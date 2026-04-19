@@ -1,0 +1,3011 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Multi-LLM Interface for Developers - Terminal & VSCode">
+      
+      
+      
+        <link rel="canonical" href="https://rcconsult.github.io/ppxai/1.17.6/ARCHITECTURE/">
+      
+      
+        <link rel="prev" href="../CUSTOM_COMMAND_DEVELOPMENT_GUIDE/">
+      
+      
+        <link rel="next" href="../ollama-limitations/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Architecture - ppxai Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#ppxai-architecture" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="ppxai Documentation" class="md-header__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ppxai Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Architecture
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="ppxai Documentation" class="md-nav__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ppxai Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../INSTALLATION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../PROVIDER_SETUP/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provider Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../AGENT_MODE_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agent Mode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../BOOTSTRAP_CONTEXT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bootstrap Context
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CONTEXT-INJECTION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Context Injection
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CHECKPOINT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Checkpoint & Undo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../FILE_EDITING_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    File Editing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../SHELL_CONSENT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shell Consent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CUSTOM_TOOL_DEVELOPMENT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CUSTOM_COMMAND_DEVELOPMENT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#full-stack-overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Full Stack Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#python-module-hierarchy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Python Module Hierarchy
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#import-patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Import Patterns
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Import Patterns">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-type_checking-pattern-static-analysis-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. TYPE_CHECKING Pattern (Static Analysis Only)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-dag-import-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. DAG Import Structure
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-clean-leaf-modules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Clean Leaf Modules
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-bootstrap-context-v1140" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Bootstrap Context (v1.14.0)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#architectural-layers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Architectural Layers
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#runtime-object-diagrams-v1161" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Runtime Object Diagrams (v1.16.1)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Runtime Object Diagrams (v1.16.1)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ppxai-rich-tui" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ppxai (Rich TUI)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ppxaide-textual-tui" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ppxaide (Textual TUI)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#key-architectural-differences" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Architectural Differences
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#command-dispatch-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Command Dispatch Flow
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dag-dependency-rule-v1161" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DAG Dependency Rule (v1.16.1)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adding-new-modules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adding New Modules
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testing-import-health" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Testing Import Health
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#critical-architecture-patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Critical Architecture Patterns
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Critical Architecture Patterns">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#transactional-state-management-gitops-style" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Transactional State Management (GitOps-Style)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Transactional State Management (GitOps-Style)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#problem" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Problem
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#solution-checkpointcommitrollback-pattern" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Solution: Checkpoint/Commit/Rollback Pattern
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usage-pattern" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Usage Pattern
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#key-features" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Features
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#where-to-apply-this-pattern" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where to Apply This Pattern
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#benefits-for-ai-agents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Benefits for AI Agents
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#implementation-guidelines" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Implementation Guidelines
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#testing-transactional-code" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Testing Transactional Code
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#future-applications" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Future Applications
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#web-app-architecture-v116x" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Web App Architecture (v1.16.x)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Web App Architecture (v1.16.x)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#file-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        File Structure
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#module-dependency-graph-web" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Module Dependency Graph (Web)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#key-patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Patterns
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#server-web-api-key-endpoints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Server ↔ Web API (key endpoints)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cross-client-autocomplete-v117x" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cross-Client Autocomplete (v1.17.x)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Cross-Client Autocomplete (v1.17.x)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#stable-completion-item-schema" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stable completion item schema
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why-this-matters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why this matters
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#schema-driven-appstate-dto-v1174" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Schema-Driven AppState DTO (v1.17.4)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Schema-Driven AppState DTO (v1.17.4)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-uses-the-dto" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What uses the DTO
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#schema-entry-format" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Schema entry format
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#drift-protection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Drift protection
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#adding-a-new-field" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adding a new field
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ollama-limitations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ollama Limitations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vllm-tool-calling-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    vLLM Tool Calling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CONTAINER_TOOLS_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Container Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../AUTOROUTER-CONFIG/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autorouter Config
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release Notes
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Release Notes
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../RELEASE-NOTES-v1.16.1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../RELEASE-NOTES-v1.16.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../RELEASE-NOTES-v1.15.6/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.15.6
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#full-stack-overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Full Stack Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#python-module-hierarchy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Python Module Hierarchy
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#import-patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Import Patterns
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Import Patterns">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-type_checking-pattern-static-analysis-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. TYPE_CHECKING Pattern (Static Analysis Only)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-dag-import-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. DAG Import Structure
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-clean-leaf-modules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Clean Leaf Modules
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-bootstrap-context-v1140" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Bootstrap Context (v1.14.0)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#architectural-layers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Architectural Layers
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#runtime-object-diagrams-v1161" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Runtime Object Diagrams (v1.16.1)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Runtime Object Diagrams (v1.16.1)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ppxai-rich-tui" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ppxai (Rich TUI)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ppxaide-textual-tui" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ppxaide (Textual TUI)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#key-architectural-differences" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Architectural Differences
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#command-dispatch-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Command Dispatch Flow
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dag-dependency-rule-v1161" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DAG Dependency Rule (v1.16.1)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adding-new-modules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adding New Modules
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testing-import-health" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Testing Import Health
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#critical-architecture-patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Critical Architecture Patterns
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Critical Architecture Patterns">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#transactional-state-management-gitops-style" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Transactional State Management (GitOps-Style)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Transactional State Management (GitOps-Style)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#problem" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Problem
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#solution-checkpointcommitrollback-pattern" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Solution: Checkpoint/Commit/Rollback Pattern
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usage-pattern" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Usage Pattern
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#key-features" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Features
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#where-to-apply-this-pattern" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where to Apply This Pattern
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#benefits-for-ai-agents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Benefits for AI Agents
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#implementation-guidelines" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Implementation Guidelines
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#testing-transactional-code" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Testing Transactional Code
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#future-applications" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Future Applications
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#web-app-architecture-v116x" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Web App Architecture (v1.16.x)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Web App Architecture (v1.16.x)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#file-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        File Structure
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#module-dependency-graph-web" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Module Dependency Graph (Web)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#key-patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Patterns
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#server-web-api-key-endpoints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Server ↔ Web API (key endpoints)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cross-client-autocomplete-v117x" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cross-Client Autocomplete (v1.17.x)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Cross-Client Autocomplete (v1.17.x)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#stable-completion-item-schema" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stable completion item schema
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why-this-matters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why this matters
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#schema-driven-appstate-dto-v1174" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Schema-Driven AppState DTO (v1.17.4)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Schema-Driven AppState DTO (v1.17.4)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-uses-the-dto" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What uses the DTO
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#schema-entry-format" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Schema entry format
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#drift-protection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Drift protection
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#adding-a-new-field" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adding a new field
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="ppxai-architecture">ppxai Architecture<a class="headerlink" href="#ppxai-architecture" title="Permanent link">&para;</a></h1>
+<p>This document describes the high-level architecture and import patterns used in the ppxai codebase.</p>
+<h2 id="full-stack-overview">Full Stack Overview<a class="headerlink" href="#full-stack-overview" title="Permanent link">&para;</a></h2>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>┌─────────────────────────────────────────────────────────────────┐
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>│  Clients                                                        │
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>│  ┌────────────┐  ┌────────────────┐  ┌─────────────────────┐   │
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>│  │ ppxai (TUI)│  │ ppxaide (TUI)  │  │ Web App / VSCode     │   │
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>│  │ Rich-based │  │ Textual-based  │  │ ppxai-desktop binary │   │
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>│  └─────┬──────┘  └───────┬────────┘  └────────┬────────────┘   │
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>│        │  direct          │  direct            │  HTTP/SSE      │
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>└────────┼──────────────────┼────────────────────┼────────────────┘
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>         │                  │                    │
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>         ▼                  ▼                    ▼
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>┌─────────────────────────────────────────────────────────────────┐
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>│  ppxai/server/http.py   (FastAPI, REST + SSE)                   │
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>│  POST /chat  GET /stream  GET /files/list  POST /command  …     │
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>└────────────────────────────┬────────────────────────────────────┘
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>                             │
+</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>                             ▼
+</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>┌─────────────────────────────────────────────────────────────────┐
+</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>│  ppxai/engine/client.py   (EngineClient facade)                 │
+</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>│  restore_session()  chat()  chat_with_tools()  set_provider()   │
+</span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>└────────────────────────────┬────────────────────────────────────┘
+</span><span id="__span-0-21"><a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>                             │
+</span><span id="__span-0-22"><a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>              ┌──────────────┼──────────────┐
+</span><span id="__span-0-23"><a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>              ▼              ▼              ▼
+</span><span id="__span-0-24"><a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>      providers/       tools/          session/
+</span><span id="__span-0-25"><a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a>      BaseProvider    manager.py      session.py
+</span><span id="__span-0-26"><a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a>      GeminiProvider  builtin/        checkpoint
+</span><span id="__span-0-27"><a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a>      OpenAIProvider  validator.py
+</span><span id="__span-0-28"><a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a>      PerplexityProv
+</span></code></pre></div>
+<h2 id="python-module-hierarchy">Python Module Hierarchy<a class="headerlink" href="#python-module-hierarchy" title="Permanent link">&para;</a></h2>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>ppxai/
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>├── config.py          # LEAF: No ppxai imports (safe to import anywhere)
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>├── themes.py          # LEAF: No ppxai imports
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>├── prompts.py         # LEAF: No ppxai imports
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>├── utils.py           # LEAF: No ppxai imports
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>├── common/            # Low-level utilities
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>│   ├── logger.py      # LEAF: No ppxai imports (enable_all/disable_all v1.15.4)
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>│   ├── preview.py     # LEAF: Preview utilities (v1.15.4)
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>│   └── consent.py     # Uses logger only
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>├── preview_server.py  # Stdlib HTTP preview server (v1.15.4)
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>├── engine/            # Core business logic
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>│   ├── types.py       # LEAF: No ppxai imports
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>│   ├── bootstrap.py   # LEAF: Bootstrap context parsing (v1.14.0)
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>│   ├── providers/     # Provider implementations
+</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>│   ├── tools/         # Tool system
+</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>│   │   ├── manager.py # Uses types only
+</span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>│   │   └── builtin/   # Built-in tools (TYPE_CHECKING pattern)
+</span><span id="__span-1-18"><a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a>│   └── client.py      # Facade (uses bootstrap.py)
+</span><span id="__span-1-19"><a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a>├── server/            # HTTP server
+</span><span id="__span-1-20"><a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a>│   └── http.py        # Uses engine, config
+</span><span id="__span-1-21"><a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a>├── commands/          # UI-agnostic command layer (v1.15.0 factory + protocol)
+</span><span id="__span-1-22"><a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a>│   ├── protocol.py    # CommandContext protocol (interface)
+</span><span id="__span-1-23"><a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a>│   ├── factory.py     # CommandFactory + CommandSpec registry
+</span><span id="__span-1-24"><a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a>│   ├── context.py     # Adapters: RichCommandContext, TextualCommandContext
+</span><span id="__span-1-25"><a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a>│   ├── results.py     # 17 CommandResult types (v1.15.0)
+</span><span id="__span-1-26"><a id="__codelineno-1-26" name="__codelineno-1-26" href="#__codelineno-1-26"></a>│   ├── system.py      # /help, /status, /theme
+</span><span id="__span-1-27"><a id="__codelineno-1-27" name="__codelineno-1-27" href="#__codelineno-1-27"></a>│   ├── provider.py    # /provider, /model
+</span><span id="__span-1-28"><a id="__codelineno-1-28" name="__codelineno-1-28" href="#__codelineno-1-28"></a>│   ├── agent.py       # /agent (agent loop)
+</span><span id="__span-1-29"><a id="__codelineno-1-29" name="__codelineno-1-29" href="#__codelineno-1-29"></a>│   └── utility.py     # /context, /debug-log
+</span><span id="__span-1-30"><a id="__codelineno-1-30" name="__codelineno-1-30" href="#__codelineno-1-30"></a>└── main.py            # Entry point
+</span></code></pre></div>
+<h2 id="import-patterns">Import Patterns<a class="headerlink" href="#import-patterns" title="Permanent link">&para;</a></h2>
+<h3 id="1-type_checking-pattern-static-analysis-only">1. TYPE_CHECKING Pattern (Static Analysis Only)<a class="headerlink" href="#1-type_checking-pattern-static-analysis-only" title="Permanent link">&para;</a></h3>
+<p>Used in builtin tools to avoid circular imports with manager.py and client.py.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    <span class="kn">from</span><span class="w"> </span><span class="nn">..manager</span><span class="w"> </span><span class="kn">import</span> <span class="n">ToolManager</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="kn">from</span><span class="w"> </span><span class="nn">...client</span><span class="w"> </span><span class="kn">import</span> <span class="n">EngineClient</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="k">def</span><span class="w"> </span><span class="nf">register_tools</span><span class="p">(</span><span class="n">manager</span><span class="p">:</span> <span class="s1">&#39;ToolManager&#39;</span><span class="p">,</span> <span class="n">engine</span><span class="p">:</span> <span class="s1">&#39;EngineClient&#39;</span><span class="p">):</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>    <span class="o">...</span>
+</span></code></pre></div>
+<p><strong>Why</strong>: Type hints are evaluated lazily (as strings) at runtime, so the imports
+inside TYPE_CHECKING block are only needed for static type checkers like mypy.</p>
+<p><strong>Files using this pattern</strong>:
+- <code>ppxai/engine/tools/builtin/*.py</code> (all builtin tools)
+- <code>ppxai/server/session_manager.py</code></p>
+<h3 id="2-dag-import-structure">2. DAG Import Structure<a class="headerlink" href="#2-dag-import-structure" title="Permanent link">&para;</a></h3>
+<p>The codebase follows a Directed Acyclic Graph (DAG) for imports:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>config.py, types.py, logger.py  (leaf modules - no ppxai imports)
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>           ↓
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>engine/providers/, engine/tools/manager.py
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>           ↓
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>engine/client.py
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>           ↓
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>commands/  (protocol, factory, handlers, adapters)
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>           ↓
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>rich/, tui/, server/  (client layer)
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>           ↓
+</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>main.py (entry points)
+</span></code></pre></div>
+<p><strong>Rule</strong>: Each module only imports from modules "below" it in the hierarchy.
+No circular dependencies exist. The <code>commands/</code> layer uses <code>TYPE_CHECKING</code>
+for forward references to client types (CommandHandler, PPXAIDEApp).</p>
+<h3 id="3-clean-leaf-modules">3. Clean Leaf Modules<a class="headerlink" href="#3-clean-leaf-modules" title="Permanent link">&para;</a></h3>
+<p>Modules that have no ppxai imports and can be imported by anything.</p>
+<ul>
+<li><code>ppxai/config.py</code> - Configuration loading and defaults</li>
+<li><code>ppxai/themes.py</code> - Theme definitions</li>
+<li><code>ppxai/prompts.py</code> - Prompt templates</li>
+<li><code>ppxai/utils.py</code> - Utility functions</li>
+<li><code>ppxai/engine/types.py</code> - Type definitions (Message, Event, etc.)</li>
+<li><code>ppxai/engine/bootstrap.py</code> - Bootstrap context parsing (v1.14.0)</li>
+<li><code>ppxai/common/logger.py</code> - Logging setup</li>
+</ul>
+<p>These form the "bottom" of the import hierarchy.</p>
+<h3 id="4-bootstrap-context-v1140">4. Bootstrap Context (v1.14.0)<a class="headerlink" href="#4-bootstrap-context-v1140" title="Permanent link">&para;</a></h3>
+<p>The bootstrap module provides project-specific AI instructions:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>ppxai/engine/bootstrap.py
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>├── BootstrapContext class
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>│   ├── base_instructions: str      # Content below YAML ---
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>│   ├── provider_hints: dict        # provider_id → list[str]
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>│   ├── model_hints: dict           # regex pattern → list[str]
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>│   ├── get_prompt_for(provider, model) → str
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>│   └── get_active_hints_for(provider, model) → dict
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>│
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>└── Helper functions:
+</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>    ├── find_bootstrap_file(directory, aliases) → Path
+</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>    ├── get_bootstrap_files_config() → list[str]
+</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>    └── is_bootstrap_enabled() → bool
+</span></code></pre></div>
+<p><strong>Integration with client.py:</strong>
+- <code>EngineClient._bootstrap_context: BootstrapContext</code> stores parsed context
+- <code>set_provider()</code> and <code>set_model()</code> trigger prompt rebuild
+- <code>get_active_hints()</code> returns detailed breakdown for debugging</p>
+<h2 id="architectural-layers">Architectural Layers<a class="headerlink" href="#architectural-layers" title="Permanent link">&para;</a></h2>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>┌─────────────────────────────────────────────────────┐
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>│                   Client Layer                       │
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>│  rich/ (ppxai)  │  tui/ (ppxaide)  │  server/ (HTTP) │
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>├─────────────────────────────────────────────────────┤
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>│                   Command Layer                      │
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>│  commands/ (protocol, factory, handlers, adapters)   │
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>├─────────────────────────────────────────────────────┤
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>│                   Engine Layer                       │
+</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>│     client.py, session.py, providers/, tools/        │
+</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>├─────────────────────────────────────────────────────┤
+</span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>│                   Common Layer                       │
+</span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a>│           config.py, types.py, logger.py             │
+</span><span id="__span-5-13"><a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a>└─────────────────────────────────────────────────────┘
+</span></code></pre></div>
+<p><strong>Rule</strong>: Lower layers should NOT import from higher layers.</p>
+<h2 id="runtime-object-diagrams-v1161">Runtime Object Diagrams (v1.16.1)<a class="headerlink" href="#runtime-object-diagrams-v1161" title="Permanent link">&para;</a></h2>
+<p>The two TUI clients — <strong>ppxai</strong> (Rich) and <strong>ppxaide</strong> (Textual) — share the same
+engine but have fundamentally different runtime architectures.</p>
+<h3 id="ppxai-rich-tui">ppxai (Rich TUI)<a class="headerlink" href="#ppxai-rich-tui" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>main() → CommandHandler [singleton]
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>  ├── engine_client: EngineClient [singleton]
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>  │     ├── provider: BaseProvider          (replaced on /provider switch)
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>  │     ├── tool_manager: ToolManager
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>  │     │     ├── tools: dict[str, Tool]
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>  │     │     └── validator: ResponseValidator
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>  │     ├── session_manager: SessionManager
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>  │     ├── context_injector: ContextInjector
+</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>  │     ├── checkpoint_manager: CheckpointManager
+</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>  │     └── bootstrap_context: BootstrapContext
+</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>  ├── prompt_session: PromptSession         (prompt_toolkit)
+</span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a>  │     ├── history: InMemoryHistory
+</span><span id="__span-6-13"><a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a>  │     └── completer: PPXAICompleter → CommandHandler (back-ref)
+</span><span id="__span-6-14"><a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a>  ├── provider: str          ─┐
+</span><span id="__span-6-15"><a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a>  ├── current_model: str      │ public attributes
+</span><span id="__span-6-16"><a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a>  ├── auto_route: bool        │ (read by RichCommandContext)
+</span><span id="__span-6-17"><a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a>  ├── tools_available: bool   │
+</span><span id="__span-6-18"><a id="__codelineno-6-18" name="__codelineno-6-18" href="#__codelineno-6-18"></a>  └── tools_verbose: bool    ─┘
+</span><span id="__span-6-19"><a id="__codelineno-6-19" name="__codelineno-6-19" href="#__codelineno-6-19"></a>
+</span><span id="__span-6-20"><a id="__codelineno-6-20" name="__codelineno-6-20" href="#__codelineno-6-20"></a>  [Per-command dispatch]
+</span><span id="__span-6-21"><a id="__codelineno-6-21" name="__codelineno-6-21" href="#__codelineno-6-21"></a>  handle_command(user_input)
+</span><span id="__span-6-22"><a id="__codelineno-6-22" name="__codelineno-6-22" href="#__codelineno-6-22"></a>    → RichCommandContext(self)     [ephemeral, created per call]
+</span><span id="__span-6-23"><a id="__codelineno-6-23" name="__codelineno-6-23" href="#__codelineno-6-23"></a>        → spec.handler(context, args) → CommandResult
+</span><span id="__span-6-24"><a id="__codelineno-6-24" name="__codelineno-6-24" href="#__codelineno-6-24"></a>        → RichRenderer.render(result) [static, type-dispatch registry]
+</span></code></pre></div>
+<h3 id="ppxaide-textual-tui">ppxaide (Textual TUI)<a class="headerlink" href="#ppxaide-textual-tui" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>main() → PPXAIDEApp [singleton, IS its own CommandContext]
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>  ├── _event_bus: EventBus                  (blinker signals)
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>  ├── _engine_client: EngineClient [singleton]  ← same structure as Rich
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>  ├── _provider: str           ─┐
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>  ├── _model: str               │ private state
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>  ├── _auto_route: bool         │ (exposed via public properties/methods)
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>  ├── _tools_verbose: bool     ─┘
+</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>  │
+</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>  ├── Widget tree (from compose()):
+</span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>  │     ├── Header
+</span><span id="__span-7-11"><a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a>  │     ├── StatusBar → BadgeTransaction    (transactional updates)
+</span><span id="__span-7-12"><a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a>  │     ├── Horizontal split:
+</span><span id="__span-7-13"><a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a>  │     │     ├── FileTree                  (DirectoryTree extension, toggleable)
+</span><span id="__span-7-14"><a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a>  │     │     ├── Vertical:
+</span><span id="__span-7-15"><a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a>  │     │     │     ├── ChatView → MessageBox[] → Markdown/Static/Button
+</span><span id="__span-7-16"><a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a>  │     │     │     └── InputBox → ChatTextArea
+</span><span id="__span-7-17"><a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a>  │     │     └── SidePanel → CodeEditor | Markdown | DataViewer
+</span><span id="__span-7-18"><a id="__codelineno-7-18" name="__codelineno-7-18" href="#__codelineno-7-18"></a>  │     │                       | TreeViewer | ImageViewer
+</span><span id="__span-7-19"><a id="__codelineno-7-19" name="__codelineno-7-19" href="#__codelineno-7-19"></a>  │     ├── Footer
+</span><span id="__span-7-20"><a id="__codelineno-7-20" name="__codelineno-7-20" href="#__codelineno-7-20"></a>  │     └── FooterStatus                    (timer-driven)
+</span><span id="__span-7-21"><a id="__codelineno-7-21" name="__codelineno-7-21" href="#__codelineno-7-21"></a>  │
+</span><span id="__span-7-22"><a id="__codelineno-7-22" name="__codelineno-7-22" href="#__codelineno-7-22"></a>  └── [Per-command dispatch]
+</span><span id="__span-7-23"><a id="__codelineno-7-23" name="__codelineno-7-23" href="#__codelineno-7-23"></a>      _handle_command(user_input)
+</span><span id="__span-7-24"><a id="__codelineno-7-24" name="__codelineno-7-24" href="#__codelineno-7-24"></a>        → spec.handler(self, args) → CommandResult  [self IS the context]
+</span><span id="__span-7-25"><a id="__codelineno-7-25" name="__codelineno-7-25" href="#__codelineno-7-25"></a>        → TextualRenderer(self).render(result)      [async, per-instance dispatch]
+</span></code></pre></div>
+<h3 id="key-architectural-differences">Key Architectural Differences<a class="headerlink" href="#key-architectural-differences" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Aspect</th>
+<th>ppxai (Rich)</th>
+<th>ppxaide (Textual)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Context</td>
+<td><code>RichCommandContext(handler)</code> adapter</td>
+<td><code>PPXAIDEApp</code> directly (implements protocol)</td>
+</tr>
+<tr>
+<td>Renderer</td>
+<td><code>RichRenderer.render()</code> — static</td>
+<td><code>TextualRenderer(app).render()</code> — async, per-instance</td>
+</tr>
+<tr>
+<td>UI updates</td>
+<td>Direct <code>console.print()</code></td>
+<td>EventBus signals → widget subscribers</td>
+</tr>
+<tr>
+<td>State</td>
+<td>Public attributes on CommandHandler</td>
+<td>Private attrs + public property/method API</td>
+</tr>
+<tr>
+<td>Widget tree</td>
+<td>None (prompt_toolkit only)</td>
+<td>Full Textual <code>compose()</code> tree</td>
+</tr>
+</tbody>
+</table>
+<h3 id="command-dispatch-flow">Command Dispatch Flow<a class="headerlink" href="#command-dispatch-flow" title="Permanent link">&para;</a></h3>
+<p>Both clients share the same 38 commands via <code>CommandFactory</code>. Commands are UI-agnostic
+— they receive <code>CommandContext</code> (protocol) and return typed <code>CommandResult</code> objects.</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>                  ┌──────────────────────┐
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>                  │   CommandFactory      │  Shared registry
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>                  │   38 CommandSpec      │  (self-registered at import)
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>                  └─────────┬────────────┘
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>                            │ spec.handler(context, args)
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>              ┌─────────────┴─────────────┐
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>              │                           │
+</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>    ┌─────────┴──────────┐    ┌───────────┴────────────┐
+</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>    │  RichCommandContext │    │  PPXAIDEApp             │
+</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>    │  (adapter)          │    │  (implements protocol   │
+</span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a>    │  wraps Handler      │    │   directly)             │
+</span><span id="__span-8-12"><a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a>    └─────────┬──────────┘    └───────────┬────────────┘
+</span><span id="__span-8-13"><a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a>              │                           │
+</span><span id="__span-8-14"><a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a>    ┌─────────┴──────────┐    ┌───────────┴────────────┐
+</span><span id="__span-8-15"><a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a>    │  RichRenderer       │    │  TextualRenderer        │
+</span><span id="__span-8-16"><a id="__codelineno-8-16" name="__codelineno-8-16" href="#__codelineno-8-16"></a>    │  .render(result)    │    │  .render(result)        │
+</span><span id="__span-8-17"><a id="__codelineno-8-17" name="__codelineno-8-17" href="#__codelineno-8-17"></a>    │  static dispatch    │    │  async dispatch         │
+</span><span id="__span-8-18"><a id="__codelineno-8-18" name="__codelineno-8-18" href="#__codelineno-8-18"></a>    └────────────────────┘    └────────────────────────┘
+</span></code></pre></div>
+<h3 id="dag-dependency-rule-v1161">DAG Dependency Rule (v1.16.1)<a class="headerlink" href="#dag-dependency-rule-v1161" title="Permanent link">&para;</a></h3>
+<p>The <code>commands/</code> layer is <strong>shared</strong> between both clients. It must NOT import from
+or know the internals of either <code>rich/</code> or <code>tui/</code>.</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>engine/          ← No UI, no commands
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>  ↑
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>commands/        ← UI-agnostic: protocol + factory + handlers + adapters
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>  ↑
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>rich/            ← Rich TUI client (imports commands/, engine/)
+</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>tui/             ← Textual TUI client (imports commands/, engine/)
+</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>server/          ← HTTP server (imports commands/, engine/)
+</span></code></pre></div>
+<p><strong>Context adapters</strong> (<code>commands/context.py</code>) bridge the gap:
+- <code>RichCommandContext</code> wraps <code>CommandHandler</code> — calls <strong>public methods only</strong>
+- <code>TextualCommandContext</code> wraps <code>PPXAIDEApp</code> — calls <strong>public methods only</strong>
+- Each client owns its full-stack logic (engine + UI updates)
+- Adapters never access private attributes (<code>_engine_client</code>, <code>_model</code>, etc.)</p>
+<h2 id="adding-new-modules">Adding New Modules<a class="headerlink" href="#adding-new-modules" title="Permanent link">&para;</a></h2>
+<p>When adding a new module:</p>
+<ol>
+<li><strong>Determine the layer</strong> - Where does it fit in the hierarchy?</li>
+<li><strong>Check for cycles</strong> - Will importing it create a circular dependency?</li>
+<li><strong>Use appropriate pattern</strong>:</li>
+<li>If needed only for type hints → TYPE_CHECKING</li>
+<li>If needed at runtime but causes cycle → Lazy import</li>
+<li>If no cycle risk → Regular import</li>
+</ol>
+<h2 id="testing-import-health">Testing Import Health<a class="headerlink" href="#testing-import-health" title="Permanent link">&para;</a></h2>
+<p>To verify no circular imports exist:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;import ppxai&quot;</span>
+</span></code></pre></div>
+<p>If this fails with ImportError, there's a circular dependency.</p>
+<hr />
+<h2 id="critical-architecture-patterns">Critical Architecture Patterns<a class="headerlink" href="#critical-architecture-patterns" title="Permanent link">&para;</a></h2>
+<h3 id="transactional-state-management-gitops-style">Transactional State Management (GitOps-Style)<a class="headerlink" href="#transactional-state-management-gitops-style" title="Permanent link">&para;</a></h3>
+<p><strong>Added:</strong> v1.15.0
+<strong>Status:</strong> Critical pattern for AI/agent workflows
+<strong>Location:</strong> <code>ppxai/tui/widgets/status_bar.py</code> (BadgeTransaction)</p>
+<h4 id="problem">Problem<a class="headerlink" href="#problem" title="Permanent link">&para;</a></h4>
+<p>AI agents perform multi-step operations that must succeed atomically or fail completely. Partial state updates create inconsistent UI, broken sessions, and user confusion.</p>
+<p><strong>Examples of problematic partial updates:</strong>
+- Provider switch succeeds, but model update fails → inconsistent state
+- 3 files added to context, 4th fails → partial context injection
+- Badge updates half-applied → confusing status display</p>
+<h4 id="solution-checkpointcommitrollback-pattern">Solution: Checkpoint/Commit/Rollback Pattern<a class="headerlink" href="#solution-checkpointcommitrollback-pattern" title="Permanent link">&para;</a></h4>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">BadgeTransaction</span><span class="p">:</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Transaction for atomic badge updates with rollback support.</span>
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>
+</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="sd">    GitOps-style API:</span>
+</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="sd">    1. Checkpoint current state (automatic on enter)</span>
+</span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="sd">    2. Stage operations (add, update, remove, hide, show)</span>
+</span><span id="__span-11-7"><a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="sd">    3. Commit changes (atomic - all succeed or all rollback)</span>
+</span><span id="__span-11-8"><a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="sd">    4. Rollback on failure with user-friendly error messages</span>
+</span><span id="__span-11-9"><a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="__span-11-10"><a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a>
+</span><span id="__span-11-11"><a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">checkpoint</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-11-12"><a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Backup current badge state.&quot;&quot;&quot;</span>
+</span><span id="__span-11-13"><a id="__codelineno-11-13" name="__codelineno-11-13" href="#__codelineno-11-13"></a>
+</span><span id="__span-11-14"><a id="__codelineno-11-14" name="__codelineno-11-14" href="#__codelineno-11-14"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">commit</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">bool</span><span class="p">,</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]]:</span>
+</span><span id="__span-11-15"><a id="__codelineno-11-15" name="__codelineno-11-15" href="#__codelineno-11-15"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Apply staged changes atomically.</span>
+</span><span id="__span-11-16"><a id="__codelineno-11-16" name="__codelineno-11-16" href="#__codelineno-11-16"></a><span class="sd">        Returns: (success, error_message)</span>
+</span><span id="__span-11-17"><a id="__codelineno-11-17" name="__codelineno-11-17" href="#__codelineno-11-17"></a><span class="sd">        &quot;&quot;&quot;</span>
+</span><span id="__span-11-18"><a id="__codelineno-11-18" name="__codelineno-11-18" href="#__codelineno-11-18"></a>
+</span><span id="__span-11-19"><a id="__codelineno-11-19" name="__codelineno-11-19" href="#__codelineno-11-19"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">rollback</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-11-20"><a id="__codelineno-11-20" name="__codelineno-11-20" href="#__codelineno-11-20"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Restore badge state from backup.&quot;&quot;&quot;</span>
+</span></code></pre></div>
+<h4 id="usage-pattern">Usage Pattern<a class="headerlink" href="#usage-pattern" title="Permanent link">&para;</a></h4>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="c1"># Atomic multi-operation update</span>
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="k">with</span> <span class="n">status_bar</span><span class="o">.</span><span class="n">transaction</span><span class="p">()</span> <span class="k">as</span> <span class="n">txn</span><span class="p">:</span>
+</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>    <span class="n">txn</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s2">&quot;tokens&quot;</span><span class="p">,</span> <span class="s2">&quot;Tokens&quot;</span><span class="p">,</span> <span class="s2">&quot;1234&quot;</span><span class="p">)</span>
+</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>    <span class="n">txn</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="s2">&quot;provider&quot;</span><span class="p">,</span> <span class="s2">&quot;ollama&quot;</span><span class="p">)</span>
+</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>    <span class="n">txn</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="s2">&quot;cost&quot;</span><span class="p">)</span>
+</span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>    <span class="n">success</span><span class="p">,</span> <span class="n">error</span> <span class="o">=</span> <span class="n">txn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+</span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a>    <span class="k">if</span> <span class="ow">not</span> <span class="n">success</span><span class="p">:</span>
+</span><span id="__span-12-8"><a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>        <span class="n">notify_user</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Update failed: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span id="__span-12-9"><a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a>        <span class="c1"># State automatically rolled back</span>
+</span></code></pre></div>
+<h4 id="key-features">Key Features<a class="headerlink" href="#key-features" title="Permanent link">&para;</a></h4>
+<p><strong>1. Validation Phase</strong>
+All operations validated before any are applied. Prevents partial updates.</p>
+<p><strong>2. Atomic Application</strong>
+Either all operations succeed or none do. No inconsistent intermediate states.</p>
+<p><strong>3. Automatic Rollback</strong>
+On failure or exception, state restored to checkpoint. System remains consistent.</p>
+<p><strong>4. User-Friendly Errors</strong>
+Clear error messages explain what failed and why.</p>
+<p><strong>5. Chainable Operations</strong>
+Fluent API: <code>txn.add(...).update(...).remove(...).commit()</code></p>
+<p><strong>6. Exception Safety</strong>
+Context manager auto-rollbacks on exceptions via <code>__exit__</code>.</p>
+<h4 id="where-to-apply-this-pattern">Where to Apply This Pattern<a class="headerlink" href="#where-to-apply-this-pattern" title="Permanent link">&para;</a></h4>
+<p><strong>Provider/Model Switching:</strong>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="k">with</span> <span class="n">config_transaction</span><span class="p">()</span> <span class="k">as</span> <span class="n">txn</span><span class="p">:</span>
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>    <span class="n">txn</span><span class="o">.</span><span class="n">set_provider</span><span class="p">(</span><span class="s2">&quot;ollama&quot;</span><span class="p">)</span>
+</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>    <span class="n">txn</span><span class="o">.</span><span class="n">set_model</span><span class="p">(</span><span class="s2">&quot;qwen2.5-coder:32b&quot;</span><span class="p">)</span>
+</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>    <span class="n">txn</span><span class="o">.</span><span class="n">update_tools</span><span class="p">(</span><span class="n">enabled</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>    <span class="n">txn</span><span class="o">.</span><span class="n">update_context_limit</span><span class="p">(</span><span class="mi">32000</span><span class="p">)</span>
+</span><span id="__span-13-6"><a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>    <span class="n">success</span><span class="p">,</span> <span class="n">error</span> <span class="o">=</span> <span class="n">txn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+</span></code></pre></div></p>
+<p><strong>Context Injection:</strong>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="k">with</span> <span class="n">context_transaction</span><span class="p">()</span> <span class="k">as</span> <span class="n">txn</span><span class="p">:</span>
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>    <span class="n">txn</span><span class="o">.</span><span class="n">inject_file</span><span class="p">(</span><span class="s2">&quot;src/main.py&quot;</span><span class="p">)</span>
+</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>    <span class="n">txn</span><span class="o">.</span><span class="n">inject_file</span><span class="p">(</span><span class="s2">&quot;tests/test_main.py&quot;</span><span class="p">)</span>
+</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>    <span class="n">txn</span><span class="o">.</span><span class="n">inject_git_diff</span><span class="p">(</span><span class="s2">&quot;HEAD~1&quot;</span><span class="p">)</span>
+</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>    <span class="n">success</span><span class="p">,</span> <span class="n">error</span> <span class="o">=</span> <span class="n">txn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+</span></code></pre></div></p>
+<p><strong>Session State Management:</strong>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="k">with</span> <span class="n">session_transaction</span><span class="p">()</span> <span class="k">as</span> <span class="n">txn</span><span class="p">:</span>
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>    <span class="n">txn</span><span class="o">.</span><span class="n">add_message</span><span class="p">(</span><span class="n">user_message</span><span class="p">)</span>
+</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>    <span class="n">txn</span><span class="o">.</span><span class="n">update_token_count</span><span class="p">(</span><span class="n">tokens_used</span><span class="p">)</span>
+</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a>    <span class="n">txn</span><span class="o">.</span><span class="n">update_cost</span><span class="p">(</span><span class="n">cost</span><span class="p">)</span>
+</span><span id="__span-15-5"><a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a>    <span class="n">txn</span><span class="o">.</span><span class="n">save_checkpoint</span><span class="p">()</span>
+</span><span id="__span-15-6"><a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a>    <span class="n">success</span><span class="p">,</span> <span class="n">error</span> <span class="o">=</span> <span class="n">txn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+</span></code></pre></div></p>
+<p><strong>Multi-Step Tool Calls:</strong>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="k">with</span> <span class="n">tool_transaction</span><span class="p">()</span> <span class="k">as</span> <span class="n">txn</span><span class="p">:</span>
+</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>    <span class="n">txn</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="s2">&quot;config.json&quot;</span><span class="p">)</span>
+</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>    <span class="n">txn</span><span class="o">.</span><span class="n">modify_config</span><span class="p">(</span><span class="s2">&quot;api_key&quot;</span><span class="p">,</span> <span class="n">new_value</span><span class="p">)</span>
+</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a>    <span class="n">txn</span><span class="o">.</span><span class="n">write_file</span><span class="p">(</span><span class="s2">&quot;config.json&quot;</span><span class="p">)</span>
+</span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a>    <span class="n">txn</span><span class="o">.</span><span class="n">git_commit</span><span class="p">(</span><span class="s2">&quot;Update API key&quot;</span><span class="p">)</span>
+</span><span id="__span-16-6"><a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a>    <span class="n">success</span><span class="p">,</span> <span class="n">error</span> <span class="o">=</span> <span class="n">txn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+</span></code></pre></div></p>
+<p><strong>UI State Synchronization:</strong>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="k">with</span> <span class="n">ui_transaction</span><span class="p">()</span> <span class="k">as</span> <span class="n">txn</span><span class="p">:</span>
+</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>    <span class="n">txn</span><span class="o">.</span><span class="n">update_statusbar</span><span class="p">(</span><span class="s2">&quot;provider&quot;</span><span class="p">,</span> <span class="s2">&quot;ollama&quot;</span><span class="p">)</span>
+</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>    <span class="n">txn</span><span class="o">.</span><span class="n">update_statusbar</span><span class="p">(</span><span class="s2">&quot;model&quot;</span><span class="p">,</span> <span class="s2">&quot;llama3:70b&quot;</span><span class="p">)</span>
+</span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a>    <span class="n">txn</span><span class="o">.</span><span class="n">show_panel</span><span class="p">(</span><span class="s2">&quot;side-panel&quot;</span><span class="p">)</span>
+</span><span id="__span-17-5"><a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a>    <span class="n">txn</span><span class="o">.</span><span class="n">update_title</span><span class="p">(</span><span class="s2">&quot;ollama/llama3:70b&quot;</span><span class="p">)</span>
+</span><span id="__span-17-6"><a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a>    <span class="n">success</span><span class="p">,</span> <span class="n">error</span> <span class="o">=</span> <span class="n">txn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+</span></code></pre></div></p>
+<h4 id="benefits-for-ai-agents">Benefits for AI Agents<a class="headerlink" href="#benefits-for-ai-agents" title="Permanent link">&para;</a></h4>
+<p><strong>State Consistency</strong>
+No partial updates that leave system in inconsistent state. Agent actions are atomic units.</p>
+<p><strong>Error Recovery</strong>
+Automatic rollback on failure. User sees coherent error messages, not broken UI.</p>
+<p><strong>User Trust</strong>
+Predictable behavior: operations complete fully or not at all. No "half-done" states.</p>
+<p><strong>Debugging</strong>
+Clear transaction boundaries. Error messages identify which operation failed.</p>
+<p><strong>Composability</strong>
+Transactions can be nested or chained. Complex workflows built from simple atomic units.</p>
+<h4 id="implementation-guidelines">Implementation Guidelines<a class="headerlink" href="#implementation-guidelines" title="Permanent link">&para;</a></h4>
+<p><strong>1. Identify State Boundaries</strong>
+What constitutes a consistent state? What operations must happen together?</p>
+<p><strong>2. Design Checkpoint Format</strong>
+What state needs backup? How to serialize/deserialize it?</p>
+<p><strong>3. Implement Validation</strong>
+Check all operations before applying any. Fail fast with clear errors.</p>
+<p><strong>4. Ensure Idempotent Rollback</strong>
+Rollback should work even if partially applied. Test with intentional failures.</p>
+<p><strong>5. Provide Error Context</strong>
+Error messages should explain what failed, why, and what was attempted.</p>
+<h4 id="testing-transactional-code">Testing Transactional Code<a class="headerlink" href="#testing-transactional-code" title="Permanent link">&para;</a></h4>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">test_successful_transaction</span><span class="p">():</span>
+</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;All operations succeed - state updated.&quot;&quot;&quot;</span>
+</span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a>    <span class="k">with</span> <span class="n">transaction</span><span class="p">()</span> <span class="k">as</span> <span class="n">txn</span><span class="p">:</span>
+</span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a>        <span class="n">txn</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="s2">&quot;A&quot;</span><span class="p">,</span> <span class="s2">&quot;1&quot;</span><span class="p">)</span>
+</span><span id="__span-18-5"><a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a>        <span class="n">txn</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s2">&quot;b&quot;</span><span class="p">,</span> <span class="s2">&quot;B&quot;</span><span class="p">,</span> <span class="s2">&quot;2&quot;</span><span class="p">)</span>
+</span><span id="__span-18-6"><a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a>        <span class="n">success</span><span class="p">,</span> <span class="n">error</span> <span class="o">=</span> <span class="n">txn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+</span><span id="__span-18-7"><a id="__codelineno-18-7" name="__codelineno-18-7" href="#__codelineno-18-7"></a>        <span class="k">assert</span> <span class="n">success</span>
+</span><span id="__span-18-8"><a id="__codelineno-18-8" name="__codelineno-18-8" href="#__codelineno-18-8"></a>        <span class="k">assert</span> <span class="n">error</span> <span class="ow">is</span> <span class="kc">None</span>
+</span><span id="__span-18-9"><a id="__codelineno-18-9" name="__codelineno-18-9" href="#__codelineno-18-9"></a>
+</span><span id="__span-18-10"><a id="__codelineno-18-10" name="__codelineno-18-10" href="#__codelineno-18-10"></a><span class="k">def</span><span class="w"> </span><span class="nf">test_failed_transaction_rollback</span><span class="p">():</span>
+</span><span id="__span-18-11"><a id="__codelineno-18-11" name="__codelineno-18-11" href="#__codelineno-18-11"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;One operation fails - all rollback.&quot;&quot;&quot;</span>
+</span><span id="__span-18-12"><a id="__codelineno-18-12" name="__codelineno-18-12" href="#__codelineno-18-12"></a>    <span class="n">initial_state</span> <span class="o">=</span> <span class="n">get_state</span><span class="p">()</span>
+</span><span id="__span-18-13"><a id="__codelineno-18-13" name="__codelineno-18-13" href="#__codelineno-18-13"></a>    <span class="k">with</span> <span class="n">transaction</span><span class="p">()</span> <span class="k">as</span> <span class="n">txn</span><span class="p">:</span>
+</span><span id="__span-18-14"><a id="__codelineno-18-14" name="__codelineno-18-14" href="#__codelineno-18-14"></a>        <span class="n">txn</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="s2">&quot;A&quot;</span><span class="p">,</span> <span class="s2">&quot;1&quot;</span><span class="p">)</span>
+</span><span id="__span-18-15"><a id="__codelineno-18-15" name="__codelineno-18-15" href="#__codelineno-18-15"></a>        <span class="n">txn</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="s2">&quot;Duplicate&quot;</span><span class="p">,</span> <span class="s2">&quot;2&quot;</span><span class="p">)</span>  <span class="c1"># Fails</span>
+</span><span id="__span-18-16"><a id="__codelineno-18-16" name="__codelineno-18-16" href="#__codelineno-18-16"></a>        <span class="n">success</span><span class="p">,</span> <span class="n">error</span> <span class="o">=</span> <span class="n">txn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+</span><span id="__span-18-17"><a id="__codelineno-18-17" name="__codelineno-18-17" href="#__codelineno-18-17"></a>        <span class="k">assert</span> <span class="ow">not</span> <span class="n">success</span>
+</span><span id="__span-18-18"><a id="__codelineno-18-18" name="__codelineno-18-18" href="#__codelineno-18-18"></a>        <span class="k">assert</span> <span class="s2">&quot;already exists&quot;</span> <span class="ow">in</span> <span class="n">error</span>
+</span><span id="__span-18-19"><a id="__codelineno-18-19" name="__codelineno-18-19" href="#__codelineno-18-19"></a>    <span class="k">assert</span> <span class="n">get_state</span><span class="p">()</span> <span class="o">==</span> <span class="n">initial_state</span>  <span class="c1"># Rolled back</span>
+</span><span id="__span-18-20"><a id="__codelineno-18-20" name="__codelineno-18-20" href="#__codelineno-18-20"></a>
+</span><span id="__span-18-21"><a id="__codelineno-18-21" name="__codelineno-18-21" href="#__codelineno-18-21"></a><span class="k">def</span><span class="w"> </span><span class="nf">test_exception_safety</span><span class="p">():</span>
+</span><span id="__span-18-22"><a id="__codelineno-18-22" name="__codelineno-18-22" href="#__codelineno-18-22"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Exception during commit - auto rollback.&quot;&quot;&quot;</span>
+</span><span id="__span-18-23"><a id="__codelineno-18-23" name="__codelineno-18-23" href="#__codelineno-18-23"></a>    <span class="n">initial_state</span> <span class="o">=</span> <span class="n">get_state</span><span class="p">()</span>
+</span><span id="__span-18-24"><a id="__codelineno-18-24" name="__codelineno-18-24" href="#__codelineno-18-24"></a>    <span class="k">try</span><span class="p">:</span>
+</span><span id="__span-18-25"><a id="__codelineno-18-25" name="__codelineno-18-25" href="#__codelineno-18-25"></a>        <span class="k">with</span> <span class="n">transaction</span><span class="p">()</span> <span class="k">as</span> <span class="n">txn</span><span class="p">:</span>
+</span><span id="__span-18-26"><a id="__codelineno-18-26" name="__codelineno-18-26" href="#__codelineno-18-26"></a>            <span class="n">txn</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="s2">&quot;A&quot;</span><span class="p">,</span> <span class="s2">&quot;1&quot;</span><span class="p">)</span>
+</span><span id="__span-18-27"><a id="__codelineno-18-27" name="__codelineno-18-27" href="#__codelineno-18-27"></a>            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;Simulated error&quot;</span><span class="p">)</span>
+</span><span id="__span-18-28"><a id="__codelineno-18-28" name="__codelineno-18-28" href="#__codelineno-18-28"></a>    <span class="k">except</span> <span class="ne">RuntimeError</span><span class="p">:</span>
+</span><span id="__span-18-29"><a id="__codelineno-18-29" name="__codelineno-18-29" href="#__codelineno-18-29"></a>        <span class="k">pass</span>
+</span><span id="__span-18-30"><a id="__codelineno-18-30" name="__codelineno-18-30" href="#__codelineno-18-30"></a>    <span class="k">assert</span> <span class="n">get_state</span><span class="p">()</span> <span class="o">==</span> <span class="n">initial_state</span>  <span class="c1"># Rolled back</span>
+</span></code></pre></div>
+<h4 id="future-applications">Future Applications<a class="headerlink" href="#future-applications" title="Permanent link">&para;</a></h4>
+<p>This pattern should be applied to:
+- ✅ StatusBar badge management (implemented)
+- ✅ Session state management — <code>EngineClient.restore_session()</code> (v1.16.1)
+- ⏳ Context injection (<code>@file</code>, <code>@git</code>, etc.) (planned)
+- ⏳ File operations with undo (planned)
+- ⏳ Multi-step tool execution (planned)</p>
+<p><strong>Rule:</strong> Any operation that modifies multiple related pieces of state should use this pattern.</p>
+<hr />
+<h2 id="web-app-architecture-v116x">Web App Architecture (v1.16.x)<a class="headerlink" href="#web-app-architecture-v116x" title="Permanent link">&para;</a></h2>
+<p>The web app (<code>ppxai/web/</code>) serves as the UI for <code>ppxai-desktop</code> and the browser-based client. It communicates with <code>ppxai/server/http.py</code> via REST + SSE.</p>
+<h3 id="file-structure">File Structure<a class="headerlink" href="#file-structure" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>ppxai/web/
+</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>├── index.html                          # Single-page app shell
+</span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>├── app.js                              # PpxaiApp root class (~2,100 lines after v1.16.2 refactor)
+</span><span id="__span-19-4"><a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a>├── shared/                             # Framework-level modules
+</span><span id="__span-19-5"><a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a>│   ├── api-client.js                   # ApiClient — all fetch() calls, timeout, error shape
+</span><span id="__span-19-6"><a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a>│   ├── app-state.js                    # AppState — centralised state with listener notifications
+</span><span id="__span-19-7"><a id="__codelineno-19-7" name="__codelineno-19-7" href="#__codelineno-19-7"></a>│   ├── stream-handler.js               # StreamHandler — SSE buffer, RAF rendering, typed events
+</span><span id="__span-19-8"><a id="__codelineno-19-8" name="__codelineno-19-8" href="#__codelineno-19-8"></a>│   └── command-dispatcher.js           # CommandDispatcher — slash command routing
+</span><span id="__span-19-9"><a id="__codelineno-19-9" name="__codelineno-19-9" href="#__codelineno-19-9"></a>│       commands/                       # Per-group command handlers
+</span><span id="__span-19-10"><a id="__codelineno-19-10" name="__codelineno-19-10" href="#__codelineno-19-10"></a>│       ├── file-commands.js            # /show, /edit, /ls, /tree, /cd, /pwd, /preview
+</span><span id="__span-19-11"><a id="__codelineno-19-11" name="__codelineno-19-11" href="#__codelineno-19-11"></a>│       ├── session-commands.js         # /save, /load, /sessions, /clear, /export
+</span><span id="__span-19-12"><a id="__codelineno-19-12" name="__codelineno-19-12" href="#__codelineno-19-12"></a>│       ├── model-commands.js           # /provider, /model, /tools, /agent
+</span><span id="__span-19-13"><a id="__codelineno-19-13" name="__codelineno-19-13" href="#__codelineno-19-13"></a>│       └── …
+</span><span id="__span-19-14"><a id="__codelineno-19-14" name="__codelineno-19-14" href="#__codelineno-19-14"></a>├── components/
+</span><span id="__span-19-15"><a id="__codelineno-19-15" name="__codelineno-19-15" href="#__codelineno-19-15"></a>│   ├── file-tree.js                    # FileTreeComponent — collapsible sidebar (v1.16.2)
+</span><span id="__span-19-16"><a id="__codelineno-19-16" name="__codelineno-19-16" href="#__codelineno-19-16"></a>│   ├── right-panel-frame.js            # RightPanelFrame — LRU view stack navigator (v1.16.2)
+</span><span id="__span-19-17"><a id="__codelineno-19-17" name="__codelineno-19-17" href="#__codelineno-19-17"></a>│   └── views/
+</span><span id="__span-19-18"><a id="__codelineno-19-18" name="__codelineno-19-18" href="#__codelineno-19-18"></a>│       ├── base-view.js                # BaseView ABC — mount/unmount/getState/setState protocol
+</span><span id="__span-19-19"><a id="__codelineno-19-19" name="__codelineno-19-19" href="#__codelineno-19-19"></a>│       ├── code-editor-view.js         # CodeEditorView — CodeMirror 6, unified view/edit
+</span><span id="__span-19-20"><a id="__codelineno-19-20" name="__codelineno-19-20" href="#__codelineno-19-20"></a>│       ├── markdown-file-view.js       # MarkdownFileView — rendered / source / edit modes
+</span><span id="__span-19-21"><a id="__codelineno-19-21" name="__codelineno-19-21" href="#__codelineno-19-21"></a>│       ├── data-file-view.js           # DataFileView — table/tree for CSV/JSON/YAML/TOML/HCL
+</span><span id="__span-19-22"><a id="__codelineno-19-22" name="__codelineno-19-22" href="#__codelineno-19-22"></a>│       ├── image-file-view.js          # ImageFileView — &lt;img&gt; + click-to-zoom
+</span><span id="__span-19-23"><a id="__codelineno-19-23" name="__codelineno-19-23" href="#__codelineno-19-23"></a>│       └── pdf-file-view.js            # PdfFileView — &lt;embed&gt; iframe
+</span><span id="__span-19-24"><a id="__codelineno-19-24" name="__codelineno-19-24" href="#__codelineno-19-24"></a>└── styles/
+</span><span id="__span-19-25"><a id="__codelineno-19-25" name="__codelineno-19-25" href="#__codelineno-19-25"></a>    ├── main.css                        # Global styles
+</span><span id="__span-19-26"><a id="__codelineno-19-26" name="__codelineno-19-26" href="#__codelineno-19-26"></a>    ├── file-tree.css                   # Sidebar styles
+</span><span id="__span-19-27"><a id="__codelineno-19-27" name="__codelineno-19-27" href="#__codelineno-19-27"></a>    └── right-panel-frame.css           # Frame chrome + view styles
+</span></code></pre></div>
+<h3 id="module-dependency-graph-web">Module Dependency Graph (Web)<a class="headerlink" href="#module-dependency-graph-web" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>app-state.js          (no deps — leaf)
+</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>api-client.js         (no deps — leaf)
+</span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a>         ↓
+</span><span id="__span-20-4"><a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a>stream-handler.js     (uses api-client)
+</span><span id="__span-20-5"><a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a>command-dispatcher.js (uses api-client, app-state)
+</span><span id="__span-20-6"><a id="__codelineno-20-6" name="__codelineno-20-6" href="#__codelineno-20-6"></a>         ↓
+</span><span id="__span-20-7"><a id="__codelineno-20-7" name="__codelineno-20-7" href="#__codelineno-20-7"></a>base-view.js          (uses api-client, app-state)
+</span><span id="__span-20-8"><a id="__codelineno-20-8" name="__codelineno-20-8" href="#__codelineno-20-8"></a>         ↓
+</span><span id="__span-20-9"><a id="__codelineno-20-9" name="__codelineno-20-9" href="#__codelineno-20-9"></a>*-view.js             (extend BaseView)
+</span><span id="__span-20-10"><a id="__codelineno-20-10" name="__codelineno-20-10" href="#__codelineno-20-10"></a>         ↓
+</span><span id="__span-20-11"><a id="__codelineno-20-11" name="__codelineno-20-11" href="#__codelineno-20-11"></a>right-panel-frame.js  (uses views, app-state)
+</span><span id="__span-20-12"><a id="__codelineno-20-12" name="__codelineno-20-12" href="#__codelineno-20-12"></a>file-tree.js          (uses api-client — standalone, no app-state dep)
+</span><span id="__span-20-13"><a id="__codelineno-20-13" name="__codelineno-20-13" href="#__codelineno-20-13"></a>         ↓
+</span><span id="__span-20-14"><a id="__codelineno-20-14" name="__codelineno-20-14" href="#__codelineno-20-14"></a>app.js                (PpxaiApp — orchestrates all modules)
+</span></code></pre></div>
+<h3 id="key-patterns">Key Patterns<a class="headerlink" href="#key-patterns" title="Permanent link">&para;</a></h3>
+<p><strong>AppState</strong> — centralised key-value store with per-key listeners. Views access <code>serverUrl</code>, <code>sessionHeaders</code>, and config via <code>appState.get(key)</code>. No direct import of app-level globals.</p>
+<p><strong>RightPanelFrame</strong> — LRU view stack. <code>push(view)</code> deduplicates by path, evicts oldest non-pinned view when full (default depth 10). Back/forward navigation with <code>Cmd+←/→</code> (macOS) or <code>Alt+←/→</code>. <code>getState()</code>/<code>setState()</code> on views preserve scroll position and editor cursor across nav.</p>
+<p><strong>FileTreeComponent</strong> — standalone (no AppState). Lazy-loads directory contents via <code>GET /files/list</code>. <code>refresh(clearExpanded=true)</code> collapses all expanded dirs when working directory changes (prevents stale 404 paths). <code>onDirCd</code> callback fires for <code>..</code>, double-click, and right-click on directories.</p>
+<p><strong>StreamHandler</strong> — wraps the SSE fetch with a proper line buffer and <code>requestAnimationFrame</code>-gated rendering. Exposes an async iterator; <code>handleStreamEvent()</code> in app.js dispatches on <code>event.type</code>.</p>
+<p><strong>Inline image flow</strong> — when <code>display_file</code> SSE fires for an image extension: (1) inline <code>&lt;img&gt;</code> injected into chat bubble via <code>/files/image/{path}</code> endpoint, tracked in <code>_streamInlineImages</code>; (2) <code>stream_end</code> prepends <code>_streamInlineImages</code> to the server's text response to preserve order; (3) <code>showToolResult</code> skips the bubble for <code>display_file</code> events.</p>
+<h3 id="server-web-api-key-endpoints">Server ↔ Web API (key endpoints)<a class="headerlink" href="#server-web-api-key-endpoints" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Endpoint</th>
+<th>Method</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/chat</code></td>
+<td>POST</td>
+<td>Stream chat; returns SSE events</td>
+</tr>
+<tr>
+<td><code>/complete</code></td>
+<td>POST</td>
+<td>Autocomplete — returns completion items for buffer+cursor</td>
+</tr>
+<tr>
+<td><code>/files/list</code></td>
+<td>GET</td>
+<td>Directory listing (<code>at_fs_root</code> flag)</td>
+</tr>
+<tr>
+<td><code>/files/read</code></td>
+<td>POST</td>
+<td>Read file (returns relative path from working dir)</td>
+</tr>
+<tr>
+<td><code>/files/write</code></td>
+<td>POST</td>
+<td>Write file</td>
+</tr>
+<tr>
+<td><code>/files/image/{path}</code></td>
+<td>GET</td>
+<td>Serve image binary for inline display</td>
+</tr>
+<tr>
+<td><code>/files/serve/{file_id}</code></td>
+<td>GET</td>
+<td>Serve uploaded file by content-addressed ID</td>
+</tr>
+<tr>
+<td><code>/files/preview/{file_id}</code></td>
+<td>GET</td>
+<td>Preview rendering (PPTX slides, DOCX→PDF)</td>
+</tr>
+<tr>
+<td><code>/command</code></td>
+<td>POST</td>
+<td>CommandFactory server pattern (unified <code>/usage</code>, <code>/status</code>, etc.)</td>
+</tr>
+<tr>
+<td><code>/set_working_dir</code></td>
+<td>POST</td>
+<td>Change working directory (REST, no SSE emitted)</td>
+</tr>
+<tr>
+<td><code>/interrupt</code></td>
+<td>POST</td>
+<td>Abort current streaming response</td>
+</tr>
+<tr>
+<td><code>/checkpoint/undo</code></td>
+<td>POST</td>
+<td>Undo last agent operation</td>
+</tr>
+</tbody>
+</table>
+<h2 id="cross-client-autocomplete-v117x">Cross-Client Autocomplete (v1.17.x)<a class="headerlink" href="#cross-client-autocomplete-v117x" title="Permanent link">&para;</a></h2>
+<p><code>ppxai/engine/completion.py</code> is the <strong>single source of truth</strong> for
+autocomplete across all four clients. Rich and Textual call it in-
+process; Web and VSCode call it via <code>POST /complete</code>. Client completers
+are pure glue layers — no client owns any subcommand tables, no client
+scans its own buffer to decide completion mode.</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>                  ┌──────────────────────────────────────────┐
+</span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a>                  │  engine/completion.py  ::  complete()    │
+</span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a>                  │  ──────────────────────────────────────  │
+</span><span id="__span-21-4"><a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a>                  │  • slash commands (CommandFactory)       │
+</span><span id="__span-21-5"><a id="__codelineno-21-5" name="__codelineno-21-5" href="#__codelineno-21-5"></a>                  │  • aliases + /quit /exit                 │
+</span><span id="__span-21-6"><a id="__codelineno-21-6" name="__codelineno-21-6" href="#__codelineno-21-6"></a>                  │  • path args (/attach, /cd, ...)         │
+</span><span id="__span-21-7"><a id="__codelineno-21-7" name="__codelineno-21-7" href="#__codelineno-21-7"></a>                  │  • subcommands (/tools, /usage, ...)     │
+</span><span id="__span-21-8"><a id="__codelineno-21-8" name="__codelineno-21-8" href="#__codelineno-21-8"></a>                  │  • /model + /provider (dynamic)          │
+</span><span id="__span-21-9"><a id="__codelineno-21-9" name="__codelineno-21-9" href="#__codelineno-21-9"></a>                  │  • /tools help &lt;tool&gt;                    │
+</span><span id="__span-21-10"><a id="__codelineno-21-10" name="__codelineno-21-10" href="#__codelineno-21-10"></a>                  │  • @file refs + @git/@tree/@clipboard/   │
+</span><span id="__span-21-11"><a id="__codelineno-21-11" name="__codelineno-21-11" href="#__codelineno-21-11"></a>                  │    @url context providers                │
+</span><span id="__span-21-12"><a id="__codelineno-21-12" name="__codelineno-21-12" href="#__codelineno-21-12"></a>                  └──────────────────────────────────────────┘
+</span><span id="__span-21-13"><a id="__codelineno-21-13" name="__codelineno-21-13" href="#__codelineno-21-13"></a>                         ▲             ▲
+</span><span id="__span-21-14"><a id="__codelineno-21-14" name="__codelineno-21-14" href="#__codelineno-21-14"></a>            in-process   │             │  in-process
+</span><span id="__span-21-15"><a id="__codelineno-21-15" name="__codelineno-21-15" href="#__codelineno-21-15"></a>           ┌─────────────┘             └──────────┐
+</span><span id="__span-21-16"><a id="__codelineno-21-16" name="__codelineno-21-16" href="#__codelineno-21-16"></a>           │                                      │
+</span><span id="__span-21-17"><a id="__codelineno-21-17" name="__codelineno-21-17" href="#__codelineno-21-17"></a>  ┌────────┴────────┐                  ┌──────────┴────────┐
+</span><span id="__span-21-18"><a id="__codelineno-21-18" name="__codelineno-21-18" href="#__codelineno-21-18"></a>  │  Rich TUI       │                  │  Textual TUI      │
+</span><span id="__span-21-19"><a id="__codelineno-21-19" name="__codelineno-21-19" href="#__codelineno-21-19"></a>  │  PPXAICompleter │                  │  TextualCompleter │
+</span><span id="__span-21-20"><a id="__codelineno-21-20" name="__codelineno-21-20" href="#__codelineno-21-20"></a>  │  (~85 lines)    │                  │  (~100 lines)     │
+</span><span id="__span-21-21"><a id="__codelineno-21-21" name="__codelineno-21-21" href="#__codelineno-21-21"></a>  └─────────────────┘                  └───────────────────┘
+</span><span id="__span-21-22"><a id="__codelineno-21-22" name="__codelineno-21-22" href="#__codelineno-21-22"></a>
+</span><span id="__span-21-23"><a id="__codelineno-21-23" name="__codelineno-21-23" href="#__codelineno-21-23"></a>                       POST /complete
+</span><span id="__span-21-24"><a id="__codelineno-21-24" name="__codelineno-21-24" href="#__codelineno-21-24"></a>           ┌─────────────┐             ┌──────────┐
+</span><span id="__span-21-25"><a id="__codelineno-21-25" name="__codelineno-21-25" href="#__codelineno-21-25"></a>           │             ▼             ▼          │
+</span><span id="__span-21-26"><a id="__codelineno-21-26" name="__codelineno-21-26" href="#__codelineno-21-26"></a>  ┌────────┴────────┐                  ┌──────────┴────────┐
+</span><span id="__span-21-27"><a id="__codelineno-21-27" name="__codelineno-21-27" href="#__codelineno-21-27"></a>  │  server/routes/ │                  │                   │
+</span><span id="__span-21-28"><a id="__codelineno-21-28" name="__codelineno-21-28" href="#__codelineno-21-28"></a>  │  completion.py  │◀────── ▲ ────────┤  vscode webview   │
+</span><span id="__span-21-29"><a id="__codelineno-21-29" name="__codelineno-21-29" href="#__codelineno-21-29"></a>  │  passes:        │        │         │  media/main.js    │
+</span><span id="__span-21-30"><a id="__codelineno-21-30" name="__codelineno-21-30" href="#__codelineno-21-30"></a>  │   • working_dir │        │         │  unified @+/ flow │
+</span><span id="__span-21-31"><a id="__codelineno-21-31" name="__codelineno-21-31" href="#__codelineno-21-31"></a>  │   • current_    │        │         └───────────────────┘
+</span><span id="__span-21-32"><a id="__codelineno-21-32" name="__codelineno-21-32" href="#__codelineno-21-32"></a>  │     provider    │        │
+</span><span id="__span-21-33"><a id="__codelineno-21-33" name="__codelineno-21-33" href="#__codelineno-21-33"></a>  │   • tool_names  │        │         ┌───────────────────┐
+</span><span id="__span-21-34"><a id="__codelineno-21-34" name="__codelineno-21-34" href="#__codelineno-21-34"></a>  │     (live)      │◀───────┴────────┤  web app.js       │
+</span><span id="__span-21-35"><a id="__codelineno-21-35" name="__codelineno-21-35" href="#__codelineno-21-35"></a>  └─────────────────┘                  │  _fetchAutocomplete│
+</span><span id="__span-21-36"><a id="__codelineno-21-36" name="__codelineno-21-36" href="#__codelineno-21-36"></a>                                       └───────────────────┘
+</span></code></pre></div>
+<h3 id="stable-completion-item-schema">Stable completion item schema<a class="headerlink" href="#stable-completion-item-schema" title="Permanent link">&para;</a></h3>
+<p>Every client — in-process or over HTTP — consumes the same dict shape:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="p">{</span>
+</span><span id="__span-22-2"><a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a>  <span class="s2">&quot;text&quot;</span><span class="p">:</span>          <span class="nb">str</span><span class="p">,</span>   <span class="c1"># text to insert</span>
+</span><span id="__span-22-3"><a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a>  <span class="s2">&quot;display&quot;</span><span class="p">:</span>       <span class="nb">str</span><span class="p">,</span>   <span class="c1"># what to show in the dropdown</span>
+</span><span id="__span-22-4"><a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a>  <span class="s2">&quot;description&quot;</span><span class="p">:</span>   <span class="nb">str</span><span class="p">,</span>   <span class="c1"># hover/meta text</span>
+</span><span id="__span-22-5"><a id="__codelineno-22-5" name="__codelineno-22-5" href="#__codelineno-22-5"></a>  <span class="s2">&quot;kind&quot;</span><span class="p">:</span>          <span class="nb">str</span><span class="p">,</span>   <span class="c1"># command | alias | dir | file | file_ref</span>
+</span><span id="__span-22-6"><a id="__codelineno-22-6" name="__codelineno-22-6" href="#__codelineno-22-6"></a>                          <span class="c1"># | context_ref | subcommand | tool | model</span>
+</span><span id="__span-22-7"><a id="__codelineno-22-7" name="__codelineno-22-7" href="#__codelineno-22-7"></a>                          <span class="c1"># | provider | theme</span>
+</span><span id="__span-22-8"><a id="__codelineno-22-8" name="__codelineno-22-8" href="#__codelineno-22-8"></a>  <span class="s2">&quot;replace_start&quot;</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>   <span class="c1"># negative offset from cursor:</span>
+</span><span id="__span-22-9"><a id="__codelineno-22-9" name="__codelineno-22-9" href="#__codelineno-22-9"></a>                          <span class="c1"># replace |replace_start| chars with text</span>
+</span><span id="__span-22-10"><a id="__codelineno-22-10" name="__codelineno-22-10" href="#__codelineno-22-10"></a><span class="p">}</span>
+</span></code></pre></div>
+<p>Clients map this to whatever native completion type they need
+(<code>prompt_toolkit.Completion</code> for Rich, tuples for Textual's InputBox,
+DOM elements for Web + VSCode webview). <code>replace_start</code> is how every
+client knows where to splice the text, so <code>selectAutocompleteItem</code>
+logic is identical across platforms — no special-casing <code>@</code> vs <code>/</code>.</p>
+<h3 id="why-this-matters">Why this matters<a class="headerlink" href="#why-this-matters" title="Permanent link">&para;</a></h3>
+<p>Before v1.17.x, each client kept its own hand-maintained tables of
+subcommands, context providers, and path-arg rules. They drifted
+constantly: Web and VSCode had no <code>/tools enable</code> completion; Textual
+had <code>@git</code>/<code>@tree</code>/<code>@clipboard</code>/<code>@url</code> but Rich didn't; Rich had
+<code>/model</code> + <code>/provider</code> lookups but the others showed nothing. Adding
+a new subcommand meant editing five files and guessing which clients
+to retest.</p>
+<p>After the unification, adding a new subcommand or context provider
+is a one-file change in <code>engine/completion.py</code>. The web client picks
+it up for free (no recompile needed, just a server restart). VSCode
+picks it up on the next extension reload. Rich and Textual get it
+immediately because they call the engine in-process. Tests live next
+to the engine logic in <code>tests/test_completion_provider.py</code> (39 tests
+covering every source).</p>
+<h2 id="schema-driven-appstate-dto-v1174">Schema-Driven AppState DTO (v1.17.4)<a class="headerlink" href="#schema-driven-appstate-dto-v1174" title="Permanent link">&para;</a></h2>
+<p>Every client's observable application state (provider, model, tools,
+tokens, context attachments, etc.) derives from <strong>one</strong> JSON schema
+file, <code>ppxai/engine/app_state_schema.json</code>. This is the golden source
+of truth for cross-language state field definitions.</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a>    ppxai/engine/app_state_schema.json   ← golden source of truth
+</span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a>              │
+</span><span id="__span-23-3"><a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a>    ┌─────────┴─────────────────────────┐
+</span><span id="__span-23-4"><a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a>    ▼                                   ▼
+</span><span id="__span-23-5"><a id="__codelineno-23-5" name="__codelineno-23-5" href="#__codelineno-23-5"></a>Python (engine/app_state.py)       VSCode (appState.ts)
+</span><span id="__span-23-6"><a id="__codelineno-23-6" name="__codelineno-23-6" href="#__codelineno-23-6"></a>loaded via importlib.resources     loaded via fs.readFileSync from
+</span><span id="__span-23-7"><a id="__codelineno-23-7" name="__codelineno-23-7" href="#__codelineno-23-7"></a>at module import. AppState.FIELDS  vscode-extension/resources/...
+</span><span id="__span-23-8"><a id="__codelineno-23-8" name="__codelineno-23-8" href="#__codelineno-23-8"></a>derived from SCHEMA.               (synced by scripts/sync-schema.js
+</span><span id="__span-23-9"><a id="__codelineno-23-9" name="__codelineno-23-9" href="#__codelineno-23-9"></a>                                   precompile hook, byte-for-byte
+</span><span id="__span-23-10"><a id="__codelineno-23-10" name="__codelineno-23-10" href="#__codelineno-23-10"></a>                                   equality pinned by pytest)
+</span><span id="__span-23-11"><a id="__codelineno-23-11" name="__codelineno-23-11" href="#__codelineno-23-11"></a>    │                                   ▲
+</span><span id="__span-23-12"><a id="__codelineno-23-12" name="__codelineno-23-12" href="#__codelineno-23-12"></a>    │                                   │ sync-schema.js
+</span><span id="__span-23-13"><a id="__codelineno-23-13" name="__codelineno-23-13" href="#__codelineno-23-13"></a>    │                                   │ (on every npm run compile)
+</span><span id="__span-23-14"><a id="__codelineno-23-14" name="__codelineno-23-14" href="#__codelineno-23-14"></a>    │                                   │
+</span><span id="__span-23-15"><a id="__codelineno-23-15" name="__codelineno-23-15" href="#__codelineno-23-15"></a>    │   ┌──────────────────────────────┘
+</span><span id="__span-23-16"><a id="__codelineno-23-16" name="__codelineno-23-16" href="#__codelineno-23-16"></a>    │   │
+</span><span id="__span-23-17"><a id="__codelineno-23-17" name="__codelineno-23-17" href="#__codelineno-23-17"></a>    ▼   ▼
+</span><span id="__span-23-18"><a id="__codelineno-23-18" name="__codelineno-23-18" href="#__codelineno-23-18"></a>GET /schema/app-state   (server/routes/schema.py)
+</span><span id="__span-23-19"><a id="__codelineno-23-19" name="__codelineno-23-19" href="#__codelineno-23-19"></a>returns canonical SCHEMA as JSON
+</span><span id="__span-23-20"><a id="__codelineno-23-20" name="__codelineno-23-20" href="#__codelineno-23-20"></a>    │
+</span><span id="__span-23-21"><a id="__codelineno-23-21" name="__codelineno-23-21" href="#__codelineno-23-21"></a>    ├── Web: server/routes/static.py injects
+</span><span id="__span-23-22"><a id="__codelineno-23-22" name="__codelineno-23-22" href="#__codelineno-23-22"></a>    │   &lt;script&gt;window.APP_STATE_SCHEMA = {...}&lt;/script&gt;
+</span><span id="__span-23-23"><a id="__codelineno-23-23" name="__codelineno-23-23" href="#__codelineno-23-23"></a>    │   into index.html before shared/app-state.js runs
+</span><span id="__span-23-24"><a id="__codelineno-23-24" name="__codelineno-23-24" href="#__codelineno-23-24"></a>    │
+</span><span id="__span-23-25"><a id="__codelineno-23-25" name="__codelineno-23-25" href="#__codelineno-23-25"></a>    └── Diagnostic tooling, CI, future REST consumers
+</span></code></pre></div>
+<h3 id="what-uses-the-dto">What uses the DTO<a class="headerlink" href="#what-uses-the-dto" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Client</th>
+<th>Mechanism</th>
+<th>Derivation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Python AppState</strong> (Rich TUI + Textual TUI + Engine)</td>
+<td><code>importlib.resources.files("ppxai.engine") / "app_state_schema.json"</code> parsed at module import</td>
+<td><code>AppState.FIELDS</code> is derived via <code>_build_fields(SCHEMA)</code>; mutable defaults cloned per instance</td>
+</tr>
+<tr>
+<td><strong>Web AppState</strong> (browser)</td>
+<td><code>window.APP_STATE_SCHEMA</code> injected into <code>index.html</code> by the FastAPI static route before any script runs</td>
+<td><code>AppState</code> constructor reads the global, derives <code>_pythonToJs</code> and defaults from <code>schema.fields</code></td>
+</tr>
+<tr>
+<td><strong>VSCode AppState</strong> (extension)</td>
+<td><code>fs.readFileSync()</code> of <code>../resources/app-state-schema.json</code> at module init</td>
+<td><code>AppState</code> module-init code builds <code>PYTHON_TO_TS</code> + defaults from the loaded JSON</td>
+</tr>
+</tbody>
+</table>
+<p>The Python TUIs (<code>ppxai</code> and <code>ppxaide</code>) <strong>also</strong> use the schema —
+transitively, through the Python <code>AppState</code> class in
+<code>ppxai/engine/app_state.py</code>. They access state via <code>engine_client.state</code>
+which is a schema-driven <code>AppState</code> instance. A
+<code>test_python_tui_state_access_uses_schema_fields_only</code> test scans the
+TUI sources and asserts every <code>state.get/on/set("&lt;field&gt;")</code> call
+references a schema-declared field — drift surfaces at CI time.</p>
+<h3 id="schema-entry-format">Schema entry format<a class="headerlink" href="#schema-entry-format" title="Permanent link">&para;</a></h3>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="p">{</span>
+</span><span id="__span-24-2"><a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a><span class="w">  </span><span class="nt">&quot;provider&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-24-3"><a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a><span class="w">    </span><span class="nt">&quot;client&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;currentProvider&quot;</span><span class="p">,</span>
+</span><span id="__span-24-4"><a id="__codelineno-24-4" name="__codelineno-24-4" href="#__codelineno-24-4"></a><span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="p">,</span>
+</span><span id="__span-24-5"><a id="__codelineno-24-5" name="__codelineno-24-5" href="#__codelineno-24-5"></a><span class="w">    </span><span class="nt">&quot;default&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&quot;</span><span class="p">,</span>
+</span><span id="__span-24-6"><a id="__codelineno-24-6" name="__codelineno-24-6" href="#__codelineno-24-6"></a><span class="w">    </span><span class="nt">&quot;group&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;core&quot;</span><span class="p">,</span>
+</span><span id="__span-24-7"><a id="__codelineno-24-7" name="__codelineno-24-7" href="#__codelineno-24-7"></a><span class="w">    </span><span class="nt">&quot;doc&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Active provider ID&quot;</span>
+</span><span id="__span-24-8"><a id="__codelineno-24-8" name="__codelineno-24-8" href="#__codelineno-24-8"></a><span class="w">  </span><span class="p">}</span>
+</span><span id="__span-24-9"><a id="__codelineno-24-9" name="__codelineno-24-9" href="#__codelineno-24-9"></a><span class="p">}</span>
+</span></code></pre></div>
+<ul>
+<li><strong><code>client</code></strong>: camelCase name used by Web (<code>this.state.currentProvider</code>)
+  and TypeScript (<code>state.get("currentProvider")</code>). Python uses the
+  snake_case top-level key directly.</li>
+<li><strong><code>type</code></strong>: one of <code>string | boolean | integer | number | array | object</code>.</li>
+<li><strong><code>default</code></strong>: initial value. Mutable defaults (lists, dicts) are
+  cloned per instance so observers on one AppState don't leak into
+  another.</li>
+<li><strong><code>group</code></strong>: documentation/layout hint (<code>core</code>, <code>features</code>,
+  <code>streaming</code>, <code>usage</code>, <code>multimodal</code>, <code>debug</code>).</li>
+<li><strong><code>doc</code></strong>: optional human-readable description.</li>
+</ul>
+<h3 id="drift-protection">Drift protection<a class="headerlink" href="#drift-protection" title="Permanent link">&para;</a></h3>
+<p>Four layers, in increasing severity:</p>
+<ol>
+<li><strong>Schema format tests</strong> (<code>tests/test_app_state.py::TestSchemaDTO</code>)
+   pin that every entry has the required properties, types match
+   their defaults, names follow case conventions, etc.</li>
+<li><strong>VSCode bundled-copy equality</strong> test does byte-for-byte
+   comparison between the canonical JSON and the copy bundled with
+   the extension. CI fails if someone edits one without running
+   <code>npm run sync-schema</code>.</li>
+<li><strong>TUI field-name scan</strong> test pins that Rich + Textual source code
+   only accesses state fields declared in the schema.</li>
+<li><strong>Runtime drift warnings</strong> in both Web + VSCode <code>updateFromPython()</code>
+   fire if the server pushes an unknown field — covers the case where
+   server and client are running different ppxai versions.</li>
+</ol>
+<h3 id="adding-a-new-field">Adding a new field<a class="headerlink" href="#adding-a-new-field" title="Permanent link">&para;</a></h3>
+<p>One edit: add an entry to <code>ppxai/engine/app_state_schema.json</code>. Then
+bump the sentinel count in
+<code>tests/test_app_state.py::TestSchemaDTO::test_schema_has_fields_dict</code>
+and (until v1.18.x codegen lands) add the camelCase name to the
+<code>AppStateFields</code> TypeScript interface in
+<code>vscode-extension/src/appState.ts</code>. Everything else propagates
+automatically:</p>
+<ul>
+<li>Python <code>AppState.FIELDS</code> picks it up at next import</li>
+<li><code>GET /schema/app-state</code> returns the updated schema</li>
+<li><code>serve_index</code> injects the updated schema into <code>index.html</code></li>
+<li>Web <code>AppState</code> reads it from <code>window.APP_STATE_SCHEMA</code></li>
+<li><code>sync-schema.js</code> copies the new JSON to <code>vscode-extension/resources/</code>
+  on the next <code>npm run compile</code></li>
+<li>VSCode <code>AppState</code> reads the bundled copy</li>
+</ul>
+<p>The v1.18.x schema-generator work in <code>docs/TODO-appstate-codegen.md</code>
+builds on this: runtime loading is the architecture; codegen adds
+compile-time type generation for TypeScript so the <code>AppStateFields</code>
+interface becomes an artifact instead of hand-maintained.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/rcconsult/ppxai" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
