@@ -11,6 +11,7 @@ from .defaults import (
     DEFAULT_AGENT_MAX_SAME_TOOL_CALLS,
     DEFAULT_AGENT_MAX_TOOL_ITERATIONS,
     DEFAULT_AGENT_MIN_TASK_WORDS,
+    DEFAULT_AGENT_ZOMBIE_THRESHOLD,
     DEFAULT_ALLOWED_COMMANDS,
     DEFAULT_DANGEROUS_COMMANDS,
     DEFAULT_NEVER_ALLOW,
@@ -96,6 +97,10 @@ def get_agent_config() -> Dict[str, Any]:
         "context_char_limit": agent_config.get("context_char_limit", DEFAULT_AGENT_CONTEXT_CHAR_LIMIT),
         "min_task_words": agent_config.get("min_task_words", DEFAULT_AGENT_MIN_TASK_WORDS),
         "auto_retry_empty": agent_config.get("auto_retry_empty", DEFAULT_AGENT_AUTO_RETRY_EMPTY),
+        # P0 (v1.18.0) — circuit breaker for the tool loop.
+        # Override via `"tools": {"agent": {"zombie_threshold": N}}` in
+        # ppxai-config.json; 0 disables zombie detection entirely.
+        "zombie_threshold": agent_config.get("zombie_threshold", DEFAULT_AGENT_ZOMBIE_THRESHOLD),
     }
 
 

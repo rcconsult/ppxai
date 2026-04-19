@@ -147,6 +147,23 @@ def _get_effective_profile(model: str, provider: str, ctx: ChatContext) -> Model
     )
 
 
+def _get_zombie_threshold(ctx: ChatContext) -> int:
+    """Read the P0 (v1.18.0) circuit-breaker threshold from agent config.
+
+    Returns the integer zombie_threshold — default 3, override via
+    `tools.agent.zombie_threshold` in ppxai-config.json. 0 disables
+    zombie detection entirely. Failures are swallowed and return the
+    default; zombie detection is a safety net, not a hard contract —
+    if config resolution breaks at runtime we fall back to the default
+    rather than crashing the tool loop.
+    """
+    try:
+        from ..config import get_agent_config
+        return int(get_agent_config().get("zombie_threshold", 3))
+    except Exception:
+        return 3
+
+
 def _get_bootstrap_tool_calling(ctx: ChatContext, model: str) -> dict:
     """Extract tool_calling overrides from bootstrap context for a model.
 
@@ -842,6 +859,35 @@ async def chat_with_tools(
                 beat.last_run_ok = False
                 beat.consecutive_failures += 1
             yield Event(EventType.AGENT_BEAT, beat.as_event_data())
+
+            # P0 (v1.18.0) — zombie detection / circuit breaker.
+            # Read the threshold from tools.agent config (0 disables).
+            # Consecutive failed iterations past the threshold → emit
+            # AGENT_ZOMBIE and break the loop. Without this, a model
+            # whose apply_patch fails 10× with hallucinated variations
+            # burns max_iterations worth of tokens before giving up.
+            zombie_threshold = _get_zombie_threshold(ctx)
+            if zombie_threshold > 0 and beat.consecutive_failures >= zombie_threshold:
+                yield Event(EventType.AGENT_ZOMBIE, {
+                    "reason": f"{beat.consecutive_failures} consecutive tool failures",
+                    "threshold": zombie_threshold,
+                    "last_tool": beat.last_tool,
+                    "iteration": iteration,
+                    "elapsed_s": round(beat.elapsed_s, 1),
+                })
+                # Treat as an error-exit — clears AppState.agent_beat
+                # via EngineClient interception and gives SRE consumers
+                # a terminal lifecycle event.
+                yield Event(EventType.AGENT_RUN_ERROR, {
+                    "reason": "zombie",
+                    "iteration": iteration,
+                    "elapsed_s": round(beat.elapsed_s, 1),
+                    "detail": (
+                        f"Circuit breaker tripped at {zombie_threshold} "
+                        f"consecutive failures on tool {beat.last_tool!r}."
+                    ),
+                })
+                return
 
             continue
 

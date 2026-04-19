@@ -195,6 +195,7 @@ class ToolSetting:
     VERBOSE: Final[str] = "verbose"
     CONTEXT_CHAR_LIMIT: Final[str] = "context_char_limit"
     MIN_TASK_WORDS: Final[str] = "min_task_words"
+    ZOMBIE_THRESHOLD: Final[str] = "zombie_threshold"  # P0 (v1.18.0)
 
 
 # =============================================================================
@@ -210,6 +211,12 @@ class Default:
     AUTO_RETRY_EMPTY: Final[int] = 3
     CONTEXT_CHAR_LIMIT: Final[int] = 2000
     MIN_TASK_WORDS: Final[int] = 3
+    # P0 (v1.18.0) circuit-breaker threshold: if the same run hits this
+    # many consecutive tool-iteration failures the engine emits
+    # AGENT_ZOMBIE and stops the loop. Prevents runaway "apply_patch
+    # fails 10× with hallucinated variations" sessions from burning
+    # max_iterations worth of tokens before giving up.
+    ZOMBIE_THRESHOLD: Final[int] = 3
 
     # Context limits
     CONTEXT_LIMIT: Final[int] = 128_000
