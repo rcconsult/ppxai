@@ -17,7 +17,7 @@
 
 No new user features. Internal wire-format change, delivered as a staged rollout with a strict byte-identical-LLM-strings invariant.
 
-**2040 tests passing (+37 net from v1.17.5), zero regressions.**
+**2068 tests passing (+65 net from v1.17.5), zero regressions.**
 
 ## Why this matters
 
@@ -62,15 +62,33 @@ Each stage is independently reversible.
 - **Web app** — `normalizeContent()` in `app.js` recognizes the new type.
 - **VSCode extension** — `textContent()` in `httpClient.ts` + `normalizeContent()` in the webview's `main.js`; TypeScript `ContentBlock` interface extended with the new optional fields.
 
+## R19 — ppxaide multimodal regression coverage (bonus)
+
+v1.17.6 was scoped as R5-only, but writing the R19 coverage tests uncovered two real bugs the engine-layer v1.17.5/6 fixes hadn't caught:
+
+1. **`MessageBox._normalize_content_to_text` missing `uploaded_file` branch** — R5 Stage 6 gap on the ppxaide widget side. PDFs rendered as `[uploaded_file]` instead of `[File: name (media_type)]` in the Textual chat bubble, inconsistent with the other three clients.
+
+2. **`AppState.set()` / `update()` didn't isolate listeners** — one raising widget-listener silently skipped every subsequent listener on the same field. Now matches the `SessionManager.on_messages_changed` try/except-with-warning policy.
+
+Both landed alongside **21 new tests in `tests/test_r19_ppxaide_multimodal.py`** covering all four R19 culprits:
+
+- **A1 (9 tests)** — `MessageBox` rendering of mixed text+image+uploaded_file content
+- **A2 (4 tests)** — full multimodal agent-turn event ordering through the dispatcher + blinker EventBus
+- **A3 (4 tests)** — `pending_files` lifecycle (happy path, error path, cross-send contamination)
+- **A4 (4 tests)** — `context_attachments` mid-stream listener resilience
+
+Three of R19's four suspected culprits are now covered directly (not just indirectly through engine-layer proxies). Culprit #3 (`pending_files` stale state) uses lightweight mocks of the send-path invariants; the full Textual integration-harness version is still possible if a concrete failure ever surfaces in the field.
+
 ## Tests
 
-- 2040 passing (was 2003 pre-R5) — +37 net, zero regressions
+- 2068 passing (was 2003 pre-R5) — +65 net, zero regressions
 - New test files:
   - `tests/test_uploaded_file_block.py` (13) — schema, defensive copy, byte-identical equivalence
   - `tests/test_r5_provider_flatten.py` (9) — all three provider entry points
   - `tests/test_r5_dual_read.py` (11) — consumers handle both shapes; mixed sessions
   - `tests/test_r5_end_to_end.py` (4) — full pipeline integration
   - `tests/test_r5_session_round_trip.py` (7) — R10 cache + session save/load
+  - `tests/test_r19_ppxaide_multimodal.py` (21) — ppxaide multimodal regression coverage
 - Existing files updated:
   - `tests/test_file_preprocessing.py` (3 assertions flipped to new shape)
   - `tests/test_csv_tools.py` (1 assertion flipped)
@@ -81,11 +99,13 @@ Drop-in release. No migration needed. The session format is unchanged — flat `
 
 ## Not in this release
 
-- **R19 — ppxaide multimodal fragility investigation.** Open-ended stress-test session; still deferred. No point fix available without reproducing the specific failure modes.
+- ~~R19 — ppxaide multimodal fragility investigation.~~ → **addressed in this release** via the 21-test coverage bundle above + the two fixes it surfaced. A full Textual-integration-harness stress test is still an option if field reports resurface; the point-fixable surface is now under test.
 
 ## Commits
 
 ```
+a021c4c6 test(ppxaide): R19 — targeted regression coverage + two real fixes
+aaf642f0 chore: bump version to v1.17.6 + CHANGELOG + release notes
 063499fe feat(clients): R5 Stage 6 — web + VSCode renderers handle uploaded_file
 94fe67d8 feat(session): R5 Stage 5 — R10 cache recognizes uploaded_file + round-trip tests
 6da602ef feat(file-preprocessing): R5 Stage 4 — producers emit structured uploaded_file blocks

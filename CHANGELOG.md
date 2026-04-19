@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.17.6] - 2026-04-19
 
+### Fixed
+
+- **R19 — MessageBox rendering gap for `uploaded_file` blocks.** The ppxaide Textual widget's `_normalize_content_to_text` was missing the R5 Stage 6 branch; assistant messages with PDF/Office attachments rendered as `[uploaded_file]` instead of `[File: name (media_type)]` — inconsistent with Rich TUI, web, and VSCode clients. Now uniform across all four clients.
+- **R19 — `AppState` listener dispatch wasn't isolated.** One listener raising during `set()` / `update()` silently broke the chain for every subsequent listener on the same field. Now wraps each callback in a try/except with a warning log — matches the `SessionManager.on_messages_changed` policy that already existed for session mutations. Prevents a buggy widget listener from wedging other observers mid-stream.
+
 ### Changed
 
 - **R5 — promoted uploaded-file attachments to a first-class content type** (`{"type": "uploaded_file", "name", "media_type", "file_id", "summary", "extra"}`). PDFs, Office documents, and large CSVs previously lived as `<uploaded_file>` XML markers embedded inside `{"type": "text"}` content blocks; every consumer had to regex-parse text to find attachments, and clients rendered the raw XML. The new block type eliminates the string parsing — `refresh_context_attachments`, `remove_context_attachment`, and the R10 multimodal-cache predicate now dispatch on `block["type"]`; web and VSCode clients render a compact `[Attached: name (media_type)]` badge.
@@ -15,6 +20,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Staged rollout.** Six commits on `bugfix/v1.17.6`: schema helpers, provider flatten, dual-read consumers, producer flip, R10 cache predicate + session round-trip, client renderers. Each stage independently reversible.
   - Producers flipped: `_preprocess_csv` (large-CSV lazy-load path), `_preprocess_pdf`, `_preprocess_office` (Excel/PPTX/DOCX) in `ppxai/engine/file_preprocessing.py`.
   - 37 new tests across `tests/test_uploaded_file_block.py`, `tests/test_r5_provider_flatten.py`, `tests/test_r5_dual_read.py`, `tests/test_r5_end_to_end.py`, `tests/test_r5_session_round_trip.py`.
+
+### Added
+
+- **R19 — targeted regression coverage for ppxaide multimodal flow.** 21 tests in `tests/test_r19_ppxaide_multimodal.py` covering the four failure modes the original R19 report flagged: mixed text+image+uploaded_file rendering, full multimodal agent-turn event ordering (STREAM_START → AGENT_INTERMEDIATE_PROSE → TOOL_GROUP_* → STREAM_END all routed via the blinker bus), `pending_files` lifecycle (clear on success, no cross-send contamination, clear even when engine raises), and `context_attachments` mid-stream listener resilience. The act of writing the tests surfaced the two bugs fixed above.
 
 ## [1.17.5] - 2026-04-19
 
