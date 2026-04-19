@@ -258,6 +258,24 @@ body {
     animation: pulse 1.5s ease-in-out infinite;
 }
 
+/* Agent heartbeat badge (P0 v1.18.0) — active only while the engine is
+ * iterating through agent-mode tool calls. Three states: default (ok),
+ * warn (failure streak mounting), error (zombie circuit-breaker tripped). */
+.agent-beat-badge {
+    background: var(--accent-color, var(--info-color));
+    color: var(--bg-primary);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+.agent-beat-badge.warn {
+    background: var(--warning-color);
+    color: var(--bg-primary);
+}
+.agent-beat-badge.error {
+    background: var(--danger-color, #dc2626);
+    color: #fff;
+}
+
 @keyframes pulse {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.6; }

@@ -873,6 +873,15 @@ class PpxaiApp {
                 // simple count badge so the user knows how many
                 // files the model currently "sees" in context.
                 this.updateAttachmentBadge();
+            } else if (pyKey === 'agent_beat') {
+                // P0 (v1.18.0): agent heartbeat badge. Engine pushes
+                // the current iteration/tool/elapsed via AppState; on
+                // run completion it sends an empty object which we
+                // interpret as "hide the badge". Zombie trips route
+                // here too — the engine clears agent_beat on
+                // AGENT_RUN_ERROR so the badge auto-hides, but a
+                // separate toast below surfaces the error cause.
+                this.updateAgentBeatBadge();
             }
         }
     }
@@ -886,6 +895,49 @@ class PpxaiApp {
      * that the AppState mirror is working and the server is pushing
      * attachment state changes correctly.
      */
+    /**
+     * Update the agent heartbeat badge in the header (P0 v1.18.0).
+     *
+     * Subscribes to `AppState.agent_beat` — the engine pushes the latest
+     * `AgentBeatState.as_event_data()` dict after each tool iteration
+     * and clears it (empty object) on run completion / run error. The
+     * badge displays iteration + tool + elapsed wall-clock; CSS variant
+     * reflects the failure streak so the user can see the zombie
+     * threshold approaching before the breaker trips.
+     */
+    updateAgentBeatBadge() {
+        const beat = this.state.agentBeat || {};
+        const badge = document.getElementById('agentBeatBadge');
+        const text = document.getElementById('agentBeatText');
+        if (!badge || !text) return;
+
+        const iteration = beat.iteration;
+        const tool = beat.tool || '';
+        const ok = beat.ok !== false;
+        const failures = beat.failures || 0;
+        const elapsed = beat.elapsed_s;
+
+        // Empty / missing payload hides the badge entirely.
+        if (!iteration && !tool && elapsed === undefined) {
+            badge.classList.add('hidden');
+            badge.classList.remove('warn', 'error');
+            text.textContent = 'idle';
+            return;
+        }
+
+        const parts = [`i${iteration || 0}`];
+        if (tool) parts.push(tool);
+        if (!ok) parts.push('fail');
+        if (failures) parts.push(`×${failures}`);
+        if (typeof elapsed === 'number') parts.push(`${elapsed}s`);
+        text.textContent = parts.join(' · ');
+
+        badge.classList.remove('warn', 'error');
+        if (failures >= 2) badge.classList.add('warn');
+        else if (!ok) badge.classList.add('error');
+        badge.classList.remove('hidden');
+    }
+
     updateAttachmentBadge() {
         const attachments = this.state.contextAttachments || [];
         const badge = document.getElementById('attachment-badge');
