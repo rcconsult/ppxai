@@ -692,7 +692,8 @@
       "context_char_limit": 4096,
       "min_task_words": 3,
       "checkpoint_backend": "auto",
-      "checkpoint_message": "ppxai checkpoint: {task}"
+      "checkpoint_message": "ppxai checkpoint: {task}",
+      "zombie_threshold": 2
     },
     "container": {
       "enabled": true,
