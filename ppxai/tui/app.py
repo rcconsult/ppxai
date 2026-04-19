@@ -233,6 +233,18 @@ class PPXAIDEApp(App):
             if initial_attachments:
                 self._on_context_attachments_changed(initial_attachments)
 
+        # P0 (v1.18.0): Subscribe to agent_beat for heartbeat badge.
+        # EngineClient emits BEAT events during tool iterations and writes
+        # the payload to AppState.agent_beat; RUN_COMPLETE/RUN_ERROR clear
+        # the field. The badge surfaces iteration, last tool, ok/fail, and
+        # elapsed wall-clock — same view as the Rich TUI's dim line but
+        # persistent in the status bar while the agent is active.
+        if self._engine_client:
+            self._engine_client.state.on(
+                "agent_beat",
+                self._on_agent_beat_changed,
+            )
+
         # Add optional status bar badges based on config (Phase 1.2)
         tui_config = get_tui_config()
 
@@ -580,6 +592,46 @@ class PPXAIDEApp(App):
         self._status_bar.add_badge(
             "attachments", "\U0001F4CE", f"{count}: {label}", variant="warning"
         )
+
+    def _on_agent_beat_changed(self, beat) -> None:
+        """Callback from AppState — update the agent heartbeat badge (P0 v1.18.0).
+
+        `beat` is the dict payload from `AgentBeatState.as_event_data()` or
+        an empty dict when the engine clears the field at run completion.
+        Empty beat hides the badge; active beat shows iteration, tool,
+        status, and elapsed wall-clock.
+        """
+        if not self._status_bar:
+            return
+        if not beat or not isinstance(beat, dict):
+            self._status_bar.remove_badge("agent_beat")
+            return
+
+        iteration = beat.get("iteration", 0)
+        tool = beat.get("tool", "")
+        ok = beat.get("ok", True)
+        failures = beat.get("failures", 0)
+        elapsed = beat.get("elapsed_s", 0.0)
+
+        parts = [f"i{iteration}"]
+        if tool:
+            parts.append(tool)
+        if failures:
+            parts.append(f"fail×{failures}")
+        parts.append(f"{elapsed}s")
+        value = " · ".join(parts)
+
+        # warning variant when a failure streak is mounting (but not yet
+        # tripping the zombie breaker); error variant when ok=False on the
+        # latest beat; success otherwise.
+        if failures >= 2:
+            variant = "warning"
+        elif not ok:
+            variant = "error"
+        else:
+            variant = "success"
+
+        self._status_bar.add_badge("agent_beat", "\u2699", value, variant=variant)
 
     def _format_cwd_display(self, path: str) -> str:
         """Format working directory path for status bar display.

@@ -100,10 +100,11 @@ NOOP_EVENTS = {
     EventType.AGENT_ITERATION,
     EventType.AGENT_COMPLETE,
     EventType.AGENT_MAX_ITERATIONS,
-    # P0 (v1.18.0) agent lifecycle events. Parked here until Stage 5
-    # wires dedicated bus signals + ppxaide rendering. Stages 2+4 emit
-    # these and route them to AppState.agent_beat; clients that need
-    # to render progress subscribe to the state field, not the events.
+    # P0 (v1.18.0) agent lifecycle events. ppxaide renders heartbeat
+    # progress via `AppState.agent_beat` (see `app.py::_on_agent_beat_changed`)
+    # rather than the event bus — the state field is kept authoritative
+    # by EngineClient and auto-clears on RUN_COMPLETE/RUN_ERROR. Events
+    # themselves are intentionally silent here to avoid double-rendering.
     EventType.AGENT_BEAT,
     EventType.AGENT_RUN_START,
     EventType.AGENT_RUN_COMPLETE,
