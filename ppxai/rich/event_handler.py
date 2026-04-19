@@ -261,6 +261,17 @@ class TUIEventHandler(EventHandler):
         EventType.TOOL_GROUP_START: ("_tui_tool_group_start", True),
         EventType.TOOL_GROUP_END: ("_tui_tool_group_end", True),
         EventType.AGENT_INTERMEDIATE_PROSE: ("_tui_agent_intermediate_prose", True),
+        # P0 (v1.18.0) agent heartbeat primitives.
+        # RUN_START / RUN_COMPLETE are silent — they exist for programmatic
+        # observers (AppState, VSCode badge, tests). BEAT prints elapsed time
+        # as a compact dim line; ZOMBIE raises a visible warning because the
+        # engine has just stopped the loop. RUN_ERROR is silent because the
+        # subsequent ERROR event already renders user-visible diagnostics.
+        EventType.AGENT_RUN_START: (None, True),
+        EventType.AGENT_BEAT: ("_tui_agent_beat", True),
+        EventType.AGENT_RUN_COMPLETE: (None, True),
+        EventType.AGENT_RUN_ERROR: (None, True),
+        EventType.AGENT_ZOMBIE: ("_tui_agent_zombie", True),
     }
 
     async def handle_event(self, event: Event) -> bool:
@@ -268,7 +279,8 @@ class TUIEventHandler(EventHandler):
         entry = self._TUI_EVENT_DISPATCH.get(event.type)
         if entry is not None:
             method_name, should_continue = entry
-            getattr(self, method_name)(event)
+            if method_name is not None:
+                getattr(self, method_name)(event)
             return should_continue
         return await super().handle_event(event)
 
@@ -360,6 +372,49 @@ class TUIEventHandler(EventHandler):
         status = "[green]✓[/green]" if all_ok else "[red]✗[/red]"
         suffix = f" {tool_list}" if tool_list else ""
         self.console.print(f"[dim]───{suffix} {status} ───[/dim]")
+
+    def _tui_agent_beat(self, event: Event) -> None:
+        """Render agent heartbeat (P0 v1.18.0) as a compact dim status line.
+
+        Complements `_tui_tool_group_end` (which shows per-group ✓/✗) by
+        adding iteration counter + cumulative failure streak + elapsed
+        wall-clock. The event fires once per iteration after the tool
+        group completes, so we render a single narrow line.
+        """
+        if not isinstance(event.data, dict):
+            return
+        iteration = event.data.get("iteration", 0)
+        tool = event.data.get("tool", "")
+        ok = event.data.get("ok", True)
+        failures = event.data.get("failures", 0)
+        elapsed = event.data.get("elapsed_s", 0.0)
+        status_txt = "ok" if ok else "fail"
+        parts = [f"iter {iteration}"]
+        if tool:
+            parts.append(tool)
+        parts.append(status_txt)
+        if failures:
+            parts.append(f"fail×{failures}")
+        parts.append(f"{elapsed}s")
+        self.console.print(f"[dim]⚙ {' · '.join(parts)}[/dim]")
+
+    def _tui_agent_zombie(self, event: Event) -> None:
+        """Render circuit-breaker trip (P0 v1.18.0).
+
+        Shown in red because the engine has already stopped the tool
+        loop — this is the only user-visible signal before the stream
+        terminates with an ERROR event.
+        """
+        if not isinstance(event.data, dict):
+            self.console.print("[red]⚠ Agent stopped (zombie detected)[/red]")
+            return
+        reason = event.data.get("reason", "zombie detected")
+        last_tool = event.data.get("last_tool", "")
+        elapsed = event.data.get("elapsed_s", 0.0)
+        suffix = f" · last: {last_tool}" if last_tool else ""
+        self.console.print(
+            f"[red]⚠ Agent stopped — {reason}{suffix} · {elapsed}s[/red]"
+        )
 
     def _on_stream_start(self):
         """Handle stream start for TUI."""

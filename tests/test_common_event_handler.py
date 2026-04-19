@@ -160,3 +160,95 @@ def test_tui_event_handler_creation():
     assert handler.console is mock_console
     assert handler.logger is mock_logger
     assert handler.verbose is True
+
+
+# =============================================================================
+# Agent heartbeat event rendering (P0 v1.18.0)
+# =============================================================================
+
+@pytest.mark.asyncio
+async def test_tui_agent_beat_renders_dim_status_line():
+    """AGENT_BEAT event prints a compact status line with iteration/tool/elapsed."""
+    mock_console = Mock()
+    mock_logger = Mock()
+    handler = TUIEventHandler(mock_console, mock_logger)
+
+    event = Event(EventType.AGENT_BEAT, {
+        "iteration": 2,
+        "beat": 2,
+        "tool": "apply_patch",
+        "ok": True,
+        "failures": 0,
+        "elapsed_s": 4.7,
+    })
+    should_continue = await handler.handle_event(event)
+
+    assert should_continue is True
+    mock_console.print.assert_called_once()
+    output = mock_console.print.call_args[0][0]
+    assert "iter 2" in output
+    assert "apply_patch" in output
+    assert "ok" in output
+    assert "4.7s" in output
+    assert "[dim]" in output
+
+
+@pytest.mark.asyncio
+async def test_tui_agent_beat_shows_failure_streak():
+    """AGENT_BEAT surfaces consecutive failure counter when non-zero."""
+    mock_console = Mock()
+    handler = TUIEventHandler(mock_console, Mock())
+
+    event = Event(EventType.AGENT_BEAT, {
+        "iteration": 3, "beat": 3, "tool": "shell",
+        "ok": False, "failures": 2, "elapsed_s": 9.1,
+    })
+    await handler.handle_event(event)
+
+    output = mock_console.print.call_args[0][0]
+    assert "fail×2" in output
+    assert "fail" in output  # status text
+
+
+@pytest.mark.asyncio
+async def test_tui_agent_zombie_renders_red_warning():
+    """AGENT_ZOMBIE prints a visible red warning (loop is stopping)."""
+    mock_console = Mock()
+    handler = TUIEventHandler(mock_console, Mock())
+
+    event = Event(EventType.AGENT_ZOMBIE, {
+        "reason": "3 consecutive tool failures",
+        "threshold": 3,
+        "last_tool": "apply_patch",
+        "iteration": 3,
+        "elapsed_s": 12.8,
+    })
+    should_continue = await handler.handle_event(event)
+
+    assert should_continue is True
+    output = mock_console.print.call_args[0][0]
+    assert "[red]" in output
+    assert "3 consecutive tool failures" in output
+    assert "apply_patch" in output
+
+
+@pytest.mark.asyncio
+async def test_tui_agent_run_events_are_silent():
+    """AGENT_RUN_START / RUN_COMPLETE / RUN_ERROR render nothing on their own.
+
+    They exist for AppState / observers — the TUI renders progress via the
+    ERROR event and BEAT/ZOMBIE heartbeats. A silent handler keeps the
+    per-turn output uncluttered.
+    """
+    mock_console = Mock()
+    handler = TUIEventHandler(mock_console, Mock())
+
+    for ev_type in (
+        EventType.AGENT_RUN_START,
+        EventType.AGENT_RUN_COMPLETE,
+        EventType.AGENT_RUN_ERROR,
+    ):
+        should_continue = await handler.handle_event(Event(ev_type, {"iteration": 1}))
+        assert should_continue is True
+
+    mock_console.print.assert_not_called()
