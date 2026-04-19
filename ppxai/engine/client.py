@@ -180,6 +180,7 @@ class EngineClient:
             "agent_mode", "auto_route", "working_dir",
             "session_name", "debug_log",
             "context_attachments",  # v1.17.4 Phase 3.3
+            "agent_beat",  # P0 (v1.18.0) — per-iteration heartbeat state
         }
         for _field in _SSE_SYNC_FIELDS:
             self.state.on(_field, lambda v, k=_field: self.enqueue_event(
@@ -858,8 +859,22 @@ class EngineClient:
         """Chat with tool support.
 
         Delegates to chat.chat_with_tools() with self as ChatContext.
+
+        P0 (v1.18.0): intercept agent lifecycle events to keep
+        `AppState.agent_beat` current. All 4 clients subscribe to the
+        field via schema sync — the renderers stay passive observers.
+        AGENT_BEAT → populate with beat state; AGENT_RUN_ERROR /
+        AGENT_COMPLETE → reset to empty (no active run).
         """
         async for event in chat_with_tools(self, stream):
+            if event.type == EventType.AGENT_BEAT:
+                if isinstance(event.data, dict):
+                    self.state.set("agent_beat", event.data)
+            elif event.type in (
+                EventType.AGENT_RUN_ERROR,
+                EventType.AGENT_COMPLETE,
+            ):
+                self.state.set("agent_beat", {})
             yield event
 
     def _parse_tool_call(self, text: str) -> Optional[Dict[str, Any]]:

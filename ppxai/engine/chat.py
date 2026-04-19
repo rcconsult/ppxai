@@ -12,11 +12,12 @@ Architecture:
 
 import asyncio
 import json
+import time
 from dataclasses import asdict
 from pathlib import Path
 from typing import AsyncIterator, Dict, Any, List, Optional, Protocol, Callable
 
-from .types import Event, EventType, Message, UsageStats
+from .types import AgentBeatState, Event, EventType, Message, UsageStats
 from .session import SessionManager
 from .tools.manager import ToolManager
 from .tools.builtin import web_premium
@@ -527,6 +528,19 @@ async def chat_with_tools(
 
     yield Event(EventType.STREAM_START, {"model": ctx.model})
 
+    # P0 (v1.18.0) — agent heartbeat primitives. `beat` tracks per-
+    # iteration state; AGENT_RUN_START fires once so clients can reset
+    # their progress widgets, AGENT_BEAT fires at the end of every
+    # iteration with structured state, AGENT_RUN_ERROR fires alongside
+    # each ERROR yield so consumers see a terminal lifecycle event.
+    beat = AgentBeatState(start_time=time.monotonic())
+    yield Event(EventType.AGENT_RUN_START, {
+        "model": ctx.model,
+        "provider": ctx.provider_name,
+        "max_iterations": max_iterations,
+        "agent_mode": bool(getattr(ctx, "agent_mode", False)),
+    })
+
     empty_retry_count = 0
     consecutive_truncation_retries = 0
     MAX_TRUNCATION_RETRIES = 3
@@ -542,6 +556,11 @@ async def chat_with_tools(
     while iteration < max_iterations:
         if ctx.is_interrupted:
             yield Event(EventType.ERROR, "Interrupted by user")
+            yield Event(EventType.AGENT_RUN_ERROR, {
+                "reason": "interrupted",
+                "iteration": iteration,
+                "elapsed_s": round(beat.elapsed_s, 1),
+            })
             return
 
         iteration += 1
@@ -592,6 +611,12 @@ async def chat_with_tools(
                         f"messages_left={len(ctx.session.messages)}"
                     )
                 yield event
+                yield Event(EventType.AGENT_RUN_ERROR, {
+                    "reason": "provider_error",
+                    "iteration": iteration,
+                    "elapsed_s": round(beat.elapsed_s, 1),
+                    "detail": str(event.data) if event.data else "",
+                })
                 return
             elif event.type == EventType.TOOL_CALL:
                 native_tool_calls.append(event.data)
@@ -606,6 +631,11 @@ async def chat_with_tools(
         # Check interrupt after provider returns (stream=False blocks until complete)
         if ctx.is_interrupted:
             yield Event(EventType.ERROR, "Interrupted by user")
+            yield Event(EventType.AGENT_RUN_ERROR, {
+                "reason": "interrupted",
+                "iteration": iteration,
+                "elapsed_s": round(beat.elapsed_s, 1),
+            })
             return
 
         # Fallback on empty: native mode returned nothing — retry with prompt-based
@@ -796,6 +826,22 @@ async def chat_with_tools(
                 "all_succeeded": all_succeeded,
                 "tools": tool_names
             })
+
+            # P0 (v1.18.0) — heartbeat tick. Per-iteration structured
+            # state for clients to render progress / zombie indicators.
+            # Emitted AFTER TOOL_GROUP_END so the beat reflects the
+            # iteration that just completed (including its success).
+            beat.iteration = iteration
+            beat.beat_sequence += 1
+            beat.last_beat_time = time.monotonic()
+            beat.last_tool = last_tool_name
+            if all_succeeded:
+                beat.last_run_ok = True
+                beat.consecutive_failures = 0
+            else:
+                beat.last_run_ok = False
+                beat.consecutive_failures += 1
+            yield Event(EventType.AGENT_BEAT, beat.as_event_data())
 
             continue
 

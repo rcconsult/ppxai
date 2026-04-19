@@ -19,6 +19,7 @@
     "total_cost":          {"client": "totalCost",          "type": "number",  "default": 0.0,   "group": "usage",      "doc": "Cumulative cost in USD"},
     "context_percentage":  {"client": "contextPercentage",  "type": "number",  "default": 0.0,   "group": "usage",      "doc": "Context window usage (0.0-100.0)"},
     "context_attachments": {"client": "contextAttachments", "type": "array",   "default": [],    "group": "multimodal", "doc": "List of attachment summaries currently in session.messages. Entry schema: {name, kind, media_type, turn_index, file_id}"},
+    "agent_beat":          {"client": "agentBeat",          "type": "object",  "default": {},    "group": "streaming",  "doc": "P0 (v1.18.0) latest agent heartbeat state. Entry schema: {iteration, beat, tool, ok, failures, elapsed_s}. Empty dict when no agent run is active. Populated by EngineClient on AGENT_BEAT events."},
     "debug_log":           {"client": "debugLog",           "type": "boolean", "default": false, "group": "debug",      "doc": "Debug logging enabled"}
   }
 }

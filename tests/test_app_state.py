@@ -243,7 +243,8 @@ class TestAppStateFieldCoverage:
         # state fields — the number is intentional friction so additions get
         # reviewed against the cross-client (Python/JS/TS) schema.
         # v1.17.4: schema-driven from app_state_schema.json; 18 fields total.
-        assert len(AppState.FIELDS) == 18
+        # v1.18.0 P0: +`agent_beat` for agent heartbeat state → 19 fields.
+        assert len(AppState.FIELDS) == 19
 
     def test_mutable_defaults_not_shared_between_instances(self):
         """Each AppState instance must get its own copy of list/dict
@@ -305,7 +306,8 @@ class TestSchemaDTO:
     def test_schema_has_fields_dict(self):
         assert "fields" in self.schema
         assert isinstance(self.schema["fields"], dict)
-        assert len(self.schema["fields"]) == 18
+        # Bump when adding fields — keep in sync with test_field_count above.
+        assert len(self.schema["fields"]) == 19
 
     def test_schema_fields_match_app_state_fields(self):
         """Every schema field must appear in AppState.FIELDS with the
@@ -543,12 +545,12 @@ class TestSseSyncFieldsContract:
         AppState facades pick up schema additions automatically —
         the only thing to update besides the engine is this count.
 
-        Current entries (v1.17.4):
+        Current entries (v1.18.0):
             provider, model, tools_enabled, tools_verbose,
             agent_mode, auto_route, working_dir, session_name,
-            debug_log, context_attachments
+            debug_log, context_attachments, agent_beat (P0)
         """
-        assert len(self.sse_sync_fields) == 10
+        assert len(self.sse_sync_fields) == 11
 
     def test_sync_fields_have_client_names_in_schema(self):
         """Every sync field must declare a `client` name in the
