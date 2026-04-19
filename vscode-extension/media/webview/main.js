@@ -710,6 +710,44 @@ function updateContextAttachmentsBadge(count, attachments) {
     }
 }
 
+// Agent heartbeat badge renderer (P0 v1.18.0).
+// `beat` is the dict payload from `AppState.agentBeat` — either an
+// `AgentBeatSnapshot` (active run) or `{}` (engine cleared on run end).
+// Variant classes mirror the Rich + Textual renderers: default for ok,
+// `.warn` for a 2+ failure streak, `.error` for a single failed beat.
+function updateAgentBeatBadge(beat) {
+    const badge = document.getElementById('agentBeatBadge');
+    const text = document.getElementById('agentBeatText');
+    if (!badge || !text) return;
+
+    const hasPayload = beat && typeof beat === 'object'
+        && ('iteration' in beat || 'tool' in beat || 'elapsed_s' in beat);
+    if (!hasPayload) {
+        badge.style.display = 'none';
+        badge.classList.remove('warn', 'error');
+        text.textContent = '⚙ idle';
+        return;
+    }
+
+    const iteration = beat.iteration || 0;
+    const tool = beat.tool || '';
+    const ok = beat.ok !== false;
+    const failures = beat.failures || 0;
+    const elapsed = typeof beat.elapsed_s === 'number' ? beat.elapsed_s : null;
+
+    const parts = ['⚙', 'i' + iteration];
+    if (tool) parts.push(tool);
+    if (!ok) parts.push('fail');
+    if (failures) parts.push('×' + failures);
+    if (elapsed !== null) parts.push(elapsed + 's');
+    text.textContent = parts.join(' · ');
+
+    badge.classList.remove('warn', 'error');
+    if (failures >= 2) badge.classList.add('warn');
+    else if (!ok) badge.classList.add('error');
+    badge.style.display = '';
+}
+
 // Function to update server status (v1.13.1)
 function updateServerStatus(connected, connecting = false) {
     serverBadge.classList.remove('connected', 'disconnected', 'connecting');
@@ -1018,6 +1056,15 @@ window.addEventListener('message', (event) => {
                     const arr = Array.isArray(c.contextAttachments)
                         ? c.contextAttachments : [];
                     updateContextAttachmentsBadge(arr.length, arr);
+                }
+                // P0 (v1.18.0): Agent heartbeat badge. Engine pushes
+                // AgentBeatState snapshots via AppState.agent_beat and
+                // clears to {} on RUN_COMPLETE / RUN_ERROR. Empty
+                // payload hides the badge; active payload renders
+                // "⚙ i{N} · {tool} · {elapsed}s" with variant classes
+                // reflecting any failure streak.
+                if (c.agentBeat !== undefined) {
+                    updateAgentBeatBadge(c.agentBeat || {});
                 }
             }
             break;

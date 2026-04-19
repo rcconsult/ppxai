@@ -82,6 +82,26 @@ export interface AppStateFields {
     // List of attachment summaries currently in session.messages.
     // Entry schema: { name, kind, media_type, turn_index, file_id }
     contextAttachments: ContextAttachment[];
+
+    // --- Agent heartbeat (P0 v1.18.0) ---
+    // Latest AgentBeatState.as_event_data() dict from the engine.
+    // `{}` when idle; engine clears on AGENT_RUN_COMPLETE / _ERROR.
+    agentBeat: AgentBeatSnapshot | Record<string, never>;
+}
+
+/**
+ * A single agent-iteration heartbeat snapshot pushed from the engine
+ * (P0 v1.18.0). Mirrors `ppxai/engine/types.py::AgentBeatState.as_event_data()`.
+ * All fields are optional on the wire because an empty-object payload
+ * `{}` is the engine's signal that the agent loop has ended.
+ */
+export interface AgentBeatSnapshot {
+    iteration: number;
+    beat: number;
+    tool: string;
+    ok: boolean;
+    failures: number;
+    elapsed_s: number;
 }
 
 /**
@@ -99,7 +119,7 @@ export interface ContextAttachment {
 /** Raw schema file shape. */
 interface SchemaField {
     client: string;
-    type: 'string' | 'boolean' | 'integer' | 'number' | 'array';
+    type: 'string' | 'boolean' | 'integer' | 'number' | 'array' | 'object';
     default: unknown;
     group: string;
     doc?: string;

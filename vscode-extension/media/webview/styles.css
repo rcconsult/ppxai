@@ -336,6 +336,28 @@ body {
     background: var(--vscode-errorForeground, #f44336);
 }
 
+/* Agent heartbeat badge (P0 v1.18.0) — mirrors streaming-badge sizing
+ * but without the pulse animation, since the payload itself ticks
+ * (iteration / elapsed_s) once per engine heartbeat. */
+.agent-beat-badge {
+    background: var(--vscode-badge-background, #0078d4);
+    color: var(--vscode-badge-foreground, #ffffff);
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 10px;
+    border: none;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+.agent-beat-badge.warn {
+    background: var(--vscode-editorWarning-foreground, #ff9800);
+    color: var(--vscode-editor-background);
+}
+.agent-beat-badge.error {
+    background: var(--vscode-errorForeground, #f44336);
+    color: var(--vscode-editor-background);
+}
+
 .header-buttons {
     display: flex;
     gap: 4px;
