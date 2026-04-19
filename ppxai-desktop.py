@@ -15,11 +15,37 @@ import time
 import webbrowser
 from pathlib import Path
 
-# Version - keep in sync with ppxai/__init__.py
-try:
-    from ppxai.version import __version__
-except ImportError:
-    __version__ = "1.17.4"  # fallback when running as frozen binary without ppxai package
+# Version — loaded directly from ppxai/version.py by file path to avoid
+# triggering ppxai/__init__.py, which imports config + engine modules
+# that pull in packages (pydantic, openai, rich, prompt_toolkit, fastapi,
+# uvicorn) intentionally excluded from this PyInstaller build. The old
+# `from ppxai.version import __version__` raised ImportError in the
+# frozen binary and silently fell through to a hardcoded fallback string
+# — the cause of v1.17.4 → v1.17.5 "ppxai-desktop --version" reporting
+# the wrong version. Direct module loading bypasses the parent package
+# and works in both dev and PyInstaller (sys._MEIPASS) modes.
+def _load_frozen_version() -> str:
+    import importlib.util
+    from pathlib import Path as _Path
+
+    if getattr(sys, "frozen", False):
+        base = _Path(sys._MEIPASS)
+    else:
+        base = _Path(__file__).resolve().parent
+
+    version_path = base / "ppxai" / "version.py"
+    if not version_path.exists():
+        return "unknown"
+
+    spec = importlib.util.spec_from_file_location("_ppxai_version", version_path)
+    if spec is None or spec.loader is None:
+        return "unknown"
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return getattr(module, "__version__", "unknown")
+
+
+__version__ = _load_frozen_version()
 
 
 def get_resource_path(relative_path: str) -> Path:

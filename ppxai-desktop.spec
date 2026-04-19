@@ -12,6 +12,13 @@ a = Analysis(
         # Include entire web UI directory tree
         ('ppxai/web', 'ppxai/web'),
         ('ppxai-config.example.json', '.'),
+        # Ship version.py as a data file so ppxai-desktop.py can load it
+        # by file path (sys._MEIPASS / "ppxai" / "version.py") — bypasses
+        # ppxai/__init__.py which pulls in excluded packages (pydantic,
+        # openai, rich, prompt_toolkit, fastapi, uvicorn). Without this,
+        # `ppxai-desktop --version` falls back to a hardcoded string and
+        # drifts on every release (the v1.17.4 → v1.17.5 stale-version bug).
+        ('ppxai/version.py', 'ppxai'),
     ],
     hiddenimports=['ppxai.version'],
     hookspath=[],
