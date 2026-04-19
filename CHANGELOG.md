@@ -5,6 +5,12 @@ All notable changes to ppxai will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.17.7] - 2026-04-19
+
+### Fixed
+
+- **`ppxai-desktop --version` reported a stale hardcoded version.** The desktop launcher had been misreporting its version at least since v1.17.4 — the frozen binary's `from ppxai.version import __version__` raised `ImportError` because `ppxai/__init__.py` transitively imports `pydantic`, `openai`, `rich`, `prompt_toolkit`, `fastapi`, and `uvicorn`, all of which are intentionally **excluded** from the desktop PyInstaller spec. The silent `except ImportError` fallback returned a hardcoded string that drifted on every release. `ppxai-desktop.py` now loads `ppxai/version.py` directly by file path via `importlib.util.spec_from_file_location`, bypassing the package `__init__` entirely. The spec ships `ppxai/version.py` as a data file so `sys._MEIPASS` resolves correctly in the frozen binary. No more hardcoded version string anywhere in the desktop launcher; the binary always matches the source of truth. Discovered during the post-v1.17.6 install-on-dev-machine rebuild when the fresh desktop binary was still reporting 1.17.4.
+
 ## [1.17.6] - 2026-04-19
 
 ### Fixed
