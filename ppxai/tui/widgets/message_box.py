@@ -39,6 +39,14 @@ def _normalize_content_to_text(content: Any) -> str:
         elif btype in ("input_file", "file"):
             name = block.get("name") or block.get("filename") or "file"
             parts.append(f"[File: {name}]")
+        elif btype == "uploaded_file":
+            # R5 (v1.17.6): first-class uploaded_file content block.
+            # Mirror Message.text_content()'s rendering so the ppxaide
+            # MessageBox stays consistent with Rich TUI, web, and
+            # VSCode clients — all four show `[File: name (media_type)]`.
+            name = block.get("name") or "file"
+            media = block.get("media_type") or ""
+            parts.append(f"[File: {name} ({media})]" if media else f"[File: {name}]")
         else:
             parts.append(f"[{btype or 'part'}]")
     return "\n".join(parts)

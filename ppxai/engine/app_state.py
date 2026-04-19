@@ -43,9 +43,12 @@ Thread-safety design:
 """
 
 import json
+import logging
 import threading
 from importlib.resources import files
 from typing import Any, Callable, Dict, List, Mapping, Optional
+
+_logger = logging.getLogger(__name__)
 
 
 # Type alias for listener callbacks: fn(new_value) -> None
@@ -167,9 +170,19 @@ class AppState:
             self._data[key] = value
             pending = list(self._listeners.get(key, []))
 
-        # Dispatch outside lock — prevents deadlock and lock contention
+        # Dispatch outside lock — prevents deadlock and lock contention.
+        # Listener isolation: one bad listener MUST NOT wedge the chain.
+        # Widgets wired through AppState across four clients can crash
+        # for reasons unrelated to the data; swallowing + logging matches
+        # SessionManager.on_messages_changed semantics.
         for fn in pending:
-            fn(value)
+            try:
+                fn(value)
+            except Exception:
+                _logger.warning(
+                    "AppState listener for %r raised; continuing", key,
+                    exc_info=True,
+                )
         return True
 
     def update(self, **kwargs: Any) -> None:
@@ -188,10 +201,16 @@ class AppState:
                     if fns:
                         pending.append((fns, value))
 
-        # Dispatch outside lock
+        # Dispatch outside lock — same listener-isolation policy as set().
         for fns, value in pending:
             for fn in fns:
-                fn(value)
+                try:
+                    fn(value)
+                except Exception:
+                    _logger.warning(
+                        "AppState listener raised during update(); continuing",
+                        exc_info=True,
+                    )
 
     def on(self, key: str, fn: Listener) -> "AppState":
         """Subscribe to changes on a field. Returns self for chaining.
