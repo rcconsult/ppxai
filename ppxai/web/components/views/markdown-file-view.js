@@ -180,12 +180,35 @@ class MarkdownFileView extends BaseView {
             if (href && !href.startsWith('http') && !href.startsWith('mailto:') && !href.startsWith('#')) {
                 link.addEventListener('click', (e) => {
                     e.preventDefault();
-                    const dir  = this._path.includes('/') ? this._path.substring(0, this._path.lastIndexOf('/')) : '';
-                    const resolved = dir ? `${dir}/${href}` : href;
-                    window.ppxai?.displayFileFromEvent?.(resolved);
+                    window.ppxai?.displayFileFromEvent?.(this._resolveRelative(href));
                 });
             }
         });
+
+        // Relative image src → rewrite to /files/image/<path> so the server
+        // resolves against the working directory instead of the web root.
+        const serverUrl = this._appState.apiClient?.serverUrl ?? '';
+        contentEl.querySelectorAll('img').forEach(img => {
+            const src = img.getAttribute('src');
+            if (!src) return;
+            if (src.startsWith('http://') || src.startsWith('https://')) return;
+            if (src.startsWith('data:') || src.startsWith('blob:')) return;
+            if (src.startsWith('/files/image/')) return;
+            const resolved = this._resolveRelative(src);
+            img.setAttribute('src', `${serverUrl}/files/image/${encodeURIComponent(resolved)}`);
+        });
+    }
+
+    _resolveRelative(href) {
+        const dir = this._path.includes('/') ? this._path.substring(0, this._path.lastIndexOf('/')) : '';
+        const combined = dir ? `${dir}/${href}` : href;
+        const parts = [];
+        for (const seg of combined.split('/')) {
+            if (seg === '' || seg === '.') continue;
+            if (seg === '..') { parts.pop(); continue; }
+            parts.push(seg);
+        }
+        return parts.join('/');
     }
 
     _renderCode(contentEl, editable) {
