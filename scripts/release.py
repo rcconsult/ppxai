@@ -605,12 +605,28 @@ def delete_existing_release(version: str) -> bool:
     return True
 
 
-def merge_to_master_if_needed(current_branch: str) -> bool:
+def merge_to_master_if_needed(current_branch: str, dry_run: bool = False) -> bool:
     """Merge current branch to master if not already on master.
 
     Returns True if successful, False if merge failed.
+
+    `dry_run` skips every git command that has side effects — checkout,
+    pull, merge — and just prints what the real run would do. The
+    previous version performed all three before the dry-run summary
+    block, leaving the user unexpectedly on master with a real merge
+    commit. That's exactly the kind of bug a `--dry-run` flag should
+    prevent.
     """
     if current_branch == "master":
+        return True
+
+    if dry_run:
+        print(f"  [dry-run] Would merge {current_branch} to master")
+        print(f"  [dry-run] Steps that would run:")
+        print(f"    git fetch origin master")
+        print(f"    git checkout master")
+        print(f"    git pull origin master")
+        print(f"    git merge {current_branch} --no-edit")
         return True
 
     print(f"  🔀 Merging {current_branch} to master...")
@@ -974,7 +990,7 @@ def main():
     if not is_master:
         step += 1
         print_step(step, total_steps, "Merging to Master")
-        if not merge_to_master_if_needed(current_branch):
+        if not merge_to_master_if_needed(current_branch, dry_run=args.dry_run):
             print(f"\n❌ Failed to merge {current_branch} to master")
             print(f"   Resolve any conflicts and try again")
             sys.exit(1)
