@@ -1,4 +1,18 @@
 const vscode = acquireVsCodeApi();
+
+// v1.18.0 Phase 4: Compact token display — "15.3K" for >= 1000, raw
+// integer string otherwise. Mirrors ppxai/common/format.py::format_tokens
+// byte-for-byte. See tests/test_usage_format.py for the cross-language
+// parity check. Kept inline because webview main.js is a standalone
+// script without a module system — the VSCode extension host imports
+// shared/formatters.ts, but the webview can't.
+function formatTokens(count) {
+    if (count >= 1000) {
+        return (count / 1000).toFixed(1) + 'K';
+    }
+    return String(count);
+}
+
 const messagesContainer = document.getElementById('messages');
 let typingIndicator = document.getElementById('typingIndicator');
 const messageInput = document.getElementById('messageInput');
@@ -990,9 +1004,14 @@ window.addEventListener('message', (event) => {
                 toolsBadge.classList.remove('enabled');
                 toolsBadge.title = 'Click to enable tools';
             }
-            // Update usage badge (v1.12.0)
+            // Update usage badge (v1.12.0). Uses the shared token-formatter
+            // (v1.18.0 Phase 4) so the "1.2K" style matches Rich/web.
+            // VSCode retains its own cost-suppression behaviour: when
+            // cost is zero we drop the "$0.0000" suffix entirely, which
+            // keeps the badge quiet during free-tier usage. The shared
+            // `formatUsageBadge` always appends cost — we don't call it
+            // here to preserve the zero-cost display contract.
             if (message.usage && usageBadge) {
-                const formatTokens = (count) => count >= 1000 ? (count/1000).toFixed(1) + 'K' : count.toString();
                 const promptStr = formatTokens(message.usage.promptTokens);
                 const completionStr = formatTokens(message.usage.completionTokens);
                 const cost = message.usage.estimatedCost;

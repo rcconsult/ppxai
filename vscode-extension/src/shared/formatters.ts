@@ -218,6 +218,36 @@ Usage: \`/checkpoint backend <git|file|auto|none>\`
 }
 
 /**
+ * Compact token-count display: "15.3K" for >= 1000, raw integer string
+ * otherwise. Mirrors ppxai/common/format.py::format_tokens byte-for-byte.
+ * See tests/test_usage_format.py for the cross-language parity check.
+ *
+ * v1.18.0 Phase 4.
+ */
+export function formatTokens(count: number): string {
+    if (count >= 1000) {
+        return (count / 1000).toFixed(1) + 'K';
+    }
+    return String(count);
+}
+
+/**
+ * Short usage-badge string: "1.2K↓/0.5K↑ $0.0045". Mirrors
+ * ppxai/common/format.py::format_usage_badge.
+ *
+ * v1.18.0 Phase 4.
+ */
+export function formatUsageBadge(
+    promptTokens: number,
+    completionTokens: number,
+    estimatedCost: number,
+): string {
+    const promptStr = formatTokens(promptTokens);
+    const completionStr = formatTokens(completionTokens);
+    return `${promptStr}↓/${completionStr}↑ $${estimatedCost.toFixed(4)}`;
+}
+
+/**
  * Format usage statistics response
  */
 export function formatUsageStats(data: UsageData, period: string | null = null): string {

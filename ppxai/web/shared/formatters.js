@@ -379,6 +379,40 @@ function formatSuccess(message) {
     return `✓ ${message}`;
 }
 
+/**
+ * Compact token-count display: "15.3K" for >= 1000, raw integer string
+ * otherwise. Mirrors `ppxai/common/format.py::format_tokens` byte-for-
+ * byte — see the Python docstring for examples and rationale. Tested
+ * by `tests/test_usage_format.py` which invokes node and asserts
+ * string equality with the Python output.
+ *
+ * @param {number} count - Non-negative token count.
+ * @returns {string}
+ */
+function formatTokens(count) {
+    if (count >= 1000) {
+        return (count / 1000).toFixed(1) + 'K';
+    }
+    return String(count);
+}
+
+/**
+ * Short usage-badge string: "1.2K↓/0.5K↑ $0.0045". Down-arrow is input,
+ * up-arrow is output. Cost fixed at four decimal places so the badge
+ * width is stable as cost accumulates. Mirrors
+ * `ppxai/common/format.py::format_usage_badge` byte-for-byte.
+ *
+ * @param {number} promptTokens
+ * @param {number} completionTokens
+ * @param {number} estimatedCost - USD
+ * @returns {string}
+ */
+function formatUsageBadge(promptTokens, completionTokens, estimatedCost) {
+    const promptStr = formatTokens(promptTokens);
+    const completionStr = formatTokens(completionTokens);
+    return `${promptStr}↓/${completionStr}↑ $${estimatedCost.toFixed(4)}`;
+}
+
 // Browser global export (for non-module scripts)
 if (typeof window !== 'undefined') {
     window.SharedFormatters = {
@@ -401,7 +435,9 @@ if (typeof window !== 'undefined') {
         formatError,
         formatSuccess,
         formatTableResult,
-        formatKeyValueResult
+        formatKeyValueResult,
+        formatTokens,
+        formatUsageBadge,
     };
 }
 
@@ -427,6 +463,8 @@ if (typeof module !== 'undefined' && module.exports) {
         formatError,
         formatSuccess,
         formatTableResult,
-        formatKeyValueResult
+        formatKeyValueResult,
+        formatTokens,
+        formatUsageBadge,
     };
 }

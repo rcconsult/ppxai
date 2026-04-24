@@ -26,6 +26,7 @@ from rich.table import Table
 from rich.text import Text
 
 from .themes import Theme, get_theme, DEFAULT_THEME, THEMES
+from ..common.format import format_usage_badge
 
 # Single temp file for copy link feature (v1.15.0)
 # Gets overwritten with each new assistant response - no accumulation
@@ -891,20 +892,11 @@ def format_usage_string(
 ) -> str:
     """Format usage statistics into a compact string.
 
-    Args:
-        prompt_tokens: Input tokens
-        completion_tokens: Output tokens
-        estimated_cost: Estimated cost in USD
+    Thin alias kept for backward-compat with existing Rich callers.
+    The actual implementation lives in `ppxai.common.format` so web
+    and VSCode clients use the same logic via their JS/TS mirrors.
 
     Returns:
         Formatted string like "1.2K↓/0.5K↑ $0.0045"
     """
-    def format_tokens(n: int) -> str:
-        if n >= 1000:
-            return f"{n/1000:.1f}K"
-        return str(n)
-
-    prompt_str = format_tokens(prompt_tokens)
-    completion_str = format_tokens(completion_tokens)
-
-    return f"{prompt_str}↓/{completion_str}↑ ${estimated_cost:.4f}"
+    return format_usage_badge(prompt_tokens, completion_tokens, estimated_cost)

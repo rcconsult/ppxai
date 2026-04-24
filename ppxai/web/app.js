@@ -3331,9 +3331,9 @@ class PpxaiApp {
             this.state.totalTokens = prompt + completion;
             this.state.totalCost = cost;
 
-            // Format badge
-            const formatTokens = (n) => n >= 1000 ? `${(n/1000).toFixed(1)}K` : n;
-            this.elements.usageBadge.textContent = `${formatTokens(prompt)}↓/${formatTokens(completion)}↑ $${cost.toFixed(4)}`;
+            // Format badge — shared helper keeps the string identical
+            // to the Rich TUI and VSCode extension (v1.18.0 Phase 4).
+            this.elements.usageBadge.textContent = SharedFormatters.formatUsageBadge(prompt, completion, cost);
             this.elements.usageBadge.title = `Prompt: ${prompt}, Completion: ${completion}, Cost: $${cost.toFixed(4)}`;
         } catch {}
     }

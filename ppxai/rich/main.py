@@ -42,13 +42,6 @@ from .event_handler import TUIEventHandler
 logger = get_logger("tui")
 
 
-def format_tokens(count: int) -> str:
-    """Format token count for display (e.g., 1.2K, 15.3K)."""
-    if count >= 1000:
-        return f"{count/1000:.1f}K"
-    return str(count)
-
-
 def get_status_line(handler, use_themed: bool = True):
     """Generate status line showing current settings.
 

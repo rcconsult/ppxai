@@ -49,5 +49,7 @@ export {
     formatSessionsList,
     formatFileContents,
     formatError,
-    formatSuccess
+    formatSuccess,
+    formatTokens,
+    formatUsageBadge,
 } from './formatters';
