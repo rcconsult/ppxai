@@ -1,5 +1,11 @@
-# ppxai — File Upload & Data Processing Research
+# ppxai — File Upload & Data Processing Research (archived)
 **Date:** April 3, 2026
+**Status:** Archived 2026-04-24. Original research that drove v1.17.4
+file upload (shipped). Pseudocode below is illustrative — the live
+API has evolved (e.g. `has_vision_model` was renamed to
+`has_vision_sidecar` in v1.17.4 and the back-compat alias was
+removed in v1.18.0). For the current architecture see
+[docs/ARCHITECTURE.md](../ARCHITECTURE.md) and the engine source.
 
 ---
 

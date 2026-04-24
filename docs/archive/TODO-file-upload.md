@@ -1,9 +1,15 @@
-# TODO: File Upload & Data Processing
+# TODO: File Upload & Data Processing — SHIPPED v1.17.4 (archived)
 
-**Status:** Complete — All phases (0-7) + Task #11 + coder deployment + PPTX visual preview done, ready for release
-**Target:** v1.17.4
-**Branch:** `feat/file-upload`
+**Status:** ✅ Shipped in v1.17.4 (April 2026). Archived for historical reference.
+**Original target:** v1.17.4
+**Original branch:** `feat/file-upload` (merged)
 **Priority:** High — enables data analyst workflows (Excel, PDF, PPTX)
+
+> This document drove the v1.17.4 file-upload implementation and is
+> kept here as a record of the staged design. Current usage and
+> architecture live in [vscode-extension/README.md](../../vscode-extension/README.md#file-upload--multimodal-v1174)
+> and [docs/ARCHITECTURE.md](../ARCHITECTURE.md). Don't update this
+> file — open a new TODO for follow-on work instead.
 **Research:**
 - `docs/ppxai-file-upload-data-processing.md` — design & preprocessing architecture
 - `docs/multimodal-api-models-reference.md` — provider vision/multimodal capability matrix

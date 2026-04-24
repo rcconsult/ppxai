@@ -723,7 +723,7 @@ ppxai/tui/                     # New module (Textual-based)
 
 ## In Progress (v1.18.0)
 
-**Branch:** `feature/v1.18.0` | **Theme:** Agent heartbeat primitives + AppState codegen + multi-model routing
+**Branch:** `feature/v1.18.0` | **Theme:** Agent heartbeat primitives + stabilization pass + AppState codegen + multi-model routing
 
 ### v1.18.0 - Agent Heartbeat Primitives (P0 — landed on branch)
 
@@ -734,6 +734,30 @@ ppxai/tui/                     # New module (Textual-based)
 | **Zombie circuit-breaker** | `tools.agent.zombie_threshold` (default 3, 0 disables) stops the tool loop after N consecutive failed iterations. | ✅ Landed |
 | **Client renderers** | Rich dim line, ppxaide status badge (success/warning/error variants), Web + VSCode header badge. | ✅ Landed |
 | **Architecture doc** | [ARCHITECTURE.md §"Agent Heartbeat Primitives"](docs/ARCHITECTURE.md) + [RELEASE-NOTES-v1.18.0.md](docs/RELEASE-NOTES-v1.18.0.md). | ✅ Landed |
+
+### v1.18.0 - Stabilization Pass (Phases 1–5 — landed on branch)
+
+Targeted cleanup pass between heartbeat P0 and the next feature
+workstream. Pays down architectural drift accumulated across v1.16.x
+/ v1.17.x. See [STABILIZATION-v1.18.0.md](docs/STABILIZATION-v1.18.0.md)
+for the full pass summary.
+
+| Phase | Feature | Status |
+|-------|---------|--------|
+| **1** | AGENT_BEAT cross-client rendering parity test (4 clients, 5 fixtures, 20 assertions) | ✅ Landed |
+| **2** | `GET /state` endpoint for SSE reconnect catch-up; `SSE_SYNC_FIELDS` hoisted to module-level constant | ✅ Landed |
+| **2.5** | 19 pre-existing test failures cleared on Windows; 2 real prod bugs fixed (`/attach` CRLF, CSV mimetype routing) | ✅ Landed |
+| **3** | `AppState.last_message_role` field; Rich interrupt handler off direct `session.messages` scanning | ✅ Landed |
+| **4** | `ppxai/common/format.py` canonical + JS/TS mirrors with byte-identical parity tests | ✅ Landed |
+| **5a-c** | Trivial cleanup, `has_vision_model` alias removed, PyInstaller spec full route listing | ✅ Landed |
+| **5d** | Zero-cost badge suppression unified across all four clients | ✅ Landed |
+| **5e** | AppState listener contract + error routing conventions documented | ✅ Landed |
+| **5f** | `AutosaveFailureGuard` surfaces sustained auto-save failures; Textual `query_one` excepts narrowed to `NoMatches` | ✅ Landed |
+| **5g** | 6 pure helpers promoted to public API; 2 I/O helpers extracted to `ppxai/common/atomic_file.py` and `ppxai/common/docx_to_pdf.py` | ✅ Landed |
+
+**Cumulative impact:** 2,410 → 2,591 passing tests, 0 failing, 4 real
+production bugs fixed as side-effects, 1 deprecated alias removed,
+8 former private helpers given documented public contracts.
 
 ### v1.18.0 - AppState Codegen + Routing Infrastructure (planned for same release)
 

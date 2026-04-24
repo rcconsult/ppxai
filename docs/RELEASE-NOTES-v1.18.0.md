@@ -1,10 +1,12 @@
 # Release Notes — v1.18.0 (draft)
 
-> **Status:** Draft — P0 agent heartbeat primitives landed on
-> `feature/v1.18.0`. Additional workstreams for this release —
+> **Status:** Draft. Two workstreams have landed on `feature/v1.18.0`:
+> P0 agent heartbeat primitives (this document) and the v1.18.0
+> stabilization pass ([docs/STABILIZATION-v1.18.0.md](STABILIZATION-v1.18.0.md)).
+> Two more are still planned for this release —
 > AppState codegen ([docs/TODO-appstate-codegen.md](TODO-appstate-codegen.md))
-> and multi-model routing infrastructure ([docs/TODO-routing.md](TODO-routing.md)) —
-> are still in progress. Final release notes will consolidate all three.
+> and multi-model routing infrastructure ([docs/TODO-routing.md](TODO-routing.md)).
+> Final release notes will consolidate all four.
 
 ## Summary
 
@@ -149,7 +151,10 @@ tend to get stuck in tool-retry loops:
 - **`tests/test_app_state.py`** — sentinel field count bumped to 19;
   SSE sync whitelist sentinel bumped to 11.
 
-**Total: 2458 passed, 2 skipped, 0 regressions** (+~120 vs v1.17.7).
+**Heartbeat P0 alone: 2,458 passed, 2 skipped, 0 regressions** (+~120 vs v1.17.7).
+After the stabilization pass: **2,591 passed**, 2 skipped, 0 failing
+(+181 vs v1.17.7) — see [STABILIZATION-v1.18.0.md](STABILIZATION-v1.18.0.md)
+for the per-phase breakdown.
 
 ## Architecture
 
@@ -171,7 +176,9 @@ Drop-in upgrade. No code changes required on consumer side.
 Users who want the breaker more or less aggressive should add
 `"zombie_threshold": N` under `tools.agent` in `ppxai-config.json`.
 
-## Commits (P0 heartbeat only — additional stages may land before release)
+## Commits
+
+### P0 heartbeat primitives
 
 ```
 51c8ed54  feat(engine): P0 Stage 1 — agent heartbeat types + dataclass
@@ -183,3 +190,25 @@ ec37b677  feat(ppxaide): P0 Stage 5b — agent heartbeat status badge
 c995ceae  feat(web):     P0 Stage 5c — agent heartbeat header badge
 0dc148c9  feat(vscode):  P0 Stage 5d — agent heartbeat header badge
 ```
+
+### v1.18.0 stabilization pass
+
+```
+3615dfe3  test(v1.18.0): AGENT_BEAT cross-client rendering parity
+246c6035  fix(v1.18.0): clear 19 pre-existing test failures on Windows
+0c4ac1f4  feat(v1.18.0): GET /state snapshot endpoint for SSE reconnect sync
+012911f1  refactor(v1.18.0): last_message_role AppState field + Rich migration
+a330c187  refactor(v1.18.0): unify token and usage-badge formatting across clients
+9c997b32  docs(v1.18.0): stabilization pass summary
+0ea64cd5  chore(v1.18.0): trivial cleanup — duplicate import, UTF-8 reads
+6c530b80  refactor(v1.18.0): drop has_vision_model back-compat alias
+62c661fa  build(v1.18.0): list every server route module in ppxai-server.spec
+8fc0be9f  refactor(v1.18.0): unify usage badge to suppress $0.0000 when cost is zero
+cdcc0369  docs(v1.18.0): AppState listener contract + error routing conventions
+2d200718  fix(v1.18.0): surface sustained auto-save failures + narrow Textual excepts
+6719c93e  refactor(v1.18.0): promote 6 pure helper functions to public API
+502e4c0d  refactor(v1.18.0): extract I/O helpers to dedicated utility modules
+```
+
+See [STABILIZATION-v1.18.0.md](STABILIZATION-v1.18.0.md) for what
+each commit changed and what the audit verified vs. left alone.

@@ -42,20 +42,37 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 - **NEW:** Client renderers — dim status line in Rich, status-bar badge in ppxaide with `success`/`warning`/`error` variants, header badge in Web + VSCode
 - See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) §"Agent Heartbeat Primitives" for the emission contract
 
+**v1.18.0 (in progress) — stabilization pass (Phases 1–5):**
+- **NEW:** `GET /state` snapshot endpoint (`ppxai/server/routes/state.py`) returns the SSE-synced AppState fields for web/VSCode reconnect catch-up. `SSE_SYNC_FIELDS` hoisted to module-level constant in `ppxai/engine/client.py` as the canonical whitelist.
+- **NEW:** `AppState.last_message_role` field — Rich and Textual interrupt handlers no longer scan `session.messages` directly; `EngineClient._on_messages_changed` is now a fan-out callback for every message-derived AppState field.
+- **NEW:** Cross-language formatting helpers — `ppxai/common/format.py` (canonical `format_tokens` + `format_usage_badge`) with byte-identical JS/TS mirrors guarded by `tests/test_usage_format.py`. Zero-cost suppression unified across Rich/web/VSCode.
+- **NEW:** `ppxai/common/autosave_guard.py::AutosaveFailureGuard` — surfaces auto-save failures to the user after 3 consecutive failures (was silently logged before, hiding "session not saving" from users with full disks / revoked permissions).
+- **NEW:** `ppxai/common/atomic_file.py::atomic_replace` and `ppxai/common/docx_to_pdf.py::convert_docx_to_pdf` — I/O helpers extracted from private routes/tools modules so tests consume them via documented public contracts. Six other pure helpers (`is_empty_or_context_only`, `load_dotenv_with_bom_handling`, `count_csv_rows_cols`, `get_effective_profile`, `normalize_content_to_text`, `is_word_document`) promoted to public — signature + docstring is the interface.
+- **NEW:** Cross-client AGENT_BEAT rendering parity test (`tests/test_agent_beat_cross_client_parity.py`) — proves the four clients agree on the contract, including known Rich divergence captured explicitly.
+- **REMOVED:** `EngineClient.has_vision_model` back-compat alias (deprecated in v1.17.4; verified zero external callers).
+- **FIX:** `/attach` of Windows text files no longer ships CRLF bytes to the LLM (`PendingFile.text` normalises). CSV attachment on Windows no longer fails — `mimetypes.guess_type` resolves `.csv` to `application/vnd.ms-excel` on Windows, file_preprocessing now special-cases CSV before the office dispatch.
+- **FIX:** 19 pre-existing test failures cleared on Windows (CRLF, mimetype, path-separator, config-default issues).
+- See [docs/STABILIZATION-v1.18.0.md](docs/STABILIZATION-v1.18.0.md) for the full pass summary.
+
 For detailed release history, see [CHANGELOG.md](CHANGELOG.md) and `docs/RELEASE-NOTES-v*.md`.
 
-## Codebase Statistics (v1.17.4, approximate)
+## Codebase Statistics (v1.18.0 in progress, approximate)
 
 | Language | Files | Lines |
 |----------|------:|------:|
-| Python (core) | 162 | ~52,700 |
-| Python (tests) | 75 | ~35,100 |
-| TypeScript (VSCode) | 17 | ~8,700 |
-| JavaScript (Web) | 19 | ~9,200 |
+| Python (core) | 174 | ~54,000 |
+| Python (tests) | 100 | ~37,500 |
+| TypeScript (VSCode) | 17 | ~8,900 |
+| JavaScript (Web) | 19 | ~9,400 |
 | CSS | 6 | ~3,400 |
-| **Total** | **~279** | **~109,100** |
+| **Total** | **~316** | **~113,200** |
 
-Breakdown: ~80% Python, ~8% JavaScript, ~8% TypeScript, ~3% CSS
+Breakdown: ~81% Python, ~8% JavaScript, ~8% TypeScript, ~3% CSS
+
+Tests: **2,591 passing**, 2 skipped. Up from 2,410 at the v1.17.7
+release tag — heartbeat P0 added 1,682 lines of new test coverage,
+the stabilization pass added 181 more (cross-client parity, AppState
+fields, autosave guard, format-string mirrors, etc.).
 
 ## Installation Locations (CRITICAL)
 

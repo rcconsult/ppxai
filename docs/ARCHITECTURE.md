@@ -43,10 +43,16 @@ ppxai/
 ├── themes.py          # LEAF: No ppxai imports
 ├── prompts.py         # LEAF: No ppxai imports
 ├── utils.py           # LEAF: No ppxai imports
-├── common/            # Low-level utilities
-│   ├── logger.py      # LEAF: No ppxai imports (enable_all/disable_all v1.15.4)
-│   ├── preview.py     # LEAF: Preview utilities (v1.15.4)
-│   └── consent.py     # Uses logger only
+├── common/            # Low-level utilities — every file here is a LEAF
+│   ├── logger.py      # No ppxai imports (enable_all/disable_all v1.15.4)
+│   ├── preview.py     # Preview utilities (v1.15.4)
+│   ├── consent.py     # Uses logger only
+│   ├── format.py      # format_tokens / format_usage_badge (v1.18.0 Phase 4 — canonical Python source for the JS/TS mirrors in web/shared and vscode/src/shared)
+│   ├── autosave_guard.py  # AutosaveFailureGuard state machine (v1.18.0 Phase 5f — surfaces sustained auto-save failures to the user)
+│   ├── atomic_file.py     # atomic_replace with Windows lock-retry (v1.18.0 Phase 5g — extracted from editor.py)
+│   ├── docx_to_pdf.py     # convert_docx_to_pdf via LibreOffice headless (v1.18.0 Phase 5g — extracted from server/routes/file_serve.py)
+│   ├── async_compat.py    # Asyncio compatibility helpers
+│   └── file_type.py       # File-type / mimetype helpers
 ├── preview_server.py  # Stdlib HTTP preview server (v1.15.4)
 ├── engine/            # Core business logic
 │   ├── types.py       # LEAF: No ppxai imports

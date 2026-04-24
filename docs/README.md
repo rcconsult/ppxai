@@ -36,6 +36,7 @@
 | [vLLM Tool Calling](vllm-tool-calling-guide.md) | Hermes vs Harmony, native vs prompt-based |
 | [Prompt-Based Tool Calling](prompt-based-tool-calling.md) | Developer guide for non-native tool calling |
 | [Release Notes v1.18.0 (draft)](RELEASE-NOTES-v1.18.0.md) | **In progress** — P0 agent heartbeat primitives (`AGENT_BEAT` / `_RUN_START` / `_RUN_COMPLETE` / `_RUN_ERROR` / `_ZOMBIE`), zombie circuit-breaker, cross-client renderers |
+| [Stabilization v1.18.0](STABILIZATION-v1.18.0.md) | **Landed** — five-phase cleanup pass: `GET /state` reconnect endpoint, AppState `last_message_role`, `format_tokens`/`format_usage_badge` cross-language helpers, `AutosaveFailureGuard`, public-API promotion of 8 helpers, removed `has_vision_model` alias |
 | [Release Notes v1.17.7](RELEASE-NOTES-v1.17.7.md) | `ppxai-desktop --version` stale-fallback fix |
 | [Release Notes v1.17.6](RELEASE-NOTES-v1.17.6.md) | R5 first-class `uploaded_file` content type, R19 multimodal rendering gap |
 | [Release Notes v1.17.5](RELEASE-NOTES-v1.17.5.md) | R8–R18 bugfix batch (alternation, CSV streaming, Gemini null-parts, /attach UX) |
@@ -240,5 +241,6 @@ A: Type `@filename`, `@git`, or `@tree` in your messages. See [Context Injection
 
 ---
 
-**Current Version**: v1.17.7
-**Last Updated**: 2026-04-19
+**Current Released Version**: v1.17.7
+**Active Branch**: `feature/v1.18.0` (P0 heartbeat + stabilization landed; AppState codegen + routing pending)
+**Last Updated**: 2026-04-24
