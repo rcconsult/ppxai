@@ -1,0 +1,3788 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Multi-LLM Interface for Developers - Terminal & VSCode">
+      
+      
+      
+        <link rel="canonical" href="https://rcconsult.github.io/ppxai/1.18.0/archive/TODO-v1.15.3/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>TODO: v1.15.3 - Config Hot-Reload, DAG Init & Platform Alignment - ppxai Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#todo-v1153-config-hot-reload-dag-init-platform-alignment" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="ppxai Documentation" class="md-header__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ppxai Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              TODO: v1.15.3 - Config Hot-Reload, DAG Init &amp; Platform Alignment
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="ppxai Documentation" class="md-nav__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ppxai Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../INSTALLATION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../PROVIDER_SETUP/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provider Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../AGENT_MODE_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agent Mode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../BOOTSTRAP_CONTEXT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bootstrap Context
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../CONTEXT-INJECTION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Context Injection
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../CHECKPOINT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Checkpoint & Undo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../FILE_EDITING_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    File Editing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../SHELL_CONSENT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shell Consent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../CUSTOM_TOOL_DEVELOPMENT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../CUSTOM_COMMAND_DEVELOPMENT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ARCHITECTURE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ollama-limitations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ollama Limitations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../vllm-tool-calling-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    vLLM Tool Calling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../CONTAINER_TOOLS_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Container Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../AUTOROUTER-CONFIG/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autorouter Config
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release Notes
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Release Notes
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../RELEASE-NOTES-v1.16.1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../RELEASE-NOTES-v1.16.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../RELEASE-NOTES-v1.15.6/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.15.6
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#executive-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Executive Summary
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Executive Summary">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#completed-66-workstreams" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ✅ Completed (6/6 workstreams)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#deferred-items-17-workstreams" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ⏳ Deferred Items (1/7 workstreams)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#release-recommendation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Release Recommendation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#detailed-workstreams" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Detailed Workstreams
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1-config-hot-reload-fix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Config Hot-Reload Fix ✅
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-dag-based-config-initialization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. DAG-Based Config Initialization ✅
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. DAG-Based Config Initialization ✅">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#completed-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Completed Changes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#test-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Test Results
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#known-issues" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Known Issues
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#problem" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Problem
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#codebase-audit-2026-02-07" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Codebase Audit (2026-02-07)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Codebase Audit (2026-02-07)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a-lazy-loading-mechanism-ppxaiconfig__init__py" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A. Lazy Loading Mechanism (ppxai/config/__init__.py)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#b-engineclient-snapshot-pattern-ppxaiengineclientpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        B. EngineClient Snapshot Pattern (ppxai/engine/client.py)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#c-all-providers-import-sites-workarounds" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        C. All PROVIDERS Import Sites (Workarounds)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#d-all-reload_config-call-sites" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        D. All reload_config() Call Sites
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#e-findings-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        E. Findings Summary
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#current-flow-broken" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Current Flow (Broken)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#proposed-flow-dag-init" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Proposed Flow (DAG Init)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#implementation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Implementation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Implementation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#step-1-replace-__getattr__-with-explicit-initialize" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 1: Replace __getattr__ with explicit initialize()
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-2-simplify-engineclient-remove-snapshot-pattern" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 2: Simplify EngineClient - remove snapshot pattern
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-3-remove-workarounds-from-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 3: Remove workarounds from commands
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-4-fix-latent-bug-in-http-server" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 4: Fix latent bug in HTTP server
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-5-add-initialize-calls-at-entry-points" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 5: Add initialize() calls at entry points
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-6-clean-up-dead-code" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 6: Clean up dead code
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#files-changed-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Files Changed Summary
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#testing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Testing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#migration-safety" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Migration Safety
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-file-navigation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. File Navigation ⏳
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. File Navigation ⏳">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#phase-0-command-based-navigation-mvp-2-days" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 0: Command-Based Navigation (MVP) - 2 days
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-1-ppxaide-interactive-file-tree-sidebar-5-days" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 1: ppxaide Interactive File Tree Sidebar - 5 days
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-platform-alignment-unixmacoslinuxwindows" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Platform Alignment (Unix/macOS/Linux/Windows) ✅
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Platform Alignment (Unix/macOS/Linux/Windows) ✅">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#completed-changes_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Completed Changes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#issues-identified" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Issues Identified
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Issues Identified">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a-signal-handling-inconsistencies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A. Signal Handling Inconsistencies
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#b-binary-search-path-platform-logic" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        B. Binary Search Path Platform Logic
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#c-file-path-hyperlink-patterns-windows-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        C. File Path Hyperlink Patterns (Windows Support)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#d-path-expansion-consistency" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        D. Path Expansion Consistency
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#e-clipboard-backend-detection-pyperclip" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        E. Clipboard Backend Detection (pyperclip)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#implementation-plan" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Implementation Plan
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Implementation Plan">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#step-1-fix-tui-signal-handling-02-days" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 1: Fix TUI Signal Handling (0.2 days)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-2-add-platform-filtering-to-binary-search-paths-03-days" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 2: Add Platform Filtering to Binary Search Paths (0.3 days)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-3-standardize-path-expansion-03-days" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 3: Standardize Path Expansion (0.3 days)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-4-document-platform-specific-behaviors-02-days" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 4: Document Platform-Specific Behaviors (0.2 days)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#files-changed-summary_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Files Changed Summary
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#migration-safety_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Migration Safety
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-tool-calling-clarification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Tool Calling Clarification ✅
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="7. Tool Calling Clarification ✅">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#problem_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Problem
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#test-results-2026-02-08" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Test Results (2026-02-08)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#implementation-plan_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Implementation Plan
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Implementation Plan">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#step-1-add-capability-flags-01-days" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 1: Add Capability Flags (0.1 days)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-2-update-provider-docstrings-005-days" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 2: Update Provider Docstrings (0.05 days)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-3-fix-gemini-sdk-025-days" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 3: Fix Gemini SDK (0.25 days)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-4-update-benchmarks-01-days" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 4: Update Benchmarks (0.1 days)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-5-create-documentation-01-days" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 5: Create Documentation (0.1 days)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-6-update-config-example-005-days" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 6: Update Config Example (0.05 days)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#implementation-summary-2026-02-14" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ✅ Implementation Summary (2026-02-14)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#testing-plan" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Testing Plan
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#success-criteria" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Success Criteria
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#files-changed-summary_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Files Changed Summary
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#impact" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Impact
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        References
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-outstanding-todos-code-level" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Outstanding TODOs (Code-Level) ⏳
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#explicitly-not-in-v1153" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Explicitly NOT in v1.15.3
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Explicitly NOT in v1.15.3">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#web-app-file-tree-sidebar" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Web App File Tree Sidebar
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ppxai-rich-cli-interactive-file-tree" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ppxai (Rich CLI) Interactive File Tree
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#success-metrics-release-criteria" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Success Metrics &amp; Release Criteria
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Success Metrics &amp; Release Criteria">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#completed-features" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Completed Features
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#open-items-for-v1153" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Open Items for v1.15.3
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#deferred-to-v1160" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Deferred to v1.16.0
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#next-steps-for-v1153-release" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Next Steps for v1.15.3 Release
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Next Steps for v1.15.3 Release">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#implementation-complete-57-workstreams" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ✅ Implementation Complete (5/7 workstreams)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#remaining-work" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ⏳ Remaining Work
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ready-for-release-after-tool-calling-work" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ready for Release After Tool Calling Work
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#version-alignment-note" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Version Alignment Note
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="todo-v1153-config-hot-reload-dag-init-platform-alignment">TODO: v1.15.3 - Config Hot-Reload, DAG Init &amp; Platform Alignment<a class="headerlink" href="#todo-v1153-config-hot-reload-dag-init-platform-alignment" title="Permanent link">&para;</a></h1>
+<p><strong>Created:</strong> 2026-02-07
+<strong>Branch:</strong> feature/v1.15.5 (completed)
+<strong>Status:</strong> ✅ Complete (6/6 workstreams)
+<strong>Previous Release:</strong> v1.15.2
+<strong>Last Updated:</strong> 2026-02-14</p>
+<hr />
+<h2 id="executive-summary">Executive Summary<a class="headerlink" href="#executive-summary" title="Permanent link">&para;</a></h2>
+<h3 id="completed-66-workstreams">✅ Completed (6/6 workstreams)<a class="headerlink" href="#completed-66-workstreams" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Workstream</th>
+<th>Status</th>
+<th>Impact</th>
+<th>Completed</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>Config Hot-Reload Fix</strong></td>
+<td>✅ Done</td>
+<td>Config changes reflected without restart</td>
+<td>2026-02-08</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>TUI EventBus Stability</strong></td>
+<td>✅ Done</td>
+<td>No NoMatches crashes, warnings displayed</td>
+<td>2026-02-08</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>DGX Spark Benchmarks</strong></td>
+<td>✅ Done</td>
+<td>Results tracked for GPT-OSS, Qwen3, Qwen2.5-Coder</td>
+<td>2026-02-08</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>DAG-Based Config Init</strong></td>
+<td>✅ Done</td>
+<td>No stale cache, 100% test pass rate</td>
+<td>2026-02-08</td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>Platform Alignment</strong></td>
+<td>✅ Done</td>
+<td>Signal handling all platforms, platform-aware binary search</td>
+<td>2026-02-08</td>
+</tr>
+<tr>
+<td>7</td>
+<td><strong>Tool Calling Clarification</strong></td>
+<td>✅ Done</td>
+<td>Metadata distinguishes native vs prompt-based</td>
+<td>2026-02-14</td>
+</tr>
+</tbody>
+</table>
+<h3 id="deferred-items-17-workstreams">⏳ Deferred Items (1/7 workstreams)<a class="headerlink" href="#deferred-items-17-workstreams" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Workstream</th>
+<th>Priority</th>
+<th>Effort</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>6</td>
+<td><strong>File Navigation</strong></td>
+<td>Medium</td>
+<td>7 days</td>
+<td>Deferred to v1.16.0</td>
+</tr>
+</tbody>
+</table>
+<h3 id="release-recommendation">Release Recommendation<a class="headerlink" href="#release-recommendation" title="Permanent link">&para;</a></h3>
+<p><strong>v1.15.3 is COMPLETE with:</strong>
+- ✅ Config Hot-Reload Fix (Done)
+- ✅ TUI EventBus Stability (Done)
+- ✅ Benchmarks (Done)
+- ✅ Platform Alignment (Done)
+- ✅ DAG-Based Config Init (Done)
+- ✅ Tool Calling Clarification (Done)</p>
+<p><strong>Deferred to v1.16.0:</strong>
+- 🔲 File Navigation (7 days - feature work)</p>
+<p><strong>Status:</strong> ✅ All v1.15.3 work complete (6/6 workstreams). Ready for v1.15.5 release.</p>
+<hr />
+<h2 id="detailed-workstreams">Detailed Workstreams<a class="headerlink" href="#detailed-workstreams" title="Permanent link">&para;</a></h2>
+<hr />
+<h2 id="1-config-hot-reload-fix">1. Config Hot-Reload Fix ✅<a class="headerlink" href="#1-config-hot-reload-fix" title="Permanent link">&para;</a></h2>
+<p><strong>Status:</strong> Done
+<strong>Effort:</strong> Completed</p>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Description</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Config auto-reload</strong></td>
+<td><code>/model</code> and <code>/provider</code> commands reload config from disk</td>
+<td>✅ Done</td>
+</tr>
+<tr>
+<td><strong><code>EngineClient.reload_config()</code></strong></td>
+<td>Single entry point to refresh all cached config data</td>
+<td>✅ Done</td>
+</tr>
+<tr>
+<td><strong>Session restore reload</strong></td>
+<td>All 3 clients reload config before restoring sessions</td>
+<td>✅ Done</td>
+</tr>
+<tr>
+<td><strong>Server endpoint reload</strong></td>
+<td>HTTP + JSON-RPC endpoints reload before listing/switching</td>
+<td>✅ Done</td>
+</tr>
+<tr>
+<td><strong>Root cause</strong></td>
+<td>ConfigStore singleton + EngineClient snapshot = stale config (since v1.8.0)</td>
+<td>✅ Identified</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Root Cause:</strong> <code>EngineClient._load_config()</code> captures <code>self._providers_config = PROVIDERS</code> at init time. When config file is edited externally (e.g., adding new models), the cached dict goes stale. <code>reload_config()</code> now refreshes ConfigStore + all cached config snapshots.</p>
+<hr />
+<h2 id="2-dag-based-config-initialization">2. DAG-Based Config Initialization ✅<a class="headerlink" href="#2-dag-based-config-initialization" title="Permanent link">&para;</a></h2>
+<p><strong>Priority:</strong> High (tech debt)
+<strong>Status:</strong> Done (10 test isolation issues remain)
+<strong>Effort:</strong> 0.5 days (Completed)</p>
+<h3 id="completed-changes">Completed Changes<a class="headerlink" href="#completed-changes" title="Permanent link">&para;</a></h3>
+<p>All planned implementation steps completed:</p>
+<ol>
+<li>✅ <strong>Replaced <code>__getattr__</code> with <code>initialize()</code></strong> - <code>ppxai/config/__init__.py</code></li>
+<li>Module-level <code>PROVIDERS</code> and <code>MODELS</code> dicts</li>
+<li><code>initialize()</code> function populates dicts in-place using <code>.clear()</code> + <code>.update()</code></li>
+<li>
+<p><code>reload_config()</code> calls <code>initialize()</code> after store reload</p>
+</li>
+<li>
+<p>✅ <strong>Simplified EngineClient</strong> - <code>ppxai/engine/client.py</code></p>
+</li>
+<li>Removed <code>self._providers_config</code> snapshot (line 137)</li>
+<li>Removed <code>self._default_provider</code> dead code (line 141)</li>
+<li>Added <code>@property providers_config</code> - always returns current PROVIDERS</li>
+<li>
+<p>Updated 3 consumers to use property (lines 424, 432, 501)</p>
+</li>
+<li>
+<p>✅ <strong>Removed workarounds</strong> - 4 files cleaned up</p>
+</li>
+<li><code>ppxai/commands/provider.py</code> - Top-level import, removed deferred re-import</li>
+<li><code>ppxai/tui/app.py</code> - Top-level import, removed local import</li>
+<li>
+<p>Fixed latent bug in <code>ppxai/server/http.py</code> - improved comment clarity</p>
+</li>
+<li>
+<p>✅ <strong>Added <code>initialize()</code> calls</strong> - 3 entry points</p>
+</li>
+<li>Rich TUI: <code>ppxai/rich/main.py</code> (already had it)</li>
+<li>Textual TUI: <code>ppxai/tui/app.py</code> in <code>on_mount()</code></li>
+<li>
+<p>Tests: <code>tests/conftest.py</code> in <code>pytest_configure()</code></p>
+</li>
+<li>
+<p>✅ <strong>Cleaned up dead code</strong></p>
+</li>
+<li>Removed <code>self._get_default_model</code> from EngineClient</li>
+<li>Removed <code>_lazy_attrs</code> dict from config/<strong>init</strong>.py</li>
+<li>Removed <code>__getattr__</code> function from config/<strong>init</strong>.py</li>
+</ol>
+<h3 id="test-results">Test Results<a class="headerlink" href="#test-results" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>1157/1157 tests pass</strong> (100% pass rate) ✅</li>
+<li><strong>Test isolation fix:</strong> Added <code>reset_config_after_test</code> fixture in <code>conftest.py</code></li>
+<li>Auto-runs after each test to reset PROVIDERS/MODELS</li>
+<li>Ensures clean config state for every test</li>
+<li>Fixed all 10 test isolation issues</li>
+</ul>
+<h3 id="known-issues">Known Issues<a class="headerlink" href="#known-issues" title="Permanent link">&para;</a></h3>
+<h3 id="problem">Problem<a class="headerlink" href="#problem" title="Permanent link">&para;</a></h3>
+<p><code>ppxai/config/__init__.py</code> uses module-level <code>__getattr__</code> to lazily compute <code>PROVIDERS</code> and <code>MODELS</code>. This creates:</p>
+<ol>
+<li><strong>No caching</strong> - <code>PROVIDERS</code> is recomputed from ConfigStore on every access</li>
+<li><strong>Snapshot staleness</strong> - <code>EngineClient._providers_config = PROVIDERS</code> captures a dict at init that goes stale on reload</li>
+<li><strong>Fragile workarounds</strong> - Commands must re-import PROVIDERS after reload, call <code>_get_providers()</code> directly, or use dynamic imports</li>
+</ol>
+<hr />
+<h3 id="codebase-audit-2026-02-07">Codebase Audit (2026-02-07)<a class="headerlink" href="#codebase-audit-2026-02-07" title="Permanent link">&para;</a></h3>
+<h4 id="a-lazy-loading-mechanism-ppxaiconfig__init__py">A. Lazy Loading Mechanism (<code>ppxai/config/__init__.py</code>)<a class="headerlink" href="#a-lazy-loading-mechanism-ppxaiconfig__init__py" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Lines</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>_get_config()</code></td>
+<td>56-62</td>
+<td>Reads <code>ConfigStore.get_instance().config</code> (fresh every call)</td>
+</tr>
+<tr>
+<td><code>_get_providers()</code></td>
+<td>65-67</td>
+<td>Returns <code>_get_config().get("providers", {})</code></td>
+</tr>
+<tr>
+<td><code>_get_models()</code></td>
+<td>70-72</td>
+<td>Returns perplexity models only (legacy)</td>
+</tr>
+<tr>
+<td><code>_lazy_attrs</code> dict</td>
+<td>88-91</td>
+<td>Maps <code>"PROVIDERS"</code> → <code>_get_providers</code>, <code>"MODELS"</code> → <code>_get_models</code></td>
+</tr>
+<tr>
+<td><code>__getattr__()</code></td>
+<td>94-98</td>
+<td>Module hook: calls factory fn on every attribute access</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Key behavior:</strong> <code>__getattr__</code> is called on <strong>every</strong> access to <code>PROVIDERS</code> or <code>MODELS</code> — it returns a fresh dict each time (no module-level caching). This means <code>from ppxai.config import PROVIDERS</code> binds to whatever <code>_get_providers()</code> returns <em>at import time</em>, and that binding goes stale after <code>ConfigStore.reload()</code>.</p>
+<h4 id="b-engineclient-snapshot-pattern-ppxaiengineclientpy">B. EngineClient Snapshot Pattern (<code>ppxai/engine/client.py</code>)<a class="headerlink" href="#b-engineclient-snapshot-pattern-ppxaiengineclientpy" title="Permanent link">&para;</a></h4>
+<p><strong><code>_load_config()</code> (lines 134-145) — 7 cached attributes:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Line</th>
+<th>Type</th>
+<th>Refreshed by <code>reload_config()</code>?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>self._providers_config</code></td>
+<td>137</td>
+<td>Dict snapshot</td>
+<td>Yes (line 158)</td>
+</tr>
+<tr>
+<td><code>self._get_api_key</code></td>
+<td>138</td>
+<td>Function ref</td>
+<td>No (but calls fresh config internally)</td>
+</tr>
+<tr>
+<td><code>self._get_base_url</code></td>
+<td>139</td>
+<td>Function ref</td>
+<td>No (but calls fresh config internally)</td>
+</tr>
+<tr>
+<td><code>self._get_default_model</code></td>
+<td>140</td>
+<td>Function ref</td>
+<td>No (but calls fresh config internally)</td>
+</tr>
+<tr>
+<td><code>self._default_provider</code></td>
+<td>141</td>
+<td>String value</td>
+<td><strong>No</strong> (stale after reload)</td>
+</tr>
+<tr>
+<td><code>self._shell_config</code></td>
+<td>144</td>
+<td>Dict snapshot</td>
+<td>Yes (line 159)</td>
+</tr>
+<tr>
+<td><code>self._agent_config</code></td>
+<td>145</td>
+<td>Dict snapshot</td>
+<td>Yes (line 160)</td>
+</tr>
+</tbody>
+</table>
+<p><strong><code>reload_config()</code> (lines 147-160):</strong>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">..config</span><span class="w"> </span><span class="kn">import</span> <span class="n">reload_config</span> <span class="k">as</span> <span class="n">_reload_config</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="n">_reload_config</span><span class="p">()</span>                              <span class="c1"># L154: reload ConfigStore</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">..config</span><span class="w"> </span><span class="kn">import</span> <span class="n">_get_providers</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="bp">self</span><span class="o">.</span><span class="n">_providers_config</span> <span class="o">=</span> <span class="n">_get_providers</span><span class="p">()</span>     <span class="c1"># L158: fresh providers</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="bp">self</span><span class="o">.</span><span class="n">_shell_config</span> <span class="o">=</span> <span class="n">get_shell_config</span><span class="p">()</span>       <span class="c1"># L159: fresh shell config</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="bp">self</span><span class="o">.</span><span class="n">_agent_config</span> <span class="o">=</span> <span class="n">get_agent_config</span><span class="p">()</span>       <span class="c1"># L160: fresh agent config</span>
+</span></code></pre></div></p>
+<p><strong>Consumers of <code>self._providers_config</code>:</strong>
+| Usage | Line | Context |
+|-------|------|---------|
+| <code>if provider_name not in self._providers_config:</code> | 420 | <code>set_provider()</code> validation |
+| <code>provider_config = self._providers_config[provider_name]</code> | 428 | <code>set_provider()</code> lookup |
+| <code>for provider_id, config in self._providers_config.items():</code> | 497 | <code>list_providers()</code> |</p>
+<p><strong>Consumers of <code>self._agent_config</code>:</strong>
+| Usage | Line | Context |
+|-------|------|---------|
+| <code>self.tool_manager.max_iterations = self._agent_config.get(...)</code> | 472, 603 | Agent start |
+| <code>return self._agent_config</code> | 686 | <code>get_agent_config()</code> property |</p>
+<p><strong>Consumer of <code>self._shell_config</code>:</strong>
+| Usage | Line | Context |
+|-------|------|---------|
+| <code>classify_shell_command(command, self._shell_config)</code> | 995 | Shell consent |</p>
+<h4 id="c-all-providers-import-sites-workarounds">C. All PROVIDERS Import Sites (Workarounds)<a class="headerlink" href="#c-all-providers-import-sites-workarounds" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Line</th>
+<th>Pattern</th>
+<th>Workaround?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ppxai/config/__init__.py</code></td>
+<td>88-98</td>
+<td><code>__getattr__</code> lazy dispatch</td>
+<td><strong>Source of the problem</strong></td>
+</tr>
+<tr>
+<td><code>ppxai/engine/client.py</code></td>
+<td>137</td>
+<td><code>self._providers_config = PROVIDERS</code></td>
+<td><strong>Snapshot</strong> (goes stale)</td>
+</tr>
+<tr>
+<td><code>ppxai/engine/client.py</code></td>
+<td>157-158</td>
+<td><code>from ..config import _get_providers</code></td>
+<td><strong>Workaround</strong> (post-reload re-fetch)</td>
+</tr>
+<tr>
+<td><code>ppxai/commands/provider.py</code></td>
+<td>119</td>
+<td><code>from ..config import PROVIDERS</code></td>
+<td><strong>Workaround</strong> (deferred import after reload)</td>
+</tr>
+<tr>
+<td><code>ppxai/tui/app.py</code></td>
+<td>646</td>
+<td><code>from ppxai.config import PROVIDERS</code></td>
+<td><strong>Workaround</strong> (local import for freshness)</td>
+</tr>
+<tr>
+<td><code>ppxai/tui/completer.py</code></td>
+<td>19</td>
+<td><code>from ..config import PROVIDERS</code></td>
+<td>Top-level (reads fresh via <code>__getattr__</code>)</td>
+</tr>
+<tr>
+<td><code>ppxai/rich/ui.py</code></td>
+<td>14</td>
+<td><code>from ..config import MODELS, ..., PROVIDERS</code></td>
+<td>Top-level (MODELS is perplexity-only legacy)</td>
+</tr>
+<tr>
+<td>Tests (5 files)</td>
+<td>various</td>
+<td><code>from ppxai.config import PROVIDERS</code></td>
+<td>Local imports in test functions</td>
+</tr>
+</tbody>
+</table>
+<h4 id="d-all-reload_config-call-sites">D. All <code>reload_config()</code> Call Sites<a class="headerlink" href="#d-all-reload_config-call-sites" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Lines</th>
+<th>Context</th>
+<th>Pattern</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ppxai/engine/client.py</code></td>
+<td>147-160</td>
+<td><code>reload_config()</code> method</td>
+<td>Refreshes 3 of 7 cached attrs</td>
+</tr>
+<tr>
+<td><code>ppxai/commands/provider.py</code></td>
+<td>41</td>
+<td><code>/model</code> handler</td>
+<td><code>engine_client.reload_config()</code> before listing</td>
+</tr>
+<tr>
+<td><code>ppxai/commands/provider.py</code></td>
+<td>116</td>
+<td><code>/provider</code> handler</td>
+<td><code>engine_client.reload_config()</code> then re-imports PROVIDERS</td>
+</tr>
+<tr>
+<td><code>ppxai/commands/utility.py</code></td>
+<td>268</td>
+<td><code>/config reload</code> handler</td>
+<td><code>engine_client.reload_config()</code> or raw <code>reload_config()</code></td>
+</tr>
+<tr>
+<td><code>ppxai/tui/app.py</code></td>
+<td>629</td>
+<td>Session restore</td>
+<td><code>self._engine_client.reload_config()</code></td>
+</tr>
+<tr>
+<td><code>ppxai/rich/main.py</code></td>
+<td>575</td>
+<td>Session restore</td>
+<td><code>handler.engine_client.reload_config()</code></td>
+</tr>
+<tr>
+<td><code>ppxai/server/http.py</code></td>
+<td>607</td>
+<td><code>/config/reload</code> POST</td>
+<td>Raw <code>reload_config()</code> (no engine refresh!)</td>
+</tr>
+<tr>
+<td><code>ppxai/server/http.py</code></td>
+<td>765</td>
+<td><code>GET /providers</code></td>
+<td><code>engine.reload_config()</code></td>
+</tr>
+<tr>
+<td><code>ppxai/server/http.py</code></td>
+<td>799</td>
+<td><code>POST /provider</code></td>
+<td><code>engine.reload_config()</code></td>
+</tr>
+<tr>
+<td><code>ppxai/server/http.py</code></td>
+<td>824</td>
+<td><code>GET /models</code></td>
+<td><code>engine.reload_config()</code></td>
+</tr>
+<tr>
+<td><code>ppxai/server/http.py</code></td>
+<td>853</td>
+<td><code>POST /model</code></td>
+<td><code>engine.reload_config()</code></td>
+</tr>
+<tr>
+<td><code>ppxai/server/http.py</code></td>
+<td>1449</td>
+<td>Session restore</td>
+<td><code>engine.reload_config()</code></td>
+</tr>
+<tr>
+<td><code>ppxai/server/jsonrpc.py</code></td>
+<td>174, 187, 194, 207</td>
+<td>All 4 RPC methods</td>
+<td><code>self.engine.reload_config()</code> before every op</td>
+</tr>
+</tbody>
+</table>
+<h4 id="e-findings-summary">E. Findings Summary<a class="headerlink" href="#e-findings-summary" title="Permanent link">&para;</a></h4>
+<p><strong>3 distinct problems:</strong></p>
+<ol>
+<li>
+<p><strong><code>__getattr__</code> re-evaluates on every access</strong> (lines 94-98) — no module-level caching, each <code>PROVIDERS</code> access triggers <code>_get_providers()</code> → <code>ConfigStore.config.get("providers", {})</code>. Wasteful but functionally correct.</p>
+</li>
+<li>
+<p><strong>EngineClient snapshots go stale</strong> (line 137) — <code>self._providers_config = PROVIDERS</code> captures a dict reference at init. After <code>ConfigStore.reload()</code>, this reference points to the old dict. Fixed by <code>reload_config()</code> but only when explicitly called.</p>
+</li>
+<li>
+<p><strong>Workaround proliferation</strong> — 4 files use deferred/dynamic imports after reload to get fresh PROVIDERS. This is fragile and easy to get wrong (e.g., <code>http.py:607</code> calls raw <code>reload_config()</code> without refreshing engine caches).</p>
+</li>
+</ol>
+<p><strong>1 latent bug found:</strong>
+- <code>ppxai/server/http.py:607</code> — The <code>/config/reload</code> POST endpoint calls raw <code>reload_config()</code> but does NOT call <code>engine.reload_config()</code>. This means the HTTP server's EngineClient keeps stale <code>_providers_config</code>, <code>_shell_config</code>, <code>_agent_config</code> until the next provider/model endpoint call.</p>
+<p><strong>1 dead attribute:</strong>
+- <code>self._default_provider</code> (line 141) — Set at init, never refreshed, and <strong>never used</strong> anywhere in the codebase after init.</p>
+<hr />
+<h3 id="current-flow-broken">Current Flow (Broken)<a class="headerlink" href="#current-flow-broken" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>Import time:    config.__getattr__(&quot;PROVIDERS&quot;) -&gt; _get_providers() -&gt; ConfigStore.config
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>EngineClient:   self._providers_config = PROVIDERS   &lt;- snapshot, never auto-refreshed
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>Config change:  ConfigStore.reload()                  &lt;- new dict, but snapshot is stale
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>Workaround:     engine_client.reload_config()         &lt;- manually re-fetches _get_providers()
+</span></code></pre></div>
+<h3 id="proposed-flow-dag-init">Proposed Flow (DAG Init)<a class="headerlink" href="#proposed-flow-dag-init" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>Startup:        config.initialize()  -&gt; loads config, sets module-level PROVIDERS/MODELS
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>                engine.initialize()  -&gt; depends on config, no snapshot needed
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>Config change:  config.reload()      -&gt; updates module PROVIDERS/MODELS in place
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>                engine reads config.PROVIDERS (always current)
+</span></code></pre></div>
+<h3 id="implementation">Implementation<a class="headerlink" href="#implementation" title="Permanent link">&para;</a></h3>
+<h4 id="step-1-replace-__getattr__-with-explicit-initialize">Step 1: Replace <code>__getattr__</code> with explicit <code>initialize()</code><a class="headerlink" href="#step-1-replace-__getattr__-with-explicit-initialize" title="Permanent link">&para;</a></h4>
+<p><strong>File: <code>ppxai/config/__init__.py</code> (lines 82-98)</strong></p>
+<p>Remove:
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">_lazy_attrs</span> <span class="o">=</span> <span class="p">{</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>    <span class="s2">&quot;PROVIDERS&quot;</span><span class="p">:</span> <span class="n">_get_providers</span><span class="p">,</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>    <span class="s2">&quot;MODELS&quot;</span><span class="p">:</span> <span class="n">_get_models</span><span class="p">,</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="p">}</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="k">def</span><span class="w"> </span><span class="fm">__getattr__</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Lazy module attribute access for PROVIDERS and MODELS.&quot;&quot;&quot;</span>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>    <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">_lazy_attrs</span><span class="p">:</span>
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>        <span class="k">return</span> <span class="n">_lazy_attrs</span><span class="p">[</span><span class="n">name</span><span class="p">]()</span>
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>    <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;module </span><span class="si">{</span><span class="vm">__name__</span><span class="si">!r}</span><span class="s2"> has no attribute </span><span class="si">{</span><span class="n">name</span><span class="si">!r}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span></code></pre></div></p>
+<p>Replace with:
+<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># Module-level attributes - populated by initialize()</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="n">PROVIDERS</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="n">MODELS</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="n">_initialized</span> <span class="o">=</span> <span class="kc">False</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="k">def</span><span class="w"> </span><span class="nf">initialize</span><span class="p">():</span>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Load config and populate module-level PROVIDERS/MODELS.</span>
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="sd">    Safe to call multiple times (idempotent).</span>
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>    <span class="k">global</span> <span class="n">PROVIDERS</span><span class="p">,</span> <span class="n">MODELS</span><span class="p">,</span> <span class="n">_initialized</span>
+</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>    <span class="n">config</span> <span class="o">=</span> <span class="n">ConfigStore</span><span class="o">.</span><span class="n">get_instance</span><span class="p">()</span><span class="o">.</span><span class="n">config</span>
+</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>    <span class="n">PROVIDERS</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+</span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a>    <span class="n">PROVIDERS</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;providers&quot;</span><span class="p">,</span> <span class="p">{}))</span>
+</span><span id="__span-4-14"><a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a>    <span class="n">MODELS</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+</span><span id="__span-4-15"><a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a>    <span class="n">MODELS</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">PROVIDERS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;perplexity&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;models&quot;</span><span class="p">,</span> <span class="p">{}))</span>
+</span><span id="__span-4-16"><a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a>    <span class="n">_initialized</span> <span class="o">=</span> <span class="kc">True</span>
+</span></code></pre></div></p>
+<p><strong>Critical:</strong> Use <code>.clear()</code> + <code>.update()</code> instead of reassignment so that existing references (e.g., <code>from ppxai.config import PROVIDERS</code>) see the updated data.</p>
+<p>Also update <code>reload_config()</code> in <code>ppxai/config/store.py</code> (line 119-121):
+<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">reload_config</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Reload configuration from disk and refresh module-level attributes.&quot;&quot;&quot;</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>    <span class="n">result</span> <span class="o">=</span> <span class="n">ConfigStore</span><span class="o">.</span><span class="n">get_instance</span><span class="p">()</span><span class="o">.</span><span class="n">reload</span><span class="p">()</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>    <span class="c1"># Re-populate PROVIDERS/MODELS from fresh config</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>    <span class="kn">from</span><span class="w"> </span><span class="nn">.</span><span class="w"> </span><span class="kn">import</span> <span class="n">initialize</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>    <span class="n">initialize</span><span class="p">()</span>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>    <span class="k">return</span> <span class="n">result</span>
+</span></code></pre></div></p>
+<h4 id="step-2-simplify-engineclient-remove-snapshot-pattern">Step 2: Simplify EngineClient - remove snapshot pattern<a class="headerlink" href="#step-2-simplify-engineclient-remove-snapshot-pattern" title="Permanent link">&para;</a></h4>
+<p><strong>File: <code>ppxai/engine/client.py</code></strong></p>
+<p>Remove from <code>_load_config()</code> (lines 134-145):
+<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="bp">self</span><span class="o">.</span><span class="n">_providers_config</span> <span class="o">=</span> <span class="n">PROVIDERS</span>          <span class="c1"># DELETE - snapshot</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="bp">self</span><span class="o">.</span><span class="n">_default_provider</span> <span class="o">=</span> <span class="n">get_default_provider</span><span class="p">()</span>  <span class="c1"># DELETE - unused</span>
+</span></code></pre></div></p>
+<p>Add property:
+<div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nd">@property</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="k">def</span><span class="w"> </span><span class="nf">providers_config</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Always returns current providers from config module.&quot;&quot;&quot;</span>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>    <span class="kn">from</span><span class="w"> </span><span class="nn">..config</span><span class="w"> </span><span class="kn">import</span> <span class="n">PROVIDERS</span>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>    <span class="k">return</span> <span class="n">PROVIDERS</span>
+</span></code></pre></div></p>
+<p>Simplify <code>reload_config()</code> (lines 147-160):
+<div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">reload_config</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Reload config from disk and refresh engine state.&quot;&quot;&quot;</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>    <span class="kn">from</span><span class="w"> </span><span class="nn">..config</span><span class="w"> </span><span class="kn">import</span> <span class="n">reload_config</span> <span class="k">as</span> <span class="n">_reload_config</span>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>    <span class="n">_reload_config</span><span class="p">()</span>  <span class="c1"># Updates PROVIDERS/MODELS in place via initialize()</span>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">_shell_config</span> <span class="o">=</span> <span class="n">get_shell_config</span><span class="p">()</span>
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">_agent_config</span> <span class="o">=</span> <span class="n">get_agent_config</span><span class="p">()</span>
+</span></code></pre></div></p>
+<p>Update 3 consumers of <code>self._providers_config</code>:
+| Line | Before | After |
+|------|--------|-------|
+| 420 | <code>if provider_name not in self._providers_config:</code> | <code>if provider_name not in self.providers_config:</code> |
+| 428 | <code>provider_config = self._providers_config[provider_name]</code> | <code>provider_config = self.providers_config[provider_name]</code> |
+| 497 | <code>for provider_id, config in self._providers_config.items():</code> | <code>for provider_id, config in self.providers_config.items():</code> |</p>
+<h4 id="step-3-remove-workarounds-from-commands">Step 3: Remove workarounds from commands<a class="headerlink" href="#step-3-remove-workarounds-from-commands" title="Permanent link">&para;</a></h4>
+<p><strong>File: <code>ppxai/commands/provider.py</code></strong> — Remove deferred re-import (line 119):
+<div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># Before (workaround):</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="n">engine_client</span><span class="o">.</span><span class="n">reload_config</span><span class="p">()</span>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">..config</span><span class="w"> </span><span class="kn">import</span> <span class="n">PROVIDERS</span>  <span class="c1"># re-import after reload</span>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="c1"># After (clean):</span>
+</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="kn">from</span><span class="w"> </span><span class="nn">..config</span><span class="w"> </span><span class="kn">import</span> <span class="n">PROVIDERS</span>  <span class="c1"># top-level import works now</span>
+</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="n">engine_client</span><span class="o">.</span><span class="n">reload_config</span><span class="p">()</span>
+</span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="c1"># PROVIDERS dict is updated in-place by reload_config() -&gt; initialize()</span>
+</span></code></pre></div></p>
+<p><strong>File: <code>ppxai/tui/app.py</code></strong> — Remove local import (line 646):
+<div class="language-python highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># Before: local import inside method for freshness</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">ppxai.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">PROVIDERS</span>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="c1"># After: top-level import works (PROVIDERS is mutated in-place)</span>
+</span></code></pre></div></p>
+<h4 id="step-4-fix-latent-bug-in-http-server">Step 4: Fix latent bug in HTTP server<a class="headerlink" href="#step-4-fix-latent-bug-in-http-server" title="Permanent link">&para;</a></h4>
+<p><strong>File: <code>ppxai/server/http.py</code> (line 607)</strong></p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1"># Before (bug): raw reload doesn&#39;t refresh engine caches</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="n">reload_config</span><span class="p">()</span>
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>
+</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="c1"># After: use engine.reload_config() if available</span>
+</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="k">if</span> <span class="n">engine</span><span class="p">:</span>
+</span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>    <span class="n">engine</span><span class="o">.</span><span class="n">reload_config</span><span class="p">()</span>
+</span><span id="__span-11-7"><a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="k">else</span><span class="p">:</span>
+</span><span id="__span-11-8"><a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a>    <span class="n">reload_config</span><span class="p">()</span>
+</span></code></pre></div>
+<h4 id="step-5-add-initialize-calls-at-entry-points">Step 5: Add <code>initialize()</code> calls at entry points<a class="headerlink" href="#step-5-add-initialize-calls-at-entry-points" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Entry Point</th>
+<th>File</th>
+<th>Change</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Rich TUI</td>
+<td><code>ppxai/main.py</code></td>
+<td>Add <code>config.initialize()</code> at startup</td>
+</tr>
+<tr>
+<td>Textual TUI</td>
+<td><code>ppxai/tui/app.py</code></td>
+<td>Add <code>config.initialize()</code> in <code>on_mount()</code></td>
+</tr>
+<tr>
+<td>HTTP server</td>
+<td><code>ppxai/server/http.py</code></td>
+<td>Add <code>config.initialize()</code> in startup</td>
+</tr>
+<tr>
+<td>Desktop app</td>
+<td><code>ppxai/desktop/app.py</code></td>
+<td>Add <code>config.initialize()</code> at startup</td>
+</tr>
+<tr>
+<td>Tests</td>
+<td><code>tests/conftest.py</code></td>
+<td>Add <code>config.initialize()</code> in session-scoped fixture</td>
+</tr>
+</tbody>
+</table>
+<h4 id="step-6-clean-up-dead-code">Step 6: Clean up dead code<a class="headerlink" href="#step-6-clean-up-dead-code" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>File</th>
+<th>Line</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>self._default_provider</code></td>
+<td><code>engine/client.py</code></td>
+<td>141</td>
+<td>Delete (unused after init)</td>
+</tr>
+<tr>
+<td><code>self._get_default_model</code></td>
+<td><code>engine/client.py</code></td>
+<td>140</td>
+<td>Delete (stored but never used as cached ref)</td>
+</tr>
+<tr>
+<td><code>_lazy_attrs</code> dict</td>
+<td><code>config/__init__.py</code></td>
+<td>88-91</td>
+<td>Delete</td>
+</tr>
+<tr>
+<td><code>__getattr__</code> function</td>
+<td><code>config/__init__.py</code></td>
+<td>94-98</td>
+<td>Delete</td>
+</tr>
+</tbody>
+</table>
+<h3 id="files-changed-summary">Files Changed Summary<a class="headerlink" href="#files-changed-summary" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Action</th>
+<th>Est. Lines</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ppxai/config/__init__.py</code></td>
+<td>Replace <code>__getattr__</code> with <code>initialize()</code>, add <code>PROVIDERS</code>/<code>MODELS</code> as real module vars</td>
+<td>~20</td>
+</tr>
+<tr>
+<td><code>ppxai/config/store.py</code></td>
+<td><code>reload_config()</code> calls <code>initialize()</code> after store reload</td>
+<td>~5</td>
+</tr>
+<tr>
+<td><code>ppxai/engine/client.py</code></td>
+<td>Remove snapshot + dead attrs, add <code>providers_config</code> property, simplify <code>reload_config()</code></td>
+<td>~25</td>
+</tr>
+<tr>
+<td><code>ppxai/commands/provider.py</code></td>
+<td>Move PROVIDERS import to top-level, remove deferred import workaround</td>
+<td>~5</td>
+</tr>
+<tr>
+<td><code>ppxai/tui/app.py</code></td>
+<td>Move PROVIDERS import to top-level, add <code>initialize()</code> in <code>on_mount()</code></td>
+<td>~5</td>
+</tr>
+<tr>
+<td><code>ppxai/server/http.py</code></td>
+<td>Fix <code>/config/reload</code> endpoint to use engine reload, add <code>initialize()</code></td>
+<td>~5</td>
+</tr>
+<tr>
+<td><code>ppxai/main.py</code></td>
+<td>Add <code>config.initialize()</code> at startup</td>
+<td>~2</td>
+</tr>
+<tr>
+<td><code>ppxai/rich/ui.py</code></td>
+<td>No change needed (top-level import already works)</td>
+<td>0</td>
+</tr>
+<tr>
+<td><code>ppxai/tui/completer.py</code></td>
+<td>No change needed (top-level import already works)</td>
+<td>0</td>
+</tr>
+</tbody>
+</table>
+<h3 id="testing">Testing<a class="headerlink" href="#testing" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[ ] Test <code>config.initialize()</code> called at all 4 entry points</li>
+<li>[ ] Test <code>config.reload_config()</code> updates <code>PROVIDERS</code> and <code>MODELS</code> <strong>in place</strong> (same dict object)</li>
+<li>[ ] Test <code>EngineClient.providers_config</code> property returns fresh data after reload</li>
+<li>[ ] Test <code>/provider list</code> shows correct providers after external config edit</li>
+<li>[ ] Test <code>/model list</code> shows correct models after external config edit</li>
+<li>[ ] Test session restore works with updated config</li>
+<li>[ ] Test top-level <code>from ppxai.config import PROVIDERS</code> sees updates after <code>reload_config()</code></li>
+<li>[ ] Verify no <code>__getattr__</code> remains in <code>config/__init__.py</code></li>
+<li>[ ] Test <code>/config reload</code> via HTTP POST refreshes engine caches (latent bug fix)</li>
+<li>[ ] Verify <code>self._default_provider</code> and <code>self._get_default_model</code> removal has no side effects</li>
+</ul>
+<h3 id="migration-safety">Migration Safety<a class="headerlink" href="#migration-safety" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Backward compatible</strong>: <code>from ppxai.config import PROVIDERS</code> still works (real module var, mutated in-place)</li>
+<li><strong>Fail-fast</strong>: If <code>initialize()</code> not called, PROVIDERS is <code>{}</code> - fails early with clear error</li>
+<li><strong>Thread-safe</strong>: ConfigStore.reload() is lock-protected; <code>initialize()</code> uses <code>.clear()/.update()</code> which are atomic under GIL</li>
+<li><strong>Tests</strong>: Existing tests work - <code>initialize()</code> is idempotent, can be called in fixtures</li>
+<li><strong>In-place mutation</strong>: <code>.clear()</code> + <code>.update()</code> ensures all existing references see new data (no dangling snapshots)</li>
+</ul>
+<hr />
+<h2 id="3-file-navigation">3. File Navigation ⏳<a class="headerlink" href="#3-file-navigation" title="Permanent link">&para;</a></h2>
+<p><strong>Priority:</strong> High
+<strong>Status:</strong> Planned
+<strong>Effort:</strong> ~7 days (Phase 0: 2 days, Phase 1: 5 days)</p>
+<h3 id="phase-0-command-based-navigation-mvp-2-days">Phase 0: Command-Based Navigation (MVP) - 2 days<a class="headerlink" href="#phase-0-command-based-navigation-mvp-2-days" title="Permanent link">&para;</a></h3>
+<p>Add <code>/ls</code> and <code>/tree</code> commands that work in ALL clients.</p>
+<p><strong>New Commands:</strong>
+- <code>/ls [path]</code> - List files/directories (sizes, permissions, mod times, color-coded)
+- <code>/tree [depth]</code> - Render directory tree (default depth: 3, icons, counts)</p>
+<p><strong>Files to Create:</strong>
+- <code>ppxai/commands/builtin/navigation.py</code> - <code>/ls</code> and <code>/tree</code> implementation</p>
+<p><strong>Files to Modify:</strong>
+- <code>ppxai/commands/handler.py</code> - Register new commands
+- <code>ppxai/rendering/rich_renderer.py</code> - Handle DirectoryListingResult
+- <code>ppxai/rendering/textual_renderer.py</code> - Handle DirectoryListingResult for TUI</p>
+<p><strong>Command Result Types:</strong>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="nd">@dataclass</span>
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">DirectoryListingResult</span><span class="p">:</span>
+</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Result of /ls command&quot;&quot;&quot;</span>
+</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>    <span class="n">path</span><span class="p">:</span> <span class="nb">str</span>
+</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>    <span class="n">entries</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">FileEntry</span><span class="p">]</span>  <span class="c1"># name, size, modified, type, permissions</span>
+</span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>    <span class="n">total_size</span><span class="p">:</span> <span class="nb">int</span>
+</span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a>
+</span><span id="__span-12-8"><a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a><span class="nd">@dataclass</span>
+</span><span id="__span-12-9"><a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a><span class="k">class</span><span class="w"> </span><span class="nc">DirectoryTreeResult</span><span class="p">:</span>
+</span><span id="__span-12-10"><a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Result of /tree command&quot;&quot;&quot;</span>
+</span><span id="__span-12-11"><a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a>    <span class="n">path</span><span class="p">:</span> <span class="nb">str</span>
+</span><span id="__span-12-12"><a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a>    <span class="n">tree_data</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span>  <span class="c1"># Nested dict for rendering</span>
+</span><span id="__span-12-13"><a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a>    <span class="n">total_dirs</span><span class="p">:</span> <span class="nb">int</span>
+</span><span id="__span-12-14"><a id="__codelineno-12-14" name="__codelineno-12-14" href="#__codelineno-12-14"></a>    <span class="n">total_files</span><span class="p">:</span> <span class="nb">int</span>
+</span><span id="__span-12-15"><a id="__codelineno-12-15" name="__codelineno-12-15" href="#__codelineno-12-15"></a>    <span class="n">max_depth</span><span class="p">:</span> <span class="nb">int</span>
+</span></code></pre></div></p>
+<p><strong>Testing:</strong>
+- [ ] Test <code>/ls</code> in all three clients (ppxaide, Web, CLI)
+- [ ] Test <code>/ls</code> with relative and absolute paths
+- [ ] Test <code>/ls</code> with non-existent paths (error handling)
+- [ ] Test <code>/tree</code> with different depth levels (1, 3, 5)
+- [ ] Test <code>/tree</code> on large repositories (performance)
+- [ ] Verify <code>.gitignore</code> patterns are respected
+- [ ] Test with directories containing special characters</p>
+<h3 id="phase-1-ppxaide-interactive-file-tree-sidebar-5-days">Phase 1: ppxaide Interactive File Tree Sidebar - 5 days<a class="headerlink" href="#phase-1-ppxaide-interactive-file-tree-sidebar-5-days" title="Permanent link">&para;</a></h3>
+<p>NvChad-inspired interactive file tree in ppxaide (Textual TUI).</p>
+<p><strong>Features:</strong>
+- Left sidebar with expandable directory tree (Textual's DirectoryTree)
+- Keyboard navigation: arrows, Enter to open, Space to expand/collapse
+- <code>Ctrl+E</code> toggle visibility, <code>Ctrl+I</code> inject <code>@file path</code> into input
+- File icons, lazy loading, <code>.gitignore</code> awareness
+- Click to open in side panel (read-only view)</p>
+<p><strong>Layout:</strong>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>+--------------------------------------------------+
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>|  Header (Provider/Model/Tools/Badges)            |
+</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>+--------------+-----------------------------------+
+</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>| File Tree    | Chat Messages                     |
+</span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>| (left panel) |                                   |
+</span><span id="__span-13-6"><a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>|              +-----------------------------------+
+</span><span id="__span-13-7"><a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a>| &gt; src/       | Code Preview / Editor             |
+</span><span id="__span-13-8"><a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a>|   main.py    | (side panel - optional)           |
+</span><span id="__span-13-9"><a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a>|   utils.py   |                                   |
+</span><span id="__span-13-10"><a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a>| &gt; tests/     |                                   |
+</span><span id="__span-13-11"><a id="__codelineno-13-11" name="__codelineno-13-11" href="#__codelineno-13-11"></a>+--------------+-----------------------------------+
+</span><span id="__span-13-12"><a id="__codelineno-13-12" name="__codelineno-13-12" href="#__codelineno-13-12"></a>| Input Box                                         |
+</span><span id="__span-13-13"><a id="__codelineno-13-13" name="__codelineno-13-13" href="#__codelineno-13-13"></a>+--------------------------------------------------+
+</span></code></pre></div></p>
+<p><strong>Files to Create:</strong>
+- <code>ppxai/tui/widgets/file_tree.py</code> - FileTree widget (~200 lines)</p>
+<p><strong>Files to Modify:</strong>
+- <code>ppxai/tui/app.py</code> - Layout integration, keyboard bindings, events
+- <code>ppxai/tui/themes/layout.tcss</code> - File tree panel sizing and styles
+- <code>ppxai/tui/widgets/input_box.py</code> - <code>@file path</code> injection at cursor
+- <code>ppxai/tui/widgets/side_panel.py</code> - Handle file tree selections</p>
+<p><strong>Testing:</strong>
+- [ ] Test with small project (&lt;100 files) and large project (&gt;10,000 files)
+- [ ] Test keyboard navigation (all bindings)
+- [ ] Test file opening in side panel
+- [ ] Test <code>@file</code> injection into input
+- [ ] Test filtering/search functionality
+- [ ] Test working directory sync (<code>/cd</code> updates tree root)
+- [ ] Test resize with <code>Ctrl+[</code> / <code>Ctrl+]</code></p>
+<p><strong>Documentation:</strong>
+- [ ] Update <code>AGENTS.md</code> with new commands
+- [ ] Add examples to <code>/help</code> output
+- [ ] Add file tree section to ppxaide documentation
+- [ ] Document keyboard bindings</p>
+<hr />
+<h2 id="4-platform-alignment-unixmacoslinuxwindows">4. Platform Alignment (Unix/macOS/Linux/Windows) ✅<a class="headerlink" href="#4-platform-alignment-unixmacoslinuxwindows" title="Permanent link">&para;</a></h2>
+<p><strong>Priority:</strong> High (critical)
+<strong>Status:</strong> Done
+<strong>Effort:</strong> 1 day (Completed)</p>
+<h3 id="completed-changes_1">Completed Changes<a class="headerlink" href="#completed-changes_1" title="Permanent link">&para;</a></h3>
+<p>All 4 sub-tasks implemented and documented:</p>
+<ol>
+<li>✅ <strong>Signal handling</strong> - TUI now handles SIGINT/SIGTERM on all platforms (Windows, macOS, Linux)</li>
+<li>File: <code>ppxai/tui/__init__.py</code> lines 66-79</li>
+<li>
+<p>Removed Windows exclusion, both signals supported</p>
+</li>
+<li>
+<p>✅ <strong>Binary search paths</strong> - Platform-aware filtering for efficiency</p>
+</li>
+<li>File: <code>ppxai/config/__init__.py</code> line 517 (<code>get_bin_search_paths()</code>)</li>
+<li>Windows skips <code>/usr/*</code> paths, Unix/macOS/Linux skip <code>AppData</code> paths</li>
+<li>
+<p>File: <code>ppxai-desktop.py</code> updated to use filtered paths</p>
+</li>
+<li>
+<p>✅ <strong>Path expansion</strong> - Standardized to <code>Path.home()</code>, intentional <code>os.path.expanduser()</code> only in tool handlers</p>
+</li>
+<li><code>ppxai/usage.py</code>, <code>ppxai/checkpoint.py</code> already using <code>Path.home()</code></li>
+<li>
+<p>Remaining <code>os.path.expanduser()</code> uses are correct (handle <code>~username</code> syntax)</p>
+</li>
+<li>
+<p>✅ <strong>Documentation</strong> - Platform-specific behaviors documented</p>
+</li>
+<li>File: <code>docs/INSTALLATION.md</code> lines 978-1040</li>
+<li>Covers clipboard support, signal handling, Linux headless requirements</li>
+</ol>
+<h3 id="issues-identified">Issues Identified<a class="headerlink" href="#issues-identified" title="Permanent link">&para;</a></h3>
+<h4 id="a-signal-handling-inconsistencies">A. Signal Handling Inconsistencies<a class="headerlink" href="#a-signal-handling-inconsistencies" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Issue</th>
+<th>File</th>
+<th>Line</th>
+<th>Description</th>
+<th>Platform</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>SIGINT handler only on Unix</strong></td>
+<td><code>ppxai/tui/__init__.py</code></td>
+<td>78-79</td>
+<td>SIGINT handler skipped on Windows with comment "Windows signal handling has quirks"</td>
+<td>Windows needs handling</td>
+</tr>
+<tr>
+<td><strong>SIGTERM not handled</strong></td>
+<td><code>ppxai/tui/__init__.py</code></td>
+<td>-</td>
+<td>TUI only handles SIGINT, not SIGTERM (server handles both)</td>
+<td>All platforms</td>
+</tr>
+<tr>
+<td><strong>Server signal handling</strong></td>
+<td><code>ppxai/server/http.py</code></td>
+<td>2364-2365</td>
+<td>Both SIGINT and SIGTERM handled in server</td>
+<td>✅ Good</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Action:</strong> Align TUI signal handling with server pattern - handle both SIGINT and SIGTERM on all platforms.</p>
+<h4 id="b-binary-search-path-platform-logic">B. Binary Search Path Platform Logic<a class="headerlink" href="#b-binary-search-path-platform-logic" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Issue</th>
+<th>File</th>
+<th>Line</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Mixed platform paths</strong></td>
+<td><code>ppxai/config/__init__.py</code></td>
+<td>491-496</td>
+<td>Hardcoded list includes both Unix (<code>~/.local/bin</code>) and Windows (<code>~/AppData/Local/ppxai</code>) paths</td>
+</tr>
+<tr>
+<td><strong>No platform filtering</strong></td>
+<td><code>ppxai-desktop.py</code></td>
+<td>74-88</td>
+<td>All paths checked regardless of platform (inefficient)</td>
+</tr>
+<tr>
+<td><strong>Unix system paths on Windows</strong></td>
+<td><code>ppxai-desktop.py</code></td>
+<td>84-85</td>
+<td><code>/usr/local/bin</code> and <code>/usr/bin</code> checked on Windows</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Action:</strong> Add platform-specific filtering to <code>get_bin_search_paths()</code>:
+<div class="language-python highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">get_bin_search_paths</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Get list of directories to search for ppxai binaries (platform-aware).&quot;&quot;&quot;</span>
+</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>    <span class="n">paths_config</span> <span class="o">=</span> <span class="n">get_paths_config</span><span class="p">()</span>
+</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>    <span class="n">all_paths</span> <span class="o">=</span> <span class="n">paths_config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;bin_search_paths&quot;</span><span class="p">,</span> <span class="p">[])</span>
+</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>
+</span><span id="__span-14-6"><a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a>    <span class="c1"># Filter platform-specific paths</span>
+</span><span id="__span-14-7"><a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a>    <span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">platform</span> <span class="o">==</span> <span class="s1">&#39;win32&#39;</span><span class="p">:</span>
+</span><span id="__span-14-8"><a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a>        <span class="c1"># Windows: Skip Unix system paths</span>
+</span><span id="__span-14-9"><a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a>        <span class="k">return</span> <span class="p">[</span><span class="n">p</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">all_paths</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">p</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;/usr&#39;</span><span class="p">)]</span>
+</span><span id="__span-14-10"><a id="__codelineno-14-10" name="__codelineno-14-10" href="#__codelineno-14-10"></a>    <span class="k">else</span><span class="p">:</span>
+</span><span id="__span-14-11"><a id="__codelineno-14-11" name="__codelineno-14-11" href="#__codelineno-14-11"></a>        <span class="c1"># Unix/macOS/Linux: Skip Windows AppData</span>
+</span><span id="__span-14-12"><a id="__codelineno-14-12" name="__codelineno-14-12" href="#__codelineno-14-12"></a>        <span class="k">return</span> <span class="p">[</span><span class="n">p</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">all_paths</span> <span class="k">if</span> <span class="s1">&#39;AppData&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">p</span><span class="p">]</span>
+</span></code></pre></div></p>
+<h4 id="c-file-path-hyperlink-patterns-windows-support">C. File Path Hyperlink Patterns (Windows Support)<a class="headerlink" href="#c-file-path-hyperlink-patterns-windows-support" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Issue</th>
+<th>File</th>
+<th>Line</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Unix path bias</strong></td>
+<td><code>ppxai/tui/hyperlinks.py</code></td>
+<td>63-64</td>
+<td>Regex pattern prioritizes Unix paths (<code>/path/to/file</code>) before Windows (<code>C:\path\to\file</code>)</td>
+</tr>
+<tr>
+<td><strong>Windows drive detection</strong></td>
+<td><code>ppxai/tui/hyperlinks.py</code></td>
+<td>66</td>
+<td>Pattern <code>[A-Za-z]:</code> only matches single-letter drives (standard, but documented)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Status:</strong> ✅ Actually OK - both patterns present, just ordered Unix-first (most common in dev environments).</p>
+<h4 id="d-path-expansion-consistency">D. Path Expansion Consistency<a class="headerlink" href="#d-path-expansion-consistency" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Issue</th>
+<th>File</th>
+<th>Function</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Mixed <code>Path.home()</code> and <code>os.path.expanduser()</code></strong></td>
+<td>Multiple</td>
+<td>Various</td>
+<td>Some code uses <code>Path.home()</code>, some uses <code>os.path.expanduser("~")</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Examples:</strong>
+- <code>ppxai/engine/session.py:24</code> → <code>Path.home() / ".ppxai"</code>
+- <code>ppxai/engine/tools/builtin/editor.py:65</code> → <code>os.path.expanduser(file_path)</code>
+- <code>ppxai/server/http.py:1131</code> → <code>os.path.expanduser(request.path)</code></p>
+<p><strong>Action:</strong> Standardize on <code>Path.home()</code> (more pythonic, better type safety):
+<div class="language-python highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="c1"># Before:</span>
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="n">expanded</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expanduser</span><span class="p">(</span><span class="s2">&quot;~/.ppxai/config.json&quot;</span><span class="p">)</span>
+</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>
+</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="c1"># After:</span>
+</span><span id="__span-15-5"><a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="n">expanded</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="o">.</span><span class="n">home</span><span class="p">()</span> <span class="o">/</span> <span class="s2">&quot;.ppxai&quot;</span> <span class="o">/</span> <span class="s2">&quot;config.json&quot;</span><span class="p">)</span>
+</span></code></pre></div></p>
+<p><strong>Exception:</strong> Keep <code>os.path.expanduser()</code> when handling user-provided paths that may contain <code>~username</code> syntax (not just <code>~</code>).</p>
+<h4 id="e-clipboard-backend-detection-pyperclip">E. Clipboard Backend Detection (pyperclip)<a class="headerlink" href="#e-clipboard-backend-detection-pyperclip" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Issue</th>
+<th>File</th>
+<th>Line</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>No fallback</strong></td>
+<td><code>ppxai/tui/clipboard.py</code></td>
+<td>10-14</td>
+<td>If pyperclip import fails, all clipboard ops return False/None</td>
+</tr>
+<tr>
+<td><strong>Platform-specific quirks</strong></td>
+<td>-</td>
+<td>-</td>
+<td>pyperclip behavior varies by platform (needs xclip/xsel on Linux headless)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Status:</strong> ✅ OK - graceful degradation with <code>CLIPBOARD_AVAILABLE</code> flag. Document pyperclip installation in setup guide.</p>
+<h3 id="implementation-plan">Implementation Plan<a class="headerlink" href="#implementation-plan" title="Permanent link">&para;</a></h3>
+<h4 id="step-1-fix-tui-signal-handling-02-days">Step 1: Fix TUI Signal Handling (0.2 days)<a class="headerlink" href="#step-1-fix-tui-signal-handling-02-days" title="Permanent link">&para;</a></h4>
+<p><strong>File: <code>ppxai/tui/__init__.py</code> (lines 66-79)</strong></p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="c1"># Current (Unix-only SIGINT):</span>
+</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">platform</span> <span class="o">!=</span> <span class="s1">&#39;win32&#39;</span><span class="p">:</span>
+</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>    <span class="n">signal</span><span class="o">.</span><span class="n">signal</span><span class="p">(</span><span class="n">signal</span><span class="o">.</span><span class="n">SIGINT</span><span class="p">,</span> <span class="n">sigint_handler</span><span class="p">)</span>
+</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a>
+</span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a><span class="c1"># Proposed (all platforms, both signals):</span>
+</span><span id="__span-16-6"><a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a><span class="k">def</span><span class="w"> </span><span class="nf">signal_handler</span><span class="p">(</span><span class="n">signum</span><span class="p">,</span> <span class="n">frame</span><span class="p">):</span>
+</span><span id="__span-16-7"><a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Handle SIGINT/SIGTERM gracefully.&quot;&quot;&quot;</span>
+</span><span id="__span-16-8"><a id="__codelineno-16-8" name="__codelineno-16-8" href="#__codelineno-16-8"></a>    <span class="k">try</span><span class="p">:</span>
+</span><span id="__span-16-9"><a id="__codelineno-16-9" name="__codelineno-16-9" href="#__codelineno-16-9"></a>        <span class="n">app</span><span class="o">.</span><span class="n">call_from_thread</span><span class="p">(</span><span class="n">app</span><span class="o">.</span><span class="n">action_quit</span><span class="p">)</span>
+</span><span id="__span-16-10"><a id="__codelineno-16-10" name="__codelineno-16-10" href="#__codelineno-16-10"></a>    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+</span><span id="__span-16-11"><a id="__codelineno-16-11" name="__codelineno-16-11" href="#__codelineno-16-11"></a>        <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+</span><span id="__span-16-12"><a id="__codelineno-16-12" name="__codelineno-16-12" href="#__codelineno-16-12"></a>
+</span><span id="__span-16-13"><a id="__codelineno-16-13" name="__codelineno-16-13" href="#__codelineno-16-13"></a><span class="c1"># Install handlers on all platforms</span>
+</span><span id="__span-16-14"><a id="__codelineno-16-14" name="__codelineno-16-14" href="#__codelineno-16-14"></a><span class="n">signal</span><span class="o">.</span><span class="n">signal</span><span class="p">(</span><span class="n">signal</span><span class="o">.</span><span class="n">SIGINT</span><span class="p">,</span> <span class="n">signal_handler</span><span class="p">)</span>
+</span><span id="__span-16-15"><a id="__codelineno-16-15" name="__codelineno-16-15" href="#__codelineno-16-15"></a><span class="n">signal</span><span class="o">.</span><span class="n">signal</span><span class="p">(</span><span class="n">signal</span><span class="o">.</span><span class="n">SIGTERM</span><span class="p">,</span> <span class="n">signal_handler</span><span class="p">)</span>
+</span></code></pre></div>
+<p><strong>Testing:</strong>
+- [ ] Test Ctrl+C on Windows (should gracefully quit, not crash)
+- [ ] Test Ctrl+C on macOS/Linux (no regression)
+- [ ] Test SIGTERM via <code>kill -TERM &lt;pid&gt;</code> on Unix
+- [ ] Test SIGTERM on Windows via Task Manager "End Task"</p>
+<h4 id="step-2-add-platform-filtering-to-binary-search-paths-03-days">Step 2: Add Platform Filtering to Binary Search Paths (0.3 days)<a class="headerlink" href="#step-2-add-platform-filtering-to-binary-search-paths-03-days" title="Permanent link">&para;</a></h4>
+<p><strong>File: <code>ppxai/config/__init__.py</code> (line 517)</strong></p>
+<p>Add platform-aware filtering to <code>get_bin_search_paths()</code>.</p>
+<p><strong>Files to Update:</strong>
+- <code>ppxai/config/__init__.py</code> - Add filtering logic
+- <code>ppxai-desktop.py</code> - Use filtered paths from config
+- <code>scripts/release_preflight_check.py</code> - Update binary search</p>
+<p><strong>Testing:</strong>
+- [ ] Test Windows binary search doesn't check <code>/usr/local/bin</code>
+- [ ] Test Unix binary search doesn't check <code>AppData/Local/ppxai</code>
+- [ ] Verify backward compatibility (custom paths in config still work)</p>
+<h4 id="step-3-standardize-path-expansion-03-days">Step 3: Standardize Path Expansion (0.3 days)<a class="headerlink" href="#step-3-standardize-path-expansion-03-days" title="Permanent link">&para;</a></h4>
+<p><strong>Pattern:</strong>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="c1"># Prefer: Path.home() / &quot;.ppxai&quot; / &quot;file.json&quot;</span>
+</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="c1"># Over:   os.path.expanduser(&quot;~/.ppxai/file.json&quot;)</span>
+</span></code></pre></div></p>
+<p><strong>Exception:</strong> Keep <code>os.path.expanduser()</code> in tool handlers that accept user paths:
+- <code>ppxai/engine/tools/builtin/editor.py</code> (handles <code>~username/file.txt</code>)
+- <code>ppxai/server/http.py</code> (handles user-submitted paths via API)</p>
+<p><strong>Files to Update:</strong>
+- <code>ppxai/engine/session.py</code> - Already uses <code>Path.home()</code> ✅
+- <code>ppxai/config/loader.py</code> - Already uses <code>PPXAI_HOME = Path.home() / ".ppxai"</code> ✅
+- <code>ppxai/usage.py</code> - Standardize to <code>Path.home()</code>
+- <code>ppxai/checkpoint.py</code> - Standardize to <code>Path.home()</code></p>
+<p><strong>Testing:</strong>
+- [ ] Run full test suite on Windows
+- [ ] Run full test suite on macOS
+- [ ] Run full test suite on Linux
+- [ ] Verify <code>~username</code> syntax still works in tool paths</p>
+<h4 id="step-4-document-platform-specific-behaviors-02-days">Step 4: Document Platform-Specific Behaviors (0.2 days)<a class="headerlink" href="#step-4-document-platform-specific-behaviors-02-days" title="Permanent link">&para;</a></h4>
+<p><strong>Add to INSTALLATION.md:</strong>
+- Windows: Clipboard requires pyperclip (auto-installed)
+- Linux headless: Clipboard requires xclip or xsel (<code>apt install xclip</code>)
+- macOS: All clipboard ops work out of box
+- Signal handling: Ctrl+C and SIGTERM supported on all platforms (v1.15.3+)</p>
+<h3 id="files-changed-summary_1">Files Changed Summary<a class="headerlink" href="#files-changed-summary_1" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Action</th>
+<th>Est. Lines</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ppxai/tui/__init__.py</code></td>
+<td>Fix signal handling for all platforms</td>
+<td>~10</td>
+</tr>
+<tr>
+<td><code>ppxai/config/__init__.py</code></td>
+<td>Add platform filtering to binary search</td>
+<td>~15</td>
+</tr>
+<tr>
+<td><code>ppxai-desktop.py</code></td>
+<td>Use filtered paths from config</td>
+<td>~5</td>
+</tr>
+<tr>
+<td><code>ppxai/usage.py</code></td>
+<td>Standardize to <code>Path.home()</code></td>
+<td>~5</td>
+</tr>
+<tr>
+<td><code>ppxai/checkpoint.py</code></td>
+<td>Standardize to <code>Path.home()</code></td>
+<td>~5</td>
+</tr>
+<tr>
+<td><code>docs/INSTALLATION.md</code></td>
+<td>Document platform-specific requirements</td>
+<td>~30</td>
+</tr>
+<tr>
+<td><code>CLAUDE.md</code></td>
+<td>Update platform alignment notes</td>
+<td>~10</td>
+</tr>
+</tbody>
+</table>
+<h3 id="migration-safety_1">Migration Safety<a class="headerlink" href="#migration-safety_1" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Backward compatible</strong>: Path resolution logic unchanged, just standardized</li>
+<li><strong>No config migration</strong>: Users don't need to change configs</li>
+<li><strong>Signal handling</strong>: Windows users get new Ctrl+C support (improvement)</li>
+<li><strong>Binary search</strong>: Faster (fewer unnecessary path checks)</li>
+</ul>
+<hr />
+<h2 id="7-tool-calling-clarification">7. Tool Calling Clarification ✅<a class="headerlink" href="#7-tool-calling-clarification" title="Permanent link">&para;</a></h2>
+<p><strong>Priority:</strong> High (accuracy)
+<strong>Status:</strong> ✅ Complete
+<strong>Effort:</strong> 0.5 days (4 hours)
+<strong>Created:</strong> 2026-02-08
+<strong>Completed:</strong> 2026-02-14
+<strong>Commit:</strong> 26217e0</p>
+<h3 id="problem_1">Problem<a class="headerlink" href="#problem_1" title="Permanent link">&para;</a></h3>
+<p>API verification tests revealed that ppxai uses <strong>TWO different tool calling methods</strong>:
+1. <strong>Native Tool Calling</strong> - Provider returns <code>tool_calls</code> in API response
+2. <strong>Prompt-Based Tool Calling</strong> - Inject tools into prompt, parse JSON from text</p>
+<p>Current issues:
+- ❌ Not documented which providers use which method
+- ❌ Benchmarks don't distinguish between native vs prompt-based
+- ❌ Perplexity marked as supporting tools (it doesn't - uses prompt-based workaround)
+- ❌ Gemini provider uses deprecated SDK (<code>google.generativeai</code>)
+- ⚠️ Capability flags don't reflect actual API behavior</p>
+<h3 id="test-results-2026-02-08">Test Results (2026-02-08)<a class="headerlink" href="#test-results-2026-02-08" title="Permanent link">&para;</a></h3>
+<p><strong>Perplexity (sonar-pro, sonar-reasoning-pro):</strong>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>Direct API: IGNORED ⚠️
+</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>- API accepts `tools` parameter without error
+</span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a>- Returns NO tool_calls in response
+</span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a>- Models explain they &quot;cannot access files&quot; instead of calling tools
+</span><span id="__span-18-5"><a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a>
+</span><span id="__span-18-6"><a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a>ppxai Engine: WORKS ✅
+</span><span id="__span-18-7"><a id="__codelineno-18-7" name="__codelineno-18-7" href="#__codelineno-18-7"></a>- TOOL_CALL events detected via prompt-based parsing
+</span><span id="__span-18-8"><a id="__codelineno-18-8" name="__codelineno-18-8" href="#__codelineno-18-8"></a>- Extracts JSON from text responses
+</span></code></pre></div></p>
+<p><strong>Conclusion:</strong> Perplexity Sonar models do NOT support native function calling.</p>
+<p><strong>Gemini (gemini-2.5-flash, gemini-2.5-pro):</strong>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>Direct API: ERROR 💥
+</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>- SDK is deprecated (google.generativeai)
+</span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>- Need to migrate to google.genai
+</span><span id="__span-19-4"><a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a>
+</span><span id="__span-19-5"><a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a>ppxai Engine: WORKS (intermittently) ⚠️
+</span><span id="__span-19-6"><a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a>- Sometimes detects TOOL_CALL events
+</span><span id="__span-19-7"><a id="__codelineno-19-7" name="__codelineno-19-7" href="#__codelineno-19-7"></a>- May be using prompt-based instead of native
+</span></code></pre></div></p>
+<p><strong>Conclusion:</strong> Gemini DOES support native function calling (per official docs), but our implementation needs SDK update.</p>
+<p><strong>Documentation:</strong>
+- Full analysis: <code>benchmarks/llm-eval/TOOL_CALLING_ANALYSIS.md</code>
+- Action plan: <code>benchmarks/llm-eval/ACTION_PLAN.md</code>
+- Test results: <code>benchmarks/llm-eval/debug/api_tool_calling_test_results.json</code></p>
+<h3 id="implementation-plan_1">Implementation Plan<a class="headerlink" href="#implementation-plan_1" title="Permanent link">&para;</a></h3>
+<h4 id="step-1-add-capability-flags-01-days">Step 1: Add Capability Flags (0.1 days)<a class="headerlink" href="#step-1-add-capability-flags-01-days" title="Permanent link">&para;</a></h4>
+<p><strong>File:</strong> <code>ppxai/engine/providers/perplexity.py</code></p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="c1"># Line 56 - Update default_capabilities</span>
+</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a><span class="n">default_capabilities</span> <span class="o">=</span> <span class="n">ProviderCapabilities</span><span class="p">(</span>
+</span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a>    <span class="n">web_search</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+</span><span id="__span-20-4"><a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a>    <span class="n">web_fetch</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+</span><span id="__span-20-5"><a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a>    <span class="n">weather</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+</span><span id="__span-20-6"><a id="__codelineno-20-6" name="__codelineno-20-6" href="#__codelineno-20-6"></a>    <span class="n">citations</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+</span><span id="__span-20-7"><a id="__codelineno-20-7" name="__codelineno-20-7" href="#__codelineno-20-7"></a>    <span class="n">streaming</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+</span><span id="__span-20-8"><a id="__codelineno-20-8" name="__codelineno-20-8" href="#__codelineno-20-8"></a>    <span class="n">native_tool_calling</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>  <span class="c1"># ← ADD: Sonar models don&#39;t support native API</span>
+</span><span id="__span-20-9"><a id="__codelineno-20-9" name="__codelineno-20-9" href="#__codelineno-20-9"></a><span class="p">)</span>
+</span></code></pre></div>
+<p><strong>File:</strong> <code>ppxai/config/loader.py</code></p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="n">DEFAULT_CAPABILITIES</span> <span class="o">=</span> <span class="p">{</span>
+</span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a>    <span class="o">...</span>
+</span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a>    <span class="s2">&quot;native_tool_calling&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>  <span class="c1"># Default to False, enable per-provider</span>
+</span><span id="__span-21-4"><a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a>    <span class="o">...</span>
+</span><span id="__span-21-5"><a id="__codelineno-21-5" name="__codelineno-21-5" href="#__codelineno-21-5"></a><span class="p">}</span>
+</span></code></pre></div>
+<p><strong>Status:</strong> Ready to implement</p>
+<hr />
+<h4 id="step-2-update-provider-docstrings-005-days">Step 2: Update Provider Docstrings (0.05 days)<a class="headerlink" href="#step-2-update-provider-docstrings-005-days" title="Permanent link">&para;</a></h4>
+<p><strong>File:</strong> <code>ppxai/engine/providers/perplexity.py</code></p>
+<p>Update line 97 from:
+<div class="language-python highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="n">tools</span><span class="p">:</span> <span class="n">Ignored</span> <span class="o">-</span> <span class="n">Perplexity</span> <span class="n">uses</span> <span class="n">native</span> <span class="n">search</span><span class="p">,</span> <span class="ow">not</span> <span class="n">tools</span>
+</span></code></pre></div></p>
+<p>To:
+<div class="language-python highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="n">tools</span><span class="p">:</span> <span class="n">Converted</span> <span class="n">to</span> <span class="n">prompt</span><span class="o">-</span><span class="n">based</span> <span class="n">tool</span> <span class="n">calling</span><span class="o">.</span> <span class="n">Perplexity</span> <span class="n">Sonar</span> <span class="n">models</span>
+</span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a>       <span class="n">do</span> <span class="ow">not</span> <span class="n">support</span> <span class="n">native</span> <span class="n">function</span> <span class="n">calling</span> <span class="n">via</span> <span class="n">the</span> <span class="n">API</span> <span class="p">(</span><span class="n">tool_calls</span> <span class="n">response</span><span class="p">)</span><span class="o">.</span>
+</span><span id="__span-23-3"><a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a>       <span class="n">Instead</span><span class="p">,</span> <span class="n">tool</span> <span class="n">definitions</span> <span class="n">are</span> <span class="n">injected</span> <span class="n">into</span> <span class="n">the</span> <span class="n">system</span> <span class="n">prompt</span> <span class="ow">and</span>
+</span><span id="__span-23-4"><a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a>       <span class="n">responses</span> <span class="n">are</span> <span class="n">parsed</span> <span class="k">for</span> <span class="n">JSON</span> <span class="n">tool</span> <span class="n">call</span> <span class="nb">format</span><span class="o">.</span>
+</span><span id="__span-23-5"><a id="__codelineno-23-5" name="__codelineno-23-5" href="#__codelineno-23-5"></a>
+</span><span id="__span-23-6"><a id="__codelineno-23-6" name="__codelineno-23-6" href="#__codelineno-23-6"></a>       <span class="n">Note</span><span class="p">:</span> <span class="n">Perplexity</span><span class="s1">&#39;s Agentic Research API supports native tools for</span>
+</span><span id="__span-23-7"><a id="__codelineno-23-7" name="__codelineno-23-7" href="#__codelineno-23-7"></a>       <span class="n">third</span><span class="o">-</span><span class="n">party</span> <span class="n">models</span> <span class="p">(</span><span class="n">openai</span><span class="o">/</span><span class="n">gpt</span><span class="o">-*</span><span class="p">,</span> <span class="n">etc</span><span class="o">.</span><span class="p">)</span> <span class="n">but</span> <span class="n">NOT</span> <span class="k">for</span> <span class="n">Sonar</span> <span class="n">models</span><span class="o">.</span>
+</span><span id="__span-23-8"><a id="__codelineno-23-8" name="__codelineno-23-8" href="#__codelineno-23-8"></a>
+</span><span id="__span-23-9"><a id="__codelineno-23-9" name="__codelineno-23-9" href="#__codelineno-23-9"></a>       <span class="n">See</span><span class="p">:</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">docs</span><span class="o">.</span><span class="n">perplexity</span><span class="o">.</span><span class="n">ai</span><span class="o">/</span><span class="n">docs</span><span class="o">/</span><span class="n">agentic</span><span class="o">-</span><span class="n">research</span><span class="o">/</span><span class="n">tools</span>
+</span></code></pre></div></p>
+<p><strong>Status:</strong> Ready to implement</p>
+<hr />
+<h4 id="step-3-fix-gemini-sdk-025-days">Step 3: Fix Gemini SDK (0.25 days)<a class="headerlink" href="#step-3-fix-gemini-sdk-025-days" title="Permanent link">&para;</a></h4>
+<p><strong>File:</strong> <code>ppxai/engine/providers/gemini.py</code></p>
+<p><strong>Current:</strong> Uses deprecated <code>google.generativeai</code></p>
+<p><strong>Replace with:</strong> <code>google.genai</code> (official SDK)</p>
+<p><strong>Changes:</strong>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="c1"># OLD</span>
+</span><span id="__span-24-2"><a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">google.generativeai</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">genai</span>
+</span><span id="__span-24-3"><a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">google.generativeai</span><span class="w"> </span><span class="kn">import</span> <span class="n">types</span> <span class="k">as</span> <span class="n">genai_types</span>
+</span><span id="__span-24-4"><a id="__codelineno-24-4" name="__codelineno-24-4" href="#__codelineno-24-4"></a>
+</span><span id="__span-24-5"><a id="__codelineno-24-5" name="__codelineno-24-5" href="#__codelineno-24-5"></a><span class="c1"># NEW</span>
+</span><span id="__span-24-6"><a id="__codelineno-24-6" name="__codelineno-24-6" href="#__codelineno-24-6"></a><span class="kn">from</span><span class="w"> </span><span class="nn">google</span><span class="w"> </span><span class="kn">import</span> <span class="n">genai</span>
+</span><span id="__span-24-7"><a id="__codelineno-24-7" name="__codelineno-24-7" href="#__codelineno-24-7"></a><span class="kn">from</span><span class="w"> </span><span class="nn">google.genai</span><span class="w"> </span><span class="kn">import</span> <span class="n">types</span>
+</span></code></pre></div></p>
+<p><strong>Reference:</strong> https://github.com/google-gemini/deprecated-generative-ai-python</p>
+<p><strong>Testing:</strong>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a><span class="nb">cd</span><span class="w"> </span>benchmarks/llm-eval
+</span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>test_tool_calling_apis.py
+</span></code></pre></div></p>
+<p><strong>Status:</strong> Ready to implement
+<strong>Priority:</strong> High (SDK is deprecated)</p>
+<hr />
+<h4 id="step-4-update-benchmarks-01-days">Step 4: Update Benchmarks (0.1 days)<a class="headerlink" href="#step-4-update-benchmarks-01-days" title="Permanent link">&para;</a></h4>
+<p><strong>File:</strong> <code>benchmarks/llm-eval/engine_runner.py</code></p>
+<p>Add tool calling method detection:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">run_async</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">categories</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+</span><span id="__span-26-2"><a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a>    <span class="c1"># Check provider capabilities</span>
+</span><span id="__span-26-3"><a id="__codelineno-26-3" name="__codelineno-26-3" href="#__codelineno-26-3"></a>    <span class="kn">from</span><span class="w"> </span><span class="nn">ppxai.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_provider_config</span>
+</span><span id="__span-26-4"><a id="__codelineno-26-4" name="__codelineno-26-4" href="#__codelineno-26-4"></a>    <span class="n">provider_config</span> <span class="o">=</span> <span class="n">get_provider_config</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">provider</span><span class="p">)</span>
+</span><span id="__span-26-5"><a id="__codelineno-26-5" name="__codelineno-26-5" href="#__codelineno-26-5"></a>    <span class="n">has_native_tools</span> <span class="o">=</span> <span class="n">provider_config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;capabilities&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;native_tool_calling&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+</span><span id="__span-26-6"><a id="__codelineno-26-6" name="__codelineno-26-6" href="#__codelineno-26-6"></a>
+</span><span id="__span-26-7"><a id="__codelineno-26-7" name="__codelineno-26-7" href="#__codelineno-26-7"></a>    <span class="c1"># Inform user about tool calling method</span>
+</span><span id="__span-26-8"><a id="__codelineno-26-8" name="__codelineno-26-8" href="#__codelineno-26-8"></a>    <span class="k">if</span> <span class="ow">not</span> <span class="n">has_native_tools</span> <span class="ow">and</span> <span class="n">categories</span> <span class="ow">and</span> <span class="s2">&quot;tool_calling&quot;</span> <span class="ow">in</span> <span class="n">categories</span><span class="p">:</span>
+</span><span id="__span-26-9"><a id="__codelineno-26-9" name="__codelineno-26-9" href="#__codelineno-26-9"></a>        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">NOTE: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">provider</span><span class="si">}</span><span class="s2"> uses prompt-based tool calling (not native API)&quot;</span><span class="p">)</span>
+</span><span id="__span-26-10"><a id="__codelineno-26-10" name="__codelineno-26-10" href="#__codelineno-26-10"></a>        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;      Tests validate JSON format compliance and parsing reliability</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span id="__span-26-11"><a id="__codelineno-26-11" name="__codelineno-26-11" href="#__codelineno-26-11"></a>
+</span><span id="__span-26-12"><a id="__codelineno-26-12" name="__codelineno-26-12" href="#__codelineno-26-12"></a>    <span class="c1"># ... test loop ...</span>
+</span><span id="__span-26-13"><a id="__codelineno-26-13" name="__codelineno-26-13" href="#__codelineno-26-13"></a>
+</span><span id="__span-26-14"><a id="__codelineno-26-14" name="__codelineno-26-14" href="#__codelineno-26-14"></a>    <span class="c1"># Add to metadata</span>
+</span><span id="__span-26-15"><a id="__codelineno-26-15" name="__codelineno-26-15" href="#__codelineno-26-15"></a>    <span class="n">metadata</span><span class="o">=</span><span class="p">{</span>
+</span><span id="__span-26-16"><a id="__codelineno-26-16" name="__codelineno-26-16" href="#__codelineno-26-16"></a>        <span class="s2">&quot;runner&quot;</span><span class="p">:</span> <span class="s2">&quot;engine&quot;</span><span class="p">,</span>
+</span><span id="__span-26-17"><a id="__codelineno-26-17" name="__codelineno-26-17" href="#__codelineno-26-17"></a>        <span class="s2">&quot;timeout&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">,</span>
+</span><span id="__span-26-18"><a id="__codelineno-26-18" name="__codelineno-26-18" href="#__codelineno-26-18"></a>        <span class="s2">&quot;retries&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">retries</span><span class="p">,</span>
+</span><span id="__span-26-19"><a id="__codelineno-26-19" name="__codelineno-26-19" href="#__codelineno-26-19"></a>        <span class="s2">&quot;tool_calling_method&quot;</span><span class="p">:</span> <span class="s2">&quot;native&quot;</span> <span class="k">if</span> <span class="n">has_native_tools</span> <span class="k">else</span> <span class="s2">&quot;prompt_based&quot;</span><span class="p">,</span>  <span class="c1"># ← ADD</span>
+</span><span id="__span-26-20"><a id="__codelineno-26-20" name="__codelineno-26-20" href="#__codelineno-26-20"></a>    <span class="p">},</span>
+</span></code></pre></div>
+<p><strong>Status:</strong> Ready to implement</p>
+<hr />
+<h4 id="step-5-create-documentation-01-days">Step 5: Create Documentation (0.1 days)<a class="headerlink" href="#step-5-create-documentation-01-days" title="Permanent link">&para;</a></h4>
+<p><strong>File:</strong> <code>docs/TOOL_CALLING.md</code> (NEW)</p>
+<p>Create comprehensive documentation:
+- Native vs prompt-based tool calling
+- Provider support matrix
+- Configuration examples
+- Troubleshooting guide</p>
+<p><strong>Template:</strong> See <code>benchmarks/llm-eval/ACTION_PLAN.md</code> for content</p>
+<p><strong>Status:</strong> Ready to implement</p>
+<hr />
+<h4 id="step-6-update-config-example-005-days">Step 6: Update Config Example (0.05 days)<a class="headerlink" href="#step-6-update-config-example-005-days" title="Permanent link">&para;</a></h4>
+<p><strong>File:</strong> <code>ppxai-config.example.json</code></p>
+<p><strong>Add to Perplexity:</strong>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-27-1"><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a><span class="nt">&quot;perplexity&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-27-2"><a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a><span class="w">  </span><span class="nt">&quot;capabilities&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-27-3"><a id="__codelineno-27-3" name="__codelineno-27-3" href="#__codelineno-27-3"></a><span class="w">    </span><span class="nt">&quot;native_tool_calling&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+</span><span id="__span-27-4"><a id="__codelineno-27-4" name="__codelineno-27-4" href="#__codelineno-27-4"></a><span class="w">    </span><span class="nt">&quot;__comment&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Sonar models use prompt-based tool calling&quot;</span>
+</span><span id="__span-27-5"><a id="__codelineno-27-5" name="__codelineno-27-5" href="#__codelineno-27-5"></a><span class="w">  </span><span class="p">}</span>
+</span><span id="__span-27-6"><a id="__codelineno-27-6" name="__codelineno-27-6" href="#__codelineno-27-6"></a><span class="p">}</span>
+</span></code></pre></div></p>
+<p><strong>Add to Gemini:</strong>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-28-1"><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a><span class="nt">&quot;gemini&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-28-2"><a id="__codelineno-28-2" name="__codelineno-28-2" href="#__codelineno-28-2"></a><span class="w">  </span><span class="nt">&quot;capabilities&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-28-3"><a id="__codelineno-28-3" name="__codelineno-28-3" href="#__codelineno-28-3"></a><span class="w">    </span><span class="nt">&quot;native_tool_calling&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+</span><span id="__span-28-4"><a id="__codelineno-28-4" name="__codelineno-28-4" href="#__codelineno-28-4"></a><span class="w">    </span><span class="nt">&quot;__comment&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Gemini 2.5+ supports native function calling&quot;</span>
+</span><span id="__span-28-5"><a id="__codelineno-28-5" name="__codelineno-28-5" href="#__codelineno-28-5"></a><span class="w">  </span><span class="p">},</span>
+</span><span id="__span-28-6"><a id="__codelineno-28-6" name="__codelineno-28-6" href="#__codelineno-28-6"></a><span class="w">  </span><span class="nt">&quot;generation_params&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-28-7"><a id="__codelineno-28-7" name="__codelineno-28-7" href="#__codelineno-28-7"></a><span class="w">    </span><span class="nt">&quot;temperature&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span>
+</span><span id="__span-28-8"><a id="__codelineno-28-8" name="__codelineno-28-8" href="#__codelineno-28-8"></a><span class="w">    </span><span class="nt">&quot;__comment&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Use 0.0 for deterministic tool calls&quot;</span>
+</span><span id="__span-28-9"><a id="__codelineno-28-9" name="__codelineno-28-9" href="#__codelineno-28-9"></a><span class="w">  </span><span class="p">}</span>
+</span><span id="__span-28-10"><a id="__codelineno-28-10" name="__codelineno-28-10" href="#__codelineno-28-10"></a><span class="p">}</span>
+</span></code></pre></div></p>
+<p><strong>Status:</strong> ✅ Implemented (config example updated)</p>
+<hr />
+<h3 id="implementation-summary-2026-02-14">✅ Implementation Summary (2026-02-14)<a class="headerlink" href="#implementation-summary-2026-02-14" title="Permanent link">&para;</a></h3>
+<p><strong>All 6 steps completed:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Task</th>
+<th>Status</th>
+<th>Files Modified</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Add capability flags</td>
+<td>✅ Done</td>
+<td>Already existed in v1.15.2</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Update provider docstrings</td>
+<td>✅ Done</td>
+<td>Already existed in v1.15.2</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Fix Gemini SDK</td>
+<td>✅ Done</td>
+<td>Migrated to google.genai in v1.15.2</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Update benchmarks</td>
+<td>✅ Done</td>
+<td>engine_runner.py (+13 lines)</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Create documentation</td>
+<td>✅ Done</td>
+<td>docs/TOOL_CALLING.md (exists, 267 lines)</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Update config example</td>
+<td>✅ Done</td>
+<td>ppxai-config.example.json (+6 lines)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Changes made (commit 26217e0):</strong></p>
+<ol>
+<li><strong>benchmarks/llm-eval/engine_runner.py</strong> (+13 lines)</li>
+<li>Added <code>_detect_tool_calling_method()</code> method</li>
+<li>Added <code>tool_calling_method</code> field to metadata</li>
+<li>
+<p>Returns "native" or "prompt_based"</p>
+</li>
+<li>
+<p><strong>ppxai-config.example.json</strong> (+6 lines)</p>
+</li>
+<li>Fixed OpenAI: added <code>native_tool_calling: true</code></li>
+<li>Fixed OpenRouter: added <code>native_tool_calling: true</code></li>
+</ol>
+<p><strong>Results:</strong>
+- Perplexity → <code>prompt_based</code> ✓
+- Gemini → <code>native</code> ✓
+- OpenAI → <code>native</code> ✓
+- OpenRouter → <code>native</code> ✓</p>
+<p><strong>Note:</strong> Steps 1-3 and 5 were already complete from v1.15.2 work. This task completed the remaining metadata and config updates.</p>
+<hr />
+<h3 id="testing-plan">Testing Plan<a class="headerlink" href="#testing-plan" title="Permanent link">&para;</a></h3>
+<p><strong>After implementation:</strong></p>
+<ol>
+<li>
+<p><strong>Verify capability flags:</strong>
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-29-1"><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;</span>
+</span><span id="__span-29-2"><a id="__codelineno-29-2" name="__codelineno-29-2" href="#__codelineno-29-2"></a><span class="s2">from ppxai.config import initialize, get_provider_config</span>
+</span><span id="__span-29-3"><a id="__codelineno-29-3" name="__codelineno-29-3" href="#__codelineno-29-3"></a><span class="s2">initialize()</span>
+</span><span id="__span-29-4"><a id="__codelineno-29-4" name="__codelineno-29-4" href="#__codelineno-29-4"></a><span class="s2">print(&#39;Perplexity:&#39;, get_provider_config(&#39;perplexity&#39;).get(&#39;capabilities&#39;, {}).get(&#39;native_tool_calling&#39;))</span>
+</span><span id="__span-29-5"><a id="__codelineno-29-5" name="__codelineno-29-5" href="#__codelineno-29-5"></a><span class="s2">print(&#39;Gemini:&#39;, get_provider_config(&#39;gemini&#39;).get(&#39;capabilities&#39;, {}).get(&#39;native_tool_calling&#39;))</span>
+</span><span id="__span-29-6"><a id="__codelineno-29-6" name="__codelineno-29-6" href="#__codelineno-29-6"></a><span class="s2">&quot;</span>
+</span></code></pre></div></p>
+</li>
+<li>
+<p><strong>Re-run API tests:</strong>
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-30-1"><a id="__codelineno-30-1" name="__codelineno-30-1" href="#__codelineno-30-1"></a><span class="nb">cd</span><span class="w"> </span>benchmarks/llm-eval
+</span><span id="__span-30-2"><a id="__codelineno-30-2" name="__codelineno-30-2" href="#__codelineno-30-2"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>test_tool_calling_apis.py
+</span></code></pre></div></p>
+</li>
+<li>
+<p><strong>Re-run benchmarks with debug:</strong>
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-31-1"><a id="__codelineno-31-1" name="__codelineno-31-1" href="#__codelineno-31-1"></a>python<span class="w"> </span>benchmark.py<span class="w"> </span>--provider<span class="w"> </span>perplexity<span class="w"> </span>--model<span class="w"> </span>sonar-pro<span class="w"> </span>--categories<span class="w"> </span>tool_calling<span class="w"> </span>--debug
+</span><span id="__span-31-2"><a id="__codelineno-31-2" name="__codelineno-31-2" href="#__codelineno-31-2"></a>python<span class="w"> </span>benchmark.py<span class="w"> </span>--provider<span class="w"> </span>gemini<span class="w"> </span>--model<span class="w"> </span>gemini-2.5-flash<span class="w"> </span>--categories<span class="w"> </span>tool_calling<span class="w"> </span>--debug
+</span></code></pre></div></p>
+</li>
+<li>
+<p><strong>Verify unit tests:</strong>
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-32-1"><a id="__codelineno-32-1" name="__codelineno-32-1" href="#__codelineno-32-1"></a>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/<span class="w"> </span>-v<span class="w"> </span>-k<span class="w"> </span>tool
+</span></code></pre></div></p>
+</li>
+</ol>
+<h3 id="success-criteria">Success Criteria<a class="headerlink" href="#success-criteria" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[ ] Capability flags correctly set for all providers</li>
+<li>[ ] Documentation clearly explains native vs prompt-based</li>
+<li>[ ] Benchmark results include <code>tool_calling_method</code> metadata</li>
+<li>[ ] Test suite passes without regressions</li>
+<li>[ ] Gemini uses new SDK successfully</li>
+<li>[ ] Config example updated with correct settings</li>
+</ul>
+<h3 id="files-changed-summary_2">Files Changed Summary<a class="headerlink" href="#files-changed-summary_2" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Action</th>
+<th>Est. Lines</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ppxai/engine/providers/perplexity.py</code></td>
+<td>Add capability flag, update docstring</td>
+<td>~10</td>
+</tr>
+<tr>
+<td><code>ppxai/engine/providers/gemini.py</code></td>
+<td>Migrate to new SDK</td>
+<td>~50</td>
+</tr>
+<tr>
+<td><code>ppxai/config/loader.py</code></td>
+<td>Add native_tool_calling to defaults</td>
+<td>~2</td>
+</tr>
+<tr>
+<td><code>benchmarks/llm-eval/engine_runner.py</code></td>
+<td>Add method detection and metadata</td>
+<td>~15</td>
+</tr>
+<tr>
+<td><code>docs/TOOL_CALLING.md</code></td>
+<td>Create new documentation</td>
+<td>~150 (new)</td>
+</tr>
+<tr>
+<td><code>ppxai-config.example.json</code></td>
+<td>Add capability comments</td>
+<td>~10</td>
+</tr>
+</tbody>
+</table>
+<h3 id="impact">Impact<a class="headerlink" href="#impact" title="Permanent link">&para;</a></h3>
+<p><strong>User Benefits:</strong>
+- ✅ Clear understanding of tool calling methods
+- ✅ Accurate benchmark comparisons
+- ✅ Better configuration guidance
+- ✅ Documented limitations per provider</p>
+<p><strong>No Breaking Changes:</strong>
+- All existing functionality preserved
+- Additive changes only
+- Backward compatible</p>
+<h3 id="references">References<a class="headerlink" href="#references" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Test results: <code>benchmarks/llm-eval/debug/api_tool_calling_test_results.json</code></li>
+<li>Full analysis: <code>benchmarks/llm-eval/TOOL_CALLING_ANALYSIS.md</code></li>
+<li>Action plan: <code>benchmarks/llm-eval/ACTION_PLAN.md</code></li>
+<li>Perplexity docs: https://docs.perplexity.ai/docs/agentic-research/tools</li>
+<li>Gemini docs: https://ai.google.dev/gemini-api/docs/function-calling</li>
+<li>Deprecated SDK: https://github.com/google-gemini/deprecated-generative-ai-python</li>
+</ul>
+<hr />
+<h2 id="5-outstanding-todos-code-level">5. Outstanding TODOs (Code-Level) ⏳<a class="headerlink" href="#5-outstanding-todos-code-level" title="Permanent link">&para;</a></h2>
+<p><strong>Priority:</strong> Medium
+<strong>Status:</strong> Planned</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Item</th>
+<th>File</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>3</td>
+<td>Interactive consent prompt (Rich TUI)</td>
+<td><code>rich_renderer.py:382</code></td>
+<td>Shows consent options but can't select - implement actual interactive prompt</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Save dialog on side panel close</td>
+<td><code>side_panel.py:243</code></td>
+<td>Users may lose edits without warning - prompt to save on close</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Cancel streaming on Ctrl+C</td>
+<td><code>tui/app.py:1920</code></td>
+<td>Ctrl+C closes panel but doesn't cancel in-flight streaming request</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Git backend cleanup prompt</td>
+<td><code>chatPanel.ts:2268</code></td>
+<td>Add second prompt for git cleanup on checkpoint restore</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="explicitly-not-in-v1153">Explicitly NOT in v1.15.3<a class="headerlink" href="#explicitly-not-in-v1153" title="Permanent link">&para;</a></h2>
+<h3 id="web-app-file-tree-sidebar">Web App File Tree Sidebar<a class="headerlink" href="#web-app-file-tree-sidebar" title="Permanent link">&para;</a></h3>
+<p>Deferred to <strong>v1.16.0</strong>. See <a href="../TODO-v1.16.0/">TODO-v1.16.0.md</a> Phase 2.</p>
+<h3 id="ppxai-rich-cli-interactive-file-tree">ppxai (Rich CLI) Interactive File Tree<a class="headerlink" href="#ppxai-rich-cli-interactive-file-tree" title="Permanent link">&para;</a></h3>
+<p>Not feasible - Rich is a rendering library, not a TUI framework. Users can use <code>/ls</code> and <code>/tree</code> commands (static output) or switch to <code>ppxaide</code>.</p>
+<hr />
+<h2 id="success-metrics-release-criteria">Success Metrics &amp; Release Criteria<a class="headerlink" href="#success-metrics-release-criteria" title="Permanent link">&para;</a></h2>
+<h3 id="completed-features">Completed Features<a class="headerlink" href="#completed-features" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Workstream</th>
+<th>Status</th>
+<th>Metric</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Config Hot-Reload</td>
+<td>✅ Done</td>
+<td>Config changes reflected without restart</td>
+<td>✅ Achieved</td>
+</tr>
+<tr>
+<td>TUI EventBus</td>
+<td>✅ Done</td>
+<td>No NoMatches crashes, warnings displayed</td>
+<td>✅ Achieved</td>
+</tr>
+<tr>
+<td>Benchmarks</td>
+<td>✅ Done</td>
+<td>Results tracked in <code>benchmarks/llm-eval/results/</code></td>
+<td>✅ Achieved</td>
+</tr>
+</tbody>
+</table>
+<h3 id="open-items-for-v1153">Open Items for v1.15.3<a class="headerlink" href="#open-items-for-v1153" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Workstream</th>
+<th>Status</th>
+<th>Metric</th>
+<th>Target</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tool Calling Clarification</td>
+<td>⏳ Open</td>
+<td>Capability flags accurate, benchmarks distinguish native vs prompt-based</td>
+<td>0.5 days</td>
+</tr>
+</tbody>
+</table>
+<h3 id="deferred-to-v1160">Deferred to v1.16.0<a class="headerlink" href="#deferred-to-v1160" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Workstream</th>
+<th>Status</th>
+<th>Metric</th>
+<th>Target</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/ls</code>, <code>/tree</code></td>
+<td>🔲 Planned</td>
+<td>Commands work in all 3 clients, &lt;2s on 10K files</td>
+<td>Phase 0: 2 days</td>
+</tr>
+<tr>
+<td>ppxaide tree</td>
+<td>🔲 Planned</td>
+<td>File tree renders &lt;500ms, no keyboard lag</td>
+<td>Phase 1: 5 days</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="next-steps-for-v1153-release">Next Steps for v1.15.3 Release<a class="headerlink" href="#next-steps-for-v1153-release" title="Permanent link">&para;</a></h2>
+<h3 id="implementation-complete-57-workstreams">✅ Implementation Complete (5/7 workstreams)<a class="headerlink" href="#implementation-complete-57-workstreams" title="Permanent link">&para;</a></h3>
+<p>Completed workstreams:
+- ✅ Config Hot-Reload Fix
+- ✅ TUI EventBus Stability
+- ✅ DGX Spark Benchmarks
+- ✅ Platform Alignment
+- ✅ DAG-Based Config Init</p>
+<p><strong>Test Status:</strong> 1157/1157 tests pass (100% pass rate)</p>
+<h3 id="remaining-work">⏳ Remaining Work<a class="headerlink" href="#remaining-work" title="Permanent link">&para;</a></h3>
+<p>High priority for release:
+- ⏳ Tool Calling Clarification (4 hours)
+  - Add capability flags (Perplexity: native_tool_calling=false)
+  - Update provider docstrings
+  - Fix Gemini SDK (migrate to google.genai)
+  - Update benchmarks with tool_calling_method metadata
+  - Create docs/TOOL_CALLING.md</p>
+<p>See: <code>benchmarks/llm-eval/ACTION_PLAN.md</code> for detailed steps</p>
+<h3 id="ready-for-release-after-tool-calling-work">Ready for Release After Tool Calling Work<a class="headerlink" href="#ready-for-release-after-tool-calling-work" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Cross-Platform Testing</strong></li>
+<li>Test on Windows, macOS, Linux</li>
+<li>Verify signal handling (Ctrl+C, SIGTERM)</li>
+<li>Verify binary search path filtering</li>
+<li>
+<p>Verify config hot-reload</p>
+</li>
+<li>
+<p><strong>Documentation &amp; Release</strong></p>
+</li>
+<li>Update CHANGELOG.md</li>
+<li>Write RELEASE-NOTES-v1.15.3.md</li>
+<li>Commit all changes</li>
+<li>
+<p>Run <code>/release v1.15.3</code></p>
+</li>
+<li>
+<p><strong>Post-Release</strong></p>
+</li>
+<li>Begin v1.16.0 planning</li>
+<li>File navigation features (Phase 0: <code>/ls</code>, <code>/tree</code>)</li>
+</ol>
+<hr />
+<h2 id="version-alignment-note">Version Alignment Note<a class="headerlink" href="#version-alignment-note" title="Permanent link">&para;</a></h2>
+<p><strong>Current:</strong> v1.15.3 scope reduced from 4 workstreams to 2 open items
+<strong>Next:</strong> v1.16.0 will focus on file navigation features
+<strong>Impact:</strong> Faster release cycle, focused stability improvements</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/rcconsult/ppxai" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

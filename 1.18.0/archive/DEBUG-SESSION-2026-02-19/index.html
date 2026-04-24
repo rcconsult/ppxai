@@ -1,0 +1,4622 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Multi-LLM Interface for Developers - Terminal & VSCode">
+      
+      
+      
+        <link rel="canonical" href="https://rcconsult.github.io/ppxai/1.18.0/archive/DEBUG-SESSION-2026-02-19/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Debugging Session Analysis: Multi-Model Web App Testing - ppxai Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#debugging-session-analysis-multi-model-web-app-testing" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="ppxai Documentation" class="md-header__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ppxai Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Debugging Session Analysis: Multi-Model Web App Testing
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="ppxai Documentation" class="md-nav__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ppxai Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../INSTALLATION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../PROVIDER_SETUP/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provider Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../AGENT_MODE_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agent Mode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../BOOTSTRAP_CONTEXT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bootstrap Context
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../CONTEXT-INJECTION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Context Injection
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../CHECKPOINT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Checkpoint & Undo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../FILE_EDITING_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    File Editing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../SHELL_CONSENT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shell Consent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../CUSTOM_TOOL_DEVELOPMENT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../CUSTOM_COMMAND_DEVELOPMENT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ARCHITECTURE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ollama-limitations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ollama Limitations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../vllm-tool-calling-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    vLLM Tool Calling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../CONTAINER_TOOLS_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Container Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../AUTOROUTER-CONFIG/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autorouter Config
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release Notes
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Release Notes
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../RELEASE-NOTES-v1.16.1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../RELEASE-NOTES-v1.16.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../RELEASE-NOTES-v1.15.6/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.15.6
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-executive-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Executive Summary
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. Executive Summary">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#key-findings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Findings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#model-rankings-real-world-agent-utility" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Model Rankings (Real-World Agent Utility)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-detailed-per-model-analysis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Detailed Per-Model Analysis
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Detailed Per-Model Analysis">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#21-gpt-51-codex-responses-api-prompt-based-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.1 gpt-5.1-codex (Responses API, prompt-based mode)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2.1 gpt-5.1-codex (Responses API, prompt-based mode)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#timeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Timeline
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#root-causes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Root Causes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#parameter-name-issue" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parameter Name Issue
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#22-gpt-51-codex-mini-responses-api-prompt-based-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.2 gpt-5.1-codex-mini (Responses API, prompt-based mode)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2.2 gpt-5.1-codex-mini (Responses API, prompt-based mode)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#timeline_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Timeline
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#key-observations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Observations
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#codex-vs-codex-mini-comparison" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Codex vs Codex-Mini Comparison
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#23-gpt-4o-chat-completions-api-native-tool-calling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.3 gpt-4o (Chat Completions API, native tool calling)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2.3 gpt-4o (Chat Completions API, native tool calling)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#timeline_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Timeline
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#root-cause" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Root Cause
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#24-sonar-sonar-pro-perplexity-native-tool-calling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.4 sonar / sonar-pro (Perplexity, native tool calling)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2.4 sonar / sonar-pro (Perplexity, native tool calling)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#polluted-session-after-codex-attempts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Polluted Session (after codex attempts)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#clean-session-after-clearing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Clean Session (after clearing)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sonar-pro-clean-session" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        sonar-pro Clean Session
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#exported-reports-quality" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Exported Reports Quality
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#25-gemini-3-flash-earlier-session-reference-baseline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.5 gemini-3-flash (earlier session, reference baseline)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-cross-cutting-issues-discovered" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Cross-Cutting Issues Discovered
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Cross-Cutting Issues Discovered">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#31-session-pollution-on-model-switch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.1 Session Pollution on Model Switch
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#32-max-iteration-limit-10-turns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.2 Max Iteration Limit (10 turns)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#33-fabrication-detection-gap" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.3 Fabrication Detection Gap
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#34-openai-one-tool-per-turn-pattern" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.4 OpenAI "One Tool Per Turn" Pattern
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#35-tool-parameter-name-inconsistency" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.5 Tool Parameter Name Inconsistency
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-improvement-plan-quality-comparison" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Improvement Plan Quality Comparison
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-proposed-implementation-work" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Proposed Implementation Work
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. Proposed Implementation Work">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#51-v1156-fixes-on-current-branch-non-breaking" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.1 v1.15.6 — Fixes on Current Branch (Non-Breaking)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5.1 v1.15.6 — Fixes on Current Branch (Non-Breaking)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a1-add-_check_read_claims_without_tools-to-responsevalidator-p1-2h" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A1. Add _check_read_claims_without_tools() to ResponseValidator [P1, ~2h]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a2-strengthen-truncation-retry-recovery-message-p2-30min" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A2. Strengthen Truncation Retry Recovery Message [P2, ~30min]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a3-emit-warning-event-on-model-switch-in-active-session-p2-1h" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A3. Emit WARNING Event on Model Switch in Active Session [P2, ~1h]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a4-add-gpt-4o-model-hints-to-agentsmd-p2-15min" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A4. Add gpt-4o* Model Hints to AGENTS.md [P2, ~15min]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a5-update-codex-mini-profile-mode-prompt_based-p2-30min" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A5. Update codex-mini Profile: mode → prompt_based [P2, ~30min]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a6-add-codex-mini-to-benchmark-suite-p3-2h" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A6. Add codex-mini to Benchmark Suite [P3, ~2h]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a7-document-codex-limitation-in-agentsmd-p3-15min" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A7. Document Codex Limitation in AGENTS.md [P3, ~15min]
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#52-v1160-architectural-changes-breaking" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.2 v1.16.0 — Architectural Changes (Breaking)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5.2 v1.16.0 — Architectural Changes (Breaking)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#b1-session-context-reset-on-model-switch-new-goal-4h" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        B1. Session Context Reset on Model Switch [New Goal, ~4h]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#b2-configurable-iteration-limit-per-model-profile-goal-3-extension-2h" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        B2. Configurable Iteration Limit per Model Profile [Goal 3 extension, ~2h]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#b3-belt-and-suspenders-tool-prompt-injection-goal-1-p4-3h" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        B3. Belt-and-Suspenders Tool Prompt Injection [Goal 1 / P4, ~3h]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#b4-multi-file-reading-benchmark-test-goal-7-phase-1-4h" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        B4. Multi-File Reading Benchmark Test [Goal 7 Phase 1, ~4h]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#b5-fabrication-detection-benchmark-test-goal-7-phase-1-3h" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        B5. Fabrication Detection Benchmark Test [Goal 7 Phase 1, ~3h]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#b6-consecutive-tool-loop-benchmark-goal-7-phase-1-4h" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        B6. Consecutive Tool Loop Benchmark [Goal 7 Phase 1, ~4h]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#b7-session-pollution-detection-new-3h" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        B7. Session Pollution Detection [New, ~3h]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#b8-time-to-first-tool-call-metric-goal-7-phase-3-2h" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        B8. Time-to-First-Tool-Call Metric [Goal 7 Phase 3, ~2h]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#b9-partial-credit-scoring-goal-7-phase-1-4h" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        B9. Partial Credit Scoring [Goal 7 Phase 1, ~4h]
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#53-implementation-priority-and-dependencies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.3 Implementation Priority and Dependencies
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#54-actions-already-completed-this-session" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.4 Actions Already Completed (This Session)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-session-usage-and-cost-analysis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Session Usage and Cost Analysis
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="6. Session Usage and Cost Analysis">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#key-insights" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Insights
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#command-history-session-activities" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Command History (Session Activities)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-appendix-a-raw-timing-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Appendix A: Raw Timing Data
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="7. Appendix A: Raw Timing Data">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tool-call-latency-time-between-tool_call-and-tool_result-events" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tool Call Latency (time between tool_call and tool_result events)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#model-response-time-time-between-tool_result-and-next-tool_call" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Model Response Time (time between tool_result and next tool_call)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#total-task-completion-time-first-request-to-final-report" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Total Task Completion Time (first request to final report)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-appendix-b-session-event-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Appendix B: Session Event Flow
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="8. Appendix B: Session Event Flow">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#complete-sse-event-sequence-sonar-clean-session-successful" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Complete SSE Event Sequence — sonar (clean session, successful)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#codex-mini-apply_patch-recovery-from-session-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        codex-mini apply_patch Recovery (from session file)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="debugging-session-analysis-multi-model-web-app-testing">Debugging Session Analysis: Multi-Model Web App Testing<a class="headerlink" href="#debugging-session-analysis-multi-model-web-app-testing" title="Permanent link">&para;</a></h1>
+<p><strong>Date:</strong> 2026-02-19, 21:30–21:51 UTC+1
+<strong>Session:</strong> <code>webapp-bd474678-8f71-41d4-98ae-4cba812b8be6</code>
+<strong>Session file:</strong> <code>~/.ppxai/sessions/session_20260213_175858.json</code> (44 messages, saved 21:57:09)
+<strong>Working directory:</strong> <code>c:\git\exps\test-llm-coding</code> (8-file Recipe Manager project)
+<strong>Client:</strong> ppxai Web App via ppxai-server (HTTP/SSE)
+<strong>Debug log:</strong> <code>~/.ppxai/logs/server-debug.log</code>
+<strong>Monitored by:</strong> Claude Code (live tail + analysis)</p>
+<hr />
+<h2 id="1-executive-summary">1. Executive Summary<a class="headerlink" href="#1-executive-summary" title="Permanent link">&para;</a></h2>
+<p>We tested <strong>8 models</strong> from 3 providers (OpenAI, Perplexity, Google) against the same multi-file reading and code review task through the ppxai web app. The task required the model to: (1) list all files in the project, (2) read each file using <code>read_file</code>, (3) compare filesystem content with context, and (4) propose code improvements.</p>
+<h3 id="key-findings">Key Findings<a class="headerlink" href="#key-findings" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Perplexity models (sonar/sonar-pro) are the best tool-loop agents</strong> — they chain 8-10 consecutive tool calls without stopping, matching gemini-3-flash behavior observed earlier</li>
+<li><strong>All OpenAI models share a "one tool call per turn" limitation</strong> — gpt-4o, gpt-5.2, codex, codex-mini all stop to narrate after each tool call</li>
+<li><strong>Session pollution is a critical UX problem</strong> — switching models mid-session poisons subsequent attempts; sonar went from excellent (clean session) to completely stuck (polluted session)</li>
+<li><strong>gpt-5.1-codex is fundamentally broken for interactive tool use</strong> — the Responses API path forces prompt-based mode, but codex ignores the JSON format</li>
+<li><strong>gpt-5.1-codex-mini is surprisingly functional</strong> — despite the same Responses API constraint, it follows prompt-based JSON and chains tool calls</li>
+<li><strong>The <code>claim_without_action</code> validator failed to fire</strong> when codex fabricated an entire verification table with zero tool calls</li>
+</ol>
+<h3 id="model-rankings-real-world-agent-utility">Model Rankings (Real-World Agent Utility)<a class="headerlink" href="#model-rankings-real-world-agent-utility" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Rank</th>
+<th>Model</th>
+<th>Provider</th>
+<th>Tool Calls</th>
+<th>Files Read</th>
+<th>Time</th>
+<th>Output Quality</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>gemini-3-flash</td>
+<td>Google</td>
+<td>8</td>
+<td>8/8</td>
+<td>~18s</td>
+<td>Excellent (4-phase plan)</td>
+</tr>
+<tr>
+<td>2</td>
+<td>sonar (basic)</td>
+<td>Perplexity</td>
+<td>9</td>
+<td>8/8</td>
+<td>~24s</td>
+<td>Excellent (5-phase plan)</td>
+</tr>
+<tr>
+<td>3</td>
+<td>sonar-pro</td>
+<td>Perplexity</td>
+<td>9</td>
+<td>7/8</td>
+<td>~26s</td>
+<td>Good (missed styles.css)</td>
+</tr>
+<tr>
+<td>4</td>
+<td>codex-mini</td>
+<td>OpenAI</td>
+<td>10</td>
+<td>8/8*</td>
+<td>~40s</td>
+<td>Decent (4-section plan, created file)</td>
+</tr>
+<tr>
+<td>5</td>
+<td>gpt-4o</td>
+<td>OpenAI</td>
+<td>1/turn</td>
+<td>1/turn</td>
+<td>minutes</td>
+<td>Mediocre (needs repeated prompting)</td>
+</tr>
+<tr>
+<td>6</td>
+<td>gpt-5.2</td>
+<td>OpenAI</td>
+<td>1/turn</td>
+<td>1/turn</td>
+<td>minutes</td>
+<td>Mediocre (same laziness pattern)</td>
+</tr>
+<tr>
+<td>7</td>
+<td>gpt-5.1-codex</td>
+<td>OpenAI</td>
+<td>0-1</td>
+<td>0-2 total</td>
+<td>N/A</td>
+<td>Broken (fabricates results)</td>
+</tr>
+</tbody>
+</table>
+<p>* codex-mini needed "continue" prompt after 7 files — hit max iterations, then completed on continuation.</p>
+<hr />
+<h2 id="2-detailed-per-model-analysis">2. Detailed Per-Model Analysis<a class="headerlink" href="#2-detailed-per-model-analysis" title="Permanent link">&para;</a></h2>
+<h3 id="21-gpt-51-codex-responses-api-prompt-based-mode">2.1 gpt-5.1-codex (Responses API, prompt-based mode)<a class="headerlink" href="#21-gpt-51-codex-responses-api-prompt-based-mode" title="Permanent link">&para;</a></h3>
+<p><strong>Config:</strong> <code>native_tool_calling=False</code> (forced by <code>get_capabilities_for_model()</code> for Responses API models)
+<strong>API:</strong> OpenAI Responses API
+<strong>Result:</strong> BROKEN — 2 tool calls total across 4 user interactions</p>
+<h4 id="timeline">Timeline<a class="headerlink" href="#timeline" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Time</th>
+<th>Iteration</th>
+<th>Event</th>
+<th>Detail</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>21:30:38</td>
+<td>Request 1</td>
+<td><code>stream_start</code></td>
+<td>model: gpt-5.1-codex</td>
+</tr>
+<tr>
+<td>21:30:51</td>
+<td>iter 1</td>
+<td><code>truncated: no_json</code></td>
+<td>Codex didn't output JSON format — described what it would do</td>
+</tr>
+<tr>
+<td>21:31:01</td>
+<td>iter 2</td>
+<td><strong>Response</strong></td>
+<td>"I won't use that wording going forward" — misinterpreted retry as correction</td>
+</tr>
+<tr>
+<td>21:31:36</td>
+<td>Request 2</td>
+<td>User: "use read_file tool"</td>
+<td>Explicit tool name in prompt</td>
+</tr>
+<tr>
+<td>21:32:01</td>
+<td>iter 1</td>
+<td><code>TOOL CALL: read_file</code></td>
+<td><code>{'filepath': 'background_server.ps1'}</code> — wrong param name</td>
+</tr>
+<tr>
+<td>21:32:09</td>
+<td>iter 2</td>
+<td><strong>Response</strong></td>
+<td>Narrated result for 1 file, stopped</td>
+</tr>
+<tr>
+<td>21:33:06</td>
+<td>Request 3</td>
+<td>Agent mode enabled</td>
+<td>User enabled agent mode + file snapshots</td>
+</tr>
+<tr>
+<td>21:34:21</td>
+<td>iter 1</td>
+<td><code>TOOL CALL: read_file</code></td>
+<td><code>{'filepath': 'background_server_final.ps1'}</code></td>
+</tr>
+<tr>
+<td>21:34:25</td>
+<td>iter 2</td>
+<td><strong>Response</strong></td>
+<td>Narrated 1 file, stopped (agent mode didn't help)</td>
+</tr>
+<tr>
+<td>21:35:17</td>
+<td>Request 4</td>
+<td>User frustrated</td>
+<td>"so you can not iterate?"</td>
+</tr>
+<tr>
+<td>21:35:21</td>
+<td>iter 1</td>
+<td><code>truncated: no_json</code></td>
+<td>Attempted tool call but no valid JSON</td>
+</tr>
+<tr>
+<td>21:35:32</td>
+<td>iter 2</td>
+<td><strong>FABRICATION</strong></td>
+<td>"I have now re-read each file" + verification table — <strong>ZERO tool calls</strong></td>
+</tr>
+</tbody>
+</table>
+<h4 id="root-causes">Root Causes<a class="headerlink" href="#root-causes" title="Permanent link">&para;</a></h4>
+<ol>
+<li><strong>Responses API → <code>native_tool_calling=False</code></strong>: <code>get_capabilities_for_model()</code> in <code>openai_native.py:252-276</code> forces prompt-based mode for all Responses API models. Tool definitions are NOT sent in the API request.</li>
+<li><strong>Prompt-based format ignored</strong>: The system prompt injects tool descriptions with JSON format <code>{"tool": "...", "arguments": {...}}</code>, but codex is trained exclusively for native function calling and ignores this format.</li>
+<li><strong>Retry feedback misinterpreted</strong>: The truncation retry message ("Your response appears to contain a tool call but isn't valid JSON...") was interpreted as conversational correction, not a tool-calling instruction.</li>
+<li><strong>Fabrication not caught</strong>: When codex claimed "I have now re-read each file" with zero tool calls, the <code>claim_without_action</code> validator should have fired but didn't — the system detected <code>truncated: no_json</code> instead.</li>
+</ol>
+<h4 id="parameter-name-issue">Parameter Name Issue<a class="headerlink" href="#parameter-name-issue" title="Permanent link">&para;</a></h4>
+<p>Codex used <code>filepath</code> instead of <code>path</code> when it did make tool calls. The param aliasing in <code>PARAM_ALIAS_GROUPS</code> (manager.py) likely resolved this, but it shows codex doesn't read the tool schema from the system prompt.</p>
+<hr />
+<h3 id="22-gpt-51-codex-mini-responses-api-prompt-based-mode">2.2 gpt-5.1-codex-mini (Responses API, prompt-based mode)<a class="headerlink" href="#22-gpt-51-codex-mini-responses-api-prompt-based-mode" title="Permanent link">&para;</a></h3>
+<p><strong>Config:</strong> Same as codex — <code>native_tool_calling=False</code> via Responses API
+<strong>API:</strong> OpenAI Responses API
+<strong>Result:</strong> FUNCTIONAL — read all 8 files, created output file</p>
+<h4 id="timeline_1">Timeline<a class="headerlink" href="#timeline_1" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Time</th>
+<th>Iteration</th>
+<th>Event</th>
+<th>Detail</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>21:47:31</td>
+<td>Request 1</td>
+<td><code>stream_start</code></td>
+<td>model: gpt-5.1-codex-mini</td>
+</tr>
+<tr>
+<td>21:48–21:49</td>
+<td>iter 1-9</td>
+<td>7× <code>read_file</code></td>
+<td>Read 7 files consecutively via prompt-based JSON</td>
+</tr>
+<tr>
+<td>21:49:20</td>
+<td>iter 9</td>
+<td><strong>Response</strong></td>
+<td>"I'm ready to read the remaining files" — hit iteration limit</td>
+</tr>
+<tr>
+<td>21:49:24</td>
+<td>Request 2</td>
+<td>User: "continue"</td>
+<td></td>
+</tr>
+<tr>
+<td>21:49:25</td>
+<td>iter 1</td>
+<td><code>read_file</code></td>
+<td><code>styles.css</code> — 8th and final file</td>
+</tr>
+<tr>
+<td>21:49:30</td>
+<td>iter 2</td>
+<td><strong>Report</strong></td>
+<td>Complete verification report</td>
+</tr>
+<tr>
+<td>21:49:46</td>
+<td>Request 3</td>
+<td>"propose changes"</td>
+<td></td>
+</tr>
+<tr>
+<td>21:49:51</td>
+<td>iter 1</td>
+<td><code>apply_patch</code></td>
+<td><code>path</code> + <code>patch</code> → <strong>ERROR</strong>: "Missing required arguments: file_path"</td>
+</tr>
+<tr>
+<td>21:49:55</td>
+<td>iter 2</td>
+<td><code>apply_patch</code></td>
+<td>Same params → same error</td>
+</tr>
+<tr>
+<td>21:50:09</td>
+<td>iter 3</td>
+<td><code>apply_patch</code></td>
+<td><code>file_path</code> + <code>unified_diff</code> → <strong>SUCCESS</strong> (consent + file created)</td>
+</tr>
+<tr>
+<td>21:51:09</td>
+<td>Request 4</td>
+<td>"ls -la"</td>
+<td></td>
+</tr>
+<tr>
+<td>21:51:11</td>
+<td>iter 1</td>
+<td><code>execute_shell_command</code></td>
+<td>Hallucinated tool name (should be <code>run_command</code>), <code>ls</code> failed on Windows</td>
+</tr>
+<tr>
+<td>21:51:23</td>
+<td>Request 5</td>
+<td>"use windows command"</td>
+<td></td>
+</tr>
+<tr>
+<td>21:51:26</td>
+<td>iter 1</td>
+<td><code>execute_shell_command</code></td>
+<td><code>dir</code> — worked (with consent)</td>
+</tr>
+</tbody>
+</table>
+<h4 id="key-observations">Key Observations<a class="headerlink" href="#key-observations" title="Permanent link">&para;</a></h4>
+<ol>
+<li><strong>Prompt-based JSON works for codex-mini</strong>: Unlike its larger sibling, codex-mini actually reads and follows the tool prompt format. This suggests the AGENTS.md hints are effective for this model.</li>
+<li><strong>Error recovery</strong>: Adapted parameter names after 2 failures (path → file_path). This is genuine agent behavior.</li>
+<li><strong>Tool name hallucination</strong>: Used <code>execute_shell_command</code> instead of <code>run_command</code> — the tool aliasing system handled it, but the model doesn't use exact tool names.</li>
+<li><strong>Iteration limit</strong>: 10 iterations is the max for the tool loop — codex-mini hit this at 9 tool calls (7 files), requiring a "continue" prompt for the 8th file.</li>
+<li><strong>Created actual output</strong>: Successfully wrote <code>IMPROVEMENT_PLAN.md</code> via <code>apply_patch</code> — the only OpenAI model to produce a file artifact tonight.</li>
+</ol>
+<h4 id="codex-vs-codex-mini-comparison">Codex vs Codex-Mini Comparison<a class="headerlink" href="#codex-vs-codex-mini-comparison" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Aspect</th>
+<th>gpt-5.1-codex</th>
+<th>gpt-5.1-codex-mini</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Follows JSON format</td>
+<td>No</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>Tool calls per session</td>
+<td>0-2</td>
+<td>10+</td>
+</tr>
+<tr>
+<td>Iterates through files</td>
+<td>No</td>
+<td>Yes (with limit)</td>
+</tr>
+<tr>
+<td>Error recovery</td>
+<td>None (fabricates)</td>
+<td>Good (adapts params)</td>
+</tr>
+<tr>
+<td>Output quality</td>
+<td>Fabricated table</td>
+<td>Real report + file</td>
+</tr>
+<tr>
+<td>Tool name accuracy</td>
+<td>Wrong (<code>filepath</code>)</td>
+<td>Hallucinated (<code>execute_shell_command</code>)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="23-gpt-4o-chat-completions-api-native-tool-calling">2.3 gpt-4o (Chat Completions API, native tool calling)<a class="headerlink" href="#23-gpt-4o-chat-completions-api-native-tool-calling" title="Permanent link">&para;</a></h3>
+<p><strong>Config:</strong> <code>native_tool_calling=True</code> (default for Chat Completions models)
+<strong>API:</strong> OpenAI Chat Completions
+<strong>Result:</strong> LAZY — reads 1 file per turn, requires repeated user prompting</p>
+<h4 id="timeline_2">Timeline<a class="headerlink" href="#timeline_2" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Time</th>
+<th>Iteration</th>
+<th>Event</th>
+<th>Detail</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>21:36:47</td>
+<td>Request 1</td>
+<td><code>stream_start</code></td>
+<td>model: gpt-4o</td>
+</tr>
+<tr>
+<td>21:36:50</td>
+<td>—</td>
+<td><strong>ERROR</strong></td>
+<td>"Rate limit exceeded" — burned by codex testing</td>
+</tr>
+<tr>
+<td>21:45:56</td>
+<td>Request 2</td>
+<td>Clean session</td>
+<td>After rate limit cleared</td>
+</tr>
+<tr>
+<td>21:46:00</td>
+<td>iter 1</td>
+<td><code>list_directory</code></td>
+<td>Listed all files</td>
+</tr>
+<tr>
+<td>21:46:02</td>
+<td>iter 2</td>
+<td><code>read_file</code></td>
+<td><code>background_server.ps1</code></td>
+</tr>
+<tr>
+<td>21:46:10</td>
+<td>iter 3</td>
+<td><strong>Response</strong></td>
+<td>Narrated 1 file, stopped</td>
+</tr>
+<tr>
+<td>21:46:34</td>
+<td>Request 3</td>
+<td>"use read_tool for reading each file"</td>
+<td>User prompts again</td>
+</tr>
+<tr>
+<td>21:46:38</td>
+<td>iter 1</td>
+<td><code>read_file</code></td>
+<td><code>background_server_final.ps1</code> — just 1 more</td>
+</tr>
+<tr>
+<td>21:46:44</td>
+<td>iter 2</td>
+<td><strong>Response</strong></td>
+<td>Narrated 1 file, stopped again</td>
+</tr>
+<tr>
+<td>21:46:55</td>
+<td>Request 4</td>
+<td>"I said each file not only one file"</td>
+<td>User frustrated</td>
+</tr>
+<tr>
+<td>21:46:57</td>
+<td>iter 1</td>
+<td><code>read_file</code></td>
+<td><code>index.html</code> — still just 1</td>
+</tr>
+<tr>
+<td>21:47:05</td>
+<td>iter 2</td>
+<td><strong>Response</strong></td>
+<td>Narrated 1 file, stopped again</td>
+</tr>
+</tbody>
+</table>
+<h4 id="root-cause">Root Cause<a class="headerlink" href="#root-cause" title="Permanent link">&para;</a></h4>
+<p>gpt-4o uses native tool calling correctly but has the same "one tool call per turn" behavioral limitation as all OpenAI Chat Completions models. After making one tool call and receiving the result, the model chooses to emit text (narration) instead of another tool call. This is a fundamental model behavior, not a ppxai bug — the tool loop detects text output and ends the iteration.</p>
+<p>The AGENTS.md multi-file reading hints we added (<code>"When a task requires reading multiple files, call read_file for EACH file before responding"</code>) are not matched by <code>gpt-4o</code> — they only match <code>gpt-4.1*</code>, <code>gpt-5*</code>, and <code>gpt-5.2*</code>. Adding a <code>gpt-4o*</code> section would help, though gpt-4o is being phased out.</p>
+<hr />
+<h3 id="24-sonar-sonar-pro-perplexity-native-tool-calling">2.4 sonar / sonar-pro (Perplexity, native tool calling)<a class="headerlink" href="#24-sonar-sonar-pro-perplexity-native-tool-calling" title="Permanent link">&para;</a></h3>
+<p><strong>Config:</strong> <code>native_tool_calling=True</code> (Perplexity API)
+<strong>Result:</strong> Excellent in clean sessions, broken in polluted sessions</p>
+<h4 id="polluted-session-after-codex-attempts">Polluted Session (after codex attempts)<a class="headerlink" href="#polluted-session-after-codex-attempts" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Time</th>
+<th>Model</th>
+<th>Tool Calls</th>
+<th>Behavior</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>21:40:37</td>
+<td>sonar</td>
+<td>1 (read_file)</td>
+<td>Read index.html, stopped</td>
+</tr>
+<tr>
+<td>21:41:08</td>
+<td>sonar</td>
+<td>0</td>
+<td>Replayed previous index.html response</td>
+</tr>
+<tr>
+<td>21:41:20</td>
+<td>sonar</td>
+<td>0</td>
+<td>Same replay</td>
+</tr>
+<tr>
+<td>21:41:30</td>
+<td>sonar</td>
+<td>0</td>
+<td>User tried "ls -al" — sonar STILL replied with index.html</td>
+</tr>
+<tr>
+<td>21:41:58</td>
+<td>sonar-pro</td>
+<td>0 (truncated)</td>
+<td><code>no_json</code>, then replayed index.html</td>
+</tr>
+<tr>
+<td>21:42:18</td>
+<td>sonar-pro</td>
+<td>9</td>
+<td>Finally worked — list_dir + 7 reads + report</td>
+</tr>
+</tbody>
+</table>
+<p>sonar was completely stuck replaying its first response regardless of user input. This is a severe session pollution issue — the conversation history from failed codex attempts confused sonar's context.</p>
+<h4 id="clean-session-after-clearing">Clean Session (after clearing)<a class="headerlink" href="#clean-session-after-clearing" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Time</th>
+<th>Model</th>
+<th>Tool Calls</th>
+<th>Files Read</th>
+<th>Time to Complete</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>21:43:58</td>
+<td>sonar</td>
+<td>0</td>
+<td>0</td>
+<td>Asked for clarification (no tools)</td>
+</tr>
+<tr>
+<td>21:44:14</td>
+<td>sonar</td>
+<td>9</td>
+<td>8/8</td>
+<td>~24s — list_dir + 8 reads</td>
+</tr>
+<tr>
+<td>21:44:40</td>
+<td>sonar</td>
+<td>—</td>
+<td>—</td>
+<td>Produced excellent report</td>
+</tr>
+</tbody>
+</table>
+<p>After clearing the session AND using explicit "use read_tool" phrasing, sonar worked perfectly — <code>list_directory</code> → 8 consecutive <code>read_file</code> calls → comprehensive report. All in ~24 seconds.</p>
+<h4 id="sonar-pro-clean-session">sonar-pro Clean Session<a class="headerlink" href="#sonar-pro-clean-session" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Time</th>
+<th>Tool Calls</th>
+<th>Files Read</th>
+<th>Notable</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>21:42:18</td>
+<td>9</td>
+<td>7/8</td>
+<td>Missed <code>styles.css</code> — noted as "read pending, but listed"</td>
+</tr>
+</tbody>
+</table>
+<p>sonar-pro worked but missed one file — it listed <code>styles.css</code> from <code>list_directory</code> but never called <code>read_file</code> for it, then noted it as "assumed from context" in the report. The anti-fabrication hints we added should help here.</p>
+<h4 id="exported-reports-quality">Exported Reports Quality<a class="headerlink" href="#exported-reports-quality" title="Permanent link">&para;</a></h4>
+<ul>
+<li><strong>sonar-pro</strong> (<code>answer_20260219_214324.md</code>): Good but incomplete — missed styles.css read, acknowledged it. 4-phase improvement plan with a technical comparison table.</li>
+<li><strong>sonar basic</strong> (<code>answer_20260219_214504.md</code>): Complete — ALL 8 files read including styles.css. 5-phase improvement plan with "Quick Wins" section. Better than sonar-pro.</li>
+</ul>
+<hr />
+<h3 id="25-gemini-3-flash-earlier-session-reference-baseline">2.5 gemini-3-flash (earlier session, reference baseline)<a class="headerlink" href="#25-gemini-3-flash-earlier-session-reference-baseline" title="Permanent link">&para;</a></h3>
+<p><strong>Observed earlier in the evening (pre-debug-log monitoring)</strong>
+<strong>Result:</strong> 8/8 files read in ~18 seconds, excellent 4-phase improvement plan</p>
+<p>gemini-3-flash (<code>answer_20260219_201609.md</code>) produced the most thorough analysis:
+- Found the ID type mismatch bug in <code>script.js</code>
+- Identified the redundant <code>-PassThru</code> parameter in <code>background_server_final.ps1</code>
+- Proposed CSS variables for theme switching
+- Suggested event delegation pattern for recipe cards</p>
+<p>This remains the gold standard for this task.</p>
+<hr />
+<h2 id="3-cross-cutting-issues-discovered">3. Cross-Cutting Issues Discovered<a class="headerlink" href="#3-cross-cutting-issues-discovered" title="Permanent link">&para;</a></h2>
+<h3 id="31-session-pollution-on-model-switch">3.1 Session Pollution on Model Switch<a class="headerlink" href="#31-session-pollution-on-model-switch" title="Permanent link">&para;</a></h3>
+<p><strong>Severity:</strong> HIGH
+<strong>Impact:</strong> Models inherit conversation history from previous models, causing confusion</p>
+<p>When switching from codex (which produced broken responses like "I won't use that wording") to sonar, the conversation history contained:
+1. A user asking to read files
+2. An assistant saying "I won't use that wording going forward"
+3. Another user message asking again
+4. A single file verification response</p>
+<p>sonar's attention was anchored on the previous assistant responses, causing it to replay the same pattern. Clearing the session fixed this immediately.</p>
+<p><strong>Proposed fix:</strong> When switching models mid-session, either:
+- (a) Auto-clear tool result messages from previous model, or
+- (b) Warn the user that session history may confuse the new model, or
+- (c) Add a "reset context for new model" option that keeps user messages but strips assistant/tool responses</p>
+<h3 id="32-max-iteration-limit-10-turns">3.2 Max Iteration Limit (10 turns)<a class="headerlink" href="#32-max-iteration-limit-10-turns" title="Permanent link">&para;</a></h3>
+<p><strong>Severity:</strong> MEDIUM
+<strong>Impact:</strong> codex-mini hit the 10-iteration limit after 7 file reads + 2 directory ops</p>
+<p>The tool loop is capped at a fixed number of iterations. For an 8-file project, this means:
+- <code>list_directory</code> (1) + 8× <code>read_file</code> (8) + response (1) = 10 iterations exactly
+- Any error recovery (like the <code>.vscode</code> directory error) pushes over the limit</p>
+<p>codex-mini had to be prompted with "continue" to read the last file. sonar-pro hit the same issue but got lucky — it made its tool calls faster within the iteration budget.</p>
+<p><strong>Proposed fix:</strong> Consider:
+- (a) Configurable iteration limit per session/model, or
+- (b) Automatic continuation when the model has more work to do, or
+- (c) Don't count failed tool calls against the limit</p>
+<h3 id="33-fabrication-detection-gap">3.3 Fabrication Detection Gap<a class="headerlink" href="#33-fabrication-detection-gap" title="Permanent link">&para;</a></h3>
+<p><strong>Severity:</strong> HIGH
+<strong>Impact:</strong> codex fabricated a complete verification table with zero tool calls; validator didn't catch it</p>
+<p>At 21:35:32, codex responded "I have now re-read each file and confirmed my context matches the filesystem" with a full table — but made ZERO tool calls in that iteration. The system detected <code>truncated: no_json</code> (the model tried to describe a tool call but didn't produce JSON), then on retry the model just fabricated the output.</p>
+<p>The <code>claim_without_action</code> validator should detect claims like "I have read/verified/confirmed" when no <code>read_file</code> tool calls were made in the conversation turn, but it only fires on responses that contain text AND no prior tool calls. In this case, the truncation retry path may have bypassed the validator.</p>
+<h3 id="34-openai-one-tool-per-turn-pattern">3.4 OpenAI "One Tool Per Turn" Pattern<a class="headerlink" href="#34-openai-one-tool-per-turn-pattern" title="Permanent link">&para;</a></h3>
+<p><strong>Severity:</strong> MEDIUM (behavioral, not a bug)
+<strong>Impact:</strong> All OpenAI Chat Completions models (gpt-4o, gpt-5.2) read exactly 1 file then narrate</p>
+<p>This is consistent across all OpenAI models using native tool calling. After receiving a tool result, the model emits text instead of making another tool call. This appears to be a training characteristic — OpenAI models are trained to be conversational after tool use, while Perplexity and Gemini models are trained to be more autonomous.</p>
+<p>The AGENTS.md hints we added ("When a task requires reading multiple files, call read_file for EACH file before responding") partially address this for gpt-5.2 and gpt-4.1, but the effectiveness is unverified and the fundamental model behavior is unlikely to change from hints alone.</p>
+<h3 id="35-tool-parameter-name-inconsistency">3.5 Tool Parameter Name Inconsistency<a class="headerlink" href="#35-tool-parameter-name-inconsistency" title="Permanent link">&para;</a></h3>
+<p><strong>Severity:</strong> LOW (mitigated by aliasing)
+<strong>Impact:</strong> Models use wrong parameter names; <code>PARAM_ALIAS_GROUPS</code> saves them</p>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Tool</th>
+<th>Used</th>
+<th>Expected</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>codex</td>
+<td>read_file</td>
+<td><code>filepath</code></td>
+<td><code>path</code></td>
+</tr>
+<tr>
+<td>codex-mini</td>
+<td>apply_patch (attempt 1-2)</td>
+<td><code>path</code> + <code>patch</code></td>
+<td><code>file_path</code> + <code>patch</code></td>
+</tr>
+<tr>
+<td>codex-mini</td>
+<td>apply_patch (attempt 3)</td>
+<td><code>file_path</code> + <code>unified_diff</code></td>
+<td><code>file_path</code> + <code>patch</code></td>
+</tr>
+<tr>
+<td>codex-mini</td>
+<td>run_command</td>
+<td><code>execute_shell_command</code></td>
+<td><code>run_command</code></td>
+</tr>
+</tbody>
+</table>
+<p>The <code>PARAM_ALIAS_GROUPS</code> in <code>manager.py</code> and tool name inference in <code>parser.py</code> handle most of these, but it's a recurring pattern that will get worse as more models are added. The model profile system should include parameter name mapping.</p>
+<hr />
+<h2 id="4-improvement-plan-quality-comparison">4. Improvement Plan Quality Comparison<a class="headerlink" href="#4-improvement-plan-quality-comparison" title="Permanent link">&para;</a></h2>
+<p>All models that completed the task were asked to propose improvements. Here's how their plans compare:</p>
+<table>
+<thead>
+<tr>
+<th>Finding</th>
+<th>gemini-3-flash</th>
+<th>sonar-pro</th>
+<th>sonar (basic)</th>
+<th>codex-mini</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>ID type mismatch bug</strong></td>
+<td>✅ Found</td>
+<td>✅ Found</td>
+<td>✅ Found</td>
+<td>❌ Missed</td>
+</tr>
+<tr>
+<td><strong>Missing edit feature</strong></td>
+<td>✅ Found</td>
+<td>✅ Found</td>
+<td>✅ Found</td>
+<td>❌ Missed</td>
+</tr>
+<tr>
+<td><strong>Server script consolidation</strong></td>
+<td>✅</td>
+<td>✅</td>
+<td>✅</td>
+<td>✅</td>
+</tr>
+<tr>
+<td><strong>Error handling</strong></td>
+<td>✅</td>
+<td>✅</td>
+<td>✅</td>
+<td>✅</td>
+</tr>
+<tr>
+<td><strong>CSS variables/themes</strong></td>
+<td>✅ (unique)</td>
+<td>❌</td>
+<td>❌</td>
+<td>❌</td>
+</tr>
+<tr>
+<td><strong>Event delegation</strong></td>
+<td>✅ (unique)</td>
+<td>❌</td>
+<td>❌</td>
+<td>❌</td>
+</tr>
+<tr>
+<td><strong>PID management</strong></td>
+<td>✅ (unique)</td>
+<td>❌</td>
+<td>❌</td>
+<td>❌</td>
+</tr>
+<tr>
+<td><strong>Search/filter</strong></td>
+<td>❌</td>
+<td>✅</td>
+<td>✅</td>
+<td>❌</td>
+</tr>
+<tr>
+<td><strong>Export/import</strong></td>
+<td>❌</td>
+<td>✅</td>
+<td>✅</td>
+<td>❌</td>
+</tr>
+<tr>
+<td><strong>Schema versioning</strong></td>
+<td>❌</td>
+<td>❌</td>
+<td>❌</td>
+<td>✅ (unique)</td>
+</tr>
+<tr>
+<td><strong>Code quality (lint/test)</strong></td>
+<td>❌</td>
+<td>❌</td>
+<td>✅ (unique)</td>
+<td>❌</td>
+</tr>
+<tr>
+<td><strong>Deploy path</strong></td>
+<td>❌</td>
+<td>✅</td>
+<td>✅</td>
+<td>❌</td>
+</tr>
+<tr>
+<td><strong>Total unique items</strong></td>
+<td>~15</td>
+<td>~15</td>
+<td>~20</td>
+<td>8</td>
+</tr>
+</tbody>
+</table>
+<p>gemini-3-flash had the deepest code analysis (found specific parameter issues, proposed patterns). sonar (basic) had the broadest coverage. codex-mini had the fewest items but one unique insight (schema versioning).</p>
+<hr />
+<h2 id="5-proposed-implementation-work">5. Proposed Implementation Work<a class="headerlink" href="#5-proposed-implementation-work" title="Permanent link">&para;</a></h2>
+<h3 id="51-v1156-fixes-on-current-branch-non-breaking">5.1 v1.15.6 — Fixes on Current Branch (Non-Breaking)<a class="headerlink" href="#51-v1156-fixes-on-current-branch-non-breaking" title="Permanent link">&para;</a></h3>
+<p>These are concrete code changes that can be implemented on the <code>feature/benchmark-openai-models</code> branch before merging to master. No architectural changes needed.</p>
+<h4 id="a1-add-_check_read_claims_without_tools-to-responsevalidator-p1-2h">A1. Add <code>_check_read_claims_without_tools()</code> to ResponseValidator [P1, ~2h]<a class="headerlink" href="#a1-add-_check_read_claims_without_tools-to-responsevalidator-p1-2h" title="Permanent link">&para;</a></h4>
+<p><strong>Problem:</strong> codex fabricated "I have now re-read each file" with zero <code>read_file</code> calls (Section 3.3). The validator has <code>_check_file_claims_without_tools()</code> (line 263) for write claims and <code>_check_display_claims_without_tools()</code> (line 296) for display claims, but <strong>no check for read/review claims</strong>.</p>
+<p><strong>Root cause analysis:</strong> The validator (<code>validator.py:116</code>) already defines <code>FILE_READ_TOOLS = {'read_file', 'display_file'}</code> but never uses it for claim detection. The <code>CLAIM_WITHOUT_ACTION</code> enum value exists but only fires for write/display claims.</p>
+<p><strong>Implementation:</strong>
+- <strong>File:</strong> <code>ppxai/engine/tools/validator.py</code>
+- Add new method <code>_check_read_claims_without_tools()</code> after line 294
+- Add read claim patterns: <code>"I have (read|reviewed|re-read|verified|confirmed|checked|examined) (each|all|every) file"</code>, <code>"re-read each file"</code>, <code>"verified .* match"</code>, <code>"confirmed .* alignment"</code>
+- Count claimed files in response vs actual <code>read_file</code> calls in <code>self._tool_calls</code>
+- If response claims N files read but <code>read_file</code> was called &lt;N times, emit <code>CLAIM_WITHOUT_ACTION</code> warning
+- Wire it into <code>validate_response()</code> (line 204-218) alongside existing checks
+- <strong>Tests:</strong> 5 new tests — claim with 0 reads, claim with partial reads, claim matching actual reads, no claim no warning, claim after tool error</p>
+<h4 id="a2-strengthen-truncation-retry-recovery-message-p2-30min">A2. Strengthen Truncation Retry Recovery Message [P2, ~30min]<a class="headerlink" href="#a2-strengthen-truncation-retry-recovery-message-p2-30min" title="Permanent link">&para;</a></h4>
+<p><strong>Problem:</strong> codex interpreted the retry message as conversational correction — "I won't use that wording going forward" (Section 2.1). The current message at <code>chat.py:492-496</code> says "Your previous response was incomplete..." which sounds like feedback, not a tool-calling instruction.</p>
+<p><strong>Implementation:</strong>
+- <strong>File:</strong> <code>ppxai/engine/chat.py</code>, lines 492-496
+- Replace the recovery message with a more direct, system-like format:
+  <div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>[SYSTEM: Tool call failed. Your response contained text about using &#39;{tool}&#39; but no valid tool call was executed.
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>To use a tool, you MUST output ONLY the tool call — no surrounding text.
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>Retry the tool call now, or respond with your answer if you cannot use tools.]
+</span></code></pre></div>
+- The <code>[SYSTEM: ...]</code> framing helps models distinguish this from user conversation
+- Keep the message added as role="user" (required for alternation) but make the content clearly system-originated
+- <strong>Tests:</strong> Update existing truncation retry test if any; add 1 test for message format</p>
+<h4 id="a3-emit-warning-event-on-model-switch-in-active-session-p2-1h">A3. Emit WARNING Event on Model Switch in Active Session [P2, ~1h]<a class="headerlink" href="#a3-emit-warning-event-on-model-switch-in-active-session-p2-1h" title="Permanent link">&para;</a></h4>
+<p><strong>Problem:</strong> Switching models mid-session poisons the conversation (Section 3.1). sonar replayed codex's broken responses 4 times. The user gets no indication that session history may confuse the new model.</p>
+<p><strong>Implementation:</strong>
+- <strong>File:</strong> <code>ppxai/engine/client.py</code>, <code>set_provider()</code> (line 414) and <code>set_model()</code> (line 527)
+- After successful switch, if <code>self.session.messages</code> is non-empty (active conversation):
+  - Log at WARNING level: <code>f"Switching to {model} with {len(self.session.messages)} existing messages — session history from previous model may cause unexpected behavior"</code>
+  - Return this warning string as part of the return value (change return from <code>bool</code> to <code>Tuple[bool, Optional[str]]</code> or add a <code>last_warning</code> attribute)
+- <strong>File:</strong> <code>ppxai/server/http.py</code>, <code>set_provider()</code> endpoint (line 793) and <code>set_model()</code> endpoint (line 847)
+  - Include the warning in the JSON response: <code>{"provider": "...", "model": "...", "warning": "..."}</code>
+- <strong>File:</strong> Web app JavaScript — display warning banner if response contains <code>warning</code> field
+- <strong>Tests:</strong> 2 tests — warning emitted with messages, no warning with empty session</p>
+<h4 id="a4-add-gpt-4o-model-hints-to-agentsmd-p2-15min">A4. Add <code>gpt-4o*</code> Model Hints to AGENTS.md [P2, ~15min]<a class="headerlink" href="#a4-add-gpt-4o-model-hints-to-agentsmd-p2-15min" title="Permanent link">&para;</a></h4>
+<p><strong>Problem:</strong> gpt-4o reads 1 file per turn (Section 2.3). The multi-file reading hint only matches <code>gpt-5*</code> and <code>gpt-4.1*</code> patterns.</p>
+<p><strong>Implementation:</strong>
+- <strong>File:</strong> <code>~/.ppxai/AGENTS.md</code>
+- Add <code>gpt-4o*:</code> section with the same multi-file reading hint
+- Also add: <code>"After receiving a tool result, immediately make the next tool call. Do NOT stop to narrate or summarize between tool calls."</code></p>
+<h4 id="a5-update-codex-mini-profile-mode-prompt_based-p2-30min">A5. Update codex-mini Profile: mode → prompt_based [P2, ~30min]<a class="headerlink" href="#a5-update-codex-mini-profile-mode-prompt_based-p2-30min" title="Permanent link">&para;</a></h4>
+<p><strong>Problem:</strong> The model profile at <code>model_profiles.py:144-150</code> has codex-mini as <code>mode="native"</code> with <code>api_path="responses"</code>. But the debug session proved codex-mini <strong>works with prompt-based mode</strong> — it successfully read all 8 files and created a file using prompt-based JSON format.</p>
+<p><strong>Implementation:</strong>
+- <strong>File:</strong> <code>ppxai/engine/model_profiles.py</code>, lines 144-150
+- Change <code>gpt-5.1-codex-mini*</code> profile from <code>mode="native"</code> to <code>mode="prompt_based"</code> (matching the actual behavior that works)
+- Keep <code>api_path="responses"</code> as that's the correct API routing
+- This aligns the profile with reality: codex-mini doesn't use native function calling via Responses API, it uses the prompt-injected JSON format
+- <strong>Tests:</strong> Update profile registry test to expect <code>prompt_based</code> for codex-mini</p>
+<h4 id="a6-add-codex-mini-to-benchmark-suite-p3-2h">A6. Add codex-mini to Benchmark Suite [P3, ~2h]<a class="headerlink" href="#a6-add-codex-mini-to-benchmark-suite-p3-2h" title="Permanent link">&para;</a></h4>
+<p><strong>Problem:</strong> codex-mini was surprisingly functional (Section 2.2) but has no benchmark score data.</p>
+<p><strong>Implementation:</strong>
+- Add <code>gpt-5.1-codex-mini</code> to <code>ppxai-config.json</code> OpenAI models list (if not already present)
+- Run standard benchmark suite (26 tests) with <code>--tool-calling-method prompt_based</code>
+- Record results in <code>benchmarks/results/</code>
+- Expected score: 40-55% based on observed behavior (good tool chaining, weak param names, tool name hallucination)</p>
+<h4 id="a7-document-codex-limitation-in-agentsmd-p3-15min">A7. Document Codex Limitation in AGENTS.md [P3, ~15min]<a class="headerlink" href="#a7-document-codex-limitation-in-agentsmd-p3-15min" title="Permanent link">&para;</a></h4>
+<p><strong>Problem:</strong> Users may try gpt-5.1-codex for tool tasks and get fabricated results (Section 2.1).</p>
+<p><strong>Implementation:</strong>
+- <strong>File:</strong> <code>~/.ppxai/AGENTS.md</code>, in the <code>gpt-5.1-codex*:</code> section
+- Add a preamble hint: <code>"WARNING: gpt-5.1-codex has known issues with tool calling — it frequently ignores tool formats and fabricates results. Use gpt-5.1-codex-mini instead for tool-based tasks."</code></p>
+<h3 id="52-v1160-architectural-changes-breaking">5.2 v1.16.0 — Architectural Changes (Breaking)<a class="headerlink" href="#52-v1160-architectural-changes-breaking" title="Permanent link">&para;</a></h3>
+<p>These require changes to the core tool loop in <code>chat.py</code> and align with the existing release plan goals.</p>
+<h4 id="b1-session-context-reset-on-model-switch-new-goal-4h">B1. Session Context Reset on Model Switch [New Goal, ~4h]<a class="headerlink" href="#b1-session-context-reset-on-model-switch-new-goal-4h" title="Permanent link">&para;</a></h4>
+<p><strong>Problem:</strong> Session pollution (Section 3.1) — switching models inherits conversation history that confuses the new model. sonar replayed codex's broken responses because the session contained codex's "I won't use that wording" message.</p>
+<p><strong>Implementation:</strong>
+- <strong>File:</strong> <code>ppxai/engine/session.py</code>
+- Add method <code>reset_for_model_switch()</code>:
+  - Keep all <code>role="user"</code> messages (preserve user intent)
+  - Strip all <code>role="assistant"</code> and <code>role="tool"</code> messages (remove previous model's responses)
+  - Optionally: insert a system message summarizing the context switch
+- <strong>File:</strong> <code>ppxai/engine/client.py</code>, <code>set_provider()</code> and <code>set_model()</code>
+  - When switching with a non-empty session, call <code>session.reset_for_model_switch()</code>
+  - Emit an INFO event: "Session context reset for new model — user messages preserved"
+- <strong>File:</strong> <code>ppxai/server/http.py</code>
+  - Add <code>reset_context</code> option to <code>/providers</code> and <code>/models</code> endpoints (default: True)
+  - Return <code>{"context_reset": true}</code> in response
+- <strong>File:</strong> Web app — show info banner: "Context reset for [new model]"
+- <strong>Tests:</strong> 5 tests — reset preserves user messages, strips assistant messages, handles empty session, respects opt-out flag, metadata updated</p>
+<h4 id="b2-configurable-iteration-limit-per-model-profile-goal-3-extension-2h">B2. Configurable Iteration Limit per Model Profile [Goal 3 extension, ~2h]<a class="headerlink" href="#b2-configurable-iteration-limit-per-model-profile-goal-3-extension-2h" title="Permanent link">&para;</a></h4>
+<p><strong>Problem:</strong> The current max is 15 (already correct — not 10 as the debug report initially stated). But codex-mini still hit the limit at 9 tool calls because <code>list_directory</code> + 8 <code>read_file</code> + report = 10+ iterations. Some models need more room for agent tasks.</p>
+<p><strong>Implementation:</strong>
+- <strong>File:</strong> <code>ppxai/engine/model_profiles.py</code>
+- Add <code>max_tool_iterations: int = 0</code> to <code>ModelProfile</code> dataclass (0 = use global default)
+- Set higher values for known agent-capable models:
+  - <code>sonar*</code> → 20 (chains 9+ tool calls per turn)
+  - <code>gemini-3-flash*</code> / <code>gemini-2.5-pro*</code> → 25
+  - <code>gpt-5.1-codex-mini*</code> → 20
+  - <code>qwen3-coder*</code> → 20
+- <strong>File:</strong> <code>ppxai/engine/chat.py</code>, line 189
+  - After getting <code>max_iterations</code> from tool_manager, check if the model profile has a higher value and use <code>max()</code>
+- <strong>Tests:</strong> 3 tests — profile override, default fallback, zero means use global</p>
+<h4 id="b3-belt-and-suspenders-tool-prompt-injection-goal-1-p4-3h">B3. Belt-and-Suspenders Tool Prompt Injection [Goal 1 / P4, ~3h]<a class="headerlink" href="#b3-belt-and-suspenders-tool-prompt-injection-goal-1-p4-3h" title="Permanent link">&para;</a></h4>
+<p><strong>Problem:</strong> When <code>native_tool_calling=True</code>, the engine sends tools as API params but does NOT inject tool descriptions into the system prompt. If native tool calling fails (codex, vLLM HarmonyError), there's no fallback context for the model.</p>
+<p><strong>Implementation:</strong>
+- <strong>File:</strong> <code>ppxai/engine/chat.py</code>
+- When profile has <code>fallback_on_empty=True</code> or <code>fallback_on_failure=True</code>, always inject <code>get_tools_prompt()</code> into the system prompt alongside sending native tool params
+- This means the model sees tools both ways: structured API params AND text descriptions
+- If native returns empty/fails, the fallback parser has schema context to parse JSON from text
+- Gate this behind the profile flag — don't inject for models that don't need it (reduces prompt size for well-behaved models)
+- <strong>Tests:</strong> 3 tests — prompt injected when fallback enabled, not injected otherwise, fallback parse works after native empty</p>
+<h4 id="b4-multi-file-reading-benchmark-test-goal-7-phase-1-4h">B4. Multi-File Reading Benchmark Test [Goal 7 Phase 1, ~4h]<a class="headerlink" href="#b4-multi-file-reading-benchmark-test-goal-7-phase-1-4h" title="Permanent link">&para;</a></h4>
+<p><strong>Problem:</strong> The current benchmark doesn't test consecutive tool loops (Section 2). gemini-3-flash scores 57.8% on the benchmark but was the best real-world performer.</p>
+<p><strong>Implementation:</strong>
+- <strong>File:</strong> New test in <code>benchmarks/tests/agent_loop/multi_file_review.py</code>
+- Simulate a project with 5-8 files (mock tool results)
+- Score = <code>files_actually_read / files_available</code> (continuous 0.0-1.0)
+- Must use <code>read_file</code> tool calls — text claims without tool calls score 0.0
+- Expected calibration: sonar → 1.0, gemini → 1.0, gpt-4o → 0.125 (1/8), codex → 0.0
+- <strong>Tests:</strong> Standard benchmark test harness</p>
+<h4 id="b5-fabrication-detection-benchmark-test-goal-7-phase-1-3h">B5. Fabrication Detection Benchmark Test [Goal 7 Phase 1, ~3h]<a class="headerlink" href="#b5-fabrication-detection-benchmark-test-goal-7-phase-1-3h" title="Permanent link">&para;</a></h4>
+<p><strong>Problem:</strong> codex fabricated an entire verification table (Section 3.3).</p>
+<p><strong>Implementation:</strong>
+- <strong>File:</strong> New test in <code>benchmarks/tests/agent_loop/claim_without_action.py</code>
+- Ask model to read and report file contents. Inject NO tool results in the simulated turn.
+- If model produces a "report" without any tool calls, score 0.0 + flag as fabrication
+- If model honestly says "I need to read the files first", score 1.0
+- Expected: honest models → 1.0, codex → 0.0</p>
+<h4 id="b6-consecutive-tool-loop-benchmark-goal-7-phase-1-4h">B6. Consecutive Tool Loop Benchmark [Goal 7 Phase 1, ~4h]<a class="headerlink" href="#b6-consecutive-tool-loop-benchmark-goal-7-phase-1-4h" title="Permanent link">&para;</a></h4>
+<p><strong>Problem:</strong> The core differentiator between "agent" models (sonar: ~1.5s between calls, chains 9+) and "conversational" models (gpt-4o: stops after 1).</p>
+<p><strong>Implementation:</strong>
+- 5-step chain: <code>list_directory</code> → <code>read_file</code> (config) → <code>read_file</code> (entry point) → <code>search_code</code> (pattern) → <code>read_file</code> (matching file)
+- Each step depends on the previous result (model must extract info from tool output to inform next call)
+- Score = <code>steps_completed / 5</code> (continuous 0.0-1.0)
+- Expected: sonar → 1.0, gemini → 1.0, codex-mini → 0.8, gpt-4o → 0.2</p>
+<h4 id="b7-session-pollution-detection-new-3h">B7. Session Pollution Detection [New, ~3h]<a class="headerlink" href="#b7-session-pollution-detection-new-3h" title="Permanent link">&para;</a></h4>
+<p><strong>Problem:</strong> sonar replayed codex's exact response 4 times (Section 3.1).</p>
+<p><strong>Implementation:</strong>
+- <strong>File:</strong> <code>ppxai/engine/chat.py</code>
+- After receiving model response, compare with previous assistant messages in session
+- If response has &gt;90% similarity (difflib.SequenceMatcher) to a previous assistant message from a DIFFERENT model, emit <code>ENGINE_WARNING</code> event
+- Warning: "Response appears to be a replay of a previous model's response — consider clearing the session"
+- <strong>Tests:</strong> 2 tests — replay detected, different response no warning</p>
+<h4 id="b8-time-to-first-tool-call-metric-goal-7-phase-3-2h">B8. Time-to-First-Tool-Call Metric [Goal 7 Phase 3, ~2h]<a class="headerlink" href="#b8-time-to-first-tool-call-metric-goal-7-phase-3-2h" title="Permanent link">&para;</a></h4>
+<p><strong>Problem:</strong> Separates proactive models (sonar: tool call in ~2s) from lazy ones (gpt-4o: 7s narration then stop).</p>
+<p><strong>Implementation:</strong>
+- Track timestamp from first token to first <code>tool_call</code> event in benchmark runner
+- Report as <code>time_to_first_tool</code> in results JSON
+- Penalize models that emit &gt;100 tokens of text before first tool call</p>
+<h4 id="b9-partial-credit-scoring-goal-7-phase-1-4h">B9. Partial Credit Scoring [Goal 7 Phase 1, ~4h]<a class="headerlink" href="#b9-partial-credit-scoring-goal-7-phase-1-4h" title="Permanent link">&para;</a></h4>
+<p><strong>Problem:</strong> gemini-3-flash gets 0% on code editing because it uses <code>read_file</code> instead of <code>apply_patch</code>, despite producing excellent real-world results.</p>
+<p><strong>Implementation:</strong>
+- Replace binary pass/fail: correct tool name = +50%, correct args = +50%
+- Wrong tool = 0%, right tool wrong arg key = 50%
+- Reduces cliff effect and better reflects real utility</p>
+<h3 id="53-implementation-priority-and-dependencies">5.3 Implementation Priority and Dependencies<a class="headerlink" href="#53-implementation-priority-and-dependencies" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>v1.15.6 (this branch, before merge to master):
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>├── A1: Validator read claims [P1] ← no dependencies, can start immediately
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>├── A2: Truncation retry message [P2] ← no dependencies
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>├── A3: Model switch warning [P2] ← no dependencies
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>├── A4: gpt-4o AGENTS.md hints [P2] ← no dependencies
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>├── A5: codex-mini profile fix [P2] ← no dependencies
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>├── A6: codex-mini benchmarks [P3] ← depends on A5
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>└── A7: codex limitation docs [P3] ← no dependencies
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>v1.16.0 (after v1.15.6 merge):
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>├── B1: Session context reset [P1] ← foundation for B7
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>├── B2: Per-model iteration limit [P2] ← depends on model_profiles.py (done)
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>├── B3: Belt-and-suspenders [P2] ← depends on Goal 1 (profile-driven loop)
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>├── B4: Multi-file review benchmark [P2] ← independent
+</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>├── B5: Fabrication benchmark [P2] ← builds on A1 (validator patterns)
+</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>├── B6: Consecutive tool loop benchmark [P2] ← independent
+</span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>├── B7: Session pollution detection [P3] ← depends on B1
+</span><span id="__span-1-18"><a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a>├── B8: Time-to-first-tool metric [P3] ← independent
+</span><span id="__span-1-19"><a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a>└── B9: Partial credit scoring [P2] ← independent
+</span></code></pre></div>
+<p><strong>Total estimated effort:</strong> v1.15.6: ~7.5 hours | v1.16.0: ~27 hours</p>
+<h3 id="54-actions-already-completed-this-session">5.4 Actions Already Completed (This Session)<a class="headerlink" href="#54-actions-already-completed-this-session" title="Permanent link">&para;</a></h3>
+<p>The following were implemented during the debugging session:</p>
+<table>
+<thead>
+<tr>
+<th>Action</th>
+<th>File</th>
+<th>What Changed</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Added anti-fabrication hints to <code>sonar*</code></td>
+<td><code>~/.ppxai/AGENTS.md</code></td>
+<td>3 new hints: never claim reads without tool calls, must read each file, be honest about limitations</td>
+</tr>
+<tr>
+<td>Strengthened <code>perplexity:</code> provider hints</td>
+<td><code>~/.ppxai/AGENTS.md</code></td>
+<td>2 new hints: must use tools for file tasks, fabrication detected by validator</td>
+</tr>
+<tr>
+<td>Added multi-file reading hints to <code>gpt-5*</code>, <code>gpt-4.1*</code></td>
+<td><code>~/.ppxai/AGENTS.md</code></td>
+<td>1 new hint each: call read_file for each file before responding</td>
+</tr>
+<tr>
+<td>Added multi-file + silent accumulation hints to <code>gpt-5.2*</code></td>
+<td><code>~/.ppxai/AGENTS.md</code></td>
+<td>2 new hints: keep reading all files, don't summarize between calls</td>
+</tr>
+<tr>
+<td>Added prompt-based format instructions to <code>gpt-5.1-codex*</code></td>
+<td><code>~/.ppxai/AGENTS.md</code></td>
+<td>4 new hints: exact JSON format, tool name cheat sheet, chaining permission</td>
+</tr>
+<tr>
+<td>Updated version/release notes section</td>
+<td><code>~/.ppxai/AGENTS.md</code></td>
+<td>v1.15.3–v1.15.6 features added, v1.15.0-v1.15.2 consolidated</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="6-session-usage-and-cost-analysis">6. Session Usage and Cost Analysis<a class="headerlink" href="#6-session-usage-and-cost-analysis" title="Permanent link">&para;</a></h2>
+<p><strong>Source:</strong> <code>~/.ppxai/sessions/session_20260213_175858.json</code></p>
+<p>The session file captures the full conversation across all model switches with 44 messages total. Here is the token usage and cost breakdown per model:</p>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Total Tokens</th>
+<th>Prompt Tokens</th>
+<th>Completion Tokens</th>
+<th>Estimated Cost</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>openai/gpt-5.1-codex</td>
+<td>732,518</td>
+<td>725,133</td>
+<td>7,385</td>
+<td>$1.887</td>
+</tr>
+<tr>
+<td>perplexity/sonar-pro</td>
+<td>218,463</td>
+<td>216,723</td>
+<td>1,740</td>
+<td>$0.676</td>
+</tr>
+<tr>
+<td>perplexity/sonar</td>
+<td>482,537</td>
+<td>480,423</td>
+<td>2,114</td>
+<td>$0.097</td>
+</tr>
+<tr>
+<td>openai/gpt-4o</td>
+<td>33,937</td>
+<td>33,028</td>
+<td>909</td>
+<td>$0.092</td>
+</tr>
+<tr>
+<td>openai/gpt-5.1-codex-mini</td>
+<td>182,399</td>
+<td>177,823</td>
+<td>4,576</td>
+<td>$0.059</td>
+</tr>
+<tr>
+<td><strong>Total</strong></td>
+<td><strong>7,192,760</strong></td>
+<td><strong>7,087,189</strong></td>
+<td><strong>74,680</strong></td>
+<td><strong>$7.67</strong></td>
+</tr>
+</tbody>
+</table>
+<h3 id="key-insights">Key Insights<a class="headerlink" href="#key-insights" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>codex was the most expensive</strong> ($1.89) despite being the least functional — it consumed 732K tokens to produce 2 tool calls and a fabricated table</li>
+<li><strong>sonar basic was the cheapest</strong> ($0.10) while delivering the best result — 8/8 files read, comprehensive report, 482K tokens</li>
+<li><strong>Cost-per-utility ratio</strong>: sonar delivered ~100x more value per dollar than codex</li>
+<li><strong>Session pollution amplified costs</strong>: The high total (7.2M tokens) reflects repeated prompt injection across model switches — each new model received the full conversation history including failed attempts</li>
+<li><strong>codex-mini was remarkably cheap</strong> ($0.06) for what it achieved — 8/8 file reads, report, and file creation</li>
+</ol>
+<h3 id="command-history-session-activities">Command History (Session Activities)<a class="headerlink" href="#command-history-session-activities" title="Permanent link">&para;</a></h3>
+<p>The session included diverse testing before the multi-model debug run:
+- <code>/preview index.html</code> — testing preview feature
+- Weather forecasts (tool calling test)
+- Project analysis with various models
+- Provider/model switching: <code>/provider openai</code>, <code>/model gpt-4o-mini</code>
+- <code>@tree</code> context provider test</p>
+<hr />
+<h2 id="7-appendix-a-raw-timing-data">7. Appendix A: Raw Timing Data<a class="headerlink" href="#7-appendix-a-raw-timing-data" title="Permanent link">&para;</a></h2>
+<h3 id="tool-call-latency-time-between-tool_call-and-tool_result-events">Tool Call Latency (time between tool_call and tool_result events)<a class="headerlink" href="#tool-call-latency-time-between-tool_call-and-tool_result-events" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Tool</th>
+<th>Latency</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>codex</td>
+<td>read_file</td>
+<td>~56ms</td>
+<td>background_server.ps1</td>
+</tr>
+<tr>
+<td>codex-mini</td>
+<td>read_file</td>
+<td>~55ms</td>
+<td>Average across 8 reads</td>
+</tr>
+<tr>
+<td>codex-mini</td>
+<td>apply_patch</td>
+<td>~62ms</td>
+<td>File creation (with consent ~4s)</td>
+</tr>
+<tr>
+<td>sonar</td>
+<td>read_file</td>
+<td>~60ms</td>
+<td>Average across 8 reads</td>
+</tr>
+<tr>
+<td>sonar</td>
+<td>list_directory</td>
+<td>~64ms</td>
+<td>Directory listing</td>
+</tr>
+<tr>
+<td>sonar-pro</td>
+<td>read_file</td>
+<td>~55ms</td>
+<td>Average across 7 reads</td>
+</tr>
+<tr>
+<td>gpt-4o</td>
+<td>read_file</td>
+<td>~60ms</td>
+<td>Single reads</td>
+</tr>
+<tr>
+<td>gpt-4o</td>
+<td>list_directory</td>
+<td>~51ms</td>
+<td>Directory listing</td>
+</tr>
+</tbody>
+</table>
+<p>Tool execution itself is fast (~55ms) — the bottleneck is model response time between tool calls.</p>
+<h3 id="model-response-time-time-between-tool_result-and-next-tool_call">Model Response Time (time between tool_result and next tool_call)<a class="headerlink" href="#model-response-time-time-between-tool_result-and-next-tool_call" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Avg Between-Call Time</th>
+<th>Chains Tools?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>sonar</td>
+<td>~1.5s</td>
+<td>Yes — fires next read immediately</td>
+</tr>
+<tr>
+<td>sonar-pro</td>
+<td>~1.8s</td>
+<td>Yes — fires next read immediately</td>
+</tr>
+<tr>
+<td>codex-mini</td>
+<td>~1.3s</td>
+<td>Yes — fires next read immediately</td>
+</tr>
+<tr>
+<td>gpt-4o</td>
+<td>~7s then STOPS</td>
+<td>No — narrates after each call</td>
+</tr>
+<tr>
+<td>gpt-5.2</td>
+<td>~8s then STOPS</td>
+<td>No — narrates after each call</td>
+</tr>
+<tr>
+<td>codex</td>
+<td>~13s then STOPS</td>
+<td>No — usually fails to produce tool call</td>
+</tr>
+</tbody>
+</table>
+<p>The between-call time clearly separates "agent" models (sonar, codex-mini: ~1.5s) from "conversational" models (gpt-4o, gpt-5.2: narrate and stop).</p>
+<h3 id="total-task-completion-time-first-request-to-final-report">Total Task Completion Time (first request to final report)<a class="headerlink" href="#total-task-completion-time-first-request-to-final-report" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Total Time</th>
+<th>User Prompts Required</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>gemini-3-flash</td>
+<td>~18s</td>
+<td>1</td>
+</tr>
+<tr>
+<td>sonar (clean)</td>
+<td>~24s</td>
+<td>2 (initial + "use read_tool")</td>
+</tr>
+<tr>
+<td>sonar-pro (clean)</td>
+<td>~26s</td>
+<td>1</td>
+</tr>
+<tr>
+<td>codex-mini</td>
+<td>~40s + continue</td>
+<td>2 (initial + "continue")</td>
+</tr>
+<tr>
+<td>gpt-4o</td>
+<td>&gt;5 min (abandoned)</td>
+<td>3+ (never completed)</td>
+</tr>
+<tr>
+<td>gpt-5.1-codex</td>
+<td>N/A</td>
+<td>4 (never completed, fabricated)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="8-appendix-b-session-event-flow">8. Appendix B: Session Event Flow<a class="headerlink" href="#8-appendix-b-session-event-flow" title="Permanent link">&para;</a></h2>
+<h3 id="complete-sse-event-sequence-sonar-clean-session-successful">Complete SSE Event Sequence — sonar (clean session, successful)<a class="headerlink" href="#complete-sse-event-sequence-sonar-clean-session-successful" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>21:44:14 | stream_start     | model: sonar
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>21:44:16 | tool_call         | list_directory {path: &#39;.&#39;, format: &#39;long&#39;}
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>21:44:16 | tool_result       | list_directory → 9 items
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>21:44:17 | tool_call         | read_file {filepath: &#39;index.html&#39;}
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>21:44:17 | tool_result       | read_file → &lt;!DOCTYPE html&gt;...
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>21:44:19 | tool_call         | read_file {filepath: &#39;styles.css&#39;}
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>21:44:19 | tool_result       | read_file → /* Summer Season...
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>21:44:21 | tool_call         | read_file {filepath: &#39;script.js&#39;}
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>21:44:21 | tool_result       | read_file → // Recipe Manager...
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>21:44:23 | tool_call         | read_file {filepath: &#39;recipes.json&#39;}
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>21:44:23 | tool_result       | read_file → [{&quot;id&quot;: 1...
+</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>21:44:26 | tool_call         | read_file {filepath: &#39;background_server.ps1&#39;}
+</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>21:44:26 | tool_result       | read_file → #!/usr/bin/env pwsh...
+</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>21:44:28 | tool_call         | read_file {filepath: &#39;background_server_final.ps1&#39;}
+</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>21:44:28 | tool_result       | read_file → #!/usr/bin/env pwsh...
+</span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>21:44:30 | tool_call         | read_file {filepath: &#39;run_server.ps1&#39;}
+</span><span id="__span-2-17"><a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a>21:44:30 | tool_result       | read_file → #!/usr/bin/env pwsh...
+</span><span id="__span-2-18"><a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a>21:44:32 | tool_call         | read_file {filepath: &#39;run_server_fixed.ps1&#39;}
+</span><span id="__span-2-19"><a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a>21:44:32 | tool_result       | read_file → #!/usr/bin/env pwsh...
+</span><span id="__span-2-20"><a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a>21:44:40 | stream_end        | ## Filesystem Audit Report...
+</span><span id="__span-2-21"><a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a>21:44:40 | done              | [DONE]
+</span></code></pre></div>
+<p><strong>Total: 9 tool calls in 10 iterations, ~26 seconds, 0 errors.</strong></p>
+<p>This is the reference flow that all models should achieve. The key characteristic is no text output between tool calls — sonar chains them back-to-back with ~1.5s model thinking time between each.</p>
+<h3 id="codex-mini-apply_patch-recovery-from-session-file">codex-mini apply_patch Recovery (from session file)<a class="headerlink" href="#codex-mini-apply_patch-recovery-from-session-file" title="Permanent link">&para;</a></h3>
+<p>The session file (<code>session_20260213_175858.json</code>, messages 127-149) captures codex-mini's 3-attempt <code>apply_patch</code> recovery:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>Attempt 1: {&quot;tool&quot;: &quot;apply_patch&quot;, &quot;arguments&quot;: {&quot;path&quot;: &quot;IMPROVEMENT_PLAN.md&quot;, &quot;patch&quot;: &quot;...&quot;}}
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>           → ERROR: &quot;Missing required arguments for apply_patch: file_path&quot;
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>Attempt 2: {&quot;tool&quot;: &quot;apply_patch&quot;, &quot;arguments&quot;: {&quot;path&quot;: &quot;IMPROVEMENT_PLAN.md&quot;, &quot;patch&quot;: &quot;...&quot;}}
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>           → ERROR: same (repeated exact params)
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>Attempt 3: {&quot;tool&quot;: &quot;apply_patch&quot;, &quot;arguments&quot;: {&quot;file_path&quot;: &quot;IMPROVEMENT_PLAN.md&quot;, &quot;unified_diff&quot;: &quot;...&quot;}}
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>           → SUCCESS: &quot;✓ Successfully created IMPROVEMENT_PLAN.md (19 lines)&quot;
+</span></code></pre></div>
+<p>This demonstrates genuine error recovery — the model read the error message ("Missing required arguments: file_path"), understood it needed to change the parameter name from <code>path</code> to <code>file_path</code>, and also switched <code>patch</code> to <code>unified_diff</code>. This is the strongest evidence that codex-mini can learn from tool feedback within a session.</p>
+<hr />
+<h1 id="session-2-macos-web-app-testing-post-hint-fix">Session 2: macOS Web App Testing (Post-Hint-Fix)<a class="headerlink" href="#session-2-macos-web-app-testing-post-hint-fix" title="Permanent link">&para;</a></h1>
+<p><strong>Date:</strong> 2026-02-20, 00:00–00:42 UTC+1 (continuation of 2026-02-19 23:55)
+<strong>Sessions:</strong> <code>webapp-7fd005b1</code> (pre-fix), <code>webapp-ae74b096</code> (gemini-3-pro), <code>webapp-f9afa0cd</code> (gemini-3-pro), <code>webapp-a3f8c979</code> (main multi-model test)
+<strong>Working directory:</strong> <code>/Users/rado/git/utils/ppxai-sre-repo</code> (monorepo with agents, libs, MCP servers)
+<strong>Client:</strong> ppxai Web App via ppxai-server (HTTP/SSE) on macOS
+<strong>Debug log:</strong> <code>~/.ppxai/logs/server-debug.log</code>
+<strong>Monitored by:</strong> Claude Code (live tail + analysis)</p>
+<hr />
+<h2 id="9-executive-summary-session-2">9. Executive Summary (Session 2)<a class="headerlink" href="#9-executive-summary-session-2" title="Permanent link">&para;</a></h2>
+<p>We tested <strong>10 models</strong> across 4 providers after applying the critical "Make ONE tool call" hint fix. The fix changed all AGENTS.md hints from <code>"Make ONE tool call per action"</code> to <code>"Avoid duplicate calls. Chain multiple DIFFERENT tool calls without stopping to narrate."</code> This was the single most impactful change in the project's history for tool chaining behavior.</p>
+<h3 id="key-findings_1">Key Findings<a class="headerlink" href="#key-findings_1" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>The "Make ONE" hint fix is transformative</strong> — ALL OpenAI models that previously stopped after 1 tool call now chain multiple calls. gpt-4.1 went from 1/turn to 5/turn, gpt-5.2 from 1/turn to 8/turn.</li>
+<li><strong>Gemini models are the most thorough agents</strong> — gemini-2.5-flash hit 19 iterations (max), reading every file in the project hierarchy. gemini-3-pro hit 8 iterations with good error recovery.</li>
+<li><strong>Codex models remain fundamentally broken</strong> — both gpt-5.1-codex and gpt-5.1-codex-mini refuse to use tools entirely via the Responses API prompt-based path. Zero tool calls in 5 attempts.</li>
+<li><strong>gpt-5-nano has a "silent completion" bug</strong> — chains 11 tool calls successfully, then returns empty response at synthesis step (<code>[Tool execution completed but no summary generated]</code>).</li>
+<li><strong>gpt-5-mini exhibits "ask permission" behavior</strong> — makes 2 tool calls then stops to ask "Before I start, should I...?" requiring re-prompting.</li>
+<li><strong>gpt-4.1-mini has the same "one per turn" laziness</strong> — 1 tool call then narrates, same as pre-fix gpt-4o. The "Make ONE" fix didn't reach this model's behavior.</li>
+<li><strong>Session pollution confirmed again</strong> — codex's "I can't assist" responses contaminated the session, causing codex-mini to also refuse despite being functional in Session 1.</li>
+<li><strong>A critical <code>TypeError: 'bool' is not iterable</code> crash was found and fixed</strong> — affected all codex/Responses API models when tools were enabled.</li>
+</ol>
+<h3 id="model-rankings-session-2-post-hint-fix">Model Rankings (Session 2, Post-Hint-Fix)<a class="headerlink" href="#model-rankings-session-2-post-hint-fix" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Rank</th>
+<th>Model</th>
+<th>Provider</th>
+<th>Tool Calls</th>
+<th>Iterations</th>
+<th>Time</th>
+<th>Behavior</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>gemini-2.5-flash</td>
+<td>Google</td>
+<td>19</td>
+<td>19 (max)</td>
+<td>~80s</td>
+<td>Read 12+ files, 7 dirs, hit iteration limit</td>
+</tr>
+<tr>
+<td>2</td>
+<td>sonar-pro</td>
+<td>Perplexity</td>
+<td>10</td>
+<td>11</td>
+<td>~30s</td>
+<td>get_cwd + search + list + 6 reads</td>
+</tr>
+<tr>
+<td>3</td>
+<td>gpt-5.2</td>
+<td>OpenAI</td>
+<td>8</td>
+<td>9</td>
+<td>~109s</td>
+<td>get_cwd + list + 4 reads + 2 lists</td>
+</tr>
+<tr>
+<td>4</td>
+<td>gemini-3-pro</td>
+<td>Google</td>
+<td>7</td>
+<td>8</td>
+<td>~62s</td>
+<td>Error recovery (dir not found → retry)</td>
+</tr>
+<tr>
+<td>5</td>
+<td>gpt-4.1</td>
+<td>OpenAI</td>
+<td>4</td>
+<td>5</td>
+<td>~23s</td>
+<td>Recursive list_directory into deep paths</td>
+</tr>
+<tr>
+<td>6</td>
+<td>gpt-5-nano</td>
+<td>OpenAI</td>
+<td>11</td>
+<td>12</td>
+<td>~96s</td>
+<td>Chained well, but empty synthesis response</td>
+</tr>
+<tr>
+<td>7</td>
+<td>gpt-4.1-nano</td>
+<td>OpenAI</td>
+<td>2</td>
+<td>3</td>
+<td>~6s</td>
+<td>Fast but shallow (README + stop)</td>
+</tr>
+<tr>
+<td>8</td>
+<td>gpt-5-mini</td>
+<td>OpenAI</td>
+<td>2</td>
+<td>3</td>
+<td>~24s</td>
+<td>Asked permission instead of continuing</td>
+</tr>
+<tr>
+<td>9</td>
+<td>gpt-4.1-mini</td>
+<td>OpenAI</td>
+<td>1</td>
+<td>2 per turn</td>
+<td>~1s/turn</td>
+<td>Old-style 1 tool per turn laziness</td>
+</tr>
+<tr>
+<td>10</td>
+<td>gpt-5.1-codex</td>
+<td>OpenAI</td>
+<td>0</td>
+<td>0</td>
+<td>N/A</td>
+<td>"I can't read files" — completely broken</td>
+</tr>
+<tr>
+<td>11</td>
+<td>gpt-5.1-codex-mini</td>
+<td>OpenAI</td>
+<td>0</td>
+<td>0</td>
+<td>N/A</td>
+<td>"I can't assist" — session pollution</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="10-detailed-per-model-analysis-session-2">10. Detailed Per-Model Analysis (Session 2)<a class="headerlink" href="#10-detailed-per-model-analysis-session-2" title="Permanent link">&para;</a></h2>
+<h3 id="101-gpt-51-codex-gpt-51-codex-mini-crash-then-refusal">10.1 gpt-5.1-codex / gpt-5.1-codex-mini — Crash Then Refusal<a class="headerlink" href="#101-gpt-51-codex-gpt-51-codex-mini-crash-then-refusal" title="Permanent link">&para;</a></h3>
+<p><strong>Pre-fix (23:55):</strong> Both models immediately crashed with <code>TypeError: 'bool' object is not iterable</code>.</p>
+<p><strong>Root cause:</strong> In <code>chat.py:217</code>, <code>openai_tools = True</code> was set as a sentinel for prompt-based mode. This <code>True</code> was passed to <code>provider.chat(tools=True)</code>. In <code>_chat_responses_api</code>, line 526 checked <code>if tools and self.capabilities.native_tool_calling:</code> — both truthy — then tried to iterate over <code>True</code> in <code>_convert_tools_for_responses(True)</code>.</p>
+<p><strong>Fix applied:</strong> Removed the <code>True</code> sentinel. For prompt-based mode, tools stay <code>None</code> since they're injected in the system prompt instead.</p>
+<p><strong>Post-fix (00:20–00:29):</strong> Crash fixed, but codex is completely non-functional:</p>
+<table>
+<thead>
+<tr>
+<th>Time</th>
+<th>Model</th>
+<th>User Input</th>
+<th>Response</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>00:21:08</td>
+<td>codex</td>
+<td>"pwd"</td>
+<td>"I'm not sure what you'd like me to do with 'pwd'"</td>
+</tr>
+<tr>
+<td>00:21:20</td>
+<td>codex</td>
+<td>"show me the current working directory"</td>
+<td>"I don't have access to a file system"</td>
+</tr>
+<tr>
+<td>00:21:28</td>
+<td>codex</td>
+<td>"use the tool"</td>
+<td>"I don't have the ability to run commands or use tools"</td>
+</tr>
+<tr>
+<td>00:21:58</td>
+<td>codex</td>
+<td>"use the tool" (retry)</td>
+<td>Fabricated correct CWD from context without tools</td>
+</tr>
+<tr>
+<td>00:23:09</td>
+<td>codex</td>
+<td>"review files, use tools"</td>
+<td>59-second "thinking" then fabricated a report with ZERO tool calls</td>
+</tr>
+<tr>
+<td>00:27:33</td>
+<td>codex</td>
+<td>"review files, use tools" (retry)</td>
+<td>3-minute pause then "I can't read files or run commands from here"</td>
+</tr>
+<tr>
+<td>00:28:19</td>
+<td>codex-mini</td>
+<td>same prompt</td>
+<td>"I'm sorry, but I can't fulfill that request"</td>
+</tr>
+<tr>
+<td>00:29:22</td>
+<td>codex-mini</td>
+<td>explicit tool instructions + agent mode</td>
+<td>"I'm sorry, but I can't assist with that"</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Analysis:</strong> codex is fundamentally broken for prompt-based tool calling via the Responses API. The model:
+1. Cannot see or parse tool definitions injected in the system prompt
+2. Fabricates answers (correct CWD from context, fake repo analysis) rather than admitting inability
+3. Takes extremely long (59s–180s) on tool-enabled requests, suggesting internal confusion
+4. Session pollution: After codex's refusals, switching to codex-mini in the same session caused codex-mini to also refuse, despite codex-mini working perfectly in Session 1 (Windows)</p>
+<p><strong>codex-mini regression from Session 1:</strong> In Session 1 (Windows), codex-mini successfully made 10+ tool calls, read all files, and even created a file. In Session 2 (macOS, same session as codex), codex-mini refused everything. This is definitive proof of <strong>session pollution</strong> — codex's "I can't assist" messages in the conversation history anchor subsequent models into the same refusal pattern.</p>
+<h3 id="102-gpt-52-dramatically-improved-tool-chaining">10.2 gpt-5.2 — Dramatically Improved Tool Chaining<a class="headerlink" href="#102-gpt-52-dramatically-improved-tool-chaining" title="Permanent link">&para;</a></h3>
+<p><strong>Config:</strong> <code>native_tool_calling=True</code> (Chat Completions API)
+<strong>Result:</strong> 8 tool calls across 9 iterations — <strong>massive improvement from Session 1</strong> (1/turn)</p>
+<table>
+<thead>
+<tr>
+<th>Time</th>
+<th>Iteration</th>
+<th>Tool</th>
+<th>Arguments</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>23:57:55</td>
+<td>1</td>
+<td>get_working_directory</td>
+<td>{}</td>
+</tr>
+<tr>
+<td>23:58:04</td>
+<td>2</td>
+<td>list_directory</td>
+<td>{path: '/...ppxai-sre-repo', format: 'long'}</td>
+</tr>
+<tr>
+<td>23:58:17</td>
+<td>3</td>
+<td>read_file</td>
+<td>{filepath: 'README.md', max_lines: 1000}</td>
+</tr>
+<tr>
+<td>23:58:33</td>
+<td>4</td>
+<td>read_file</td>
+<td>{filepath: 'pyproject.toml', max_lines: 1000}</td>
+</tr>
+<tr>
+<td>23:58:35</td>
+<td>5</td>
+<td>list_directory</td>
+<td>{path: 'agents', format: 'long'}</td>
+</tr>
+<tr>
+<td>23:58:42</td>
+<td>6</td>
+<td>list_directory</td>
+<td>{path: 'agents/cert-monitor', format: 'long'}</td>
+</tr>
+<tr>
+<td>23:58:48</td>
+<td>7</td>
+<td>read_file</td>
+<td>{filepath: 'agents/cert-monitor/AGENT.md', max_lines: 1000}</td>
+</tr>
+<tr>
+<td>23:58:52</td>
+<td>8</td>
+<td>read_file</td>
+<td>{filepath: 'agents/cert-monitor/README.md', max_lines: 1000}</td>
+</tr>
+<tr>
+<td>23:59:27</td>
+<td>—</td>
+<td>RESPONSE</td>
+<td>Structured analysis report</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Key observations:</strong>
+- <strong>Chains tool calls back-to-back</strong> without stopping to narrate — direct result of the hint fix
+- <strong>Smart navigation pattern</strong>: CWD → root list → README → pyproject → drill into agents/cert-monitor
+- <strong>Decent depth</strong>: Read 4 files + listed 3 directories before synthesizing
+- <strong>Still uses <code>max_lines: 1000</code></strong> parameter (not in our tool schema — model adds it from training)
+- <strong>Total time: 109s</strong> — slower than Gemini/Perplexity but functional</p>
+<h3 id="103-gemini-3-pro-preview-good-error-recovery">10.3 gemini-3-pro-preview — Good Error Recovery<a class="headerlink" href="#103-gemini-3-pro-preview-good-error-recovery" title="Permanent link">&para;</a></h3>
+<p><strong>Sessions:</strong> <code>webapp-ae74b096</code> (initial), <code>webapp-f9afa0cd</code> (main test)
+<strong>Result:</strong> 7 tool calls across 8 iterations, with graceful error recovery</p>
+<table>
+<thead>
+<tr>
+<th>Time</th>
+<th>Iteration</th>
+<th>Tool</th>
+<th>Notable</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>00:13:08</td>
+<td>1</td>
+<td>list_directory</td>
+<td><code>{path: 'ppxai'}</code> — ERROR: Directory not found</td>
+</tr>
+<tr>
+<td>00:13:20</td>
+<td>2</td>
+<td>list_directory</td>
+<td><code>{format: 'simple'}</code> — recovered, listed root</td>
+</tr>
+<tr>
+<td>00:13:28</td>
+<td>3</td>
+<td>read_file</td>
+<td>README.md</td>
+</tr>
+<tr>
+<td>00:13:37</td>
+<td>4</td>
+<td>read_file</td>
+<td>pyproject.toml</td>
+</tr>
+<tr>
+<td>00:13:41</td>
+<td>5</td>
+<td>list_directory</td>
+<td>libs/</td>
+</tr>
+<tr>
+<td>00:13:44</td>
+<td>6</td>
+<td>list_directory</td>
+<td>mcp-servers/</td>
+</tr>
+<tr>
+<td>00:13:47</td>
+<td>7</td>
+<td>list_directory</td>
+<td>agents/</td>
+</tr>
+<tr>
+<td>00:14:05</td>
+<td>—</td>
+<td>RESPONSE</td>
+<td>"# ppxai-sre Repository Analysis Report"</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Error recovery pattern:</strong> First call tried <code>list_directory({path: 'ppxai'})</code> — a hallucinated directory name (likely from AGENTS.md context about the ppxai project). Got error, immediately retried with root directory. This is strong agent behavior.</p>
+<h3 id="104-gemini-25-flash-most-thorough-agent-hit-max-iterations">10.4 gemini-2.5-flash — Most Thorough Agent (Hit Max Iterations)<a class="headerlink" href="#104-gemini-25-flash-most-thorough-agent-hit-max-iterations" title="Permanent link">&para;</a></h3>
+<p><strong>Result:</strong> 19 tool calls across 19 iterations — hit the maximum iteration limit.</p>
+<table>
+<thead>
+<tr>
+<th>Time</th>
+<th>Iter</th>
+<th>Tool</th>
+<th>Target</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>00:34:42</td>
+<td>1</td>
+<td>list_directory</td>
+<td>root (format: long)</td>
+</tr>
+<tr>
+<td>00:34:45</td>
+<td>2</td>
+<td>read_file</td>
+<td>README.md</td>
+</tr>
+<tr>
+<td>00:34:48</td>
+<td>3</td>
+<td>list_directory</td>
+<td>agents/</td>
+</tr>
+<tr>
+<td>00:34:51</td>
+<td>4</td>
+<td>read_file</td>
+<td>agents/cert-monitor/AGENTS.md → ERROR (not found)</td>
+</tr>
+<tr>
+<td>00:34:53</td>
+<td>5</td>
+<td>list_directory</td>
+<td>agents/cert-monitor/ → found correct filenames</td>
+</tr>
+<tr>
+<td>00:34:56</td>
+<td>6</td>
+<td>read_file</td>
+<td>agents/cert-monitor/AGENT.md</td>
+</tr>
+<tr>
+<td>00:35:00</td>
+<td>7</td>
+<td>read_file</td>
+<td>agents/cert-monitor/README.md</td>
+</tr>
+<tr>
+<td>00:35:02</td>
+<td>8</td>
+<td>read_file</td>
+<td>agents/cert-monitor/RUNBOOKS.md</td>
+</tr>
+<tr>
+<td>00:35:05</td>
+<td>9</td>
+<td>read_file</td>
+<td>agents/cert-monitor/TOOLS.md</td>
+</tr>
+<tr>
+<td>00:35:12</td>
+<td>10</td>
+<td>read_file</td>
+<td>agents/incident-responder/AGENT.md</td>
+</tr>
+<tr>
+<td>00:35:15</td>
+<td>11</td>
+<td>read_file</td>
+<td>agents/incident-responder/README.md</td>
+</tr>
+<tr>
+<td>00:35:19</td>
+<td>12</td>
+<td>read_file</td>
+<td>agents/incident-responder/RUNBOOKS.md</td>
+</tr>
+<tr>
+<td>00:35:22</td>
+<td>13</td>
+<td>read_file</td>
+<td>agents/incident-responder/TOOLS.md</td>
+</tr>
+<tr>
+<td>00:35:32</td>
+<td>14</td>
+<td>read_file</td>
+<td>pyproject.toml</td>
+</tr>
+<tr>
+<td>00:35:35</td>
+<td>15</td>
+<td>list_directory</td>
+<td>libs/</td>
+</tr>
+<tr>
+<td>00:35:37</td>
+<td>16</td>
+<td>list_directory</td>
+<td>libs/core/</td>
+</tr>
+<tr>
+<td>00:35:41</td>
+<td>17</td>
+<td>read_file</td>
+<td>libs/core/README.md</td>
+</tr>
+<tr>
+<td>00:35:44</td>
+<td>18</td>
+<td>list_directory</td>
+<td>mcp-servers/</td>
+</tr>
+<tr>
+<td>00:35:59</td>
+<td>—</td>
+<td>RESPONSE</td>
+<td>Complete analysis report</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Key observations:</strong>
+- <strong>Read every file in 2 agent directories</strong> — deepest exploration of any model
+- <strong>Error recovery</strong>: Tried <code>AGENTS.md</code> (from ppxai convention), got 404, listed dir to find correct <code>AGENT.md</code>
+- <strong>Hit 19 iterations</strong> (iteration limit) — would have continued reading more agents/mcp-servers if allowed
+- <strong>~2.6s between tool calls</strong> — slightly slower than sonar but relentless
+- <strong>Total time: ~80s</strong> — acceptable for the depth of exploration</p>
+<h3 id="105-sonar-pro-efficient-and-targeted">10.5 sonar-pro — Efficient and Targeted<a class="headerlink" href="#105-sonar-pro-efficient-and-targeted" title="Permanent link">&para;</a></h3>
+<p><strong>Result:</strong> 10 tool calls across 11 iterations — well-structured exploration</p>
+<table>
+<thead>
+<tr>
+<th>Time</th>
+<th>Tool</th>
+<th>Arguments</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>00:36:42</td>
+<td>get_working_directory</td>
+<td>{}</td>
+</tr>
+<tr>
+<td>00:36:44</td>
+<td>list_directory</td>
+<td>root (format: long)</td>
+</tr>
+<tr>
+<td>00:36:45</td>
+<td>search_files</td>
+<td>{pattern: '*'} — smart: get all filenames at once</td>
+</tr>
+<tr>
+<td>00:36:48</td>
+<td>read_file</td>
+<td>README.md</td>
+</tr>
+<tr>
+<td>00:36:51</td>
+<td>read_file</td>
+<td>pyproject.toml</td>
+</tr>
+<tr>
+<td>00:36:53</td>
+<td>list_directory</td>
+<td>agents/</td>
+</tr>
+<tr>
+<td>00:36:55</td>
+<td>read_file</td>
+<td>agents/incident-responder/README.md</td>
+</tr>
+<tr>
+<td>00:36:56</td>
+<td>read_file</td>
+<td>agents/incident-responder/AGENT.md</td>
+</tr>
+<tr>
+<td>00:36:58</td>
+<td>read_file</td>
+<td>agents/cert-monitor/README.md</td>
+</tr>
+<tr>
+<td>00:37:00</td>
+<td>read_file</td>
+<td>agents/cert-monitor/AGENT.md</td>
+</tr>
+<tr>
+<td>00:37:11</td>
+<td>RESPONSE</td>
+<td>Complete analysis report</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Key observation:</strong> Used <code>search_files({pattern: '*'})</code> to get a full file listing in one call — more efficient than gemini-2.5-flash's recursive directory traversal. This is a sign of sophisticated tool strategy.</p>
+<h3 id="106-gpt-41-good-recursive-exploration">10.6 gpt-4.1 — Good Recursive Exploration<a class="headerlink" href="#106-gpt-41-good-recursive-exploration" title="Permanent link">&para;</a></h3>
+<p><strong>Result:</strong> 4 tool calls across 5 iterations — focused on drilling into libs/</p>
+<table>
+<thead>
+<tr>
+<th>Time</th>
+<th>Tool</th>
+<th>Path</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>00:32:39</td>
+<td>list_directory</td>
+<td>libs/</td>
+</tr>
+<tr>
+<td>00:32:42</td>
+<td>list_directory</td>
+<td>libs/core/</td>
+</tr>
+<tr>
+<td>00:32:45</td>
+<td>list_directory</td>
+<td>libs/core/src/</td>
+</tr>
+<tr>
+<td>00:32:50</td>
+<td>list_directory</td>
+<td>libs/core/src/ppxai_sre_core/</td>
+</tr>
+<tr>
+<td>00:32:55</td>
+<td>RESPONSE</td>
+<td>Analysis of core library modules</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Note:</strong> gpt-4.1 received a polluted session (from codex testing + gpt-4.1-mini + gpt-4.1-nano earlier). It skipped agents/README and went directly into libs/ — likely influenced by the session context. Despite this, it chained 4 calls without stopping, confirming the hint fix works for gpt-4.1.</p>
+<h3 id="107-gpt-41-nano-fast-but-shallow">10.7 gpt-4.1-nano — Fast But Shallow<a class="headerlink" href="#107-gpt-41-nano-fast-but-shallow" title="Permanent link">&para;</a></h3>
+<p><strong>Result:</strong> 2 tool calls in 3 iterations, 6 seconds total</p>
+<table>
+<thead>
+<tr>
+<th>Time</th>
+<th>Tool</th>
+<th>Arguments</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>00:29:58</td>
+<td>list_directory</td>
+<td>root (format: long)</td>
+</tr>
+<tr>
+<td>00:30:00</td>
+<td>read_file</td>
+<td>README.md</td>
+</tr>
+<tr>
+<td>00:30:03</td>
+<td>RESPONSE</td>
+<td>Brief project description</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Assessment:</strong> Fast (6 seconds!) but doesn't explore deeply. Only read README before synthesizing. Still chains tool calls (2 without stopping), but the model's limited capacity means it stops early. Suitable for simple queries, not comprehensive analysis.</p>
+<h3 id="108-gpt-5-mini-ask-permission-anti-pattern">10.8 gpt-5-mini — "Ask Permission" Anti-Pattern<a class="headerlink" href="#108-gpt-5-mini-ask-permission-anti-pattern" title="Permanent link">&para;</a></h3>
+<p><strong>Result:</strong> 2 tool calls then stopped to ask permission</p>
+<table>
+<thead>
+<tr>
+<th>Time</th>
+<th>Tool</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>00:38:16</td>
+<td>search_files</td>
+<td>{pattern: '*<em>/</em>'} — good strategy</td>
+</tr>
+<tr>
+<td>00:38:19</td>
+<td>list_directory</td>
+<td>root</td>
+</tr>
+<tr>
+<td>00:38:33</td>
+<td>RESPONSE</td>
+<td>"I can do a full, automated review... Before I start, should I..."</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Assessment:</strong> gpt-5-mini used a good strategy (search all files first), but then stopped to ask for permission instead of continuing. This is a known GPT training behavior — the model tries to be "helpful" by confirming before doing extensive work. On re-prompt with the same task, it continued properly. The AGENTS.md hint "Call tools directly without explanation" partially addresses this, but not fully.</p>
+<h3 id="109-gpt-5-nano-tool-chaining-works-synthesis-fails">10.9 gpt-5-nano — Tool Chaining Works, Synthesis Fails<a class="headerlink" href="#109-gpt-5-nano-tool-chaining-works-synthesis-fails" title="Permanent link">&para;</a></h3>
+<p><strong>Result:</strong> 11 tool calls across 12 iterations, then empty synthesis</p>
+<table>
+<thead>
+<tr>
+<th>Time</th>
+<th>Tool</th>
+<th>Path</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>00:38:56</td>
+<td>get_working_directory</td>
+<td>{}</td>
+</tr>
+<tr>
+<td>00:38:59</td>
+<td>list_directory</td>
+<td>.</td>
+</tr>
+<tr>
+<td>00:39:06</td>
+<td>read_file</td>
+<td>pyproject.toml</td>
+</tr>
+<tr>
+<td>00:39:14</td>
+<td>list_directory</td>
+<td>libs/</td>
+</tr>
+<tr>
+<td>00:39:26</td>
+<td>list_directory</td>
+<td>libs/core/</td>
+</tr>
+<tr>
+<td>00:39:32</td>
+<td>list_directory</td>
+<td>libs/core/src/</td>
+</tr>
+<tr>
+<td>00:39:36</td>
+<td>list_directory</td>
+<td>libs/core/src/ppxai_sre_core/</td>
+</tr>
+<tr>
+<td>00:39:42</td>
+<td>read_file</td>
+<td><strong>init</strong>.py</td>
+</tr>
+<tr>
+<td>00:39:49</td>
+<td>read_file</td>
+<td>agent.py</td>
+</tr>
+<tr>
+<td>00:39:57</td>
+<td>read_file</td>
+<td>models.py</td>
+</tr>
+<tr>
+<td>00:40:06</td>
+<td>read_file</td>
+<td>audit.py</td>
+</tr>
+<tr>
+<td>00:40:33</td>
+<td>RESPONSE</td>
+<td><code>[Tool execution completed but no summary generated]</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Key finding:</strong> gpt-5-nano <strong>chains tools perfectly</strong> (11 calls, no stopping, good navigation pattern). The problem is at the synthesis step — after all tools complete, the model returns empty when asked to summarize. This triggers the <code>chat.py:538</code> fallback: <code>"[Tool execution completed but no summary generated]"</code>.</p>
+<p><strong>Root cause:</strong> nano models have very limited output capacity. After generating 11 tool call responses (each consuming output tokens), the model has exhausted its generation budget and returns empty on the synthesis prompt. This could be mitigated by:
+1. Configuring higher <code>max_output_tokens</code> for nano models during synthesis
+2. Reducing the tool iteration limit so synthesis gets more token budget
+3. Or: a "streaming synthesis" approach that doesn't require a separate API call</p>
+<h3 id="1010-gpt-41-mini-still-lazy-one-per-turn">10.10 gpt-4.1-mini — Still Lazy (One Per Turn)<a class="headerlink" href="#1010-gpt-41-mini-still-lazy-one-per-turn" title="Permanent link">&para;</a></h3>
+<p><strong>Result:</strong> 1 tool call per turn, requires repeated prompting (same as pre-fix gpt-4o)</p>
+<table>
+<thead>
+<tr>
+<th>Time</th>
+<th>User Input</th>
+<th>Tool Calls</th>
+<th>Response</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>00:31:25</td>
+<td>"review all files"</td>
+<td>0</td>
+<td>"I'll start by listing..." (narrated plan, no action)</td>
+</tr>
+<tr>
+<td>00:31:34</td>
+<td>"do it"</td>
+<td>1 (list_directory)</td>
+<td>Listed agents/, stopped to narrate</td>
+</tr>
+<tr>
+<td>00:32:06</td>
+<td>"keep iterating"</td>
+<td>0</td>
+<td>"I'll list docs directory next" (no action, just plan)</td>
+</tr>
+<tr>
+<td>00:32:16</td>
+<td>"continue"</td>
+<td>1 (list_directory)</td>
+<td>Listed docs/, stopped</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Analysis:</strong> gpt-4.1-mini completely ignores the chaining hints. It:
+1. Narrates what it <em>would</em> do instead of doing it
+2. Makes exactly 1 tool call per user prompt, then stops
+3. Even explicit "keep iterating" gets a plan instead of action</p>
+<p>This model is in <code>PROMPT_BASED_MODELS</code> (chat.py forces prompt-based mode) AND gets native tool calling disabled. The hint fix helped gpt-4.1 (full) but not gpt-4.1-mini. The mini model likely has insufficient instruction-following capacity to override its trained conversational behavior.</p>
+<hr />
+<h2 id="11-session-2-cross-cutting-findings">11. Session 2 Cross-Cutting Findings<a class="headerlink" href="#11-session-2-cross-cutting-findings" title="Permanent link">&para;</a></h2>
+<h3 id="111-make-one-hint-fix-beforeafter-comparison">11.1 "Make ONE" Hint Fix — Before/After Comparison<a class="headerlink" href="#111-make-one-hint-fix-beforeafter-comparison" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Session 1 (Before Fix)</th>
+<th>Session 2 (After Fix)</th>
+<th>Improvement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>gpt-5.2</td>
+<td>1 tool/turn, narrate &amp; stop</td>
+<td>8 tools, chains back-to-back</td>
+<td><strong>8x</strong></td>
+</tr>
+<tr>
+<td>gpt-4.1</td>
+<td>(not tested Session 1)</td>
+<td>4 tools, recursive drill-in</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>gpt-4.1-nano</td>
+<td>(not tested)</td>
+<td>2 tools, fast</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>gpt-5-nano</td>
+<td>(not tested)</td>
+<td>11 tools, chains perfectly</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>gpt-5-mini</td>
+<td>(not tested)</td>
+<td>2 tools then asks permission</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>gemini-2.5-flash</td>
+<td>(not tested)</td>
+<td>19 tools, hit max iterations</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>gemini-3-pro</td>
+<td>(not tested)</td>
+<td>7 tools with error recovery</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>sonar-pro</td>
+<td>9 tools (already good)</td>
+<td>10 tools</td>
+<td>Unchanged</td>
+</tr>
+<tr>
+<td>gpt-4.1-mini</td>
+<td>(similar to gpt-4o)</td>
+<td>1 tool/turn, still lazy</td>
+<td><strong>No improvement</strong></td>
+</tr>
+<tr>
+<td>codex/codex-mini</td>
+<td>Broken</td>
+<td>Broken</td>
+<td><strong>No improvement</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Conclusion:</strong> The hint fix transformed gpt-5.x model behavior from single-tool-per-turn to proper chaining. Gemini and Perplexity models were already good and maintained their behavior. The fix failed for gpt-4.1-mini (insufficient model capacity to follow hints) and codex (doesn't see hints at all via Responses API).</p>
+<h3 id="112-typeerror-crash-chatpy217-bool-sentinel-bug">11.2 TypeError Crash — <code>chat.py:217</code> Bool Sentinel Bug<a class="headerlink" href="#112-typeerror-crash-chatpy217-bool-sentinel-bug" title="Permanent link">&para;</a></h3>
+<p><strong>Severity:</strong> CRITICAL (crash for all Responses API models)
+<strong>Status:</strong> Fixed in this session</p>
+<p>The <code>openai_tools = True</code> sentinel on line 217 was intended to signal "tools enabled but using prompt-based mode." However, this <code>True</code> value propagated to <code>provider.chat(tools=True)</code>, where <code>_chat_responses_api</code> line 526 did:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">if</span> <span class="n">tools</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">capabilities</span><span class="o">.</span><span class="n">native_tool_calling</span><span class="p">:</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>    <span class="k">for</span> <span class="n">tool_def</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_convert_tools_for_responses</span><span class="p">(</span><span class="n">tools</span><span class="p">):</span>  <span class="c1"># tools=True → iterate over bool</span>
+</span></code></pre></div>
+<p><strong>Fix:</strong> Removed the sentinel entirely. For prompt-based mode, <code>openai_tools</code> stays <code>None</code> — tools are already injected in the system prompt.</p>
+<h3 id="113-interruptesc-doesnt-stop-background-tasks">11.3 Interrupt/Esc Doesn't Stop Background Tasks<a class="headerlink" href="#113-interruptesc-doesnt-stop-background-tasks" title="Permanent link">&para;</a></h3>
+<p><strong>Severity:</strong> MEDIUM (UX issue, not data corruption)
+<strong>Status:</strong> Partially fixed in this session</p>
+<p>User reported that pressing Escape in the web app interrupts the UI (shows "Interrupted") but the background streaming task continues. Analysis revealed:</p>
+<ol>
+<li>Web app correctly POSTs <code>/interrupt</code> and aborts the SSE fetch</li>
+<li>Server sets <code>_interrupted = True</code> flag on the engine</li>
+<li>But the flag is only checked at coarse granularity — not during tool execution or provider API calls</li>
+</ol>
+<p><strong>Fixes applied:</strong>
+- Added interrupt check in the tool execution wait loop (<code>chat.py:372</code>) — cancels running tool task
+- Added interrupt check after <code>provider.chat()</code> returns (<code>chat.py:327</code>) — catches interrupt between provider call and tool processing</p>
+<p><strong>Remaining gaps:</strong>
+- No interrupt check inside <code>provider.chat()</code> itself (blocked API call can't be interrupted)
+- Starlette <code>StreamingResponse</code> doesn't propagate client disconnects to the async generator</p>
+<h3 id="114-o3-mini-max_tokens-vs-max_completion_tokens-error">11.4 o3-mini — <code>max_tokens</code> vs <code>max_completion_tokens</code> Error<a class="headerlink" href="#114-o3-mini-max_tokens-vs-max_completion_tokens-error" title="Permanent link">&para;</a></h3>
+<p>From an earlier test in the same log session (line 5480):
+<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>Engine error: Invalid request: Unsupported parameter: &#39;max_tokens&#39; is not supported with this model. Use &#39;max_completion_tokens&#39; instead.
+</span></code></pre></div></p>
+<p><strong>Status:</strong> Already fixed by <code>_needs_max_completion_tokens()</code> in <code>OpenAINativeProvider</code>. This error occurred because o3-mini was routed through <code>OpenAICompatibleProvider</code> (which uses the old parameter name) instead of <code>OpenAINativeProvider</code>. The provider registry should route all <code>o3*</code> models through the native provider.</p>
+<hr />
+<h2 id="12-updated-model-rankings-combined-sessions-1-2">12. Updated Model Rankings (Combined Sessions 1 + 2)<a class="headerlink" href="#12-updated-model-rankings-combined-sessions-1-2" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Rank</th>
+<th>Model</th>
+<th>Provider</th>
+<th>Best Tool Calls</th>
+<th>Best Behavior</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>gemini-2.5-flash</td>
+<td>Google</td>
+<td>19</td>
+<td>Hit max iterations, read every file</td>
+<td>Best agent behavior across all tests</td>
+</tr>
+<tr>
+<td>2</td>
+<td>gemini-3-pro</td>
+<td>Google</td>
+<td>7-8</td>
+<td>Error recovery, structured analysis</td>
+<td>Consistent across sessions</td>
+</tr>
+<tr>
+<td>3</td>
+<td>sonar-pro</td>
+<td>Perplexity</td>
+<td>10</td>
+<td>Efficient (search_files strategy)</td>
+<td>Best on Windows and macOS</td>
+</tr>
+<tr>
+<td>4</td>
+<td>sonar</td>
+<td>Perplexity</td>
+<td>9</td>
+<td>8/8 files, $0.10 total cost</td>
+<td>Best cost/value ratio</td>
+</tr>
+<tr>
+<td>5</td>
+<td>gpt-5.2</td>
+<td>OpenAI</td>
+<td>8</td>
+<td>Chains well after hint fix</td>
+<td>Dramatic improvement from 1/turn</td>
+</tr>
+<tr>
+<td>6</td>
+<td>gpt-5-nano</td>
+<td>OpenAI</td>
+<td>11</td>
+<td>Chains perfectly, synthesis fails</td>
+<td>Tool calling A+, synthesis F</td>
+</tr>
+<tr>
+<td>7</td>
+<td>gpt-4.1</td>
+<td>OpenAI</td>
+<td>4-5</td>
+<td>Recursive exploration</td>
+<td>Good, but needs cleaner sessions</td>
+</tr>
+<tr>
+<td>8</td>
+<td>gpt-4.1-nano</td>
+<td>OpenAI</td>
+<td>2</td>
+<td>Very fast (6s)</td>
+<td>Shallow but useful for quick queries</td>
+</tr>
+<tr>
+<td>9</td>
+<td>codex-mini</td>
+<td>OpenAI</td>
+<td>10 (Session 1 only)</td>
+<td>Read all files, created file</td>
+<td>ONLY works in clean sessions on Windows</td>
+</tr>
+<tr>
+<td>10</td>
+<td>gpt-5-mini</td>
+<td>OpenAI</td>
+<td>2</td>
+<td>Asks permission</td>
+<td>Could be better with stronger hints</td>
+</tr>
+<tr>
+<td>11</td>
+<td>gpt-4.1-mini</td>
+<td>OpenAI</td>
+<td>1/turn</td>
+<td>Lazy narrator</td>
+<td>Hint fix ineffective</td>
+</tr>
+<tr>
+<td>12</td>
+<td>gpt-5.1-codex</td>
+<td>OpenAI</td>
+<td>0-2</td>
+<td>Broken, fabricates</td>
+<td>Responses API incompatible with prompt-based tools</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="13-session-2-response-time-analysis">13. Session 2 Response Time Analysis<a class="headerlink" href="#13-session-2-response-time-analysis" title="Permanent link">&para;</a></h2>
+<h3 id="tool-call-chaining-speed-time-between-consecutive-tool-calls">Tool Call Chaining Speed (time between consecutive tool calls)<a class="headerlink" href="#tool-call-chaining-speed-time-between-consecutive-tool-calls" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Avg Between-Call</th>
+<th>Chains?</th>
+<th>Total Calls</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>gemini-2.5-flash</td>
+<td>~2.8s</td>
+<td>Yes</td>
+<td>19</td>
+</tr>
+<tr>
+<td>sonar-pro</td>
+<td>~1.8s</td>
+<td>Yes</td>
+<td>10</td>
+</tr>
+<tr>
+<td>gpt-5-nano</td>
+<td>~6.5s</td>
+<td>Yes</td>
+<td>11</td>
+</tr>
+<tr>
+<td>gpt-5.2</td>
+<td>~7.5s</td>
+<td>Yes</td>
+<td>8</td>
+</tr>
+<tr>
+<td>gemini-3-pro</td>
+<td>~5.5s</td>
+<td>Yes</td>
+<td>7</td>
+</tr>
+<tr>
+<td>gpt-4.1</td>
+<td>~3.5s</td>
+<td>Yes</td>
+<td>4</td>
+</tr>
+<tr>
+<td>gpt-4.1-nano</td>
+<td>~2.5s</td>
+<td>Yes</td>
+<td>2</td>
+</tr>
+<tr>
+<td>gpt-5-mini</td>
+<td>~3.5s</td>
+<td>Partial</td>
+<td>2</td>
+</tr>
+<tr>
+<td>gpt-4.1-mini</td>
+<td>STOPS</td>
+<td>No</td>
+<td>1/turn</td>
+</tr>
+<tr>
+<td>codex/codex-mini</td>
+<td>N/A</td>
+<td>No</td>
+<td>0</td>
+</tr>
+</tbody>
+</table>
+<h3 id="task-completion-time-first-request-to-final-report">Task Completion Time (first request to final report)<a class="headerlink" href="#task-completion-time-first-request-to-final-report" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Total Time</th>
+<th>User Prompts</th>
+<th>Report Quality</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>gpt-4.1-nano</td>
+<td>~6s</td>
+<td>1</td>
+<td>Brief (README-only analysis)</td>
+</tr>
+<tr>
+<td>gpt-4.1</td>
+<td>~23s</td>
+<td>1</td>
+<td>Good (libs deep-dive)</td>
+</tr>
+<tr>
+<td>sonar-pro</td>
+<td>~30s</td>
+<td>1</td>
+<td>Excellent (targeted, efficient)</td>
+</tr>
+<tr>
+<td>gemini-3-pro</td>
+<td>~62s</td>
+<td>1</td>
+<td>Good (error recovery)</td>
+</tr>
+<tr>
+<td>gemini-2.5-flash</td>
+<td>~80s</td>
+<td>1</td>
+<td>Excellent (most thorough)</td>
+</tr>
+<tr>
+<td>gpt-5-nano</td>
+<td>~96s</td>
+<td>1</td>
+<td>FAILED (empty synthesis)</td>
+</tr>
+<tr>
+<td>gpt-5.2</td>
+<td>~109s</td>
+<td>1</td>
+<td>Good (structured report)</td>
+</tr>
+<tr>
+<td>gpt-5-mini</td>
+<td>~24s + reprompt</td>
+<td>2</td>
+<td>Good (after reprompt)</td>
+</tr>
+<tr>
+<td>gpt-4.1-mini</td>
+<td>minutes</td>
+<td>4+</td>
+<td>Mediocre (incomplete)</td>
+</tr>
+<tr>
+<td>codex</td>
+<td>N/A</td>
+<td>5+</td>
+<td>FAILED (fabricated or refused)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h1 id="session-3-macos-codex-native-tool-calling-fix">Session 3: macOS — Codex Native Tool Calling Fix<a class="headerlink" href="#session-3-macos-codex-native-tool-calling-fix" title="Permanent link">&para;</a></h1>
+<p><strong>Date:</strong> 2026-02-20, 00:42–01:20 UTC+1
+<strong>Session:</strong> <code>webapp-d10cfb08-198c-4c67-a43c-fedbf7a4ab33</code>
+<strong>Working directory:</strong> <code>/Users/rado/git/utils/ppxai-sre-repo</code>
+<strong>Client:</strong> ppxai Web App via ppxai-server (HTTP/SSE) on macOS
+<strong>Debug log:</strong> <code>~/.ppxai/logs/server-debug.log</code>
+<strong>Monitored by:</strong> Claude Code (live tail + analysis)</p>
+<hr />
+<h2 id="14-executive-summary-session-3">14. Executive Summary (Session 3)<a class="headerlink" href="#14-executive-summary-session-3" title="Permanent link">&para;</a></h2>
+<p>Session 3 focused on a single objective: <strong>fix codex models so they can use tools</strong>. The root cause identified in Session 2 was that <code>get_capabilities_for_model()</code> returned <code>native_tool_calling=False</code> for all Responses API models, which meant tools were never sent in the API request — codex had zero visibility of available tools.</p>
+<h3 id="changes-applied">Changes Applied<a class="headerlink" href="#changes-applied" title="Permanent link">&para;</a></h3>
+<ol>
+<li>
+<p><strong><code>openai_native.py:get_capabilities_for_model()</code></strong> — Removed <code>self._is_responses_api_model(model)</code> from the <code>use_prompt_based</code> condition. Only <code>o4-mini</code> and <code>gpt-4.1-mini</code> remain forced to prompt-based (benchmark-proven).</p>
+</li>
+<li>
+<p><strong><code>openai_native.py:_chat_responses_api()</code></strong> — Added belt-and-suspenders: tool descriptions injected into the <code>instructions</code> field alongside native function definitions. If codex outputs tool calls as JSON text instead of <code>function_call</code> items, the fallback parser in <code>chat.py</code> catches them.</p>
+</li>
+<li>
+<p><strong><code>openai_native.py:_build_tool_hint()</code></strong> — New static method that formats tool names/params/descriptions for text injection.</p>
+</li>
+<li>
+<p><strong><code>model_profiles.py</code></strong> — <code>gpt-5.1-codex*</code> changed from <code>mode="prompt_based"</code> to <code>mode="native"</code>.</p>
+</li>
+<li>
+<p><strong><code>AGENTS.md</code></strong> — Codex hints updated to reference "native function calling" instead of text-based JSON output.</p>
+</li>
+<li>
+<p><strong><code>ppxai-config.json</code></strong> — <code>max_iterations</code> and <code>max_tool_iterations</code> doubled from 25 to 50.</p>
+</li>
+</ol>
+<h3 id="results">Results<a class="headerlink" href="#results" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Iterations</th>
+<th>Tool Calls</th>
+<th>Behavior</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>gpt-5.1-codex</td>
+<td>25 (×3 turns) + 4 (synthesis)</td>
+<td>71+ total</td>
+<td>Exhaustive file-by-file reading, no errors or refusals</td>
+<td><strong>FIXED</strong></td>
+</tr>
+<tr>
+<td>gpt-5.1-codex-mini</td>
+<td>19 (1 turn)</td>
+<td>19</td>
+<td>Breadth-first scan, then synthesis at <code>**Repository Review Summary**</code></td>
+<td><strong>FIXED</strong></td>
+</tr>
+</tbody>
+</table>
+<p>Both codex models went from <strong>completely non-functional</strong> (0 tool calls, crashes, refusals) to <strong>fully working agents</strong> with native tool calling.</p>
+<hr />
+<h2 id="15-detailed-per-model-analysis-session-3">15. Detailed Per-Model Analysis (Session 3)<a class="headerlink" href="#15-detailed-per-model-analysis-session-3" title="Permanent link">&para;</a></h2>
+<h3 id="151-gpt-51-codex-exhaustive-but-wont-synthesize">15.1 gpt-5.1-codex — Exhaustive But Won't Synthesize<a class="headerlink" href="#151-gpt-51-codex-exhaustive-but-wont-synthesize" title="Permanent link">&para;</a></h3>
+<p><strong>Config:</strong> <code>native_tool_calling=True</code> (Responses API with function tools)
+<strong>Task:</strong> "Review all files in this repo and provide comprehensive analysis report"</p>
+<p><strong>Turn 1 (7 iterations):</strong>
+- <code>list_directory</code> × 4 (root, agents, docs, libs, mcp-servers)
+- <code>read_file</code> × 3 (README.md, libs/core/README.md)
+- Stopped to narrate: "I'll proceed by reviewing all files..."</p>
+<p><strong>Turn 2 (25 iterations, hit max):</strong>
+- Continued from where it left off
+- Systematic: <code>list_directory</code> → <code>read_file</code> for every file in cert-monitor agent
+- Read <code>AGENT.md</code>, <code>README.md</code>, <code>RUNBOOKS.md</code>, <code>TOOLS.md</code>, <code>__init__.py</code>, <code>agent.py</code>, <code>cli.py</code>
+- Then moved to cost-optimizer, deployment-validator, incident-responder
+- Hit 25 iteration limit still reading</p>
+<p><strong>Turn 3 (21 iterations, interrupted by user):</strong>
+- Continued reading incident-responder files
+- User sent new message before completion</p>
+<p><strong>Turn 4 (4 iterations + synthesis):</strong>
+- Read 2 more files, listed 1 directory
+- Finally produced <code>## Repository Overview</code> synthesis after 25 seconds</p>
+<p><strong>Key observations:</strong>
+- <strong>71+ total tool calls</strong> across 4 turns — the most tool calls of any model tested
+- <strong>Zero errors, zero refusals</strong> — complete turnaround from Session 2 (0 tool calls)
+- <strong>Arguments are correct</strong>: <code>filepath</code>, <code>path</code>, <code>format</code>, <code>max_lines</code> all properly formatted
+- <strong>Won't self-synthesize</strong>: Reads exhaustively without stopping. Needs explicit "stop and summarize" or hitting iteration limit to produce output
+- <strong>~2s between tool calls</strong> — reasonable pace</p>
+<h3 id="152-gpt-51-codex-mini-smart-and-efficient">15.2 gpt-5.1-codex-mini — Smart and Efficient<a class="headerlink" href="#152-gpt-51-codex-mini-smart-and-efficient" title="Permanent link">&para;</a></h3>
+<p><strong>Config:</strong> <code>native_tool_calling=True</code> (Responses API with function tools)
+<strong>Task:</strong> Same as codex</p>
+<p><strong>Single turn (19 iterations + synthesis):</strong>
+- <strong>Phase 1 — Structure scan (8 <code>list_directory</code> calls):</strong> root → agents → libs → agents/capacity-planner → agents/cert-monitor → agents/cost-optimizer → libs/core → mcp-servers
+- <strong>Phase 2 — Targeted reads (8 <code>read_file</code> calls):</strong> README.md, cert-monitor/AGENT.md, cert-monitor/README.md, cert-monitor/RUNBOOKS.md, incident-responder/agent.py, libs/core/README.md, plus Python source files
+- <strong>Phase 3 — Synthesis:</strong> Produced <code>**Repository Review Summary**</code> after 19 iterations</p>
+<p><strong>Key observations:</strong>
+- <strong>Smarter strategy than codex</strong>: Mapped directory structure first (breadth-first), then selectively read key files
+- <strong>Self-synthesized at 19 iterations</strong> — didn't need hitting the max limit
+- <strong>~1.5s between tool calls</strong> — faster than codex
+- <strong>Total time: ~50s</strong> — vs codex's 4 minutes across 4 turns for similar depth</p>
+<h3 id="153-codex-comparison-big-vs-mini">15.3 Codex Comparison: Big vs Mini<a class="headerlink" href="#153-codex-comparison-big-vs-mini" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>gpt-5.1-codex</th>
+<th>gpt-5.1-codex-mini</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tool calls to synthesis</td>
+<td>71+ (4 turns)</td>
+<td>19 (1 turn)</td>
+</tr>
+<tr>
+<td>Strategy</td>
+<td>Exhaustive depth-first</td>
+<td>Breadth-first + selective</td>
+</tr>
+<tr>
+<td>Self-synthesizes?</td>
+<td>No (needs max limit or prompt)</td>
+<td>Yes (at ~19 iterations)</td>
+</tr>
+<tr>
+<td>Between-call time</td>
+<td>~2s</td>
+<td>~1.5s</td>
+</tr>
+<tr>
+<td>Total time</td>
+<td>~4 minutes</td>
+<td>~50 seconds</td>
+</tr>
+<tr>
+<td>Report quality</td>
+<td>(would need more prompting)</td>
+<td>Good overview</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Conclusion:</strong> codex-mini is the superior choice for agent tasks — more efficient strategy, self-synthesizes, faster between calls.</p>
+<hr />
+<h2 id="16-session-3-impact-on-benchmark-evaluation">16. Session 3 Impact on Benchmark Evaluation<a class="headerlink" href="#16-session-3-impact-on-benchmark-evaluation" title="Permanent link">&para;</a></h2>
+<h3 id="problem-benchmark-scores-dont-reflect-real-world-agent-utility">Problem: Benchmark Scores Don't Reflect Real-World Agent Utility<a class="headerlink" href="#problem-benchmark-scores-dont-reflect-real-world-agent-utility" title="Permanent link">&para;</a></h3>
+<p>The current 26-test benchmark suite has significant scoring distortions exposed by Session 3:</p>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Old Status</th>
+<th>Session 3 Status</th>
+<th>Benchmark Would Score</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>gpt-5.1-codex</td>
+<td>"Broken, 0 tool calls"</td>
+<td>71+ tool calls, fully functional</td>
+<td>Still ~40% (single-turn tests)</td>
+</tr>
+<tr>
+<td>gpt-5.1-codex-mini</td>
+<td>"Session polluted, refused"</td>
+<td>19 calls + synthesis</td>
+<td>Still ~50% (doesn't test chaining)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="root-causes_1">Root Causes<a class="headerlink" href="#root-causes_1" title="Permanent link">&para;</a></h3>
+<ol>
+<li>
+<p><strong>All tests are single-turn or 2-turn</strong> — The suite tests "can you make one tool call?" but never "can you chain 19 tool calls and synthesize?" Codex-mini's real-world strength (breadth-first exploration + synthesis) is completely unmeasured.</p>
+</li>
+<li>
+<p><strong>Binary pass/fail</strong> — A model that calls the right tool with a slightly wrong arg gets 0%, same as a model that refuses entirely. Codex models get right tool name but sometimes wrong param name (<code>path</code> vs <code>filepath</code>), scoring 0% despite being 80% correct.</p>
+</li>
+<li>
+<p><strong>No agent loop category</strong> — The benchmark has hallucination_resistance (5 tests), tool_calling (6 tests), code_editing (3 tests) etc. but zero tests for consecutive tool chaining, multi-file navigation, or synthesis-after-exploration.</p>
+</li>
+<li>
+<p><strong>Tool schema mismatch</strong> — Benchmark tools use <code>read_file(path)</code> but engine tools use <code>read_file(filepath)</code>. When codex learns from real usage, it uses <code>filepath</code> — which fails benchmark validation.</p>
+</li>
+</ol>
+<h3 id="recommended-benchmark-improvements-a12">Recommended Benchmark Improvements (A12)<a class="headerlink" href="#recommended-benchmark-improvements-a12" title="Permanent link">&para;</a></h3>
+<p><strong>Phase 1 — Scoring Fixes (v1.15.6):</strong>
+- Partial credit: tool name match = 50%, correct args = 50%
+- Accept param aliases: <code>path</code> ≡ <code>filepath</code>, <code>patch</code> ≡ <code>unified_diff</code></p>
+<p><strong>Phase 2 — Agent Loop Tests (v1.16.0):</strong>
+- <code>multi_file_review</code>: Give 5 simulated files, score = files_read / total
+- <code>consecutive_tool_loop</code>: 5-step chain, score = steps_completed / total
+- <code>breadth_first_exploration</code>: List dirs before reading files (codex-mini pattern)
+- <code>synthesis_after_tools</code>: Chain N tool calls then produce coherent summary</p>
+<p><strong>Phase 3 — Real-World Correlation:</strong>
+- Run benchmark + live test for same models
+- Compute correlation coefficient
+- Target: benchmark ranking within ±2 positions of real-world ranking</p>
+<hr />
+<h2 id="17-updated-model-rankings-combined-sessions-1-2-3">17. Updated Model Rankings (Combined Sessions 1 + 2 + 3)<a class="headerlink" href="#17-updated-model-rankings-combined-sessions-1-2-3" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Rank</th>
+<th>Model</th>
+<th>Provider</th>
+<th>Best Tool Calls</th>
+<th>Best Behavior</th>
+<th>Sessions</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>gemini-2.5-flash</td>
+<td>Google</td>
+<td>19</td>
+<td>Hit max, read every file</td>
+<td>2</td>
+</tr>
+<tr>
+<td>2</td>
+<td>gpt-5.1-codex-mini</td>
+<td>OpenAI</td>
+<td>19</td>
+<td>Breadth-first + synthesis</td>
+<td>1 (Windows), 3 (macOS)</td>
+</tr>
+<tr>
+<td>3</td>
+<td>sonar-pro</td>
+<td>Perplexity</td>
+<td>10</td>
+<td>Efficient search_files strategy</td>
+<td>1, 2</td>
+</tr>
+<tr>
+<td>4</td>
+<td>sonar</td>
+<td>Perplexity</td>
+<td>9</td>
+<td>8/8 files, best cost/value</td>
+<td>1</td>
+</tr>
+<tr>
+<td>5</td>
+<td>gpt-5.2</td>
+<td>OpenAI</td>
+<td>8</td>
+<td>Chains well after hint fix</td>
+<td>2</td>
+</tr>
+<tr>
+<td>6</td>
+<td>gpt-5.1-codex</td>
+<td>OpenAI</td>
+<td>71+ (4 turns)</td>
+<td>Exhaustive, won't synthesize</td>
+<td>3</td>
+</tr>
+<tr>
+<td>7</td>
+<td>gemini-3-pro</td>
+<td>Google</td>
+<td>7-8</td>
+<td>Error recovery</td>
+<td>2</td>
+</tr>
+<tr>
+<td>8</td>
+<td>gpt-4.1</td>
+<td>OpenAI</td>
+<td>4-5</td>
+<td>Recursive exploration</td>
+<td>2</td>
+</tr>
+<tr>
+<td>9</td>
+<td>gpt-5-nano</td>
+<td>OpenAI</td>
+<td>11</td>
+<td>Tool calling A+, synthesis F</td>
+<td>2</td>
+</tr>
+<tr>
+<td>10</td>
+<td>gpt-4.1-nano</td>
+<td>OpenAI</td>
+<td>2</td>
+<td>Very fast (6s)</td>
+<td>2</td>
+</tr>
+<tr>
+<td>11</td>
+<td>gpt-5-mini</td>
+<td>OpenAI</td>
+<td>2</td>
+<td>Asks permission</td>
+<td>2</td>
+</tr>
+<tr>
+<td>12</td>
+<td>gpt-4.1-mini</td>
+<td>OpenAI</td>
+<td>1/turn</td>
+<td>Lazy narrator</td>
+<td>2</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Notable changes from Session 2:</strong>
+- <strong>codex-mini jumps from #9 to #2</strong> — was broken in Session 2 due to session pollution + prompt-based mode. Now #2 with native tool calling.
+- <strong>codex jumps from #12 to #6</strong> — was completely non-functional, now makes 71+ tool calls. Ranked lower than codex-mini due to inability to self-synthesize.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/rcconsult/ppxai" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
