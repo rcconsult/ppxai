@@ -25,8 +25,15 @@ def check_version_in_file(file_path: Path, version: str, pattern: str) -> bool:
     return match is not None
 
 
-def validate_release(version: str) -> bool:
-    """Validate all files have been updated for the release."""
+def validate_release(version: str, allow_dirty: bool = False) -> bool:
+    """Validate all files have been updated for the release.
+
+    `allow_dirty=True` skips the "git working directory is clean"
+    check. Used by `scripts/release.py` which calls this validator
+    *after* making version-bump edits but *before* committing them —
+    a clean check at that point is structurally guaranteed to fail.
+    Standalone runs (e.g. CI sanity-check) keep the strict default.
+    """
     # Remove 'v' prefix if present
     version_number = version.lstrip('v')
 
@@ -123,16 +130,19 @@ def validate_release(version: str) -> bool:
             else:
                 warnings.append(msg)
 
-    # Check that git is clean
-    import subprocess
-    result = subprocess.run(
-        ["git", "status", "--porcelain"],
-        cwd=project_root,
-        capture_output=True,
-        text=True
-    )
-    if result.stdout.strip():
-        errors.append("Git working directory is not clean")
+    # Check that git is clean (skip when called from release.py after
+    # version-bump edits — that flow guarantees a dirty tree at this
+    # validation point, by design).
+    if not allow_dirty:
+        import subprocess
+        result = subprocess.run(
+            ["git", "status", "--porcelain"],
+            cwd=project_root,
+            capture_output=True,
+            text=True
+        )
+        if result.stdout.strip():
+            errors.append("Git working directory is not clean")
 
     # Print results
     print(f"Validating release {version}...")
@@ -172,15 +182,22 @@ def validate_release(version: str) -> bool:
 
 
 def main():
-    if len(sys.argv) != 2:
-        print("Usage: python scripts/validate-release.py v1.11.4")
+    args = [a for a in sys.argv[1:] if a != "--allow-dirty"]
+    allow_dirty = "--allow-dirty" in sys.argv[1:]
+
+    if len(args) != 1:
+        print("Usage: python scripts/validate-release.py v1.11.4 [--allow-dirty]")
+        print()
+        print("  --allow-dirty   Skip the 'git working directory is clean' check.")
+        print("                  Used by release.py mid-flow (uncommitted version")
+        print("                  bumps are expected and not a failure condition).")
         sys.exit(1)
 
-    version = sys.argv[1]
+    version = args[0]
     if not version.startswith('v'):
         version = f'v{version}'
 
-    success = validate_release(version)
+    success = validate_release(version, allow_dirty=allow_dirty)
     sys.exit(0 if success else 1)
 
 

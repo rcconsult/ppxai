@@ -525,20 +525,25 @@ def run_validation(version: str) -> bool:
         print("  ⚠️  validate-release.py not found, skipping validation")
         return True
 
-    # Run validation script
-    result = run_command(f"python3 {validate_script} v{version}", check=False)
+    # Run validation script. Pass --allow-dirty because we're calling
+    # this *after* the version-bump step but *before* the commit step,
+    # so a clean working tree is structurally impossible at this point.
+    # The previous heuristic ("suppress if git-dirty is the *only*
+    # error") fell over when any other error was also present —
+    # produced misleading "validation failed" output even when the
+    # only real failure was an expected dirty tree.
+    result = run_command(
+        f"python3 {validate_script} v{version} --allow-dirty",
+        check=False,
+    )
 
     if result.returncode == 0:
         print("  ✅ All version references validated")
         return True
-    else:
-        # Check if only git-dirty error (that's expected at this point)
-        if "Git working directory is not clean" in result.stdout and result.stdout.count("- ") == 1:
-            print("  ✅ All version references validated (git dirty expected)")
-            return True
-        print("  ❌ Validation failed!")
-        print(result.stdout)
-        return False
+
+    print("  ❌ Validation failed!")
+    print(result.stdout)
+    return False
 
 
 def create_commit(version: str, message: str) -> bool:
