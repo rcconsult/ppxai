@@ -10,29 +10,27 @@
       
       
       
-        <link rel="canonical" href="https://rcconsult.github.io/ppxai/dev/">
+        <link rel="canonical" href="https://rcconsult.github.io/ppxai/dev/DISCUSSION-agents-framework/">
       
       
-      
-        <link rel="next" href="INSTALLATION/">
       
       
         
       
       
-      <link rel="icon" href="assets/images/favicon.png">
+      <link rel="icon" href="../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
-        <title>ppxai Documentation</title>
+        <title>Agents Framework — Design Discussion - ppxai Documentation</title>
       
     
     
-      <link rel="stylesheet" href="assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
       
         
-        <link rel="stylesheet" href="assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -51,7 +49,7 @@
       
     
     
-    <script>__md_scope=new URL(".",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -76,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#ppxai-documentation" class="md-skip">
+        <a href="#agents-framework-design-discussion" class="md-skip">
           Skip to content
         </a>
       
@@ -96,7 +94,7 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="." title="ppxai Documentation" class="md-header__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+    <a href=".." title="ppxai Documentation" class="md-header__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -116,7 +114,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Home
+              Agents Framework — Design Discussion
             
           </span>
         </div>
@@ -234,7 +232,7 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="." title="ppxai Documentation" class="md-nav__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+    <a href=".." title="ppxai Documentation" class="md-nav__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -261,37 +259,10 @@
       
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Home
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="." class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
         
   
   
@@ -307,170 +278,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#why-ppxai" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Why ppxai?
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#quick-start" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Quick Start
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Quick Start">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#installation" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Installation
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#configure-api-keys" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Configure API Keys
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#run" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Run
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#features" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Features
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Features">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#multi-provider-support" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Multi-Provider Support
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#four-interfaces" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Four Interfaces
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#agent-mode" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Agent Mode
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#bootstrap-context" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Bootstrap Context
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#documentation" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Documentation
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#resources" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Resources
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -536,7 +343,7 @@
   
   
     <li class="md-nav__item">
-      <a href="INSTALLATION/" class="md-nav__link">
+      <a href="../INSTALLATION/" class="md-nav__link">
         
   
   
@@ -564,7 +371,7 @@
   
   
     <li class="md-nav__item">
-      <a href="PROVIDER_SETUP/" class="md-nav__link">
+      <a href="../PROVIDER_SETUP/" class="md-nav__link">
         
   
   
@@ -653,7 +460,7 @@
   
   
     <li class="md-nav__item">
-      <a href="AGENT_MODE_GUIDE/" class="md-nav__link">
+      <a href="../AGENT_MODE_GUIDE/" class="md-nav__link">
         
   
   
@@ -681,7 +488,7 @@
   
   
     <li class="md-nav__item">
-      <a href="BOOTSTRAP_CONTEXT_GUIDE/" class="md-nav__link">
+      <a href="../BOOTSTRAP_CONTEXT_GUIDE/" class="md-nav__link">
         
   
   
@@ -709,7 +516,7 @@
   
   
     <li class="md-nav__item">
-      <a href="CONTEXT-INJECTION/" class="md-nav__link">
+      <a href="../CONTEXT-INJECTION/" class="md-nav__link">
         
   
   
@@ -737,7 +544,7 @@
   
   
     <li class="md-nav__item">
-      <a href="CHECKPOINT_GUIDE/" class="md-nav__link">
+      <a href="../CHECKPOINT_GUIDE/" class="md-nav__link">
         
   
   
@@ -765,7 +572,7 @@
   
   
     <li class="md-nav__item">
-      <a href="FILE_EDITING_GUIDE/" class="md-nav__link">
+      <a href="../FILE_EDITING_GUIDE/" class="md-nav__link">
         
   
   
@@ -793,7 +600,7 @@
   
   
     <li class="md-nav__item">
-      <a href="SHELL_CONSENT_GUIDE/" class="md-nav__link">
+      <a href="../SHELL_CONSENT_GUIDE/" class="md-nav__link">
         
   
   
@@ -882,7 +689,7 @@
   
   
     <li class="md-nav__item">
-      <a href="CUSTOM_TOOL_DEVELOPMENT_GUIDE/" class="md-nav__link">
+      <a href="../CUSTOM_TOOL_DEVELOPMENT_GUIDE/" class="md-nav__link">
         
   
   
@@ -910,7 +717,7 @@
   
   
     <li class="md-nav__item">
-      <a href="CUSTOM_COMMAND_DEVELOPMENT_GUIDE/" class="md-nav__link">
+      <a href="../CUSTOM_COMMAND_DEVELOPMENT_GUIDE/" class="md-nav__link">
         
   
   
@@ -938,7 +745,7 @@
   
   
     <li class="md-nav__item">
-      <a href="ARCHITECTURE/" class="md-nav__link">
+      <a href="../ARCHITECTURE/" class="md-nav__link">
         
   
   
@@ -1027,7 +834,7 @@
   
   
     <li class="md-nav__item">
-      <a href="ollama-limitations/" class="md-nav__link">
+      <a href="../ollama-limitations/" class="md-nav__link">
         
   
   
@@ -1055,7 +862,7 @@
   
   
     <li class="md-nav__item">
-      <a href="vllm-tool-calling-guide/" class="md-nav__link">
+      <a href="../vllm-tool-calling-guide/" class="md-nav__link">
         
   
   
@@ -1083,7 +890,7 @@
   
   
     <li class="md-nav__item">
-      <a href="CONTAINER_TOOLS_GUIDE/" class="md-nav__link">
+      <a href="../CONTAINER_TOOLS_GUIDE/" class="md-nav__link">
         
   
   
@@ -1111,7 +918,7 @@
   
   
     <li class="md-nav__item">
-      <a href="AUTOROUTER-CONFIG/" class="md-nav__link">
+      <a href="../AUTOROUTER-CONFIG/" class="md-nav__link">
         
   
   
@@ -1200,7 +1007,7 @@
   
   
     <li class="md-nav__item">
-      <a href="RELEASE-NOTES-v1.16.1/" class="md-nav__link">
+      <a href="../RELEASE-NOTES-v1.16.1/" class="md-nav__link">
         
   
   
@@ -1228,7 +1035,7 @@
   
   
     <li class="md-nav__item">
-      <a href="RELEASE-NOTES-v1.16.0/" class="md-nav__link">
+      <a href="../RELEASE-NOTES-v1.16.0/" class="md-nav__link">
         
   
   
@@ -1256,7 +1063,7 @@
   
   
     <li class="md-nav__item">
-      <a href="RELEASE-NOTES-v1.15.6/" class="md-nav__link">
+      <a href="../RELEASE-NOTES-v1.15.6/" class="md-nav__link">
         
   
   
@@ -1311,10 +1118,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#why-ppxai" class="md-nav__link">
+  <a href="#origin-of-the-idea" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Why ppxai?
+        Origin of the idea
       
     </span>
   </a>
@@ -1322,22 +1129,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#quick-start" class="md-nav__link">
+  <a href="#two-systems-not-one" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Quick Start
+        Two systems, not one
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Quick Start">
+    <nav class="md-nav" aria-label="Two systems, not one">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#installation" class="md-nav__link">
+  <a href="#system-1-sub-agents-synchronous-interactive" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Installation
+        System 1 — Sub-agents (synchronous, interactive)
       
     </span>
   </a>
@@ -1345,21 +1152,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#configure-api-keys" class="md-nav__link">
+  <a href="#system-2-autonomous-agents-asynchronous-unattended" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Configure API Keys
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#run" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Run
+        System 2 — Autonomous agents (asynchronous, unattended)
       
     </span>
   </a>
@@ -1372,22 +1168,33 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#features" class="md-nav__link">
+  <a href="#worked-example-prometheus-anomaly-watcher" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Features
+        Worked example: Prometheus anomaly watcher
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Features">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#survey-of-existing-ppxai-sre-as-of-2026-04-24" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Survey of existing ppxai-sre (as of 2026-04-24)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Survey of existing ppxai-sre (as of 2026-04-24)">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#multi-provider-support" class="md-nav__link">
+  <a href="#whats-already-there" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Multi-Provider Support
+        What's already there
       
     </span>
   </a>
@@ -1395,10 +1202,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#four-interfaces" class="md-nav__link">
+  <a href="#gaps-vs-the-autonomous-agent-vision" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Four Interfaces
+        Gaps vs. the autonomous-agent vision
       
     </span>
   </a>
@@ -1406,21 +1213,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#agent-mode" class="md-nav__link">
+  <a href="#repo-metadata" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Agent Mode
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#bootstrap-context" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Bootstrap Context
+        Repo metadata
       
     </span>
   </a>
@@ -1433,10 +1229,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#documentation" class="md-nav__link">
+  <a href="#the-real-blocker-ppxais-api-surface" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Documentation
+        The real blocker — ppxai's API surface
       
     </span>
   </a>
@@ -1444,10 +1240,82 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#resources" class="md-nav__link">
+  <a href="#proposed-ordering-not-committed" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Resources
+        Proposed ordering (not committed)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Proposed ordering (not committed)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ppxai-side-work-in-this-repo-on-featurev1180-or-later" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ppxai-side work (in this repo, on feature/v1.18.0 or later)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ppxai-sre-side-work-separate-repo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ppxai-sre-side work (separate repo)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rationale-for-this-ordering" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rationale for this ordering
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#design-decisions-still-open" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Design decisions still open
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#things-explicitly-not-decided-yet" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Things explicitly NOT decided yet
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#next-step-if-pursued" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Next step if pursued
       
     </span>
   </a>
@@ -1474,205 +1342,316 @@
   
 
 
-<h1 id="ppxai-documentation">ppxai Documentation<a class="headerlink" href="#ppxai-documentation" title="Permanent link">&para;</a></h1>
-<p><strong>Multi-LLM Interface for Developers</strong> - Use your favorite AI provider in terminal or VSCode with zero vendor lock-in.</p>
-<p><a href="https://github.com/rcconsult/ppxai/releases"><img alt="Version" src="https://img.shields.io/badge/version-1.18.0-blue" /></a>
-<a href="https://github.com/rcconsult/ppxai/blob/master/LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-brightgreen" /></a></p>
-<h2 id="why-ppxai">Why ppxai?<a class="headerlink" href="#why-ppxai" title="Permanent link">&para;</a></h2>
+<h1 id="agents-framework-design-discussion">Agents Framework — Design Discussion<a class="headerlink" href="#agents-framework-design-discussion" title="Permanent link">&para;</a></h1>
+<p><strong>Status:</strong> Not a decision yet. Captured for later review.
+<strong>Date:</strong> 2026-04-24
+<strong>Branch at time of discussion:</strong> <code>feature/v1.18.0</code>
+<strong>Related repos:</strong> <a href="https://github.com/rcconsult/ppxai">ppxai</a>, <a href="https://github.com/rcconsult/ppxai-sre">ppxai-sre</a></p>
+<hr />
+<h2 id="origin-of-the-idea">Origin of the idea<a class="headerlink" href="#origin-of-the-idea" title="Permanent link">&para;</a></h2>
+<p>The conversation started from two separate observations:</p>
+<ol>
+<li>
+<p><strong>"I want sub-agents in ppxai or ppxai-sre — tool-like, spawned from a
+   prompt, driven by an <code>AGENT.md</code>/<code>SOUL.md</code> file, solve a scoped task
+   with input from the caller."</strong></p>
+</li>
+<li>
+<p><strong>"Also, <code>ppxai-sre</code> should provide a framework for autonomous agents
+   that run as daemons / k8s jobs / cron jobs — e.g. a Prometheus metric
+   watcher that detects anomalies, fires Alertmanager alerts, and
+   publishes an audit log."</strong></p>
+</li>
+</ol>
+<p>These are two distinct systems with shared DNA (agent definition format,
+tool registry, result publishing) but fundamentally different runtimes.
+Conflating them produces a chat-loop shape forced onto a cron job.</p>
+<hr />
+<h2 id="two-systems-not-one">Two systems, not one<a class="headerlink" href="#two-systems-not-one" title="Permanent link">&para;</a></h2>
+<h3 id="system-1-sub-agents-synchronous-interactive">System 1 — Sub-agents (synchronous, interactive)<a class="headerlink" href="#system-1-sub-agents-synchronous-interactive" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Spawned by a parent agent or a user prompt</li>
+<li>One task → returns a result → dies</li>
+<li>Runs <em>inside</em> ppxai/ppxai-sre as a built-in tool</li>
+<li>Operator is in the loop</li>
+</ul>
+<h3 id="system-2-autonomous-agents-asynchronous-unattended">System 2 — Autonomous agents (asynchronous, unattended)<a class="headerlink" href="#system-2-autonomous-agents-asynchronous-unattended" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Spawned by a scheduler (daemon / cron / k8s CronJob)</li>
+<li>Lifecycle per tick: wake → observe → decide → act → publish → sleep</li>
+<li>Runs <em>outside</em> ppxai as its own process/pod</li>
+<li>No operator in the loop — side effects are the product</li>
+</ul>
+<p><strong>Rule:</strong> share the <strong>definition format</strong> (<code>AGENT.md</code>) and the <strong>tool
+registry</strong>, keep the <strong>runtime</strong> separate. Don't unify prematurely.</p>
+<hr />
+<h2 id="worked-example-prometheus-anomaly-watcher">Worked example: Prometheus anomaly watcher<a class="headerlink" href="#worked-example-prometheus-anomaly-watcher" title="Permanent link">&para;</a></h2>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>prometheus-anomaly-watcher/
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>├── AGENT.md                 # role, scope, schedule, tools, success criteria
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>├── runtime: k8s CronJob every 5min
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>└── lifecycle per tick:
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    1. Pull:    query prometheus (PromQL queries from AGENT.md)
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    2. Decide:  LLM call — &quot;anomalous vs the last 7d baseline?&quot;
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    3. Act:     if anomaly → POST to Alertmanager, write audit log
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    4. Publish: append to audit stream (Loki / Kafka / postgres)
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    5. Exit:    0 on success, non-zero on infra error → k8s retries
+</span></code></pre></div>
+<p>The LLM is <em>only</em> the decision step. Everything else is plumbing.</p>
+<hr />
+<h2 id="survey-of-existing-ppxai-sre-as-of-2026-04-24">Survey of existing <code>ppxai-sre</code> (as of 2026-04-24)<a class="headerlink" href="#survey-of-existing-ppxai-sre-as-of-2026-04-24" title="Permanent link">&para;</a></h2>
+<p>Confirmed via gh API — <code>rcconsult/ppxai-sre</code>, default branch <code>master</code>.</p>
+<h3 id="whats-already-there">What's already there<a class="headerlink" href="#whats-already-there" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
 <tr>
-<th>Problem</th>
-<th>ppxai Solution</th>
+<th>Piece</th>
+<th>Status</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Locked to one AI vendor</td>
-<td>Switch between Perplexity, Gemini, OpenAI, OpenRouter, Ollama anytime</td>
+<td><code>AGENT.md</code> definition format</td>
+<td>✅ Used in <code>agents/*/AGENT.md</code> — Identity, Role, Capabilities, Boundaries, Escalation Rules</td>
 </tr>
 <tr>
-<td>Can't use local models</td>
-<td>Full Ollama/vLLM support with same interface</td>
+<td>Agent loader</td>
+<td>✅ <code>libs/core/src/ppxai_sre_core/bootstrap_loader.py</code> (<code>load_agent_bootstrap</code>, <code>find_agent_md</code>)</td>
 </tr>
 <tr>
-<td>AI modifies files without asking</td>
-<td>Consent-based safety for all file operations</td>
+<td>Entry-point discovery</td>
+<td>✅ <code>[project.entry-points."ppxai_sre.agents"]</code> + <code>discovery.py</code></td>
 </tr>
 <tr>
-<td>Lost context when switching models</td>
-<td>Preserve conversation across provider changes</td>
+<td>Tool registry bridge</td>
+<td>✅ <code>tools_adapter.py</code> with <code>register_mcp_server</code> (MCP-based)</td>
 </tr>
 <tr>
-<td>Expensive cloud-only pricing</td>
-<td>Mix cloud and local models per task</td>
+<td>Scheduler</td>
+<td>✅ <code>heartbeat.py</code> on APScheduler</td>
+</tr>
+<tr>
+<td>Manager/Executor split</td>
+<td>✅ <code>manager.py</code> + <code>executor.py</code></td>
+</tr>
+<tr>
+<td>Policy / consent model</td>
+<td>✅ <code>PolicyEngine</code> + <code>ActionTier</code> (AUTONOMOUS / NOTIFY_AND_ACT / REQUIRE_APPROVAL)</td>
+</tr>
+<tr>
+<td>Audit log</td>
+<td>✅ <code>AuditLogger</code> → JSONL</td>
+</tr>
+<tr>
+<td>Event bus integration</td>
+<td>✅ <code>SREEventType</code>, <code>sre_event</code> hook into ppxai's bus</td>
+</tr>
+<tr>
+<td>Packaging per agent</td>
+<td>✅ Dockerfile + PyInstaller spec per agent</td>
+</tr>
+<tr>
+<td>SRE tool pack</td>
+<td>⚠️ K8s + Prometheus implemented; Grafana / Slack / PagerDuty / Vault / Pure stubs</td>
 </tr>
 </tbody>
 </table>
-<h2 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h2>
-<h3 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h3>
-<div class="tabbed-set tabbed-alternate" data-tabs="1:3"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><input id="__tabbed_1_3" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Linux/macOS</label><label for="__tabbed_1_2">Windows</label><label for="__tabbed_1_3">pip</label></div>
-<div class="tabbed-content">
-<div class="tabbed-block">
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>curl<span class="w"> </span>-sSL<span class="w"> </span>https://raw.githubusercontent.com/rcconsult/ppxai/master/scripts/install.sh<span class="w"> </span><span class="p">|</span><span class="w"> </span>bash
-</span></code></pre></div>
-</div>
-<div class="tabbed-block">
-<div class="language-powershell highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nb">irm </span><span class="n">https</span><span class="p">://</span><span class="n">raw</span><span class="p">.</span><span class="n">githubusercontent</span><span class="p">.</span><span class="n">com</span><span class="p">/</span><span class="n">rcconsult</span><span class="p">/</span><span class="n">ppxai</span><span class="p">/</span><span class="n">master</span><span class="p">/</span><span class="n">scripts</span><span class="p">/</span><span class="n">install</span><span class="p">.</span><span class="n">ps1</span> <span class="p">|</span> <span class="nb">iex</span>
-</span></code></pre></div>
-</div>
-<div class="tabbed-block">
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>pip<span class="w"> </span>install<span class="w"> </span>ppxai
-</span></code></pre></div>
-</div>
-</div>
-</div>
-<h3 id="configure-api-keys">Configure API Keys<a class="headerlink" href="#configure-api-keys" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Create ~/.ppxai/.env with your keys</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="nv">PERPLEXITY_API_KEY</span><span class="o">=</span>pplx-xxx
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="nv">GEMINI_API_KEY</span><span class="o">=</span>xxx
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="nv">OPENAI_API_KEY</span><span class="o">=</span>sk-xxx
-</span></code></pre></div>
-<h3 id="run">Run<a class="headerlink" href="#run" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>ppxai<span class="w">              </span><span class="c1"># Rich TUI (original)</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>ppxaide<span class="w">            </span><span class="c1"># Textual TUI (v1.15.0+)</span>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>ppxai-server<span class="w">       </span><span class="c1"># HTTP server for VSCode</span>
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>ppxai-desktop<span class="w">      </span><span class="c1"># Desktop web app</span>
-</span></code></pre></div>
-<h2 id="features">Features<a class="headerlink" href="#features" title="Permanent link">&para;</a></h2>
-<h3 id="multi-provider-support">Multi-Provider Support<a class="headerlink" href="#multi-provider-support" title="Permanent link">&para;</a></h3>
+<h3 id="gaps-vs-the-autonomous-agent-vision">Gaps vs. the autonomous-agent vision<a class="headerlink" href="#gaps-vs-the-autonomous-agent-vision" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>No k8s manifests / Helm chart</strong> — Dockerfiles exist, nothing to deploy them</li>
+<li><strong>No Alertmanager integration</strong> — the motivating metric-watcher example isn't wired</li>
+<li><strong>No <code>/metrics</code> endpoint on agents</strong> — audit logs yes, Prometheus scrape target no</li>
+<li><strong>No webhook/server runtime mode</strong> — scheduler exists, no "listen for alertmanager → respond" shape</li>
+<li><strong>Stalled since 2026-04-05</strong> (19 days) — ppxai has moved to v1.18.0 while <code>ppxai-sre</code> still pins <code>ppxai&gt;=1.17.3</code></li>
+</ol>
+<h3 id="repo-metadata">Repo metadata<a class="headerlink" href="#repo-metadata" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>Perplexity AI</strong> - Real-time web search with citations</li>
-<li><strong>Google Gemini</strong> - 1M token context, search grounding</li>
-<li><strong>OpenAI</strong> - GPT-4o, o1 reasoning models</li>
-<li><strong>OpenRouter</strong> - 100+ models including Claude</li>
-<li><strong>Local Models</strong> - Ollama, vLLM, LMStudio</li>
+<li>6 commits total, last push 2026-04-05</li>
+<li>0 open issues / PRs</li>
+<li>uv workspace monorepo; Python &gt;=3.11</li>
+<li>Core lib MIT; root repo no license declared</li>
+<li>Tests exist in <code>libs/core</code>, <code>agents/incident-responder</code>, <code>agents/cert-monitor</code>, <code>mcp-servers/kubernetes</code>, <code>mcp-servers/prometheus</code> — coverage unknown</li>
 </ul>
-<h3 id="four-interfaces">Four Interfaces<a class="headerlink" href="#four-interfaces" title="Permanent link">&para;</a></h3>
+<hr />
+<h2 id="the-real-blocker-ppxais-api-surface">The real blocker — ppxai's API surface<a class="headerlink" href="#the-real-blocker-ppxais-api-surface" title="Permanent link">&para;</a></h2>
+<p>The gap isn't in <code>ppxai-sre</code>. It's that <strong>ppxai has no documented public
+API</strong>. <code>ppxai-sre</code> depends on <code>ppxai&gt;=1.17.3</code> but every v1.17.x→v1.18.0
+refactor risks breaking it. Three structural issues:</p>
+<ol>
+<li><strong>No public API contract</strong> — <code>ppxai-sre</code> reaches into <code>ppxai.engine</code>
+   internals. Every engine refactor is a potential break.</li>
+<li><strong>No tool registration entry point</strong> — <code>tools_adapter</code> bridges MCP
+   servers via import tricks, not a stable extension point.</li>
+<li><strong>No <code>spawn_agent</code> primitive</strong> — the interactive sub-agent pattern
+   (System 1) doesn't exist in ppxai yet, so there's no way to validate
+   the <code>AGENT.md</code> format in the human-in-the-loop case before running
+   it unattended.</li>
+</ol>
+<hr />
+<h2 id="proposed-ordering-not-committed">Proposed ordering (not committed)<a class="headerlink" href="#proposed-ordering-not-committed" title="Permanent link">&para;</a></h2>
+<h3 id="ppxai-side-work-in-this-repo-on-featurev1180-or-later">ppxai-side work (in this repo, on feature/v1.18.0 or later)<a class="headerlink" href="#ppxai-side-work-in-this-repo-on-featurev1180-or-later" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
 <tr>
-<th>Feature</th>
-<th>ppxai (Rich TUI)</th>
-<th>ppxaide (Textual TUI)</th>
-<th>VSCode</th>
-<th>Web App</th>
+<th>#</th>
+<th>Item</th>
+<th style="text-align: center;">Effort</th>
+<th>Unblocks</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Streaming responses</td>
-<td>✅</td>
-<td>✅</td>
-<td>✅</td>
-<td>✅</td>
+<td>A</td>
+<td>Bump ppxai-sre's ppxai pin to 1.18.0; fix breakage</td>
+<td style="text-align: center;">~1d</td>
+<td>Repo buildable again</td>
 </tr>
 <tr>
-<td>Syntax highlighting</td>
-<td>✅</td>
-<td>✅</td>
-<td>✅</td>
-<td>✅</td>
+<td>B</td>
+<td>Define and document ppxai's public API (<code>EngineClient</code>, tool registration, event bus). Mark everything else internal</td>
+<td style="text-align: center;">~3d</td>
+<td>ppxai-sre stops depending on private internals</td>
 </tr>
 <tr>
-<td>File editing tools</td>
-<td>✅</td>
-<td>✅</td>
-<td>✅</td>
-<td>✅</td>
+<td>C</td>
+<td>Add <code>ppxai.tools</code> entry-point group to the tool loader so external packages register without import tricks</td>
+<td style="text-align: center;">~2d</td>
+<td>Clean ppxai-sre integration; enables third-party tool packs</td>
 </tr>
 <tr>
-<td>Agent mode</td>
-<td>✅</td>
-<td>✅</td>
-<td>✅</td>
-<td>✅</td>
-</tr>
-<tr>
-<td>Checkpoint/undo</td>
-<td>✅</td>
-<td>✅</td>
-<td>✅</td>
-<td>✅</td>
-</tr>
-<tr>
-<td>Markdown in chat</td>
-<td>Limited</td>
-<td>✅ Full rendering</td>
-<td>✅</td>
-<td>✅</td>
-</tr>
-<tr>
-<td>Themes</td>
-<td>6 themes</td>
-<td>17+ themes</td>
-<td>N/A</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>Tab completion</td>
-<td>✅</td>
-<td>✅</td>
-<td>N/A</td>
-<td>N/A</td>
+<td>D</td>
+<td>Build <code>spawn_agent</code> built-in tool — loads <code>AGENT.md</code>, instantiates scoped <code>EngineClient</code>, returns structured result</td>
+<td style="text-align: center;">~5d</td>
+<td>Interactive sub-agents; foundation for ppxai-sre Manager agent</td>
 </tr>
 </tbody>
 </table>
-<h3 id="agent-mode">Agent Mode<a class="headerlink" href="#agent-mode" title="Permanent link">&para;</a></h3>
-<p>Enable autonomous multi-step task execution:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>/agent on
-</span></code></pre></div>
-<p>The AI can chain tool calls, edit files, run commands - all with your consent.</p>
-<h3 id="bootstrap-context">Bootstrap Context<a class="headerlink" href="#bootstrap-context" title="Permanent link">&para;</a></h3>
-<p>Load project-specific instructions from <code>AGENTS.md</code>:</p>
-<div class="language-markdown highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>---
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>provider_hints:
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>  local:
-</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">    </span><span class="k">-</span><span class="w"> </span>&quot;Complete tasks fully without stopping.&quot;
-</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>model_hints:
-</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>  &quot;deepseek-r1*&quot;:
-</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="gu">    - &quot;Show reasoning before actions.&quot;</span>
-</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="gu">---</span>
-</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>
-</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="gh"># Project Instructions</span>
-</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>Python 3.11+, pytest for testing.
-</span></code></pre></div>
-<h2 id="documentation">Documentation<a class="headerlink" href="#documentation" title="Permanent link">&para;</a></h2>
-<div class="grid cards">
+<h3 id="ppxai-sre-side-work-separate-repo">ppxai-sre-side work (separate repo)<a class="headerlink" href="#ppxai-sre-side-work-separate-repo" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Item</th>
+<th style="text-align: center;">Effort</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>E</td>
+<td>Alertmanager tool + Prometheus anomaly-watcher example agent</td>
+<td style="text-align: center;">~1 week</td>
+</tr>
+<tr>
+<td>F</td>
+<td>Helm chart + k8s CronJob manifests</td>
+<td style="text-align: center;">~3d</td>
+</tr>
+<tr>
+<td>G</td>
+<td><code>/metrics</code> endpoint per agent (Prom scrape target)</td>
+<td style="text-align: center;">~2d</td>
+</tr>
+</tbody>
+</table>
+<h3 id="rationale-for-this-ordering">Rationale for this ordering<a class="headerlink" href="#rationale-for-this-ordering" title="Permanent link">&para;</a></h3>
 <ul>
-<li>
-<p><span class="twemoji lg middle"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M5 20h14v-2H5m14-9h-4V3H9v6H5l7 7z"/></svg></span> <strong>Installation</strong></p>
-<hr />
-<p>Install ppxai on Linux, macOS, or Windows</p>
-<p><a href="INSTALLATION/"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13.22 19.03a.75.75 0 0 1 0-1.06L18.19 13H3.75a.75.75 0 0 1 0-1.5h14.44l-4.97-4.97a.749.749 0 0 1 .326-1.275.75.75 0 0 1 .734.215l6.25 6.25a.75.75 0 0 1 0 1.06l-6.25 6.25a.75.75 0 0 1-1.06 0"/></svg></span> Installation Guide</a></p>
-</li>
-<li>
-<p><span class="twemoji lg middle"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2M7.5 13A2.5 2.5 0 0 0 5 15.5 2.5 2.5 0 0 0 7.5 18a2.5 2.5 0 0 0 2.5-2.5A2.5 2.5 0 0 0 7.5 13m9 0a2.5 2.5 0 0 0-2.5 2.5 2.5 2.5 0 0 0 2.5 2.5 2.5 2.5 0 0 0 2.5-2.5 2.5 2.5 0 0 0-2.5-2.5"/></svg></span> <strong>Agent Mode</strong></p>
-<hr />
-<p>Autonomous task execution with tools</p>
-<p><a href="AGENT_MODE_GUIDE/"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13.22 19.03a.75.75 0 0 1 0-1.06L18.19 13H3.75a.75.75 0 0 1 0-1.5h14.44l-4.97-4.97a.749.749 0 0 1 .326-1.275.75.75 0 0 1 .734.215l6.25 6.25a.75.75 0 0 1 0 1.06l-6.25 6.25a.75.75 0 0 1-1.06 0"/></svg></span> Agent Mode Guide</a></p>
-</li>
-<li>
-<p><span class="twemoji lg middle"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 9h5.5L13 3.5zM6 2h8l6 6v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4c0-1.11.89-2 2-2m9 16v-2H6v2zm3-4v-2H6v2z"/></svg></span> <strong>Bootstrap Context</strong></p>
-<hr />
-<p>Project-specific AI instructions</p>
-<p><a href="BOOTSTRAP_CONTEXT_GUIDE/"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13.22 19.03a.75.75 0 0 1 0-1.06L18.19 13H3.75a.75.75 0 0 1 0-1.5h14.44l-4.97-4.97a.749.749 0 0 1 .326-1.275.75.75 0 0 1 .734.215l6.25 6.25a.75.75 0 0 1 0 1.06l-6.25 6.25a.75.75 0 0 1-1.06 0"/></svg></span> Bootstrap Context Guide</a></p>
-</li>
-<li>
-<p><span class="twemoji lg middle"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 15.5A3.5 3.5 0 0 1 8.5 12 3.5 3.5 0 0 1 12 8.5a3.5 3.5 0 0 1 3.5 3.5 3.5 3.5 0 0 1-3.5 3.5m7.43-2.53c.04-.32.07-.64.07-.97s-.03-.66-.07-1l2.11-1.63c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.31-.61-.22l-2.49 1c-.52-.39-1.06-.73-1.69-.98l-.37-2.65A.506.506 0 0 0 14 2h-4c-.25 0-.46.18-.5.42l-.37 2.65c-.63.25-1.17.59-1.69.98l-2.49-1c-.22-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64L4.57 11c-.04.34-.07.67-.07 1s.03.65.07.97l-2.11 1.66c-.19.15-.25.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1.01c.52.4 1.06.74 1.69.99l.37 2.65c.04.24.25.42.5.42h4c.25 0 .46-.18.5-.42l.37-2.65c.63-.26 1.17-.59 1.69-.99l2.49 1.01c.22.08.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64z"/></svg></span> <strong>Provider Setup</strong></p>
-<hr />
-<p>Configure AI providers</p>
-<p><a href="PROVIDER_SETUP/"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13.22 19.03a.75.75 0 0 1 0-1.06L18.19 13H3.75a.75.75 0 0 1 0-1.5h14.44l-4.97-4.97a.749.749 0 0 1 .326-1.275.75.75 0 0 1 .734.215l6.25 6.25a.75.75 0 0 1 0 1.06l-6.25 6.25a.75.75 0 0 1-1.06 0"/></svg></span> Provider Setup</a></p>
-</li>
+<li><strong>A</strong> gets ppxai-sre unstuck immediately.</li>
+<li><strong>B</strong> is load-bearing: without a documented public API, every ppxai
+  release is a ppxai-sre breakage risk.</li>
+<li><strong>C</strong> turns the ad-hoc tool bridge into a real extension point.</li>
+<li><strong>D</strong> validates the <code>AGENT.md</code> format and sub-agent execution model in
+  the interactive case, where bugs are cheap. No autonomous agents fire
+  real alerts before the format has been proven in chat.</li>
+<li><strong>E/F/G</strong> become a thin layer on top, not a parallel framework.</li>
 </ul>
-</div>
-<h2 id="resources">Resources<a class="headerlink" href="#resources" title="Permanent link">&para;</a></h2>
+<p>A + B + C together are what I earlier called "extract
+<code>ppxai-agent-core</code>" — but you don't actually need a separate package.
+You just need a stable API surface within <code>ppxai</code> itself.</p>
+<hr />
+<h2 id="design-decisions-still-open">Design decisions still open<a class="headerlink" href="#design-decisions-still-open" title="Permanent link">&para;</a></h2>
+<ol>
+<li>
+<p><strong><code>AGENT.md</code> vs <code>SOUL.md</code></strong> — ppxai-sre uses <code>AGENT.md</code>. Should
+   ppxai's <code>spawn_agent</code> tool accept either, or only one? (Leaning:
+   only <code>AGENT.md</code>, match ppxai-sre.)</p>
+</li>
+<li>
+<p><strong>Frontmatter schema</strong> — ppxai-sre's <code>AGENT.md</code> is free-form prose
+   (Identity, Role, Capabilities, Boundaries, Escalation). Do we
+   formalize YAML frontmatter for machine-readable fields (name,
+   tools, model, schedule)? (Leaning: yes — prose for LLM context,
+   frontmatter for loader/runtime.)</p>
+</li>
+<li>
+<p><strong>Sub-agent discovery locations</strong> — <code>./AGENTS/*.md</code>,
+   <code>~/.ppxai/agents/*.md</code>, pyproject entry points. All three or just
+   one? (Leaning: all three, layered; package entry points are how
+   ppxai-sre exposes its agents to ppxai chat.)</p>
+</li>
+<li>
+<p><strong>Tool allowlist per sub-agent</strong> — explicit <code>tools:</code> list in
+   frontmatter, unknown tools rejected at load. Inherit from parent
+   or always explicit? (Leaning: always explicit, for auditability.)</p>
+</li>
+<li>
+<p><strong>Model/provider per sub-agent</strong> — per-agent <code>model:</code> in
+   frontmatter, or resolve via the in-progress routing work
+   (<code>RoutingRole</code>)? (Leaning: routing once it lands; per-agent model
+   pin as escape hatch.)</p>
+</li>
+<li>
+<p><strong>Consent flow for nested edits</strong> — sub-agent file edits: inherit
+   parent consent, or prompt fresh? (Leaning: inherit, with
+   observable trail in UI.)</p>
+</li>
+<li>
+<p><strong>Result contract</strong> — <code>SubAgentResult(summary, artifacts, success,
+   error)</code> or looser? (Leaning: strict; parent agents need to reason
+   about success/failure.)</p>
+</li>
+<li>
+<p><strong>Autonomous-agent safety primitives</strong> — dry-run mode, rate
+   limits, circuit breakers, RBAC scope. All in ppxai-sre, or some
+   primitives (circuit breaker) in ppxai itself since interactive
+   agents benefit too? (Leaning: circuit breaker in ppxai-sre's
+   <code>PolicyEngine</code> — already partially there.)</p>
+</li>
+<li>
+<p><strong>Observability contract</strong> — what every agent must emit.
+   Structured audit log ✅ (already in ppxai-sre). <code>/metrics</code>
+   endpoint? OpenTelemetry traces? (Leaning: audit log + <code>/metrics</code>
+   mandatory; OTel optional.)</p>
+</li>
+<li>
+<p><strong>Should ppxai grow an autonomous-agent runtime, or stay
+    interactive-only?</strong> — Currently ppxai has no daemon/CronJob
+    concept. Autonomous agents live entirely in ppxai-sre. Keep that
+    split? (Leaning: yes — ppxai is an interactive app, ppxai-sre is
+    the unattended-agent platform.)</p>
+</li>
+</ol>
+<hr />
+<h2 id="things-explicitly-not-decided-yet">Things explicitly NOT decided yet<a class="headerlink" href="#things-explicitly-not-decided-yet" title="Permanent link">&para;</a></h2>
 <ul>
-<li><a href="https://github.com/rcconsult/ppxai">GitHub Repository</a></li>
-<li><a href="https://github.com/rcconsult/ppxai/releases">Releases</a></li>
-<li><a href="https://github.com/rcconsult/ppxai/issues">Issue Tracker</a></li>
-<li><a href="https://github.com/rcconsult/ppxai/blob/master/CHANGELOG.md">Changelog</a></li>
+<li>Timeline — nothing is scheduled against v1.18.0 or any other release</li>
+<li>Whether to do this at all — user said "I need to think about it"</li>
+<li>Whether to extract <code>ppxai-agent-core</code> as a separate Python package or
+  keep everything in <code>ppxai</code> with a documented public API</li>
+<li>MCP vs ppxai-native tool registration as the canonical extension
+  mechanism (ppxai-sre uses MCP; ppxai uses native tools)</li>
 </ul>
+<hr />
+<h2 id="next-step-if-pursued">Next step if pursued<a class="headerlink" href="#next-step-if-pursued" title="Permanent link">&para;</a></h2>
+<p>Pick one of:</p>
+<ul>
+<li><strong>Minimum unblock:</strong> just do item <strong>A</strong> (bump pin, fix breakage). ~1
+  day, no new design.</li>
+<li><strong>Stabilize:</strong> do <strong>A + B</strong>. Establishes public API contract before
+  1.18.0 ships. ~4 days.</li>
+<li><strong>Full path:</strong> do <strong>A + B + C + D</strong>, then hand off to ppxai-sre for
+  E. ~2 weeks on ppxai side, then ppxai-sre work begins. Ships
+  end-to-end in a v1.19 or v1.20 timeframe.</li>
+</ul>
+<p>No commitment until this gets reviewed.</p>
 
 
 
@@ -1744,10 +1723,10 @@
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": ".", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
       
     
   </body>

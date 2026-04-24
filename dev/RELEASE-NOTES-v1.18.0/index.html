@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://rcconsult.github.io/ppxai/dev/bench-Qwen3-4B-2026-03-04-agents-sync/">
+        <link rel="canonical" href="https://rcconsult.github.io/ppxai/dev/RELEASE-NOTES-v1.18.0/">
       
       
       
@@ -23,7 +23,7 @@
     
     
       
-        <title>Benchmark: Qwen3-4B after AGENTS.md sync — 2026-03-04 - ppxai Documentation</title>
+        <title>Release Notes — v1.18.0 - ppxai Documentation</title>
       
     
     
@@ -74,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#benchmark-qwen3-4b-after-agentsmd-sync-2026-03-04" class="md-skip">
+        <a href="#release-notes-v1180" class="md-skip">
           Skip to content
         </a>
       
@@ -114,7 +114,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Benchmark: Qwen3-4B after AGENTS.md sync — 2026-03-04
+              Release Notes — v1.18.0
             
           </span>
         </div>
@@ -1118,10 +1118,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#context" class="md-nav__link">
+  <a href="#summary" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Context
+        Summary
       
     </span>
   </a>
@@ -1129,44 +1129,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#results" class="md-nav__link">
+  <a href="#whats-new" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Results
+        What's new
       
     </span>
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#category-breakdown-with-agentsmd" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Category Breakdown — With AGENTS.md
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#key-findings" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Key Findings
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Key Findings">
+    <nav class="md-nav" aria-label="What&#39;s new">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#agentsmd-helps-hallucination_resistance-222" class="md-nav__link">
+  <a href="#engine" class="md-nav__link">
     <span class="md-ellipsis">
       
-        AGENTS.md helps: hallucination_resistance +22.2%
+        Engine
       
     </span>
   </a>
@@ -1174,10 +1152,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#agentsmd-hurts-tool_calling-214" class="md-nav__link">
+  <a href="#appstate" class="md-nav__link">
     <span class="md-ellipsis">
       
-        AGENTS.md hurts: tool_calling -21.4%
+        AppState
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#client-renderers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Client renderers
       
     </span>
   </a>
@@ -1190,13 +1179,85 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#action-items" class="md-nav__link">
+  <a href="#configuration" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Action Items
+        Configuration
       
     </span>
   </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#test-coverage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Test coverage
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Architecture
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#upgrade-notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Upgrade notes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#commits" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Commits
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Commits">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#p0-heartbeat-primitives" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        P0 heartbeat primitives
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v1180-stabilization-pass" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v1.18.0 stabilization pass
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1220,125 +1281,197 @@
   
 
 
-<h1 id="benchmark-qwen3-4b-after-agentsmd-sync-2026-03-04">Benchmark: Qwen3-4B after AGENTS.md sync — 2026-03-04<a class="headerlink" href="#benchmark-qwen3-4b-after-agentsmd-sync-2026-03-04" title="Permanent link">&para;</a></h1>
-<h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
-<p>Re-ran benchmark after syncing AGENTS.md across Linux <code>~/.ppxai/</code>, Windows host, and repo:
-- <code>local</code> provider hints: replaced 3 generic hints with 11 Qwen3-4B-specific operational hints
-- Added <code>Qwen3-4B*</code> model hints (new — not previously in repo)</p>
-<h2 id="results">Results<a class="headerlink" href="#results" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Run</th>
-<th>Score</th>
-<th>Tests passed</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>With AGENTS.md</td>
-<td><strong>76.1%</strong></td>
-<td>27/36</td>
-</tr>
-<tr>
-<td>Without AGENTS.md</td>
-<td><strong>75.1%</strong></td>
-<td>27/36</td>
-</tr>
-<tr>
-<td>Delta</td>
-<td><strong>+1.0%</strong></td>
-<td>—</td>
-</tr>
-</tbody>
-</table>
-<p>Previous best single-run: <strong>81.5%</strong> (run #8, post prompt-based tuning)</p>
-<h2 id="category-breakdown-with-agentsmd">Category Breakdown — With AGENTS.md<a class="headerlink" href="#category-breakdown-with-agentsmd" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Category</th>
-<th>Score</th>
-<th>vs Without</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>error_recovery</td>
-<td>100.0%</td>
-<td>=</td>
-</tr>
-<tr>
-<td>format_compliance</td>
-<td>100.0%</td>
-<td>=</td>
-</tr>
-<tr>
-<td>instruction_following</td>
-<td>100.0%</td>
-<td>=</td>
-</tr>
-<tr>
-<td>reasoning</td>
-<td>100.0%</td>
-<td>=</td>
-</tr>
-<tr>
-<td>code_editing</td>
-<td>81.8%</td>
-<td>=</td>
-</tr>
-<tr>
-<td>tool_calling</td>
-<td>78.6%</td>
-<td><strong>-21.4%</strong></td>
-</tr>
-<tr>
-<td>agentic_tool_loops</td>
-<td>67.6%</td>
-<td>=</td>
-</tr>
-<tr>
-<td>efficiency</td>
-<td>58.0%</td>
-<td>=</td>
-</tr>
-<tr>
-<td>hallucination_resistance</td>
-<td>55.6%</td>
-<td><strong>+22.2%</strong></td>
-</tr>
-</tbody>
-</table>
-<h2 id="key-findings">Key Findings<a class="headerlink" href="#key-findings" title="Permanent link">&para;</a></h2>
-<h3 id="agentsmd-helps-hallucination_resistance-222">AGENTS.md helps: hallucination_resistance +22.2%<a class="headerlink" href="#agentsmd-helps-hallucination_resistance-222" title="Permanent link">&para;</a></h3>
-<ul>
-<li><code>contradiction_detection</code>: FAIL without → PASS with</li>
-<li>Likely driven by: "When a tool fails, explicitly acknowledge it" and "Do NOT re-read files you already read"</li>
-</ul>
-<h3 id="agentsmd-hurts-tool_calling-214">AGENTS.md hurts: tool_calling -21.4%<a class="headerlink" href="#agentsmd-hurts-tool_calling-214" title="Permanent link">&para;</a></h3>
-<ul>
-<li><code>multi_tool_sequence</code>: <strong>PASS without → FAIL with</strong></li>
-<li>Likely cause: <code>"Make ONE tool call per step"</code> in <code>Qwen3-4B*</code> model hints conflicts with tests
-  requiring consecutive multi-tool chains in a single turn</li>
-<li>Also: <code>patch_multiline</code> PASS without → FAIL with (possible hint interference)</li>
-<li>Offsetting gain: <code>patch_apply_verify</code> PARTIAL(50%) without → PASS with (apply+verify hint works)</li>
-</ul>
-<h2 id="action-items">Action Items<a class="headerlink" href="#action-items" title="Permanent link">&para;</a></h2>
+<h1 id="release-notes-v1180">Release Notes — v1.18.0<a class="headerlink" href="#release-notes-v1180" title="Permanent link">&para;</a></h1>
+<blockquote>
+<p><strong>Scope:</strong> P0 agent heartbeat primitives + v1.18.0 stabilization
+pass (<a href="../STABILIZATION-v1.18.0/">docs/STABILIZATION-v1.18.0.md</a>).</p>
+<p><strong>Deferred to v1.18.1:</strong> AppState codegen
+(<a href="../TODO-appstate-codegen/">docs/TODO-appstate-codegen.md</a>) and
+multi-model routing infrastructure
+(<a href="../TODO-routing/">docs/TODO-routing.md</a>). Both are substantial
+enough to deserve dedicated release notes; bundling them with
+heartbeat would produce a release nobody can review in one sitting.</p>
+</blockquote>
+<h2 id="summary">Summary<a class="headerlink" href="#summary" title="Permanent link">&para;</a></h2>
+<p><strong>P0 — Agent heartbeat primitives.</strong> ppxai's agent tool loop now has
+a structured, observable heartbeat that every client can render
+without scraping events. <code>EventType.AGENT_BEAT</code> fires once per tool
+iteration; <code>AGENT_RUN_START</code> / <code>AGENT_RUN_COMPLETE</code> / <code>AGENT_RUN_ERROR</code>
+bracket the run; <code>AGENT_ZOMBIE</code> fires when a new circuit-breaker
+trips after N consecutive failed iterations. The latest beat is
+mirrored to <code>AppState.agent_beat</code> (schema-driven, cross-client) and
+cleared on run completion, so Rich, ppxaide, the web app, and the
+VSCode extension all render from one canonical field.</p>
+<p>Together these primitives turn three recurring failure modes into
+observable events:</p>
 <ol>
-<li>
-<p><strong>Review <code>Qwen3-4B*</code> hint</strong>: <code>"Make ONE tool call per step"</code> is too restrictive — it prevents
-   multi-tool sequences. Consider replacing with:
-   <code>"Do NOT duplicate the same tool call — but chain DIFFERENT tool calls for multi-step tasks."</code></p>
-</li>
-<li>
-<p><strong>Re-run after hint fix</strong> to confirm tool_calling regression resolves.</p>
-</li>
-<li>
-<p><strong>Variance note</strong>: Single-run scores for Qwen3-4B vary significantly (~76–82%) due to model
-   temperature and prompt sensitivity. The running average over 12 runs remains at 81.5%.</p>
-</li>
+<li><strong>Silent multi-minute tool loops</strong> where the user couldn't tell
+   if the agent was still working. Heartbeat events fire on every
+   iteration with elapsed time.</li>
+<li><strong>"apply_patch fails 10× with hallucinated variations"</strong> sessions
+   that burned the full <code>max_iterations</code> budget before giving up.
+   The zombie breaker stops them after 3 consecutive failures.</li>
+<li><strong>Cross-client renderer drift</strong> where each UI client scraped
+   different events to approximate agent progress. Now every client
+   subscribes to one AppState field.</li>
 </ol>
+<p>No breaking changes. No migration needed. Existing consumers that
+ignore the new events continue to work.</p>
+<h2 id="whats-new">What's new<a class="headerlink" href="#whats-new" title="Permanent link">&para;</a></h2>
+<h3 id="engine">Engine<a class="headerlink" href="#engine" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong><code>EventType.AGENT_BEAT</code>, <code>AGENT_RUN_START</code>, <code>AGENT_RUN_COMPLETE</code>,
+  <code>AGENT_RUN_ERROR</code>, <code>AGENT_ZOMBIE</code></strong> — new lifecycle events emitted
+  by <code>ppxai/engine/chat.py::chat_with_tools</code>. Payloads are
+  JSON-serializable dicts; see <code>ppxai/engine/types.py::AgentBeatState</code>
+  for the canonical shape.</li>
+<li><strong><code>AgentBeatState</code> dataclass</strong> — tracks iteration, beat sequence,
+  last tool name, per-beat ok flag, consecutive-failure streak, and
+  wall-clock elapsed. <code>as_event_data()</code> is the single stable payload
+  helper consumed by every observer.</li>
+<li><strong>Zombie circuit-breaker</strong> — new config key
+  <code>tools.agent.zombie_threshold</code> (default <strong>3</strong>, <code>0</code> disables).
+  When the agent loop hits the threshold of consecutive failed
+  iterations it emits <code>AGENT_ZOMBIE</code>, <code>AGENT_RUN_ERROR</code>, and
+  returns cleanly. Prevents runaway retries from burning the full
+  <code>max_iterations</code> budget on hallucinated variations.</li>
+</ul>
+<h3 id="appstate">AppState<a class="headerlink" href="#appstate" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong><code>agent_beat</code> field</strong> added to <code>ppxai/engine/app_state_schema.json</code>
+  (<code>"type": "object"</code>, <code>"default": {}</code>). Mirrored automatically in
+  the JS + TypeScript AppState implementations — they derive fields
+  from the schema at module init.</li>
+<li><strong>SSE state_sync whitelist</strong> (<code>_SSE_SYNC_FIELDS</code> in
+  <code>ppxai/engine/client.py</code>) includes <code>agent_beat</code>, so the server
+  pushes heartbeat updates over the existing <code>state_sync</code> event
+  stream with zero per-route changes.</li>
+<li><strong>Engine-side invalidation</strong> — <code>EngineClient._chat_with_tools</code>
+  writes the latest beat to AppState on every <code>AGENT_BEAT</code> event
+  and clears the field (empty dict) on <code>AGENT_RUN_COMPLETE</code> /
+  <code>AGENT_RUN_ERROR</code> / legacy <code>AGENT_COMPLETE</code>. Clients never scan
+  events themselves.</li>
+</ul>
+<h3 id="client-renderers">Client renderers<a class="headerlink" href="#client-renderers" title="Permanent link">&para;</a></h3>
+<p>All four clients render the heartbeat from the same AppState field.
+Visuals differ per host, but the data source is identical.</p>
+<ul>
+<li><strong>Rich TUI (<code>ppxai</code>)</strong> — dim one-liner
+  <code>⚙ iter N · tool · status · Xs</code> printed after each tool group by
+  <code>TUIEventHandler</code>. Circuit-breaker trips render as a red
+  <code>⚠ Agent stopped — {reason} · last: {tool} · {elapsed}s</code>.
+  <code>AGENT_RUN_START</code> / <code>AGENT_RUN_COMPLETE</code> / <code>AGENT_RUN_ERROR</code>
+  themselves are silent — they exist for observers; user-visible
+  signal is the existing ERROR event plus BEAT / ZOMBIE.</li>
+<li><strong>Textual TUI (<code>ppxaide</code>)</strong> — persistent status-bar badge
+  <code>⚙ iN · tool · Xs</code> with variant colouring: <code>success</code> (ok),
+  <code>error</code> (single failed beat), <code>warning</code> (≥2 consecutive failures —
+  approaching the zombie threshold). Cleared automatically when the
+  engine empties <code>agent_beat</code> on run end.</li>
+<li><strong>Web (<code>ppxai-server</code> + browser)</strong> — header badge (<code>#agentBeatBadge</code>)
+  between the streaming-badge and usage-badge. Same variant logic
+  via <code>.warn</code> / <code>.error</code> CSS classes against the existing VSCode-style
+  badge palette. Auto-hidden while idle.</li>
+<li><strong>VSCode extension</strong> — identical badge in the webview header,
+  styled with <code>vscode-badge-background</code> / <code>vscode-editorWarning</code> /
+  <code>vscode-errorForeground</code> theme tokens. The extension host forwards
+  the payload over the existing <code>stateSync</code> postMessage channel —
+  no new message types.</li>
+</ul>
+<h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
+<p>New config key in <code>~/.ppxai/ppxai-config.json</code>:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>{
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>  &quot;tools&quot;: {
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    &quot;agent&quot;: {
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>      &quot;max_iterations&quot;: 10,
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>      &quot;max_tool_iterations&quot;: 15,
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>      &quot;max_same_tool_calls&quot;: 3,
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>      &quot;zombie_threshold&quot;: 3   // NEW in v1.18.0 — 0 disables the breaker
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    }
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>  }
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>}
+</span></code></pre></div>
+<p>A more aggressive setting is useful on locally-hosted models that
+tend to get stuck in tool-retry loops:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>{ &quot;tools&quot;: { &quot;agent&quot;: { &quot;zombie_threshold&quot;: 2 } } }
+</span></code></pre></div>
+<h2 id="test-coverage">Test coverage<a class="headerlink" href="#test-coverage" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong><code>tests/test_agent_beat_primitives.py</code></strong> — EventType membership,
+  <code>AgentBeatState</code> field contract, elapsed computation, payload
+  shape, mutation invariants.</li>
+<li><strong><code>tests/test_agent_beat_emission.py</code></strong> — emission ordering in
+  <code>chat_with_tools</code>, payload propagation through <code>EngineClient</code>,
+  failure-counter reset semantics, mode-agnostic
+  <code>AGENT_RUN_COMPLETE</code> firing.</li>
+<li><strong><code>tests/test_agent_beat_zombie.py</code></strong> — circuit-breaker below /
+  at / above threshold, custom threshold from config,
+  <code>threshold=0</code> disables, <code>ConfigStore.set_for_testing()</code> round-trip.</li>
+<li><strong><code>tests/test_agent_beat_sse.py</code></strong> — end-to-end integration through
+  the real EngineClient + server <code>sse_event_generator</code> with a
+  MockProvider; pins wire format, event ordering, and
+  <code>state_sync</code> pass-through for <code>agent_beat</code>.</li>
+<li><strong><code>tests/test_agent_beat_textual_renderer.py</code></strong> — ppxaide badge
+  lifecycle (add / update / remove), variant selection across
+  <code>ok</code> / single-fail / streak, <code>AppState</code>-driven end-to-end.</li>
+<li><strong><code>tests/test_common_event_handler.py</code></strong> — Rich TUI renderer
+  verifies dim-line format, failure-streak annotation, red zombie
+  warning, silent-by-design run events.</li>
+<li><strong><code>tests/test_stream_handler_dispatch.py</code></strong> — drift test updated;
+  new EventType members are in the ppxaide <code>NOOP_EVENTS</code> set (TUI
+  renders via AppState instead of the event bus).</li>
+<li><strong><code>tests/test_app_state.py</code></strong> — sentinel field count bumped to 19;
+  SSE sync whitelist sentinel bumped to 11.</li>
+</ul>
+<p><strong>Heartbeat P0 alone: 2,458 passed, 2 skipped, 0 regressions</strong> (+~120 vs v1.17.7).
+After the stabilization pass: <strong>2,591 passed</strong>, 2 skipped, 0 failing
+(+181 vs v1.17.7) — see <a href="../STABILIZATION-v1.18.0/">STABILIZATION-v1.18.0.md</a>
+for the per-phase breakdown.</p>
+<h2 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">&para;</a></h2>
+<p>See the new §"Agent Heartbeat Primitives (v1.18.0)" in
+<a href="../ARCHITECTURE/">docs/ARCHITECTURE.md</a> for:</p>
+<ul>
+<li>The emission contract for <code>chat_with_tools</code> (which events fire
+  where, and what payload invariants to assume).</li>
+<li>The <code>AgentBeatState</code> → <code>AppState.agent_beat</code> lifecycle and why
+  the engine — not clients — owns invalidation.</li>
+<li>The zombie-breaker decision flow.</li>
+<li>The cross-client renderer contract (what changes when a new
+  client is added).</li>
+</ul>
+<h2 id="upgrade-notes">Upgrade notes<a class="headerlink" href="#upgrade-notes" title="Permanent link">&para;</a></h2>
+<p>Drop-in upgrade. No code changes required on consumer side.</p>
+<p>Users who want the breaker more or less aggressive should add
+<code>"zombie_threshold": N</code> under <code>tools.agent</code> in <code>ppxai-config.json</code>.</p>
+<h2 id="commits">Commits<a class="headerlink" href="#commits" title="Permanent link">&para;</a></h2>
+<h3 id="p0-heartbeat-primitives">P0 heartbeat primitives<a class="headerlink" href="#p0-heartbeat-primitives" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>51c8ed54  feat(engine): P0 Stage 1 — agent heartbeat types + dataclass
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>26b73c20  feat(engine): P0 Stages 2+4 — emit agent lifecycle events, wire AppState.agent_beat
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>16496d40  feat(engine): P0 Stages 2+4 follow-up — SSE integration tests + AGENT_RUN_COMPLETE
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>5d0f7fc5  feat(engine): P0 Stage 3 — zombie detection / circuit breaker
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>c7c87850  feat(rich):    P0 Stage 5a — agent heartbeat renderer
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>ec37b677  feat(ppxaide): P0 Stage 5b — agent heartbeat status badge
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>c995ceae  feat(web):     P0 Stage 5c — agent heartbeat header badge
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>0dc148c9  feat(vscode):  P0 Stage 5d — agent heartbeat header badge
+</span></code></pre></div>
+<h3 id="v1180-stabilization-pass">v1.18.0 stabilization pass<a class="headerlink" href="#v1180-stabilization-pass" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>3615dfe3  test(v1.18.0): AGENT_BEAT cross-client rendering parity
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>246c6035  fix(v1.18.0): clear 19 pre-existing test failures on Windows
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>0c4ac1f4  feat(v1.18.0): GET /state snapshot endpoint for SSE reconnect sync
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>012911f1  refactor(v1.18.0): last_message_role AppState field + Rich migration
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>a330c187  refactor(v1.18.0): unify token and usage-badge formatting across clients
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>9c997b32  docs(v1.18.0): stabilization pass summary
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>0ea64cd5  chore(v1.18.0): trivial cleanup — duplicate import, UTF-8 reads
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>6c530b80  refactor(v1.18.0): drop has_vision_model back-compat alias
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>62c661fa  build(v1.18.0): list every server route module in ppxai-server.spec
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>8fc0be9f  refactor(v1.18.0): unify usage badge to suppress $0.0000 when cost is zero
+</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>cdcc0369  docs(v1.18.0): AppState listener contract + error routing conventions
+</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>2d200718  fix(v1.18.0): surface sustained auto-save failures + narrow Textual excepts
+</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>6719c93e  refactor(v1.18.0): promote 6 pure helper functions to public API
+</span><span id="__span-3-14"><a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a>502e4c0d  refactor(v1.18.0): extract I/O helpers to dedicated utility modules
+</span></code></pre></div>
+<p>See <a href="../STABILIZATION-v1.18.0/">STABILIZATION-v1.18.0.md</a> for what
+each commit changed and what the audit verified vs. left alone.</p>
 
 
 
