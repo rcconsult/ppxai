@@ -25,6 +25,7 @@ from textual.css.query import NoMatches
 from textual.message import Message
 from textual.widgets import Header, Footer, Static, Input, RichLog
 
+from ppxai.common.autosave_guard import AutosaveFailureGuard
 from ppxai.common.consent import normalize_consent_response
 from ppxai.common.logger import Logger, get_logger
 from ppxai.constants import ConsentResponse
@@ -120,6 +121,11 @@ class PPXAIDEApp(App):
         # Ctrl+C double-press tracking (v1.15.2)
         self._last_ctrl_c_time: float = 0.0
         self._CTRL_C_TIMEOUT = 2.0  # seconds to press Ctrl+C again
+
+        # v1.18.0 Phase 5f: tell the user if auto-save has been failing
+        # silently. stream_handler.py reads this and surfaces a footer
+        # warning the Nth consecutive failure; first success resets it.
+        self._autosave_guard = AutosaveFailureGuard()
         self._response_start_time: float = 0.0
         # Reasoning token state (DeepSeek R1, GPT-OSS thinking)
         self._reasoning_started = False
@@ -1574,14 +1580,17 @@ class PPXAIDEApp(App):
             self.pop_screen()
             return
 
-        # If focus is in the file tree, return to input (don't close tree)
+        # If focus is in the file tree, return to input (don't close tree).
+        # v1.18.0 Phase 5f: narrowed from bare Exception to NoMatches —
+        # the only expected failure is "file-tree not mounted in this
+        # layout state." Any other exception should propagate.
         focused = self.focused
         try:
             file_tree = self.query_one("#file-tree", FileTree)
             if focused and file_tree in focused.ancestors_with_self:
                 self.query_one("#input-box", InputBox).focus()
                 return
-        except Exception:
+        except NoMatches:
             pass
 
         # Check if side panel is open
@@ -1591,9 +1600,10 @@ class PPXAIDEApp(App):
 
     def action_toggle_file_tree(self) -> None:
         """Show or hide the file tree browser (Ctrl+B)."""
+        # v1.18.0 Phase 5f: narrowed from bare Exception to NoMatches.
         try:
             file_tree = self.query_one("#file-tree", FileTree)
-        except Exception:
+        except NoMatches:
             return
         self._file_tree_visible = not self._file_tree_visible
         if self._file_tree_visible:

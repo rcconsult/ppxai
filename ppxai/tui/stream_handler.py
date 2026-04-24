@@ -272,8 +272,21 @@ async def on_stream_end(app, sender, data, **kwargs) -> None:
     if message_count > 0 and (save_interval == 0 or message_count % max(1, save_interval) == 0):
         try:
             app._engine_client.session.save_dirty()
+            app._autosave_guard.on_success()
         except Exception as e:
             app._log.warning(f"Auto-save failed: {e}")
+            # v1.18.0 Phase 5f: tell the user after the threshold so
+            # a run with a full disk or revoked permissions doesn't
+            # silently lose every turn's save for the rest of the run.
+            if app._autosave_guard.on_failure(e):
+                app.notify(
+                    f"Auto-save has failed "
+                    f"{app._autosave_guard.consecutive_failures} times in a row "
+                    f"({e}). Check disk space and permissions.",
+                    title="Auto-save failing",
+                    severity="warning",
+                    timeout=10,
+                )
 
 
 async def on_tool_call(app, sender, data, **kwargs) -> None:

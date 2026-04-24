@@ -37,6 +37,7 @@ from .ui_components import format_usage_string, render_status_panel
 from ..engine.session import SessionManager
 from .themes import get_theme
 from ..common.logger import get_logger
+from ..common.autosave_guard import AutosaveFailureGuard
 from .event_handler import TUIEventHandler
 
 logger = get_logger("tui")
@@ -451,6 +452,11 @@ def main():
     ctrl_c_timestamp = 0
     ctrl_c_timeout = 2.0  # seconds
 
+    # v1.18.0 Phase 5f: tell the user when auto-save has been failing
+    # silently. Guard returns True exactly once per failure streak so
+    # we don't spam; resets on the first success.
+    autosave_guard = AutosaveFailureGuard()
+
     while True:
         try:
             # Reset Ctrl-C counter if timeout elapsed
@@ -580,8 +586,20 @@ def main():
                 if message_count > 0 and (save_interval == 0 or message_count % max(1, save_interval) == 0):
                     try:
                         handler.engine_client.session.save_dirty()
+                        autosave_guard.on_success()
                     except Exception as e:
                         logger.warning(f"Auto-save failed: {e}")
+                        # v1.18.0 Phase 5f: tell the user after the
+                        # threshold so a run with a full disk or
+                        # revoked permissions doesn't silently lose
+                        # every turn's save for the rest of the run.
+                        if autosave_guard.on_failure(e):
+                            console.print(
+                                f"[yellow]⚠ Auto-save has failed "
+                                f"{autosave_guard.consecutive_failures} times in a row "
+                                f"({e}). Check disk space and permissions; "
+                                f"use /save to force a save to a specific path.[/yellow]"
+                            )
 
         except KeyboardInterrupt:
             # Implement double Ctrl-C to exit
