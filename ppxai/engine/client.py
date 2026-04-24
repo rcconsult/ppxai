@@ -384,14 +384,11 @@ class EngineClient:
         report whether the currently active model is vision-capable
         (for that, see `model_profiles.get_profile(model).supports_vision`).
         Renamed from `has_vision_model` in v1.17.4 to remove the
-        model-vs-sidecar ambiguity (R4 in TODO-file-upload.md).
+        model-vs-sidecar ambiguity (R4 in TODO-file-upload.md); the
+        back-compat alias was removed in v1.18.0 after confirming no
+        external callers (ppxai-sre was clean).
         """
         return multimodal_ops.has_vision_sidecar()
-
-    # Back-compat alias. Scheduled for removal in v1.18.x — callers
-    # should migrate to `has_vision_sidecar`. Still used by a few
-    # external/test helpers that haven't been updated yet.
-    has_vision_model = has_vision_sidecar
 
     def caption_image(
         self,

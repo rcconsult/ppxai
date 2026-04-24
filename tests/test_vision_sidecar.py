@@ -3,7 +3,7 @@
 Exercises:
 
 1. `get_vision_model_config` — defaults and overrides via the config store
-2. `EngineClient.has_vision_model` — truthiness across config states
+2. `EngineClient.has_vision_sidecar` — truthiness across config states
 3. `EngineClient.caption_image` — successful captioning via a mocked
    OpenAI client, plus every failure mode (disabled, missing endpoint,
    SDK missing, HTTP error, malformed response)
@@ -86,7 +86,7 @@ class TestGetVisionModelConfig:
 
 
 # -----------------------------------------------------------------------------
-# has_vision_model
+# has_vision_sidecar
 # -----------------------------------------------------------------------------
 
 
@@ -129,7 +129,7 @@ class TestHasVisionModel:
     def test_disabled_returns_false(self, engine):
         original = _set_vision_config({"enabled": False})
         try:
-            assert engine.has_vision_model() is False
+            assert engine.has_vision_sidecar() is False
         finally:
             _restore_config(original)
 
@@ -140,7 +140,7 @@ class TestHasVisionModel:
             "model": "qwen2.5vl",
         })
         try:
-            assert engine.has_vision_model() is False
+            assert engine.has_vision_sidecar() is False
         finally:
             _restore_config(original)
 
@@ -151,7 +151,7 @@ class TestHasVisionModel:
             "model": "",
         })
         try:
-            assert engine.has_vision_model() is False
+            assert engine.has_vision_sidecar() is False
         finally:
             _restore_config(original)
 
@@ -162,7 +162,7 @@ class TestHasVisionModel:
             "model": "qwen2.5vl:7b",
         })
         try:
-            assert engine.has_vision_model() is True
+            assert engine.has_vision_sidecar() is True
         finally:
             _restore_config(original)
 
