@@ -124,18 +124,16 @@ class EngineClient:
         )
         # Every time session.messages mutates (add_message, remove_last_message,
         # clear, load, strip_to_user_messages, validate_and_fix_alternation)
-        # recompute the multimodal-attachments summary in AppState. That is
-        # the single source of truth every client reads for its attachment
-        # badge/chip UI — Rich status bar today, Textual/Web/VSCode in later
-        # phases — so hoisting it into AppState here means zero per-client
-        # scanning of session.messages and automatic state_sync propagation
-        # over SSE for remote clients.
-        self.session.on_messages_changed = self._refresh_context_attachments
+        # refresh the AppState fields that mirror message-list state. Each
+        # client reads AppState and never scans session.messages itself.
+        # Adding a new message-derived field? Add a `_refresh_<thing>()`
+        # method below and call it from `_on_messages_changed`.
+        self.session.on_messages_changed = self._on_messages_changed
         # Sync initial session name
         self.state.set("session_name", self.session.session_name)
-        # Initial attachments snapshot (empty list, but sets the field so
-        # any early subscriber sees a consistent shape).
-        self._refresh_context_attachments()
+        # Initial snapshot — sets AppState fields so any early subscriber
+        # sees a consistent shape.
+        self._on_messages_changed()
 
         # Context injection for automatic file content inclusion
         self.context_injector = ContextInjector()
@@ -305,15 +303,56 @@ class EngineClient:
             context_percentage=context_pct,
         )
 
+    def _on_messages_changed(self) -> None:
+        """Fan-out callback wired into `session.on_messages_changed`.
+
+        Any AppState field derived from `session.messages` must refresh
+        here — that way clients read AppState and never scan the message
+        list themselves. Currently:
+          - `context_attachments` (multimodal attachment summary)
+          - `last_message_role` (for interrupt / alternation checks)
+
+        Adding a new derived field: write `_refresh_<field>` and call it
+        from this method. Do NOT reach directly into `session.messages`
+        from a client (Rich/Textual/Web/VSCode).
+        """
+        self._refresh_context_attachments()
+        self._refresh_last_message_role()
+
     def _refresh_context_attachments(self) -> None:
         """Recompute the `context_attachments` AppState field from session history.
 
-        Delegates to `multimodal_ops.refresh_context_attachments`. Wired
-        into `session.on_messages_changed` so it fires on every mutation
-        of `session.messages`. See `multimodal_ops.py` for the full role
-        filter, dedup, and entry schema documentation.
+        Delegates to `multimodal_ops.refresh_context_attachments`. See
+        `multimodal_ops.py` for the full role filter, dedup, and entry
+        schema documentation.
         """
         multimodal_ops.refresh_context_attachments(self)
+
+    def _refresh_last_message_role(self) -> None:
+        """Mirror `session.messages[-1].role` into AppState.last_message_role.
+
+        v1.18.0 Phase 3: Rich and Textual previously scanned
+        `session.messages` directly to make decisions about interrupt
+        handling and alternation (e.g. "should I drop the dangling user
+        message after Ctrl-C?"). That violates the AppState contract —
+        each client re-implements the check slightly differently, and
+        every future message-handling change forces three code sites to
+        move in lockstep.
+
+        Now maintained centrally: the engine writes the latest role
+        here on every message-list mutation; clients read
+        `state.get("last_message_role")` and never touch
+        `session.messages` for alternation decisions.
+
+        Empty string when the session has no messages. AppState's
+        equality-dedup means no-op mutations (same role) don't fire
+        listeners.
+        """
+        if self.session.messages:
+            role = self.session.messages[-1].role or ""
+        else:
+            role = ""
+        self.state.set("last_message_role", role)
 
     def get_context_attachments(self) -> List[Dict[str, Any]]:
         """Return the current multimodal attachments in conversation context.

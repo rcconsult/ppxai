@@ -601,10 +601,14 @@ def main():
                 console.print("[yellow]  • Press Ctrl-C again to exit[/yellow]")
                 console.print("[yellow]  • Or continue typing to resume[/yellow]\n")
 
-                # Cleanup conversation history if interrupted during streaming (v1.12.0: engine only)
+                # Cleanup conversation history if interrupted during streaming.
+                # v1.18.0 Phase 3: read last role from AppState instead of
+                # scanning session.messages — the engine maintains
+                # last_message_role via session.on_messages_changed.
                 cleaned = False
-                if handler.engine_client and handler.engine_client.session.messages:
-                    if handler.engine_client.session.messages[-1].role == "user":
+                if handler.engine_client:
+                    last_role = handler.engine_client.state.get("last_message_role")
+                    if last_role == "user":
                         handler.engine_client.session.remove_last_message()
                         cleaned = True
                 if cleaned:

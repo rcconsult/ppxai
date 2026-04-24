@@ -243,8 +243,9 @@ class TestAppStateFieldCoverage:
         # state fields — the number is intentional friction so additions get
         # reviewed against the cross-client (Python/JS/TS) schema.
         # v1.17.4: schema-driven from app_state_schema.json; 18 fields total.
-        # v1.18.0 P0: +`agent_beat` for agent heartbeat state → 19 fields.
-        assert len(AppState.FIELDS) == 19
+        # v1.18.0 P0:   +`agent_beat` for agent heartbeat state → 19.
+        # v1.18.0 Ph3: +`last_message_role` for alternation checks → 20.
+        assert len(AppState.FIELDS) == 20
 
     def test_mutable_defaults_not_shared_between_instances(self):
         """Each AppState instance must get its own copy of list/dict
@@ -307,7 +308,7 @@ class TestSchemaDTO:
         assert "fields" in self.schema
         assert isinstance(self.schema["fields"], dict)
         # Bump when adding fields — keep in sync with test_field_count above.
-        assert len(self.schema["fields"]) == 19
+        assert len(self.schema["fields"]) == 20
 
     def test_schema_fields_match_app_state_fields(self):
         """Every schema field must appear in AppState.FIELDS with the
