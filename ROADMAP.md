@@ -1,6 +1,6 @@
 # ppxai Development Roadmap
 
-> **Current Version**: v1.17.7 (April 2026) | ppxai-desktop stale-version-fallback fix
+> **Current Version**: v1.18.0 (April 2026) | ppxai-desktop stale-version-fallback fix
 > **Focus**: Multi-LLM interface for developers—terminal + VSCode, zero vendor lock-in
 
 ---

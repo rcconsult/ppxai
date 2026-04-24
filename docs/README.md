@@ -241,6 +241,5 @@ A: Type `@filename`, `@git`, or `@tree` in your messages. See [Context Injection
 
 ---
 
-**Current Released Version**: v1.17.7
-**Active Branch**: `feature/v1.18.0` (P0 heartbeat + stabilization landed; AppState codegen + routing pending)
-**Last Updated**: 2026-04-24
+**Current Version**: v1.18.0
+**Last Updated**: 2026-04-25
