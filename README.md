@@ -295,6 +295,10 @@ All clients provide reliable ways to copy AI responses to clipboard:
 
 **Why dedicated copy?** Terminal text selection often copies panel borders (Rich TUI) or conflicts with terminal plugins (iTerm2). The `/copy` command and buttons guarantee clean text.
 
+### Voice Input (optional)
+
+ppxai works with any system transcription tool that types into the focused text field. [**Handy**](https://github.com/cjpais/Handy) (MIT, offline, Whisper/Parakeet) is a good fit — install it, set a global hotkey, focus the ppxai input, hold the hotkey, speak. Confirmed working in the **VSCode extension** and **Desktop Web App**; terminal UIs are less reliable because synthetic keystroke injection into terminal apps varies by platform. See [VSCode extension docs](vscode-extension/README.md#voice-input-optional) for details.
+
 ## Configuration
 
 **Simple (one provider):**

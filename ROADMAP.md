@@ -869,6 +869,37 @@ OLLAMA_NUM_PARALLEL=2 ollama serve
 
 **Status:** Research phase. PDF saved to `docs/`. Next: benchmark existing small models on ppxai tool schema before implementation.
 
+### Voice Input / Speech-to-Text (Research)
+
+**Reference:** [cjpais/Handy](https://github.com/cjpais/Handy) — MIT, Tauri desktop app, offline, macOS/Windows/Linux. Whisper via `whisper-rs`, Parakeet V3 via `transcribe-rs`, Silero VAD, global hotkey → synthetic keystrokes into focused window.
+
+**Problem:** ppxai has four clients (Rich TUI, Textual TUI, Web, VSCode) and none accept voice input today. Users wanting dictation have to copy-paste from an external transcription app.
+
+**Constraint:** Handy has **no programmatic integration surface** — no HTTP/WebSocket server, no file/stdout mode, no plugin API. Its only output is OS-level synthetic keystrokes. That works for GUI text fields (VSCode webview, browser) but not reliably for terminal UIs.
+
+**Three integration options:**
+
+| Option | Effort | Fit | Notes |
+|--------|:-:|:-:|-------|
+| **A.** Run Handy alongside ppxai, use its hotkey | None | Poor | Works in VSCode webview + browser, likely broken in TUIs. No start/stop signal, no partials, no mic indicator in-chat. |
+| **B.** Fork Handy, add `--serve` WebSocket output mode | Medium | OK | Small Rust PR on a fast-moving upstream (releases every 3–10 days). Fork maintenance burden. |
+| **C.** Build `ppxai-voice` sidecar from Handy's ingredients | High | Best | Take `whisper-rs` or `transcribe-rs` + Silero VAD + `cpal`. Ship as small Rust binary alongside `ppxai-server`. Expose WebSocket to all clients. Mic button in chat UI, partial transcripts, per-provider routing. Model cache under `~/.ppxai/models/`. No fork. |
+
+**Recommended path:** Option A confirmed working in VSCode webview (tested 2026-04-24). Ship a docs entry now; defer B/C unless users ask for in-chat mic button, partials, or TUI dictation.
+
+**Near-term actions (Option A productization):**
+- Add "Voice input" section to `docs/` and `README.md` — install Handy, recommended hotkey, focus-the-input workflow
+- Note known limitations: no start/stop signal in chat UI, no partials, TUI reliability untested
+- Link from VSCode extension README (most likely to work since webview accepts synthetic keystrokes)
+
+**If Option C becomes necessary later, decisions to make up front:**
+- Backend: `whisper-rs` (GPU, multi-lang) vs `transcribe-rs`/Parakeet (CPU, faster)
+- Transport: WebSocket (SSE can't push binary audio for round-trip) or Unix socket
+- Where hotkey lives: each client owns its own binding, sidecar only does audio→text
+- Model distribution: download-on-first-use, progress in `state_sync`, cached in `~/.ppxai/models/voice/`
+
+**Status:** Option A validated. Next: docs entry. Revisit C if user demand materializes or Handy upstream adds a structured output mode (tracked in [Handy#933](https://github.com/cjpais/Handy/discussions/933)).
+
 ### Data Visualization Library Upgrade (Web App)
 
 Current: Vanilla JavaScript (`DataTableViewer`, `DataTreeViewer`) - lightweight, no dependencies.

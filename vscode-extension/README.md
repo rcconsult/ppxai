@@ -182,6 +182,19 @@ apt install poppler-utils libreoffice-nogui
 
 Pre-built server binaries include all Python `[data]` dependencies. System packages (poppler, LibreOffice) must be installed separately if you need PDF rasterization or PPTX slide rendering.
 
+## Voice Input (optional)
+
+ppxai doesn't ship with speech-to-text, but the chat input accepts dictation from any system transcription tool. [**Handy**](https://github.com/cjpais/Handy) (MIT, offline, Whisper/Parakeet) pairs well:
+
+1. Install Handy from https://github.com/cjpais/Handy/releases and grant microphone + accessibility permissions.
+2. Configure a global hotkey (default: push-to-talk).
+3. Click into the ppxai chat input, hold your hotkey, speak. Handy types the transcript into the focused field.
+4. Press **Ctrl+Enter** (or **Ctrl+J**) to send.
+
+This is a zero-integration workflow — ppxai and Handy don't talk to each other; Handy just types into whatever window has focus. Works reliably in the VSCode webview. For the Rich/Textual TUIs, synthetic keystroke injection into terminal apps is less reliable; use the VSCode extension or desktop web app for voice input today.
+
+Other transcription tools (macOS Dictation, Windows Voice Access, wispr-flow, etc.) work the same way — if they can type into any text field, they can type into ppxai.
+
 ## Troubleshooting
 
 **"Could not connect to server"**
