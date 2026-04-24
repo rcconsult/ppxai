@@ -75,7 +75,8 @@ class TestConfigRoutes:
             data = resp.json()
             assert data["success"] is True
             assert data["message"] == "Configuration reloaded successfully"
-            assert data["config_path"] == "/home/user/.ppxai/ppxai-config.json"
+            # Normalise separators so Windows (\) and POSIX (/) both pass.
+            assert data["config_path"].replace("\\", "/") == "/home/user/.ppxai/ppxai-config.json"
             mock_reload.assert_called_once()
 
     def test_reload_config_failure(self, client):
@@ -172,7 +173,8 @@ class TestSessionRoutes:
         resp = client.post("/export", json={})
 
         assert resp.status_code == 200
-        assert resp.json()["filepath"] == "/tmp/export.md"
+        # Normalise separators so Windows (\) and POSIX (/) both pass.
+        assert resp.json()["filepath"].replace("\\", "/") == "/tmp/export.md"
         mock_session.engine.export_answer.assert_called_once_with(None)
 
     def test_export_answer_no_message(self, client, mock_session):
@@ -191,5 +193,6 @@ class TestSessionRoutes:
         resp = client.post("/export", json={"filename": "my-notes"})
 
         assert resp.status_code == 200
-        assert resp.json()["filepath"] == "/tmp/my-notes.md"
+        # Normalise separators so Windows (\) and POSIX (/) both pass.
+        assert resp.json()["filepath"].replace("\\", "/") == "/tmp/my-notes.md"
         mock_session.engine.export_answer.assert_called_once_with("my-notes")

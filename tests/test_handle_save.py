@@ -120,7 +120,9 @@ class TestSavePathReporting:
         result = handle_save(_make_context(engine), "flat_test")
 
         assert result.details["format"] == "flat"
-        assert result.details["filepath"].endswith("/flat_test.json")
+        # Normalise separators so Windows (\) and POSIX (/) both pass.
+        filepath = result.details["filepath"].replace("\\", "/")
+        assert filepath.endswith("/flat_test.json")
         # And the file actually exists at that path.
         assert (engine.session.sessions_dir / "flat_test.json").exists()
 
@@ -143,7 +145,8 @@ class TestSavePathReporting:
 
         assert result.details["format"] == "directory"
         # Path points at <name>/session.json, not <name>.json.
-        filepath = result.details["filepath"]
+        # Normalise separators so Windows (\) and POSIX (/) both pass.
+        filepath = result.details["filepath"].replace("\\", "/")
         assert filepath.endswith("/multimodal_test/session.json")
         # And the directory actually contains the expected files.
         session_dir = engine.session.sessions_dir / "multimodal_test"

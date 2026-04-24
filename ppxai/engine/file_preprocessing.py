@@ -709,6 +709,16 @@ def preprocess_file(
     name = _sanitize_name(name)
     canonical_mt, kind = _classify_file(name, data, media_type)
 
+    # CSV special-case: on Windows `mimetypes.guess_type("x.csv")` returns
+    # `application/vnd.ms-excel` (Excel is the default registered app),
+    # which classifies as KIND_OFFICE and routes to the binary-office
+    # path requiring a SessionFileStore. CSV is a text format with its
+    # own lazy-loading path (`_preprocess_text` → `_preprocess_csv` for
+    # files >= _CSV_LAZY_THRESHOLD), so force-route it there regardless
+    # of platform classification.
+    if _is_csv_file(name, canonical_mt):
+        return _preprocess_text(name, data, "text/csv", file_store=file_store)
+
     if kind == KIND_IMAGE:
         return _preprocess_image(
             name,

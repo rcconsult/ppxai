@@ -113,13 +113,23 @@ class PendingFile:
 
     @property
     def text(self) -> str:
-        """UTF-8 decoded text (Phase 1 compat, text kind only)."""
+        """UTF-8 decoded text with normalised newlines (Phase 1 compat,
+        text kind only).
+
+        Windows writes `\r\n` line endings; LLMs and downstream text
+        tooling expect `\n`. Normalise at the decode boundary so the
+        attach pipeline behaves identically on every platform — a user
+        /attach'ing a Windows-edited file shouldn't pay extra tokens or
+        break parsers expecting LF.
+        """
         if self.kind != "text" or not self.data:
             return ""
         try:
-            return self.data.decode("utf-8")
+            decoded = self.data.decode("utf-8")
         except UnicodeDecodeError:
-            return self.data.decode("utf-8", errors="replace")
+            decoded = self.data.decode("utf-8", errors="replace")
+        # CRLF → LF, then bare CR → LF (classic-Mac exports).
+        return decoded.replace("\r\n", "\n").replace("\r", "\n")
 
 
 @dataclass

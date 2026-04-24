@@ -36,7 +36,11 @@ def _make_csv_store(tmp_path, name="data.csv", content=None, rows=10, cols=3):
             writer.writerow([f"val_{r}_{c}" for c in range(cols)])
         content = buf.getvalue()
 
-    csv_path.write_text(content)
+    # newline="" so csv.writer's \r\n terminators aren't translated
+    # again on Windows (which would produce \r\r\n and make the reader
+    # see blank rows between every real row). Matches the csv module's
+    # documented open() idiom.
+    csv_path.write_text(content, encoding="utf-8", newline="")
 
     meta = MagicMock()
     meta.path = csv_path

@@ -444,7 +444,7 @@ class TestSchemaDTO:
         for source in tui_sources:
             if not source.exists():
                 continue
-            content = source.read_text()
+            content = source.read_text(encoding="utf-8")
             # Line-by-line so we can skip lines that clearly reference
             # session recovery dicts (last_state, session_state).
             for line in content.splitlines():
@@ -497,7 +497,7 @@ class TestSseSyncFieldsContract:
         import pathlib
 
         client_py = pathlib.Path(__file__).parent.parent / "ppxai" / "engine" / "client.py"
-        tree = ast.parse(client_py.read_text())
+        tree = ast.parse(client_py.read_text(encoding="utf-8"))
 
         for node in ast.walk(tree):
             if not isinstance(node, ast.Assign):

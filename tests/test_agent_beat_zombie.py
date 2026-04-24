@@ -158,10 +158,12 @@ class TestZombieDetectionAtDefaultThreshold:
         ctx = MockChatContext(provider=provider, tool_manager=tm)
         ctx.session.add_message(Message("user", "try"))
 
-        with patch("ppxai.engine.chat.get_profile") as mock_profile:
+        with patch("ppxai.engine.chat.get_profile") as mock_profile, \
+             patch("ppxai.engine.chat._get_zombie_threshold") as mock_threshold:
             mock_profile.return_value = ModelProfile(
                 tool_calling=ToolCallingProfile(mode="native"),
             )
+            mock_threshold.return_value = 3
             events = await _collect(ctx)
 
         types = [e.type for e in events]
@@ -188,10 +190,12 @@ class TestZombieDetectionAtDefaultThreshold:
         ctx = MockChatContext(provider=provider, tool_manager=tm)
         ctx.session.add_message(Message("user", "retry"))
 
-        with patch("ppxai.engine.chat.get_profile") as mock_profile:
+        with patch("ppxai.engine.chat.get_profile") as mock_profile, \
+             patch("ppxai.engine.chat._get_zombie_threshold") as mock_threshold:
             mock_profile.return_value = ModelProfile(
                 tool_calling=ToolCallingProfile(mode="native"),
             )
+            mock_threshold.return_value = 3
             events = await _collect(ctx)
 
         types = [e.type for e in events]
@@ -224,10 +228,12 @@ class TestZombieDetectionAtDefaultThreshold:
         ctx = MockChatContext(provider=provider, tool_manager=tm)
         ctx.session.add_message(Message("user", "retry"))
 
-        with patch("ppxai.engine.chat.get_profile") as mock_profile:
+        with patch("ppxai.engine.chat.get_profile") as mock_profile, \
+             patch("ppxai.engine.chat._get_zombie_threshold") as mock_threshold:
             mock_profile.return_value = ModelProfile(
                 tool_calling=ToolCallingProfile(mode="native"),
             )
+            mock_threshold.return_value = 3
             events = await _collect(ctx)
 
         zombie = next(e for e in events if e.type == EventType.AGENT_ZOMBIE)
@@ -261,10 +267,12 @@ class TestZombieDetectionResetsOnSuccess:
         ctx = MockChatContext(provider=provider, tool_manager=tm)
         ctx.session.add_message(Message("user", "long recovery"))
 
-        with patch("ppxai.engine.chat.get_profile") as mock_profile:
+        with patch("ppxai.engine.chat.get_profile") as mock_profile, \
+             patch("ppxai.engine.chat._get_zombie_threshold") as mock_threshold:
             mock_profile.return_value = ModelProfile(
                 tool_calling=ToolCallingProfile(mode="native"),
             )
+            mock_threshold.return_value = 3
             events = await _collect(ctx)
 
         types = [e.type for e in events]
@@ -356,9 +364,23 @@ class TestAgentConfigIncludesZombieThreshold:
     """
 
     def test_default_is_three(self):
+        """Library default (no user or repo override) is 3.
+
+        The repo ships `ppxai-config.json` with zombie_threshold=2 for
+        local-model tuning, so we can't just read `get_agent_config()`
+        — it would reflect the repo override. Clear the config via the
+        store and verify the dataclass default.
+        """
         from ppxai.config import get_agent_config
-        cfg = get_agent_config()
-        assert cfg["zombie_threshold"] == 3
+        from ppxai.config.store import ConfigStore
+
+        store = ConfigStore.get_instance()
+        original_config = dict(store.config)
+        try:
+            store.set_for_testing({})
+            assert get_agent_config()["zombie_threshold"] == 3
+        finally:
+            store.set_for_testing(original_config)
 
     def test_custom_value_from_config(self):
         from ppxai.config import get_agent_config
