@@ -72,14 +72,14 @@ class TestCommandDefinitions:
 
     def test_required_commands_in_js(self):
         """Test that all required commands are defined in commands.js."""
-        content = COMMANDS_JS.read_text()
+        content = COMMANDS_JS.read_text(encoding="utf-8")
         for cmd in self.REQUIRED_COMMANDS:
             assert f"'{cmd}'" in content or f'"{cmd}"' in content, \
                 f"Command {cmd} not found in commands.js"
 
     def test_subcommands_in_js(self):
         """Test that commands with subcommands have them listed."""
-        content = COMMANDS_JS.read_text()
+        content = COMMANDS_JS.read_text(encoding="utf-8")
         for cmd, subcommands in self.COMMANDS_WITH_SUBCOMMANDS.items():
             for subcmd in subcommands:
                 # Check if subcommand appears in the file (in subcommands array or usage string)
@@ -88,7 +88,7 @@ class TestCommandDefinitions:
 
     def test_command_categories_exist(self):
         """Test that command categories are defined."""
-        content = COMMANDS_JS.read_text()
+        content = COMMANDS_JS.read_text(encoding="utf-8")
         expected_categories = [
             "SESSION", "PROVIDER", "TOOLS", "CHECKPOINT", "USAGE", "FILE", "CODING", "OTHER"
         ]
@@ -97,7 +97,7 @@ class TestCommandDefinitions:
 
     def test_ai_forwarded_commands_defined(self):
         """Test that AI-forwarded commands list is defined."""
-        content = COMMANDS_JS.read_text()
+        content = COMMANDS_JS.read_text(encoding="utf-8")
         assert "AI_FORWARDED_COMMANDS" in content
         # These commands should be in the AI forwarded list
         for cmd in ["/generate", "/explain", "/test", "/docs", "/debug", "/implement", "/convert", "/spec"]:
@@ -130,7 +130,7 @@ class TestFormatterFunctions:
 
     def test_all_formatters_defined(self):
         """Test that all required formatter functions are defined."""
-        content = FORMATTERS_JS.read_text()
+        content = FORMATTERS_JS.read_text(encoding="utf-8")
         for formatter in self.REQUIRED_FORMATTERS:
             assert f"function {formatter}" in content or f"export function {formatter}" in content, \
                 f"Formatter {formatter} not found in formatters.js"
@@ -158,8 +158,8 @@ class TestVSCodeSharedModules:
 
     def test_command_parity(self):
         """Test that Web App and VSCode have the same commands."""
-        web_content = COMMANDS_JS.read_text()
-        ts_content = (self.VSCODE_SHARED_DIR / "commands.ts").read_text()
+        web_content = COMMANDS_JS.read_text(encoding="utf-8")
+        ts_content = (self.VSCODE_SHARED_DIR / "commands.ts").read_text(encoding="utf-8")
 
         # Extract command names from both files (simplified check)
         for cmd in TestCommandDefinitions.REQUIRED_COMMANDS:
@@ -192,7 +192,7 @@ class TestDesktopSpecIncludesShared:
     def test_desktop_spec_includes_shared(self):
         """Test that ppxai-desktop.spec includes shared directory."""
         spec_file = Path(__file__).parent.parent / "ppxai-desktop.spec"
-        content = spec_file.read_text()
+        content = spec_file.read_text(encoding="utf-8")
 
         # Check that shared is included (either explicitly or via parent directory)
         assert "ppxai/web/shared" in content or "('ppxai/web', 'ppxai/web')" in content, \
