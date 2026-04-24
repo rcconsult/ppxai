@@ -491,29 +491,16 @@ class TestSseSyncFieldsContract:
 
     @property
     def sse_sync_fields(self) -> frozenset:
-        """Extract `_SSE_SYNC_FIELDS` from engine/client.py without
-        instantiating EngineClient (which requires config bootstrap)."""
-        import ast
-        import pathlib
+        """Return the engine's SSE sync whitelist.
 
-        client_py = pathlib.Path(__file__).parent.parent / "ppxai" / "engine" / "client.py"
-        tree = ast.parse(client_py.read_text(encoding="utf-8"))
+        v1.18.0: the set is now a module-level constant
+        (`SSE_SYNC_FIELDS`) in `ppxai/engine/client.py` so the
+        `GET /state` endpoint can return the same shape. Previously
+        extracted via AST from a local variable inside __init__.
+        """
+        from ppxai.engine.client import SSE_SYNC_FIELDS
 
-        for node in ast.walk(tree):
-            if not isinstance(node, ast.Assign):
-                continue
-            if not (len(node.targets) == 1
-                    and isinstance(node.targets[0], ast.Name)
-                    and node.targets[0].id == "_SSE_SYNC_FIELDS"):
-                continue
-            if not isinstance(node.value, ast.Set):
-                continue
-            return frozenset(
-                elt.value for elt in node.value.elts
-                if isinstance(elt, ast.Constant) and isinstance(elt.value, str)
-            )
-
-        raise RuntimeError("_SSE_SYNC_FIELDS not found in engine/client.py")
+        return frozenset(SSE_SYNC_FIELDS)
 
     def test_all_sync_fields_exist_in_app_state(self):
         """No orphaned sync fields — every pushed field must be a real AppState key."""

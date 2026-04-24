@@ -233,9 +233,21 @@ class PpxaiApp {
             });
             if (resp.ok) {
                 if (this._heartbeatFailCount >= 2) {
-                    // Recovered — reconnect
+                    // Recovered — reconnect. Refresh AppState snapshot
+                    // from the server (v1.18.0 Phase 2): any state_sync
+                    // events that fired during the outage are lost,
+                    // so the local mirror may be stale. GET /state
+                    // returns the current values of every SSE-synced
+                    // field in one shot — feed straight through the
+                    // schema-driven facade.
                     this.updateServerStatus('connected');
                     this.showSystemMessage('Server connection restored.');
+                    try {
+                        const state = await this.apiClient.getState();
+                        this.state.updateFromPython(state);
+                    } catch (e) {
+                        console.warn('[PpxaiApp] state refresh after reconnect failed:', e);
+                    }
                 }
                 this._heartbeatFailCount = 0;
                 return;

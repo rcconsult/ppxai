@@ -175,6 +175,7 @@ a = Analysis(
         'ppxai.server.routes.terminal',
         'ppxai.server.routes.file_serve',
         'ppxai.server.routes.completion',
+        'ppxai.server.routes.state',  # v1.18.0: GET /state snapshot endpoint
         'ppxai.server.session_manager',
         'ppxai.common.preview',
         # Engine modules added in v1.17.4

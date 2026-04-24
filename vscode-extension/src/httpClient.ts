@@ -310,6 +310,26 @@ export class HttpClient {
     }
 
     /**
+     * v1.18.0 Phase 2: snapshot of all SSE-synced AppState fields for
+     * reconnect catch-up.
+     *
+     * Returns the current values of every field the engine pushes via
+     * `state_sync` events, shaped exactly like an accumulated payload
+     * from the SSE stream. Feed straight through `AppState.updateFromPython()`
+     * to re-synchronise after a disconnect without re-deriving which
+     * fields changed during the gap.
+     */
+    async fetchState(): Promise<Record<string, any>> {
+        const response = await fetch(`${this.baseUrl}/state`, {
+            headers: this.getHeaders(),
+        });
+        if (!response.ok) {
+            throw new Error(`State fetch failed: ${response.statusText}`);
+        }
+        return response.json() as Promise<Record<string, any>>;
+    }
+
+    /**
      * Get available providers
      */
     async getProviders(): Promise<ProviderInfo[]> {

@@ -21,6 +21,7 @@ from . import (
     providers,
     schema,
     sessions,
+    state,
     static,
     terminal,
     usage,
@@ -44,5 +45,6 @@ all_routers: list[APIRouter] = [
     terminal.router,
     completion.router,  # v1.17.4: POST /complete for cross-client autocomplete
     schema.router,      # v1.17.4: GET /schema/app-state — canonical DTO
+    state.router,       # v1.18.0: GET /state — snapshot for SSE reconnect sync
     static.router,
 ]

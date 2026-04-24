@@ -97,6 +97,14 @@ class ApiClient {
         return this.get('/status');
     }
 
+    // v1.18.0 Phase 2: snapshot of all SSE-synced AppState fields for
+    // reconnect catch-up. Returns a snake_case dict shaped exactly
+    // like an accumulated stream of `state_sync` events, so it can be
+    // fed directly to `AppState.updateFromPython()`.
+    async getState() {
+        return this.get('/state');
+    }
+
     // === Providers ===
 
     async getProviders() {

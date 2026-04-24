@@ -54,6 +54,20 @@ from . import (
 logger = get_logger("tui")
 
 
+# Fields that change flow to SSE `state_sync` events for connected web /
+# VSCode clients. Hoisted to module-level so `GET /state` can return the
+# exact same shape for reconnect catch-up without re-deriving the list.
+# Excludes high-frequency fields (is_streaming, cancel_requested, usage
+# tokens) which clients read from STREAM_END metadata, not state_sync.
+SSE_SYNC_FIELDS = frozenset({
+    "provider", "model", "tools_enabled", "tools_verbose",
+    "agent_mode", "auto_route", "working_dir",
+    "session_name", "debug_log",
+    "context_attachments",  # v1.17.4 Phase 3.3
+    "agent_beat",  # P0 (v1.18.0) — per-iteration heartbeat state
+})
+
+
 class EngineClient:
     """Main engine client - the facade for all engine functionality.
 
@@ -172,17 +186,11 @@ class EngineClient:
         self._event_queue_lock = threading.Lock()
 
         # Push AppState changes to SSE side-channel so connected web/VSCode
-        # clients stay in sync. Fields that change frequently during streaming
-        # (is_streaming, cancel_requested, usage tokens) are excluded to avoid
-        # flooding the SSE channel — clients read those from STREAM_END metadata.
-        _SSE_SYNC_FIELDS = {
-            "provider", "model", "tools_enabled", "tools_verbose",
-            "agent_mode", "auto_route", "working_dir",
-            "session_name", "debug_log",
-            "context_attachments",  # v1.17.4 Phase 3.3
-            "agent_beat",  # P0 (v1.18.0) — per-iteration heartbeat state
-        }
-        for _field in _SSE_SYNC_FIELDS:
+        # clients stay in sync. Whitelist lives at module level (SSE_SYNC_FIELDS)
+        # so GET /state can return the exact same shape on reconnect without
+        # re-deriving the set. See the constant definition above for which
+        # fields are deliberately excluded.
+        for _field in SSE_SYNC_FIELDS:
             self.state.on(_field, lambda v, k=_field: self.enqueue_event(
                 Event(type=EventType.STATE_SYNC, data={k: v})
             ))
