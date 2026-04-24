@@ -950,3 +950,65 @@ payload; (3) hide when the dict is empty. No engine changes needed.
 - `tests/test_stream_handler_dispatch.py` fails if a new heartbeat
   EventType lands without updating ppxaide's `NOOP_EVENTS` set.
 
+
+## Error Routing Conventions (v1.18.0)
+
+Errors can reach the user through three different channels. Which
+one to pick depends on **who needs to know** and **how quickly**.
+
+### Three channels
+
+1. **Event bus → user-visible** — `emit(Event(EventType.ERROR, ...))`
+   or a typed event that the clients render as a toast / bubble.
+   Use this when the error is caused by *the current user action*
+   and the user needs to act on it (bad input, permission denied,
+   provider API error, consent declined).
+
+2. **Logger (warning / error)** — `logger.warning(...)` or
+   `logger.error(..., exc_info=True)`.
+   Use this when the error is a *system condition* the user can't
+   do anything about and shouldn't be interrupted by (retryable
+   network blip, non-critical background task failure, cleanup
+   operation that failed harmlessly). These land in `server-debug.log`
+   when debug logging is enabled.
+
+3. **Raise** — let the exception propagate.
+   Use this when the error is *a programming bug* (invariant
+   violation, type mismatch, "this should never happen"). Raising
+   makes the bug loud during development.
+
+### Decision rules
+
+- **If the user initiated the action, they must see the outcome.**
+  Silent failure of a user-initiated action is misleading. Route to
+  the event bus even if the error is "just" a log-worthy condition.
+
+- **Background auto-saves, auto-retries, and cleanup operations**
+  should log at WARNING when they fail and surface a user-visible
+  event only on sustained failure (e.g. 3 consecutive auto-save
+  failures mean the disk probably filled up — tell the user, don't
+  just keep writing to the log).
+
+- **`except Exception: pass` is almost always wrong** — at minimum
+  log what was swallowed. Two narrow exceptions are acceptable:
+  - Textual `query_one` guards that catch `NoMatches` specifically
+    (the widget might not be mounted; that's expected).
+  - Listener isolation in `AppState.set/update` — a misbehaving
+    listener can't be allowed to wedge the fan-out, so we catch
+    and log at WARNING with traceback.
+
+### What currently violates these rules
+
+Auto-save failure in the Rich TUI and the Textual TUI (see
+`rich/main.py`, `tui/stream_handler.py`) log a warning but never
+tell the user, so a user whose session save has been failing for
+minutes sees "everything looks fine." v1.18.0 Phase 5f adds a
+user-visible warning after 3 consecutive auto-save failures and
+resets the counter on the first success. See the Phase 5f commit
+for the guard mechanism.
+
+### When in doubt
+
+Prefer the event bus. A toast the user can dismiss is strictly
+better than a log line they'll never read. Noisy clients lose users
+slowly; silently broken clients lose them suddenly.

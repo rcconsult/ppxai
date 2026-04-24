@@ -124,6 +124,38 @@ class AppState:
     Schema is loaded from `app_state_schema.json` at module import.
     `FIELDS` is a derived dict of {python_name: default_value} kept
     for backward compatibility with call sites that iterate it.
+
+    Listener contract
+    -----------------
+    Listeners are called with the new value, on the thread that
+    performed the `set()` / `update()`. The lock is released before
+    dispatch so a listener can safely call `state.get()` on any
+    field — it won't deadlock.
+
+    Listeners SHOULD NOT synchronously call `state.set()` or
+    `state.update()` from within their own callback. The re-entrant
+    case is not a true deadlock (the lock is released during
+    dispatch), but it has two hazards worth avoiding:
+
+      1. **Nested dispatch ordering is observable.** A listener on
+         field A that writes field B causes B's listeners to run
+         before A's remaining listeners see the original A-change.
+         That's rarely what you want, and it makes debugging race-
+         like symptoms very hard.
+
+      2. **Infinite-loop risk.** A listener that writes the same
+         field it observes will short-circuit on AppState's equality
+         dedup (fine), but one that writes a different field whose
+         listener writes back into the original field will loop
+         until the values converge — if they ever do.
+
+    If a listener needs to react by mutating another field, schedule
+    the mutation on the next tick (e.g. via an asyncio task or the
+    application's event loop) rather than calling `set()` inline.
+
+    Listener exceptions are caught and logged at WARNING with full
+    traceback; one bad listener can't wedge the fan-out to others.
+    See the `set()` / `update()` implementations for details.
     """
 
     # Raw schema (for the server endpoint, tests, and diagnostic tools).
