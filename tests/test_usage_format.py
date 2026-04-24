@@ -160,13 +160,28 @@ def _extract_function(source_path: Path, fn_name: str) -> str:
 
 
 def _extract_ts_function(source_path: Path, fn_name: str) -> str:
-    """TS function has `export function name(arg: type): ret { ... }`.
+    """Extract a TS function and strip TypeScript-only syntax so node
+    can eval it as plain JavaScript.
 
-    Same brace-balance extraction. We then strip the leading `export`
-    and type annotations are left in place — node ignores them
-    because TS syntax is a superset that runs fine as plain JS when
-    the file doesn't use types at runtime. Fail if that assumption
-    breaks for a given function; we'll transpile for real at that point.
+    Removes:
+      - leading `export `
+      - parameter type annotations: `count: number` → `count`
+      - return type annotations: `): string {` → `) {`
+
+    The earlier version of this helper assumed node would silently
+    ignore TS annotations because "TS is a superset of JS." It isn't —
+    node is a JavaScript runtime, not a TypeScript one. Local node 24
+    happened to be permissive in a way that hid the bug; CI (node 20)
+    correctly rejected `function f(x: number): string { ... }` with
+    `SyntaxError: Unexpected token ':'`. The v1.18.0 release CI run
+    failed all 13 cross-language parity tests because of this.
+
+    Lightweight regex stripper instead of pulling in tsc — the TS
+    we cross-test is intentionally simple (parameter types + return
+    types + no generics, decorators, or interfaces). If a future
+    helper grows TS features beyond that, we should shell out to
+    `tsc --target=ESNext --strip-only` rather than extending this
+    regex with more edge cases.
     """
     source = source_path.read_text(encoding="utf-8")
     # Match `export function NAME(...)` with an optional `:` return type
@@ -188,12 +203,55 @@ def _extract_ts_function(source_path: Path, fn_name: str) -> str:
         elif ch == "}":
             depth -= 1
             if depth == 0:
-                # Strip the leading `export ` so node treats it as a
-                # plain function declaration.
                 fn_body = source[start : i + 1]
-                return fn_body.replace("export function", "function", 1)
+                return _strip_ts_syntax(fn_body, fn_name)
         i += 1
     pytest.fail(f"Unbalanced braces in {fn_name}")
+
+
+def _strip_ts_syntax(fn_body: str, fn_name: str) -> str:
+    """Convert a TS function declaration to plain JS for node eval.
+
+    Conservative: only handles the patterns actually present in our
+    shared formatters (`export function name(arg: type, arg: type):
+    ret_type { ... }`). Anything more elaborate fails fast.
+    """
+    # 1. Drop the `export` keyword so it's a top-level function.
+    body = fn_body.replace("export function", "function", 1)
+
+    # 2. Strip the return type annotation: `) : string {` or `): string {`.
+    #    Match the closing paren of the parameter list, optional whitespace,
+    #    a colon, then the type up to the opening brace.
+    body = re.sub(
+        r"\)(\s*):\s*[A-Za-z_][\w<>\[\]\s,|&.]*\s*\{",
+        r")\1{",
+        body,
+        count=1,
+    )
+
+    # 3. Strip parameter type annotations. Find the parameter list and
+    #    rewrite each `name: type` → `name`.
+    open_paren = body.find("(")
+    close_paren = body.find(")", open_paren)
+    if open_paren < 0 or close_paren < 0:
+        pytest.fail(f"Cannot locate parameter list for {fn_name}")
+    params_raw = body[open_paren + 1 : close_paren]
+    # Split on top-level commas only (we don't have generics here, so
+    # plain split works).
+    new_params = []
+    for raw in params_raw.split(","):
+        raw = raw.strip()
+        if not raw:
+            continue
+        # `name: type` or `name: type = default` or just `name`.
+        # Strip the colon and everything after, except keep `= default`.
+        m = re.match(r"^(\w+)\s*:\s*[^=]+(\s*=\s*.+)?$", raw)
+        if m:
+            new_params.append(m.group(1) + (m.group(2) or ""))
+        else:
+            new_params.append(raw)  # already untyped
+    body = body[: open_paren + 1] + ", ".join(new_params) + body[close_paren:]
+    return body
 
 
 # ── Web (shared/formatters.js) ──────────────────────────────────────
