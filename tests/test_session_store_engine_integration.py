@@ -260,7 +260,7 @@ class TestSessionRoundTrip:
         engine.session.save("compact")
 
         session_json = isolated_dirs["sessions_dir"] / "compact" / "session.json"
-        with open(session_json) as f:
+        with open(session_json, encoding="utf-8") as f:
             data = json.load(f)
 
         # The image_url URL in the saved JSON is a file:// reference,
@@ -327,7 +327,7 @@ class TestSessionRoundTrip:
         session_json = (
             isolated_dirs["sessions_dir"] / "id_stability" / "session.json"
         )
-        with open(session_json) as f:
+        with open(session_json, encoding="utf-8") as f:
             data = json.load(f)
         original_id = data["messages"][0]["content"][0]["file_id"]
         assert original_id  # non-empty
@@ -467,7 +467,7 @@ class TestLegacySessionCompat:
         }
 
         legacy_path = isolated_dirs["sessions_dir"] / "phase1_legacy.json"
-        with open(legacy_path, "w") as f:
+        with open(legacy_path, "w", encoding="utf-8") as f:
             json.dump(legacy_data, f)
 
         # Load with the new engine — must succeed and preserve the data URI.

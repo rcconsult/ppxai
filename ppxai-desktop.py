@@ -90,7 +90,7 @@ def find_server_binary() -> Path | None:
         if config_loc.exists():
             try:
                 import json
-                config = json.loads(config_loc.read_text())
+                config = json.loads(config_loc.read_text(encoding="utf-8"))
                 if 'paths' in config and 'bin_search_paths' in config['paths']:
                     for p in config['paths']['bin_search_paths']:
                         expanded = p.replace('{home}', str(Path.home()))

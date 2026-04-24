@@ -263,7 +263,8 @@ class FileCheckpointBackend(CheckpointBackend):
         metadata_file.write_text(
             f"Description: {description}\n"
             f"Timestamp: {datetime.now().isoformat()}\n"
-            f"Files:\n"
+            f"Files:\n",
+            encoding="utf-8",
         )
 
         # Copy each modified file
@@ -280,7 +281,7 @@ class FileCheckpointBackend(CheckpointBackend):
             shutil.copy2(file_path, dest_path)
 
             # Append to metadata
-            with metadata_file.open("a") as f:
+            with metadata_file.open("a", encoding="utf-8") as f:
                 f.write(f"  - {rel_path}\n")
 
         return checkpoint_id
@@ -321,7 +322,7 @@ class FileCheckpointBackend(CheckpointBackend):
                 continue
 
             # Parse metadata
-            metadata = metadata_file.read_text()
+            metadata = metadata_file.read_text(encoding="utf-8")
             lines = metadata.split("\n")
             description = "Unknown"
             timestamp = "Unknown"

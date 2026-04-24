@@ -463,7 +463,7 @@ class ContextInjector:
                     size=original_size
                 )
 
-            content = path.read_text(errors='replace')
+            content = path.read_text(errors='replace', encoding="utf-8")
             truncated = False
 
             if len(content) > self.MAX_FILE_SIZE:

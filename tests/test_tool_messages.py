@@ -162,7 +162,7 @@ class TestSessionToolMessageSerialization:
         }
 
         filepath = tmp_path / "old_session.json"
-        with open(filepath, 'w') as f:
+        with open(filepath, 'w', encoding="utf-8") as f:
             json.dump(old_data, f)
 
         session = SessionManager(sessions_dir=tmp_path, exports_dir=tmp_path / "exports")

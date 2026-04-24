@@ -361,7 +361,7 @@ def handle_debug_log(context: CommandContext, args: str) -> CommandResult:
             return ErrorResult(status=ResultStatus.ERROR, message="No log file found")
 
         try:
-            with open(log_file, 'r') as f:
+            with open(log_file, 'r', encoding="utf-8") as f:
                 lines = f.readlines()
                 # Show last 50 lines
                 recent_lines = lines[-50:]

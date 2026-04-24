@@ -183,7 +183,7 @@ class TestFindMissingRecommended:
 def _write_config(tmp_path: Path, data: dict) -> Path:
     """Write a JSON config to tmp_path and return the path."""
     path = tmp_path / "test-config.json"
-    path.write_text(json.dumps(data))
+    path.write_text(json.dumps(data), encoding="utf-8")
     return path
 
 
@@ -195,7 +195,7 @@ class TestAuditUserConfig:
 
     def test_malformed_json_returns_error(self, tmp_path):
         path = tmp_path / "bad.json"
-        path.write_text("{ not valid json")
+        path.write_text("{ not valid json", encoding="utf-8")
         result = audit_user_config(path)
         assert result["error"]
         assert "valid JSON" in result["error"] or "JSON" in result["error"]
@@ -565,7 +565,7 @@ class TestDeprecationTableInvariants:
 
         repo_root = pathlib.Path(__file__).parent.parent
         example_path = repo_root / "ppxai-config.example.json"
-        cfg = json.loads(example_path.read_text())
+        cfg = json.loads(example_path.read_text(encoding="utf-8"))
 
         violations = []
         for provider_name, provider_cfg in cfg.get("providers", {}).items():

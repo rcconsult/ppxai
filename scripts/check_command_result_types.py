@@ -27,7 +27,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 def extract_return_types_from_file(filepath: Path) -> Dict[str, Set[str]]:
     """Extract return statement result types from command handlers."""
     try:
-        content = filepath.read_text()
+        content = filepath.read_text(encoding="utf-8")
         tree = ast.parse(content)
     except Exception as e:
         console.print(f"[red]Error parsing {filepath}: {e}[/red]")
@@ -74,7 +74,7 @@ def extract_return_types_from_file(filepath: Path) -> Dict[str, Set[str]]:
 def extract_test_expectations(test_file: Path) -> Dict[str, Set[str]]:
     """Extract expected result types from test assertions."""
     try:
-        content = test_file.read_text()
+        content = test_file.read_text(encoding="utf-8")
         tree = ast.parse(content)
     except Exception as e:
         console.print(f"[red]Error parsing {test_file}: {e}[/red]")

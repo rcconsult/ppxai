@@ -562,7 +562,7 @@ Examples:
     if args.compare_descriptions:
         all_results = compare_descriptions(args.base_url, args.model, args.api_key)
         if args.output:
-            with open(args.output, 'w') as f:
+            with open(args.output, 'w', encoding="utf-8") as f:
                 json.dump(all_results, f, indent=2)
             print(f"\nResults saved to {args.output}")
 
@@ -598,7 +598,7 @@ Examples:
             print(f"{r['model']:<25} {tool_acc:<12} {args_acc:<12} {r['false_positive']:<6} {r['false_negative']:<6} {avg_lat:<12}")
 
         if args.output:
-            with open(args.output, 'w') as f:
+            with open(args.output, 'w', encoding="utf-8") as f:
                 json.dump(all_results, f, indent=2)
             print(f"\nResults saved to {args.output}")
     else:
@@ -610,7 +610,7 @@ Examples:
         )
 
         if args.output:
-            with open(args.output, 'w') as f:
+            with open(args.output, 'w', encoding="utf-8") as f:
                 json.dump(results, f, indent=2)
             print(f"Results saved to {args.output}")
 

@@ -96,7 +96,7 @@ class TestSessionManagerCommandHistory:
 
         # Load the saved file and verify
         filepath = temp_sessions_dir / f"{session_manager.session_name}.json"
-        with open(filepath) as f:
+        with open(filepath, encoding="utf-8") as f:
             data = json.load(f)
 
         assert "command_history" in data
@@ -122,7 +122,7 @@ class TestSessionManagerWorkingDirectory:
 
         # Load the saved file and verify
         filepath = temp_sessions_dir / f"{session_manager.session_name}.json"
-        with open(filepath) as f:
+        with open(filepath, encoding="utf-8") as f:
             data = json.load(f)
 
         assert data["working_dir"] == "/custom/path"
@@ -161,7 +161,7 @@ class TestSessionStateFile:
             session_manager._update_state_file(dirty=True)
 
             assert state_file.exists()
-            with open(state_file) as f:
+            with open(state_file, encoding="utf-8") as f:
                 data = json.load(f)
             assert data["version"] == 1
             assert data["last_session"]["dirty"] is True
@@ -175,7 +175,7 @@ class TestSessionStateFile:
         with patch('ppxai.engine.session.SESSION_STATE_FILE', state_file):
             session_manager._update_state_file(dirty=False)
 
-            with open(state_file) as f:
+            with open(state_file, encoding="utf-8") as f:
                 data = json.load(f)
 
             assert data["last_session"]["name"] == session_manager.session_name
@@ -206,7 +206,7 @@ class TestSessionStateFile:
             },
             "updated_at": "2026-01-12T10:30:00"
         }
-        with open(state_file, 'w') as f:
+        with open(state_file, 'w', encoding="utf-8") as f:
             json.dump(state_data, f)
 
         with patch('ppxai.engine.session.SESSION_STATE_FILE', state_file):
@@ -219,7 +219,7 @@ class TestSessionStateFile:
     def test_clear_state_file(self, tmp_path):
         """Test clearing the state file."""
         state_file = tmp_path / "state.json"
-        with open(state_file, 'w') as f:
+        with open(state_file, 'w', encoding="utf-8") as f:
             json.dump({"version": 1, "last_session": {}}, f)
 
         with patch('ppxai.engine.session.SESSION_STATE_FILE', state_file):
@@ -257,7 +257,7 @@ class TestSessionLoadWithExtras:
             "usage": {}
         }
         filepath = temp_sessions_dir / "old_session.json"
-        with open(filepath, 'w') as f:
+        with open(filepath, 'w', encoding="utf-8") as f:
             json.dump(old_session, f)
 
         # Load should succeed with defaults
@@ -417,7 +417,7 @@ class TestSessionFullFlow:
             session.save_dirty()
 
             # Verify state file shows dirty
-            with open(state_file) as f:
+            with open(state_file, encoding="utf-8") as f:
                 state = json.load(f)
             assert state["last_session"]["dirty"] is True
 
@@ -425,7 +425,7 @@ class TestSessionFullFlow:
             session.mark_clean()
 
             # Verify state file shows clean
-            with open(state_file) as f:
+            with open(state_file, encoding="utf-8") as f:
                 state = json.load(f)
             assert state["last_session"]["dirty"] is False
 
@@ -616,7 +616,7 @@ class TestSessionDiskScanFallback:
             "session_name": "session_old",
             "messages": [{"role": "user", "content": "hi"}],
             "metadata": {"provider": "openai", "model": "gpt-4.1-mini"},
-        }))
+        }), encoding="utf-8")
         new.write_text(json.dumps({
             "session_name": "session_new",
             "messages": [
@@ -625,7 +625,7 @@ class TestSessionDiskScanFallback:
             ],
             "metadata": {"provider": "perplexity", "model": "sonar"},
             "tools_enabled": True,
-        }))
+        }), encoding="utf-8")
         import os as _os
         _os.utime(old, (1_000_000_000, 1_000_000_000))
         _os.utime(new, (2_000_000_000, 2_000_000_000))
@@ -656,7 +656,7 @@ class TestSessionDiskScanFallback:
             "session_name": "session_dir",
             "messages": [{"role": "user", "content": "ping"}],
             "metadata": {"provider": "gemini", "model": "gemini-3-flash"},
-        }))
+        }), encoding="utf-8")
         import os as _os
         _os.utime(inner, (3_000_000_000, 3_000_000_000))
 
@@ -681,14 +681,14 @@ class TestSessionDiskScanFallback:
                 "model": "gpt-4.1-mini",
                 "dirty": False,
             },
-        }))
+        }), encoding="utf-8")
 
         # Put a newer session on disk — the pointer should still win.
         (sessions_dir / "newer.json").write_text(json.dumps({
             "session_name": "newer",
             "messages": [{"role": "user", "content": "x"}],
             "metadata": {},
-        }))
+        }), encoding="utf-8")
 
         monkeypatch.setattr("ppxai.engine.session.SESSION_STATE_FILE", state_file)
         monkeypatch.setattr("ppxai.engine.session.Path.home", lambda: tmp_path)
@@ -710,7 +710,7 @@ class TestSessionDiskScanFallback:
             "messages": [{"role": "user", "content": "x"},
                          {"role": "assistant", "content": "y"}],
             "metadata": {"provider": "openai", "model": "gpt-4.1-mini"},
-        }))
+        }), encoding="utf-8")
 
         monkeypatch.setattr("ppxai.engine.session.SESSION_STATE_FILE", state_file)
         monkeypatch.setattr("ppxai.engine.session.Path.home", lambda: tmp_path)
@@ -758,7 +758,7 @@ class TestAtomicSessionFormatTransition:
             "session_name": "dup1",
             "messages": [{"role": "user", "content": "stale"}],
             "metadata": {},
-        }))
+        }), encoding="utf-8")
         import os as _os
         _os.utime(flat, (1_000_000_000, 1_000_000_000))
 
@@ -770,7 +770,7 @@ class TestAtomicSessionFormatTransition:
             "session_name": "dup1",
             "messages": [{"role": "user", "content": "fresh"}],
             "metadata": {},
-        }))
+        }), encoding="utf-8")
         _os.utime(dir_json, (2_000_000_000, 2_000_000_000))
 
         # Record warning calls via a shim.
@@ -809,7 +809,7 @@ class TestAtomicSessionFormatTransition:
             "session_name": "crash",
             "messages": [{"role": "user", "content": "before attachment"}],
             "metadata": {},
-        }))
+        }), encoding="utf-8")
 
         # Mock Path.unlink to raise AFTER the atomic rename has happened.
         from pathlib import Path as _Path
@@ -835,7 +835,7 @@ class TestAtomicSessionFormatTransition:
                 {"role": "assistant", "content": "ok"},
             ],
             "metadata": {},
-        }))
+        }), encoding="utf-8")
         # Ensure directory mtime is newer than flat.
         import os as _os
         _os.utime(dir_json, (2_000_000_000, 2_000_000_000))
@@ -860,7 +860,7 @@ class TestAtomicSessionFormatTransition:
         # Seed pre-existing flat file to force a transition.
         flat = sm.sessions_dir / "atomic_test.json"
         flat.write_text(json.dumps({"session_name": "atomic_test",
-                                    "messages": [], "metadata": {}}))
+                                    "messages": [], "metadata": {}}), encoding="utf-8")
 
         # Add a message that makes _has_multimodal_attachments True.
         from ppxai.engine.types import Message

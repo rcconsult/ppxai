@@ -210,7 +210,7 @@ class Logger:
     def clear(self):
         """Clear the log file."""
         if self._log_file and self._log_file.exists():
-            self._log_file.write_text("")
+            self._log_file.write_text("", encoding="utf-8")
             if self._enabled:
                 # Re-log session start
                 self._logger.info("=" * 80)

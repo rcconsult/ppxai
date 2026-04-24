@@ -25,12 +25,12 @@ from ppxai.engine.completion import complete
 @pytest.fixture
 def populated_dir(tmp_path):
     """A tmp dir with predictable files and dirs."""
-    (tmp_path / "alpha.txt").write_text("a")
-    (tmp_path / "beta.py").write_text("b")
+    (tmp_path / "alpha.txt").write_text("a", encoding="utf-8")
+    (tmp_path / "beta.py").write_text("b", encoding="utf-8")
     sub = tmp_path / "subdir"
     sub.mkdir()
-    (sub / "deep.md").write_text("d")
-    (tmp_path / ".hidden").write_text("h")
+    (sub / "deep.md").write_text("d", encoding="utf-8")
+    (tmp_path / ".hidden").write_text("h", encoding="utf-8")
     return tmp_path
 
 

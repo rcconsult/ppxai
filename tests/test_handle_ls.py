@@ -37,11 +37,11 @@ def context(tmp_path) -> Any:
 @pytest.fixture
 def populated_dir(tmp_path):
     """A tmp dir with a few predictable entries."""
-    (tmp_path / "file1.txt").write_text("hello")
-    (tmp_path / "file2.md").write_text("# hi")
+    (tmp_path / "file1.txt").write_text("hello", encoding="utf-8")
+    (tmp_path / "file2.md").write_text("# hi", encoding="utf-8")
     sub = tmp_path / "subdir"
     sub.mkdir()
-    (sub / "nested.py").write_text("print(1)")
+    (sub / "nested.py").write_text("print(1)", encoding="utf-8")
     return tmp_path
 
 
@@ -113,13 +113,13 @@ class TestLsErrorCases:
 
 class TestLsFlags:
     def test_hidden_flag_skipped_by_default(self, context, populated_dir):
-        (populated_dir / ".hidden").write_text("secret")
+        (populated_dir / ".hidden").write_text("secret", encoding="utf-8")
         result = handle_ls(context, "")
         names = {row[0] for row in result.rows}
         assert ".hidden" not in names
 
     def test_hidden_flag_shows_dotfiles(self, context, populated_dir):
-        (populated_dir / ".hidden").write_text("secret")
+        (populated_dir / ".hidden").write_text("secret", encoding="utf-8")
         result = handle_ls(context, "-a")
         names = {row[0] for row in result.rows}
         assert ".hidden" in names

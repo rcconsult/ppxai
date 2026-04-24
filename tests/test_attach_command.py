@@ -195,13 +195,13 @@ class TestLoadFile:
     def test_resolves_relative_against_working_dir(self, tmp_path):
         sub = tmp_path / "sub"
         sub.mkdir()
-        (sub / "file.txt").write_text("x")
+        (sub / "file.txt").write_text("x", encoding="utf-8")
         pf, err = _load_file("sub/file.txt", str(tmp_path))
         assert err is None
         assert pf.name == "file.txt"
 
     def test_strips_surrounding_quotes(self, tmp_path):
-        (tmp_path / "a.txt").write_text("x")
+        (tmp_path / "a.txt").write_text("x", encoding="utf-8")
         pf, err = _load_file('"a.txt"', str(tmp_path))
         assert err is None
         assert pf.name == "a.txt"
@@ -215,7 +215,7 @@ class TestLoadFile:
         """R18: siblings in the target dir are surfaced when the name is wrong."""
         (tmp_path / "ppxai-vscode-v1.17.4.png").write_bytes(b"\x89PNG\r\n\x1a\n")
         (tmp_path / "ppxai-tui-preview.png").write_bytes(b"\x89PNG\r\n\x1a\n")
-        (tmp_path / "something-unrelated.txt").write_text("x")
+        (tmp_path / "something-unrelated.txt").write_text("x", encoding="utf-8")
 
         _, err = _load_file("ppxai-vscode-v1.17.3.png", str(tmp_path))
         assert err is not None
@@ -291,7 +291,7 @@ class TestHandleAttach:
 
     def test_attach_image_plus_text(self, ctx, tmp_path):
         (tmp_path / "img.png").write_bytes(_RED_PIXEL_PNG)
-        (tmp_path / "code.py").write_text("def f(): pass")
+        (tmp_path / "code.py").write_text("def f(): pass", encoding="utf-8")
         result = handle_attach(ctx, "img.png code.py")
         assert result.status == ResultStatus.SUCCESS
         kinds = [pf.kind for pf in ctx.pending_files]

@@ -399,7 +399,7 @@ def test_show_command_existing_file(mock_context, tmp_path):
 
     # Create test file
     test_file = tmp_path / "test.py"
-    test_file.write_text("# Test Python file\nprint('hello')\n")
+    test_file.write_text("# Test Python file\nprint('hello')\n", encoding="utf-8")
 
     # Mock working directory
     mock_context.engine_client.get_working_dir = Mock(return_value=str(tmp_path))

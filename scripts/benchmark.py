@@ -62,7 +62,7 @@ def get_version() -> str:
     pyproject = PROJECT_ROOT / "pyproject.toml"
     if pyproject.exists():
         import re
-        content = pyproject.read_text()
+        content = pyproject.read_text(encoding="utf-8")
         match = re.search(r'version\s*=\s*"([^"]+)"', content)
         if match:
             return match.group(1)
@@ -298,7 +298,7 @@ def save_results(benchmark_data: dict, summary: dict):
 
     # Load existing log
     if log_file.exists():
-        with open(log_file) as f:
+        with open(log_file, encoding="utf-8") as f:
             log = json.load(f)
     else:
         log = {"entries": []}
@@ -320,7 +320,7 @@ def save_results(benchmark_data: dict, summary: dict):
     log["entries"].append(entry)
 
     # Save log
-    with open(log_file, "w") as f:
+    with open(log_file, "w", encoding="utf-8") as f:
         json.dump(log, f, indent=2)
 
     print(f"\nResults saved to {log_file}")
@@ -374,7 +374,7 @@ def compare_with_baseline(summary: dict, log_file: Path) -> bool:
         print("\nNo baseline to compare (first run)")
         return True
 
-    with open(log_file) as f:
+    with open(log_file, encoding="utf-8") as f:
         log = json.load(f)
 
     # Get previous entry for same provider (if exists)

@@ -784,7 +784,7 @@ class TestSessionOps:
         result = export_answer(engine, "answer.md")
 
         assert result == tmp_path / "answer.md"
-        assert (tmp_path / "answer.md").read_text() == "Here is the answer."
+        assert (tmp_path / "answer.md").read_text(encoding="utf-8") == "Here is the answer."
 
     @patch("ppxai.engine.session_ops.EXPORTS_DIR")
     def test_export_answer_auto_filename(self, mock_exports_dir, tmp_path):
@@ -798,7 +798,7 @@ class TestSessionOps:
 
         assert result.name.startswith("answer_")
         assert result.name.endswith(".md")
-        assert result.read_text() == "Auto named."
+        assert result.read_text(encoding="utf-8") == "Auto named."
 
     @patch("ppxai.engine.session_ops.EXPORTS_DIR")
     def test_export_answer_adds_md_extension(self, mock_exports_dir, tmp_path):
@@ -822,7 +822,7 @@ class TestSessionOps:
         engine.session.messages = [user_msg, first_asst, user_msg, second_asst]
 
         result = export_answer(engine, "out.md")
-        assert (tmp_path / "out.md").read_text() == "second answer"
+        assert (tmp_path / "out.md").read_text(encoding="utf-8") == "second answer"
 
     def test_get_usage(self):
         engine = _make_engine()

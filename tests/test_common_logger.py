@@ -85,7 +85,7 @@ def test_logger_log_methods():
     logger.error("Error message")
 
     # Check log file contains messages
-    log_content = logger.log_file.read_text()
+    log_content = logger.log_file.read_text(encoding="utf-8")
     assert "Info message" in log_content
     assert "Debug message" in log_content
     assert "Warning message" in log_content
@@ -111,7 +111,7 @@ def test_logger_user_message():
 
     logger.log_user_message("User input test")
 
-    log_content = logger.log_file.read_text()
+    log_content = logger.log_file.read_text(encoding="utf-8")
     assert "USER INPUT: User input test" in log_content
 
 
@@ -122,7 +122,7 @@ def test_logger_assistant_message():
 
     logger.log_assistant_message("Assistant response test")
 
-    log_content = logger.log_file.read_text()
+    log_content = logger.log_file.read_text(encoding="utf-8")
     assert "ASSISTANT RESPONSE: Assistant response test" in log_content
 
 
@@ -133,7 +133,7 @@ def test_logger_command():
 
     logger.log_command("/tools enable")
 
-    log_content = logger.log_file.read_text()
+    log_content = logger.log_file.read_text(encoding="utf-8")
     assert "COMMAND: /tools enable" in log_content
 
 
@@ -144,7 +144,7 @@ def test_logger_tool_call():
 
     logger.log_tool_call("list_directory", {"path": "/"})
 
-    log_content = logger.log_file.read_text()
+    log_content = logger.log_file.read_text(encoding="utf-8")
     assert "TOOL CALL: list_directory" in log_content
     assert "Arguments: {'path': '/'}" in log_content
 
@@ -156,7 +156,7 @@ def test_logger_api_error():
 
     logger.log_api_error(500, "Internal Server Error")
 
-    log_content = logger.log_file.read_text()
+    log_content = logger.log_file.read_text(encoding="utf-8")
     assert "API ERROR 500: Internal Server Error" in log_content
 
 
@@ -167,7 +167,7 @@ def test_logger_http_request():
 
     logger.log_http_request("POST", "/api/chat", "client123")
 
-    log_content = logger.log_file.read_text()
+    log_content = logger.log_file.read_text(encoding="utf-8")
     assert "HTTP POST /api/chat from client123" in log_content
 
 
@@ -177,10 +177,10 @@ def test_logger_clear():
     logger.enable()
 
     logger.info("Message 1")
-    assert "Message 1" in logger.log_file.read_text()
+    assert "Message 1" in logger.log_file.read_text(encoding="utf-8")
 
     logger.clear()
-    log_content = logger.log_file.read_text()
+    log_content = logger.log_file.read_text(encoding="utf-8")
 
     # Should have session start but not old message
     assert "DEBUG SESSION STARTED" in log_content
@@ -195,7 +195,7 @@ def test_logger_truncates_long_messages():
     long_message = "A" * 500
     logger.log_user_message(long_message)
 
-    log_content = logger.log_file.read_text()
+    log_content = logger.log_file.read_text(encoding="utf-8")
     # Should only log first 200 chars
     assert long_message[:200] in log_content
     assert len(long_message) > 200  # Confirm it was long

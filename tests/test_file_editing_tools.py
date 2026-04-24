@@ -229,7 +229,7 @@ async def test_replace_block_success(temp_file, engine_with_consent):
     assert "Successfully replaced block" in result
 
     # Verify file content
-    content = temp_file.read_text()
+    content = temp_file.read_text(encoding="utf-8")
     assert "Modified Line 2" in content
     # Check that original "Line 2\n" was replaced (not just substring)
     lines = content.split('\n')
@@ -255,7 +255,7 @@ async def test_replace_block_consent_denied(temp_file):
     assert "User denied permission" in result
 
     # Verify file unchanged
-    content = temp_file.read_text()
+    content = temp_file.read_text(encoding="utf-8")
     assert "Line 2" in content
     assert "Modified Line 2" not in content
 
@@ -278,7 +278,7 @@ async def test_replace_block_not_found(temp_file, engine_with_consent):
 async def test_replace_block_multiple_matches(temp_file, engine_with_consent):
     """Test replacement fails when search text appears multiple times."""
     # Create file with duplicate content
-    temp_file.write_text("Line 1\nDuplicate\nLine 3\nDuplicate\n")
+    temp_file.write_text("Line 1\nDuplicate\nLine 3\nDuplicate\n", encoding="utf-8")
 
     tool = ReplaceBlockTool(engine_with_consent)
 
@@ -309,7 +309,7 @@ async def test_insert_text_success(temp_file, engine_with_consent):
     assert "Successfully inserted text" in result
 
     # Verify file content
-    lines = temp_file.read_text().split('\n')
+    lines = temp_file.read_text(encoding="utf-8").split('\n')
     assert lines[1] == "Inserted Line"
     assert lines[2] == "Line 2"
 
@@ -326,7 +326,7 @@ async def test_insert_text_at_end(temp_file, engine_with_consent):
     )
 
     assert "Successfully inserted text" in result
-    content = temp_file.read_text()
+    content = temp_file.read_text(encoding="utf-8")
     assert "New Last Line" in content
 
 
@@ -361,7 +361,7 @@ async def test_delete_lines_success(temp_file, engine_with_consent):
     assert "Successfully deleted lines" in result
 
     # Verify file content
-    lines = temp_file.read_text().split('\n')
+    lines = temp_file.read_text(encoding="utf-8").split('\n')
     assert "Line 1" in lines
     assert "Line 2" not in lines
     assert "Line 3" in lines
@@ -371,7 +371,7 @@ async def test_delete_lines_success(temp_file, engine_with_consent):
 async def test_delete_lines_range(temp_file, engine_with_consent):
     """Test deleting a range of lines."""
     # Create file with more lines
-    temp_file.write_text("Line 1\nLine 2\nLine 3\nLine 4\nLine 5\n")
+    temp_file.write_text("Line 1\nLine 2\nLine 3\nLine 4\nLine 5\n", encoding="utf-8")
 
     tool = DeleteLinesTool(engine_with_consent)
 
@@ -382,7 +382,7 @@ async def test_delete_lines_range(temp_file, engine_with_consent):
     )
 
     assert "Successfully deleted lines" in result
-    content = temp_file.read_text()
+    content = temp_file.read_text(encoding="utf-8")
     assert "Line 1" in content
     assert "Line 2" not in content
     assert "Line 3" not in content
@@ -428,7 +428,7 @@ async def test_apply_patch_success(temp_file, engine_with_consent):
     assert "Successfully applied patch" in result
 
     # Verify file content
-    content = temp_file.read_text()
+    content = temp_file.read_text(encoding="utf-8")
     assert "Modified Line 2" in content
     # Check that original "Line 2\n" was replaced (not just substring)
     lines = content.split('\n')
@@ -440,7 +440,7 @@ async def test_apply_patch_success(temp_file, engine_with_consent):
 @pytest.mark.asyncio
 async def test_rollback_on_error(temp_file, engine_with_consent):
     """Test that file is restored on error."""
-    original_content = temp_file.read_text()
+    original_content = temp_file.read_text(encoding="utf-8")
 
     tool = ReplaceBlockTool(engine_with_consent)
 
@@ -678,7 +678,7 @@ class TestNewFileCreation:
             assert new_file.exists()
 
             # Verify content
-            content = new_file.read_text()
+            content = new_file.read_text(encoding="utf-8")
             assert '#!/usr/bin/env python' in content
             assert 'print("Hello, World!")' in content
 
@@ -700,7 +700,7 @@ class TestNewFileCreation:
 
             assert "Successfully created" in result
             assert new_file.exists()
-            assert "content line" in new_file.read_text()
+            assert "content line" in new_file.read_text(encoding="utf-8")
 
     @pytest.mark.asyncio
     async def test_apply_patch_without_new_file_syntax_fails(self, engine_with_consent):
@@ -769,7 +769,7 @@ class TestInsertTextNewFile:
 
             assert "Successfully created" in result
             assert new_file.exists()
-            content = new_file.read_text()
+            content = new_file.read_text(encoding="utf-8")
             assert "#!/usr/bin/env python" in content
             assert "print('Hello')" in content
 
@@ -789,7 +789,7 @@ class TestInsertTextNewFile:
 
             assert "Successfully created" in result
             assert new_file.exists()
-            assert "content" in new_file.read_text()
+            assert "content" in new_file.read_text(encoding="utf-8")
 
     @pytest.mark.asyncio
     async def test_insert_text_nonexistent_requires_line_1(self, engine_with_consent):
@@ -909,7 +909,7 @@ class TestSearchReplaceDiff:
             )
 
             assert "Successfully applied patch" in result
-            content = temp_path.read_text()
+            content = temp_path.read_text(encoding="utf-8")
             assert "Path.cwd()" in content
             assert "# Config" in content
             assert "print('done')" in content
@@ -1050,7 +1050,7 @@ class TestUnicodeWhitespaceNormalization:
             )
 
             assert "Successfully applied patch" in result
-            content = temp_path.read_text()
+            content = temp_path.read_text(encoding="utf-8")
             assert "**Page 2 Table 1** - Updated" in content
             assert "# Report" in content
             assert "| Col A | Col B |" in content
@@ -1072,14 +1072,14 @@ class TestAtomicReplaceRetry:
         from ppxai.common.atomic_file import atomic_replace
 
         target = tmp_path / "target.txt"
-        target.write_text("old content")
+        target.write_text("old content", encoding="utf-8")
 
         temp = tmp_path / "target.txt.tmp"
-        temp.write_text("new content")
+        temp.write_text("new content", encoding="utf-8")
 
         atomic_replace(temp, target)
 
-        assert target.read_text() == "new content"
+        assert target.read_text(encoding="utf-8") == "new content"
         assert not temp.exists()
 
     def test_retries_on_permission_error(self, tmp_path):
@@ -1087,10 +1087,10 @@ class TestAtomicReplaceRetry:
         from ppxai.common.atomic_file import atomic_replace
 
         target = tmp_path / "target.txt"
-        target.write_text("old content")
+        target.write_text("old content", encoding="utf-8")
 
         temp = tmp_path / "target.txt.tmp"
-        temp.write_text("new content")
+        temp.write_text("new content", encoding="utf-8")
 
         call_count = 0
         original_replace = Path.replace
@@ -1107,7 +1107,7 @@ class TestAtomicReplaceRetry:
                 mock_sys.platform = 'win32'
                 atomic_replace(temp, target)
 
-        assert target.read_text() == "new content"
+        assert target.read_text(encoding="utf-8") == "new content"
         assert call_count == 2
 
     def test_raises_after_max_retries(self, tmp_path):
@@ -1115,10 +1115,10 @@ class TestAtomicReplaceRetry:
         from ppxai.common.atomic_file import atomic_replace
 
         target = tmp_path / "target.txt"
-        target.write_text("old content")
+        target.write_text("old content", encoding="utf-8")
 
         temp = tmp_path / "target.txt.tmp"
-        temp.write_text("new content")
+        temp.write_text("new content", encoding="utf-8")
 
         def always_fail(self_path, target_path):
             raise PermissionError("[WinError 5] Access is denied")
@@ -1137,10 +1137,10 @@ class TestAtomicReplaceRetry:
         from ppxai.common.atomic_file import atomic_replace
 
         target = tmp_path / "target.txt"
-        target.write_text("old content")
+        target.write_text("old content", encoding="utf-8")
 
         temp = tmp_path / "target.txt.tmp"
-        temp.write_text("new content")
+        temp.write_text("new content", encoding="utf-8")
 
         call_count = 0
 
@@ -1280,7 +1280,7 @@ class TestCheckpointRegistration:
         """replace_block calls register_file before writing."""
         engine, mock_mgr = engine_with_checkpoint
         test_file = tmp_path / "test.txt"
-        test_file.write_text("hello world\n")
+        test_file.write_text("hello world\n", encoding="utf-8")
 
         tool = ReplaceBlockTool(engine)
         await tool.execute(file_path=str(test_file), search="hello", replace="goodbye")
@@ -1291,7 +1291,7 @@ class TestCheckpointRegistration:
         """apply_patch calls register_file before writing."""
         engine, mock_mgr = engine_with_checkpoint
         test_file = tmp_path / "test.txt"
-        test_file.write_text("line 1\n")
+        test_file.write_text("line 1\n", encoding="utf-8")
 
         tool = ApplyPatchTool(engine)
         diff = (
@@ -1311,7 +1311,7 @@ class TestCheckpointRegistration:
         """insert_text calls register_file before writing."""
         engine, mock_mgr = engine_with_checkpoint
         test_file = tmp_path / "test.txt"
-        test_file.write_text("existing\n")
+        test_file.write_text("existing\n", encoding="utf-8")
 
         tool = InsertTextTool(engine)
         await tool.execute(file_path=str(test_file), line_number=1, text="new line\n")
@@ -1322,7 +1322,7 @@ class TestCheckpointRegistration:
         """delete_lines calls register_file before writing."""
         engine, mock_mgr = engine_with_checkpoint
         test_file = tmp_path / "test.txt"
-        test_file.write_text("line 1\nline 2\n")
+        test_file.write_text("line 1\nline 2\n", encoding="utf-8")
 
         tool = DeleteLinesTool(engine)
         await tool.execute(file_path=str(test_file), start_line=1, end_line=1)
@@ -1336,7 +1336,7 @@ class TestCheckpointRegistration:
         engine._checkpoint_manager = None
 
         test_file = tmp_path / "test.txt"
-        test_file.write_text("hello world\n")
+        test_file.write_text("hello world\n", encoding="utf-8")
 
         tool = ReplaceBlockTool(engine)
         result = await tool.execute(
@@ -1397,7 +1397,7 @@ class TestR13SyntaxValidation:
     ):
         """apply_patch must reject a diff that produces invalid Python."""
         tool = ApplyPatchTool(engine=engine_with_consent)
-        original = temp_python_file.read_text()
+        original = temp_python_file.read_text(encoding="utf-8")
 
         # Diff that inserts a raw `base_dir = ...` line inside a function
         # return statement — mirrors the gemini-3.1-pro corruption.
@@ -1423,7 +1423,7 @@ class TestR13SyntaxValidation:
             f"Error should mention python/syntax: {result!r}"
         )
         # File must NOT have been modified.
-        assert temp_python_file.read_text() == original, (
+        assert temp_python_file.read_text(encoding="utf-8") == original, (
             "File was modified despite syntax validation failure"
         )
 
@@ -1455,7 +1455,7 @@ class TestR13SyntaxValidation:
         )
         assert not result.startswith("Error"), f"Valid diff rejected: {result!r}"
         # New function must be in the file.
-        assert "def shout" in temp_python_file.read_text()
+        assert "def shout" in temp_python_file.read_text(encoding="utf-8")
 
     @pytest.mark.asyncio
     async def test_replace_block_rejects_broken_python(
@@ -1463,7 +1463,7 @@ class TestR13SyntaxValidation:
     ):
         """replace_block catches an edit that removes a closing paren."""
         tool = ReplaceBlockTool(engine=engine_with_consent)
-        original = temp_python_file.read_text()
+        original = temp_python_file.read_text(encoding="utf-8")
 
         # Replace `return f'Hello, {name}!'` with a broken version
         # (unterminated string).
@@ -1473,7 +1473,7 @@ class TestR13SyntaxValidation:
             replace="return f'Hello, {name",  # missing closing brace + quote
         )
         assert result.startswith("Error"), f"Expected Error, got: {result!r}"
-        assert temp_python_file.read_text() == original
+        assert temp_python_file.read_text(encoding="utf-8") == original
 
     @pytest.mark.asyncio
     async def test_insert_text_rejects_broken_python(
@@ -1481,7 +1481,7 @@ class TestR13SyntaxValidation:
     ):
         """insert_text catches a snippet pasted mid-expression."""
         tool = InsertTextTool(engine=engine_with_consent)
-        original = temp_python_file.read_text()
+        original = temp_python_file.read_text(encoding="utf-8")
 
         # Insert "def broken(" at line 2 — smack in the middle of the
         # greet() body, produces invalid Python.
@@ -1491,7 +1491,7 @@ class TestR13SyntaxValidation:
             line_number=2,
         )
         assert result.startswith("Error"), f"Expected Error, got: {result!r}"
-        assert temp_python_file.read_text() == original
+        assert temp_python_file.read_text(encoding="utf-8") == original
 
     @pytest.mark.asyncio
     async def test_delete_lines_rejects_when_result_is_broken(
@@ -1508,7 +1508,7 @@ class TestR13SyntaxValidation:
             p = Path(f.name)
         try:
             tool = DeleteLinesTool(engine=engine_with_consent)
-            original = p.read_text()
+            original = p.read_text(encoding="utf-8")
 
             # Delete just line 2 (`    if True:`) — leaves a dangling
             # `return 1` indented under nothing. Still parses in Python
@@ -1521,7 +1521,7 @@ class TestR13SyntaxValidation:
                 end_line=1,
             )
             assert result.startswith("Error"), f"Expected Error, got: {result!r}"
-            assert p.read_text() == original
+            assert p.read_text(encoding="utf-8") == original
         finally:
             if p.exists():
                 p.unlink()
@@ -1540,7 +1540,7 @@ class TestR13SyntaxValidation:
             replace="LINE TWO — gibberish {{{",  # totally fine for .txt
         )
         assert not result.startswith("Error"), f"Unexpected error: {result!r}"
-        assert "LINE TWO" in temp_file.read_text()
+        assert "LINE TWO" in temp_file.read_text(encoding="utf-8")
 
     @pytest.mark.asyncio
     async def test_json_validation_rejects_broken_object(
@@ -1548,7 +1548,7 @@ class TestR13SyntaxValidation:
     ):
         """JSON files are validated — missing comma → reject."""
         tool = ReplaceBlockTool(engine=engine_with_consent)
-        original = temp_json_file.read_text()
+        original = temp_json_file.read_text(encoding="utf-8")
 
         result = await tool.execute(
             file_path=str(temp_json_file),
@@ -1557,7 +1557,7 @@ class TestR13SyntaxValidation:
         )
         assert result.startswith("Error"), f"Expected Error, got: {result!r}"
         assert "json" in result.lower()
-        assert temp_json_file.read_text() == original
+        assert temp_json_file.read_text(encoding="utf-8") == original
 
 
 # =============================================================================

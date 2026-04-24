@@ -479,7 +479,7 @@ class TestValidation:
         with tempfile.TemporaryDirectory() as tmpdir:
             # Create a test file
             test_file = Path(tmpdir) / "test.txt"
-            test_file.write_text("test")
+            test_file.write_text("test", encoding="utf-8")
 
             # Resolve relative to tmpdir
             result = safe_resolve_path("test.txt", base_dir=tmpdir)
@@ -4294,7 +4294,7 @@ class TestAppIntegration:
 
         # Create temporary file
         test_file = tmp_path / "test.py"
-        test_file.write_text("def hello():\n    print('world')\n")
+        test_file.write_text("def hello():\n    print('world')\n", encoding="utf-8")
 
         app = PPXAIDEApp()
         app._working_dir = str(tmp_path)
@@ -4325,7 +4325,7 @@ class TestAppIntegration:
 
         # Create temporary JSON file
         test_file = tmp_path / "data.json"
-        test_file.write_text(json.dumps({"key": "value", "nested": {"a": 1}}))
+        test_file.write_text(json.dumps({"key": "value", "nested": {"a": 1}}), encoding="utf-8")
 
         app = PPXAIDEApp()
         app._working_dir = str(tmp_path)
@@ -4365,7 +4365,7 @@ class TestAppIntegration:
 
         # Create temporary CSV file
         test_file = tmp_path / "data.csv"
-        test_file.write_text("name,age\nAlice,30\nBob,25\n")
+        test_file.write_text("name,age\nAlice,30\nBob,25\n", encoding="utf-8")
 
         app = PPXAIDEApp()
         app._working_dir = str(tmp_path)
@@ -4399,7 +4399,7 @@ class TestAppIntegration:
 
         # Create temporary file
         test_file = tmp_path / "edit.txt"
-        test_file.write_text("Original content")
+        test_file.write_text("Original content", encoding="utf-8")
 
         app = PPXAIDEApp()
         app._working_dir = str(tmp_path)
@@ -4490,7 +4490,7 @@ class TestAppIntegration:
 
         # Create test file
         test_file = tmp_path / "test.txt"
-        test_file.write_text("Test content")
+        test_file.write_text("Test content", encoding="utf-8")
 
         app = PPXAIDEApp()
         app._working_dir = str(tmp_path)
@@ -4518,13 +4518,13 @@ class TestAppIntegration:
 
         # Create different file types
         py_file = tmp_path / "code.py"
-        py_file.write_text("print('hello')")
+        py_file.write_text("print('hello')", encoding="utf-8")
 
         json_file = tmp_path / "data.json"
-        json_file.write_text(json.dumps({"key": "value"}))
+        json_file.write_text(json.dumps({"key": "value"}), encoding="utf-8")
 
         csv_file = tmp_path / "data.csv"
-        csv_file.write_text("a,b\n1,2\n")
+        csv_file.write_text("a,b\n1,2\n", encoding="utf-8")
 
         app = PPXAIDEApp()
         app._working_dir = str(tmp_path)
@@ -4555,7 +4555,7 @@ class TestAppIntegration:
 
         # Create test file
         test_file = tmp_path / "test.py"
-        test_file.write_text("# Test file")
+        test_file.write_text("# Test file", encoding="utf-8")
 
         app = PPXAIDEApp()
         app._working_dir = str(tmp_path)
@@ -4587,7 +4587,7 @@ class TestAppIntegration:
 
         # Create test file
         test_file = tmp_path / "test.py"
-        test_file.write_text("# Test")
+        test_file.write_text("# Test", encoding="utf-8")
 
         app = PPXAIDEApp()
         app._working_dir = str(tmp_path)
@@ -4666,9 +4666,9 @@ class TestAppIntegration:
 
         # Create multiple JSON files (simpler content type)
         file1 = tmp_path / "file1.json"
-        file1.write_text('{"name": "file1"}')
+        file1.write_text('{"name": "file1"}', encoding="utf-8")
         file2 = tmp_path / "file2.json"
-        file2.write_text('{"name": "file2"}')
+        file2.write_text('{"name": "file2"}', encoding="utf-8")
 
         app = PPXAIDEApp()
         app._working_dir = str(tmp_path)
@@ -4695,7 +4695,7 @@ class TestAppIntegration:
 
         # Create test JSON file (simpler)
         test_file = tmp_path / "test.json"
-        test_file.write_text('{"key": "value"}')
+        test_file.write_text('{"key": "value"}', encoding="utf-8")
 
         app = PPXAIDEApp()
         app._working_dir = str(tmp_path)

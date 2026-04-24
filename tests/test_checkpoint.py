@@ -42,7 +42,7 @@ class TestGitCheckpointBackend:
             )
 
             # Create initial commit
-            (repo_path / "README.md").write_text("# Test Repo\n")
+            (repo_path / "README.md").write_text("# Test Repo\n", encoding="utf-8")
             subprocess.run(["git", "add", "."], cwd=repo_path, check=True, capture_output=True)
             subprocess.run(
                 ["git", "commit", "-m", "Initial commit"],
@@ -69,7 +69,7 @@ class TestGitCheckpointBackend:
         backend = GitCheckpointBackend(git_repo)
 
         # Make some changes
-        (git_repo / "test.txt").write_text("Test content\n")
+        (git_repo / "test.txt").write_text("Test content\n", encoding="utf-8")
 
         # Create checkpoint
         checkpoint_id = backend.create_checkpoint("Test checkpoint")
@@ -103,7 +103,7 @@ class TestGitCheckpointBackend:
         backend = GitCheckpointBackend(git_repo)
 
         # Create a checkpoint with file changes
-        (git_repo / "test.txt").write_text("Checkpoint content\n")
+        (git_repo / "test.txt").write_text("Checkpoint content\n", encoding="utf-8")
         checkpoint_id = backend.create_checkpoint("Add test file")
 
         # Revert the checkpoint (undo those changes)
@@ -135,10 +135,10 @@ class TestGitCheckpointBackend:
         backend = GitCheckpointBackend(git_repo)
 
         # Create multiple checkpoints
-        (git_repo / "file1.txt").write_text("Content 1\n")
+        (git_repo / "file1.txt").write_text("Content 1\n", encoding="utf-8")
         checkpoint1 = backend.create_checkpoint("Checkpoint 1")
 
-        (git_repo / "file2.txt").write_text("Content 2\n")
+        (git_repo / "file2.txt").write_text("Content 2\n", encoding="utf-8")
         checkpoint2 = backend.create_checkpoint("Checkpoint 2")
 
         # List checkpoints
@@ -161,7 +161,7 @@ class TestGitCheckpointBackend:
         backend = GitCheckpointBackend(git_repo)
 
         # Create a checkpoint
-        (git_repo / "test.txt").write_text("Content\n")
+        (git_repo / "test.txt").write_text("Content\n", encoding="utf-8")
         checkpoint_id = backend.create_checkpoint("Test checkpoint")
 
         # Checkpoint is HEAD, should be valid
@@ -174,11 +174,11 @@ class TestGitCheckpointBackend:
         backend = GitCheckpointBackend(git_repo)
 
         # Create a checkpoint
-        (git_repo / "test.txt").write_text("Content 1\n")
+        (git_repo / "test.txt").write_text("Content 1\n", encoding="utf-8")
         checkpoint_id = backend.create_checkpoint("Checkpoint 1")
 
         # Create another commit to move HEAD forward
-        (git_repo / "test2.txt").write_text("Content 2\n")
+        (git_repo / "test2.txt").write_text("Content 2\n", encoding="utf-8")
         backend.create_checkpoint("Checkpoint 2")
 
         # Original checkpoint is now HEAD~1, should still be valid
@@ -191,14 +191,14 @@ class TestGitCheckpointBackend:
         backend = GitCheckpointBackend(git_repo)
 
         # Create a checkpoint
-        (git_repo / "test.txt").write_text("Content 1\n")
+        (git_repo / "test.txt").write_text("Content 1\n", encoding="utf-8")
         checkpoint_id = backend.create_checkpoint("Checkpoint 1")
 
         # Create two more commits to move HEAD forward
-        (git_repo / "test2.txt").write_text("Content 2\n")
+        (git_repo / "test2.txt").write_text("Content 2\n", encoding="utf-8")
         backend.create_checkpoint("Checkpoint 2")
 
-        (git_repo / "test3.txt").write_text("Content 3\n")
+        (git_repo / "test3.txt").write_text("Content 3\n", encoding="utf-8")
         backend.create_checkpoint("Checkpoint 3")
 
         # Original checkpoint is now HEAD~2, should be invalid (stale)
@@ -227,7 +227,7 @@ class TestGitCheckpointBackend:
         backend = GitCheckpointBackend(git_repo)
 
         # Create a checkpoint
-        (git_repo / "test.txt").write_text("Content\n")
+        (git_repo / "test.txt").write_text("Content\n", encoding="utf-8")
         checkpoint_id = backend.create_checkpoint("Test checkpoint")
 
         # Use short hash (first 8 chars)
@@ -262,7 +262,7 @@ class TestFileCheckpointBackend:
 
         # Create some files
         test_file = working_dir / "test.txt"
-        test_file.write_text("Test content\n")
+        test_file.write_text("Test content\n", encoding="utf-8")
 
         # Register file for checkpointing
         backend.register_file(test_file)
@@ -281,7 +281,7 @@ class TestFileCheckpointBackend:
 
         # Verify file was copied
         assert (checkpoint_dir / "test.txt").exists()
-        assert (checkpoint_dir / "test.txt").read_text() == "Test content\n"
+        assert (checkpoint_dir / "test.txt").read_text(encoding="utf-8") == "Test content\n"
 
     def test_create_checkpoint_without_files(self, temp_dirs):
         """Test that checkpoint returns empty string when no files registered."""
@@ -301,19 +301,19 @@ class TestFileCheckpointBackend:
 
         # Create a file and checkpoint it
         test_file = working_dir / "test.txt"
-        test_file.write_text("Original content\n")
+        test_file.write_text("Original content\n", encoding="utf-8")
         backend.register_file(test_file)
         checkpoint_id = backend.create_checkpoint("Save original")
 
         # Modify the file
-        test_file.write_text("Modified content\n")
+        test_file.write_text("Modified content\n", encoding="utf-8")
 
         # Restore checkpoint
         success = backend.restore_checkpoint(checkpoint_id)
         assert success is True
 
         # Verify file was restored
-        assert test_file.read_text() == "Original content\n"
+        assert test_file.read_text(encoding="utf-8") == "Original content\n"
 
     def test_restore_nonexistent_checkpoint(self, temp_dirs):
         """Test that restoring invalid checkpoint fails."""
@@ -332,13 +332,13 @@ class TestFileCheckpointBackend:
         import time
         test_file = working_dir / "test.txt"
 
-        test_file.write_text("Version 1\n")
+        test_file.write_text("Version 1\n", encoding="utf-8")
         backend.register_file(test_file)
         checkpoint1 = backend.create_checkpoint("Checkpoint 1")
 
         time.sleep(1.1)  # Ensure different timestamp (format is YYYYMMDD-HHMMSS)
 
-        test_file.write_text("Version 2\n")
+        test_file.write_text("Version 2\n", encoding="utf-8")
         backend.modified_files = [test_file]  # Re-register
         checkpoint2 = backend.create_checkpoint("Checkpoint 2")
 
@@ -369,7 +369,7 @@ class TestFileCheckpointBackend:
         test_file = working_dir / "test.txt"
         base_time = datetime(2026, 1, 1, 12, 0, 0)
         for i in range(7):
-            test_file.write_text(f"Version {i}\n")
+            test_file.write_text(f"Version {i}\n", encoding="utf-8")
             backend.modified_files = [test_file]  # Re-register
             # Mock datetime.now() to return a unique timestamp for each checkpoint
             mock_time = base_time + timedelta(seconds=i)
@@ -404,7 +404,7 @@ class TestFileCheckpointBackend:
         subdir = working_dir / "subdir" / "nested"
         subdir.mkdir(parents=True)
         test_file = subdir / "test.txt"
-        test_file.write_text("Nested content\n")
+        test_file.write_text("Nested content\n", encoding="utf-8")
 
         # Register and checkpoint
         backend.register_file(test_file)
@@ -414,7 +414,7 @@ class TestFileCheckpointBackend:
         checkpoint_dir = backend.checkpoint_dir / checkpoint_id
         snapshot_file = checkpoint_dir / "subdir" / "nested" / "test.txt"
         assert snapshot_file.exists()
-        assert snapshot_file.read_text() == "Nested content\n"
+        assert snapshot_file.read_text(encoding="utf-8") == "Nested content\n"
 
     # v1.12.1: Stale checkpoint detection tests (file backend)
 
@@ -425,7 +425,7 @@ class TestFileCheckpointBackend:
 
         # Create a checkpoint
         test_file = working_dir / "test.txt"
-        test_file.write_text("Content\n")
+        test_file.write_text("Content\n", encoding="utf-8")
         backend.register_file(test_file)
         checkpoint_id = backend.create_checkpoint("Test checkpoint")
 
@@ -478,7 +478,7 @@ class TestCheckpointManager:
             )
 
             # Create initial commit
-            (repo_path / "README.md").write_text("# Test\n")
+            (repo_path / "README.md").write_text("# Test\n", encoding="utf-8")
             subprocess.run(["git", "add", "."], cwd=repo_path, check=True, capture_output=True)
             subprocess.run(
                 ["git", "commit", "-m", "Initial"],
@@ -539,7 +539,7 @@ class TestCheckpointManager:
         manager = CheckpointManager(str(git_repo), "test-session")
 
         # Make changes
-        (Path(git_repo) / "test.txt").write_text("Test\n")
+        (Path(git_repo) / "test.txt").write_text("Test\n", encoding="utf-8")
 
         # Create checkpoint
         checkpoint_id = manager.create_checkpoint("Test task")
@@ -553,7 +553,7 @@ class TestCheckpointManager:
 
         # Create a checkpoint with changes
         test_file = Path(git_repo) / "test.txt"
-        test_file.write_text("Checkpoint changes\n")
+        test_file.write_text("Checkpoint changes\n", encoding="utf-8")
         checkpoint_id = manager.create_checkpoint("Add test file")
 
         # Undo the checkpoint (revert it)
@@ -595,7 +595,7 @@ class TestCheckpointManager:
         manager = CheckpointManager(str(git_repo), "test-session", backend="git")
 
         # Create a checkpoint
-        (Path(git_repo) / "test.txt").write_text("Content\n")
+        (Path(git_repo) / "test.txt").write_text("Content\n", encoding="utf-8")
         checkpoint_id = manager.create_checkpoint("Test task")
 
         # Should be valid (HEAD)
@@ -603,7 +603,7 @@ class TestCheckpointManager:
         assert is_valid is True
 
         # Create another commit to make it HEAD~1
-        (Path(git_repo) / "test2.txt").write_text("Content 2\n")
+        (Path(git_repo) / "test2.txt").write_text("Content 2\n", encoding="utf-8")
         manager.create_checkpoint("Second task")
 
         # Original should still be valid (HEAD~1)
@@ -611,7 +611,7 @@ class TestCheckpointManager:
         assert is_valid is True
 
         # Create one more commit to make original stale (HEAD~2)
-        (Path(git_repo) / "test3.txt").write_text("Content 3\n")
+        (Path(git_repo) / "test3.txt").write_text("Content 3\n", encoding="utf-8")
         manager.create_checkpoint("Third task")
 
         # Original should now be invalid (stale)

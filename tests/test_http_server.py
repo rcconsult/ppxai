@@ -616,7 +616,7 @@ class TestFileWrite:
         assert data["success"] is True
         assert data["created"] is True
         assert data["size"] == 11
-        assert test_file.read_text() == "Hello World"
+        assert test_file.read_text(encoding="utf-8") == "Hello World"
 
     def test_file_write_update_existing(self, mock_client, tmp_path):
         """Test POST /files/write updates existing file."""
@@ -624,7 +624,7 @@ class TestFileWrite:
         mock_engine.get_working_dir.return_value = str(tmp_path)
 
         test_file = tmp_path / "existing.txt"
-        test_file.write_text("Original content")
+        test_file.write_text("Original content", encoding="utf-8")
 
         response = client.post(
             "/files/write",
@@ -634,7 +634,7 @@ class TestFileWrite:
         data = response.json()
         assert data["success"] is True
         assert data["created"] is False  # File existed
-        assert test_file.read_text() == "Updated content"
+        assert test_file.read_text(encoding="utf-8") == "Updated content"
 
     def test_file_write_creates_parent_dirs(self, mock_client, tmp_path):
         """Test POST /files/write creates parent directories."""
@@ -648,7 +648,7 @@ class TestFileWrite:
         )
         assert response.status_code == 200
         assert nested_file.exists()
-        assert nested_file.read_text() == "Nested content"
+        assert nested_file.read_text(encoding="utf-8") == "Nested content"
 
     def test_file_write_relative_path(self, mock_client, tmp_path):
         """Test POST /files/write resolves relative paths."""

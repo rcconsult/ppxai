@@ -96,15 +96,15 @@ class TestPathArgumentCompletion:
         #       lib/
         #         helper.py
         (tmp_path / "apple.png").write_bytes(b"")
-        (tmp_path / "banana.txt").write_text("")
-        (tmp_path / ".hidden").write_text("")
+        (tmp_path / "banana.txt").write_text("", encoding="utf-8")
+        (tmp_path / ".hidden").write_text("", encoding="utf-8")
         (tmp_path / "docs").mkdir()
-        (tmp_path / "docs" / "guide.md").write_text("")
-        (tmp_path / "docs" / "readme.md").write_text("")
+        (tmp_path / "docs" / "guide.md").write_text("", encoding="utf-8")
+        (tmp_path / "docs" / "readme.md").write_text("", encoding="utf-8")
         (tmp_path / "src").mkdir()
-        (tmp_path / "src" / "main.py").write_text("")
+        (tmp_path / "src" / "main.py").write_text("", encoding="utf-8")
         (tmp_path / "src" / "lib").mkdir()
-        (tmp_path / "src" / "lib" / "helper.py").write_text("")
+        (tmp_path / "src" / "lib" / "helper.py").write_text("", encoding="utf-8")
 
         class _FakeEngine:
             def __init__(self, root):

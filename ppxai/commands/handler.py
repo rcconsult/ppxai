@@ -544,7 +544,7 @@ class CommandHandler:
             if files:
                 file_path = files[0]
                 try:
-                    file_content = file_path.read_text()
+                    file_content = file_path.read_text(encoding="utf-8")
                     filename = file_path.name
 
                     resolved_files.append({

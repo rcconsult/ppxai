@@ -194,7 +194,7 @@ class TestPendingAttachmentWarning:
         # because nothing has been sent to the engine yet.
         filepath = engine.session.sessions_dir / "with_pending.json"
         assert filepath.exists()
-        data = json.loads(filepath.read_text())
+        data = json.loads(filepath.read_text(encoding="utf-8"))
         # Messages list should contain only the user/assistant pair —
         # no synthetic message carrying the staged attachment.
         assert len(data["messages"]) == 2

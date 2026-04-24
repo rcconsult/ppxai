@@ -428,7 +428,7 @@ def display_global_usage():
         console.print("\n[yellow]No usage data available yet.[/yellow]\n")
         return
 
-    with open(USAGE_FILE, 'r') as f:
+    with open(USAGE_FILE, 'r', encoding="utf-8") as f:
         usage_data = json.load(f)
 
     if not usage_data:

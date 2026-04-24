@@ -13,7 +13,7 @@ class TestReadFileContent:
     def test_read_existing_file(self, tmp_path):
         """Test reading an existing file."""
         test_file = tmp_path / "test.txt"
-        test_file.write_text("Hello, World!")
+        test_file.write_text("Hello, World!", encoding="utf-8")
 
         content = read_file_content(str(test_file))
         assert content == "Hello, World!"
@@ -40,7 +40,7 @@ class TestReadFileContent:
         """Test that user paths are expanded."""
         # Create a file in a temp directory
         test_file = tmp_path / "test.txt"
-        test_file.write_text("test content")
+        test_file.write_text("test content", encoding="utf-8")
 
         # Mock expanduser to return our temp path
         def mock_expanduser(path):
@@ -56,7 +56,7 @@ class TestReadFileContent:
     def test_read_empty_file(self, tmp_path):
         """Test reading an empty file."""
         test_file = tmp_path / "empty.txt"
-        test_file.write_text("")
+        test_file.write_text("", encoding="utf-8")
 
         content = read_file_content(str(test_file))
         assert content == ""
@@ -65,7 +65,7 @@ class TestReadFileContent:
         """Test reading a multiline file."""
         test_file = tmp_path / "multiline.txt"
         expected = "Line 1\nLine 2\nLine 3"
-        test_file.write_text(expected)
+        test_file.write_text(expected, encoding="utf-8")
 
         content = read_file_content(str(test_file))
         assert content == expected

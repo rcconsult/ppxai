@@ -187,7 +187,7 @@ class TestGetCursorFilePath:
         from ppxai.tui.widgets.file_tree import FileTree
 
         # Create a file so the tree has content
-        (tmp_path / "hello.py").write_text("x = 1")
+        (tmp_path / "hello.py").write_text("x = 1", encoding="utf-8")
         app = _make_tree(tmp_path)
 
         async def run():
@@ -206,7 +206,7 @@ class TestGetCursorFilePath:
         from unittest.mock import MagicMock, patch
 
         target = tmp_path / "target.py"
-        target.write_text("pass")
+        target.write_text("pass", encoding="utf-8")
 
         app = _make_tree(tmp_path)
         results = []
@@ -250,7 +250,7 @@ class TestFileTreeFilePreview:
         from ppxai.tui.widgets.file_tree import FileTree
         from textual.widgets import DirectoryTree
 
-        (tmp_path / "readme.md").write_text("# Hello")
+        (tmp_path / "readme.md").write_text("# Hello", encoding="utf-8")
         previews = []
 
         class TestApp(_make_tree(tmp_path).__class__):
@@ -280,7 +280,7 @@ class TestFileTreeFilePreview:
         from textual.widgets import DirectoryTree
         from unittest.mock import MagicMock
 
-        (tmp_path / "file.py").write_text("")
+        (tmp_path / "file.py").write_text("", encoding="utf-8")
         app = _make_tree(tmp_path)
 
         async def run():
@@ -303,7 +303,7 @@ class TestActionEdit:
         from unittest.mock import MagicMock, patch
 
         target = tmp_path / "main.py"
-        target.write_text("pass")
+        target.write_text("pass", encoding="utf-8")
         edits = []
 
         class TestApp(_make_tree(tmp_path).__class__):
@@ -356,7 +356,7 @@ class TestActionInject:
         from unittest.mock import patch
 
         target = tmp_path / "config.json"
-        target.write_text("{}")
+        target.write_text("{}", encoding="utf-8")
         injections = []
 
         class TestApp(_make_tree(tmp_path).__class__):

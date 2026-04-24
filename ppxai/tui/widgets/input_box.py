@@ -45,7 +45,7 @@ class ChatTextArea(TextArea):
                 k = repr(event.key)
                 c = repr(event.character)
                 a = repr(event.aliases) if hasattr(event, "aliases") else "N/A"
-                with open(log_path, "a") as f:
+                with open(log_path, "a", encoding="utf-8") as f:
                     f.write(f"key={k} character={c} aliases={a}\n")
         except Exception:
             pass

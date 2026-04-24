@@ -137,7 +137,7 @@ class TestParsers:
 
         csv_file = FIXTURES_DIR / "sample.csv"
         if csv_file.exists():
-            content = csv_file.read_text()
+            content = csv_file.read_text(encoding="utf-8")
             data = parse_csv(content)
 
             assert "name" in data.headers
@@ -183,7 +183,7 @@ class TestParsers:
 
         json_file = FIXTURES_DIR / "sample.json"
         if json_file.exists():
-            content = json_file.read_text()
+            content = json_file.read_text(encoding="utf-8")
             tree = parse_json(content)
 
             assert tree.node_type == "object"

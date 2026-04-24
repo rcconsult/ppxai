@@ -225,7 +225,7 @@ Instructions.
     def test_from_file(self):
         """Test loading from file."""
         with temp_dir() as d:
-            (d / "AGENTS.md").write_text("Project rules here.")
+            (d / "AGENTS.md").write_text("Project rules here.", encoding="utf-8")
             ctx = BootstrapContext.from_file(d / "AGENTS.md")
             assert ctx.base_instructions == "Project rules here."
             assert ctx.source_file == str(d / "AGENTS.md")
@@ -237,7 +237,7 @@ class TestFindBootstrapFile:
     def test_finds_agents_md(self):
         """Find AGENTS.md in directory."""
         with temp_dir() as d:
-            (d / "AGENTS.md").write_text("Rules")
+            (d / "AGENTS.md").write_text("Rules", encoding="utf-8")
             result = find_bootstrap_file(d)
             assert result is not None
             assert result.name == "AGENTS.md"
@@ -245,7 +245,7 @@ class TestFindBootstrapFile:
     def test_finds_claude_md_as_fallback(self):
         """Find CLAUDE.md when AGENTS.md doesn't exist."""
         with temp_dir() as d:
-            (d / "CLAUDE.md").write_text("Rules")
+            (d / "CLAUDE.md").write_text("Rules", encoding="utf-8")
             result = find_bootstrap_file(d)
             assert result is not None
             assert result.name == "CLAUDE.md"
@@ -253,8 +253,8 @@ class TestFindBootstrapFile:
     def test_agents_md_takes_priority(self):
         """AGENTS.md is preferred over CLAUDE.md."""
         with temp_dir() as d:
-            (d / "AGENTS.md").write_text("AGENTS rules")
-            (d / "CLAUDE.md").write_text("CLAUDE rules")
+            (d / "AGENTS.md").write_text("AGENTS rules", encoding="utf-8")
+            (d / "CLAUDE.md").write_text("CLAUDE rules", encoding="utf-8")
             result = find_bootstrap_file(d)
             assert result is not None
             assert result.name == "AGENTS.md"
@@ -262,8 +262,8 @@ class TestFindBootstrapFile:
     def test_custom_alias_list(self):
         """Custom alias list is respected."""
         with temp_dir() as d:
-            (d / "COPILOT.md").write_text("Copilot rules")
-            (d / "CLAUDE.md").write_text("Claude rules")
+            (d / "COPILOT.md").write_text("Copilot rules", encoding="utf-8")
+            (d / "CLAUDE.md").write_text("Claude rules", encoding="utf-8")
             result = find_bootstrap_file(d, ["COPILOT.md", "CLAUDE.md", "AGENTS.md"])
             assert result is not None
             assert result.name == "COPILOT.md"
@@ -271,7 +271,7 @@ class TestFindBootstrapFile:
     def test_custom_alias_fallback_order(self):
         """Falls back through alias list in order."""
         with temp_dir() as d:
-            (d / "AI.md").write_text("AI rules")
+            (d / "AI.md").write_text("AI rules", encoding="utf-8")
             result = find_bootstrap_file(d, ["AGENTS.md", "CLAUDE.md", "AI.md"])
             assert result is not None
             assert result.name == "AI.md"
@@ -279,7 +279,7 @@ class TestFindBootstrapFile:
     def test_empty_alias_list_returns_none(self):
         """Empty alias list disables bootstrap."""
         with temp_dir() as d:
-            (d / "AGENTS.md").write_text("Should be ignored")
+            (d / "AGENTS.md").write_text("Should be ignored", encoding="utf-8")
             result = find_bootstrap_file(d, [])
             assert result is None
 
@@ -301,7 +301,7 @@ class TestContextInjector:
     def test_find_bootstrap_files_default(self):
         """Find bootstrap files with default aliases."""
         with temp_dir() as d:
-            (d / "AGENTS.md").write_text("Project rules")
+            (d / "AGENTS.md").write_text("Project rules", encoding="utf-8")
             injector = ContextInjector(working_dir=str(d))
             files = injector.find_bootstrap_files()
             assert len(files) == 1
@@ -310,7 +310,7 @@ class TestContextInjector:
     def test_find_bootstrap_files_claude_fallback(self):
         """Fall back to CLAUDE.md."""
         with temp_dir() as d:
-            (d / "CLAUDE.md").write_text("Claude instructions")
+            (d / "CLAUDE.md").write_text("Claude instructions", encoding="utf-8")
             injector = ContextInjector(working_dir=str(d))
             files = injector.find_bootstrap_files()
             assert len(files) == 1
@@ -319,8 +319,8 @@ class TestContextInjector:
     def test_find_bootstrap_files_agents_priority(self):
         """AGENTS.md takes priority over CLAUDE.md."""
         with temp_dir() as d:
-            (d / "AGENTS.md").write_text("Agents rules")
-            (d / "CLAUDE.md").write_text("Claude rules")
+            (d / "AGENTS.md").write_text("Agents rules", encoding="utf-8")
+            (d / "CLAUDE.md").write_text("Claude rules", encoding="utf-8")
             injector = ContextInjector(working_dir=str(d))
             files = injector.find_bootstrap_files()
             assert len(files) == 1
@@ -329,8 +329,8 @@ class TestContextInjector:
     def test_find_bootstrap_files_custom_aliases(self):
         """Custom alias list is respected."""
         with temp_dir() as d:
-            (d / "COPILOT.md").write_text("Copilot rules")
-            (d / "CLAUDE.md").write_text("Claude rules")
+            (d / "COPILOT.md").write_text("Copilot rules", encoding="utf-8")
+            (d / "CLAUDE.md").write_text("Claude rules", encoding="utf-8")
             injector = ContextInjector(
                 working_dir=str(d),
                 bootstrap_files=["COPILOT.md", "CLAUDE.md", "AGENTS.md"]
@@ -342,7 +342,7 @@ class TestContextInjector:
     def test_find_bootstrap_files_empty_aliases(self):
         """Empty alias list disables bootstrap."""
         with temp_dir() as d:
-            (d / "AGENTS.md").write_text("Should be ignored")
+            (d / "AGENTS.md").write_text("Should be ignored", encoding="utf-8")
             injector = ContextInjector(working_dir=str(d), bootstrap_files=[])
             files = injector.find_bootstrap_files()
             assert len(files) == 0
@@ -357,7 +357,7 @@ provider_hints:
 ---
 
 # Rules
-""")
+""", encoding="utf-8")
             injector = ContextInjector(working_dir=str(d))
             ctx = injector.load_bootstrap_context()
             assert ctx is not None
@@ -561,7 +561,7 @@ class TestFindBootstrapFilesByScope:
         with temp_dir() as d:
             # Create a fake git repo
             (d / ".git").mkdir()
-            (d / "AGENTS.md").write_text("Project rules")
+            (d / "AGENTS.md").write_text("Project rules", encoding="utf-8")
 
             result = find_bootstrap_files_by_scope(d)
 
@@ -578,12 +578,12 @@ class TestFindBootstrapFilesByScope:
         with temp_dir() as project_root:
             # Create a fake git repo
             (project_root / ".git").mkdir()
-            (project_root / "AGENTS.md").write_text("Project rules")
+            (project_root / "AGENTS.md").write_text("Project rules", encoding="utf-8")
 
             # Create a subdirectory with its own AGENTS.md
             subdir = project_root / "src"
             subdir.mkdir()
-            (subdir / "AGENTS.md").write_text("Subdir rules")
+            (subdir / "AGENTS.md").write_text("Subdir rules", encoding="utf-8")
 
             result = find_bootstrap_files_by_scope(subdir)
 
@@ -597,7 +597,7 @@ class TestFindBootstrapFilesByScope:
         from ppxai.engine.bootstrap import find_bootstrap_files_by_scope
 
         with temp_dir() as d:
-            (d / "AGENTS.md").write_text("Should be ignored")
+            (d / "AGENTS.md").write_text("Should be ignored", encoding="utf-8")
             result = find_bootstrap_files_by_scope(d, aliases=[])
             assert result == []
 
@@ -612,7 +612,7 @@ class TestContextInjectorScopes:
         with temp_dir() as project_root:
             # Create a fake git repo
             (project_root / ".git").mkdir()
-            (project_root / "AGENTS.md").write_text("Project rules")
+            (project_root / "AGENTS.md").write_text("Project rules", encoding="utf-8")
 
             injector = ContextInjector(working_dir=str(project_root))
             sources = injector.find_bootstrap_files_with_scopes()
@@ -637,7 +637,7 @@ provider_hints:
 ---
 
 # Project Rules
-""")
+""", encoding="utf-8")
 
             # Create subdirectory with different content
             subdir = project_root / "src"
@@ -645,7 +645,7 @@ provider_hints:
             (subdir / "AGENTS.md").write_text("""# Subdir Rules
 
 Extra instructions for this directory.
-""")
+""", encoding="utf-8")
 
             # Use custom bootstrap_files to isolate from global ~/.ppxai/AGENTS.md
             injector = ContextInjector(working_dir=str(subdir), bootstrap_files=["AGENTS.md"])
@@ -681,7 +681,7 @@ Extra instructions for this directory.
         with temp_dir() as project_root:
             # Create a fake git repo
             (project_root / ".git").mkdir()
-            (project_root / "AGENTS.md").write_text("Project rules")
+            (project_root / "AGENTS.md").write_text("Project rules", encoding="utf-8")
 
             injector = ContextInjector(working_dir=str(project_root))
             ctx, sources = injector.load_bootstrap_context_merged()
@@ -705,12 +705,12 @@ class TestScopePrecedence:
         with temp_dir() as project_root:
             # Create a fake git repo
             (project_root / ".git").mkdir()
-            (project_root / "AGENTS.md").write_text("Project rules")
+            (project_root / "AGENTS.md").write_text("Project rules", encoding="utf-8")
 
             # Create subdirectory
             subdir = project_root / "src"
             subdir.mkdir()
-            (subdir / "AGENTS.md").write_text("Subdir rules")
+            (subdir / "AGENTS.md").write_text("Subdir rules", encoding="utf-8")
 
             result = find_bootstrap_files_by_scope(subdir)
 
@@ -730,7 +730,7 @@ class TestScopePrecedence:
 
         with temp_dir() as d:
             # No git repo, so no project scope
-            (d / "AGENTS.md").write_text("Directory rules")
+            (d / "AGENTS.md").write_text("Directory rules", encoding="utf-8")
 
             result = find_bootstrap_files_by_scope(d)
 

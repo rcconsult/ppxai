@@ -237,7 +237,7 @@ class TestContextInjector:
         # Create a file in home directory for testing
         home_file = Path.home() / f".ppxai_test_{os.getpid()}.txt"
         try:
-            home_file.write_text("test")
+            home_file.write_text("test", encoding="utf-8")
             resolved = injector.resolve_path(f"~/{home_file.name}")
             assert resolved is not None
             assert resolved.resolve() == home_file.resolve()
@@ -260,16 +260,16 @@ class TestContextInjector:
 
             # Create and commit a file
             test_file = Path(tmpdir) / 'test.txt'
-            test_file.write_text("original content\n")
+            test_file.write_text("original content\n", encoding="utf-8")
             subprocess.run(['git', 'add', 'test.txt'], cwd=tmpdir, capture_output=True)
             subprocess.run(['git', 'commit', '-m', 'Initial commit'], cwd=tmpdir, capture_output=True)
 
             # Make unstaged changes
-            test_file.write_text("modified content\n")
+            test_file.write_text("modified content\n", encoding="utf-8")
 
             # Create another file and stage it
             new_file = Path(tmpdir) / 'new.txt'
-            new_file.write_text("new file\n")
+            new_file.write_text("new file\n", encoding="utf-8")
             subprocess.run(['git', 'add', 'new.txt'], cwd=tmpdir, capture_output=True)
 
             # Test git context injection
@@ -297,7 +297,7 @@ class TestContextInjector:
 
             # Create and commit a file
             test_file = Path(tmpdir) / 'test.txt'
-            test_file.write_text("content\n")
+            test_file.write_text("content\n", encoding="utf-8")
             subprocess.run(['git', 'add', 'test.txt'], cwd=tmpdir, capture_output=True)
             subprocess.run(['git', 'commit', '-m', 'Initial commit'], cwd=tmpdir, capture_output=True)
 
@@ -329,10 +329,10 @@ class TestContextInjector:
         # Create a temporary directory structure
         with tempfile.TemporaryDirectory() as tmpdir:
             # Create some files and directories
-            (Path(tmpdir) / 'file1.txt').write_text("content")
-            (Path(tmpdir) / 'file2.py').write_text("print('hello')")
+            (Path(tmpdir) / 'file1.txt').write_text("content", encoding="utf-8")
+            (Path(tmpdir) / 'file2.py').write_text("print('hello')", encoding="utf-8")
             (Path(tmpdir) / 'subdir').mkdir()
-            (Path(tmpdir) / 'subdir' / 'nested.md').write_text("# Nested")
+            (Path(tmpdir) / 'subdir' / 'nested.md').write_text("# Nested", encoding="utf-8")
             (Path(tmpdir) / '.git').mkdir()  # Should be ignored
 
             tree_injector = ContextInjector(working_dir=tmpdir)
@@ -359,7 +359,7 @@ class TestContextInjector:
             for i in range(5):
                 current = current / f'level{i}'
                 current.mkdir()
-                (current / f'file{i}.txt').write_text(f"level {i}")
+                (current / f'file{i}.txt').write_text(f"level {i}", encoding="utf-8")
 
             tree_injector = ContextInjector(working_dir=tmpdir)
 
@@ -386,10 +386,10 @@ class TestContextInjector:
             subprocess.run(['git', 'config', 'user.name', 'Test User'], cwd=tmpdir, capture_output=True)
 
             test_file = Path(tmpdir) / 'test.txt'
-            test_file.write_text("original\n")
+            test_file.write_text("original\n", encoding="utf-8")
             subprocess.run(['git', 'add', 'test.txt'], cwd=tmpdir, capture_output=True)
             subprocess.run(['git', 'commit', '-m', 'Initial'], cwd=tmpdir, capture_output=True)
-            test_file.write_text("modified\n")
+            test_file.write_text("modified\n", encoding="utf-8")
 
             git_injector = ContextInjector(working_dir=tmpdir)
             message = "Review the changes in @git and suggest improvements"
@@ -414,8 +414,8 @@ class TestContextInjector:
 
         # Create a temporary directory with files
         with tempfile.TemporaryDirectory() as tmpdir:
-            (Path(tmpdir) / 'file1.txt').write_text("content")
-            (Path(tmpdir) / 'file2.py').write_text("code")
+            (Path(tmpdir) / 'file1.txt').write_text("content", encoding="utf-8")
+            (Path(tmpdir) / 'file2.py').write_text("code", encoding="utf-8")
 
             tree_injector = ContextInjector(working_dir=tmpdir)
             message = "Here's the project structure: @tree"
@@ -454,11 +454,11 @@ class TestContextInjector:
             subprocess.run(['git', 'commit', '-m', 'Initial'], cwd=tmpdir, capture_output=True)
 
             # Make a change
-            test_file.write_text("modified content\n")
+            test_file.write_text("modified content\n", encoding="utf-8")
 
             # Create another file for @file reference
             another_file = Path(tmpdir) / 'another.txt'
-            another_file.write_text("another file content\n")
+            another_file.write_text("another file content\n", encoding="utf-8")
 
             combined_injector = ContextInjector(working_dir=tmpdir)
             message = f"Review @git changes, check @tree structure, and edit @{another_file.name}"

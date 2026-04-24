@@ -152,13 +152,13 @@ class TestResolvePreviewPath:
     """Tests for resolve_preview_path()."""
 
     def test_resolves_relative_html(self, tmp_path):
-        (tmp_path / "index.html").write_text("<html></html>")
+        (tmp_path / "index.html").write_text("<html></html>", encoding="utf-8")
         from ppxai.common.preview import resolve_preview_path
         result = resolve_preview_path("index.html", str(tmp_path))
         assert result == (tmp_path / "index.html").resolve()
 
     def test_rejects_non_html(self, tmp_path):
-        (tmp_path / "data.json").write_text("{}")
+        (tmp_path / "data.json").write_text("{}", encoding="utf-8")
         from ppxai.common.preview import resolve_preview_path
         with pytest.raises(ValueError, match="Not an HTML file"):
             resolve_preview_path("data.json", str(tmp_path))
@@ -174,20 +174,20 @@ class TestResolvePreviewPath:
             resolve_preview_path("../../../etc/passwd", str(tmp_path))
 
     def test_accepts_htm_extension(self, tmp_path):
-        (tmp_path / "page.htm").write_text("<html></html>")
+        (tmp_path / "page.htm").write_text("<html></html>", encoding="utf-8")
         from ppxai.common.preview import resolve_preview_path
         result = resolve_preview_path("page.htm", str(tmp_path))
         assert result.name == "page.htm"
 
     def test_accepts_absolute_path(self, tmp_path):
         html_file = tmp_path / "abs.html"
-        html_file.write_text("<html></html>")
+        html_file.write_text("<html></html>", encoding="utf-8")
         from ppxai.common.preview import resolve_preview_path
         result = resolve_preview_path(str(html_file), str(tmp_path))
         assert result == html_file.resolve()
 
     def test_no_extension_restriction(self, tmp_path):
-        (tmp_path / "styles.css").write_text("body {}")
+        (tmp_path / "styles.css").write_text("body {}", encoding="utf-8")
         from ppxai.common.preview import resolve_preview_path
         result = resolve_preview_path(
             "styles.css", str(tmp_path), restrict_extension=False
@@ -199,7 +199,7 @@ class TestPreviewServer:
     """Tests for PreviewServer stdlib server."""
 
     def test_starts_on_free_port(self, tmp_path):
-        (tmp_path / "test.html").write_text("<html><body>Hello</body></html>")
+        (tmp_path / "test.html").write_text("<html><body>Hello</body></html>", encoding="utf-8")
         from ppxai.preview_server import PreviewServer
         server = PreviewServer(str(tmp_path / "test.html"), str(tmp_path))
         try:
@@ -212,7 +212,8 @@ class TestPreviewServer:
 
     def test_serves_html_with_reload_script(self, tmp_path):
         (tmp_path / "test.html").write_text(
-            "<html><body><h1>Hello World</h1></body></html>"
+            "<html><body><h1>Hello World</h1></body></html>",
+            encoding="utf-8",
         )
         from ppxai.preview_server import PreviewServer
         server = PreviewServer(str(tmp_path / "test.html"), str(tmp_path))
@@ -228,7 +229,7 @@ class TestPreviewServer:
 
     def test_poll_returns_mtime(self, tmp_path):
         html_file = tmp_path / "test.html"
-        html_file.write_text("<html></html>")
+        html_file.write_text("<html></html>", encoding="utf-8")
         from ppxai.preview_server import PreviewServer
         server = PreviewServer(str(html_file), str(tmp_path))
         try:
@@ -242,7 +243,7 @@ class TestPreviewServer:
             server.stop()
 
     def test_stop_shuts_down(self, tmp_path):
-        (tmp_path / "test.html").write_text("<html></html>")
+        (tmp_path / "test.html").write_text("<html></html>", encoding="utf-8")
         from ppxai.preview_server import PreviewServer
         server = PreviewServer(str(tmp_path / "test.html"), str(tmp_path))
         server.start(open_browser=False)
@@ -254,8 +255,8 @@ class TestPreviewServer:
         assert not server.is_running
 
     def test_serves_static_assets(self, tmp_path):
-        (tmp_path / "test.html").write_text("<html><body>Hi</body></html>")
-        (tmp_path / "style.css").write_text("body { color: red; }")
+        (tmp_path / "test.html").write_text("<html><body>Hi</body></html>", encoding="utf-8")
+        (tmp_path / "style.css").write_text("body { color: red; }", encoding="utf-8")
         from ppxai.preview_server import PreviewServer
         server = PreviewServer(str(tmp_path / "test.html"), str(tmp_path))
         try:
@@ -269,8 +270,8 @@ class TestPreviewServer:
             server.stop()
 
     def test_serves_json_data_files(self, tmp_path):
-        (tmp_path / "test.html").write_text("<html><body>Hi</body></html>")
-        (tmp_path / "data.json").write_text('[{"id": 1, "name": "test"}]')
+        (tmp_path / "test.html").write_text("<html><body>Hi</body></html>", encoding="utf-8")
+        (tmp_path / "data.json").write_text('[{"id": 1, "name": "test"}]', encoding="utf-8")
         from ppxai.preview_server import PreviewServer
         server = PreviewServer(str(tmp_path / "test.html"), str(tmp_path))
         try:
@@ -282,7 +283,7 @@ class TestPreviewServer:
             server.stop()
 
     def test_relative_filepath(self, tmp_path):
-        (tmp_path / "index.html").write_text("<html><body>Rel</body></html>")
+        (tmp_path / "index.html").write_text("<html><body>Rel</body></html>", encoding="utf-8")
         from ppxai.preview_server import PreviewServer
         server = PreviewServer("index.html", str(tmp_path))
         try:
