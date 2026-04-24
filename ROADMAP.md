@@ -723,7 +723,7 @@ ppxai/tui/                     # New module (Textual-based)
 
 ## In Progress (v1.18.0)
 
-**Branch:** `feature/v1.18.0` | **Theme:** Agent heartbeat primitives + stabilization pass + AppState codegen + multi-model routing
+**Branch:** `feature/v1.18.0` | **Theme:** Agent heartbeat primitives + stabilization pass
 
 ### v1.18.0 - Agent Heartbeat Primitives (P0 — landed on branch)
 
@@ -759,7 +759,12 @@ for the full pass summary.
 production bugs fixed as side-effects, 1 deprecated alias removed,
 8 former private helpers given documented public contracts.
 
-### v1.18.0 - AppState Codegen + Routing Infrastructure (planned for same release)
+### v1.18.1 - AppState Codegen + Routing Infrastructure (deferred from v1.18.0)
+
+Originally planned to ship alongside heartbeat in v1.18.0; moved to
+v1.18.1 because they're each substantial enough to deserve dedicated
+release notes — bundling four workstreams in one release made review
+impractical.
 
 | Feature | Description | Plan |
 |---------|-------------|------|
@@ -768,14 +773,14 @@ production bugs fixed as side-effects, 1 deprecated alias removed,
 | **Routing infrastructure** | `RoutingRole`, `ProviderPool`, `ModelRouter` classes | [TODO-routing.md](docs/TODO-routing.md) Phase 1 |
 | **Coding command routing** | Replace `coding_model` with `router.resolve(RoutingRole.CODER)` | [TODO-routing.md](docs/TODO-routing.md) Phase 2 |
 
-### v1.18.1 - Agent + Chat Mode Routing
+### v1.18.2 - Agent + Chat Mode Routing
 
 | Feature | Description | Plan |
 |---------|-------------|------|
 | **Agent mode routing** | Planner role on first turn, tools role on iterations 2+ | [TODO-routing.md](docs/TODO-routing.md) Phase 3 |
 | **Chat mode routing** | Route regular chat to `chat` role, mode presets | [TODO-routing.md](docs/TODO-routing.md) Phase 4 |
 
-### v1.18.2+ - Preset Commands + TUI Integration
+### v1.18.3+ - Preset Commands + TUI Integration
 
 | Feature | Description | Plan |
 |---------|-------------|------|

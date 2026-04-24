@@ -318,6 +318,12 @@ No new features, no new commands, no new dependencies. Ship as
 "hardened heartbeat release" — feature work lands on a foundation
 that doesn't shift under it.
 
+**AppState codegen and multi-model routing — both originally planned
+for v1.18.0 — were deferred to v1.18.1.** Each is substantial enough
+to deserve dedicated release notes; bundling four workstreams in one
+release would produce notes nobody can review in one sitting. See
+the v1.18.1 entry in [ROADMAP.md](../ROADMAP.md).
+
 ### Cumulative numbers
 
 - **2,410 → 2,591 passing tests (+181)**, 2 skipped, 0 failing

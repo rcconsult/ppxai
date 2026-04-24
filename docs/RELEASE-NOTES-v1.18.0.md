@@ -1,12 +1,14 @@
-# Release Notes — v1.18.0 (draft)
+# Release Notes — v1.18.0
 
-> **Status:** Draft. Two workstreams have landed on `feature/v1.18.0`:
-> P0 agent heartbeat primitives (this document) and the v1.18.0
-> stabilization pass ([docs/STABILIZATION-v1.18.0.md](STABILIZATION-v1.18.0.md)).
-> Two more are still planned for this release —
-> AppState codegen ([docs/TODO-appstate-codegen.md](TODO-appstate-codegen.md))
-> and multi-model routing infrastructure ([docs/TODO-routing.md](TODO-routing.md)).
-> Final release notes will consolidate all four.
+> **Scope:** P0 agent heartbeat primitives + v1.18.0 stabilization
+> pass ([docs/STABILIZATION-v1.18.0.md](STABILIZATION-v1.18.0.md)).
+>
+> **Deferred to v1.18.1:** AppState codegen
+> ([docs/TODO-appstate-codegen.md](TODO-appstate-codegen.md)) and
+> multi-model routing infrastructure
+> ([docs/TODO-routing.md](TODO-routing.md)). Both are substantial
+> enough to deserve dedicated release notes; bundling them with
+> heartbeat would produce a release nobody can review in one sitting.
 
 ## Summary
 
