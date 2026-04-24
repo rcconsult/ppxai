@@ -657,7 +657,7 @@ class TestBOMHandling:
 
     def test_load_dotenv_with_bom(self):
         """Test that .env files with UTF-8 BOM are loaded correctly."""
-        from ppxai.config.loader import _load_dotenv_with_bom_handling
+        from ppxai.config.loader import load_dotenv_with_bom_handling
         import tempfile
 
         # Create a temp .env file with UTF-8 BOM
@@ -671,7 +671,7 @@ class TestBOMHandling:
             if 'TEST_BOM_KEY' in os.environ:
                 del os.environ['TEST_BOM_KEY']
 
-            _load_dotenv_with_bom_handling(Path(temp_path))
+            load_dotenv_with_bom_handling(Path(temp_path))
 
             # Key should be loaded correctly without BOM corruption
             assert os.environ.get('TEST_BOM_KEY') == 'test_bom_value', \
@@ -683,7 +683,7 @@ class TestBOMHandling:
 
     def test_load_dotenv_without_bom(self):
         """Test that .env files without BOM still work."""
-        from ppxai.config.loader import _load_dotenv_with_bom_handling
+        from ppxai.config.loader import load_dotenv_with_bom_handling
         import tempfile
 
         # Create a temp .env file without BOM
@@ -695,7 +695,7 @@ class TestBOMHandling:
             if 'TEST_NO_BOM_KEY' in os.environ:
                 del os.environ['TEST_NO_BOM_KEY']
 
-            _load_dotenv_with_bom_handling(Path(temp_path))
+            load_dotenv_with_bom_handling(Path(temp_path))
 
             assert os.environ.get('TEST_NO_BOM_KEY') == 'test_no_bom_value'
         finally:
@@ -705,14 +705,14 @@ class TestBOMHandling:
 
     def test_load_dotenv_nonexistent_file(self):
         """Test that nonexistent .env files are handled gracefully."""
-        from ppxai.config.loader import _load_dotenv_with_bom_handling
+        from ppxai.config.loader import load_dotenv_with_bom_handling
 
         # Should not raise an exception
-        _load_dotenv_with_bom_handling(Path('/nonexistent/path/.env'))
+        load_dotenv_with_bom_handling(Path('/nonexistent/path/.env'))
 
     def test_load_dotenv_multiple_keys_with_bom(self):
         """Test that all keys are loaded correctly when file has BOM."""
-        from ppxai.config.loader import _load_dotenv_with_bom_handling
+        from ppxai.config.loader import load_dotenv_with_bom_handling
         import tempfile
 
         # Create a temp .env file with BOM and multiple keys
@@ -725,7 +725,7 @@ class TestBOMHandling:
                 if key in os.environ:
                     del os.environ[key]
 
-            _load_dotenv_with_bom_handling(Path(temp_path))
+            load_dotenv_with_bom_handling(Path(temp_path))
 
             assert os.environ.get('FIRST_KEY') == 'first_value'
             assert os.environ.get('SECOND_KEY') == 'second_value'

@@ -3,7 +3,7 @@
 Covers the four failure modes suspected in the original R19 report:
 
   1. Mixed-content assistant messages render correctly via MessageBox's
-     `_normalize_content_to_text` (text + image_url + uploaded_file
+     `normalize_content_to_text` (text + image_url + uploaded_file
      blocks interleaved).
 
   2. Engine stream-event ordering through the ppxaide dispatcher for a
@@ -78,25 +78,25 @@ def _subscribe_capture(bus: EventBus, *event_names: str):
 
 
 class TestMessageBoxMultimodalRendering:
-    """`_normalize_content_to_text` must handle every content-block type
+    """`normalize_content_to_text` must handle every content-block type
     the engine can emit in an assistant message. R19 culprit #1.
     """
 
     def test_text_only_string_passes_through(self):
-        from ppxai.tui.widgets.message_box import _normalize_content_to_text
-        assert _normalize_content_to_text("hello") == "hello"
+        from ppxai.tui.widgets.message_box import normalize_content_to_text
+        assert normalize_content_to_text("hello") == "hello"
 
     def test_text_block_list_flattened(self):
-        from ppxai.tui.widgets.message_box import _normalize_content_to_text
-        result = _normalize_content_to_text([
+        from ppxai.tui.widgets.message_box import normalize_content_to_text
+        result = normalize_content_to_text([
             {"type": "text", "text": "line 1"},
             {"type": "text", "text": "line 2"},
         ])
         assert result == "line 1\nline 2"
 
     def test_image_url_rendered_as_placeholder(self):
-        from ppxai.tui.widgets.message_box import _normalize_content_to_text
-        result = _normalize_content_to_text([
+        from ppxai.tui.widgets.message_box import normalize_content_to_text
+        result = normalize_content_to_text([
             {"type": "text", "text": "Here's the chart:"},
             {"type": "image_url", "name": "chart.png",
              "image_url": {"url": "data:image/png;base64,AAAA"}},
@@ -104,15 +104,15 @@ class TestMessageBoxMultimodalRendering:
         assert result == "Here's the chart:\n[Image: chart.png]"
 
     def test_image_url_without_name_uses_fallback(self):
-        from ppxai.tui.widgets.message_box import _normalize_content_to_text
-        result = _normalize_content_to_text([
+        from ppxai.tui.widgets.message_box import normalize_content_to_text
+        result = normalize_content_to_text([
             {"type": "image_url", "image_url": {"url": "data:image/png;base64,AA"}},
         ])
         assert result == "[Image: image]"
 
     def test_input_file_rendered_as_file_placeholder(self):
-        from ppxai.tui.widgets.message_box import _normalize_content_to_text
-        result = _normalize_content_to_text([
+        from ppxai.tui.widgets.message_box import normalize_content_to_text
+        result = normalize_content_to_text([
             {"type": "input_file", "name": "data.bin"},
         ])
         assert result == "[File: data.bin]"
@@ -123,14 +123,14 @@ class TestMessageBoxMultimodalRendering:
         the fix: ppxaide shows the same `[File: name (media_type)]`
         shape that the web/VSCode clients render.
         """
-        from ppxai.tui.widgets.message_box import _normalize_content_to_text
+        from ppxai.tui.widgets.message_box import normalize_content_to_text
         block = make_uploaded_file_block(
             name="report.pdf",
             media_type="application/pdf",
             file_id="sha256:abc",
             summary="PDF attached.",
         )
-        result = _normalize_content_to_text([block])
+        result = normalize_content_to_text([block])
         assert result == "[File: report.pdf (application/pdf)]"
 
     def test_mixed_text_image_uploaded_file_rendering(self):
@@ -139,8 +139,8 @@ class TestMessageBoxMultimodalRendering:
         every part in order. Silent dropping of any block type would
         make the chat bubble look truncated.
         """
-        from ppxai.tui.widgets.message_box import _normalize_content_to_text
-        result = _normalize_content_to_text([
+        from ppxai.tui.widgets.message_box import normalize_content_to_text
+        result = normalize_content_to_text([
             {"type": "text", "text": "I read the report:"},
             make_uploaded_file_block(
                 name="report.pdf",
@@ -163,8 +163,8 @@ class TestMessageBoxMultimodalRendering:
 
     def test_uploaded_file_without_media_type(self):
         """Graceful fallback when media_type is missing."""
-        from ppxai.tui.widgets.message_box import _normalize_content_to_text
-        result = _normalize_content_to_text([
+        from ppxai.tui.widgets.message_box import normalize_content_to_text
+        result = normalize_content_to_text([
             {"type": "uploaded_file", "name": "thing", "file_id": "x"},
         ])
         # Either `[File: thing]` or `[File: thing ()]` — we accept the
@@ -175,8 +175,8 @@ class TestMessageBoxMultimodalRendering:
         """Safety net: a future block type the widget doesn't know about
         must not silently drop or raise; it must produce something.
         """
-        from ppxai.tui.widgets.message_box import _normalize_content_to_text
-        result = _normalize_content_to_text([
+        from ppxai.tui.widgets.message_box import normalize_content_to_text
+        result = normalize_content_to_text([
             {"type": "text", "text": "hi"},
             {"type": "future_block_type_not_yet_invented", "data": "x"},
         ])

@@ -89,13 +89,18 @@ class ChatContext(Protocol):
         ...
 
 
-def _get_effective_profile(model: str, provider: str, ctx: ChatContext) -> ModelProfile:
+def get_effective_profile(model: str, provider: str, ctx: ChatContext) -> ModelProfile:
     """Get model profile with config and bootstrap overrides applied.
 
     Precedence (highest wins per field):
     1. ppxai-config.json per-model tool_calling
     2. AGENTS.md tool_calling overrides (project-level)
     3. Built-in profile (model_profiles.py)
+
+    Public (v1.18.0 Phase 5g) so the profile-merging test suite can
+    exercise precedence rules directly instead of driving a full
+    chat invocation. Pure function — reads ctx.bootstrap and global
+    config; no mutation.
 
     Args:
         model: Model ID
@@ -490,7 +495,7 @@ async def chat_with_tools(
 
     # Override with per-model limit if profile specifies a higher value (B2)
     # v1.16.0 Step 5: Apply config + bootstrap overrides on top of built-in profile
-    profile = _get_effective_profile(ctx.model, ctx.provider_name, ctx)
+    profile = get_effective_profile(ctx.model, ctx.provider_name, ctx)
     if profile.max_tool_iterations > 0:
         max_iterations = max(max_iterations, profile.max_tool_iterations)
 

@@ -63,12 +63,16 @@ _initialized = False
 # Environment Loading
 # =============================================================================
 
-def _load_dotenv_with_bom_handling(dotenv_path: Path) -> None:
+def load_dotenv_with_bom_handling(dotenv_path: Path) -> None:
     """Load .env file with UTF-8 BOM handling.
 
     python-dotenv does NOT handle UTF-8 BOM, which corrupts the first key.
     Windows PowerShell's Out-File creates files with BOM by default.
     This function strips the BOM before parsing.
+
+    Part of the config loader's public surface so tests can exercise
+    the BOM path directly (v1.18.0 Phase 5g). Silently falls back to
+    plain python-dotenv loading if BOM read fails for any reason.
     """
     if not dotenv_path.exists():
         return
@@ -158,8 +162,8 @@ def initialize() -> None:
     _seed_config_on_first_run()
 
     # Load .env files
-    _load_dotenv_with_bom_handling(Path.cwd() / ".env")
-    _load_dotenv_with_bom_handling(PPXAI_HOME / ".env")
+    load_dotenv_with_bom_handling(Path.cwd() / ".env")
+    load_dotenv_with_bom_handling(PPXAI_HOME / ".env")
 
     # Ensure directories exist
     _ensure_directories()

@@ -1,4 +1,4 @@
-"""R8 regression test — `_count_csv_rows_cols` must stream, not materialize.
+"""R8 regression test — `count_csv_rows_cols` must stream, not materialize.
 
 Pre-R8 the function called `_decode_text(data)` on the full buffer before
 sniffing the delimiter, producing a multi-MB Python string for a 10 MB
@@ -16,7 +16,7 @@ import tracemalloc
 
 import pytest
 
-from ppxai.engine.file_preprocessing import _count_csv_rows_cols
+from ppxai.engine.file_preprocessing import count_csv_rows_cols
 
 
 def _build_csv_bytes(rows: int, cols: int, delimiter: str = ",") -> bytes:
@@ -33,42 +33,42 @@ class TestCountCsvRowsColsCorrectness:
     """Existing contract — row/col counts, delimiter detection, edge cases."""
 
     def test_empty_buffer_returns_zero(self):
-        assert _count_csv_rows_cols(b"") == (0, 0)
+        assert count_csv_rows_cols(b"") == (0, 0)
 
     def test_header_only_returns_zero_rows(self):
         data = b"a,b,c\n"
-        assert _count_csv_rows_cols(data) == (0, 3)
+        assert count_csv_rows_cols(data) == (0, 3)
 
     def test_small_comma_csv(self):
         data = _build_csv_bytes(rows=5, cols=4)
-        assert _count_csv_rows_cols(data) == (5, 4)
+        assert count_csv_rows_cols(data) == (5, 4)
 
     def test_tab_delimiter_detected(self):
         data = _build_csv_bytes(rows=3, cols=2, delimiter="\t")
-        assert _count_csv_rows_cols(data) == (3, 2)
+        assert count_csv_rows_cols(data) == (3, 2)
 
     def test_semicolon_delimiter_detected(self):
         data = _build_csv_bytes(rows=4, cols=3, delimiter=";")
-        assert _count_csv_rows_cols(data) == (4, 3)
+        assert count_csv_rows_cols(data) == (4, 3)
 
     def test_non_utf8_bytes_do_not_crash(self):
         """errors='replace' on TextIOWrapper keeps the reader alive."""
         # Valid header + a CP1252-byte in the body. UTF-8 decode inserts
         # U+FFFD where the byte is invalid; csv.reader still counts rows.
         data = b"name,value\nrow1," + b"\xff" + b"\n" + b"row2,ok\n"
-        rows, cols = _count_csv_rows_cols(data)
+        rows, cols = count_csv_rows_cols(data)
         assert rows == 2
         assert cols == 2
 
     def test_quoted_fields_with_embedded_newlines(self):
         data = b'name,bio\nalice,"line1\nline2"\nbob,hi\n'
-        rows, _ = _count_csv_rows_cols(data)
+        rows, _ = count_csv_rows_cols(data)
         # csv.reader treats the quoted newline as part of one row
         assert rows == 2
 
     def test_missing_trailing_newline(self):
         data = b"a,b\n1,2\n3,4"
-        assert _count_csv_rows_cols(data) == (2, 2)
+        assert count_csv_rows_cols(data) == (2, 2)
 
 
 class TestStreamingMemoryBound:
@@ -92,7 +92,7 @@ class TestStreamingMemoryBound:
 
         tracemalloc.start()
         tracemalloc.reset_peak()
-        rows, cols = _count_csv_rows_cols(data)
+        rows, cols = count_csv_rows_cols(data)
         _current, peak = tracemalloc.get_traced_memory()
         tracemalloc.stop()
 

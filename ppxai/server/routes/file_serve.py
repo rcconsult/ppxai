@@ -72,8 +72,13 @@ _WORD_MIMES = {
 _WORD_EXTENSIONS = {".docx", ".doc"}
 
 
-def _is_word_document(meta) -> bool:
-    """Return True if the file metadata indicates a Word document."""
+def is_word_document(meta) -> bool:
+    """Return True if the file metadata indicates a Word document.
+
+    Pure predicate — reads `meta.media_type` and `meta.name` only.
+    Public (v1.18.0 Phase 5g) so mimetype-vs-extension fallback
+    logic can be unit-tested directly.
+    """
     if meta.media_type and meta.media_type in _WORD_MIMES:
         return True
     if meta.name:
@@ -156,7 +161,7 @@ async def preview_file(
         raise HTTPException(status_code=503, detail="LibreOffice not installed")
 
     # ── Word document → PDF ──────────────────────────────────────────
-    if _is_word_document(meta):
+    if is_word_document(meta):
         cache_dir = meta.path.parent / "preview"
         try:
             pdf_path = _convert_docx_to_pdf(meta.path, cache_dir)

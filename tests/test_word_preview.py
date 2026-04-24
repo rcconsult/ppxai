@@ -12,39 +12,39 @@ import pytest
 
 class TestIsWordDocument:
     def test_docx_mime(self):
-        from ppxai.server.routes.file_serve import _is_word_document
+        from ppxai.server.routes.file_serve import is_word_document
         meta = MagicMock()
         meta.media_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         meta.name = "report.docx"
-        assert _is_word_document(meta) is True
+        assert is_word_document(meta) is True
 
     def test_doc_mime(self):
-        from ppxai.server.routes.file_serve import _is_word_document
+        from ppxai.server.routes.file_serve import is_word_document
         meta = MagicMock()
         meta.media_type = "application/msword"
         meta.name = "report.doc"
-        assert _is_word_document(meta) is True
+        assert is_word_document(meta) is True
 
     def test_docx_extension_fallback(self):
-        from ppxai.server.routes.file_serve import _is_word_document
+        from ppxai.server.routes.file_serve import is_word_document
         meta = MagicMock()
         meta.media_type = "application/octet-stream"
         meta.name = "report.docx"
-        assert _is_word_document(meta) is True
+        assert is_word_document(meta) is True
 
     def test_not_word(self):
-        from ppxai.server.routes.file_serve import _is_word_document
+        from ppxai.server.routes.file_serve import is_word_document
         meta = MagicMock()
         meta.media_type = "application/pdf"
         meta.name = "report.pdf"
-        assert _is_word_document(meta) is False
+        assert is_word_document(meta) is False
 
     def test_pptx_not_word(self):
-        from ppxai.server.routes.file_serve import _is_word_document
+        from ppxai.server.routes.file_serve import is_word_document
         meta = MagicMock()
         meta.media_type = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
         meta.name = "slides.pptx"
-        assert _is_word_document(meta) is False
+        assert is_word_document(meta) is False
 
 
 class TestConvertDocxToPdf:

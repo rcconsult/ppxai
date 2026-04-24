@@ -340,7 +340,7 @@ def _is_csv_file(name: str, media_type: str) -> bool:
 _CSV_LAZY_THRESHOLD = 50 * 1024  # 50 KB
 
 
-def _count_csv_rows_cols(data: bytes) -> tuple[int, int]:
+def count_csv_rows_cols(data: bytes) -> tuple[int, int]:
     """Count rows and columns in a CSV. Returns (rows, columns).
 
     Uses csv.reader with delimiter sniffing. Row count excludes the
@@ -352,6 +352,9 @@ def _count_csv_rows_cols(data: bytes) -> tuple[int, int]:
     string. For a 500 MB CSV this keeps peak memory at roughly the
     TextIOWrapper buffer (~8 KB) + one decoded row, instead of
     allocating a multi-hundred-MB string just to sniff the shape.
+
+    Pure function. Public so the R8 streaming regression test can
+    exercise it directly (v1.18.0 Phase 5g).
     """
     import csv as _csv
     import io as _io
@@ -414,7 +417,7 @@ def _preprocess_csv(
             "No SessionFileStore wired — CSV will be unreachable to tools"
         )
 
-    row_count, col_count = _count_csv_rows_cols(data)
+    row_count, col_count = count_csv_rows_cols(data)
     size_kb = len(data) / 1024
 
     # R5 (v1.17.6): emit the first-class uploaded_file block. Provider

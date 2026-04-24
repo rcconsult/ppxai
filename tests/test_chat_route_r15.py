@@ -17,12 +17,12 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from ppxai.server.routes.chat import _is_empty_or_context_only, router as chat_router
+from ppxai.server.routes.chat import is_empty_or_context_only, router as chat_router
 from ppxai.server.state import Session, get_session
 
 
 # ---------------------------------------------------------------------------
-# Pure function: _is_empty_or_context_only
+# Pure function: is_empty_or_context_only
 # ---------------------------------------------------------------------------
 
 
@@ -30,26 +30,26 @@ class TestIsEmptyOrContextOnly:
     """Detection of chat bodies that carry no real user prompt."""
 
     def test_empty_string(self):
-        assert _is_empty_or_context_only("") is True
+        assert is_empty_or_context_only("") is True
 
     def test_whitespace_only(self):
-        assert _is_empty_or_context_only("   \n\t  ") is True
+        assert is_empty_or_context_only("   \n\t  ") is True
 
     def test_bare_context_block(self):
         msg = '[Context: Working in VSCode workspace "ppxai" at /Users/rado/git/utils/ppxai]'
-        assert _is_empty_or_context_only(msg) is True
+        assert is_empty_or_context_only(msg) is True
 
     def test_context_block_with_trailing_newlines(self):
         msg = '[Context: Working in VSCode workspace "ppxai" at /home/user/p]\n\n'
-        assert _is_empty_or_context_only(msg) is True
+        assert is_empty_or_context_only(msg) is True
 
     def test_multiple_context_blocks(self):
         """A client that accidentally prepended twice should still be caught."""
         msg = "[Context: workspace A]\n[Context: workspace B]\n"
-        assert _is_empty_or_context_only(msg) is True
+        assert is_empty_or_context_only(msg) is True
 
     def test_real_prompt_passes(self):
-        assert _is_empty_or_context_only("Hello, how are you?") is False
+        assert is_empty_or_context_only("Hello, how are you?") is False
 
     def test_context_plus_real_prompt_passes(self):
         """The common case — context preamble followed by a real user question."""
@@ -57,12 +57,12 @@ class TestIsEmptyOrContextOnly:
             '[Context: Working in VSCode workspace "ppxai" at /path]\n\n'
             "What does this function do?"
         )
-        assert _is_empty_or_context_only(msg) is False
+        assert is_empty_or_context_only(msg) is False
 
     def test_context_like_text_inside_prompt_passes(self):
         """Mentioning '[Context:' in a real question must not trigger the guard."""
         msg = "Why did I see the log line '[Context: foo]' in my output?"
-        assert _is_empty_or_context_only(msg) is False
+        assert is_empty_or_context_only(msg) is False
 
 
 # ---------------------------------------------------------------------------

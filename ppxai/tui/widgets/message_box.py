@@ -14,13 +14,17 @@ from textual.widgets import Static, Markdown, Button
 from ..clipboard import copy_to_clipboard
 
 
-def _normalize_content_to_text(content: Any) -> str:
+def normalize_content_to_text(content: Any) -> str:
     """Flatten multimodal Message.content (str | list[dict]) to display text.
 
     Image / file parts are rendered as `[Image: name]` / `[File: name]`
     placeholders so the user sees *something* for attached media rather than
     a silently truncated bubble. This mirrors Message.text_content() but is
     duplicated here to keep widgets free of engine imports.
+
+    Pure function. Public (v1.18.0 Phase 5g) so unit tests covering
+    every content-block permutation can exercise it directly rather
+    than via full MessageBox construction.
     """
     if isinstance(content, str):
         return content
@@ -85,7 +89,7 @@ class MessageBox(Static):
         # Widget always displays plain text; multimodal list content is
         # flattened to text + placeholders. Streaming chunks (appended later)
         # are always strings so the reactive field stays str-typed.
-        self.content = _normalize_content_to_text(content)
+        self.content = normalize_content_to_text(content)
         self.role = role
         self.streaming = streaming
         self.response_time = response_time

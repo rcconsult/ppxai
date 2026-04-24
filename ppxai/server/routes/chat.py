@@ -50,13 +50,17 @@ _CONTEXT_ONLY_RE = re.compile(
 )
 
 
-def _is_empty_or_context_only(message: str) -> bool:
+def is_empty_or_context_only(message: str) -> bool:
     """True if `message` is blank or contains only [Context: ...] preambles.
 
     These messages would otherwise be sent to the LLM as a bare user turn
     consisting of nothing but the VSCode workspace context block. The
     provider has no actual prompt to answer and strict-alternation
     providers (Perplexity) reject the request.
+
+    Pure predicate — no side effects, no state. Part of the module's
+    public surface so unit tests can exercise it directly without
+    reaching into privates (v1.18.0 Phase 5g).
     """
     if not message or not message.strip():
         return True
@@ -166,7 +170,7 @@ async def chat(
     # block (VSCode) when the user sent no actual prompt; dispatching them
     # wastes a provider round-trip and triggers 400 errors on strict
     # alternation providers like Perplexity.
-    if not request.files and _is_empty_or_context_only(request.message or ""):
+    if not request.files and is_empty_or_context_only(request.message or ""):
         logger.warning(
             f"Chat rejected for session {s.id}: empty or context-only message "
             f"({len(request.message or '')} chars)"
