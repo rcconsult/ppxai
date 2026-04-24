@@ -21,6 +21,7 @@ render images, PDFs, and other media inline. Used by:
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import JSONResponse, Response
 
+from ...common.docx_to_pdf import convert_docx_to_pdf
 from ..state import Session, get_session
 
 router = APIRouter()
@@ -89,42 +90,9 @@ def is_word_document(meta) -> bool:
     return False
 
 
-def _convert_docx_to_pdf(source_path, cache_dir) -> "Path":
-    """Convert a Word document to PDF via LibreOffice headless.
-
-    The result is cached as ``cache_dir / preview.pdf``.  Returns the
-    path to the cached PDF.
-    """
-    import subprocess
-    import tempfile
-    from pathlib import Path
-
-    cache_dir = Path(cache_dir)
-    cached_pdf = cache_dir / "preview.pdf"
-    if cached_pdf.exists():
-        return cached_pdf
-
-    cache_dir.mkdir(parents=True, exist_ok=True)
-
-    with tempfile.TemporaryDirectory() as tmpdir:
-        subprocess.run(
-            [
-                "libreoffice", "--headless", "--norestore",
-                "--convert-to", "pdf",
-                "--outdir", tmpdir,
-                str(source_path),
-            ],
-            capture_output=True,
-            timeout=120,
-        )
-        pdf_candidates = list(Path(tmpdir).glob("*.pdf"))
-        if not pdf_candidates:
-            raise RuntimeError("LibreOffice produced no PDF output")
-        # Copy to cache
-        import shutil
-        shutil.copy2(pdf_candidates[0], cached_pdf)
-
-    return cached_pdf
+# convert_docx_to_pdf moved to ppxai.common.docx_to_pdf in v1.18.0
+# Phase 5g so the Word-preview route can test against a documented
+# public contract rather than reaching into a route-private helper.
 
 
 @router.get("/files/preview/{file_id}")
@@ -164,7 +132,7 @@ async def preview_file(
     if is_word_document(meta):
         cache_dir = meta.path.parent / "preview"
         try:
-            pdf_path = _convert_docx_to_pdf(meta.path, cache_dir)
+            pdf_path = convert_docx_to_pdf(meta.path, cache_dir)
         except Exception as exc:
             raise HTTPException(status_code=500, detail=f"Conversion failed: {exc}")
 

@@ -184,6 +184,10 @@ a = Analysis(
         'ppxai.server.routes.usage',
         'ppxai.server.session_manager',
         'ppxai.common.preview',
+        'ppxai.common.atomic_file',  # v1.18.0 Phase 5g
+        'ppxai.common.docx_to_pdf',  # v1.18.0 Phase 5g
+        'ppxai.common.format',        # v1.18.0 Phase 4
+        'ppxai.common.autosave_guard',  # v1.18.0 Phase 5f
         # Engine modules added in v1.17.4
         'ppxai.version',
         'ppxai.engine.app_state',

@@ -1059,11 +1059,17 @@ class TestUnicodeWhitespaceNormalization:
 
 
 class TestAtomicReplaceRetry:
-    """Tests for _atomic_replace retry logic on Windows file lock errors."""
+    """Tests for atomic_replace retry logic on Windows file lock errors.
+
+    v1.18.0 Phase 5g: moved from ppxai.engine.tools.builtin.editor
+    (where it was `_atomic_replace`) to ppxai.common.atomic_file
+    (now a public utility). The editor module re-imports it; these
+    tests target the canonical public location.
+    """
 
     def test_succeeds_on_first_attempt(self, tmp_path):
         """Normal case: replace succeeds on first try."""
-        from ppxai.engine.tools.builtin.editor import _atomic_replace
+        from ppxai.common.atomic_file import atomic_replace
 
         target = tmp_path / "target.txt"
         target.write_text("old content")
@@ -1071,14 +1077,14 @@ class TestAtomicReplaceRetry:
         temp = tmp_path / "target.txt.tmp"
         temp.write_text("new content")
 
-        _atomic_replace(temp, target)
+        atomic_replace(temp, target)
 
         assert target.read_text() == "new content"
         assert not temp.exists()
 
     def test_retries_on_permission_error(self, tmp_path):
         """Retries on PermissionError and succeeds on subsequent attempt."""
-        from ppxai.engine.tools.builtin.editor import _atomic_replace
+        from ppxai.common.atomic_file import atomic_replace
 
         target = tmp_path / "target.txt"
         target.write_text("old content")
@@ -1097,16 +1103,16 @@ class TestAtomicReplaceRetry:
             return original_replace(self_path, target_path)
 
         with patch.object(Path, 'replace', mock_replace):
-            with patch('ppxai.engine.tools.builtin.editor.sys') as mock_sys:
+            with patch('ppxai.common.atomic_file.sys') as mock_sys:
                 mock_sys.platform = 'win32'
-                _atomic_replace(temp, target)
+                atomic_replace(temp, target)
 
         assert target.read_text() == "new content"
         assert call_count == 2
 
     def test_raises_after_max_retries(self, tmp_path):
         """Raises PermissionError after exhausting all retries."""
-        from ppxai.engine.tools.builtin.editor import _atomic_replace
+        from ppxai.common.atomic_file import atomic_replace
 
         target = tmp_path / "target.txt"
         target.write_text("old content")
@@ -1118,17 +1124,17 @@ class TestAtomicReplaceRetry:
             raise PermissionError("[WinError 5] Access is denied")
 
         with patch.object(Path, 'replace', always_fail):
-            with patch('ppxai.engine.tools.builtin.editor.sys') as mock_sys:
+            with patch('ppxai.common.atomic_file.sys') as mock_sys:
                 mock_sys.platform = 'win32'
                 with pytest.raises(PermissionError):
-                    _atomic_replace(temp, target)
+                    atomic_replace(temp, target)
 
         # Temp file should be cleaned up on failure
         assert not temp.exists()
 
     def test_no_retry_on_non_windows(self, tmp_path):
         """On non-Windows, PermissionError is raised immediately without retry."""
-        from ppxai.engine.tools.builtin.editor import _atomic_replace
+        from ppxai.common.atomic_file import atomic_replace
 
         target = tmp_path / "target.txt"
         target.write_text("old content")
@@ -1144,10 +1150,10 @@ class TestAtomicReplaceRetry:
             raise PermissionError("Permission denied")
 
         with patch.object(Path, 'replace', always_fail):
-            with patch('ppxai.engine.tools.builtin.editor.sys') as mock_sys:
+            with patch('ppxai.common.atomic_file.sys') as mock_sys:
                 mock_sys.platform = 'linux'
                 with pytest.raises(PermissionError):
-                    _atomic_replace(temp, target)
+                    atomic_replace(temp, target)
 
         assert call_count == 1  # No retry on Linux
 

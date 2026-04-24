@@ -49,26 +49,26 @@ class TestIsWordDocument:
 
 class TestConvertDocxToPdf:
     def test_returns_cached_pdf(self, tmp_path):
-        from ppxai.server.routes.file_serve import _convert_docx_to_pdf
+        from ppxai.common.docx_to_pdf import convert_docx_to_pdf
         cache_dir = tmp_path / "preview"
         cache_dir.mkdir()
         cached = cache_dir / "preview.pdf"
         cached.write_bytes(b"%PDF-1.4 cached")
 
-        result = _convert_docx_to_pdf(tmp_path / "dummy.docx", cache_dir)
+        result = convert_docx_to_pdf(tmp_path / "dummy.docx", cache_dir)
         assert result == cached
         assert result.read_bytes() == b"%PDF-1.4 cached"
 
     def test_raises_on_no_output(self, tmp_path):
-        from ppxai.server.routes.file_serve import _convert_docx_to_pdf
+        from ppxai.common.docx_to_pdf import convert_docx_to_pdf
         cache_dir = tmp_path / "preview"
 
         with patch("subprocess.run", return_value=MagicMock(returncode=1)):
             with pytest.raises(RuntimeError, match="no PDF output"):
-                _convert_docx_to_pdf(tmp_path / "dummy.docx", cache_dir)
+                convert_docx_to_pdf(tmp_path / "dummy.docx", cache_dir)
 
     def test_successful_conversion(self, tmp_path):
-        from ppxai.server.routes.file_serve import _convert_docx_to_pdf
+        from ppxai.common.docx_to_pdf import convert_docx_to_pdf
         source = tmp_path / "test.docx"
         source.write_bytes(b"PK fake docx")
         cache_dir = tmp_path / "preview"
@@ -81,10 +81,10 @@ class TestConvertDocxToPdf:
             return MagicMock(returncode=0)
 
         with patch("subprocess.run", side_effect=fake_libreoffice) as mock_sub:
-            result = _convert_docx_to_pdf(source, cache_dir)
+            result = convert_docx_to_pdf(source, cache_dir)
 
         assert result.exists()
         assert result.read_bytes() == b"%PDF-1.4 converted"
         # Second call should return cached
-        result2 = _convert_docx_to_pdf(source, cache_dir)
+        result2 = convert_docx_to_pdf(source, cache_dir)
         assert result2 == result

@@ -14,6 +14,7 @@ import unicodedata
 from pathlib import Path
 from typing import Optional, Dict, Any
 
+from ....common.atomic_file import atomic_replace
 from ...types import ToolEngineProtocol, ToolManagerProtocol
 from ..base import BaseTool
 from .syntax_validator import (
@@ -21,37 +22,6 @@ from .syntax_validator import (
     format_validation_error,
 )
 
-
-def _atomic_replace(temp_path: Path, target_path: Path, max_retries: int = 3):
-    """Replace target with temp file, retrying on Windows file lock errors.
-
-    On Windows, os.replace() fails with [WinError 5] Access is denied when
-    the target file has an open handle (e.g., antivirus scanner, file watcher,
-    preview server). This helper retries with short backoff to handle
-    transient locks.
-
-    Args:
-        temp_path: Path to the temp file containing new content.
-        target_path: Path to the file to replace.
-        max_retries: Number of attempts before giving up.
-
-    Raises:
-        PermissionError: If all retries are exhausted.
-    """
-    for attempt in range(max_retries):
-        try:
-            temp_path.replace(target_path)
-            return
-        except PermissionError:
-            if sys.platform == 'win32' and attempt < max_retries - 1:
-                time.sleep(0.1 * (attempt + 1))  # 100ms, 200ms
-            else:
-                # Clean up orphaned temp file before re-raising
-                try:
-                    temp_path.unlink(missing_ok=True)
-                except OSError:
-                    pass
-                raise
 
 def _register_checkpoint_file(engine: ToolEngineProtocol, path: Path):
     """Register a file with the checkpoint manager before editing.
@@ -185,7 +155,7 @@ class ApplyPatchTool(BaseTool):
                     f.writelines(new_lines)
 
                 # Replace original file
-                _atomic_replace(temp_path, path)
+                atomic_replace(temp_path, path)
 
                 # Track edited file for agent auto-commit
                 self.engine._agent_edited_files.add(str(path))
@@ -324,7 +294,7 @@ class ReplaceBlockTool(BaseTool):
                 with open(temp_path, 'w', encoding='utf-8') as f:
                     f.write(new_content)
 
-                _atomic_replace(temp_path, path)
+                atomic_replace(temp_path, path)
 
                 lines_added = replace.count('\n') - search.count('\n')
                 # Track edited file for agent auto-commit
@@ -454,7 +424,7 @@ class InsertTextTool(BaseTool):
                 with open(temp_path, 'w', encoding='utf-8') as f:
                     f.writelines(lines)
 
-                _atomic_replace(temp_path, path)
+                atomic_replace(temp_path, path)
 
                 num_lines = text.count('\n') + (0 if text.endswith('\n') else 1)
                 end_line = line_number + num_lines - 1
@@ -593,7 +563,7 @@ class DeleteLinesTool(BaseTool):
                 with open(temp_path, 'w', encoding='utf-8') as f:
                     f.writelines(new_lines)
 
-                _atomic_replace(temp_path, path)
+                atomic_replace(temp_path, path)
 
                 num_deleted = end_line - start_line + 1
                 preview = deleted_content[:100] + "..." if len(deleted_content) > 100 else deleted_content
