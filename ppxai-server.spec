@@ -159,23 +159,29 @@ a = Analysis(
         'ppxai.server.state',
         'ppxai.server.streaming',
         'ppxai.server.routes',
+        # Every route module under ppxai.server.routes — listed
+        # explicitly (v1.18.0) so PyInstaller's frozen bundle doesn't
+        # rely on the routes/__init__.py import cascade, which is more
+        # fragile in some frozen-bundle scenarios than a direct
+        # hiddenimport reference.
         'ppxai.server.routes.agent',
         'ppxai.server.routes.chat',
         'ppxai.server.routes.checkpoints',
         'ppxai.server.routes.commands',
+        'ppxai.server.routes.completion',
         'ppxai.server.routes.config',
         'ppxai.server.routes.consent',
         'ppxai.server.routes.context',
+        'ppxai.server.routes.file_serve',
         'ppxai.server.routes.files',
         'ppxai.server.routes.preview',
         'ppxai.server.routes.providers',
+        'ppxai.server.routes.schema',
         'ppxai.server.routes.sessions',
+        'ppxai.server.routes.state',
         'ppxai.server.routes.static',
-        'ppxai.server.routes.usage',
         'ppxai.server.routes.terminal',
-        'ppxai.server.routes.file_serve',
-        'ppxai.server.routes.completion',
-        'ppxai.server.routes.state',  # v1.18.0: GET /state snapshot endpoint
+        'ppxai.server.routes.usage',
         'ppxai.server.session_manager',
         'ppxai.common.preview',
         # Engine modules added in v1.17.4
