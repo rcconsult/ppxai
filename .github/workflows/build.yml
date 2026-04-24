@@ -9,6 +9,16 @@ on:
 permissions:
   contents: write
 
+# Opt into Node.js 24 ahead of GitHub Actions' 2026-06-02 cutoff.
+# Several actions we use (actions/checkout, astral-sh/setup-uv,
+# actions/setup-node, actions/upload-artifact, softprops/action-gh-release)
+# ship Node 20 runtimes that GitHub will deprecate. Setting this env
+# forces them onto Node 24 now, surfacing any incompatibility at the
+# next CI run rather than at the cliff. Drop this once every action
+# has been bumped to a v5+ release and verified on Node 24.
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
 jobs:
   test:
     runs-on: ubuntu-latest

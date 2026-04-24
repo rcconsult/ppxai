@@ -22,6 +22,12 @@ permissions:
   pages: write
   id-token: write
 
+# Opt into Node.js 24 ahead of GitHub Actions' 2026-06-02 cutoff.
+# See build.yml for rationale; same env var applied to both
+# workflows so a Node 24 incompat surfaces in either path.
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
 concurrency:
   group: docs-deploy
   cancel-in-progress: false
