@@ -1004,13 +1004,13 @@ window.addEventListener('message', (event) => {
                 toolsBadge.classList.remove('enabled');
                 toolsBadge.title = 'Click to enable tools';
             }
-            // Update usage badge (v1.12.0). Uses the shared token-formatter
-            // (v1.18.0 Phase 4) so the "1.2K" style matches Rich/web.
-            // VSCode retains its own cost-suppression behaviour: when
-            // cost is zero we drop the "$0.0000" suffix entirely, which
-            // keeps the badge quiet during free-tier usage. The shared
-            // `formatUsageBadge` always appends cost — we don't call it
-            // here to preserve the zero-cost display contract.
+            // Update usage badge (v1.12.0). Uses the shared
+            // token-formatter (v1.18.0 Phase 4). As of Phase 5d the
+            // zero-cost suppression behaviour is the canonical one
+            // across Rich/web/VSCode — formatUsageBadge in
+            // ppxai/common/format.py omits "$0.0000" when cost == 0.
+            // We keep the inline fork here for the `has-cost` CSS
+            // class toggle, which the shared helper doesn't handle.
             if (message.usage && usageBadge) {
                 const promptStr = formatTokens(message.usage.promptTokens);
                 const completionStr = formatTokens(message.usage.completionTokens);

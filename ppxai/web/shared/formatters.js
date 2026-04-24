@@ -398,8 +398,9 @@ function formatTokens(count) {
 
 /**
  * Short usage-badge string: "1.2K↓/0.5K↑ $0.0045". Down-arrow is input,
- * up-arrow is output. Cost fixed at four decimal places so the badge
- * width is stable as cost accumulates. Mirrors
+ * up-arrow is output. Cost suffix omitted when estimatedCost is zero
+ * (free-tier / local models) to keep the badge quiet; four-decimal
+ * cost otherwise so badge width is stable. Mirrors
  * `ppxai/common/format.py::format_usage_badge` byte-for-byte.
  *
  * @param {number} promptTokens
@@ -410,7 +411,11 @@ function formatTokens(count) {
 function formatUsageBadge(promptTokens, completionTokens, estimatedCost) {
     const promptStr = formatTokens(promptTokens);
     const completionStr = formatTokens(completionTokens);
-    return `${promptStr}↓/${completionStr}↑ $${estimatedCost.toFixed(4)}`;
+    const tokens = `${promptStr}↓/${completionStr}↑`;
+    if (estimatedCost > 0) {
+        return `${tokens} $${estimatedCost.toFixed(4)}`;
+    }
+    return tokens;
 }
 
 // Browser global export (for non-module scripts)

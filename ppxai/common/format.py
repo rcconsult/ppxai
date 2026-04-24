@@ -52,19 +52,29 @@ def format_usage_badge(
     """Short usage-badge string: "1.2K↓/0.5K↑ $0.0045".
 
     Arrow glyphs: down = input / prompt, up = output / completion.
-    Cost always shows four decimal places so badge width stays stable
-    as the cost accumulates from pennies to dollars.
+    When estimated_cost is zero (free-tier / local models) the "$..."
+    suffix is omitted entirely — a "$0.0000" suffix is visual noise
+    and wasted width. When cost is present it shows four decimal
+    places so the badge width stays stable as cost accumulates from
+    pennies to dollars.
 
-    Mirrored verbatim in the web (`updateUsage`) and VSCode
-    (`updateUsageBadge` in main.js) status bars. The Rich TUI uses
-    this for its session status line.
+    Mirrored verbatim in web (`formatters.js`), VSCode extension host
+    (`formatters.ts`), and the VSCode webview (inline copy in
+    `main.js`). The Rich TUI uses this for its session status line.
+    Cross-language parity is verified byte-for-byte by
+    `tests/test_usage_format.py`.
 
     Examples:
         >>> format_usage_badge(0, 0, 0.0)
-        '0↓/0↑ $0.0000'
+        '0↓/0↑'
+        >>> format_usage_badge(1200, 450, 0.0)
+        '1.2K↓/450↑'
         >>> format_usage_badge(1200, 450, 0.0045)
         '1.2K↓/450↑ $0.0045'
     """
     prompt_str = format_tokens(prompt_tokens)
     completion_str = format_tokens(completion_tokens)
-    return f"{prompt_str}↓/{completion_str}↑ ${estimated_cost:.4f}"
+    tokens = f"{prompt_str}↓/{completion_str}↑"
+    if estimated_cost > 0:
+        return f"{tokens} ${estimated_cost:.4f}"
+    return tokens

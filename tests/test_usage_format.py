@@ -71,8 +71,13 @@ class TestFormatTokensPython:
 
 
 class TestFormatUsageBadgePython:
-    def test_zero_case(self):
-        assert format_usage_badge(0, 0, 0.0) == "0↓/0↑ $0.0000"
+    def test_zero_cost_suppresses_dollar_suffix(self):
+        # v1.18.0 Phase 5d: zero cost drops the "$0.0000" tail entirely
+        # so the badge is quiet for free-tier / local models.
+        assert format_usage_badge(0, 0, 0.0) == "0↓/0↑"
+
+    def test_zero_cost_with_nonzero_tokens_also_suppresses(self):
+        assert format_usage_badge(1200, 450, 0.0) == "1.2K↓/450↑"
 
     def test_sub_k_tokens_with_cents(self):
         assert format_usage_badge(1200, 450, 0.0045) == "1.2K↓/450↑ $0.0045"
@@ -80,8 +85,9 @@ class TestFormatUsageBadgePython:
     def test_both_sides_over_threshold(self):
         assert format_usage_badge(15300, 8700, 0.1234) == "15.3K↓/8.7K↑ $0.1234"
 
-    def test_cost_always_four_decimals(self):
-        # Cost pads to four places even when values would round off.
+    def test_cost_always_four_decimals_when_present(self):
+        # When cost IS shown, it pads to four places even if values
+        # would round off — keeps badge width stable across turns.
         assert format_usage_badge(100, 100, 12.3) == "100↓/100↑ $12.3000"
 
 

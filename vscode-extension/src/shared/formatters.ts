@@ -232,10 +232,12 @@ export function formatTokens(count: number): string {
 }
 
 /**
- * Short usage-badge string: "1.2K↓/0.5K↑ $0.0045". Mirrors
- * ppxai/common/format.py::format_usage_badge.
+ * Short usage-badge string: "1.2K↓/0.5K↑ $0.0045". Cost suffix
+ * omitted when estimatedCost is zero (free-tier / local models).
+ * Mirrors ppxai/common/format.py::format_usage_badge byte-for-byte;
+ * cross-language parity guarded by tests/test_usage_format.py.
  *
- * v1.18.0 Phase 4.
+ * v1.18.0 Phase 4 (introduced), 5d (zero-cost suppression).
  */
 export function formatUsageBadge(
     promptTokens: number,
@@ -244,7 +246,11 @@ export function formatUsageBadge(
 ): string {
     const promptStr = formatTokens(promptTokens);
     const completionStr = formatTokens(completionTokens);
-    return `${promptStr}↓/${completionStr}↑ $${estimatedCost.toFixed(4)}`;
+    const tokens = `${promptStr}↓/${completionStr}↑`;
+    if (estimatedCost > 0) {
+        return `${tokens} $${estimatedCost.toFixed(4)}`;
+    }
+    return tokens;
 }
 
 /**
