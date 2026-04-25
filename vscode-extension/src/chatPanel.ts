@@ -413,6 +413,42 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                     break;
             }
         });
+
+        // v1.18.1 (state-sync Phase A): re-anchor AppState from
+        // GET /state whenever the VSCode window regains focus. The
+        // VSCode equivalent of the web app's `visibilitychange`
+        // listener — without it, AppState drifts during long
+        // idle periods (window unfocused, user switched apps) when
+        // SSE state_sync events fire but no /chat is in flight to
+        // drain the engine's side-channel queue.
+        const focusListener = vscode.window.onDidChangeWindowState(
+            (windowState) => {
+                if (windowState.focused) {
+                    this._reanchorFromServer();
+                }
+            }
+        );
+        webviewView.onDidDispose(() => focusListener.dispose());
+    }
+
+    /**
+     * Pull the current AppState snapshot from the server and feed
+     * it through the schema-driven facade.
+     *
+     * Called on `onDidChangeWindowState` → focused (v1.18.1
+     * state-sync Phase A). Mirrors the web app's
+     * `_reanchorFromServer` in ppxai/web/app.js — same shape, same
+     * helper boundary, so the two clients can't drift in their
+     * re-anchor behavior. Errors are swallowed because a transient
+     * /state failure shouldn't break the chat panel.
+     */
+    private async _reanchorFromServer(): Promise<void> {
+        try {
+            const snapshot = await this._backend.fetchState();
+            this._appState.updateFromPython(snapshot);
+        } catch (e) {
+            console.warn('[ppxai] state re-anchor failed:', e);
+        }
     }
 
     /**
