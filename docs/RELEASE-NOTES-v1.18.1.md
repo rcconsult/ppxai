@@ -20,6 +20,7 @@ Two big architectural pushes plus two scope-limited fixes.
 
 3. **`validate_agent_task` shared safety gate.** Pre-v1.18.1, `/agent fix` from web users bypassed the `min_task_words` check entirely. v1.18.1 centralises validation; `/chat` and the factory both invoke it.
 4. **`pypdfium2` replaces `pdf2image+poppler`.** No more system binary requirement; PyInstaller binaries are self-contained.
+5. **Bonus — published binaries actually have PDF/Excel/PPTX/Gemini tooling.** Surfaced during release pre-flight: CI build jobs installed only `--extra build --extra server` (or `--extra tui`), so the `[data]` / `[gemini]` / `[search]` modules listed in spec hiddenimports silently dropped at PyInstaller time. The bug is pre-existing — server binaries since v1.17.4 have shipped with broken PDF rasterization (and v1.16.0+ with broken native Gemini, broken DDG search). v1.18.1 is the first release where shipped binaries fulfil the published feature set. Fix is `--all-extras` in every build job, mirroring the test job.
 
 ## What's new
 
@@ -113,6 +114,16 @@ v1.18.1 ports the full templates (`api`, `cli`, `lib`, `algo`, `ui`) + guideline
 - `SummarizePptxVisualTool` slide rasterizer: subprocess `pdftoppm` → `PdfDocument` iteration
 
 `pypdfium2` is pure-wheel bindings to Google's PDFium (the renderer in Chrome). License: BSD-3 OR Apache-2.0 — permissive, no AGPL drag. Wheels for Linux/macOS/Windows on PyPI. PyInstaller binaries are now truly self-contained.
+
+### CI build jobs install `--all-extras` (pre-existing fix)
+
+Surfaced during the v1.18.1 release pre-flight audit, but the bug pre-dates this branch. CI build jobs installed `--extra build --extra server` (or `--tui`), but `ppxai-server.spec` lists `pypdf`, `pypdfium2`, `openpyxl`, `python-pptx` (the `[data]` extras), `google.genai` (`[gemini]`), and `ddgs` (`[search]`) in hiddenimports. PyInstaller's contract for hidden imports: a name not importable in the build env logs a warning and the build succeeds with the module missing. So the published binaries since v1.17.4 silently shipped without the [data] tooling, since v1.16.0 without native Gemini, and since whenever `[search]` landed without DDG search.
+
+The runtime impact is graceful — users get "pdf2image is not installed" instead of a crash — so the bug went undetected for six releases.
+
+Fix: every PyInstaller job in `.github/workflows/build.yml` now uses `uv sync --frozen --all-extras`, matching the test job. Adds <2s to install steps and ensures the build venv covers every spec's hiddenimports + every dynamic import in the command-loading and file-preprocessing chains.
+
+`uv.lock` was also stale after the pypdfium2 swap — regenerated in the same commit.
 
 ## Architecture docs
 

@@ -30,6 +30,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`@query` fuzzy search** in `/show` emits `PROMPT_QUICK_PICK` on multiple matches instead of the prior "type the full path" text fallback. Cross-client UX: same picker shape on TUI/web/VSCode.
 - **Test count: 2926 passing, 0 skipped** (was 2924 + 2 skipped at v1.18.0). The poppler-skipped PDF tests now run unconditionally after the pypdfium2 swap.
 
+### Fixed
+
+- **CI build jobs now install `--all-extras`** instead of `--extra build --extra server` (or `--tui`). Pre-existing bug surfaced during v1.18.1 release pre-flight: spec hiddenimports for `[data]` (pypdf, pypdfium2, openpyxl, python-pptx), `[gemini]` (google.genai), and `[search]` (ddgs) were silently dropped at PyInstaller time because the modules weren't in the build venv. Server binaries have shipped since v1.17.4 with broken PDF rasterization, since v1.16.0 with broken native Gemini, and similar silent gaps for web search. Runtime impact was graceful (users got "pdf2image is not installed" errors instead of crashes), so the bug went undetected for six releases. v1.18.1 is the first release where shipped binaries fulfil the published feature set.
+- **`uv.lock` regenerated** after the pypdfium2 swap. The lock pinned `pdf2image 1.17.0`; CI's `uv sync --frozen` would have installed the stale package list and ignored the new `pypdfium2` entry in `pyproject.toml`.
+
 ### Deferred to v1.18.2
 
 - **Agent loop unification across HTTP clients.** Validation unified in v1.18.1; loop body still runs client-side in VSCode and via the streaming `/chat` path on web because factory's `handle_agent` is TUI-shaped (`asyncio.run`, `console.print`). See [docs/TODO-v1.18.2-agent-loop-unification.md](docs/TODO-v1.18.2-agent-loop-unification.md).
