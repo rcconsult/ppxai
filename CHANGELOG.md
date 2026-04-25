@@ -5,6 +5,42 @@ All notable changes to ppxai will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.18.1] - 2026-04-25
+
+### Added
+
+- **Command-dispatch unification (Option A).** Every slash command now flows through `POST /command/<name>` via the Python `CommandFactory`. Web's `command-dispatcher.js` and VSCode's `chatPanel.ts:handleSlashCommand` are thin shells over the v1 wire envelope `{ok, result, side_effects, events, version}`. The pre-v1.18.1 35-case switches in both clients (~775 LoC web, ~557 LoC VSCode) are gone. Where command logic previously lived twice — once in Python, once in JS/TS — there is now one source of truth. See [docs/TODO-v1.18.1-command-unification.md](docs/TODO-v1.18.1-command-unification.md).
+- **`SideEffectKind` taxonomy (15 kinds).** Side-effects name the user's intent, not the rendering: `open_editor`, `open_viewer`, `show_image`, `show_pdf`, `reveal_in_explorer`, `open_terminal`, `run_shell`, `open_html_preview`, `refresh_file_tree`, `set_theme`, `copy_to_clipboard`, `attach_file`, `prompt_quick_pick`, `notify`, `vscode_delegate`. Web builds panels (xterm.js, CodeMirror, iframe); VSCode delegates to first-party APIs (`createTerminal`, `showTextDocument`, `executeCommand('vscode.open')`). Open-enum invariant — clients ignore unknown kinds. Taxonomy sentinel test (`tests/test_command_envelope.py`) pins the v1.18.1 set.
+- **`prompt_quick_pick` resume protocol.** Per ADR `docs/decisions/0001-keys-command-cross-client.md` Q3 (b): the chosen `value` IS the literal next args. Client re-issues `POST /command/<command_to_resume>` with `args=<chosen value>`; no server-side continuation state. Used by `/show @query`, `/edit <missing>`, future free-text follow-ups.
+- **State-sync determinism — Phase A (visibility re-anchor).** Web `document.visibilitychange → visible` and VSCode `vscode.window.onDidChangeWindowState → focused` fetch `GET /state` and feed the snapshot through `AppState`. Brings sleep-recovered tabs / focus-restored windows back in sync without waiting for the next chat. Shared `_reanchorFromServer` helper across both clients; parity test in `tests/test_vscode_visibility_reanchor.py`.
+- **State-sync determinism — Phase B (REST piggyback).** State-mutating REST routes wrap their response in `with_drained_events(payload, engine)` so any `state_sync` events queued by the handler ride along on the same response. Clients drain `envelope.events[]` through the same dispatcher that handles live SSE events. `engine.set_working_dir`, `/cd` factory route, `/sessions/load`, etc. now reach the AppState mirror within one round-trip — no longer waiting for the next `/chat` to open an SSE generator.
+- **State-sync determinism — Phase C (file tree subscribes to AppState).** Web's file tree consumes `state.workingDir` via `AppState.on()` instead of caching `_fileTreeCurrentPath`. Eliminates the 300ms debounce that masked drift; the tree refreshes in lockstep with cwd changes from any source.
+- **State-sync determinism — Phase D (`cwd_anchor` 409 conflict).** `/files/read|write|image` accept an optional `cwd_anchor` argument (the `working_dir` the client thinks the relpath was captured against). Server returns `409 Conflict` with `{expected, actual, events}` on drift. Web file-view widgets and VSCode's `chatPanel.handleCwdAnchorMismatch` recover by draining the events and surfacing a notice — drift becomes named, surfaced, and recoverable instead of a silent "404 file not found".
+- **Server-side `validate_agent_task` shared safety gate.** Pre-v1.18.1, the `min_task_words` check existed only in the TUI factory path; web users running `/agent fix` via `streamChat` hit `/chat` directly and the LLM-with-tools just went — a real safety gap. v1.18.1 centralises validation in `ppxai/commands/agent.py::validate_agent_task` and applies it from both `/chat` (when the message starts with `/agent `) and the factory's `handle_agent`. Friendlier rejection: `NotificationResult(WARNING)` framed as a question with concrete examples instead of a red error.
+- **Rich `/spec` templates ported to factory.** Pre-v1.18.1, `/spec` returned a 5-line stub from the factory while VSCode had ~50-line rich templates inline. The full templates (api / cli / lib / algo / ui) + guidelines now live in `ppxai/commands/system.py::handle_spec`; all four clients see identical content. VSCode's client-side `handleSpecCommand` is gone.
+- **VSCode `sideEffectsHandler.ts` + `commandRenderer.ts`.** Two new helper modules (~485 LoC total) translate envelope `result` → systemMessage and `side_effects` → vscode.* APIs (createTerminal, showTextDocument, executeCommand). Lazy-init from `ChatViewProvider`; webview stays a thin display surface.
+- **`ADR 0001` — `/keys` command cross-client convention.** First architectural decision record under `docs/decisions/`. Establishes the convention for future ADRs and pins the cross-client routing for `/keys` (TUI in-process, web/VSCode via `vscode_delegate`).
+- **`pypdfium2` replaces `pdf2image+poppler`.** Page rasterization (`GetPdfPageImageTool`) and PPTX slide rendering (`render_pptx_slides`) now use pure-wheel bindings to Google's PDFium — no system binary required, PyInstaller binaries are self-contained on every platform. License: BSD-3 OR Apache-2.0. Two tests previously skipped on dev machines without poppler now run unconditionally.
+
+### Changed
+
+- **VSCode `chatPanel.ts` slimmed by 557 LoC** (243 added, 800 removed). The 35-case `handleSlashCommand` switch + ~12 bespoke handlers (`handleSpecCommand`, `handleShowCommand`, `handleEditCommand`, `handleCdCommand`, `handlePwdCommand`, `handleUsageCommand`, `renderCommandResult`, duplicate min-words validation in `handleAgentCommand`) deleted. Six chat-shaped commands (`/generate /explain /test /docs /debug /implement`) keep using `_backend.codingTask` via a `CHAT_SHAPED_TASKS` Map so the active editor's language + filename ride along.
+- **Web `command-dispatcher.js` slimmed by 775 LoC**. The `STREAMING_COMMANDS` set keeps the chat-shaped commands streaming; everything else is `apiClient.executeCommand(name, args)` + envelope unwrap.
+- **Engine `working_dir` mutation pipeline consolidated.** `_onWorkingDirChanged` is the single subscriber for `state.workingDir` changes — coordinates badge update, file-tree refresh, and SSE-piggyback drain. The four prior write paths (REST, /chat SSE, optimistic `/cd`, `/sessions/load`) write through `AppState`; the subscriber fires once.
+- **`@query` fuzzy search** in `/show` emits `PROMPT_QUICK_PICK` on multiple matches instead of the prior "type the full path" text fallback. Cross-client UX: same picker shape on TUI/web/VSCode.
+- **Test count: 2926 passing, 0 skipped** (was 2924 + 2 skipped at v1.18.0). The poppler-skipped PDF tests now run unconditionally after the pypdfium2 swap.
+
+### Deferred to v1.18.2
+
+- **Agent loop unification across HTTP clients.** Validation unified in v1.18.1; loop body still runs client-side in VSCode and via the streaming `/chat` path on web because factory's `handle_agent` is TUI-shaped (`asyncio.run`, `console.print`). See [docs/TODO-v1.18.2-agent-loop-unification.md](docs/TODO-v1.18.2-agent-loop-unification.md).
+- **`prompt_text` side-effect kind** for free-text follow-ups when `prompt_quick_pick`'s finite-choice shape doesn't fit. See [docs/TODO-v1.18.2-prompt-text-kind.md](docs/TODO-v1.18.2-prompt-text-kind.md).
+
+### Docs
+
+- New [docs/RELEASE-NOTES-v1.18.1.md](docs/RELEASE-NOTES-v1.18.1.md).
+- New [docs/decisions/0001-keys-command-cross-client.md](docs/decisions/0001-keys-command-cross-client.md) (first ADR).
+- [CLAUDE.md](CLAUDE.md) gains the §"Critical Architecture Pattern: Command Dispatch via Envelope (v1.18.1)" and §"Critical Architecture Pattern: State-Sync Determinism (v1.18.1)" sections (added during the work, not at release).
+
 ## [1.18.0] - 2026-04-25
 
 ### Added
