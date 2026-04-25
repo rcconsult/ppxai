@@ -24,6 +24,7 @@ from .results import (
     ListResult,
     MarkdownResult,
     NotificationResult,
+    SideEffectKind,
     TextResult,
 )
 
@@ -157,7 +158,7 @@ def handle_theme(context: CommandContext, args: str) -> CommandResult:
             message=f"Theme switched to: {new_theme.name}",
             details={"theme": args}
         )
-        result.add_side_effect("set_theme", name=args)
+        result.add_side_effect(SideEffectKind.SET_THEME, name=args)
         return result
     except ValueError as e:
         return ErrorResult(
@@ -424,7 +425,7 @@ def handle_terminal(context: CommandContext, args: str) -> CommandResult:
             message="Opening terminal",
         )
 
-    result.add_side_effect("open_terminal", cwd=cwd)
+    result.add_side_effect(SideEffectKind.OPEN_TERMINAL, cwd=cwd)
     return result
 
 

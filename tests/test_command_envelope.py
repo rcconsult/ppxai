@@ -36,8 +36,76 @@ from ppxai.commands.results import (
     NotificationResult,
     ResultStatus,
     SideEffect,
+    SideEffectKind,
     TableResult,
 )
+
+
+# ---------------------------------------------------------------------------
+# SideEffectKind taxonomy sentinel
+# ---------------------------------------------------------------------------
+
+class TestSideEffectKindTaxonomy:
+    """Pin the v1.18.1 kind taxonomy.
+
+    The constants in `SideEffectKind` and the docstring on `SideEffect`
+    list the same set of kinds. If they drift, this test fails loudly
+    so handler authors don't reach for an undocumented kind (or a
+    documented-but-not-constant one).
+
+    Web and VSCode renderers honor the documented kinds. Adding a new
+    kind: add the constant in SideEffectKind AND list it in the
+    SideEffect docstring AND extend this test's expected set.
+    """
+
+    # The canonical v1.18.1 kind set — kept here so a sentinel diff is
+    # the audit trail for every taxonomy change.
+    EXPECTED_KINDS_V1 = frozenset({
+        "open_editor",
+        "open_viewer",
+        "show_image",
+        "show_pdf",
+        "reveal_in_explorer",
+        "open_terminal",
+        "run_shell",
+        "open_html_preview",
+        "refresh_file_tree",
+        "set_theme",
+        "copy_to_clipboard",
+        "attach_file",
+        "prompt_quick_pick",
+        "notify",
+        "vscode_delegate",
+    })
+
+    def test_sideeffect_kind_constants_match_expected(self):
+        """SideEffectKind exposes exactly the v1.18.1 kind set."""
+        actual = frozenset(SideEffectKind.all_kinds())
+        missing = self.EXPECTED_KINDS_V1 - actual
+        extra = actual - self.EXPECTED_KINDS_V1
+        assert not missing, f"SideEffectKind missing kinds: {missing}"
+        assert not extra, (
+            f"SideEffectKind has unexpected kinds: {extra}. "
+            f"Update EXPECTED_KINDS_V1 if intentional."
+        )
+
+    def test_docstring_lists_all_kinds(self):
+        """SideEffect docstring documents every constant in SideEffectKind."""
+        from ppxai.commands.results import SideEffect
+        doc = SideEffect.__doc__ or ""
+        for kind in SideEffectKind.all_kinds():
+            quoted = f'"{kind}"'
+            assert quoted in doc, (
+                f"SideEffect docstring missing kind {quoted}. "
+                f"Add it to the 'Known kinds' block."
+            )
+
+    def test_no_uppercase_constant_collisions(self):
+        """No two SideEffectKind constants alias the same kind value."""
+        kinds = list(SideEffectKind.all_kinds())
+        assert len(kinds) == len(set(kinds)), (
+            f"Duplicate kind values: {kinds}"
+        )
 
 
 # ---------------------------------------------------------------------------

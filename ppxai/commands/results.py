@@ -38,6 +38,78 @@ class ResultStatus(Enum):
 # Side-effect envelope (v1.18.1) — UI directives separate from rendered payload
 # ============================================================================
 
+
+class SideEffectKind:
+    """Canonical names for SideEffect kinds (v1.18.1).
+
+    Use these constants instead of bare strings when emitting:
+
+        result.add_side_effect(SideEffectKind.OPEN_EDITOR,
+                               filepath=str(path), line=42)
+
+    Bare strings still work — kinds are an open enum on the wire —
+    but the constants give you a typo-proof handle and let mypy /
+    IDE rename refactors catch references. Adding a new kind: add
+    the constant here AND document it in the SideEffect docstring
+    below; the test_command_envelope.py sentinel asserts the two
+    stay in sync.
+
+    Removed in v1.18.1 (do not use):
+      - SPAWN_TERMINAL  → use OPEN_TERMINAL
+      - OPEN_PREVIEW    → use OPEN_HTML_PREVIEW
+    """
+    # File handling
+    OPEN_EDITOR = "open_editor"        # editable; client picks editor
+    OPEN_VIEWER = "open_viewer"        # read-only; client picks viewer
+    SHOW_IMAGE = "show_image"          # client decodes / delegates
+    SHOW_PDF = "show_pdf"              # client decodes / delegates
+    REVEAL_IN_EXPLORER = "reveal_in_explorer"
+
+    # Terminals + shells
+    OPEN_TERMINAL = "open_terminal"    # cwd only
+    RUN_SHELL = "run_shell"            # cwd + command pre-typed
+
+    # Live previews
+    OPEN_HTML_PREVIEW = "open_html_preview"
+
+    # File tree / workspace
+    REFRESH_FILE_TREE = "refresh_file_tree"
+
+    # User preferences
+    SET_THEME = "set_theme"
+
+    # Clipboard
+    COPY_TO_CLIPBOARD = "copy_to_clipboard"
+
+    # Session / engine state
+    ATTACH_FILE = "attach_file"
+
+    # Interactive prompts (engine asks the user a follow-up)
+    PROMPT_QUICK_PICK = "prompt_quick_pick"
+
+    # User-facing messages
+    NOTIFY = "notify"
+
+    # VSCode-only escape hatch (web ignores)
+    VSCODE_DELEGATE = "vscode_delegate"
+
+    @classmethod
+    def all_kinds(cls) -> tuple[str, ...]:
+        """Return every public kind constant (uppercase fields).
+
+        Used by the v1.18.1 sentinel test to verify the docstring
+        on `SideEffect` lists exactly the same names — no typos,
+        no drift.
+        """
+        return tuple(
+            sorted(
+                getattr(cls, name)
+                for name in vars(cls)
+                if name.isupper() and isinstance(getattr(cls, name), str)
+            )
+        )
+
+
 @dataclass
 class SideEffect:
     """A UI directive emitted alongside a CommandResult.
@@ -756,6 +828,7 @@ __all__ = [
     # Base
     "CommandResult",
     "SideEffect",
+    "SideEffectKind",
     # Display
     "NotificationResult",
     "ErrorResult",

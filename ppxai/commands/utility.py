@@ -25,6 +25,7 @@ from .results import (
     ErrorResult,
     DirectoryListingResult,
     DirectoryTreeResult,
+    SideEffectKind,
     TreeResult,
     TextResult,
     FileViewResult,
@@ -197,7 +198,7 @@ def handle_cd(context: CommandContext, args: str) -> CommandResult:
             message=f"Working directory changed to: {resolved}",
             details={"working_dir": resolved}
         )
-        result.add_side_effect("refresh_file_tree", cwd=resolved)
+        result.add_side_effect(SideEffectKind.REFRESH_FILE_TREE, cwd=resolved)
         return result
 
     except Exception as e:
