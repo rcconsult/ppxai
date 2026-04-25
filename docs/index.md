@@ -2,7 +2,7 @@
 
 **Multi-LLM Interface for Developers** - Use your favorite AI provider in terminal or VSCode with zero vendor lock-in.
 
-[![Version](https://img.shields.io/badge/version-1.18.0-blue)](https://github.com/rcconsult/ppxai/releases)
+[![Version](https://img.shields.io/badge/version-1.18.1-blue)](https://github.com/rcconsult/ppxai/releases)
 [![License](https://img.shields.io/badge/license-MIT-brightgreen)](https://github.com/rcconsult/ppxai/blob/master/LICENSE)
 
 ## Why ppxai?

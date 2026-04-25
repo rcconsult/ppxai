@@ -438,11 +438,17 @@ def check_release_notes_not_template(version: str) -> bool:
 
 def get_uv_command() -> str:
     """Detect the correct uv command based on local installation."""
-    local_uv = PROJECT_ROOT / ".uv/uv"
-    if local_uv.exists():
-        return str(local_uv)
-    # Try system uv
-    result = subprocess.run("which uv", shell=True, capture_output=True, text=True)
+    # Local .uv/ — Windows ships uv.exe, Unix ships uv (no extension).
+    # Without the .exe check, Windows users with only .uv/uv.exe fall
+    # through to `which uv` and end up returning None when only the
+    # local copy is installed (defect surfaced during v1.18.1 release).
+    for candidate in (".uv/uv.exe", ".uv/uv"):
+        local_uv = PROJECT_ROOT / candidate
+        if local_uv.exists():
+            return str(local_uv)
+    # Try system uv. `which` is Unix-style; on Windows we use `where`.
+    cmd = "where uv" if sys.platform == "win32" else "which uv"
+    result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
     if result.returncode == 0:
         return "uv"
     return None
