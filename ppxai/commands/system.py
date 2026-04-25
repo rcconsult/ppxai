@@ -424,7 +424,7 @@ def handle_terminal(context: CommandContext, args: str) -> CommandResult:
             message="Opening terminal",
         )
 
-    result.add_side_effect("spawn_terminal", cwd=cwd)
+    result.add_side_effect("open_terminal", cwd=cwd)
     return result
 
 

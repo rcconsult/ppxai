@@ -42,20 +42,107 @@ class ResultStatus(Enum):
 class SideEffect:
     """A UI directive emitted alongside a CommandResult.
 
-    Side-effects are orthogonal to the rendered payload: a command can
-    return a TableResult AND tell the client "also open this preview
-    panel". Clients pattern-match on `kind` and ignore unknown kinds,
-    so adding a new kind is non-breaking.
+    Side-effects are orthogonal to the rendered payload: a command
+    can return a TableResult AND tell the client "also open a
+    terminal at this cwd". Clients pattern-match on `kind` and
+    ignore unknown kinds — adding a new kind is non-breaking.
 
-    Known kinds (v1):
-      - "open_preview"      payload: {url, filepath}
-      - "spawn_terminal"    payload: {cwd}
-      - "open_editor"       payload: {filepath, line?, read_only}
-      - "show_image"        payload: {filepath}
-      - "show_pdf"          payload: {filepath}
-      - "refresh_file_tree" payload: {cwd}
-      - "set_theme"         payload: {name}
-      - "notify"            payload: {level, message}
+    The contract is "name the user's intent, let the client choose
+    the rendering". Web builds panels (xterm.js, CodeMirror,
+    embedded iframe); VSCode delegates to native APIs
+    (createTerminal, showTextDocument, executeCommand('vscode.open'))
+    so users get their shell, IntelliSense, debugging integration,
+    installed image/PDF extensions, etc.
+
+    Known kinds (v1.18.1):
+      - "open_editor"        payload: {filepath, line?, column?}
+            User wants to edit this file. Web → CodeMirror panel.
+            VSCode → showTextDocument(preview=False) in primary col.
+
+      - "open_viewer"        payload: {filepath, line?, column?}
+            User wants to view this file read-only. Web → preview
+            panel. VSCode → executeCommand('vscode.open',
+            preview=True, viewColumn=Beside).
+
+      - "open_terminal"      payload: {cwd}
+            User wants a terminal at this cwd. Web → xterm.js panel.
+            VSCode → window.createTerminal({cwd}).show() — user's
+            chosen shell, profile, history.
+
+      - "run_shell"          payload: {command, cwd}
+            User wants a terminal AND a command pre-typed/executed.
+            Strict superset of open_terminal. Web → xterm.js with
+            command. VSCode → createTerminal + sendText(command).
+
+      - "open_html_preview"  payload: {filepath, url, served?, proxied?}
+            User wants live HTML preview with reload. Web → iframe
+            in side panel. VSCode → existing previewPanel.ts
+            WebviewPanel.
+
+      - "show_image"         payload: {filepath}
+            User wants to view an image. Web → inline <img> viewer.
+            VSCode → executeCommand('vscode.open', uri) (delegates
+            to user's installed image-viewer extension).
+
+      - "show_pdf"           payload: {filepath}
+            User wants to view a PDF. Web → embedded PDF.js viewer.
+            VSCode → executeCommand('vscode.open', uri) (delegates
+            to user's PDF extension).
+
+      - "reveal_in_explorer" payload: {filepath}
+            User wants the file highlighted in the file tree. Web →
+            scroll/expand FileTreeComponent. VSCode →
+            executeCommand('revealInExplorer', uri).
+
+      - "refresh_file_tree"  payload: {cwd}
+            The working tree changed; clients refresh their views.
+            Web → FileTreeComponent.refresh(). VSCode → usually no-op
+            (auto-watches), or workbench.files.action.refreshFilesExplorer.
+
+      - "set_theme"          payload: {name}
+            User picked a theme. Web → swap CSS class on body.
+            VSCode → no-op (the user's VSCode theme is independent
+            of the webview's theme).
+
+      - "copy_to_clipboard"  payload: {text}
+            User wants text on the system clipboard. Web →
+            navigator.clipboard.writeText(). VSCode →
+            vscode.env.clipboard.writeText(). The capability is
+            client-dependent — kind makes that explicit.
+
+      - "attach_file"        payload: {filepath} | {file_id}
+            User asked to attach a file to the current session.
+            Web → existing drag-drop handler / SessionFileStore
+            upload. VSCode → similar via the extension's own attach
+            path. TUI → uses the path directly.
+
+      - "prompt_quick_pick"  payload: {title, items: [{label, value}],
+                                       request_id, command_to_resume,
+                                       resolved_arg_template}
+            Engine needs the user to pick one of N options before
+            the command can complete. Web → clickable list in chat.
+            VSCode → window.showQuickPick(items). Choice resumes by
+            issuing a fresh POST /command/<command_to_resume> with
+            args = resolved_arg_template.format(value=<choice>).
+            See ADR 0001 for the resume protocol decision.
+
+      - "notify"             payload: {level: "info"|"warn"|"error",
+                                       message}
+            User-visible message that doesn't fit the result payload.
+            Web → toast in chat. VSCode → showInformationMessage /
+            showWarningMessage / showErrorMessage by level.
+
+      - "vscode_delegate"    payload: {command, args}
+            Escape hatch: invoke an arbitrary VSCode command via
+            executeCommand(command, *args). Web ignores. Use
+            sparingly — most things should have a stable kind so
+            web has parity.
+
+    Removed in v1.18.1 (renamed for consistency):
+      - "spawn_terminal"  → "open_terminal"
+      - "open_preview"    → "open_html_preview"
+      - "open_editor" with read_only flag → split into
+        "open_editor" (editable) + "open_viewer" (read-only)
     """
     kind: str
     payload: Dict[str, Any] = field(default_factory=dict)

@@ -51,8 +51,8 @@ class TestSideEffectDataclass:
         assert se.payload == {}
 
     def test_to_dict_flattens_payload(self):
-        se = SideEffect(kind="open_preview", payload={"url": "x", "filepath": "/a"})
-        assert se.to_dict() == {"kind": "open_preview", "url": "x", "filepath": "/a"}
+        se = SideEffect(kind="open_html_preview", payload={"url": "x", "filepath": "/a"})
+        assert se.to_dict() == {"kind": "open_html_preview", "url": "x", "filepath": "/a"}
 
     def test_to_dict_no_payload(self):
         assert SideEffect(kind="refresh").to_dict() == {"kind": "refresh"}
@@ -194,10 +194,10 @@ class TestHandlerSideEffectEmission:
         if body["ok"]:
             assert "set_theme" in kinds, body
 
-    def test_terminal_emits_spawn_terminal(self, http_client):
+    def test_terminal_emits_open_terminal(self, http_client):
         body = http_client.post("/command/terminal", json={"args": ""}).json()
         kinds = [se["kind"] for se in body["side_effects"]]
-        assert "spawn_terminal" in kinds, body
+        assert "open_terminal" in kinds, body
 
 
 class TestEnvelopeBackwardCompat:

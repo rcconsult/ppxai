@@ -513,7 +513,7 @@ def handle_preview(context: CommandContext, args: str) -> CommandResult:
         filepath=str(path),
         metadata={"working_dir": working_dir}
     )
-    result.add_side_effect("open_preview", filepath=str(path))
+    result.add_side_effect("open_html_preview", filepath=str(path))
     return result
 
 
