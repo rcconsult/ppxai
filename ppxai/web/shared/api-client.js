@@ -58,16 +58,45 @@ class ApiClient {
     }
 
     /**
+     * Throw a richer Error from a non-OK response. Keeps
+     * `err.message` compatible with existing string-based handling
+     * (`err.message.includes('404')` etc.) AND attaches `.status`
+     * and `.body` so callers that care about structured errors —
+     * notably the v1.18.1 cwd_anchor 409 path — can read them.
+     */
+    async _throwHttpError(response) {
+        let body;
+        try { body = await response.json(); }
+        catch { body = { detail: response.statusText }; }
+        // FastAPI wraps the response body in `detail` for HTTPException.
+        // We attach BOTH the wrapped body (body.detail) AND the raw
+        // body so callers can pick whichever shape is convenient.
+        const detail = body && typeof body.detail === 'object' ? body.detail : body;
+        const messageParts = [];
+        if (typeof detail?.detail === 'string') messageParts.push(detail.detail);
+        else if (typeof body.detail === 'string') messageParts.push(body.detail);
+        else messageParts.push(`HTTP ${response.status}`);
+        const err = new Error(messageParts.join(' '));
+        err.status = response.status;
+        err.body = body;
+        // For 409 cwd-anchor mismatches, surface expected/actual + events
+        // at the top level for caller convenience.
+        if (detail && typeof detail === 'object') {
+            err.expected = detail.expected;
+            err.actual = detail.actual;
+            err.events = detail.events;
+        }
+        throw err;
+    }
+
+    /**
      * Make a GET request
      */
     async get(endpoint) {
         const response = await fetch(`${this.serverUrl}${endpoint}`, {
             headers: this.getHeaders()
         });
-        if (!response.ok) {
-            const error = await response.json().catch(() => ({ detail: response.statusText }));
-            throw new Error(error.detail || `HTTP ${response.status}`);
-        }
+        if (!response.ok) await this._throwHttpError(response);
         return response.json();
     }
 
@@ -80,10 +109,7 @@ class ApiClient {
             headers: this.getHeaders(true),
             body: JSON.stringify(body)
         });
-        if (!response.ok) {
-            const error = await response.json().catch(() => ({ detail: response.statusText }));
-            throw new Error(error.detail || `HTTP ${response.status}`);
-        }
+        if (!response.ok) await this._throwHttpError(response);
         return response.json();
     }
 
@@ -235,8 +261,15 @@ class ApiClient {
 
     // === Files ===
 
-    async readFile(filepath) {
-        return this.post('/files/read', { path: filepath });
+    async readFile(filepath, cwdAnchor = null) {
+        // v1.18.1 Phase D: optional cwd_anchor lets the server
+        // detect drift between the client's idea of cwd (when the
+        // relpath was captured) and the engine's current cwd. On
+        // mismatch the server returns 409 + new cwd; the caller
+        // refreshes its tree and retries.
+        const body = { path: filepath };
+        if (cwdAnchor) body.cwd_anchor = cwdAnchor;
+        return this.post('/files/read', body);
     }
 
     async searchFiles(query, limit = 20) {
@@ -331,8 +364,11 @@ class ApiClient {
         return this.get(`/files/tree${queryString ? '?' + queryString : ''}`);
     }
 
-    async writeFile(path, content) {
-        return this.post('/files/write', { path, content });
+    async writeFile(path, content, cwdAnchor = null) {
+        // v1.18.1 Phase D: see readFile() for cwd_anchor semantics.
+        const body = { path, content };
+        if (cwdAnchor) body.cwd_anchor = cwdAnchor;
+        return this.post('/files/write', body);
     }
 
     // === Commands ===

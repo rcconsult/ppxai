@@ -34,10 +34,17 @@ class FileTreeComponent {
      * @param {Object} options
      * @param {string} options.serverUrl - Base server URL
      * @param {Function} options.getHeaders - Returns headers object for fetch calls
-     * @param {Function} options.onFileClick - Called with relative path on left-click (preview)
-     * @param {Function} options.onFileEdit - Called with relative path on double-click (edit)
-     * @param {Function} options.onFileInject - Called with relative path on right-click (files)
-     * @param {Function} options.onDirCd - Called with target path string when user cds into a dir
+     * @param {Function} options.onFileClick - (relPath, cwdAnchor) → preview file (single-click)
+     * @param {Function} options.onFileEdit  - (relPath, cwdAnchor) → open editor (double-click)
+     * @param {Function} options.onFileInject - (relPath) → inject @file ref (right-click)
+     * @param {Function} options.onDirCd     - (path) → cd into directory
+     *
+     *   `cwdAnchor` (v1.18.1 Phase D) is the working_dir the most
+     *   recent /files/list was anchored against. Click handlers
+     *   pass it to apiClient.readFile/writeFile so the server can
+     *   return 409 if engine cwd has drifted since the tree
+     *   loaded. Caller can ignore (omit the second param) for
+     *   backward-compat — anchor is optional on the server side.
      */
     constructor(container, options = {}) {
         this.container = container;
@@ -59,6 +66,10 @@ class FileTreeComponent {
         this.errors = new Map();
         // Whether cwd is filesystem root (no ".." available)
         this._atFsRoot = false;
+        // v1.18.1 Phase D: working_dir reported by the most recent
+        // /files/list response. Click actions pass this as
+        // `cwd_anchor` so the server can return 409 on drift.
+        this.workingDirAtLoad = null;
 
         this._render();
         this.refresh();
@@ -134,6 +145,13 @@ class FileTreeComponent {
                 // Detect whether we're at filesystem root by checking if parent exists
                 if (relPath === '') {
                     this._atFsRoot = data.at_fs_root === true;
+                }
+                // v1.18.1 Phase D: record the cwd this listing was
+                // anchored against. Subsequent click actions on this
+                // entry pass `working_dir` as `cwd_anchor` so the
+                // server can detect drift if engine cwd has moved.
+                if (data.working_dir) {
+                    this.workingDirAtLoad = data.working_dir;
                 }
             }
         } catch (e) {
@@ -236,6 +254,13 @@ class FileTreeComponent {
             const isDir = node.dataset.isDir === '1';
             const isParent = node.dataset.isParent === '1';
 
+            // v1.18.1 Phase D: snapshot the cwd this listing was
+            // anchored against at click time. The handler passes
+            // it through to readFile/writeFile as `cwd_anchor` so
+            // the server can return 409 if engine cwd has drifted
+            // since the tree was loaded.
+            const anchor = this.workingDirAtLoad;
+
             node.addEventListener('click', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
@@ -248,7 +273,7 @@ class FileTreeComponent {
                 } else {
                     // File: delay single-click so dblclick can cancel it
                     clearTimeout(this._clickTimer);
-                    this._clickTimer = setTimeout(() => this.onFileClick(path), 150);
+                    this._clickTimer = setTimeout(() => this.onFileClick(path, anchor), 150);
                 }
             });
 
@@ -261,7 +286,7 @@ class FileTreeComponent {
                     this.onDirCd(path);
                 } else if (!isDir) {
                     // Double-click file → open for editing
-                    this.onFileEdit(path);
+                    this.onFileEdit(path, anchor);
                 }
             });
 

@@ -13,7 +13,7 @@ from typing import Optional
 
 from ...common.logger import get_logger
 from ..models import FileReadRequest, FileSearchRequest, FileWriteRequest
-from ..state import Session, get_session, is_path_allowed, MIME_TYPES
+from ..state import Session, get_session, is_path_allowed, MIME_TYPES, with_drained_events
 
 logger = get_logger("server")
 
@@ -21,6 +21,56 @@ logger = get_logger("server")
 IGNORE_DIRS = {'.git', 'node_modules', '__pycache__', '.venv', 'venv', '.tox', 'dist', 'build', '.eggs', '.mypy_cache'}
 
 router = APIRouter()
+
+
+# ---------------------------------------------------------------------------
+# cwd_anchor mismatch handling (v1.18.1 state-sync Phase D)
+# ---------------------------------------------------------------------------
+
+def _check_cwd_anchor(
+    cwd_anchor: Optional[str],
+    engine_working_dir: str,
+    engine_for_drain,
+) -> None:
+    """Raise HTTPException(409) when the client's anchor doesn't
+    match the engine's current working_dir.
+
+    The 409 body carries:
+      - detail   : human-readable summary
+      - expected : the cwd the client thought it was anchored to
+      - actual   : the engine's current cwd
+      - events   : drained side-channel events so the client can
+                   re-anchor AppState before retrying
+
+    No-op when cwd_anchor is None — backward-compatible for clients
+    that haven't been updated to send the anchor yet.
+
+    Path comparison is normalised via Path().resolve() so trailing
+    slashes / different separators / `..` segments don't cause
+    false-positive conflicts.
+    """
+    if cwd_anchor is None:
+        return
+    try:
+        anchor = str(Path(cwd_anchor).resolve())
+        actual = str(Path(engine_working_dir).resolve())
+    except OSError:
+        # Path resolution can fail on weird inputs (network paths,
+        # malformed strings) — treat as mismatch so the client
+        # retries with a fresh anchor instead of 500'ing.
+        anchor = cwd_anchor
+        actual = engine_working_dir
+    if anchor == actual:
+        return
+    body = with_drained_events(
+        {
+            "detail": "working directory drift",
+            "expected": anchor,
+            "actual": actual,
+        },
+        engine_for_drain,
+    )
+    raise HTTPException(status_code=409, detail=body)
 
 
 @router.post("/files/search")
@@ -153,7 +203,15 @@ async def list_files(
             })
 
     at_fs_root = target.parent == target  # True when cwd is filesystem root (e.g. /)
-    return {"files": files, "path": str(target), "at_fs_root": at_fs_root}
+    # v1.18.1 Phase D: include `working_dir` so clients can store
+    # it as a `cwd_anchor` and detect drift when they later issue
+    # /files/read against a relpath that no longer resolves.
+    return {
+        "files": files,
+        "path": str(target),
+        "at_fs_root": at_fs_root,
+        "working_dir": str(working_dir.resolve()),
+    }
 
 
 @router.get("/files/tree")
@@ -250,6 +308,16 @@ async def write_file(
 
     filepath = request.path.strip()
 
+    # Phase D: anchor check before any path resolution.
+    if not filepath.startswith('~'):
+        _path_obj = Path(filepath)
+        if not _path_obj.is_absolute():
+            _check_cwd_anchor(
+                request.cwd_anchor,
+                s.engine.get_working_dir() or os.getcwd(),
+                s.engine,
+            )
+
     # Resolve path - handle tilde expansion
     if filepath.startswith('~'):
         filepath = os.path.expanduser(filepath)
@@ -300,16 +368,28 @@ async def write_file(
 @router.get("/files/image/{filepath:path}")
 async def serve_image(
     filepath: str,
+    cwd_anchor: Optional[str] = None,
     s: Session = Depends(get_session)
 ):
     """Serve raw image file for inline display in chat bubbles (v1.16.2).
 
     Returns the image binary with correct Content-Type header.
     Used by marked.js ![alt](/files/image/path) in chat messages.
+
+    cwd_anchor query string (v1.18.1 Phase D): when the relpath
+    was resolved client-side from a stale cwd, return 409 with the
+    new cwd in the body so the client can refresh the markdown
+    before showing a broken image.
     """
 
     path = Path(filepath)
+    # Phase D: relpath-only — absolute paths bypass cwd entirely.
     if not path.is_absolute():
+        _check_cwd_anchor(
+            cwd_anchor,
+            s.engine.get_working_dir() or os.getcwd(),
+            s.engine,
+        )
         working_dir = Path(s.engine.get_working_dir() or os.getcwd())
         path = working_dir / filepath
     path = path.resolve()
@@ -354,6 +434,19 @@ async def read_file(
     logger.debug(f"  Working directory: {s.engine.get_working_dir()}")
 
     filepath = request.path.strip()
+
+    # Phase D: check cwd_anchor for relative paths. Absolute paths
+    # don't depend on cwd, so the anchor is informational at most;
+    # skip the check to avoid spurious conflicts when a client
+    # passes both an anchor and an absolute path.
+    if not filepath.startswith('@') and not filepath.startswith('~'):
+        _path_obj = Path(filepath)
+        if not _path_obj.is_absolute():
+            _check_cwd_anchor(
+                request.cwd_anchor,
+                s.engine.get_working_dir() or os.getcwd(),
+                s.engine,
+            )
 
     # Handle @search-query by searching for files
     if filepath.startswith('@'):

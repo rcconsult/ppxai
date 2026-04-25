@@ -101,8 +101,16 @@ class ShellConsentRequest(BaseModel):
 
 
 class FileReadRequest(BaseModel):
-    """Request to read a file."""
+    """Request to read a file.
+
+    cwd_anchor (v1.18.1 Phase D): the working_dir the client thinks
+    the relpath is anchored against. If the engine's current cwd
+    differs, the route returns 409 with the new cwd in the body so
+    the client can refresh and retry. None means "don't check" —
+    backward-compatible for callers that haven't been updated yet.
+    """
     path: str
+    cwd_anchor: Optional[str] = None
 
 
 class FileSearchRequest(BaseModel):
@@ -112,9 +120,13 @@ class FileSearchRequest(BaseModel):
 
 
 class FileWriteRequest(BaseModel):
-    """Request to write a file."""
+    """Request to write a file.
+
+    cwd_anchor: same semantics as FileReadRequest.
+    """
     path: str
     content: str
+    cwd_anchor: Optional[str] = None
 
 
 class UsageDisplayModeRequest(BaseModel):

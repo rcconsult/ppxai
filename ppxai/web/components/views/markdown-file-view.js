@@ -19,10 +19,12 @@ class MarkdownFileView extends BaseView {
      * @param {string} relPath   - Relative path within the working directory
      * @param {object} appState  - AppState singleton (provides apiClient, theme)
      */
-    constructor(relPath, appState) {
+    constructor(relPath, appState, opts = {}) {
         super();
         this._path     = relPath;
         this._appState = appState;
+        // v1.18.1 Phase D: cwd_anchor for drift detection on read
+        this._cwdAnchor = opts.cwdAnchor ?? null;
         this._mode     = 'rendered';  // 'rendered' | 'source' | 'edit'
 
         this._container      = null;
@@ -46,11 +48,20 @@ class MarkdownFileView extends BaseView {
         this._container = container;
         container.innerHTML = '<div class="rpf-loading">Loading…</div>';
         try {
-            const data = await this._appState.apiClient.readFile(this._path);
+            const data = await this._appState.apiClient.readFile(this._path, this._cwdAnchor);
             this._content         = data.content ?? '';
             this._originalContent = this._content;
             this._lines           = data.lines ?? this._content.split('\n').length;
         } catch (err) {
+            // v1.18.1 Phase D: 409 = stale cwd_anchor. Recover by
+            // applying the drained events; user can click again.
+            if (err.status === 409 && window.ppxai?.handleCwdAnchorMismatch) {
+                if (window.ppxai.handleCwdAnchorMismatch(err)) {
+                    container.innerHTML = '';
+                    return;
+                }
+            }
+
             container.innerHTML = `<div class="rpf-error">Failed to load: ${_mfvEsc(err.message)}</div>`;
             return;
         }

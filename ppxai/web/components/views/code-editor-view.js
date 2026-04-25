@@ -33,6 +33,10 @@ class CodeEditorView extends BaseView {
         this._line     = opts.line  ?? 1;
         this._col      = opts.col   ?? 1;
         this._isNew    = opts.isNew ?? false;
+        // v1.18.1 Phase D: working_dir at click time, sent as
+        // cwd_anchor on read/write so the server can 409 on
+        // engine-cwd drift instead of confusing 404.
+        this._cwdAnchor = opts.cwdAnchor ?? null;
 
         this._container      = null;
         this._editor         = null;      // cm6 EditorView or fallback shim
@@ -74,7 +78,7 @@ class CodeEditorView extends BaseView {
         if (this._loadedContent === null) {
             if (!this._isNew) {
                 try {
-                    const data = await this._appState.apiClient.readFile(this._path);
+                    const data = await this._appState.apiClient.readFile(this._path, this._cwdAnchor);
                     if (data.type === 'image' || data.type === 'pdf') {
                         container.innerHTML = `<div class="rpf-error">Cannot display binary file: ${_cevEsc(this._path)}</div>`;
                         return;
@@ -84,8 +88,21 @@ class CodeEditorView extends BaseView {
                     this._lines           = data.lines ?? this._loadedContent.split('\n').length;
                     this._size            = data.size  ?? 0;
                 } catch (err) {
-                    if (err.message.includes('404') || err.message.includes('not found') ||
-                        err.message.includes('does not exist') || err.message === 'HTTP 404') {
+                    // v1.18.1 Phase D: 409 means the relpath was
+                    // anchored against a stale cwd. Recover: apply
+                    // the drained events to AppState (file tree
+                    // refreshes from new cwd via the subscriber),
+                    // surface a notice, and bail out — user can
+                    // click again from the refreshed tree.
+                    if (err.status === 409 && window.ppxai?.handleCwdAnchorMismatch) {
+                        if (window.ppxai.handleCwdAnchorMismatch(err)) {
+                            container.innerHTML = '';
+                            return;
+                        }
+                    }
+                    if (err.status === 404 || err.message.includes('404') ||
+                        err.message.includes('not found') ||
+                        err.message.includes('does not exist')) {
                         this._isNew = true;
                         this._loadedContent   = '';
                         this._originalContent = '';
@@ -163,7 +180,7 @@ class CodeEditorView extends BaseView {
         if (this.isDirty()) return;  // don't clobber unsaved edits
         if (!this._path || this._isNew) return;
         try {
-            const data = await this._appState.apiClient.readFile(this._path);
+            const data = await this._appState.apiClient.readFile(this._path, this._cwdAnchor);
             if (data.type === 'image' || data.type === 'pdf') return;
             const newContent = data.content ?? '';
             if (newContent === this._loadedContent) return;  // no change on disk
@@ -187,12 +204,21 @@ class CodeEditorView extends BaseView {
         const content = this._currentContent();
         this._setStatus('Saving…');
         try {
-            const data = await this._appState.apiClient.writeFile(this._path, content);
+            const data = await this._appState.apiClient.writeFile(this._path, content, this._cwdAnchor);
             this._originalContent = content;
             this._isNew = false;
             this._setStatus(data.created ? '✓ Created' : '✓ Saved', 2000);
             if (this._modeBtn) this._updateDirtyIndicator();
         } catch (err) {
+            // Phase D: 409 means the relpath was anchored against a
+            // stale cwd. Refresh AppState; the user keeps their
+            // edits and can re-save once the tree shows the new cwd.
+            if (err.status === 409 && window.ppxai?.handleCwdAnchorMismatch) {
+                if (window.ppxai.handleCwdAnchorMismatch(err)) {
+                    this._setStatus('✗ Working dir changed — try save again', 4000);
+                    return;
+                }
+            }
             this._setStatus(`✗ ${err.message}`, 4000);
         }
     }

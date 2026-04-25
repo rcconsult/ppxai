@@ -11,10 +11,12 @@ class ImageFileView extends BaseView {
      * @param {string} relPath   - Relative path within the working directory
      * @param {object} appState  - AppState singleton (provides apiClient)
      */
-    constructor(relPath, appState) {
+    constructor(relPath, appState, opts = {}) {
         super();
         this._path     = relPath;
         this._appState = appState;
+        // v1.18.1 Phase D: cwd_anchor for drift detection on read
+        this._cwdAnchor = opts.cwdAnchor ?? null;
         this._container = null;
         this._zoomed   = false;
     }
@@ -35,7 +37,7 @@ class ImageFileView extends BaseView {
         container.innerHTML = '<div class="rpf-loading">Loading image…</div>';
 
         try {
-            const data = await this._appState.apiClient.readFile(this._path);
+            const data = await this._appState.apiClient.readFile(this._path, this._cwdAnchor);
             if (data.type !== 'image') {
                 container.innerHTML = `<div class="rpf-error">Not an image: ${_ifvEsc(this._path)}</div>`;
                 return;
@@ -72,6 +74,15 @@ class ImageFileView extends BaseView {
             img.addEventListener('click', toggleZoom);
             zoomBtn.addEventListener('click', toggleZoom);
         } catch (err) {
+            // v1.18.1 Phase D: 409 = stale cwd_anchor. Recover by
+            // applying the drained events; user can click again.
+            if (err.status === 409 && window.ppxai?.handleCwdAnchorMismatch) {
+                if (window.ppxai.handleCwdAnchorMismatch(err)) {
+                    container.innerHTML = '';
+                    return;
+                }
+            }
+
             container.innerHTML = `<div class="rpf-error">Failed to load image: ${_ifvEsc(err.message)}</div>`;
         }
     }

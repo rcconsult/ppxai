@@ -10,10 +10,12 @@ class PdfFileView extends BaseView {
      * @param {string} relPath   - Relative path within the working directory
      * @param {object} appState  - AppState singleton (provides apiClient)
      */
-    constructor(relPath, appState) {
+    constructor(relPath, appState, opts = {}) {
         super();
         this._path      = relPath;
         this._appState  = appState;
+        // v1.18.1 Phase D: cwd_anchor for drift detection on read
+        this._cwdAnchor = opts.cwdAnchor ?? null;
         this._container = null;
     }
 
@@ -33,7 +35,7 @@ class PdfFileView extends BaseView {
         container.innerHTML = '<div class="rpf-loading">Loading PDF…</div>';
 
         try {
-            const data = await this._appState.apiClient.readFile(this._path);
+            const data = await this._appState.apiClient.readFile(this._path, this._cwdAnchor);
             if (data.type !== 'pdf') {
                 container.innerHTML = `<div class="rpf-error">Not a PDF: ${_pfvEsc(this._path)}</div>`;
                 return;
@@ -56,6 +58,15 @@ class PdfFileView extends BaseView {
                 </div>
             `;
         } catch (err) {
+            // v1.18.1 Phase D: 409 = stale cwd_anchor. Recover by
+            // applying the drained events; user can click again.
+            if (err.status === 409 && window.ppxai?.handleCwdAnchorMismatch) {
+                if (window.ppxai.handleCwdAnchorMismatch(err)) {
+                    container.innerHTML = '';
+                    return;
+                }
+            }
+
             container.innerHTML = `<div class="rpf-error">Failed to load PDF: ${_pfvEsc(err.message)}</div>`;
         }
     }

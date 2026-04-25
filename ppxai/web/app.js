@@ -292,6 +292,49 @@ class PpxaiApp {
     }
 
     /**
+     * Recover from a v1.18.1 Phase D cwd-anchor mismatch (HTTP 409
+     * from /files/read|write|image).
+     *
+     * The error carries `expected`, `actual` (the engine's current
+     * cwd), and `events[]` (drained side-channel events the engine
+     * may have queued since the last sync). Returns true when the
+     * caller should consider the situation handled, false when the
+     * error wasn't a 409 and the caller should re-raise.
+     *
+     * Steps:
+     *   1. Apply the drained events through handleStateSync /
+     *      processSseEvent so AppState catches up to engine.
+     *      `state.workingDir` change fires _onWorkingDirChanged
+     *      which refreshes the file tree against the new cwd.
+     *   2. Surface a user-facing notice. The user can then click
+     *      again from the refreshed tree to retry the action.
+     */
+    handleCwdAnchorMismatch(err) {
+        if (!err || err.status !== 409) return false;
+        const events = err.events || [];
+        for (const ev of events) {
+            if (ev?.type === 'state_sync' && ev.data && this.handleStateSync) {
+                this.handleStateSync(ev.data);
+            } else if (typeof this.processSseEvent === 'function') {
+                this.processSseEvent(ev);
+            }
+        }
+        // Defense in depth: if events[] was empty for some reason
+        // but we still got a 409, write the actual cwd directly.
+        if (err.actual && this.state.workingDir !== err.actual) {
+            this.state.workingDir = err.actual;
+        }
+        const oldCwd = err.expected || '?';
+        const newCwd = err.actual || '?';
+        this.showSystemMessage(
+            `Working directory changed (was ${oldCwd}, now ${newCwd}). ` +
+            `File tree refreshed — click again to retry.`,
+            'warning',
+        );
+        return true;
+    }
+
+    /**
      * Periodic health check. Detects stuck connections and server unavailability.
      * After consecutive failures: marks disconnected, aborts stuck streams.
      * On recovery: reconnects and re-enables UI.
@@ -3029,24 +3072,28 @@ class PpxaiApp {
      * Display file from display_file event (v1.15.2)
      * Called when AI uses the display_file tool
      */
-    async displayFileFromEvent(filepath) {
+    async displayFileFromEvent(filepath, cwdAnchor = null) {
+        // cwdAnchor (v1.18.1 Phase D): the working_dir the relpath
+        // was anchored against when the click happened. Threaded
+        // through to each view's readFile call so the server can
+        // 409 if engine cwd has drifted since.
         if (!this.rightPanelFrame) return;
-        // Route to the appropriate view type by extension (v1.16.2 Phase 3)
         const ext = filepath.split('.').pop().toLowerCase();
         const imageExts = new Set(['png','jpg','jpeg','gif','svg','webp','bmp','ico','tiff']);
         const dataExts  = new Set(['json','yaml','yml','toml','hcl','tf','tfvars','csv','tsv','tab']);
         const mdExts    = new Set(['md','markdown']);
+        const opts = { cwdAnchor };
         let view;
         if (imageExts.has(ext)) {
-            view = new ImageFileView(filepath, this.state);
+            view = new ImageFileView(filepath, this.state, opts);
         } else if (ext === 'pdf') {
-            view = new PdfFileView(filepath, this.state);
+            view = new PdfFileView(filepath, this.state, opts);
         } else if (mdExts.has(ext)) {
-            view = new MarkdownFileView(filepath, this.state);
+            view = new MarkdownFileView(filepath, this.state, opts);
         } else if (dataExts.has(ext)) {
-            view = new DataFileView(filepath, this.state);
+            view = new DataFileView(filepath, this.state, opts);
         } else {
-            view = new CodeEditorView(filepath, this.state, { mode: 'view' });
+            view = new CodeEditorView(filepath, this.state, { mode: 'view', cwdAnchor });
         }
         this.rightPanelFrame.push(view);
         this.elements.resizeHandle.classList.remove('hidden');
@@ -3191,10 +3238,14 @@ class PpxaiApp {
                 this._fileTree = new FileTreeComponent(sidebar, {
                     serverUrl: this.serverUrl,
                     getHeaders: () => this.getSessionHeaders(),
-                    onFileClick: (relPath) => this.displayFileFromEvent(relPath),
-                    onFileEdit:  (relPath) => {
+                    onFileClick: (relPath, cwdAnchor) =>
+                        this.displayFileFromEvent(relPath, cwdAnchor),
+                    onFileEdit:  (relPath, cwdAnchor) => {
                         if (this.rightPanelFrame) {
-                            this.rightPanelFrame.push(new CodeEditorView(relPath, this.state, { mode: 'edit' }));
+                            this.rightPanelFrame.push(new CodeEditorView(
+                                relPath, this.state,
+                                { mode: 'edit', cwdAnchor }
+                            ));
                             this.elements.resizeHandle.classList.remove('hidden');
                         }
                     },
