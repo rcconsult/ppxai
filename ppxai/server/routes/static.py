@@ -70,9 +70,22 @@ async def serve_index():
 
 @router.get("/app.js")
 async def serve_app_js():
-    """Serve app.js with no-cache headers to ensure fresh content."""
+    """Serve app.js with no-cache headers to ensure fresh content.
+
+    Returns 404 with a clear message when the web UI isn't installed
+    (matches the behavior of `/`). Without this guard, FileResponse
+    raised at send-time and the route returned 500 — surfaced by
+    test_server_smoke_e2e on Linux CI where ~/.ppxai/web/ doesn't
+    exist.
+    """
+    file_path = WEB_UI_DIR / 'app.js'
+    if not file_path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail="app.js not found — install web UI to ~/.ppxai/web/"
+        )
     return FileResponse(
-        WEB_UI_DIR / 'app.js',
+        file_path,
         media_type='application/javascript',
         headers={"Cache-Control": "no-cache, must-revalidate"}
     )
@@ -80,9 +93,18 @@ async def serve_app_js():
 
 @router.get("/styles.css")
 async def serve_styles_css():
-    """Serve styles.css with no-cache headers."""
+    """Serve styles.css with no-cache headers.
+
+    Returns 404 when missing — see serve_app_js() for the rationale.
+    """
+    file_path = WEB_UI_DIR / 'styles.css'
+    if not file_path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail="styles.css not found — install web UI to ~/.ppxai/web/"
+        )
     return FileResponse(
-        WEB_UI_DIR / 'styles.css',
+        file_path,
         media_type='text/css',
         headers={"Cache-Control": "no-cache, must-revalidate"}
     )

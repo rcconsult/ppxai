@@ -177,12 +177,19 @@ class TestFilesReadCwdAnchor:
 
     def test_absolute_path_skips_anchor_check(self, http_client, tmp_path):
         """Absolute paths don't depend on cwd, so the anchor check
-        is bypassed even if the anchor disagrees with engine cwd."""
-        target = tmp_path / "abs.txt"
-        target.write_text("absolute", encoding="utf-8")
-        # Engine cwd elsewhere
+        is bypassed even if the anchor disagrees with engine cwd.
+
+        The target lives INSIDE the engine cwd so the broader
+        path-allowed policy (independent of cwd_anchor) admits it on
+        every platform — pre-fix, the target was a sibling of `elsewhere`
+        which Windows tolerated because tmp_path lives under
+        $HOME there, but Linux CI rejected because $HOME=/home/runner
+        and tmp_path=/tmp/...
+        """
         elsewhere = tmp_path / "elsewhere"
         elsewhere.mkdir()
+        target = elsewhere / "abs.txt"  # inside engine cwd
+        target.write_text("absolute", encoding="utf-8")
         headers = _new_session_headers("read-abs")
         http_client.post(
             "/context/working_dir",
