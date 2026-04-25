@@ -13,25 +13,19 @@ import { HttpClient, StreamEvent } from './httpClient';
 import { startServer, stopServer, onServerStatusChange } from './extension';
 import { openHtmlPreview, closeHtmlPreview } from './previewPanel';
 
-// Import shared modules for command definitions and formatters
-import {
-    generateHelpText
-} from './shared/commands';
-import {
-    formatCheckpointInfo,
-    formatCheckpointBackendHelp,
-    formatUsageStats,
-    formatUsageDisplayHelp,
-    formatStatus,
-    formatProvidersList,
-    formatModelsList,
-    formatSessionsList,
-    formatTableResult,
-    formatKeyValueResult,
-    CommandResultData
-} from './shared/formatters';
+// Import shared modules for command definitions and formatters.
+// v1.18.1 5b.2: only generateHelpText is still used here (by showHelp,
+// which augments factory /help output with VSCode keyboard shortcuts).
+// The legacy result formatters were superseded by CommandRenderer; the
+// status/usage/provider/model/session formatters were used by handlers
+// removed in 5b.2.
+import { generateHelpText } from './shared/commands';
 
 import { AppState } from './appState';
+
+// v1.18.1 envelope dispatch: factory result + side-effects rendering.
+import { CommandRenderer, RendererHost } from './commandRenderer';
+import { SideEffectsHandler, SideEffectHost } from './sideEffectsHandler';
 
 // Import extracted handlers (Phase 2-4 refactoring)
 import {
@@ -53,6 +47,25 @@ import {
 // updateFromPython). This file only consumes AppState via
 // `this._appState.updateFromPython(pythonPayload)` — no keyMaps here.
 
+/**
+ * v1.18.1 5b.2: commands that keep using `_backend.codingTask` so the
+ * active editor's language + filename are sent along (the VSCode-only
+ * context advantage). The factory has equivalents for all six, but
+ * routing them through the envelope path would lose the editor
+ * context. Map value is the `task_type` passed to `/coding_task`.
+ *
+ * /convert is chat-shaped too but has special arg parsing — handled
+ * separately in `handleSlashCommand`.
+ */
+const CHAT_SHAPED_TASKS = new Map<string, string>([
+    ['generate', 'generate'],
+    ['explain', 'explain'],
+    ['test', 'test'],
+    ['docs', 'docs'],
+    ['debug', 'debug'],
+    ['implement', 'implement'],
+]);
+
 export class ChatViewProvider implements vscode.WebviewViewProvider {
     public static readonly viewType = 'ppxai.chatView';
 
@@ -68,6 +81,13 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
 
     // Phase 4a: Agent state machine (initialized lazily after backend available)
     private _agentStateMachine?: AgentStateMachine;
+
+    // v1.18.1 5b: envelope dispatch helpers — render factory results +
+    // translate side-effects to vscode.* APIs. Lazy because they need the
+    // panel to be wired up first (postMessage / openHtmlPreview rely on
+    // _view existing).
+    private _commandRenderer?: CommandRenderer;
+    private _sideEffectsHandler?: SideEffectsHandler;
 
     constructor(
         context: vscode.ExtensionContext,
@@ -162,6 +182,50 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             this._agentStateMachine = new AgentStateMachine(this._eventBus, this._backend);
         }
         return this._agentStateMachine;
+    }
+
+    /** v1.18.1 5b: lazy renderer (CommandResult → systemMessage). */
+    private getCommandRenderer(): CommandRenderer {
+        if (!this._commandRenderer) {
+            const host: RendererHost = {
+                postSystemMessage: (content, level) => {
+                    const type = level === 'error' ? 'error' : 'systemMessage';
+                    this._view?.webview.postMessage({ type, content });
+                    this._backend.logClientEvent(level === 'error' ? 'error' : 'info', content);
+                },
+                postToWebview: (msg) => {
+                    this._view?.webview.postMessage(msg);
+                },
+            };
+            this._commandRenderer = new CommandRenderer(host);
+        }
+        return this._commandRenderer;
+    }
+
+    /** v1.18.1 5b: lazy side-effects handler (envelope.side_effects → vscode.*). */
+    private getSideEffectsHandler(): SideEffectsHandler {
+        if (!this._sideEffectsHandler) {
+            const host: SideEffectHost = {
+                getWorkingDirHint: () => this._appState.get('workingDir') || undefined,
+                openHtmlPreviewFromSideEffect: (filepath) => {
+                    // Reuse the existing previewPanel — the chat-panel
+                    // `/preview` UX path is identical to the side-effect
+                    // path, so route both through openHtmlPreview.
+                    void openHtmlPreview(filepath);
+                },
+                postToWebview: (msg) => {
+                    this._view?.webview.postMessage(msg);
+                },
+                dispatchCommandFromSideEffect: async (cmd, args) => {
+                    // PROMPT_QUICK_PICK resume: chosen value IS the next
+                    // args (per ADR Q3 (b)). Re-issue the command via
+                    // the factory dispatcher; no continuation state.
+                    await this.dispatchFactoryCommand(cmd, args);
+                },
+            };
+            this._sideEffectsHandler = new SideEffectsHandler(host);
+        }
+        return this._sideEffectsHandler;
     }
 
     /**
@@ -717,344 +781,149 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         processStreamEvent(event, this._eventBus);
     }
 
+    /**
+     * v1.18.1 5b.2: thin dispatcher over POST /command/<name>.
+     *
+     * Pre-v1.18.1 this was a 35-case switch with ~15 bespoke handlers
+     * each duplicating the formatting + REST logic that the Python
+     * `CommandFactory` already implements. The factory and the TS list
+     * drifted; PyInstaller silently dropped 9 of 10 builtin command
+     * modules at v1.17.4 (only `/usage` actually exercised the factory
+     * path, so nobody noticed for six releases).
+     *
+     * v1.18.1 unifies dispatch:
+     *   - Chat-shaped (LLM-streamed) commands keep using
+     *     `_backend.codingTask` so the active editor's language +
+     *     filename ride along (VSCode-only context advantage).
+     *   - `/agent <task>` keeps its iteration loop here pending
+     *     loop unification (see docs/TODO-v1.18.2-agent-loop-unification.md).
+     *   - `/preview` keeps its own webview panel (VSCode-specific).
+     *   - `/help` augments factory output with VSCode keyboard shortcuts.
+     *   - `/checkpoint`, `/tools`, `/context` use already-extracted
+     *     handlers (they hit bespoke REST today; full factory routing
+     *     is deferred to a later phase).
+     *   - Everything else flows through `dispatchFactoryCommand`,
+     *     which unwraps the v1 envelope into rendered result + applied
+     *     side-effects.
+     */
     private async handleSlashCommand(input: string) {
         if (!this._view) { return; }
 
-        const parts = input.split(/\s+/);
-        const command = parts[0].toLowerCase();
-        const args = parts.slice(1);
+        const trimmed = input.trim();
+        const parts = trimmed.split(/\s+/);
+        // Strip leading slash for factory dispatch; case-insensitive.
+        const command = parts[0].replace(/^\//, '').toLowerCase();
+        const argsArr = parts.slice(1);
+        const argsText = argsArr.join(' ');
 
-        // Show command in chat
+        // Echo the user's command into the chat panel.
         this._view.webview.postMessage({
             type: 'commandMessage',
             content: input
         });
 
         try {
-            switch (command) {
-                case '/help':
-                    await this.showHelp();
-                    break;
-
-                case '/clear':
-                    await this._backend.clearHistory();
-                    this._view.webview.postMessage({ type: 'cleared' });
-                    this._view.webview.postMessage({
-                        type: 'systemMessage',
-                        content: '✓ Conversation history cleared'
-                    });
-                    break;
-
-                case '/save':
-                    const sessionName = await this._backend.saveSession();
-                    this._view.webview.postMessage({
-                        type: 'systemMessage',
-                        content: `✓ Session saved: ${sessionName}`
-                    });
-                    break;
-
-                case '/export':
-                    try {
-                        const filename = args.length > 0 ? args[0] : undefined;
-                        const filepath = await this._backend.exportAnswer(filename);
-                        this._view.webview.postMessage({
-                            type: 'systemMessage',
-                            content: `✓ Answer exported to: ${filepath}`
-                        });
-                    } catch (error: any) {
-                        this._view.webview.postMessage({
-                            type: 'systemMessage',
-                            content: `✗ ${error.message || 'Failed to export answer'}`
-                        });
-                    }
-                    break;
-
-                case '/load':
-                    if (args.length === 0) {
-                        // Show session picker
-                        const sessions = await this._backend.getSessions();
-                        if (sessions.length === 0) {
-                            this._view.webview.postMessage({
-                                type: 'systemMessage',
-                                content: 'No saved sessions found'
-                            });
-                        } else {
-                            const items = sessions.map(s => ({
-                                label: s.name,
-                                description: `${s.provider}/${s.model} - ${s.message_count} messages`,
-                                detail: s.created_at
-                            }));
-                            const selected = await vscode.window.showQuickPick(items, {
-                                placeHolder: 'Select a session to load'
-                            });
-                            if (selected) {
-                                await this._backend.loadSession(selected.label);
-                                await this.refreshHistory();
-                                await this.updateStatus();  // v1.15.3: Update provider/model from restored session
-                                this._view.webview.postMessage({
-                                    type: 'systemMessage',
-                                    content: `✓ Loaded session: ${selected.label}`
-                                });
-                            }
-                        }
-                    } else {
-                        const loaded = await this._backend.loadSession(args[0]);
-                        if (loaded) {
-                            await this.refreshHistory();
-                            await this.updateStatus();  // v1.15.3: Update provider/model from restored session
-                            this._view.webview.postMessage({
-                                type: 'systemMessage',
-                                content: `✓ Loaded session: ${args[0]}`
-                            });
-                        } else {
-                            this._view.webview.postMessage({
-                                type: 'error',
-                                content: `Session not found: ${args[0]}`
-                            });
-                        }
-                    }
-                    break;
-
-                case '/sessions':
-                    const sessions = await this._backend.getSessions();
-                    if (sessions.length === 0) {
-                        this._view.webview.postMessage({
-                            type: 'systemMessage',
-                            content: 'No saved sessions'
-                        });
-                    } else {
-                        let sessionText = '**Saved Sessions:**\n\n';
-                        sessionText += '| Session | Messages | Provider/Model | Created | Last Saved |\n';
-                        sessionText += '|:--------|:--------:|:---------------|:--------|:-----------|\n';
-                        sessions.forEach(s => {
-                            const created = s.created_at ? s.created_at.slice(0, 16).replace('T', ' ') : 'unknown';
-                            const saved = s.saved_at ? s.saved_at.slice(0, 16).replace('T', ' ') : '-';
-                            sessionText += `| \`${s.name}\` | ${s.message_count} | ${s.provider}/${s.model} | ${created} | ${saved} |\n`;
-                        });
-                        this._view.webview.postMessage({
-                            type: 'systemMessage',
-                            content: sessionText
-                        });
-                    }
-                    break;
-
-                case '/model':
-                    if (args.length === 0) {
-                        // Show model picker
-                        const models = await this._backend.getModels();
-                        const items = models.map(m => ({
-                            label: m.name,
-                            description: m.description,
-                            id: m.id
-                        }));
-                        const selected = await vscode.window.showQuickPick(items, {
-                            placeHolder: 'Select a model'
-                        });
-                        if (selected) {
-                            const result = await this._backend.setModel((selected as any).id);
-                            await this.updateStatus();
-                            let msg = `✓ Switched to model: ${selected.label}`;
-                            if (result.contextReset > 0) {
-                                msg += ` (${result.contextReset} messages cleared from context)`;
-                            }
-                            this._view.webview.postMessage({
-                                type: 'systemMessage',
-                                content: msg
-                            });
-                        }
-                    } else if (args[0] === 'list') {
-                        // List available models
-                        const models = await this._backend.getModels();
-                        const status = await this._backend.getStatus();
-                        const modelList = models.map(m =>
-                            `• **${m.id}**${m.id === status.model ? ' ✓' : ''} - ${m.description}`
-                        ).join('\n');
-                        this._view.webview.postMessage({
-                            type: 'systemMessage',
-                            content: `**Available Models:**\n${modelList}`
-                        });
-                    } else {
-                        const result = await this._backend.setModel(args[0]);
-                        if (result.ok) {
-                            await this.updateStatus();
-                            let msg = `✓ Switched to model: ${args[0]}`;
-                            if (result.contextReset > 0) {
-                                msg += ` (${result.contextReset} messages cleared from context)`;
-                            }
-                            this._view.webview.postMessage({
-                                type: 'systemMessage',
-                                content: msg
-                            });
-                        } else {
-                            this._view.webview.postMessage({
-                                type: 'error',
-                                content: `Model not found: ${args[0]}`
-                            });
-                        }
-                    }
-                    break;
-
-                case '/provider':
-                    if (args.length === 0) {
-                        // Show provider picker
-                        const providers = await this._backend.getProviders();
-                        const items = providers.map(p => ({
-                            label: p.name,
-                            description: p.has_api_key ? '' : '(no API key)',
-                            id: p.id
-                        }));
-                        const selected = await vscode.window.showQuickPick(items, {
-                            placeHolder: 'Select a provider'
-                        });
-                        if (selected) {
-                            const result = await this._backend.setProvider((selected as any).id);
-                            await this.updateStatus();
-                            let msg = `✓ Switched to provider: ${selected.label}`;
-                            if (result.contextReset > 0) {
-                                msg += ` (${result.contextReset} messages cleared from context)`;
-                            }
-                            this._view.webview.postMessage({
-                                type: 'systemMessage',
-                                content: msg
-                            });
-                        }
-                    } else if (args[0] === 'list') {
-                        // List available providers
-                        const providers = await this._backend.getProviders();
-                        const status = await this._backend.getStatus();
-                        const providerList = providers.map(p =>
-                            `• **${p.id}**${p.id === status.provider ? ' ✓' : ''} - ${p.name}${p.has_api_key ? '' : ' (no API key)'}`
-                        ).join('\n');
-                        this._view.webview.postMessage({
-                            type: 'systemMessage',
-                            content: `**Available Providers:**\n${providerList}`
-                        });
-                    } else {
-                        const result = await this._backend.setProvider(args[0]);
-                        if (result.ok) {
-                            await this.updateStatus();
-                            let msg = `✓ Switched to provider: ${args[0]}`;
-                            if (result.contextReset > 0) {
-                                msg += ` (${result.contextReset} messages cleared from context)`;
-                            }
-                            this._view.webview.postMessage({
-                                type: 'systemMessage',
-                                content: msg
-                            });
-                        } else {
-                            this._view.webview.postMessage({
-                                type: 'error',
-                                content: `Provider not found or no API key: ${args[0]}`
-                            });
-                        }
-                    }
-                    break;
-
-                case '/tools':
-                    await this.handleToolsCommand(args);
-                    break;
-
-                case '/show':
-                case '/cat':
-                    await this.handleShowCommand(args);
-                    break;
-
-                case '/edit':
-                    await this.handleEditCommand(args);
-                    break;
-
-                case '/cd':
-                    await this.handleCdCommand(args);
-                    break;
-
-                case '/pwd':
-                    await this.handlePwdCommand();
-                    break;
-
-                case '/ls':
-                    await this.handleLsCommand(args);
-                    break;
-
-                case '/tree':
-                    await this.handleTreeCommand(args);
-                    break;
-
-                case '/preview':
-                    await this.handlePreviewCommand(args);
-                    break;
-
-                case '/usage':
-                    await this.handleUsageCommand(args);
-                    break;
-
-                case '/status':
-                    const status = await this._backend.getStatus();
-                    const toolsStatus = await this._backend.getToolsStatus();
-                    this._view.webview.postMessage({
-                        type: 'systemMessage',
-                        content: `**Status:**
-• Provider: ${status.provider}
-• Model: ${status.model}
-• Tools: ${toolsStatus.enabled ? `enabled (${toolsStatus.tool_count} tools)` : 'disabled'}
-• Messages: ${status.message_count}`
-                    });
-                    break;
-
-                // Coding task commands
-                case '/generate':
-                    await this.handleCodingTaskCommand('generate', args.join(' '));
-                    break;
-
-                case '/explain':
-                    await this.handleCodingTaskCommand('explain', args.join(' '));
-                    break;
-
-                case '/test':
-                    await this.handleCodingTaskCommand('test', args.join(' '));
-                    break;
-
-                case '/docs':
-                    await this.handleCodingTaskCommand('docs', args.join(' '));
-                    break;
-
-                case '/debug':
-                    await this.handleCodingTaskCommand('debug', args.join(' '));
-                    break;
-
-                case '/implement':
-                    await this.handleCodingTaskCommand('implement', args.join(' '));
-                    break;
-
-                case '/spec':
-                    await this.handleSpecCommand(args.join(' '));
-                    break;
-
-                case '/convert':
-                    await this.handleConvertCommand(args);
-                    break;
-
-                case '/agent':
-                    await this.handleAgentCommand(args);
-                    break;
-
-                case '/checkpoint':
-                    await this.handleCheckpointCommand(args);
-                    break;
-
-                case '/context':
-                    await this.handleContextCommand(args);
-                    break;
-
-                default:
-                    this._view.webview.postMessage({
-                        type: 'error',
-                        content: `Unknown command: ${command}\nType /help for available commands.`
-                    });
+            // Chat-shaped commands keep client-side path so the active
+            // editor's language + filename are sent along with the task.
+            const codingTaskType = CHAT_SHAPED_TASKS.get(command);
+            if (codingTaskType) {
+                await this.handleCodingTaskCommand(codingTaskType, argsText);
+                return;
             }
-        } catch (error) {
+
+            // /convert is chat-shaped too (factory's handle_convert
+            // blocks on the LLM, so we keep streaming via codingTask).
+            if (command === 'convert') {
+                await this.handleConvertCommand(argsArr);
+                return;
+            }
+
+            // /agent: iteration loop runs client-side. Server gate
+            // (added in 5b.1) validates min-words; we no longer
+            // duplicate the check here.
+            if (command === 'agent') {
+                await this.handleAgentCommand(argsArr);
+                return;
+            }
+
+            // /preview owns its own previewPanel.ts WebviewPanel —
+            // VSCode-specific UX.
+            if (command === 'preview') {
+                await this.handlePreviewCommand(argsArr);
+                return;
+            }
+
+            // /help: factory output + VSCode-specific keyboard shortcut
+            // augmentation (TUI/web don't have these shortcuts).
+            if (command === 'help' || command === 'h' || command === '?') {
+                await this.showHelp();
+                return;
+            }
+
+            // Already-extracted client-side handlers (Phase 2 refactor).
+            // These hit bespoke REST today; full factory routing is a
+            // later phase.
+            if (command === 'tools') {
+                await this.handleToolsCommand(argsArr);
+                return;
+            }
+            if (command === 'checkpoint') {
+                await this.handleCheckpointCommand(argsArr);
+                return;
+            }
+            if (command === 'context') {
+                await this.handleContextCommand(argsArr);
+                return;
+            }
+            if (command === 'ls') {
+                await this.handleLsCommand(argsArr);
+                return;
+            }
+            if (command === 'tree') {
+                await this.handleTreeCommand(argsArr);
+                return;
+            }
+
+            // Everything else routes through the factory envelope.
+            await this.dispatchFactoryCommand(command, argsText);
+        } catch (error: any) {
             this._view.webview.postMessage({
                 type: 'error',
-                content: `Command error: ${error}`
+                content: `Command error: ${error?.message ?? error}`
+            });
+        }
+    }
+
+    /**
+     * v1.18.1 5b.2: dispatch a command via the v1 wire envelope.
+     *
+     * Calls `POST /command/<name>` and translates the response:
+     *   - `result`        → CommandRenderer (systemMessage / error)
+     *   - `side_effects`  → SideEffectsHandler (vscode.* APIs)
+     *   - `events`        → 5c will feed through state-sync (TODO)
+     *
+     * Per ADR Q3 (b), `prompt_quick_pick` resume happens inside the
+     * side-effects handler: the chosen item's `value` becomes the next
+     * `args` for the same command.
+     */
+    private async dispatchFactoryCommand(command: string, args: string): Promise<void> {
+        if (!this._view) { return; }
+        try {
+            const envelope = await this._backend.executeCommand(command, args);
+            this.getCommandRenderer().render(envelope.result);
+            await this.getSideEffectsHandler().apply(envelope.side_effects);
+            // TODO 5c: feed envelope.events through the state-sync path.
+        } catch (error: any) {
+            // 404 from the dispatcher: unknown command. Show the
+            // friendly "type /help" message rather than the raw HTTP
+            // error so the UX matches the pre-v1.18.1 default branch.
+            const msg = error?.message ?? String(error);
+            const isUnknown = /404|not\s*found|unknown\s*command/i.test(msg);
+            this._view.webview.postMessage({
+                type: 'error',
+                content: isUnknown
+                    ? `Unknown command: /${command}\nType /help for available commands.`
+                    : `Command "/${command}" failed: ${msg}`
             });
         }
     }
@@ -1111,28 +980,15 @@ Example: /agent Fix the bug in auth.py
         }
 
         // v1.11.9: Get agent config from server
+        // v1.18.1 5b.1: min-words validation now lives server-side in
+        // ppxai.commands.agent.validate_agent_task — applied by both
+        // the /chat route (gate) and the factory's handle_agent. The
+        // duplicate client-side check that lived here is gone; if
+        // /agent <task> reaches us with an under-threshold task the
+        // server rejects it with a friendly NotificationResult before
+        // the iteration loop ever starts.
         const agentConfig = await this._backend.getAgentConfig();
-        const minWords = agentConfig.min_task_words;
         const maxIterations = agentConfig.max_iterations;
-
-        // v1.11.9: Reject vague/ambiguous single-word tasks for safety
-        const words = task.split(/\s+/).filter(w => w.length > 0);
-        if (words.length < minWords) {
-            this._view.webview.postMessage({
-                type: 'error',
-                content: `Task too vague: "${task}"
-
-Agent tasks should be specific and descriptive (at least ${minWords} words).
-Vague tasks can lead to unexpected AI interpretations.
-
-Examples:
-  ✓ /agent Fix the authentication bug in login.py
-  ✓ /agent Review @git changes and suggest improvements
-  ✗ /agent fix bug
-  ✗ /agent do it`
-            });
-            return;
-        }
 
         // Ensure agent mode is enabled (auto-enables tools)
         try {
@@ -1302,40 +1158,13 @@ Review your previous actions and continue. If the task is complete, respond with
         await this.updateStatus();  // v1.12.0: Update usage badge after response
     }
 
-    private async handleSpecCommand(specType: string) {
-        if (!this._view) { return; }
-
-        const SPEC_TEMPLATES: Record<string, string> = {
-            'api': '**REST API Endpoint Specification Template:**\n\n**Endpoint**: [HTTP_METHOD] /api/v1/resource\n**Purpose**: [What this endpoint does]\n\n**Authentication**: [Required/Optional, type]\n\n**Request:**\n- Headers: [Content-Type, Authorization, etc.]\n- Body Schema:\n  ```json\n  {\n    "field1": "type (description)",\n    "field2": "type (description)"\n  }\n  ```\n\n**Response:**\n- Success (200):\n  ```json\n  {\n    "data": {},\n    "message": "Success"\n  }\n  ```\n- Error (4xx/5xx):\n  ```json\n  {\n    "error": "Error message"\n  }\n  ```\n\n**Validation Rules**: [List validation requirements]\n**Business Logic**: [Describe the processing steps]\n**Error Handling**: [How to handle specific errors]\n\n**Example Request:**\n```bash\ncurl -X POST /api/v1/resource \\\\\n  -H "Content-Type: application/json" \\\\\n  -d \'{"field1": "value"}\'\n```',
-            'cli': '**CLI Tool Specification Template:**\n\n**Command**: program-name [command] [options] [arguments]\n**Purpose**: [What this tool does]\n\n**Commands:**\n- `command1` - [Description]\n- `command2` - [Description]\n\n**Options:**\n- `-f, --flag`: [Description, default value]\n- `-o, --option <value>`: [Description]\n\n**Arguments:**\n- `arg1`: [Description, required/optional]\n\n**Input/Output:**\n- Input: [stdin, files, arguments]\n- Output: [stdout, files, exit codes]\n\n**Error Handling:**\n- Exit code 0: Success\n- Exit code 1: [Error type]\n- Exit code 2: [Error type]\n\n**Examples:**\n```bash\nprogram-name command1 --flag value arg1\nprogram-name command2 -o option < input.txt > output.txt\n```\n\n**Dependencies**: [Required libraries, system tools]\n**Configuration**: [Config files, environment variables]',
-            'lib': '**Library/Module Specification Template:**\n\n**Module Name**: module_name\n**Purpose**: [What this library provides]\n**Language**: [Python, JavaScript, Go, etc.]\n\n**Public API:**\n\n1. **Function/Class**: `name(param1, param2)`\n   - Purpose: [What it does]\n   - Parameters:\n     - `param1` (type): [Description]\n     - `param2` (type): [Description]\n   - Returns: [Type and description]\n   - Raises: [Exceptions/errors]\n   - Example:\n     ```python\n     result = name(value1, value2)\n     ```\n\n2. **Function/Class**: [Repeat for each public interface]\n\n**Internal Architecture:**\n- [Key components and their relationships]\n\n**Dependencies**: [External libraries needed]\n**Thread Safety**: [If applicable]\n**Performance Characteristics**: [Time/space complexity]\n\n**Usage Example:**\n```python\nfrom module_name import ClassName\n\nobj = ClassName(config)\nresult = obj.method(args)\n```',
-            'algo': '**Algorithm Specification Template:**\n\n**Algorithm Name**: [Name or description]\n**Purpose**: [Problem it solves]\n**Language**: [Preferred language]\n\n**Input:**\n- Type: [Array, tree, graph, etc.]\n- Constraints: [Size limits, value ranges]\n- Format: [Specific structure]\n\n**Output:**\n- Type: [What the algorithm returns]\n- Format: [Structure of the result]\n\n**Requirements:**\n- Time Complexity: [Target: O(n log n), etc.]\n- Space Complexity: [Target: O(1), O(n), etc.]\n- Special Constraints: [In-place, iterative vs recursive]\n\n**Algorithm Approach:**\n[High-level description of the approach]\n- Step 1: [Description]\n- Step 2: [Description]\n- Step 3: [Description]\n\n**Edge Cases to Handle:**\n- Empty input\n- Single element\n- Duplicate values\n- [Other specific cases]\n\n**Test Cases:**\n```\nInput: [1, 2, 3]\nOutput: [expected]\n\nInput: []\nOutput: [expected]\n\nInput: [edge case]\nOutput: [expected]\n```',
-            'ui': '**UI Component Specification Template:**\n\n**Component Name**: ComponentName\n**Purpose**: [What this component displays/does]\n**Framework**: [React, Vue, Angular, etc.]\n\n**Props/Inputs:**\n- `prop1` (type, required/optional): [Description, default]\n- `prop2` (type, required/optional): [Description, default]\n\n**State Management:**\n- [Internal state needed]\n- [External state/store]\n\n**Events/Callbacks:**\n- `onEvent1`: [When triggered, parameters]\n- `onEvent2`: [When triggered, parameters]\n\n**Visual Design:**\n- Layout: [Describe structure]\n- Styling: [CSS approach, theme]\n- Responsive: [Mobile/desktop behavior]\n\n**Behavior:**\n- User Interactions: [Click, hover, etc.]\n- Loading States: [How to show loading]\n- Error States: [How to display errors]\n\n**Accessibility:**\n- ARIA labels\n- Keyboard navigation\n- Screen reader support\n\n**Example Usage:**\n```jsx\n<ComponentName\n  prop1="value"\n  prop2={data}\n  onEvent1={handler}\n/>\n```'
-        };
-
-        const SPEC_GUIDELINES = '# Specification Guidelines for Best Outcomes\n\nWriting clear, detailed specifications helps generate better code implementations. Follow this structure:\n\n## 1. Overview\n- **What**: Brief description of what you\'re building\n- **Why**: Purpose and problem it solves\n- **Language/Framework**: Specify the technology stack\n\n## 2. Requirements\n### Functional Requirements\n- List specific features and behaviors\n- Define input/output expectations\n- Specify data structures and formats\n\n### Non-Functional Requirements\n- Performance expectations\n- Security considerations\n- Scalability needs\n- Error handling requirements\n\n## 3. Technical Details\n- API signatures or interfaces\n- Data models/schemas\n- External dependencies\n- Configuration needs\n\n## 4. Constraints & Assumptions\n- Platform limitations\n- Library/version constraints\n- Assumptions about the environment\n\n## 5. Examples\n- Sample inputs and expected outputs\n- Usage scenarios\n- Edge cases to consider\n\n---\n\n## Quick Templates\n\nUse `/spec <type>` to see templates for specific implementation types:\n- `/spec api` - REST API endpoint\n- `/spec cli` - Command-line tool\n- `/spec lib` - Library/module\n- `/spec algo` - Algorithm implementation\n- `/spec ui` - UI component';
-
-        const type = specType.trim().toLowerCase();
-
-        if (!type) {
-            // Show guidelines
-            this._view.webview.postMessage({
-                type: 'systemMessage',
-                content: SPEC_GUIDELINES
-            });
-        } else if (type in SPEC_TEMPLATES) {
-            // Show specific template
-            this._view.webview.postMessage({
-                type: 'systemMessage',
-                content: SPEC_TEMPLATES[type]
-            });
-        } else {
-            this._view.webview.postMessage({
-                type: 'error',
-                content: `Unknown spec type: ${type}\n\nAvailable types: api, cli, lib, algo, ui\nOr use /spec without arguments for guidelines.`
-            });
-        }
-    }
+    // v1.18.1 5b.2: handleSpecCommand removed.
+    // Rich /spec templates now live in ppxai/commands/system.py
+    // (handle_spec) and dispatch through the factory envelope, so all
+    // four clients see identical content. The previous client-side
+    // SPEC_TEMPLATES + SPEC_GUIDELINES blob (~50 lines per template,
+    // ~200 LoC total) was the divergence point — TUI shipped a 5-line
+    // stub while VSCode had the full templates inline.
 
     private async handleConvertCommand(args: string[]) {
         if (!this._view) { return; }
@@ -2307,416 +2136,30 @@ Review your previous actions and continue. If the task is complete, respond with
         }
     }
 
-    /**
-     * Handle /usage command with sub-commands (v1.12.3)
-     *
-     * Sub-commands:
-     *   /usage              - Show session usage with per-model breakdown
-     *   /usage 24h          - Show usage for last 24 hours (v1.12.3)
-     *   /usage week         - Show usage for last 7 days (v1.12.3)
-     *   /usage month        - Show usage for last 30 days (v1.12.3)
-     *   /usage year         - Show usage for last 365 days (v1.12.3)
-     *   /usage all          - Show all-time usage (v1.12.3)
-     *   /usage show session - Status shows session totals (default)
-     *   /usage show provider - Status shows current provider totals
-     *   /usage show model   - Status shows current model totals
-     *   /usage show off     - Hide usage from status
-     *   /usage reset        - Reset all usage counters
-     */
-    private async handleUsageCommand(args: string[]) {
-        if (!this._view) { return; }
+    // v1.18.1 5b.2: handleUsageCommand and renderCommandResult removed.
+    // /usage now flows through dispatchFactoryCommand; CommandRenderer
+    // (vscode-extension/src/commandRenderer.ts) covers the full result
+    // taxonomy that this method's switch only partially handled.
 
-        // v1.16.1: Delegate to shared command handler via POST /command/usage
-        // v1.18.1: executeCommand now returns the envelope; unwrap
-        // .result for the renderCommandResult shape (which still
-        // expects the legacy CommandResultData shape). The full
-        // envelope dispatcher arrives in 5b — for now this is a
-        // minimal compat shim.
-        try {
-            const envelope = await this._backend.executeCommand('usage', args.join(' '));
-            this.renderCommandResult(envelope.result as any);
-        } catch (error) {
-            this._view.webview.postMessage({
-                type: 'systemMessage',
-                content: `Failed to get usage: ${error}`
-            });
-        }
-    }
+    // v1.18.1 5b.2: handleShowCommand removed.
+    // Factory's handle_show (ppxai/commands/display.py) does the file
+    // resolution server-side, emits OPEN_VIEWER for direct hits and
+    // PROMPT_QUICK_PICK for multi-match. The SideEffectsHandler
+    // translates OPEN_VIEWER → vscode.commands.executeCommand('vscode.open')
+    // — preserves the "beside, preview mode" UX while letting installed
+    // PDF/image extensions handle non-text files.
 
-    /**
-     * Render a server-side CommandResult in the webview.
-     *
-     * Generic dispatcher for all command result types returned by
-     * POST /command/{name}. Works for any command, not just /usage.
-     *
-     * v1.16.1: Added for CommandFactory server-side execution.
-     */
-    private renderCommandResult(result: CommandResultData) {
-        if (!this._view) { return; }
-
-        let content: string;
-        switch (result.type) {
-            case 'TableResult':
-            case 'DirectoryListingResult':
-                content = formatTableResult(result);
-                break;
-            case 'KeyValueResult':
-                content = formatKeyValueResult(result);
-                break;
-            case 'ErrorResult': {
-                const suggestions = result.suggestions || [];
-                content = result.message +
-                    (suggestions.length ? '\n' + suggestions.join('\n') : '');
-                break;
-            }
-            case 'ConfirmationResult':
-            case 'NotificationResult':
-            default:
-                content = result.message;
-        }
-        this._view.webview.postMessage({ type: 'systemMessage', content });
-        this._backend.logClientEvent('info', content);
-    }
-
-    private async handleShowCommand(args: string[]) {
-        if (!this._view) { return; }
-
-        if (args.length === 0) {
-            this._view.webview.postMessage({
-                type: 'systemMessage',
-                content: 'Usage: `/show <filepath>` or `/show @<search>`\n\nExamples:\n- `/show README.md`\n- `/show @architecture` (searches for files)\n- `/show docs/README.md`'
-            });
-            return;
-        }
-
-        const startTime = Date.now();
-        let query = args.join(' ');
-        const workspaceFolders = vscode.workspace.workspaceFolders;
-
-        // Extract @reference if present (ignore trailing words like "file", "in docs", etc.)
-        const atMatch = query.match(/@([\w.\-\/]+)/);
-        if (atMatch) {
-            query = atMatch[1];  // Use just the reference without @
-        }
-
-        const fs = require('fs');
-        const pathModule = require('path');
-
-        let fullPath: string | undefined;
-
-        // Check if it's a direct path first
-        if (query.startsWith('/') || query.startsWith('~')) {
-            fullPath = query;
-        } else if (workspaceFolders && workspaceFolders.length > 0) {
-            const directPath = vscode.Uri.joinPath(workspaceFolders[0].uri, query).fsPath;
-            if (fs.existsSync(directPath)) {
-                fullPath = directPath;
-            }
-        }
-
-        // If not found, search for files
-        if (!fullPath || !fs.existsSync(fullPath)) {
-            this._view.webview.postMessage({
-                type: 'systemMessage',
-                content: `*Searching for '${query}'...*`
-            });
-
-            const matches = await this.searchFiles(query);
-
-            if (matches.length === 0) {
-                this._view.webview.postMessage({
-                    type: 'error',
-                    content: `No files found matching: ${query}`
-                });
-                return;
-            }
-
-            if (matches.length === 1) {
-                fullPath = matches[0].fsPath;
-                const relPath = workspaceFolders
-                    ? pathModule.relative(workspaceFolders[0].uri.fsPath, fullPath)
-                    : matches[0].path.split('/').pop();
-                this._view.webview.postMessage({
-                    type: 'systemMessage',
-                    content: `*Found: ${relPath}*`
-                });
-            } else {
-                // Multiple matches - show list
-                const list = matches.slice(0, 10).map((m, i) => {
-                    const relPath = workspaceFolders
-                        ? pathModule.relative(workspaceFolders[0].uri.fsPath, m.fsPath)
-                        : m.path;
-                    return `${i + 1}. \`${relPath}\``;
-                }).join('\n');
-
-                this._view.webview.postMessage({
-                    type: 'systemMessage',
-                    content: `**Multiple files found (${matches.length}):**\n${list}\n\n*Use exact path: /show <path>*`
-                });
-                return;
-            }
-        }
-
-        try {
-            if (!fs.existsSync(fullPath)) {
-                this._view.webview.postMessage({
-                    type: 'error',
-                    content: `File not found: ${query}`
-                });
-                return;
-            }
-
-            const stats = fs.statSync(fullPath);
-            if (!stats.isFile()) {
-                this._view.webview.postMessage({
-                    type: 'error',
-                    content: `Not a file: ${query}`
-                });
-                return;
-            }
-
-            // Open file in VSCode editor (beside current editor)
-            const uri = vscode.Uri.file(fullPath);
-            const doc = await vscode.workspace.openTextDocument(uri);
-            await vscode.window.showTextDocument(doc, vscode.ViewColumn.Beside);
-
-            const filename = pathModule.basename(fullPath);
-            const sizeKB = (stats.size / 1024).toFixed(1);
-            const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
-
-            this._view.webview.postMessage({
-                type: 'systemMessage',
-                content: `📂 Opened **${filename}** (${sizeKB} KB) in editor • *${elapsed}s*`
-            });
-        } catch (error) {
-            this._view.webview.postMessage({
-                type: 'error',
-                content: `Error opening file: ${error}`
-            });
-        }
-    }
-
-    /**
-     * Handle /edit command - open file in VSCode native editor (v1.14.1)
-     *
-     * Supports line and column numbers:
-     * - /edit file.py           - Opens file at line 1
-     * - /edit file.py:42        - Opens file at line 42
-     * - /edit file.py:42:10     - Opens file at line 42, column 10
-     *
-     * Unlike /show which opens beside, /edit opens in the primary editor
-     * as the user likely wants to make edits.
-     */
-    private async handleEditCommand(args: string[]) {
-        if (!this._view) { return; }
-
-        if (args.length === 0) {
-            this._view.webview.postMessage({
-                type: 'systemMessage',
-                content: 'Usage: `/edit <filepath[:line[:col]]>`\n\nExamples:\n- `/edit README.md`\n- `/edit src/app.py:42`\n- `/edit config.ts:10:5`'
-            });
-            return;
-        }
-
-        const startTime = Date.now();
-        let query = args.join(' ');
-
-        // Parse line and column from filepath (e.g., "file.py:42:10")
-        let targetLine = 1;
-        let targetColumn = 1;
-
-        // Match patterns like file.py:42 or file.py:42:10
-        const lineColMatch = query.match(/^(.+?):(\d+)(?::(\d+))?$/);
-        if (lineColMatch) {
-            query = lineColMatch[1];  // File path without line/col
-            targetLine = parseInt(lineColMatch[2], 10);
-            if (lineColMatch[3]) {
-                targetColumn = parseInt(lineColMatch[3], 10);
-            }
-        }
-
-        const workspaceFolders = vscode.workspace.workspaceFolders;
-        const fs = require('fs');
-        const pathModule = require('path');
-
-        let fullPath: string | undefined;
-
-        // Check if it's a direct path first
-        if (query.startsWith('/') || query.startsWith('~') || (query.length > 1 && query[1] === ':')) {
-            // Absolute path (Unix, tilde expansion, or Windows drive letter)
-            if (query.startsWith('~')) {
-                const homedir = require('os').homedir();
-                query = pathModule.join(homedir, query.slice(1));
-            }
-            fullPath = query;
-        } else if (workspaceFolders && workspaceFolders.length > 0) {
-            // Relative path - check workspace first
-            const directPath = vscode.Uri.joinPath(workspaceFolders[0].uri, query).fsPath;
-            if (fs.existsSync(directPath)) {
-                fullPath = directPath;
-            }
-        }
-
-        // If not found directly, try working directory
-        if (!fullPath || !fs.existsSync(fullPath)) {
-            const workingDir = await this._backend.getWorkingDir();
-            if (workingDir) {
-                const workingDirPath = pathModule.join(workingDir, query);
-                if (fs.existsSync(workingDirPath)) {
-                    fullPath = workingDirPath;
-                }
-            }
-        }
-
-        // If still not found, search
-        if (!fullPath || !fs.existsSync(fullPath)) {
-            this._view.webview.postMessage({
-                type: 'systemMessage',
-                content: `*Searching for '${query}'...*`
-            });
-
-            const matches = await this.searchFiles(query);
-
-            if (matches.length === 0) {
-                this._view.webview.postMessage({
-                    type: 'error',
-                    content: `File not found: ${query}`
-                });
-                return;
-            }
-
-            if (matches.length === 1) {
-                fullPath = matches[0].fsPath;
-            } else {
-                // Multiple matches - show list
-                const list = matches.slice(0, 10).map((m, i) => {
-                    const relPath = workspaceFolders
-                        ? pathModule.relative(workspaceFolders[0].uri.fsPath, m.fsPath)
-                        : m.path;
-                    return `${i + 1}. \`${relPath}\``;
-                }).join('\n');
-
-                this._view.webview.postMessage({
-                    type: 'systemMessage',
-                    content: `**Multiple files found (${matches.length}):**\n${list}\n\n*Use exact path: /edit <path>*`
-                });
-                return;
-            }
-        }
-
-        try {
-            if (!fs.existsSync(fullPath)) {
-                this._view.webview.postMessage({
-                    type: 'error',
-                    content: `File not found: ${query}`
-                });
-                return;
-            }
-
-            const stats = fs.statSync(fullPath);
-            if (!stats.isFile()) {
-                this._view.webview.postMessage({
-                    type: 'error',
-                    content: `Not a file: ${query}`
-                });
-                return;
-            }
-
-            // Open file in VSCode editor (primary editor, not beside)
-            const uri = vscode.Uri.file(fullPath);
-            const doc = await vscode.workspace.openTextDocument(uri);
-
-            // Show the document with selection at the target line/column
-            const editor = await vscode.window.showTextDocument(doc, {
-                viewColumn: vscode.ViewColumn.One,
-                preview: false  // Don't use preview mode - user wants to edit
-            });
-
-            // Jump to line/column (VSCode uses 0-based indexing)
-            const position = new vscode.Position(Math.max(0, targetLine - 1), Math.max(0, targetColumn - 1));
-            editor.selection = new vscode.Selection(position, position);
-            editor.revealRange(
-                new vscode.Range(position, position),
-                vscode.TextEditorRevealType.InCenter
-            );
-
-            const filename = pathModule.basename(fullPath);
-            const sizeKB = (stats.size / 1024).toFixed(1);
-            const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
-
-            let locationInfo = '';
-            if (targetLine > 1) {
-                locationInfo = ` at line ${targetLine}`;
-                if (targetColumn > 1) {
-                    locationInfo += `:${targetColumn}`;
-                }
-            }
-
-            this._view.webview.postMessage({
-                type: 'systemMessage',
-                content: `✏️ Editing **${filename}**${locationInfo} (${sizeKB} KB) • *${elapsed}s*`
-            });
-        } catch (error) {
-            this._view.webview.postMessage({
-                type: 'error',
-                content: `Error opening file: ${error}`
-            });
-        }
-    }
-
-    private async handleCdCommand(args: string[]) {
-        if (!this._view) { return; }
-
-        if (args.length === 0) {
-            // No args - show current directory (same as /pwd)
-            await this.handlePwdCommand();
-            return;
-        }
-
-        const targetPath = args.join(' ');
-
-        try {
-            const result = await this._backend.setWorkingDir(targetPath);
-            if (result.success) {
-                this._view.webview.postMessage({
-                    type: 'systemMessage',
-                    content: `Working directory changed to: \`${result.path}\``
-                });
-                // Update the workspace display badge
-                this._view.webview.postMessage({
-                    type: 'workingDirChanged',
-                    path: result.path
-                });
-            } else {
-                this._view.webview.postMessage({
-                    type: 'error',
-                    content: `Failed to change directory: ${result.error || 'Unknown error'}`
-                });
-            }
-        } catch (error) {
-            this._view.webview.postMessage({
-                type: 'error',
-                content: `Failed to change directory: ${error}`
-            });
-        }
-    }
-
-    private async handlePwdCommand() {
-        if (!this._view) { return; }
-
-        try {
-            const path = await this._backend.getWorkingDir();
-            this._view.webview.postMessage({
-                type: 'systemMessage',
-                content: `Current working directory: \`${path}\``
-            });
-        } catch (error) {
-            this._view.webview.postMessage({
-                type: 'error',
-                content: `Failed to get working directory: ${error}`
-            });
-        }
-    }
+    // v1.18.1 5b.2: handleEditCommand removed.
+    // Factory's handle_edit (ppxai/commands/display.py) parses the
+    // file:line:col syntax and emits OPEN_EDITOR with line/column
+    // payload. SideEffectsHandler.OPEN_EDITOR opens primary column,
+    // preview=false, jumps to position — same UX as before, no
+    // duplicate file-search code.
+    // v1.18.1 5b.2: handleCdCommand and handlePwdCommand removed.
+    // Factory's handle_cd (ppxai/commands/utility.py) emits
+    // REFRESH_FILE_TREE side-effect after a successful cd; the working
+    // dir mirror is pushed via state_sync (Phase A re-anchor).
+    // handle_pwd returns the cwd as a NotificationResult.
 
     /**
      * Handle /ls command - delegates to extracted handler (v1.16.0)
