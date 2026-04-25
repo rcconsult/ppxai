@@ -86,6 +86,55 @@ export interface EngineStatus {
     auto_inject_context?: boolean;
 }
 
+// v1.18.1 Wire envelope returned by POST /command/<name>.
+//   `result`        — CommandResult.to_dict() (rendered payload)
+//   `side_effects`  — UI directives orthogonal to the payload
+//                     (open editor, spawn terminal, etc.)
+//   `events`        — drained engine side-channel events
+//                     (state_sync, working_dir_changed, etc.)
+//                     for state-sync determinism Phase B
+//   `version`       — envelope schema version (currently 1)
+//
+// `result` is loosely typed because it ranges across all
+// CommandResult subtypes — TableResult, MarkdownResult, FileViewResult,
+// etc. — and the renderer pattern-matches on `result.type`.
+export interface CommandResultPayload {
+    type: string;
+    status: string;
+    message: string;
+    metadata?: Record<string, unknown>;
+    columns?: string[];
+    rows?: string[][];
+    pairs?: Record<string, string>;
+    details?: Record<string, unknown>;
+    suggestions?: string[];
+    error_details?: string | null;
+    content?: string;
+    filepath?: string;
+    items?: Array<Record<string, unknown>>;
+    root?: Record<string, unknown>;
+    [key: string]: unknown;
+}
+
+export interface SideEffectEntry {
+    kind: string;
+    [key: string]: unknown;
+}
+
+export interface SsePiggybackEvent {
+    type: string;
+    data?: Record<string, unknown>;
+    metadata?: Record<string, unknown>;
+}
+
+export interface CommandEnvelope {
+    ok: boolean;
+    result: CommandResultPayload;
+    side_effects: SideEffectEntry[];
+    events?: SsePiggybackEvent[];
+    version: number;
+}
+
 // Multimodal content part (OpenAI format). Text parts carry `text`, image
 // parts carry `image_url.url` (usually a data: URI), file parts carry
 // `name` / `filename`, and the R5 (v1.17.6) `uploaded_file` type carries
@@ -1378,38 +1427,25 @@ export class HttpClient {
      * @param name - Command name without slash (e.g., "usage", "tools")
      * @param args - Command arguments string
      */
-    async executeCommand(name: string, args: string = ''): Promise<{
-        type: string;
-        status: string;
-        message: string;
-        metadata?: Record<string, unknown>;
-        columns?: string[];
-        rows?: string[][];
-        pairs?: Record<string, string>;
-        details?: Record<string, unknown>;
-        suggestions?: string[];
-        error_details?: string | null;
-    }> {
+    async executeCommand(name: string, args: string = ''): Promise<CommandEnvelope> {
         const response = await fetch(`${this.baseUrl}/command/${encodeURIComponent(name)}`, {
             method: 'POST',
             headers: this.getHeaders(true),
             body: JSON.stringify({ args })
         });
         if (!response.ok) {
-            throw new Error(`Command /${name} failed: ${response.statusText}`);
+            // 404 is "unknown command" — surface it specifically so
+            // the dispatcher can show a friendly error instead of a
+            // generic failure.
+            const err: any = new Error(
+                response.status === 404
+                    ? `Unknown command: /${name}`
+                    : `Command /${name} failed: ${response.statusText}`
+            );
+            err.status = response.status;
+            throw err;
         }
-        return response.json() as Promise<{
-            type: string;
-            status: string;
-            message: string;
-            metadata?: Record<string, unknown>;
-            columns?: string[];
-            rows?: string[][];
-            pairs?: Record<string, string>;
-            details?: Record<string, unknown>;
-            suggestions?: string[];
-            error_details?: string | null;
-        }>;
+        return response.json() as Promise<CommandEnvelope>;
     }
 
     /**

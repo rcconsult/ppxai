@@ -2327,9 +2327,14 @@ Review your previous actions and continue. If the task is complete, respond with
         if (!this._view) { return; }
 
         // v1.16.1: Delegate to shared command handler via POST /command/usage
+        // v1.18.1: executeCommand now returns the envelope; unwrap
+        // .result for the renderCommandResult shape (which still
+        // expects the legacy CommandResultData shape). The full
+        // envelope dispatcher arrives in 5b — for now this is a
+        // minimal compat shim.
         try {
-            const result = await this._backend.executeCommand('usage', args.join(' '));
-            this.renderCommandResult(result);
+            const envelope = await this._backend.executeCommand('usage', args.join(' '));
+            this.renderCommandResult(envelope.result as any);
         } catch (error) {
             this._view.webview.postMessage({
                 type: 'systemMessage',
