@@ -93,8 +93,17 @@ async def sse_event_generator(prompt, engine: EngineClient, session_id: str = "d
                     engine_done = True
                     break
 
-                # Yield control briefly then re-check
-                await asyncio.sleep(0.1)
+                # Yield control briefly then re-check.
+                # v1.18.1 hotfix: was 0.1 — capped streaming throughput at
+                # ~10 events/sec because the loop slept 100ms after each
+                # check regardless of how fast the engine produced events.
+                # Per-token providers (Perplexity sonar-pro at ~9 tok/sec)
+                # ran right at the ceiling; batched providers (OpenAI,
+                # Gemini emitting 3-5 tokens/chunk) clamped to 10/sec
+                # too. Dropping to 10ms uncaps the forwarder — engine
+                # rate becomes the real bottleneck, no observable CPU
+                # cost at single-digit concurrent connections.
+                await asyncio.sleep(0.01)
 
             if engine_done:
                 break
