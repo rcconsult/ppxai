@@ -247,19 +247,25 @@ class CommandFactory:
         cls._loaded = False
 
     @classmethod
-    def generate_help(cls, client: Optional[str] = None) -> str:
+    def generate_help(cls, client: Optional[str] = None, markdown: bool = False) -> str:
         """Generate help text from registered commands.
 
         Dynamically builds help output grouped by category.
 
         Args:
             client: Optional client filter ("rich", "textual", or None for all)
+            markdown: If True, output GitHub-flavored markdown (web,
+                VSCode). If False, Rich console markup (TUI).
+                Same content, two formatters.
 
         Returns:
-            Formatted help text with Rich markup
+            Formatted help text
         """
         cls._ensure_loaded()
-        lines = ["[bold]Available Commands:[/bold]\n"]
+        if markdown:
+            lines = ["**Available Commands:**\n"]
+        else:
+            lines = ["[bold]Available Commands:[/bold]\n"]
 
         # Group by category
         for category in cls.get_categories():
@@ -268,26 +274,40 @@ class CommandFactory:
                 continue
 
             # Category header
-            lines.append(f"[cyan]{category.title()}:[/cyan]")
+            if markdown:
+                lines.append(f"**{category.title()}:**")
+            else:
+                lines.append(f"[cyan]{category.title()}:[/cyan]")
 
             # Commands in category, sorted by name
             for cmd in sorted(commands, key=lambda c: c.name):
                 alias_str = ""
                 if cmd.aliases:
-                    alias_str = f" [dim](/{', /'.join(cmd.aliases)})[/dim]"
-                lines.append(f"  /{cmd.name}{alias_str} - {cmd.description}")
+                    if markdown:
+                        alias_str = f" *(/{', /'.join(cmd.aliases)})*"
+                    else:
+                        alias_str = f" [dim](/{', /'.join(cmd.aliases)})[/dim]"
+                if markdown:
+                    lines.append(f"- `/{cmd.name}`{alias_str} — {cmd.description}")
+                else:
+                    lines.append(f"  /{cmd.name}{alias_str} - {cmd.description}")
 
             lines.append("")  # Blank line between categories
 
-        lines.append("[dim]Use /help <command> for detailed help on a specific command.[/dim]")
+        if markdown:
+            lines.append("*Use `/help <command>` for detailed help on a specific command.*")
+        else:
+            lines.append("[dim]Use /help <command> for detailed help on a specific command.[/dim]")
         return "\n".join(lines)
 
     @classmethod
-    def get_command_help(cls, name: str) -> Optional[str]:
+    def get_command_help(cls, name: str, markdown: bool = False) -> Optional[str]:
         """Get detailed help for a specific command.
 
         Args:
             name: Command name or alias (without leading /)
+            markdown: If True, output GitHub-flavored markdown.
+                If False, Rich console markup.
 
         Returns:
             Formatted help text, or None if command not found
@@ -298,24 +318,26 @@ class CommandFactory:
             return None
 
         lines = []
-
-        # Command header
-        lines.append(f"[bold]/{spec.name}[/bold] - {spec.description}")
-        lines.append("")
-
-        # Usage
-        if spec.usage:
-            lines.append(f"[cyan]Usage:[/cyan] {spec.usage}")
+        if markdown:
+            lines.append(f"### `/{spec.name}` — {spec.description}")
+            lines.append("")
+            usage = spec.usage if spec.usage else f"/{spec.name}"
+            lines.append(f"**Usage:** `{usage}`")
+            if spec.aliases:
+                aliases = ", ".join(f"`/{a}`" for a in spec.aliases)
+                lines.append(f"**Aliases:** {aliases}")
+            lines.append(f"**Category:** {spec.category}")
         else:
-            lines.append(f"[cyan]Usage:[/cyan] /{spec.name}")
-
-        # Aliases
-        if spec.aliases:
-            aliases = ", ".join(f"/{a}" for a in spec.aliases)
-            lines.append(f"[cyan]Aliases:[/cyan] {aliases}")
-
-        # Category
-        lines.append(f"[cyan]Category:[/cyan] {spec.category}")
+            lines.append(f"[bold]/{spec.name}[/bold] - {spec.description}")
+            lines.append("")
+            if spec.usage:
+                lines.append(f"[cyan]Usage:[/cyan] {spec.usage}")
+            else:
+                lines.append(f"[cyan]Usage:[/cyan] /{spec.name}")
+            if spec.aliases:
+                aliases = ", ".join(f"/{a}" for a in spec.aliases)
+                lines.append(f"[cyan]Aliases:[/cyan] {aliases}")
+            lines.append(f"[cyan]Category:[/cyan] {spec.category}")
 
         return "\n".join(lines)
 

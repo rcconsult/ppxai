@@ -40,48 +40,77 @@ def handle_help(context: CommandContext, args: str) -> CommandResult:
         /help           - Show all commands grouped by category
         /help <command> - Show detailed help for a specific command
 
+    The factory's command registry is the single source of truth for
+    every client. The output format branches on context:
+
+    - In-process TUI (Rich/Textual) → TextResult with Rich console
+      markup (`[bold]`, `[cyan]`).
+    - HTTP clients (web, VSCode) → MarkdownResult with GitHub-
+      flavored markdown so the webview / chat panel renders properly.
+
+    The previous web-side hand-built help (SharedCommands.generateHelpText
+    in ppxai/web/shared/commands.js) drifted from the Python factory
+    over time. v1.18.1 routes /help through CommandFactory for both
+    paths so there's only one place to maintain the catalog.
+
     Args:
-        context: Command context providing access to engine client
+        context: Command context — TUI vs HTTP determines rendering
         args: Optional command name for detailed help
 
     Returns:
-        TextResult with help content
+        TextResult (TUI) or MarkdownResult (HTTP)
     """
+    # Lazy import — context.py imports system.py transitively at
+    # module load.
+    from .context import ServerCommandContext
+
+    is_http = isinstance(context, ServerCommandContext)
     args = args.strip().lower() if args else ""
 
     # /help <command> - detailed help for specific command
     if args:
-        # Remove leading slash if present
         cmd_name = args.lstrip("/")
-        detailed_help = CommandFactory.get_command_help(cmd_name)
+        detailed_help = CommandFactory.get_command_help(cmd_name, markdown=is_http)
 
         if detailed_help:
+            if is_http:
+                return MarkdownResult(
+                    status=ResultStatus.INFO,
+                    message=f"Help: /{cmd_name}",
+                    content=detailed_help,
+                )
             return TextResult(
                 status=ResultStatus.INFO,
-                message=detailed_help
+                message=detailed_help,
             )
-        else:
-            # Command not found - show error with suggestions
-            available = CommandFactory.list_all()
-            # Find similar commands
-            suggestions = [c for c in available if cmd_name in c or c in cmd_name][:3]
-            suggestion_text = ""
-            if suggestions:
-                suggestion_text = f"\n\nDid you mean: {', '.join(f'/{s}' for s in suggestions)}"
 
-            return ErrorResult(
-                status=ResultStatus.ERROR,
-                message=f"Unknown command: /{cmd_name}",
-                suggestions=[f"Use /help to see all available commands{suggestion_text}"]
-            )
+        # Command not found - show error with suggestions
+        available = CommandFactory.list_all()
+        suggestions = [c for c in available if cmd_name in c or c in cmd_name][:3]
+        suggestion_text = ""
+        if suggestions:
+            suggestion_text = f"\n\nDid you mean: {', '.join(f'/{s}' for s in suggestions)}"
+        return ErrorResult(
+            status=ResultStatus.ERROR,
+            message=f"Unknown command: /{cmd_name}",
+            suggestions=[f"Use /help to see all available commands{suggestion_text}"]
+        )
 
     # /help - show all commands
+    if is_http:
+        header = f"## ppxai v{__version__} — AI Chat Assistant\n\n"
+        help_text = header + CommandFactory.generate_help(markdown=True)
+        return MarkdownResult(
+            status=ResultStatus.INFO,
+            message="Available commands",
+            content=help_text,
+        )
+
     header = f"[bold]ppxai v{__version__} - AI Chat Assistant[/bold]\n\n"
     help_text = header + CommandFactory.generate_help()
-
     return TextResult(
         status=ResultStatus.INFO,
-        message=help_text
+        message=help_text,
     )
 
 
