@@ -766,24 +766,93 @@ export class HttpClient {
     }
 
     /**
+     * Throw a structured Error from a non-OK response.
+     *
+     * Keeps `err.message` compatible with the legacy string-matching
+     * callers (`err.message.includes('404')`) AND attaches `.status`,
+     * `.body`, plus the v1.18.1 cwd-anchor 409 fields
+     * (`expected`, `actual`, `events[]`) for callers that want to
+     * recover from drift via `ChatViewProvider.handleCwdAnchorMismatch`.
+     *
+     * Mirrors `ppxai/web/shared/api-client.js::_throwHttpError`.
+     */
+    private async _throwHttpError(response: Response, fallbackMsg: string): Promise<never> {
+        let body: any;
+        try { body = await response.json(); }
+        catch { body = { detail: response.statusText }; }
+        // FastAPI wraps HTTPException bodies in `detail`; the cwd_anchor
+        // 409 path packs the structured fields inside that wrapper.
+        const detail = (body && typeof body.detail === 'object') ? body.detail : body;
+        const messageParts: string[] = [];
+        if (typeof detail?.detail === 'string') messageParts.push(detail.detail);
+        else if (typeof body?.detail === 'string') messageParts.push(body.detail);
+        else messageParts.push(fallbackMsg || `HTTP ${response.status}`);
+        const err: any = new Error(messageParts.join(' '));
+        err.status = response.status;
+        err.body = body;
+        if (detail && typeof detail === 'object') {
+            err.expected = detail.expected;
+            err.actual = detail.actual;
+            err.events = detail.events;
+        }
+        throw err;
+    }
+
+    /**
+     * Read file contents (v1.18.1 Phase D).
+     *
+     * Optional `cwdAnchor`: the working_dir the client thinks the
+     * relpath was captured against. Server returns 409 if the engine
+     * has moved on; httpClient surfaces it as a structured error with
+     * `.expected`, `.actual`, `.events` for the recovery helper.
+     */
+    async readFile(filepath: string, cwdAnchor?: string): Promise<{
+        path: string;
+        content: string;
+        size: number;
+        encoding: string;
+    }> {
+        const body: Record<string, unknown> = { path: filepath };
+        if (cwdAnchor) body.cwd_anchor = cwdAnchor;
+        const response = await fetch(`${this.baseUrl}/files/read`, {
+            method: 'POST',
+            headers: this.getHeaders(true),
+            body: JSON.stringify(body)
+        });
+        if (!response.ok) {
+            await this._throwHttpError(response, `Failed to read file`);
+        }
+        return response.json() as Promise<{
+            path: string;
+            content: string;
+            size: number;
+            encoding: string;
+        }>;
+    }
+
+    /**
      * Write file contents (v1.14.1)
      *
      * Writes content to a file in the working directory.
+     *
+     * v1.18.1 Phase D: optional `cwdAnchor` argument enables drift
+     * detection — see readFile() for semantics.
      */
-    async writeFile(path: string, content: string): Promise<{
+    async writeFile(path: string, content: string, cwdAnchor?: string): Promise<{
         path: string;
         success: boolean;
         created: boolean;
         size: number;
     }> {
+        const body: Record<string, unknown> = { path, content };
+        if (cwdAnchor) body.cwd_anchor = cwdAnchor;
         const response = await fetch(`${this.baseUrl}/files/write`, {
             method: 'POST',
             headers: this.getHeaders(true),
-            body: JSON.stringify({ path, content })
+            body: JSON.stringify(body)
         });
         if (!response.ok) {
-            const error = await response.json() as { detail?: string };
-            throw new Error(error.detail || `Failed to write file: ${response.statusText}`);
+            await this._throwHttpError(response, `Failed to write file`);
         }
         return response.json() as Promise<{
             path: string;

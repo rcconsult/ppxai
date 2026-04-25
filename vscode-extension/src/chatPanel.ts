@@ -9,7 +9,7 @@
  */
 
 import * as vscode from 'vscode';
-import { HttpClient, StreamEvent } from './httpClient';
+import { HttpClient, StreamEvent, SsePiggybackEvent } from './httpClient';
 import { startServer, stopServer, onServerStatusChange } from './extension';
 import { openHtmlPreview, closeHtmlPreview } from './previewPanel';
 
@@ -912,7 +912,11 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             const envelope = await this._backend.executeCommand(command, args);
             this.getCommandRenderer().render(envelope.result);
             await this.getSideEffectsHandler().apply(envelope.side_effects);
-            // TODO 5c: feed envelope.events through the state-sync path.
+            // v1.18.1 5c (Phase B): drain piggyback events from the
+            // envelope. State-mutating handlers (e.g. /cd) emit
+            // state_sync into the engine queue; without this the events
+            // sit there until the next /chat opens an SSE generator.
+            this._drainEnvelopeEvents(envelope.events);
         } catch (error: any) {
             // 404 from the dispatcher: unknown command. Show the
             // friendly "type /help" message rather than the raw HTTP
@@ -926,6 +930,85 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                     : `Command "/${command}" failed: ${msg}`
             });
         }
+    }
+
+    /**
+     * v1.18.1 5c (Phase B): feed REST-piggyback events through the
+     * same EventBus subscribers the live SSE pipeline uses.
+     *
+     * Wire shape per ppxai/server/state.py::with_drained_events:
+     *   {"type": "state_sync", "data": {"working_dir": "/x"}}
+     *   {"type": "working_dir_changed", "data": {"path": "/x"}}
+     *
+     * The data field is already a structured object (not a JSON
+     * string), so we go directly to the EventBus rather than through
+     * `processStreamEvent` (which expects the live-SSE shape where
+     * `content` is a string for state_sync). Same EventBus, same
+     * subscribers, same outcome — AppState mirror catches up
+     * immediately, file tree refreshes, status badge updates.
+     *
+     * Public so the Phase D recovery helper can reuse it.
+     */
+    public _drainEnvelopeEvents(events: SsePiggybackEvent[] | undefined): void {
+        if (!Array.isArray(events) || events.length === 0) return;
+        for (const ev of events) {
+            if (!ev || typeof ev !== 'object') continue;
+            if (ev.type === 'state_sync' && ev.data) {
+                this._eventBus.emit('state:sync', ev.data);
+            } else if (ev.type === 'working_dir_changed') {
+                const path = (ev.data as Record<string, unknown> | undefined)?.path;
+                if (typeof path === 'string') {
+                    this._eventBus.emit('ui:working_dir_changed', path);
+                }
+            }
+            // Other event types (currently none in the piggyback
+            // taxonomy) drop quietly — open-enum invariant.
+        }
+    }
+
+    /**
+     * v1.18.1 5c (Phase D): recover from a cwd-anchor mismatch.
+     *
+     * When /files/read|write|image is called with a `cwd_anchor` and
+     * the engine's current cwd doesn't match, the server returns
+     * HTTP 409 with body shape:
+     *   {detail: "...", expected: "/old", actual: "/new", events: [...]}
+     *
+     * httpClient surfaces this as a structured Error with
+     * `.status === 409` plus `.expected`, `.actual`, `.events`. This
+     * helper drains the events through the same path Phase B uses
+     * (so AppState catches up to the engine's actual cwd), then
+     * surfaces a notice to the user.
+     *
+     * Mirrors web's `app.handleCwdAnchorMismatch`. No call sites in
+     * the VSCode extension today (the chat panel uses
+     * `vscode.workspace.openTextDocument` for reads, which doesn't
+     * go through /files/read), but kept symmetric so future readers
+     * /writers can opt in cheaply.
+     *
+     * @returns true if the error was a 409 and was handled; false to
+     *   tell the caller to re-raise.
+     */
+    public handleCwdAnchorMismatch(err: any): boolean {
+        if (!err || err.status !== 409) return false;
+        const events = err.events as SsePiggybackEvent[] | undefined;
+        this._drainEnvelopeEvents(events);
+        // Defense in depth: if events[] was empty for some reason
+        // but we still got a 409, write the actual cwd directly.
+        if (err.actual && this._appState.get('workingDir') !== err.actual) {
+            this._appState.set('workingDir', err.actual);
+            this._eventBus.emit('ui:working_dir_changed', err.actual);
+        }
+        const oldCwd = err.expected || '?';
+        const newCwd = err.actual || '?';
+        this._view?.webview.postMessage({
+            type: 'systemMessage',
+            content: (
+                `⚠️ Working directory changed (was \`${oldCwd}\`, now \`${newCwd}\`). ` +
+                `File tree refreshed — try the action again.`
+            ),
+        });
+        return true;
     }
 
     /**
