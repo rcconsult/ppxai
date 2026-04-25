@@ -41,6 +41,7 @@ from .results import (
     ErrorResult,
     NotificationResult,
     ResultStatus,
+    SideEffectKind,
 )
 
 _attach_logger = get_logger("attach")
@@ -652,11 +653,24 @@ def handle_attach(context: Any, args: str) -> CommandResult:
 
     # Metadata carries image paths so the Rich client can render an inline
     # preview right after /attach completes without re-reading the files.
-    return NotificationResult(
+    result = NotificationResult(
         status=ResultStatus.SUCCESS,
         message="\n".join(lines),
         metadata={"attached_paths": [pf.path for pf in added if pf.kind == "image"]},
     )
+    # ATTACH_FILE kind tells web/VSCode that the engine just took
+    # ownership of these files — clients update their attachment
+    # indicators (chip strip, badge count, etc.). One side-effect per
+    # file so the renderer can iterate cleanly. `pf.kind` (image/text/
+    # pdf) goes in payload as `file_kind` to avoid colliding with
+    # the SideEffect's own `kind` discriminator.
+    for pf in added:
+        result.add_side_effect(
+            SideEffectKind.ATTACH_FILE,
+            filepath=pf.path,
+            file_kind=pf.kind,
+        )
+    return result
 
 
 def _split_paths(args: str) -> List[str]:

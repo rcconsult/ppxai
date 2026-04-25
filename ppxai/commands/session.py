@@ -21,6 +21,7 @@ from .results import (
     TableResult,
     ErrorResult,
     NotificationResult,
+    SideEffectKind,
 )
 
 
@@ -327,14 +328,20 @@ def handle_copy(context: CommandContext, args: str) -> CommandResult:
 
         target_msg = assistant_messages[-offset]
 
-        # Copy to clipboard
-        pyperclip.copy(target_msg)
+        # Try server-side pyperclip first (works in TUI on the user's
+        # machine) but tolerate failure on headless servers — the
+        # COPY_TO_CLIPBOARD side-effect below carries the text to the
+        # user's actual machine via web/VSCode native clipboard APIs.
+        try:
+            pyperclip.copy(target_msg)
+        except Exception:
+            pass
 
         # Truncate preview for confirmation
         preview = target_msg[:100] + "..." if len(target_msg) > 100 else target_msg
         preview = preview.replace("\n", " ")
 
-        return ConfirmationResult(
+        result = ConfirmationResult(
             status=ResultStatus.SUCCESS,
             message=f"Copied to clipboard ({len(target_msg):,} chars)",
             details={
@@ -343,6 +350,14 @@ def handle_copy(context: CommandContext, args: str) -> CommandResult:
                 "message_offset": offset
             }
         )
+        # Web → navigator.clipboard.writeText, VSCode →
+        # vscode.env.clipboard.writeText, TUI ignores (pyperclip already
+        # ran). The kind names the intent; each client picks the API.
+        result.add_side_effect(
+            SideEffectKind.COPY_TO_CLIPBOARD,
+            text=target_msg,
+        )
+        return result
 
     except Exception as e:
         return ErrorResult(

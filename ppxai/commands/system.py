@@ -363,32 +363,77 @@ provides comprehensive templates with examples and best practices.
 
 
 def handle_keys(context: CommandContext, args: str) -> CommandResult:
-    """Handle /keys command - show all keyboard shortcuts.
+    """Handle /keys command - show keyboard shortcuts.
+
+    Per ADR 0001 (Option B): TUI clients (Rich/Textual) get the rich
+    binding table from `ppxai.tui.keys`. HTTP clients (web, VSCode)
+    get a small MarkdownResult of cross-client universal bindings
+    plus a `vscode_delegate` side-effect that opens VSCode's native
+    keybinding editor for users to inspect the full list.
+
+    Per-client structured registries (Option A) are deferred — see
+    docs/TODO-v1.18.2-keys-binding-registries.md.
 
     Args:
-        context: Command context providing access to engine client
-        args: Optional subcommand ("conflicts" to show binding conflicts)
+        context: Command context — TUI vs HTTP determines rendering
+        args: Optional subcommand ("conflicts" to show binding conflicts,
+              TUI only)
 
     Returns:
-        TextResult with formatted key binding table
+        TextResult (TUI) or MarkdownResult + vscode_delegate (HTTP)
     """
-    try:
-        from ..tui.keys import get_keys_table, get_conflicts_table
-        if args and args.strip().lower() == "conflicts":
+    # Lazy import to avoid pulling in `ppxai.commands.context` at module
+    # load time — context.py imports results.py which imports system.py.
+    from .context import ServerCommandContext
+
+    is_http = isinstance(context, ServerCommandContext)
+
+    if not is_http:
+        # In-process TUI path: use the existing rich binding table.
+        try:
+            from ..tui.keys import get_keys_table, get_conflicts_table
+            if args and args.strip().lower() == "conflicts":
+                return TextResult(
+                    status=ResultStatus.INFO,
+                    message=get_conflicts_table()
+                )
             return TextResult(
                 status=ResultStatus.INFO,
-                message=get_conflicts_table()
+                message=get_keys_table()
             )
-        return TextResult(
-            status=ResultStatus.INFO,
-            message=get_keys_table()
-        )
-    except ImportError:
-        return ErrorResult(
-            status=ResultStatus.ERROR,
-            message="Key registry not available",
-            suggestions=["This command requires the TUI components to be installed"]
-        )
+        except ImportError:
+            # Fall through to the HTTP-style universal table.
+            pass
+
+    universal_md = (
+        "## Keyboard Shortcuts (universal)\n\n"
+        "| Key | Action |\n"
+        "|---|---|\n"
+        "| `Enter` | Submit message (web/VSCode) |\n"
+        "| `Shift+Enter` | New line in input |\n"
+        "| `↑` / `↓` | Command history |\n"
+        "| `Esc` | Interrupt streaming |\n"
+        "| `Ctrl+Enter` (or `Ctrl+J`) | Submit (Textual TUI) |\n"
+        "\n"
+        "### Client-specific shortcuts\n\n"
+        "- **VSCode:** opens the global keybinding editor — search "
+        "`ppxai` to filter to extension bindings.\n"
+        "- **Web:** see https://ppxai.dev/docs/keys/web for the full list.\n"
+        "- **Textual TUI:** run `/keys` inside the TUI for the live registry "
+        "(needs `ppxai.tui` installed)."
+    )
+    result = MarkdownResult(
+        status=ResultStatus.INFO,
+        message="Keyboard Shortcuts",
+        content=universal_md,
+    )
+    # Side-effect: open VSCode's keybinding editor. Web ignores the kind
+    # (open enum). TUI doesn't reach this branch.
+    result.add_side_effect(
+        SideEffectKind.VSCODE_DELEGATE,
+        command="workbench.action.openGlobalKeybindings",
+    )
+    return result
 
 
 def handle_terminal(context: CommandContext, args: str) -> CommandResult:
