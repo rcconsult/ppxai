@@ -171,4 +171,5 @@ testpaths = ["tests"]
 addopts = "--ignore=tests/test_custom_endpoint_integration.py"
 markers = [
     "integration: marks tests as integration tests (deselect with '-m \"not integration\"')",
+    "slow: marks tests that spawn subprocesses or otherwise take seconds (deselect with '-m \"not slow\"')",
 ]

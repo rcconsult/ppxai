@@ -23,6 +23,7 @@ from .results import (
     KeyValueResult,
     ListResult,
     MarkdownResult,
+    NotificationResult,
     TextResult,
 )
 
@@ -151,11 +152,13 @@ def handle_theme(context: CommandContext, args: str) -> CommandResult:
     # Try to switch to the specified theme
     try:
         new_theme = get_theme(args)
-        return ConfirmationResult(
+        result = ConfirmationResult(
             status=ResultStatus.SUCCESS,
             message=f"Theme switched to: {new_theme.name}",
             details={"theme": args}
         )
+        result.add_side_effect("set_theme", name=args)
+        return result
     except ValueError as e:
         return ErrorResult(
             status=ResultStatus.ERROR,
@@ -400,20 +403,29 @@ def handle_terminal(context: CommandContext, args: str) -> CommandResult:
     Returns:
         MarkdownResult with terminal info and configuration help
     """
+    cwd = ""
+    if context.engine_client:
+        cwd = context.engine_client.get_working_dir() or ""
+
     try:
         from ..tui.terminal import get_terminal_help
         help_text = get_terminal_help()
-        return MarkdownResult(
+        result = MarkdownResult(
             status=ResultStatus.INFO,
             message="Terminal Configuration",
             content=help_text
         )
     except ImportError:
-        return ErrorResult(
-            status=ResultStatus.ERROR,
-            message="Terminal detection not available",
-            suggestions=["This command requires the TUI components to be installed"]
+        # No Rich terminal helper available (server-only install) — fall
+        # through to a notification result. Web/VSCode use the
+        # spawn_terminal side-effect to actually open a terminal.
+        result = NotificationResult(
+            status=ResultStatus.SUCCESS,
+            message="Opening terminal",
         )
+
+    result.add_side_effect("spawn_terminal", cwd=cwd)
+    return result
 
 
 # =============================================================================

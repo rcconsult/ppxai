@@ -192,11 +192,13 @@ def handle_cd(context: CommandContext, args: str) -> CommandResult:
             )
 
         context.engine_client.set_working_dir(resolved)
-        return ConfirmationResult(
+        result = ConfirmationResult(
             status=ResultStatus.SUCCESS,
             message=f"Working directory changed to: {resolved}",
             details={"working_dir": resolved}
         )
+        result.add_side_effect("refresh_file_tree", cwd=resolved)
+        return result
 
     except Exception as e:
         return ErrorResult(

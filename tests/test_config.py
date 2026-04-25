@@ -103,7 +103,29 @@ class TestConfig:
 
 
 class TestProviderConfig:
-    """Tests for multi-provider configuration."""
+    """Tests for multi-provider configuration.
+
+    These tests assert against the bundled `ppxai-config.example.json`
+    contract, not whatever happens to be in the developer's
+    `~/.ppxai/ppxai-config.json`. The autouse fixture pins the loader
+    to the example config so test order can't pollute the assertions.
+    Without it, a peer test's `initialize()` call leaks the user's
+    home config into PROVIDERS — caught the hard way during v1.18.1
+    when `coding_model` mismatched on a dev machine.
+    """
+
+    @pytest.fixture(autouse=True)
+    def _pin_example_config(self, monkeypatch):
+        from pathlib import Path
+        example = Path(__file__).resolve().parents[1] / "ppxai-config.example.json"
+        assert example.exists(), f"Example config missing at {example}"
+        monkeypatch.setenv("PPXAI_CONFIG_FILE", str(example))
+        reload_config()
+        yield
+        # post-yield: reload back to default (no env override) so the
+        # next test class doesn't inherit the example config.
+        monkeypatch.delenv("PPXAI_CONFIG_FILE", raising=False)
+        reload_config()
 
     def test_providers_dict_exists(self):
         """Test that PROVIDERS dictionary exists with expected providers."""

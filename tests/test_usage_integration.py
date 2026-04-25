@@ -140,7 +140,12 @@ def _get_usage_result(engine, args: str = "") -> dict:
 
 
 def _get_usage_result_via_http(engine, args: str = "") -> dict:
-    """Run /usage through POST /command/usage and return JSON result."""
+    """Run /usage through POST /command/usage and return JSON result.
+
+    v1.18.1 envelope: route returns {ok, result, side_effects, version}.
+    Callers of this helper assert against the inner CommandResult dict,
+    so we unwrap envelope.result here.
+    """
     from fastapi.testclient import TestClient
     import ppxai.server.http as http_module
 
@@ -152,7 +157,9 @@ def _get_usage_result_via_http(engine, args: str = "") -> dict:
 
         resp = client.post("/command/usage", json={"args": args})
         assert resp.status_code == 200, f"Expected 200, got {resp.status_code}: {resp.text}"
-        result = resp.json()
+        envelope = resp.json()
+        assert envelope.get("version") == 1
+        result = envelope["result"]
 
         http_module.session_manager = original
 

@@ -199,13 +199,25 @@ def handle_show(context: CommandContext, args: str) -> CommandResult:
 
     # Handle images (binary) - return ImageResult
     if file_type == FileType.IMAGE:
-        return ImageResult(
+        result = ImageResult(
             status=ResultStatus.SUCCESS,
             message=f"Displaying {path.name} ({size_kb:.1f} KB)",
             filepath=str(path),
             format=path.suffix.lower().lstrip('.'),
             metadata={"size_kb": size_kb}
         )
+        result.add_side_effect("show_image", filepath=str(path))
+        return result
+
+    # Handle PDFs - special-case before binary rejection
+    if path.suffix.lower() == ".pdf":
+        result = NotificationResult(
+            status=ResultStatus.SUCCESS,
+            message=f"Opening {path.name} ({size_kb:.1f} KB)",
+            metadata={"size_kb": size_kb, "filepath": str(path)}
+        )
+        result.add_side_effect("show_pdf", filepath=str(path))
+        return result
 
     # Handle binary files
     if file_type == FileType.BINARY:
@@ -495,12 +507,14 @@ def handle_preview(context: CommandContext, args: str) -> CommandResult:
             ]
         )
 
-    return PreviewResult(
+    result = PreviewResult(
         status=ResultStatus.SUCCESS,
         message=f"Preview: {path.name}",
         filepath=str(path),
         metadata={"working_dir": working_dir}
     )
+    result.add_side_effect("open_preview", filepath=str(path))
+    return result
 
 
 CommandFactory.register(CommandSpec(

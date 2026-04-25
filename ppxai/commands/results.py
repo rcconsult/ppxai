@@ -34,6 +34,36 @@ class ResultStatus(Enum):
     INFO = "info"
 
 
+# ============================================================================
+# Side-effect envelope (v1.18.1) — UI directives separate from rendered payload
+# ============================================================================
+
+@dataclass
+class SideEffect:
+    """A UI directive emitted alongside a CommandResult.
+
+    Side-effects are orthogonal to the rendered payload: a command can
+    return a TableResult AND tell the client "also open this preview
+    panel". Clients pattern-match on `kind` and ignore unknown kinds,
+    so adding a new kind is non-breaking.
+
+    Known kinds (v1):
+      - "open_preview"      payload: {url, filepath}
+      - "spawn_terminal"    payload: {cwd}
+      - "open_editor"       payload: {filepath, line?, read_only}
+      - "show_image"        payload: {filepath}
+      - "show_pdf"          payload: {filepath}
+      - "refresh_file_tree" payload: {cwd}
+      - "set_theme"         payload: {name}
+      - "notify"            payload: {level, message}
+    """
+    kind: str
+    payload: Dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> dict:
+        return {"kind": self.kind, **self.payload}
+
+
 @dataclass
 class CommandResult(ABC):
     """Base result type - all results inherit from this.
@@ -45,10 +75,16 @@ class CommandResult(ABC):
         status: Execution status (SUCCESS, ERROR, WARNING, INFO)
         message: Human-readable message describing the result
         metadata: Optional metadata for extended information
+        side_effects: UI directives orthogonal to the rendered payload.
+            Populated by handlers that need to open panels, spawn
+            terminals, refresh widgets, etc. The HTTP route layer
+            promotes this field into the v1 envelope's `side_effects`
+            array; in-process callers (Rich/Textual) read it directly.
     """
     status: ResultStatus
     message: str
     metadata: Dict[str, Any] = field(default_factory=dict)
+    side_effects: List[SideEffect] = field(default_factory=list)
 
     @property
     def success(self) -> bool:
@@ -60,11 +96,19 @@ class CommandResult(ABC):
         """Check if result indicates failure."""
         return self.status == ResultStatus.ERROR
 
+    def add_side_effect(self, kind: str, **payload: Any) -> None:
+        """Append a UI directive to this result. Handler convenience helper."""
+        self.side_effects.append(SideEffect(kind=kind, payload=payload))
+
     def to_dict(self) -> dict:
         """Serialize result for HTTP/JSON transport.
 
         Used by POST /command/{name} endpoint to return CommandResult as JSON.
         Subclasses override to add their specific fields.
+
+        Note: `side_effects` is NOT included here — the route layer
+        promotes them into the envelope so the wire shape stays clean.
+        In-process TUI callers read `result.side_effects` directly.
         """
         return {
             "type": type(self).__name__,
@@ -624,6 +668,7 @@ __all__ = [
     "ResultStatus",
     # Base
     "CommandResult",
+    "SideEffect",
     # Display
     "NotificationResult",
     "ErrorResult",
