@@ -122,6 +122,76 @@ def _search_files(handler: Any, query: str, max_results: int = 10) -> List[Path]
 # Type-Based Result Handlers (v1.15.0)
 # =============================================================================
 
+
+def _resolve_at_query(
+    search_term: str,
+    working_dir: Path,
+    *,
+    command_to_resume: str,
+) -> "CommandResult | str":
+    """Resolve `@<search_term>` to a literal path or a quick-pick prompt.
+
+    Returns:
+        - absolute path string (single match) — caller continues
+          handling as if the user had typed that literal path.
+        - CommandResult (zero or many matches) — caller returns it
+          directly; ErrorResult for zero, NotificationResult with
+          PROMPT_QUICK_PICK side-effect for many.
+
+    Per ADR Q3 (b): the quick-pick item's `value` is the literal
+    absolute path. The client re-issues POST /command/<command_to_resume>
+    with that path as args, and the second pass takes the non-@ branch.
+
+    Match cap is 25 to keep the quick-pick payload small. If the user's
+    intent is broader, they re-search with a more specific term.
+    """
+    matches: List[Path] = []
+    try:
+        for candidate in working_dir.rglob('*'):
+            try:
+                if candidate.is_file() and search_term.lower() in candidate.name.lower():
+                    matches.append(candidate)
+                    if len(matches) >= 25:
+                        break
+            except OSError:
+                # Network paths can raise WinError 4350; skip
+                continue
+    except (PermissionError, OSError):
+        pass
+
+    if not matches:
+        return ErrorResult(
+            status=ResultStatus.ERROR,
+            message=f"No files found matching: {search_term}",
+            suggestions=["Try a different search term, or use a literal path"]
+        )
+
+    if len(matches) == 1:
+        return str(matches[0].resolve())
+
+    items = []
+    for m in matches:
+        try:
+            label = str(m.resolve().relative_to(working_dir))
+        except ValueError:
+            label = str(m)
+        items.append({
+            "label": label,
+            "value": str(m.resolve()),
+        })
+    result = NotificationResult(
+        status=ResultStatus.INFO,
+        message=f"{len(matches)} files match '{search_term}'",
+    )
+    result.add_side_effect(
+        SideEffectKind.PROMPT_QUICK_PICK,
+        title=f"Multiple files match '{search_term}' — pick one",
+        items=items,
+        command_to_resume=command_to_resume,
+    )
+    return result
+
+
 def handle_show(context: CommandContext, args: str) -> CommandResult:
     """Handle /show command - display file contents with appropriate viewer.
 
@@ -167,13 +237,21 @@ def handle_show(context: CommandContext, args: str) -> CommandResult:
         query = query.replace(flag, '')
     query = query.strip()
 
-    # Extract @reference if present
-    at_match = re.search(r'@([\w.\-/]+)', query)
-    if at_match:
-        query = at_match.group(1)
-
-    # Get working directory
     working_dir = Path(context.engine_client.get_working_dir())
+
+    # `@<query>` triggers a fuzzy search across working_dir.
+    # 0 matches → error; 1 match → use it; 2+ matches → prompt user
+    # to pick. Per ADR Q3 (b): the picker's value is the literal
+    # path, so re-issuing /show <picked-path> takes the direct branch.
+    at_match = re.match(r'^@(\S+)\s*$', query)
+    if at_match:
+        search_term = at_match.group(1)
+        result_or_path = _resolve_at_query(
+            search_term, working_dir, command_to_resume="show"
+        )
+        if isinstance(result_or_path, CommandResult):
+            return result_or_path
+        query = result_or_path  # absolute path string
 
     # Resolve path
     direct_path = Path(query).expanduser()
@@ -590,6 +668,31 @@ def handle_edit(context: CommandContext, args: str) -> CommandResult:
             status=ResultStatus.ERROR,
             message="Usage: /edit --create <filepath>"
         )
+
+    # `@<query>` triggers a fuzzy file search across working_dir.
+    # Mirrors /show: 0 → error; 1 → use it; 2+ → quick-pick. The
+    # picker's value is the resolved literal path, so the client's
+    # re-issue takes the direct branch on the second pass. Search
+    # is incompatible with --create (you can't create a non-existent
+    # match — the user's input was a search, not a path to create).
+    at_match = re.match(r'^@(\S+)\s*$', raw)
+    if at_match:
+        if create_mode:
+            return ErrorResult(
+                status=ResultStatus.ERROR,
+                message="@search and --create cannot be combined"
+            )
+        working_dir_for_search = Path(
+            context.engine_client.get_working_dir() or os.getcwd()
+        )
+        result_or_path = _resolve_at_query(
+            at_match.group(1),
+            working_dir_for_search,
+            command_to_resume="edit",
+        )
+        if isinstance(result_or_path, CommandResult):
+            return result_or_path
+        raw = result_or_path  # absolute path — fall through to parse
 
     # Parse `path[:line[:col]]`. `rsplit(':', 2)` handles Windows
     # drive letters cleanly: "C:\foo.py:42:5" splits to

@@ -185,3 +185,65 @@ class TestShowErrorsNoSideEffect:
         result = handle_show(context, ".")
         assert isinstance(result, ErrorResult)
         assert result.side_effects == []
+
+
+# ---------------------------------------------------------------------------
+# @query fuzzy search → quick-pick on multiple matches
+# ---------------------------------------------------------------------------
+
+class TestShowAtQuery:
+    def test_zero_matches_returns_error(self, context, tmp_path):
+        result = handle_show(context, "@nonexistent")
+        assert isinstance(result, ErrorResult)
+        assert "No files found" in result.message
+
+    def test_single_match_resolves_and_renders(self, context, tmp_path):
+        target = tmp_path / "config.py"
+        target.write_text("x = 1\n", encoding="utf-8")
+        result = handle_show(context, "@config")
+        # Single match → handler proceeds as if user typed the path
+        assert isinstance(result, FileViewResult)
+        assert SideEffectKind.OPEN_VIEWER in _kinds(result)
+
+    def test_multiple_matches_emit_quick_pick(self, context, tmp_path):
+        (tmp_path / "config.py").write_text("a", encoding="utf-8")
+        (tmp_path / "config.json").write_text("{}", encoding="utf-8")
+        (tmp_path / "config.yaml").write_text("a: 1", encoding="utf-8")
+        result = handle_show(context, "@config")
+        assert isinstance(result, NotificationResult)
+        assert SideEffectKind.PROMPT_QUICK_PICK in _kinds(result)
+
+    def test_quick_pick_resume_targets_show(self, context, tmp_path):
+        (tmp_path / "config.py").write_text("a", encoding="utf-8")
+        (tmp_path / "config.json").write_text("{}", encoding="utf-8")
+        result = handle_show(context, "@config")
+        se = next(s for s in result.side_effects
+                  if s.kind == SideEffectKind.PROMPT_QUICK_PICK)
+        assert se.payload["command_to_resume"] == "show"
+
+    def test_quick_pick_items_have_absolute_path_values(self, context, tmp_path):
+        (tmp_path / "config.py").write_text("a", encoding="utf-8")
+        (tmp_path / "config.json").write_text("{}", encoding="utf-8")
+        result = handle_show(context, "@config")
+        se = next(s for s in result.side_effects
+                  if s.kind == SideEffectKind.PROMPT_QUICK_PICK)
+        for item in se.payload["items"]:
+            assert "label" in item
+            assert "value" in item
+            # value is absolute path → re-issue takes the direct branch
+            from pathlib import Path
+            assert Path(item["value"]).is_absolute()
+
+    def test_quick_pick_labels_are_relative(self, context, tmp_path):
+        (tmp_path / "src").mkdir()
+        (tmp_path / "src" / "config.py").write_text("a", encoding="utf-8")
+        (tmp_path / "tests").mkdir()
+        (tmp_path / "tests" / "config.py").write_text("b", encoding="utf-8")
+        result = handle_show(context, "@config")
+        se = next(s for s in result.side_effects
+                  if s.kind == SideEffectKind.PROMPT_QUICK_PICK)
+        labels = [it["label"] for it in se.payload["items"]]
+        # Labels are relative paths under working_dir; full absolute
+        # paths would be too noisy in the picker UI.
+        assert all(not str(l).startswith("/") and ":" not in str(l)[:3]
+                   for l in labels), f"absolute label slipped in: {labels}"

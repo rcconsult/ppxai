@@ -188,3 +188,41 @@ class TestHandleEditUsage:
         result = handle_edit(context, "")
         assert isinstance(result, ErrorResult)
         assert "Usage" in result.message
+
+
+# ---------------------------------------------------------------------------
+# @query fuzzy search
+# ---------------------------------------------------------------------------
+
+class TestHandleEditAtQuery:
+    def test_zero_matches_returns_error(self, context, tmp_path):
+        result = handle_edit(context, "@nonexistent")
+        assert isinstance(result, ErrorResult)
+
+    def test_single_match_proceeds_to_edit(self, context, tmp_path):
+        target = tmp_path / "config.py"
+        target.write_text("x = 1\n", encoding="utf-8")
+        result = handle_edit(context, "@config")
+        # Single match → handler edits that file
+        from ppxai.commands.results import FileViewResult
+        assert isinstance(result, FileViewResult)
+        kinds = [se.kind for se in result.side_effects]
+        assert SideEffectKind.OPEN_EDITOR in kinds
+
+    def test_multiple_matches_emit_quick_pick_for_edit(self, context, tmp_path):
+        (tmp_path / "config.py").write_text("a", encoding="utf-8")
+        (tmp_path / "config.json").write_text("{}", encoding="utf-8")
+        result = handle_edit(context, "@config")
+        kinds = [se.kind for se in result.side_effects]
+        assert SideEffectKind.PROMPT_QUICK_PICK in kinds
+        se = next(s for s in result.side_effects
+                  if s.kind == SideEffectKind.PROMPT_QUICK_PICK)
+        # Resume target is /edit, not /show
+        assert se.payload["command_to_resume"] == "edit"
+
+    def test_at_query_with_create_flag_is_an_error(self, context, tmp_path):
+        """@search and --create are incompatible: a search finds an
+        existing file; --create assumes a literal new path."""
+        result = handle_edit(context, "--create @config")
+        assert isinstance(result, ErrorResult)
+        assert "@search" in result.message or "combine" in result.message.lower()
