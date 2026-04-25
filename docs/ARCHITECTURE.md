@@ -254,31 +254,158 @@ main() → PPXAIDEApp [singleton, IS its own CommandContext]
 | State | Public attributes on CommandHandler | Private attrs + public property/method API |
 | Widget tree | None (prompt_toolkit only) | Full Textual `compose()` tree |
 
-### Command Dispatch Flow
+### Command Dispatch Flow (v1.18.1)
 
-Both clients share the same 38 commands via `CommandFactory`. Commands are UI-agnostic
-— they receive `CommandContext` (protocol) and return typed `CommandResult` objects.
+All four clients share the same `CommandFactory`. Commands are
+UI-agnostic — they receive a `CommandContext` and return typed
+`CommandResult` objects with optional `side_effects[]`. The two
+TUIs call the factory in-process; web and VSCode call it over
+HTTP via `POST /command/<name>`, which wraps the result in a v1
+envelope.
 
 ```
-                  ┌──────────────────────┐
-                  │   CommandFactory      │  Shared registry
-                  │   38 CommandSpec      │  (self-registered at import)
-                  └─────────┬────────────┘
-                            │ spec.handler(context, args)
-              ┌─────────────┴─────────────┐
-              │                           │
-    ┌─────────┴──────────┐    ┌───────────┴────────────┐
-    │  RichCommandContext │    │  PPXAIDEApp             │
-    │  (adapter)          │    │  (implements protocol   │
-    │  wraps Handler      │    │   directly)             │
-    └─────────┬──────────┘    └───────────┬────────────┘
-              │                           │
-    ┌─────────┴──────────┐    ┌───────────┴────────────┐
-    │  RichRenderer       │    │  TextualRenderer        │
-    │  .render(result)    │    │  .render(result)        │
-    │  static dispatch    │    │  async dispatch         │
-    └────────────────────┘    └────────────────────────┘
+                  ┌────────────────────────┐
+                  │  CommandFactory         │  Single registry
+                  │  N CommandSpec entries  │  (self-registered at import)
+                  └─────────────┬──────────┘
+                                │ spec.handler(context, args)
+                                │
+        ┌───────────────────────┼───────────────────────┐
+        │ in-process            │            HTTP path  │
+        │                       │                       │
+  ┌─────┴─────────┐   ┌─────────┴─────────┐   ┌─────────┴─────────┐
+  │ Rich /        │   │ Textual /         │   │ Web (app.js)      │
+  │ Textual TUI   │   │ ppxaide.py        │   │ VSCode (chatPanel)│
+  │               │   │                   │   │ POST /command/X   │
+  │ context =     │   │ context =         │   │ context =         │
+  │ RichCmdCtx /  │   │ PPXAIDEApp        │   │ ServerCmdCtx      │
+  │ TextualCmdCtx │   │                   │   │                   │
+  └─────┬─────────┘   └─────────┬─────────┘   └─────────┬─────────┘
+        │                       │                       │
+        │ result.side_effects   │ result.side_effects   │ envelope:
+        │ read directly         │ read directly         │ {ok, result,
+        │                       │                       │  side_effects[],
+        │                       │                       │  version: 1}
+        ▼                       ▼                       ▼
+  ┌─────────────┐       ┌─────────────┐         ┌─────────────────┐
+  │ RichRenderer│       │ TextualRdr  │         │ Web/VSCode      │
+  │             │       │             │         │ side-effect     │
+  │ .render(r)  │       │ .render(r)  │         │ dispatcher      │
+  │             │       │ → opens     │         │  → kind→native  │
+  │ + ad-hoc    │       │ side panel  │         │    API call     │
+  │ side-effect │       │ on FileView │         │                 │
+  │ handling    │       │ Result etc. │         │ Web: panels     │
+  │ (TBD Step 5)│       │             │         │ VSCode: vscode.*│
+  └─────────────┘       └─────────────┘         └─────────────────┘
 ```
+
+**Wire envelope** (`POST /command/<name>` response):
+
+```json
+{
+  "ok": true,                      // mirrors result.success
+  "result": {                      // CommandResult.to_dict()
+    "type": "FileViewResult",
+    "status": "success",
+    "filepath": "/abs/path.py",
+    "content": "..."
+  },
+  "side_effects": [
+    {"kind": "open_editor", "filepath": "/abs/path.py", "line": 42}
+  ],
+  "version": 1
+}
+```
+
+**Side-effect kinds (v1.18.1)** — see `ppxai/commands/results.py::SideEffectKind`
+for the full taxonomy. Categories:
+- File handling: `open_editor`, `open_viewer`, `show_image`,
+  `show_pdf`, `reveal_in_explorer`
+- Terminals: `open_terminal`, `run_shell`
+- Live previews: `open_html_preview`
+- Workspace: `refresh_file_tree`
+- Preferences: `set_theme`
+- Clipboard: `copy_to_clipboard`
+- Session/engine: `attach_file`
+- Interactive: `prompt_quick_pick`
+- Messages: `notify`
+- VSCode escape hatch: `vscode_delegate`
+
+Open enum — clients ignore unknown kinds. Adding a new kind is
+non-breaking; `vscode_delegate` lets the engine call any
+`vscode.commands.executeCommand(name, ...args)` for VSCode-only
+features (e.g. `workbench.action.openGlobalKeybindings`).
+
+**`prompt_quick_pick` resume protocol** — when the engine needs the
+user to pick one of N options, it emits `PROMPT_QUICK_PICK` with
+`items: [{label, value}]`. The chosen `value` IS the literal next
+args. Client re-issues `POST /command/<command_to_resume>` with
+`args=<value>`. No server-side continuation state; every POST is
+idempotent given the args. Example: `/show @config` finds 3 matches
+→ `value` of each is the absolute path → user picks → second POST
+takes the direct branch.
+
+### State-Sync Channels (v1.18.1)
+
+Engine state is canonical. Web/VSCode AppState mirrors stay in sync
+through multiple channels — same destination (`updateFromPython`),
+different triggers:
+
+```
+  ENGINE                              CLIENTS (web, VSCode)
+  ──────                              ─────────────────────
+
+  state.set("working_dir", x)
+       │
+       ▼
+  ┌───────────────────┐
+  │ _event_queue      │
+  │  (in-process)     │
+  └────────┬──────────┘
+           │
+   drain triggers:
+           │
+   ┌───────┼──────────┬─────────────┐
+   │       │          │             │
+   ▼       ▼          ▼             ▼
+  POST   GET     state-mut      (Phase F:
+  /chat  /state  REST           persistent
+  SSE    (poll)  response       /events SSE,
+                 events[]       deferred)
+   │       │     piggyback      to v1.18.2
+   │       │     (Phase B)
+   │       │     planned
+   │       │      Step 2
+   ▼       ▼
+  client SSE      visibility-
+  handler         change /
+                  reconnect
+                  triggers /state
+                       │
+                       ▼
+              _reanchorFromServer()
+                       │
+                       ▼
+              state.updateFromPython(payload)
+                       │
+                       ▼
+              AppState observers fire
+                       │
+              ┌────────┴────────┐
+              ▼                 ▼
+            web UI          VSCode webview
+          (file tree,      (panel state,
+           badges, etc.)    delegate calls)
+```
+
+Both clients have `_reanchorFromServer()` as the single entry
+point that reads `/state` and writes the AppState mirror. The
+heartbeat-reconnect path AND the visibility/focus path both
+delegate to it. Future channels (REST piggyback, persistent
+SSE) feed the same shape into the same mirror.
+
+For the open / planned items see
+[docs/TODO-v1.18.1-state-sync-determinism.md](TODO-v1.18.1-state-sync-determinism.md).
 
 ### DAG Dependency Rule (v1.16.1)
 

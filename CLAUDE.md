@@ -672,6 +672,206 @@ the pushed value, done. No per-client scanning.
    when adding a new field — intentional friction so every addition gets
    reviewed against the cross-client schema contract.
 
+## Critical Architecture Pattern: Command Dispatch via Envelope (v1.18.1)
+
+**Added:** v1.18.1
+**Status:** **CRITICAL — ALL slash command logic flows through `POST /command/<name>`**
+**Reference:** `ppxai/server/routes/commands.py`, `ppxai/commands/results.py::SideEffect`,
+`docs/TODO-v1.18.1-command-unification.md`, `docs/decisions/0001-keys-command-cross-client.md`
+
+### Problem
+
+Pre-v1.18.1, the same slash command was implemented twice — once in
+the Python `CommandFactory` (Rich + Textual TUIs) and once in
+`ppxai/web/shared/command-dispatcher.js` / `vscode-extension/src/chatPanel.ts`.
+Most commands didn't actually go through `POST /command/<name>`;
+they hit bespoke REST endpoints (`/sessions`, `/checkpoint/list`,
+`/working-dir`, `/files/read`, ...) and the JS/TS clients duplicated
+the formatting logic. The factory and the JS/TS lists drifted — at
+v1.18.0 nine of ten builtin command modules were missing from the
+PyInstaller specs and nobody noticed for six releases because only
+`/usage` actually exercised the factory path.
+
+### Solution: One dispatch path, one wire envelope, intent-named side-effects
+
+1. **Every command** (server logic) lives in `CommandFactory`. The
+   web JS dispatcher and the VSCode extension dispatcher are thin
+   shells that call `apiClient.executeCommand(name, args)` →
+   `POST /command/<name>` → `CommandFactory.get(name).handler(context, args)`.
+2. **The wire envelope** (`POST /command/<name>` response) is:
+   ```json
+   {
+     "ok": true,
+     "result": { ...CommandResult.to_dict()... },
+     "side_effects": [{"kind": "...", ...payload}],
+     "version": 1
+   }
+   ```
+   `result` is the rendered payload (TableResult, MarkdownResult,
+   FileViewResult, etc.). `side_effects` are orthogonal UI directives.
+3. **Side-effect kinds name the user's intent, not the rendering.**
+   Web builds panels (xterm.js, CodeMirror, iframe); VSCode delegates
+   to first-party APIs (`createTerminal`, `showTextDocument`,
+   `executeCommand('vscode.open')`). The kind is the contract; the
+   rendering is the client's choice. See
+   `ppxai/commands/results.py::SideEffectKind` for the canonical
+   list (15 kinds in v1.18.1).
+4. **Open-enum invariant.** Clients ignore unknown kinds gracefully.
+   Adding a new kind is non-breaking. `vscode_delegate` is the
+   escape hatch for VSCode-only features (e.g.
+   `workbench.action.openGlobalKeybindings`); web ignores it.
+
+### TUI handlers vs HTTP handlers
+
+The factory handlers are called from BOTH paths:
+- **In-process** (Rich/Textual): `CommandFactory.get("name").handler(context, args)`
+  with a `RichCommandContext` / `TextualCommandContext`. The result's
+  `side_effects` field is read directly by the TUI renderer; no envelope wrap.
+- **HTTP** (web/VSCode): `POST /command/<name>` →
+  `ServerCommandContext` → handler → route layer wraps the result
+  in the v1 envelope.
+
+Handlers branch on `isinstance(context, ServerCommandContext)` when
+they need to format differently for HTTP (e.g. `/help` returns
+`MarkdownResult` for HTTP and `TextResult` with Rich markup for
+TUI; same content, two formatters via
+`CommandFactory.generate_help(markdown=True)`).
+
+### `prompt_quick_pick` resume protocol (v1.18.1)
+
+Per ADR `docs/decisions/0001-keys-command-cross-client.md`'s related
+Q3 decision: when an engine handler needs the user to pick one of N
+options, it emits `PROMPT_QUICK_PICK` with `items: [{label, value}]`.
+**The chosen value IS the literal next args.** The client re-issues
+`POST /command/<command_to_resume>` with `args=<chosen value>` —
+no server-side continuation state. Every POST is idempotent given
+the args.
+
+Example: `/show @config` finds 3 matches → emits `PROMPT_QUICK_PICK`
+with each item's `value` set to the absolute path. User picks one →
+client POSTs `/command/show` with `args=<absolute path>`. Second
+pass takes the direct branch, returns the rendered file view.
+
+### Rules
+
+1. **Never add a bespoke REST endpoint for command logic.** Routes
+   like `/sessions`, `/checkpoint/list` exist for non-command UI
+   (dropdowns, file-tree widget); they MUST NOT duplicate handler
+   logic that lives in the factory. Phase 6 of the v1.18.1 plan
+   retires the duplicates.
+2. **`SideEffectKind` constants over bare strings.** Use
+   `result.add_side_effect(SideEffectKind.OPEN_EDITOR, filepath=p)`
+   so a typo is a `AttributeError`, not a silently-ignored unknown
+   kind. The taxonomy sentinel test
+   (`tests/test_command_envelope.py::TestSideEffectKindTaxonomy`)
+   pins the exact set of v1.18.1 kinds; add a new kind in BOTH the
+   constants class AND the `SideEffect` docstring AND the
+   sentinel's `EXPECTED_KINDS_V1` set.
+3. **Test the envelope shape, not just the result type.** The
+   envelope contract (`{ok, result, side_effects, version}`) is
+   what web/VSCode read. `tests/test_command_envelope.py` pins it.
+4. **Per-command behavior tests live next to the handler.** Each
+   handler gets a `tests/test_<command>_handler.py` with branches
+   for: existing-arg, missing-arg, malformed-arg, server-side
+   capability mismatch (e.g. headless server can't pyperclip).
+5. **Mock persistence at the binding site.** Tests that drive
+   handlers writing to disk (`set_tui_config`, etc.) must mock
+   the helper on the importing module's namespace —
+   monkeypatching `HOME` does NOT redirect the path because
+   `USER_CONFIG_FILE` is module-load-resolved. See
+   [memory/feedback_test_persistence_pollution.md](memory/feedback_test_persistence_pollution.md).
+
+## Critical Architecture Pattern: State-Sync Determinism (v1.18.1)
+
+**Added:** v1.18.1
+**Status:** **CRITICAL — Engine state must be observable to clients within one round-trip**
+**Reference:** `ppxai/web/app.js::_reanchorFromServer`,
+`vscode-extension/src/chatPanel.ts::_reanchorFromServer`,
+`docs/TODO-v1.18.1-state-sync-determinism.md`
+
+### Problem
+
+Pre-v1.18.1, the only path that delivered engine state changes to
+clients was the SSE stream inside `POST /chat`. Outside an active
+chat, `engine.set_working_dir()` (and similar) enqueued
+`state_sync` events into `engine._event_queue`, but no consumer
+drained the queue until the next chat opened an SSE generator.
+
+The drift symptoms:
+- File-tree clicks against a stale cwd → 404 file-not-found.
+- Multi-tab divergence: tab A runs `/cd /x`, tab B's mirror is
+  still on the old cwd.
+- Tab sleep / focus restore / browser back-forward: web only
+  re-anchors after two consecutive heartbeat failures.
+- Agent tool fires `working_dir_changed` after `STREAM_END` but
+  before the SSE generator exits → timing-dependent loss.
+
+This non-determinism makes confident agent execution impossible:
+the engine state can drift arbitrarily far from the UI between
+chat turns.
+
+### Solution: Many channels, one truth
+
+Engine state is canonical. Web/VSCode are renderers, not
+co-owners. Every mutation that lands in engine MUST be observable
+to clients within one round-trip via at least one of these
+channels:
+
+1. **SSE during chat** — `state_sync` events on the `/chat`
+   stream (existing).
+2. **`/state` snapshot on demand** — `GET /state` returns the
+   current values of every `SSE_SYNC_FIELDS` field. Clients call
+   it on:
+   - **Web**: `document.visibilitychange` → `visible` (Phase A,
+     v1.18.1) AND on heartbeat reconnect (existing).
+   - **VSCode**: `vscode.window.onDidChangeWindowState` →
+     `focused` AND on reconnect.
+3. **REST response piggyback** — state-mutating REST endpoints
+   include drained events in the response body's `events: [...]`
+   field (Phase B, planned for Step 2 of the v1.18.1 plan). The
+   client feeds them through the same dispatcher that handles
+   live SSE.
+4. **`cwd_anchor` for stale-relpath detection** — `/files/list`
+   returns the `working_dir` it resolved against; `/files/read`
+   returns 409 + new cwd if the client's anchor doesn't match
+   (Phase D, planned for Step 4).
+
+### The `_reanchorFromServer` helper
+
+Both web and VSCode have a private async helper named
+`_reanchorFromServer` that does:
+```
+GET /state → updateFromPython(snapshot)
+```
+The same helper is called from BOTH the visibility/focus path
+AND the heartbeat reconnect path. Tests
+(`tests/test_web_visibility_reanchor.py`,
+`tests/test_vscode_visibility_reanchor.py`) enforce that the
+shape stays parity across the two clients — if the helpers
+diverge in what they re-anchor, drift fixes won't compose.
+
+### Rules
+
+1. **Engine state is canonical.** Web/VSCode read AppState; they
+   never invent their own copy of the same field. Optimistic
+   client-side updates (e.g. set `state.workingDir = data.path`
+   from a REST response) are fine but the server's value wins
+   on the next sync.
+2. **Visibility/focus events trigger re-anchor.** Any new client
+   widget that depends on AppState must subscribe to AppState,
+   not cache the value at mount time. The `_reanchorFromServer`
+   helper updates the canonical mirror; subscribers receive the
+   new value automatically.
+3. **No new state channels without justification.** Persistent
+   `GET /events` (Phase F) is deferred until A–E prove
+   insufficient. Polling + REST piggyback is enough for current
+   needs and avoids long-lived-connection complexity.
+4. **`cwd_anchor` instead of "404 file not found".** When a
+   route resolves a relpath against a working dir, return the
+   working dir it used in the response. Clients send back the
+   anchor on follow-up calls; mismatch → 409 with the new cwd
+   in the body. Drift becomes named, surfaced, recoverable.
+
 ## VSCode Extension
 
 ### Installation
