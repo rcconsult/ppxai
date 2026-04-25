@@ -415,7 +415,11 @@ class TestServerSmoke:
 
     def test_command_envelope_shape_via_real_server(self, server):
         """The v1.18.1 envelope must round-trip through a real
-        uvicorn process, not just FastAPI's TestClient."""
+        uvicorn process, not just FastAPI's TestClient.
+
+        v1.18.1 Phase B added `events[]` to the envelope alongside
+        the existing keys.
+        """
         base_url, _ = server
         r = httpx.post(
             f"{base_url}/command/status",
@@ -424,6 +428,85 @@ class TestServerSmoke:
         )
         assert r.status_code == 200, r.text
         body = r.json()
-        assert set(body.keys()) == {"ok", "result", "side_effects", "version"}
+        assert set(body.keys()) == {
+            "ok", "result", "side_effects", "events", "version"
+        }
         assert body["version"] == 1
         assert isinstance(body["side_effects"], list)
+        assert isinstance(body["events"], list)
+
+    def test_state_mutating_command_drains_events_via_real_server(
+        self, server, tmp_path
+    ):
+        """v1.18.1 Phase B end-to-end: POST /command/cd through a
+        real uvicorn process must drain state_sync/working_dir_changed
+        events into envelope.events. Without this, the VSCode/web
+        AppState mirror stays stale until the next /chat opens an SSE
+        generator.
+        """
+        base_url, _ = server
+        r = httpx.post(
+            f"{base_url}/command/cd",
+            json={"args": str(tmp_path)},
+            headers={"X-Session-Id": "smoke-cd-piggyback"},
+            timeout=10.0,
+        )
+        assert r.status_code == 200, r.text
+        body = r.json()
+        assert isinstance(body["events"], list)
+        types = [e["type"] for e in body["events"]]
+        # /cd hits engine.set_working_dir which fires both
+        # state_sync(working_dir=...) and working_dir_changed.
+        assert any(
+            t in types for t in ("state_sync", "working_dir_changed")
+        ), (
+            f"/cd against real server didn't drain state-sync events; "
+            f"got: {types}"
+        )
+
+    def test_files_read_409_on_stale_cwd_anchor_via_real_server(
+        self, server, tmp_path
+    ):
+        """v1.18.1 Phase D drift-simulation end-to-end: the server
+        must surface a 409 with structured {expected, actual, events}
+        when /files/read is called with a cwd_anchor that doesn't
+        match the engine's current cwd.
+
+        Drives the full path through real HTTP so the recovery
+        helper on web/VSCode (handleCwdAnchorMismatch) has a wire
+        contract it can rely on.
+        """
+        base_url, _ = server
+        headers = {"X-Session-Id": "smoke-cwd-anchor-409"}
+        # Step 1: server's engine cwd starts somewhere; pin it to the
+        # actual tmp_path so we have a known anchor for the drift.
+        r = httpx.post(
+            f"{base_url}/context/working_dir",
+            json={"path": str(tmp_path)},
+            headers=headers,
+            timeout=10.0,
+        )
+        assert r.status_code == 200, r.text
+        # Step 2: simulate drift — client THINKS cwd is some stale
+        # subdir that doesn't match the engine's actual cwd.
+        stale_anchor = str(tmp_path / "definitely_not_the_engine_cwd")
+        r = httpx.post(
+            f"{base_url}/files/read",
+            json={"path": "anything.txt", "cwd_anchor": stale_anchor},
+            headers=headers,
+            timeout=10.0,
+        )
+        assert r.status_code == 409, (
+            f"Expected 409 from stale cwd_anchor; got {r.status_code}: "
+            f"{r.text[:300]}"
+        )
+        body = r.json()
+        # FastAPI wraps HTTPException body in `detail`
+        detail = body.get("detail", body) if isinstance(body, dict) else body
+        if isinstance(detail, dict):
+            for field in ("expected", "actual", "events"):
+                assert field in detail, (
+                    f"409 body missing {field!r}; got keys: "
+                    f"{sorted(detail.keys())}"
+                )
+            assert isinstance(detail["events"], list)
