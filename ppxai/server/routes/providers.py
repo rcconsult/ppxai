@@ -5,7 +5,7 @@ Provider and model management endpoints.
 from fastapi import APIRouter, Depends, HTTPException
 
 from ..models import SetProviderRequest, SetModelRequest, ToolsRequest, ToolsConfigRequest
-from ..state import Session, get_session
+from ..state import Session, get_session, with_drained_events
 from ...common.logger import get_logger
 from ...constants import Default
 
@@ -54,7 +54,7 @@ async def set_provider(request: SetProviderRequest, s: Session = Depends(get_ses
     }
     if s.engine.last_model_switch_reset > 0:
         result["context_reset"] = s.engine.last_model_switch_reset
-    return result
+    return with_drained_events(result, s.engine)
 
 
 @router.get("/models")
@@ -90,7 +90,7 @@ async def set_model(request: SetModelRequest, s: Session = Depends(get_session))
     }
     if s.engine.last_model_switch_reset > 0:
         result["context_reset"] = s.engine.last_model_switch_reset
-    return result
+    return with_drained_events(result, s.engine)
 
 
 # === Tools Management ===
@@ -127,7 +127,10 @@ async def set_tools(request: ToolsRequest, s: Session = Depends(get_session)):
     else:
         s.engine.disable_tools()
 
-    return {"enabled": s.engine.state.get("tools_enabled")}
+    return with_drained_events(
+        {"enabled": s.engine.state.get("tools_enabled")},
+        s.engine,
+    )
 
 
 @router.post("/tools/config")
@@ -137,11 +140,14 @@ async def set_tools_config(request: ToolsConfigRequest, s: Session = Depends(get
     if not success:
         raise HTTPException(status_code=400, detail=f"Unknown setting: {request.setting}")
 
-    return {
-        "setting": request.setting,
-        "value": request.value,
-        "success": True,
-    }
+    return with_drained_events(
+        {
+            "setting": request.setting,
+            "value": request.value,
+            "success": True,
+        },
+        s.engine,
+    )
 
 
 @router.get("/tools/help/{tool_name}")

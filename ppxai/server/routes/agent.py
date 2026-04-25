@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends
 from typing import Optional
 
 from ...common.logger import get_logger
-from ..state import Session, get_session
+from ..state import Session, get_session, with_drained_events
 
 logger = get_logger("server")
 
@@ -53,11 +53,14 @@ async def enable_agent_mode(s: Session = Depends(get_session)):
     s.engine.enable_agent_mode()
     logger.info(f"Agent mode enabled via API for session {s.id}")
 
-    return {
-        "ok": True,
-        "agent_mode": True,
-        "tools_enabled": s.engine.state.get("tools_enabled"),
-    }
+    return with_drained_events(
+        {
+            "ok": True,
+            "agent_mode": True,
+            "tools_enabled": s.engine.state.get("tools_enabled"),
+        },
+        s.engine,
+    )
 
 
 @router.post("/agent/disable")
@@ -70,8 +73,11 @@ async def disable_agent_mode(s: Session = Depends(get_session)):
     s.engine.disable_agent_mode()
     logger.info(f"Agent mode disabled via API for session {s.id}")
 
-    return {
-        "ok": True,
-        "agent_mode": False,
-        "tools_enabled": s.engine.state.get("tools_enabled"),
-    }
+    return with_drained_events(
+        {
+            "ok": True,
+            "agent_mode": False,
+            "tools_enabled": s.engine.state.get("tools_enabled"),
+        },
+        s.engine,
+    )

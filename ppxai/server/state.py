@@ -206,3 +206,53 @@ def update_activity():
     """
     if session_manager:
         session_manager.update_activity()
+
+
+# ---------------------------------------------------------------------------
+# REST response piggyback (v1.18.1 — state-sync determinism Phase B)
+# ---------------------------------------------------------------------------
+
+def with_drained_events(payload: dict, engine: EngineClient) -> dict:
+    """Attach the engine's drained side-channel events to a REST response.
+
+    State-mutating REST endpoints (POST /context/working_dir, POST /providers,
+    POST /tools, etc.) ALWAYS produce `state_sync` and command-specific
+    events into `engine._event_queue`. Without this helper, those events
+    sit in the queue until the next /chat opens an SSE generator to drain
+    them — which means non-chat REST mutations are invisible to clients
+    until a chat happens.
+
+    Wrapping the response with `events: [...]` lets the client feed the
+    events through the same dispatcher that handles live SSE. Same
+    semantics as if the mutation had happened during a chat stream.
+
+    Wire shape:
+        {
+            ...original_payload,
+            "events": [
+                {"type": "state_sync", "data": {"working_dir": "/x"}},
+                {"type": "working_dir_changed", "data": {"path": "/x"}},
+                ...
+            ]
+        }
+
+    Empty list when nothing was queued (cheaper than skipping the field —
+    keeps the wire shape stable for consumers).
+
+    Args:
+        payload: The route's existing response dict. Mutated in place
+            (also returned for fluent style).
+        engine: The session's EngineClient — supplies drain_events().
+
+    Returns:
+        The same payload dict with `events` populated.
+    """
+    payload["events"] = [
+        {
+            "type": ev.type.value,
+            "data": ev.data,
+            **({"metadata": ev.metadata} if ev.metadata else {}),
+        }
+        for ev in engine.drain_events()
+    ]
+    return payload

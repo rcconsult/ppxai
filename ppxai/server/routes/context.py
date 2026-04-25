@@ -9,7 +9,7 @@ from typing import Optional
 
 from ...common.logger import get_logger
 from ..models import WorkingDirRequest, AutoInjectRequest
-from ..state import Session, get_session
+from ..state import Session, get_session, with_drained_events
 
 logger = get_logger("server")
 
@@ -51,7 +51,10 @@ async def set_working_dir(
 
     s.engine.set_working_dir(path)
     logger.info(f"Session {s.id} working directory set to: {path}")
-    return {"path": path, "success": True, "session_id": s.id}
+    return with_drained_events(
+        {"path": path, "success": True, "session_id": s.id},
+        s.engine,
+    )
 
 
 @router.post("/context/auto_inject")
@@ -65,7 +68,10 @@ async def set_auto_inject(
     """
 
     s.engine.set_auto_inject(request.enabled)
-    return {"enabled": request.enabled, "success": True}
+    return with_drained_events(
+        {"enabled": request.enabled, "success": True},
+        s.engine,
+    )
 
 
 @router.get("/context/auto_inject")
@@ -110,11 +116,14 @@ async def clear_context_injections(s: Session = Depends(get_session)):
     """
 
     removed_count = s.engine.clear_injected_contexts()
-    return {
-        "removed_count": removed_count,
-        "success": True,
-        "session_id": s.id
-    }
+    return with_drained_events(
+        {
+            "removed_count": removed_count,
+            "success": True,
+            "session_id": s.id
+        },
+        s.engine,
+    )
 
 
 @router.get("/context/hints")
@@ -188,8 +197,11 @@ async def reload_bootstrap_context(s: Session = Depends(get_session)):
     success = s.engine.reload_bootstrap_context()
     status = s.engine.get_bootstrap_status()
 
-    return {
-        "success": success,
-        **status,
-        "session_id": s.id
-    }
+    return with_drained_events(
+        {
+            "success": success,
+            **status,
+            "session_id": s.id
+        },
+        s.engine,
+    )

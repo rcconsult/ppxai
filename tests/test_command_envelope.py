@@ -197,7 +197,11 @@ class TestEnvelopeShape:
         resp = http_client.post(f"/command/{stub_command}", json={"args": "hi"})
         assert resp.status_code == 200
         body = resp.json()
-        assert set(body.keys()) == {"ok", "result", "side_effects", "version"}
+        # v1.18.1 Phase B: envelope gained `events[]` for drained
+        # engine side-channel events alongside the existing keys.
+        assert set(body.keys()) == {
+            "ok", "result", "side_effects", "events", "version"
+        }
 
     def test_version_is_one(self, http_client, stub_command):
         body = http_client.post(f"/command/{stub_command}", json={"args": ""}).json()

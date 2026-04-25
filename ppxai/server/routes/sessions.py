@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from typing import Optional
 
 from ...engine.session import SessionManager as EngineSessionManager
-from ..state import Session, get_session
+from ..state import Session, get_session, with_drained_events
 
 router = APIRouter()
 
@@ -47,7 +47,7 @@ async def save_session(
     """
 
     saved_name = s.engine.session.save(name)
-    return {"name": saved_name}
+    return with_drained_events({"name": saved_name}, s.engine)
 
 
 @router.post("/export")
@@ -88,15 +88,18 @@ async def load_session(
     if not result["success"]:
         raise HTTPException(status_code=404, detail=result.get("error", f"Session not found: {name}"))
 
-    return {
-        "name": name,
-        "loaded": True,
-        "provider": result["provider"],
-        "model": result["model"],
-        "working_dir": result["working_dir"],
-        "tools_enabled": result["tools_enabled"],
-        "message_count": result["message_count"],
-    }
+    return with_drained_events(
+        {
+            "name": name,
+            "loaded": True,
+            "provider": result["provider"],
+            "model": result["model"],
+            "working_dir": result["working_dir"],
+            "tools_enabled": result["tools_enabled"],
+            "message_count": result["message_count"],
+        },
+        s.engine,
+    )
 
 
 @router.post("/sessions/clear")
@@ -107,7 +110,7 @@ async def clear_session(s: Session = Depends(get_session)):
     """
 
     s.engine.session.clear()
-    return {"cleared": True}
+    return with_drained_events({"cleared": True}, s.engine)
 
 
 @router.get("/sessions/last")
@@ -180,12 +183,15 @@ async def restore_last_session(s: Session = Depends(get_session)):
     if not result["success"]:
         raise HTTPException(status_code=404, detail=result.get("error", f"Session not found: {session_name}"))
 
-    return {
-        "name": session_name,
-        "restored": True,
-        "provider": result["provider"],
-        "model": result["model"],
-        "working_dir": result["working_dir"],
-        "tools_enabled": result["tools_enabled"],
-        "message_count": result["message_count"],
-    }
+    return with_drained_events(
+        {
+            "name": session_name,
+            "restored": True,
+            "provider": result["provider"],
+            "model": result["model"],
+            "working_dir": result["working_dir"],
+            "tools_enabled": result["tools_enabled"],
+            "message_count": result["message_count"],
+        },
+        s.engine,
+    )
