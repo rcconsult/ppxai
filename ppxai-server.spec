@@ -200,9 +200,29 @@ a = Analysis(
         'ppxai.engine.bootstrap_ops',
         'ppxai.engine.checkpoint_ops',
         'ppxai.engine.consent_ops',
-        # Command system (for CompletionProvider)
+        # Command system. CRITICAL: list every module in
+        # _BUILTIN_COMMAND_MODULES (ppxai/commands/factory.py:26).
+        # The factory's `_ensure_loaded` uses `importlib.import_module(string)`
+        # which PyInstaller can't see at static-analysis time. Without
+        # explicit hidden imports, the frozen binary's CommandFactory
+        # registry is empty and every `POST /command/<name>` returns
+        # "Unknown command" (the bug surfaced post-v1.18.0 release).
         'ppxai.commands',
         'ppxai.commands.factory',
+        'ppxai.commands.handler',
+        'ppxai.commands.context',
+        'ppxai.commands.protocol',
+        'ppxai.commands.results',
+        'ppxai.commands.session',
+        'ppxai.commands.provider',
+        'ppxai.commands.system',
+        'ppxai.commands.coding',
+        'ppxai.commands.utility',
+        'ppxai.commands.agent',
+        'ppxai.commands.tools',
+        'ppxai.commands.display',
+        'ppxai.commands.attach',
+        'ppxai.commands.doctor',
         # Tool modules (v1.17.4 — data file tools)
         'ppxai.engine.tools.builtin',
         'ppxai.engine.tools.builtin.pdf_tools',

@@ -39,6 +39,28 @@ a = Analysis(
         'ppxai.tui.themes.themes',
         'ppxai.common.preview',
         'ppxai.preview_server',
+        # Command system. CRITICAL: list every module in
+        # _BUILTIN_COMMAND_MODULES (ppxai/commands/factory.py:26).
+        # Factory uses dynamic `importlib.import_module` which
+        # PyInstaller can't resolve at static analysis time. Without
+        # these, ppxaide's CommandFactory.get(cmd) returns None for
+        # every command and every slash command silently fails.
+        'ppxai.commands',
+        'ppxai.commands.factory',
+        'ppxai.commands.handler',
+        'ppxai.commands.context',
+        'ppxai.commands.protocol',
+        'ppxai.commands.results',
+        'ppxai.commands.session',
+        'ppxai.commands.provider',
+        'ppxai.commands.system',
+        'ppxai.commands.coding',
+        'ppxai.commands.utility',
+        'ppxai.commands.agent',
+        'ppxai.commands.tools',
+        'ppxai.commands.display',
+        'ppxai.commands.attach',
+        'ppxai.commands.doctor',
         'tree_sitter',
         'tree_sitter_python',
         'tree_sitter_javascript',

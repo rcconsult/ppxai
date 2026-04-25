@@ -39,21 +39,26 @@ a = Analysis(
         'ppxai.prompts',
         'ppxai.data',
         'ppxai.data.parsers',
-        # Commands (v1.15.0 architecture)
+        # Commands (v1.15.0 architecture). Every module in
+        # _BUILTIN_COMMAND_MODULES (ppxai/commands/factory.py:26) must be
+        # listed — `_ensure_loaded` uses dynamic `importlib.import_module`
+        # which PyInstaller can't resolve at static analysis time.
         'ppxai.commands',
+        'ppxai.commands.factory',
         'ppxai.commands.handler',
         'ppxai.commands.context',
+        'ppxai.commands.protocol',
+        'ppxai.commands.results',
         'ppxai.commands.session',
         'ppxai.commands.provider',
         'ppxai.commands.system',
         'ppxai.commands.coding',
-        'ppxai.commands.agent',
-        'ppxai.commands.results',
-        'ppxai.commands.display',
-        'ppxai.commands.factory',
-        'ppxai.commands.protocol',
-        'ppxai.commands.tools',
         'ppxai.commands.utility',
+        'ppxai.commands.agent',
+        'ppxai.commands.tools',
+        'ppxai.commands.display',
+        'ppxai.commands.attach',     # added v1.18.0 fix
+        'ppxai.commands.doctor',     # added v1.18.0 fix
         # Engine
         'ppxai.engine',
         'ppxai.engine.client',
