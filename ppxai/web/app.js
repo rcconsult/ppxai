@@ -209,6 +209,21 @@ class PpxaiApp {
         this.setupEventListeners();
         this.applyTheme();
         this.setupMarkdown();
+
+        // v1.18.1 (state-sync Phase C): subscribe DOM-side effects
+        // for AppState changes once, here. Previously the same
+        // updates were sprinkled across the SSE handler, the
+        // working_dir_changed event, the cd REST optimistic update,
+        // etc. — drift between paths produced the "rare working-dir
+        // misalignment" that motivated the determinism plan.
+        // AppState's set() is equality-deduplicated, so session
+        // restore replaying the same cwd three times in 50ms only
+        // fires this listener once — no debounce needed at this
+        // layer. Subscribers are added BEFORE connectToServer() so
+        // the first AppState write from the connection sequence
+        // already fires them.
+        this.state.on('workingDir', (cwd) => this._onWorkingDirChanged(cwd));
+
         await this.connectToServer();
 
         // v1.17.0: Start heartbeat watchdog
@@ -250,6 +265,29 @@ class PpxaiApp {
             this.state.updateFromPython(state);
         } catch (e) {
             console.warn('[PpxaiApp] state re-anchor failed:', e);
+        }
+    }
+
+    /**
+     * Single subscriber for `state.workingDir` changes (state-sync
+     * Phase C, v1.18.1). All paths that mutate cwd — REST
+     * piggyback events, /chat SSE state_sync, the cd command's
+     * optimistic update, /sessions/load, /sessions/restore — write
+     * through AppState. This subscriber consolidates the DOM
+     * side-effects (badge update, file-tree refresh) so the four
+     * write paths can't drift in what they trigger.
+     *
+     * No debounce needed here: AppState.set() is equality-
+     * deduplicated. Session restore that replays the same cwd
+     * three times in 50ms only fires this listener once.
+     */
+    _onWorkingDirChanged(cwd) {
+        if (!cwd) return;
+        this.updateFolderBadge(cwd);
+        // The file tree is lazy-init'd when the sidebar is opened;
+        // refresh only when it exists.
+        if (this._fileTree) {
+            this._fileTree.refresh(true);
         }
     }
 
@@ -833,8 +871,9 @@ class PpxaiApp {
     async loadWorkingDir() {
         try {
             const data = await this.apiClient.getWorkingDir();
+            // v1.18.1 Phase C: AppState write fires
+            // _onWorkingDirChanged → updateFolderBadge + tree refresh.
             this.state.workingDir = data.path || '';
-            this.updateFolderBadge(data.path);
         } catch (e) {
             console.error('Failed to load working directory:', e);
         }
@@ -843,8 +882,8 @@ class PpxaiApp {
     async setWorkingDir(path) {
         try {
             const data = await this.apiClient.setWorkingDir(path);
+            // v1.18.1 Phase C: AppState write fires the subscriber.
             this.state.workingDir = data.path || '';
-            this.updateFolderBadge(data.path);
             this.showSystemMessage(`Working directory set to: ${data.path}`);
         } catch (e) {
             this.showError(`Failed to set working directory: ${e.message}`);
@@ -903,8 +942,11 @@ class PpxaiApp {
                 this.loadHintsStatus();
             } else if (pyKey === 'tools_enabled') {
                 this.updateToolsBadge();
-            } else if (pyKey === 'working_dir' && value) {
-                this.updateFolderBadge(value);
+            } else if (pyKey === 'working_dir') {
+                // v1.18.1 Phase C: side-effects (badge + file tree)
+                // are handled by the _onWorkingDirChanged subscriber
+                // installed in init(). This branch is intentionally
+                // empty — left in to keep the keyMap exhaustive.
             } else if (pyKey === 'tools_verbose') {
                 this.updateVerboseIndicator();
             } else if (pyKey === 'agent_mode') {
@@ -1631,10 +1673,11 @@ class PpxaiApp {
             const data = await this.apiClient.restoreSession();
             this.showSystemMessage(`✓ Session restored: ${data.name} (${data.message_count} messages)`);
 
-            // Update state from restored session
+            // Update state from restored session — AppState writes
+            // fire their respective DOM-side subscribers
+            // (badge + file tree for workingDir, badge for tools).
             if (data.working_dir) {
                 this.state.workingDir = data.working_dir;
-                this.updateFolderBadge(data.working_dir);
             }
             if (data.tools_enabled) {
                 this.state.toolsEnabled = true;
@@ -2010,24 +2053,14 @@ class PpxaiApp {
                 break;
 
             case 'working_dir_changed':
-                // Update folder badge when working directory changes (v1.13.2)
+                // v1.18.1 Phase C: write through AppState, the
+                // _onWorkingDirChanged subscriber does the badge +
+                // file-tree refresh. AppState.set is equality-
+                // deduplicated, so session restore replaying the
+                // same cwd three times only fires the side-effects
+                // once — replaces the prior 300ms debounce hack.
                 if (event.data && event.data.path) {
                     this.state.workingDir = event.data.path;
-                    this.updateFolderBadge(event.data.path);
-                    // Debounce file tree refresh — session restore fires multiple
-                    // working_dir_changed events in quick succession; only refresh once.
-                    // Also skip the refresh if cwd hasn't actually changed (avoids flicker
-                    // on every chat send when session restore replays the same cwd).
-                    if (this._fileTree) {
-                        const newPath = event.data.path;
-                        clearTimeout(this._fileTreeRefreshTimer);
-                        this._fileTreeRefreshTimer = setTimeout(() => {
-                            if (newPath !== this._fileTreeCurrentPath) {
-                                this._fileTreeCurrentPath = newPath;
-                                this._fileTree.refresh(true);
-                            }
-                        }, 300);
-                    }
                 }
                 break;
 
