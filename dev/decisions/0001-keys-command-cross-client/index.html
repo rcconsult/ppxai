@@ -10,29 +10,27 @@
       
       
       
-        <link rel="canonical" href="https://rcconsult.github.io/ppxai/dev/">
+        <link rel="canonical" href="https://rcconsult.github.io/ppxai/dev/decisions/0001-keys-command-cross-client/">
       
       
-      
-        <link rel="next" href="INSTALLATION/">
       
       
         
       
       
-      <link rel="icon" href="assets/images/favicon.png">
+      <link rel="icon" href="../../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
-        <title>ppxai Documentation</title>
+        <title>ADR 0001 — /keys cross-client behavior in v1.18.1 - ppxai Documentation</title>
       
     
     
-      <link rel="stylesheet" href="assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
       
         
-        <link rel="stylesheet" href="assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -51,7 +49,7 @@
       
     
     
-    <script>__md_scope=new URL(".",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -76,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#ppxai-documentation" class="md-skip">
+        <a href="#adr-0001-keys-cross-client-behavior-in-v1181" class="md-skip">
           Skip to content
         </a>
       
@@ -96,7 +94,7 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="." title="ppxai Documentation" class="md-header__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+    <a href="../.." title="ppxai Documentation" class="md-header__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -116,7 +114,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Home
+              ADR 0001 — /keys cross-client behavior in v1.18.1
             
           </span>
         </div>
@@ -234,7 +232,7 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="." title="ppxai Documentation" class="md-nav__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+    <a href="../.." title="ppxai Documentation" class="md-nav__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -261,37 +259,10 @@
       
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Home
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="." class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
         
   
   
@@ -307,170 +278,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#why-ppxai" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Why ppxai?
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#quick-start" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Quick Start
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Quick Start">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#installation" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Installation
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#configure-api-keys" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Configure API Keys
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#run" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Run
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#features" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Features
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Features">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#multi-provider-support" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Multi-Provider Support
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#four-interfaces" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Four Interfaces
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#agent-mode" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Agent Mode
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#bootstrap-context" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Bootstrap Context
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#documentation" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Documentation
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#resources" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Resources
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -536,7 +343,7 @@
   
   
     <li class="md-nav__item">
-      <a href="INSTALLATION/" class="md-nav__link">
+      <a href="../../INSTALLATION/" class="md-nav__link">
         
   
   
@@ -564,7 +371,7 @@
   
   
     <li class="md-nav__item">
-      <a href="PROVIDER_SETUP/" class="md-nav__link">
+      <a href="../../PROVIDER_SETUP/" class="md-nav__link">
         
   
   
@@ -653,7 +460,7 @@
   
   
     <li class="md-nav__item">
-      <a href="AGENT_MODE_GUIDE/" class="md-nav__link">
+      <a href="../../AGENT_MODE_GUIDE/" class="md-nav__link">
         
   
   
@@ -681,7 +488,7 @@
   
   
     <li class="md-nav__item">
-      <a href="BOOTSTRAP_CONTEXT_GUIDE/" class="md-nav__link">
+      <a href="../../BOOTSTRAP_CONTEXT_GUIDE/" class="md-nav__link">
         
   
   
@@ -709,7 +516,7 @@
   
   
     <li class="md-nav__item">
-      <a href="CONTEXT-INJECTION/" class="md-nav__link">
+      <a href="../../CONTEXT-INJECTION/" class="md-nav__link">
         
   
   
@@ -737,7 +544,7 @@
   
   
     <li class="md-nav__item">
-      <a href="CHECKPOINT_GUIDE/" class="md-nav__link">
+      <a href="../../CHECKPOINT_GUIDE/" class="md-nav__link">
         
   
   
@@ -765,7 +572,7 @@
   
   
     <li class="md-nav__item">
-      <a href="FILE_EDITING_GUIDE/" class="md-nav__link">
+      <a href="../../FILE_EDITING_GUIDE/" class="md-nav__link">
         
   
   
@@ -793,7 +600,7 @@
   
   
     <li class="md-nav__item">
-      <a href="SHELL_CONSENT_GUIDE/" class="md-nav__link">
+      <a href="../../SHELL_CONSENT_GUIDE/" class="md-nav__link">
         
   
   
@@ -882,7 +689,7 @@
   
   
     <li class="md-nav__item">
-      <a href="CUSTOM_TOOL_DEVELOPMENT_GUIDE/" class="md-nav__link">
+      <a href="../../CUSTOM_TOOL_DEVELOPMENT_GUIDE/" class="md-nav__link">
         
   
   
@@ -910,7 +717,7 @@
   
   
     <li class="md-nav__item">
-      <a href="CUSTOM_COMMAND_DEVELOPMENT_GUIDE/" class="md-nav__link">
+      <a href="../../CUSTOM_COMMAND_DEVELOPMENT_GUIDE/" class="md-nav__link">
         
   
   
@@ -938,7 +745,7 @@
   
   
     <li class="md-nav__item">
-      <a href="ARCHITECTURE/" class="md-nav__link">
+      <a href="../../ARCHITECTURE/" class="md-nav__link">
         
   
   
@@ -1027,7 +834,7 @@
   
   
     <li class="md-nav__item">
-      <a href="ollama-limitations/" class="md-nav__link">
+      <a href="../../ollama-limitations/" class="md-nav__link">
         
   
   
@@ -1055,7 +862,7 @@
   
   
     <li class="md-nav__item">
-      <a href="vllm-tool-calling-guide/" class="md-nav__link">
+      <a href="../../vllm-tool-calling-guide/" class="md-nav__link">
         
   
   
@@ -1083,7 +890,7 @@
   
   
     <li class="md-nav__item">
-      <a href="CONTAINER_TOOLS_GUIDE/" class="md-nav__link">
+      <a href="../../CONTAINER_TOOLS_GUIDE/" class="md-nav__link">
         
   
   
@@ -1111,7 +918,7 @@
   
   
     <li class="md-nav__item">
-      <a href="AUTOROUTER-CONFIG/" class="md-nav__link">
+      <a href="../../AUTOROUTER-CONFIG/" class="md-nav__link">
         
   
   
@@ -1200,7 +1007,7 @@
   
   
     <li class="md-nav__item">
-      <a href="RELEASE-NOTES-v1.16.1/" class="md-nav__link">
+      <a href="../../RELEASE-NOTES-v1.16.1/" class="md-nav__link">
         
   
   
@@ -1228,7 +1035,7 @@
   
   
     <li class="md-nav__item">
-      <a href="RELEASE-NOTES-v1.16.0/" class="md-nav__link">
+      <a href="../../RELEASE-NOTES-v1.16.0/" class="md-nav__link">
         
   
   
@@ -1256,7 +1063,7 @@
   
   
     <li class="md-nav__item">
-      <a href="RELEASE-NOTES-v1.15.6/" class="md-nav__link">
+      <a href="../../RELEASE-NOTES-v1.15.6/" class="md-nav__link">
         
   
   
@@ -1311,10 +1118,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#why-ppxai" class="md-nav__link">
+  <a href="#context" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Why ppxai?
+        Context
       
     </span>
   </a>
@@ -1322,22 +1129,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#quick-start" class="md-nav__link">
+  <a href="#options-considered" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Quick Start
+        Options considered
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Quick Start">
+    <nav class="md-nav" aria-label="Options considered">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#installation" class="md-nav__link">
+  <a href="#option-a-per-client-binding-registries-served-by-the-engine" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Installation
+        Option A — Per-client binding registries served by the engine
       
     </span>
   </a>
@@ -1345,21 +1152,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#configure-api-keys" class="md-nav__link">
+  <a href="#option-b-markdownresult-of-cross-client-universals-native-delegation" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Configure API Keys
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#run" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Run
+        Option B — MarkdownResult of cross-client universals + native delegation
       
     </span>
   </a>
@@ -1372,71 +1168,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#features" class="md-nav__link">
+  <a href="#decision" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Features
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Features">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#multi-provider-support" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Multi-Provider Support
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#four-interfaces" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Four Interfaces
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#agent-mode" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Agent Mode
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#bootstrap-context" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Bootstrap Context
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#documentation" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Documentation
+        Decision
       
     </span>
   </a>
@@ -1444,10 +1179,43 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#resources" class="md-nav__link">
+  <a href="#why-this-and-not-option-a" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Resources
+        Why this and not Option A
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#future-proper-solution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Future / proper solution
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#triggers-to-revisit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Triggers to revisit
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#implementation-notes-for-v1181" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Implementation notes for v1.18.1
       
     </span>
   </a>
@@ -1474,205 +1242,175 @@
   
 
 
-<h1 id="ppxai-documentation">ppxai Documentation<a class="headerlink" href="#ppxai-documentation" title="Permanent link">&para;</a></h1>
-<p><strong>Multi-LLM Interface for Developers</strong> - Use your favorite AI provider in terminal or VSCode with zero vendor lock-in.</p>
-<p><a href="https://github.com/rcconsult/ppxai/releases"><img alt="Version" src="https://img.shields.io/badge/version-1.18.1-blue" /></a>
-<a href="https://github.com/rcconsult/ppxai/blob/master/LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-brightgreen" /></a></p>
-<h2 id="why-ppxai">Why ppxai?<a class="headerlink" href="#why-ppxai" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Problem</th>
-<th>ppxai Solution</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Locked to one AI vendor</td>
-<td>Switch between Perplexity, Gemini, OpenAI, OpenRouter, Ollama anytime</td>
-</tr>
-<tr>
-<td>Can't use local models</td>
-<td>Full Ollama/vLLM support with same interface</td>
-</tr>
-<tr>
-<td>AI modifies files without asking</td>
-<td>Consent-based safety for all file operations</td>
-</tr>
-<tr>
-<td>Lost context when switching models</td>
-<td>Preserve conversation across provider changes</td>
-</tr>
-<tr>
-<td>Expensive cloud-only pricing</td>
-<td>Mix cloud and local models per task</td>
-</tr>
-</tbody>
-</table>
-<h2 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h2>
-<h3 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h3>
-<div class="tabbed-set tabbed-alternate" data-tabs="1:3"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><input id="__tabbed_1_3" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Linux/macOS</label><label for="__tabbed_1_2">Windows</label><label for="__tabbed_1_3">pip</label></div>
-<div class="tabbed-content">
-<div class="tabbed-block">
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>curl<span class="w"> </span>-sSL<span class="w"> </span>https://raw.githubusercontent.com/rcconsult/ppxai/master/scripts/install.sh<span class="w"> </span><span class="p">|</span><span class="w"> </span>bash
-</span></code></pre></div>
-</div>
-<div class="tabbed-block">
-<div class="language-powershell highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nb">irm </span><span class="n">https</span><span class="p">://</span><span class="n">raw</span><span class="p">.</span><span class="n">githubusercontent</span><span class="p">.</span><span class="n">com</span><span class="p">/</span><span class="n">rcconsult</span><span class="p">/</span><span class="n">ppxai</span><span class="p">/</span><span class="n">master</span><span class="p">/</span><span class="n">scripts</span><span class="p">/</span><span class="n">install</span><span class="p">.</span><span class="n">ps1</span> <span class="p">|</span> <span class="nb">iex</span>
-</span></code></pre></div>
-</div>
-<div class="tabbed-block">
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>pip<span class="w"> </span>install<span class="w"> </span>ppxai
-</span></code></pre></div>
-</div>
-</div>
-</div>
-<h3 id="configure-api-keys">Configure API Keys<a class="headerlink" href="#configure-api-keys" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Create ~/.ppxai/.env with your keys</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="nv">PERPLEXITY_API_KEY</span><span class="o">=</span>pplx-xxx
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="nv">GEMINI_API_KEY</span><span class="o">=</span>xxx
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="nv">OPENAI_API_KEY</span><span class="o">=</span>sk-xxx
-</span></code></pre></div>
-<h3 id="run">Run<a class="headerlink" href="#run" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>ppxai<span class="w">              </span><span class="c1"># Rich TUI (original)</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>ppxaide<span class="w">            </span><span class="c1"># Textual TUI (v1.15.0+)</span>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>ppxai-server<span class="w">       </span><span class="c1"># HTTP server for VSCode</span>
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>ppxai-desktop<span class="w">      </span><span class="c1"># Desktop web app</span>
-</span></code></pre></div>
-<h2 id="features">Features<a class="headerlink" href="#features" title="Permanent link">&para;</a></h2>
-<h3 id="multi-provider-support">Multi-Provider Support<a class="headerlink" href="#multi-provider-support" title="Permanent link">&para;</a></h3>
+<h1 id="adr-0001-keys-cross-client-behavior-in-v1181">ADR 0001 — <code>/keys</code> cross-client behavior in v1.18.1<a class="headerlink" href="#adr-0001-keys-cross-client-behavior-in-v1181" title="Permanent link">&para;</a></h1>
+<p><strong>Date:</strong> 2026-04-25
+<strong>Status:</strong> Accepted
+<strong>Related:</strong> <code>docs/TODO-v1.18.1-command-unification.md</code> Phase 2 step 1f</p>
+<h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
+<p><code>/keys</code> is a TUI-introspection command. Today its server-side handler
+(<code>ppxai/commands/system.py::handle_keys</code>) returns a <code>TextResult</code>
+built from <code>ppxai.tui.keys.get_keys_table()</code> — a formatted table of
+the <strong>Textual binding registry</strong> (<code>ALL_KEYS</code> in <code>ppxai/tui/keys.py</code>).</p>
+<p>That registry is meaningless to web and VSCode clients because:</p>
 <ul>
-<li><strong>Perplexity AI</strong> - Real-time web search with citations</li>
-<li><strong>Google Gemini</strong> - 1M token context, search grounding</li>
-<li><strong>OpenAI</strong> - GPT-4o, o1 reasoning models</li>
-<li><strong>OpenRouter</strong> - 100+ models including Claude</li>
-<li><strong>Local Models</strong> - Ollama, vLLM, LMStudio</li>
+<li><strong>Textual bindings</strong> name widgets that don't exist outside the
+  Textual TUI (file tree, side panel, data viewer, full-screen editor).</li>
+<li><strong>VSCode</strong> has its own keybinding system: command IDs registered in
+  <code>vscode-extension/package.json::contributes.keybindings</code>, plus the
+  user's <code>keybindings.json</code> overrides. Reading the Textual table tells
+  a VSCode user nothing about which keys actually do something inside
+  their VSCode session.</li>
+<li><strong>Web</strong> has DOM keyboard-event mappings inside <code>app.js</code> and the
+  webview components. There is no central registry today.</li>
 </ul>
-<h3 id="four-interfaces">Four Interfaces<a class="headerlink" href="#four-interfaces" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>Feature</th>
-<th>ppxai (Rich TUI)</th>
-<th>ppxaide (Textual TUI)</th>
-<th>VSCode</th>
-<th>Web App</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Streaming responses</td>
-<td>✅</td>
-<td>✅</td>
-<td>✅</td>
-<td>✅</td>
-</tr>
-<tr>
-<td>Syntax highlighting</td>
-<td>✅</td>
-<td>✅</td>
-<td>✅</td>
-<td>✅</td>
-</tr>
-<tr>
-<td>File editing tools</td>
-<td>✅</td>
-<td>✅</td>
-<td>✅</td>
-<td>✅</td>
-</tr>
-<tr>
-<td>Agent mode</td>
-<td>✅</td>
-<td>✅</td>
-<td>✅</td>
-<td>✅</td>
-</tr>
-<tr>
-<td>Checkpoint/undo</td>
-<td>✅</td>
-<td>✅</td>
-<td>✅</td>
-<td>✅</td>
-</tr>
-<tr>
-<td>Markdown in chat</td>
-<td>Limited</td>
-<td>✅ Full rendering</td>
-<td>✅</td>
-<td>✅</td>
-</tr>
-<tr>
-<td>Themes</td>
-<td>6 themes</td>
-<td>17+ themes</td>
-<td>N/A</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>Tab completion</td>
-<td>✅</td>
-<td>✅</td>
-<td>N/A</td>
-<td>N/A</td>
-</tr>
-</tbody>
-</table>
-<h3 id="agent-mode">Agent Mode<a class="headerlink" href="#agent-mode" title="Permanent link">&para;</a></h3>
-<p>Enable autonomous multi-step task execution:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>/agent on
-</span></code></pre></div>
-<p>The AI can chain tool calls, edit files, run commands - all with your consent.</p>
-<h3 id="bootstrap-context">Bootstrap Context<a class="headerlink" href="#bootstrap-context" title="Permanent link">&para;</a></h3>
-<p>Load project-specific instructions from <code>AGENTS.md</code>:</p>
-<div class="language-markdown highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>---
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>provider_hints:
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>  local:
-</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">    </span><span class="k">-</span><span class="w"> </span>&quot;Complete tasks fully without stopping.&quot;
-</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>model_hints:
-</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>  &quot;deepseek-r1*&quot;:
-</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="gu">    - &quot;Show reasoning before actions.&quot;</span>
-</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="gu">---</span>
-</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>
-</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="gh"># Project Instructions</span>
-</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>Python 3.11+, pytest for testing.
-</span></code></pre></div>
-<h2 id="documentation">Documentation<a class="headerlink" href="#documentation" title="Permanent link">&para;</a></h2>
-<div class="grid cards">
+<p>The command unification migration in v1.18.1 routes every command
+through <code>POST /command/&lt;name&gt;</code> so all three clients exercise the same
+factory handler. That forces us to answer: what should <code>/keys</code> say
+when it isn't running in a Textual TUI?</p>
+<h2 id="options-considered">Options considered<a class="headerlink" href="#options-considered" title="Permanent link">&para;</a></h2>
+<h3 id="option-a-per-client-binding-registries-served-by-the-engine">Option A — Per-client binding registries served by the engine<a class="headerlink" href="#option-a-per-client-binding-registries-served-by-the-engine" title="Permanent link">&para;</a></h3>
+<p>Each client maintains its own structured binding registry (web in JS,
+VSCode contributed via <code>package.json</code>, Textual via <code>tui/keys.py</code>).
+The HTTP request includes an <code>X-Client: web|vscode|textual</code> header.
+The factory handler <code>handle_keys</code> looks up the client-specific
+registry and returns it.</p>
+<p><strong>Cost.</strong> Adds two new registries that don't exist today. Web bindings
+are scattered across <code>app.js</code>, components, and webview event handlers
+— consolidating them is a real refactor (~150 LoC across three or
+four files plus a structured manifest). VSCode bindings live in
+<code>package.json</code> but the engine has to either bundle a snapshot or
+fetch them from the extension host (round-trip + caching).</p>
+<p><strong>Benefit.</strong> <code>/keys</code> works correctly and gives the user actionable
+information specific to where they are.</p>
+<h3 id="option-b-markdownresult-of-cross-client-universals-native-delegation">Option B — <code>MarkdownResult</code> of cross-client universals + native delegation<a class="headerlink" href="#option-b-markdownresult-of-cross-client-universals-native-delegation" title="Permanent link">&para;</a></h3>
+<p><code>/keys</code> returns a small <code>MarkdownResult</code> listing the bindings that
+ARE universal across all three clients (essentially: chat-input
+controls — <code>Enter</code>/<code>Ctrl+Enter</code> to submit, <code>Esc</code> to interrupt,
+<code>↑/↓</code> for history). Plus client-specific side-effects:</p>
 <ul>
-<li>
-<p><span class="twemoji lg middle"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M5 20h14v-2H5m14-9h-4V3H9v6H5l7 7z"/></svg></span> <strong>Installation</strong></p>
-<hr />
-<p>Install ppxai on Linux, macOS, or Windows</p>
-<p><a href="INSTALLATION/"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13.22 19.03a.75.75 0 0 1 0-1.06L18.19 13H3.75a.75.75 0 0 1 0-1.5h14.44l-4.97-4.97a.749.749 0 0 1 .326-1.275.75.75 0 0 1 .734.215l6.25 6.25a.75.75 0 0 1 0 1.06l-6.25 6.25a.75.75 0 0 1-1.06 0"/></svg></span> Installation Guide</a></p>
-</li>
-<li>
-<p><span class="twemoji lg middle"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2M7.5 13A2.5 2.5 0 0 0 5 15.5 2.5 2.5 0 0 0 7.5 18a2.5 2.5 0 0 0 2.5-2.5A2.5 2.5 0 0 0 7.5 13m9 0a2.5 2.5 0 0 0-2.5 2.5 2.5 2.5 0 0 0 2.5 2.5 2.5 2.5 0 0 0 2.5-2.5 2.5 2.5 0 0 0-2.5-2.5"/></svg></span> <strong>Agent Mode</strong></p>
-<hr />
-<p>Autonomous task execution with tools</p>
-<p><a href="AGENT_MODE_GUIDE/"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13.22 19.03a.75.75 0 0 1 0-1.06L18.19 13H3.75a.75.75 0 0 1 0-1.5h14.44l-4.97-4.97a.749.749 0 0 1 .326-1.275.75.75 0 0 1 .734.215l6.25 6.25a.75.75 0 0 1 0 1.06l-6.25 6.25a.75.75 0 0 1-1.06 0"/></svg></span> Agent Mode Guide</a></p>
-</li>
-<li>
-<p><span class="twemoji lg middle"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 9h5.5L13 3.5zM6 2h8l6 6v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4c0-1.11.89-2 2-2m9 16v-2H6v2zm3-4v-2H6v2z"/></svg></span> <strong>Bootstrap Context</strong></p>
-<hr />
-<p>Project-specific AI instructions</p>
-<p><a href="BOOTSTRAP_CONTEXT_GUIDE/"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13.22 19.03a.75.75 0 0 1 0-1.06L18.19 13H3.75a.75.75 0 0 1 0-1.5h14.44l-4.97-4.97a.749.749 0 0 1 .326-1.275.75.75 0 0 1 .734.215l6.25 6.25a.75.75 0 0 1 0 1.06l-6.25 6.25a.75.75 0 0 1-1.06 0"/></svg></span> Bootstrap Context Guide</a></p>
-</li>
-<li>
-<p><span class="twemoji lg middle"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 15.5A3.5 3.5 0 0 1 8.5 12 3.5 3.5 0 0 1 12 8.5a3.5 3.5 0 0 1 3.5 3.5 3.5 3.5 0 0 1-3.5 3.5m7.43-2.53c.04-.32.07-.64.07-.97s-.03-.66-.07-1l2.11-1.63c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.31-.61-.22l-2.49 1c-.52-.39-1.06-.73-1.69-.98l-.37-2.65A.506.506 0 0 0 14 2h-4c-.25 0-.46.18-.5.42l-.37 2.65c-.63.25-1.17.59-1.69.98l-2.49-1c-.22-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64L4.57 11c-.04.34-.07.67-.07 1s.03.65.07.97l-2.11 1.66c-.19.15-.25.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1.01c.52.4 1.06.74 1.69.99l.37 2.65c.04.24.25.42.5.42h4c.25 0 .46-.18.5-.42l.37-2.65c.63-.26 1.17-.59 1.69-.99l2.49 1.01c.22.08.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64z"/></svg></span> <strong>Provider Setup</strong></p>
-<hr />
-<p>Configure AI providers</p>
-<p><a href="PROVIDER_SETUP/"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13.22 19.03a.75.75 0 0 1 0-1.06L18.19 13H3.75a.75.75 0 0 1 0-1.5h14.44l-4.97-4.97a.749.749 0 0 1 .326-1.275.75.75 0 0 1 .734.215l6.25 6.25a.75.75 0 0 1 0 1.06l-6.25 6.25a.75.75 0 0 1-1.06 0"/></svg></span> Provider Setup</a></p>
-</li>
+<li>VSCode: <code>{kind: "vscode_delegate", command: "workbench.action.openGlobalKeybindings"}</code>
+  → opens the user's keybinding editor where they can find anything</li>
+<li>Web: <code>{kind: "notify", level: "info", message: "Web keyboard shortcuts are listed at &lt;docs URL&gt;"}</code></li>
+<li>Textual: existing rich table via the current handler (unchanged)</li>
 </ul>
-</div>
-<h2 id="resources">Resources<a class="headerlink" href="#resources" title="Permanent link">&para;</a></h2>
+<p><strong>Cost.</strong> Trivial. Reuses the existing handler for Textual, adds two
+side-effects for the other clients, lists ~5 universal bindings.
+~30 LoC change to <code>handle_keys</code>.</p>
+<p><strong>Benefit.</strong> <code>/keys</code> does <em>something</em> useful in every client without
+building new infrastructure. The VSCode user gets directly to the
+canonical place to inspect/edit keys; the web user gets pointed at
+docs (which we'd need to write — but we'd need to write them anyway
+for Option A).</p>
+<p><strong>Limitation.</strong> The "universal" list is small and somewhat
+hand-curated. The web fallback is weak (a docs link is worse UX
+than a real binding table). VSCode's native keybinding editor doesn't
+filter to ppxai-specific bindings — the user has to type "ppxai" to
+find them.</p>
+<h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h2>
+<p><strong>Option B.</strong> For v1.18.1.</p>
+<h2 id="why-this-and-not-option-a">Why this and not Option A<a class="headerlink" href="#why-this-and-not-option-a" title="Permanent link">&para;</a></h2>
 <ul>
-<li><a href="https://github.com/rcconsult/ppxai">GitHub Repository</a></li>
-<li><a href="https://github.com/rcconsult/ppxai/releases">Releases</a></li>
-<li><a href="https://github.com/rcconsult/ppxai/issues">Issue Tracker</a></li>
-<li><a href="https://github.com/rcconsult/ppxai/blob/master/CHANGELOG.md">Changelog</a></li>
+<li><strong>Scope discipline.</strong> v1.18.1 is already large (command unification</li>
+<li>state-sync determinism). Adding two new structured registries
+  expands the surface area without solving a hot user pain point —
+  there's no evidence users are blocked on <code>/keys</code> in web/VSCode today
+  (the command essentially didn't reach them before this migration).</li>
+<li><strong>Cheap to upgrade later.</strong> Option B's <code>vscode_delegate</code> and
+  <code>notify</code> paths are still valid even after Option A lands —
+  Option A would just augment them with a pre-built table. The two
+  options compose; (B) is a strict subset of (A).</li>
+<li><strong>Forces us to write the docs.</strong> Web's <code>notify(docs URL)</code> only
+  works if the URL exists. Writing that doc is a forcing function
+  for a piece of cross-client documentation we owe users anyway.</li>
 </ul>
+<h2 id="future-proper-solution">Future / proper solution<a class="headerlink" href="#future-proper-solution" title="Permanent link">&para;</a></h2>
+<p>When we revisit, <strong>Option A</strong> is the target:</p>
+<ol>
+<li><strong>Web binding registry.</strong> Consolidate the scattered DOM keyboard
+   handlers in <code>app.js</code> and components into a single
+   <code>ppxai/web/shared/keys.js</code> mirror of <code>ppxai/tui/keys.py</code> — a
+   structured array of <code>{key, owner, description, action}</code> records
+   with a <code>get_keys_table()</code> analogue.</li>
+<li><strong>VSCode binding registry.</strong> Either (a) the extension contributes
+   a <code>package.json::contributes.keybindings</code> block and the engine
+   reads it via <code>keybindings.json</code> parser, or (b) the extension
+   posts its own registry to the server on activation
+   (<code>POST /clients/keys</code>) and the server caches it per-session.
+   (a) is purer; (b) is more flexible if VSCode keybindings ever
+   need to be dynamic.</li>
+<li><strong>Engine handler.</strong> <code>handle_keys</code> reads <code>X-Client</code> header (already
+   used elsewhere for telemetry) and returns the matching registry's
+   formatted table as a <code>MarkdownResult</code> or <code>TableResult</code>.</li>
+<li><strong>Cross-client universals.</strong> Tag bindings with a <code>universal: true</code>
+   flag in each registry so the engine can synthesize a "common keys"
+   section even when called without a client header.</li>
+</ol>
+<p>Estimated cost when we do it: ~250–350 LoC across web, VSCode, and
+engine — not enormous, but only worth doing when there's a user
+signal that <code>/keys</code> matters in web/VSCode.</p>
+<h2 id="triggers-to-revisit">Triggers to revisit<a class="headerlink" href="#triggers-to-revisit" title="Permanent link">&para;</a></h2>
+<p>Re-evaluate this decision if any of these become true:</p>
+<ul>
+<li>Users (1+ in the wild) report confusion about which keys work in
+  web or VSCode and ask for a <code>/keys</code>-style introspection.</li>
+<li>Web grows enough keyboard-driven UI (file tree navigation,
+  panel switching, command palette) that hand-tracking the bindings
+  in docs becomes a maintenance burden.</li>
+<li>VSCode's keybinding system gains an API for "let extensions list
+  their own bindings" (today this requires reading <code>package.json</code> +
+  the user's <code>keybindings.json</code>, which is brittle).</li>
+<li>We ship a major refactor that touches the web event-handler layout
+  anyway (e.g. moving to a state machine for input handling) — fold
+  the registry migration into that work for free.</li>
+</ul>
+<h2 id="implementation-notes-for-v1181">Implementation notes for v1.18.1<a class="headerlink" href="#implementation-notes-for-v1181" title="Permanent link">&para;</a></h2>
+<p>The Option B handler in <code>ppxai/commands/system.py::handle_keys</code>:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">handle_keys</span><span class="p">(</span><span class="n">context</span><span class="p">:</span> <span class="n">CommandContext</span><span class="p">,</span> <span class="n">args</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">CommandResult</span><span class="p">:</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="c1"># Textual path: existing rich table (unchanged)</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="k">if</span> <span class="n">context</span><span class="o">.</span><span class="n">is_textual_client</span><span class="p">():</span>  <span class="c1"># to be added; falls back to True if env says TUI</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>        <span class="k">try</span><span class="p">:</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>            <span class="kn">from</span><span class="w"> </span><span class="nn">..tui.keys</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_keys_table</span><span class="p">,</span> <span class="n">get_conflicts_table</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>            <span class="o">...</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>        <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>            <span class="k">pass</span>  <span class="c1"># fall through to universal-only</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    <span class="c1"># Universal cross-client bindings</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    <span class="n">md</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;## Keyboard Shortcuts (universal)</span>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="s2">| Key | Action |</span>
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="s2">|---|---|</span>
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="s2">| `Enter` | Submit message (web/VSCode) |</span>
+</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="s2">| `Shift+Enter` | New line in input |</span>
+</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="s2">| `↑` / `↓` | Command history |</span>
+</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="s2">| `Esc` | Interrupt streaming |</span>
+</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a><span class="s2">| `Ctrl+Enter` (or `Ctrl+J`) | Submit (Textual TUI) |</span>
+</span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>
+</span><span id="__span-0-21"><a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a><span class="s2">For client-specific shortcuts:</span>
+</span><span id="__span-0-22"><a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a><span class="s2">- **Web:** see https://ppxai.dev/docs/keys/web</span>
+</span><span id="__span-0-23"><a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a><span class="s2">- **VSCode:** opening keybinding editor — search &quot;ppxai&quot;</span>
+</span><span id="__span-0-24"><a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a><span class="s2">- **Textual TUI:** run `/keys` inside the TUI&quot;&quot;&quot;</span>
+</span><span id="__span-0-25"><a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a>
+</span><span id="__span-0-26"><a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a>    <span class="n">result</span> <span class="o">=</span> <span class="n">MarkdownResult</span><span class="p">(</span>
+</span><span id="__span-0-27"><a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a>        <span class="n">status</span><span class="o">=</span><span class="n">ResultStatus</span><span class="o">.</span><span class="n">INFO</span><span class="p">,</span>
+</span><span id="__span-0-28"><a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a>        <span class="n">message</span><span class="o">=</span><span class="s2">&quot;Keyboard Shortcuts&quot;</span><span class="p">,</span>
+</span><span id="__span-0-29"><a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a>        <span class="n">content</span><span class="o">=</span><span class="n">md</span><span class="p">,</span>
+</span><span id="__span-0-30"><a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a>    <span class="p">)</span>
+</span><span id="__span-0-31"><a id="__codelineno-0-31" name="__codelineno-0-31" href="#__codelineno-0-31"></a>    <span class="c1"># Side-effects per client capability — unknown kinds are no-ops</span>
+</span><span id="__span-0-32"><a id="__codelineno-0-32" name="__codelineno-0-32" href="#__codelineno-0-32"></a>    <span class="n">result</span><span class="o">.</span><span class="n">add_side_effect</span><span class="p">(</span><span class="s2">&quot;vscode_delegate&quot;</span><span class="p">,</span>
+</span><span id="__span-0-33"><a id="__codelineno-0-33" name="__codelineno-0-33" href="#__codelineno-0-33"></a>                           <span class="n">command</span><span class="o">=</span><span class="s2">&quot;workbench.action.openGlobalKeybindings&quot;</span><span class="p">)</span>
+</span><span id="__span-0-34"><a id="__codelineno-0-34" name="__codelineno-0-34" href="#__codelineno-0-34"></a>    <span class="k">return</span> <span class="n">result</span>
+</span></code></pre></div>
+<p>The web client honors the <code>MarkdownResult</code> rendering and ignores
+<code>vscode_delegate</code> (per the open-enum contract). VSCode honors both:
+the panel renders the markdown AND the keybinding editor opens.
+Textual doesn't take this path — its <code>is_textual_client()</code> short-circuit
+returns the existing rich table.</p>
+<p><code>is_textual_client()</code> is a small helper on <code>CommandContext</code> to be
+added in step 1f. Initial implementation: returns <code>True</code> if the
+context was constructed by Rich/Textual TUI (in-process call), <code>False</code>
+if constructed by <code>ServerCommandContext</code> (HTTP call). This isn't
+strictly Textual vs not-Textual — it's "was this the in-process
+TUI path?" — which is what we actually want.</p>
 
 
 
@@ -1744,10 +1482,10 @@
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": ".", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
       
     
   </body>
