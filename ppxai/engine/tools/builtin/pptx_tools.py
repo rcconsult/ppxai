@@ -316,9 +316,12 @@ def render_pptx_slides(pptx_path: Path, cache_dir: Path) -> List[Path]:
     cache_dir.mkdir(parents=True, exist_ok=True)
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        # LibreOffice converts to PDF first, then we use poppler to get PNGs
-        # (single-step --convert-to png only produces first slide on some versions)
-        pdf_path = Path(tmpdir) / "presentation.pdf"
+        # LibreOffice converts .pptx → .pdf headlessly; we then render
+        # each PDF page to PNG with pypdfium2 (replaces the old
+        # `pdftoppm` subprocess from poppler — pure-wheel, no system
+        # binary required).
+        # Single-step `--convert-to png` only emits the first slide on
+        # some LibreOffice versions, so go via PDF.
         subprocess.run(
             [
                 "libreoffice", "--headless", "--norestore",
@@ -335,18 +338,33 @@ def render_pptx_slides(pptx_path: Path, cache_dir: Path) -> List[Path]:
             return []
         pdf_path = pdf_candidates[0]
 
-        # Use pdftoppm (poppler) to convert PDF pages to PNG
-        subprocess.run(
-            [
-                "pdftoppm", "-png", "-r", "150",
-                str(pdf_path),
-                str(cache_dir / "slide"),
-            ],
-            capture_output=True,
-            timeout=120,
-        )
+        # v1.18.1: pypdfium2 replaces pdftoppm. Same 150 DPI as before;
+        # `scale` is relative to 72 DPI (PDF's internal resolution).
+        try:
+            import pypdfium2 as pdfium  # noqa: PLC0415
+        except ImportError:
+            return []
 
-    # pdftoppm names files as slide-01.png, slide-02.png, ...
+        try:
+            pdf = pdfium.PdfDocument(str(pdf_path))
+        except pdfium.PdfiumError:
+            return []
+
+        try:
+            for i in range(len(pdf)):
+                # 1-indexed, zero-padded to 2 digits — preserves the
+                # filename shape pdftoppm produced (slide-01.png ...).
+                out = cache_dir / f"slide-{i + 1:02d}.png"
+                page = pdf[i]
+                bitmap = page.render(scale=150 / 72)
+                try:
+                    bitmap.to_pil().save(out, format="PNG")
+                finally:
+                    bitmap.close()
+                    page.close()
+        finally:
+            pdf.close()
+
     return sorted(cache_dir.glob("slide-*.png"))
 
 

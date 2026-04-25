@@ -316,28 +316,18 @@ class TestReadPdfTool:
 
 
 # -----------------------------------------------------------------------------
-# GetPdfPageImageTool — requires poppler system dependency
+# GetPdfPageImageTool — page rasterization via pypdfium2 (v1.18.1)
 # -----------------------------------------------------------------------------
-
-
-def _poppler_available() -> bool:
-    """Check if poppler is installed for pdf2image to use."""
-    try:
-        from pdf2image.pdfinfo import pdfinfo_from_path  # noqa: PLC0415
-        # Calling it with an invalid path still triggers poppler detection.
-        try:
-            pdfinfo_from_path("/nonexistent")
-        except Exception as exc:
-            # PDFInfoNotInstalledError means poppler is missing.
-            if "poppler" in str(exc).lower() or "not installed" in str(exc).lower():
-                return False
-        return True
-    except ImportError:
-        return False
+#
+# Pre-v1.18.1 the rasterizer used pdf2image+poppler, which required
+# the poppler system binary. Tests were guarded with `skipif(not
+# _poppler_available())` so the suite stayed green on dev machines
+# without it. v1.18.1 swapped the backend to pypdfium2 — pure-wheel,
+# bundled via the [data] extras — so the guards are gone and the
+# tests run unconditionally.
 
 
 class TestGetPdfPageImageTool:
-    @pytest.mark.skipif(not _poppler_available(), reason="poppler not installed")
     def test_rasterize_single_page(self, fake_engine, three_page_pdf_meta):
         tool = GetPdfPageImageTool(fake_engine)
         result = asyncio.run(
@@ -349,7 +339,6 @@ class TestGetPdfPageImageTool:
         assert "Dimensions:" in result
         assert "KB PNG" in result
 
-    @pytest.mark.skipif(not _poppler_available(), reason="poppler not installed")
     def test_dpi_capped(self, fake_engine, three_page_pdf_meta):
         tool = GetPdfPageImageTool(fake_engine)
         # Request absurdly high DPI — should be clamped silently.

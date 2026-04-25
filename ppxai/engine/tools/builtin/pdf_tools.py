@@ -255,9 +255,10 @@ class GetPdfPageImageTool(BaseTool):
     embedded in a follow-up vision turn, letting a vision-capable model
     "see" the page.
 
-    Requires pdf2image + poppler (system binary). On installs without
-    poppler, the tool returns a clear error pointing at the install
-    instructions rather than crashing with an obscure subprocess error.
+    Uses pypdfium2 — pure-wheel bindings to Google's PDFium, bundled
+    via the [data] extras. No system binary required (replaces the
+    pre-v1.18.1 pdf2image + poppler stack), so PyInstaller binaries
+    work out-of-the-box on every platform.
     """
 
     def __init__(self, engine: ToolEngineProtocol):
@@ -325,49 +326,53 @@ class GetPdfPageImageTool(BaseTool):
         except (TypeError, ValueError):
             dpi_int = _DEFAULT_DPI
 
-        # pdf2image requires poppler at runtime — a system dependency we
-        # can't install via pip. If the import works but conversion
-        # fails, the error message below tells the user how to recover.
+        # v1.18.1: pypdfium2 replaces pdf2image + poppler. Pure wheel,
+        # no system binary, so PyInstaller binaries are self-contained.
         try:
-            from pdf2image import convert_from_path  # noqa: PLC0415
-            from pdf2image.exceptions import (  # noqa: PLC0415
-                PDFInfoNotInstalledError,
-                PDFPageCountError,
-                PDFSyntaxError,
-            )
+            import pypdfium2 as pdfium  # noqa: PLC0415
         except ImportError:
             return (
-                "Error: pdf2image is not installed. Page rasterization requires "
-                "the [data] extras group: pip install 'ppxai[data]'"
+                "Error: pypdfium2 is not installed. Page rasterization "
+                "requires the [data] extras group: pip install 'ppxai[data]'"
             )
 
+        pdf = None
+        pdf_page = None
+        bitmap = None
         try:
-            images = convert_from_path(
-                str(meta.path),
-                dpi=dpi_int,
-                first_page=page,
-                last_page=page,
-            )
-        except PDFInfoNotInstalledError:
-            return (
-                "Error: poppler is not installed. pdf2image requires poppler as "
-                "a system dependency:\n"
-                "  macOS:   brew install poppler\n"
-                "  Debian:  apt install poppler-utils\n"
-                "  Windows: download from https://github.com/oschwartz10612/poppler-windows"
-            )
-        except PDFPageCountError as exc:
-            return f"Error: {exc}. Check that page {page} is in range."
-        except PDFSyntaxError as exc:
-            return f"Error: PDF {meta.name!r} has invalid syntax: {exc}"
-        except Exception as exc:  # pragma: no cover — defensive
-            return f"Error rasterizing page {page} of {meta.name!r}: {exc}"
+            try:
+                pdf = pdfium.PdfDocument(str(meta.path))
+            except pdfium.PdfiumError as exc:
+                return f"Error: could not open PDF {meta.name!r}: {exc}"
 
-        if not images:
-            return f"Error: pdf2image returned no images for page {page}."
+            page_count = len(pdf)
+            if page > page_count:
+                return (
+                    f"Error: page {page} out of range "
+                    f"(PDF has {page_count} page{'s' if page_count != 1 else ''})."
+                )
 
-        img = images[0]
-        width, height = img.size
+            try:
+                pdf_page = pdf[page - 1]  # pypdfium2 is 0-indexed
+                # `scale` in pypdfium2 is relative to 72 DPI (PDF's
+                # internal resolution). dpi=150 → scale=150/72.
+                bitmap = pdf_page.render(scale=dpi_int / 72)
+                img = bitmap.to_pil()
+            except pdfium.PdfiumError as exc:
+                return f"Error: PDF {meta.name!r} has invalid syntax: {exc}"
+            except Exception as exc:  # pragma: no cover — defensive
+                return f"Error rasterizing page {page} of {meta.name!r}: {exc}"
+
+            width, height = img.size
+        finally:
+            # Order matters: bitmap → page → document. pypdfium2's
+            # context isn't reference-counted across these objects.
+            if bitmap is not None:
+                bitmap.close()
+            if pdf_page is not None:
+                pdf_page.close()
+            if pdf is not None:
+                pdf.close()
 
         # Encode the PIL image to PNG bytes in-memory, then base64 for
         # data URI embedding. PNG is lossless and universally supported

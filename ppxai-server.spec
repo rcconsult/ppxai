@@ -232,7 +232,10 @@ a = Analysis(
         'ppxai.engine.tools.builtin.csv_tools',
         # [data] extras — optional but bundle when available
         'pypdf',
-        'pdf2image',
+        # v1.18.1: pypdfium2 replaces pdf2image+poppler. Pure-wheel,
+        # bundles a self-contained PDFium binary, so PyInstaller
+        # output works without a system poppler install.
+        'pypdfium2',
         'openpyxl',
         'pptx',
         # Timezone support

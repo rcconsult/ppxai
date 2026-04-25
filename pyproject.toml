@@ -79,16 +79,21 @@ gemini = [
 # Data processing support (v1.13.8 yaml/hcl, v1.17.4 multimodal file upload)
 # Groups two related but distinct capabilities under one extras name so
 # `pip install 'ppxai[data]'` gives users everything needed for file-based
-# workflows: YAML/HCL parsing for config tooling, pypdf/pdf2image for PDF
+# workflows: YAML/HCL parsing for config tooling, pypdf/pypdfium2 for PDF
 # attachment extraction (ReadPdfTool, GetPdfPageImageTool), and the
 # future Excel/PPTX dependencies added in Phase 4.
 data = [
     "pyyaml>=6.0",
     "python-hcl2>=4.3",
     # v1.17.4 Phase 2.9 — PDF attachment support
-    "pypdf>=4.0",       # Text extraction for ReadPdfTool
-    "pdf2image>=1.17",  # Page rasterization for GetPdfPageImageTool
-    #                    (also requires poppler — system binary, not pip)
+    "pypdf>=4.0",        # Text extraction for ReadPdfTool
+    # v1.18.1: replaced pdf2image+poppler with pypdfium2 — pure-wheel
+    # bindings to Google's PDFium. Bundled via uv venv, no system
+    # binary required, so PyInstaller binaries are self-contained on
+    # all platforms. Used for both GetPdfPageImageTool (PDF→PNG) and
+    # the SummarizePptxVisualTool slide rasterizer (replaces a
+    # `pdftoppm` subprocess call).
+    "pypdfium2>=4.30",
     # v1.17.4 Phase 4.3 — Excel + PowerPoint attachment support
     "openpyxl>=3.1",    # Excel read for ListExcelSheetsTool, ReadExcelSheetTool
     "python-pptx>=1.0", # PowerPoint read for ListPptxSlidesTool, ReadPptxSlideTextTool
