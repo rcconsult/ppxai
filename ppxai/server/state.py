@@ -98,6 +98,32 @@ async def get_session(x_session_id: Optional[str] = Header(None)) -> Session:
     sid, engine, lock = await get_or_create_session(x_session_id)
     return Session(id=sid, engine=engine, lock=lock)
 
+
+async def get_session_or_query(
+    x_session_id: Optional[str] = Header(None, alias="X-Session-Id"),
+    session: Optional[str] = None,
+) -> Session:
+    """FastAPI dependency — resolves session from X-Session-Id header
+    OR a `?session=<id>` query string. Header takes precedence.
+
+    Use this on any route reachable via a plain HTML attribute
+    (`<img src>`, `<iframe src>`, `<a href>`) where the browser
+    fetches without sending custom headers. Without query-string
+    support, those routes fall back to the default session — wrong
+    cwd, wrong file_store, 404s when the user's session pointed
+    elsewhere (surfaced by markdown image rendering, where docs/foo.png
+    couldn't be found because the default session was at $HOME instead
+    of the user's project root).
+
+    Usage in routes:
+        @router.get("/files/image/{filepath:path}")
+        async def serve_image(filepath: str, s: Session = Depends(get_session_or_query)):
+            ...
+    """
+    sid_arg = x_session_id or session
+    sid, engine, lock = await get_or_create_session(sid_arg)
+    return Session(id=sid, engine=engine, lock=lock)
+
 # Session manager singleton (v1.13.10)
 # Set by http.py lifespan, accessed by route modules
 session_manager = None

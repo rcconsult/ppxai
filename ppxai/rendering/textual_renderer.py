@@ -361,7 +361,15 @@ async def render_file_view(renderer: TextualRenderer, result: FileViewResult) ->
 
 @TextualRenderer.register(MarkdownResult)
 async def render_markdown(renderer: TextualRenderer, result: MarkdownResult) -> None:
-    """Render markdown in Markdown widget in side panel."""
+    """Render markdown in Markdown widget in side panel.
+
+    v1.18.1 hotfix: rewrite relative `![alt](path)` and `[text](path)`
+    to absolute file:// URIs using the markdown file's directory as
+    base. Without this, Textual's Markdown widget hands the raw
+    `docs/foo.png` to the OS when the user clicks the link, which
+    can't resolve relative paths and shows a broken-URL popup.
+    Shared helper with the Rich renderer for cross-TUI parity.
+    """
 
     chat_view = renderer._get_chat_view()
 
@@ -369,10 +377,16 @@ async def render_markdown(renderer: TextualRenderer, result: MarkdownResult) -> 
         chat_view.add_system_message(f"[dim]File: {result.filepath}[/dim]")
         return
 
+    # Rewrite relative links to file:// URIs based on the source
+    # file's directory so terminal/widget link clicks resolve to
+    # actual files instead of "Hmmm... can't reach this page" pop-ups.
+    from ..common.markdown_links import rewrite_relative_links
+    content = rewrite_relative_links(result.content, result.filepath)
+
     # Show in side panel using show_file_in_panel with markdown mode
     await renderer.app.show_file_in_panel(
         Path(result.filepath),
-        result.content,
+        content,
         mode="markdown",
         read_only=True
     )

@@ -198,7 +198,13 @@ class MarkdownFileView extends BaseView {
 
         // Relative image src → rewrite to /files/image/<path> so the server
         // resolves against the working directory instead of the web root.
+        // v1.18.1 hotfix: append ?session= so the server resolves the path
+        // against THIS user's session, not the default session. <img> tags
+        // can't add custom headers, so session ID rides on the URL.
         const serverUrl = this._appState.apiClient?.serverUrl ?? '';
+        const sid = encodeURIComponent(
+            this._appState.apiClient?.getSessionId?.() ?? ''
+        );
         contentEl.querySelectorAll('img').forEach(img => {
             const src = img.getAttribute('src');
             if (!src) return;
@@ -206,7 +212,11 @@ class MarkdownFileView extends BaseView {
             if (src.startsWith('data:') || src.startsWith('blob:')) return;
             if (src.startsWith('/files/image/')) return;
             const resolved = this._resolveRelative(src);
-            img.setAttribute('src', `${serverUrl}/files/image/${encodeURIComponent(resolved)}`);
+            const sessionQs = sid ? `?session=${sid}` : '';
+            img.setAttribute(
+                'src',
+                `${serverUrl}/files/image/${encodeURIComponent(resolved)}${sessionQs}`
+            );
         });
     }
 

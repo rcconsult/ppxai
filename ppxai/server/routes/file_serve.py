@@ -22,7 +22,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import JSONResponse, Response
 
 from ...common.docx_to_pdf import convert_docx_to_pdf
-from ..state import Session, get_session
+from ..state import Session, get_session_or_query
 
 router = APIRouter()
 
@@ -30,7 +30,7 @@ router = APIRouter()
 @router.get("/files/serve/{file_id}")
 async def serve_file(
     file_id: str,
-    s: Session = Depends(get_session),
+    s: Session = Depends(get_session_or_query),
 ):
     """Serve raw bytes of a SessionFileStore file by file_id.
 
@@ -100,7 +100,7 @@ async def preview_file(
     file_id: str,
     slide: int = Query(1, ge=1, description="Slide number (1-based)"),
     total: bool = Query(False, description="Return only the total slide count"),
-    s: Session = Depends(get_session),
+    s: Session = Depends(get_session_or_query),
 ):
     """Render a PPTX slide as PNG or a Word document as PDF via LibreOffice.
 

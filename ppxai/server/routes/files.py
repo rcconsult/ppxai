@@ -13,7 +13,7 @@ from typing import Optional
 
 from ...common.logger import get_logger
 from ..models import FileReadRequest, FileSearchRequest, FileWriteRequest
-from ..state import Session, get_session, is_path_allowed, MIME_TYPES, with_drained_events
+from ..state import Session, get_session, get_session_or_query, is_path_allowed, MIME_TYPES, with_drained_events
 
 logger = get_logger("server")
 
@@ -369,7 +369,7 @@ async def write_file(
 async def serve_image(
     filepath: str,
     cwd_anchor: Optional[str] = None,
-    s: Session = Depends(get_session)
+    s: Session = Depends(get_session_or_query)
 ):
     """Serve raw image file for inline display in chat bubbles (v1.16.2).
 
@@ -380,6 +380,12 @@ async def serve_image(
     was resolved client-side from a stale cwd, return 409 with the
     new cwd in the body so the client can refresh the markdown
     before showing a broken image.
+
+    v1.18.1 hotfix: uses `get_session_or_query` so `<img>` tags can
+    pass `?session=<id>` (browsers can't add custom headers on
+    HTMl-attribute-driven fetches). Without it, the route fell back
+    to the default session and returned 404 whenever the user's
+    session cwd differed from the server-process cwd.
     """
 
     path = Path(filepath)

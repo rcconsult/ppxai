@@ -2153,7 +2153,13 @@ class PpxaiApp {
                     const imgExt = fp.split('.').pop().toLowerCase();
                     const inlineImageExts = new Set(['png','jpg','jpeg','gif','svg','webp','bmp','ico']);
                     if (inlineImageExts.has(imgExt)) {
-                        const imgUrl = `${this.apiClient.serverUrl}/files/image/${encodeURIComponent(fp)}`;
+                        // v1.18.1 hotfix: append ?session= so the server resolves
+                        // the path against THIS user's session (and its working
+                        // dir / file_store), not the default session. <img> tags
+                        // can't add custom headers, so the session ID has to ride
+                        // on the URL itself.
+                        const sid = encodeURIComponent(this.apiClient.getSessionId());
+                        const imgUrl = `${this.apiClient.serverUrl}/files/image/${encodeURIComponent(fp)}?session=${sid}`;
                         const basename = fp.split('/').pop().split('\\').pop();
                         const inlineImgMd = `\n\n![${basename}](${imgUrl})\n`;
                         fullContent += inlineImgMd;

@@ -237,12 +237,23 @@ def render_file_view(result: FileViewResult) -> None:
 
 @RichRenderer.register(MarkdownResult)
 def render_markdown(result: MarkdownResult) -> None:
-    """Render markdown with rich formatting."""
+    """Render markdown with rich formatting.
+
+    v1.18.1 hotfix: relative image/link paths in `result.content`
+    are rewritten to absolute file:// URIs using `result.filepath`'s
+    directory as the base, so terminal-level OSC 8 hyperlinks
+    resolve to real files instead of "invalid link" popups. Helper
+    lives in `ppxai/common/markdown_links.py` and is shared with
+    the Textual TUI renderer.
+    """
+    from ..common.markdown_links import rewrite_relative_links
+
     if result.message:
         console.print(f"[bold]{result.message}[/bold]\n")
 
     if result.content:
-        md = Markdown(result.content)
+        content = rewrite_relative_links(result.content, result.filepath)
+        md = Markdown(content)
         console.print(md)
     else:
         console.print(f"[dim]File: {result.filepath}[/dim]")
