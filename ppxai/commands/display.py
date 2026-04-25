@@ -248,7 +248,7 @@ def handle_show(context: CommandContext, args: str) -> CommandResult:
 
     # If --source flag, force code view regardless of file type
     if show_source:
-        return FileViewResult(
+        result = FileViewResult(
             status=ResultStatus.SUCCESS,
             message=f"Displaying {path.name} ({size_kb:.1f} KB, {lines} lines) [source]",
             filepath=str(path),
@@ -257,6 +257,8 @@ def handle_show(context: CommandContext, args: str) -> CommandResult:
             read_only=True,
             metadata={"size_kb": size_kb, "lines": lines}
         )
+        result.add_side_effect(SideEffectKind.OPEN_VIEWER, filepath=str(path))
+        return result
 
     # Return typed result based on detected file type
     if file_type == FileType.MARKDOWN:
@@ -285,7 +287,7 @@ def handle_show(context: CommandContext, args: str) -> CommandResult:
             )
         else:
             # Parse failed, fall back to code view
-            return FileViewResult(
+            result = FileViewResult(
                 status=ResultStatus.WARNING,
                 message=f"Displaying {path.name} (parse error, showing source)",
                 filepath=str(path),
@@ -294,6 +296,8 @@ def handle_show(context: CommandContext, args: str) -> CommandResult:
                 read_only=True,
                 metadata={"size_kb": size_kb, "lines": lines}
             )
+            result.add_side_effect(SideEffectKind.OPEN_VIEWER, filepath=str(path))
+            return result
 
     elif file_type in (FileType.CSV, FileType.TSV):
         # Parse tabular data and return TableResult
@@ -312,7 +316,7 @@ def handle_show(context: CommandContext, args: str) -> CommandResult:
             )
         else:
             # Parse failed, fall back to code view
-            return FileViewResult(
+            result = FileViewResult(
                 status=ResultStatus.WARNING,
                 message=f"Displaying {path.name} (parse error, showing source)",
                 filepath=str(path),
@@ -321,10 +325,12 @@ def handle_show(context: CommandContext, args: str) -> CommandResult:
                 read_only=True,
                 metadata={"size_kb": size_kb, "lines": lines}
             )
+            result.add_side_effect(SideEffectKind.OPEN_VIEWER, filepath=str(path))
+            return result
 
     else:
         # Code/Text - return FileViewResult
-        return FileViewResult(
+        result = FileViewResult(
             status=ResultStatus.SUCCESS,
             message=f"Displaying {path.name} ({size_kb:.1f} KB, {lines} lines)",
             filepath=str(path),
@@ -333,6 +339,8 @@ def handle_show(context: CommandContext, args: str) -> CommandResult:
             read_only=True,
             metadata={"size_kb": size_kb, "lines": lines}
         )
+        result.add_side_effect(SideEffectKind.OPEN_VIEWER, filepath=str(path))
+        return result
 
 
 def _parse_structured_data(content: str, file_type: FileType) -> Optional[Dict[str, Any]]:
