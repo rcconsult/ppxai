@@ -1,6 +1,6 @@
 # ppxai - Multi-LLM Interface for Developers
 
-![Version](https://img.shields.io/badge/version-1.18.0-blue) ![Tests](https://img.shields.io/badge/tests-2591%20passing-green) ![License](https://img.shields.io/badge/license-MIT-brightgreen) [![Docs](https://img.shields.io/badge/docs-rcconsult.github.io%2Fppxai-blue)](https://rcconsult.github.io/ppxai/)
+![Version](https://img.shields.io/badge/version-1.18.1-blue) ![Tests](https://img.shields.io/badge/tests-2591%20passing-green) ![License](https://img.shields.io/badge/license-MIT-brightgreen) [![Docs](https://img.shields.io/badge/docs-rcconsult.github.io%2Fppxai-blue)](https://rcconsult.github.io/ppxai/)
 
 **Open-source AI assistant with zero vendor lock-in.** Use your favorite LLM provider in the terminal or VSCode—switch models mid-session, run locally, pay only for what you need.
 
@@ -80,7 +80,7 @@ Download from [Releases](../../releases):
 - `ppxaide-{platform}` - Textual TUI (new in v1.15.0)
 - `ppxai-server-{platform}` - HTTP server for VSCode
 - `ppxai-desktop-{platform}` - Desktop Web App
-- `ppxai-1.18.0.vsix` - VSCode extension
+- `ppxai-1.18.1.vsix` - VSCode extension
 - `ppxai-*-macos-arm64.dmg` - macOS app bundle installer
 
 ### Option 3: From Source

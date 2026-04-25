@@ -20,7 +20,7 @@ Usage:
     logger.enable()
     logger.log_api_request(1, messages)
 
-Version: v1.18.0
+Version: v1.18.1
 """
 
 import logging
