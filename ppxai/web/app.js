@@ -214,6 +214,43 @@ class PpxaiApp {
         // v1.17.0: Start heartbeat watchdog
         this._heartbeatFailCount = 0;
         this._heartbeatTimer = setInterval(() => this._heartbeat(), 15000);
+
+        // v1.18.1 (state-sync Phase A): re-anchor AppState from
+        // GET /state whenever the tab becomes visible again. Tab
+        // sleep, focus restore, browser back/forward navigation —
+        // none of these trigger heartbeat reconnect, so without
+        // this hook the local mirror silently drifts when SSE
+        // events fire during a backgrounded tab. The cost is one
+        // cheap GET per visibility transition; the snapshot is
+        // small (whitelisted SSE_SYNC_FIELDS only).
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                this._reanchorFromServer();
+            }
+        });
+    }
+
+    /**
+     * Pull the current AppState snapshot from the server and feed
+     * it through the schema-driven facade.
+     *
+     * Called from two places (v1.18.1):
+     *   - Heartbeat reconnect after the watchdog sees the server
+     *     come back (lines ~234-251 below).
+     *   - `visibilitychange` → visible (state-sync Phase A) above.
+     *
+     * Both paths use `apiClient.getState()` which returns the same
+     * shape as live SSE `state_sync` events. Errors are swallowed
+     * because a temporary `/state` failure shouldn't break the UI;
+     * the next visibility change or chat send will re-anchor.
+     */
+    async _reanchorFromServer() {
+        try {
+            const state = await this.apiClient.getState();
+            this.state.updateFromPython(state);
+        } catch (e) {
+            console.warn('[PpxaiApp] state re-anchor failed:', e);
+        }
     }
 
     /**
@@ -239,15 +276,11 @@ class PpxaiApp {
                     // so the local mirror may be stale. GET /state
                     // returns the current values of every SSE-synced
                     // field in one shot — feed straight through the
-                    // schema-driven facade.
+                    // schema-driven facade. Shared with the
+                    // visibilitychange path (state-sync Phase A).
                     this.updateServerStatus('connected');
                     this.showSystemMessage('Server connection restored.');
-                    try {
-                        const state = await this.apiClient.getState();
-                        this.state.updateFromPython(state);
-                    } catch (e) {
-                        console.warn('[PpxaiApp] state refresh after reconnect failed:', e);
-                    }
+                    await this._reanchorFromServer();
                 }
                 this._heartbeatFailCount = 0;
                 return;
