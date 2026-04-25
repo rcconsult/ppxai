@@ -93,7 +93,16 @@ jobs:
       run: uv python install 3.11
 
     - name: Install dependencies
-      run: uv sync --frozen --extra build
+      # v1.18.1: --all-extras matches the test job above. The TUI
+      # binary's command system dynamically loads every module under
+      # ppxai.commands.* (factory.py::_ensure_loaded), and the
+      # /attach pipeline transitively imports pypdf / pypdfium2 /
+      # openpyxl / python-pptx for file preprocessing. Building with
+      # only [build] silently drops those — PyInstaller emits a
+      # warning, the binary builds, and runtime imports fail when the
+      # user attaches a PDF. Use --all-extras to keep the build venv
+      # in sync with every spec hiddenimport.
+      run: uv sync --frozen --all-extras
 
     - name: Build with PyInstaller
       run: uv run pyinstaller ppxai.spec
@@ -145,7 +154,15 @@ jobs:
       run: uv python install 3.11
 
     - name: Install dependencies
-      run: uv sync --frozen --extra build --extra server
+      # v1.18.1: --all-extras matches the test job. ppxai-server.spec
+      # hiddenimports include pypdf, pypdfium2, openpyxl, python-pptx
+      # ([data] extras), google.genai ([gemini]), and ddgs ([search])
+      # — all consumed via dynamic-import paths the static analyzer
+      # can't see. Without --all-extras, PyInstaller silently drops
+      # them and ships a binary missing PDF rasterization, Excel
+      # tooling, native Gemini, and web search. Bug pre-dates
+      # v1.18.1; surfaced during release pre-flight audit.
+      run: uv sync --frozen --all-extras
 
     - name: Build server with PyInstaller
       run: uv run pyinstaller ppxai-server.spec
@@ -197,7 +214,9 @@ jobs:
       run: uv python install 3.11
 
     - name: Install dependencies
-      run: uv sync --frozen --extra build --extra tui
+      # v1.18.1: see build-tui job for the rationale — Textual TUI
+      # also drives the command factory + /attach pipeline.
+      run: uv sync --frozen --all-extras
 
     - name: Build with PyInstaller
       run: uv run pyinstaller ppxaide.spec
@@ -249,7 +268,10 @@ jobs:
       run: uv python install 3.11
 
     - name: Install dependencies
-      run: uv sync --frozen --extra build
+      # ppxai-desktop is a thin launcher (~minimal hiddenimports), but
+      # use --all-extras for consistency with the other build jobs.
+      # Adds <2s to the install step.
+      run: uv sync --frozen --all-extras
 
     - name: Build desktop with PyInstaller
       run: uv run pyinstaller ppxai-desktop.spec
