@@ -194,6 +194,53 @@ async def chat(
             }
         )
 
+    # v1.18.1 safety gate: when the chat message is `/agent <task>`,
+    # apply the same min-words validation the factory's handle_agent
+    # uses. Pre-v1.18.1, web's streamChat shipped /agent <task>
+    # straight to /chat which had no awareness — letting users run
+    # `/agent fix` and the LLM-with-tools just go. Now we intercept
+    # before the lock acquisition / streaming setup. The message
+    # the user sees is the same friendly nudge across TUI / web /
+    # VSCode (single source: validate_agent_task in commands/agent.py).
+    msg_text = (request.message or "").strip()
+    if msg_text.startswith("/agent ") or msg_text.startswith("/agent\t"):
+        from ...commands.agent import validate_agent_task
+        # Strip the /agent prefix to get just the task body
+        task = msg_text.split(None, 1)[1] if " " in msg_text or "\t" in msg_text else ""
+        agent_config = s.engine.get_agent_config()
+        min_words = agent_config.get("min_task_words", 3)
+        rejection = validate_agent_task(task.strip(), min_words)
+        if rejection is not None:
+            logger.info(
+                f"/agent rejected for session {s.id}: "
+                f"task too brief ({len(task.split())} word(s))"
+            )
+
+            async def _vague_task_response():
+                # Surface as a system message in the SSE stream so
+                # the existing chat-stream UI renders it normally —
+                # no special case in the client. The full rejection
+                # text from validate_agent_task carries the question
+                # framing + concrete examples.
+                payload = json.dumps({
+                    "type": "system",
+                    "data": rejection.message,
+                })
+                yield f"data: {payload}\n\n"
+                # Mark the stream complete so client unwinds normally.
+                yield f"data: {json.dumps({'type': 'stream_end', 'data': ''})}\n\n"
+
+            return StreamingResponse(
+                _vague_task_response(),
+                media_type="text/event-stream",
+                headers={
+                    "Cache-Control": "no-cache",
+                    "Connection": "keep-alive",
+                    "X-Accel-Buffering": "no",
+                    "X-Session-Id": s.id,
+                }
+            )
+
     # Acquire lock to serialize chat requests (v1.12.0)
     async with s.lock:
         logger.info(f"Chat lock acquired for session {s.id} - processing request")

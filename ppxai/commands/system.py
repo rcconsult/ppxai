@@ -351,6 +351,272 @@ def handle_status(context: CommandContext, args: str) -> CommandResult:
     )
 
 
+# Rich spec templates — single source for all clients (v1.18.1).
+# Previously these lived only in the VSCode extension's
+# chatPanel.ts:handleSpecCommand and the server returned a stub
+# template. v1.18.1 unifies: TUI/web/VSCode all reach the same
+# templates via the factory's /spec handler.
+
+_SPEC_GUIDELINES = """\
+# Specification Guidelines for Best Outcomes
+
+Writing clear, detailed specifications helps generate better code implementations. Follow this structure:
+
+## 1. Overview
+- **What**: Brief description of what you're building
+- **Why**: Purpose and problem it solves
+- **Language/Framework**: Specify the technology stack
+
+## 2. Requirements
+### Functional Requirements
+- List specific features and behaviors
+- Define input/output expectations
+- Specify data structures and formats
+
+### Non-Functional Requirements
+- Performance expectations
+- Security considerations
+- Scalability needs
+- Error handling requirements
+
+## 3. Technical Details
+- API signatures or interfaces
+- Data models/schemas
+- External dependencies
+- Configuration needs
+
+## 4. Constraints & Assumptions
+- Platform limitations
+- Library/version constraints
+- Assumptions about the environment
+
+## 5. Examples
+- Sample inputs and expected outputs
+- Usage scenarios
+- Edge cases to consider
+
+---
+
+## Quick Templates
+
+Use `/spec <type>` to see templates for specific implementation types:
+- `/spec api` - REST API endpoint
+- `/spec cli` - Command-line tool
+- `/spec lib` - Library/module
+- `/spec algo` - Algorithm implementation
+- `/spec ui` - UI component
+"""
+
+
+_SPEC_TEMPLATES: dict[str, str] = {
+    "api": """\
+**REST API Endpoint Specification Template:**
+
+**Endpoint**: [HTTP_METHOD] /api/v1/resource
+**Purpose**: [What this endpoint does]
+
+**Authentication**: [Required/Optional, type]
+
+**Request:**
+- Headers: [Content-Type, Authorization, etc.]
+- Body Schema:
+  ```json
+  {
+    "field1": "type (description)",
+    "field2": "type (description)"
+  }
+  ```
+
+**Response:**
+- Success (200):
+  ```json
+  {
+    "data": {},
+    "message": "Success"
+  }
+  ```
+- Error (4xx/5xx):
+  ```json
+  {
+    "error": "Error message"
+  }
+  ```
+
+**Validation Rules**: [List validation requirements]
+**Business Logic**: [Describe the processing steps]
+**Error Handling**: [How to handle specific errors]
+
+**Example Request:**
+```bash
+curl -X POST /api/v1/resource \\
+  -H "Content-Type: application/json" \\
+  -d '{"field1": "value"}'
+```
+""",
+    "cli": """\
+**CLI Tool Specification Template:**
+
+**Command**: program-name [command] [options] [arguments]
+**Purpose**: [What this tool does]
+
+**Commands:**
+- `command1` - [Description]
+- `command2` - [Description]
+
+**Options:**
+- `-f, --flag`: [Description, default value]
+- `-o, --option <value>`: [Description]
+
+**Arguments:**
+- `arg1`: [Description, required/optional]
+
+**Input/Output:**
+- Input: [stdin, files, arguments]
+- Output: [stdout, files, exit codes]
+
+**Error Handling:**
+- Exit code 0: Success
+- Exit code 1: [Error type]
+- Exit code 2: [Error type]
+
+**Examples:**
+```bash
+program-name command1 --flag value arg1
+program-name command2 -o option < input.txt > output.txt
+```
+
+**Dependencies**: [Required libraries, system tools]
+**Configuration**: [Config files, environment variables]
+""",
+    "lib": """\
+**Library/Module Specification Template:**
+
+**Module Name**: module_name
+**Purpose**: [What this library provides]
+**Language**: [Python, JavaScript, Go, etc.]
+
+**Public API:**
+
+1. **Function/Class**: `name(param1, param2)`
+   - Purpose: [What it does]
+   - Parameters:
+     - `param1` (type): [Description]
+     - `param2` (type): [Description]
+   - Returns: [Type and description]
+   - Raises: [Exceptions/errors]
+   - Example:
+     ```python
+     result = name(value1, value2)
+     ```
+
+2. **Function/Class**: [Repeat for each public interface]
+
+**Internal Architecture:**
+- [Key components and their relationships]
+
+**Dependencies**: [External libraries needed]
+**Thread Safety**: [If applicable]
+**Performance Characteristics**: [Time/space complexity]
+
+**Usage Example:**
+```python
+from module_name import ClassName
+
+obj = ClassName(config)
+result = obj.method(args)
+```
+""",
+    "algo": """\
+**Algorithm Specification Template:**
+
+**Algorithm Name**: [Name or description]
+**Purpose**: [Problem it solves]
+**Language**: [Preferred language]
+
+**Input:**
+- Type: [Array, tree, graph, etc.]
+- Constraints: [Size limits, value ranges]
+- Format: [Specific structure]
+
+**Output:**
+- Type: [What the algorithm returns]
+- Format: [Structure of the result]
+
+**Requirements:**
+- Time Complexity: [Target: O(n log n), etc.]
+- Space Complexity: [Target: O(1), O(n), etc.]
+- Special Constraints: [In-place, iterative vs recursive]
+
+**Algorithm Approach:**
+[High-level description of the approach]
+- Step 1: [Description]
+- Step 2: [Description]
+- Step 3: [Description]
+
+**Edge Cases to Handle:**
+- Empty input
+- Single element
+- Duplicate values
+- [Other specific cases]
+
+**Test Cases:**
+```
+Input: [1, 2, 3]
+Output: [expected]
+
+Input: []
+Output: [expected]
+
+Input: [edge case]
+Output: [expected]
+```
+""",
+    "ui": """\
+**UI Component Specification Template:**
+
+**Component Name**: ComponentName
+**Purpose**: [What this component displays/does]
+**Framework**: [React, Vue, Angular, etc.]
+
+**Props/Inputs:**
+- `prop1` (type, required/optional): [Description, default]
+- `prop2` (type, required/optional): [Description, default]
+
+**State Management:**
+- [Internal state needed]
+- [External state/store]
+
+**Events/Callbacks:**
+- `onEvent1`: [When triggered, parameters]
+- `onEvent2`: [When triggered, parameters]
+
+**Visual Design:**
+- Layout: [Describe structure]
+- Styling: [CSS approach, theme]
+- Responsive: [Mobile/desktop behavior]
+
+**Behavior:**
+- User Interactions: [Click, hover, etc.]
+- Loading States: [How to show loading]
+- Error States: [How to display errors]
+
+**Accessibility:**
+- ARIA labels
+- Keyboard navigation
+- Screen reader support
+
+**Example Usage:**
+```jsx
+<ComponentName
+  prop1="value"
+  prop2={data}
+  onEvent1={handler}
+/>
+```
+""",
+}
+
+
 def handle_spec(context: CommandContext, args: str) -> CommandResult:
     """Handle /spec command - display specification templates.
 
@@ -364,25 +630,20 @@ def handle_spec(context: CommandContext, args: str) -> CommandResult:
     spec_type = args.strip().lower() if args else None
 
     if not spec_type:
-        spec_text = """Available Specification Templates:
-
-  /spec api    - API specification template
-  /spec cli    - CLI application specification
-  /spec lib    - Library specification
-  /spec algo   - Algorithm specification
-  /spec ui     - UI component specification
-
-Use: /spec <type> to view a specific template
-"""
+        # Show the full guidelines + a list of available templates.
+        # Previously the TUI got a 5-line stub; v1.18.1 brings the
+        # rich VSCode-side guidelines to all clients.
+        spec_text = _SPEC_GUIDELINES
+    elif spec_type in _SPEC_TEMPLATES:
+        spec_text = _SPEC_TEMPLATES[spec_type]
     else:
-        # Simple spec template - full templates can be added later
-        spec_text = f"""Specification Template: {spec_type.upper()}
-
-[Basic template - use old handler for full rich templates]
-
-For detailed {spec_type} specification templates, the full rich UI version
-provides comprehensive templates with examples and best practices.
-"""
+        # Unknown type — list the valid options.
+        valid = ", ".join(sorted(_SPEC_TEMPLATES.keys()))
+        spec_text = (
+            f"**Unknown specification type:** `{spec_type}`\n\n"
+            f"Available types: {valid}\n\n"
+            f"Use `/spec` (no argument) for the full guidelines."
+        )
 
     return MarkdownResult(
         status=ResultStatus.INFO,

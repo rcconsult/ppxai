@@ -22,6 +22,7 @@ from .results import (
     ConfirmationResult,
     ErrorResult,
     KeyValueResult,
+    NotificationResult,
     TableResult,
     TextResult,
 )
@@ -163,6 +164,67 @@ If the task is now complete, respond with:
 TASK_COMPLETE: <brief summary of what was done>
 
 If more work is needed, explain what you're doing next and use the appropriate tools."""
+
+
+# =============================================================================
+# Public agent-task validation (v1.18.1)
+# =============================================================================
+#
+# Used by:
+#   - handle_agent (TUI in-process path)
+#   - server-side /chat hook (web /agent <task> safety gate)
+#   - VSCode chatPanel.ts via the factory dispatch (5b.2)
+#
+# Centralising here closes the safety gap where web users could
+# previously run `/agent fix` without any min-words check (web's
+# streamChat hits /chat which had no /agent awareness).
+
+
+def validate_agent_task(
+    task: str,
+    min_words: int,
+) -> Optional[CommandResult]:
+    """Return a NotificationResult if the task is too vague, else None.
+
+    The non-None return is a friendly nudge framed as a question
+    (not an ErrorResult) — same content the user sees when they
+    type `/agent fix` in any client. Concrete examples included so
+    they know what level of detail is expected. Per the v1.18.1 UX
+    decision: ask for more context, don't just bounce them.
+
+    Args:
+        task: The user's task string (already trimmed).
+        min_words: Threshold from agent config (default 3).
+
+    Returns:
+        None when valid. NotificationResult(WARNING) when too vague.
+    """
+    words = task.split()
+    if len(words) >= min_words:
+        return None
+
+    quoted = task or "(empty)"
+    msg = (
+        f"I need a bit more detail before running autonomously.\n\n"
+        f"Your task `{quoted}` is too brief — please tell me:\n"
+        f"  • **What** to do? (a bug to fix, a feature to add, an investigation)\n"
+        f"  • **Where**? (which file, function, or area)\n"
+        f"  • **How** will I know it's done? (acceptance criteria, optional)\n\n"
+        f"Examples:\n"
+        f"  `/agent Fix the off-by-one in src/parser.py:line_count()`\n"
+        f"  `/agent Review @git changes and suggest improvements`\n"
+        f"  `/agent Investigate why login.test.js times out and fix the cause`\n"
+    )
+    return NotificationResult(
+        status=ResultStatus.WARNING,
+        message=msg,
+        metadata={
+            "reason": "agent_task_too_vague",
+            "min_words": min_words,
+            "actual_words": len(words),
+            "task": task,
+        },
+    )
 
 
 # =============================================================================
@@ -567,21 +629,12 @@ def handle_agent(context: CommandContext, args: str) -> CommandResult:
     min_words = agent_config.get("min_task_words", 3)
     max_iterations = agent_config.get("max_iterations", 10)
 
-    # Reject vague/ambiguous tasks for safety
-    words = task.split()
-    if len(words) < min_words:
-        return ErrorResult(
-            status=ResultStatus.ERROR,
-            message=f"Task too vague: \"{task}\"",
-            error_details=f"Agent tasks should be specific and descriptive (at least {min_words} words). "
-                          "Vague tasks can lead to unexpected AI interpretations.",
-            suggestions=[
-                "✓ /agent Fix the authentication bug in login.py",
-                "✓ /agent Review @git changes and suggest improvements",
-                "✗ /agent fix bug",
-                "✗ /agent do it"
-            ]
-        )
+    # v1.18.1: shared validation. Same nudge text across TUI / web /
+    # VSCode — closes the previous safety gap where web could
+    # bypass min-words by sending `/agent <task>` to /chat.
+    validation = validate_agent_task(task, min_words)
+    if validation is not None:
+        return validation
 
     # Ensure agent mode is enabled
     if not context.engine_client.agent_mode:
