@@ -110,3 +110,10 @@ deploy/shared/ppxai-config-local.json
 deploy/microk8s/
 .mcp.json
 docs/session-log-*.txt
+
+# Graphify (https://github.com/safishamsi/graphify) — knowledge graph
+# artifacts. Outputs and per-run scratch files. `.graphifyignore` is
+# intentionally NOT ignored — it's a project-level input filter
+# (equivalent to .gitignore for graphify) and meant to be committed.
+graphify-out/
+.graphify_*
