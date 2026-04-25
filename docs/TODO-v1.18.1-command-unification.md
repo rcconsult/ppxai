@@ -274,6 +274,7 @@ The big advantage of VSCode is that we can delegate to first-party APIs and inst
 
 - AppState codegen (deferred to v1.18.2 — see `docs/TODO-appstate-codegen.md`)
 - Multi-model routing infrastructure (deferred to v1.18.2 — see `docs/TODO-routing.md`)
+- Per-client keyboard binding registries for `/keys` (deferred to v1.18.2 — see `docs/TODO-v1.18.2-keys-binding-registries.md` and `docs/decisions/0001-keys-command-cross-client.md`). v1.18.1 ships Option B (universal markdown + `vscode_delegate`); Option A is the proper solution when triggers fire.
 - Retiring bespoke REST endpoints (Phase 6, separate PR after migration is stable)
 
 ## Acceptance criteria
