@@ -542,10 +542,11 @@ CommandFactory.register(CommandSpec(
 
 CommandFactory.register(CommandSpec(
     name="terminal",
-    description="Show terminal capabilities and image config help",
+    description="Open a terminal at the current working directory",
     handler=handle_terminal,
     category="system",
-    usage="/terminal"
+    usage="/terminal",
+    aliases=["term", "sh"],
 ))
 
 CommandFactory.register(CommandSpec(

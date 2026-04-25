@@ -2131,7 +2131,10 @@ class PpxaiApp {
     }
 
     async handleShowCommand(args) {
-        await this.commandDispatcher.handleShowCommand(args);
+        // v1.18.1: route through the unified dispatcher; the
+        // factory's display.show handler emits OPEN_VIEWER /
+        // SHOW_IMAGE / SHOW_PDF as appropriate.
+        await this.commandDispatcher.dispatch(`/show ${args}`);
     }
 
     // === Messages ===
@@ -3163,7 +3166,7 @@ class PpxaiApp {
                         }
                     },
                     onFileInject: (relPath) => this._injectFileRef(relPath),
-                    onDirCd: (path) => this.commandDispatcher.handleCdCommand(path),
+                    onDirCd: (path) => this.commandDispatcher.dispatch(`/cd ${path}`),
                 });
             } else {
                 this._fileTree.refresh();
