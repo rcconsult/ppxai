@@ -10,6 +10,7 @@ v1.15.0: Migrated to type-based renderer dispatch with file type detection
 import csv
 import io
 import json
+import os
 import re
 import time
 from pathlib import Path
@@ -524,4 +525,176 @@ CommandFactory.register(CommandSpec(
     handler=handle_preview,
     category="display",
     usage="/preview <file.html>"
+))
+
+
+# ============================================================================
+# /edit — open file in editor (v1.18.1)
+# ============================================================================
+
+
+def handle_edit(context: CommandContext, args: str) -> CommandResult:
+    """Handle /edit — open a file for editing.
+
+    Syntax:
+        /edit <file>[:line[:col]]
+        /edit --create <file>[:line[:col]]    (create + edit, no prompt)
+
+    Behavior:
+        - If the file exists → emit `open_editor` side-effect.
+        - If the file is missing → return a `prompt_quick_pick`
+          asking the user to confirm creation. The "Create" choice's
+          `value` is `--create <path>`, so the client re-issues
+          POST /command/edit with that string and the second pass
+          takes the create branch.
+        - If the user passed `--create` directly, mkdir + touch and
+          emit `open_editor`.
+
+    Why this shape (per ADR Q3 — quick-pick resume protocol):
+        Choices ARE the resolved args. No server-side continuation
+        state; every POST is idempotent given the args.
+    """
+    if not context.engine_client:
+        return ErrorResult(
+            status=ResultStatus.ERROR,
+            message="Engine client not available"
+        )
+
+    raw = args.strip()
+    if not raw:
+        return ErrorResult(
+            status=ResultStatus.ERROR,
+            message="Usage: /edit <filepath>[:line[:col]]",
+            suggestions=[
+                "/edit README.md",
+                "/edit src/main.py:42      # Jump to line 42",
+                "/edit config.json:10:5    # Line 10, column 5",
+            ]
+        )
+
+    # Strip the --create flag and remember its presence.
+    create_mode = False
+    if raw.startswith("--create "):
+        create_mode = True
+        raw = raw[len("--create "):].strip()
+    elif raw == "--create":
+        return ErrorResult(
+            status=ResultStatus.ERROR,
+            message="Usage: /edit --create <filepath>"
+        )
+
+    # Parse `path[:line[:col]]`. `rsplit(':', 2)` handles Windows
+    # drive letters cleanly: "C:\foo.py:42:5" splits to
+    # ["C:\\foo.py", "42", "5"], drive colon stays with the path.
+    line = None
+    col = None
+    parts = raw.rsplit(':', 2)
+    if len(parts) >= 2 and parts[-1].isdigit():
+        if len(parts) == 3 and parts[-2].isdigit():
+            path_str = parts[0]
+            line = int(parts[-2])
+            col = int(parts[-1])
+        else:
+            path_str = ':'.join(parts[:-1])
+            line = int(parts[-1])
+    else:
+        path_str = raw
+
+    # Resolve relative to engine's working dir (canonical).
+    working_dir = context.engine_client.get_working_dir() or os.getcwd()
+    candidate = Path(path_str).expanduser()
+    if not candidate.is_absolute():
+        candidate = Path(working_dir) / path_str
+    candidate = candidate.resolve()
+
+    if candidate.exists():
+        if not candidate.is_file():
+            return ErrorResult(
+                status=ResultStatus.ERROR,
+                message=f"Not a file: {path_str}",
+                suggestions=["Pick a regular file, not a directory"]
+            )
+        # Existing file — emit open_editor.
+        result = FileViewResult(
+            status=ResultStatus.SUCCESS,
+            message=f"Editing {candidate.name}",
+            filepath=str(candidate),
+            content="",  # client fetches via /files/read
+            language=None,
+            line_highlight=line,
+            col_highlight=col,
+            read_only=False,
+        )
+        payload = {"filepath": str(candidate)}
+        if line is not None:
+            payload["line"] = line
+        if col is not None:
+            payload["column"] = col
+        result.add_side_effect(SideEffectKind.OPEN_EDITOR, **payload)
+        return result
+
+    # Missing file path — two branches.
+    if create_mode:
+        # User already confirmed (or was passed --create directly).
+        # mkdir + touch, then emit open_editor.
+        try:
+            candidate.parent.mkdir(parents=True, exist_ok=True)
+            candidate.touch()
+        except OSError as exc:
+            return ErrorResult(
+                status=ResultStatus.ERROR,
+                message=f"Could not create file: {exc}",
+                error_details=str(exc),
+            )
+        result = FileViewResult(
+            status=ResultStatus.SUCCESS,
+            message=f"Created and editing {candidate.name}",
+            filepath=str(candidate),
+            content="",
+            language=None,
+            line_highlight=line,
+            col_highlight=col,
+            read_only=False,
+        )
+        payload = {"filepath": str(candidate)}
+        if line is not None:
+            payload["line"] = line
+        if col is not None:
+            payload["column"] = col
+        result.add_side_effect(SideEffectKind.OPEN_EDITOR, **payload)
+        return result
+
+    # Missing file, no --create flag → prompt user to confirm creation.
+    # Per ADR Q3 (b): the quick-pick choice's value IS the next args
+    # to re-issue. "Create" maps to "--create <original_args>",
+    # "Cancel" maps to a no-op flag the handler ignores cleanly.
+    items = [
+        {
+            "label": f"Create new file: {path_str}",
+            "value": f"--create {raw}",
+        },
+        {
+            "label": "Cancel",
+            "value": "--cancelled",  # handler short-circuits below
+        },
+    ]
+    result = NotificationResult(
+        status=ResultStatus.INFO,
+        message=f"File not found: {path_str}",
+    )
+    result.add_side_effect(
+        SideEffectKind.PROMPT_QUICK_PICK,
+        title=f"Create new file '{path_str}'?",
+        items=items,
+        command_to_resume="edit",
+    )
+    return result
+
+
+CommandFactory.register(CommandSpec(
+    name="edit",
+    description="Open file in editor (creates if missing)",
+    handler=handle_edit,
+    category="display",
+    usage="/edit <file>[:line[:col]]"
 ))

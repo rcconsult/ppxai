@@ -322,18 +322,35 @@ async def render_key_value(renderer: TextualRenderer, result: KeyValueResult) ->
 
 @TextualRenderer.register(FileViewResult)
 async def render_file_view(renderer: TextualRenderer, result: FileViewResult) -> None:
-    """Render file in CodeEditor widget."""
+    """Render file in CodeEditor widget.
+
+    Some handlers (e.g. /edit) leave `result.content` empty because
+    web/VSCode clients fetch content via their own paths
+    (apiClient.readFile, vscode.workspace.openTextDocument). The
+    Textual renderer shares the filesystem with the engine, so it
+    reads the file directly when `content` is missing.
+    """
 
     chat_view = renderer._get_chat_view()
 
-    if not result.content:
+    content = result.content
+    if not content and result.filepath:
+        try:
+            content = Path(result.filepath).read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError) as exc:
+            chat_view.add_system_message(
+                f"[red]Cannot read {result.filepath}: {exc}[/red]"
+            )
+            return
+
+    if not content and not result.filepath:
         chat_view.add_system_message(f"[dim]File: {result.filepath}[/dim]")
         return
 
     # Show in side panel using existing show_file_in_panel method
     await renderer.app.show_file_in_panel(
         Path(result.filepath),
-        result.content,
+        content,
         mode="code",
         line=result.line_highlight,
         read_only=result.read_only
