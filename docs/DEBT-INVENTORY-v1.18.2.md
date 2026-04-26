@@ -151,6 +151,106 @@ locally or as a one-off doc commit.
 
 ---
 
+### Item 5 — Bundle the VSCode extension
+
+**Affected files:** `vscode-extension/package.json`, `vscode-extension/.vscodeignore`,
+no esbuild/webpack config currently in use (compile is just `npx tsc -p ./`).
+
+**What the warning says:** every `vsce package` run prints
+> "This extension consists of 804 files, out of which 397 are JavaScript
+> files. For performance reasons, you should bundle your extension."
+
+The 804 files come from the runtime deps (`dotenv`, `highlight.js`,
+`marked`, `openai`) being shipped as raw `node_modules/` trees. Webpack
++ ts-loader are already installed as devDependencies but unused.
+
+**Concrete fix (esbuild — VSCode's recommended bundler):**
+
+1. `npm i -D esbuild` in `vscode-extension/`.
+2. Add `vscode-extension/esbuild.js`:
+   ```js
+   const esbuild = require("esbuild");
+   const production = process.argv.includes("--production");
+   esbuild.build({
+     entryPoints: ["src/extension.ts"],
+     bundle: true, format: "cjs", platform: "node",
+     external: ["vscode"], outfile: "dist/extension.js",
+     minify: production, sourcemap: !production,
+   }).catch(() => process.exit(1));
+   ```
+3. `package.json`: switch `main` from `./out/extension.js` to
+   `./dist/extension.js`; replace `compile` with `node esbuild.js` and
+   add `package: "node esbuild.js --production"` +
+   `vscode:prepublish: "npm run package"`.
+4. `.vscodeignore`: replace the per-package excludes with `node_modules/**`,
+   `out/**`, `src/**`.
+
+**Why deferred:** maintenance-driven, not correctness-driven. Every
+release ships fine without bundling — the warning has been there for
+months. Risk: bundling can subtly break runtime imports of native
+modules or dynamic-loaded files; needs activate/deactivate testing.
+
+**Trigger to revisit:** when extension activation latency becomes a
+user complaint, OR when the `.vsix` size crosses 2 MB, OR when a CI
+gate is added for extension performance.
+
+**Effort:** ~30 minutes for the config + ~1 hour testing the
+activate/deactivate paths against `dotenv`, `marked`, `openai`,
+`highlight.js`. Expected outcome: 804 files → ~3 files,
+1.1 MB → ~300-500 KB, faster activation.
+
+**Branch when ready:** `feat/bundle-vscode-extension`.
+
+---
+
+### Item 6 — Windows `code` CLI shim resolution
+
+**Affected:** developer environment only (Git Bash on Windows). Not in
+the repo, but documented here so the next developer doesn't waste time
+debugging the symptom.
+
+**What's wrong:** `code --install-extension foo.vsix` fails with
+`bad option: --install-extension`. Root cause: on Windows the user
+PATH lists `C:\...\Microsoft VS Code\` (containing the GUI `code.exe`)
+*before* `C:\...\Microsoft VS Code\bin\` (containing the proper sh
+shim that delegates to `code.cmd`). Bash strips the `.exe`, so the
+GUI launcher wins and rejects unknown flags.
+
+**Concrete fix (pick one, smallest blast radius first):**
+
+(a) **Shell-local alias** — reversible, no system change. Add to
+    `~/.bashrc`:
+    ```bash
+    alias code='/c/Users/$USER/AppData/Local/Programs/Microsoft\ VS\ Code/bin/code'
+    ```
+
+(b) **PATH reorder for this user** — open Windows env var settings,
+    move `...\Microsoft VS Code\bin` above `...\Microsoft VS Code` in
+    user `Path`. Permanent; affects every shell. Restart Git Bash.
+
+(c) **Symlink in early-PATH dir** — if `~/.local/bin/` is already
+    ahead of the VSCode dirs:
+    ```bash
+    ln -s "/c/.../Microsoft VS Code/bin/code.cmd" ~/.local/bin/code
+    ```
+
+**Why deferred:** purely a dev-environment ergonomics issue. Workaround
+exists (use `bin/code.cmd` explicitly). Doesn't affect builds, CI, or
+shipped artifacts.
+
+**Trigger to revisit:** when another contributor hits the same
+"bad option" error and pings the team, OR when adding install steps
+to `docs/INSTALLATION.md` that need a working `code` CLI on Windows.
+
+**Effort:** ~5 minutes per developer to apply locally. No upstream
+fix needed unless we want to document it in `docs/INSTALLATION.md`
+under a "Windows developer setup" subsection (~15 minutes).
+
+**Branch when ready:** none required for the env fix; if documenting,
+fold into a future `docs:` commit.
+
+---
+
 ## Closed
 
 (Move items here as they land. Format: `### Item X — title — closed YYYY-MM-DD in commit-hash`)
