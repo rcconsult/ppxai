@@ -55,7 +55,7 @@ from ppxai.config import (
     PROVIDERS, get_default_provider, get_default_model, get_api_key, initialize,
     get_tui_config, get_auto_restore_mode, get_auto_save_interval,
 )
-from ppxai.version import __version__
+from ppxai.version import __version__, format_version_banner
 
 # Command Factory integration (Phase 6.1.1 - Technical debt cleanup)
 from ppxai.commands import CommandFactory
@@ -292,10 +292,14 @@ class PPXAIDEApp(App):
         # Add welcome message with bootstrap status (Phase 6.3)
         chat_view = self._chat_view
 
+        # v1.18.2: prefix with the runtime-version banner so screenshots
+        # of the welcome frame always carry version + commit + source mtime.
+        # See ppxai/version.py::format_version_banner.
+        version_line = f"[dim]{format_version_banner()}[/dim]\n"
         if self._provider and self._model:
-            welcome_msg = f"Welcome to ppxaide! Connected to {self._provider}/{self._model}\n"
+            welcome_msg = version_line + f"Welcome to ppxaide! Connected to {self._provider}/{self._model}\n"
         else:
-            welcome_msg = "[bold yellow]Welcome to ppxaide![/bold yellow]\n"
+            welcome_msg = version_line + "[bold yellow]Welcome to ppxaide![/bold yellow]\n"
             welcome_msg += "[red]⚠️  Engine not configured - check your .env file for API keys[/red]\n"
             welcome_msg += "[dim]Use /provider list to see available providers[/dim]\n\n"
 

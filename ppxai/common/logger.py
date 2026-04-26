@@ -155,9 +155,16 @@ class Logger:
 
         self._logger.addHandler(file_handler)
 
-        # Log session start
+        # Log session start with version + source mtime so log readers
+        # can correlate behavior with the running code state. Critical
+        # for editable-install setups where a stale Python process can
+        # outlive its own source — the process keeps running the OLD
+        # code, but operators reading the log later see the NEW source.
+        # The source_mtime field makes this gap visible.
+        from ..version import format_version_banner  # local import — version is leaf, no cycle
         self._logger.info("=" * 80)
         self._logger.info(f"{self.name.upper()} DEBUG SESSION STARTED - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        self._logger.info(format_version_banner())
         self._logger.info("=" * 80)
 
     @property

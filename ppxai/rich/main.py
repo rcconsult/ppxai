@@ -9,7 +9,7 @@ import asyncio
 import time
 from pathlib import Path
 
-from ..version import __version__
+from ..version import __version__, format_version_banner
 
 from prompt_toolkit import PromptSession
 from prompt_toolkit.history import InMemoryHistory
@@ -442,7 +442,12 @@ def main():
         auto_suggest=AutoSuggestFromHistory(),
     )
 
-    # Main loop
+    # Main loop. Print the version banner BEFORE the welcome line so a
+    # screenshot of the first frame always carries the running code state
+    # — version + git commit + source mtime. Catches the
+    # "edited source but stale Python process" gap that hid the
+    # save_usage_to_persistent_storage fix during initial testing.
+    console.print(f"[dim]{format_version_banner()}[/dim]")
     console.print("\n[bold green]Ready to chat! Type your message or /help for commands.[/bold green]")
     console.print("[dim]Tab: autocomplete • @file: reference files • ↑/↓: history • Ctrl-C twice to exit[/dim]\n")
     console.print(f"[dim]Session: {handler.engine_client.session.session_name}[/dim]\n")
