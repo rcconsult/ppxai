@@ -889,6 +889,236 @@ class TestAtomicSessionFormatTransition:
             "stale flat file must be removed after successful transition"
 
 
+class TestWriteSessionJsonPropagatesOSError:
+    """The engine layer MUST propagate write failures so the UI layer's
+    AutosaveFailureGuard (rich/main.py, tui/stream_handler.py) can count
+    consecutive failures and surface them to the user. Silently swallowing
+    here would let a full-disk run hide every save failure for hours.
+    """
+
+    def _sm(self, tmp_path):
+        sm = SessionManager(sessions_dir=tmp_path / "sessions")
+        sm.sessions_dir.mkdir(parents=True, exist_ok=True)
+        sm.session_name = "wtest"
+        return sm
+
+    def test_in_place_flat_write_propagates_oserror(self, tmp_path):
+        sm = self._sm(tmp_path)
+        with patch("builtins.open", side_effect=OSError(28, "No space left on device")):
+            with pytest.raises(OSError, match="No space left"):
+                sm._write_session_json_in_place(
+                    "wtest", {"session_name": "wtest", "messages": [], "metadata": {}},
+                    is_dir_format=False,
+                )
+
+    def test_in_place_flat_write_propagates_permission_error(self, tmp_path):
+        sm = self._sm(tmp_path)
+        with patch("builtins.open", side_effect=PermissionError("read-only mount")):
+            with pytest.raises(PermissionError, match="read-only mount"):
+                sm._write_session_json_in_place(
+                    "wtest", {"session_name": "wtest", "messages": [], "metadata": {}},
+                    is_dir_format=False,
+                )
+
+    def test_in_place_dir_write_propagates_oserror(self, tmp_path):
+        sm = self._sm(tmp_path)
+        # mkdir succeeds, json.dump fails — ensure error reaches caller
+        with patch("builtins.open", side_effect=OSError(28, "No space left on device")):
+            with pytest.raises(OSError, match="No space left"):
+                sm._write_session_json_in_place(
+                    "wtest", {"session_name": "wtest", "messages": [], "metadata": {}},
+                    is_dir_format=True,
+                )
+
+    def test_save_with_extras_propagates_write_failure(self, tmp_path):
+        sm = self._sm(tmp_path)
+        with patch("builtins.open", side_effect=OSError(28, "ENOSPC")):
+            with pytest.raises(OSError, match="ENOSPC"):
+                sm._save_with_extras()
+
+    def test_save_dirty_propagates_write_failure_so_guard_can_catch(self, tmp_path):
+        sm = self._sm(tmp_path)
+        with patch("builtins.open", side_effect=OSError(28, "ENOSPC")):
+            with pytest.raises(OSError, match="ENOSPC"):
+                sm.save_dirty()
+
+    def test_save_propagates_write_failure(self, tmp_path):
+        """Public save() (e.g. /save command) must surface errors so the
+        slash command result reports the failure rather than claiming
+        success on a no-op."""
+        sm = self._sm(tmp_path)
+        with patch("builtins.open", side_effect=OSError(28, "ENOSPC")):
+            with pytest.raises(OSError, match="ENOSPC"):
+                sm.save("named_save")
+
+    def test_transition_atomic_rename_failure_leaves_tmp_for_recovery(self, tmp_path):
+        """When the flat->dir atomic rename fails, _write_session_json
+        re-raises so the caller knows the transition didn't happen.
+        The staged tmp directory stays on disk (already tested in
+        TestAtomicSessionFormatTransition) — here we just pin the
+        re-raise so the guard sees the failure.
+        """
+        from ppxai.engine.types import Message
+        sm = self._sm(tmp_path)
+        sm.session_name = "atomic"
+
+        # Seed flat file to force a transition.
+        flat = sm.sessions_dir / "atomic.json"
+        flat.write_text(json.dumps({"session_name": "atomic", "messages": [],
+                                    "metadata": {}}), encoding="utf-8")
+        # Make multimodal so directory format is required.
+        sm.messages = [Message(role="user", content=[
+            {"type": "image_url", "image_url": {"url": "data:image/png;base64,AA"}},
+        ])]
+
+        with patch("ppxai.engine.session.os.rename",
+                   side_effect=OSError("rename failed")):
+            with pytest.raises(OSError, match="rename failed"):
+                sm._write_session_json("atomic", {
+                    "session_name": "atomic", "messages": [], "metadata": {},
+                })
+
+
+class TestSessionSymlinkBehavior:
+    """Symlinks WITHIN sessions_dir are user-controlled territory — the
+    engine resolves them transparently via Path.is_dir/is_file. These
+    tests pin the behavior so a future "resolve to absolute path before
+    use" refactor can't silently change semantics.
+
+    Path-traversal protection (rejecting '../' in names) is separate
+    and tested in TestSessionNamePathTraversal — that catches bogus
+    names; this catches what happens when the user themselves places
+    a symlink in their data directory.
+    """
+
+    def _supports_symlinks(self, tmp_path):
+        try:
+            target = tmp_path / "_probe_target"
+            target.write_text("x", encoding="utf-8")
+            link = tmp_path / "_probe_link"
+            link.symlink_to(target)
+            link.unlink()
+            target.unlink()
+            return True
+        except (OSError, NotImplementedError):
+            return False
+
+    def _sm(self, tmp_path):
+        sm = SessionManager(sessions_dir=tmp_path / "sessions")
+        sm.sessions_dir.mkdir(parents=True, exist_ok=True)
+        return sm
+
+    def test_symlink_to_flat_session_json_loads(self, tmp_path):
+        if not self._supports_symlinks(tmp_path):
+            pytest.skip("filesystem does not support symlinks")
+        sm = self._sm(tmp_path)
+
+        real_dir = tmp_path / "outside"
+        real_dir.mkdir()
+        real_session = real_dir / "real_session.json"
+        real_session.write_text(json.dumps({
+            "session_name": "linked",
+            "messages": [{"role": "user", "content": "hi"},
+                         {"role": "assistant", "content": "ok"}],
+            "metadata": {},
+        }), encoding="utf-8")
+
+        link = sm.sessions_dir / "linked.json"
+        link.symlink_to(real_session)
+
+        assert sm.load("linked") is True
+        assert len(sm.messages) == 2
+
+    def test_broken_symlink_returns_false(self, tmp_path):
+        if not self._supports_symlinks(tmp_path):
+            pytest.skip("filesystem does not support symlinks")
+        sm = self._sm(tmp_path)
+
+        link = sm.sessions_dir / "broken.json"
+        link.symlink_to(tmp_path / "does_not_exist.json")
+
+        assert sm.load("broken") is False
+        # And it must not raise — broken symlink at flat path is_file()
+        # returns False so _resolve_session_load_path returns None.
+
+    def test_symlink_to_directory_session_loads(self, tmp_path):
+        if not self._supports_symlinks(tmp_path):
+            pytest.skip("filesystem does not support symlinks")
+        sm = self._sm(tmp_path)
+
+        real_dir = tmp_path / "outside_dir"
+        real_dir.mkdir()
+        (real_dir / "session.json").write_text(json.dumps({
+            "session_name": "linked_dir",
+            "messages": [{"role": "user", "content": "hi"},
+                         {"role": "assistant", "content": "ok"}],
+            "metadata": {},
+        }), encoding="utf-8")
+
+        link = sm.sessions_dir / "linked_dir"
+        link.symlink_to(real_dir, target_is_directory=True)
+
+        assert sm.load("linked_dir") is True
+        assert len(sm.messages) == 2
+
+    def test_symlink_loop_does_not_infinite_loop(self, tmp_path):
+        """A self-pointing symlink in sessions_dir must not hang
+        list_sessions(). Path.is_dir() returns False for cyclic
+        links, so the entry is silently skipped."""
+        if not self._supports_symlinks(tmp_path):
+            pytest.skip("filesystem does not support symlinks")
+        sm = self._sm(tmp_path)
+
+        loop = sm.sessions_dir / "loop"
+        loop.symlink_to(loop)  # self-loop
+
+        # Must complete without raising.
+        sessions = sm.list_sessions()
+        # Either skipped silently or, if present, the name should not
+        # cause subsequent operations to hang. Just guard against hang.
+        assert isinstance(sessions, list)
+
+    def test_list_sessions_skips_broken_symlink(self, tmp_path):
+        if not self._supports_symlinks(tmp_path):
+            pytest.skip("filesystem does not support symlinks")
+        sm = self._sm(tmp_path)
+
+        # One real session + one broken symlink.
+        real_session = sm.sessions_dir / "real.json"
+        real_session.write_text(json.dumps({
+            "session_name": "real",
+            "messages": [{"role": "user", "content": "hi"}],
+            "metadata": {},
+        }), encoding="utf-8")
+        broken = sm.sessions_dir / "broken.json"
+        broken.symlink_to(tmp_path / "does_not_exist.json")
+
+        names = [s.name for s in sm.list_sessions()]
+        assert "real" in names
+        assert "broken" not in names
+
+    def test_symlink_in_session_directory_uploads_does_not_crash_listing(self, tmp_path):
+        """Directory-format session with a symlinked uploads/ subdir
+        — list_sessions reads session.json directly, so symlinks
+        inside the session dir are irrelevant to the listing pass."""
+        if not self._supports_symlinks(tmp_path):
+            pytest.skip("filesystem does not support symlinks")
+        sm = self._sm(tmp_path)
+
+        ses_dir = sm.sessions_dir / "with_uploads"
+        ses_dir.mkdir()
+        (ses_dir / "session.json").write_text(json.dumps({
+            "session_name": "with_uploads",
+            "messages": [{"role": "user", "content": "hi"}],
+            "metadata": {},
+        }), encoding="utf-8")
+        # Add a broken symlink alongside session.json.
+        (ses_dir / "uploads").symlink_to(tmp_path / "nonexistent")
+
+        names = [s.name for s in sm.list_sessions()]
+        assert "with_uploads" in names
+
+
 class TestSessionLoadCorruptRecovery:
     """load() returns False gracefully for corrupt/missing/truncated JSON."""
 
@@ -1136,6 +1366,287 @@ class TestStatePointerStale:
         sessions = sm.list_sessions()
         names = [s.name for s in sessions]
         assert "not_a_session" not in names
+
+
+class TestStatePointerToDeletedSession:
+    """The state file pointer (~/.ppxai/session-state.json) is independent
+    of whether the named session still exists on disk. The caller
+    (engine/session_ops.restore_session) MUST handle the 'pointer-stale'
+    case gracefully — returning success=False rather than crashing.
+    """
+
+    def _sm(self, tmp_path):
+        sm = SessionManager(sessions_dir=tmp_path / "sessions")
+        sm.sessions_dir.mkdir(parents=True, exist_ok=True)
+        return sm
+
+    def test_get_last_state_returns_pointer_even_when_session_deleted(
+        self, tmp_path, monkeypatch
+    ):
+        """Pointer survives the session — get_last_session_state does
+        no existence check. The caller decides what to do."""
+        state_file = tmp_path / "session-state.json"
+        state_file.write_text(json.dumps({
+            "version": 1,
+            "last_session": {
+                "name": "ghost_session",
+                "dirty": False,
+                "provider": "openai",
+                "model": "gpt-5.4-mini",
+                "working_dir": "/tmp",
+                "tools_enabled": True,
+                "message_count": 5,
+            },
+        }), encoding="utf-8")
+        monkeypatch.setattr("ppxai.engine.session.SESSION_STATE_FILE", state_file)
+
+        result = SessionManager.get_last_session_state()
+        assert result is not None
+        assert result["name"] == "ghost_session"
+        # No "exists on disk" check happens — that's the caller's job.
+
+    def test_load_of_pointed_session_returns_false_when_deleted(self, tmp_path):
+        """When the engine layer tries to restore the pointer's named
+        session and it's gone, load() returns False. The session_ops
+        wrapper turns this into success=False."""
+        sm = self._sm(tmp_path)
+        # Pointer says "session_x" but no session_x.json exists.
+        assert sm.load("session_x") is False
+        # Engine messages stayed pristine.
+        assert sm.messages == []
+
+    def test_get_or_scan_returns_pointer_even_if_named_session_gone(
+        self, tmp_path, monkeypatch
+    ):
+        """The fallback scan only fires when get_last_session_state
+        returns None. A stale-but-present pointer still wins —
+        documenting current behavior so a future 'validate first'
+        change is intentional, not accidental."""
+        state_file = tmp_path / "session-state.json"
+        state_file.write_text(json.dumps({
+            "version": 1,
+            "last_session": {
+                "name": "stale_pointer",
+                "dirty": True,
+                "provider": "openai",
+                "model": "gpt-5.4-mini",
+                "working_dir": "/tmp",
+                "tools_enabled": False,
+                "message_count": 0,
+            },
+        }), encoding="utf-8")
+        monkeypatch.setattr("ppxai.engine.session.SESSION_STATE_FILE", state_file)
+
+        # Don't provision any actual session files.
+        result = SessionManager.get_last_session_state_or_scan()
+        assert result is not None
+        assert result["name"] == "stale_pointer"
+        # No `recovered_from_disk` key — this came from the pointer.
+        assert "recovered_from_disk" not in result
+
+    def test_clear_state_file_clears_stale_pointer(self, tmp_path, monkeypatch):
+        """After /clear or fresh-session start, clear_state_file
+        removes the pointer entirely. Subsequent get_last_session_state
+        returns None — auto-restore prompt won't fire."""
+        state_file = tmp_path / "session-state.json"
+        state_file.write_text(json.dumps({
+            "version": 1, "last_session": {"name": "x", "dirty": False},
+        }), encoding="utf-8")
+        monkeypatch.setattr("ppxai.engine.session.SESSION_STATE_FILE", state_file)
+
+        SessionManager.clear_state_file()
+        assert SessionManager.get_last_session_state() is None
+        assert not state_file.exists()
+
+    def test_clear_state_file_idempotent_when_already_missing(
+        self, tmp_path, monkeypatch
+    ):
+        """Calling clear twice (or when no pointer exists) must not
+        raise — startup paths often clear-then-write."""
+        state_file = tmp_path / "session-state.json"
+        monkeypatch.setattr("ppxai.engine.session.SESSION_STATE_FILE", state_file)
+        # Doesn't exist yet.
+        SessionManager.clear_state_file()  # must not raise
+        SessionManager.clear_state_file()  # idempotent
+        assert not state_file.exists()
+
+    def test_pointer_dirty_flag_survives_pointer_lifecycle(
+        self, tmp_path, monkeypatch
+    ):
+        """save_dirty -> _update_state_file(dirty=True). mark_clean ->
+        _update_state_file(dirty=False) ONLY if there was meaningful
+        content. Verify the dirty flag round-trips correctly so the
+        client's 'unsaved changes?' prompt fires on restart."""
+        from ppxai.engine.types import Message
+
+        state_file = tmp_path / "session-state.json"
+        monkeypatch.setattr("ppxai.engine.session.SESSION_STATE_FILE", state_file)
+
+        sm = self._sm(tmp_path)
+        sm.session_name = "active"
+        sm.messages = [Message(role="user", content="x")]
+        sm.save_dirty()
+
+        ptr = SessionManager.get_last_session_state()
+        assert ptr is not None
+        assert ptr["dirty"] is True
+        assert ptr["name"] == "active"
+
+        sm.mark_clean()
+        ptr_after = SessionManager.get_last_session_state()
+        assert ptr_after["dirty"] is False
+
+
+class TestConcurrentSaveLoad:
+    """Two SessionManager instances pointing at the same sessions_dir.
+
+    The server architecture already holds a per-session asyncio.Lock at
+    the SessionManager (server/session_manager.py) layer — within one
+    process, save/load can't race. But two ppxai processes (two TUI
+    instances on the same host, or web + TUI on the same user) DO
+    point at the same ~/.ppxai/sessions/ and there's no inter-process
+    lock. Test the file-level invariants that survive that.
+    """
+
+    def _sm(self, sessions_dir):
+        sm = SessionManager(sessions_dir=sessions_dir)
+        sm.sessions_dir.mkdir(parents=True, exist_ok=True)
+        return sm
+
+    def test_second_writer_overwrites_first_for_flat_session(self, tmp_path):
+        from ppxai.engine.types import Message
+        sessions_dir = tmp_path / "sessions"
+
+        sm1 = self._sm(sessions_dir)
+        sm1.session_name = "shared"
+        sm1.messages = [
+            Message(role="user", content="from sm1"),
+            Message(role="assistant", content="reply"),
+        ]
+        sm1.save("shared")
+
+        sm2 = self._sm(sessions_dir)
+        sm2.session_name = "shared"
+        sm2.messages = [
+            Message(role="user", content="from sm2"),
+            Message(role="assistant", content="ok"),
+        ]
+        sm2.save("shared")
+
+        # A third manager loading sees sm2's data — last writer wins.
+        sm3 = self._sm(sessions_dir)
+        assert sm3.load("shared") is True
+        assert len(sm3.messages) == 2
+        assert sm3.messages[0].content == "from sm2"
+
+    def test_two_managers_can_both_load_same_session_independently(self, tmp_path):
+        """No exclusive lock — both readers see the same data, no
+        EBUSY, no corruption. Important because web/VSCode clients
+        often refresh /sessions concurrently."""
+        from ppxai.engine.types import Message
+        sessions_dir = tmp_path / "sessions"
+
+        seed = self._sm(sessions_dir)
+        seed.session_name = "concur"
+        seed.messages = [
+            Message(role="user", content="hi"),
+            Message(role="assistant", content="hello"),
+        ]
+        seed.save("concur")
+
+        sm_a = self._sm(sessions_dir)
+        sm_b = self._sm(sessions_dir)
+
+        assert sm_a.load("concur") is True
+        assert sm_b.load("concur") is True
+        assert len(sm_a.messages) == len(sm_b.messages) == 2
+        assert sm_a.messages[0].content == sm_b.messages[0].content
+
+    def test_load_picks_up_external_writer_changes(self, tmp_path):
+        """Manager loaded before an external writer rewrote the file —
+        a second load() call MUST see the new data, not a cached
+        old version. (No internal cache invalidation bug.)"""
+        from ppxai.engine.types import Message
+        sessions_dir = tmp_path / "sessions"
+
+        seed = self._sm(sessions_dir)
+        seed.session_name = "watcher"
+        # Alternation matters — orphan-user messages get stripped
+        # by validate_and_fix_alternation() inside save().
+        seed.messages = [
+            Message(role="user", content="round 1"),
+            Message(role="assistant", content="reply 1"),
+        ]
+        seed.save("watcher")
+
+        observer = self._sm(sessions_dir)
+        observer.load("watcher")
+        assert observer.messages[0].content == "round 1"
+
+        # External writer modifies on disk.
+        writer = self._sm(sessions_dir)
+        writer.session_name = "watcher"
+        writer.messages = [
+            Message(role="user", content="round 2"),
+            Message(role="assistant", content="ack"),
+        ]
+        writer.save("watcher")
+
+        # Second load on observer sees the new state.
+        assert observer.load("watcher") is True
+        assert len(observer.messages) == 2
+        assert observer.messages[0].content == "round 2"
+
+    def test_concurrent_format_transitions_only_one_winner(self, tmp_path):
+        """Both managers see a flat file + want to transition to
+        directory. The first reaches os.rename and wins; the second
+        either succeeds via the stale-tmp cleanup OR raises a clear
+        OSError. It MUST NOT silently corrupt the live directory."""
+        from ppxai.engine.types import Message
+
+        sessions_dir = tmp_path / "sessions"
+        sessions_dir.mkdir()
+
+        # Seed flat file.
+        flat = sessions_dir / "shared.json"
+        flat.write_text(json.dumps({
+            "session_name": "shared", "messages": [], "metadata": {},
+        }), encoding="utf-8")
+
+        sm1 = SessionManager(sessions_dir=sessions_dir)
+        sm1.session_name = "shared"
+        sm1.messages = [Message(role="user", content=[
+            {"type": "image_url", "image_url": {"url": "data:image/png;base64,AA"}},
+        ])]
+
+        sm2 = SessionManager(sessions_dir=sessions_dir)
+        sm2.session_name = "shared"
+        sm2.messages = [Message(role="user", content=[
+            {"type": "image_url", "image_url": {"url": "data:image/png;base64,BB"}},
+        ])]
+
+        # First write — succeeds.
+        sm1._write_session_json("shared", {
+            "session_name": "shared", "messages": [], "metadata": {},
+        })
+
+        # Second write — directory already exists, takes the
+        # in-place path (rule 1 of _resolve_session_storage).
+        # Must not crash, must overwrite cleanly.
+        sm2._write_session_json("shared", {
+            "session_name": "shared",
+            "messages": [{"role": "user", "content": "sm2 wrote"}],
+            "metadata": {},
+        })
+
+        dir_path = sessions_dir / "shared"
+        assert dir_path.is_dir()
+        # No leftover tmp.
+        assert not (sessions_dir / "shared.tmp").exists()
+        # Final state is sm2's.
+        with open(dir_path / "session.json", "r", encoding="utf-8") as f:
+            data = json.load(f)
+        assert data["messages"][0]["content"] == "sm2 wrote"
 
 
 class TestSessionNamePathTraversal:
