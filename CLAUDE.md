@@ -674,6 +674,40 @@ the pushed value, done. No per-client scanning.
    when adding a new field — intentional friction so every addition gets
    reviewed against the cross-client schema contract.
 
+### Reading the graphify signal about this pattern (don't misdiagnose)
+
+The community-detection graph at `graphify-out/GRAPH_REPORT.md`
+consistently shows AppState's host community (typically the largest
+one, e.g. "Engine + AppState Core") with **cohesion ≈ 0.0** and
+~1,000–1,500 nodes pulled into it. This is **expected, not a smell.**
+
+Why it shows that way: AppState is hub-and-spoke by design (one
+canonical engine-side store, four renderers subscribing). Louvain sees
+no internal subgroup boundaries inside the hub and assigns minimum
+cohesion. The graph is correctly describing the topology — it is *not*
+labelling the design as broken.
+
+**Do not** propose to "decompose" or "refactor" this community based
+on the graphify reading alone. The pattern was deliberately chosen to
+eliminate cross-client drift (4 clients re-implementing the same
+state-derivation = 4 places to fix when the shape changes), and the
+maintenance cost is paid for by mirroring rules 3 and 6 above plus
+the planned AppState codegen (`docs/TODO-appstate-codegen.md`).
+
+**Do** use the graph as a steady-state gauge:
+- C0 size growing rapidly between rebuilds → AppState may be absorbing
+  state that doesn't need cross-client parity (transient UI flicker,
+  per-client view state). That belongs in a non-AppState observable.
+- A new top-10 god node appearing inside C0 *without* a corresponding
+  entry in `SSE_SYNC_FIELDS` (`ppxai/engine/client.py`) → cross-client
+  state escaped the contract. Investigate.
+- If C0 ever splits into multiple communities of comparable size, the
+  hub-and-spoke contract has eroded — that *is* a design regression.
+
+The misreading to avoid: "C0 has cohesion 0.0 → leaky abstraction →
+let's redesign." That was a verify-don't-assume miss caught on
+2026-04-27. The graph signal is honest; the *interpretation* matters.
+
 ## Critical Architecture Pattern: Command Dispatch via Envelope (v1.18.1)
 
 **Added:** v1.18.1
@@ -1210,6 +1244,43 @@ I'll use the apply_patch tool.
   }
 }
 ```
+
+## Verify, Don't Assume
+
+**Before dismissing an anomaly (warning, error, unexpected output) as
+"pre-existing", "unrelated", "normal", or "expected to fail", run the
+actual check that proves it.** Confident-sounding assumptions on this
+project have repeatedly cost corrective iterations.
+
+Concrete examples from project history:
+- v1.18.1 needed 4 retag cycles in part because Linux-vs-Windows test
+  divergence was assumed-equivalent (HOME-includes-tmp_path fallback was
+  Windows-only). See `memory/release-lessons.md` §4.
+- v1.18.1 streaming felt sluggish — a 100ms tick from 6 weeks earlier
+  that was *assumed* to be fine because it was unchanged.
+- PyInstaller binaries shipped without `dotenv` because the build venv
+  was *assumed* to have every `hiddenimport` installed. See
+  `memory/feedback_pyinstaller_silent_module_drop.md`.
+- Test persistence pollution: `monkeypatch HOME` was *assumed* to redirect
+  a path that was actually module-load-resolved. See
+  `memory/feedback_test_persistence_pollution.md`.
+
+Common 30-second verifications to run before dismissing:
+- "Does this fail on master too?" → `git stash`, rerun, restore.
+- "Is this output from my edit or pre-existing?" → check timestamps,
+  `git blame`, or run the tool against a baseline.
+- "Does the file parse?" → run the parser on JUST the section edited,
+  not the whole file (whole-file parsers often error on legitimate
+  non-target content like markdown bodies after YAML frontmatter).
+- "Is the binary actually working?" → `<binary> --version` after every
+  PyInstaller rebuild, even when the build succeeded.
+
+If verification is genuinely impractical, say "I'm assuming X because Y,
+but haven't confirmed" — make the uncertainty explicit so the user can
+decide whether to trust it. Trust-but-verify especially applies to:
+PyInstaller builds, cross-platform test failures, encoding/CRLF behaviour,
+Windows-specific path code, YAML parsing of multi-format files, and
+anything to do with releases.
 
 ## Commit Guidelines
 
