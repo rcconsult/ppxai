@@ -586,6 +586,18 @@ def main():
                 if message_count > 0 and (save_interval == 0 or message_count % max(1, save_interval) == 0):
                     try:
                         handler.engine_client.session.save_dirty()
+                        # v1.18.2: also flush per-session usage to the
+                        # global ledger (~/.ppxai/usage/usage.json). The
+                        # server already does this per-turn (see
+                        # server/streaming.py:179, 238); Rich TUI used
+                        # to call it only on /quit, so /usage 24h
+                        # reported stale data through long sessions.
+                        try:
+                            handler.engine_client.session.save_usage_to_persistent_storage()
+                        except Exception:
+                            # Non-critical — global ledger lag is not
+                            # worth crashing the chat loop over.
+                            pass
                         autosave_guard.on_success()
                     except Exception as e:
                         logger.warning(f"Auto-save failed: {e}")

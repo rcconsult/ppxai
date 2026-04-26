@@ -272,6 +272,16 @@ async def on_stream_end(app, sender, data, **kwargs) -> None:
     if message_count > 0 and (save_interval == 0 or message_count % max(1, save_interval) == 0):
         try:
             app._engine_client.session.save_dirty()
+            # v1.18.2: also flush per-session usage to the global
+            # ledger so /usage 24h reports up-to-date data instead
+            # of stale snapshots written only on /quit. Server-side
+            # equivalents live in server/streaming.py:179, 238.
+            try:
+                app._engine_client.session.save_usage_to_persistent_storage()
+            except Exception:
+                # Non-critical — don't crash the chat loop on a
+                # global-ledger write failure.
+                pass
             app._autosave_guard.on_success()
         except Exception as e:
             app._log.warning(f"Auto-save failed: {e}")
