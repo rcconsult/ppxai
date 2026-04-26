@@ -542,6 +542,49 @@ class SessionManager:
                     f"at position {i}"
                 )
 
+        # v1.18.2: Orphan assistant.tool_calls cleanup.
+        # If an assistant message has tool_calls but the following tool
+        # messages don't cover ALL tool_call_ids, OpenAI rejects the next
+        # request with a 400. This happens when KeyboardInterrupt fires
+        # in chat.py between adding the assistant message and the tool
+        # result loop, OR when a tool execution is cancelled mid-loop.
+        # Drop the orphan assistant message; the model will re-emit the
+        # tool calls on the next turn.
+        cleaned: list = []
+        i = 0
+        while i < len(fixed_messages):
+            msg = fixed_messages[i]
+            if msg.role == "assistant" and msg.tool_calls:
+                expected_ids = {
+                    tc.get("id") for tc in msg.tool_calls if tc.get("id")
+                }
+                # Collect tool_call_ids in following consecutive tool messages.
+                seen_ids: set = set()
+                j = i + 1
+                while j < len(fixed_messages) and fixed_messages[j].role == "tool":
+                    tcid = fixed_messages[j].tool_call_id
+                    if tcid:
+                        seen_ids.add(tcid)
+                    j += 1
+                missing = expected_ids - seen_ids
+                if expected_ids and missing:
+                    # Drop this orphan assistant + any partial tool results.
+                    # Partial results without their assistant context are
+                    # also invalid for the next API call.
+                    removed_count += 1 + (j - i - 1)
+                    logger.warning(
+                        f"Session alternation fix: dropped orphan "
+                        f"assistant.tool_calls + {j - i - 1} partial tool "
+                        f"messages (missing {len(missing)} tool_call_ids: "
+                        f"{', '.join(sorted(missing))[:120]}). "
+                        f"Likely a KeyboardInterrupt mid-tool-iteration."
+                    )
+                    i = j
+                    continue
+            cleaned.append(msg)
+            i += 1
+        fixed_messages = cleaned
+
         # Also ensure session ends with assistant message (not orphan user)
         # A trailing user message without assistant response will cause alternation
         # errors when the next message is sent
@@ -1199,6 +1242,32 @@ class SessionManager:
                 completion_tokens=usage_data.get("completion_tokens", 0),
                 estimated_cost=usage_data.get("estimated_cost", 0.0)
             )
+            # v1.18.2: Restore per-model breakdown and tool usage. Without
+            # this, every session reload silently wipes the historical
+            # per-model attribution — only chats since the last load show
+            # up under by_model, while the session total keeps accumulating
+            # correctly. Long-running sessions (multi-day, multi-launch) end
+            # up with a TOTAL row that doesn't match the sum of per-model
+            # rows, making the cost breakdown unreadable.
+            self.usage_by_model = {}
+            for key, stats_dict in (usage_data.get("by_model") or {}).items():
+                self.usage_by_model[key] = UsageStats(
+                    total_tokens=stats_dict.get("total_tokens", 0),
+                    prompt_tokens=stats_dict.get("prompt_tokens", 0),
+                    completion_tokens=stats_dict.get("completion_tokens", 0),
+                    estimated_cost=stats_dict.get("estimated_cost", 0.0),
+                )
+            # Restore tool_calls into self.usage.tool_calls (separate
+            # counter, accumulated by update_usage's tool-merge branch).
+            self.usage.tool_calls = {}
+            for tool_name, tool_dict in (usage_data.get("tool_calls") or {}).items():
+                self.usage.tool_calls[tool_name] = ToolUsage(
+                    call_count=tool_dict.get("call_count", 0),
+                    tokens_in=tool_dict.get("tokens_in", 0),
+                    tokens_out=tool_dict.get("tokens_out", 0),
+                    estimated_cost=tool_dict.get("estimated_cost", 0.0),
+                    provider=tool_dict.get("provider", ""),
+                )
 
             # Load persistence fields
             self.command_history = data.get("command_history", [])

@@ -616,11 +616,20 @@ def main():
                 # v1.18.0 Phase 3: read last role from AppState instead of
                 # scanning session.messages — the engine maintains
                 # last_message_role via session.on_messages_changed.
+                # v1.18.2: also fire validate_and_fix_alternation() to clean
+                # any orphan assistant.tool_calls left behind when
+                # KeyboardInterrupt fired between chat.py adding the assistant
+                # message and the tool result loop. Without this, the next
+                # turn's request to OpenAI rejects with a 400 referencing the
+                # missing tool_call_ids.
                 cleaned = False
                 if handler.engine_client:
                     last_role = handler.engine_client.state.get("last_message_role")
                     if last_role == "user":
                         handler.engine_client.session.remove_last_message()
+                        cleaned = True
+                    fixed = handler.engine_client.session.validate_and_fix_alternation()
+                    if fixed > 0:
                         cleaned = True
                 if cleaned:
                     console.print("[dim]Conversation history cleaned up. Message chain is in a sane state.[/dim]\n")

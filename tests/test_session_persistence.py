@@ -889,6 +889,306 @@ class TestAtomicSessionFormatTransition:
             "stale flat file must be removed after successful transition"
 
 
+class TestUsageRoundTrip:
+    """v1.18.2 fix: session.load() restores usage_by_model and tool_calls.
+
+    Bug: pre-fix, load() restored only `self.usage` (session total) from
+    JSON. `self.usage_by_model` and `self.usage.tool_calls` were left at
+    their __init__ defaults (empty dicts). Every restart of a long-lived
+    session silently wiped the historical per-model attribution.
+
+    Symptom: usage table shows TOTAL row that doesn't match the sum of
+    per-model rows — historical tokens accumulate into the session
+    total but vanish from the breakdown.
+    """
+
+    def _sm(self, tmp_path):
+        sm = SessionManager(sessions_dir=tmp_path / "sessions")
+        sm.sessions_dir.mkdir(parents=True, exist_ok=True)
+        return sm
+
+    def test_save_then_load_preserves_usage_by_model(self, tmp_path):
+        from ppxai.engine.types import Message, UsageStats
+        sm = self._sm(tmp_path)
+        sm.session_name = "usage_rt"
+        sm.messages = [
+            Message(role="user", content="hi"),
+            Message(role="assistant", content="hello"),
+        ]
+        sm.update_usage(
+            UsageStats(
+                prompt_tokens=1000,
+                completion_tokens=500,
+                total_tokens=1500,
+                estimated_cost=0.0123,
+            ),
+            provider="openai",
+            model="gpt-5.4-mini",
+        )
+        sm.save("usage_rt")
+
+        # Load into a fresh manager.
+        sm2 = self._sm(tmp_path)
+        assert sm2.load("usage_rt") is True
+
+        # Session total restored.
+        assert sm2.usage.prompt_tokens == 1000
+        assert sm2.usage.completion_tokens == 500
+        assert sm2.usage.estimated_cost == pytest.approx(0.0123)
+
+        # Per-model breakdown restored — this is the fix.
+        key = "openai/gpt-5.4-mini"
+        assert key in sm2.usage_by_model, (
+            f"by_model lost on reload — got keys: {list(sm2.usage_by_model.keys())}"
+        )
+        m = sm2.usage_by_model[key]
+        assert m.prompt_tokens == 1000
+        assert m.completion_tokens == 500
+        assert m.estimated_cost == pytest.approx(0.0123)
+
+    def test_save_then_load_preserves_multi_model_breakdown(self, tmp_path):
+        """Two models in the same session both round-trip."""
+        from ppxai.engine.types import Message, UsageStats
+        sm = self._sm(tmp_path)
+        sm.session_name = "multi_model"
+        sm.messages = [
+            Message(role="user", content="hi"),
+            Message(role="assistant", content="hello"),
+        ]
+        sm.update_usage(
+            UsageStats(prompt_tokens=2000000, completion_tokens=10000,
+                       total_tokens=2010000, estimated_cost=10.30),
+            provider="openai", model="gpt-5.4-mini",
+        )
+        sm.update_usage(
+            UsageStats(prompt_tokens=5000000, completion_tokens=20000,
+                       total_tokens=5020000, estimated_cost=25.60),
+            provider="openai", model="gpt-5.5",
+        )
+        sm.save("multi_model")
+
+        sm2 = self._sm(tmp_path)
+        sm2.load("multi_model")
+        assert "openai/gpt-5.4-mini" in sm2.usage_by_model
+        assert "openai/gpt-5.5" in sm2.usage_by_model
+        assert sm2.usage_by_model["openai/gpt-5.5"].prompt_tokens == 5000000
+        assert sm2.usage_by_model["openai/gpt-5.4-mini"].prompt_tokens == 2000000
+
+    def test_save_then_load_preserves_tool_calls_usage(self, tmp_path):
+        from ppxai.engine.types import Message, UsageStats, ToolUsage
+        sm = self._sm(tmp_path)
+        sm.session_name = "tool_usage"
+        sm.messages = [
+            Message(role="user", content="hi"),
+            Message(role="assistant", content="hello"),
+        ]
+        usage = UsageStats(
+            prompt_tokens=100, completion_tokens=50, total_tokens=150,
+            estimated_cost=0.001,
+        )
+        usage.tool_calls = {
+            "vl_caption": ToolUsage(
+                call_count=3, tokens_in=15000, tokens_out=300,
+                estimated_cost=0.025, provider="gemini",
+            ),
+        }
+        sm.update_usage(usage, provider="openai", model="gpt-5.4-mini")
+        sm.save("tool_usage")
+
+        sm2 = self._sm(tmp_path)
+        sm2.load("tool_usage")
+        assert "vl_caption" in sm2.usage.tool_calls
+        tc = sm2.usage.tool_calls["vl_caption"]
+        assert tc.call_count == 3
+        assert tc.tokens_in == 15000
+        assert tc.estimated_cost == pytest.approx(0.025)
+        assert tc.provider == "gemini"
+
+    def test_load_old_session_without_by_model_does_not_crash(self, tmp_path):
+        """Pre-v1.18.2 sessions had no by_model in their saved JSON.
+        Loading them must not crash; usage_by_model just stays empty."""
+        sm = self._sm(tmp_path)
+        path = sm.sessions_dir / "legacy.json"
+        path.write_text(json.dumps({
+            "session_name": "legacy",
+            "messages": [
+                {"role": "user", "content": "hi"},
+                {"role": "assistant", "content": "ok"},
+            ],
+            "metadata": {},
+            "usage": {
+                "total_tokens": 1500,
+                "prompt_tokens": 1000,
+                "completion_tokens": 500,
+                "estimated_cost": 0.0123,
+                # No by_model key, no tool_calls key — pre-fix format
+            },
+        }), encoding="utf-8")
+
+        assert sm.load("legacy") is True
+        assert sm.usage.prompt_tokens == 1000
+        assert sm.usage_by_model == {}
+        assert sm.usage.tool_calls == {}
+
+
+class TestOrphanToolCallsCleanup:
+    """v1.18.2 fix: Ctrl+C mid-tool-iteration leaves orphan tool_calls.
+
+    Bug: When KeyboardInterrupt fires between chat.py adding the
+    assistant message with tool_calls (line 795) and the tool result
+    loop (line 807), the session has an assistant message with
+    tool_call_ids that no following tool messages cover. Next OpenAI
+    request rejects with HTTP 400:
+
+        An assistant message with 'tool_calls' must be followed by
+        tool messages responding to each 'tool_call_id'. The following
+        tool_call_ids did not have response messages: call_X, call_Y, call_Z
+
+    Fix: validate_and_fix_alternation drops the orphan assistant
+    message + any partial tool results so the model retries the
+    tool calls on the next turn.
+    """
+
+    def _sm(self, tmp_path):
+        sm = SessionManager(sessions_dir=tmp_path / "sessions")
+        sm.sessions_dir.mkdir(parents=True, exist_ok=True)
+        return sm
+
+    def _assistant_with_tool_calls(self, ids):
+        from ppxai.engine.types import Message
+        return Message(
+            role="assistant",
+            content="",
+            tool_calls=[
+                {
+                    "id": tcid,
+                    "type": "function",
+                    "function": {"name": "read_file", "arguments": "{}"},
+                }
+                for tcid in ids
+            ],
+        )
+
+    def _tool_result(self, tcid, content="result"):
+        from ppxai.engine.types import Message
+        return Message(role="tool", content=content, tool_call_id=tcid)
+
+    def test_drops_assistant_with_no_tool_responses(self, tmp_path):
+        """Pure orphan: assistant + 3 tool_calls, zero tool messages."""
+        from ppxai.engine.types import Message
+        sm = self._sm(tmp_path)
+        sm.messages = [
+            Message(role="user", content="be concise"),
+            self._assistant_with_tool_calls(["call_A", "call_B", "call_C"]),
+        ]
+        removed = sm.validate_and_fix_alternation()
+        assert removed >= 1
+        # Only the user message should remain (or be removed too if it
+        # would now be a trailing user message — both are valid sane states).
+        roles = [m.role for m in sm.messages]
+        assert "assistant" not in roles or all(
+            not m.tool_calls for m in sm.messages if m.role == "assistant"
+        ), f"Orphan tool_calls survived: {roles}"
+
+    def test_drops_assistant_with_partial_tool_responses(self, tmp_path):
+        """Partial: 3 tool_calls, only 1 response."""
+        from ppxai.engine.types import Message
+        sm = self._sm(tmp_path)
+        sm.messages = [
+            Message(role="user", content="run it"),
+            self._assistant_with_tool_calls(["call_A", "call_B", "call_C"]),
+            self._tool_result("call_A", "ok"),
+            # call_B and call_C never got responses
+        ]
+        removed = sm.validate_and_fix_alternation()
+        assert removed >= 1
+        # The orphan + partial cleanup should leave just the user message.
+        for msg in sm.messages:
+            if msg.role == "assistant" and msg.tool_calls:
+                pytest.fail(
+                    f"Orphan assistant.tool_calls survived: "
+                    f"ids={[t.get('id') for t in msg.tool_calls]}"
+                )
+
+    def test_preserves_complete_tool_call_sequence(self, tmp_path):
+        """Sanity: a complete assistant+tools+followup sequence stays intact."""
+        from ppxai.engine.types import Message
+        sm = self._sm(tmp_path)
+        sm.messages = [
+            Message(role="user", content="run it"),
+            self._assistant_with_tool_calls(["call_A", "call_B"]),
+            self._tool_result("call_A", "ok"),
+            self._tool_result("call_B", "ok2"),
+            Message(role="assistant", content="Done."),
+        ]
+        sm.validate_and_fix_alternation()
+        # All 5 messages survive
+        roles = [m.role for m in sm.messages]
+        assert roles == ["user", "assistant", "tool", "tool", "assistant"]
+
+    def test_orphan_in_middle_of_session_drops_only_orphan(self, tmp_path):
+        """Earlier complete tool sequence + later orphan tool_calls."""
+        from ppxai.engine.types import Message
+        sm = self._sm(tmp_path)
+        sm.messages = [
+            Message(role="user", content="first"),
+            self._assistant_with_tool_calls(["call_A"]),
+            self._tool_result("call_A", "ok"),
+            Message(role="assistant", content="first response"),
+            Message(role="user", content="second"),
+            self._assistant_with_tool_calls(["call_B", "call_C"]),
+            # call_B and call_C orphaned
+        ]
+        sm.validate_and_fix_alternation()
+        # The complete first sequence survives.
+        # The trailing orphan assistant gets dropped.
+        # The trailing user message also gets dropped (no response) by
+        # the existing trailing-cleanup logic.
+        assistant_with_calls = [
+            m for m in sm.messages if m.role == "assistant" and m.tool_calls
+        ]
+        for msg in assistant_with_calls:
+            ids = {t.get("id") for t in msg.tool_calls}
+            tool_msgs_after = [
+                m for m in sm.messages[sm.messages.index(msg) + 1:]
+                if m.role == "tool"
+            ]
+            seen_ids = {m.tool_call_id for m in tool_msgs_after}
+            assert ids.issubset(seen_ids), (
+                f"Surviving assistant.tool_calls {ids} missing responses: "
+                f"{ids - seen_ids}"
+            )
+
+    def test_save_then_load_clean_session_with_orphan(self, tmp_path):
+        """End-to-end: save a corrupted session, load it, validation
+        fires implicitly via load() and cleans the orphan."""
+        from ppxai.engine.types import Message
+
+        sm = self._sm(tmp_path)
+        sm.session_name = "orphan_test"
+        sm.messages = [
+            Message(role="user", content="run"),
+            self._assistant_with_tool_calls(["call_X", "call_Y"]),
+            # No tool responses — orphan
+        ]
+        # Bypass save() (which calls validate_and_fix_alternation pre-save)
+        # by writing the JSON directly.
+        import json as _json
+        path = sm.sessions_dir / "orphan_test.json"
+        path.write_text(_json.dumps({
+            "session_name": "orphan_test",
+            "messages": [sm._serialize_message(m) for m in sm.messages],
+            "metadata": {},
+        }), encoding="utf-8")
+
+        # Load into a fresh manager — validation should clean the orphan.
+        sm2 = self._sm(tmp_path)
+        assert sm2.load("orphan_test") is True
+        for msg in sm2.messages:
+            if msg.role == "assistant" and msg.tool_calls:
+                pytest.fail("Orphan tool_calls survived load+validation")
+
+
 class TestWriteSessionJsonPropagatesOSError:
     """The engine layer MUST propagate write failures so the UI layer's
     AutosaveFailureGuard (rich/main.py, tui/stream_handler.py) can count
