@@ -157,6 +157,42 @@ model_hints:
     - "Use ONLY tools from the available tools list - do NOT hallucinate tool names."
     - "apply_patch parameter names are EXACTLY 'path' and 'patch' - NEVER use 'file_path', 'filepath', 'unified_diff', or 'diff'."
     - "Do NOT output tool call JSON in markdown code blocks - use native tool calling."
+  # gpt-5.5* family — flagship (released 2026-04-23). NOT YET BENCHMARKED.
+  # First fully retrained base since GPT-4.5. Hints cloned from gpt-5.4
+  # as a starting point. Re-tune after running benchmarks/llm-eval.
+  # Expected: error_recovery_chain pattern carries from gpt-5.4;
+  # fix_verify possibly fixed by cleaner base training.
+  "gpt-5.5*":
+    - "For code modifications, use apply_patch with complete unified diffs including ALL context lines (3+ before/after each change)."
+    - "Do NOT output tool call JSON in your response text. Use the tools API to make function calls."
+    - "Call tools directly — do NOT explain what you'll do first."
+    - "Avoid duplicate or redundant calls for the same operation."
+    - "For large file writes: ensure the COMPLETE content is in the tool call — never truncate or abbreviate."
+    - "When a task requires multiple file operations, chain ALL tool calls consecutively. Do NOT stop to narrate between tool calls."
+    - "When asked to read multiple files, call read_file for EACH file before responding."
+    - "After fixing code or resolving an issue, verify the fix by re-running the relevant test. The cycle is: write → test → fix → retest."
+    - "When an approach fails, try at least one alternative before reporting the issue."
+    - "Leverage your 1M context window for large codebase analysis — include full file contents when relevant."
+  # gpt-5.3-codex — code-specialized variant. Hints cloned from gpt-5.1-codex
+  # since the family shares the Codex API path. 400K context, 128K max output.
+  "gpt-5.3-codex*":
+    - "You are a code-specialized model — prioritize correctness and code quality over commentary."
+    - "For code modifications, use apply_patch with complete unified diffs (3+ context lines before/after each change)."
+    - "Use the tools API for function calls — do NOT output JSON in response text."
+    - "Chain multi-step coding work: read → modify → test → verify, all in one continuous tool sequence."
+    - "Avoid duplicate or redundant tool calls for the same operation."
+    - "For large file writes: ensure the COMPLETE content is in the tool call — never truncate."
+    - "After fixing code, run the relevant test to verify the fix works. The cycle is: write → test → fix → retest."
+    - "Leverage your 400K context for long agentic sessions — keep full file context when refactoring across files."
+  # gpt-5-pro — premium tier of GPT-5 with extended reasoning.
+  "gpt-5-pro*":
+    - "You are a reasoning-tier model — leverage extended thinking for hard problems."
+    - "For code modifications, use apply_patch with complete unified diffs (3+ context lines)."
+    - "Use the tools API for function calls — do NOT output JSON in response text."
+    - "Call tools directly without lengthy preamble — your reasoning happens before the tool call, not in the response."
+    - "Avoid duplicate calls. Chain different operations consecutively."
+    - "For large file writes: complete content only — never truncate."
+    - "After fixing, verify by re-running the relevant test or command."
   # gpt-5.4* family — flagship (released 2026-03-05 / 03-17).
   # Benchmarked 2026-04-12: gpt-5.4 = 84.2%, gpt-5.4-mini = 97.5%.
   #

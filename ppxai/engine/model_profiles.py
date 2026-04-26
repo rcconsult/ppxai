@@ -121,6 +121,38 @@ BUILTIN_PROFILES: Dict[str, ModelProfile] = {
 
     # ── Tier A: 65-75% success ────────────────────────────────────────
 
+    "gpt-5.5*": ModelProfile(
+        # Released 2026-04-23. NOT YET BENCHMARKED — tier="A" provisional,
+        # cloned from gpt-5.4. Re-tier after running benchmarks/llm-eval.
+        # Same shape as gpt-5.2/5.4: native tool calling, JSON-leak strip,
+        # parallel calls, restricted sampling params for reasoning models.
+        tool_calling=ToolCallingProfile(
+            mode="native",
+            strip_json_from_text=True,
+            parallel_tool_calls=True,
+        ),
+        max_tokens=128_000,
+        restricted_params=["temperature", "top_p"],
+        supports_vision=True,
+        tier="A",
+    ),
+    "gpt-5.3-codex*": ModelProfile(
+        # Code-specialized variant ("most capable agentic coding model
+        # to date" per OpenAI). Uses Responses API like other Codex
+        # variants. Shape mirrors gpt-5.1-codex but with the newer
+        # capabilities folded into the gpt-5.4 mainline.
+        tool_calling=ToolCallingProfile(
+            mode="native",
+            api_path="responses",
+            strip_json_from_text=True,
+            fallback_on_empty=True,
+        ),
+        max_tokens=128_000,
+        max_tool_iterations=20,
+        restricted_params=["temperature", "top_p"],
+        supports_vision=True,
+        tier="A",
+    ),
     "gpt-5.2*": ModelProfile(
         tool_calling=ToolCallingProfile(
             mode="native",
@@ -148,6 +180,17 @@ BUILTIN_PROFILES: Dict[str, ModelProfile] = {
             fallback_on_empty=True,
         ),
         max_tokens=128_000,
+        supports_vision=True,
+        tier="A",
+    ),
+    # NOTE: gpt-5-pro MUST come before gpt-5 to avoid glob shadowing.
+    "gpt-5-pro*": ModelProfile(
+        tool_calling=ToolCallingProfile(
+            mode="native",
+            strip_json_from_text=True,
+        ),
+        max_tokens=128_000,
+        restricted_params=["temperature", "top_p"],
         supports_vision=True,
         tier="A",
     ),

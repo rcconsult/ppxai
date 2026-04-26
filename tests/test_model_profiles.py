@@ -211,6 +211,40 @@ class TestBuiltinProfiles:
             assert profile.max_tokens == 16_384, \
                 f"{model}: expected max_tokens=16384, got {profile.max_tokens}"
 
+    def test_gpt_5_5_resolves_to_native_profile(self):
+        """gpt-5.5 (released 2026-04-23) should resolve to its own profile."""
+        for model in ["gpt-5.5", "gpt-5.5-pro", "gpt-5.5-2026-04-23"]:
+            profile = get_profile(model)
+            assert profile.tool_calling.mode == "native", \
+                f"{model} should be native, got {profile.tool_calling.mode}"
+            assert profile.tool_calling.parallel_tool_calls is True, \
+                f"{model} should support parallel tool calls"
+            assert profile.supports_vision is True, \
+                f"{model} should support vision"
+            assert "temperature" in profile.restricted_params, \
+                f"{model} should have temperature restricted"
+
+    def test_gpt_5_3_codex_uses_responses_api(self):
+        """gpt-5.3-codex must hit the Responses API path like other Codex variants."""
+        profile = get_profile("gpt-5.3-codex")
+        assert profile.tool_calling.api_path == "responses", \
+            "gpt-5.3-codex should use Responses API"
+        assert profile.tool_calling.mode == "native"
+        assert profile.max_tokens == 128_000
+        assert profile.supports_vision is True
+
+    def test_gpt_5_pro_not_shadowed_by_gpt_5_glob(self):
+        """gpt-5-pro must match its own profile, not gpt-5*."""
+        profile = get_profile("gpt-5-pro")
+        # gpt-5-pro is a premium tier — restricted params, native tool calling
+        assert profile.tool_calling.mode == "native"
+        assert "temperature" in profile.restricted_params, \
+            "gpt-5-pro should have restricted sampling params"
+        # Verify base gpt-5 still matches its own profile (no restricted params)
+        base = get_profile("gpt-5")
+        assert "temperature" not in base.restricted_params, \
+            "Base gpt-5 should NOT have restricted_params (was: it doesn't in the registry)"
+
     def test_codex_mini_not_shadowed_by_codex_glob(self):
         """gpt-5.1-codex-mini must match its own profile, not gpt-5.1-codex*."""
         profile = get_profile("gpt-5.1-codex-mini")

@@ -235,10 +235,12 @@ ALL_DEPRECATIONS: Dict[str, Deprecation] = {
 RECOMMENDED_NEW_MODELS: List[Dict[str, str]] = [
     {
         "provider": "openai",
-        "model": "gpt-5.4",
+        "model": "gpt-5.5",
         "reason": (
-            "New OpenAI flagship (released 2026-03-05). 1M context, "
-            "75% computer use benchmark, $2.50/MTok input."
+            "Newest OpenAI flagship (released 2026-04-23). 1M context, "
+            "first fully retrained base since GPT-4.5. $5/MTok input — "
+            "2× the price of gpt-5.4. Use for hardest tasks; "
+            "gpt-5.4-mini remains best price/perf for everyday work."
         ),
     },
     {
@@ -247,6 +249,25 @@ RECOMMENDED_NEW_MODELS: List[Dict[str, str]] = [
         "reason": (
             "Newest OpenAI small model (released 2026-03-17). 400K context, "
             "$0.75/$4.50 per MTok — best price/performance in the GPT-5.x tier."
+        ),
+    },
+    {
+        "provider": "openai",
+        "model": "gpt-5.4",
+        "reason": (
+            "OpenAI flagship (released 2026-03-05). 1M context, "
+            "75% computer use benchmark, $2.50/MTok input. "
+            "Stable default — cheaper than gpt-5.5 with proven track record."
+        ),
+    },
+    {
+        "provider": "openai",
+        "model": "gpt-5.3-codex",
+        "reason": (
+            "Code-specialized model — \"most capable agentic coding model "
+            "to date\" per OpenAI. 400K context. Note: gpt-5.4 mainline "
+            "absorbs these capabilities, but the dedicated Codex variant "
+            "remains a valid choice for long agentic coding sessions."
         ),
     },
     {

@@ -243,6 +243,20 @@
         "preferred": "gemini"
       },
       "models": {
+        "gpt-5.5": {
+          "name": "GPT-5.5",
+          "description": "Newest OpenAI flagship (released 2026-04-23). 1M context, $5/$30 per MTok — 2× the price of GPT-5.4. First fully retrained base since GPT-4.5.",
+          "context_limit": 1048576,
+          "__comment_best_for": "Hardest reasoning, novel algorithm design, long-context refactors. Expensive — prefer gpt-5.4-mini for everyday work.",
+          "__comment_benchmark_status": "NOT YET BENCHMARKED — hints cloned from gpt-5.4 as starting point. Run benchmarks/llm-eval before tuning."
+        },
+        "gpt-5.5-pro": {
+          "name": "GPT-5.5 Pro",
+          "description": "Premium tier of GPT-5.5 (released 2026-04-23). $30/$180 per MTok — highest available capability.",
+          "context_limit": 1048576,
+          "__comment_best_for": "Critical code review, ADR drafting, multi-day investigation work. ~6× the cost of gpt-5.4-pro.",
+          "__comment_benchmark_status": "NOT YET BENCHMARKED — likely cost-prohibitive for the 36-test suite (~$15-20 per run)."
+        },
         "gpt-5.4": {
           "name": "GPT-5.4",
           "description": "Current flagship (released 2026-03-05). 1M context, 75% computer use benchmark, best overall intelligence.",
@@ -294,6 +308,15 @@
             "max_tokens": 16384
           }
         },
+        "gpt-5.3-codex": {
+          "name": "GPT-5.3 Codex",
+          "description": "Code-specialized model — \"most capable agentic coding model to date\" per OpenAI. 400K context, 128K max output. Note: gpt-5.4 mainline has absorbed these capabilities, but the Codex variant remains for users who want the dedicated coding-tuned model.",
+          "context_limit": 400000,
+          "__comment_best_for": "Long-horizon agentic coding sessions, multi-file refactors with extensive tool chains.",
+          "generation_params": {
+            "max_tokens": 16384
+          }
+        },
         "gpt-5.1": {
           "name": "GPT-5.1",
           "description": "Previous flagship, still excellent for general coding",
@@ -302,7 +325,7 @@
         },
         "gpt-5.1-codex": {
           "name": "GPT-5.1 Codex",
-          "description": "Code-specialized model optimized for software engineering tasks",
+          "description": "Code-specialized model optimized for software engineering tasks. DEPRECATED upstream by OpenAI in favor of gpt-5.3-codex / gpt-5.4 — kept for backwards compat.",
           "context_limit": 400000,
           "__comment_best_for": "Code generation, refactoring, debugging. Tuned specifically for coding."
         },
@@ -311,6 +334,15 @@
           "description": "Lightweight code-specialized model for fast coding tasks",
           "context_limit": 400000,
           "__comment_best_for": "Quick edits, simple code generation, file operations. Budget codex option.",
+          "generation_params": {
+            "max_tokens": 16384
+          }
+        },
+        "gpt-5-pro": {
+          "name": "GPT-5 Pro",
+          "description": "Premium tier of GPT-5 with extended reasoning. 400K context. Sits between gpt-5 and gpt-5.4-pro for users who want GPT-5-class with deeper reasoning.",
+          "context_limit": 400000,
+          "__comment_best_for": "Reasoning-heavy investigation work where gpt-5 isn't deep enough but gpt-5.4-pro is overkill.",
           "generation_params": {
             "max_tokens": 16384
           }
@@ -392,6 +424,16 @@
         }
       },
       "pricing": {
+        "gpt-5.5": {
+          "input": 5.0,
+          "output": 30.0,
+          "__comment": "Released 2026-04-23. 2× the price of gpt-5.4."
+        },
+        "gpt-5.5-pro": {
+          "input": 30.0,
+          "output": 180.0,
+          "__comment": "Released 2026-04-23. 2× the price of gpt-5.4-pro. Verify against https://platform.openai.com/docs/pricing"
+        },
         "gpt-5.4": {
           "input": 2.5,
           "output": 15.0
@@ -400,6 +442,11 @@
           "input": 15.0,
           "output": 75.0,
           "__comment": "Premium tier — verify against https://platform.openai.com/docs/pricing"
+        },
+        "gpt-5.3-codex": {
+          "input": 1.75,
+          "output": 14.0,
+          "__comment": "Code-specialized variant. Pricing per devtk.ai 2026-03 listing. Verify against https://developers.openai.com/codex/pricing"
         },
         "gpt-5.4-mini": {
           "input": 0.75,
@@ -428,6 +475,11 @@
         "gpt-5.1-codex-mini": {
           "input": 0.25,
           "output": 2.0
+        },
+        "gpt-5-pro": {
+          "input": 12.5,
+          "output": 100.0,
+          "__comment": "Pro tier of GPT-5. Verify against https://platform.openai.com/docs/pricing"
         },
         "gpt-5": {
           "input": 1.25,
