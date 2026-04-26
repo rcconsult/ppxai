@@ -1093,6 +1093,12 @@ class SessionManager:
         instead of two entries for the same conversation in the session
         list. Full atomic-rename fix is still R11 in TODO-file-upload.
         """
+        # Reject names that would escape sessions_dir via path traversal.
+        # Path("/a/b") / "../c" resolves to /a/c on open() even without
+        # .resolve(), so we must validate before any filesystem operation.
+        if not name or "/" in name or "\\" in name or name in (".", ".."):
+            return None
+
         dir_path = self.sessions_dir / name
         flat_path = self.sessions_dir / f"{name}.json"
 
