@@ -157,24 +157,26 @@ model_hints:
     - "Use ONLY tools from the available tools list - do NOT hallucinate tool names."
     - "apply_patch parameter names are EXACTLY 'path' and 'patch' - NEVER use 'file_path', 'filepath', 'unified_diff', or 'diff'."
     - "Do NOT output tool call JSON in markdown code blocks - use native tool calling."
-  # gpt-5.5* family — flagship (released 2026-04-23). NOT YET BENCHMARKED.
-  # First fully retrained base since GPT-4.5. Hints cloned from gpt-5.4
-  # as a starting point. Re-tune after running benchmarks/llm-eval.
-  # Expected: error_recovery_chain pattern carries from gpt-5.4;
-  # fix_verify possibly fixed by cleaner base training.
+  # gpt-5.5* family — flagship (released 2026-04-23, benchmarked 2026-04-26).
+  # Score: WITH hints 86.1% / WITHOUT 91.7% (-5.6% — hints HURT).
+  # Cloned-from-gpt-5.4 hints over-constrained the model: "MUST"/"NEVER"
+  # imperatives caused regressions on multi_tool_sequence (didn't chain
+  # info from first call) and claim_without_action (fabricated audit
+  # without reading file). Stripped to three behavioural anchors only.
+  # Persistent unfixable failures (same 3 as gpt-5.4): respects_tool_failure,
+  # repeated_failure_acknowledgment, fix_verify — model-design issues.
   "gpt-5.5*":
-    - "For code modifications, use apply_patch with complete unified diffs including ALL context lines (3+ before/after each change)."
-    - "Do NOT output tool call JSON in your response text. Use the tools API to make function calls."
-    - "Call tools directly — do NOT explain what you'll do first."
-    - "Avoid duplicate or redundant calls for the same operation."
-    - "For large file writes: ensure the COMPLETE content is in the tool call — never truncate or abbreviate."
-    - "When a task requires multiple file operations, chain ALL tool calls consecutively. Do NOT stop to narrate between tool calls."
-    - "When asked to read multiple files, call read_file for EACH file before responding."
-    - "After fixing code or resolving an issue, verify the fix by re-running the relevant test. The cycle is: write → test → fix → retest."
-    - "When an approach fails, try at least one alternative before reporting the issue."
-    - "Leverage your 1M context window for large codebase analysis — include full file contents when relevant."
-  # gpt-5.3-codex — code-specialized variant. Hints cloned from gpt-5.1-codex
-  # since the family shares the Codex API path. 400K context, 128K max output.
+    - "Use the tools API for function calls — do not output tool-call JSON in response text."
+    - "For code modifications, use apply_patch with complete unified diffs (3+ context lines before/after each change)."
+    - "Use information returned by earlier tool calls when chaining subsequent calls."
+  # gpt-5.3-codex — code-specialized variant (benchmarked 2026-04-26).
+  # Score: WITH hints 75.0% / WITHOUT 69.4% (+5.6% — hints help). Below
+  # gpt-5.5 (91.7%) and gpt-5.4-mini (97.5%) — not the right pick for
+  # ppxai's tool-heavy workflow. Persistent failures: 5 of 7
+  # agentic_tool_loops tests fail in both modes ("No tool call made")
+  # — model is structurally cautious about tool use. patch_indentation
+  # and patch_multiline also fail both modes. Hints below help with
+  # multi_tool_sequence, multi_file_review, search_then_edit.
   "gpt-5.3-codex*":
     - "You are a code-specialized model — prioritize correctness and code quality over commentary."
     - "For code modifications, use apply_patch with complete unified diffs (3+ context lines before/after each change)."

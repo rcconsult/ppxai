@@ -1309,6 +1309,20 @@
         "overall_score": 86.03960396039605,
         "agents_md_mode": "without"
       }
+    ],
+    "openai/gpt-5.5": [
+      {
+        "filename": "openai_gpt-5.5_2026-04-26_0aedfc2d.json",
+        "timestamp": "2026-04-26T15:37:28.772101",
+        "overall_score": 85.64356435643565,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "openai_gpt-5.5_2026-04-26_13b5ae51.json",
+        "timestamp": "2026-04-26T15:41:59.728498",
+        "overall_score": 90.4950495049505,
+        "agents_md_mode": "without"
+      }
     ]
   },
   "runs": [
@@ -2745,6 +2759,20 @@
       "filename": "vllm-qwen35_Qwen_Qwen3.5-27B-FP8_2026-04-07_c6d2a123.json",
       "timestamp": "2026-04-07T14:21:22.907992",
       "overall_score": 86.03960396039605,
+      "agents_md_mode": "without"
+    },
+    {
+      "pair": "openai/gpt-5.5",
+      "filename": "openai_gpt-5.5_2026-04-26_0aedfc2d.json",
+      "timestamp": "2026-04-26T15:37:28.772101",
+      "overall_score": 85.64356435643565,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "openai/gpt-5.5",
+      "filename": "openai_gpt-5.5_2026-04-26_13b5ae51.json",
+      "timestamp": "2026-04-26T15:41:59.728498",
+      "overall_score": 90.4950495049505,
       "agents_md_mode": "without"
     }
   ]
