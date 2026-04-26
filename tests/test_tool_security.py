@@ -423,6 +423,23 @@ class TestContainerConsentFlow:
         assert "denied" in result.lower()
         mock_run.assert_not_called()  # never reached subprocess
 
+    def test_cli_tool_base_class_build_command_raises_not_implemented(self):
+        """[E5 audit] container.py:104 raises NotImplementedError. This
+        is the abstract-method contract — the base CLITool isn't
+        meant to be instantiated directly. All 14 concrete subclasses
+        (DockerTool, KubeTool, ContainerListTool, etc.) override
+        build_command. Pin the contract so a future refactor that
+        accidentally instantiates the base class fails loudly instead
+        of running with empty args."""
+        from ppxai.engine.tools.builtin.container import CLITool
+
+        class BareSubclass(CLITool):
+            def __init__(self):
+                pass  # skip engine assignment for the contract test
+
+        with pytest.raises(NotImplementedError):
+            BareSubclass().build_command()
+
     @pytest.mark.asyncio
     async def test_consent_cli_tool_runtime_check_short_circuits_consent(
         self, tmp_path

@@ -644,7 +644,11 @@ class GeminiProvider(BaseProvider):
             List of function declarations in Gemini format
         """
         declarations = []
+        if not openai_tools:
+            return declarations
         for tool in openai_tools:
+            if not isinstance(tool, dict):
+                continue
             if tool.get("type") == "function" and "function" in tool:
                 func = tool["function"]
                 declaration = {

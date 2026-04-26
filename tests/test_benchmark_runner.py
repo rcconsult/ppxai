@@ -164,6 +164,82 @@ class TestBenchmarkSystemPromptBuild:
         assert "EDGE_CASE_SENTINEL" in full
         assert len(full) > 0
 
+    def test_engine_runner_source_actually_calls_bootstrap_prompt(self):
+        """CI gate against the d334453 regression class.
+
+        The other tests in this file reproduce the system-prompt build
+        logic INLINE (see _build_full_system). That's necessary because
+        benchmarks/llm-eval/engine_runner.py has sys.path + initialize()
+        side effects at import time, so we can't import the function
+        and call it directly.
+
+        The hidden risk: if engine_runner.py changes its build logic
+        (e.g., a future refactor drops the get_bootstrap_prompt call),
+        the inline reproduction tests still pass. The original 2026-02
+        regression went undetected for ~7 weeks for exactly this
+        reason — debug logs showed hints loaded, but the runner's
+        provider call never used them.
+
+        This static check guards against that: read the runner's
+        source and assert the invariant tokens are present in the
+        chat() method body. Any future refactor that drops them must
+        be intentional and re-update this test.
+        """
+        from pathlib import Path
+        runner_path = (
+            Path(__file__).parent.parent
+            / "benchmarks" / "llm-eval" / "engine_runner.py"
+        )
+        if not runner_path.is_file():
+            pytest.skip("engine_runner.py not present (running outside repo)")
+
+        source = runner_path.read_text(encoding="utf-8")
+
+        # Invariant 1: get_bootstrap_prompt must be invoked.
+        assert "get_bootstrap_prompt(" in source, (
+            "engine_runner.py does NOT call get_bootstrap_prompt — "
+            "AGENTS.md hints will be silently stripped from every "
+            "benchmark request. See commit d334453's regression."
+        )
+
+        # Invariant 2: the result must end up in a `full_system`
+        # variable that's the system message sent to the provider.
+        # We don't pin exact whitespace; we pin the conjunction
+        # 'bootstrap_prompt' + 'full_system' + 'system' role.
+        assert "bootstrap_prompt" in source
+        assert "full_system" in source
+        assert 'role="system"' in source or "role='system'" in source, (
+            "engine_runner.py's chat() doesn't append a system-role "
+            "message. The bootstrap prompt has nowhere to land."
+        )
+
+        # Invariant 3: debug logging must capture bootstrap_prompt_length.
+        # This is what an external CI step (or human reviewer) would
+        # grep for in a real benchmark run's debug logs to confirm
+        # hints reached the provider. If this field disappears, the
+        # post-mortem signal disappears with it.
+        assert "bootstrap_prompt_length" in source, (
+            "engine_runner.py's debug log no longer captures "
+            "bootstrap_prompt_length — operators lose the audit "
+            "signal that proves AGENTS.md hints reached the wire."
+        )
+
+        # Invariant 4: the bootstrap_prompt must be assembled BEFORE
+        # provider_messages.append for the system message. Easiest
+        # static check: bootstrap_prompt assignment line precedes the
+        # provider_messages.append("system", ...) line.
+        bp_idx = source.find("bootstrap_prompt = self._client.get_bootstrap_prompt")
+        sys_msg_idx = source.find('Message(role="system"')
+        if sys_msg_idx == -1:
+            sys_msg_idx = source.find("Message(role='system'")
+        assert bp_idx > 0, "Could not locate bootstrap_prompt assignment"
+        assert sys_msg_idx > 0, "Could not locate system Message construction"
+        assert bp_idx < sys_msg_idx, (
+            f"bootstrap_prompt assigned at offset {bp_idx} but used at "
+            f"offset {sys_msg_idx} — assembly order is wrong; the "
+            f"system message will be built before hints are loaded."
+        )
+
     def test_bootstrap_failure_falls_back_to_test_prompt(self):
         """If get_bootstrap_prompt() raises, we fall back to test-only.
 

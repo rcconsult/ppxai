@@ -122,3 +122,60 @@ class TestGeminiNullPartsRegression:
             [Message("user", "hello")], model="gemini-3-flash-preview"
         )
         assert result == ""
+
+
+class TestGeminiNoneIterableGuards:
+    """Defensive guards against the broader 'NoneType is not iterable'
+    class of bugs flagged in the gemini-3.1-pro benchmark debug logs.
+    The exact trigger wasn't reproducible from committed logs but the
+    most likely candidate is _convert_tools_to_gemini iterating None.
+    Pin the guards so future code paths can pass None safely."""
+
+    @pytest.fixture
+    def provider(self):
+        from ppxai.engine.providers.gemini import GeminiProvider
+
+        with patch("ppxai.engine.providers.gemini.genai") as mock_genai:
+            mock_genai.Client.return_value = MagicMock()
+            provider = GeminiProvider(api_key="test")
+        return provider
+
+    def test_convert_tools_to_gemini_handles_none(self, provider):
+        """Direct None input must return [] without iterating."""
+        result = provider._convert_tools_to_gemini(None)
+        assert result == []
+
+    def test_convert_tools_to_gemini_handles_empty_list(self, provider):
+        result = provider._convert_tools_to_gemini([])
+        assert result == []
+
+    def test_convert_tools_to_gemini_skips_non_dict_entries(self, provider):
+        """A malformed tools list with mixed non-dict entries must
+        skip the bad ones rather than raise AttributeError on .get()."""
+        malformed = [
+            None,  # bad
+            "string",  # bad
+            42,  # bad
+            {"type": "function", "function": {"name": "good_tool",
+                                              "description": "ok"}},
+        ]
+        result = provider._convert_tools_to_gemini(malformed)
+        assert len(result) == 1
+        assert result[0]["name"] == "good_tool"
+
+    def test_parse_function_call_handles_none(self, provider):
+        assert provider._parse_function_call(None) is None
+
+    def test_parse_grounding_handles_none(self, provider):
+        assert provider._parse_grounding(None) == []
+
+    def test_parse_usage_handles_none(self, provider):
+        assert provider._parse_usage(None) is None
+
+    def test_content_to_gemini_parts_handles_none_content(self, provider):
+        """Message content=None should produce an empty/blank text
+        part, not crash on `for block in None`."""
+        result = provider._content_to_gemini_parts(None)
+        assert isinstance(result, list)
+        # Either empty parts OR a blank text fallback — both safe.
+        assert len(result) >= 0
