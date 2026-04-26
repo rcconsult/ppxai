@@ -291,13 +291,19 @@ model_hints:
     - "When a tool returns an error, ACKNOWLEDGE it. After 2 failures, STOP and report."
     - "CRITICAL: When a task requires multiple file operations, chain ALL tool calls consecutively. Do NOT stop to narrate after each tool call. After receiving a tool result, immediately make the next tool call."
     - "When asked to read multiple files, call read_file for EACH file before responding. Do NOT read one file then describe it."
+  # gpt-5* fallback — applies to gpt-5, gpt-5.1, gpt-5.5, gpt-5-pro
+  # and any future variant. Two prescriptive hints removed 2026-04-26
+  # after gpt-5.5 benchmark showed they caused regressions on
+  # claim_without_action and multi_tool_sequence (the "After 2
+  # failures STOP" caused fabrication; "Avoid duplicate / Chain
+  # DIFFERENT" caused skipped info-passing). Mirror change in
+  # ~/.ppxai/AGENTS.md (user-side gpt-5* block).
   "gpt-5*":
     - "For code modifications, ALWAYS use apply_patch - do NOT use read_file when you should be editing."
     - "Include context lines (3+ before/after) in patches for reliable application."
-    - "CRITICAL: Do NOT output tool call JSON like {\"tool\": \"...\", \"arguments\": {...}} in your response. Use the tools API for all tool calls."
-    - "CRITICAL: When a tool returns an error, ACKNOWLEDGE it to the user. After 2 consecutive failures, STOP retrying and report the issue."
+    - "Do NOT output tool call JSON like {\"tool\": \"...\", \"arguments\": {...}} in your response. Use the tools API for all tool calls."
+    - "When a tool returns an error, acknowledge it to the user."
     - "Call tools directly - don't explain what you'll do first."
-    - "Avoid duplicate tool calls. Chain multiple DIFFERENT tool calls without stopping to narrate."
     - "For large file writes: generate the COMPLETE file content - never truncate or abbreviate."
   "gpt-4.1*":
     - "You have 1M token context - leverage it for large codebase analysis."
