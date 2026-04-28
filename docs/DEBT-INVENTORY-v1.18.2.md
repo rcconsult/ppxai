@@ -121,36 +121,6 @@ have minimum test coverage.
 
 ---
 
-### Item 4 — Focused-subtree graphify runs [Critique #10 follow-up]
-
-**What the critique said:** the original whole-repo graphify build (now
-12,781 nodes after the `.graphifyignore` hygiene fix) is informative for
-god-node detection but dilutes signal for subsystem-level architecture
-questions. Recommended running additional graphify builds scoped to:
-- `ppxai/engine/`
-- `ppxai/server/`
-- `ppxai/commands/`
-- `vscode-extension/src/`
-
-Each subtree-graph would surface its own communities, hubs, and
-inferred edges without the cross-subsystem noise.
-
-**Why deferred:** purely diagnostic work. The whole-repo graph is good
-enough for the kind of debt-inventory questions we ran today. Subtree
-graphs are a "polish on the polish" pass.
-
-**Trigger to revisit:** when a debt-inventory pass needs subsystem-level
-detail the whole-repo graph can't surface, OR when onboarding a new
-contributor who'd benefit from per-area architecture maps.
-
-**Effort:** ~1 hour to run all 4 builds + skim. Each subtree build is
-the same `graphify update <path>` command pointed at a subdirectory.
-
-**Branch when ready:** none needed — diagnostic only, results consumed
-locally or as a one-off doc commit.
-
----
-
 ### Item 5 — Bundle the VSCode extension
 
 **Affected files:** `vscode-extension/package.json`, `vscode-extension/.vscodeignore`,
@@ -390,6 +360,57 @@ Item 7 — both are one-line `logger.info` additions.
 ## Closed
 
 (Move items here as they land. Format: `### Item X — title — closed YYYY-MM-DD in commit-hash`)
+
+### Item 4 — Focused-subtree graphify runs — closed 2026-04-28
+
+Built per-subtree AST-only graphs to `graphify-out-{engine,server,commands,vscode}/`
+(gitignored). Diagnostic only — no fix branch needed.
+
+Per-subtree shape:
+
+| Subtree | Files | Nodes | Edges | Communities | Top hub (degree) |
+|---|---:|---:|---:|---:|---|
+| `ppxai/engine/` | 48 | 1,356 | 5,029 | 23 | `Event` / `EventType` (208) |
+| `ppxai/server/` | 27 | 478 | 904 | 23 | `Session` (109) |
+| `ppxai/commands/` | 16 | 430 | 1,847 | 25 | `CommandResult` (169) |
+| `vscode-extension/src/` | 19 | 285 | 566 | 15 | `HttpClient` (69) |
+
+What the subtree views surfaced that the whole-repo graph (cohesion ≈ 0.0
+across 12,781 nodes) could not:
+
+- **commands/** has the densest hub-and-spoke shape: edges-per-node 4.3
+  vs ~1.5–3.5 in other subtrees. Every handler module touches
+  `CommandResult` (169) + `CommandFactory` (127) + `CommandSpec` (99) +
+  `ResultStatus` (99) — confirms the v1.18.1 unification reach.
+  Communities cluster cleanly around shape: handler families
+  (agent/checkpoint/attach/show/edit), result types, context adapters,
+  factory plumbing. Cohesion 0.04–0.19, much higher than whole-repo.
+- **engine/** confirms the event-driven hub-and-spoke. The two largest
+  communities are 221 + 160 nodes around `EngineClient` / `AppState` /
+  tool base — exactly the hub-and-spoke pattern CLAUDE.md says is
+  *deliberate* and not to be "decomposed" based on graphify cohesion
+  alone. Subtree communities show 0.02–0.22 cohesion vs ~0.0 in the
+  whole-repo. The misreading risk is real; the subtree view should be
+  the default reading lens for this subsystem.
+- **server/** Session as the single dominant hub (109 inbound) — every
+  route resolves through it. Communities split cleanly along route
+  modules: file-ops, completion, agent, checkpoint, consent, static.
+  Cohesion peaks at 0.18 (file-ops) and 0.20 (checkpoint) — these are
+  genuinely well-encapsulated subsystems.
+- **vscode-extension/src/** — `ChatViewProvider` shows up at degree 56
+  in its own community of size 1 (cohesion 0.11), which independently
+  corroborates Item 2 (`resolveWebviewView` refactor) without needing
+  the gpt-5.5 critique to flag it. Anyone reading the subtree report
+  cold sees the smell.
+
+Surprising connections per subtree are minor (mostly INFERRED
+`uses` edges already obvious from imports). The signal is in the
+hubs + community split, not the surprises.
+
+Reusable: `c:\tmp\subtree_build.py` — small wrapper around
+`graphify.{detect,extract,build,cluster,analyze,report,export}` that
+runs the AST-only pipeline against an arbitrary `<input_path>
+<output_dir>`, no LLM cost.
 
 ### Critique items closed in v1.18.2
 

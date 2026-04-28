@@ -116,4 +116,5 @@ docs/session-log-*.txt
 # intentionally NOT ignored — it's a project-level input filter
 # (equivalent to .gitignore for graphify) and meant to be committed.
 graphify-out/
+graphify-out-*/
 .graphify_*
