@@ -7,11 +7,45 @@ node_modules
 __pycache__
 .pytest_cache
 graphify-out
+graphify-out-engine
+graphify-out-server
+graphify-out-commands
+graphify-out-vscode
+graphify-out-tui
 .code-review-graph
 *.min.js
 *.min.css
 *.map
 *.pyc
 .DS_Store
+
+# Test + benchmark + build-tooling exclusions (added 2026-04-29).
+#
+# Why these matter: a single 4,788-line `tests/test_tui.py` was
+# inflating PPXAIDEApp / MessageBox / ChatView whole-repo edge counts
+# to 507 / 473 / 442 — 71-79% of those edges came from that one
+# test file. The gpt-5.5 critique #6 read those numbers as a
+# "god class" smell, and Item 1 in DEBT-INVENTORY-v1.18.2.md
+# propagated the misread until production-code-only inbound
+# verification on 2026-04-29 caught it.
+#
+# Without these exclusions, every refactoring decision based on
+# whole-repo god-node ranking is biased: thoroughly-tested classes
+# look "smelly" and undertested classes look "clean" — exactly
+# inverted from the architectural reality.
+#
+# tests/ alone contributes 56.6% of all graph nodes; excluding the
+# four buckets below drops the whole-repo graph from ~11,600 nodes
+# to ~4,600 (−60%) and from ~47k edges to ~17k (−64%). The
+# resulting graph is a clean architectural view, not a test-
+# coverage map. To get test-coverage signal, run pytest --cov.
+tests
+benchmarks
+scripts
+examples
 benchmarks/llm-eval/debug
 benchmarks/llm-eval/results
+# Archived validation/migration scripts left over from v1.15.1
+# completed work — they're test-shaped and add no architectural
+# signal to the current graph.
+docs/archive
