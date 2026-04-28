@@ -26,35 +26,89 @@ without re-discovering the context.
 
 ## Open
 
-### Item 1 — God node refactoring [Critique #6]
+### Item 1 — God node refactoring [Critique #6] — SCOPE NARROWED 2026-04-28
 
-**Affected modules:** `ppxai/tui/app.py::PPXAIDEApp` (508 inbound edges),
-`ppxai/engine/client.py::EngineClient` (474 edges, partially decomposed in
-v1.17.x via `ops` modules), `ppxai/tui/widgets/message_box.py::MessageBox`
-(474 edges), `ppxai/tui/widgets/chat_view.py::ChatView` (443 edges).
+**Affected modules:** `ppxai/tui/app.py::PPXAIDEApp` (507 inbound edges),
+`ppxai/tui/widgets/message_box.py::MessageBox` (473 edges),
+`ppxai/tui/widgets/chat_view.py::ChatView` (was 443; now displaced from
+top-10 — verify with subtree build before scheduling).
+
+**EngineClient dropped from scope (2026-04-28).** A Tier 2 investigation
+on `bugfix/v1.18.2` (commit `c6322dda`) found that the 474→489 edge
+growth since the v1.17.x decomposition is fully attributable to v1.18.0
+features that **belong** in EngineClient per the documented AppState
+pattern: `_on_messages_changed` and `_refresh_last_message_role`
+fan-out callbacks (CLAUDE.md AppState rule #2 — "Engine-owned
+invalidation: EngineClient recomputes the field on mutation via a
+session callback"). Production-code inbound edges are 35 across 3
+importers (protocol, context, init re-export) — exactly what v1.17.x's
+decomposition aimed for. Further splitting would re-introduce the
+cross-client drift the AppState pattern was designed to eliminate.
 
 **What the critique said:** these classes have too many responsibilities;
 extract narrower services so future changes don't cascade. Specifically:
 - Move session-restore + state-sync orchestration out of `PPXAIDEApp`.
 - Extract rendering + state-update helpers from `MessageBox` and `ChatView`.
-- Split `EngineClient` further into: chat streaming, session restore, tool
-  registry, state/event queue, provider/model switching.
 
 **Why deferred:** refactor work that doesn't fit on a bugfix branch.
-Decomposing `EngineClient` already shipped 6 ops modules in v1.17.x; the
-remaining hot spots are UI classes whose tests are flakier and whose
-external API breaks easily.
+The remaining hot spots are pure UI classes whose tests are flakier and
+whose external API breaks easily. The AppState pattern doesn't
+constrain UI decomposition, so this is the right scope for a refactor
+branch.
 
-**Trigger to revisit:** when adding a new client (Slack bot, mobile app,
-CLI agent) that needs to reuse engine logic without dragging the TUI
-machinery, OR when a refactor touching `PPXAIDEApp` causes its 5th
-regression in a release.
+**Trigger to revisit:** when adding a new TUI variant (different
+framework, web-only, etc.) that needs to reuse the chat-rendering
+logic without dragging Textual machinery, OR when a refactor touching
+`PPXAIDEApp` causes its 5th regression in a release.
 
-**Effort:** ~1-2 weeks for a careful pass. Best done as 4 separate PRs
-(one per class), each landing with new test coverage for the extracted
-service.
+**Effort:** ~3–5 days for a careful pass (revised down from 1–2 weeks
+since EngineClient is no longer in scope). Best done as 3 separate PRs
+(one per class), each landing with new test coverage for the
+extracted service.
 
 **Branch when ready:** `refactor/god-nodes-v1.19.0` (or later).
+
+**Subtree graph signal (built 2026-04-28 via `c:\tmp\subtree_build.py
+ppxai/tui graphify-out-tui`):** the whole-repo god-node ranking is
+misleading for refactor planning — most of `PPXAIDEApp`'s 507 edges
+come from outside the TUI (tests, scripts, benchmarks). Inside the
+TUI subtree, the actual hub ranking is:
+
+| Node | Subtree degree | Notable |
+|---|---:|---|
+| `CodeEditor` | 176 | NOT in original critique — biggest UI hub |
+| `MessageBox` | 120 | Confirmed |
+| `FileTree` | 109 | NOT in original critique |
+| `Events` | 96 | Event-bus, structural |
+| `ChatView` | 92 | Confirmed but smaller than expected |
+
+`PPXAIDEApp` lands as a **singleton community** (cohesion 1.0, size
+1) — the same shape Item 2's `ChatViewProvider` shows in the VSCode
+subtree. Pure god-class smell; no internal structure for clustering
+to find.
+
+**Natural decomposition seams** the subtree graph surfaces:
+- **C0 (109 nodes, cohesion 0.03):** CodeEditor + DataViewer + viewer
+  widgets cluster — already partly separate, needs further pull.
+- **C1 (147 nodes, cohesion 0.04):** stream-handler + completion +
+  slash-commands cluster — extract a `stream_handler` service.
+- **C2 (107 nodes, cohesion 0.02):** MessageBox + ChatView + App
+  internals — extract `message_rendering` helpers (Rich markup
+  stripping, response-time badge update, etc.).
+- **PPXAIDEApp itself:** extract session-restore + state-sync into
+  TUI ops modules (mirror the `engine/ops_*` pattern).
+
+**Healthy clean splits already done** (cohesion ≥ 0.09): keys.py
+registry (C7), clipboard (C9), linkify (C10), input validation
+(C11), display-mode detection (C12). These confirm the
+extraction pattern works when applied with intent.
+
+**Refactor PR plan:**
+1. Extract `tui/stream_handler_ops` from C1 (largest win, lowest risk).
+2. Extract `tui/message_rendering` helpers from C2.
+3. Extract `tui/session_restore_ops` from PPXAIDEApp.
+4. CodeEditor / DataViewer cluster cleanup is optional — already
+   has internal structure, lower priority.
 
 ---
 
@@ -218,6 +272,84 @@ under a "Windows developer setup" subsection (~15 minutes).
 
 **Branch when ready:** none required for the env fix; if documenting,
 fold into a future `docs:` commit.
+
+---
+
+### Item 10 — Introduce `EngineClientProtocol` for the commands layer
+
+**Affected files:**
+[ppxai/commands/protocol.py:18,44](../ppxai/commands/protocol.py#L18),
+[ppxai/commands/context.py:21,75](../ppxai/commands/context.py#L21),
+new `EngineClientProtocol` to live in [ppxai/engine/types.py](../ppxai/engine/types.py).
+
+**What's wrong:** `commands/protocol.py` is the canonical Protocol
+layer for commands — it should be free of concrete engine types. It
+currently imports `EngineClient` directly to type-annotate the
+`engine_client` property. `commands/context.py` does the same for
+`ServerCommandContext.__init__`. Per
+[CLAUDE.md "Critical Architecture Pattern: Protocol-Based
+Dependency Inversion"], the project pattern is to define a `*Protocol`
+in `engine/types.py` (a leaf module) and have concrete classes satisfy
+it structurally. Two such protocols exist already: `ToolEngineProtocol`
+and `ToolManagerProtocol`. EngineClient does not have one.
+
+**Why this matters:** the commands→engine boundary is the only
+production importer surface where this rule slips. The graphify graph
+attributes ~21 inbound edges to `EngineClient` from `protocol.py`
+alone — most of those are method references that an
+`EngineClientProtocol` would absorb cleanly. Surfaced during the
+Tier 2 investigation on 2026-04-28 (commit `c6322dda`); the rest of
+the EngineClient hub is structurally healthy.
+
+**Why this is NOT a circular-import bug:** `engine.client` does not
+import from `ppxai.commands`, so the strict Protocol-DI rule is
+technically satisfied. The motivation here is consistency and edge-
+count reduction, not a working defect.
+
+**Concrete fix:**
+
+(a) In [ppxai/engine/types.py](../ppxai/engine/types.py), add:
+```python
+@runtime_checkable
+class EngineClientProtocol(Protocol):
+    """The engine surface area that commands depend on.
+
+    Define ONLY what commands actually use — chat, providers, tools,
+    session management, working dir, agent mode. No streaming
+    internals, no SSE machinery, no AppState mutation.
+    """
+    @property
+    def session(self) -> Any: ...
+    @property
+    def state(self) -> Any: ...
+    def get_working_dir(self) -> Optional[str]: ...
+    def set_working_dir(self, path: str) -> None: ...
+    def list_providers(self) -> list: ...
+    def get_current_provider(self) -> str: ...
+    # ... etc — match what protocol.py + context.py actually call
+```
+
+(b) Replace `EngineClient` annotations in `protocol.py` and
+`context.py` with `EngineClientProtocol`.
+
+(c) Drop the `from ..engine.client import EngineClient` lines from
+both files; they no longer need the concrete class.
+
+**Effort:** ~half day. Mostly mechanical — read what
+`protocol.py` + `context.py` actually access on the engine, list the
+union as protocol methods, replace annotations. Add a sentinel test
+asserting `EngineClient` satisfies the protocol via
+`isinstance(engine, EngineClientProtocol)` so future changes don't
+silently break the contract. Expected outcome: ~20 fewer inbound
+edges to `EngineClient` in the next graphify rebuild, and the
+commands layer becomes engine-implementation-agnostic.
+
+**Trigger to revisit:** when adding a fourth concrete CommandContext
+adapter (e.g. mobile/Slack/CLI), OR when EngineClient gains a
+breaking API change — both scenarios benefit from the indirection
+already being in place.
+
+**Branch when ready:** `refactor/engine-client-protocol`.
 
 ---
 
