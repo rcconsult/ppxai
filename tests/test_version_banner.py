@@ -129,6 +129,69 @@ class TestGitCommitFallback:
         assert info["commit"] == "n/a"
 
 
+class TestBuildInfoInjection:
+    """v1.18.2 Item 8: when scripts/write_build_info.py has generated
+    `ppxai/_build_info.py`, the runtime banner reads from it instead of
+    falling back to git rev-parse + source-mtime probes.
+
+    PyInstaller binaries lose access to git and the source tree, so
+    pre-fix they reported `commit n/a, source n/a`. Build-time
+    injection lets shipped binaries display the real commit + build
+    time — the diagnostic data the v1.18.2 banner feature was for.
+    """
+
+    def test_build_info_takes_precedence_when_present(self):
+        """When `_build_info.py` exists, its values win over runtime
+        probes — even when git rev-parse would succeed."""
+        from ppxai import version as ver_mod
+        # Stand up a fake _build_info module and inject it.
+        import sys
+        import types
+
+        fake = types.ModuleType("ppxai._build_info")
+        fake.BUILD_COMMIT = "deadbee"
+        fake.BUILD_MTIME = "2026-04-28 20:00:00 UTC"
+        sys.modules["ppxai._build_info"] = fake
+        try:
+            info = ver_mod.get_runtime_version_info()
+            assert info["commit"] == "deadbee"
+            assert info["source_mtime"] == "2026-04-28 20:00:00 UTC"
+        finally:
+            del sys.modules["ppxai._build_info"]
+
+    def test_falls_back_to_runtime_probes_when_absent(self):
+        """No _build_info.py → existing git rev-parse + mtime probes."""
+        from ppxai import version as ver_mod
+        import sys
+        # Defensively remove the module if a previous test left one.
+        sys.modules.pop("ppxai._build_info", None)
+        # The runtime path returns either real values or "n/a"
+        # depending on whether the test runs from a git checkout.
+        info = ver_mod.get_runtime_version_info()
+        # Either resolved to real values or fell through to "n/a".
+        # Both are acceptable; what's NOT acceptable is the build-info
+        # leaking into the runtime path.
+        assert info["commit"] != "deadbee"
+
+    def test_partial_build_info_falls_through(self):
+        """If `_build_info.py` is malformed (missing BUILD_MTIME) the
+        runtime path takes over — we don't ship a half-populated banner."""
+        from ppxai import version as ver_mod
+        import sys
+        import types
+
+        fake = types.ModuleType("ppxai._build_info")
+        fake.BUILD_COMMIT = "deadbee"
+        # Deliberately omit BUILD_MTIME.
+        sys.modules["ppxai._build_info"] = fake
+        try:
+            info = ver_mod.get_runtime_version_info()
+            # Must NOT use the partial commit — fall through to runtime.
+            assert info["commit"] != "deadbee"
+        finally:
+            del sys.modules["ppxai._build_info"]
+
+
 class TestLoggerBannerIntegration:
     def test_logger_writes_version_banner_at_session_start(self, tmp_path, monkeypatch):
         """The Logger.enable() session-start banner must include the

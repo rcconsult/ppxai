@@ -258,3 +258,40 @@ class TestStateRoute:
                          "completion_tokens", "total_cost",
                          "is_streaming", "cancel_requested"):
             assert excluded not in body
+
+    def test_route_logs_request(self, client, caplog, tmp_path, monkeypatch):
+        """v1.18.2 Item 9: GET /state emits an info-level log line so
+        we can tell whether visibilitychange / focus re-anchor (Phase A)
+        actually fires in production.
+
+        Pre-fix, the route was silent — the 2026-04-27 webapp session
+        ran 21 minutes with zero observable /state hits, leaving us
+        unable to distinguish "listener not wired" from "listener fired
+        but route doesn't log". Wiring was confirmed (deployed app.js
+        byte-identical to repo) so this log line is the diagnostic.
+
+        The Logger singleton is force-enabled for the test, mirroring
+        the production scenario where debug-log is toggled on before
+        an investigation; otherwise route logs go to a NullHandler.
+        Enable on the existing singleton — popping it would orphan the
+        module-level `logger = get_logger("server")` in state.py.
+        """
+        import logging
+        monkeypatch.setattr("pathlib.Path.home", lambda: tmp_path)
+        from ppxai.common.logger import get_logger
+        log = get_logger("server")
+        was_enabled = log.enabled
+        if not was_enabled:
+            log.enable()
+        try:
+            with caplog.at_level(logging.INFO, logger="ppxai.server"):
+                client.get("/state")
+            matches = [
+                r for r in caplog.records
+                if "GET /state" in r.getMessage()
+            ]
+            assert matches, "expected an info log line containing 'GET /state'"
+            assert "session=" in matches[0].getMessage()
+        finally:
+            if not was_enabled and hasattr(log, "disable"):
+                log.disable()

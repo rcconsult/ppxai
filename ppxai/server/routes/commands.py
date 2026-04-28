@@ -35,8 +35,11 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from ...commands.context import ServerCommandContext
 from ...commands.factory import CommandFactory
+from ...common.logger import get_logger
 from ..models import CommandRequest
 from ..state import Session, get_session, with_drained_events
+
+logger = get_logger("server")
 
 router = APIRouter()
 
@@ -57,12 +60,17 @@ async def execute_command(
     The factory does the lookup; the handler does the work; this
     route only wraps the result for the wire.
     """
+    args_preview = (request.args or "")[:120]
+    logger.info(f"HTTP POST /command/{name} from session={s.id} args={args_preview!r}")
+
     spec = CommandFactory.get(name)
     if not spec:
+        logger.warning(f"  Unknown command: /{name}")
         raise HTTPException(status_code=404, detail=f"Unknown command: /{name}")
 
     context = ServerCommandContext(s.engine)
     result = spec.handler(context, request.args)
+    logger.debug(f"  /{name} ok={result.success} side_effects={len(result.side_effects)}")
 
     envelope = {
         "ok": result.success,

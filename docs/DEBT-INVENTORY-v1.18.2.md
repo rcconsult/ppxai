@@ -221,145 +221,90 @@ fold into a future `docs:` commit.
 
 ---
 
-### Item 7 — `/command/{name}` route emits no request log
-
-**Affected file:** [ppxai/server/routes/commands.py:46](../ppxai/server/routes/commands.py#L46).
-
-**What's wrong:** the canonical v1.18.1 slash-command dispatch path
-has zero `logger.info(...)` instrumentation. Every sibling route
-([files.py:439](../ppxai/server/routes/files.py#L439),
-[files.py:307](../ppxai/server/routes/files.py#L307),
-[files.py:165](../ppxai/server/routes/files.py#L165),
-[context.py:195](../ppxai/server/routes/context.py#L195)) logs
-`HTTP {METHOD} /<path>` on entry; `commands.py` does not.
-
-In the 2026-04-27 webapp session (`webapp-f2d045de`), `/save`,
-`/usage`, and `/usage 24h` were issued 8 times across a 21-minute
-session and `server-debug.log` shows only the client-echo lines
-(`CLIENT[web]: > /save`). The server-side dispatch is invisible.
-
-**Why this matters:** v1.18.1 unification was specifically meant to
-prevent commands from silently falling back to bespoke endpoints —
-the failure mode that caused 9/10 builtin command modules to be
-missing from PyInstaller specs for six releases. Without route
-logging we can't *prove* the unification holds in production; the
-exact regression we built to detect would slip through again.
-
-**Concrete fix:** add one line at the top of `execute_command`:
-```python
-logger.info(f"HTTP POST /command/{name} from session={s.id}")
-```
-plus a debug line for `request.args` truncated to ~120 chars.
-
-**Effort:** ~5 minutes + a unit test asserting the log line is
-emitted (mirror the pattern in `tests/test_files_routes.py` if one
-exists, otherwise a `caplog.text` assertion is enough).
-
-**Branch when ready:** small enough to fold into the next bugfix
-branch — does not need its own.
-
----
-
-### Item 8 — Version banner shows `commit n/a, source n/a` for shipped binaries
-
-**Affected file:** [ppxai/version.py:21-69](../ppxai/version.py#L21-L69).
-
-**What's wrong:** `_git_commit_hash()` runs `git rev-parse --short
-HEAD` against `Path(__file__).resolve().parent.parent`, and
-`_source_mtime()` walks engine + clients dirs. Both fall back to
-`None` (rendered as "n/a") when the running process is a
-PyInstaller binary in `~/.ppxai/bin/` — no `.git/`, no source tree
-in the expected layout. Confirmed in the 2026-04-27 session
-banner: `ppxai v1.18.2 (commit n/a, source n/a, python 3.13.13,
-windows-AMD64)`.
-
-**Why this matters:** the v1.18.2 banner feature
-(commit `b3deca6b`) was specifically designed to "make it obvious
-which code state is actually running — particularly important
-after editable installs where a stale Python process can outlive
-its source." For end-users on shipped binaries (the largest
-audience), the two diagnostic fields that actually answer "what
-am I running" are gone. The feature works only for dev runs from
-source.
-
-**Concrete fix:** bake the build-time commit into the binary:
-
-(a) In `scripts/release.py` (or PyInstaller pre-build hook), write
-    `ppxai/_build_info.py` with:
-    ```python
-    BUILD_COMMIT = "b3deca6b"
-    BUILD_DATE = "2026-04-25T18:30:00Z"
-    BUILD_VERSION = "1.18.2"
-    ```
-(b) `version.py` checks for `_build_info.py` first; falls back to
-    `git rev-parse` only when it's absent (dev runs).
-(c) `.gitignore` excludes `_build_info.py` so it's regenerated on
-    every build and never committed.
-
-Alternative (lighter): set `PPXAI_BUILD_COMMIT` env var in the
-PyInstaller spec via `--add-data` or `runtime_hooks`, read it in
-`version.py`.
-
-**Effort:** ~30 minutes for the file-injection variant + a smoke
-test that the binary's `--version` output includes a real commit
-hash. Slightly more if we want CI to verify it.
-
-**Branch when ready:** `feat/version-banner-binary-injection` or
-fold into the next release-tooling pass alongside
-[docs/TODO-release-tooling.md](TODO-release-tooling.md).
-
----
-
-### Item 9 — `/state` re-anchor not observable in production logs
-
-**Affected:** v1.18.1 Phase A wiring (web `visibilitychange`
-listener, VSCode `onDidChangeWindowState`) → `GET /state` → AppState
-re-anchor. Likely in [ppxai/web/app.js](../ppxai/web/) and
-[vscode-extension/src/chatPanel.ts](../vscode-extension/src/chatPanel.ts).
-
-**What's wrong:** the 2026-04-27 webapp session ran 21 minutes,
-involved 5 provider switches, 3 saves, and 8 `/usage` checks, yet
-`server-debug.log` shows zero `GET /state` requests. The Phase A
-contract says the listener fires on tab focus/blur transitions.
-Either:
-1. The listener is not wired in the deployed `~/.ppxai/web/app.js`
-   (deployment drift between repo source and `~/.ppxai/web/`).
-2. `_reanchorFromServer` is wired but `GET /state` lacks logging
-   (same instrumentation gap as Item 7).
-3. The user genuinely never blurred the tab — possible but
-   unlikely across 21 minutes with multiple terminal switches.
-
-**Why this matters:** v1.18.1 spent significant effort on
-state-sync determinism (Phases A–D) precisely so that drift
-between engine state and client mirrors becomes named, surfaced,
-recoverable. If Phase A doesn't fire, we lose the front-line
-defence. We currently can't tell whether it's broken or just
-silent.
-
-**Concrete fix (in order):**
-
-(a) Add `logger.info(f"HTTP GET /state from session={s.id}")` to
-    `ppxai/server/routes/state.py` — same pattern as Item 7.
-    Eliminates ambiguity #2.
-(b) Diff deployed `~/.ppxai/web/app.js` against repo
-    `ppxai/web/app.js` — confirm `_reanchorFromServer` and the
-    `visibilitychange` listener are present in the deployed file.
-    Eliminates ambiguity #1.
-(c) If the listener is wired but never fires, add a one-line
-    `console.debug("visibilitychange:", document.visibilityState)`
-    so we can correlate browser events with server logs.
-
-**Effort:** ~15 minutes for (a) + (b). (c) is optional and only
-needed if (b) confirms the wiring is correct.
-
-**Branch when ready:** fold into the same observability pass as
-Item 7 — both are one-line `logger.info` additions.
-
----
-
 ## Closed
 
 (Move items here as they land. Format: `### Item X — title — closed YYYY-MM-DD in commit-hash`)
+
+### Item 7 — `/command/{name}` route emits no request log — closed 2026-04-28
+
+`ppxai/server/routes/commands.py:execute_command` now emits an
+INFO-level log line on every dispatch:
+
+```
+HTTP POST /command/{name} from session={s.id} args={args_preview!r}
+```
+
+Plus a DEBUG line with `ok` flag and `side_effects` count, and a
+WARNING when the command is unknown. The `args_preview` is
+truncated to 120 chars so noisy `/agent` prompts don't dominate
+the log.
+
+Tests added in `tests/test_command_envelope.py::TestRouteLogging`:
+- `test_route_logs_request` — INFO line emitted on POST
+- `test_unknown_command_logs_warning` — 404 path emits WARNING
+- `test_long_args_truncated_to_120_chars` — truncation guard
+
+The Logger wrapper in `ppxai.common.logger` is no-op until
+`/debug-log on` enables it (via env var or runtime toggle), so the
+tests force-enable the existing singleton — popping the singleton
+would orphan module-level `logger = get_logger("server")`
+references. This is a real subtle gotcha worth documenting.
+
+### Item 8 — Version banner shows `commit n/a, source n/a` for shipped binaries — closed 2026-04-28
+
+`ppxai/version.py::_build_info()` now checks for an optional
+`ppxai/_build_info.py` module before falling back to runtime probes
+(`git rev-parse`, source-mtime scan). The build-info module is
+generated by `scripts/write_build_info.py` and gitignored — release
+tooling runs the script just before each PyInstaller invocation,
+so the bundled binary carries the real commit + UTC build time.
+
+Generated module shape (4 lines, plus docstring):
+```python
+BUILD_COMMIT = '7b13784f'
+BUILD_MTIME = '2026-04-28 20:18:19 UTC'
+```
+
+Resolution order in `get_runtime_version_info()`:
+1. `_build_info.py` if present (binary builds).
+2. Runtime probes: `git rev-parse` + source mtime scan (dev runs).
+3. `"n/a"` fallback (genuinely unavailable).
+
+Partial build-info (missing `BUILD_MTIME`) falls through to runtime
+probes — we don't ship half-populated banners.
+
+Tests added in `tests/test_version_banner.py::TestBuildInfoInjection`:
+- `test_build_info_takes_precedence_when_present`
+- `test_falls_back_to_runtime_probes_when_absent`
+- `test_partial_build_info_falls_through`
+
+**Wiring into release tooling deferred** to whoever does the next
+release: add `python scripts/write_build_info.py` as a step in
+`scripts/release.py` before each `pyinstaller` invocation, OR add
+it as a pre-build hook to each `.spec` file. The mechanism is
+ready; the integration is one line.
+
+### Item 9 — `/state` re-anchor not observable in production logs — closed 2026-04-28
+
+`ppxai/server/routes/state.py::get_app_state` now emits an
+INFO-level log line on every snapshot fetch:
+
+```
+HTTP GET /state from session={s.id}
+```
+
+Diagnostic clauses (b) from the original entry was also performed:
+deployed `~/.ppxai/web/app.js` is byte-identical to repo source,
+and contains 6 occurrences of `visibilitychange` /
+`_reanchorFromServer` — the wiring IS present. The 21-minute
+2026-04-27 session that showed zero `/state` hits was therefore
+NOT a wiring break; the listener simply hadn't fired (most likely
+the user genuinely kept the tab focused). The new log line is the
+diagnostic for the next investigation: if `/state` lines appear,
+the listener works; if they're absent across known focus changes,
+we have a real wiring regression to chase.
+
+Test added in `tests/test_server_routes.py::TestStateRoute::test_route_logs_request`.
 
 ### Item 4 — Focused-subtree graphify runs — closed 2026-04-28
 

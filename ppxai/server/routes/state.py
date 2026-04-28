@@ -25,8 +25,11 @@ for those (same contract as live `state_sync` events).
 
 from fastapi import APIRouter, Depends
 
+from ...common.logger import get_logger
 from ...engine.client import SSE_SYNC_FIELDS
 from ..state import Session, get_session
+
+logger = get_logger("server")
 
 router = APIRouter()
 
@@ -43,5 +46,6 @@ async def get_app_state(s: Session = Depends(get_session)) -> dict:
     the same contract as live `state_sync` — clients get those from
     STREAM_END metadata, not from reconnect snapshots.
     """
+    logger.info(f"HTTP GET /state from session={s.id}")
     snapshot = s.engine.state.snapshot()
     return {field: snapshot.get(field) for field in SSE_SYNC_FIELDS}

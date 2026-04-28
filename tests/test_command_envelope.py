@@ -282,3 +282,74 @@ class TestEnvelopeBackwardCompat:
         result = body["result"]
         for key in ("type", "status", "message", "metadata"):
             assert key in result, f"Missing legacy key: {key}"
+
+
+class TestRouteLogging:
+    """v1.18.2 Item 7: every POST /command/<name> emits an info-level
+    log line so the unified dispatch path is visible in server-debug.log.
+
+    Pre-fix, the route was silent — the v1.18.1 unification could
+    silently revert to bespoke endpoints (the exact failure mode it was
+    built to prevent) and we'd never see it in production logs. The
+    2026-04-27 webapp session showed only client-echo lines for 8
+    slash commands across 21 minutes; nothing on the server side.
+
+    Note: the `ppxai.common.Logger` wrapper is a no-op until enabled
+    (via env var or `/debug-log on`). These tests force-enable the
+    "server" logger for the duration of each test so caplog can see
+    the records — mirroring the production scenario where debug-log
+    is toggled on before investigating an issue.
+    """
+
+    @pytest.fixture(autouse=True)
+    def _enable_server_logger(self, tmp_path, monkeypatch):
+        """Force the existing server Logger singleton on with file output
+        redirected to tmp_path. Must NOT replace the singleton — module-
+        level `logger = get_logger("server")` references in route files
+        captured the original instance at import time; popping it here
+        would leave those references pointing at the orphaned disabled
+        Logger.
+        """
+        monkeypatch.setattr("pathlib.Path.home", lambda: tmp_path)
+        from ppxai.common.logger import get_logger
+        log = get_logger("server")
+        was_enabled = log.enabled
+        if not was_enabled:
+            log.enable()
+        yield
+        if not was_enabled and hasattr(log, "disable"):
+            log.disable()
+
+    def test_route_logs_request(self, http_client, stub_command, caplog):
+        import logging
+        with caplog.at_level(logging.INFO, logger="ppxai.server"):
+            http_client.post(f"/command/{stub_command}", json={"args": "abc"})
+        matches = [r for r in caplog.records if "/command/" in r.getMessage()]
+        assert matches, "expected an info log line containing '/command/'"
+        msg = matches[0].getMessage()
+        assert stub_command in msg
+        assert "session=" in msg
+        assert "abc" in msg, "args preview should be in the log line"
+
+    def test_unknown_command_logs_warning(self, http_client, caplog):
+        import logging
+        with caplog.at_level(logging.WARNING, logger="ppxai.server"):
+            http_client.post("/command/__definitely_not_a_command__", json={"args": ""})
+        warnings = [r for r in caplog.records if r.levelno >= logging.WARNING]
+        assert any("Unknown command" in r.getMessage() for r in warnings)
+
+    def test_long_args_truncated_to_120_chars(self, http_client, stub_command, caplog):
+        import logging
+        long_args = "x" * 500
+        with caplog.at_level(logging.INFO, logger="ppxai.server"):
+            http_client.post(f"/command/{stub_command}", json={"args": long_args})
+        # Find the route log line (not the handler's own logs).
+        route_lines = [
+            r.getMessage() for r in caplog.records
+            if "POST /command/" in r.getMessage()
+        ]
+        assert route_lines
+        # 'x' * 120 should fit; 'x' * 500 must NOT — truncation guard
+        # exists to keep log lines bounded for noisy /agent prompts.
+        assert "x" * 120 in route_lines[0]
+        assert "x" * 500 not in route_lines[0]
