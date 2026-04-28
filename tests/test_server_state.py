@@ -13,9 +13,31 @@ from __future__ import annotations
 
 import asyncio
 import signal
+import sys
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+
+# Windows lacks `os.getpgid` and `os.killpg` (Unix process-group APIs).
+# unittest.mock.patch() validates the target attribute exists at import
+# time, so any test that does `patch("ppxai.server.state.os.getpgid")`
+# raises AttributeError on Windows BEFORE the test body runs — not even
+# a runtime check, a patch-setup error.
+#
+# The kill_preview_backend code itself IS cross-platform (it guards on
+# `platform.system() != "Windows"` and calls `process.terminate()` on
+# Windows), so the production code works fine. Only the Linux-specific
+# branch tests can't run on Windows.
+#
+# Linux CI is where these tests actually need to pass (preview-backend
+# subprocess management is exercised in production on the Linux server
+# image). Skipping on Windows lets devs get green local runs while CI
+# enforces the contract.
+_unix_only = pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="Mocks Unix-only os.getpgid/killpg; Windows kill_preview_backend "
+           "uses process.terminate() — see test_windows_calls_process_terminate.",
+)
 
 pytest.importorskip("fastapi")
 
@@ -279,6 +301,7 @@ class TestKillPreviewBackend:
         )
         return backend, proc
 
+    @_unix_only
     @pytest.mark.asyncio
     async def test_unix_sends_sigterm_to_process_group(self):
         backend, proc = self._backend_with_process()
@@ -298,6 +321,7 @@ class TestKillPreviewBackend:
         proc.terminate.assert_called_once()
         proc.wait.assert_awaited()
 
+    @_unix_only
     @pytest.mark.asyncio
     async def test_already_dead_process_lookup_swallowed(self):
         """getpgid raising ProcessLookupError must not surface."""
@@ -308,6 +332,7 @@ class TestKillPreviewBackend:
             await kill_preview_backend(backend)  # must not raise
         proc.wait.assert_awaited()
 
+    @_unix_only
     @pytest.mark.asyncio
     async def test_killpg_oserror_swallowed(self):
         """os.killpg raising OSError (e.g. EPERM) must not surface."""
@@ -319,6 +344,7 @@ class TestKillPreviewBackend:
             await kill_preview_backend(backend)
         proc.wait.assert_awaited()
 
+    @_unix_only
     @pytest.mark.asyncio
     async def test_wait_timeout_triggers_hard_kill(self):
         """If wait() times out, fall through to process.kill()."""
@@ -332,6 +358,7 @@ class TestKillPreviewBackend:
 
         proc.kill.assert_called_once()
 
+    @_unix_only
     @pytest.mark.asyncio
     async def test_kill_after_wait_swallows_dead_process(self):
         """If process died between wait-timeout and kill(), don't raise."""
@@ -346,6 +373,7 @@ class TestKillPreviewBackend:
 
         proc.kill.assert_called_once()
 
+    @_unix_only
     @pytest.mark.asyncio
     async def test_wait_processlookuperror_treated_as_already_dead(self):
         """Some kernels surface a dead-process wait as ProcessLookupError;
@@ -358,6 +386,7 @@ class TestKillPreviewBackend:
              patch("ppxai.server.state.os.killpg"):
             await kill_preview_backend(backend)  # must not raise
 
+    @_unix_only
     @pytest.mark.asyncio
     async def test_wait_uses_2_second_timeout(self):
         """Doc says timeout=2 — guard against silent regression."""

@@ -688,227 +688,24 @@ class PPXAIDEApp(App):
     async def _check_session_restoration(self) -> None:
         """Check for last session and offer to restore (Phase 7).
 
-        Shows interactive modal dialog if auto_restore is "prompt".
-        Auto-restores if config says 'always'.
+        Thin wrapper around `session_restore_ops.check_session_restoration`
+        — the body was extracted to that ops module in v1.18.2 (Item 1
+        narrowing) to mirror the engine/session_ops.py decomposition.
+        Kept as a method on PPXAIDEApp because `on_mount` calls it via
+        `self.run_worker(self._check_session_restoration(), ...)`,
+        which needs a bound coroutine.
         """
-        self._log.info("_check_session_restoration() called")
-        try:
-            if not self._engine_client:
-                self._log.debug("No engine client, skipping session restoration")
-                return
-
-            # Get last session state — with disk-scan fallback for cases
-            # where the pointer is missing but saved sessions still exist.
-            last_state = SessionManager.get_last_session_state_or_scan()
-            if not last_state:
-                self._log.debug("No last session state found (pointer missing and no sessions on disk)")
-                return
-
-            session_name = last_state.get("name")
-            message_count = last_state.get("message_count", 0)
-            recovered_from_disk = last_state.get("recovered_from_disk", False)
-
-            self._log.info(
-                f"Found last session: {session_name} with {message_count} messages"
-                + (" (recovered from disk — state pointer was missing)" if recovered_from_disk else "")
-            )
-
-            # Skip if no messages
-            if message_count == 0:
-                self._log.debug("Skipping session with 0 messages")
-                return
-
-            chat_view = self._chat_view
-            provider_info = last_state.get("provider", "unknown")
-            tools_info = "ON" if last_state.get("tools_enabled") else "OFF"
-
-            # Check if session file actually exists before showing any dialog
-            sessions_dir = Path.home() / ".ppxai" / "sessions"
-            session_file = sessions_dir / f"{session_name}.json"
-            if not session_file.exists():
-                self._log.warning(f"Session file missing for '{session_name}', clearing stale state")
-                SessionManager.clear_state_file()
-                return
-
-            # Check if session was dirty (crash recovery) - Phase 2.2
-            is_dirty = last_state.get("dirty", False)
-            if is_dirty:
-                self._log.info(f"Detected dirty session (crash): {session_name}")
-
-                # Always show crash recovery prompt (higher priority than auto_restore)
-                self._log.info("Showing crash recovery dialog...")
-                try:
-                    response = await self.push_screen_wait(
-                        ConsentDialog(
-                            title="⚠ Session Recovery",
-                            message=f"ppxaide was interrupted during last session",
-                            question=f"Recover session '{session_name}'?\n{message_count} messages, Provider: {provider_info}, Tools: {tools_info}",
-                            options=["Yes", "No"]
-                        )
-                    )
-                    self._log.info(f"Dialog response: {response!r}")
-                except Exception as e:
-                    self._log.error(f"Dialog error: {e}")
-                    response = "yes"  # Default to recovery on error
-
-                if response == "yes":
-                    if await self._restore_session(session_name, last_state):
-                        chat_view.add_system_message(
-                            f"⚠ [yellow]Session recovered:[/yellow] {session_name} ({message_count} messages)\n"
-                            f"[dim]Provider: {provider_info}, Tools: {tools_info}[/dim]"
-                        )
-                        self._log.info(f"User chose to recover crash session: {session_name}")
-                    else:
-                        # Restore failed — clear stale state to prevent repeat dialog
-                        SessionManager.clear_state_file()
-                        self._log.warning(f"Session restore failed for '{session_name}', cleared state file")
-                    return
-                else:
-                    # Clear dirty flag if user declines recovery
-                    SessionManager.clear_state_file()
-                    self._log.info("User declined crash recovery, cleared state file")
-                    return
-
-            # Normal auto-restore logic (not a crash)
-            auto_restore = get_auto_restore_mode()
-            self._log.info(f"Auto-restore mode: {auto_restore}")
-
-            # Auto-restore if configured
-            if auto_restore == "always":
-                if await self._restore_session(session_name, last_state):
-                    chat_view.add_system_message(
-                        f"✓ [green]Session restored:[/green] {session_name} ({message_count} messages)\n"
-                        f"[dim]Provider: {provider_info}, Tools: {tools_info}[/dim]"
-                    )
-                    self._log.info(f"Auto-restored session: {session_name}")
-                else:
-                    SessionManager.clear_state_file()
-                    self._log.warning(f"Auto-restore failed for '{session_name}', cleared state file")
-                return
-
-            # Show interactive prompt for "prompt" mode
-            if auto_restore != "never":
-                self._log.info(f"Showing session restoration prompt for {session_name}")
-
-                # Show modal dialog. When the state pointer was missing
-                # and we fell back to a disk scan, tell the user why — so
-                # they know this is a recovery path, not a normal resume.
-                if recovered_from_disk:
-                    dialog_title = "Session Recovery (state pointer missing)"
-                    dialog_message = f"Most recent session on disk: {session_name}"
-                else:
-                    dialog_title = "Session Restoration"
-                    dialog_message = f"Last session: {session_name}"
-
-                response = await self.push_screen_wait(
-                    ConsentDialog(
-                        title=dialog_title,
-                        message=dialog_message,
-                        question=f"{message_count} messages, Provider: {provider_info}, Tools: {tools_info}\n\nRestore this session?",
-                        options=["Yes", "No"]
-                    )
-                )
-
-                if response.lower() == "yes":
-                    if await self._restore_session(session_name, last_state):
-                        chat_view.add_system_message(
-                            f"✓ [green]Session restored:[/green] {session_name} ({message_count} messages)\n"
-                            f"[dim]Provider: {provider_info}, Tools: {tools_info}[/dim]"
-                        )
-                        self._log.info(f"User chose to restore session: {session_name}")
-                    else:
-                        SessionManager.clear_state_file()
-                        self._log.warning(f"Restore failed for '{session_name}', cleared state file")
-                else:
-                    self._log.info("User declined session restoration")
-
-        except Exception as e:
-            self._log.error(f"Error checking session restoration: {e}", exc_info=True)
+        from .session_restore_ops import check_session_restoration
+        await check_session_restoration(self)
 
     async def _restore_session(self, session_name: str, session_state: dict) -> bool:
-        """Restore a session with provider, model, and tools state (async for Textual).
+        """Restore a session — thin wrapper around session_restore_ops.
 
-        Args:
-            session_name: Name of session to load
-            session_state: Session state from state file
-
-        Returns:
-            True if restored successfully
+        See `tui/session_restore_ops.py::restore_session` for the body.
+        Returns True on full successful restoration.
         """
-        if not self._engine_client:
-            self._log.error("Restoration failed: No engine client")
-            return False
-
-        self._log.info(f"Loading session: {session_name}")
-        result = self._engine_client.restore_session(session_name)
-        if not result["success"]:
-            self._log.error(f"Restoration failed: {result.get('error')}")
-            return False
-
-        self._log.info(f"Session loaded successfully: {result['message_count']} messages")
-        # Provider/model/tools/working_dir already synced to AppState by
-        # engine_client.restore_session() → observers update badges automatically.
-        self._log.info(f"Restored provider: {result.get('provider')}, model: {result.get('model')}")
-
-        # Restore working directory (TUI-specific: os.chdir + completer + cwd badge)
-        working_dir = result["working_dir"]
-        if working_dir and os.path.isdir(working_dir):
-            try:
-                os.chdir(working_dir)
-                self._working_dir = working_dir
-                self._log.info(f"Restored working directory: {working_dir}")
-
-                input_box = self._input_box
-                if input_box._completer:
-                    input_box._completer.update_working_dir(Path(working_dir))
-
-                tui_config = get_tui_config()
-                if tui_config.get("show_cwd", True):
-                    cwd_display = self._format_cwd_display(working_dir)
-                    if self._status_bar is not None:
-                        self._status_bar.update_badge("cwd", cwd_display)
-                    self._log.info(f"Updated cwd badge to: {cwd_display}")
-            except Exception as e:
-                self._log.warning(f"Failed to restore working directory: {e}")
-
-        # Render loaded messages into ChatView (like /load command does)
-        chat_view = self._chat_view
-        chat_view.clear()
-
-        messages = self._engine_client.session.messages
-        self._log.info(f"Rendering {len(messages)} messages to chat view")
-        for msg in messages:
-            role = msg.role
-            # Flatten multimodal content to text for widget display; image
-            # and file parts become [Image: name] / [File: name] placeholders.
-            content = msg.text_content()
-
-            if role == "user":
-                chat_view.add_user_message(content)
-            elif role == "assistant":
-                chat_view.add_assistant_message(content)
-            elif role == "system":
-                chat_view.add_system_message(content)
-            elif role == "tool":
-                chat_view.add_message(content, role="tool")
-
-        # Update subtitle to match restored provider/model
-        if self._provider and self._model:
-            self.sub_title = f"{self._provider}/{self._model}"
-            self._log.info(f"Updated subtitle: {self.sub_title}")
-
-        # Restore command history to InputBox (matches Rich TUI behavior)
-        input_box = self._input_box
-        command_history = self._engine_client.session.command_history
-        if command_history:
-            input_box.set_history(command_history)
-            self._log.info(f"Restored {len(command_history)} commands to input history")
-
-        # Refocus input box after session restoration (critical for autocomplete integration)
-        input_box.focus()
-
-        self._log.info(f"Session restoration complete: provider={self._provider}, model={self._model}, tools={self._tools_enabled}")
-        return True
+        from .session_restore_ops import restore_session
+        return await restore_session(self, session_name, session_state)
 
     # ========================================================================
     # CommandContext Protocol Implementation (Phase 6.1.1)

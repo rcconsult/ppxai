@@ -6,75 +6,45 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ppxai is a terminal-based UI application for interacting with multiple AI providers (Perplexity AI, OpenAI, OpenRouter, local models). It provides an interactive chat interface with model selection, conversation history, streaming responses, and AI-powered tools.
 
-**Current Version:** v1.18.2
+**Current Version:** v1.18.2 (active branch: `bugfix/v1.18.2`; last release tag: v1.18.1)
 
-**v1.17.x highlights:**
-- **NEW:** AppState schema DTO — `ppxai/engine/app_state_schema.json` is the golden source of truth for all 4 clients. Python loads via `importlib.resources`, Web via `window.APP_STATE_SCHEMA` injected into `index.html` by FastAPI, VSCode via bundled copy kept in sync by `scripts/sync-schema.js` precompile hook. Rich + Textual TUIs consume it transitively via the Python `AppState`. `GET /schema/app-state` diagnostic endpoint. Zero hand-maintained parallel schemas.
-- **NEW:** AppState — observable state across all 4 clients (Python, JS, TS), SSE `state_sync` push
-- **NEW:** Server modularization — `http.py` 2,936→411 lines, 17 route modules (agent, chat, checkpoints, commands, completion, config, consent, context, file_serve, files, preview, providers, schema, sessions, static, terminal, usage), DI via `Depends(get_session)`. The v1.17.1 baseline was 13 modules; v1.17.4 added `completion.py` (cross-client autocomplete), `file_serve.py` + `preview.py` (file upload Phase 3), and `schema.py` (AppState DTO)
-- **NEW:** Config submodules — `config/__init__.py` 943→262 lines, 6 submodules
-- **NEW:** EngineClient decomposition — 1,588→977 lines across **6 ops modules**: `bootstrap_ops`, `checkpoint_ops`, `consent_ops`, `session_ops`, `multimodal_ops` (v1.17.4 Phase 2 extraction: context attachments + VL sidecar), `provider_ops` (v1.17.4: provider/model switching, list, current). `client.py` stays ~977 lines as a thin facade; each ops module is <500 lines and independently testable.
-- **NEW:** CodeMirror modular — shared core + 30 language addons (6.3MB→2.3MB), lazy loading
-- **NEW:** K8s POC — 5 phases: namespace, Dockerfile.server, session manager, login, LDAP auth
-- **NEW:** Benchmark infra — K8s benchmark jobs, `--agents-md` toggle, delta test results
-- **NEW:** File upload Phases 0-7 complete — multimodal message plumbing, `/attach` command, SessionFileStore, file preprocessing, image validation, VL sidecar, PDF/Excel/PPTX tools, web drag-drop + thumbnails, VSCode drag-drop overlay + inline thumbnails + context badge, Textual file tree attach
-- **NEW:** CompletionProvider engine layer — `engine/completion.py` is the single source of truth for autocomplete across ALL 4 clients (Rich, Textual, Web, VSCode). Covers: slash commands + aliases, path args, @file refs, `@git`/`@tree`/`@clipboard`/`@url` context providers, `/tools`/`/usage`/`/checkpoint`/`/status`/`/theme` subcommands, dynamic `/model` + `/provider` lookups, `/tools help <tool>`. Rich + Textual call in-process; Web + VSCode call via `POST /complete`. Client completers are pure glue (~85 lines Rich, ~100 lines Textual, down from ~594 / ~238). No more duplicated subcommand tables.
-- **NEW:** Gemini 3.1 Flash Lite + Gemma 4 family (31B, 26B MoE, E4B, E2B); deprecated 2.0/2.5 models with shutdown dates
-- **NEW:** `/doctor` config advisor — deprecation table, dead/deprecated/new/recommended model scanning
-- **FIX:** Heartbeat during streaming — skip health failures while single-worker busy with LLM tokens
-- **FIX:** `/save <name>` now honors name argument; `/ls <file>` supports single-file listing
-- **FIX:** Session autorestore for directory-format sessions; context attachment badge visibility
-- **FIX:** Inline attachment thumbnails with split panel lightbox (images) and PDF embed
-- **FIX:** Terminal PTY Windows crash — guarded Unix-only imports; server starts cleanly on Windows
-- **FIX:** ppxai-desktop version reporting — PyInstaller spec includes `ppxai.version` hidden import
+**Major architectural patterns** — each has its own dedicated section below; respect these when changing code:
+- **AppState** (v1.17.x) — observable state across all 4 clients (Python, JS, TS); SSE `state_sync` push; engine-owned invalidation via session callbacks. See "Cross-Client State Through AppState" below.
+- **Engine ops decomposition** (v1.17.x) — `EngineClient` is a thin facade (~1058 LoC) over 6 ops modules in `engine/*_ops.py`. Same pattern applied to `tui/session_restore_ops.py` (v1.18.2 Item 1).
+- **Server modularization** (v1.17.x) — `http.py` 411 lines + 17 route modules under `server/routes/`. DI via `Depends(get_session)`.
+- **Command Dispatch via Envelope** (v1.18.1) — every slash command flows through `POST /command/<name>` returning `{ok, result, side_effects, events, version}`. See dedicated section below.
+- **State-Sync Determinism** (v1.18.1) — Phases A-D: `/state` snapshot + visibility/focus re-anchor + REST event piggyback + `cwd_anchor` 409 mismatch. See dedicated section.
+- **Agent Heartbeat Primitives** (v1.18.0) — `EventType.AGENT_BEAT` / `AGENT_RUN_START` / `AGENT_RUN_COMPLETE` / `AGENT_RUN_ERROR` / `AGENT_ZOMBIE` lifecycle events; zombie circuit-breaker via `tools.agent.zombie_threshold`. See [docs/ARCHITECTURE.md] §"Agent Heartbeat Primitives".
+- **EngineClientProtocol** (v1.18.2 Item 10) — commands type against the protocol, not the concrete `EngineClient`. See [ppxai/engine/types.py].
+- **CommandContext three-pattern split** (v1.18.2) — Rich uses Pattern A proxy, Textual passes `self`, Server uses Pattern B explicit. **Don't unify on speculation** — see [docs/decisions/0002-command-context-three-pattern-split.md].
 
-**Version Alignment:**
-- Python package (pyproject.toml): v1.17.7
-- VSCode extension (package.json): v1.17.7
-- Last release tag: v1.17.7
-- Active branch: `feature/v1.18.0` (P0 agent heartbeat primitives — see [docs/RELEASE-NOTES-v1.18.0.md](docs/RELEASE-NOTES-v1.18.0.md))
+**Capability surface (also documented in dedicated sections):**
+- AppState schema DTO (`engine/app_state_schema.json`) — single source of truth for 4 clients; mirrors in `web/shared/app-state.js` + `vscode-extension/src/appState.ts`; cross-language sentinel tests.
+- CompletionProvider engine layer (`engine/completion.py`) — single source of truth for autocomplete; clients are thin glue.
+- File upload + multimodal — `/attach` command, SessionFileStore, file preprocessing, image validation, VL sidecar, PDF/Excel/PPTX/DOCX tools.
+- `/doctor` config advisor — deprecation table, dead/deprecated/new/recommended model scanning.
+- VSCode extension bundled via esbuild (v1.18.2 Item 5) — 128 KB VSIX (was 1.1 MB), 15 files (was 804); CI has 500 KB size-budget gate.
 
-**v1.18.0 (in progress) — P0 agent heartbeat primitives:**
-- **NEW:** `EventType.AGENT_BEAT` / `AGENT_RUN_START` / `AGENT_RUN_COMPLETE` / `AGENT_RUN_ERROR` / `AGENT_ZOMBIE` lifecycle events emitted by `chat_with_tools`
-- **NEW:** `AgentBeatState` dataclass (`ppxai/engine/types.py`) with `as_event_data()` JSON payload helper
-- **NEW:** `AppState.agent_beat` field (schema-driven across Python/JS/TS) — heartbeat pushed via `state_sync` SSE, cleared on run end
-- **NEW:** Zombie circuit-breaker — `tools.agent.zombie_threshold` config (default 3, 0 disables) stops the tool loop after N consecutive failed iterations, emits `AGENT_ZOMBIE` + `AGENT_RUN_ERROR`
-- **NEW:** Client renderers — dim status line in Rich, status-bar badge in ppxaide with `success`/`warning`/`error` variants, header badge in Web + VSCode
-- See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) §"Agent Heartbeat Primitives" for the emission contract
+For per-version release notes, see [CHANGELOG.md](CHANGELOG.md) and `docs/RELEASE-NOTES-v*.md`.
+For architecture decisions, see `docs/decisions/`.
 
-**v1.18.0 (in progress) — stabilization pass (Phases 1–5):**
-- **NEW:** `GET /state` snapshot endpoint (`ppxai/server/routes/state.py`) returns the SSE-synced AppState fields for web/VSCode reconnect catch-up. `SSE_SYNC_FIELDS` hoisted to module-level constant in `ppxai/engine/client.py` as the canonical whitelist.
-- **NEW:** `AppState.last_message_role` field — Rich and Textual interrupt handlers no longer scan `session.messages` directly; `EngineClient._on_messages_changed` is now a fan-out callback for every message-derived AppState field.
-- **NEW:** Cross-language formatting helpers — `ppxai/common/format.py` (canonical `format_tokens` + `format_usage_badge`) with byte-identical JS/TS mirrors guarded by `tests/test_usage_format.py`. Zero-cost suppression unified across Rich/web/VSCode.
-- **NEW:** `ppxai/common/autosave_guard.py::AutosaveFailureGuard` — surfaces auto-save failures to the user after 3 consecutive failures (was silently logged before, hiding "session not saving" from users with full disks / revoked permissions).
-- **NEW:** `ppxai/common/atomic_file.py::atomic_replace` and `ppxai/common/docx_to_pdf.py::convert_docx_to_pdf` — I/O helpers extracted from private routes/tools modules so tests consume them via documented public contracts. Six other pure helpers (`is_empty_or_context_only`, `load_dotenv_with_bom_handling`, `count_csv_rows_cols`, `get_effective_profile`, `normalize_content_to_text`, `is_word_document`) promoted to public — signature + docstring is the interface.
-- **NEW:** Cross-client AGENT_BEAT rendering parity test (`tests/test_agent_beat_cross_client_parity.py`) — proves the four clients agree on the contract, including known Rich divergence captured explicitly.
-- **REMOVED:** `EngineClient.has_vision_model` back-compat alias (deprecated in v1.17.4; verified zero external callers).
-- **FIX:** `/attach` of Windows text files no longer ships CRLF bytes to the LLM (`PendingFile.text` normalises). CSV attachment on Windows no longer fails — `mimetypes.guess_type` resolves `.csv` to `application/vnd.ms-excel` on Windows, file_preprocessing now special-cases CSV before the office dispatch.
-- **FIX:** 19 pre-existing test failures cleared on Windows (CRLF, mimetype, path-separator, config-default issues).
-- See [docs/STABILIZATION-v1.18.0.md](docs/STABILIZATION-v1.18.0.md) for the full pass summary.
-
-For detailed release history, see [CHANGELOG.md](CHANGELOG.md) and `docs/RELEASE-NOTES-v*.md`.
-
-## Codebase Statistics (v1.18.0 in progress, approximate)
+## Codebase Statistics (v1.18.2, approximate)
 
 | Language | Files | Lines |
 |----------|------:|------:|
-| Python (core) | 174 | ~54,000 |
-| Python (tests) | 100 | ~37,500 |
-| TypeScript (VSCode) | 17 | ~8,900 |
+| Python (core) | ~175 | ~55,000 |
+| Python (tests) | ~100 | ~38,000 |
+| TypeScript (VSCode) | 19 | ~9,000 |
 | JavaScript (Web) | 19 | ~9,400 |
 | CSS | 6 | ~3,400 |
-| **Total** | **~316** | **~113,200** |
+| **Total** | **~319** | **~115,000** |
 
 Breakdown: ~81% Python, ~8% JavaScript, ~8% TypeScript, ~3% CSS
 
-Tests: **3,067 passing**, 2 skipped. Up from 2,591 at v1.18.1.
-v1.18.2 added 476 tests across the gpt-5.5 critique sweep
-(server/state.py, _execute_ai_task, tool security, server route edges,
-session persistence) plus production bug fixes (orphan tool_calls
-cleanup, usage_by_model load round-trip, per-turn ledger flush,
-runtime version banner).
+Tests: **3,067 passing**, 9 skipped (7 are Unix-only `TestKillPreviewBackend`
+that can't `patch()` `os.getpgid`/`os.killpg` on Windows; the
+`kill_preview_backend` Windows branch IS cross-platform and tested
+separately).
 
 ## Installation Locations (CRITICAL)
 
@@ -1282,6 +1252,27 @@ PyInstaller builds, cross-platform test failures, encoding/CRLF behaviour,
 Windows-specific path code, YAML parsing of multi-format files, and
 anything to do with releases.
 
+**Verify both directions, not just "is there a problem".** When a
+signal flags X as broken AND when someone pushes back saying the
+signal is wrong, both readings need the same Tier-2-style
+verification (production-code-only inbound counts, channel-ratio
+inspection, source-code grep). Pattern-matched three times on
+`bugfix/v1.18.2` (`EngineClient`, `ChatViewProvider`,
+`PPXAIDEApp`) before the discipline was pinned. Concrete
+heuristic for graphify-flagged "god classes":
+
+```bash
+# Production-code-only inbound count.
+grep -rc "ClassName" ppxai/ --include="*.py" | grep -v ":0$"
+
+# Channel ratio in the suspect file.
+grep -cE 'event_bus\.(emit|subscribe)|state\.(on|set|get)' file.py
+```
+
+If textual references are <30 across production code AND
+bus/state/protocol channels carry communication, the class is NOT
+a god class regardless of whole-repo graphify edge count.
+
 ## Commit Guidelines
 
 - Do NOT include Claude credits or co-authored-by lines. Keep commit messages clean.
@@ -1297,3 +1288,26 @@ Rules:
 - If graphify-out/wiki/index.md exists, navigate it instead of reading raw files
 - For cross-module "how does X relate to Y" questions, prefer `graphify query "<question>"`, `graphify path "<A>" "<B>"`, or `graphify explain "<concept>"` over grep — these traverse the graph's EXTRACTED + INFERRED edges instead of scanning files
 - After modifying code files in this session, run `graphify update .` to keep the graph current (AST-only, no API cost)
+
+**Whole-repo god-node ranking is biased by test coverage.** As of
+v1.18.2 (2026-04-29), `.graphifyignore` excludes `tests/`,
+`benchmarks/`, `scripts/`, `examples/`, `docs/archive/` — without
+them, `tests/test_tui.py` (4,788 LoC) alone drove 71-79% of the
+"god class" edges on `PPXAIDEApp`/`MessageBox`/`ChatView` and
+made the whole-repo ranking misleading. With exclusions: 11.6k →
+4.5k nodes (-61%); the post-exclusion top hubs reflect actual
+architectural hubs (`EventType`, `CommandResult`, `SessionManager`,
+`BaseTool`, `BaseProvider`, `ToolManagerProtocol`).
+
+**Subtree-build pattern for subsystem analysis.** When the
+whole-repo graph is too coarse (e.g. "what are the actual UI
+hubs?"), build a per-subtree graph with `c:\tmp\subtree_build.py
+<input_path> <output_dir>`. Used three times in v1.18.2
+(`engine`, `server`, `commands`, `vscode`, `tui`) to surface
+subsystem-internal structure that the whole-repo graph hides.
+
+**Don't read whole-repo "god class" rank as architectural smell
+without verifying.** Apply the production-code-only inbound count
+heuristic above before concluding. The same trap caught
+`EngineClient`, `ChatViewProvider`, and `PPXAIDEApp` on this
+branch.

@@ -67,7 +67,7 @@ ppxai/
 ├── commands/          # UI-agnostic command layer (v1.15.0 factory + protocol)
 │   ├── protocol.py    # CommandContext protocol (interface)
 │   ├── factory.py     # CommandFactory + CommandSpec registry
-│   ├── context.py     # Adapters: RichCommandContext, TextualCommandContext
+│   ├── context.py     # Adapters: RichCommandContext (Pattern A proxy), ServerCommandContext (Pattern B explicit). Textual uses no adapter — see ADR 0002.
 │   ├── results.py     # 17 CommandResult types (v1.15.0)
 │   ├── system.py      # /help, /status, /theme
 │   ├── provider.py    # /provider, /model
@@ -422,11 +422,19 @@ tui/             ← Textual TUI client (imports commands/, engine/)
 server/          ← HTTP server (imports commands/, engine/)
 ```
 
-**Context adapters** (`commands/context.py`) bridge the gap:
-- `RichCommandContext` wraps `CommandHandler` — calls **public methods only**
-- `TextualCommandContext` wraps `PPXAIDEApp` — calls **public methods only**
+**Context delivery** (`commands/context.py`) — three patterns by design,
+pinned in [ADR 0002](decisions/0002-command-context-three-pattern-split.md):
+- `RichCommandContext` wraps `CommandHandler` (Pattern A — `__getattr__`
+  proxy; wrapped class implements protocol via public methods)
+- `PPXAIDEApp` IS the context (no wrapper — Textual passes `self`
+  directly to command handlers)
+- `ServerCommandContext` wraps engine via `EngineClientProtocol`
+  (Pattern B — explicit delegation; no UI handler to wrap)
 - Each client owns its full-stack logic (engine + UI updates)
 - Adapters never access private attributes (`_engine_client`, `_model`, etc.)
+- The unused `TextualCommandContext` Pattern-A wrapper was removed in
+  v1.18.2 — it had been dead code since v1.15.0. See ADR 0002 for
+  why a unified-on-Pattern-B refactor was considered and deferred.
 
 ## Adding New Modules
 

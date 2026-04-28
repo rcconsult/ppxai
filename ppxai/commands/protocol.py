@@ -7,7 +7,7 @@ Commands are UI-agnostic and only depend on this minimal interface.
 Architecture:
 - Commands receive CommandContext (protocol), not concrete Handler/App
 - Context provides access to: engine_client, session, working_dir, etc.
-- UI frameworks implement this protocol via adapters (RichCommandContext, TextualCommandContext)
+- UI frameworks implement this protocol via adapters (RichCommandContext for Rich) or directly on the app class (PPXAIDEApp for Textual)
 - Zero UI framework dependencies in command code
 
 v1.15.0: Type-based renderer dispatch refactoring

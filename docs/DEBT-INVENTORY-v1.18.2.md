@@ -26,92 +26,6 @@ without re-discovering the context.
 
 ## Open
 
-### Item 1 — God node refactoring [Critique #6] — SCOPE NARROWED 2026-04-28
-
-**Affected modules:** `ppxai/tui/app.py::PPXAIDEApp` (507 inbound edges),
-`ppxai/tui/widgets/message_box.py::MessageBox` (473 edges),
-`ppxai/tui/widgets/chat_view.py::ChatView` (was 443; now displaced from
-top-10 — verify with subtree build before scheduling).
-
-**EngineClient dropped from scope (2026-04-28).** A Tier 2 investigation
-on `bugfix/v1.18.2` (commit `c6322dda`) found that the 474→489 edge
-growth since the v1.17.x decomposition is fully attributable to v1.18.0
-features that **belong** in EngineClient per the documented AppState
-pattern: `_on_messages_changed` and `_refresh_last_message_role`
-fan-out callbacks (CLAUDE.md AppState rule #2 — "Engine-owned
-invalidation: EngineClient recomputes the field on mutation via a
-session callback"). Production-code inbound edges are 35 across 3
-importers (protocol, context, init re-export) — exactly what v1.17.x's
-decomposition aimed for. Further splitting would re-introduce the
-cross-client drift the AppState pattern was designed to eliminate.
-
-**What the critique said:** these classes have too many responsibilities;
-extract narrower services so future changes don't cascade. Specifically:
-- Move session-restore + state-sync orchestration out of `PPXAIDEApp`.
-- Extract rendering + state-update helpers from `MessageBox` and `ChatView`.
-
-**Why deferred:** refactor work that doesn't fit on a bugfix branch.
-The remaining hot spots are pure UI classes whose tests are flakier and
-whose external API breaks easily. The AppState pattern doesn't
-constrain UI decomposition, so this is the right scope for a refactor
-branch.
-
-**Trigger to revisit:** when adding a new TUI variant (different
-framework, web-only, etc.) that needs to reuse the chat-rendering
-logic without dragging Textual machinery, OR when a refactor touching
-`PPXAIDEApp` causes its 5th regression in a release.
-
-**Effort:** ~3–5 days for a careful pass (revised down from 1–2 weeks
-since EngineClient is no longer in scope). Best done as 3 separate PRs
-(one per class), each landing with new test coverage for the
-extracted service.
-
-**Branch when ready:** `refactor/god-nodes-v1.19.0` (or later).
-
-**Subtree graph signal (built 2026-04-28 via `c:\tmp\subtree_build.py
-ppxai/tui graphify-out-tui`):** the whole-repo god-node ranking is
-misleading for refactor planning — most of `PPXAIDEApp`'s 507 edges
-come from outside the TUI (tests, scripts, benchmarks). Inside the
-TUI subtree, the actual hub ranking is:
-
-| Node | Subtree degree | Notable |
-|---|---:|---|
-| `CodeEditor` | 176 | NOT in original critique — biggest UI hub |
-| `MessageBox` | 120 | Confirmed |
-| `FileTree` | 109 | NOT in original critique |
-| `Events` | 96 | Event-bus, structural |
-| `ChatView` | 92 | Confirmed but smaller than expected |
-
-`PPXAIDEApp` lands as a **singleton community** (cohesion 1.0, size
-1) — the same shape Item 2's `ChatViewProvider` shows in the VSCode
-subtree. Pure god-class smell; no internal structure for clustering
-to find.
-
-**Natural decomposition seams** the subtree graph surfaces:
-- **C0 (109 nodes, cohesion 0.03):** CodeEditor + DataViewer + viewer
-  widgets cluster — already partly separate, needs further pull.
-- **C1 (147 nodes, cohesion 0.04):** stream-handler + completion +
-  slash-commands cluster — extract a `stream_handler` service.
-- **C2 (107 nodes, cohesion 0.02):** MessageBox + ChatView + App
-  internals — extract `message_rendering` helpers (Rich markup
-  stripping, response-time badge update, etc.).
-- **PPXAIDEApp itself:** extract session-restore + state-sync into
-  TUI ops modules (mirror the `engine/ops_*` pattern).
-
-**Healthy clean splits already done** (cohesion ≥ 0.09): keys.py
-registry (C7), clipboard (C9), linkify (C10), input validation
-(C11), display-mode detection (C12). These confirm the
-extraction pattern works when applied with intent.
-
-**Refactor PR plan:**
-1. Extract `tui/stream_handler_ops` from C1 (largest win, lowest risk).
-2. Extract `tui/message_rendering` helpers from C2.
-3. Extract `tui/session_restore_ops` from PPXAIDEApp.
-4. CodeEditor / DataViewer cluster cleanup is optional — already
-   has internal structure, lower priority.
-
----
-
 ### Item 3 — k8s session-manager security tests [Critique #8]
 
 **Affected files:** `deploy/images/session-manager/main.py` (648 LOC),
@@ -152,6 +66,55 @@ have minimum test coverage.
 ## Closed
 
 (Move items here as they land. Format: `### Item X — title — closed YYYY-MM-DD in commit-hash`)
+
+### Item 1 — God node refactoring [Critique #6] — closed 2026-04-29
+
+**Verification killed most of the original framing.** The 507/473/442
+"god class" edges on `PPXAIDEApp`/`MessageBox`/`ChatView` were
+**71-79% test-coverage volume from a single 4,788-line `tests/test_tui.py`**.
+After excluding tests via `.graphifyignore` (2026-04-29), those
+classes disappeared from the post-exclusion top 15. Channel-ratio
+audit confirmed `app.py` uses EventBus (17) + AppState (30) + 54
+direct widget calls (passing simple data) — healthy orchestrator
+pattern. `MessageBox` (203 LoC, 8 methods) and `ChatView` (76 LoC,
+8 methods) are tiny leaf widgets — never god classes.
+
+**Two narrow extraction PRs landed (real signal that survived
+verification):**
+
+1. **`tui/session_restore_ops`** (272 LoC) extracted from
+   `app.py:_check_session_restoration` + `_restore_session` — mirrors
+   the engine's `session_ops.py` pattern. `app.py` shrank 1947 → 1744
+   LoC. The methods on PPXAIDEApp became thin wrappers (8 lines
+   each). All 276 TUI tests pass.
+
+2. **Dead `TextualCommandContext` deleted** from
+   `commands/context.py`. It was created in v1.15.0, never wired
+   into `app.py` (which passes `self` directly), and survived 13
+   releases as dead code. Removed with documentation in
+   ADR 0002 explaining why the three-pattern split (Rich proxy,
+   Textual no-adapter, Server explicit) is deliberate.
+
+**The 16 inline CommandContext methods on PPXAIDEApp stay** — they
+are the actual Pattern A implementation, NOT boilerplate to remove.
+ADR 0002 pins this so it doesn't get re-litigated. Memory entry
+[reference_command_context_adr.md] is the thinking-shortcut for
+future readers.
+
+**Pre-existing `TestKillPreviewBackend` failures fixed** —
+7 tests that try to `patch("ppxai.server.state.os.getpgid")` failed
+on Windows because `os.getpgid` doesn't exist on Windows. Added
+`@_unix_only` skipif decorator with documentation. Linux CI (where
+preview-backend subprocess management actually runs) keeps full
+coverage; Windows devs get green local runs.
+
+**Three lessons captured for future refactor decisions:**
+- `feedback_verify_both_directions.md` — verify code BOTH when a
+  signal flags a problem AND when pushback says the signal is wrong.
+- `reference_graphify_noise.md` — `.graphifyignore` exclusions
+  added; whole-repo node count dropped 11.6k → 4.5k.
+- `reference_command_context_adr.md` — Pattern A vs B vs no-adapter
+  is deliberate; don't re-litigate.
 
 ### Item 5 — Bundle the VSCode extension — closed 2026-04-29
 
