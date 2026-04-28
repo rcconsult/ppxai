@@ -1,6 +1,6 @@
 .vscode/**
 .vscode-test/**
-src/**
+.claude/**
 .gitignore
 .yarnrc
 vsc-extension-quickstart.md
@@ -8,15 +8,18 @@ vsc-extension-quickstart.md
 **/.eslintrc.json
 **/*.map
 **/*.ts
-# Include production dependencies, exclude dev dependencies
-node_modules/.bin/**
-node_modules/@types/**
-node_modules/typescript/**
-node_modules/eslint/**
-node_modules/@typescript-eslint/**
-node_modules/webpack/**
-node_modules/webpack-cli/**
-node_modules/ts-loader/**
-# We bundle these in media/ folder
-node_modules/marked/**
-node_modules/highlight.js/**
+# Item 5 (v1.18.2): now bundled via esbuild — exclude everything
+# except dist/, media/, resources/, and the user-facing docs. The
+# bundle in dist/extension.js carries dotenv + all internal source.
+# The webview-side libraries (marked, highlight.js) are loaded as
+# static assets from media/webview/, not via node_modules.
+node_modules/**
+out/**
+src/**
+esbuild.js
+build-hljs.cjs
+# Build-time scripts run during prepackage (sync-schema), not at
+# runtime — keep them out of the shipped VSIX.
+scripts/**
+# Dev-only documentation.
+TESTING.md

@@ -339,13 +339,35 @@ jobs:
       working-directory: vscode-extension
       run: npm run lint
 
-    - name: Compile
+    # Item 5 (v1.18.2): bundled via esbuild. `npm run typecheck` runs
+    # `tsc -p ./ --noEmit` to catch type errors before bundling
+    # (esbuild itself does not type-check). The subsequent
+    # `vsce package` step triggers the `vscode:prepublish` script,
+    # which runs `npm run package` — typecheck + esbuild --production
+    # — so the shipped bundle is always the minified one even if a
+    # human runs the steps out of order locally.
+    - name: Type check
       working-directory: vscode-extension
-      run: npm run compile
+      run: npm run typecheck
 
     - name: Package VSIX
       working-directory: vscode-extension
       run: npx vsce package --allow-missing-repository
+
+    - name: Verify bundle size budget
+      working-directory: vscode-extension
+      shell: bash
+      run: |
+        # Item 5 budget: post-bundle VSIX should stay under 500 KB.
+        # Pre-bundle baseline was ~1.1 MB. If this gate fails, the
+        # bundle has likely picked up an unintended dependency —
+        # inspect `npx vsce ls` to see what got pulled in.
+        size=$(stat -c%s ppxai-*.vsix 2>/dev/null || stat -f%z ppxai-*.vsix)
+        echo "VSIX size: ${size} bytes"
+        if [ "${size}" -gt 524288 ]; then
+          echo "::error::VSIX size ${size} bytes exceeds 500 KB budget."
+          exit 1
+        fi
 
     - name: Get version
       id: version

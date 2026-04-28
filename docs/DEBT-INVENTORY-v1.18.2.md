@@ -149,61 +149,85 @@ have minimum test coverage.
 
 ---
 
-### Item 5 — Bundle the VSCode extension
-
-**Affected files:** `vscode-extension/package.json`, `vscode-extension/.vscodeignore`,
-no esbuild/webpack config currently in use (compile is just `npx tsc -p ./`).
-
-**What the warning says:** every `vsce package` run prints
-> "This extension consists of 804 files, out of which 397 are JavaScript
-> files. For performance reasons, you should bundle your extension."
-
-The 804 files come from the runtime deps (`dotenv`, `highlight.js`,
-`marked`, `openai`) being shipped as raw `node_modules/` trees. Webpack
-+ ts-loader are already installed as devDependencies but unused.
-
-**Concrete fix (esbuild — VSCode's recommended bundler):**
-
-1. `npm i -D esbuild` in `vscode-extension/`.
-2. Add `vscode-extension/esbuild.js`:
-   ```js
-   const esbuild = require("esbuild");
-   const production = process.argv.includes("--production");
-   esbuild.build({
-     entryPoints: ["src/extension.ts"],
-     bundle: true, format: "cjs", platform: "node",
-     external: ["vscode"], outfile: "dist/extension.js",
-     minify: production, sourcemap: !production,
-   }).catch(() => process.exit(1));
-   ```
-3. `package.json`: switch `main` from `./out/extension.js` to
-   `./dist/extension.js`; replace `compile` with `node esbuild.js` and
-   add `package: "node esbuild.js --production"` +
-   `vscode:prepublish: "npm run package"`.
-4. `.vscodeignore`: replace the per-package excludes with `node_modules/**`,
-   `out/**`, `src/**`.
-
-**Why deferred:** maintenance-driven, not correctness-driven. Every
-release ships fine without bundling — the warning has been there for
-months. Risk: bundling can subtly break runtime imports of native
-modules or dynamic-loaded files; needs activate/deactivate testing.
-
-**Trigger to revisit:** when extension activation latency becomes a
-user complaint, OR when the `.vsix` size crosses 2 MB, OR when a CI
-gate is added for extension performance.
-
-**Effort:** ~30 minutes for the config + ~1 hour testing the
-activate/deactivate paths against `dotenv`, `marked`, `openai`,
-`highlight.js`. Expected outcome: 804 files → ~3 files,
-1.1 MB → ~300-500 KB, faster activation.
-
-**Branch when ready:** `feat/bundle-vscode-extension`.
-
----
-
 ## Closed
 
 (Move items here as they land. Format: `### Item X — title — closed YYYY-MM-DD in commit-hash`)
+
+### Item 5 — Bundle the VSCode extension — closed 2026-04-29
+
+Bundled via [esbuild](https://esbuild.github.io/) (VSCode's recommended
+bundler). Configuration in
+[vscode-extension/esbuild.js](../vscode-extension/esbuild.js) — pure
+Node, no shell-isms, works on Linux/macOS/Windows. esbuild's
+`optionalDependencies` install the right native binary per host on
+`npm install`.
+
+**Build flow:**
+
+| Script | Action |
+|---|---|
+| `npm run typecheck` | `tsc -p ./ --noEmit` (no JS output, types only) |
+| `npm run compile` | typecheck + dev bundle (sourcemaps, no minify) |
+| `npm run package` | typecheck + production bundle (minified, no sourcemap) |
+| `npm run watch` | esbuild watch mode (rebuilds on change) |
+| `vscode:prepublish` | runs `npm run package` so `vsce package` always ships the production bundle |
+
+**Bundle stats** (108 KB minified, 200 KB dev):
+
+| Metric | Pre | Post | Δ |
+|---|---:|---:|---:|
+| `.vsix` size | ~1.1 MB | **128 KB** | **−88%** |
+| `.vsix` file count | 804 | **15** | **−98%** |
+| `vsce package` warning | yes | gone | — |
+
+**.vscodeignore** rewritten to use the bundle-friendly shape:
+exclude `node_modules/**`, `out/**`, `src/**`, `esbuild.js`,
+`build-hljs.cjs`, `scripts/**`, `TESTING.md`, `.claude/**`.
+The 15 files that DO ship: `dist/extension.js`, the 5 webview
+assets in `media/`, package metadata + license + README +
+THIRD_PARTY_LICENSES + 2 `resources/` icons + `app-state-schema.json`.
+
+**Why webview libs aren't bundled:** `marked` and `highlight.js`
+are loaded by the webview's `media/main.js` as static assets via
+`<script>` tags — they never enter the extension host's
+`require` graph. `dotenv` is the only third-party module bundled;
+`openai` is listed in `package.json` but unused by extension code
+(it's a string literal in `config.ts` provider defaults).
+
+**CI alignment** in
+[`.github/workflows/build.yml`](../.github/workflows/build.yml):
+
+- Replaced explicit `npm run compile` step with `npm run typecheck`
+  (catches type errors fast; the bundle itself is built by
+  `vscode:prepublish` during `vsce package`).
+- Added a **bundle-size budget gate** — fails the build if the
+  VSIX exceeds 500 KB. Detects accidental bloat (e.g. a new
+  dependency dragging in a heavy transitive tree) the next time
+  it happens, not in user reports months later.
+
+**Cross-platform verified:**
+- esbuild script: pure Node, platform-agnostic file paths.
+- npm scripts: chained with `&&` (works in cmd.exe / bash /
+  PowerShell via npm's shell wrapper).
+- CI step uses `shell: bash` for `stat -c%s || stat -f%z` so the
+  size check works on Linux runners *and* future macOS runners
+  if anyone moves the job.
+
+**Smoke checks:**
+- `npm run package` reproduces the bundle from a clean `dist/`.
+- Bundle parses as valid JS (`new Function(code)`).
+- Bundle exports `activate` + `deactivate`, requires `vscode` as
+  external, contains `HttpClient` + `ChatViewProvider` + dotenv
+  parser code.
+- The only `node_modules/` reference in the bundle is a string
+  literal inside a `findFiles` exclusion pattern (not a require).
+
+**Deferred testing:** activate/deactivate against a live VSCode
+host is a manual step — install the VSIX (`code --install-extension
+vscode-extension/ppxai-1.18.2.vsix`), open chat panel, verify
+streaming + slash commands + dotenv-loaded API key. The
+auto-checks above cover everything that can fail at build time;
+runtime exercises require human eyes.
 
 ### Item 2 — VSCode `resolveWebviewView` refactor — closed 2026-04-28
 
