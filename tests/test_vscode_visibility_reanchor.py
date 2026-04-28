@@ -52,34 +52,77 @@ class TestVSCodeVisibilityReanchorWiring:
     def test_listener_guards_on_focused(self):
         """Re-anchor only on focused=true, not on every window
         state change (which fires on focus loss too — re-anchoring
-        then is wasted work)."""
+        then is wasted work).
+
+        Item 2 (v1.18.2) split the listener into a contract-based
+        `installFocusReanchor` function. The contract: the
+        installer must (a) check `focused` before invoking the
+        callback, and (b) the orchestrator must pass
+        `_reanchorFromServer` as that callback. We validate both
+        sides of the contract, not the specific call-site pattern.
+        """
         src = _read_chat_panel()
-        # Find the listener block — onDidChangeWindowState((arg) => { ... })
-        match = re.search(
-            r"onDidChangeWindowState\([\s\S]*?\}\s*\)",
+        # Side (a): the installer guards on `focused`.
+        installer = re.search(
+            r"function\s+installFocusReanchor\([\s\S]*?^\}",
+            src,
+            re.MULTILINE,
+        )
+        assert installer, "installFocusReanchor function not found"
+        assert "focused" in installer.group(0), (
+            "installFocusReanchor must check windowState.focused"
+        )
+
+        # Side (b): the orchestrator wires `_reanchorFromServer` as
+        # the callback.
+        orchestrator_call = re.search(
+            r"installFocusReanchor\(\s*\(\)\s*=>\s*this\._reanchorFromServer\(\)\s*\)",
             src,
         )
-        assert match, "could not locate onDidChangeWindowState block"
-        block = match.group(0)
-        assert "focused" in block, (
-            "listener must check windowState.focused"
-        )
-        assert "_reanchorFromServer" in block, (
-            "listener must call _reanchorFromServer()"
+        assert orchestrator_call, (
+            "resolveWebviewView must pass `() => this._reanchorFromServer()` "
+            "to installFocusReanchor — that's the contract that ties focus "
+            "events to AppState re-anchor"
         )
 
     def test_listener_is_disposed_with_webview(self):
         """The listener disposable must be tied to the webview's
         lifecycle so it doesn't outlive the panel. Without
-        `onDidDispose`, the listener leaks across panel reopens."""
+        `onDidDispose`, the listener leaks across panel reopens.
+
+        Item 2 (v1.18.2) returns the listener as a `Disposable`
+        from `installFocusReanchor`; the orchestrator must dispose
+        it inside `webviewView.onDidDispose`. The contract here is
+        that the focus disposable is reachable from the dispose
+        callback, regardless of how it's named.
+        """
         src = _read_chat_panel()
-        # The handle name is `focusListener` per the implementation.
+        # `installFocusReanchor` must return a Disposable.
         assert re.search(
-            r"onDidDispose\(\s*\(\s*\)\s*=>\s*\w+\.dispose",
+            r"function\s+installFocusReanchor[\s\S]*?\):\s*vscode\.Disposable",
             src,
-        ), (
-            "listener must be disposed via webviewView.onDidDispose() — "
-            "otherwise it leaks past panel close"
+        ), "installFocusReanchor must declare a vscode.Disposable return type"
+
+        # The orchestrator must capture that disposable AND dispose it
+        # inside onDidDispose. Match the pattern: a const assigned from
+        # installFocusReanchor + a .dispose() call inside onDidDispose.
+        capture = re.search(
+            r"const\s+(\w+)\s*=\s*installFocusReanchor\(",
+            src,
+        )
+        assert capture, (
+            "resolveWebviewView must capture the installFocusReanchor "
+            "Disposable in a const so it can be disposed later"
+        )
+        handle_name = capture.group(1)
+        dispose_block = re.search(
+            r"webviewView\.onDidDispose\(\s*\(\)\s*=>\s*\{[\s\S]*?\}\s*\)",
+            src,
+        )
+        assert dispose_block, "webviewView.onDidDispose block not found"
+        assert f"{handle_name}.dispose()" in dispose_block.group(0), (
+            f"focus disposable `{handle_name}` must be disposed inside "
+            f"webviewView.onDidDispose() — otherwise it leaks past panel close"
         )
 
     def test_reanchor_helper_is_defined(self):

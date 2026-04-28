@@ -112,32 +112,6 @@ extraction pattern works when applied with intent.
 
 ---
 
-### Item 2 — VSCode `resolveWebviewView` refactor [Critique #7]
-
-**Affected file:** `vscode-extension/src/chatPanel.ts::ChatViewProvider.resolveWebviewView`.
-
-**What the critique said:** highest criticality flow in the
-code-review-graph (criticality 0.723, 84 nodes / 6 files). Function does
-too much in one place: webview HTML/content construction, message
-handlers, API client wiring, state subscriptions, lifecycle/disposal.
-Recommended split into setup phases.
-
-**Why deferred:** VSCode extension is lower-traffic than TUI; refactor is
-maintainability-driven, not correctness-driven. Tests around it would
-need a VSCode test runner setup.
-
-**Trigger to revisit:** when adding a new client-server message kind
-requires another large change to the function, OR when the function
-crosses 200 LOC.
-
-**Effort:** ~half day for the split + ~half day for tests. Output a
-companion `docs/TODO-v1.18.x-vscode-webview-refactor.md` with the phase
-breakdown when starting.
-
-**Branch when ready:** `refactor/vscode-webview-v1.19.0`.
-
----
-
 ### Item 3 — k8s session-manager security tests [Critique #8]
 
 **Affected files:** `deploy/images/session-manager/main.py` (648 LOC),
@@ -230,6 +204,79 @@ activate/deactivate paths against `dotenv`, `marked`, `openai`,
 ## Closed
 
 (Move items here as they land. Format: `### Item X — title — closed YYYY-MM-DD in commit-hash`)
+
+### Item 2 — VSCode `resolveWebviewView` refactor — closed 2026-04-28
+
+Refactored to a **contract-based** design rather than private-method
+decomposition (which the user rejected as code relocation, not real
+decoupling). The 98-line monolith with no internal structure
+(criticality 0.723 in the gpt-5.5 review-graph; singleton community
+in the graphify VSCode subtree) became a 21-line orchestrator
+composing four typed contracts.
+
+**The contracts** (declared at module level, above `ChatViewProvider`):
+
+1. **`type WebviewMessage`** — discriminated union of every inbound
+   webview message. Adding a new message type means adding a member.
+2. **`type WebviewMessageHandlers`** — `Required<{ [K in
+   WebviewMessage['type']]: (m: Extract<WebviewMessage, { type: K }>)
+   => Promise<void> }>`. The `Required<>` wrap makes the dispatch
+   table exhaustive at compile time — adding a `WebviewMessage`
+   variant fails the build until a handler is registered.
+3. **`function configureWebview(webview, extensionUri, renderHtml)`**
+   — pure side effect on the webview. Phase 1.
+4. **`function installMessageRouter(webview, handlers): vscode.Disposable`**
+   — registers the type-keyed dispatch table, returns the Disposable
+   the caller owns. Phase 3.
+5. **`function installFocusReanchor(onFocused: () => void):
+   vscode.Disposable`** — registers the focus listener, returns its
+   Disposable. Phase 4.
+
+The 16-case `switch` is gone — replaced by a typed handler map
+returned from `_buildMessageHandlers()`. Each entry is keyed by
+message type, narrowed to its specific variant via `Extract`.
+Adding a message type is now: `WebviewMessage` member + map entry.
+
+**`resolveWebviewView` body becomes:**
+```typescript
+public resolveWebviewView(webviewView, _context, _token) {
+    this._view = webviewView;
+    configureWebview(webviewView.webview, this._context.extensionUri,
+                     (w) => this._getHtmlForWebview(w));
+    try {
+        this.wireUISubscriptions();
+    } catch (e) { console.error('[ppxai] Error:', e); }
+    const messageRouter = installMessageRouter(
+        webviewView.webview, this._buildMessageHandlers());
+    const focusReanchor = installFocusReanchor(
+        () => this._reanchorFromServer());
+    webviewView.onDidDispose(() => {
+        messageRouter.dispose();
+        focusReanchor.dispose();
+    });
+}
+```
+
+**Tests updated** in
+[`tests/test_vscode_visibility_reanchor.py`](../tests/test_vscode_visibility_reanchor.py)
+to validate the **contract**, not the old code pattern:
+
+- `test_listener_guards_on_focused` — splits into two
+  contract-side checks: `installFocusReanchor` checks `focused`
+  internally AND the orchestrator passes
+  `() => this._reanchorFromServer()` as the callback.
+- `test_listener_is_disposed_with_webview` — checks the
+  installer's return-type signature is `vscode.Disposable` AND
+  the orchestrator captures + disposes that handle inside
+  `webviewView.onDidDispose`.
+
+The new tests can survive shape changes that preserve the
+contract (different variable names, different handler-table
+shape) — they pin the *what*, not the *how*.
+
+**Compile:** `npx tsc -p ./ --noEmit` clean. Tests: 2842/2842
+pass on the full non-TUI sweep (7 pre-existing Unix-only
+`TestKillPreviewBackend` failures verified against master).
 
 ### Item 6 — Windows `code` CLI shim resolution — closed 2026-04-28 (per-developer)
 

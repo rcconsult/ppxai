@@ -66,6 +66,120 @@ const CHAT_SHAPED_TASKS = new Map<string, string>([
     ['implement', 'implement'],
 ]);
 
+// =====================================================================
+// Webview-setup contracts (Item 2 / v1.18.2)
+// =====================================================================
+//
+// `resolveWebviewView` had grown to a 98-line monolith with no internal
+// structure (criticality 0.723 in the gpt-5.5 review-graph; singleton
+// community in the graphify VSCode subtree). The refactor frames each
+// setup phase as a typed contract, not a private helper:
+//
+//   1. `WebviewMessage`           — discriminated union of inbound msgs.
+//   2. `WebviewMessageHandlers`   — type-keyed dispatch table.
+//   3. `configureWebview`         — pure side effect on a Webview.
+//   4. `installMessageRouter`     — registers handler, returns Disposable.
+//   5. `installFocusReanchor`     — registers focus listener, returns Disposable.
+//
+// Phases (3)–(5) all return `vscode.Disposable | void` so the caller
+// owns lifecycle. Phase (2) — the dispatch table — IS the message
+// contract: adding a message type means adding a key, not editing a
+// switch buried inside the orchestrator.
+// =====================================================================
+
+/**
+ * Discriminated union of every message the webview can post.
+ *
+ * Adding a new message type means adding a member here AND a handler
+ * in `WebviewMessageHandlers`. The compiler will refuse to compile a
+ * dispatch table missing a key once you make this exhaustive (the
+ * `Required<>` wrap on `WebviewMessageHandlers` enforces that).
+ */
+type WebviewMessage =
+    | { type: 'chat'; content: string; files?: Array<{ name: string; media_type: string; data: string }> }
+    | { type: 'clear' }
+    | { type: 'save' }
+    | { type: 'saveAnswer'; content: string }
+    | { type: 'ready' }
+    | { type: 'toggleTools'; enable: boolean }
+    | { type: 'toggleVerboseTools'; enable: boolean }
+    | { type: 'toggleDebugLog'; enable: boolean }
+    | { type: 'toggleServer'; stop: boolean }
+    | { type: 'toggleAgent'; enable: boolean }
+    | { type: 'undoCheckpoint' }
+    | { type: 'complete'; buffer: string; cursor: number }
+    | { type: 'openLink'; url?: string }
+    | { type: 'interrupt' }
+    | { type: 'clearContext' }
+    | { type: 'previewFile'; fileId: string; name: string; data: string };
+
+/**
+ * Per-message handler contract. The map shape replaces a 16-case
+ * switch: each handler is a typed async function keyed by message
+ * type, narrowed to the specific message variant via `Extract`.
+ *
+ * `Required<>` makes every key mandatory — adding a new variant to
+ * `WebviewMessage` causes a compile error here until a handler is
+ * registered. That's the type-system enforcing the contract.
+ */
+type WebviewMessageHandlers = Required<{
+    [K in WebviewMessage['type']]: (
+        message: Extract<WebviewMessage, { type: K }>
+    ) => Promise<void>;
+}>;
+
+/**
+ * Configure the webview shell — scripts allowed, resource roots
+ * scoped to the extension, HTML rendered from the provided
+ * generator. Pure side effect on `webview`; no return value because
+ * there's no lifecycle to dispose.
+ */
+function configureWebview(
+    webview: vscode.Webview,
+    extensionUri: vscode.Uri,
+    renderHtml: (w: vscode.Webview) => string,
+): void {
+    webview.options = {
+        enableScripts: true,
+        localResourceRoots: [extensionUri],
+    };
+    webview.html = renderHtml(webview);
+}
+
+/**
+ * Install the webview→extension message router. Returns the
+ * Disposable so the caller owns lifecycle (e.g. wires it into
+ * `webviewView.onDidDispose`). Unknown message types are logged
+ * and ignored — no crash, no silent drop.
+ */
+function installMessageRouter(
+    webview: vscode.Webview,
+    handlers: WebviewMessageHandlers,
+): vscode.Disposable {
+    return webview.onDidReceiveMessage(async (message: WebviewMessage) => {
+        console.log('[ppxai] Received message from webview:', message.type);
+        const handler = (handlers as Record<string, (m: any) => Promise<void>>)[message.type];
+        if (!handler) {
+            console.warn('[ppxai] No handler for message type:', message.type);
+            return;
+        }
+        await handler(message);
+    });
+}
+
+/**
+ * Install a focus-change listener that calls `onFocused` whenever
+ * the VSCode window regains focus. Used for state-sync Phase A
+ * (re-anchor AppState from /state). Returns the Disposable.
+ */
+function installFocusReanchor(
+    onFocused: () => void,
+): vscode.Disposable {
+    return vscode.window.onDidChangeWindowState((s) => {
+        if (s.focused) onFocused();
+    });
+}
+
 export class ChatViewProvider implements vscode.WebviewViewProvider {
     public static readonly viewType = 'ppxai.chatView';
 
@@ -395,6 +509,24 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         });
     }
 
+    /**
+     * Compose the webview-setup contracts (Item 2 / v1.18.2).
+     *
+     * Each line below is a phase with a typed contract:
+     *   1. `configureWebview` — pure side effect on the webview (no
+     *      Disposable to track).
+     *   2. `wireUISubscriptions` — EventBus subscriptions, wrapped in
+     *      try/catch so a malformed subscription can't brick later
+     *      phases (a panel without a message router is unrecoverable).
+     *   3. `installMessageRouter` — registers the type-keyed dispatch
+     *      table and returns its Disposable.
+     *   4. `installFocusReanchor` — registers the focus listener and
+     *      returns its Disposable.
+     *
+     * Disposables are bound to `webviewView.onDidDispose` so cleanup
+     * is automatic. Adding a new setup phase or message type touches
+     * one contract, not the whole flow.
+     */
     public resolveWebviewView(
         webviewView: vscode.WebviewView,
         _context: vscode.WebviewViewResolveContext,
@@ -402,14 +534,12 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     ) {
         this._view = webviewView;
 
-        webviewView.webview.options = {
-            enableScripts: true,
-            localResourceRoots: [this._context.extensionUri]
-        };
+        configureWebview(
+            webviewView.webview,
+            this._context.extensionUri,
+            (w) => this._getHtmlForWebview(w),
+        );
 
-        webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
-
-        // Phase 3c: Wire up EventBus subscriptions for decoupled UI updates
         try {
             console.log('[ppxai] Wiring UI subscriptions...');
             this.wireUISubscriptions();
@@ -418,81 +548,67 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             console.error('[ppxai] Error wiring UI subscriptions:', e);
         }
 
-        // Handle messages from the webview
-        console.log('[ppxai] Setting up webview message handler...');
-        webviewView.webview.onDidReceiveMessage(async (message) => {
-            console.log('[ppxai] Received message from webview:', message.type);
-            switch (message.type) {
-                case 'chat':
-                    // v1.17.4 Phase 6.1: webview may include files[] for multimodal
-                    await this.handleChat(message.content, message.files);
-                    break;
-                case 'clear':
-                    await this._backend.clearHistory();
-                    this._view?.webview.postMessage({ type: 'cleared' });
-                    break;
-                case 'save':
-                    vscode.commands.executeCommand('ppxai.saveSession');
-                    break;
-                case 'saveAnswer':
-                    await this.handleSaveAnswer(message.content);
-                    break;
-                case 'ready':
-                    await this.initializeBackend();
-                    break;
-                case 'toggleTools':
-                    await this.handleToggleTools(message.enable);
-                    break;
-                case 'toggleVerboseTools':
-                    await this.handleToggleVerboseTools(message.enable);
-                    break;
-                case 'toggleDebugLog':
-                    await this.handleToggleDebugLog(message.enable);
-                    break;
-                case 'toggleServer':
-                    await this.handleToggleServer(message.stop);
-                    break;
-                case 'toggleAgent':
-                    await this.handleToggleAgent(message.enable);
-                    break;
-                case 'undoCheckpoint':
-                    await this.handleUndoCheckpoint();
-                    break;
-                case 'complete':
-                    await this.handleComplete(message.buffer, message.cursor);
-                    break;
-                case 'openLink':
-                    if (message.url) {
-                        vscode.env.openExternal(vscode.Uri.parse(message.url));
-                    }
-                    break;
-                case 'interrupt':
-                    await this.handleInterrupt();
-                    break;
-                case 'clearContext':
-                    await this.handleClearContext();
-                    break;
-                case 'previewFile':
-                    await this.handlePreviewFile(message.fileId, message.name, message.data);
-                    break;
-            }
-        });
-
-        // v1.18.1 (state-sync Phase A): re-anchor AppState from
-        // GET /state whenever the VSCode window regains focus. The
-        // VSCode equivalent of the web app's `visibilitychange`
-        // listener — without it, AppState drifts during long
-        // idle periods (window unfocused, user switched apps) when
-        // SSE state_sync events fire but no /chat is in flight to
-        // drain the engine's side-channel queue.
-        const focusListener = vscode.window.onDidChangeWindowState(
-            (windowState) => {
-                if (windowState.focused) {
-                    this._reanchorFromServer();
-                }
-            }
+        const messageRouter = installMessageRouter(
+            webviewView.webview,
+            this._buildMessageHandlers(),
         );
-        webviewView.onDidDispose(() => focusListener.dispose());
+        const focusReanchor = installFocusReanchor(() => this._reanchorFromServer());
+
+        webviewView.onDidDispose(() => {
+            messageRouter.dispose();
+            focusReanchor.dispose();
+        });
+    }
+
+    /**
+     * The webview-message dispatch contract.
+     *
+     * Returns the type-keyed handler table consumed by
+     * `installMessageRouter`. Each entry has a typed signature
+     * (`Extract<WebviewMessage, { type: K }>` narrows the message)
+     * and is responsible for exactly one message type. Adding a new
+     * type means: extend `WebviewMessage`, add an entry here.
+     * The `Required<>` wrap on `WebviewMessageHandlers` makes that
+     * a compile error if you forget the handler.
+     *
+     * Bound methods are used because most handlers need access to
+     * `this._backend`, `this._view`, etc. — wrapping each in an arrow
+     * keeps the binding without exposing the dispatch table to
+     * outside code.
+     */
+    private _buildMessageHandlers(): WebviewMessageHandlers {
+        return {
+            chat: async (m) => {
+                // v1.17.4 Phase 6.1: webview may include files[] for multimodal
+                await this.handleChat(m.content, m.files);
+            },
+            clear: async () => {
+                await this._backend.clearHistory();
+                this._view?.webview.postMessage({ type: 'cleared' });
+            },
+            save: async () => {
+                vscode.commands.executeCommand('ppxai.saveSession');
+            },
+            saveAnswer: async (m) => { await this.handleSaveAnswer(m.content); },
+            ready: async () => { await this.initializeBackend(); },
+            toggleTools: async (m) => { await this.handleToggleTools(m.enable); },
+            toggleVerboseTools: async (m) => { await this.handleToggleVerboseTools(m.enable); },
+            toggleDebugLog: async (m) => { await this.handleToggleDebugLog(m.enable); },
+            toggleServer: async (m) => { await this.handleToggleServer(m.stop); },
+            toggleAgent: async (m) => { await this.handleToggleAgent(m.enable); },
+            undoCheckpoint: async () => { await this.handleUndoCheckpoint(); },
+            complete: async (m) => { await this.handleComplete(m.buffer, m.cursor); },
+            openLink: async (m) => {
+                if (m.url) {
+                    vscode.env.openExternal(vscode.Uri.parse(m.url));
+                }
+            },
+            interrupt: async () => { await this.handleInterrupt(); },
+            clearContext: async () => { await this.handleClearContext(); },
+            previewFile: async (m) => {
+                await this.handlePreviewFile(m.fileId, m.name, m.data);
+            },
+        };
     }
 
     /**
