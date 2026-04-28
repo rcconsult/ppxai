@@ -275,70 +275,38 @@ fold into a future `docs:` commit.
 
 ---
 
-### Item 11 — Latent AttributeError in `agent.py` Rich-TUI path
-
-**Affected file:**
-[ppxai/commands/agent.py:680](../ppxai/commands/agent.py#L680).
-
-**What's wrong:** the agent loop construction passes
-`context.engine_client.logger` to `TUIEventHandler.__init__()`, but
-`EngineClient` has **no `logger` attribute**. The path crashes with
-`AttributeError: 'EngineClient' object has no attribute 'logger'` if
-ever exercised through Rich TUI's `/agent <task>` command.
-
-```python
-event_handler = TUIEventHandler(
-    console, context.engine_client.logger,  # ← AttributeError
-    verbose=context.get_tools_verbose(),
-    ...
-)
-```
-
-`CommandHandler.logger` (the Rich TUI's own logger, line 327) likely
-the intended target — `context.handler.logger` or
-`get_logger("tui")` would fix it.
-
-**Why this matters:** Rich TUI users running `/agent` may hit this
-crash. Tests in `test_common_event_handler.py` /
-`test_agent_beat_cross_client_parity.py` pass `Mock()` for the logger
-arg, so the test suite can't catch it.
-
-**Why surfaced now:** discovered while assembling
-`EngineClientProtocol` for Item 10 — the protocol enumeration step
-caught the missing attribute. Tier 1 instrumentation (Item 7)
-makes this kind of latent bug easier to spot in production logs once
-agent runs are exercised.
-
-**Concrete fix:** swap line 680 to pass the TUI logger directly:
-```python
-from ppxai.common.logger import get_logger
-...
-event_handler = TUIEventHandler(
-    console, get_logger("tui"),
-    ...
-)
-```
-
-Plus a regression test that constructs a real `RichCommandContext` +
-real `EngineClient`, calls `handle_agent` with a no-op task,
-confirms construction reaches `chat()` without AttributeError. Avoids
-mocking the engine — the bug exists precisely because mocks
-substituted `Mock()` for the missing attribute.
-
-**Effort:** ~30 minutes (1-line code fix + 1 integration test).
-
-**Trigger to revisit:** can be done immediately — small, isolated.
-Or fold into the next bugfix branch alongside any other agent-mode
-work.
-
-**Branch when ready:** `fix/agent-logger-attribute` or fold into next
-bugfix.
-
----
-
 ## Closed
 
 (Move items here as they land. Format: `### Item X — title — closed YYYY-MM-DD in commit-hash`)
+
+### Item 11 — Latent AttributeError in `agent.py` Rich-TUI path — closed 2026-04-28
+
+[`ppxai/commands/agent.py:680`](../ppxai/commands/agent.py#L680)
+swapped from `context.engine_client.logger` (which did not exist
+on `EngineClient`) to a module-level `get_logger("tui")` import. The
+old construction would have raised `AttributeError` mid-`/agent`
+run; tests passed because they substituted `Mock()` for the logger
+arg, masking the missing attribute.
+
+Regression tests in
+[`tests/test_agent_logger_attribute.py`](../tests/test_agent_logger_attribute.py)
+pin four contracts:
+- `EngineClient` still has no `logger` attribute (catches drift if
+  someone re-adds it).
+- `get_logger("tui")` exposes the methods `TUIEventHandler` actually
+  calls (`log_assistant_message`, `log_tool_call`, etc.).
+- `TUIEventHandler` constructs cleanly with a REAL `EngineClient`
+  + real `get_logger("tui")` — the exact construction shape the
+  agent loop performs. No mocks. The bug existed precisely because
+  mocks substituted the missing attribute.
+- The original buggy access pattern (`engine.logger`) still raises
+  AttributeError, documenting the failure mode.
+
+The fix is intentionally narrow — it does not refactor the agent
+loop, just corrects the logger handoff. The "agent loop unification
+across HTTP clients" work tracked in
+[docs/TODO-v1.18.2-agent-loop-unification.md](TODO-v1.18.2-agent-loop-unification.md)
+remains separate; this fix lets the existing TUI path actually run.
 
 ### Item 10 — Introduce `EngineClientProtocol` for the commands layer — closed 2026-04-28
 

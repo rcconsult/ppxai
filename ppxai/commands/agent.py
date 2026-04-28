@@ -27,6 +27,7 @@ from .results import (
     TextResult,
 )
 
+from ..common.logger import get_logger
 from ..rich.event_handler import TUIEventHandler
 from ..rich.ui import console
 
@@ -675,9 +676,15 @@ def handle_agent(context: CommandContext, args: str) -> CommandResult:
             else:
                 prompt = _build_continuation_prompt(task, iteration)
 
-            # Run chat with event handling
+            # Run chat with event handling.
+            #
+            # Use the TUI logger directly (not engine_client.logger —
+            # which doesn't exist; that path AttributeError'd silently
+            # because no test exercised the construction with a real
+            # engine). Item 11 (v1.18.2). See
+            # tests/test_agent_logger_attribute.py for the regression test.
             event_handler = TUIEventHandler(
-                console, context.engine_client.logger,
+                console, get_logger("tui"),
                 verbose=context.get_tools_verbose(),
                 emoji_mode=getattr(context, 'emoji_mode', False),
                 engine_client=context.engine_client
