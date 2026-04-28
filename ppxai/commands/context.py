@@ -18,7 +18,7 @@ v1.17.1: Replaced boilerplate forwarding with __getattr__ proxy
 
 from typing import Any, Optional
 
-from ..engine.client import EngineClient
+from ..engine.types import EngineClientProtocol
 
 
 class _CommandContextProxy:
@@ -67,12 +67,14 @@ class TextualCommandContext(_CommandContextProxy):
 class ServerCommandContext:
     """CommandContext adapter for HTTP server.
 
-    Wraps EngineClient — reads state from AppState for consistency with
-    TUI clients. Server-specific overrides: no auto-route, no verbose,
-    no config values.
+    Wraps an engine satisfying `EngineClientProtocol` — reads state from
+    AppState for consistency with TUI clients. Server-specific overrides:
+    no auto-route, no verbose, no config values. Typed against the
+    Protocol (not the concrete `EngineClient`) so the
+    commands→engine boundary stays nominally decoupled (Item 10, v1.18.2).
     """
 
-    def __init__(self, engine: EngineClient):
+    def __init__(self, engine: EngineClientProtocol):
         self._engine = engine
 
     @property

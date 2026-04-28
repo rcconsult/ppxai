@@ -275,87 +275,114 @@ fold into a future `docs:` commit.
 
 ---
 
-### Item 10 — Introduce `EngineClientProtocol` for the commands layer
+### Item 11 — Latent AttributeError in `agent.py` Rich-TUI path
 
-**Affected files:**
-[ppxai/commands/protocol.py:18,44](../ppxai/commands/protocol.py#L18),
-[ppxai/commands/context.py:21,75](../ppxai/commands/context.py#L21),
-new `EngineClientProtocol` to live in [ppxai/engine/types.py](../ppxai/engine/types.py).
+**Affected file:**
+[ppxai/commands/agent.py:680](../ppxai/commands/agent.py#L680).
 
-**What's wrong:** `commands/protocol.py` is the canonical Protocol
-layer for commands — it should be free of concrete engine types. It
-currently imports `EngineClient` directly to type-annotate the
-`engine_client` property. `commands/context.py` does the same for
-`ServerCommandContext.__init__`. Per
-[CLAUDE.md "Critical Architecture Pattern: Protocol-Based
-Dependency Inversion"], the project pattern is to define a `*Protocol`
-in `engine/types.py` (a leaf module) and have concrete classes satisfy
-it structurally. Two such protocols exist already: `ToolEngineProtocol`
-and `ToolManagerProtocol`. EngineClient does not have one.
+**What's wrong:** the agent loop construction passes
+`context.engine_client.logger` to `TUIEventHandler.__init__()`, but
+`EngineClient` has **no `logger` attribute**. The path crashes with
+`AttributeError: 'EngineClient' object has no attribute 'logger'` if
+ever exercised through Rich TUI's `/agent <task>` command.
 
-**Why this matters:** the commands→engine boundary is the only
-production importer surface where this rule slips. The graphify graph
-attributes ~21 inbound edges to `EngineClient` from `protocol.py`
-alone — most of those are method references that an
-`EngineClientProtocol` would absorb cleanly. Surfaced during the
-Tier 2 investigation on 2026-04-28 (commit `c6322dda`); the rest of
-the EngineClient hub is structurally healthy.
-
-**Why this is NOT a circular-import bug:** `engine.client` does not
-import from `ppxai.commands`, so the strict Protocol-DI rule is
-technically satisfied. The motivation here is consistency and edge-
-count reduction, not a working defect.
-
-**Concrete fix:**
-
-(a) In [ppxai/engine/types.py](../ppxai/engine/types.py), add:
 ```python
-@runtime_checkable
-class EngineClientProtocol(Protocol):
-    """The engine surface area that commands depend on.
-
-    Define ONLY what commands actually use — chat, providers, tools,
-    session management, working dir, agent mode. No streaming
-    internals, no SSE machinery, no AppState mutation.
-    """
-    @property
-    def session(self) -> Any: ...
-    @property
-    def state(self) -> Any: ...
-    def get_working_dir(self) -> Optional[str]: ...
-    def set_working_dir(self, path: str) -> None: ...
-    def list_providers(self) -> list: ...
-    def get_current_provider(self) -> str: ...
-    # ... etc — match what protocol.py + context.py actually call
+event_handler = TUIEventHandler(
+    console, context.engine_client.logger,  # ← AttributeError
+    verbose=context.get_tools_verbose(),
+    ...
+)
 ```
 
-(b) Replace `EngineClient` annotations in `protocol.py` and
-`context.py` with `EngineClientProtocol`.
+`CommandHandler.logger` (the Rich TUI's own logger, line 327) likely
+the intended target — `context.handler.logger` or
+`get_logger("tui")` would fix it.
 
-(c) Drop the `from ..engine.client import EngineClient` lines from
-both files; they no longer need the concrete class.
+**Why this matters:** Rich TUI users running `/agent` may hit this
+crash. Tests in `test_common_event_handler.py` /
+`test_agent_beat_cross_client_parity.py` pass `Mock()` for the logger
+arg, so the test suite can't catch it.
 
-**Effort:** ~half day. Mostly mechanical — read what
-`protocol.py` + `context.py` actually access on the engine, list the
-union as protocol methods, replace annotations. Add a sentinel test
-asserting `EngineClient` satisfies the protocol via
-`isinstance(engine, EngineClientProtocol)` so future changes don't
-silently break the contract. Expected outcome: ~20 fewer inbound
-edges to `EngineClient` in the next graphify rebuild, and the
-commands layer becomes engine-implementation-agnostic.
+**Why surfaced now:** discovered while assembling
+`EngineClientProtocol` for Item 10 — the protocol enumeration step
+caught the missing attribute. Tier 1 instrumentation (Item 7)
+makes this kind of latent bug easier to spot in production logs once
+agent runs are exercised.
 
-**Trigger to revisit:** when adding a fourth concrete CommandContext
-adapter (e.g. mobile/Slack/CLI), OR when EngineClient gains a
-breaking API change — both scenarios benefit from the indirection
-already being in place.
+**Concrete fix:** swap line 680 to pass the TUI logger directly:
+```python
+from ppxai.common.logger import get_logger
+...
+event_handler = TUIEventHandler(
+    console, get_logger("tui"),
+    ...
+)
+```
 
-**Branch when ready:** `refactor/engine-client-protocol`.
+Plus a regression test that constructs a real `RichCommandContext` +
+real `EngineClient`, calls `handle_agent` with a no-op task,
+confirms construction reaches `chat()` without AttributeError. Avoids
+mocking the engine — the bug exists precisely because mocks
+substituted `Mock()` for the missing attribute.
+
+**Effort:** ~30 minutes (1-line code fix + 1 integration test).
+
+**Trigger to revisit:** can be done immediately — small, isolated.
+Or fold into the next bugfix branch alongside any other agent-mode
+work.
+
+**Branch when ready:** `fix/agent-logger-attribute` or fold into next
+bugfix.
 
 ---
 
 ## Closed
 
 (Move items here as they land. Format: `### Item X — title — closed YYYY-MM-DD in commit-hash`)
+
+### Item 10 — Introduce `EngineClientProtocol` for the commands layer — closed 2026-04-28
+
+Added [`EngineClientProtocol`](../ppxai/engine/types.py) alongside
+the existing `ToolEngineProtocol` / `ToolManagerProtocol`. Enumerates
+~30 properties + methods that commands actually call on the engine,
+grouped functionally (AppState access, provider/model switching,
+working dir, tools/agent management, bootstrap/context, checkpoints,
+chat). [`commands/protocol.py`](../ppxai/commands/protocol.py) and
+[`commands/context.py`](../ppxai/commands/context.py) now type
+against the protocol; both files dropped their
+`from ..engine.client import EngineClient` import.
+
+Sentinel tests in
+[`tests/test_engine_client_protocol.py`](../tests/test_engine_client_protocol.py)
+pin three contracts:
+- `EngineClient` satisfies the protocol structurally
+  (`isinstance` runtime check).
+- `EngineClient` does NOT inherit from the protocol (the whole
+  point of structural Protocol-DI).
+- Neither `commands/protocol.py` nor `commands/context.py` slip
+  back to importing the concrete `EngineClient` class.
+
+**Verified via graphify edge reduction (rebuild after the change):**
+
+| Metric | Pre-Item 10 | Post-Item 10 | Δ |
+|---|---:|---:|---:|
+| `EngineClient` total inbound | 56 | 39 | −17 |
+| `protocol.py` → `EngineClient` | 21 | 4 | −17 (~80% reduction) |
+| `context.py` → `EngineClient` | 7 | 7 | 0* |
+| `EngineClientProtocol` inbound | — | 32 | new |
+
+*context.py's 7 remaining edges are method-call references
+(`self._engine.set_model(...)`) that graphify pins to the concrete
+class; only the import was decoupled. Expected — the protocol
+removes nominal coupling, not the runtime call references.
+
+Tier 2 prediction "~20 fewer edges" → actual −17. Mission accomplished.
+
+**Latent bug spotted during the protocol enumeration step:**
+[`agent.py:680`](../ppxai/commands/agent.py#L680) accesses
+`engine_client.logger` which doesn't exist on `EngineClient`. Filed
+as Item 11. Item 10 dropped `logger` from the protocol's surface
+rather than wishful-list it.
 
 ### Item 7 — `/command/{name}` route emits no request log — closed 2026-04-28
 

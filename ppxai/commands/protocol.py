@@ -15,7 +15,7 @@ v1.15.0: Type-based renderer dispatch refactoring
 
 from typing import Any, Protocol, runtime_checkable, Callable, Optional
 
-from ..engine.client import EngineClient
+from ..engine.types import EngineClientProtocol
 from .results import CommandResult
 
 
@@ -41,14 +41,20 @@ class CommandContext(Protocol):
     # ========================================================================
 
     @property
-    def engine_client(self) -> EngineClient:
+    def engine_client(self) -> EngineClientProtocol:
         """Access to engine client for AI operations.
+
+        Returns the engine surface that commands depend on. Typed as the
+        Protocol (not the concrete `EngineClient` class) so the
+        commands→engine boundary stays nominally decoupled — see
+        `EngineClientProtocol` in `ppxai/engine/types.py` for the full
+        method/property surface (Item 10, v1.18.2).
 
         Provides:
         - engine_client.chat(message) - Send chat message
         - engine_client.session - Session management
-        - engine_client.tools - Tool management
-        - engine_client.providers - Provider management
+        - engine_client.tool_manager - Tool registry access
+        - engine_client.state - AppState read/write
         """
         ...
 
