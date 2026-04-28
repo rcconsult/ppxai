@@ -227,57 +227,33 @@ activate/deactivate paths against `dotenv`, `marked`, `openai`,
 
 ---
 
-### Item 6 — Windows `code` CLI shim resolution
-
-**Affected:** developer environment only (Git Bash on Windows). Not in
-the repo, but documented here so the next developer doesn't waste time
-debugging the symptom.
-
-**What's wrong:** `code --install-extension foo.vsix` fails with
-`bad option: --install-extension`. Root cause: on Windows the user
-PATH lists `C:\...\Microsoft VS Code\` (containing the GUI `code.exe`)
-*before* `C:\...\Microsoft VS Code\bin\` (containing the proper sh
-shim that delegates to `code.cmd`). Bash strips the `.exe`, so the
-GUI launcher wins and rejects unknown flags.
-
-**Concrete fix (pick one, smallest blast radius first):**
-
-(a) **Shell-local alias** — reversible, no system change. Add to
-    `~/.bashrc`:
-    ```bash
-    alias code='/c/Users/$USER/AppData/Local/Programs/Microsoft\ VS\ Code/bin/code'
-    ```
-
-(b) **PATH reorder for this user** — open Windows env var settings,
-    move `...\Microsoft VS Code\bin` above `...\Microsoft VS Code` in
-    user `Path`. Permanent; affects every shell. Restart Git Bash.
-
-(c) **Symlink in early-PATH dir** — if `~/.local/bin/` is already
-    ahead of the VSCode dirs:
-    ```bash
-    ln -s "/c/.../Microsoft VS Code/bin/code.cmd" ~/.local/bin/code
-    ```
-
-**Why deferred:** purely a dev-environment ergonomics issue. Workaround
-exists (use `bin/code.cmd` explicitly). Doesn't affect builds, CI, or
-shipped artifacts.
-
-**Trigger to revisit:** when another contributor hits the same
-"bad option" error and pings the team, OR when adding install steps
-to `docs/INSTALLATION.md` that need a working `code` CLI on Windows.
-
-**Effort:** ~5 minutes per developer to apply locally. No upstream
-fix needed unless we want to document it in `docs/INSTALLATION.md`
-under a "Windows developer setup" subsection (~15 minutes).
-
-**Branch when ready:** none required for the env fix; if documenting,
-fold into a future `docs:` commit.
-
----
-
 ## Closed
 
 (Move items here as they land. Format: `### Item X — title — closed YYYY-MM-DD in commit-hash`)
+
+### Item 6 — Windows `code` CLI shim resolution — closed 2026-04-28 (per-developer)
+
+Applied fix variant (a) — shell-local alias in `~/.bashrc`:
+```bash
+alias code='/c/Users/<user>/AppData/Local/Programs/Microsoft\ VS\ Code/bin/code'
+```
+
+This bypasses the default Windows PATH ordering where `Microsoft VS Code\`
+(GUI launcher `code.exe`) precedes `Microsoft VS Code\bin\` (CLI shim).
+Bash strips `.exe`, so the GUI launcher would otherwise win and reject
+flags like `--install-extension`. With the alias, `code --install-extension foo.vsix`
+and `code --version` work directly from Git Bash.
+
+Verified `code --version` returns `1.117.0` (the proper CLI shim
+output) after `bash -i -c 'code --version'`. No repo-level commit
+needed — `~/.bashrc` is per-developer config, not project state.
+
+**For other contributors who hit this:** the recipe in this entry's
+prior text (variants a / b / c) has the smallest-blast-radius fix
+first. If a second developer reports the issue, that's the trigger
+to fold a "Windows developer setup" subsection into
+`docs/INSTALLATION.md` per the original "trigger to revisit"
+condition.
 
 ### Item 11 — Latent AttributeError in `agent.py` Rich-TUI path — closed 2026-04-28
 
