@@ -132,6 +132,96 @@ release branch — too small to need its own.
 
 ---
 
+### Item 13 — `scripts/release.py` step 15 fails silently when `gh release view` errors
+
+**Affected file:** [scripts/release.py](../scripts/release.py),
+specifically the "Step 15/15: Verifying Release" block.
+
+**What's wrong:** when `gh release view v<version> --json assets`
+returns "release not found" (because CI failed and the `release`
+job was skipped, OR because the release was never created), step
+15 prints `❌ Could not fetch release info` but the script
+**continues to print `✅ Release v1.18.2 complete!`** and exits
+with status 0. Operators who trust the green checkmark + exit
+code don't realise the release page never materialised.
+
+**Observed twice now:**
+
+- **v1.18.1** retag cycles (4 attempts) — captured in
+  `memory/release-lessons.md`. Multiple runs reported success
+  while the actual release was incomplete or absent.
+- **v1.18.2 today (2026-04-29)** — `build-dmg` failed with
+  `hdiutil: Resource busy` (transient macOS CI flake), which
+  caused `release` job to skip, which meant no GitHub Release
+  was created. release.py's "Step 15: Verify" printed the
+  "Could not fetch release info" warning, then printed the
+  green completion banner anyway. Caught only because we ran
+  `gh release view` ourselves per the project's "don't trust
+  release.py's release complete" rule.
+
+**Why this matters:** the fix to v1.18.1's silent-failure mode
+was discipline (`gh release view` after every release). That's
+not robust — it relies on the operator remembering. The script
+has all the information it needs to fail loudly; it just doesn't.
+
+**Concrete fix:**
+
+In `scripts/release.py`, find the verification step and change:
+
+```python
+# Current (approximate shape — gracefully degrades on failure)
+result = run(["gh", "release", "view", f"v{version}", "--json", "assets"])
+if result.returncode != 0:
+    print("  ❌ Could not fetch release info")
+else:
+    # check assets ...
+```
+
+To:
+
+```python
+result = run(["gh", "release", "view", f"v{version}", "--json", "assets"])
+if result.returncode != 0:
+    print("  ❌ FATAL: gh release view failed — release was NOT created.")
+    print("     Most common cause: a CI job failed (build-dmg flake,")
+    print("     test failure, etc.) and the `release` job was skipped.")
+    print("     Run: gh run list --workflow='Build Executables' --limit 3")
+    print("     If a job failed, re-run it: gh run rerun <RUN_ID> --failed")
+    sys.exit(1)
+asset_count = len(json.loads(result.stdout)["assets"])
+if asset_count < EXPECTED_ASSET_COUNT:  # 15 as of v1.18.2
+    print(f"  ❌ FATAL: only {asset_count} assets attached, expected {EXPECTED_ASSET_COUNT}.")
+    sys.exit(1)
+print(f"  ✅ {asset_count} assets verified.")
+```
+
+Plus: bump `EXPECTED_ASSET_COUNT` constant when assets change
+(currently 15: 13 binaries + 1 dmg + 1 vsix). The constant lives
+at module scope so changes are reviewed alongside CI matrix
+changes in `.github/workflows/build.yml`.
+
+**Why deferred:** noticed during the v1.18.2 release recovery,
+just after the release was confirmed working. Bumping
+`scripts/release.py` after the release would have been a
+post-release commit on master — fine, but better batched with
+related release-tooling improvements (e.g. the `_build_info.py`
+integration noted in Item 8).
+
+**Trigger to revisit:** any v1.18.3+ release prep — bundle this
+fix with the Item 8 build-info integration and any other
+release-tooling polish.
+
+**Effort:** ~30 minutes — one function change + one constant +
+one test that asserts the script `sys.exit(1)`s when `gh release
+view` mocks return a non-zero exit code.
+
+**Branch when ready:** fold into a `chore/release-tooling-v1.18.3`
+branch alongside Item 8's build-info integration. Or stand alone
+as a `fix/release-py-verify-fail-loud` branch if Item 8 isn't
+ready.
+
+---
+
 ## Closed
 
 (Move items here as they land. Format: `### Item X — title — closed YYYY-MM-DD in commit-hash`)
