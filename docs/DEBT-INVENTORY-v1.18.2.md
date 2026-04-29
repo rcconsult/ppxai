@@ -63,6 +63,75 @@ have minimum test coverage.
 
 ---
 
+### Item 12 — GitHub Actions Node.js 20 deprecation warnings (cosmetic)
+
+**Affected files:** [.github/workflows/build.yml](../.github/workflows/build.yml),
+[.github/workflows/docs.yml](../.github/workflows/docs.yml).
+
+**What's wrong:** every CI run still emits a deprecation banner for
+`actions/checkout@v4`, `actions/setup-node@v4`, and
+`actions/upload-artifact@v4`:
+
+> "Node.js 20 actions are deprecated. The following actions are
+> running on Node.js 20 ... To opt into Node.js 24 now, set the
+> FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true environment variable..."
+
+**State today.** Commit `67b0774a` (2026-04-25) already set
+`FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'` at the workflow `env`
+level in both files, **forcing the runtime to Node.js 24**. The
+actions DO run on Node 24 today — the deprecation is observed only
+as a cosmetic banner because GitHub's runner reads the action's
+`action.yml` manifest (which still declares `using: 'node20'`)
+when emitting the warning. The runtime override doesn't change
+the manifest text.
+
+**Why this is cosmetic, not an error.** Build artifacts, tests,
+and release publishing all succeed today. GitHub's hard cutoff is
+2026-09-16 (when Node 20 is removed from runners) — until then
+the env-var override is effective. The warning is informational
+noise for CI log readers.
+
+**Concrete fix:** bump pins to v5 versions whose manifests declare
+`using: 'node24'`:
+
+```diff
+-      uses: actions/checkout@v4
++      uses: actions/checkout@v5
+-      uses: actions/setup-node@v4
++      uses: actions/setup-node@v5
+-      uses: actions/upload-artifact@v4
++      uses: actions/upload-artifact@v5
+```
+
+`actions/setup-python@v5` is already current.
+
+After bumping, the `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24` env var
+becomes redundant — drop it in the same commit. Per the original
+commit message: "Removal plan: drop the env once every referenced
+action has shipped a v5+ release running natively on Node 24, and
+we've verified each in CI."
+
+**Why deferred:** noticed mid-release on `bugfix/v1.18.2`. Bumping
+action pins would have added an unrelated change to master after
+the release-prep commits, risking the asset-build CI run we were
+already waiting on. Filed for next branch.
+
+**Trigger to revisit:**
+- Convenient: any next release branch (v1.18.3 or v1.19.0).
+- Forced: 2026-06-02 (GitHub forces Node 24 default — env-var
+  override stops being needed; bump pins to silence warnings).
+- Hard deadline: 2026-09-16 (Node 20 removed from runners).
+
+**Effort:** ~10 minutes — three pin bumps + one env removal +
+one CI run to verify nothing breaks. v5 versions of all three
+actions ship Node 24 manifests and are backwards-compatible at
+the input level.
+
+**Branch when ready:** fold into the first commit on the next
+release branch — too small to need its own.
+
+---
+
 ## Closed
 
 (Move items here as they land. Format: `### Item X — title — closed YYYY-MM-DD in commit-hash`)
