@@ -8,6 +8,16 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 
 **Current Version:** v1.18.2
 
+**Release state:** v1.18.2 tagged + published 2026-04-29. Active branch: `master`.
+GitHub release: https://github.com/rcconsult/ppxai/releases/tag/v1.18.2 (15 assets:
+13 binaries + 1 dmg + 1 vsix). 5 trigger-deferred items remain in
+[docs/DEBT-INVENTORY-v1.18.2.md](docs/DEBT-INVENTORY-v1.18.2.md): Item 3 (k8s
+session-manager security tests), Item 12 (Node.js 20 deprecation → bump
+actions/* to v5), Item 13 (release.py step 15 silent-failure), Item 14
+(Anthropic provider with TOS-aware auth fallback), Item 15 (deploy/shared/
+AGENTS.md stale parallel copy). All trigger-deferred — pick up when their
+forcing conditions hit.
+
 **Major architectural patterns** — each has its own dedicated section below; respect these when changing code:
 - **AppState** (v1.17.x) — observable state across all 4 clients (Python, JS, TS); SSE `state_sync` push; engine-owned invalidation via session callbacks. See "Cross-Client State Through AppState" below.
 - **Engine ops decomposition** (v1.17.x) — `EngineClient` is a thin facade (~1058 LoC) over 6 ops modules in `engine/*_ops.py`. Same pattern applied to `tui/session_restore_ops.py` (v1.18.2 Item 1).
