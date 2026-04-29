@@ -5,6 +5,63 @@ All notable changes to ppxai will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.18.2] - 2026-04-29
+
+### Added
+
+- **Tier 1 observability pass.** Three production silent paths gained log lines so the next investigation isn't blind:
+  - `POST /command/{name}` now emits `HTTP POST /command/{name} from session={id} args={preview}` (INFO) plus `ok` + side-effect count (DEBUG) and a WARNING for unknown commands. Args truncated to 120 chars so noisy `/agent` prompts don't dominate the log. Pre-v1.18.2, the canonical v1.18.1 dispatch path was invisible — the exact regression the unification was built to detect would have slipped through silently. (Item 7)
+  - `GET /state` now emits `HTTP GET /state from session={id}`. Pre-fix, the route was silent — a 21-min webapp session showed zero observable `/state` hits despite 5 provider switches and likely focus changes; we couldn't tell whether visibilitychange / focus re-anchor was broken or just silent. Wiring verified byte-identical between deployed `~/.ppxai/web/app.js` and repo source. (Item 9)
+  - Version banner build-info injection. `version.py::_build_info()` checks for an optional `ppxai/_build_info.py` (gitignored, written by new `scripts/write_build_info.py` from current git state) before falling back to runtime probes. PyInstaller binaries can now report real commit + build-time UTC instead of "n/a, n/a". Wiring into release tooling deferred — mechanism is ready, integration is one line. (Item 8)
+- **`EngineClientProtocol` in `ppxai/engine/types.py`.** Enumerates ~30 properties/methods commands actually call on the engine, grouped functionally (AppState access, provider/model switching, working dir, tools/agent management, bootstrap/context, checkpoints, chat). `commands/protocol.py` and `commands/context.py` now type against the protocol; both files dropped `from ..engine.client import EngineClient`. Sentinel tests in `tests/test_engine_client_protocol.py` pin: real `EngineClient` satisfies the protocol structurally (`isinstance` runtime check), no inheritance, neither file imports the concrete class. **Verified via graphify rebuild:** `protocol.py` → `EngineClient` edges 21 → 4 (~80% reduction); total `EngineClient` inbound 56 → 39. (Item 10)
+- **VSCode extension bundled via esbuild.** New `vscode-extension/esbuild.js` (cross-platform, pure Node). `npm run typecheck` (tsc --noEmit) + `npm run package` (esbuild --production) replace the prior `npx tsc -p ./` flow. `vscode:prepublish` runs the production bundle so `vsce package` always ships minified. `.vscodeignore` rewritten to ship `dist/` + `media/` + `resources/` only. CI gains a 500 KB VSIX size-budget gate to catch accidental bloat. **Results: 1.1 MB → 128 KB VSIX (−88%); 804 → 15 files (−98%); `vsce package` warning gone.** (Item 5)
+- **Contract-based `resolveWebviewView` refactor.** The 98-line monolith in `vscode-extension/src/chatPanel.ts` (criticality 0.723 in the gpt-5.5 review-graph; singleton community in the graphify VSCode subtree) becomes a 21-line orchestrator composing four typed contracts at module level: `WebviewMessage` discriminated union (16 variants), `WebviewMessageHandlers = Required<...>` exhaustive dispatch table, `configureWebview()`, `installMessageRouter()` returning Disposable, `installFocusReanchor()` returning Disposable. Adding a message type requires extending the union and adding a map entry — the type system enforces both. (Item 2)
+- **`tui/session_restore_ops.py` extracted from `tui/app.py`** (272 LoC ops module). Mirrors the engine's `session_ops.py` decomposition pattern. `app.py` shrinks 1947 → 1744 LoC. `_check_session_restoration` and `_restore_session` become thin wrappers calling into the ops module. Same shape applied to TUI as v1.17.x applied to engine and v1.17.4 applied to server. (Item 1, narrowed)
+- **`ADR 0002` — CommandContext three-pattern split.** Documents why Rich uses Pattern A (`__getattr__` proxy via `RichCommandContext(handler)`), Textual passes `self` directly (no adapter), and Server uses Pattern B (explicit `ServerCommandContext` delegating against `EngineClientProtocol`). Pins the rationale so reviewers don't re-litigate. Triggers to revisit: 4th context type, 5+ new CommandContext members in one release, or external SDK consumer needing `commands/`.
+- **GPT-5.5 family models registered.** `gpt-5.5`, `gpt-5.5-pro`, `gpt-5.3-codex`, `gpt-5-pro` added to model profiles + benchmark sweep against the gpt-5.4 baseline.
+- **`docs/MODEL-SELECTION-GUIDE.md`** — planner/executor selection guide with surgical hint strip validation.
+- **Runtime version banner** in Rich/Textual/server logger headers — `ppxai vX.Y.Z (commit X, source Y, python Z, platform W)`. Critical for editable-install setups where a stale Python process can outlive its source.
+- **9 new tests in `tests/test_engine_client_protocol.py`** (protocol surface + structural satisfaction + import hygiene).
+- **4 new tests in `tests/test_agent_logger_attribute.py`** pinning the Item 11 fix with REAL `EngineClient` (no mocks — the bug existed precisely because mocks substituted the missing attribute).
+
+### Changed
+
+- **`commands/agent.py:680` uses `get_logger("tui")` directly** instead of `context.engine_client.logger` (which raised `AttributeError` because `EngineClient` has no `logger` attribute). Pre-fix, the Rich-TUI `/agent <task>` path crashed mid-construction; existing tests substituted `Mock()` for the logger arg, masking the missing attribute. (Item 11)
+- **CHANGELOG/CLAUDE.md trim.** CLAUDE.md's accumulated v1.17.x / v1.18.0-in-progress version highlights (~67 lines of marketing copy that duplicated CHANGELOG content) replaced with a short pointer block referencing the durable architectural pattern sections + ADRs. Net change: +14 lines (added discipline rules — verify-both-directions, graphify noise hygiene, subtree-build pattern).
+- **`commands/context.py` documentation rewritten** to describe the actual three-pattern architecture (Pattern A proxy for Rich, no adapter for Textual, Pattern B explicit for Server). Old docstring claimed `TextualCommandContext` was the Textual adapter — but it was dead code never wired into `app.py`.
+- **`docs/ARCHITECTURE.md`** updated to drop stale `TextualCommandContext` reference + document the three-pattern split with pointer to ADR 0002.
+- **`gpt-5.5-mini` becomes the default OpenAI `default_model` and `coding_model`** (was `gpt-4.1-mini` and `gpt-5.1-codex-mini` respectively).
+- **Engine `chat_with_tools` per-turn usage flush.** Rich + Textual TUIs now call `save_usage_to_persistent_storage()` per turn, matching server-side behaviour. Pre-fix, TUI usage tracking only flushed on `/save` or session exit — losing data on Ctrl+C interrupt or crash.
+
+### Fixed
+
+- **Orphan tool_calls cleanup.** Ctrl+C mid-tool-iteration left assistant messages with `tool_calls` but no following `tool` role messages — the next API call rejected the malformed conversation history. `validate_and_fix_alternation` now drops orphans, and the test suite gained a regression for it.
+- **`session.load()` rejects path-traversal names** (`..`, absolute paths, embedded separators). 21 persistence tests added covering write-failure propagation, symlinks, state-pointer staleness, and concurrent IO.
+- **`usage_by_model` round-trip on session load.** Pre-fix, `session.load()` was wiping `usage_by_model` and `tool_calls` because deserialization rebuilt them as empty containers. Fix hydrates both from the persisted JSON.
+- **Latent `agent.py:680` `AttributeError`** on Rich TUI `/agent <task>` — see Item 11 above.
+- **7 `TestKillPreviewBackend` failures on Windows** — the tests `patch("ppxai.server.state.os.getpgid")` etc., but those attributes don't exist on Windows so `unittest.mock.patch()` raised `AttributeError` before the test body ran. Added `@_unix_only` skipif decorator with documentation. The `kill_preview_backend` Windows branch (`process.terminate()`) IS cross-platform and tested separately; only the Linux signal-handling branch tests can't mock on Windows.
+- **`gemini` provider None-iter defensive guards** in `_convert_tools_to_gemini` and adjacent methods.
+- **`container.py:104` audited** as by-design abstract base + regression test added.
+
+### Internal
+
+- **`.graphifyignore` exclusions added** (`tests/`, `benchmarks/`, `scripts/`, `examples/`, `docs/archive/`). Pre-fix, a single `tests/test_tui.py` (4,788 LoC) drove 71-79% of the "god class" edges on `PPXAIDEApp` / `MessageBox` / `ChatView`, biasing whole-repo god-node ranking with test-coverage volume. Whole-repo graph 11,628 → 4,481 nodes (−61%); 46,971 → 16,602 edges (−65%). Post-exclusion top hubs reflect actual architecture (`EventType`, `CommandResult`, `SessionManager`, `BaseTool`, `BaseProvider`, `ToolManagerProtocol`).
+- **Subtree-build script** used multiple times this branch (`engine`, `server`, `commands`, `vscode`, `tui`) to surface subsystem-internal structure that the whole-repo graph hides. Pattern documented in CLAUDE.md graphify section.
+- **Verify-don't-assume both directions.** When a signal flags X as a problem AND when someone pushes back saying the signal is wrong, both readings need the same Tier-2-style verification (production-code-only inbound counts, channel-ratio inspection, source-code grep). Pattern-matched three times before discipline pinned: `EngineClient` (Tier 2 — turned out to be design working as intended), `ChatViewProvider` (Item 2 — turned out to be a real refactor), `PPXAIDEApp` (Item 1 — turned out to be test inflation).
+- **476 tests added across the gpt-5.5 critique sweep.** Test count: 2591 → 3067 passing, 9 skipped (the 7 Unix-only `TestKillPreviewBackend` + 2 pre-existing). Coverage now spans server/state.py (28 tests across 4 classes), `_execute_ai_task` (20 tests across 7 sub-cases), tool security + `docs/CONSENT-CONTRACT.md` (18 tests), server route edges (17 tests), session persistence (44 tests across multiple files), benchmark CI gate (9 tests).
+- **Dead `TextualCommandContext` class deleted** from `commands/context.py`. Created v1.15.0, never wired into `app.py` (which passes `self` directly), survived 13 releases as dead code. Detection during Item 10's protocol enumeration.
+- **CommandContext methods on `PPXAIDEApp` retained** (16 inline methods, ~100 LoC). They're the actual Pattern A implementation, NOT boilerplate to remove. ADR 0002 documents this.
+- **DEBT-INVENTORY-v1.18.2.md** is the canonical home for deferred items. 9 items closed in this branch (Items 1, 2, 4, 5, 6, 7, 8, 9, 10, 11). Item 3 (k8s session-manager security tests) remains trigger-deferred — to be addressed when in k8s context environment so tests can be exercised end-to-end.
+
+### Docs
+
+- New [docs/RELEASE-NOTES-v1.18.2.md](docs/RELEASE-NOTES-v1.18.2.md).
+- New [docs/decisions/0002-command-context-three-pattern-split.md](docs/decisions/0002-command-context-three-pattern-split.md) (second ADR).
+- New [docs/MODEL-SELECTION-GUIDE.md](docs/MODEL-SELECTION-GUIDE.md).
+- New [docs/CONSENT-CONTRACT.md](docs/CONSENT-CONTRACT.md) (security boundary for tool execution).
+- [CLAUDE.md](CLAUDE.md) trimmed obsolete version-marketing; gained verify-both-directions discipline + graphify noise-hygiene + subtree-build pattern guidance + pointer to ADR 0002.
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) updated for the three-pattern CommandContext split.
+
 ## [1.18.1] - 2026-04-25
 
 ### Added
