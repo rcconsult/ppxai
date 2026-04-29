@@ -1173,6 +1173,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#item-14-add-anthropic-provider-with-explicit-tos-aware-auth-fallback" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Item 14 — Add Anthropic provider (with explicit TOS-aware auth fallback)
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1547,6 +1558,99 @@ view</code> mocks return a non-zero exit code.</p>
 branch alongside Item 8's build-info integration. Or stand alone
 as a <code>fix/release-py-verify-fail-loud</code> branch if Item 8 isn't
 ready.</p>
+<hr />
+<h3 id="item-14-add-anthropic-provider-with-explicit-tos-aware-auth-fallback">Item 14 — Add Anthropic provider (with explicit TOS-aware auth fallback)<a class="headerlink" href="#item-14-add-anthropic-provider-with-explicit-tos-aware-auth-fallback" title="Permanent link">&para;</a></h3>
+<p><strong>Affected files:</strong> new <code>ppxai/engine/providers/anthropic.py</code>, new
+<code>ppxai-config.example.json</code> entry, registration in
+<a href="../ppxai/engine/providers/__init__.py">ppxai/engine/providers/<strong>init</strong>.py</a>,
+new tests, README provider table.</p>
+<p><strong>What's missing:</strong> ppxai supports OpenAI, Perplexity, Gemini,
+OpenAI-compat (vLLM/local), but not Anthropic directly. Users who
+want Claude (Opus/Sonnet/Haiku) for chat or coding tasks have no
+first-class path today. They CAN configure an OpenAI-compat
+provider pointing at an Anthropic-compatible proxy, but that's
+a workaround — losing tool-calling translation, model-profile
+hints, etc.</p>
+<p><strong>Mainline scope (Phase 1):</strong> standard provider class using the
+official <code>anthropic</code> Python SDK. Same shape as
+<code>providers/openai_native.py</code> and <code>providers/gemini.py</code>:
+- Add <code>anthropic&gt;=0.43</code> to <code>pyproject.toml</code>.
+- <code>AnthropicProvider(BaseProvider)</code> with <code>chat_stream</code>, tool-call
+  translation, model-list, capability flags.
+- <code>ModelProfile</code> entries for <code>claude-opus-4-7</code>, <code>claude-sonnet-4-6</code>,
+  <code>claude-haiku-4-5-20251001</code> (the v4.x family on knowledge cutoff
+  2026-01).
+- Auth via <code>ANTHROPIC_API_KEY</code> env (preferred) or
+  <code>providers.anthropic.api_key_env</code> config.
+- <code>pyproject.toml</code> extra: <code>[anthropic]</code> so users opt into the
+  dependency.</p>
+<p><strong>Auth-fallback shape (Phase 2, opt-in, TOS-aware):</strong> when
+<code>ANTHROPIC_API_KEY</code> is unset AND <code>ANTHROPIC_AUTH_TOKEN</code> is set
+(or detectable from <code>~/.claude/.credentials.json</code> left by
+<code>claude /login</code>), use the auth-token path. <strong>This must:</strong>
+1. <strong>Display a runtime WARNING the first time the fallback is
+   invoked</strong>, not just in docs. Suggested text:</p>
+<blockquote>
+<p>"ppxai is using ANTHROPIC_AUTH_TOKEN (Claude Code subscription
+OAuth) instead of an API key. Reusing a Claude Code
+subscription credential from non-Claude-Code clients may
+violate Anthropic's terms of service. The project provides
+this fallback for personal experimentation only; you assume
+full responsibility for compliance with Anthropic's licensing
+terms. Set <code>ANTHROPIC_API_KEY</code> to silence this warning and
+use the supported API path."
+2. <strong>NOT auto-read <code>~/.claude/.credentials.json</code> without explicit
+   opt-in.</strong> The user must either set <code>ANTHROPIC_AUTH_TOKEN</code>
+   themselves OR set a config flag like
+   <code>providers.anthropic.allow_claude_code_oauth: true</code>. Silently
+   slurping Claude Code's credential file is the project taking
+   the user's TOS decision for them.
+3. <strong>Implement token-refresh awareness.</strong> OAuth access tokens
+   expire (~1h). If the user opts into the credentials-file path,
+   re-read the file per request — Claude Code keeps it fresh. If
+   the user supplies a raw <code>ANTHROPIC_AUTH_TOKEN</code>, fail loudly
+   when it expires (401) with "your auth token has expired; run
+   <code>claude /login</code> and retry, or set <code>ANTHROPIC_API_KEY</code>".</p>
+</blockquote>
+<p><strong>Documentation requirements:</strong>
+- README's provider table gets an Anthropic row with both auth
+  paths shown.
+- A new <code>docs/ANTHROPIC-PROVIDER.md</code> covering: setup with API key
+  (mainline, recommended), opt-in OAuth-reuse with the full TOS
+  warning quoted verbatim, troubleshooting expired tokens.
+- The TOS-warning text on the runtime banner mirrors the docs
+  text — single source of truth.</p>
+<p><strong>Why this matters for ppxai users:</strong> Claude is currently the
+strongest coding model in the v4.x generation; a first-class
+provider unlocks <code>/explain</code>, <code>/test</code>, <code>/docs</code>, <code>/agent</code> against
+Claude with the same UX as the other providers. The OAuth-reuse
+path also lets users with existing Claude Code subscriptions
+experiment without paying for separate API access — at their own
+TOS risk.</p>
+<p><strong>Why deferred:</strong> scoped feature work, not a fix. ~2-3 days for
+Phase 1 + ~1 day for Phase 2 (with docs and warning plumbing).
+Better as a focused branch than a slip-in.</p>
+<p><strong>Trigger to revisit:</strong> any v1.18.3+ feature window. Pairs well
+with multi-model routing work (<code>docs/TODO-routing.md</code>) — Claude
+as a coding-model option in the routing layer is one of the
+listed motivations.</p>
+<p><strong>Effort:</strong> Phase 1 ~2-3 days, Phase 2 ~1 day. Tests for both:
+mock <code>anthropic</code> client, sentinel for the TOS warning emitting on
+fallback path (assert <code>caplog</code> contains the warning text).</p>
+<p><strong>Branch when ready:</strong> <code>feat/anthropic-provider</code>. Phase 2 can be
+a follow-up commit on the same branch or split into
+<code>feat/anthropic-oauth-fallback</code> if the TOS-warning UX needs
+review independently.</p>
+<p><strong>Caveats this entry pins so they don't get re-litigated:</strong>
+- The project does NOT endorse, guarantee, or take legal
+  responsibility for users using their Claude Code subscription
+  credentials with ppxai. The runtime warning is the project's
+  due-diligence boundary.
+- The mainline (API-key) path has no TOS concerns and is the
+  recommended setup. Phase 2 exists for users who explicitly
+  choose the experimentation path.
+- Auto-reading <code>~/.claude/.credentials.json</code> without opt-in is
+  off the table — too easy to surprise a user into TOS exposure.</p>
 <hr />
 <h2 id="closed">Closed<a class="headerlink" href="#closed" title="Permanent link">&para;</a></h2>
 <p>(Move items here as they land. Format: <code>### Item X — title — closed YYYY-MM-DD in commit-hash</code>)</p>
