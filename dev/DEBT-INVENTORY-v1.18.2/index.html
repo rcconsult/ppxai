@@ -1507,19 +1507,32 @@ job was skipped, OR because the release was never created), step
 <strong>continues to print <code>✅ Release v1.18.2 complete!</code></strong> and exits
 with status 0. Operators who trust the green checkmark + exit
 code don't realise the release page never materialised.</p>
-<p><strong>Observed twice now:</strong></p>
+<p><strong>Observed three times now (each a different failure mode):</strong></p>
 <ul>
 <li><strong>v1.18.1</strong> retag cycles (4 attempts) — captured in
   <code>memory/release-lessons.md</code>. Multiple runs reported success
   while the actual release was incomplete or absent.</li>
-<li><strong>v1.18.2 today (2026-04-29)</strong> — <code>build-dmg</code> failed with
-  <code>hdiutil: Resource busy</code> (transient macOS CI flake), which
-  caused <code>release</code> job to skip, which meant no GitHub Release
+<li><strong>v1.18.2 first failure (2026-04-29 ~00:14 UTC)</strong> — <code>build-dmg</code>
+  failed with <code>hdiutil: Resource busy</code> (transient macOS CI flake),
+  which caused <code>release</code> job to skip, which meant no GitHub Release
   was created. release.py's "Step 15: Verify" printed the
-  "Could not fetch release info" warning, then printed the
-  green completion banner anyway. Caught only because we ran
-  <code>gh release view</code> ourselves per the project's "don't trust
-  release.py's release complete" rule.</li>
+  "Could not fetch release info" warning, then printed the green
+  completion banner anyway. Caught only because we ran <code>gh release
+  view</code> ourselves per the project's "don't trust release.py's
+  release complete" rule.</li>
+<li><strong>v1.18.2 second failure (2026-04-29 ~00:26 UTC, after build-dmg
+  rerun)</strong> — release object now existed but <code>body</code> contained ONLY
+  the auto-generated <code>**Full Changelog**: https://...</code> link
+  (80 chars), NOT the rich <code>docs/RELEASE-NOTES-v1.18.2.md</code> content
+  (~18,000 chars). release.py's "Publish Notes" step took 338s
+  (5.6 min — wildly long for a <code>gh release edit --notes-file</code> call);
+  it likely retried internally and timed out gracefully without
+  raising. Step 15 didn't catch it because the release exists and
+  has 15 assets — <code>gh release view</code> returns 200; the body just
+  happens to be near-empty. <strong>Caught only because the user noticed
+  the release page</strong> ~1 hour later showed only the changelog link.
+  Fixed manually with <code>gh release edit v1.18.2 --notes-file
+  docs/RELEASE-NOTES-v1.18.2.md</code>.</li>
 </ul>
 <p><strong>Why this matters:</strong> the fix to v1.18.1's silent-failure mode
 was discipline (<code>gh release view</code> after every release). That's
@@ -1535,24 +1548,52 @@ has all the information it needs to fail loudly; it just doesn't.</p>
 </span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>    <span class="c1"># check assets ...</span>
 </span></code></pre></div>
 <p>To:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">result</span> <span class="o">=</span> <span class="n">run</span><span class="p">([</span><span class="s2">&quot;gh&quot;</span><span class="p">,</span> <span class="s2">&quot;release&quot;</span><span class="p">,</span> <span class="s2">&quot;view&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;v</span><span class="si">{</span><span class="n">version</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="s2">&quot;--json&quot;</span><span class="p">,</span> <span class="s2">&quot;assets&quot;</span><span class="p">])</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">returncode</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;  ❌ FATAL: gh release view failed — release was NOT created.&quot;</span><span class="p">)</span>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;     Most common cause: a CI job failed (build-dmg flake,&quot;</span><span class="p">)</span>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;     test failure, etc.) and the `release` job was skipped.&quot;</span><span class="p">)</span>
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;     Run: gh run list --workflow=&#39;Build Executables&#39; --limit 3&quot;</span><span class="p">)</span>
-</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;     If a job failed, re-run it: gh run rerun &lt;RUN_ID&gt; --failed&quot;</span><span class="p">)</span>
-</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>    <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
-</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="n">asset_count</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">stdout</span><span class="p">)[</span><span class="s2">&quot;assets&quot;</span><span class="p">])</span>
-</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="k">if</span> <span class="n">asset_count</span> <span class="o">&lt;</span> <span class="n">EXPECTED_ASSET_COUNT</span><span class="p">:</span>  <span class="c1"># 15 as of v1.18.2</span>
-</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  ❌ FATAL: only </span><span class="si">{</span><span class="n">asset_count</span><span class="si">}</span><span class="s2"> assets attached, expected </span><span class="si">{</span><span class="n">EXPECTED_ASSET_COUNT</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
-</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>    <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
-</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  ✅ </span><span class="si">{</span><span class="n">asset_count</span><span class="si">}</span><span class="s2"> assets verified.&quot;</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">result</span> <span class="o">=</span> <span class="n">run</span><span class="p">([</span><span class="s2">&quot;gh&quot;</span><span class="p">,</span> <span class="s2">&quot;release&quot;</span><span class="p">,</span> <span class="s2">&quot;view&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;v</span><span class="si">{</span><span class="n">version</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>              <span class="s2">&quot;--json&quot;</span><span class="p">,</span> <span class="s2">&quot;assets,body&quot;</span><span class="p">])</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">returncode</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;  ❌ FATAL: gh release view failed — release was NOT created.&quot;</span><span class="p">)</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;     Most common cause: a CI job failed (build-dmg flake,&quot;</span><span class="p">)</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;     test failure, etc.) and the `release` job was skipped.&quot;</span><span class="p">)</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;     Run: gh run list --workflow=&#39;Build Executables&#39; --limit 3&quot;</span><span class="p">)</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;     If a job failed, re-run it: gh run rerun &lt;RUN_ID&gt; --failed&quot;</span><span class="p">)</span>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>    <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="n">data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">stdout</span><span class="p">)</span>
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="n">asset_count</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;assets&quot;</span><span class="p">])</span>
+</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="n">body</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;body&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="k">if</span> <span class="n">asset_count</span> <span class="o">&lt;</span> <span class="n">EXPECTED_ASSET_COUNT</span><span class="p">:</span>  <span class="c1"># 15 as of v1.18.2</span>
+</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  ❌ FATAL: only </span><span class="si">{</span><span class="n">asset_count</span><span class="si">}</span><span class="s2"> assets attached, expected </span><span class="si">{</span><span class="n">EXPECTED_ASSET_COUNT</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>    <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+</span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a><span class="c1"># v1.18.2&#39;s second failure: body had only the 80-char auto-generated</span>
+</span><span id="__span-2-17"><a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a><span class="c1"># `**Full Changelog**: ...` link instead of the ~18000-char release</span>
+</span><span id="__span-2-18"><a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a><span class="c1"># notes from docs/RELEASE-NOTES-v{version}.md. Detect by length.</span>
+</span><span id="__span-2-19"><a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a><span class="n">MIN_BODY_CHARS</span> <span class="o">=</span> <span class="mi">500</span>  <span class="c1"># any real release-notes file is far longer</span>
+</span><span id="__span-2-20"><a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a><span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">body</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">MIN_BODY_CHARS</span><span class="p">:</span>
+</span><span id="__span-2-21"><a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  ❌ FATAL: release body is only </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">body</span><span class="p">)</span><span class="si">}</span><span class="s2"> chars — &quot;</span>
+</span><span id="__span-2-22"><a id="__codelineno-2-22" name="__codelineno-2-22" href="#__codelineno-2-22"></a>          <span class="sa">f</span><span class="s2">&quot;release-notes publishing failed. Recover with:&quot;</span><span class="p">)</span>
+</span><span id="__span-2-23"><a id="__codelineno-2-23" name="__codelineno-2-23" href="#__codelineno-2-23"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;     gh release edit v</span><span class="si">{</span><span class="n">version</span><span class="si">}</span><span class="s2"> </span><span class="se">\\</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span id="__span-2-24"><a id="__codelineno-2-24" name="__codelineno-2-24" href="#__codelineno-2-24"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;       --notes-file docs/RELEASE-NOTES-v</span><span class="si">{</span><span class="n">version</span><span class="si">}</span><span class="s2">.md&quot;</span><span class="p">)</span>
+</span><span id="__span-2-25"><a id="__codelineno-2-25" name="__codelineno-2-25" href="#__codelineno-2-25"></a>    <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+</span><span id="__span-2-26"><a id="__codelineno-2-26" name="__codelineno-2-26" href="#__codelineno-2-26"></a><span class="c1"># Cross-check: body should match the release-notes file we have on disk.</span>
+</span><span id="__span-2-27"><a id="__codelineno-2-27" name="__codelineno-2-27" href="#__codelineno-2-27"></a><span class="n">notes_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;docs/RELEASE-NOTES-v</span><span class="si">{</span><span class="n">version</span><span class="si">}</span><span class="s2">.md&quot;</span><span class="p">)</span>
+</span><span id="__span-2-28"><a id="__codelineno-2-28" name="__codelineno-2-28" href="#__codelineno-2-28"></a><span class="k">if</span> <span class="n">notes_path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+</span><span id="__span-2-29"><a id="__codelineno-2-29" name="__codelineno-2-29" href="#__codelineno-2-29"></a>    <span class="n">expected</span> <span class="o">=</span> <span class="n">notes_path</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+</span><span id="__span-2-30"><a id="__codelineno-2-30" name="__codelineno-2-30" href="#__codelineno-2-30"></a>    <span class="k">if</span> <span class="n">expected</span> <span class="ow">and</span> <span class="n">expected</span><span class="p">[:</span><span class="mi">200</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">body</span><span class="p">:</span>
+</span><span id="__span-2-31"><a id="__codelineno-2-31" name="__codelineno-2-31" href="#__codelineno-2-31"></a>        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  ⚠️  WARNING: release body does not match &quot;</span>
+</span><span id="__span-2-32"><a id="__codelineno-2-32" name="__codelineno-2-32" href="#__codelineno-2-32"></a>              <span class="sa">f</span><span class="s2">&quot;docs/RELEASE-NOTES-v</span><span class="si">{</span><span class="n">version</span><span class="si">}</span><span class="s2">.md prefix. Manual review needed.&quot;</span><span class="p">)</span>
+</span><span id="__span-2-33"><a id="__codelineno-2-33" name="__codelineno-2-33" href="#__codelineno-2-33"></a>        <span class="c1"># Don&#39;t sys.exit — could be intentional editorial difference.</span>
+</span><span id="__span-2-34"><a id="__codelineno-2-34" name="__codelineno-2-34" href="#__codelineno-2-34"></a><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  ✅ </span><span class="si">{</span><span class="n">asset_count</span><span class="si">}</span><span class="s2"> assets verified, body </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">body</span><span class="p">)</span><span class="si">}</span><span class="s2"> chars.&quot;</span><span class="p">)</span>
 </span></code></pre></div>
 <p>Plus: bump <code>EXPECTED_ASSET_COUNT</code> constant when assets change
 (currently 15: 13 binaries + 1 dmg + 1 vsix). The constant lives
 at module scope so changes are reviewed alongside CI matrix
 changes in <code>.github/workflows/build.yml</code>.</p>
+<p><strong>MIN_BODY_CHARS rationale:</strong> the auto-generated changelog link is
+~80 chars; any real <code>RELEASE-NOTES-v*.md</code> file is multi-paragraph
+and well over 500. A threshold of 500 catches the
+"changelog-link-only body" failure mode without false-positives on
+short-but-real release notes (e.g. a hotfix release). If you ever
+want to ship a 200-char release intentionally, raise the threshold
+explicitly with a comment.</p>
 <p><strong>Why deferred:</strong> noticed during the v1.18.2 release recovery,
 just after the release was confirmed working. Bumping
 <code>scripts/release.py</code> after the release would have been a
