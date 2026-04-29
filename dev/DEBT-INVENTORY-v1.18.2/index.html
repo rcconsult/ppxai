@@ -1184,6 +1184,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#item-15-deploysharedagentsmd-is-a-stale-parallel-copy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Item 15 — deploy/shared/AGENTS.md is a stale parallel copy
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1652,6 +1663,74 @@ review independently.</p>
 - Auto-reading <code>~/.claude/.credentials.json</code> without opt-in is
   off the table — too easy to surprise a user into TOS exposure.</p>
 <hr />
+<h3 id="item-15-deploysharedagentsmd-is-a-stale-parallel-copy">Item 15 — <code>deploy/shared/AGENTS.md</code> is a stale parallel copy<a class="headerlink" href="#item-15-deploysharedagentsmd-is-a-stale-parallel-copy" title="Permanent link">&para;</a></h3>
+<p><strong>Affected files:</strong> <a href="../deploy/shared/AGENTS.md">deploy/shared/AGENTS.md</a>
+(369 lines, last touched 2026-03-27 in commit <code>1862422c</code>),
+<a href="../deploy/shared/AGENTS-local.md">deploy/shared/AGENTS-local.md</a>
+(82 lines, similar age).</p>
+<p><strong>What's wrong:</strong> the file looks like an active source of truth
+("data we use to inject AGENTS.md into coder pods") but in fact
+<strong>nothing in the deploy stack reads it</strong>:</p>
+<ul>
+<li><code>deploy/images/server/Dockerfile:53</code> does
+  <code>COPY AGENTS.md /root/.ppxai/AGENTS.md</code> — pulling from the
+  <strong>project root</strong> (the 564-line file), NOT <code>deploy/shared/</code>.</li>
+<li>No helm template, kaniko job, session-manager deployment, or
+  <code>values.yaml</code> reference <code>deploy/shared/</code>. Verified by
+  <code>grep -rn "deploy/shared\|shared/AGENTS"</code> returning zero
+  matches outside the file itself and a doc cross-reference.</li>
+<li>The bootstrap loader picks up the project-root copy from
+  <code>/root/.ppxai/AGENTS.md</code> at session start. Coder pods get the
+  fresh project-root content.</li>
+</ul>
+<p>The file appears to be an early artifact from when k8s deployment
+was being scaffolded, superseded by the Dockerfile-from-root
+pattern that ships today.</p>
+<p><strong>Why it's confusing:</strong> anyone reading the deploy/ directory could
+reasonably assume <code>deploy/shared/AGENTS.md</code> is what gets injected.
+The user's question on 2026-04-29 ("check the deploy folder for
+data we use to inject AGENTS.md into coder pods") was exactly
+this misread, prompted by IDE-opening the file.</p>
+<p><strong>What's stale:</strong> the deploy/shared copy is missing <strong>13 model
+hint blocks</strong> for newer models the project root has tracked
+since March 27:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>gpt-5.5*, gpt-5.4*, gpt-5.4-mini*, gpt-5.4-nano*, gpt-5.4-pro*,
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>gpt-5.3-codex*, gpt-5-pro*, gemini-3.1-flash-lite*, gemma-4*,
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>sonar-deep-research*, sonar-reasoning-pro*, o3*, o3-mini*
+</span></code></pre></div>
+<p><strong>What's NOT stale:</strong> the Qwen3.5 hint block is byte-identical
+between the two files. Whatever Qwen3.5-specific guidance ppxai
+ships, coder pods receive it via the project-root copy.</p>
+<p><strong>Why deferred:</strong> purely cosmetic. Coder pods get the right
+content. The only cost is reader confusion when someone discovers
+the parallel file. No CI failure, no runtime drift, no user
+impact.</p>
+<p><strong>Concrete fix (pick one when convenient):</strong></p>
+<p>(a) <strong>Sync from project root</strong> as part of release tooling. Add
+    <code>cp AGENTS.md deploy/shared/AGENTS.md</code> to <code>scripts/release.py</code>
+    so the deploy/shared copy stays current automatically.
+    ~5 min once. Maintenance burden: zero (release script handles).</p>
+<p>(b) <strong>Delete</strong> <code>deploy/shared/AGENTS.md</code> and
+    <code>deploy/shared/AGENTS-local.md</code> as deprecated. The Dockerfile
+    is the canonical injection point; this file confuses readers
+    without serving any deploy purpose. ~2 min: <code>rm</code> + commit.
+    Risk: if someone's using these for delta testing or historical
+    reference, that workflow breaks.</p>
+<p>(c) <strong>Convert into a comment-bearing reference doc</strong> explaining
+    "this file documents the AGENTS.md hint structure for the
+    coder pod context — actual content comes from project root via
+    Dockerfile". Keeps the file as documentation but removes the
+    "is this current?" ambiguity.</p>
+<p><strong>Trigger to revisit:</strong> any work in deploy/ that touches the
+session-manager image build, OR the next contributor who notices
+the parallel file and pings about it. Until then, the duplication
+is harmless.</p>
+<p><strong>Effort:</strong> 5 min for any of (a), (b), or (c). Pick the shape
+that matches your maintenance preference when next in deploy/
+work.</p>
+<p><strong>Branch when ready:</strong> fold into a <code>chore/deploy-cleanup</code> branch
+or any deploy-touching commit — too small to need its own.</p>
+<hr />
 <h2 id="closed">Closed<a class="headerlink" href="#closed" title="Permanent link">&para;</a></h2>
 <p>(Move items here as they land. Format: <code>### Item X — title — closed YYYY-MM-DD in commit-hash</code>)</p>
 <h3 id="item-1-god-node-refactoring-critique-6-closed-2026-04-29">Item 1 — God node refactoring [Critique #6] — closed 2026-04-29<a class="headerlink" href="#item-1-god-node-refactoring-critique-6-closed-2026-04-29" title="Permanent link">&para;</a></h3>
@@ -1844,22 +1923,22 @@ returned from <code>_buildMessageHandlers()</code>. Each entry is keyed by
 message type, narrowed to its specific variant via <code>Extract</code>.
 Adding a message type is now: <code>WebviewMessage</code> member + map entry.</p>
 <p><strong><code>resolveWebviewView</code> body becomes:</strong>
-<div class="language-typescript highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">public</span><span class="w"> </span><span class="nx">resolveWebviewView</span><span class="p">(</span><span class="nx">webviewView</span><span class="p">,</span><span class="w"> </span><span class="nx">_context</span><span class="p">,</span><span class="w"> </span><span class="nx">_token</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="k">this</span><span class="p">.</span><span class="nx">_view</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">webviewView</span><span class="p">;</span>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="nx">configureWebview</span><span class="p">(</span><span class="nx">webviewView</span><span class="p">.</span><span class="nx">webview</span><span class="p">,</span><span class="w"> </span><span class="k">this</span><span class="p">.</span><span class="nx">_context</span><span class="p">.</span><span class="nx">extensionUri</span><span class="p">,</span>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">                     </span><span class="p">(</span><span class="nx">w</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="k">this</span><span class="p">.</span><span class="nx">_getHtmlForWebview</span><span class="p">(</span><span class="nx">w</span><span class="p">));</span>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">    </span><span class="k">try</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">        </span><span class="k">this</span><span class="p">.</span><span class="nx">wireUISubscriptions</span><span class="p">();</span>
-</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">catch</span><span class="w"> </span><span class="p">(</span><span class="nx">e</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">console</span><span class="p">.</span><span class="nx">error</span><span class="p">(</span><span class="s1">&#39;[ppxai] Error:&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">e</span><span class="p">);</span><span class="w"> </span><span class="p">}</span>
-</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">messageRouter</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">installMessageRouter</span><span class="p">(</span>
-</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">        </span><span class="nx">webviewView</span><span class="p">.</span><span class="nx">webview</span><span class="p">,</span><span class="w"> </span><span class="k">this</span><span class="p">.</span><span class="nx">_buildMessageHandlers</span><span class="p">());</span>
-</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">focusReanchor</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">installFocusReanchor</span><span class="p">(</span>
-</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="w">        </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="k">this</span><span class="p">.</span><span class="nx">_reanchorFromServer</span><span class="p">());</span>
-</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="w">    </span><span class="nx">webviewView</span><span class="p">.</span><span class="nx">onDidDispose</span><span class="p">(()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="w">        </span><span class="nx">messageRouter</span><span class="p">.</span><span class="nx">dispose</span><span class="p">();</span>
-</span><span id="__span-3-14"><a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="w">        </span><span class="nx">focusReanchor</span><span class="p">.</span><span class="nx">dispose</span><span class="p">();</span>
-</span><span id="__span-3-15"><a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a><span class="w">    </span><span class="p">});</span>
-</span><span id="__span-3-16"><a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a><span class="p">}</span>
+<div class="language-typescript highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">public</span><span class="w"> </span><span class="nx">resolveWebviewView</span><span class="p">(</span><span class="nx">webviewView</span><span class="p">,</span><span class="w"> </span><span class="nx">_context</span><span class="p">,</span><span class="w"> </span><span class="nx">_token</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span><span class="k">this</span><span class="p">.</span><span class="nx">_view</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">webviewView</span><span class="p">;</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="nx">configureWebview</span><span class="p">(</span><span class="nx">webviewView</span><span class="p">.</span><span class="nx">webview</span><span class="p">,</span><span class="w"> </span><span class="k">this</span><span class="p">.</span><span class="nx">_context</span><span class="p">.</span><span class="nx">extensionUri</span><span class="p">,</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">                     </span><span class="p">(</span><span class="nx">w</span><span class="p">)</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="k">this</span><span class="p">.</span><span class="nx">_getHtmlForWebview</span><span class="p">(</span><span class="nx">w</span><span class="p">));</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">    </span><span class="k">try</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">        </span><span class="k">this</span><span class="p">.</span><span class="nx">wireUISubscriptions</span><span class="p">();</span>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">catch</span><span class="w"> </span><span class="p">(</span><span class="nx">e</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">console</span><span class="p">.</span><span class="nx">error</span><span class="p">(</span><span class="s1">&#39;[ppxai] Error:&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">e</span><span class="p">);</span><span class="w"> </span><span class="p">}</span>
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">messageRouter</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">installMessageRouter</span><span class="p">(</span>
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">        </span><span class="nx">webviewView</span><span class="p">.</span><span class="nx">webview</span><span class="p">,</span><span class="w"> </span><span class="k">this</span><span class="p">.</span><span class="nx">_buildMessageHandlers</span><span class="p">());</span>
+</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">focusReanchor</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">installFocusReanchor</span><span class="p">(</span>
+</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="w">        </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="k">this</span><span class="p">.</span><span class="nx">_reanchorFromServer</span><span class="p">());</span>
+</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="w">    </span><span class="nx">webviewView</span><span class="p">.</span><span class="nx">onDidDispose</span><span class="p">(()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="w">        </span><span class="nx">messageRouter</span><span class="p">.</span><span class="nx">dispose</span><span class="p">();</span>
+</span><span id="__span-4-14"><a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a><span class="w">        </span><span class="nx">focusReanchor</span><span class="p">.</span><span class="nx">dispose</span><span class="p">();</span>
+</span><span id="__span-4-15"><a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a><span class="w">    </span><span class="p">});</span>
+</span><span id="__span-4-16"><a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a><span class="p">}</span>
 </span></code></pre></div></p>
 <p><strong>Tests updated</strong> in
 <a href="../tests/test_vscode_visibility_reanchor.py"><code>tests/test_vscode_visibility_reanchor.py</code></a>
@@ -1882,7 +1961,7 @@ pass on the full non-TUI sweep (7 pre-existing Unix-only
 <code>TestKillPreviewBackend</code> failures verified against master).</p>
 <h3 id="item-6-windows-code-cli-shim-resolution-closed-2026-04-28-per-developer">Item 6 — Windows <code>code</code> CLI shim resolution — closed 2026-04-28 (per-developer)<a class="headerlink" href="#item-6-windows-code-cli-shim-resolution-closed-2026-04-28-per-developer" title="Permanent link">&para;</a></h3>
 <p>Applied fix variant (a) — shell-local alias in <code>~/.bashrc</code>:
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nb">alias</span><span class="w"> </span><span class="nv">code</span><span class="o">=</span><span class="s1">&#39;/c/Users/&lt;user&gt;/AppData/Local/Programs/Microsoft\ VS\ Code/bin/code&#39;</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nb">alias</span><span class="w"> </span><span class="nv">code</span><span class="o">=</span><span class="s1">&#39;/c/Users/&lt;user&gt;/AppData/Local/Programs/Microsoft\ VS\ Code/bin/code&#39;</span>
 </span></code></pre></div></p>
 <p>This bypasses the default Windows PATH ordering where <code>Microsoft VS Code\</code>
 (GUI launcher <code>code.exe</code>) precedes <code>Microsoft VS Code\bin\</code> (CLI shim).
@@ -1992,7 +2071,7 @@ rather than wishful-list it.</p>
 <h3 id="item-7-commandname-route-emits-no-request-log-closed-2026-04-28">Item 7 — <code>/command/{name}</code> route emits no request log — closed 2026-04-28<a class="headerlink" href="#item-7-commandname-route-emits-no-request-log-closed-2026-04-28" title="Permanent link">&para;</a></h3>
 <p><code>ppxai/server/routes/commands.py:execute_command</code> now emits an
 INFO-level log line on every dispatch:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>HTTP POST /command/{name} from session={s.id} args={args_preview!r}
+<div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>HTTP POST /command/{name} from session={s.id} args={args_preview!r}
 </span></code></pre></div>
 <p>Plus a DEBUG line with <code>ok</code> flag and <code>side_effects</code> count, and a
 WARNING when the command is unknown. The <code>args_preview</code> is
@@ -2015,8 +2094,8 @@ generated by <code>scripts/write_build_info.py</code> and gitignored — release
 tooling runs the script just before each PyInstaller invocation,
 so the bundled binary carries the real commit + UTC build time.</p>
 <p>Generated module shape (4 lines, plus docstring):
-<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">BUILD_COMMIT</span> <span class="o">=</span> <span class="s1">&#39;7b13784f&#39;</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="n">BUILD_MTIME</span> <span class="o">=</span> <span class="s1">&#39;2026-04-28 20:18:19 UTC&#39;</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="n">BUILD_COMMIT</span> <span class="o">=</span> <span class="s1">&#39;7b13784f&#39;</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="n">BUILD_MTIME</span> <span class="o">=</span> <span class="s1">&#39;2026-04-28 20:18:19 UTC&#39;</span>
 </span></code></pre></div></p>
 <p>Resolution order in <code>get_runtime_version_info()</code>:
 1. <code>_build_info.py</code> if present (binary builds).
@@ -2036,7 +2115,7 @@ ready; the integration is one line.</p>
 <h3 id="item-9-state-re-anchor-not-observable-in-production-logs-closed-2026-04-28">Item 9 — <code>/state</code> re-anchor not observable in production logs — closed 2026-04-28<a class="headerlink" href="#item-9-state-re-anchor-not-observable-in-production-logs-closed-2026-04-28" title="Permanent link">&para;</a></h3>
 <p><code>ppxai/server/routes/state.py::get_app_state</code> now emits an
 INFO-level log line on every snapshot fetch:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>HTTP GET /state from session={s.id}
+<div class="language-text highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>HTTP GET /state from session={s.id}
 </span></code></pre></div>
 <p>Diagnostic clauses (b) from the original entry was also performed:
 deployed <code>~/.ppxai/web/app.js</code> is byte-identical to repo source,
