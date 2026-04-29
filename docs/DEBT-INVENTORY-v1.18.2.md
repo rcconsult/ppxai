@@ -326,6 +326,91 @@ review independently.
 
 ---
 
+### Item 15 — `deploy/shared/AGENTS.md` is a stale parallel copy
+
+**Affected files:** [deploy/shared/AGENTS.md](../deploy/shared/AGENTS.md)
+(369 lines, last touched 2026-03-27 in commit `1862422c`),
+[deploy/shared/AGENTS-local.md](../deploy/shared/AGENTS-local.md)
+(82 lines, similar age).
+
+**What's wrong:** the file looks like an active source of truth
+("data we use to inject AGENTS.md into coder pods") but in fact
+**nothing in the deploy stack reads it**:
+
+- `deploy/images/server/Dockerfile:53` does
+  `COPY AGENTS.md /root/.ppxai/AGENTS.md` — pulling from the
+  **project root** (the 564-line file), NOT `deploy/shared/`.
+- No helm template, kaniko job, session-manager deployment, or
+  `values.yaml` reference `deploy/shared/`. Verified by
+  `grep -rn "deploy/shared\|shared/AGENTS"` returning zero
+  matches outside the file itself and a doc cross-reference.
+- The bootstrap loader picks up the project-root copy from
+  `/root/.ppxai/AGENTS.md` at session start. Coder pods get the
+  fresh project-root content.
+
+The file appears to be an early artifact from when k8s deployment
+was being scaffolded, superseded by the Dockerfile-from-root
+pattern that ships today.
+
+**Why it's confusing:** anyone reading the deploy/ directory could
+reasonably assume `deploy/shared/AGENTS.md` is what gets injected.
+The user's question on 2026-04-29 ("check the deploy folder for
+data we use to inject AGENTS.md into coder pods") was exactly
+this misread, prompted by IDE-opening the file.
+
+**What's stale:** the deploy/shared copy is missing **13 model
+hint blocks** for newer models the project root has tracked
+since March 27:
+
+```
+gpt-5.5*, gpt-5.4*, gpt-5.4-mini*, gpt-5.4-nano*, gpt-5.4-pro*,
+gpt-5.3-codex*, gpt-5-pro*, gemini-3.1-flash-lite*, gemma-4*,
+sonar-deep-research*, sonar-reasoning-pro*, o3*, o3-mini*
+```
+
+**What's NOT stale:** the Qwen3.5 hint block is byte-identical
+between the two files. Whatever Qwen3.5-specific guidance ppxai
+ships, coder pods receive it via the project-root copy.
+
+**Why deferred:** purely cosmetic. Coder pods get the right
+content. The only cost is reader confusion when someone discovers
+the parallel file. No CI failure, no runtime drift, no user
+impact.
+
+**Concrete fix (pick one when convenient):**
+
+(a) **Sync from project root** as part of release tooling. Add
+    `cp AGENTS.md deploy/shared/AGENTS.md` to `scripts/release.py`
+    so the deploy/shared copy stays current automatically.
+    ~5 min once. Maintenance burden: zero (release script handles).
+
+(b) **Delete** `deploy/shared/AGENTS.md` and
+    `deploy/shared/AGENTS-local.md` as deprecated. The Dockerfile
+    is the canonical injection point; this file confuses readers
+    without serving any deploy purpose. ~2 min: `rm` + commit.
+    Risk: if someone's using these for delta testing or historical
+    reference, that workflow breaks.
+
+(c) **Convert into a comment-bearing reference doc** explaining
+    "this file documents the AGENTS.md hint structure for the
+    coder pod context — actual content comes from project root via
+    Dockerfile". Keeps the file as documentation but removes the
+    "is this current?" ambiguity.
+
+**Trigger to revisit:** any work in deploy/ that touches the
+session-manager image build, OR the next contributor who notices
+the parallel file and pings about it. Until then, the duplication
+is harmless.
+
+**Effort:** 5 min for any of (a), (b), or (c). Pick the shape
+that matches your maintenance preference when next in deploy/
+work.
+
+**Branch when ready:** fold into a `chore/deploy-cleanup` branch
+or any deploy-touching commit — too small to need its own.
+
+---
+
 ## Closed
 
 (Move items here as they land. Format: `### Item X — title — closed YYYY-MM-DD in commit-hash`)
