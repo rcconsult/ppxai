@@ -176,19 +176,149 @@ serverConfig:
     files:
       - "AGENTS.md"
     enabled: true
-  # -- Providers block. Override entirely per environment.
-  #    Example provider (uncomment or replace in your values file):
-  #    your-provider:
-  #      name: "Your LLM"
-  #      base_url: "http://localhost:8000/v1"
-  #      api_key_env: "CUSTOM_API_KEY"
-  #      default_model: "your-model-id"
-  #      models:
-  #        your-model-id:
-  #          name: "Your Model"
-  #          context_limit: 131072
-  #          max_tokens: 8192
-  providers: {}
+  # -- Providers block — system prompts and model schemas baked in.
+  #    URLs use placeholders (YOUR_*) — override per cluster in your own
+  #    values file (e.g., values-microk8s.yaml). API keys come from the
+  #    Secret named in apiKeys.create / apiKeys.keys.
+  providers:
+    dgx-spark:
+      api_key_env: VLLM_API_KEY
+      base_url: http://YOUR_DGX_HOST:8000/v1
+      capabilities:
+        native_tool_calling: true
+        realtime_info: true
+        weather: true
+        web_fetch: true
+        web_search: true
+      coding_model: /models/Qwen3.5-122B-A10B-NVFP4
+      default_model: /models/Qwen3.5-122B-A10B-NVFP4
+      generation_params:
+        frequency_penalty: 0
+        temperature: 0.2
+        top_p: 0.9
+      models:
+        /models/Qwen3.5-122B-A10B-NVFP4:
+          context_limit: 196608
+          description: 'MoE: 122B total / 10B active, NVFP4 quantization, 192K context, DGX Spark GB10'
+          max_tokens: 8192
+          name: Qwen3.5 122B-A10B NVFP4 (MoE)
+      name: DGX Spark (Qwen3.5 122B)
+      system_prompt: 'You are a helpful AI coding assistant running on DGX Spark. Be concise and direct.
+
+
+        CRITICAL TOOL RULES:
+
+        1. Call tools directly using native function calling - NEVER output XML like <tool_call>
+
+        2. Read the COMPLETE tool result. If it contains ''FAILED'' or ''Error:'', say ''The operation failed: [error]'' - do NOT claim success
+
+        3. After repeated failure (2+ attempts), STOP and report the error
+
+        4. For apply_patch: use unified diff with ''--- a/path'', ''+++ b/path'', @@ markers, 3+ context lines
+
+        5. For multi-file tasks, read ALL files - not just the first 2
+
+        6. Complete ALL steps in multi-step tasks - do not stop at 3/4'
+      tool_calling:
+        fallback_on_empty: true
+        mode: native
+        strip_json_from_text: true
+    vllm-gptoss:
+      api_key_env: VLLM_API_KEY
+      base_url: http://YOUR_GPTOSS_VLLM_SVC/v1
+      capabilities:
+        native_tool_calling: true
+        realtime_info: true
+        weather: true
+        web_fetch: true
+        web_search: true
+      coding_model: openai/gpt-oss-120b
+      default_model: openai/gpt-oss-120b
+      generation_params:
+        frequency_penalty: 0.1
+        presence_penalty: 0.05
+        temperature: 0.2
+        top_p: 0.9
+      models:
+        openai/gpt-oss-120b:
+          context_limit: 131072
+          description: In-cluster vLLM with LMCache (H100 NVL), native tool calling
+          generation_params:
+            frequency_penalty: 0.1
+            presence_penalty: 0.05
+            temperature: 0.2
+            top_p: 0.9
+          max_tokens: 8192
+          name: GPT-OSS 120B
+          tool_calling:
+            fallback_on_failure: true
+      name: vLLM GPT-OSS 120B
+      system_prompt: 'You are a helpful AI coding assistant. Be concise and direct.
+
+
+        CRITICAL TOOL RULES:
+
+        1. NEVER say ''I''ll use the X tool'' - just call the tool directly
+
+        2. Do NOT output tool calls as JSON in your response - use native tool calling
+
+        3. If you need a tool, call it immediately without explanation
+
+        4. Only explain AFTER the tool returns its result
+
+        5. Read the COMPLETE tool result. If it contains ''FAILED'' or ''Error:'', acknowledge the failure - do NOT claim success
+
+        6. When given task order (''start with X''), execute step 1 IMMEDIATELY - do NOT explore first
+
+        7. For multi-file tasks, read ALL files - not just the first 2
+
+        8. Fix-verify: apply_patch → run tests → check result → report. Complete ALL steps'
+      tool_calling:
+        fallback_on_empty: true
+        mode: native
+        strip_json_from_text: true
+    vllm-qwen35:
+      api_key_env: VLLM_API_KEY
+      base_url: http://YOUR_QWEN35_VLLM_SVC/v1
+      capabilities:
+        native_tool_calling: true
+        realtime_info: true
+        weather: true
+        web_fetch: true
+        web_search: true
+      coding_model: Qwen/Qwen3.5-27B-FP8
+      default_model: Qwen/Qwen3.5-27B-FP8
+      generation_params:
+        frequency_penalty: 0
+        temperature: 0.2
+        top_p: 0.9
+      models:
+        Qwen/Qwen3.5-27B-FP8:
+          context_limit: 131072
+          description: In-cluster vLLM worker (H100 NVL), qwen3_coder tool parser, 128K context
+          max_tokens: 8192
+          name: Qwen3.5 27B FP8
+      name: vLLM Qwen3.5 27B FP8
+      system_prompt: 'You are a helpful AI coding assistant. Be concise and direct.
+
+
+        CRITICAL TOOL RULES:
+
+        1. Call tools directly using native function calling - NEVER output XML like <tool_call>
+
+        2. Read the COMPLETE tool result. If it contains ''FAILED'' or ''Error:'', say ''The operation failed: [error]'' - do NOT claim success
+
+        3. After repeated failure (2+ attempts), STOP and report the error
+
+        4. For apply_patch: use unified diff with ''--- a/path'', ''+++ b/path'', @@ markers, 3+ context lines
+
+        5. For multi-file tasks, read ALL files - not just the first 2
+
+        6. Complete ALL steps in multi-step tasks - do not stop at 3/4'
+      tool_calling:
+        fallback_on_empty: true
+        mode: native
+        strip_json_from_text: true
   tools:
     shell:
       timeout: 300
