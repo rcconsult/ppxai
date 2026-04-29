@@ -2524,7 +2524,7 @@
 </span><span id="__span-1-27"><a id="__codelineno-1-27" name="__codelineno-1-27" href="#__codelineno-1-27"></a>├── commands/          # UI-agnostic command layer (v1.15.0 factory + protocol)
 </span><span id="__span-1-28"><a id="__codelineno-1-28" name="__codelineno-1-28" href="#__codelineno-1-28"></a>│   ├── protocol.py    # CommandContext protocol (interface)
 </span><span id="__span-1-29"><a id="__codelineno-1-29" name="__codelineno-1-29" href="#__codelineno-1-29"></a>│   ├── factory.py     # CommandFactory + CommandSpec registry
-</span><span id="__span-1-30"><a id="__codelineno-1-30" name="__codelineno-1-30" href="#__codelineno-1-30"></a>│   ├── context.py     # Adapters: RichCommandContext, TextualCommandContext
+</span><span id="__span-1-30"><a id="__codelineno-1-30" name="__codelineno-1-30" href="#__codelineno-1-30"></a>│   ├── context.py     # Adapters: RichCommandContext (Pattern A proxy), ServerCommandContext (Pattern B explicit). Textual uses no adapter — see ADR 0002.
 </span><span id="__span-1-31"><a id="__codelineno-1-31" name="__codelineno-1-31" href="#__codelineno-1-31"></a>│   ├── results.py     # 17 CommandResult types (v1.15.0)
 </span><span id="__span-1-32"><a id="__codelineno-1-32" name="__codelineno-1-32" href="#__codelineno-1-32"></a>│   ├── system.py      # /help, /status, /theme
 </span><span id="__span-1-33"><a id="__codelineno-1-33" name="__codelineno-1-33" href="#__codelineno-1-33"></a>│   ├── provider.py    # /provider, /model
@@ -2854,11 +2854,19 @@ or know the internals of either <code>rich/</code> or <code>tui/</code>.</p>
 </span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>tui/             ← Textual TUI client (imports commands/, engine/)
 </span><span id="__span-11-7"><a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a>server/          ← HTTP server (imports commands/, engine/)
 </span></code></pre></div>
-<p><strong>Context adapters</strong> (<code>commands/context.py</code>) bridge the gap:
-- <code>RichCommandContext</code> wraps <code>CommandHandler</code> — calls <strong>public methods only</strong>
-- <code>TextualCommandContext</code> wraps <code>PPXAIDEApp</code> — calls <strong>public methods only</strong>
+<p><strong>Context delivery</strong> (<code>commands/context.py</code>) — three patterns by design,
+pinned in <a href="../decisions/0002-command-context-three-pattern-split/">ADR 0002</a>:
+- <code>RichCommandContext</code> wraps <code>CommandHandler</code> (Pattern A — <code>__getattr__</code>
+  proxy; wrapped class implements protocol via public methods)
+- <code>PPXAIDEApp</code> IS the context (no wrapper — Textual passes <code>self</code>
+  directly to command handlers)
+- <code>ServerCommandContext</code> wraps engine via <code>EngineClientProtocol</code>
+  (Pattern B — explicit delegation; no UI handler to wrap)
 - Each client owns its full-stack logic (engine + UI updates)
-- Adapters never access private attributes (<code>_engine_client</code>, <code>_model</code>, etc.)</p>
+- Adapters never access private attributes (<code>_engine_client</code>, <code>_model</code>, etc.)
+- The unused <code>TextualCommandContext</code> Pattern-A wrapper was removed in
+  v1.18.2 — it had been dead code since v1.15.0. See ADR 0002 for
+  why a unified-on-Pattern-B refactor was considered and deferred.</p>
 <h2 id="adding-new-modules">Adding New Modules<a class="headerlink" href="#adding-new-modules" title="Permanent link">&para;</a></h2>
 <p>When adding a new module:</p>
 <ol>
