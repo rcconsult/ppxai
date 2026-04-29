@@ -145,19 +145,32 @@ job was skipped, OR because the release was never created), step
 with status 0. Operators who trust the green checkmark + exit
 code don't realise the release page never materialised.
 
-**Observed twice now:**
+**Observed three times now (each a different failure mode):**
 
 - **v1.18.1** retag cycles (4 attempts) — captured in
   `memory/release-lessons.md`. Multiple runs reported success
   while the actual release was incomplete or absent.
-- **v1.18.2 today (2026-04-29)** — `build-dmg` failed with
-  `hdiutil: Resource busy` (transient macOS CI flake), which
-  caused `release` job to skip, which meant no GitHub Release
+- **v1.18.2 first failure (2026-04-29 ~00:14 UTC)** — `build-dmg`
+  failed with `hdiutil: Resource busy` (transient macOS CI flake),
+  which caused `release` job to skip, which meant no GitHub Release
   was created. release.py's "Step 15: Verify" printed the
-  "Could not fetch release info" warning, then printed the
-  green completion banner anyway. Caught only because we ran
-  `gh release view` ourselves per the project's "don't trust
-  release.py's release complete" rule.
+  "Could not fetch release info" warning, then printed the green
+  completion banner anyway. Caught only because we ran `gh release
+  view` ourselves per the project's "don't trust release.py's
+  release complete" rule.
+- **v1.18.2 second failure (2026-04-29 ~00:26 UTC, after build-dmg
+  rerun)** — release object now existed but `body` contained ONLY
+  the auto-generated `**Full Changelog**: https://...` link
+  (80 chars), NOT the rich `docs/RELEASE-NOTES-v1.18.2.md` content
+  (~18,000 chars). release.py's "Publish Notes" step took 338s
+  (5.6 min — wildly long for a `gh release edit --notes-file` call);
+  it likely retried internally and timed out gracefully without
+  raising. Step 15 didn't catch it because the release exists and
+  has 15 assets — `gh release view` returns 200; the body just
+  happens to be near-empty. **Caught only because the user noticed
+  the release page** ~1 hour later showed only the changelog link.
+  Fixed manually with `gh release edit v1.18.2 --notes-file
+  docs/RELEASE-NOTES-v1.18.2.md`.
 
 **Why this matters:** the fix to v1.18.1's silent-failure mode
 was discipline (`gh release view` after every release). That's
@@ -180,7 +193,8 @@ else:
 To:
 
 ```python
-result = run(["gh", "release", "view", f"v{version}", "--json", "assets"])
+result = run(["gh", "release", "view", f"v{version}",
+              "--json", "assets,body"])
 if result.returncode != 0:
     print("  ❌ FATAL: gh release view failed — release was NOT created.")
     print("     Most common cause: a CI job failed (build-dmg flake,")
@@ -188,17 +202,45 @@ if result.returncode != 0:
     print("     Run: gh run list --workflow='Build Executables' --limit 3")
     print("     If a job failed, re-run it: gh run rerun <RUN_ID> --failed")
     sys.exit(1)
-asset_count = len(json.loads(result.stdout)["assets"])
+data = json.loads(result.stdout)
+asset_count = len(data["assets"])
+body = data.get("body", "")
 if asset_count < EXPECTED_ASSET_COUNT:  # 15 as of v1.18.2
     print(f"  ❌ FATAL: only {asset_count} assets attached, expected {EXPECTED_ASSET_COUNT}.")
     sys.exit(1)
-print(f"  ✅ {asset_count} assets verified.")
+# v1.18.2's second failure: body had only the 80-char auto-generated
+# `**Full Changelog**: ...` link instead of the ~18000-char release
+# notes from docs/RELEASE-NOTES-v{version}.md. Detect by length.
+MIN_BODY_CHARS = 500  # any real release-notes file is far longer
+if len(body) < MIN_BODY_CHARS:
+    print(f"  ❌ FATAL: release body is only {len(body)} chars — "
+          f"release-notes publishing failed. Recover with:")
+    print(f"     gh release edit v{version} \\")
+    print(f"       --notes-file docs/RELEASE-NOTES-v{version}.md")
+    sys.exit(1)
+# Cross-check: body should match the release-notes file we have on disk.
+notes_path = Path(f"docs/RELEASE-NOTES-v{version}.md")
+if notes_path.exists():
+    expected = notes_path.read_text(encoding="utf-8").strip()
+    if expected and expected[:200] not in body:
+        print(f"  ⚠️  WARNING: release body does not match "
+              f"docs/RELEASE-NOTES-v{version}.md prefix. Manual review needed.")
+        # Don't sys.exit — could be intentional editorial difference.
+print(f"  ✅ {asset_count} assets verified, body {len(body)} chars.")
 ```
 
 Plus: bump `EXPECTED_ASSET_COUNT` constant when assets change
 (currently 15: 13 binaries + 1 dmg + 1 vsix). The constant lives
 at module scope so changes are reviewed alongside CI matrix
 changes in `.github/workflows/build.yml`.
+
+**MIN_BODY_CHARS rationale:** the auto-generated changelog link is
+~80 chars; any real `RELEASE-NOTES-v*.md` file is multi-paragraph
+and well over 500. A threshold of 500 catches the
+"changelog-link-only body" failure mode without false-positives on
+short-but-real release notes (e.g. a hotfix release). If you ever
+want to ship a 200-char release intentionally, raise the threshold
+explicitly with a comment.
 
 **Why deferred:** noticed during the v1.18.2 release recovery,
 just after the release was confirmed working. Bumping
