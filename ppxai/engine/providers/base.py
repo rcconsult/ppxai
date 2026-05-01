@@ -17,7 +17,7 @@ from openai import OpenAI
 from ..model_profiles import ModelProfile, get_profile
 from ..types import Message, Event, EventType, ProviderCapabilities, ModelInfo, UsageStats
 from ..uploaded_file import flatten_uploaded_file_blocks
-from ...config import get_generation_params, get_model_max_tokens
+from ...config import get_generation_params, get_model_max_tokens, get_extra_body
 from ...common.logger import get_logger
 
 
@@ -237,6 +237,19 @@ class BaseProvider(ABC):
         except AttributeError:
             return None
 
+    def _get_extra_body(self, model: str) -> Dict[str, Any]:
+        """Get vendor-specific ``extra_body`` payload for a model.
+
+        v1.18.3: thin instance wrapper over :func:`get_extra_body` so
+        provider subclasses can override / extend the resolved payload
+        without having to re-import config helpers. Returns an empty dict
+        when no provider/model entry is configured.
+        """
+        try:
+            return get_extra_body(self.provider_id, model)
+        except AttributeError:
+            return {}
+
     def _convert_messages(self, messages: List[Message]) -> List[Dict[str, Any]]:
         """Convert Message objects to API format.
 
@@ -350,6 +363,23 @@ class BaseProvider(ABC):
 
         # API errors (server-side issues)
         if isinstance(e, openai.APIStatusError):
+            # v1.18.3: provider-side throttle / quota — recognize NIM-style
+            # "operation not allowed" 403 + generic 429 with cleaner messages
+            # so users learn this is a provider quota block, not a model bug.
+            if e.status_code == 403:
+                if "operation not allowed" in error_str.lower():
+                    return (
+                        f"Provider quota / permission error (403): "
+                        f"endpoint refused the call. On NVIDIA NIM free tier "
+                        f"this typically means the per-model rate limit was "
+                        f"exhausted — wait, switch model, or use paid tier."
+                    )
+                return f"Provider permission error (403): {error_str}"
+            if e.status_code == 429:
+                return (
+                    f"Provider rate limit (429): {error_str}. "
+                    f"Wait before retrying or switch to another model."
+                )
             return f"API error ({e.status_code}): {error_str}"
 
         # httpx-level connection errors
@@ -358,6 +388,41 @@ class BaseProvider(ABC):
 
         # Fallback: return the exception type and message without full traceback
         return f"{error_type}: {error_str}"
+
+    def _classify_throttle(self, e: Exception) -> Optional[Dict[str, Any]]:
+        """Detect provider-side rate-limit / quota errors and return a
+        structured payload for ``EventType.PROVIDER_THROTTLED``.
+
+        Returns a dict with keys ``status_code``, ``provider``, ``message``,
+        ``retry_after`` when the exception is a 429 ``RateLimitError`` or
+        a 403 ``APIStatusError``; otherwise ``None`` so the caller falls
+        back to ``EventType.ERROR``.
+
+        v1.18.3: introduced alongside NVIDIA NIM provider work — free-tier
+        NIM returns HTTP 403 ``{"message":"Operation not allowed"}`` when
+        per-model quota exhausts, indistinguishable from a model failure
+        until you know to look at the status code.
+        """
+        if not isinstance(e, openai.APIStatusError):
+            return None
+        status = getattr(e, "status_code", None)
+        if status not in (403, 429):
+            return None
+        retry_after: Optional[float] = None
+        try:
+            response = getattr(e, "response", None)
+            if response is not None:
+                header = response.headers.get("retry-after")
+                if header:
+                    retry_after = float(header)
+        except (AttributeError, TypeError, ValueError):
+            retry_after = None
+        return {
+            "status_code": int(status),
+            "provider": self.provider_id or "",
+            "message": self._format_error(e),
+            "retry_after": retry_after,
+        }
 
     def _log_error_traceback(self, e: Exception) -> None:
         """Log full exception traceback to debug log for troubleshooting.

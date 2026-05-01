@@ -77,6 +77,12 @@ EVENT_MAP = {
     EventType.TOOL_GROUP_START: Events.ENGINE_TOOL_GROUP_START,
     EventType.TOOL_GROUP_END: Events.ENGINE_TOOL_GROUP_END,
     EventType.ERROR: Events.ENGINE_ERROR,
+    # v1.18.3: provider quota / rate-limit blocks share the ERROR bus signal
+    # — chat.py already treats them identically (abort path with rollback)
+    # so a single handler keeps client rendering consistent. The structured
+    # payload (status_code, retry_after, message) is preserved in event.data
+    # and unwrapped by on_engine_error for display.
+    EventType.PROVIDER_THROTTLED: Events.ENGINE_ERROR,
     EventType.WARNING: Events.ENGINE_WARNING,
     EventType.INFO: Events.ENGINE_INFO,
     EventType.WORKING_DIR_CHANGED: Events.ENGINE_WORKING_DIR_CHANGED,
@@ -413,11 +419,20 @@ async def on_consent_request(app, sender, data, **kwargs) -> None:
 
 
 async def on_engine_error(app, sender, data, **kwargs) -> None:
-    """Handle ENGINE_ERROR event."""
+    """Handle ENGINE_ERROR event.
+
+    v1.18.3: PROVIDER_THROTTLED also routes here. Dict payloads carry a
+    pre-formatted ``message`` key — extract it so the user sees the
+    recovery hint rather than ``{'status_code': 403, ...}``.
+    """
     if app._chat_view is None:
         return
+    if isinstance(data, dict) and "message" in data:
+        text = data["message"]
+    else:
+        text = data
     app._log.error(f"[Event] Engine error: {data}")
-    app._chat_view.add_system_message(f"[red]Error:[/red] {data}")
+    app._chat_view.add_system_message(f"[red]Error:[/red] {text}")
 
 
 async def on_engine_warning(app, sender, data, **kwargs) -> None:

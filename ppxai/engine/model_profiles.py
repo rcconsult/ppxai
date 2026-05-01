@@ -365,6 +365,71 @@ BUILTIN_PROFILES: Dict[str, ModelProfile] = {
         supports_reasoning=True,
         tier="B",
     ),
+    # ── NVIDIA NIM-served models (build.nvidia.com) ────────────────────
+    # All use namespaced IDs like `<owner>/<model>`. Patterns use `*/`
+    # leading wildcard to match the namespace prefix.
+    #
+    # Qwen3-Coder-480B: frontier MoE coder (480B/35B-active). Family-wide
+    # qwen3-coder* entry above only matches non-namespaced IDs, so
+    # NIM-routed `qwen/qwen3-coder-480b-a35b-instruct` needs its own
+    # pattern. Tier S is provisional — 2026-05-01 benchmark on free tier
+    # was rate-limit-contaminated (19.0% with 9 tool calls in 75s vs
+    # 74-89 in 197-1836s for healthy peers). Same family characteristics
+    # as `qwen3-coder*` so we inherit parallel_tool_calls + Tier S.
+    "*/qwen3-coder-480b*": ModelProfile(
+        tool_calling=ToolCallingProfile(
+            mode="native",
+            parallel_tool_calls=True,
+        ),
+        max_tokens=4_096,
+        max_tool_iterations=20,
+        tier="S",
+    ),
+    # Qwen3.5-122B-A10B: NIM Tier A benchmark winner (77.4%), best
+    # all-around NVIDIA model on the 36-test suite. NVIDIA-portal
+    # recommends temp=0.2, top_p=0.9 (matches our default).
+    "*/qwen3.5-122b*": ModelProfile(
+        tool_calling=ToolCallingProfile(mode="native"),
+        max_tokens=4_096,
+        tier="A",
+    ),
+    # Qwen3.5-397B-A17B: larger sibling of 122b. Probe failed (endpoint
+    # timeout) on 2026-05-01 — provisional Tier B inherited from family
+    # quality + size. Re-tier after a successful sweep.
+    "*/qwen3.5-397b*": ModelProfile(
+        tool_calling=ToolCallingProfile(mode="native"),
+        max_tokens=4_096,
+        tier="B",
+    ),
+    # Llama-3.3-Nemotron-Super-49B-v1.5: NVIDIA's reasoning-tuned Llama.
+    # Reasoning toggle via system-prompt convention `/think` and
+    # `/no_think` (NOT chat_template_kwargs — that's Qwen3.5/GLM only).
+    # Free-tier hung at agentic_tool_loops on 2026-05-01 sweep. Tier B
+    # provisional. supports_reasoning is True even though the toggle
+    # mechanism is in-prompt rather than via reasoning_content delta.
+    "*/llama-3.3-nemotron*": ModelProfile(
+        tool_calling=ToolCallingProfile(mode="native"),
+        max_tokens=8_192,
+        supports_reasoning=True,
+        tier="B",
+    ),
+    # Mistral-Large-3-675B-Instruct-2512: Mistral's frontier dense.
+    # Free-tier hung at agentic_tool_loops on 2026-05-01 sweep — Tier
+    # B provisional pending paid-tier rerun. Native tool calling
+    # confirmed working in pre-sweep probe.
+    "*/mistral-large-3*": ModelProfile(
+        tool_calling=ToolCallingProfile(mode="native"),
+        max_tokens=4_096,
+        tier="B",
+    ),
+    # Devstral-2-123B-Instruct-2512: Mistral coding-specialized 123B.
+    # Native tool calling confirmed in pre-sweep probe; not yet
+    # benchmarked. Tier B provisional inherited from coding-family.
+    "*/devstral-2*": ModelProfile(
+        tool_calling=ToolCallingProfile(mode="native"),
+        max_tokens=4_096,
+        tier="B",
+    ),
     # RedHatAI Qwen3-30B: community fine-tune (60.94%), uses hermes parser
     "*/qwen3-30b*": ModelProfile(
         tool_calling=ToolCallingProfile(mode="native"),

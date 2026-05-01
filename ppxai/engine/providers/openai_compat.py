@@ -8,7 +8,12 @@ including OpenAI, OpenRouter, Gemini (via compatibility layer), local models, et
 import json
 import re
 from typing import List, AsyncIterator, Optional, Dict, Any
-from ...config import get_model_context_limit, get_default_provider, get_context_warn_percent
+from ...config import (
+    get_model_context_limit,
+    get_default_provider,
+    get_context_warn_percent,
+    get_extra_body,
+)
 from ..types import Message, Event, EventType, ProviderCapabilities
 from .base import BaseProvider
 
@@ -240,6 +245,15 @@ class OpenAICompatibleProvider(BaseProvider):
                 request_kwargs["tools"] = tools
                 request_kwargs["tool_choice"] = "auto"
 
+            # v1.18.3: vendor-specific extra_body pass-through (e.g.
+            # NVIDIA NIM / vLLM ``chat_template_kwargs.enable_thinking``).
+            # Only sent when configured — empty dict skipped to keep wire
+            # payloads clean and avoid confusing endpoints that reject
+            # unknown top-level keys.
+            extra_body = self._get_extra_body(model)
+            if extra_body:
+                request_kwargs["extra_body"] = extra_body
+
             if stream:
                 # Streaming response with usage tracking
                 # Try with stream_options first, fall back if not supported (e.g., vLLM, Ollama)
@@ -415,8 +429,17 @@ class OpenAICompatibleProvider(BaseProvider):
                 yield Event(EventType.STREAM_END, content, metadata)
 
         except Exception as e:
-            error_msg = self._format_error(e)
-            yield Event(EventType.ERROR, error_msg)
+            # v1.18.3: separate provider throttle (HTTP 403/429) from generic
+            # ERROR so callers can skip-not-fail (benchmarks) or render with
+            # a different UI affordance (toast vs banner). Falls through to
+            # ERROR for anything that isn't a typed APIStatusError throttle.
+            throttle = self._classify_throttle(e)
+            if throttle is not None:
+                throttle["model"] = model
+                yield Event(EventType.PROVIDER_THROTTLED, throttle)
+            else:
+                error_msg = self._format_error(e)
+                yield Event(EventType.ERROR, error_msg)
             # Log full traceback to debug log for troubleshooting
             self._log_error_traceback(e)
 

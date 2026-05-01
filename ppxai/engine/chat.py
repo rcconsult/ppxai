@@ -241,11 +241,11 @@ async def chat_simple(
                 yield Event(EventType.ERROR, "Interrupted by user")
                 return
 
-            if event.type == EventType.ERROR:
+            if event.type in (EventType.ERROR, EventType.PROVIDER_THROTTLED):
                 removed = ctx.session.remove_last_message()
                 logger.info(
-                    f"Error rollback (simple): removed={removed}, "
-                    f"messages_left={len(ctx.session.messages)}"
+                    f"Error rollback (simple): event={event.type.value}, "
+                    f"removed={removed}, messages_left={len(ctx.session.messages)}"
                 )
                 yield event
                 return
@@ -623,18 +623,27 @@ async def chat_with_tools(
         native_tool_calls = []
 
         async for event in ctx.provider.chat(messages, ctx.model, stream=False, tools=openai_tools):
-            if event.type == EventType.ERROR:
+            if event.type in (EventType.ERROR, EventType.PROVIDER_THROTTLED):
                 # Only remove user message on first iteration (before any tool results added)
                 # This prevents session corruption from orphan user messages (v1.14.1)
                 if iteration == 1:
                     removed = ctx.session.remove_last_message()
                     logger.info(
-                        f"Error rollback: iteration={iteration}, removed={removed}, "
+                        f"Error rollback: event={event.type.value}, "
+                        f"iteration={iteration}, removed={removed}, "
                         f"messages_left={len(ctx.session.messages)}"
                     )
                 yield event
+                # v1.18.3: PROVIDER_THROTTLED records reason='provider_throttled'
+                # so post-mortems / benchmark harnesses can distinguish quota
+                # blocks from genuine model failures.
+                reason = (
+                    "provider_throttled"
+                    if event.type == EventType.PROVIDER_THROTTLED
+                    else "provider_error"
+                )
                 yield Event(EventType.AGENT_RUN_ERROR, {
-                    "reason": "provider_error",
+                    "reason": reason,
                     "iteration": iteration,
                     "elapsed_s": round(beat.elapsed_s, 1),
                     "detail": str(event.data) if event.data else "",
@@ -667,7 +676,7 @@ async def chat_with_tools(
                 yield Event(EventType.INFO, "Native tool calling returned empty, retrying with prompt-based...")
                 fallback_messages = _build_prompt_based_messages(ctx)
                 async for event in ctx.provider.chat(fallback_messages, ctx.model, stream=False, tools=None):
-                    if event.type == EventType.ERROR:
+                    if event.type in (EventType.ERROR, EventType.PROVIDER_THROTTLED):
                         yield event
                         return
                     elif event.type == EventType.STREAM_END:
@@ -985,7 +994,7 @@ async def chat_with_tools(
                 async for event in ctx.provider.chat(
                     ctx.session.get_messages(), ctx.model, stream=False, tools=None
                 ):
-                    if event.type == EventType.ERROR:
+                    if event.type in (EventType.ERROR, EventType.PROVIDER_THROTTLED):
                         yield event
                         return
                     elif event.type == EventType.STREAM_END:

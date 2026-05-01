@@ -137,6 +137,11 @@ async def sse_event_generator(prompt, engine: EngineClient, session_id: str = "d
                 logger.log_assistant_message(str(event.data)[:200] if event.data else "")
             elif event.type == EventType.ERROR:
                 logger.error(f"Engine error: {event.data}")
+            elif event.type == EventType.PROVIDER_THROTTLED:
+                # v1.18.3: surface provider quota / rate-limit blocks at WARN
+                # so they're visible in operator logs even when client-side
+                # rendering treats them as a soft failure.
+                logger.warning(f"Provider throttle: {event.data}")
 
             # Emit regular event
             event_data = {

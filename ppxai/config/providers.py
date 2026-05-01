@@ -263,6 +263,62 @@ def get_generation_params(provider: str = None, model: str = None) -> Dict[str, 
     return {k: v for k, v in params.items() if not k.startswith("__comment")}
 
 
+def get_extra_body(provider: str = None, model: str = None) -> Dict[str, Any]:
+    """Get vendor-specific ``extra_body`` payload for a model.
+
+    OpenAI's chat-completions ``extra_body`` parameter is a pass-through
+    dict that adds vendor-specific fields the SDK does not officially
+    expose. v1.18.3 plumbs this through ppxai so users can drive Qwen3.5
+    / GLM thinking-mode toggles via ``chat_template_kwargs`` and similar
+    NIM- / vLLM-specific runtime knobs without forking the engine.
+
+    Config structure (mirrors generation_params: provider defaults +
+    model-level overrides, model wins on conflict)::
+
+        providers:
+          nvidia:
+            extra_body:                # Provider-level defaults
+              chat_template_kwargs:
+                enable_thinking: false
+            models:
+              qwen/qwen3.5-122b-a10b:
+                extra_body:            # Model-level overrides
+                  chat_template_kwargs:
+                    enable_thinking: true
+
+    Args:
+        provider: Provider name (uses default if not specified).
+        model: Model name (uses default if not specified).
+
+    Returns:
+        Dict suitable for passing as ``extra_body=...`` to OpenAI SDK
+        chat-completions calls. Empty dict when nothing is configured.
+    """
+    if provider is None:
+        provider = get_default_provider()
+    if model is None:
+        model = get_default_model(provider)
+
+    body: Dict[str, Any] = {}
+    config_path = find_config_file()
+    if not config_path:
+        return body
+
+    json_config = _load_json_config(config_path)
+    provider_config = json_config.get("providers", {}).get(provider, {})
+
+    if "extra_body" in provider_config:
+        body.update(provider_config["extra_body"])
+
+    models = provider_config.get("models", {})
+    model_config = models.get(model, {})
+    if "extra_body" in model_config:
+        body.update(model_config["extra_body"])
+
+    # Strip top-level __comment_* sentinels — vendor APIs don't expect them.
+    return {k: v for k, v in body.items() if not k.startswith("__comment")}
+
+
 def get_tool_calling_config(provider: str = None, model: str = None) -> Dict[str, Any]:
     """Get tool calling configuration overrides for a model.
 

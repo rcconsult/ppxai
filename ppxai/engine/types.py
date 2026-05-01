@@ -184,6 +184,7 @@ class EventType(Enum):
     AGENT_ZOMBIE = "agent_zombie"  # P0 (v1.18.0): circuit breaker — consecutive tool failures exceeded threshold
     WARNING = "warning"  # Validation warning (v1.15.2 - hallucination detection)
     ERROR = "error"
+    PROVIDER_THROTTLED = "provider_throttled"  # v1.18.3: provider-side rate-limit / quota block (HTTP 429 / 403). Distinct from ERROR so callers can skip-not-fail (benchmarks) or render differently (UI toast vs banner). Payload: {"status_code": int, "provider": str, "model": str, "message": str, "retry_after": Optional[float]}
     INFO = "info"
 
 

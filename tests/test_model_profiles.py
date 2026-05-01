@@ -516,3 +516,60 @@ class TestGetEffectiveProfile:
         assert profile.tier == builtin.tier
         assert profile.supports_reasoning == builtin.supports_reasoning
         assert profile.restricted_params == builtin.restricted_params
+
+
+class TestNvidiaNimProfiles:
+    """Sentinel: namespaced NIM model IDs (`<owner>/<model>`) match the
+    correct profile. Free-form `qwen3-coder*` patterns without leading
+    `*/` only match non-namespaced IDs — regression here means agentic
+    NIM users silently fall back to the default profile.
+
+    Added in v1.18.3 alongside the NVIDIA provider entry. Update this
+    list whenever a new NIM model is added to the config — failure to
+    match here means the model_profiles registry needs a new pattern.
+    """
+
+    def test_qwen3_coder_480b_namespaced(self):
+        p = get_profile("qwen/qwen3-coder-480b-a35b-instruct")
+        assert p.tier == "S", "Tier S expected (qwen3-coder family)"
+        assert p.tool_calling.mode == "native"
+        assert p.tool_calling.parallel_tool_calls is True
+
+    def test_qwen3_5_122b_namespaced(self):
+        p = get_profile("qwen/qwen3.5-122b-a10b")
+        assert p.tier == "A", "Tier A expected (NIM benchmark 77.4%)"
+        assert p.tool_calling.mode == "native"
+
+    def test_qwen3_5_397b_namespaced(self):
+        p = get_profile("qwen/qwen3.5-397b-a17b")
+        assert p.tier == "B", "Tier B provisional (probe failed, family-inherited)"
+        assert p.tool_calling.mode == "native"
+
+    def test_qwen3_next_80b_thinking_supports_reasoning(self):
+        p = get_profile("qwen/qwen3-next-80b-a3b-thinking")
+        assert p.supports_reasoning is True
+
+    def test_llama_3_3_nemotron_supports_reasoning(self):
+        p = get_profile("nvidia/llama-3.3-nemotron-super-49b-v1.5")
+        assert p.supports_reasoning is True, (
+            "Nemotron uses /think /no_think in-prompt convention; "
+            "supports_reasoning marks it as a reasoning-capable model"
+        )
+        assert p.tool_calling.mode == "native"
+
+    def test_mistral_large_3_namespaced(self):
+        p = get_profile("mistralai/mistral-large-3-675b-instruct-2512")
+        assert p.tier == "B"
+        assert p.tool_calling.mode == "native"
+
+    def test_devstral_2_namespaced(self):
+        p = get_profile("mistralai/devstral-2-123b-instruct-2512")
+        assert p.tier == "B"
+        assert p.tool_calling.mode == "native"
+
+    def test_unknown_nim_model_falls_through_to_default(self):
+        """Sanity: non-pattern-matching NIM model IDs should NOT silently
+        match a wrong profile — they fall through to the default."""
+        p = get_profile("nvidia/totally-fake-model-name-xyz")
+        assert p.tier == ""  # default profile has empty tier
+        assert p.tool_calling.mode == "native"  # default mode

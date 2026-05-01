@@ -75,6 +75,7 @@ from .providers import (
     get_model_context_limit,
     get_model_max_tokens,
     get_generation_params,
+    get_extra_body,
     get_tool_calling_config,
 )
 
@@ -300,6 +301,8 @@ __all__ = [
     "get_model_max_tokens",
     # Generation params
     "get_generation_params",
+    # Vendor-specific extra_body pass-through (v1.18.3)
+    "get_extra_body",
     # Tool calling config (v1.16.0)
     "get_tool_calling_config",
     # Bootstrap functions (v1.14.0)
