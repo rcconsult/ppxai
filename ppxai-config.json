@@ -581,6 +581,159 @@
         "native_tool_calling": true
       }
     },
+    "nvidia": {
+      "name": "NVIDIA NIM (build.nvidia.com)",
+      "base_url": "https://integrate.api.nvidia.com/v1",
+      "api_key_env": "NVIDIA_API_KEY",
+      "default_model": "qwen/qwen3.5-122b-a10b",
+      "coding_model": "qwen/qwen3-coder-480b-a35b-instruct",
+      "__comment_benchmark": "Tier A NVIDIA NIM sweep (2026-05-01, full 36-test suite). Healthy: qwen3.5-122b-a10b 77.4%, qwen3-next-80b-thinking 76.6%, qwen3-next-80b-instruct 68.3%. qwen3-coder-480b returned 19.0% but result is RATE-LIMIT-CONTAMINATED (only 9 tool calls in 75s vs 74-89 in 197-1836s for healthy models; multiple tests show 'operation not allowed' from NIM). Treat 480b as un-ranked until rerun on paid tier.",
+      "__comment_known_issues": "1) Free-tier hangs on long agentic_tool_loops tests for some models (mistral-large-3, llama-3.3-nemotron). 2) llama-4-maverick is regionally restricted ('NIM unavailable in your location' from EU). 3) qwen2.5-coder-32b returns HTTP 400 'Tool use has not been enabled' — set tool_calling.mode='prompt_based' for that model.",
+      "system_prompt": "You are an expert AI coding assistant served via NVIDIA NIM. Be concise and precise. Call tools directly using native function calling — never output tool-call JSON in response text. After tool failures, acknowledge the actual error message before retrying.",
+      "generation_params": {
+        "temperature": 0.2,
+        "top_p": 0.9
+      },
+      "tool_calling": {
+        "mode": "native",
+        "fallback_on_empty": true,
+        "strip_json_from_text": true
+      },
+      "models": {
+        "qwen/qwen3.5-122b-a10b": {
+          "name": "Qwen3.5 122B-A10B",
+          "description": "Frontier MoE (122B total, 10B active). NVIDIA-recommended params: temp=0.2, top_p=0.9, max_tokens=4096. Tier A benchmark: 77.4% (28/36).",
+          "context_limit": 256000,
+          "max_tokens": 4096,
+          "__comment_best_for": "All-around coding, multi-step tool loops, strong instruction following. Best Tier A NVIDIA model overall.",
+          "generation_params": {
+            "temperature": 0.2,
+            "top_p": 0.9
+          }
+        },
+        "qwen/qwen3-next-80b-a3b-instruct": {
+          "name": "Qwen3-Next 80B-A3B Instruct",
+          "description": "Hybrid Gated DeltaNet + MoE (80B total, 3B active). NVIDIA-recommended params: temp=0.7, top_p=0.8, max_tokens=4096. Tier A benchmark: 68.3% (24/36).",
+          "context_limit": 262144,
+          "max_tokens": 4096,
+          "__comment_best_for": "Cheap fast tool-calling for everyday tasks. Strong tool_calling/format/error_recovery (100%); weak instruction_following (28.6%).",
+          "generation_params": {
+            "temperature": 0.7,
+            "top_p": 0.8
+          }
+        },
+        "qwen/qwen3-next-80b-a3b-thinking": {
+          "name": "Qwen3-Next 80B-A3B Thinking",
+          "description": "Reasoning variant of Qwen3-Next-80B. Auto-emits reasoning_content. NVIDIA-recommended params: temp=0.6, top_p=0.95, max_tokens=8192. Tier A benchmark: 76.6% (28/36).",
+          "context_limit": 262144,
+          "max_tokens": 8192,
+          "__comment_best_for": "Reasoning-heavy work — agentic_tool_loops (85.7%) and reasoning (100%) categories. ~9× slower than instruct sibling.",
+          "generation_params": {
+            "temperature": 0.6,
+            "top_p": 0.95
+          }
+        },
+        "qwen/qwen3-coder-480b-a35b-instruct": {
+          "name": "Qwen3-Coder 480B-A35B",
+          "description": "Frontier coding MoE (480B total, 35B active). NVIDIA-recommended params: temp=0.7, top_p=0.8, max_tokens=4096. Tier A benchmark: 19.0% but RATE-LIMIT-CONTAMINATED — rerun on paid tier before drawing conclusions.",
+          "context_limit": 262144,
+          "max_tokens": 4096,
+          "__comment_best_for": "Hard coding tasks once paid-tier access removes free-tier quota. Avoid scheduling against free tier — calls return 'operation not allowed'.",
+          "generation_params": {
+            "temperature": 0.7,
+            "top_p": 0.8
+          }
+        },
+        "mistralai/mistral-large-3-675b-instruct-2512": {
+          "name": "Mistral Large 3 675B",
+          "description": "Mistral's frontier dense model. NVIDIA-recommended params: temp=0.2, top_p=0.95, max_tokens=4096. Tier A benchmark: hung at agentic_tool_loops on free tier (no score).",
+          "context_limit": 256000,
+          "max_tokens": 4096,
+          "__comment_best_for": "Reasoning/instruction-following workloads on paid tier. Free-tier hangs on long tool loops — schedule with extra timeout.",
+          "generation_params": {
+            "temperature": 0.2,
+            "top_p": 0.95
+          }
+        },
+        "nvidia/llama-3.3-nemotron-super-49b-v1.5": {
+          "name": "Llama-3.3 Nemotron Super 49B v1.5",
+          "description": "NVIDIA's reasoning-tuned Llama. Reasoning toggle via system prompt '/think' or '/no_think'. NVIDIA-recommended params: temp=0.6, top_p=0.95. Tier A benchmark: hung at agentic_tool_loops on free tier (no score).",
+          "context_limit": 131072,
+          "max_tokens": 8192,
+          "__comment_best_for": "Reasoning workloads on paid tier. Same free-tier hang pattern as mistral-large-3.",
+          "generation_params": {
+            "temperature": 0.6,
+            "top_p": 0.95
+          }
+        },
+        "qwen/qwen2.5-coder-32b-instruct": {
+          "name": "Qwen2.5 Coder 32B",
+          "description": "Older Qwen2.5 coder. NIM does NOT enable native tool calling for this model — set tool_calling.mode='prompt_based' to use it.",
+          "context_limit": 32768,
+          "max_tokens": 4096,
+          "tool_calling": {
+            "mode": "prompt_based",
+            "__comment_mode": "NIM rejects native tools with 'Tool use has not been enabled' for qwen2.5-coder-32b. Prompt-based works."
+          }
+        },
+        "moonshotai/kimi-k2-thinking": {
+          "name": "Kimi K2 Thinking",
+          "description": "Moonshot's reasoning model. Probe failed (endpoint timeout) — likely cold-start or regional unavailable. Try once before relying on it.",
+          "context_limit": 200000,
+          "max_tokens": 8192
+        },
+        "deepseek-ai/deepseek-v3.2": {
+          "name": "DeepSeek V3.2",
+          "description": "DeepSeek frontier. Probe failed (endpoint timeout). Try once before relying on it.",
+          "context_limit": 131072,
+          "max_tokens": 8192
+        },
+        "mistralai/devstral-2-123b-instruct-2512": {
+          "name": "Devstral 2 123B",
+          "description": "Mistral's coding-specialized 123B. Native tools probed OK; not yet benchmarked.",
+          "context_limit": 131072,
+          "max_tokens": 4096,
+          "generation_params": {
+            "temperature": 0.2,
+            "top_p": 0.95
+          }
+        },
+        "meta/llama-4-maverick-17b-128e-instruct": {
+          "name": "Llama-4 Maverick 17B-128E",
+          "description": "Meta's Llama-4 MoE (17B active, 128 experts). Regionally restricted — returns 'This NIM is unavailable in your location' from EU.",
+          "context_limit": 1048576,
+          "max_tokens": 4096
+        },
+        "qwen/qwen3.5-397b-a17b": {
+          "name": "Qwen3.5 397B-A17B",
+          "description": "Larger sibling of qwen3.5-122b-a10b. Probe failed (endpoint timeout). Try once before relying on it.",
+          "context_limit": 256000,
+          "max_tokens": 4096
+        }
+      },
+      "pricing": {
+        "qwen/qwen3.5-122b-a10b": {"input": 0.0, "output": 0.0, "__comment": "NVIDIA NIM free tier (rate-limited)"},
+        "qwen/qwen3-next-80b-a3b-instruct": {"input": 0.0, "output": 0.0},
+        "qwen/qwen3-next-80b-a3b-thinking": {"input": 0.0, "output": 0.0},
+        "qwen/qwen3-coder-480b-a35b-instruct": {"input": 0.0, "output": 0.0},
+        "mistralai/mistral-large-3-675b-instruct-2512": {"input": 0.0, "output": 0.0},
+        "nvidia/llama-3.3-nemotron-super-49b-v1.5": {"input": 0.0, "output": 0.0},
+        "qwen/qwen2.5-coder-32b-instruct": {"input": 0.0, "output": 0.0},
+        "moonshotai/kimi-k2-thinking": {"input": 0.0, "output": 0.0},
+        "deepseek-ai/deepseek-v3.2": {"input": 0.0, "output": 0.0},
+        "mistralai/devstral-2-123b-instruct-2512": {"input": 0.0, "output": 0.0},
+        "meta/llama-4-maverick-17b-128e-instruct": {"input": 0.0, "output": 0.0},
+        "qwen/qwen3.5-397b-a17b": {"input": 0.0, "output": 0.0}
+      },
+      "capabilities": {
+        "web_search": false,
+        "web_fetch": false,
+        "weather": false,
+        "realtime_info": false,
+        "native_tool_calling": true,
+        "__comment_native_tool_calling": "NVIDIA NIM supports OpenAI-style function calling via /v1/chat/completions. Some older models (qwen2.5-coder-32b) need prompt_based fallback."
+      }
+    },
     "local": {
       "name": "Local vLLM (RTX 3050)",
       "base_url": "http://localhost:8000/v1",

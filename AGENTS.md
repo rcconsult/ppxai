@@ -71,6 +71,15 @@ provider_hints:
     - "Only call tools that exist - verify tool names from the available tools list."
     - "apply_patch parameter names are EXACTLY 'path' and 'patch' - NEVER use 'file_path', 'filepath', or 'diff'."
     - "For large file writes (50+ lines), ensure the COMPLETE content is in the tool call arguments - never truncate."
+  nvidia:
+    - "You are running on NVIDIA NIM (build.nvidia.com) with native tool calling."
+    - "Call tools directly via the API - do NOT output tool-call JSON in response text."
+    - "If a tool returns 'Operation not allowed' or 'NIM unavailable', that is a NIM-side rate limit / quota block, NOT a model failure. Acknowledge the error and STOP retrying - do not loop."
+    - "After 2 consecutive identical NIM errors, report the persistent error to the user and wait - do not escalate to alternative tools."
+    - "For long agentic chains, prefer fewer steps with focused tool calls over many small ones - free-tier quotas favour batched work."
+    - "Do NOT mention tool names in your response text when calling them. Just call the tool."
+    - "When a tool result shows a real error (FileNotFoundError, permission denied, etc.), acknowledge the exact error before retrying."
+    - "Use ONLY parameter names from the tool schema - apply_patch uses 'path' and 'patch', not 'file_path' or 'diff'."
   gemini:
     - "Use Google Search grounding for current information when available."
     - "You have a 1M token context - feel free to include full file contents."

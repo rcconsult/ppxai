@@ -1335,6 +1335,70 @@
         "overall_score": 86.83168316831683,
         "agents_md_mode": "with"
       }
+    ],
+    "nvidia/qwen/qwen2.5-coder-32b-instruct": [
+      {
+        "filename": "nvidia_qwen_qwen2.5-coder-32b-instruct_2026-05-01_5743c5ae.json",
+        "timestamp": "2026-05-01T19:15:53.958459",
+        "overall_score": 0.0,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "nvidia_qwen_qwen2.5-coder-32b-instruct_2026-05-01_52a6bdc2.json",
+        "timestamp": "2026-05-01T19:16:18.144245",
+        "overall_score": 0.0,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "nvidia_qwen_qwen2.5-coder-32b-instruct_2026-05-01_c26ef1f2.json",
+        "timestamp": "2026-05-01T19:17:18.088653",
+        "overall_score": 0.0,
+        "agents_md_mode": "with"
+      }
+    ],
+    "nvidia/qwen/qwen3-coder-480b-a35b-instruct": [
+      {
+        "filename": "nvidia_qwen_qwen3-coder-480b-a35b-instruct_2026-05-01_50b43e70.json",
+        "timestamp": "2026-05-01T19:18:40.098521",
+        "overall_score": 85.71428571428571,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "nvidia_qwen_qwen3-coder-480b-a35b-instruct_2026-05-01_3ac86319.json",
+        "timestamp": "2026-05-01T19:19:35.061429",
+        "overall_score": 85.71428571428571,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "nvidia_qwen_qwen3-coder-480b-a35b-instruct_2026-05-01_6a71dfab.json",
+        "timestamp": "2026-05-01T19:37:34.661718",
+        "overall_score": 19.00990099009901,
+        "agents_md_mode": "with"
+      }
+    ],
+    "nvidia/qwen/qwen3.5-122b-a10b": [
+      {
+        "filename": "nvidia_qwen_qwen3.5-122b-a10b_2026-05-01_12025cfd.json",
+        "timestamp": "2026-05-01T19:40:55.196165",
+        "overall_score": 77.42574257425743,
+        "agents_md_mode": "with"
+      }
+    ],
+    "nvidia/qwen/qwen3-next-80b-a3b-instruct": [
+      {
+        "filename": "nvidia_qwen_qwen3-next-80b-a3b-instruct_2026-05-01_8d93b529.json",
+        "timestamp": "2026-05-01T19:44:53.640410",
+        "overall_score": 68.34983498349835,
+        "agents_md_mode": "with"
+      }
+    ],
+    "nvidia/qwen/qwen3-next-80b-a3b-thinking": [
+      {
+        "filename": "nvidia_qwen_qwen3-next-80b-a3b-thinking_2026-05-01_850cd5e2.json",
+        "timestamp": "2026-05-01T20:15:32.492950",
+        "overall_score": 76.63366336633663,
+        "agents_md_mode": "with"
+      }
     ]
   },
   "runs": [
@@ -2799,6 +2863,69 @@
       "filename": "openai_gpt-5.4-mini_2026-04-26_45317011.json",
       "timestamp": "2026-04-26T16:20:42.873385",
       "overall_score": 90.19801980198021,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "nvidia/qwen/qwen2.5-coder-32b-instruct",
+      "filename": "nvidia_qwen_qwen2.5-coder-32b-instruct_2026-05-01_5743c5ae.json",
+      "timestamp": "2026-05-01T19:15:53.958459",
+      "overall_score": 0.0,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "nvidia/qwen/qwen2.5-coder-32b-instruct",
+      "filename": "nvidia_qwen_qwen2.5-coder-32b-instruct_2026-05-01_52a6bdc2.json",
+      "timestamp": "2026-05-01T19:16:18.144245",
+      "overall_score": 0.0,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "nvidia/qwen/qwen2.5-coder-32b-instruct",
+      "filename": "nvidia_qwen_qwen2.5-coder-32b-instruct_2026-05-01_c26ef1f2.json",
+      "timestamp": "2026-05-01T19:17:18.088653",
+      "overall_score": 0.0,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "nvidia/qwen/qwen3-coder-480b-a35b-instruct",
+      "filename": "nvidia_qwen_qwen3-coder-480b-a35b-instruct_2026-05-01_50b43e70.json",
+      "timestamp": "2026-05-01T19:18:40.098521",
+      "overall_score": 85.71428571428571,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "nvidia/qwen/qwen3-coder-480b-a35b-instruct",
+      "filename": "nvidia_qwen_qwen3-coder-480b-a35b-instruct_2026-05-01_3ac86319.json",
+      "timestamp": "2026-05-01T19:19:35.061429",
+      "overall_score": 85.71428571428571,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "nvidia/qwen/qwen3-coder-480b-a35b-instruct",
+      "filename": "nvidia_qwen_qwen3-coder-480b-a35b-instruct_2026-05-01_6a71dfab.json",
+      "timestamp": "2026-05-01T19:37:34.661718",
+      "overall_score": 19.00990099009901,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "nvidia/qwen/qwen3.5-122b-a10b",
+      "filename": "nvidia_qwen_qwen3.5-122b-a10b_2026-05-01_12025cfd.json",
+      "timestamp": "2026-05-01T19:40:55.196165",
+      "overall_score": 77.42574257425743,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "nvidia/qwen/qwen3-next-80b-a3b-instruct",
+      "filename": "nvidia_qwen_qwen3-next-80b-a3b-instruct_2026-05-01_8d93b529.json",
+      "timestamp": "2026-05-01T19:44:53.640410",
+      "overall_score": 68.34983498349835,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "nvidia/qwen/qwen3-next-80b-a3b-thinking",
+      "filename": "nvidia_qwen_qwen3-next-80b-a3b-thinking_2026-05-01_850cd5e2.json",
+      "timestamp": "2026-05-01T20:15:32.492950",
+      "overall_score": 76.63366336633663,
       "agents_md_mode": "with"
     }
   ]

@@ -1,0 +1,93 @@
+{
+  "provider": "nvidia",
+  "model": "qwen/qwen2.5-coder-32b-instruct",
+  "timestamp": "2026-05-01T19:15:53.958459",
+  "overall_score": 0.0,
+  "tests_passed": 0,
+  "tests_total": 6,
+  "duration_seconds": 5.3587141036987305,
+  "category_scores": {
+    "tool_calling": 0.0
+  },
+  "test_results": [
+    {
+      "name": "simple_tool_call",
+      "category": "tool_calling",
+      "passed": false,
+      "score": 0.0,
+      "details": {
+        "error": "No tool call made",
+        "response": ""
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "complex_args",
+      "category": "tool_calling",
+      "passed": false,
+      "score": 0.0,
+      "details": {
+        "error": "No tool call made",
+        "response": ""
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "large_payload",
+      "category": "tool_calling",
+      "passed": false,
+      "score": 0.0,
+      "details": {
+        "error": "No tool call made",
+        "response": ""
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "multi_tool_sequence",
+      "category": "tool_calling",
+      "passed": false,
+      "score": 0.0,
+      "details": {
+        "error": "No tool call in first turn"
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "no_explain_before_tool",
+      "category": "tool_calling",
+      "passed": false,
+      "score": 0.0,
+      "details": {
+        "error": "No tool call made",
+        "response": ""
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "no_json_in_content",
+      "category": "tool_calling",
+      "passed": false,
+      "score": 0.0,
+      "details": {
+        "error": "No tool call made",
+        "response": ""
+      },
+      "weight": 1.0
+    }
+  ],
+  "metadata": {
+    "runner": "engine",
+    "timeout": 120,
+    "retries": 1,
+    "sdk_versions": {
+      "google-genai": "1.56.0",
+      "openai": "2.11.0"
+    },
+    "model_fingerprint": "no-samples",
+    "tool_calling_method": "native",
+    "total_tokens": 0,
+    "total_tool_calls": 0,
+    "agents_md_mode": "with"
+  }
+}

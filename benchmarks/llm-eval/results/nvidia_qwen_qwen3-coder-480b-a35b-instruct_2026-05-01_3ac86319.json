@@ -1,0 +1,102 @@
+{
+  "provider": "nvidia",
+  "model": "qwen/qwen3-coder-480b-a35b-instruct",
+  "timestamp": "2026-05-01T19:19:35.061429",
+  "overall_score": 85.71428571428571,
+  "tests_passed": 5,
+  "tests_total": 6,
+  "duration_seconds": 40.42970657348633,
+  "category_scores": {
+    "tool_calling": 85.71428571428571
+  },
+  "test_results": [
+    {
+      "name": "simple_tool_call",
+      "category": "tool_calling",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "tool": "read_file",
+        "args": {
+          "path": "/src/main.py"
+        }
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "complex_args",
+      "category": "tool_calling",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "tool": "write_file",
+        "args": {
+          "path": "/tmp/test.txt",
+          "content": "Hello, World!"
+        }
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "large_payload",
+      "category": "tool_calling",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "content_length": 1070,
+        "repetitions": 13,
+        "model_max_tokens": 16384
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "multi_tool_sequence",
+      "category": "tool_calling",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "sequence": [
+          "read_file config.json",
+          "read_file main.py"
+        ]
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "no_explain_before_tool",
+      "category": "tool_calling",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "tool_calls": 1,
+        "content_length": 0
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "no_json_in_content",
+      "category": "tool_calling",
+      "passed": false,
+      "score": 0.0,
+      "details": {
+        "error": "No tool call made",
+        "response": ""
+      },
+      "weight": 1.0
+    }
+  ],
+  "metadata": {
+    "runner": "engine",
+    "timeout": 120,
+    "retries": 1,
+    "sdk_versions": {
+      "google-genai": "1.56.0",
+      "openai": "2.11.0"
+    },
+    "model_fingerprint": "no-samples",
+    "tool_calling_method": "native",
+    "total_tokens": 0,
+    "total_tool_calls": 6,
+    "agents_md_mode": "with"
+  }
+}
