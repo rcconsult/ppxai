@@ -51,13 +51,29 @@ All four binaries should appear in `dist/`. Each is roughly 33–40 MB.
 
 ### 3. Build the VSCode extension VSIX
 
+Wrap the whole thing in a subshell `( ... )` so the `cd` is scoped and
+cannot leak to step 4. Earlier runs ate a `cd vscode-extension` that
+persisted into step 4 — `bash scripts/create-macos-app.sh` then
+failed with "No such file or directory" because the script lives at
+the project root.
+
 ```bash
-cd vscode-extension
-[ -d node_modules ] || npm install            # only on first run / after dep bump
-npm run compile                               # esbuild → dist/extension.js (107 KB minified)
-npx vsce package --allow-missing-repository   # → ppxai-X.Y.Z.vsix (~128 KB)
-cd ..
+(cd vscode-extension && \
+    { [ -d node_modules ] || npm install; } && \
+    npm run compile && \
+    npx vsce package --allow-missing-repository)
+# subshell exits — parent cwd unchanged
 ```
+
+What each line does:
+- `[ -d node_modules ] || npm install` — only on first run / after dep bump
+- `npm run compile` — esbuild → `dist/extension.js` (~107 KB minified)
+- `npx vsce package --allow-missing-repository` — produces
+  `vscode-extension/ppxai-X.Y.Z.vsix` (~128 KB)
+
+Do NOT use a bare `cd vscode-extension && ...` chain without the
+surrounding parens. The Bash tool persists the working directory
+across calls; a leaked cwd silently breaks downstream steps.
 
 If `npm run compile` fails with `Cannot find module 'esbuild'`, the
 v1.18.2 esbuild bundling rewrite never had `npm install` run on this
