@@ -152,46 +152,6 @@ report confirms availability has changed.
 
 ---
 
-### Item 19 — Wire `extra_body` for Qwen3.5 thinking-mode toggle in user-facing config
-
-**Affected files:** `ppxai-config.json` (already has `extra_body`
-plumbing as of v1.18.3 Tier 1 #1), `ppxai-config.example.json`,
-`AGENTS.md` (`*/qwen3.5*` model_hint block could mention
-`enable_thinking`).
-
-**What's already done:** v1.18.3 Tier 1 #1 plumbed `extra_body`
-through `openai_compat`. The plumbing is ready; users can already add
-`extra_body: {chat_template_kwargs: {enable_thinking: true}}` per-model
-in their own configs and ppxai forwards it to NIM.
-
-**What's missing:** no example wiring in the bundled config files, and
-no model_hint mention of the toggle. A user who wants reasoning mode
-on `qwen/qwen3.5-122b-a10b` has to discover the feature from the v1.18.3
-release notes — there's nothing in the config or AGENTS.md pointing at
-it.
-
-**Why deferred:** Qwen3.5 thinking-mode is a niche use case — the model
-does fine without it for most coding tasks (77.4% Tier A benchmark with
-thinking off). Wiring an example that's enabled by default would
-silently double latency for everyone. Better to leave the plumbing
-ready and document the opt-in.
-
-**Trigger to revisit:** when a user asks "how do I enable thinking on
-Qwen3.5?", OR when running a reasoning-heavy benchmark that wants the
-toggle.
-
-**Effort:**
-- ~5 min: add a commented-out `extra_body` block to the Qwen3.5 model
-  entries in both repo configs with `__comment_extra_body` explaining
-  the toggle.
-- ~5 min: add a line to the `Qwen/Qwen3.5*` model_hint block in
-  `AGENTS.md` mentioning the opt-in.
-
-**Branch when ready:** roll into next config touch — too small for its
-own branch.
-
----
-
 ## Carried over from DEBT-INVENTORY-v1.18.2.md (still open)
 
 ### Item 3 — k8s session-manager security tests
@@ -200,27 +160,11 @@ own branch.
 [DEBT-INVENTORY-v1.18.2.md](DEBT-INVENTORY-v1.18.2.md#item-3--k8s-session-manager-security-tests-critique-8).
 Not addressable until in a k8s context environment.
 
-### Item 12 — Node.js 20 deprecation → bump actions/* to v5
-
-**Status:** carried over. Hard deadline 2026-09-16. ~10 min on the
-next branch. See [DEBT-INVENTORY-v1.18.2.md](DEBT-INVENTORY-v1.18.2.md#item-12--github-actions-nodejs-20-deprecation-warnings-cosmetic).
-
-### Item 13 — `scripts/release.py` step 15 silent failure
-
-**Status:** carried over. Pairs with Item 8 (build-info wiring) — both
-should land together as the next release-tooling pass.
-[DEBT-INVENTORY-v1.18.2.md](DEBT-INVENTORY-v1.18.2.md#item-13--scriptsreleasepy-step-15-fails-silently-when-gh-release-view-errors).
-
 ### Item 14 — Anthropic provider
 
 **Status:** carried over. Pre-work + ADR done; Phase 1 (API key)
 implementation pending. ~half day with TOS-aware OAuth fallback in
 Phase 2. [DEBT-INVENTORY-v1.18.2.md](DEBT-INVENTORY-v1.18.2.md#item-14--add-anthropic-provider-with-explicit-tos-aware-auth-fallback).
-
-### Item 15 — `deploy/shared/AGENTS.md` stale parallel copy
-
-**Status:** carried over. Cosmetic — pods get correct content from
-project-root copy at build time. [DEBT-INVENTORY-v1.18.2.md](DEBT-INVENTORY-v1.18.2.md#item-15--deployshareedgentsmd-is-a-stale-parallel-copy).
 
 ---
 
@@ -349,6 +293,65 @@ module-level convenience functions, pre-v1.18.3 backward compat.
 
 The data accumulates from v1.18.3 onward but is not yet rendered in
 any `/usage` surface — see Item 16 (Open) for the rendering follow-up.
+
+### Item 12 — GitHub Actions Node 20 deprecation — closed 2026-05-02 (commit `c1bc765b`)
+
+Carried from v1.18.2. Bumped `actions/checkout`, `actions/setup-node`,
+`actions/upload-artifact`, `actions/download-artifact` from v4 → v5
+across `build.yml` (8 + 2 + 7 + 5 = 22 occurrences) and `docs.yml`
+(1 occurrence). v5 versions ship Node 24 manifests natively, so the
+`FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'` env-var override is no
+longer needed and dropped from both workflows. Untouched:
+`astral-sh/setup-uv@v4` (different vendor), `softprops/action-gh-release@v2`
+(separate version track), `actions/setup-python@v5` (already current).
+Beats GitHub's hard cutoff of 2026-09-16 by ~4 months.
+
+### Item 13 — `release.py` step 14 silent-failure fix — closed 2026-05-02 (commit `4d756c1a`)
+
+Carried from v1.18.2. `verify_release()` now `sys.exit(1)` on four
+critical conditions: release missing, JSON unparseable, required
+asset(s) missing, body shorter than `MIN_RELEASE_BODY_CHARS=500`.
+Asset list expanded from 11 → 15 to include the 3 ppxaide binaries
+(build-tui-textual job) and the macOS DMG (build-dmg job) — both
+were silently un-checked before, which is why the v1.18.2 build-dmg
+flake passed verification. Body cross-check warns (not exits) on
+prefix mismatch with `docs/RELEASE-NOTES-v*.md`. Verified against
+live v1.18.2 (success) + simulated v1.18.2-style failures
+(missing-DMG, 80-char body) — all four `sys.exit(1)` paths trigger
+correctly with actionable recovery hints.
+
+Lands on `feature/v1.18.3` so the fix runs for the v1.18.3 release
+itself — first opportunity to confirm it catches the silent-failure
+modes that bit v1.18.1 (4 retag cycles) and v1.18.2 (twice).
+
+### Item 15 — `deploy/shared/AGENTS.md` deletion — closed 2026-05-02 (commit `c7f3a3d7`)
+
+Carried from v1.18.2. `deploy/shared/AGENTS.md` (369 lines) and
+`deploy/shared/AGENTS-local.md` (82 lines) deleted entirely (option
+(b) from the v1.18.2 entry's listed remediations). Confirmed nothing
+in the deploy stack reads them: `deploy/images/server/Dockerfile:53`
+copies `AGENTS.md` from the project root, not `deploy/shared/`. No
+helm template, kaniko job, session-manager deployment, or
+`values.yaml` referenced the path. The parallel copies had drifted
+across 13 model_hint blocks since 2026-03-27. git history preserves
+both files if anyone needs to consult them; the empty
+`deploy/shared/` directory disappears with them.
+
+### Item 19 — Qwen3.5 `enable_thinking` config example — closed 2026-05-02 (commit `7db7d665`)
+
+Added an `__example_extra_body` block to the
+`qwen/qwen3.5-122b-a10b` entry in both bundled configs
+(`ppxai-config.json` and `ppxai-config.example.json`) showing the
+`chat_template_kwargs.enable_thinking` shape, plus an
+`__comment_extra_body` explaining why it's commented out by default
+(~2x latency). Also added a hint line to the `Qwen/Qwen3.5*`
+model_hint block in `AGENTS.md` pointing at the config example.
+
+The `__example_*` prefix follows the existing `__comment_*`
+convention and is stripped before sending to the provider — config
+remains valid even with the example present. Closes the only
+v1.18.3 Open item that didn't gate on external triggers (paid NIM
+tier, kubernetes context, etc.).
 
 ---
 
