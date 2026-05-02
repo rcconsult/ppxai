@@ -139,6 +139,29 @@ def _get_usage_result(engine, args: str = "") -> dict:
     return CommandFactory.get("usage").handler(context, args).to_dict()
 
 
+def _extract_usage_table(d: dict) -> dict:
+    """Return the session-usage TableResult, unwrapping CompositeResult.
+
+    v1.18.3 wraps /usage in CompositeResult([usage_table, errors_table])
+    when provider-error telemetry is present (NIM throttles, OpenAI 429s,
+    etc.). The errors history persists across `/usage reset`, so any host
+    that has ever recorded a throttle will see CompositeResult here even
+    after a fresh session reset. The tests assert against the inner
+    usage table; this helper finds it whether wrapped or not.
+    """
+    if d.get("type") != "CompositeResult":
+        return d
+    for sub in d.get("results", []):
+        if sub.get("type") == "TableResult" and \
+           sub.get("metadata", {}).get("report_type") == "session":
+            return sub
+    # Fallback: first TableResult sub-result
+    for sub in d.get("results", []):
+        if sub.get("type") == "TableResult":
+            return sub
+    return d
+
+
 def _get_usage_result_via_http(engine, args: str = "") -> dict:
     """Run /usage through POST /command/usage and return JSON result.
 
@@ -280,7 +303,7 @@ class TestUsageCountersViaFactory:
         engine.session.reset_usage()
 
         raw_usage = _chat_and_get_usage(engine)
-        result_dict = _get_usage_result(engine)
+        result_dict = _extract_usage_table(_get_usage_result(engine))
 
         _assert_table_matches_raw_usage(result_dict, raw_usage, "perplexity", model_id)
 
@@ -309,7 +332,7 @@ class TestUsageCountersViaFactory:
             f"After 2 chats, total_tokens={tokens_2} should be > after 1 chat={tokens_1}"
 
         # Table should show accumulated totals
-        result_dict = _get_usage_result(engine)
+        result_dict = _extract_usage_table(_get_usage_result(engine))
         total_row = result_dict["rows"][-1]
         table_total_in = _parse_comma_int(total_row[2])
         table_total_out = _parse_comma_int(total_row[3])
@@ -341,8 +364,10 @@ class TestUsageCountersViaFactory:
         assert len(usage_after.get("by_model", {})) == 0, \
             f"by_model should be empty after reset: {usage_after.get('by_model')}"
 
-        # Table should show no model rows (empty by_model → no rows)
-        table_dict = _get_usage_result(engine)
+        # Table should show no model rows (empty by_model → no rows).
+        # /usage may be wrapped in CompositeResult if provider-error
+        # telemetry exists (persists across session reset).
+        table_dict = _extract_usage_table(_get_usage_result(engine))
         assert table_dict["type"] == "TableResult"
         assert len(table_dict["rows"]) == 0, \
             f"Table should have no rows after reset, got: {table_dict['rows']}"
@@ -360,7 +385,7 @@ class TestUsageCountersViaFactory:
 
         engine.session.reset_usage()
         _chat_and_get_usage(engine)
-        result_dict = _get_usage_result(engine)
+        result_dict = _extract_usage_table(_get_usage_result(engine))
 
         rows = result_dict["rows"]
         # Find the gemini row
@@ -380,7 +405,7 @@ class TestUsageCountersViaFactory:
 
         engine.session.reset_usage()
         _chat_and_get_usage(engine)
-        result_dict = _get_usage_result(engine)
+        result_dict = _extract_usage_table(_get_usage_result(engine))
 
         for row in result_dict["rows"]:
             cost_str = row[4]
@@ -460,7 +485,7 @@ class TestUsageCountersViaHttp:
 
         engine.session.reset_usage()
         raw_usage = _chat_and_get_usage(engine)
-        result_dict = _get_usage_result_via_http(engine)
+        result_dict = _extract_usage_table(_get_usage_result_via_http(engine))
 
         _assert_table_matches_raw_usage(result_dict, raw_usage, "openai", model_id)
 
@@ -532,10 +557,10 @@ class TestUsageCrossClientConsistency:
         raw_usage = _chat_and_get_usage(engine)
 
         # Path 1: CommandFactory direct
-        factory_dict = _get_usage_result(engine)
+        factory_dict = _extract_usage_table(_get_usage_result(engine))
 
         # Path 2: HTTP endpoint (same engine, no chat in between)
-        http_dict = _get_usage_result_via_http(engine)
+        http_dict = _extract_usage_table(_get_usage_result_via_http(engine))
 
         # Both must produce identical output
         assert factory_dict["type"] == http_dict["type"]
@@ -590,7 +615,7 @@ class TestResultSerialization:
         engine.session.reset_usage()
         _chat_and_get_usage(engine)
 
-        d = _get_usage_result(engine)
+        d = _extract_usage_table(_get_usage_result(engine))
 
         assert d["type"] == "TableResult"
         assert d["status"] == "success"

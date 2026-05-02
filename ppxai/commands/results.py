@@ -763,6 +763,19 @@ class CompositeResult(CommandResult):
     """
     results: List[CommandResult] = field(default_factory=list)
 
+    def to_dict(self) -> dict:
+        """Serialize sub-results so HTTP clients can render the composite.
+
+        Without this override, the base class returns only type/status/
+        message/metadata — the `results` list is silently dropped and
+        web/VSCode see an empty container. Each sub-result is serialized
+        via its own `to_dict()` so nested types (TableResult, ImageResult,
+        ...) survive the wire transit.
+        """
+        d = super().to_dict()
+        d["results"] = [r.to_dict() for r in self.results]
+        return d
+
 
 @dataclass
 class ToolExecutionResult(CommandResult):
