@@ -293,3 +293,157 @@ class TestPreviewServer:
             assert 'Rel' in html
         finally:
             server.stop()
+
+
+class TestPreviewArgsParser:
+    """Coverage for `_parse_preview_args` (v1.18.3) — flag parsing for
+    /preview's --serve / --proxy / --port. The flags were advertised in
+    web `commands.js` as far back as v1.17.1 but never reached the
+    handler, so /preview <file> --serve resolved as the literal filepath
+    `<file> --serve`."""
+
+    def _parse(self, args: str):
+        from ppxai.commands.display import _parse_preview_args
+        return _parse_preview_args(args)
+
+    def test_static_no_flags(self):
+        err, parsed = self._parse("index.html")
+        assert err is None
+        assert parsed["filepath"] == "index.html"
+        assert parsed["mode"] == "static"
+
+    def test_serve_no_command_autodetects(self):
+        err, parsed = self._parse("index.html --serve")
+        assert err is None
+        assert parsed["mode"] == "served"
+        assert parsed["command"] is None  # server-side autodetect
+        assert parsed["filepath"] == "index.html"
+
+    def test_serve_with_explicit_command(self):
+        err, parsed = self._parse('index.html --serve "python main.py"')
+        assert err is None
+        assert parsed["mode"] == "served"
+        assert parsed["command"] == "python main.py"
+
+    def test_serve_with_uvicorn_command_quoted(self):
+        # Multi-word commands must be quoted; the parser consumes a
+        # single shell-token, so `--serve uvicorn main:app` would
+        # leave `main:app` as a stray positional. Quoting fixes it.
+        err, parsed = self._parse('index.html --serve "uvicorn main:app"')
+        assert err is None
+        assert parsed["mode"] == "served"
+        assert parsed["command"] == "uvicorn main:app"
+
+    def test_serve_with_unquoted_multiword_command_errors(self):
+        err, _ = self._parse("index.html --serve uvicorn main:app")
+        assert err is not None
+        assert "filepath" in err.message.lower() or "expected one" in err.message.lower()
+
+    def test_serve_with_explicit_port(self):
+        err, parsed = self._parse("index.html --serve --port 8080")
+        assert err is None
+        assert parsed["mode"] == "served"
+        assert parsed["port"] == 8080
+        assert parsed["command"] is None
+
+    def test_proxy_to_running_backend(self):
+        err, parsed = self._parse("index.html --proxy 8000")
+        assert err is None
+        assert parsed["mode"] == "proxied"
+        assert parsed["port"] == 8000
+
+    def test_serve_and_proxy_conflict(self):
+        err, parsed = self._parse("index.html --serve --proxy 8000")
+        assert err is not None
+        assert "mutually exclusive" in err.message.lower()
+
+    def test_proxy_requires_port(self):
+        err, _ = self._parse("index.html --proxy")
+        assert err is not None
+        assert "port" in err.message.lower()
+
+    def test_proxy_port_must_be_int(self):
+        err, _ = self._parse("index.html --proxy abc")
+        assert err is not None
+
+    def test_missing_filepath(self):
+        err, _ = self._parse("--serve")
+        assert err is not None
+        assert "filepath" in err.message.lower()
+
+    def test_too_many_positionals(self):
+        err, _ = self._parse("a.html b.html")
+        assert err is not None
+
+    def test_serve_then_filepath_does_not_consume_filepath_as_command(self):
+        # `--serve index.html` — no command given; index.html is the
+        # filepath, not the serve command. Heuristic: bare filenames
+        # don't look shell-y.
+        err, parsed = self._parse("--serve index.html")
+        assert err is None
+        assert parsed["mode"] == "served"
+        assert parsed["filepath"] == "index.html"
+        assert parsed["command"] is None
+
+    def test_unparseable_quotes(self):
+        err, _ = self._parse('index.html --serve "unterminated')
+        assert err is not None
+
+
+class TestHandlePreviewWiring:
+    """End-to-end: handle_preview emits the right side-effect payload
+    so the web client routes to openServedPreview / openProxiedPreview."""
+
+    def _make_context(self, working_dir):
+        from unittest.mock import MagicMock
+        ctx = MagicMock()
+        ctx.engine_client.get_working_dir.return_value = str(working_dir)
+        return ctx
+
+    def test_static_emits_open_html_preview_with_mode_static(self, tmp_path):
+        from ppxai.commands.display import handle_preview
+        (tmp_path / "index.html").write_text("<html></html>", encoding="utf-8")
+        ctx = self._make_context(tmp_path)
+        result = handle_preview(ctx, "index.html")
+        assert result.status.value == "success"
+        assert len(result.side_effects) == 1
+        se = result.side_effects[0]
+        assert se.kind == "open_html_preview"
+        assert se.payload["mode"] == "static"
+        assert se.payload["filepath"].endswith("index.html")
+
+    def test_serve_emits_command_and_port(self, tmp_path):
+        from ppxai.commands.display import handle_preview
+        (tmp_path / "index.html").write_text("<html></html>", encoding="utf-8")
+        ctx = self._make_context(tmp_path)
+        result = handle_preview(ctx, 'index.html --serve "python main.py" --port 8000')
+        assert result.status.value == "success"
+        se = result.side_effects[0]
+        assert se.payload["mode"] == "served"
+        assert se.payload["command"] == "python main.py"
+        assert se.payload["port"] == 8000
+
+    def test_serve_no_command_signals_autodetect(self, tmp_path):
+        from ppxai.commands.display import handle_preview
+        (tmp_path / "index.html").write_text("<html></html>", encoding="utf-8")
+        ctx = self._make_context(tmp_path)
+        result = handle_preview(ctx, "index.html --serve")
+        se = result.side_effects[0]
+        assert se.payload["mode"] == "served"
+        assert se.payload["command"] is None  # web client passes None → server autodetects
+
+    def test_proxy_emits_port(self, tmp_path):
+        from ppxai.commands.display import handle_preview
+        (tmp_path / "index.html").write_text("<html></html>", encoding="utf-8")
+        ctx = self._make_context(tmp_path)
+        result = handle_preview(ctx, "index.html --proxy 8000")
+        se = result.side_effects[0]
+        assert se.payload["mode"] == "proxied"
+        assert se.payload["port"] == 8000
+
+    def test_close_unchanged(self, tmp_path):
+        from ppxai.commands.display import handle_preview
+        ctx = self._make_context(tmp_path)
+        result = handle_preview(ctx, "close")
+        assert result.status.value == "info"
+        assert result.metadata.get("action") == "close"

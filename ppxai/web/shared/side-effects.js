@@ -115,7 +115,23 @@ SideEffectsHandler._handlers = {
     },
 
     // ─── HTML preview ────────────────────────────────────────────────────
-    open_html_preview({filepath, url, served, proxied}) {
+    // v1.18.3: dispatch on `mode` so /preview --serve and --proxy
+    // actually reach openServedPreview / openProxiedPreview. Falls back
+    // to the legacy `served`/`proxied` boolean shape so older payloads
+    // (and the openServedPreview internal call path) keep working.
+    open_html_preview({filepath, url, served, proxied, mode, command, port}) {
+        if (mode === 'served') {
+            if (typeof this.app.openServedPreview === 'function') {
+                this.app.openServedPreview(filepath, command || null, port || null);
+            }
+            return;
+        }
+        if (mode === 'proxied') {
+            if (typeof this.app.openProxiedPreview === 'function') {
+                this.app.openProxiedPreview(filepath, port);
+            }
+            return;
+        }
         if (typeof this.app.openHtmlPreview === 'function') {
             this.app.openHtmlPreview(filepath, url || null, !!proxied);
         }

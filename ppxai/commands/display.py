@@ -12,9 +12,10 @@ import io
 import json
 import os
 import re
+import shlex
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from .factory import CommandFactory, CommandSpec
 from .protocol import CommandContext
@@ -544,45 +545,173 @@ CommandFactory.register(CommandSpec(
 # /preview Command — Live HTML Preview
 # =============================================================================
 
+def _parse_preview_args(args: str) -> Tuple[Optional[CommandResult], dict]:
+    """Parse `/preview <file> [--serve [cmd]] [--proxy port] [--port N]`.
+
+    Returns (error_result, parsed) — exactly one of the two is non-None.
+    `parsed` keys: filepath, mode (static|served|proxied), command, port.
+
+    `--serve` may take an optional positional command (autodetected when
+    omitted via the server's `_detect_command`). `--proxy <port>` connects
+    to an already-running backend without launching one. `--port N` pins
+    the expected port for `--serve` when port-from-stdout detection
+    fails. Static mode (no flags) preserves the v1.15.4 behavior.
+    """
+    try:
+        tokens = shlex.split(args.strip())
+    except ValueError as e:
+        return ErrorResult(
+            status=ResultStatus.ERROR,
+            message=f"Could not parse arguments: {e}",
+            suggestions=["Quote arguments containing spaces"]
+        ), {}
+
+    serve_flag = False
+    serve_command: Optional[str] = None
+    proxy_port: Optional[int] = None
+    explicit_port: Optional[int] = None
+    positional: List[str] = []
+
+    i = 0
+    while i < len(tokens):
+        tok = tokens[i]
+        if tok == "--serve":
+            serve_flag = True
+            # Optional positional: the command. Skip if next token is a flag.
+            if i + 1 < len(tokens) and not tokens[i + 1].startswith("--"):
+                # Heuristic: a single bare token like 'index.html' is more
+                # likely the filepath than a serve command. Treat the next
+                # token as the command only when it looks shell-y (has a
+                # space, or starts with python/node/uv/npm/etc.). Otherwise
+                # leave it to autodetect.
+                nxt = tokens[i + 1]
+                looks_like_command = (
+                    " " in nxt or
+                    nxt.split()[0] in {"python", "python3", "uv", "npm", "node", "yarn", "pnpm", "deno", "bun", "go", "cargo", "ruby", "rails", "flask", "uvicorn", "gunicorn", "rye", "poetry"}
+                )
+                if looks_like_command:
+                    serve_command = nxt
+                    i += 2
+                    continue
+            i += 1
+            continue
+        if tok == "--proxy":
+            if i + 1 >= len(tokens):
+                return ErrorResult(
+                    status=ResultStatus.ERROR,
+                    message="--proxy requires a port number",
+                    suggestions=["/preview index.html --proxy 8000"]
+                ), {}
+            try:
+                proxy_port = int(tokens[i + 1])
+            except ValueError:
+                return ErrorResult(
+                    status=ResultStatus.ERROR,
+                    message=f"--proxy port must be an integer, got: {tokens[i + 1]}",
+                ), {}
+            i += 2
+            continue
+        if tok == "--port":
+            if i + 1 >= len(tokens):
+                return ErrorResult(
+                    status=ResultStatus.ERROR,
+                    message="--port requires a port number",
+                ), {}
+            try:
+                explicit_port = int(tokens[i + 1])
+            except ValueError:
+                return ErrorResult(
+                    status=ResultStatus.ERROR,
+                    message=f"--port must be an integer, got: {tokens[i + 1]}",
+                ), {}
+            i += 2
+            continue
+        positional.append(tok)
+        i += 1
+
+    if not positional:
+        return ErrorResult(
+            status=ResultStatus.ERROR,
+            message="Missing filepath",
+            suggestions=["/preview index.html"]
+        ), {}
+    if len(positional) > 1:
+        return ErrorResult(
+            status=ResultStatus.ERROR,
+            message=f"Expected one filepath, got: {positional}",
+            suggestions=["Quote the filepath if it contains spaces"]
+        ), {}
+
+    if proxy_port is not None and serve_flag:
+        return ErrorResult(
+            status=ResultStatus.ERROR,
+            message="--serve and --proxy are mutually exclusive",
+        ), {}
+
+    if proxy_port is not None:
+        mode = "proxied"
+    elif serve_flag:
+        mode = "served"
+    else:
+        mode = "static"
+
+    return None, {
+        "filepath": positional[0],
+        "mode": mode,
+        "command": serve_command,
+        "port": proxy_port if mode == "proxied" else explicit_port,
+    }
+
+
 def handle_preview(context: CommandContext, args: str) -> CommandResult:
     """Handle /preview command - open live-reloading HTML preview.
 
     Args:
         context: Command context providing access to engine client
-        args: Filepath to HTML file, or "close" to stop preview
+        args: Filepath plus optional --serve/--proxy/--port flags, or
+            "close" to stop preview.
 
     Returns:
-        PreviewResult on success, ErrorResult on failure
+        PreviewResult on success, ErrorResult on failure.
+
+    v1.18.3: --serve and --proxy flags now reach the engine (they were
+    advertised in the web `commands.js` `usage:` field but never parsed).
+    The web/VSCode side-effects.js dispatcher reads the `mode` payload
+    field and routes to `openServedPreview` / `openProxiedPreview`,
+    which orchestrate POST /preview/serve and POST /preview/proxy/start.
     """
     if not args.strip():
         return ErrorResult(
             status=ResultStatus.ERROR,
-            message="Usage: /preview <file.html>",
+            message="Usage: /preview <file.html> [--serve [\"cmd\"]] [--proxy port] [--port N]",
             suggestions=[
-                "/preview index.html     — Open live preview",
-                "/preview close           — Close preview",
+                "/preview index.html                       — static preview",
+                "/preview index.html --serve               — autostart backend (autodetect command)",
+                "/preview index.html --serve \"python main.py\"  — autostart backend with explicit command",
+                "/preview index.html --proxy 8000           — proxy to already-running backend",
+                "/preview close                             — close preview",
             ]
         )
 
-    args_stripped = args.strip()
-
-    # Handle /preview close
-    if args_stripped.lower() == 'close':
+    if args.strip().lower() == 'close':
         return NotificationResult(
             status=ResultStatus.INFO,
             message="Preview closed",
             metadata={"action": "close"}
         )
 
-    # Resolve and validate HTML file path
+    err, parsed = _parse_preview_args(args)
+    if err is not None:
+        return err
+
     working_dir = context.engine_client.get_working_dir()
 
     try:
-        path = resolve_preview_path(args_stripped, working_dir)
+        path = resolve_preview_path(parsed["filepath"], working_dir)
     except FileNotFoundError:
         return ErrorResult(
             status=ResultStatus.ERROR,
-            message=f"File not found: {args_stripped}",
+            message=f"File not found: {parsed['filepath']}",
             suggestions=["Check the file path and try again"]
         )
     except ValueError as e:
@@ -595,13 +724,25 @@ def handle_preview(context: CommandContext, args: str) -> CommandResult:
             ]
         )
 
+    mode = parsed["mode"]
+    payload: Dict[str, Any] = {"filepath": str(path), "mode": mode}
+    if mode == "served":
+        payload["command"] = parsed["command"]  # may be None → autodetect
+        payload["port"] = parsed["port"]
+        message = f"Starting backend for {path.name}…"
+    elif mode == "proxied":
+        payload["port"] = parsed["port"]
+        message = f"Proxying {path.name} to localhost:{parsed['port']}"
+    else:
+        message = f"Preview: {path.name}"
+
     result = PreviewResult(
         status=ResultStatus.SUCCESS,
-        message=f"Preview: {path.name}",
+        message=message,
         filepath=str(path),
-        metadata={"working_dir": working_dir}
+        metadata={"working_dir": working_dir, "mode": mode}
     )
-    result.add_side_effect(SideEffectKind.OPEN_HTML_PREVIEW, filepath=str(path))
+    result.add_side_effect(SideEffectKind.OPEN_HTML_PREVIEW, **payload)
     return result
 
 
