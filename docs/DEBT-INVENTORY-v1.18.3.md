@@ -26,145 +26,8 @@ a focused branch without re-discovering the context.
 
 ## Open
 
-### Item 16 — Surface throttle counters in `/usage` command output
-
-**Affected files:** `ppxai/usage.py` (already has the data via
-`get_provider_errors()`), `ppxai/commands/usage.py`, `ppxai/server/routes/usage.py`,
-`ppxai/web/app.js` (web `/usage` panel), `vscode-extension/src/handlers/`
-(VSCode `/usage`), `ppxai/rich/event_handler.py` (Rich-TUI `/usage`),
-`ppxai/tui/app.py` (Textual `/usage`).
-
-**What's already done:** v1.18.3 Tier 2 #5 plumbed
-`UsageStorage.record_provider_error(provider, status_code, model)`
-into the throttle path of `openai_compat.py`. Every NIM 403 / 429
-(and any other openai-compat 403/429) now persists to
-`~/.ppxai/usage/usage.json` under the `provider_errors` key with shape
-`{count, last_seen, models[]}`.
-
-**What's missing:** none of the four `/usage` rendering surfaces (Rich,
-Textual, web, VSCode) read the new field. The data accumulates silently;
-a user looking at "today's NVIDIA NIM activity" still only sees token
-counts and cost, with no way to know whether 80% of calls were rate-limit
-blocked. Surfacing it fulfils the original Tier 2 #5 design intent —
-"NIM returned 12 quota errors today, last at 14:32" — and makes the
-contamination pattern (see Item 18 below) visible without re-running
-benchmarks.
-
-**Why deferred:** the persistence layer is the load-bearing piece. UI
-rendering is a clean follow-up that doesn't gate the v1.18.3 release —
-shipping the persistence first means data starts accumulating from
-v1.18.3 onward, so when the rendering lands, there's already history.
-
-**Trigger to revisit:** next NVIDIA NIM session that hits a quota wall,
-OR when `/usage` is touched for any other reason, OR a quiet rainy
-afternoon (~30-45 min of work).
-
-**Effort:**
-- Minimum (~30 min): one new section in each of the four renderers
-  reading `usage.get_provider_errors()` and emitting a "Provider errors"
-  table with columns `provider | status | count | last_seen | models`.
-  Skip the section when the dict is empty.
-- Polish (~+15 min): optional `/usage --errors` flag to show only the
-  error counters, hide them when zero, group by provider with sub-rows
-  for status codes.
-
-**Branch when ready:** `feat/usage-throttle-display`.
-
----
-
-### Item 17 — Rerun qwen3-coder-480b benchmark on paid NVIDIA tier
-
-**Affected files:** `benchmarks/llm-eval/results/index.json`,
-`benchmarks/llm-eval/results/nvidia_qwen_qwen3-coder-480b-*.json`,
-`ppxai-config.json` (`__comment_benchmark` block on `nvidia` provider),
-`AGENTS.md` (`Qwen/Qwen3-Coder*` model_hint block).
-
-**What's wrong:** the 2026-05-01 free-tier sweep returned 19.0% for
-`qwen/qwen3-coder-480b-a35b-instruct` — but that result is
-**rate-limit-contaminated**, not a quality measurement. The model made
-9 tool calls in 75s vs 74-89 calls in 197-1836s for healthy peers, and
-multiple test results contain `{"message":"operation not allowed"}`
-errors from NIM's 403 quota-block response.
-
-**Free-tier rerun on 2026-05-02** (commit landing this entry): re-ran
-the 36-test sweep — same 19.0% (7/36), same low-tool-call signature
-(11 calls in 86s). Only **1 of 29 failures** explicitly leaked the
-"operation not allowed" marker this time, vs many on the 2026-05-01
-run. **Conclusion: the free tier still throttles the 480b, just less
-explicitly.** The duration + tool-call-count signature is the
-diagnostic, not the explicit error string. Fixed
-`__comment_benchmark` in both configs to record both runs.
-
-A single curl ping to the same endpoint at session start returned
-200 OK in 679 ms — confirms the API itself works for this model on
-free tier; it's the sustained 36-test load that hits the wall.
-
-See [memory/feedback_benchmark_rate_limit_contamination.md] for the
-broader diagnostic pattern.
-
-**What's still open:** a clean (paid-tier) score for the 480b. The
-provisional Tier S profile entry in `engine/model_profiles.py`
-inherits family characteristics from the existing `qwen3-coder*`
-glob, but `__comment_benchmark` in both repo configs continues to flag
-the score as un-trustworthy until a clean rerun.
-
-**Why deferred:** requires NVIDIA NIM paid-tier access. The 2026-05-02
-rerun confirmed the free-tier diagnosis — no further free-tier reruns
-will produce a clean number. The provisional Tier S placement is
-reasonable given the family heritage; a paid-tier rerun would either
-confirm or re-tier.
-
-**Trigger to revisit:** when paid-tier access is provisioned, OR when
-NVIDIA changes their free-tier policy, OR when a user reports the
-480b underperforming in real use.
-
-**Effort:**
-- ~15 min: rerun the 36-test sweep against the paid-tier endpoint:
-  `python benchmarks/llm-eval/benchmark.py --provider nvidia --model qwen/qwen3-coder-480b-a35b-instruct --timeout 120 --retries 1`
-- ~5 min: update `__comment_benchmark` in `ppxai-config.json` and
-  `ppxai-config.example.json` with the clean score; remove the
-  "RATE-LIMIT-CONTAMINATED" qualifier.
-- ~5 min: re-tier `*/qwen3-coder-480b*` profile if the score warrants
-  a different placement.
-
-**Branch when ready:** `bench/qwen3-coder-480b-rerun`.
-
----
-
-### Item 18 — Probe kimi-k2-thinking, deepseek-v3.2, qwen3.5-397b once endpoints come back
-
-**Affected files:** `ppxai-config.json` (currently has these as
-"probe failed" model entries with no benchmark data),
-`benchmarks/llm-eval/results/`.
-
-**What's wrong:** during the 2026-05-01 NIM provider validation,
-three models had endpoint timeouts (~90s) on the basic tool-calling
-probe:
-- `moonshotai/kimi-k2-thinking`
-- `deepseek-ai/deepseek-v3.2`
-- `qwen/qwen3.5-397b-a17b`
-
-Cause unknown — could be cold-start latency, regional routing, or
-free-tier credit exhaustion on those specific models. Their config
-entries carry a `"probe failed"` description and no benchmark.
-
-**Why deferred:** the three Tier A passing models (qwen3.5-122b-a10b,
-qwen3-next-80b-{instruct,thinking}) are sufficient for daily use.
-Filing this so the next NIM session checks whether the endpoints are
-back rather than re-discovering "huh, those don't work" cold.
-
-**Trigger to revisit:** any new NVIDIA NIM session, OR when an external
-report confirms availability has changed.
-
-**Effort:**
-- ~5 min: rerun `/c/tmp/probe_nvidia_models.sh` — already exists,
-  classifies HTTP 200 + tool_calls / 400 / timeout / etc.
-- If any probe succeeds: ~10 min benchmark each via
-  `c:/tmp/run_nvidia_tierA*.sh`.
-- ~2 min: update config descriptions / add `__comment_best_for` for
-  newly-passing models.
-
-**Branch when ready:** `bench/nvidia-tier-a-followups`.
+(All v1.18.3-introduced items closed in-branch — see "## Closed" below.
+The remaining open work is in "## Carried over" below.)
 
 ---
 
@@ -365,9 +228,95 @@ model_hint block in `AGENTS.md` pointing at the config example.
 
 The `__example_*` prefix follows the existing `__comment_*`
 convention and is stripped before sending to the provider — config
-remains valid even with the example present. Closes the only
-v1.18.3 Open item that didn't gate on external triggers (paid NIM
-tier, kubernetes context, etc.).
+remains valid even with the example present.
+
+### Item 16 — Surface throttle counters in `/usage` — closed 2026-05-02 (commit `95b89115`)
+
+v1.18.3 Tier 2 #5 plumbed `UsageStorage.record_provider_error` so
+every NIM 403 / openai-compat 429 persists to
+`~/.ppxai/usage/usage.json` under `provider_errors`. The data
+accumulated silently — no `/usage` surface read it. This commit
+makes the `/usage` command read it.
+
+Single point of change feeds all 4 surfaces via the v1.18.1
+envelope. New helpers `_build_provider_errors_table()` and
+`_maybe_compose_with_errors()` in `ppxai/commands/tools.py` wrap
+the existing usage TableResult in a CompositeResult ONLY when
+provider_errors is non-empty. Empty-errors path returns the original
+plain TableResult byte-identical to pre-v1.18.3 (backward-compatible).
+
+CompositeResult was already supported by Rich and Textual via the
+type-based dispatch; web (`web/shared/result-renderer.js`) and
+VSCode (`vscode-extension/src/commandRenderer.ts`) had no handler —
+added one in each that recurses the dispatcher into each sub-result.
+Same pattern across all four renderers.
+
+10 new tests in `tests/test_usage_provider_errors_command.py`:
+empty → None, single → correct shape, multiple → sort order
+(highest count first), comma-joined models, empty-models edge,
+missing last_seen, session report empty path → plain TableResult
+(backward compat), session report with errors → CompositeResult,
+period report empty → plain TableResult, period report with errors
+→ CompositeResult.
+
+User-facing surface: when NIM has thrown 403s during the session,
+`/usage` now shows a "Provider errors (throttle / quota / auth):
+N total" table below the usage stats with provider | status | count
+| last seen | models columns.
+
+### Item 17 — qwen3-coder-480b excluded from curated NIM models — closed 2026-05-02 (commit `0f79549f`)
+
+Re-ran the 36-test sweep against `qwen/qwen3-coder-480b-a35b-instruct`
+on the NVIDIA NIM free tier on 2026-05-02 (commit `70882919` recorded
+the result). Same 19.0% as the 2026-05-01 sweep, same low-tool-call/
+short-duration contamination signature (11 calls in 86s on the rerun
+vs 9 in 75s the day before; healthy peers do 74-89 in 197-1836s).
+Conclusion: free tier throttles 480b sustained-load regardless of
+how few explicit "operation not allowed" markers leak — the duration
+and tool-call-volume signature is the diagnostic.
+
+Decision (user direction 2026-05-02): exclude qwen3-coder-480b from
+the curated NIM model set rather than continue listing a known-
+broken-on-free-tier model. Removed entries from `models` and
+`pricing` blocks in both `ppxai-config.json` and
+`ppxai-config.example.json`. `coding_model` redirected from
+qwen3-coder-480b to qwen3.5-122b-a10b (the Tier A champion at 77.4%
+that already serves as default_model).
+
+Engine `ModelProfile` entry (`*/qwen3-coder-480b*` glob in
+`engine/model_profiles.py`) intentionally retained — users with paid
+NIM access who re-add the model to their own config get the right
+Tier S characteristics (parallel_tool_calls=True, max_tokens=4096).
+Documented this in a new `__comment_coding_model` field in the main
+config so the next reader doesn't mistake the exclusion for a code
+oversight.
+
+### Item 18 — NIM probe rerun: kimi-k2-thinking works, others still down — closed 2026-05-02 (commit `0f79549f`)
+
+Re-probed the three "endpoint timeout" models from the 2026-05-01
+NIM provider validation:
+
+| Model | 2026-05-01 | 2026-05-02 |
+|---|---|---|
+| `moonshotai/kimi-k2-thinking` | timeout >90s | **200 OK** (reasoning_content emitted) |
+| `deepseek-ai/deepseek-v3.2` | timeout >90s | timeout >60s (still down) |
+| `qwen/qwen3.5-397b-a17b` | timeout >90s | timeout >60s (still down) |
+
+`kimi-k2-thinking` is alive: returns 200 with reasoning_content (it's
+a thinking model — emits the reasoning chain via `reasoning_content`
+field; visible response in `content` once thinking concludes). The
+short test exhausted `max_tokens` mid-thought (`finish_reason=length`)
+because 10 tokens isn't enough for a reasoning model — set max_tokens
+high (8K+) for real use. Description in the curated model entry now
+records the probe success and the reasoning-mode caveat.
+
+`deepseek-v3.2` and `qwen3.5-397b-a17b` description fields now record
+both probe dates so future probes don't re-discover the same wall.
+
+Not benchmarked: kimi-k2-thinking remains un-benchmarked because
+running the 36-test reasoning-heavy sweep on the free tier carries
+the same throttling risk that bit qwen3-coder-480b. Benchmark is a
+separate decision when paid access lands or a user explicitly asks.
 
 ---
 
