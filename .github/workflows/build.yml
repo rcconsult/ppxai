@@ -9,22 +9,12 @@ on:
 permissions:
   contents: write
 
-# Opt into Node.js 24 ahead of GitHub Actions' 2026-06-02 cutoff.
-# Several actions we use (actions/checkout, astral-sh/setup-uv,
-# actions/setup-node, actions/upload-artifact, softprops/action-gh-release)
-# ship Node 20 runtimes that GitHub will deprecate. Setting this env
-# forces them onto Node 24 now, surfacing any incompatibility at the
-# next CI run rather than at the cliff. Drop this once every action
-# has been bumped to a v5+ release and verified on Node 24.
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
-
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Install uv
       uses: astral-sh/setup-uv@v4
@@ -41,7 +31,7 @@ jobs:
       run: uv run pytest tests/ -v --ignore=tests/test_custom_endpoint_integration.py --ignore=tests/e2e
 
     - name: Setup Node.js for E2E tests
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v5
       with:
         node-version: '20'
 
@@ -82,7 +72,7 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Install uv
       uses: astral-sh/setup-uv@v4
@@ -119,7 +109,7 @@ jobs:
         dir dist\
 
     - name: Upload artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: ${{ matrix.asset_name }}
         path: dist/${{ matrix.artifact_name }}
@@ -143,7 +133,7 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Install uv
       uses: astral-sh/setup-uv@v4
@@ -179,7 +169,7 @@ jobs:
         dir dist\
 
     - name: Upload artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: ${{ matrix.asset_name }}
         path: dist/${{ matrix.artifact_name }}
@@ -203,7 +193,7 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Install uv
       uses: astral-sh/setup-uv@v4
@@ -233,7 +223,7 @@ jobs:
         dir dist\
 
     - name: Upload artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: ${{ matrix.asset_name }}
         path: dist/${{ matrix.artifact_name }}
@@ -257,7 +247,7 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Install uv
       uses: astral-sh/setup-uv@v4
@@ -288,7 +278,7 @@ jobs:
         dir dist\
 
     - name: Upload artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: ${{ matrix.asset_name }}
         path: dist/${{ matrix.artifact_name }}
@@ -299,7 +289,7 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Get version
       id: version
@@ -311,7 +301,7 @@ jobs:
         zip -r ../../ppxai-web-ui-${{ steps.version.outputs.version }}.zip .
 
     - name: Upload web UI artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: ppxai-web-ui-${{ steps.version.outputs.version }}.zip
         path: ppxai-web-ui-${{ steps.version.outputs.version }}.zip
@@ -322,10 +312,10 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Setup Node.js
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v5
       with:
         node-version: '20'
         cache: 'npm'
@@ -374,7 +364,7 @@ jobs:
       run: echo "version=$(node -p "require('./vscode-extension/package.json').version")" >> $GITHUB_OUTPUT
 
     - name: Upload VSIX artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: ppxai-vscode-${{ steps.version.outputs.version }}.vsix
         path: vscode-extension/*.vsix
@@ -386,28 +376,28 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Download Rich TUI artifact
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v5
       with:
         name: ppxai-macos-arm64
         path: dist/
 
     - name: Download Textual TUI artifact
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v5
       with:
         name: ppxaide-macos-arm64
         path: dist/
 
     - name: Download desktop artifact
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v5
       with:
         name: ppxai-desktop-macos-arm64
         path: dist/
 
     - name: Download server artifact
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v5
       with:
         name: ppxai-server-macos-arm64
         path: dist/
@@ -530,7 +520,7 @@ jobs:
         ls -lh dist/*.dmg
 
     - name: Upload DMG artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: ppxai-${{ steps.version.outputs.version }}-macos-arm64.dmg
         path: dist/ppxai-${{ steps.version.outputs.version }}-macos-arm64.dmg
@@ -542,7 +532,7 @@ jobs:
 
     steps:
     - name: Download all artifacts
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v5
       with:
         path: artifacts
 
