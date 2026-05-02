@@ -97,6 +97,31 @@ Produces:
 cp dist/ppxai dist/ppxaide dist/ppxai-server dist/ppxai-desktop ~/.local/bin/
 ```
 
+### 5b. Refresh `~/.ppxai/web/` — server reads from disk, not bundle
+
+`ppxai-server` reads the web UI from `~/.ppxai/web/` at request time
+(see `ppxai/server/routes/static.py::WEB_UI_DIR`). `ppxai-desktop`
+auto-installs that directory **only when it doesn't exist** —
+subsequent launches don't refresh it. So a freshly-rebuilt server
+binary still serves stale JS/CSS unless `~/.ppxai/web/` is also
+synced. Caught on 2026-05-02 v1.18.3 build-install: Item 16's
+CompositeResult handler in `web/shared/result-renderer.js` was
+present in the binary AND the .app bundle, but the server still
+served the old file because nobody refreshed the on-disk copy.
+
+```bash
+TS=$(date +%Y%m%d-%H%M%S)
+[ -d ~/.ppxai/web ] && mv ~/.ppxai/web ~/.ppxai/web.backup.$TS
+cp -R ppxai/web ~/.ppxai/web
+```
+
+The backup is per-run-timestamp and uses the same `.backup.*`
+convention as `ppxai-config.json` backups, so cleanup is uniform.
+
+If you only changed Python code (no `web/` edits), this step is a
+no-op functionally — but it's cheap (~3 MB copy) and the alternative
+is silent staleness.
+
 ### 6. Install the .app from the DMG (real install, not just `cp dist/ppxai.app`)
 
 When the user asks to "install the DMG" they mean running the install
@@ -134,7 +159,7 @@ code --install-extension vscode-extension/ppxai-*.vsix --force
 extension. A fresh load of any open VS Code window picks up the new
 build automatically; no restart needed.
 
-### 8. Verify versions agree
+### 8. Verify versions agree AND web sync took effect
 
 ```bash
 ~/.local/bin/ppxai --version
@@ -147,6 +172,20 @@ build automatically; no restart needed.
 All five should print the same `X.Y.Z`. If `ppxai-desktop` reports a
 stale version, the v1.17.7 fix (PyInstaller hidden-import for
 `ppxai.version`) regressed — investigate before shipping.
+
+Then sanity-check the on-disk web sync against a known-recent string.
+Pick something from `ppxai/web/` that you know was added in this
+branch — e.g. for v1.18.3 Item 16, `CompositeResult` was added to
+`result-renderer.js`:
+
+```bash
+diff -q ppxai/web/shared/result-renderer.js ~/.ppxai/web/shared/result-renderer.js
+# Expected: no output (files identical)
+```
+
+If `diff` reports a difference, step 5b didn't run or didn't take —
+re-run it before claiming the install is complete. A 0-output diff
+proves the on-disk copy matches what the binaries expect.
 
 ## Don't
 
