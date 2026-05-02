@@ -193,6 +193,34 @@ def update_version_in_file(filepath: str, pattern: str, replacement: str, versio
     return True
 
 
+def update_changelog_date(version: str, date: str) -> bool:
+    """Substitute ``## [X.Y.Z] - unreleased`` → ``## [X.Y.Z] - <date>``.
+
+    The "unreleased" placeholder is the canonical in-development state
+    (sentinel test and ``validate-release.py`` both accept it). At
+    release time, this helper rewrites it to the actual release date so
+    the tagged artifact's CHANGELOG entry reflects when it shipped.
+
+    Returns True if a substitution was performed, False if the entry was
+    already dated (idempotent re-runs are safe) or missing.
+    """
+    changelog = PROJECT_ROOT / "CHANGELOG.md"
+    if not changelog.exists():
+        return False
+
+    content = changelog.read_text(encoding='utf-8')
+    pattern = rf"##\s+\[{re.escape(version)}\]\s+-\s+unreleased"
+    if not re.search(pattern, content):
+        # Either already dated (probable, on re-runs) or no entry at all
+        # (validate-release.py will catch the latter).
+        return False
+
+    new_content = re.sub(pattern, f"## [{version}] - {date}", content)
+    changelog.write_text(new_content, encoding='utf-8')
+    print(f"  ✅ Updated: CHANGELOG.md ([{version}] - unreleased → {date})")
+    return True
+
+
 def update_package_lock(version: str):
     """Update vscode-extension/package-lock.json."""
     lock_file = PROJECT_ROOT / "vscode-extension/package-lock.json"
@@ -932,6 +960,7 @@ def main():
             print(f"       - {filepath}")
         print(f"       - vscode-extension/package-lock.json (typed JSON edit)")
         print(f"       - README.md (version + test-count badges)")
+        print(f"       - CHANGELOG.md (substitute `unreleased` → today's date)")
 
         # Validation
         dry_step += 1
@@ -1012,6 +1041,12 @@ def main():
         if new_content != content:
             index_path.write_text(new_content, encoding='utf-8')
             print(f"  ✅ Updated: docs/index.md")
+
+    # Substitute ``## [X.Y.Z] - unreleased`` → ``## [X.Y.Z] - <today>`` in
+    # CHANGELOG.md. The placeholder is the canonical state during
+    # development (sentinel + validate-release.py both accept it). The
+    # dated form is what ships in the released artifact.
+    update_changelog_date(version, date)
 
     record_step("Update Versions")
 

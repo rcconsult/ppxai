@@ -67,10 +67,15 @@ def validate_release(version: str, allow_dirty: bool = False) -> bool:
             "pattern": r'"version":\s*"{version}"',
             "critical": True,
         },
-        # CHANGELOG must have entry for this version
+        # CHANGELOG must have an entry for this version. Accept either
+        # the dated form ``## [X.Y.Z] - 2026-05-02`` (post-release) or
+        # the in-development placeholder ``## [X.Y.Z] - unreleased``.
+        # ``release.py`` substitutes the placeholder with today's date
+        # as a release-time step, so by the time the tag is pushed only
+        # the dated form survives.
         {
             "file": "CHANGELOG.md",
-            "pattern": r"##\s+\[{version}\]\s+-\s+\d{{4}}-\d{{2}}-\d{{2}}",
+            "pattern": r"##\s+\[{version}\]\s+-\s+(?:\d{{4}}-\d{{2}}-\d{{2}}|unreleased)",
             "critical": True,
         },
         # README.md version badge
