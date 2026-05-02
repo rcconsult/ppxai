@@ -484,13 +484,13 @@
     },
     "nvidia": {
       "__comment": "NVIDIA NIM (build.nvidia.com) — OpenAI-compatible API. Free tier with API key (nvapi-...). 141 models available.",
-      "__comment_benchmark": "Tier A sweep (2026-05-01 + 2026-05-02 rerun): qwen3.5-122b-a10b 77.4%, qwen3-next-80b-thinking 76.6%, qwen3-next-80b-instruct 68.3%. qwen3-coder-480b returned 19.0% on both free-tier runs — rate-limit-contaminated (9-11 tool calls in 75-86s vs 74-89 for healthy models). Verify on paid tier.",
+      "__comment_benchmark": "Tier A sweep (2026-05-01 + 2026-05-02 rerun): qwen3.5-122b-a10b 77.4%, qwen3-next-80b-thinking 76.6%, qwen3-next-80b-instruct 68.3%. qwen3-coder-480b excluded as of 2026-05-02 — both free-tier runs scored 19.0% with the rate-limit-contamination signature. Re-add manually if you have paid-tier access (the engine ModelProfile entry is retained for that case).",
       "__comment_known_issues": "1) Free-tier hangs on long agentic_tool_loops (mistral-large-3, llama-3.3-nemotron). 2) llama-4-maverick is regionally restricted (EU users get 'NIM unavailable in your location'). 3) qwen2.5-coder-32b needs tool_calling.mode='prompt_based' (NIM rejects native tools).",
       "name": "NVIDIA NIM (build.nvidia.com)",
       "base_url": "https://integrate.api.nvidia.com/v1",
       "api_key_env": "NVIDIA_API_KEY",
       "default_model": "qwen/qwen3.5-122b-a10b",
-      "coding_model": "qwen/qwen3-coder-480b-a35b-instruct",
+      "coding_model": "qwen/qwen3.5-122b-a10b",
       "system_prompt": "You are an expert AI coding assistant served via NVIDIA NIM. Be concise and precise. Call tools directly using native function calling — never output tool-call JSON in response text. After tool failures, acknowledge the actual error message before retrying.",
       "generation_params": {
         "temperature": 0.2,
@@ -530,14 +530,6 @@
           "__comment_best_for": "Reasoning-heavy work — 100% reasoning, 85.7% agentic_tool_loops. ~9× slower than instruct sibling.",
           "generation_params": {"temperature": 0.6, "top_p": 0.95}
         },
-        "qwen/qwen3-coder-480b-a35b-instruct": {
-          "name": "Qwen3-Coder 480B-A35B",
-          "description": "Frontier coding MoE (480B total, 35B active). NVIDIA-recommended params: temp=0.7, top_p=0.8. Free-tier returned 19.0% but result was rate-limit-contaminated — rerun on paid tier.",
-          "context_limit": 262144,
-          "max_tokens": 4096,
-          "__comment_best_for": "Hard coding tasks once paid-tier access removes free-tier quota. Avoid scheduling against free tier.",
-          "generation_params": {"temperature": 0.7, "top_p": 0.8}
-        },
         "qwen/qwen2.5-coder-32b-instruct": {
           "name": "Qwen2.5 Coder 32B",
           "description": "Older Qwen2.5 coder. NIM does NOT enable native tool calling for this model.",
@@ -553,7 +545,6 @@
         "qwen/qwen3.5-122b-a10b": {"input": 0.0, "output": 0.0, "__comment": "NVIDIA NIM free tier (rate-limited)"},
         "qwen/qwen3-next-80b-a3b-instruct": {"input": 0.0, "output": 0.0},
         "qwen/qwen3-next-80b-a3b-thinking": {"input": 0.0, "output": 0.0},
-        "qwen/qwen3-coder-480b-a35b-instruct": {"input": 0.0, "output": 0.0},
         "qwen/qwen2.5-coder-32b-instruct": {"input": 0.0, "output": 0.0}
       },
       "capabilities": {

@@ -586,8 +586,9 @@
       "base_url": "https://integrate.api.nvidia.com/v1",
       "api_key_env": "NVIDIA_API_KEY",
       "default_model": "qwen/qwen3.5-122b-a10b",
-      "coding_model": "qwen/qwen3-coder-480b-a35b-instruct",
-      "__comment_benchmark": "Tier A NVIDIA NIM sweep (2026-05-01 + 2026-05-02 rerun, full 36-test suite). Healthy: qwen3.5-122b-a10b 77.4%, qwen3-next-80b-thinking 76.6%, qwen3-next-80b-instruct 68.3%. qwen3-coder-480b returned 19.0% on 2026-05-01 (rate-limit-contaminated: 9 tool calls in 75s, multiple 'operation not allowed' signatures) and 19.0% again on 2026-05-02 (rerun: 11 tool calls in 86s, 1 explicit quota marker). The rerun confirms contamination via the low-tool-call/short-duration signature that healthy peers don't share (74-89 calls in 197-1836s) — free tier throttles 480b regardless of how few explicit quota markers leak. Treat 480b as un-ranked until rerun on paid tier.",
+      "coding_model": "qwen/qwen3.5-122b-a10b",
+      "__comment_coding_model": "Was qwen/qwen3-coder-480b-a35b-instruct until 2026-05-02 — removed because free-tier sustained-load throttling makes it unusable here. Engine ModelProfile entry retained (`*/qwen3-coder-480b*` in engine/model_profiles.py) so users with paid NIM access can re-add this model to their own config and get the right Tier S characteristics.",
+      "__comment_benchmark": "Tier A NVIDIA NIM sweep (2026-05-01 + 2026-05-02 rerun, full 36-test suite). Healthy: qwen3.5-122b-a10b 77.4%, qwen3-next-80b-thinking 76.6%, qwen3-next-80b-instruct 68.3%. qwen3-coder-480b excluded from this curated set as of 2026-05-02 — two free-tier runs both scored 19.0% with the same low-tool-call/short-duration contamination signature that healthy peers don't share (9-11 calls in 75-86s vs 74-89 calls in 197-1836s). Requires paid-tier access; users with that should re-add it manually.",
       "__comment_known_issues": "1) Free-tier hangs on long agentic_tool_loops tests for some models (mistral-large-3, llama-3.3-nemotron). 2) llama-4-maverick is regionally restricted ('NIM unavailable in your location' from EU). 3) qwen2.5-coder-32b returns HTTP 400 'Tool use has not been enabled' — set tool_calling.mode='prompt_based' for that model.",
       "system_prompt": "You are an expert AI coding assistant served via NVIDIA NIM. Be concise and precise. Call tools directly using native function calling — never output tool-call JSON in response text. After tool failures, acknowledge the actual error message before retrying.",
       "generation_params": {
@@ -639,17 +640,6 @@
             "top_p": 0.95
           }
         },
-        "qwen/qwen3-coder-480b-a35b-instruct": {
-          "name": "Qwen3-Coder 480B-A35B",
-          "description": "Frontier coding MoE (480B total, 35B active). NVIDIA-recommended params: temp=0.7, top_p=0.8, max_tokens=4096. Tier A benchmark: 19.0% but RATE-LIMIT-CONTAMINATED — rerun on paid tier before drawing conclusions.",
-          "context_limit": 262144,
-          "max_tokens": 4096,
-          "__comment_best_for": "Hard coding tasks once paid-tier access removes free-tier quota. Avoid scheduling against free tier — calls return 'operation not allowed'.",
-          "generation_params": {
-            "temperature": 0.7,
-            "top_p": 0.8
-          }
-        },
         "mistralai/mistral-large-3-675b-instruct-2512": {
           "name": "Mistral Large 3 675B",
           "description": "Mistral's frontier dense model. NVIDIA-recommended params: temp=0.2, top_p=0.95, max_tokens=4096. Tier A benchmark: hung at agentic_tool_loops on free tier (no score).",
@@ -686,13 +676,14 @@
         },
         "moonshotai/kimi-k2-thinking": {
           "name": "Kimi K2 Thinking",
-          "description": "Moonshot's reasoning model. Probe failed (endpoint timeout) — likely cold-start or regional unavailable. Try once before relying on it.",
+          "description": "Moonshot's reasoning model. Probe succeeded 2026-05-02 (endpoint healthy, returned 200 with reasoning_content). Auto-emits reasoning chain via `reasoning_content` field — the visible response is in `content` once thinking concludes. Set max_tokens high (8K+) so thinking has room to finish before truncation. Not yet benchmarked.",
           "context_limit": 200000,
-          "max_tokens": 8192
+          "max_tokens": 8192,
+          "__comment_best_for": "Reasoning-heavy work where chain-of-thought is required. Slower than non-thinking models — pair with a max_tokens budget that fits the reasoning."
         },
         "deepseek-ai/deepseek-v3.2": {
           "name": "DeepSeek V3.2",
-          "description": "DeepSeek frontier. Probe failed (endpoint timeout). Try once before relying on it.",
+          "description": "DeepSeek frontier. Probe failed both 2026-05-01 and 2026-05-02 (endpoint timeout >60s). Try again periodically — may be regional / cold-start.",
           "context_limit": 131072,
           "max_tokens": 8192
         },
@@ -714,7 +705,7 @@
         },
         "qwen/qwen3.5-397b-a17b": {
           "name": "Qwen3.5 397B-A17B",
-          "description": "Larger sibling of qwen3.5-122b-a10b. Probe failed (endpoint timeout). Try once before relying on it.",
+          "description": "Larger sibling of qwen3.5-122b-a10b. Probe failed both 2026-05-01 and 2026-05-02 (endpoint timeout >60s). Try again periodically.",
           "context_limit": 256000,
           "max_tokens": 4096
         }
@@ -730,10 +721,6 @@
           "output": 0.0
         },
         "qwen/qwen3-next-80b-a3b-thinking": {
-          "input": 0.0,
-          "output": 0.0
-        },
-        "qwen/qwen3-coder-480b-a35b-instruct": {
           "input": 0.0,
           "output": 0.0
         },
