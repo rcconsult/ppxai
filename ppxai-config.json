@@ -609,6 +609,12 @@
           "generation_params": {
             "temperature": 0.2,
             "top_p": 0.9
+          },
+          "__comment_extra_body": "v1.18.3 plumbed extra_body through openai_compat. To enable Qwen3.5's reasoning mode, uncomment the block below. Roughly doubles latency — leave off unless you need extended chain-of-thought. NVIDIA's chat_template_kwargs.enable_thinking is the toggle.",
+          "__example_extra_body": {
+            "chat_template_kwargs": {
+              "enable_thinking": true
+            }
           }
         },
         "qwen/qwen3-next-80b-a3b-instruct": {

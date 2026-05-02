@@ -152,6 +152,7 @@ model_hints:
     - "When user specifies N output blocks/sections, produce exactly N — count before responding."
     - "Do NOT output tool calls as XML (<tool_call>) — use native function calling only."
     - "Chain multiple DIFFERENT tool calls without stopping to narrate between them."
+    - "Reasoning mode is opt-in via NVIDIA's chat_template_kwargs.enable_thinking — see ppxai-config.json __example_extra_body block on this model. Default is reasoning OFF (faster). Enable when chain-of-thought is required, accept ~2x latency."
   "gpt-oss*":
     - "You are a coding specialist - prioritize working code over explanations."
     - "Execute tools immediately rather than describing what you would do."
