@@ -11,12 +11,13 @@ from typing import List
 
 from ..config import get_model_context_limit, get_max_injection_size
 from ..engine.tools.builtin import web_premium
-from ..usage import get_usage_report
+from ..usage import get_provider_errors, get_usage_report
 from .factory import CommandFactory, CommandSpec
 from .protocol import CommandContext
 from .results import (
     ResultStatus,
     CommandResult,
+    CompositeResult,
     ConfirmationResult,
     TableResult,
     KeyValueResult,
@@ -485,6 +486,76 @@ def handle_usage(context: CommandContext, args: str) -> CommandResult:
         )
 
 
+def _build_provider_errors_table() -> TableResult | None:
+    """Build a Provider Errors table from usage_stats throttle telemetry.
+
+    Returns None when no errors recorded — caller should skip the section
+    rather than render an empty table. v1.18.3 Tier 2 #5 plumbed the data
+    via UsageStorage.record_provider_error from openai_compat's throttle
+    classifier; this surface lets users actually see how often NIM (and
+    other providers) refused calls so the contamination signal that
+    Item 17 / Item 18 hinge on becomes visible without re-running benchmarks.
+
+    Each row: provider | status | count | last seen | models (one or more,
+    comma-separated). Sort by count descending so the worst offender is
+    on top.
+    """
+    errors = get_provider_errors()
+    if not errors:
+        return None
+    rows = []
+    for key, payload in errors.items():
+        provider, _, status = key.partition(":")
+        count = payload.get("count", 0)
+        last_seen = payload.get("last_seen", "")
+        # Trim ISO timestamp to minute precision for table density
+        if isinstance(last_seen, str) and "T" in last_seen:
+            last_seen = last_seen[:16].replace("T", " ")
+        models = payload.get("models", []) or []
+        models_str = ", ".join(models) if models else ""
+        rows.append([
+            provider or "?",
+            status or "?",
+            str(count),
+            str(last_seen),
+            models_str,
+            int(count),  # Sort key, stripped before render
+        ])
+    rows.sort(key=lambda r: r[-1], reverse=True)
+    rows = [r[:-1] for r in rows]
+    total = sum(int(r[2]) for r in rows)
+    return TableResult(
+        status=ResultStatus.WARNING if total else ResultStatus.INFO,
+        message=f"Provider errors (throttle / quota / auth): {total} total",
+        columns=["Provider", "Status", "Count", "Last Seen", "Models"],
+        rows=rows,
+        metadata={
+            "report_type": "provider_errors",
+            "total_errors": total,
+            "distinct_keys": len(rows),
+        },
+    )
+
+
+def _maybe_compose_with_errors(usage_table: TableResult) -> CommandResult:
+    """If provider_errors are present, return a CompositeResult that pairs
+    the usage table with a provider-errors table. Otherwise return the
+    usage table unchanged.
+
+    Keeps the empty-errors path byte-identical to pre-v1.18.3 output so
+    no client renderer regresses; only when there's something to report
+    does the user see the additional section.
+    """
+    errors_table = _build_provider_errors_table()
+    if errors_table is None:
+        return usage_table
+    return CompositeResult(
+        status=usage_table.status,
+        message="",  # sub-results carry their own headers
+        results=[usage_table, errors_table],
+    )
+
+
 def _display_usage_report(context: CommandContext) -> CommandResult:
     """Display detailed usage report with per-model breakdown."""
     usage = context.engine_client.session.get_usage()
@@ -529,7 +600,7 @@ def _display_usage_report(context: CommandContext) -> CommandResult:
         f"Display mode: {display_mode} - Change with /usage show <mode>"
     ]
 
-    return TableResult(
+    usage_table = TableResult(
         status=ResultStatus.SUCCESS,
         message=" | ".join(message_parts),
         columns=["Provider", "Model", "In", "Out", "Cost"],
@@ -544,6 +615,7 @@ def _display_usage_report(context: CommandContext) -> CommandResult:
             "display_mode": display_mode,
         }
     )
+    return _maybe_compose_with_errors(usage_table)
 
 
 def _display_global_usage_report(context: CommandContext, period: str) -> CommandResult:
@@ -598,7 +670,7 @@ def _display_global_usage_report(context: CommandContext, period: str) -> Comman
         message += f" ({report['start_date']} to {report['end_date']})"
     message += f" | {report.get('session_count', 0)} sessions | {report.get('total_tokens', 0):,} tokens ({report.get('prompt_tokens', 0):,}↓ / {report.get('completion_tokens', 0):,}↑) | ${report.get('total_cost', 0.0):.4f}"
 
-    return TableResult(
+    usage_table = TableResult(
         status=ResultStatus.SUCCESS,
         message=message,
         columns=["Provider", "Model", "In", "Out", "Cost"],
@@ -616,6 +688,7 @@ def _display_global_usage_report(context: CommandContext, period: str) -> Comman
             "end_date": report.get("end_date"),
         }
     )
+    return _maybe_compose_with_errors(usage_table)
 
 
 # =============================================================================

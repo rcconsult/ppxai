@@ -136,6 +136,24 @@ export class CommandRenderer {
                 }
                 return;
 
+            case 'CompositeResult': {
+                // v1.18.3 Item 16: /usage returns CompositeResult when
+                // provider throttle counters are non-empty (usage table
+                // + errors table). Render top-level message (if any)
+                // then recurse into each sub-result through the same
+                // dispatch — matches Rich + Textual + web behaviour.
+                if (result.message) {
+                    this._host.postSystemMessage(result.message);
+                }
+                const subs = Array.isArray(result.results)
+                    ? (result.results as CommandResultPayload[])
+                    : [];
+                for (const sub of subs) {
+                    this.render(sub);
+                }
+                return;
+            }
+
             default:
                 // Unknown type — open enum, ignore gracefully.
                 if (result.message) {

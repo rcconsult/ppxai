@@ -155,6 +155,18 @@ ResultRenderer._handlers = {
     PreviewResult(result) {
         if (result.message) this.app.showSystemMessage(result.message);
     },
+    CompositeResult(result) {
+        // v1.18.3 Item 16: /usage returns CompositeResult when provider
+        // throttle counters are non-empty (usage table + errors table).
+        // Render top-level message (if any) then recurse into each sub-
+        // result through the same dispatch — same pattern Rich + Textual
+        // renderers already implement.
+        if (result.message) this.app.showSystemMessage(result.message);
+        const subs = Array.isArray(result.results) ? result.results : [];
+        for (const sub of subs) {
+            this.render(sub);
+        }
+    },
 
     _default(result) {
         // Unknown type — open enum, ignore gracefully.
