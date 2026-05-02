@@ -84,27 +84,43 @@ afternoon (~30-45 min of work).
 **rate-limit-contaminated**, not a quality measurement. The model made
 9 tool calls in 75s vs 74-89 calls in 197-1836s for healthy peers, and
 multiple test results contain `{"message":"operation not allowed"}`
-errors from NIM's 403 quota-block response. See
-[memory/feedback_benchmark_rate_limit_contamination.md] for the
-diagnostic pattern.
+errors from NIM's 403 quota-block response.
 
-The provisional Tier S profile entry in `engine/model_profiles.py`
+**Free-tier rerun on 2026-05-02** (commit landing this entry): re-ran
+the 36-test sweep — same 19.0% (7/36), same low-tool-call signature
+(11 calls in 86s). Only **1 of 29 failures** explicitly leaked the
+"operation not allowed" marker this time, vs many on the 2026-05-01
+run. **Conclusion: the free tier still throttles the 480b, just less
+explicitly.** The duration + tool-call-count signature is the
+diagnostic, not the explicit error string. Fixed
+`__comment_benchmark` in both configs to record both runs.
+
+A single curl ping to the same endpoint at session start returned
+200 OK in 679 ms — confirms the API itself works for this model on
+free tier; it's the sustained 36-test load that hits the wall.
+
+See [memory/feedback_benchmark_rate_limit_contamination.md] for the
+broader diagnostic pattern.
+
+**What's still open:** a clean (paid-tier) score for the 480b. The
+provisional Tier S profile entry in `engine/model_profiles.py`
 inherits family characteristics from the existing `qwen3-coder*`
-glob, but `__comment_benchmark` in both repo configs flags the score
-as un-trustworthy until a clean rerun.
+glob, but `__comment_benchmark` in both repo configs continues to flag
+the score as un-trustworthy until a clean rerun.
 
-**Why deferred:** requires NVIDIA NIM paid-tier access (or a 24-hour
-free-tier wait for quota reset, which itself isn't reliable). The
-provisional Tier S placement is reasonable given the family heritage;
-a clean rerun would either confirm or re-tier.
+**Why deferred:** requires NVIDIA NIM paid-tier access. The 2026-05-02
+rerun confirmed the free-tier diagnosis — no further free-tier reruns
+will produce a clean number. The provisional Tier S placement is
+reasonable given the family heritage; a paid-tier rerun would either
+confirm or re-tier.
 
 **Trigger to revisit:** when paid-tier access is provisioned, OR when
 NVIDIA changes their free-tier policy, OR when a user reports the
 480b underperforming in real use.
 
 **Effort:**
-- ~15 min: rerun the 36-test sweep against the paid-tier endpoint
-  (existing `c:/tmp/run_nvidia_tierA_resume.sh` script).
+- ~15 min: rerun the 36-test sweep against the paid-tier endpoint:
+  `python benchmarks/llm-eval/benchmark.py --provider nvidia --model qwen/qwen3-coder-480b-a35b-instruct --timeout 120 --retries 1`
 - ~5 min: update `__comment_benchmark` in `ppxai-config.json` and
   `ppxai-config.example.json` with the clean score; remove the
   "RATE-LIMIT-CONTAMINATED" qualifier.
