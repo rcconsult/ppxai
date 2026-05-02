@@ -97,6 +97,12 @@ class PerplexityProvider(BaseProvider):
 
             yield Event(EventType.STREAM_START, {"model": model})
 
+            # v1.18.3: vendor-specific extra_body pass-through (e.g.
+            # Perplexity-only ``search_recency_filter``,
+            # ``search_domain_filter``, ``return_images``). Only sent when
+            # configured; empty dict skipped.
+            extra_body = self._get_extra_body(model)
+
             if stream:
                 # Streaming response with usage tracking
                 request_kwargs = {
@@ -108,6 +114,8 @@ class PerplexityProvider(BaseProvider):
                 # Add generation params if configured
                 if generation_params:
                     request_kwargs.update(generation_params)
+                if extra_body:
+                    request_kwargs["extra_body"] = extra_body
                 response_stream = self.client.chat.completions.create(**request_kwargs)
 
                 full_response = []
@@ -148,6 +156,8 @@ class PerplexityProvider(BaseProvider):
                 # Add generation params if configured
                 if generation_params:
                     request_kwargs.update(generation_params)
+                if extra_body:
+                    request_kwargs["extra_body"] = extra_body
                 response = self.client.chat.completions.create(**request_kwargs)
 
                 content = response.choices[0].message.content or ""
@@ -169,8 +179,25 @@ class PerplexityProvider(BaseProvider):
                 yield Event(EventType.STREAM_END, content, metadata)
 
         except Exception as e:
-            error_msg = self._format_error(e)
-            yield Event(EventType.ERROR, error_msg)
+            # v1.18.3: provider throttle (HTTP 403/429) → typed event +
+            # persistent telemetry counter. Falls through to ERROR for
+            # anything that isn't a typed APIStatusError throttle.
+            throttle = self._classify_throttle(e)
+            if throttle is not None:
+                throttle["model"] = model
+                try:
+                    from ...usage import record_provider_error
+                    record_provider_error(
+                        provider=throttle["provider"] or self.provider_id or "",
+                        status_code=throttle["status_code"],
+                        model=model,
+                    )
+                except Exception:
+                    pass
+                yield Event(EventType.PROVIDER_THROTTLED, throttle)
+            else:
+                error_msg = self._format_error(e)
+                yield Event(EventType.ERROR, error_msg)
             self._log_error_traceback(e)
 
     def chat_sync_simple(
@@ -189,6 +216,7 @@ class PerplexityProvider(BaseProvider):
         """
         api_messages = self._convert_messages(messages)
         generation_params = self._get_generation_params(model)
+        extra_body = self._get_extra_body(model)
 
         request_kwargs = {
             "model": model,
@@ -197,6 +225,8 @@ class PerplexityProvider(BaseProvider):
         }
         if generation_params:
             request_kwargs.update(generation_params)
+        if extra_body:
+            request_kwargs["extra_body"] = extra_body
 
         response = self.client.chat.completions.create(**request_kwargs)
 

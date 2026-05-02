@@ -301,6 +301,12 @@ class OpenAINativeProvider(BaseProvider):
                 request_kwargs["tools"] = tools
                 request_kwargs["tool_choice"] = "auto"
 
+            # v1.18.3 follow-up: vendor-specific extra_body pass-through.
+            # Forwarded only when configured to keep wire payloads clean.
+            extra_body = self._get_extra_body(model)
+            if extra_body:
+                request_kwargs["extra_body"] = extra_body
+
             if stream:
                 async for event in self._stream_chat_completions(request_kwargs):
                     yield event
@@ -315,8 +321,23 @@ class OpenAINativeProvider(BaseProvider):
                 async for event in self._chat_responses_api(messages, model, stream, tools):
                     yield event
                 return
-            error_msg = self._format_error(e)
-            yield Event(EventType.ERROR, error_msg)
+            # v1.18.3 follow-up: typed throttle event + persistent telemetry.
+            throttle = self._classify_throttle(e)
+            if throttle is not None:
+                throttle["model"] = model
+                try:
+                    from ...usage import record_provider_error
+                    record_provider_error(
+                        provider=throttle["provider"] or self.provider_id or "",
+                        status_code=throttle["status_code"],
+                        model=model,
+                    )
+                except Exception:
+                    pass
+                yield Event(EventType.PROVIDER_THROTTLED, throttle)
+            else:
+                error_msg = self._format_error(e)
+                yield Event(EventType.ERROR, error_msg)
             self._log_error_traceback(e)
 
     async def _stream_chat_completions(
@@ -507,6 +528,13 @@ class OpenAINativeProvider(BaseProvider):
             if response_tools:
                 request_kwargs["tools"] = response_tools
 
+            # v1.18.3 follow-up: extra_body also works on the Responses
+            # API (`client.responses.create(extra_body=...)`). Same lookup
+            # path as Chat Completions; only sent when configured.
+            extra_body = self._get_extra_body(model)
+            if extra_body:
+                request_kwargs["extra_body"] = extra_body
+
             if stream:
                 async for event in self._stream_responses(request_kwargs):
                     yield event
@@ -515,8 +543,23 @@ class OpenAINativeProvider(BaseProvider):
                     yield event
 
         except Exception as e:
-            error_msg = self._format_error(e)
-            yield Event(EventType.ERROR, error_msg)
+            # v1.18.3 follow-up: typed throttle event + persistent telemetry.
+            throttle = self._classify_throttle(e)
+            if throttle is not None:
+                throttle["model"] = model
+                try:
+                    from ...usage import record_provider_error
+                    record_provider_error(
+                        provider=throttle["provider"] or self.provider_id or "",
+                        status_code=throttle["status_code"],
+                        model=model,
+                    )
+                except Exception:
+                    pass
+                yield Event(EventType.PROVIDER_THROTTLED, throttle)
+            else:
+                error_msg = self._format_error(e)
+                yield Event(EventType.ERROR, error_msg)
             self._log_error_traceback(e)
 
     async def _stream_responses(

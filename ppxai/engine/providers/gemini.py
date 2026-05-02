@@ -37,10 +37,12 @@ _genai_available = False
 try:
     from google import genai
     from google.genai import types as genai_types
+    from google.genai import errors as genai_errors
     _genai_available = True
 except ImportError:
     genai = None
     genai_types = None
+    genai_errors = None
 
 # Initialize logger
 logger = get_logger("gemini")
@@ -396,8 +398,26 @@ class GeminiProvider(BaseProvider):
                 yield Event(EventType.STREAM_END, content, metadata)
 
         except Exception as e:
-            error_msg = self._format_error(e)
-            yield Event(EventType.ERROR, error_msg)
+            # v1.18.3 follow-up: typed throttle event + persistent telemetry.
+            # Gemini overrides _classify_throttle to handle google.genai
+            # errors (APIError with code 403/429) since the base class
+            # only knows about openai.APIStatusError.
+            throttle = self._classify_throttle(e)
+            if throttle is not None:
+                throttle["model"] = model
+                try:
+                    from ...usage import record_provider_error
+                    record_provider_error(
+                        provider=throttle["provider"] or self.provider_id or "",
+                        status_code=throttle["status_code"],
+                        model=model,
+                    )
+                except Exception:
+                    pass
+                yield Event(EventType.PROVIDER_THROTTLED, throttle)
+            else:
+                error_msg = self._format_error(e)
+                yield Event(EventType.ERROR, error_msg)
             self._log_error_traceback(e)
 
     def chat_sync_simple(
@@ -749,6 +769,54 @@ class GeminiProvider(BaseProvider):
             content += "\n\n**Sources:**\n" + "\n".join(citation_lines)
 
         return content
+
+    def _classify_throttle(self, e: Exception) -> Optional[Dict[str, Any]]:
+        """Detect Gemini-side rate-limit / quota errors.
+
+        v1.18.3 follow-up: the base class checks ``openai.APIStatusError``
+        which never matches google-genai exceptions. Gemini's
+        ``google.genai.errors.APIError`` carries an integer ``code`` and
+        a string ``status`` (e.g. ``RESOURCE_EXHAUSTED``); we map 403 /
+        429 onto throttle and let everything else fall through to the
+        generic ERROR path.
+
+        Returns the same dict shape as the base implementation
+        (``status_code``, ``provider``, ``message``, ``retry_after``)
+        so the SSE consumer can be polymorphic across providers.
+
+        Returns ``None`` when:
+        * google-genai isn't installed (defensive — should never happen
+          if a request is in flight, but the guard keeps the helper
+          callable in test contexts that build the provider without
+          the dep).
+        * Exception isn't an ``APIError`` or its ``code`` isn't a
+          throttle status.
+        """
+        if genai_errors is None:
+            return None
+        if not isinstance(e, genai_errors.APIError):
+            return None
+        code = getattr(e, "code", None)
+        if code not in (403, 429):
+            return None
+        retry_after: Optional[float] = None
+        # google-genai's APIError carries an httpx.Response-like object
+        # on `.response` for live API calls; replay shims set it to None.
+        try:
+            response = getattr(e, "response", None)
+            if response is not None:
+                headers = getattr(response, "headers", None) or {}
+                header = headers.get("retry-after") if hasattr(headers, "get") else None
+                if header:
+                    retry_after = float(header)
+        except (AttributeError, TypeError, ValueError):
+            retry_after = None
+        return {
+            "status_code": int(code),
+            "provider": self.provider_id or "gemini",
+            "message": self._format_error(e),
+            "retry_after": retry_after,
+        }
 
     def _format_error(self, e: Exception) -> str:
         """Format exception into user-friendly error message.
