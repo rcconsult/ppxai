@@ -5,6 +5,34 @@ All notable changes to ppxai will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.18.3] - unreleased
+
+### Added
+
+- **NVIDIA NIM provider goes first-class.** `ppxai-config.json` and `ppxai-config.example.json` ship a `nvidia` provider entry pointing at `https://integrate.api.nvidia.com/v1` with 12 curated models (NVIDIA-portal-recommended per-model `generation_params` — temp varies 0.2–0.7, top_p 0.8–0.95). Native tool calling default; `qwen2.5-coder-32b-instruct` overrides to `prompt_based`. Tier A 36-test benchmark sweep (2026-05-01) on the four healthy models: `qwen/qwen3.5-122b-a10b` 77.4% (best overall), `qwen3-next-80b-thinking` 76.6%, `qwen3-next-80b-instruct` 68.3%. The `qwen/qwen3-coder-480b` 19% result was rate-limit-contaminated on free tier — see Item 17 in [DEBT-INVENTORY-v1.18.3.md](docs/DEBT-INVENTORY-v1.18.3.md).
+- **`EventType.PROVIDER_THROTTLED` typed event.** New event distinguishes provider-side rate-limit / quota errors (HTTP 403 / 429) from generic model failures. `BaseProvider._classify_throttle()` produces a structured `{status_code, provider, model, message, retry_after}` payload. `openai_compat.py` emits `PROVIDER_THROTTLED` instead of `ERROR` when classification matches; `chat.py` treats both events identically on the abort path but tags `reason="provider_throttled"` in `AGENT_RUN_ERROR` so post-mortems can distinguish quota blocks from genuine failures. `_format_error()` 403 branch refined: NIM's "Operation not allowed" body produces "Provider quota / permission error... wait, switch model, or use paid tier" instead of a generic API-error wrapper. ppxaide TUI's `stream_handler.py` maps the new event onto `ENGINE_ERROR` with a dict-aware unwrap so the user sees the recovery hint, not the raw payload dict. (Tier 1 #2)
+- **`extra_body` config pass-through.** New `ppxai/config/providers.py::get_extra_body()` resolves a per-provider / per-model `extra_body` dict (provider defaults, model overrides win on conflict; `__comment_*` keys stripped). `BaseProvider._get_extra_body()` is a thin instance wrapper. `openai_compat.py` forwards via `client.chat.completions.create(extra_body=...)` only when non-empty (empty dict skipped to avoid breaking strict endpoints). Unblocks Qwen3.5 / GLM `chat_template_kwargs.enable_thinking` toggle without forking the engine; future-proofs for vLLM-only parameters and other vendor-specific runtime knobs. (Tier 1 #1)
+- **Seven `ModelProfile` entries for namespaced NIM IDs.** `*/qwen3-coder-480b*` (Tier S, parallel_tool_calls), `*/qwen3.5-122b*` (Tier A — NIM benchmark 77.4%), `*/qwen3.5-397b*` (Tier B provisional), `*/llama-3.3-nemotron*` (Tier B, supports_reasoning), `*/mistral-large-3*` (Tier B), `*/devstral-2*` (Tier B). Pre-fix, the existing `qwen3-coder*` (no leading `*/`) only matched non-namespaced IDs, so `qwen/qwen3-coder-480b-a35b-instruct` fell back to default. Sentinel test class `TestNvidiaNimProfiles` in `tests/test_model_profiles.py`. (Tier 1 #3)
+- **`reasoning_trigger` per-model in-prompt marker.** NVIDIA's `nvidia/llama-3.3-nemotron-super-49b-v1.5` toggles reasoning via `/think` (enable) or `/no_think` (disable) appended to the system message — distinct from `chat_template_kwargs.enable_thinking` (Qwen3.5 / GLM go via `extra_body`). New `get_reasoning_trigger()` config helper + `BaseProvider._apply_reasoning_trigger()` appends the marker to the FIRST system message, idempotent (skipped when already present); when no system message exists, one is prepended carrying just the trigger. nemotron config has `"reasoning_trigger": "/think"` so reasoning fires by default. (Tier 2 #4)
+- **Provider-error telemetry in `usage_stats`.** `UsageStorage.record_provider_error(provider, status_code, model)` persists a counter to `~/.ppxai/usage/usage.json` under a new `provider_errors` key (`{count, last_seen, models[]}` per `provider:status_code`). `openai_compat.py` fires it from the `_classify_throttle` path. Best-effort persistence — failures logged at DEBUG and ignored, never breaks chat. Backward-compatible with pre-v1.18.3 usage files. Surfaces "NIM returned 12 quota errors today" without re-running benchmarks; `/usage` rendering is debt Item 16 (data accumulates from v1.18.3 onward, no rendering surface yet). (Tier 2 #5)
+- **`nvidia:` provider_hint block in `AGENTS.md`** (repo + home) — runtime guidance for models served via NIM: native tool calling, no-loop on "Operation not allowed" 403, free-tier quota awareness, batched chains for long agentic work.
+- **41 new tests across 5 files.** `tests/test_model_profiles.py::TestNvidiaNimProfiles` (8 sentinels), `tests/test_provider_throttle.py` (9 classification + message-format tests), `tests/test_extra_body.py` (7 config-layer + provider-wiring tests), `tests/test_reasoning_trigger.py` (9 config + helper tests), `tests/test_usage_provider_errors.py` (8 persistence + backward-compat tests).
+
+### Changed
+
+- **Version banner sites bumped 1.18.2 → 1.18.3** across the 12 sites enumerated in CLAUDE.md release section: pyproject.toml, ppxai/version.py, vscode-extension/{package.json, package-lock.json}, ppxai/rich/event_handler.py, ppxai/common/logger.py, README.md (badge + vsix asset), vscode-extension/README.md (vsix references), CLAUDE.md / ROADMAP.md / AGENTS.md / docs/README.md ("Current Version" pointers).
+
+### Internal
+
+- **Sentinel test caught a missing dispatcher entry.** `tests/test_stream_handler_dispatch.py::test_every_event_type_is_covered` flagged the new `EventType.PROVIDER_THROTTLED` as missing from `stream_handler.py::EVENT_MAP`. Fixed by mapping it to `ENGINE_ERROR` (chat.py treats them identically) + dict-aware unwrap in `on_engine_error` so users see the recovery hint instead of the raw payload dict. The drift test did its job — added without it, ppxaide would silently log "Unhandled event type" warnings on every NIM 403.
+- **DEBT-INVENTORY-v1.18.3.md filed with 4 new items** (16: `/usage` throttle display, 17: 480b paid-tier rerun, 18: kimi/deepseek/397b probes, 19: example `extra_body` wiring) plus 5 carried over from v1.18.2 (Items 3, 12, 13, 14, 15).
+
+### Docs
+
+- New [docs/RELEASE-NOTES-v1.18.3.md](docs/RELEASE-NOTES-v1.18.3.md).
+- New [docs/DEBT-INVENTORY-v1.18.3.md](docs/DEBT-INVENTORY-v1.18.3.md).
+- [CLAUDE.md](CLAUDE.md) "Release state" + open-items pointer updated for v1.18.3.
+
 ## [1.18.2] - 2026-04-29
 
 ### Added

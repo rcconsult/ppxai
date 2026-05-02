@@ -8,15 +8,28 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 
 **Current Version:** v1.18.3
 
-**Release state:** v1.18.2 tagged + published 2026-04-29. Active branch: `master`.
-GitHub release: https://github.com/rcconsult/ppxai/releases/tag/v1.18.2 (15 assets:
-13 binaries + 1 dmg + 1 vsix). 5 trigger-deferred items remain in
-[docs/DEBT-INVENTORY-v1.18.2.md](docs/DEBT-INVENTORY-v1.18.2.md): Item 3 (k8s
-session-manager security tests), Item 12 (Node.js 20 deprecation → bump
-actions/* to v5), Item 13 (release.py step 15 silent-failure), Item 14
-(Anthropic provider with TOS-aware auth fallback), Item 15 (deploy/shared/
-AGENTS.md stale parallel copy). All trigger-deferred — pick up when their
-forcing conditions hit.
+**Release state:** v1.18.3 in progress on branch `feature/v1.18.3` (pushed
+to `origin/feature/v1.18.3` at `51c55d16`, three commits over master).
+**Not released yet** — `/release v1.18.3` is the next step. v1.18.2
+remains the latest GitHub release: https://github.com/rcconsult/ppxai/releases/tag/v1.18.2
+(15 assets: 13 binaries + 1 dmg + 1 vsix).
+
+v1.18.3 theme: NVIDIA NIM provider goes from "config-only support" to
+"first-class engine support." Five engine-level changes — ModelProfile
+entries for namespaced NIM IDs, `EventType.PROVIDER_THROTTLED` for HTTP
+403/429, `extra_body` config pass-through, per-model `reasoning_trigger`
+in-prompt marker, provider-error telemetry in `usage_stats`. Plus the
+NVIDIA NIM provider config + Tier A 36-test benchmark sweep already on
+master. See [docs/RELEASE-NOTES-v1.18.3.md](docs/RELEASE-NOTES-v1.18.3.md)
+for the full summary, [docs/DEBT-INVENTORY-v1.18.3.md](docs/DEBT-INVENTORY-v1.18.3.md)
+for open follow-ups.
+
+Open items in [docs/DEBT-INVENTORY-v1.18.3.md](docs/DEBT-INVENTORY-v1.18.3.md):
+4 new (Item 16: `/usage` throttle counter rendering, Item 17: 480b
+paid-tier rerun, Item 18: kimi-k2-thinking / deepseek-v3.2 / qwen3.5-397b
+probes, Item 19: example `extra_body` wiring) + 5 carried over from
+v1.18.2 (Items 3, 12, 13, 14, 15). All trigger-deferred — pick up when
+their forcing conditions hit.
 
 **Major architectural patterns** — each has its own dedicated section below; respect these when changing code:
 - **AppState** (v1.17.x) — observable state across all 4 clients (Python, JS, TS); SSE `state_sync` push; engine-owned invalidation via session callbacks. See "Cross-Client State Through AppState" below.
