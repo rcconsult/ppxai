@@ -1,11 +1,13 @@
 """Tests for ShellExecuteTool — compound commands, cd handling, interactive guards."""
 
+import asyncio
 import os
 import sys
+import time
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from ppxai.engine.tools.builtin.shell import ShellExecuteTool
+from ppxai.engine.tools.builtin.shell import ShellExecuteTool, _is_backgrounded
 
 # Windows cmd.exe doesn't support single quotes in arguments
 _Q = '"' if sys.platform == 'win32' else "'"
@@ -110,3 +112,106 @@ class TestWorkingDir:
         """Non-existent working_dir should return error."""
         result = await shell_tool.execute("ls", working_dir="/nonexistent/path/xyz")
         assert "does not exist" in result.lower()
+
+
+class TestBackgroundDetection:
+    """`&`/`nohup` detection used to avoid pipe-EOF deadlock (v1.18.3 P3)."""
+
+    def test_trailing_amp_detected(self):
+        assert _is_backgrounded("python main.py &")
+        assert _is_backgrounded("sleep 60 &")
+        assert _is_backgrounded("cd /x && python main.py > log 2>&1 &")
+
+    def test_amp_with_trailing_whitespace(self):
+        assert _is_backgrounded("sleep 60 &   ")
+
+    def test_logical_and_not_backgrounded(self):
+        assert not _is_backgrounded("ls && pwd")
+        assert not _is_backgrounded("a && b && c")
+
+    def test_nohup_detected(self):
+        assert _is_backgrounded("nohup python main.py")
+
+    def test_plain_command_not_backgrounded(self):
+        assert not _is_backgrounded("ls -la")
+        assert not _is_backgrounded("echo hello")
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX backgrounding semantics")
+class TestBackgroundedCommandNoDeadlock:
+    """Long-running backgrounded children must not block the tool call.
+
+    Regression for the 2026-05-02 demo session where `python main.py > log 2>&1 &`
+    held subprocess.run's captured pipes via inherited FDs for the full 300s
+    timeout. Fixed by setting stdout/stderr/stdin = DEVNULL +
+    start_new_session=True for backgrounded commands.
+    """
+
+    @pytest.mark.asyncio
+    async def test_long_running_backgrounded_returns_quickly(self, shell_tool, tmp_path):
+        # Use a python child that holds stdout/stderr open for 30s — would
+        # have hung subprocess.run(capture_output=True) until timeout.
+        log = tmp_path / "child.log"
+        cmd = (
+            f"python3 -c 'import time,sys; sys.stdout.write(\"alive\\n\"); "
+            f"sys.stdout.flush(); time.sleep(30)' > {log} 2>&1 &"
+        )
+        start = time.monotonic()
+        result = await shell_tool.execute(cmd)
+        elapsed = time.monotonic() - start
+        assert elapsed < 5.0, f"backgrounded command took {elapsed:.2f}s (deadlock?)"
+        assert "background" in result.lower()
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX signal semantics")
+class TestInterruptCancelsRunningProcess:
+    """interrupt_stream() during a running tool must SIGTERM the subprocess
+    so /interrupt is effective without waiting for the timeout."""
+
+    @pytest.mark.asyncio
+    async def test_interrupt_terminates_running_subprocess(self):
+        """Real engine + real subprocess: simulate Esc during a 30s sleep."""
+        from ppxai.engine.client import EngineClient
+
+        # Stub providers/config — we only exercise subprocess registry +
+        # interrupt_stream; no LLM call.
+        with patch("ppxai.engine.client.create_provider"), \
+             patch("ppxai.engine.client.get_api_key", return_value="stub"), \
+             patch("ppxai.engine.client.get_base_url", return_value="http://stub"):
+            engine = EngineClient.__new__(EngineClient)
+            engine._interrupted = False
+            engine._active_subprocesses = []
+            from ppxai.engine.app_state import AppState
+            engine.state = AppState()
+
+        tool = ShellExecuteTool(engine)
+        # Bypass consent for this test.
+        engine.request_shell_consent = AsyncMock(return_value=True)
+        engine.get_working_dir = MagicMock(return_value=os.getcwd())
+
+        # Long-running foreground command — would normally run for 30s.
+        with patch(
+            "ppxai.engine.tools.builtin.shell._get_shell_config",
+            return_value={"timeout": 30, "interactive_commands": [], "non_interactive_with_args": []},
+        ):
+            execute_task = asyncio.create_task(
+                tool.execute("python3 -c 'import time; time.sleep(30)'")
+            )
+
+            # Wait for the subprocess to actually be registered.
+            for _ in range(50):
+                if engine._active_subprocesses:
+                    break
+                await asyncio.sleep(0.05)
+            assert engine._active_subprocesses, "subprocess never registered"
+
+            start = time.monotonic()
+            engine.interrupt_stream()
+            result = await execute_task
+            elapsed = time.monotonic() - start
+
+        assert elapsed < 5.0, f"interrupt didn't kill subprocess fast (elapsed={elapsed:.2f}s)"
+        # After interrupt: process exited via SIGTERM; tool returns either
+        # the (empty) captured output or a non-zero exit-code marker.
+        # The key assertion is the elapsed-time bound above.
+        assert engine._active_subprocesses == [], "subprocess not unregistered"

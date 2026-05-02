@@ -361,8 +361,11 @@ class TestShellSecurityContract:
 
     @pytest.mark.asyncio
     async def test_shell_execute_returns_timeout_message(self, tmp_path):
-        """When subprocess.run raises TimeoutExpired, the tool returns
-        an error message rather than propagating the exception."""
+        """When the shell command exceeds tools.shell.timeout, the tool
+        SIGTERMs the subprocess and returns a 'timed out' error message
+        rather than propagating an exception (v1.18.3 P3: real async
+        subprocess + asyncio.wait_for, replaces the old subprocess.run
+        mock)."""
         from ppxai.engine.tools.builtin.shell import ShellExecuteTool
 
         engine = EngineClient()
@@ -378,8 +381,16 @@ class TestShellSecurityContract:
 
         tool = ShellExecuteTool(engine)
 
-        with patch("ppxai.engine.tools.builtin.shell.subprocess.run",
-                   side_effect=subprocess.TimeoutExpired("sleep 5", 1)):
+        with patch(
+            "ppxai.engine.tools.builtin.shell._get_shell_config",
+            return_value={
+                "timeout": 1,
+                "shell_bin": None,
+                "login_shell": False,
+                "interactive_commands": [],
+                "non_interactive_with_args": [],
+            },
+        ):
             result = await tool.execute(command="sleep 5", working_dir=str(tmp_path))
 
         assert "timed out" in result.lower()

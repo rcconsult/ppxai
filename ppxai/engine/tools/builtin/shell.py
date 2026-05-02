@@ -2,16 +2,52 @@
 Shell command execution tool with consent management (v1.11.2).
 
 v1.13.6: Interactive command lists now configurable via JSON config.
+v1.18.3 P3: async + cancellable. `subprocess.run` (blocking, sync) is
+replaced with `asyncio.create_subprocess_shell`/`exec` so the event loop
+keeps servicing POST /interrupt while a tool runs. The running process is
+registered with the engine so `interrupt_stream()` can SIGTERM it.
+Trailing-`&` (and `nohup`) commands now run with `start_new_session=True`
+and stdout/stderr/stdin = DEVNULL so a backgrounded long-running child
+(e.g. uvicorn) cannot hold the captured pipes open after the wrapper
+subshell exits — that was the 5-minute deadlock observed in the demo
+session of 2026-05-02.
 """
 
+import asyncio
 import os
-import subprocess
+import re
 import platform
 from typing import List
 
 from ....config import get_shell_config
 from ...types import ToolEngineProtocol, ToolManagerProtocol
 from ..base import BaseTool
+
+
+# `&` at the end of the command, or anywhere followed by whitespace + EOL,
+# means "background this". Avoids matching `&&` (logical AND) and `&` inside
+# quoted strings is best-effort: a trailing-only check is correct for the
+# common `cmd args > log 2>&1 &` pattern. Models that hand-build complex
+# pipelines with mid-command `&` are responsible for their own redirection.
+_TRAILING_AMP_RE = re.compile(r"(?:^|[^&])&\s*$")
+
+
+def _is_backgrounded(command: str) -> bool:
+    """Detect commands that detach a long-running child from the wrapper shell.
+
+    Matches:
+      - trailing `&` (POSIX async list terminator)
+      - `nohup ...` prefix (caller intends to outlive the shell)
+
+    Backgrounded commands need stdin/stdout/stderr = DEVNULL and a new
+    session so the captured-output pipes from the parent don't keep the
+    child's FDs alive. Without this, uvicorn-style servers deadlock the
+    `await proc.communicate()` call until the configured timeout fires.
+    """
+    stripped = command.strip()
+    if stripped.startswith("nohup "):
+        return True
+    return bool(_TRAILING_AMP_RE.search(stripped))
 
 
 def _get_shell_config() -> dict:
@@ -170,77 +206,133 @@ class ShellExecuteTool(BaseTool):
             # Determine shell based on platform
             is_windows = platform.system() == "Windows"
 
-            # Change to working directory if specified
-            original_dir = None
-            if working_dir:
-                original_dir = os.getcwd()
-                if not os.path.isdir(working_dir):
-                    return f"Error: Working directory does not exist: {working_dir}"
-                os.chdir(working_dir)
+            # Validate working directory without chdir-ing the engine process:
+            # the asyncio subprocess accepts cwd= directly, and chdir-ing the
+            # whole event-loop thread would race with concurrent tool calls.
+            if working_dir and not os.path.isdir(working_dir):
+                return f"Error: Working directory does not exist: {working_dir}"
 
+            backgrounded = _is_backgrounded(command)
+
+            # Resolve shell binary and login mode from config.
+            shell_bin = shell_config.get("shell_bin") if not is_windows else None
+            login_shell = shell_config.get("login_shell", False) and not is_windows
+
+            # Pipe vs DEVNULL:
+            # - foreground commands: capture stdout+stderr (the result the
+            #   model needs to see).
+            # - backgrounded commands: DEVNULL everything so an inherited
+            #   pipe FD held open by the long-running child cannot block
+            #   our await proc.communicate() / proc.wait().
+            if backgrounded:
+                stdout_dst = asyncio.subprocess.DEVNULL
+                stderr_dst = asyncio.subprocess.DEVNULL
+                stdin_dst = asyncio.subprocess.DEVNULL
+            else:
+                stdout_dst = asyncio.subprocess.PIPE
+                stderr_dst = asyncio.subprocess.PIPE
+                stdin_dst = asyncio.subprocess.DEVNULL  # never let a tool block on stdin
+
+            # `start_new_session=True` puts the wrapper in its own process
+            # group so SIGTERM during interrupt_stream propagates to the
+            # whole tree, AND so backgrounded children cannot get TTY
+            # signals from the engine process.
             try:
-                # Resolve shell binary and login mode from config.
-                # shell_bin: path to shell (e.g. /bin/zsh). Defaults to system default.
-                # login_shell: invoke as login shell (-l) so shell profile is sourced,
-                #   giving the subprocess the same PATH and env as an interactive terminal.
-                shell_bin = shell_config.get("shell_bin") if not is_windows else None
-                login_shell = shell_config.get("login_shell", False) and not is_windows
-
                 if shell_bin:
-                    # Explicit shell: run as [shell_bin, (-l,) -c, command]
                     cmd_list = [shell_bin]
                     if login_shell:
                         cmd_list.append('-l')
                     cmd_list.extend(['-c', command])
-                    result = subprocess.run(
-                        cmd_list,
-                        shell=False,
-                        capture_output=True,
-                        text=True,
-                        timeout=timeout,
-                        errors='replace',
+                    proc = await asyncio.create_subprocess_exec(
+                        *cmd_list,
+                        stdin=stdin_dst,
+                        stdout=stdout_dst,
+                        stderr=stderr_dst,
                         cwd=working_dir if working_dir else None,
+                        start_new_session=not is_windows,
                     )
                 else:
-                    # Default: let Python pick the system shell (/bin/sh on Unix)
-                    result = subprocess.run(
+                    proc = await asyncio.create_subprocess_shell(
                         command,
-                        shell=True,
-                        capture_output=True,
-                        text=True,
-                        timeout=timeout,
-                        encoding='utf-8' if not is_windows else None,
-                        errors='replace',
+                        stdin=stdin_dst,
+                        stdout=stdout_dst,
+                        stderr=stderr_dst,
                         cwd=working_dir if working_dir else None,
+                        start_new_session=not is_windows,
+                    )
+            except Exception as e:
+                return f"Error executing command: {str(e)}"
+
+            self.engine.register_subprocess(proc)
+            try:
+                if backgrounded:
+                    # Wait briefly for the wrapper subshell to fork+detach
+                    # (typical: <50 ms). The actual long-running child has
+                    # been re-parented via start_new_session and its FDs
+                    # are DEVNULL, so we don't wait for it.
+                    try:
+                        await asyncio.wait_for(proc.wait(), timeout=min(timeout, 5))
+                        rc = proc.returncode
+                    except asyncio.TimeoutError:
+                        # Wrapper itself is still running — unusual for a
+                        # backgrounded command but not fatal. Treat as
+                        # "launched, detached".
+                        rc = 0
+                    return (
+                        f"Command launched in background (exit code: {rc if rc is not None else 'detached'}). "
+                        f"Output discarded — redirect explicitly with `> file 2>&1` if you need it."
                     )
 
-                # Combine stdout and stderr
-                output = ""
-                if result.stdout:
-                    output += result.stdout
-                if result.stderr:
+                try:
+                    stdout_b, stderr_b = await asyncio.wait_for(
+                        proc.communicate(), timeout=timeout
+                    )
+                except asyncio.TimeoutError:
+                    # SIGTERM the whole process group, then SIGKILL after grace.
+                    try:
+                        proc.terminate()
+                    except (ProcessLookupError, OSError):
+                        pass
+                    try:
+                        await asyncio.wait_for(proc.wait(), timeout=2)
+                    except asyncio.TimeoutError:
+                        try:
+                            proc.kill()
+                        except (ProcessLookupError, OSError):
+                            pass
+                    return (
+                        f"Error: Command timed out after {timeout} seconds. "
+                        f"Set 'tools.shell.timeout' in config for longer timeouts."
+                    )
+                except asyncio.CancelledError:
+                    # Engine cancellation (interrupt_stream) — kill and re-raise.
+                    try:
+                        proc.terminate()
+                    except (ProcessLookupError, OSError):
+                        pass
+                    raise
+
+                stdout_text = stdout_b.decode('utf-8', errors='replace') if stdout_b else ""
+                stderr_text = stderr_b.decode('utf-8', errors='replace') if stderr_b else ""
+
+                output = stdout_text
+                if stderr_text:
                     if output:
                         output += "\n--- stderr ---\n"
-                    output += result.stderr
+                    output += stderr_text
 
-                # Add return code if non-zero
-                if result.returncode != 0:
-                    output += f"\n\nCommand exited with code: {result.returncode}"
+                if proc.returncode and proc.returncode != 0:
+                    output += f"\n\nCommand exited with code: {proc.returncode}"
 
                 # Truncate output if too large (prevent context overflow)
                 max_output = 10000  # 10KB limit
                 if len(output) > max_output:
                     output = output[:max_output] + f"\n\n... (output truncated, {len(output) - max_output} chars omitted)"
 
-                return output if output else f"Command completed successfully (exit code: {result.returncode})"
-
+                return output if output else f"Command completed successfully (exit code: {proc.returncode})"
             finally:
-                # Restore original directory
-                if original_dir:
-                    os.chdir(original_dir)
+                self.engine.unregister_subprocess(proc)
 
-        except subprocess.TimeoutExpired:
-            return f"Error: Command timed out after {timeout} seconds. Set 'tools.shell.timeout' in config for longer timeouts."
         except Exception as e:
             return f"Error executing command: {str(e)}"
 

@@ -149,6 +149,12 @@ class EngineClient:
         # Interrupt handling for graceful stream cancellation
         self._interrupted: bool = False
 
+        # Active asyncio subprocesses spawned by tools (v1.18.3 P3).
+        # interrupt_stream() terminates these so a hung shell command
+        # (e.g. `python main.py &` that deadlocks on inherited pipe FDs)
+        # cannot starve POST /interrupt by holding the event loop.
+        self._active_subprocesses: List["asyncio.subprocess.Process"] = []
+
         # File edit consent callback (Phase 1: v1.11.0)
         self.consent_callback = consent_callback
 
@@ -490,11 +496,31 @@ class EngineClient:
     def interrupt_stream(self) -> None:
         """Interrupt the current streaming response gracefully.
 
-        This sets a flag that the chat() method will check during streaming.
-        The stream will stop at the next chunk and return partial results.
+        Sets the cancel flag (checked at chat()-iteration boundaries) AND
+        terminates any active subprocesses spawned by tools so a hung
+        `subprocess` call cannot block POST /interrupt's effect until its
+        timeout fires.
         """
         self._interrupted = True
         self.state.set("cancel_requested", True)
+
+        for proc in list(self._active_subprocesses):
+            try:
+                if proc.returncode is None:
+                    proc.terminate()
+            except (ProcessLookupError, OSError):
+                pass
+
+    def register_subprocess(self, proc: "asyncio.subprocess.Process") -> None:
+        """Track an active subprocess for cancellation by interrupt_stream."""
+        self._active_subprocesses.append(proc)
+
+    def unregister_subprocess(self, proc: "asyncio.subprocess.Process") -> None:
+        """Remove a subprocess from the active list once it has exited."""
+        try:
+            self._active_subprocesses.remove(proc)
+        except ValueError:
+            pass
 
     # === Provider Management ===
 
