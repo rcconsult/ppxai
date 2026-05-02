@@ -74,6 +74,14 @@ VERSION_FILES = {
     },
 }
 
+# verify_release() body-length floor. The auto-generated `**Full Changelog**:
+# https://...` link that softprops/action-gh-release emits when notes-file
+# publishing fails is ~80 chars. Any real `docs/RELEASE-NOTES-v*.md` file is
+# multi-paragraph and well over 500 chars. v1.18.2's second-failure mode
+# (notes-file publish timed out, release body shipped with only the 80-char
+# link) went undetected for ~1 hour because verify_release didn't check.
+MIN_RELEASE_BODY_CHARS = 500
+
 
 def run_command(cmd: str, capture: bool = True, check: bool = True) -> subprocess.CompletedProcess:
     """Run a shell command (cross-platform)."""
@@ -761,67 +769,121 @@ def build_intel_assets(version: str) -> bool:
 
 
 def verify_release(version: str) -> bool:
-    """Verify release has all expected assets."""
-    result = run_gh_command(f"release view v{version} --json assets", check=False)
+    """Verify release has all expected assets AND a non-empty release body.
+
+    Hard-exits (sys.exit(1)) on critical failures:
+      * `gh release view` fails (release was never created — CI job skipped)
+      * required assets missing (a build matrix job silently skipped/failed)
+      * body length below MIN_RELEASE_BODY_CHARS (notes-file publish failed,
+        body shipped with only the ~80-char auto-generated changelog link)
+
+    Warns but does not exit when:
+      * body doesn't contain the first 200 chars of RELEASE-NOTES-v*.md
+        (editorial drift between on-disk and published is allowed)
+      * optional Intel Mac assets are missing (local build skipped)
+
+    History:
+      * v1.18.1 — 4 retag cycles; release.py reported success while the
+        actual release was incomplete or absent (memory/release-lessons.md).
+      * v1.18.2 first failure (2026-04-29) — build-dmg `hdiutil: Resource
+        busy` flake skipped the release job; verify said "could not fetch"
+        then printed "✅ Release complete" anyway.
+      * v1.18.2 second failure (2026-04-29) — `gh release edit --notes-file`
+        timed out; release existed with all 15 assets but body was only the
+        80-char `**Full Changelog**: ...` link. verify saw 15 assets and
+        "✅"-ed it; user noticed ~1 hour later.
+    """
+    result = run_gh_command(f"release view v{version} --json assets,body", check=False)
 
     if result.returncode != 0:
-        print(f"  ❌ Could not fetch release info")
-        return False
+        print(f"  ❌ FATAL: `gh release view v{version}` failed — release was NOT created.")
+        print(f"     Most common cause: a CI job failed and the `release` job was skipped.")
+        print(f"     Check failed runs:   gh run list --workflow='Build Executables' --limit 3")
+        print(f"     Re-run failed jobs:  gh run rerun <RUN_ID> --failed")
+        sys.exit(1)
 
     try:
         data = json.loads(result.stdout)
-        assets = [a["name"] for a in data.get("assets", [])]
-
-        expected = [
-            # VSCode extension
-            f"ppxai-{version}.vsix",
-            # TUI binaries
-            "ppxai-linux-amd64",
-            "ppxai-macos-arm64",
-            "ppxai-windows.exe",
-            # Server binaries
-            "ppxai-server-linux-amd64",
-            "ppxai-server-macos-arm64",
-            "ppxai-server-windows.exe",
-            # Desktop binaries (v1.13.1+)
-            "ppxai-desktop-linux-amd64",
-            "ppxai-desktop-macos-arm64",
-            "ppxai-desktop-windows.exe",
-            # Web UI zip (v1.13.1+)
-            f"ppxai-web-ui-{version}.zip",
-        ]
-
-        # Optional Intel Mac builds (built locally, not by CI)
-        optional = [
-            "ppxai-macos-intel",
-            "ppxai-server-macos-intel",
-            "ppxai-desktop-macos-intel",
-        ]
-
-        missing = [e for e in expected if e not in assets]
-        present_optional = [o for o in optional if o in assets]
-
-        print(f"  📦 Assets: {len(assets)} found")
-        for asset in assets:
-            print(f"      ✅ {asset}")
-
-        if missing:
-            print(f"  ⚠️  Missing required assets:")
-            for m in missing:
-                print(f"      ❌ {m}")
-            return False
-
-        if len(present_optional) < len(optional):
-            missing_optional = [o for o in optional if o not in assets]
-            print(f"  ⚠️  Missing optional assets (Intel Mac builds):")
-            for m in missing_optional:
-                print(f"      ⏭️  {m}")
-
-        return True
-
     except json.JSONDecodeError:
-        print(f"  ❌ Could not parse release info")
-        return False
+        print(f"  ❌ FATAL: could not parse `gh release view` output as JSON.")
+        sys.exit(1)
+
+    assets = [a["name"] for a in data.get("assets", [])]
+    body = data.get("body", "")
+
+    # Required assets — every CI build job in build.yml produces one. Missing
+    # any means a matrix job silently skipped or failed. v1.18.2 first-failure
+    # mode (build-dmg flake) skipped the DMG; original verify_release didn't
+    # check the DMG OR ppxaide binaries, so it would have ✅-ed those too.
+    expected_required = [
+        # VSCode extension (build-vscode job)
+        f"ppxai-{version}.vsix",
+        # Rich TUI binaries (build-tui job)
+        "ppxai-linux-amd64",
+        "ppxai-macos-arm64",
+        "ppxai-windows.exe",
+        # Textual TUI binaries (build-tui-textual job)
+        "ppxaide-linux-amd64",
+        "ppxaide-macos-arm64",
+        "ppxaide-windows.exe",
+        # Server binaries (build-server job)
+        "ppxai-server-linux-amd64",
+        "ppxai-server-macos-arm64",
+        "ppxai-server-windows.exe",
+        # Desktop binaries (build-desktop job, v1.13.1+)
+        "ppxai-desktop-linux-amd64",
+        "ppxai-desktop-macos-arm64",
+        "ppxai-desktop-windows.exe",
+        # macOS DMG (build-dmg job)
+        f"ppxai-{version}-macos-arm64.dmg",
+        # Web UI zip (build-web-ui job, v1.13.1+)
+        f"ppxai-web-ui-{version}.zip",
+    ]
+
+    # Optional Intel Mac builds (built locally, not by CI)
+    optional = [
+        "ppxai-macos-intel",
+        "ppxai-server-macos-intel",
+        "ppxai-desktop-macos-intel",
+    ]
+
+    missing_required = [e for e in expected_required if e not in assets]
+    missing_optional = [o for o in optional if o not in assets]
+
+    print(f"  📦 Assets: {len(assets)} found")
+    for asset in assets:
+        print(f"      ✅ {asset}")
+
+    if missing_required:
+        print(f"  ❌ FATAL: {len(missing_required)} required asset(s) missing:")
+        for m in missing_required:
+            print(f"      ❌ {m}")
+        print(f"     A build matrix job likely failed or was skipped.")
+        print(f"     Check:   gh run list --workflow='Build Executables' --limit 3")
+        sys.exit(1)
+
+    if missing_optional:
+        print(f"  ⏭️  Optional assets not present (Intel Mac builds — OK if local build skipped):")
+        for m in missing_optional:
+            print(f"      ⏭️  {m}")
+
+    if len(body) < MIN_RELEASE_BODY_CHARS:
+        print(f"  ❌ FATAL: release body is only {len(body)} chars "
+              f"(threshold: {MIN_RELEASE_BODY_CHARS}).")
+        print(f"     Release-notes publishing failed silently. Recover with:")
+        print(f"     gh release edit v{version} \\")
+        print(f"       --notes-file docs/RELEASE-NOTES-v{version}.md")
+        sys.exit(1)
+
+    notes_path = PROJECT_ROOT / f"docs/RELEASE-NOTES-v{version}.md"
+    if notes_path.exists():
+        expected_prefix = notes_path.read_text(encoding="utf-8").strip()[:200]
+        if expected_prefix and expected_prefix not in body:
+            print(f"  ⚠️  WARNING: release body does not contain the first 200 chars")
+            print(f"     of docs/RELEASE-NOTES-v{version}.md — manual review recommended.")
+
+    print(f"  ✅ {len(assets)} assets verified, body {len(body)} chars.")
+    return True
 
 
 def print_step(step: int, total: int, title: str, step_times: list = None):
