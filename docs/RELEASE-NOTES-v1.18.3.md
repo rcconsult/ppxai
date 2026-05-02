@@ -1,18 +1,29 @@
 # Release Notes — v1.18.3
 
 > **Scope:** NVIDIA NIM provider goes from "config-only support" to
-> "first-class engine support." Five engine-level changes across two
-> commits, plus a Tier A benchmark sweep that quantified the model lineup.
+> "first-class engine support" (Tier 1 + Tier 2). The engine helpers
+> introduced for NIM are then extended across every other provider
+> (Perplexity, OpenAI-native, Gemini-native), so 403/429 throttle
+> telemetry and `extra_body` pass-through become a uniform contract
+> rather than a NIM-only feature. A separate refactor pass collapses
+> the 13 places the release script used to patch down to 3 sources of
+> truth, with a CI-enforced sentinel test that makes drift between
+> releases impossible.
 >
-> **Tests:** 2883 passing, 15 skipped (was 2842 at v1.18.2 baseline → +41).
-> 7 of the 15 skips are Unix-only `TestKillPreviewBackend` (Windows lacks
-> the mock targets); fully covered on Linux CI.
+> **Tests:** 2785 passing, 2 skipped (was 2842 at v1.18.2 baseline →
+> +43 added by NIM helpers, +29 by provider gap-fill, +14 by the
+> version-consistency sentinel). The skip count drop is a test-suite
+> tightening unrelated to v1.18.3, not a coverage regression. Counts
+> are non-TUI; full Linux CI runs cover the TUI tests too.
 
 ## Summary
 
-v1.18.3 takes NVIDIA NIM from "you can configure it as a custom provider
-and it mostly works" to "the engine knows about NIM-style models, throttle
-events, and reasoning-mode toggles." The work clusters into three themes:
+v1.18.3 has two threads. The first takes NVIDIA NIM from "you can
+configure it as a custom provider and it mostly works" to "the engine
+knows about NIM-style models, throttle events, and reasoning-mode
+toggles" (themes 1–3 below). The second cleans up the cross-provider
+gaps that work surfaced (theme 4) and addresses an unrelated
+release-tooling drift risk (theme 5):
 
 1. **NVIDIA NIM provider + Tier A benchmark sweep** (2026-05-01,
    committed at `b37e6a01` — already on master pre-branch). Provider
@@ -34,15 +45,38 @@ events, and reasoning-mode toggles." The work clusters into three themes:
    `~/.ppxai/usage/usage.json` so quota-block patterns survive across
    sessions.
 
+4. **Cross-provider gap-fill** (`d98a1255`). The Tier 1/2 helpers were
+   designed provider-agnostic but only wired into `openai_compat.py`,
+   so Perplexity / OpenAI-native / Gemini-native silently no-op'd
+   them. A 429 from any of those three providers used to emit generic
+   `EventType.ERROR` and never increment the persistent
+   `provider_errors` counter. v1.18.3 wires them all through the same
+   contract — Perplexity (both stream paths), OpenAI-native (Chat
+   Completions API + Responses API), Gemini-native (custom
+   `_classify_throttle` for `google.genai.errors.APIError`) — so
+   throttle telemetry is uniform across all four providers.
+
+5. **Version-string drift collapse** (`1d24faed`). Pre-2026-05 the
+   release script mechanically patched 13 places per release. The
+   sweep is reliable inside `/release` but leaves 13 drift points
+   open between releases. v1.18.3 collapses to 3 sources of truth
+   (`pyproject.toml`, `ppxai/version.py`, `vscode-extension/package.json`)
+   plus one derived (`package-lock.json`) and 2 shields.io badges,
+   adds `tests/test_version_consistency.py` as a CI-enforced sentinel,
+   and slims `release.py` accordingly. Drift between releases is now
+   a build failure on the contributing PR, not a "we shipped the
+   wrong string" surprise on tag day.
+
 The user-visible change is most evident on three error paths: a NIM 403
 "Operation not allowed" now produces a clear "Provider quota /
 permission error... wait, switch model, or use paid tier" message
 rather than a generic API-error wrapping the JSON body; the agent loop
 tags the resulting `AGENT_RUN_ERROR` with `reason="provider_throttled"`
 so post-mortems can distinguish quota blocks from genuine model
-failures; and the throttle counters silently accumulate so a
-follow-up `/usage` rendering pass (debt Item 16) can show "NVIDIA
-returned 12 quota errors today" without re-running benchmarks.
+failures; and the throttle counters silently accumulate from EVERY
+provider (not just NIM) so a follow-up `/usage` rendering pass (debt
+Item 16) can show "OpenAI returned 3 rate-limits today, Perplexity
+returned 1, Gemini returned 8" without re-running benchmarks.
 
 ## What's new
 
@@ -227,12 +261,120 @@ The existing `Qwen/Qwen3.5*` and `*Qwen3-Next*` model_hint blocks
 already covered the three benchmark-passing models — no model_hint
 changes needed for v1.18.3.
 
+### Cross-provider gap-fill (theme 4)
+
+The Tier 1/2 helpers (`_classify_throttle`, `_get_extra_body`,
+`record_provider_error`) live on `BaseProvider` and the config helpers
+(`get_extra_body`, `get_reasoning_trigger`) take `provider` as an arg
+— designed provider-agnostic. But the only WIRING was in
+`openai_compat.py`, so Perplexity / OpenAI-native / Gemini-native
+silently no-op'd them: a 429 from any of those three providers
+emitted `EventType.ERROR` and never incremented the persistent
+`provider_errors` counter.
+
+`d98a1255` fills the gaps where each helper naturally fits:
+
+**Perplexity (`perplexity.py`):** `extra_body` forwarded to both
+streaming and non-streaming `chat.completions.create` calls (also
+wired into `chat_sync_simple`). Throttle classification + telemetry
+replaces the single `except Exception` block. Reasoning trigger
+skipped — Sonar reasoning models reason automatically.
+
+**OpenAI-native (`openai_native.py`):** `extra_body` forwarded on
+BOTH API paths — `_chat_completions_api` (gpt-4.1, gpt-5.x, o-series)
+and `_chat_responses_api` (gpt-5.1-codex*, gpt-*-pro). Responses API
+also accepts `extra_body=...`. Throttle classification + telemetry
+on both paths' error handlers. The pre-existing 404 → Responses-API
+auto-fallback in `_chat_completions_api` is preserved (404 stays on
+the fallback path; throttle classification only fires for 403/429).
+Reasoning trigger skipped — OpenAI uses `reasoning={"effort": ...}`
+parameter.
+
+**Gemini-native (`gemini.py`):** `_classify_throttle` overridden
+because `google.genai.errors.APIError` is not an
+`openai.APIStatusError` — the base class returns None for every
+Gemini error. Custom override: detect `APIError` with
+`code in (403, 429)`, return the same payload shape
+(`status_code`, `provider`, `message`, `retry_after`). Headers
+parsed defensively for `Retry-After`. Telemetry wired into `chat()`
+error handler. Extra-body skipped — Gemini config is
+`GenerateContentConfig` object, not OpenAI-SDK kwargs. Reasoning
+trigger skipped — Gemini 2.5 thinking is via `thinking_config`
+parameter.
+
+Coverage matrix after this change:
+
+| Provider | Backing class | Gets v1.18.3 features? |
+|----------|---------------|------------------------|
+| `local`, `custom` (NIM, OpenRouter, vLLM, LM Studio, ...) | `OpenAICompatibleProvider` | ✅ All 5 (since v1.18.3 Tier 1/2) |
+| `gemini` (fallback when `google-genai` not installed) | `OpenAICompatibleProvider` | ✅ All 5 |
+| `openai` | `OpenAINativeProvider` (Responses + Chat Completions) | ✅ extra_body + throttle + telemetry |
+| `perplexity` | `PerplexityProvider` | ✅ extra_body + throttle + telemetry |
+| `gemini` (native, when `google-genai` installed) | `GeminiProvider` | ✅ throttle + telemetry (custom classifier) |
+
+Reasoning trigger remains NIM/openai-compat-only by design — none of
+the dedicated providers use the in-prompt `/think` convention.
+
+### Version-string drift collapse (theme 5)
+
+`1d24faed` collapses the release script's 13 patch points to 3 SoTs +
+4 derived locations, plus a CI sentinel test that makes drift
+impossible.
+
+**Sources of truth (post-collapse):**
+- `pyproject.toml` — canonical Python package version.
+- `ppxai/version.py::__version__` — Python runtime SoT;
+  `ppxai/__init__.py` re-exports it.
+- `vscode-extension/package.json` — npm SoT.
+- Derived: `vscode-extension/package-lock.json` (typed JSON edit, not
+  regex), `README.md` shields.io version + test-count badges,
+  `docs/index.md` version badge.
+
+**Retired locations (now derived or linked):**
+- `ppxai/rich/event_handler.py` and `ppxai/common/logger.py` had a
+  `Version: vX.Y.Z` line in the module docstring — replaced with a
+  pointer to `ppxai.__version__`.
+- `CLAUDE.md` / `ROADMAP.md` / `AGENTS.md` / `docs/README.md` had
+  "Current Version: vX.Y.Z" headers — replaced with a link to
+  `https://github.com/rcconsult/ppxai/releases/latest`.
+- `README.md` and `vscode-extension/README.md` referenced
+  `ppxai-1.18.3.vsix` literally — replaced with the
+  `ppxai-<version>.vsix` placeholder pattern.
+
+**Release-script slim:**
+- `VERSION_FILES`: 6 entries → 3 (dropped `ppxai/__init__.py`,
+  `event_handler.py`, `logger.py`).
+- `VSIX_FILES` constant + `update_vsix_references` function: removed.
+- `DOC_FILES` constant: was dead code, removed.
+- `update_claude_md` / `update_agents_md` / `update_docs_readme`:
+  removed. ROADMAP.md "Current Version" patcher block: removed.
+- `validate-release.py`: 14 checks → 6 + accepts `unreleased`
+  CHANGELOG placeholder during dev; `release.py` substitutes the date
+  at release time.
+
+**Sentinel test (`tests/test_version_consistency.py`):**
+14 tests across two classes. *Positive direction* — every surviving
+SoT must match `pyproject.toml`. Drift between `pyproject.toml` and
+`version.py` / `package.json` / `package-lock.json` / README badges
+is a CI failure. *Negative direction* — every retired location must
+NOT contain a hardcoded `vX.Y.Z` pattern that the release script
+used to patch. A new "Current Version: v1.x.y" line in CLAUDE.md
+becomes a CI failure on the contributing PR — not a "we shipped the
+wrong string" surprise during release. Verified the sentinel
+actually catches drift via synthetic-regression test.
+
 ## Internal
 
-- **2883 tests passing** (was 2842 → +41 across the v1.18.3 branch).
-  Distribution: 8 NIM profile sentinels + 9 throttle classification
-  + 7 extra_body + 9 reasoning_trigger + 8 provider-error telemetry
-  = 41 new tests. All run in <1s on the .venv interpreter.
+- **2785 tests passing, 2 skipped** (was 2742 at branch start →
+  +43 across v1.18.3). Distribution:
+  * 8 NIM profile sentinels + 9 throttle classification + 7 extra_body
+    + 9 reasoning_trigger + 8 provider-error telemetry = 41 (NIM
+    Tier 1 + Tier 2)
+  * 7 Perplexity wiring + 11 OpenAI-native wiring + 11 Gemini wiring
+    = 29 (cross-provider gap-fill)
+  * 14 version-consistency sentinel
+  All run in <1s on the .venv interpreter except the agentic-task
+  validation suite which dominates wall time.
 - **`docs/DEBT-INVENTORY-v1.18.3.md`** filed with 4 new items (16:
   /usage rendering, 17: 480b paid-tier rerun, 18: kimi/deepseek/397b
   probes, 19: extra_body wiring example) plus 5 carried-over from
@@ -243,6 +385,12 @@ changes needed for v1.18.3.
   `EVENT_MAP`. Fixed by mapping to `ENGINE_ERROR` (chat.py treats them
   identically). Without the drift test, ppxaide TUI would have silently
   logged "Unhandled event type" warnings on every NIM 403.
+- **Version-consistency sentinel verified end-to-end.** Synthetic
+  drift test (mutate `ppxai/version.py` to "9.9.9" and run the
+  sentinel) confirmed CI would catch the regression. The pre-tag
+  `validate-release.py` also tightened to 6 checks and now accepts
+  `## [X.Y.Z] - unreleased` as a valid in-development CHANGELOG
+  state, with `release.py` substituting the date at release time.
 
 ## Discipline pinned
 
@@ -274,17 +422,22 @@ as compliance.
 
 If picking this up on a different machine, see
 [DEBT-INVENTORY-v1.18.3.md](DEBT-INVENTORY-v1.18.3.md) for the open
-follow-ups. The branch is `feature/v1.18.3` (pushed to origin at
-`51c55d16`). Three commits over master:
+follow-ups. The branch is `feature/v1.18.3`. Commits over master, in
+chronological order:
 
 ```
-51c55d16 feat(engine): NVIDIA NIM Tier 2 — reasoning_trigger + throttle telemetry
-b3aad2f6 chore: bump version 1.18.2 → 1.18.3
 0f986d36 feat(engine): NVIDIA NIM Tier 1 — profiles, throttle event, extra_body
+b3aad2f6 chore: bump version 1.18.2 → 1.18.3
+51c55d16 feat(engine): NVIDIA NIM Tier 2 — reasoning_trigger + throttle telemetry
+1c5dd81d docs(v1.18.3): preserve resume context — debt inventory, release notes, CHANGELOG, CLAUDE pointer
+d98a1255 feat(providers): extend v1.18.3 throttle telemetry + extra_body to Perplexity, OpenAI-native, Gemini
+3282acd0 style(config): expand nvidia pricing block to multi-line layout
+1d24faed refactor(version): collapse 13 patch points to 3 sources of truth + sentinel test
+91d663c1 chore(release): make pre-flight green during dev — accept CHANGELOG `unreleased` placeholder
 ```
 
-`/release v1.18.3` is the next step — script will detect the version
-bumps already in place and proceed to changelog/release-notes
-verification + tag + push. Item 16 (`/usage` throttle display) and
-Item 17 (480b paid-tier rerun) can roll into v1.18.4 or land first
-depending on appetite.
+`/release v1.18.3` is the next step — script will detect version bumps
+already in place, substitute the CHANGELOG date placeholder, run
+validation against the slim 6-check list, and proceed to tag + push.
+Item 16 (`/usage` throttle display) and Item 17 (480b paid-tier rerun)
+can roll into v1.18.4 or land first depending on appetite.
