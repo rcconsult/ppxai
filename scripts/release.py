@@ -42,15 +42,26 @@ if sys.platform == 'win32':
 # Project root directory
 PROJECT_ROOT = Path(__file__).parent.parent
 
-# Files that need version updates
+# Files that need version updates.
+#
+# Slimmed from 13 → 3 in 2026-05 ("Reduce version-string drift" pass):
+# * `ppxai/__init__.py` re-exports `__version__` from `ppxai.version`, so
+#   the only Python source-of-truth is `version.py`.
+# * `ppxai/rich/event_handler.py` and `ppxai/common/logger.py` had a
+#   docstring `Version: vX.Y.Z` line — replaced with a pointer to
+#   `ppxai.__version__` so they no longer need patching.
+# * `package-lock.json` is patched separately (typed JSON edit, not
+#   regex) by `update_package_lock`.
+# * READMEs / CLAUDE.md / ROADMAP.md / AGENTS.md / docs/README.md no
+#   longer carry hardcoded version strings — they link to
+#   https://github.com/rcconsult/ppxai/releases/latest instead.
+# * The `tests/test_version_consistency.py` sentinel test enforces
+#   that all surviving version strings stay in sync with `pyproject.toml`
+#   on every commit, so drift between releases is impossible.
 VERSION_FILES = {
     "pyproject.toml": {
         "pattern": r'version = "[\d.]+(?:\.\w+)*"',
         "replacement": 'version = "{version}"',
-    },
-    "ppxai/__init__.py": {
-        "pattern": r'__version__ = "[\d.]+(?:\.\w+)*"',
-        "replacement": '__version__ = "{version}"',
     },
     "ppxai/version.py": {
         "pattern": r'__version__ = "[\d.]+(?:\.\w+)*"',
@@ -60,34 +71,6 @@ VERSION_FILES = {
         "pattern": r'"version": "[\d.]+"',
         "replacement": '"version": "{version}"',
         "json_key": "version",
-    },
-    "ppxai/rich/event_handler.py": {
-        "pattern": r'Version: v[\d.]+',
-        "replacement": 'Version: v{version}',
-    },
-    "ppxai/common/logger.py": {
-        "pattern": r'Version: v[\d.]+',
-        "replacement": 'Version: v{version}',
-    },
-}
-
-# Files with vsix references that need updating
-VSIX_FILES = [
-    "README.md",
-    "vscode-extension/README.md",
-]
-
-# Documentation files that need version updates
-DOC_FILES = {
-    "CLAUDE.md": {
-        "current_version_pattern": r'\*\*Current Version:\*\* v[\d.]+',
-        "current_version_replacement": '**Current Version:** v{version}',
-        "version_alignment_pattern": r'- Python package \(pyproject\.toml\): v[\d.]+\n- VSCode extension \(package\.json\): v[\d.]+\n- Git tag: v[\d.]+ \(released [\d-]+\)\n- GitHub Release: https://github\.com/rcconsult/ppxai/releases/tag/v[\d.]+',
-    },
-    "ROADMAP.md": {
-        # Pattern matches: > **Current Version**: v1.11.9 (December 2025)
-        "current_release_pattern": r'> \*\*Current Version\*\*: v[\d.]+ \([^)]+\)',
-        "current_release_replacement": '> **Current Version**: v{version} ({month} {year})',
     },
 }
 
@@ -210,28 +193,6 @@ def update_version_in_file(filepath: str, pattern: str, replacement: str, versio
     return True
 
 
-def update_vsix_references(version: str) -> int:
-    """Update all ppxai-X.Y.Z.vsix references."""
-    count = 0
-    vsix_pattern = r'ppxai-[\d.]+\.vsix'
-    vsix_replacement = f'ppxai-{version}.vsix'
-
-    for filepath in VSIX_FILES:
-        full_path = PROJECT_ROOT / filepath
-        if not full_path.exists():
-            continue
-
-        content = full_path.read_text(encoding='utf-8')
-        new_content = re.sub(vsix_pattern, vsix_replacement, content)
-
-        if content != new_content:
-            full_path.write_text(new_content, encoding='utf-8')
-            print(f"  ✅ Updated vsix refs: {filepath}")
-            count += 1
-
-    return count
-
-
 def update_package_lock(version: str):
     """Update vscode-extension/package-lock.json."""
     lock_file = PROJECT_ROOT / "vscode-extension/package-lock.json"
@@ -254,34 +215,6 @@ def update_package_lock(version: str):
     if changed:
         lock_file.write_text(json.dumps(data, indent=2) + "\n", encoding='utf-8')
         print(f"  ✅ Updated: vscode-extension/package-lock.json")
-
-
-def update_claude_md(version: str, date: str):
-    """Update CLAUDE.md with new version info."""
-    filepath = PROJECT_ROOT / "CLAUDE.md"
-    content = filepath.read_text(encoding='utf-8')
-
-    # Update current version line
-    content = re.sub(
-        r'\*\*Current Version:\*\* v[\d.]+[^\n]*',
-        f'**Current Version:** v{version}',
-        content
-    )
-
-    # Update version alignment section
-    alignment_replacement = f"""- Python package (pyproject.toml): v{version}
-- VSCode extension (package.json): v{version}
-- Git tag: v{version} (released {date})
-- GitHub Release: https://github.com/rcconsult/ppxai/releases/tag/v{version}"""
-
-    content = re.sub(
-        r'- Python package \(pyproject\.toml\): v[\d.]+\n- VSCode extension \(package\.json\): v[\d.]+\n- Git tag: v[\d.]+ \(released [\d-]+\)\n- GitHub Release: https://github\.com/rcconsult/ppxai/releases/tag/v[\d.]+',
-        alignment_replacement,
-        content
-    )
-
-    filepath.write_text(content, encoding='utf-8')
-    print(f"  ✅ Updated: CLAUDE.md")
 
 
 def update_readme_badges(version: str, test_count: int | None = None):
@@ -309,52 +242,6 @@ def update_readme_badges(version: str, test_count: int | None = None):
 
     filepath.write_text(content, encoding='utf-8')
     print(f"  ✅ Updated: README.md (badges)")
-
-
-def update_agents_md(version: str):
-    """Update AGENTS.md current version line."""
-    filepath = PROJECT_ROOT / "AGENTS.md"
-    if not filepath.exists():
-        return
-
-    content = filepath.read_text(encoding='utf-8')
-    new_content = re.sub(
-        r'### Current Version: v[\d.]+',
-        f'### Current Version: v{version}',
-        content
-    )
-
-    if content != new_content:
-        filepath.write_text(new_content, encoding='utf-8')
-        print(f"  ✅ Updated: AGENTS.md")
-    else:
-        print(f"  ⏭️  No change needed: AGENTS.md")
-
-
-def update_docs_readme(version: str, date: str):
-    """Update docs/README.md current version and last updated date."""
-    filepath = PROJECT_ROOT / "docs/README.md"
-    if not filepath.exists():
-        return
-
-    content = filepath.read_text(encoding='utf-8')
-
-    # Update: **Current Version**: vX.Y.Z
-    content = re.sub(
-        r'\*\*Current Version\*\*: v[\d.]+',
-        f'**Current Version**: v{version}',
-        content
-    )
-
-    # Update: **Last Updated**: YYYY-MM-DD
-    content = re.sub(
-        r'\*\*Last Updated\*\*: [\d-]+',
-        f'**Last Updated**: {date}',
-        content
-    )
-
-    filepath.write_text(content, encoding='utf-8')
-    print(f"  ✅ Updated: docs/README.md")
 
 
 def create_release_notes(version: str, date: str):
@@ -1043,13 +930,8 @@ def main():
         print(f"  {dry_step}. 📝 Update version files:")
         for filepath in VERSION_FILES:
             print(f"       - {filepath}")
-        for filepath in VSIX_FILES:
-            print(f"       - {filepath} (vsix refs)")
-        print(f"       - CLAUDE.md")
-        print(f"       - ROADMAP.md")
-        print(f"       - AGENTS.md")
-        print(f"       - docs/README.md")
-        print(f"       - vscode-extension/package-lock.json")
+        print(f"       - vscode-extension/package-lock.json (typed JSON edit)")
+        print(f"       - README.md (version + test-count badges)")
 
         # Validation
         dry_step += 1
@@ -1110,25 +992,15 @@ def main():
     for filepath, config in VERSION_FILES.items():
         update_version_in_file(filepath, config["pattern"], config["replacement"], version)
 
-    # Update vsix references
-    update_vsix_references(version)
-
-    # Update package-lock.json
+    # Update package-lock.json (typed JSON edit — not a regex; lock file
+    # is a derived artifact but kept in tree, so we edit it directly to
+    # avoid making npm a release-tooling dependency).
     update_package_lock(version)
-
-    # Update CLAUDE.md
-    update_claude_md(version, date)
 
     # Update README.md badges (version only, test count updated after tests pass)
     update_readme_badges(version)
 
-    # Update AGENTS.md
-    update_agents_md(version)
-
-    # Update docs/README.md
-    update_docs_readme(version, date)
-
-    # Update docs/index.md version badge
+    # Update docs/index.md version badge (shields.io image URL)
     index_path = PROJECT_ROOT / "docs/index.md"
     if index_path.exists():
         content = index_path.read_text(encoding='utf-8')
@@ -1141,19 +1013,6 @@ def main():
             index_path.write_text(new_content, encoding='utf-8')
             print(f"  ✅ Updated: docs/index.md")
 
-    # Update ROADMAP.md current version
-    roadmap_path = PROJECT_ROOT / "ROADMAP.md"
-    if roadmap_path.exists():
-        content = roadmap_path.read_text(encoding='utf-8')
-        # Pattern: > **Current Version**: v1.11.9 (December 2025)
-        month_year = datetime.now().strftime("%B %Y")  # e.g., "December 2025"
-        content = re.sub(
-            r'> \*\*Current Version\*\*: v[\d.]+ \([^)]+\)',
-            f'> **Current Version**: v{version} ({month_year})',
-            content
-        )
-        roadmap_path.write_text(content, encoding='utf-8')
-        print(f"  ✅ Updated: ROADMAP.md")
     record_step("Update Versions")
 
     # Step 4: Validate all version references

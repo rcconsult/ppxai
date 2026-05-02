@@ -9,7 +9,7 @@ Architecture:
 - Callbacks are provided by the client for rendering
 - Business logic is centralized, UI is delegated
 
-Version: v1.18.3
+Version: see ``ppxai.__version__`` (single source of truth in ``ppxai/version.py``).
 """
 
 from datetime import datetime

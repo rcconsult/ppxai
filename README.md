@@ -80,7 +80,7 @@ Download from [Releases](../../releases):
 - `ppxaide-{platform}` - Textual TUI (new in v1.15.0)
 - `ppxai-server-{platform}` - HTTP server for VSCode
 - `ppxai-desktop-{platform}` - Desktop Web App
-- `ppxai-1.18.3.vsix` - VSCode extension
+- `ppxai-{version}.vsix` - VSCode extension
 - `ppxai-*-macos-arm64.dmg` - macOS app bundle installer
 
 ### Option 3: From Source

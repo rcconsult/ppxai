@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ppxai is a terminal-based UI application for interacting with multiple AI providers (Perplexity AI, OpenAI, OpenRouter, local models). It provides an interactive chat interface with model selection, conversation history, streaming responses, and AI-powered tools.
 
-**Current Version:** v1.18.3
+**Current version:** see [pyproject.toml](pyproject.toml) (single source of truth) or [the latest release](https://github.com/rcconsult/ppxai/releases/latest).
 
 **Release state:** v1.18.3 in progress on branch `feature/v1.18.3` (pushed
 to `origin/feature/v1.18.3` at `51c55d16`, three commits over master).
@@ -378,20 +378,20 @@ powershell -File scripts/copy-beta.ps1 -TargetDir "I:\Software\ppxai"
 
 ### Files Updated by Release Script
 
-| File | Pattern |
-|------|---------|
-| `pyproject.toml` | `version = "X.Y.Z"` |
-| `ppxai/__init__.py` | `__version__ = "X.Y.Z"` |
-| `vscode-extension/package.json` | `"version": "X.Y.Z"` |
-| `vscode-extension/package-lock.json` | `"version": "X.Y.Z"` |
-| `ppxai/rich/event_handler.py` | `Version: vX.Y.Z` |
-| `ppxai/common/logger.py` | `Version: vX.Y.Z` |
-| `README.md` | `ppxai-X.Y.Z.vsix` + version/test badges |
-| `vscode-extension/README.md` | `ppxai-X.Y.Z.vsix` |
-| `CLAUDE.md` | `**Current Version:** vX.Y.Z` |
-| `ROADMAP.md` | `**Current Version**: vX.Y.Z` |
-| `AGENTS.md` | `### Current Version: vX.Y.Z` |
-| `docs/README.md` | `**Current Version**: vX.Y.Z` + `**Last Updated**` |
+Slimmed in 2026-05 ("Reduce version-string drift"). Most files
+previously patched now read from `ppxai.__version__` at runtime, link
+to `https://github.com/rcconsult/ppxai/releases/latest` in markdown,
+or use a `<version>` placeholder. The `tests/test_version_consistency.py`
+sentinel test enforces parity on every commit.
+
+| File | Pattern | How |
+|------|---------|-----|
+| `pyproject.toml` | `version = "X.Y.Z"` | regex (canonical Python SoT) |
+| `ppxai/version.py` | `__version__ = "X.Y.Z"` | regex (Python runtime SoT) |
+| `vscode-extension/package.json` | `"version": "X.Y.Z"` | regex (npm SoT) |
+| `vscode-extension/package-lock.json` | `"version": "X.Y.Z"` | typed JSON edit |
+| `README.md` | `badge/version-X.Y.Z-blue` + tests-NNNN | shields.io badge |
+| `docs/index.md` | `badge/version-X.Y.Z-blue` | shields.io badge |
 
 ### Pre-Release Checklist
 

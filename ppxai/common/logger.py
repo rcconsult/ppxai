@@ -20,7 +20,7 @@ Usage:
     logger.enable()
     logger.log_api_request(1, messages)
 
-Version: v1.18.3
+Version: see ``ppxai.__version__`` (single source of truth in ``ppxai/version.py``).
 """
 
 import logging

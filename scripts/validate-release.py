@@ -40,7 +40,12 @@ def validate_release(version: str, allow_dirty: bool = False) -> bool:
     errors = []
     warnings = []
 
-    # Check version files
+    # Check version files.
+    #
+    # Slimmed in 2026-05 ("Reduce version-string drift" pass) — most
+    # markdown / source files no longer carry hardcoded version strings.
+    # `tests/test_version_consistency.py` is the day-to-day enforcer
+    # (runs on every commit); this list is the pre-tag fail-safe.
     checks = [
         {
             "file": "pyproject.toml",
@@ -58,57 +63,14 @@ def validate_release(version: str, allow_dirty: bool = False) -> bool:
             "critical": True,
         },
         {
-            "file": "ROADMAP.md",
-            # Pattern: > **Current Version**: v1.12.0 (December 2025)
-            "pattern": r">\s+\*\*Current Version\*\*:\s+v{version}",
-            "critical": True,
-        },
-        {
-            "file": "CLAUDE.md",
-            "pattern": r"\*\*Current Version:\*\*\s+v{version}",
-            "critical": False,  # CLAUDE.md might be updated during development
-        },
-        # README VSIX version checks (repeatedly missed in v1.11.4, v1.11.5, v1.11.6)
-        {
-            "file": "README.md",
-            "pattern": r"ppxai-{version}\.vsix",
-            "critical": True,
-        },
-        # NOTE: "What's New" check removed - README.md is project overview, not changelog
-        # Version-specific changes go in docs/RELEASE-NOTES-v{version}.md
-        {
-            "file": "vscode-extension/README.md",
-            "pattern": r"ppxai-{version}\.vsix",
+            "file": "vscode-extension/package-lock.json",
+            "pattern": r'"version":\s*"{version}"',
             "critical": True,
         },
         # CHANGELOG must have entry for this version
         {
             "file": "CHANGELOG.md",
             "pattern": r"##\s+\[{version}\]\s+-\s+\d{{4}}-\d{{2}}-\d{{2}}",
-            "critical": True,
-        },
-        # event_handler.py has version in welcome message
-        {
-            "file": "ppxai/rich/event_handler.py",
-            "pattern": r"Version:\s+v{version}",
-            "critical": True,
-        },
-        # logger.py has version in banner
-        {
-            "file": "ppxai/common/logger.py",
-            "pattern": r"Version:\s+v{version}",
-            "critical": True,
-        },
-        # AGENTS.md current version
-        {
-            "file": "AGENTS.md",
-            "pattern": r"### Current Version: v{version}",
-            "critical": True,
-        },
-        # docs/README.md current version
-        {
-            "file": "docs/README.md",
-            "pattern": r"\*\*Current Version\*\*:\s+v{version}",
             "critical": True,
         },
         # README.md version badge
