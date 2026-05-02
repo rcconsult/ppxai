@@ -714,18 +714,55 @@
         }
       },
       "pricing": {
-        "qwen/qwen3.5-122b-a10b": {"input": 0.0, "output": 0.0, "__comment": "NVIDIA NIM free tier (rate-limited)"},
-        "qwen/qwen3-next-80b-a3b-instruct": {"input": 0.0, "output": 0.0},
-        "qwen/qwen3-next-80b-a3b-thinking": {"input": 0.0, "output": 0.0},
-        "qwen/qwen3-coder-480b-a35b-instruct": {"input": 0.0, "output": 0.0},
-        "mistralai/mistral-large-3-675b-instruct-2512": {"input": 0.0, "output": 0.0},
-        "nvidia/llama-3.3-nemotron-super-49b-v1.5": {"input": 0.0, "output": 0.0},
-        "qwen/qwen2.5-coder-32b-instruct": {"input": 0.0, "output": 0.0},
-        "moonshotai/kimi-k2-thinking": {"input": 0.0, "output": 0.0},
-        "deepseek-ai/deepseek-v3.2": {"input": 0.0, "output": 0.0},
-        "mistralai/devstral-2-123b-instruct-2512": {"input": 0.0, "output": 0.0},
-        "meta/llama-4-maverick-17b-128e-instruct": {"input": 0.0, "output": 0.0},
-        "qwen/qwen3.5-397b-a17b": {"input": 0.0, "output": 0.0}
+        "qwen/qwen3.5-122b-a10b": {
+          "input": 0.0,
+          "output": 0.0,
+          "__comment": "NVIDIA NIM free tier (rate-limited)"
+        },
+        "qwen/qwen3-next-80b-a3b-instruct": {
+          "input": 0.0,
+          "output": 0.0
+        },
+        "qwen/qwen3-next-80b-a3b-thinking": {
+          "input": 0.0,
+          "output": 0.0
+        },
+        "qwen/qwen3-coder-480b-a35b-instruct": {
+          "input": 0.0,
+          "output": 0.0
+        },
+        "mistralai/mistral-large-3-675b-instruct-2512": {
+          "input": 0.0,
+          "output": 0.0
+        },
+        "nvidia/llama-3.3-nemotron-super-49b-v1.5": {
+          "input": 0.0,
+          "output": 0.0
+        },
+        "qwen/qwen2.5-coder-32b-instruct": {
+          "input": 0.0,
+          "output": 0.0
+        },
+        "moonshotai/kimi-k2-thinking": {
+          "input": 0.0,
+          "output": 0.0
+        },
+        "deepseek-ai/deepseek-v3.2": {
+          "input": 0.0,
+          "output": 0.0
+        },
+        "mistralai/devstral-2-123b-instruct-2512": {
+          "input": 0.0,
+          "output": 0.0
+        },
+        "meta/llama-4-maverick-17b-128e-instruct": {
+          "input": 0.0,
+          "output": 0.0
+        },
+        "qwen/qwen3.5-397b-a17b": {
+          "input": 0.0,
+          "output": 0.0
+        }
       },
       "capabilities": {
         "web_search": false,
