@@ -49,3 +49,12 @@ benchmarks/llm-eval/results
 # completed work — they're test-shaped and add no architectural
 # signal to the current graph.
 docs/archive
+
+# Product art — logos + screenshots at multiple sizes (2026-05-02).
+# resources/ holds icon variants, TUI preview screenshots
+# (ppxai-tui-preview-{16,24,32,48}.png) and ppxaide branding
+# (ppxaide-{transparent,nobg,icon-source}.png). Vision extraction
+# on logo PNGs adds no graph signal beyond the doc nodes that
+# reference them; processing 11 near-duplicate icons would burn
+# token budget for zero architectural insight.
+resources
