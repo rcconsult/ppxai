@@ -1,6 +1,6 @@
 # ppxai Development Roadmap
 
-> **Current Version**: v1.18.2 (April 2026) | session debt sweep + cross-client usage tracking
+> **Current Version**: v1.18.3 (May 2026) | NVIDIA NIM provider + Tier 1 engine support (profiles, throttle event, extra_body)
 > **Focus**: Multi-LLM interface for developers—terminal + VSCode, zero vendor lock-in
 
 ---
