@@ -664,7 +664,9 @@
           "generation_params": {
             "temperature": 0.6,
             "top_p": 0.95
-          }
+          },
+          "reasoning_trigger": "/think",
+          "__comment_reasoning_trigger": "v1.18.3: nemotron toggles reasoning via in-prompt '/think' (enable) or '/no_think' (disable). Engine appends this to the system message before sending."
         },
         "qwen/qwen2.5-coder-32b-instruct": {
           "name": "Qwen2.5 Coder 32B",

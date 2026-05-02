@@ -17,7 +17,12 @@ from openai import OpenAI
 from ..model_profiles import ModelProfile, get_profile
 from ..types import Message, Event, EventType, ProviderCapabilities, ModelInfo, UsageStats
 from ..uploaded_file import flatten_uploaded_file_blocks
-from ...config import get_generation_params, get_model_max_tokens, get_extra_body
+from ...config import (
+    get_generation_params,
+    get_model_max_tokens,
+    get_extra_body,
+    get_reasoning_trigger,
+)
 from ...common.logger import get_logger
 
 
@@ -249,6 +254,53 @@ class BaseProvider(ABC):
             return get_extra_body(self.provider_id, model)
         except AttributeError:
             return {}
+
+    def _apply_reasoning_trigger(
+        self,
+        api_messages: List[Dict[str, Any]],
+        model: str,
+    ) -> List[Dict[str, Any]]:
+        """Append the configured reasoning trigger to the system message.
+
+        v1.18.3: nemotron's reasoning toggle is an in-prompt convention
+        — ``/think`` enables it, ``/no_think`` disables it. This helper
+        looks up :func:`get_reasoning_trigger` for ``self.provider_id``
+        + ``model`` and (when configured) appends the marker on its own
+        line to the FIRST ``role == 'system'`` message. Idempotent: if
+        the trigger is already present at the end of that system
+        message, the helper is a no-op.
+
+        When no system message exists, a new one is prepended carrying
+        only the trigger — so users get correct behavior without having
+        to also specify a base system_prompt.
+
+        Returns a new list (does not mutate the input). Callers pass the
+        result downstream; if the trigger is unconfigured, the input is
+        returned unchanged.
+        """
+        try:
+            trigger = get_reasoning_trigger(self.provider_id, model)
+        except AttributeError:
+            trigger = None
+        if not trigger:
+            return api_messages
+
+        # Locate the first system message.
+        for idx, msg in enumerate(api_messages):
+            if msg.get("role") == "system":
+                content = msg.get("content") or ""
+                if isinstance(content, str) and content.rstrip().endswith(trigger):
+                    return api_messages  # already applied — idempotent
+                new_content = (content + ("\n\n" if content else "") + trigger) if isinstance(content, str) else content
+                # Build a shallow copy so the original isn't mutated.
+                updated = list(api_messages)
+                new_msg = dict(msg)
+                new_msg["content"] = new_content
+                updated[idx] = new_msg
+                return updated
+
+        # No system message present — prepend one carrying only the trigger.
+        return [{"role": "system", "content": trigger}, *api_messages]
 
     def _convert_messages(self, messages: List[Message]) -> List[Dict[str, Any]]:
         """Convert Message objects to API format.

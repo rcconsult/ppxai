@@ -92,7 +92,8 @@ class UsageStorage:
         # Return empty structure
         return {
             "version": self.STORAGE_VERSION,
-            "sessions": []
+            "sessions": [],
+            "provider_errors": {},
         }
 
     def _save(self):
@@ -333,6 +334,51 @@ class UsageStorage:
         ]
         self._save()
 
+    def record_provider_error(
+        self,
+        provider: str,
+        status_code: int,
+        model: Optional[str] = None,
+    ) -> None:
+        """Increment a counter for a provider-side error (e.g. 403, 429).
+
+        v1.18.3: surfaces NIM free-tier quota exhaustion (and similar
+        provider-side throttle / permission blocks) in the persistent
+        usage report so users can see "NVIDIA returned 12 quota errors
+        today" without re-running benchmarks.
+
+        Storage shape::
+
+            "provider_errors": {
+                "nvidia:403": {
+                    "count": 12,
+                    "last_seen": "2026-05-02T14:32:00",
+                    "models": ["qwen/qwen3-coder-480b-a35b-instruct"]
+                }
+            }
+
+        Non-critical: failures to persist are logged at DEBUG level and
+        ignored — telemetry must not break chat. Best-effort save on
+        every record so the data survives crashes.
+        """
+        # Defensive: if storage was loaded from a pre-v1.18.3 file, the
+        # key may be missing.
+        errors = self._data.setdefault("provider_errors", {})
+        key = f"{provider}:{status_code}"
+        entry = errors.setdefault(key, {"count": 0, "last_seen": None, "models": []})
+        entry["count"] += 1
+        entry["last_seen"] = datetime.now().isoformat()
+        if model and model not in entry["models"]:
+            entry["models"].append(model)
+        try:
+            self._save()
+        except Exception as e:
+            logger.debug(f"record_provider_error failed to persist: {e}")
+
+    def get_provider_errors(self) -> Dict[str, Dict[str, Any]]:
+        """Return the provider_errors counter dict (read-only view)."""
+        return dict(self._data.get("provider_errors", {}))
+
 
 # Module-level singleton for convenience
 _storage: Optional[UsageStorage] = None
@@ -367,6 +413,27 @@ def save_session_usage(
         message_count=message_count,
         tool_calls=tool_calls,
     )
+
+
+def record_provider_error(
+    provider: str,
+    status_code: int,
+    model: Optional[str] = None,
+) -> None:
+    """Module-level convenience: record a provider-side error (403/429)."""
+    try:
+        get_usage_storage().record_provider_error(provider, status_code, model)
+    except Exception as e:  # noqa: BLE001 — telemetry must not break chat
+        logger.debug(f"record_provider_error noop: {e}")
+
+
+def get_provider_errors() -> Dict[str, Dict[str, Any]]:
+    """Module-level convenience: read provider_errors counter dict."""
+    try:
+        return get_usage_storage().get_provider_errors()
+    except Exception as e:  # noqa: BLE001
+        logger.debug(f"get_provider_errors noop: {e}")
+        return {}
 
 
 def get_usage_report(period: str = "all") -> Dict[str, Any]:

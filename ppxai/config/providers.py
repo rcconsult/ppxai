@@ -319,6 +319,61 @@ def get_extra_body(provider: str = None, model: str = None) -> Dict[str, Any]:
     return {k: v for k, v in body.items() if not k.startswith("__comment")}
 
 
+def get_reasoning_trigger(provider: str = None, model: str = None) -> Optional[str]:
+    """Get the per-model reasoning trigger string.
+
+    Some models (notably ``nvidia/llama-3.3-nemotron-super-49b-v1.5``)
+    use an in-prompt convention to toggle reasoning mode: appending
+    ``/think`` enables reasoning, ``/no_think`` disables it. This is
+    distinct from ``chat_template_kwargs.enable_thinking`` (which
+    Qwen3.5 / GLM use via ``extra_body``) — nemotron has no extra-body
+    knob, only the prompt-level marker.
+
+    v1.18.3: read from per-provider or per-model ``reasoning_trigger``.
+    Model-level wins on conflict.
+
+    Config example::
+
+        providers:
+          nvidia:
+            models:
+              "nvidia/llama-3.3-nemotron-super-49b-v1.5":
+                reasoning_trigger: "/think"
+
+    Args:
+        provider: Provider name (uses default if not specified).
+        model: Model name (uses default if not specified).
+
+    Returns:
+        The trigger string (e.g. ``"/think"``) or ``None`` when not
+        configured. ``None`` means "do not modify the system prompt".
+    """
+    if provider is None:
+        provider = get_default_provider()
+    if model is None:
+        model = get_default_model(provider)
+
+    config_path = find_config_file()
+    if not config_path:
+        return None
+
+    json_config = _load_json_config(config_path)
+    provider_config = json_config.get("providers", {}).get(provider, {})
+
+    # Provider-level default.
+    trigger = provider_config.get("reasoning_trigger")
+
+    # Model-level override.
+    models = provider_config.get("models", {})
+    model_config = models.get(model, {})
+    if "reasoning_trigger" in model_config:
+        trigger = model_config["reasoning_trigger"]
+
+    if trigger is None or not isinstance(trigger, str) or not trigger.strip():
+        return None
+    return trigger.strip()
+
+
 def get_tool_calling_config(provider: str = None, model: str = None) -> Dict[str, Any]:
     """Get tool calling configuration overrides for a model.
 

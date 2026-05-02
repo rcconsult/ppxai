@@ -176,6 +176,10 @@ class OpenAICompatibleProvider(BaseProvider):
         """
         try:
             api_messages = self._convert_messages(messages)
+            # v1.18.3: nemotron / similar models toggle reasoning via an
+            # in-prompt marker (`/think` / `/no_think`). Apply when
+            # configured — no-op for everyone else.
+            api_messages = self._apply_reasoning_trigger(api_messages, model)
 
             # Estimate token count and check for context overflow
             # This prevents the "max_tokens must be at least 1" error from vLLM
@@ -436,6 +440,19 @@ class OpenAICompatibleProvider(BaseProvider):
             throttle = self._classify_throttle(e)
             if throttle is not None:
                 throttle["model"] = model
+                # v1.18.3 Tier 2 #5: record throttle in persistent usage so
+                # users can see "NIM returned 12 quota errors today" without
+                # re-running benchmarks. Best-effort — never break chat on
+                # telemetry failure.
+                try:
+                    from ...usage import record_provider_error
+                    record_provider_error(
+                        provider=throttle["provider"] or self.provider_id or "",
+                        status_code=throttle["status_code"],
+                        model=model,
+                    )
+                except Exception:
+                    pass
                 yield Event(EventType.PROVIDER_THROTTLED, throttle)
             else:
                 error_msg = self._format_error(e)
@@ -458,6 +475,7 @@ class OpenAICompatibleProvider(BaseProvider):
             Assistant's response content
         """
         api_messages = self._convert_messages(messages)
+        api_messages = self._apply_reasoning_trigger(api_messages, model)
 
         response = self.client.chat.completions.create(
             model=model,

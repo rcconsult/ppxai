@@ -76,6 +76,7 @@ from .providers import (
     get_model_max_tokens,
     get_generation_params,
     get_extra_body,
+    get_reasoning_trigger,
     get_tool_calling_config,
 )
 
@@ -303,6 +304,8 @@ __all__ = [
     "get_generation_params",
     # Vendor-specific extra_body pass-through (v1.18.3)
     "get_extra_body",
+    # In-prompt reasoning trigger (v1.18.3) — e.g. nemotron's /think convention
+    "get_reasoning_trigger",
     # Tool calling config (v1.16.0)
     "get_tool_calling_config",
     # Bootstrap functions (v1.14.0)
