@@ -114,8 +114,26 @@ ResultRenderer._handlers = {
         }
     },
 
+    // v1.18.4: DirectoryListingResult is a TableResult subclass on the
+    // Python side (commands/results.py). The wire `result.type` carries
+    // the concrete subclass name, so without an explicit alias here it
+    // fell through to the unknown-type fallback that shows only
+    // `result.message` ("44 items in /Users/rado/git/exps") instead of
+    // the actual listing rows. Same shape as TableResult — re-use the
+    // same handler.
+    DirectoryListingResult(result) {
+        ResultRenderer._handlers.TableResult.call(this, result);
+    },
+
     TreeResult(result) {
         this.app.addMessage('system', this._formatTree(result));
+    },
+
+    // v1.18.4: same fix as DirectoryListingResult — DirectoryTreeResult
+    // is a TreeResult subclass and needs an explicit handler so its
+    // wire type doesn't fall through to the unknown-type fallback.
+    DirectoryTreeResult(result) {
+        ResultRenderer._handlers.TreeResult.call(this, result);
     },
 
     KeyValueResult(result) {

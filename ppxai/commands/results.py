@@ -454,6 +454,21 @@ class TreeResult(CommandResult):
     """
     root: Dict[str, Any] = field(default_factory=dict)
 
+    def to_dict(self) -> dict:
+        """Serialize TreeResult including the `root` payload.
+
+        v1.18.4 fix: pre-v1.18.4, this class inherited CommandResult's
+        to_dict which only emitted `type/status/message/metadata` —
+        silently dropping the `root` tree on the wire. HTTP clients
+        (web/VSCode) saw an empty container instead of the tree.
+        Same class of bug as `CompositeResult.to_dict()` fixed in
+        v1.18.3 (commit 848b4d99). DirectoryTreeResult subclass
+        inherits this fix automatically.
+        """
+        d = super().to_dict()
+        d["root"] = self.root
+        return d
+
 
 @dataclass
 class DirectoryListingResult(TableResult):

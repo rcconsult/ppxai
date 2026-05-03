@@ -100,11 +100,19 @@ export class CommandRenderer {
                 return;
             }
 
+            // v1.18.4: DirectoryListingResult / DirectoryTreeResult are
+            // Python subclasses of TableResult / TreeResult. Their wire
+            // `type` is the concrete subclass name, so without explicit
+            // case branches here they fell through to the
+            // unknown-type fallback that only shows `result.message`
+            // ("44 items in <path>") instead of the listing rows.
             case 'TableResult':
+            case 'DirectoryListingResult':
                 this._host.postSystemMessage(this._formatTable(result));
                 return;
 
             case 'TreeResult':
+            case 'DirectoryTreeResult':
                 this._host.postSystemMessage(this._formatTree(result));
                 return;
 
