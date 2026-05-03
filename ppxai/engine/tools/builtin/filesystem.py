@@ -187,11 +187,29 @@ class ListDirectoryTool(BaseTool):
                     item_type = "DIR " if item.is_dir() else "FILE"
                     items.append(f"{item_type} {item.name}")
 
-            result = "\n".join(items[:100])
-            if len(items) > 100:
-                result += f"\n... ({len(items) - 100} more items)"
+            # v1.18.4: prefix the resolved path in the output. Without
+            # it, the model that called this tool with `path="."` has
+            # no way to know which directory it just listed — it
+            # confabulates a path in its response (e.g. shows the
+            # parent dir if the user just `/cd`'d into a subdir).
+            # Reported 2026-05-04 from the web UI: after `/cd ppxai_demo`,
+            # asking the model "ls" produced "/Users/rado/git/exps
+            # contains the files and folders listed above" — the
+            # parent of the actual working dir.
+            header = (
+                f"Long-format listing of {dir_path}:"
+                if format == "long"
+                else f"Listing of {dir_path}:"
+            )
+            if not items:
+                return f"{header}\n(empty)"
 
-            return result
+            visible = items[:100]
+            body = "\n".join(visible)
+            if len(items) > 100:
+                body += f"\n... ({len(items) - 100} more items)"
+
+            return f"{header}\n{body}"
         except Exception as e:
             return f"Error: {str(e)}"
 
