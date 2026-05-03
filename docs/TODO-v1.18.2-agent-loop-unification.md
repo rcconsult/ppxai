@@ -1,6 +1,8 @@
 # v1.18.2 — Agent loop HTTP-streaming unification
 
-**Status:** Deferred from v1.18.1.
+**Status:** Deferred from v1.18.1. **Re-scoped 2026-05-03** —
+investigation shows the original premise was partly outdated.
+See "Refined scope" section below.
 **Trigger to revisit:** when web/VSCode users complain about
 divergent agent UX, OR when ADRs/agents work needs server-side
 agent loop control (e.g. cross-client agent state machine).
@@ -127,3 +129,101 @@ Worth its own milestone with focused review.
 - [ ] VSCode's `handleAgentCommand` deleted; web's
       `_dispatchAgent` simplified to standard factory dispatch.
 - [ ] Cross-client parity test extended with HTTP-path coverage.
+
+## Refined scope after 2026-05-03 investigation
+
+The original "Background" section above was written before v1.18.0
+shipped `EventType.AGENT_BEAT` and before v1.18.1 added the
+`/chat` route's `validate_agent_task` gate. Code state today:
+
+### What's already in place (premise correction)
+
+1. **AGENT_RUN_START / AGENT_BEAT / AGENT_RUN_COMPLETE already fire**
+   from `engine/chat.py` (lines 559, 875, 1066, 1138). They're
+   emitted by `chat_with_tools` per tool-iteration. AppState
+   subscribes; web (`web/app.js`), VSCode (`chatPanel.ts`), and
+   ppxaide (`tui/event_handler.py`) all render them. The original
+   plan's step 2 ("make `chat_with_tools` emit them per iteration")
+   is **done** — but those events track the **inner** tool loop
+   inside ONE `chat()` call, not the outer multi-iteration
+   continuation loop in `handle_agent`.
+
+2. **Web does NOT run a client-side loop.** `_dispatchAgent`
+   (`web/shared/command-dispatcher.js`) calls
+   `app.streamChat('/agent <task>')` → hits `POST /chat` → the
+   gate at `server/routes/chat.py:206` runs `validate_agent_task`
+   → if it passes, the message goes through engine's normal chat
+   path. There IS no outer iteration loop on the web client.
+   AGENT_BEAT events stream over SSE from `chat_with_tools`'s
+   inner tool loop. This client is already aligned.
+
+3. **VSCode IS the actual divergence.**
+   `chatPanel.ts::handleAgentCommand` (lines 1143–1279) runs the
+   same multi-iteration outer loop the TUI factory does — for
+   `iteration in 1..maxIterations`, build a continuation prompt,
+   `_backend.chat(prompt)`, watch for `TASK_COMPLETE:` in the
+   accumulated response. ~150 LoC of client-side iteration logic.
+
+4. **TUI factory `handle_agent` runs the outer loop in-process**
+   via `asyncio.run(run_agent_loop())`. Per iteration it builds a
+   continuation prompt, calls `engine_client.chat(prompt)` (which
+   internally runs `chat_with_tools` and emits AGENT_BEAT events),
+   then text-matches `TASK_COMPLETE:` to decide whether to continue.
+
+### The two design questions to answer FIRST
+
+The outer multi-iteration continuation loop is meta-orchestration
+on top of `chat_with_tools`'s inner tool loop. They aren't the
+same thing:
+
+- **Inner loop** (`chat_with_tools`) — model calls tools, sees
+  results, calls more tools, eventually gives a final text
+  response. Stops when the model stops calling tools.
+- **Outer loop** (`handle_agent` / `handleAgentCommand`) — if the
+  model's final text doesn't say `TASK_COMPLETE:`, send a
+  continuation prompt and run another inner loop. Up to
+  `max_iterations`.
+
+**Question A:** Do we keep the outer loop?
+- Keeping it gives multi-pass agent behavior (model goes "I did X,
+  let me also Y" without saying TASK_COMPLETE).
+- Eliminating it means relying solely on the inner tool loop —
+  the model finishes one chat turn, you're done. Behavioral
+  change for TUI users.
+
+**Question B:** If we keep it, where does it run?
+- Server-side as a background task: matches the TODO's plan,
+  requires cancellation/lifecycle management, BUT eliminates the
+  client divergence.
+- Client-side per-client: status quo. VSCode + TUI each run their
+  own. Two implementations to maintain.
+
+### Recommended path forward
+
+1. **Phase A (small, high-leverage):** delete VSCode's
+   `handleAgentCommand` and route `/agent <task>` through
+   `streamChat('/agent <task>')` exactly like web does. The
+   `/chat` route's existing validate_agent_task gate covers the
+   safety check. This drops ~150 LoC and aligns VSCode with web —
+   the user gets the same single-iteration behavior web users
+   already get. The downside is VSCode users lose the outer
+   continuation loop (the model needs to do everything in one
+   chat turn, OR keep calling tools without stopping).
+
+2. **Phase B (bigger, separate decision):** if the outer loop is
+   actually load-bearing (Question A), reimplement it server-side
+   as a background task so TUI + web + VSCode all get it. This is
+   the original TODO's plan. Defer until we have user signal that
+   the outer loop is missed.
+
+3. **Phase C:** drop `validate_agent_task`'s side-effect-only
+   handling once `prompt_text` (v1.18.3) gets enough field use to
+   confirm the auto-resume UX.
+
+The real architectural question is Question A. If the answer is
+"the outer loop is overkill, modern models do enough in one turn",
+then Phase A is the whole fix and we can also strip the outer
+loop from `handle_agent` for symmetry. If the answer is "the outer
+loop is genuinely valuable", we need the bigger Phase B refactor.
+
+Pick a direction before implementing.
