@@ -8,7 +8,7 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 
 **Current version:** see [pyproject.toml](pyproject.toml) (single source of truth) or [the latest release](https://github.com/rcconsult/ppxai/releases/latest).
 
-**Release state:** v1.18.3 in progress on `feature/v1.18.3`. **Not released yet** — `/release v1.18.3` is the next step. v1.18.2 is the latest GitHub release. Theme: NVIDIA NIM provider goes from "config-only" to "first-class engine support" (ModelProfile, `EventType.PROVIDER_THROTTLED`, `extra_body` pass-through, `reasoning_trigger`, provider-error telemetry). See [docs/RELEASE-NOTES-v1.18.3.md](docs/RELEASE-NOTES-v1.18.3.md) and [docs/DEBT-INVENTORY-v1.18.3.md](docs/DEBT-INVENTORY-v1.18.3.md).
+**Release state:** v1.18.3 **released** 2026-05-03 (https://github.com/rcconsult/ppxai/releases/tag/v1.18.3, 20 assets). v1.18.3 is the surface ppxai-sre's outlook-monitor agent consumes — preserve gateway shape (`POST /v1/oneshot`, bearer auth) byte-identical on `bugfix/v1.18.4`. Active branch: `bugfix/v1.18.4`, scope: post-release fixes only, no new features. See [docs/RELEASE-NOTES-v1.18.3.md](docs/RELEASE-NOTES-v1.18.3.md) for what shipped, [docs/DEBT-INVENTORY-v1.18.3.md](docs/DEBT-INVENTORY-v1.18.3.md) for open carryovers.
 
 For per-version release notes, see [CHANGELOG.md](CHANGELOG.md) and `docs/RELEASE-NOTES-v*.md`. For architecture decisions, see `docs/decisions/`.
 
