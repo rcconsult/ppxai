@@ -162,6 +162,100 @@ export class CommandRenderer {
                 return;
             }
 
+            // v1.18.4: explicit branches for result types that previously
+            // fell through to the default unknown-type fallback. Each
+            // renders the user-visible payload — keep it simple, rich
+            // layouts can grow without changing dispatch.
+
+            case 'AIResponseResult': {
+                const body = (result.content as string) || result.message || '';
+                this._host.postSystemMessage(body);
+                return;
+            }
+
+            case 'ProgressResult': {
+                const cur = (result.current as number) ?? 0;
+                const total = (result.total as number) ?? 100;
+                const desc = (result.description as string) || result.message || 'Working';
+                this._host.postSystemMessage(`[${cur}/${total}] ${desc}`);
+                return;
+            }
+
+            case 'DiffResult': {
+                const summary = (result.summary as string) || '';
+                const files = Array.isArray(result.files)
+                    ? (result.files as Array<Record<string, unknown>>)
+                    : [];
+                const lines = [`**${result.message || 'Diff'}**`];
+                if (summary) lines.push(summary);
+                if (files.length) {
+                    lines.push('', 'Files:');
+                    for (const f of files) {
+                        const path = (f.path as string) || (f.filepath as string) || '';
+                        if (path) lines.push(`- \`${path}\``);
+                    }
+                }
+                this._host.postSystemMessage(lines.join('\n'));
+                return;
+            }
+
+            case 'ConsentResult': {
+                // Interactive consent — most flows now ride
+                // `prompt_quick_pick` side-effect (v1.18.1).
+                const lines = [`**${result.message || 'Consent required'}**`];
+                if (result.question) lines.push(result.question as string);
+                const opts = Array.isArray(result.options)
+                    ? (result.options as string[])
+                    : [];
+                if (opts.length) lines.push('', `Options: ${opts.join(', ')}`);
+                if (result.default) lines.push(`Default: ${result.default}`);
+                this._host.postSystemMessage(lines.join('\n'));
+                return;
+            }
+
+            case 'PromptResult': {
+                // Interactive text prompt — most flows now ride
+                // `prompt_text` side-effect (v1.18.3). Fallback shape.
+                const lines = [`**${result.message || 'Input required'}**`];
+                if (result.prompt) lines.push(result.prompt as string);
+                if (result.placeholder) {
+                    lines.push(`_(e.g. ${result.placeholder})_`);
+                }
+                this._host.postSystemMessage(lines.join('\n'));
+                return;
+            }
+
+            case 'ToolExecutionResult': {
+                const tool = (result.tool_name as string) || 'tool';
+                const dur = result.duration
+                    ? ` (${Number(result.duration).toFixed(2)}s)`
+                    : '';
+                const ok = result.exit_code === 0 ? '✅' : '❌';
+                const lines = [`${ok} **${tool}**${dur}`];
+                if (result.message) lines.push(result.message);
+                const stdout = ((result.stdout as string) || '').trim();
+                if (stdout) {
+                    const preview =
+                        stdout.length > 1000
+                            ? stdout.slice(0, 1000) +
+                              `\n... (${stdout.length - 1000} chars truncated)`
+                            : stdout;
+                    lines.push('', '```', preview, '```');
+                }
+                const stderr = ((result.stderr as string) || '').trim();
+                if (stderr) {
+                    lines.push('', '_stderr:_', '```', stderr.slice(0, 500), '```');
+                }
+                this._host.postSystemMessage(lines.join('\n'));
+                const artifacts = Array.isArray(result.artifacts)
+                    ? (result.artifacts as CommandResultPayload[])
+                    : [];
+                for (const artifact of artifacts) {
+                    this.render(artifact);
+                }
+                return;
+            }
+
             default:
                 // Unknown type — open enum, ignore gracefully.
                 if (result.message) {

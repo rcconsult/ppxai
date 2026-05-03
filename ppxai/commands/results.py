@@ -314,6 +314,11 @@ class NotificationResult(CommandResult):
     """
     auto_dismiss: bool = True  # For future toast implementation
 
+    def to_dict(self) -> dict:
+        d = super().to_dict()
+        d["auto_dismiss"] = self.auto_dismiss
+        return d
+
 
 @dataclass
 class ErrorResult(CommandResult):
@@ -392,6 +397,12 @@ class AIResponseResult(CommandResult):
     """
     content: str = ""  # Full markdown content
     code_blocks: List[Dict[str, str]] = field(default_factory=list)
+
+    def to_dict(self) -> dict:
+        d = super().to_dict()
+        d["content"] = self.content
+        d["code_blocks"] = self.code_blocks
+        return d
 
 
 # ============================================================================
@@ -518,6 +529,11 @@ class ListResult(CommandResult):
     """
     items: List[Dict[str, Any]] = field(default_factory=list)
 
+    def to_dict(self) -> dict:
+        d = super().to_dict()
+        d["items"] = self.items
+        return d
+
 
 @dataclass
 class KeyValueResult(CommandResult):
@@ -580,6 +596,16 @@ class FileViewResult(CommandResult):
     col_highlight: Optional[int] = None
     read_only: bool = True
 
+    def to_dict(self) -> dict:
+        d = super().to_dict()
+        d["filepath"] = self.filepath
+        d["content"] = self.content
+        d["language"] = self.language
+        d["line_highlight"] = self.line_highlight
+        d["col_highlight"] = self.col_highlight
+        d["read_only"] = self.read_only
+        return d
+
 
 @dataclass
 class MarkdownResult(CommandResult):
@@ -601,6 +627,12 @@ class MarkdownResult(CommandResult):
     """
     filepath: str = ""
     content: str = ""
+
+    def to_dict(self) -> dict:
+        d = super().to_dict()
+        d["filepath"] = self.filepath
+        d["content"] = self.content
+        return d
 
 
 @dataclass
@@ -627,6 +659,13 @@ class ImageResult(CommandResult):
     image_data: Optional[str] = None  # Base64 encoded image data (optional)
     format: str = "png"  # png, jpg, svg, etc.
 
+    def to_dict(self) -> dict:
+        d = super().to_dict()
+        d["filepath"] = self.filepath
+        d["image_data"] = self.image_data
+        d["format"] = self.format
+        return d
+
 
 @dataclass
 class PreviewResult(CommandResult):
@@ -650,6 +689,12 @@ class PreviewResult(CommandResult):
     """
     filepath: str = ""
     url: str = ""
+
+    def to_dict(self) -> dict:
+        d = super().to_dict()
+        d["filepath"] = self.filepath
+        d["url"] = self.url
+        return d
 
 
 # ============================================================================
@@ -679,6 +724,13 @@ class ProgressResult(CommandResult):
     total: int = 100
     description: str = ""
 
+    def to_dict(self) -> dict:
+        d = super().to_dict()
+        d["current"] = self.current
+        d["total"] = self.total
+        d["description"] = self.description
+        return d
+
 
 @dataclass
 class DiffResult(CommandResult):
@@ -707,6 +759,12 @@ class DiffResult(CommandResult):
     """
     files: List[Dict[str, Any]] = field(default_factory=list)
     summary: str = ""
+
+    def to_dict(self) -> dict:
+        d = super().to_dict()
+        d["files"] = self.files
+        d["summary"] = self.summary
+        return d
 
 
 # ============================================================================
@@ -738,6 +796,14 @@ class ConsentResult(CommandResult):
     default: str = "Deny"
     context: Dict[str, Any] = field(default_factory=dict)
 
+    def to_dict(self) -> dict:
+        d = super().to_dict()
+        d["question"] = self.question
+        d["options"] = self.options
+        d["default"] = self.default
+        d["context"] = self.context
+        return d
+
 
 @dataclass
 class PromptResult(CommandResult):
@@ -763,6 +829,14 @@ class PromptResult(CommandResult):
     placeholder: str = ""
     default: str = ""
     validation: Optional[str] = None  # Regex pattern
+
+    def to_dict(self) -> dict:
+        d = super().to_dict()
+        d["prompt"] = self.prompt
+        d["placeholder"] = self.placeholder
+        d["default"] = self.default
+        d["validation"] = self.validation
+        return d
 
 
 # ============================================================================
@@ -838,6 +912,22 @@ class ToolExecutionResult(CommandResult):
     exit_code: int = 0
     artifacts: List[CommandResult] = field(default_factory=list)
 
+    def to_dict(self) -> dict:
+        """Serialize execution payload + nested artifacts.
+
+        Mirrors `CompositeResult.to_dict()` for the `artifacts` list:
+        each artifact is serialized via its own `to_dict()` so nested
+        result types (TableResult, ImageResult, ...) survive the wire.
+        """
+        d = super().to_dict()
+        d["tool_name"] = self.tool_name
+        d["duration"] = self.duration
+        d["stdout"] = self.stdout
+        d["stderr"] = self.stderr
+        d["exit_code"] = self.exit_code
+        d["artifacts"] = [a.to_dict() for a in self.artifacts]
+        return d
+
 
 # ============================================================================
 # Fallback Result Type
@@ -861,6 +951,11 @@ class TextResult(CommandResult):
         )
     """
     error_details: Optional[str] = None
+
+    def to_dict(self) -> dict:
+        d = super().to_dict()
+        d["error_details"] = self.error_details
+        return d
 
 
 # Export all result types for easy importing

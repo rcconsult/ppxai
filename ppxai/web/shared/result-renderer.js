@@ -148,6 +148,91 @@ ResultRenderer._handlers = {
         }
     },
 
+    // v1.18.4: explicit handlers for result types that previously fell
+    // through to the unknown-type fallback. Each renders the
+    // user-visible payload — keeping renderings simple; rich layouts
+    // can grow in later iterations without changing dispatch.
+
+    AIResponseResult(result) {
+        // content is markdown (full response from /generate, /test,
+        // /explain, etc.). Fall back to message if content is empty.
+        const body = result.content || result.message || '';
+        this.app.addMessage('system', body);
+    },
+
+    ProgressResult(result) {
+        const cur = result.current ?? 0;
+        const total = result.total ?? 100;
+        const desc = result.description || result.message || 'Working';
+        this.app.showSystemMessage(`[${cur}/${total}] ${desc}`);
+    },
+
+    DiffResult(result) {
+        const summary = result.summary || '';
+        const files = Array.isArray(result.files) ? result.files : [];
+        const lines = [`**${result.message || 'Diff'}**`];
+        if (summary) lines.push(summary);
+        if (files.length) {
+            lines.push('', 'Files:');
+            for (const f of files) {
+                const path = f.path || f.filepath || '';
+                if (path) lines.push(`- \`${path}\``);
+            }
+        }
+        this.app.addMessage('system', lines.join('\n'));
+    },
+
+    ConsentResult(result) {
+        // Interactive consent — most flows now ride the
+        // `prompt_quick_pick` side-effect (v1.18.1). The result body
+        // exists as a fallback for clients that don't honor that kind.
+        const lines = [`**${result.message || 'Consent required'}**`];
+        if (result.question) lines.push(result.question);
+        const opts = Array.isArray(result.options) ? result.options : [];
+        if (opts.length) {
+            lines.push('', `Options: ${opts.join(', ')}`);
+        }
+        if (result.default) lines.push(`Default: ${result.default}`);
+        this.app.addMessage('system', lines.join('\n'));
+    },
+
+    PromptResult(result) {
+        // Interactive text prompt — most flows now ride the
+        // `prompt_text` side-effect (v1.18.3). Fallback shape.
+        const lines = [`**${result.message || 'Input required'}**`];
+        if (result.prompt) lines.push(result.prompt);
+        if (result.placeholder) lines.push(`_(e.g. ${result.placeholder})_`);
+        this.app.addMessage('system', lines.join('\n'));
+    },
+
+    ToolExecutionResult(result) {
+        // Tool execution summary — name, duration, status.
+        // stdout/stderr are truncated to keep the chat readable;
+        // artifacts are recursed through so nested results render.
+        const tool = result.tool_name || 'tool';
+        const dur = result.duration ? ` (${Number(result.duration).toFixed(2)}s)` : '';
+        const ok = result.exit_code === 0 ? '✅' : '❌';
+        const lines = [`${ok} **${tool}**${dur}`];
+        if (result.message) lines.push(result.message);
+        const stdout = (result.stdout || '').trim();
+        if (stdout) {
+            const preview = stdout.length > 1000
+                ? stdout.slice(0, 1000) + `\n... (${stdout.length - 1000} chars truncated)`
+                : stdout;
+            lines.push('', '```', preview, '```');
+        }
+        const stderr = (result.stderr || '').trim();
+        if (stderr) {
+            lines.push('', '_stderr:_', '```', stderr.slice(0, 500), '```');
+        }
+        this.app.addMessage('system', lines.join('\n'));
+        // Recurse into artifacts via the same dispatch.
+        const artifacts = Array.isArray(result.artifacts) ? result.artifacts : [];
+        for (const artifact of artifacts) {
+            this.render(artifact);
+        }
+    },
+
     ListResult(result) {
         // Same shape as a markdown bullet list.
         const lines = [`**${result.message}**`, ''];
