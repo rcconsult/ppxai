@@ -1260,8 +1260,8 @@
 
 
 <h1 id="todo-release-tooling-hardening-v1181">TODO: Release tooling hardening (v1.18.1+)<a class="headerlink" href="#todo-release-tooling-hardening-v1181" title="Permanent link">&para;</a></h1>
-<p><strong>Status:</strong> Open. Captured 2026-04-25 after the v1.18.0 release exposed
-three real defects in the release flow plus two procedural lessons.</p>
+<p><strong>Status:</strong> Closed 2026-05-03. All three confirmed defects have landed
+fixes; acceptance criteria met. See "Closed" section at the bottom.</p>
 <p>The v1.18.0 release shipped successfully but the path was bumpy. This
 document tracks the specific fixes so they don't get lost.</p>
 <h2 id="confirmed-defects">Confirmed defects<a class="headerlink" href="#confirmed-defects" title="Permanent link">&para;</a></h2>
@@ -1277,14 +1277,13 @@ success at the 70s mark while the build job was already in <code>failure</code>
 state.</p>
 <p><strong>Effect.</strong> If trusted, the script publishes "release complete" with
 no binaries on the GitHub Release. The user has to notice manually.</p>
-<p><strong>Fix.</strong> Filter the run lookup to the specific workflow name (<code>Build
-Executables</code>) — that's the one that creates the release object and
-uploads the binaries. Other concurrent workflows (docs, etc.) are
-informational; their status doesn't gate the release.</p>
-<p><strong>Files.</strong> <code>scripts/release.py::wait_for_ci</code>, around line 660.</p>
-<p><strong>Effort.</strong> ~1 hour. Add a <code>workflow_name</code> filter to the <code>gh run list</code>
-call; pin to "Build Executables"; fail fast if no run found for that
-specific workflow.</p>
+<p><strong>Fix.</strong> <strong>Landed 2026-05-03.</strong> <code>wait_for_ci</code> now passes
+<code>--workflow="Build Executables"</code> to <code>gh run list</code>, so docs deploys
+and any other concurrent workflows on the tag are excluded from the
+gate. The existing <code>seen_in_progress</code> guard remains as a second
+defense against stale completed runs.</p>
+<p><strong>Files.</strong> <code>scripts/release.py::wait_for_ci</code> (~line 619).</p>
+<p><strong>Status.</strong> Done.</p>
 <h3 id="2-releasepy-dry-run-performs-the-master-merge">2. <code>release.py --dry-run</code> performs the master merge<a class="headerlink" href="#2-releasepy-dry-run-performs-the-master-merge" title="Permanent link">&para;</a></h3>
 <p><strong>Bug.</strong> The "merge to master if on a feature branch" step ignored
 <code>args.dry_run</code>, so a dry-run preview unconditionally executed
@@ -1296,9 +1295,12 @@ manually reset.</p>
 <p><strong>Fix.</strong> Landed on master at commit <code>7d5b1700</code>:
 <code>merge_to_master_if_needed</code> now accepts <code>dry_run=True</code> and prints the
 four git commands without executing them.</p>
-<p><strong>Status.</strong> Done. Needs a regression test that runs <code>--dry-run</code> and
-asserts <code>git status --porcelain</code> is unchanged afterwards — covered by
-acceptance criterion #2 below.</p>
+<p><strong>Status.</strong> Done. <strong>Regression test landed 2026-05-03</strong> in
+<code>tests/test_release_dry_run.py</code>: three tests pin the contract that
+<code>merge_to_master_if_needed(..., dry_run=True)</code> invokes zero
+subprocess calls, plus a sanity test that <code>dry_run=False</code> still
+calls the real git commands (catches a "always skip side effects"
+rewrite regression).</p>
 <h3 id="3-cross-language-test-passes-locally-fails-in-ci">3. Cross-language test passes locally, fails in CI<a class="headerlink" href="#3-cross-language-test-passes-locally-fails-in-ci" title="Permanent link">&para;</a></h3>
 <p><strong>Bug.</strong> <code>tests/test_usage_format.py::_extract_ts_function</code> extracted
 TypeScript code and ran it under node <em>as-is</em>. Local node 24 was
@@ -1326,6 +1328,10 @@ Two options:</p>
   direction.</li>
 </ul>
 <p>Recommend (a) — single source of truth for the version.</p>
+<p><strong>Generalisation status.</strong> <strong>Landed 2026-05-03.</strong> <code>.nvmrc</code> at repo
+root pins <code>20</code>. nvm/fnm/asdf and most CI setup-node actions read
+this file when no explicit version is specified, so local node
+invocations from tests will match CI by default.</p>
 <h2 id="procedural-lessons">Procedural lessons<a class="headerlink" href="#procedural-lessons" title="Permanent link">&para;</a></h2>
 <h3 id="4-no-working-dry-run-path">4. No working dry-run path<a class="headerlink" href="#4-no-working-dry-run-path" title="Permanent link">&para;</a></h3>
 <p><strong>Symptom.</strong> I ran <code>--dry-run</code> to verify before the destructive

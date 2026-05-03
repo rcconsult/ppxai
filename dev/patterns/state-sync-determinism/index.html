@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://rcconsult.github.io/ppxai/dev/TODO-v1.18.2-agent-loop-unification/">
+        <link rel="canonical" href="https://rcconsult.github.io/ppxai/dev/patterns/state-sync-determinism/">
       
       
       
@@ -18,19 +18,19 @@
         
       
       
-      <link rel="icon" href="../assets/images/favicon.png">
+      <link rel="icon" href="../../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
-        <title>v1.18.2 — Agent loop HTTP-streaming unification - ppxai Documentation</title>
+        <title>Pattern: State-Sync Determinism - ppxai Documentation</title>
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
       
         
-        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -49,7 +49,7 @@
       
     
     
-    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -74,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#v1182-agent-loop-http-streaming-unification" class="md-skip">
+        <a href="#pattern-state-sync-determinism" class="md-skip">
           Skip to content
         </a>
       
@@ -94,7 +94,7 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href=".." title="ppxai Documentation" class="md-header__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+    <a href="../.." title="ppxai Documentation" class="md-header__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -114,7 +114,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              v1.18.2 — Agent loop HTTP-streaming unification
+              Pattern: State-Sync Determinism
             
           </span>
         </div>
@@ -232,7 +232,7 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href=".." title="ppxai Documentation" class="md-nav__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+    <a href="../.." title="ppxai Documentation" class="md-nav__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -262,7 +262,7 @@
   
   
     <li class="md-nav__item">
-      <a href=".." class="md-nav__link">
+      <a href="../.." class="md-nav__link">
         
   
   
@@ -343,7 +343,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../INSTALLATION/" class="md-nav__link">
+      <a href="../../INSTALLATION/" class="md-nav__link">
         
   
   
@@ -371,7 +371,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../PROVIDER_SETUP/" class="md-nav__link">
+      <a href="../../PROVIDER_SETUP/" class="md-nav__link">
         
   
   
@@ -460,7 +460,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../AGENT_MODE_GUIDE/" class="md-nav__link">
+      <a href="../../AGENT_MODE_GUIDE/" class="md-nav__link">
         
   
   
@@ -488,7 +488,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../BOOTSTRAP_CONTEXT_GUIDE/" class="md-nav__link">
+      <a href="../../BOOTSTRAP_CONTEXT_GUIDE/" class="md-nav__link">
         
   
   
@@ -516,7 +516,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../CONTEXT-INJECTION/" class="md-nav__link">
+      <a href="../../CONTEXT-INJECTION/" class="md-nav__link">
         
   
   
@@ -544,7 +544,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../CHECKPOINT_GUIDE/" class="md-nav__link">
+      <a href="../../CHECKPOINT_GUIDE/" class="md-nav__link">
         
   
   
@@ -572,7 +572,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../FILE_EDITING_GUIDE/" class="md-nav__link">
+      <a href="../../FILE_EDITING_GUIDE/" class="md-nav__link">
         
   
   
@@ -600,7 +600,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../SHELL_CONSENT_GUIDE/" class="md-nav__link">
+      <a href="../../SHELL_CONSENT_GUIDE/" class="md-nav__link">
         
   
   
@@ -689,7 +689,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../CUSTOM_TOOL_DEVELOPMENT_GUIDE/" class="md-nav__link">
+      <a href="../../CUSTOM_TOOL_DEVELOPMENT_GUIDE/" class="md-nav__link">
         
   
   
@@ -717,7 +717,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../CUSTOM_COMMAND_DEVELOPMENT_GUIDE/" class="md-nav__link">
+      <a href="../../CUSTOM_COMMAND_DEVELOPMENT_GUIDE/" class="md-nav__link">
         
   
   
@@ -745,7 +745,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../ARCHITECTURE/" class="md-nav__link">
+      <a href="../../ARCHITECTURE/" class="md-nav__link">
         
   
   
@@ -834,7 +834,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../ollama-limitations/" class="md-nav__link">
+      <a href="../../ollama-limitations/" class="md-nav__link">
         
   
   
@@ -862,7 +862,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../vllm-tool-calling-guide/" class="md-nav__link">
+      <a href="../../vllm-tool-calling-guide/" class="md-nav__link">
         
   
   
@@ -890,7 +890,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../CONTAINER_TOOLS_GUIDE/" class="md-nav__link">
+      <a href="../../CONTAINER_TOOLS_GUIDE/" class="md-nav__link">
         
   
   
@@ -918,7 +918,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../AUTOROUTER-CONFIG/" class="md-nav__link">
+      <a href="../../AUTOROUTER-CONFIG/" class="md-nav__link">
         
   
   
@@ -1007,7 +1007,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../RELEASE-NOTES-v1.16.1/" class="md-nav__link">
+      <a href="../../RELEASE-NOTES-v1.16.1/" class="md-nav__link">
         
   
   
@@ -1035,7 +1035,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../RELEASE-NOTES-v1.16.0/" class="md-nav__link">
+      <a href="../../RELEASE-NOTES-v1.16.0/" class="md-nav__link">
         
   
   
@@ -1063,7 +1063,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../RELEASE-NOTES-v1.15.6/" class="md-nav__link">
+      <a href="../../RELEASE-NOTES-v1.15.6/" class="md-nav__link">
         
   
   
@@ -1118,10 +1118,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#background" class="md-nav__link">
+  <a href="#problem" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Background
+        Problem
       
     </span>
   </a>
@@ -1129,60 +1129,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#scope-when-picked-up" class="md-nav__link">
+  <a href="#solution-many-channels-one-truth" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Scope when picked up
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Scope when picked up">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#1-factory-handler-emits-sse-events-for-iteration-progress" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        1. Factory handler emits SSE events for iteration progress
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#2-agent_beat-event-lifecycle-already-partially-exists-in-v1180" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        2. AGENT_BEAT event lifecycle (already partially exists in v1.18.0!)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#3-drop-client-side-agent-loops" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        3. Drop client-side agent loops
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#why-deferred" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Why deferred
+        Solution: Many channels, one truth
       
     </span>
   </a>
@@ -1190,10 +1140,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#acceptance-criteria-when-picked-up" class="md-nav__link">
+  <a href="#the-_reanchorfromserver-helper" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Acceptance criteria when picked up
+        The _reanchorFromServer helper
       
     </span>
   </a>
@@ -1201,52 +1151,13 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#refined-scope-after-2026-05-03-investigation" class="md-nav__link">
+  <a href="#rules" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Refined scope after 2026-05-03 investigation
+        Rules
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="Refined scope after 2026-05-03 investigation">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#whats-already-in-place-premise-correction" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        What's already in place (premise correction)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#the-two-design-questions-to-answer-first" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        The two design questions to answer FIRST
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#recommended-path-forward" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Recommended path forward
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -1270,217 +1181,50 @@
   
 
 
-<h1 id="v1182-agent-loop-http-streaming-unification">v1.18.2 — Agent loop HTTP-streaming unification<a class="headerlink" href="#v1182-agent-loop-http-streaming-unification" title="Permanent link">&para;</a></h1>
-<p><strong>Status:</strong> Deferred from v1.18.1. <strong>Re-scoped 2026-05-03</strong> —
-investigation shows the original premise was partly outdated.
-See "Refined scope" section below. <strong>Superseded by</strong>
-<a href="../decisions/0003-agent-platform-architecture/">ADR 0003 — Agent platform architecture</a>,
-which folds this refactor into the v1.19.x agent-platform plan.
-<strong>Trigger to revisit:</strong> when web/VSCode users complain about
-divergent agent UX, OR when ADRs/agents work needs server-side
-agent loop control (e.g. cross-client agent state machine).</p>
-<h2 id="background">Background<a class="headerlink" href="#background" title="Permanent link">&para;</a></h2>
-<p>v1.18.1's principle was "every command flows through the
-factory's <code>POST /command/&lt;name&gt;</code>". For most commands this
-worked cleanly. <strong><code>/agent &lt;task&gt;</code> is the exception.</strong></p>
-<p>The factory's <code>handle_agent</code> runs the autonomous loop in-process:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">run_agent_loop</span><span class="p">():</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">iteration</span> <span class="o">=</span> <span class="mi">0</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="k">while</span> <span class="n">iteration</span> <span class="o">&lt;</span> <span class="n">max_iterations</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">task_complete</span><span class="p">:</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>        <span class="n">iteration</span> <span class="o">+=</span> <span class="mi">1</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>        <span class="k">async</span> <span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">context</span><span class="o">.</span><span class="n">engine_client</span><span class="o">.</span><span class="n">chat</span><span class="p">(</span><span class="n">prompt</span><span class="p">,</span> <span class="n">stream</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>            <span class="k">await</span> <span class="n">event_handler</span><span class="o">.</span><span class="n">handle_event</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>        <span class="o">...</span>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="n">full_output</span><span class="p">,</span> <span class="n">summary</span><span class="p">,</span> <span class="n">success</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">run_agent_loop</span><span class="p">())</span>
-</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="k">return</span> <span class="n">AIResponseResult</span><span class="p">(</span><span class="n">message</span><span class="o">=</span><span class="n">summary</span><span class="p">,</span> <span class="n">content</span><span class="o">=</span><span class="n">full_output</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
+<h1 id="pattern-state-sync-determinism">Pattern: State-Sync Determinism<a class="headerlink" href="#pattern-state-sync-determinism" title="Permanent link">&para;</a></h1>
+<p><strong>Added:</strong> v1.18.1
+<strong>Status:</strong> <strong>CRITICAL — Engine state must be observable to clients within one round-trip</strong>
+<strong>Reference:</strong> <code>ppxai/web/app.js::_reanchorFromServer</code>, <code>vscode-extension/src/chatPanel.ts::_reanchorFromServer</code></p>
+<h2 id="problem">Problem<a class="headerlink" href="#problem" title="Permanent link">&para;</a></h2>
+<p>Pre-v1.18.1, the only path that delivered engine state changes to clients was the SSE stream inside <code>POST /chat</code>. Outside an active chat, <code>engine.set_working_dir()</code> (and similar) enqueued <code>state_sync</code> events into <code>engine._event_queue</code>, but no consumer drained the queue until the next chat opened an SSE generator.</p>
+<p>Drift symptoms:
+- File-tree clicks against a stale cwd → 404 file-not-found.
+- Multi-tab divergence: tab A runs <code>/cd /x</code>, tab B's mirror is still on the old cwd.
+- Tab sleep / focus restore / browser back-forward: web only re-anchors after two consecutive heartbeat failures.
+- Agent tool fires <code>working_dir_changed</code> after <code>STREAM_END</code> but before the SSE generator exits → timing-dependent loss.</p>
+<p>This non-determinism makes confident agent execution impossible: the engine state can drift arbitrarily far from the UI between chat turns.</p>
+<h2 id="solution-many-channels-one-truth">Solution: Many channels, one truth<a class="headerlink" href="#solution-many-channels-one-truth" title="Permanent link">&para;</a></h2>
+<p>Engine state is canonical. Web/VSCode are renderers, not co-owners. Every mutation that lands in engine MUST be observable to clients within one round-trip via at least one of these channels:</p>
+<ol>
+<li>
+<p><strong>SSE during chat</strong> — <code>state_sync</code> events on the <code>/chat</code> stream (existing).</p>
+</li>
+<li>
+<p><strong><code>/state</code> snapshot on demand</strong> — <code>GET /state</code> returns the current values of every <code>SSE_SYNC_FIELDS</code> field. Clients call it on:</p>
+</li>
+<li><strong>Web</strong>: <code>document.visibilitychange</code> → <code>visible</code> AND on heartbeat reconnect.</li>
+<li>
+<p><strong>VSCode</strong>: <code>vscode.window.onDidChangeWindowState</code> → <code>focused</code> AND on reconnect.</p>
+</li>
+<li>
+<p><strong>REST response piggyback</strong> — state-mutating REST endpoints include drained events in the response body's <code>events: [...]</code> field. The client feeds them through the same dispatcher that handles live SSE.</p>
+</li>
+<li>
+<p><strong><code>cwd_anchor</code> for stale-relpath detection</strong> — <code>/files/list</code> returns the <code>working_dir</code> it resolved against; <code>/files/read</code> returns 409 + new cwd if the client's anchor doesn't match.</p>
+</li>
+</ol>
+<h2 id="the-_reanchorfromserver-helper">The <code>_reanchorFromServer</code> helper<a class="headerlink" href="#the-_reanchorfromserver-helper" title="Permanent link">&para;</a></h2>
+<p>Both web and VSCode have a private async helper named <code>_reanchorFromServer</code> that does:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>GET /state → updateFromPython(snapshot)
 </span></code></pre></div>
-<p>This works for the TUI (in-process call, console rendering, hot
-loop blocks the user's prompt). It does NOT work for HTTP clients:</p>
+<p>The same helper is called from BOTH the visibility/focus path AND the heartbeat reconnect path. Tests (<code>tests/test_web_visibility_reanchor.py</code>, <code>tests/test_vscode_visibility_reanchor.py</code>) enforce that the shape stays parity across the two clients — if the helpers diverge in what they re-anchor, drift fixes won't compose.</p>
+<h2 id="rules">Rules<a class="headerlink" href="#rules" title="Permanent link">&para;</a></h2>
 <ol>
-<li><strong>Blocking</strong> — the HTTP request holds open while the agent
-   runs (potentially many minutes). Browsers / proxies time out.</li>
-<li><strong>Console-rendered</strong> — <code>console.print</code> calls in the loop
-   write to the server's stdout, not to a client.</li>
-<li><strong><code>asyncio.run</code> inside a route handler</strong> fights FastAPI's
-   already-running event loop.</li>
-<li><strong>No iteration progress</strong> — the user only sees the final
-   <code>AIResponseResult</code> after the full loop, not per-iteration
-   updates.</li>
+<li><strong>Engine state is canonical.</strong> Web/VSCode read AppState; they never invent their own copy of the same field. Optimistic client-side updates (e.g. set <code>state.workingDir = data.path</code> from a REST response) are fine but the server's value wins on the next sync.</li>
+<li><strong>Visibility/focus events trigger re-anchor.</strong> Any new client widget that depends on AppState must subscribe to AppState, not cache the value at mount time.</li>
+<li><strong>No new state channels without justification.</strong> Persistent <code>GET /events</code> is deferred until A–E prove insufficient. Polling + REST piggyback is enough for current needs.</li>
+<li><strong><code>cwd_anchor</code> instead of "404 file not found".</strong> When a route resolves a relpath against a working dir, return the working dir it used in the response. Clients send back the anchor on follow-up calls; mismatch → 409 with the new cwd in the body. Drift becomes named, surfaced, recoverable.</li>
 </ol>
-<p>So in v1.18.1:
-- TUI: factory <code>handle_agent</code> works (in-process).
-- VSCode: bypasses factory; chatPanel.ts has its own agent loop
-  using <code>_backend.chat</code>. Validation + UI duplicated client-side.
-- Web: bypasses factory; <code>streamChat('/agent &lt;task&gt;')</code> ships to
-  <code>/chat</code> which is now gated by <code>validate_agent_task</code> (v1.18.1
-  step 5b.1) but the loop itself runs in <code>/chat</code>'s normal path.</p>
-<p>This is a real divergence the v1.18.1 plan accepts as scope
-sacrifice. The validation gate closes the safety hole; the loop
-unification stays divergent until v1.18.2.</p>
-<h2 id="scope-when-picked-up">Scope when picked up<a class="headerlink" href="#scope-when-picked-up" title="Permanent link">&para;</a></h2>
-<p>Make the factory <code>handle_agent</code> HTTP-streaming compatible. Three
-sub-pieces:</p>
-<h3 id="1-factory-handler-emits-sse-events-for-iteration-progress">1. Factory handler emits SSE events for iteration progress<a class="headerlink" href="#1-factory-handler-emits-sse-events-for-iteration-progress" title="Permanent link">&para;</a></h3>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">handle_agent</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">args</span><span class="p">):</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>    <span class="o">...</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">ServerCommandContext</span><span class="p">):</span>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>        <span class="c1"># HTTP path: don&#39;t asyncio.run, don&#39;t console.print.</span>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>        <span class="c1"># Emit AGENT_RUN_START / AGENT_BEAT / AGENT_RUN_COMPLETE</span>
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>        <span class="c1"># via engine.enqueue_event so the SSE side-channel carries</span>
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>        <span class="c1"># them. Return a NotificationResult immediately; the loop</span>
-</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>        <span class="c1"># runs as a background task.</span>
-</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>        <span class="n">asyncio</span><span class="o">.</span><span class="n">create_task</span><span class="p">(</span><span class="n">_run_agent_async</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">task</span><span class="p">,</span> <span class="o">...</span><span class="p">))</span>
-</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>        <span class="k">return</span> <span class="n">NotificationResult</span><span class="p">(</span>
-</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>            <span class="n">status</span><span class="o">=</span><span class="n">ResultStatus</span><span class="o">.</span><span class="n">INFO</span><span class="p">,</span>
-</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>            <span class="n">message</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;🤖 Agent started: </span><span class="si">{</span><span class="n">task</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
-</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>        <span class="p">)</span>
-</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>    <span class="k">else</span><span class="p">:</span>
-</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>        <span class="c1"># TUI in-process path: existing console-rendered loop.</span>
-</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>        <span class="o">...</span>
-</span></code></pre></div>
-<h3 id="2-agent_beat-event-lifecycle-already-partially-exists-in-v1180">2. AGENT_BEAT event lifecycle (already partially exists in v1.18.0!)<a class="headerlink" href="#2-agent_beat-event-lifecycle-already-partially-exists-in-v1180" title="Permanent link">&para;</a></h3>
-<p><code>ppxai/engine/types.py::EventType.AGENT_BEAT</code> and friends exist.
-The Phase 5 work just needs to:
-- Make <code>chat_with_tools</code> emit them per iteration when called from
-  factory's <code>handle_agent</code> (currently only the chat tool loop emits
-  these, not the explicit /agent flow).
-- Verify clients render them — Rich, Textual, web, VSCode all
-  have AGENT_BEAT handlers per <code>tests/test_agent_beat_cross_client_parity.py</code>.</p>
-<h3 id="3-drop-client-side-agent-loops">3. Drop client-side agent loops<a class="headerlink" href="#3-drop-client-side-agent-loops" title="Permanent link">&para;</a></h3>
-<p>Once the factory path streams progress correctly:
-- VSCode chatPanel.ts deletes <code>handleAgentCommand</code> and the
-  in-class iteration loop (~150 LoC).
-- Web's <code>_dispatchAgent</code> simplifies to factory dispatch like
-  every other command — no special-case streaming.
-- The factory <code>handle_agent</code> is the single source.</p>
-<p>Estimated cost: ~250 LoC removed (client-side loops) +
-~100 LoC added (HTTP-aware factory branch). Net negative.</p>
-<h2 id="why-deferred">Why deferred<a class="headerlink" href="#why-deferred" title="Permanent link">&para;</a></h2>
-<p>v1.18.1 closes the <strong>safety gap</strong> (agent task validation) without
-needing to refactor the loop. Two clients keep their bespoke
-loops in v1.18.1, but that's pre-existing behavior — not a
-regression.</p>
-<p>The loop unification is meaningful work:
-- New error paths (background task fails after returning OK)
-- Cancellation / interrupt protocol over SSE
-- Test infrastructure for "did the engine actually emit per-iter
-  events?"</p>
-<p>Worth its own milestone with focused review.</p>
-<h2 id="acceptance-criteria-when-picked-up">Acceptance criteria when picked up<a class="headerlink" href="#acceptance-criteria-when-picked-up" title="Permanent link">&para;</a></h2>
-<ul>
-<li>[ ] <code>POST /command/agent</code> with a valid task returns immediately
-      and starts a background loop.</li>
-<li>[ ] AGENT_RUN_START / AGENT_BEAT / AGENT_RUN_COMPLETE events
-      flow on the SSE stream during the loop.</li>
-<li>[ ] Per-iteration tool calls are visible to the client in
-      real-time (not buffered until completion).</li>
-<li>[ ] Esc / SIGINT interrupts the running loop (cancellation
-      protocol works over HTTP).</li>
-<li>[ ] VSCode's <code>handleAgentCommand</code> deleted; web's
-      <code>_dispatchAgent</code> simplified to standard factory dispatch.</li>
-<li>[ ] Cross-client parity test extended with HTTP-path coverage.</li>
-</ul>
-<h2 id="refined-scope-after-2026-05-03-investigation">Refined scope after 2026-05-03 investigation<a class="headerlink" href="#refined-scope-after-2026-05-03-investigation" title="Permanent link">&para;</a></h2>
-<p>The original "Background" section above was written before v1.18.0
-shipped <code>EventType.AGENT_BEAT</code> and before v1.18.1 added the
-<code>/chat</code> route's <code>validate_agent_task</code> gate. Code state today:</p>
-<h3 id="whats-already-in-place-premise-correction">What's already in place (premise correction)<a class="headerlink" href="#whats-already-in-place-premise-correction" title="Permanent link">&para;</a></h3>
-<ol>
-<li>
-<p><strong>AGENT_RUN_START / AGENT_BEAT / AGENT_RUN_COMPLETE already fire</strong>
-   from <code>engine/chat.py</code> (lines 559, 875, 1066, 1138). They're
-   emitted by <code>chat_with_tools</code> per tool-iteration. AppState
-   subscribes; web (<code>web/app.js</code>), VSCode (<code>chatPanel.ts</code>), and
-   ppxaide (<code>tui/event_handler.py</code>) all render them. The original
-   plan's step 2 ("make <code>chat_with_tools</code> emit them per iteration")
-   is <strong>done</strong> — but those events track the <strong>inner</strong> tool loop
-   inside ONE <code>chat()</code> call, not the outer multi-iteration
-   continuation loop in <code>handle_agent</code>.</p>
-</li>
-<li>
-<p><strong>Web does NOT run a client-side loop.</strong> <code>_dispatchAgent</code>
-   (<code>web/shared/command-dispatcher.js</code>) calls
-   <code>app.streamChat('/agent &lt;task&gt;')</code> → hits <code>POST /chat</code> → the
-   gate at <code>server/routes/chat.py:206</code> runs <code>validate_agent_task</code>
-   → if it passes, the message goes through engine's normal chat
-   path. There IS no outer iteration loop on the web client.
-   AGENT_BEAT events stream over SSE from <code>chat_with_tools</code>'s
-   inner tool loop. This client is already aligned.</p>
-</li>
-<li>
-<p><strong>VSCode IS the actual divergence.</strong>
-   <code>chatPanel.ts::handleAgentCommand</code> (lines 1143–1279) runs the
-   same multi-iteration outer loop the TUI factory does — for
-   <code>iteration in 1..maxIterations</code>, build a continuation prompt,
-   <code>_backend.chat(prompt)</code>, watch for <code>TASK_COMPLETE:</code> in the
-   accumulated response. ~150 LoC of client-side iteration logic.</p>
-</li>
-<li>
-<p><strong>TUI factory <code>handle_agent</code> runs the outer loop in-process</strong>
-   via <code>asyncio.run(run_agent_loop())</code>. Per iteration it builds a
-   continuation prompt, calls <code>engine_client.chat(prompt)</code> (which
-   internally runs <code>chat_with_tools</code> and emits AGENT_BEAT events),
-   then text-matches <code>TASK_COMPLETE:</code> to decide whether to continue.</p>
-</li>
-</ol>
-<h3 id="the-two-design-questions-to-answer-first">The two design questions to answer FIRST<a class="headerlink" href="#the-two-design-questions-to-answer-first" title="Permanent link">&para;</a></h3>
-<p>The outer multi-iteration continuation loop is meta-orchestration
-on top of <code>chat_with_tools</code>'s inner tool loop. They aren't the
-same thing:</p>
-<ul>
-<li><strong>Inner loop</strong> (<code>chat_with_tools</code>) — model calls tools, sees
-  results, calls more tools, eventually gives a final text
-  response. Stops when the model stops calling tools.</li>
-<li><strong>Outer loop</strong> (<code>handle_agent</code> / <code>handleAgentCommand</code>) — if the
-  model's final text doesn't say <code>TASK_COMPLETE:</code>, send a
-  continuation prompt and run another inner loop. Up to
-  <code>max_iterations</code>.</li>
-</ul>
-<p><strong>Question A:</strong> Do we keep the outer loop?
-- Keeping it gives multi-pass agent behavior (model goes "I did X,
-  let me also Y" without saying TASK_COMPLETE).
-- Eliminating it means relying solely on the inner tool loop —
-  the model finishes one chat turn, you're done. Behavioral
-  change for TUI users.</p>
-<p><strong>Question B:</strong> If we keep it, where does it run?
-- Server-side as a background task: matches the TODO's plan,
-  requires cancellation/lifecycle management, BUT eliminates the
-  client divergence.
-- Client-side per-client: status quo. VSCode + TUI each run their
-  own. Two implementations to maintain.</p>
-<h3 id="recommended-path-forward">Recommended path forward<a class="headerlink" href="#recommended-path-forward" title="Permanent link">&para;</a></h3>
-<ol>
-<li>
-<p><strong>Phase A (small, high-leverage):</strong> delete VSCode's
-   <code>handleAgentCommand</code> and route <code>/agent &lt;task&gt;</code> through
-   <code>streamChat('/agent &lt;task&gt;')</code> exactly like web does. The
-   <code>/chat</code> route's existing validate_agent_task gate covers the
-   safety check. This drops ~150 LoC and aligns VSCode with web —
-   the user gets the same single-iteration behavior web users
-   already get. The downside is VSCode users lose the outer
-   continuation loop (the model needs to do everything in one
-   chat turn, OR keep calling tools without stopping).</p>
-</li>
-<li>
-<p><strong>Phase B (bigger, separate decision):</strong> if the outer loop is
-   actually load-bearing (Question A), reimplement it server-side
-   as a background task so TUI + web + VSCode all get it. This is
-   the original TODO's plan. Defer until we have user signal that
-   the outer loop is missed.</p>
-</li>
-<li>
-<p><strong>Phase C:</strong> drop <code>validate_agent_task</code>'s side-effect-only
-   handling once <code>prompt_text</code> (v1.18.3) gets enough field use to
-   confirm the auto-resume UX.</p>
-</li>
-</ol>
-<p>The real architectural question is Question A. If the answer is
-"the outer loop is overkill, modern models do enough in one turn",
-then Phase A is the whole fix and we can also strip the outer
-loop from <code>handle_agent</code> for symmetry. If the answer is "the outer
-loop is genuinely valuable", we need the bigger Phase B refactor.</p>
-<p>Pick a direction before implementing.</p>
 
 
 
@@ -1552,10 +1296,10 @@ loop is genuinely valuable", we need the bigger Phase B refactor.</p>
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
       
     
   </body>

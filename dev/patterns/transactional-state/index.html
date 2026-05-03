@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://rcconsult.github.io/ppxai/dev/TODO-v1.18.2-agent-loop-unification/">
+        <link rel="canonical" href="https://rcconsult.github.io/ppxai/dev/patterns/transactional-state/">
       
       
       
@@ -18,19 +18,19 @@
         
       
       
-      <link rel="icon" href="../assets/images/favicon.png">
+      <link rel="icon" href="../../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
-        <title>v1.18.2 — Agent loop HTTP-streaming unification - ppxai Documentation</title>
+        <title>Pattern: Transactional State Management - ppxai Documentation</title>
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
       
         
-        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -49,7 +49,7 @@
       
     
     
-    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -74,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#v1182-agent-loop-http-streaming-unification" class="md-skip">
+        <a href="#pattern-transactional-state-management" class="md-skip">
           Skip to content
         </a>
       
@@ -94,7 +94,7 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href=".." title="ppxai Documentation" class="md-header__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+    <a href="../.." title="ppxai Documentation" class="md-header__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -114,7 +114,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              v1.18.2 — Agent loop HTTP-streaming unification
+              Pattern: Transactional State Management
             
           </span>
         </div>
@@ -232,7 +232,7 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href=".." title="ppxai Documentation" class="md-nav__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+    <a href="../.." title="ppxai Documentation" class="md-nav__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -262,7 +262,7 @@
   
   
     <li class="md-nav__item">
-      <a href=".." class="md-nav__link">
+      <a href="../.." class="md-nav__link">
         
   
   
@@ -343,7 +343,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../INSTALLATION/" class="md-nav__link">
+      <a href="../../INSTALLATION/" class="md-nav__link">
         
   
   
@@ -371,7 +371,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../PROVIDER_SETUP/" class="md-nav__link">
+      <a href="../../PROVIDER_SETUP/" class="md-nav__link">
         
   
   
@@ -460,7 +460,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../AGENT_MODE_GUIDE/" class="md-nav__link">
+      <a href="../../AGENT_MODE_GUIDE/" class="md-nav__link">
         
   
   
@@ -488,7 +488,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../BOOTSTRAP_CONTEXT_GUIDE/" class="md-nav__link">
+      <a href="../../BOOTSTRAP_CONTEXT_GUIDE/" class="md-nav__link">
         
   
   
@@ -516,7 +516,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../CONTEXT-INJECTION/" class="md-nav__link">
+      <a href="../../CONTEXT-INJECTION/" class="md-nav__link">
         
   
   
@@ -544,7 +544,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../CHECKPOINT_GUIDE/" class="md-nav__link">
+      <a href="../../CHECKPOINT_GUIDE/" class="md-nav__link">
         
   
   
@@ -572,7 +572,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../FILE_EDITING_GUIDE/" class="md-nav__link">
+      <a href="../../FILE_EDITING_GUIDE/" class="md-nav__link">
         
   
   
@@ -600,7 +600,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../SHELL_CONSENT_GUIDE/" class="md-nav__link">
+      <a href="../../SHELL_CONSENT_GUIDE/" class="md-nav__link">
         
   
   
@@ -689,7 +689,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../CUSTOM_TOOL_DEVELOPMENT_GUIDE/" class="md-nav__link">
+      <a href="../../CUSTOM_TOOL_DEVELOPMENT_GUIDE/" class="md-nav__link">
         
   
   
@@ -717,7 +717,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../CUSTOM_COMMAND_DEVELOPMENT_GUIDE/" class="md-nav__link">
+      <a href="../../CUSTOM_COMMAND_DEVELOPMENT_GUIDE/" class="md-nav__link">
         
   
   
@@ -745,7 +745,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../ARCHITECTURE/" class="md-nav__link">
+      <a href="../../ARCHITECTURE/" class="md-nav__link">
         
   
   
@@ -834,7 +834,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../ollama-limitations/" class="md-nav__link">
+      <a href="../../ollama-limitations/" class="md-nav__link">
         
   
   
@@ -862,7 +862,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../vllm-tool-calling-guide/" class="md-nav__link">
+      <a href="../../vllm-tool-calling-guide/" class="md-nav__link">
         
   
   
@@ -890,7 +890,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../CONTAINER_TOOLS_GUIDE/" class="md-nav__link">
+      <a href="../../CONTAINER_TOOLS_GUIDE/" class="md-nav__link">
         
   
   
@@ -918,7 +918,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../AUTOROUTER-CONFIG/" class="md-nav__link">
+      <a href="../../AUTOROUTER-CONFIG/" class="md-nav__link">
         
   
   
@@ -1007,7 +1007,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../RELEASE-NOTES-v1.16.1/" class="md-nav__link">
+      <a href="../../RELEASE-NOTES-v1.16.1/" class="md-nav__link">
         
   
   
@@ -1035,7 +1035,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../RELEASE-NOTES-v1.16.0/" class="md-nav__link">
+      <a href="../../RELEASE-NOTES-v1.16.0/" class="md-nav__link">
         
   
   
@@ -1063,7 +1063,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../RELEASE-NOTES-v1.15.6/" class="md-nav__link">
+      <a href="../../RELEASE-NOTES-v1.15.6/" class="md-nav__link">
         
   
   
@@ -1118,10 +1118,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#background" class="md-nav__link">
+  <a href="#problem" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Background
+        Problem
       
     </span>
   </a>
@@ -1129,60 +1129,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#scope-when-picked-up" class="md-nav__link">
+  <a href="#solution-gitops-style-transactions" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Scope when picked up
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Scope when picked up">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#1-factory-handler-emits-sse-events-for-iteration-progress" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        1. Factory handler emits SSE events for iteration progress
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#2-agent_beat-event-lifecycle-already-partially-exists-in-v1180" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        2. AGENT_BEAT event lifecycle (already partially exists in v1.18.0!)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#3-drop-client-side-agent-loops" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        3. Drop client-side agent loops
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#why-deferred" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Why deferred
+        Solution: GitOps-Style Transactions
       
     </span>
   </a>
@@ -1190,10 +1140,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#acceptance-criteria-when-picked-up" class="md-nav__link">
+  <a href="#components" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Acceptance criteria when picked up
+        Components
       
     </span>
   </a>
@@ -1201,52 +1151,35 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#refined-scope-after-2026-05-03-investigation" class="md-nav__link">
+  <a href="#where-to-apply" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Refined scope after 2026-05-03 investigation
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Refined scope after 2026-05-03 investigation">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#whats-already-in-place-premise-correction" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        What's already in place (premise correction)
+        Where to Apply
       
     </span>
   </a>
   
 </li>
-        
-          <li class="md-nav__item">
-  <a href="#the-two-design-questions-to-answer-first" class="md-nav__link">
+      
+        <li class="md-nav__item">
+  <a href="#example-provider-switch" class="md-nav__link">
     <span class="md-ellipsis">
       
-        The two design questions to answer FIRST
+        Example: Provider Switch
       
     </span>
   </a>
   
 </li>
-        
-          <li class="md-nav__item">
-  <a href="#recommended-path-forward" class="md-nav__link">
+      
+        <li class="md-nav__item">
+  <a href="#implementation-status" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Recommended path forward
+        Implementation Status
       
     </span>
   </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -1270,217 +1203,69 @@
   
 
 
-<h1 id="v1182-agent-loop-http-streaming-unification">v1.18.2 — Agent loop HTTP-streaming unification<a class="headerlink" href="#v1182-agent-loop-http-streaming-unification" title="Permanent link">&para;</a></h1>
-<p><strong>Status:</strong> Deferred from v1.18.1. <strong>Re-scoped 2026-05-03</strong> —
-investigation shows the original premise was partly outdated.
-See "Refined scope" section below. <strong>Superseded by</strong>
-<a href="../decisions/0003-agent-platform-architecture/">ADR 0003 — Agent platform architecture</a>,
-which folds this refactor into the v1.19.x agent-platform plan.
-<strong>Trigger to revisit:</strong> when web/VSCode users complain about
-divergent agent UX, OR when ADRs/agents work needs server-side
-agent loop control (e.g. cross-client agent state machine).</p>
-<h2 id="background">Background<a class="headerlink" href="#background" title="Permanent link">&para;</a></h2>
-<p>v1.18.1's principle was "every command flows through the
-factory's <code>POST /command/&lt;name&gt;</code>". For most commands this
-worked cleanly. <strong><code>/agent &lt;task&gt;</code> is the exception.</strong></p>
-<p>The factory's <code>handle_agent</code> runs the autonomous loop in-process:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">run_agent_loop</span><span class="p">():</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">iteration</span> <span class="o">=</span> <span class="mi">0</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="k">while</span> <span class="n">iteration</span> <span class="o">&lt;</span> <span class="n">max_iterations</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">task_complete</span><span class="p">:</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>        <span class="n">iteration</span> <span class="o">+=</span> <span class="mi">1</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>        <span class="k">async</span> <span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">context</span><span class="o">.</span><span class="n">engine_client</span><span class="o">.</span><span class="n">chat</span><span class="p">(</span><span class="n">prompt</span><span class="p">,</span> <span class="n">stream</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>            <span class="k">await</span> <span class="n">event_handler</span><span class="o">.</span><span class="n">handle_event</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>        <span class="o">...</span>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="n">full_output</span><span class="p">,</span> <span class="n">summary</span><span class="p">,</span> <span class="n">success</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">run_agent_loop</span><span class="p">())</span>
-</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="k">return</span> <span class="n">AIResponseResult</span><span class="p">(</span><span class="n">message</span><span class="o">=</span><span class="n">summary</span><span class="p">,</span> <span class="n">content</span><span class="o">=</span><span class="n">full_output</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
+<h1 id="pattern-transactional-state-management">Pattern: Transactional State Management<a class="headerlink" href="#pattern-transactional-state-management" title="Permanent link">&para;</a></h1>
+<p><strong>Added:</strong> v1.15.0
+<strong>Status:</strong> <strong>CRITICAL — Apply to all multi-step state operations</strong></p>
+<h2 id="problem">Problem<a class="headerlink" href="#problem" title="Permanent link">&para;</a></h2>
+<p>AI agents perform multi-step operations that must succeed atomically or fail completely. Partial state updates create inconsistent UI, broken sessions, and user confusion.</p>
+<h2 id="solution-gitops-style-transactions">Solution: GitOps-Style Transactions<a class="headerlink" href="#solution-gitops-style-transactions" title="Permanent link">&para;</a></h2>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">with</span> <span class="n">status_bar</span><span class="o">.</span><span class="n">transaction</span><span class="p">()</span> <span class="k">as</span> <span class="n">txn</span><span class="p">:</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">txn</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s2">&quot;tokens&quot;</span><span class="p">,</span> <span class="s2">&quot;Tokens&quot;</span><span class="p">,</span> <span class="s2">&quot;1234&quot;</span><span class="p">)</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">txn</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="s2">&quot;provider&quot;</span><span class="p">,</span> <span class="s2">&quot;ollama&quot;</span><span class="p">)</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">txn</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="s2">&quot;cost&quot;</span><span class="p">)</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">success</span><span class="p">,</span> <span class="n">error</span> <span class="o">=</span> <span class="n">txn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="k">if</span> <span class="ow">not</span> <span class="n">success</span><span class="p">:</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>        <span class="c1"># All changes rolled back automatically</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>        <span class="n">notify_user</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Update failed: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 </span></code></pre></div>
-<p>This works for the TUI (in-process call, console rendering, hot
-loop blocks the user's prompt). It does NOT work for HTTP clients:</p>
+<h2 id="components">Components<a class="headerlink" href="#components" title="Permanent link">&para;</a></h2>
 <ol>
-<li><strong>Blocking</strong> — the HTTP request holds open while the agent
-   runs (potentially many minutes). Browsers / proxies time out.</li>
-<li><strong>Console-rendered</strong> — <code>console.print</code> calls in the loop
-   write to the server's stdout, not to a client.</li>
-<li><strong><code>asyncio.run</code> inside a route handler</strong> fights FastAPI's
-   already-running event loop.</li>
-<li><strong>No iteration progress</strong> — the user only sees the final
-   <code>AIResponseResult</code> after the full loop, not per-iteration
-   updates.</li>
+<li><strong>Checkpoint</strong> — automatic backup of current state on transaction enter</li>
+<li><strong>Stage operations</strong> — chainable operations queued for validation</li>
+<li><strong>Validate</strong> — all operations checked before any are applied</li>
+<li><strong>Commit</strong> — atomic application (all succeed or none do)</li>
+<li><strong>Rollback</strong> — restore checkpoint on failure or exception</li>
 </ol>
-<p>So in v1.18.1:
-- TUI: factory <code>handle_agent</code> works (in-process).
-- VSCode: bypasses factory; chatPanel.ts has its own agent loop
-  using <code>_backend.chat</code>. Validation + UI duplicated client-side.
-- Web: bypasses factory; <code>streamChat('/agent &lt;task&gt;')</code> ships to
-  <code>/chat</code> which is now gated by <code>validate_agent_task</code> (v1.18.1
-  step 5b.1) but the loop itself runs in <code>/chat</code>'s normal path.</p>
-<p>This is a real divergence the v1.18.1 plan accepts as scope
-sacrifice. The validation gate closes the safety hole; the loop
-unification stays divergent until v1.18.2.</p>
-<h2 id="scope-when-picked-up">Scope when picked up<a class="headerlink" href="#scope-when-picked-up" title="Permanent link">&para;</a></h2>
-<p>Make the factory <code>handle_agent</code> HTTP-streaming compatible. Three
-sub-pieces:</p>
-<h3 id="1-factory-handler-emits-sse-events-for-iteration-progress">1. Factory handler emits SSE events for iteration progress<a class="headerlink" href="#1-factory-handler-emits-sse-events-for-iteration-progress" title="Permanent link">&para;</a></h3>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">handle_agent</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">args</span><span class="p">):</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>    <span class="o">...</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">ServerCommandContext</span><span class="p">):</span>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>        <span class="c1"># HTTP path: don&#39;t asyncio.run, don&#39;t console.print.</span>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>        <span class="c1"># Emit AGENT_RUN_START / AGENT_BEAT / AGENT_RUN_COMPLETE</span>
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>        <span class="c1"># via engine.enqueue_event so the SSE side-channel carries</span>
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>        <span class="c1"># them. Return a NotificationResult immediately; the loop</span>
-</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>        <span class="c1"># runs as a background task.</span>
-</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>        <span class="n">asyncio</span><span class="o">.</span><span class="n">create_task</span><span class="p">(</span><span class="n">_run_agent_async</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">task</span><span class="p">,</span> <span class="o">...</span><span class="p">))</span>
-</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>        <span class="k">return</span> <span class="n">NotificationResult</span><span class="p">(</span>
-</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>            <span class="n">status</span><span class="o">=</span><span class="n">ResultStatus</span><span class="o">.</span><span class="n">INFO</span><span class="p">,</span>
-</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>            <span class="n">message</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;🤖 Agent started: </span><span class="si">{</span><span class="n">task</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
-</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>        <span class="p">)</span>
-</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>    <span class="k">else</span><span class="p">:</span>
-</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>        <span class="c1"># TUI in-process path: existing console-rendered loop.</span>
-</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>        <span class="o">...</span>
+<h2 id="where-to-apply">Where to Apply<a class="headerlink" href="#where-to-apply" title="Permanent link">&para;</a></h2>
+<p>REQUIRED for:
+- Provider/model switching with related config updates
+- Context injection with multiple files
+- Session state updates (messages + tokens + cost)
+- Multi-step tool execution
+- UI state synchronization across multiple widgets</p>
+<h2 id="example-provider-switch">Example: Provider Switch<a class="headerlink" href="#example-provider-switch" title="Permanent link">&para;</a></h2>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">switch_provider</span><span class="p">(</span><span class="n">new_provider</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">new_model</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>    <span class="k">with</span> <span class="n">status_bar</span><span class="o">.</span><span class="n">transaction</span><span class="p">()</span> <span class="k">as</span> <span class="n">txn</span><span class="p">:</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>        <span class="n">txn</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="s2">&quot;provider&quot;</span><span class="p">,</span> <span class="n">new_provider</span><span class="p">)</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>        <span class="n">txn</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="s2">&quot;model&quot;</span><span class="p">,</span> <span class="n">new_model</span><span class="p">)</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>        <span class="k">if</span> <span class="n">new_provider</span> <span class="o">==</span> <span class="s2">&quot;perplexity&quot;</span><span class="p">:</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>            <span class="n">txn</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s2">&quot;web&quot;</span><span class="p">,</span> <span class="s2">&quot;Web&quot;</span><span class="p">,</span> <span class="s2">&quot;ON&quot;</span><span class="p">)</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>            <span class="n">txn</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="s2">&quot;thinking&quot;</span><span class="p">)</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>        <span class="n">success</span><span class="p">,</span> <span class="n">error</span> <span class="o">=</span> <span class="n">txn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>        <span class="k">if</span> <span class="ow">not</span> <span class="n">success</span><span class="p">:</span>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>            <span class="n">notify</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;UI update failed: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>            <span class="k">return</span> <span class="kc">False</span>
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>    <span class="k">try</span><span class="p">:</span>
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>        <span class="k">await</span> <span class="n">engine_client</span><span class="o">.</span><span class="n">set_provider</span><span class="p">(</span><span class="n">new_provider</span><span class="p">)</span>
+</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>        <span class="k">await</span> <span class="n">engine_client</span><span class="o">.</span><span class="n">set_model</span><span class="p">(</span><span class="n">new_model</span><span class="p">)</span>
+</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>        <span class="k">return</span> <span class="kc">True</span>
+</span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+</span><span id="__span-1-18"><a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a>        <span class="k">with</span> <span class="n">status_bar</span><span class="o">.</span><span class="n">transaction</span><span class="p">()</span> <span class="k">as</span> <span class="n">txn</span><span class="p">:</span>
+</span><span id="__span-1-19"><a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a>            <span class="n">txn</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="s2">&quot;provider&quot;</span><span class="p">,</span> <span class="n">old_provider</span><span class="p">)</span>
+</span><span id="__span-1-20"><a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a>            <span class="n">txn</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="s2">&quot;model&quot;</span><span class="p">,</span> <span class="n">old_model</span><span class="p">)</span>
+</span><span id="__span-1-21"><a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a>            <span class="n">txn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+</span><span id="__span-1-22"><a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a>        <span class="n">notify</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Engine error: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span id="__span-1-23"><a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a>        <span class="k">return</span> <span class="kc">False</span>
 </span></code></pre></div>
-<h3 id="2-agent_beat-event-lifecycle-already-partially-exists-in-v1180">2. AGENT_BEAT event lifecycle (already partially exists in v1.18.0!)<a class="headerlink" href="#2-agent_beat-event-lifecycle-already-partially-exists-in-v1180" title="Permanent link">&para;</a></h3>
-<p><code>ppxai/engine/types.py::EventType.AGENT_BEAT</code> and friends exist.
-The Phase 5 work just needs to:
-- Make <code>chat_with_tools</code> emit them per iteration when called from
-  factory's <code>handle_agent</code> (currently only the chat tool loop emits
-  these, not the explicit /agent flow).
-- Verify clients render them — Rich, Textual, web, VSCode all
-  have AGENT_BEAT handlers per <code>tests/test_agent_beat_cross_client_parity.py</code>.</p>
-<h3 id="3-drop-client-side-agent-loops">3. Drop client-side agent loops<a class="headerlink" href="#3-drop-client-side-agent-loops" title="Permanent link">&para;</a></h3>
-<p>Once the factory path streams progress correctly:
-- VSCode chatPanel.ts deletes <code>handleAgentCommand</code> and the
-  in-class iteration loop (~150 LoC).
-- Web's <code>_dispatchAgent</code> simplifies to factory dispatch like
-  every other command — no special-case streaming.
-- The factory <code>handle_agent</code> is the single source.</p>
-<p>Estimated cost: ~250 LoC removed (client-side loops) +
-~100 LoC added (HTTP-aware factory branch). Net negative.</p>
-<h2 id="why-deferred">Why deferred<a class="headerlink" href="#why-deferred" title="Permanent link">&para;</a></h2>
-<p>v1.18.1 closes the <strong>safety gap</strong> (agent task validation) without
-needing to refactor the loop. Two clients keep their bespoke
-loops in v1.18.1, but that's pre-existing behavior — not a
-regression.</p>
-<p>The loop unification is meaningful work:
-- New error paths (background task fails after returning OK)
-- Cancellation / interrupt protocol over SSE
-- Test infrastructure for "did the engine actually emit per-iter
-  events?"</p>
-<p>Worth its own milestone with focused review.</p>
-<h2 id="acceptance-criteria-when-picked-up">Acceptance criteria when picked up<a class="headerlink" href="#acceptance-criteria-when-picked-up" title="Permanent link">&para;</a></h2>
+<h2 id="implementation-status">Implementation Status<a class="headerlink" href="#implementation-status" title="Permanent link">&para;</a></h2>
 <ul>
-<li>[ ] <code>POST /command/agent</code> with a valid task returns immediately
-      and starts a background loop.</li>
-<li>[ ] AGENT_RUN_START / AGENT_BEAT / AGENT_RUN_COMPLETE events
-      flow on the SSE stream during the loop.</li>
-<li>[ ] Per-iteration tool calls are visible to the client in
-      real-time (not buffered until completion).</li>
-<li>[ ] Esc / SIGINT interrupts the running loop (cancellation
-      protocol works over HTTP).</li>
-<li>[ ] VSCode's <code>handleAgentCommand</code> deleted; web's
-      <code>_dispatchAgent</code> simplified to standard factory dispatch.</li>
-<li>[ ] Cross-client parity test extended with HTTP-path coverage.</li>
+<li>StatusBar badge management (<code>ppxai/tui/widgets/status_bar.py</code>)</li>
+<li>Provider/model switching (badge updates in <code>_restore_session</code>, <code>handle_load</code>)</li>
+<li>Session state management (<code>EngineClient.restore_session()</code> — atomic restore)</li>
+<li>Context injection — planned</li>
 </ul>
-<h2 id="refined-scope-after-2026-05-03-investigation">Refined scope after 2026-05-03 investigation<a class="headerlink" href="#refined-scope-after-2026-05-03-investigation" title="Permanent link">&para;</a></h2>
-<p>The original "Background" section above was written before v1.18.0
-shipped <code>EventType.AGENT_BEAT</code> and before v1.18.1 added the
-<code>/chat</code> route's <code>validate_agent_task</code> gate. Code state today:</p>
-<h3 id="whats-already-in-place-premise-correction">What's already in place (premise correction)<a class="headerlink" href="#whats-already-in-place-premise-correction" title="Permanent link">&para;</a></h3>
-<ol>
-<li>
-<p><strong>AGENT_RUN_START / AGENT_BEAT / AGENT_RUN_COMPLETE already fire</strong>
-   from <code>engine/chat.py</code> (lines 559, 875, 1066, 1138). They're
-   emitted by <code>chat_with_tools</code> per tool-iteration. AppState
-   subscribes; web (<code>web/app.js</code>), VSCode (<code>chatPanel.ts</code>), and
-   ppxaide (<code>tui/event_handler.py</code>) all render them. The original
-   plan's step 2 ("make <code>chat_with_tools</code> emit them per iteration")
-   is <strong>done</strong> — but those events track the <strong>inner</strong> tool loop
-   inside ONE <code>chat()</code> call, not the outer multi-iteration
-   continuation loop in <code>handle_agent</code>.</p>
-</li>
-<li>
-<p><strong>Web does NOT run a client-side loop.</strong> <code>_dispatchAgent</code>
-   (<code>web/shared/command-dispatcher.js</code>) calls
-   <code>app.streamChat('/agent &lt;task&gt;')</code> → hits <code>POST /chat</code> → the
-   gate at <code>server/routes/chat.py:206</code> runs <code>validate_agent_task</code>
-   → if it passes, the message goes through engine's normal chat
-   path. There IS no outer iteration loop on the web client.
-   AGENT_BEAT events stream over SSE from <code>chat_with_tools</code>'s
-   inner tool loop. This client is already aligned.</p>
-</li>
-<li>
-<p><strong>VSCode IS the actual divergence.</strong>
-   <code>chatPanel.ts::handleAgentCommand</code> (lines 1143–1279) runs the
-   same multi-iteration outer loop the TUI factory does — for
-   <code>iteration in 1..maxIterations</code>, build a continuation prompt,
-   <code>_backend.chat(prompt)</code>, watch for <code>TASK_COMPLETE:</code> in the
-   accumulated response. ~150 LoC of client-side iteration logic.</p>
-</li>
-<li>
-<p><strong>TUI factory <code>handle_agent</code> runs the outer loop in-process</strong>
-   via <code>asyncio.run(run_agent_loop())</code>. Per iteration it builds a
-   continuation prompt, calls <code>engine_client.chat(prompt)</code> (which
-   internally runs <code>chat_with_tools</code> and emits AGENT_BEAT events),
-   then text-matches <code>TASK_COMPLETE:</code> to decide whether to continue.</p>
-</li>
-</ol>
-<h3 id="the-two-design-questions-to-answer-first">The two design questions to answer FIRST<a class="headerlink" href="#the-two-design-questions-to-answer-first" title="Permanent link">&para;</a></h3>
-<p>The outer multi-iteration continuation loop is meta-orchestration
-on top of <code>chat_with_tools</code>'s inner tool loop. They aren't the
-same thing:</p>
-<ul>
-<li><strong>Inner loop</strong> (<code>chat_with_tools</code>) — model calls tools, sees
-  results, calls more tools, eventually gives a final text
-  response. Stops when the model stops calling tools.</li>
-<li><strong>Outer loop</strong> (<code>handle_agent</code> / <code>handleAgentCommand</code>) — if the
-  model's final text doesn't say <code>TASK_COMPLETE:</code>, send a
-  continuation prompt and run another inner loop. Up to
-  <code>max_iterations</code>.</li>
-</ul>
-<p><strong>Question A:</strong> Do we keep the outer loop?
-- Keeping it gives multi-pass agent behavior (model goes "I did X,
-  let me also Y" without saying TASK_COMPLETE).
-- Eliminating it means relying solely on the inner tool loop —
-  the model finishes one chat turn, you're done. Behavioral
-  change for TUI users.</p>
-<p><strong>Question B:</strong> If we keep it, where does it run?
-- Server-side as a background task: matches the TODO's plan,
-  requires cancellation/lifecycle management, BUT eliminates the
-  client divergence.
-- Client-side per-client: status quo. VSCode + TUI each run their
-  own. Two implementations to maintain.</p>
-<h3 id="recommended-path-forward">Recommended path forward<a class="headerlink" href="#recommended-path-forward" title="Permanent link">&para;</a></h3>
-<ol>
-<li>
-<p><strong>Phase A (small, high-leverage):</strong> delete VSCode's
-   <code>handleAgentCommand</code> and route <code>/agent &lt;task&gt;</code> through
-   <code>streamChat('/agent &lt;task&gt;')</code> exactly like web does. The
-   <code>/chat</code> route's existing validate_agent_task gate covers the
-   safety check. This drops ~150 LoC and aligns VSCode with web —
-   the user gets the same single-iteration behavior web users
-   already get. The downside is VSCode users lose the outer
-   continuation loop (the model needs to do everything in one
-   chat turn, OR keep calling tools without stopping).</p>
-</li>
-<li>
-<p><strong>Phase B (bigger, separate decision):</strong> if the outer loop is
-   actually load-bearing (Question A), reimplement it server-side
-   as a background task so TUI + web + VSCode all get it. This is
-   the original TODO's plan. Defer until we have user signal that
-   the outer loop is missed.</p>
-</li>
-<li>
-<p><strong>Phase C:</strong> drop <code>validate_agent_task</code>'s side-effect-only
-   handling once <code>prompt_text</code> (v1.18.3) gets enough field use to
-   confirm the auto-resume UX.</p>
-</li>
-</ol>
-<p>The real architectural question is Question A. If the answer is
-"the outer loop is overkill, modern models do enough in one turn",
-then Phase A is the whole fix and we can also strip the outer
-loop from <code>handle_agent</code> for symmetry. If the answer is "the outer
-loop is genuinely valuable", we need the bigger Phase B refactor.</p>
-<p>Pick a direction before implementing.</p>
+<p><strong>Rule:</strong> Any operation that modifies multiple related pieces of state MUST use this pattern.</p>
 
 
 
@@ -1552,10 +1337,10 @@ loop is genuinely valuable", we need the bigger Phase B refactor.</p>
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
       
     
   </body>
