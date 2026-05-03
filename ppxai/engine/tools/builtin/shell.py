@@ -17,11 +17,75 @@ import asyncio
 import os
 import re
 import platform
+import signal
 from typing import List
 
 from ....config import get_shell_config
 from ...types import ToolEngineProtocol, ToolManagerProtocol
 from ..base import BaseTool
+
+
+def terminate_subprocess_tree(proc) -> None:
+    """SIGTERM a subprocess and its children when on POSIX, else fall back.
+
+    Linux-specific bug we caught in CI on v1.18.3: when the shell tool spawns
+    via `asyncio.create_subprocess_shell(..., start_new_session=True)`, the
+    OS process tree is `/bin/sh -c "<command>"` → `<actual command>`. Calling
+    `proc.terminate()` only sends SIGTERM to the shell wrapper. The child
+    inherits the wrapper's stdout/stderr file descriptors, so even after the
+    wrapper exits, those FDs remain open in the child until the child
+    finishes — which means `proc.communicate()` waits for the child's
+    natural timeout (the test's 30s sleep), not the SIGTERM-induced exit
+    we wanted.
+
+    The fix is to SIGTERM the entire process group via `os.killpg(pgid)`.
+    Both the wrapper and the child are in the new session group, so the
+    signal reaches the child too, the FDs close, and `communicate()`
+    returns immediately. macOS happens to behave differently here
+    (SIGTERM-to-leader nudges the orphan in some cases), which is why the
+    test passed locally on darwin but failed on CI Linux.
+    """
+    if proc.returncode is not None:
+        return  # already exited
+
+    if hasattr(os, "killpg") and os.name != "nt":
+        try:
+            pgid = os.getpgid(proc.pid)
+        except (ProcessLookupError, OSError):
+            return
+        try:
+            os.killpg(pgid, signal.SIGTERM)
+            return
+        except (ProcessLookupError, OSError):
+            pass
+
+    # Windows or POSIX without killpg: SIGTERM the leader.
+    try:
+        proc.terminate()
+    except (ProcessLookupError, OSError):
+        pass
+
+
+def kill_subprocess_tree(proc) -> None:
+    """SIGKILL a subprocess and its children when on POSIX, else fall back."""
+    if proc.returncode is not None:
+        return
+
+    if hasattr(os, "killpg") and os.name != "nt":
+        try:
+            pgid = os.getpgid(proc.pid)
+        except (ProcessLookupError, OSError):
+            return
+        try:
+            os.killpg(pgid, signal.SIGKILL)
+            return
+        except (ProcessLookupError, OSError):
+            pass
+
+    try:
+        proc.kill()
+    except (ProcessLookupError, OSError):
+        pass
 
 
 # `&` at the end of the command, or anywhere followed by whitespace + EOL,
@@ -289,27 +353,18 @@ class ShellExecuteTool(BaseTool):
                     )
                 except asyncio.TimeoutError:
                     # SIGTERM the whole process group, then SIGKILL after grace.
-                    try:
-                        proc.terminate()
-                    except (ProcessLookupError, OSError):
-                        pass
+                    terminate_subprocess_tree(proc)
                     try:
                         await asyncio.wait_for(proc.wait(), timeout=2)
                     except asyncio.TimeoutError:
-                        try:
-                            proc.kill()
-                        except (ProcessLookupError, OSError):
-                            pass
+                        kill_subprocess_tree(proc)
                     return (
                         f"Error: Command timed out after {timeout} seconds. "
                         f"Set 'tools.shell.timeout' in config for longer timeouts."
                     )
                 except asyncio.CancelledError:
                     # Engine cancellation (interrupt_stream) — kill and re-raise.
-                    try:
-                        proc.terminate()
-                    except (ProcessLookupError, OSError):
-                        pass
+                    terminate_subprocess_tree(proc)
                     raise
 
                 stdout_text = stdout_b.decode('utf-8', errors='replace') if stdout_b else ""

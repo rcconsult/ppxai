@@ -500,16 +500,23 @@ class EngineClient:
         terminates any active subprocesses spawned by tools so a hung
         `subprocess` call cannot block POST /interrupt's effect until its
         timeout fires.
+
+        v1.18.3 fix: use `terminate_subprocess_tree` (process-group SIGTERM
+        on POSIX) so a shell wrapper's child inheriting stdout/stderr FDs
+        also receives the signal and closes the pipes — otherwise
+        `communicate()` waits for the child's natural exit even though
+        the wrapper is dead. Caught by `test_shell_tool.py::TestInterrupt
+        CancelsRunningProcess::test_interrupt_terminates_running_subprocess`
+        on Linux CI; macOS happened to mask this with different orphan
+        FD behavior.
         """
+        from .tools.builtin.shell import terminate_subprocess_tree
+
         self._interrupted = True
         self.state.set("cancel_requested", True)
 
         for proc in list(self._active_subprocesses):
-            try:
-                if proc.returncode is None:
-                    proc.terminate()
-            except (ProcessLookupError, OSError):
-                pass
+            terminate_subprocess_tree(proc)
 
     def register_subprocess(self, proc: "asyncio.subprocess.Process") -> None:
         """Track an active subprocess for cancellation by interrupt_stream."""
