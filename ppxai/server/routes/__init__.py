@@ -17,6 +17,7 @@ from . import (
     context,
     file_serve,
     files,
+    oneshot,
     preview,
     providers,
     schema,
@@ -46,5 +47,6 @@ all_routers: list[APIRouter] = [
     completion.router,  # v1.17.4: POST /complete for cross-client autocomplete
     schema.router,      # v1.17.4: GET /schema/app-state — canonical DTO
     state.router,       # v1.18.0: GET /state — snapshot for SSE reconnect sync
+    oneshot.router,     # v1.18.3: POST /v1/oneshot — stateless gateway primitive
     static.router,
 ]

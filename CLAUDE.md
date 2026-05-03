@@ -33,6 +33,7 @@ Each has a dedicated doc — read it before changing code in that area.
 - File upload + multimodal — `/attach` command, `SessionFileStore`, file preprocessing, image validation, VL sidecar, PDF/Excel/PPTX/DOCX tools.
 - `/doctor` config advisor — deprecation table, dead/deprecated/new/recommended model scanning.
 - VSCode extension bundled via esbuild (v1.18.2) — 128 KB VSIX (was 1.1 MB), 15 files (was 804); CI has 500 KB size-budget gate.
+- **v1 API gateway** (v1.18.3) — `POST /v1/oneshot` is the first stable, semver-versioned external surface. Internal endpoints (`/chat`, `/command/*`, etc.) keep evolving. See [docs/API-GATEWAY.md](docs/API-GATEWAY.md).
 
 ## Codebase Statistics (v1.18.2, approximate)
 

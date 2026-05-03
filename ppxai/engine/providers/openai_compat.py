@@ -484,3 +484,109 @@ class OpenAICompatibleProvider(BaseProvider):
         )
 
         return response.choices[0].message.content or ""
+
+    def oneshot(
+        self,
+        prompt: str,
+        model: str,
+        system: Optional[str] = None,
+        response_format: Optional[Dict[str, Any]] = None,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+    ) -> Dict[str, Any]:
+        """Stateless single-turn completion.
+
+        v1.18.3: backs the `POST /v1/oneshot` gateway endpoint. No
+        history, no tools, no streaming. Designed for external agents
+        (classifiers, routers, structured-extraction pipelines) that
+        want ppxai-server as a thin LLM gateway without having to
+        manage sessions per call.
+
+        Request-level overrides (`max_tokens`, `temperature`,
+        `response_format`) take precedence over per-model config.
+        `extra_body` from config is still applied so vendor-specific
+        knobs (NVIDIA NIM `chat_template_kwargs.enable_thinking` etc.)
+        carry through.
+
+        Args:
+            prompt: The user message content.
+            model: Model ID to use (e.g. "qwen/qwen3.5-122b-a10b").
+            system: Optional system message prepended.
+            response_format: Optional OpenAI-style response_format
+                dict, e.g. ``{"type": "json_object"}`` or
+                ``{"type": "json_schema", "json_schema": {...}}``.
+                Forwarded to the provider as-is.
+            max_tokens: Optional cap. Overrides per-model config.
+            temperature: Optional sampling temperature. Overrides
+                per-model generation_params if set.
+
+        Returns:
+            ``{"content": str, "finish_reason": str | None,
+              "model": str, "usage": {prompt_tokens, completion_tokens,
+              total_tokens} | None}``
+        """
+        messages: List[Message] = []
+        if system:
+            messages.append(Message(role="system", content=system))
+        messages.append(Message(role="user", content=prompt))
+
+        api_messages = self._convert_messages(messages)
+        api_messages = self._apply_reasoning_trigger(api_messages, model)
+
+        request_kwargs: Dict[str, Any] = {
+            "model": model,
+            "messages": api_messages,
+            "stream": False,
+        }
+
+        # max_tokens: request override > per-model config > omit
+        use_completion_tokens = self._needs_max_completion_tokens(model)
+        token_key = "max_completion_tokens" if use_completion_tokens else "max_tokens"
+        if max_tokens is not None:
+            request_kwargs[token_key] = max_tokens
+        else:
+            configured_max = self._get_max_tokens(model)
+            if configured_max:
+                request_kwargs[token_key] = configured_max
+
+        # temperature: request override wins; otherwise pull configured
+        # generation_params (filtered for restricted models).
+        if temperature is not None:
+            if not (use_completion_tokens and "temperature" in self.RESTRICTED_GENERATION_PARAMS):
+                request_kwargs["temperature"] = temperature
+        else:
+            generation_params = self._get_generation_params(model)
+            if generation_params:
+                if use_completion_tokens:
+                    if "max_tokens" in generation_params:
+                        generation_params["max_completion_tokens"] = generation_params.pop("max_tokens")
+                    for param in self.RESTRICTED_GENERATION_PARAMS:
+                        generation_params.pop(param, None)
+                request_kwargs.update(generation_params)
+
+        if response_format is not None:
+            request_kwargs["response_format"] = response_format
+
+        extra_body = self._get_extra_body(model)
+        if extra_body:
+            request_kwargs["extra_body"] = extra_body
+
+        response = self.client.chat.completions.create(**request_kwargs)
+
+        msg = response.choices[0].message
+        finish_reason = response.choices[0].finish_reason
+        usage_obj = getattr(response, "usage", None)
+        usage_dict = None
+        if usage_obj is not None:
+            usage_dict = {
+                "prompt_tokens": getattr(usage_obj, "prompt_tokens", 0) or 0,
+                "completion_tokens": getattr(usage_obj, "completion_tokens", 0) or 0,
+                "total_tokens": getattr(usage_obj, "total_tokens", 0) or 0,
+            }
+
+        return {
+            "content": msg.content or "",
+            "finish_reason": finish_reason,
+            "model": getattr(response, "model", None) or model,
+            "usage": usage_dict,
+        }
