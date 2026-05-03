@@ -200,6 +200,25 @@ app.add_middleware(
 )
 
 
+from .auth import check_request as _auth_check_request
+
+
+@app.middleware("http")
+async def auth_middleware(request: Request, call_next):
+    """Bearer-token auth gate (v1.18.3).
+
+    No-op when `PPXAI_API_TOKEN` is unset. Returns 401 with
+    `WWW-Authenticate: Bearer ...` when set and the request is
+    missing/malformed/wrong-token. OPTIONS preflight is exempted.
+
+    See ppxai/server/auth.py and docs/API-GATEWAY.md for the policy.
+    """
+    rejected = _auth_check_request(request)
+    if rejected is not None:
+        return rejected
+    return await call_next(request)
+
+
 @app.middleware("http")
 async def activity_tracking_middleware(request: Request, call_next):
     """Track client activity for idle shutdown (v1.13.10).

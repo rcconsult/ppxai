@@ -63,16 +63,128 @@ your use case is internal-client-shaped and we should talk about it.
 
 ## Authentication
 
-**v1.18.3 status: optional.**
+**v1.18.3 status: optional bearer-token auth (opt-in, default off).**
 
-By default the server runs unauthenticated and listens on loopback
-(`127.0.0.1`). For cluster-internal deployment behind a NetworkPolicy,
-that is appropriate.
+### Threat model
 
-Bearer-token auth is on the roadmap (gated by `PPXAI_API_TOKEN` env
-var; default off to preserve loopback UX). Until that lands, anything
-exposing ppxai-server beyond a trusted network MUST gate it at the
-ingress / service-mesh layer (mTLS, OAuth proxy, etc.).
+ppxai-server is an LLM proxy with API-key-spending power. Any client
+that reaches its HTTP port can spend tokens on your provider accounts,
+read provider responses, and (against `/chat`) trigger ppxai's tools.
+"Auth" here is really "who is allowed to spend money and trigger code
+on your behalf."
+
+| Deployment | Trust boundary | Auth required? |
+|---|---|---|
+| Loopback only (TUI / web app / VSCode on localhost) | Same machine — anything on the box already has your `~/.ppxai/.env` | No — adds friction without value |
+| Cluster-internal behind a NetworkPolicy | The cluster | Optional. Defense-in-depth if NetworkPolicy is misconfigured or another pod gets compromised |
+| Exposed beyond cluster (Ingress, NodePort, port-forward, public DNS) | The network | **Mandatory.** Without it, anyone reachable can drain your provider account |
+
+### Enabling auth
+
+Set the `PPXAI_API_TOKEN` environment variable to the token clients
+must present. Empty / whitespace-only values are treated as "auth
+disabled" so a stray empty config entry doesn't lock everyone out.
+
+```bash
+export PPXAI_API_TOKEN="$(openssl rand -hex 32)"
+ppxai-server
+```
+
+Clients send the token via the standard `Authorization: Bearer …`
+header (case-insensitive scheme per RFC 7235):
+
+```http
+POST /v1/oneshot
+Authorization: Bearer <token>
+Content-Type: application/json
+```
+
+### Behavior
+
+- **Auth disabled (default):** all routes serve as before. Localhost
+  desktop UX unchanged.
+- **Auth enabled:** every request needs the right `Authorization`
+  header or it gets `401 Unauthorized` with `WWW-Authenticate: Bearer
+  realm="ppxai"`.
+- **CORS preflight (OPTIONS) is exempted** — browsers don't send
+  `Authorization` on preflight by spec; the actual request that
+  follows is auth-checked normally.
+- **The token is read from the env var on every request.** Operators
+  can rotate / disable / re-enable by updating the variable without a
+  server restart (e.g. via k8s ConfigMap reload, though the pod still
+  needs to see the new value — env-var reload depends on your
+  deployment mechanism).
+
+### What auth doesn't replace
+
+- **NetworkPolicy / mTLS / firewall rules** are still your floor.
+  Tokens can leak (`exec` into a pod, `cat` a mounted secret, `env |
+  grep PPXAI`). Network controls don't.
+- **Provider-side auth** is unaffected. Your NIM / OpenAI / Perplexity
+  API keys are still spent through ppxai; the bearer token only gates
+  who's allowed to invoke the proxy.
+- **Prompt-injection defenses** are not auth's job. A malicious prompt
+  body still works regardless of the caller's identity.
+
+### Limitations of v1
+
+The v1.18.3 model is **single shared token**. Deliberately scoped to
+unblock the loopback-leaving deployments without committing to a
+larger design. Specifically NOT in v1:
+
+- Multiple per-agent tokens (everyone uses the same secret).
+- Per-token attribution in logs (the audit trail says "authenticated
+  caller," not "outlook-monitor").
+- Token rotation / expiry (you rotate by changing the env var; no
+  graceful handover window).
+- Scoped tokens (a token that can call `/v1/oneshot` but not `/chat`).
+- Rate-limiting per token.
+- OAuth/OIDC integration (no JWT validation; no corporate IdP).
+
+If your use case needs any of these, see "Future directions" below
+and either file an issue or write the ADR.
+
+### Future directions
+
+The natural next step is a **token registry** managed via gateway
+endpoints — closer to GitHub PATs than to a login flow:
+
+- `POST /v1/tokens` — create a new token with a name and optional
+  scopes. Returns `{token_id, token_value}`. The full value is shown
+  exactly once (like GitHub).
+- `GET /v1/tokens` — list tokens (without values) — `[{id, name,
+  scopes, created_at, last_used_at}]`.
+- `DELETE /v1/tokens/{id}` — revoke a token.
+- `POST /v1/tokens/{id}/rotate` — generate a new value, invalidate
+  the old, return the new value.
+
+This would supersede the env-var token (kept as a bootstrap mechanism
+for the first token). Each token can carry:
+
+- **`name`** for audit attribution ("outlook-monitor", "incident-responder").
+- **`scopes`** like `["oneshot:invoke", "chat:read"]` so a classifier
+  agent can call `/v1/oneshot` but can't `/chat` with tools.
+- **`expires_at`** for time-bounded rotation.
+- **`last_used_at`** for stale-token detection.
+
+For corporate environments, a third direction is **OIDC / JWT
+validation**: drop the local token registry, validate JWTs from a
+configured issuer (Auth0, Okta, Azure AD, k8s ServiceAccount tokens).
+Each call's identity comes from the JWT's `sub` / `aud` / custom
+claims; ppxai-server doesn't store any secrets. This is the
+production-grade option and ships as `/v1/auth/jwt` config plus an
+optional path-based verification policy. Defer until there's actual
+demand.
+
+**Naming note:** the future endpoints are named `/v1/tokens` (CRUD on
+API tokens, modeled after GitHub PATs) rather than `/v1/auth` (which
+typically means OAuth-style login flows). `/v1/auth/...` is reserved
+for the OIDC/JWT direction if that lands.
+
+These are speculative — no commitment until an ADR pins the design.
+The v1.18.3 single-token model intentionally has no migration cost
+to the registry version (env-var bootstrap stays valid; registry
+becomes the production path).
 
 ---
 
