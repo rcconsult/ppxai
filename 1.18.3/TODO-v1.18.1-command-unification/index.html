@@ -1,0 +1,2025 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Multi-LLM Interface for Developers - Terminal & VSCode">
+      
+      
+      
+        <link rel="canonical" href="https://rcconsult.github.io/ppxai/1.18.3/TODO-v1.18.1-command-unification/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>v1.18.1 — Command Unification (Option A, no compromises) - ppxai Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#v1181-command-unification-option-a-no-compromises" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="ppxai Documentation" class="md-header__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ppxai Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              v1.18.1 — Command Unification (Option A, no compromises)
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="ppxai Documentation" class="md-nav__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ppxai Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../INSTALLATION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../PROVIDER_SETUP/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provider Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../AGENT_MODE_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agent Mode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../BOOTSTRAP_CONTEXT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bootstrap Context
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CONTEXT-INJECTION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Context Injection
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CHECKPOINT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Checkpoint & Undo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../FILE_EDITING_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    File Editing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../SHELL_CONSENT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shell Consent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CUSTOM_TOOL_DEVELOPMENT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CUSTOM_COMMAND_DEVELOPMENT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ARCHITECTURE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ollama-limitations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ollama Limitations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vllm-tool-calling-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    vLLM Tool Calling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CONTAINER_TOOLS_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Container Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../AUTOROUTER-CONFIG/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autorouter Config
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release Notes
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Release Notes
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../RELEASE-NOTES-v1.16.1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../RELEASE-NOTES-v1.16.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../RELEASE-NOTES-v1.15.6/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.15.6
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#why-this-matters-now" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why this matters now
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#locked-design-decisions-user-confirmed-2026-04-25" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Locked design decisions (user confirmed 2026-04-25)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#new-wire-envelope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        New wire envelope
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#side-effect-kinds-name-the-intent-let-the-client-choose-the-rendering" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Side-effect kinds: name the intent, let the client choose the rendering
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#migration-scope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Migration scope
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Migration scope">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a-web-commands-routed-through-bespoke-rest-endpoints-23-migrate-to-factory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A. Web commands routed through bespoke REST endpoints (23) → migrate to factory
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#b-web-commands-handled-locally-in-js-migrate-to-factory-5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        B. Web commands handled locally in JS → migrate to factory (5)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#c-factory-commands-unreachable-from-web-8-add-web-entries" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        C. Factory commands unreachable from web (8) → add web entries
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#d-streaming-commands-generate-explain-test-docs-debug-implement-convert-spec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        D. Streaming commands (/generate, /explain, /test, /docs, /debug, /implement, /convert, /spec)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#e-side-effect-emission-per-command" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        E. Side-effect emission per command
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#implementation-phases" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Implementation phases
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Implementation phases">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#phase-1-server-envelope-dispatcher-rewrite" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 1 — Server: envelope + dispatcher rewrite
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-2-server-gaps-in-factory-new-side-effect-kinds" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 2 — Server: gaps in factory + new side-effect kinds
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-3-web-app-rewrite-command-dispatcherjs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 3 — Web app: rewrite command-dispatcher.js
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-4-vscode-extension-same-migration-with-platform-delegation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 4 — VSCode extension: same migration with platform delegation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-5-tests-doc" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 5 — Tests + doc
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#risk-register" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Risk register
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#out-of-scope-for-v1181" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Out of scope for v1.18.1
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#acceptance-criteria" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Acceptance criteria
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#open-questions-for-next-session" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Open questions for next session
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="v1181-command-unification-option-a-no-compromises">v1.18.1 — Command Unification (Option A, no compromises)<a class="headerlink" href="#v1181-command-unification-option-a-no-compromises" title="Permanent link">&para;</a></h1>
+<p><strong>Branch:</strong> <code>feature/v1.18.1</code> (off master <code>9f1c1f4c</code>)
+<strong>Goal:</strong> Every slash command flows through <code>POST /command/&lt;name&gt;</code> → Python <code>CommandFactory</code>. No bespoke REST endpoints for command logic. Same wire protocol for web app and VSCode extension. Eliminate the split-brain.</p>
+<h2 id="why-this-matters-now">Why this matters now<a class="headerlink" href="#why-this-matters-now" title="Permanent link">&para;</a></h2>
+<p>The PyInstaller hidden-imports bug shipped in v1.17.4 → v1.18.0 (six releases) without anyone noticing because <code>POST /command/</code> was a dead code path for everything except <code>/usage</code>. The 35-case JS dispatcher in <code>command-dispatcher.js</code> and the parallel registrations in <code>CommandFactory</code> were a maintenance hazard masquerading as a working design — every command path was implemented twice, and only one of the two implementations was actually load-bearing.</p>
+<p><strong>Eliminating the parallel implementations</strong> means:
+- One place to change a command's behavior.
+- Tests that exercise the factory cover all clients.
+- The PyInstaller spec failure mode that just bit us becomes a single symptom (every command broken on frozen builds), not a silent six-release drift.
+- Web/VSCode extension stay as thin renderers — they don't re-implement business logic.</p>
+<h2 id="locked-design-decisions-user-confirmed-2026-04-25">Locked design decisions (user confirmed 2026-04-25)<a class="headerlink" href="#locked-design-decisions-user-confirmed-2026-04-25" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>Wire envelope.</strong> <code>POST /command/&lt;name&gt;</code> returns a structured envelope, not raw <code>CommandResult.to_dict()</code>. The envelope cleanly separates the rendered payload from UI side-effect hints (open panel, spawn terminal, refresh tree, etc.) so clients don't have to peek at <code>metadata</code> to decide whether to act.</li>
+<li><strong>Factory is the single dispatcher.</strong> If a command is registered in the Python <code>CommandFactory</code>, every client (web, VSCode, Rich, Textual) reaches it via <code>POST /command/&lt;name&gt;</code>. No bespoke REST endpoint may duplicate command logic.</li>
+<li><strong>VSCode uses the same path.</strong> Identical wire protocol as the web app. The VSCode extension is a renderer over the same envelope, not a parallel command implementation.</li>
+</ol>
+<h2 id="new-wire-envelope">New wire envelope<a class="headerlink" href="#new-wire-envelope" title="Permanent link">&para;</a></h2>
+<p><code>POST /command/&lt;name&gt;</code> will return:</p>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="p">{</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">&quot;ok&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="nt">&quot;result&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="cm">/* CommandResult.to_dict() — rendered payload */</span><span class="w"> </span><span class="p">},</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span><span class="nt">&quot;side_effects&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;open_html_preview&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;http://127.0.0.1:54321/&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;filepath&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/abs/path/index.html&quot;</span><span class="w"> </span><span class="p">},</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;open_terminal&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;cwd&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/abs/cwd&quot;</span><span class="w"> </span><span class="p">},</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;open_editor&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;filepath&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/abs/file.py&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;line&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">12</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;column&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="w"> </span><span class="p">},</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;open_viewer&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;filepath&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/abs/doc.md&quot;</span><span class="w"> </span><span class="p">},</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;refresh_file_tree&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;cwd&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/abs/cwd&quot;</span><span class="w"> </span><span class="p">},</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;show_image&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;filepath&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/abs/img.png&quot;</span><span class="w"> </span><span class="p">},</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;show_pdf&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;filepath&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/abs/doc.pdf&quot;</span><span class="w"> </span><span class="p">},</span>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;set_theme&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;dracula&quot;</span><span class="w"> </span><span class="p">},</span>
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;reveal_in_explorer&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;filepath&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/abs/file.py&quot;</span><span class="w"> </span><span class="p">},</span>
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;prompt_quick_pick&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;title&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Multiple matches&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;items&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="err">...</span><span class="p">],</span><span class="w"> </span><span class="nt">&quot;request_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;...&quot;</span><span class="w"> </span><span class="p">},</span>
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;run_shell&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;command&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;kubectl logs ...&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;cwd&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;/abs/cwd&quot;</span><span class="w"> </span><span class="p">},</span>
+</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;notify&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;level&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;info|warn|error&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;message&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;...&quot;</span><span class="w"> </span><span class="p">},</span>
+</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;vscode_delegate&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;command&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;workbench.action.findInFiles&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;args&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[{</span><span class="nt">&quot;query&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;TODO&quot;</span><span class="p">}]</span><span class="w"> </span><span class="p">}</span>
+</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="w">  </span><span class="p">],</span>
+</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a><span class="w">  </span><span class="nt">&quot;version&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span>
+</span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a><span class="p">}</span>
+</span></code></pre></div>
+<p>Errors (4xx/5xx) keep returning HTTPException as today. The <code>ok</code> field is reserved for command-level success/failure inside a 200 response, mirroring <code>CommandResult.status</code>.</p>
+<p><strong>Schema rules:</strong>
+- <code>result</code> is <code>CommandResult.to_dict()</code> — unchanged shape, just nested under <code>result</code>.
+- <code>side_effects</code> is always an array (possibly empty). Each entry has a <code>kind</code> discriminator.
+- <code>kind</code> values are an open enum — clients ignore unknown kinds gracefully. Adding a new kind is non-breaking.
+- <code>version: 1</code> for forward-compat. Bump if envelope shape changes.</p>
+<p><strong>Why an envelope instead of <code>metadata</code> flags:</strong> UI hints aren't metadata about the result — they're orthogonal directives to the renderer. Mixing them into <code>result.metadata</code> blurs the contract and forces clients to scan <code>metadata</code> for magic keys.</p>
+<h2 id="side-effect-kinds-name-the-intent-let-the-client-choose-the-rendering">Side-effect kinds: name the intent, let the client choose the rendering<a class="headerlink" href="#side-effect-kinds-name-the-intent-let-the-client-choose-the-rendering" title="Permanent link">&para;</a></h2>
+<p>Each <code>kind</code> describes <strong>what the user asked the engine to do</strong>, not how to render it. Clients are free to pick the most native rendering they have:</p>
+<ul>
+<li>The web app builds panels because that's all it has (xterm.js, CodeMirror, embedded iframe).</li>
+<li>The VSCode extension delegates to first-party VSCode APIs whenever possible — <code>vscode.window.createTerminal</code>, <code>vscode.workspace.openTextDocument</code>, <code>vscode.commands.executeCommand('vscode.open', ...)</code>. This gives the user their chosen shell, IntelliSense, debugging integration, multi-cursor, breakpoints, the file types their installed extensions handle, etc.</li>
+</ul>
+<p>The engine doesn't know or care which client honors a side-effect. It emits intent; clients translate.</p>
+<table>
+<thead>
+<tr>
+<th><code>kind</code></th>
+<th>User intent</th>
+<th>Web rendering</th>
+<th>VSCode rendering (delegate to platform)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>open_editor</code></td>
+<td>"let the user edit this file"</td>
+<td>CodeMirror 6 in side panel</td>
+<td><code>vscode.workspace.openTextDocument</code> + <code>showTextDocument({viewColumn: One, preview: false})</code> — full IDE features inherit free</td>
+</tr>
+<tr>
+<td><code>open_viewer</code></td>
+<td>"show this file read-only"</td>
+<td>preview panel with type-appropriate viewer</td>
+<td><code>vscode.commands.executeCommand('vscode.open', uri, {preview: true, viewColumn: Beside})</code> — user's chosen viewer extensions handle non-text files</td>
+</tr>
+<tr>
+<td><code>open_terminal</code></td>
+<td>"give the user a terminal at this cwd"</td>
+<td>xterm.js panel</td>
+<td><code>vscode.window.createTerminal({cwd}).show()</code> — user's shell, profile, history, terminal grouping</td>
+</tr>
+<tr>
+<td><code>run_shell</code></td>
+<td>"execute this command for the user, leave the terminal open"</td>
+<td>xterm.js with command pre-typed</td>
+<td><code>createTerminal({cwd}) + sendText(command)</code> — already implemented at <code>chatPanel.ts:132</code>; just wire to envelope</td>
+</tr>
+<tr>
+<td><code>open_html_preview</code></td>
+<td>"render this HTML live (with reload)"</td>
+<td>iframe in side panel</td>
+<td>existing <code>previewPanel.ts</code> <code>WebviewPanel</code></td>
+</tr>
+<tr>
+<td><code>show_image</code></td>
+<td>"display this image"</td>
+<td>inline <code>&lt;img&gt;</code> viewer</td>
+<td><code>executeCommand('vscode.open', uri)</code> — lets installed image-viewer extensions take over</td>
+</tr>
+<tr>
+<td><code>show_pdf</code></td>
+<td>"display this PDF"</td>
+<td>embedded PDF.js viewer</td>
+<td><code>executeCommand('vscode.open', uri)</code> — installed PDF extensions handle it</td>
+</tr>
+<tr>
+<td><code>reveal_in_explorer</code></td>
+<td>"highlight this in the file tree"</td>
+<td>scroll/expand <code>FileTreeComponent</code></td>
+<td><code>executeCommand('revealInExplorer', uri)</code></td>
+</tr>
+<tr>
+<td><code>refresh_file_tree</code></td>
+<td>"the working tree changed under us"</td>
+<td>refresh <code>FileTreeComponent</code></td>
+<td>usually a no-op (VSCode auto-watches), or <code>executeCommand('workbench.files.action.refreshFilesExplorer')</code></td>
+</tr>
+<tr>
+<td><code>set_theme</code></td>
+<td>"user picked a theme"</td>
+<td>swap CSS class on webview body</td>
+<td>no-op on the extension host (this is webview-only UI; the user's VSCode theme is independent)</td>
+</tr>
+<tr>
+<td><code>prompt_quick_pick</code></td>
+<td>"let the user pick one of N options"</td>
+<td>clickable list in chat</td>
+<td><code>vscode.window.showQuickPick(items)</code> — native palette UI; result POSTed back</td>
+</tr>
+<tr>
+<td><code>notify</code></td>
+<td>"tell the user something"</td>
+<td>toast in chat</td>
+<td><code>vscode.window.showInformationMessage</code> / <code>Warning</code> / <code>Error</code> based on <code>level</code></td>
+</tr>
+<tr>
+<td><code>vscode_delegate</code></td>
+<td>escape hatch for VSCode-only features that have no web equivalent</td>
+<td>ignored</td>
+<td><code>vscode.commands.executeCommand(payload.command, ...payload.args)</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Three taxonomy decisions worth calling out:</strong></p>
+<ol>
+<li><strong><code>open_editor</code> vs <code>open_viewer</code> are split.</strong> Earlier draft used a single <code>open_editor</code> with a <code>read_only</code> flag. VSCode wants different APIs (<code>showTextDocument</code> vs <code>vscode.open</code>), and the split makes the dispatcher mechanical.</li>
+<li><strong><code>spawn_terminal</code> renamed to <code>open_terminal</code>.</strong> Same intent, less verb-noun collision, parallel to <code>open_editor</code> / <code>open_viewer</code>. <code>run_shell</code> is added as a strict superset for "open terminal AND type this command" — what <code>chatPanel.ts:runCommandInTerminal</code> already does.</li>
+<li><strong><code>vscode_delegate</code> is the escape hatch.</strong> Use sparingly — most things should have a stable <code>kind</code> so web has parity. But for genuinely VSCode-only features (search-across-files, source-control panel focus, debug-start) it's cleaner than inventing a fake kind that web has no rendering for.</li>
+</ol>
+<p><strong>Audit: VSCode delegations to preserve through the migration.</strong></p>
+<p>The current extension already delegates correctly in many places. The migration must NOT regress these — they map to the new kinds 1:1:</p>
+<table>
+<thead>
+<tr>
+<th>Current code</th>
+<th>Location</th>
+<th>Maps to kind</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>vscode.window.createTerminal({cwd})</code></td>
+<td><code>chatPanel.ts:138</code></td>
+<td><code>open_terminal</code></td>
+</tr>
+<tr>
+<td><code>createTerminal + sendText(command)</code></td>
+<td><code>chatPanel.ts:132</code> (<code>runCommandInTerminal</code>)</td>
+<td><code>run_shell</code></td>
+</tr>
+<tr>
+<td><code>showTextDocument(doc, {viewColumn: One, preview: false})</code></td>
+<td><code>chatPanel.ts:2589</code> (<code>handleEditCommand</code>)</td>
+<td><code>open_editor</code></td>
+</tr>
+<tr>
+<td><code>showTextDocument(doc, ViewColumn.Beside)</code></td>
+<td><code>chatPanel.ts:243</code>, <code>:2440</code></td>
+<td><code>open_viewer</code> (preview: true, Beside)</td>
+</tr>
+<tr>
+<td><code>executeCommand('vscode.open', uri)</code> for images</td>
+<td><code>chatPanel.ts:1693</code>, <code>:1719</code>, <code>:1733</code>, <code>:1759</code></td>
+<td><code>show_image</code> / <code>show_pdf</code></td>
+</tr>
+<tr>
+<td><code>WebviewPanel</code> for HTML preview</td>
+<td><code>previewPanel.ts</code></td>
+<td><code>open_html_preview</code></td>
+</tr>
+<tr>
+<td><code>showInformationMessage</code> / <code>showWarningMessage</code> / <code>showErrorMessage</code></td>
+<td>many</td>
+<td><code>notify</code> (level field)</td>
+</tr>
+<tr>
+<td><code>showQuickPick</code> for "multiple matches"</td>
+<td><code>chatPanel.ts:751</code>, <code>:814</code>, <code>:870</code></td>
+<td><code>prompt_quick_pick</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="migration-scope">Migration scope<a class="headerlink" href="#migration-scope" title="Permanent link">&para;</a></h2>
+<h3 id="a-web-commands-routed-through-bespoke-rest-endpoints-23-migrate-to-factory">A. Web commands routed through bespoke REST endpoints (23) → migrate to factory<a class="headerlink" href="#a-web-commands-routed-through-bespoke-rest-endpoints-23-migrate-to-factory" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Current bespoke endpoint</th>
+<th>Factory side</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/clear</code></td>
+<td><code>POST /chat/clear</code> (apiClient.clearConversation)</td>
+<td>already in factory (<code>session.py</code>)</td>
+</tr>
+<tr>
+<td><code>/save &lt;name&gt;</code></td>
+<td><code>POST /sessions</code> (saveSession)</td>
+<td>already in factory (<code>session.py</code>)</td>
+</tr>
+<tr>
+<td><code>/load &lt;name&gt;</code></td>
+<td><code>POST /sessions/load</code> (loadSession)</td>
+<td>already in factory (<code>session.py</code>)</td>
+</tr>
+<tr>
+<td><code>/sessions</code></td>
+<td><code>GET /sessions</code> (listSessions)</td>
+<td>already in factory (<code>session.py</code>)</td>
+</tr>
+<tr>
+<td><code>/export &lt;fmt&gt;</code></td>
+<td><code>POST /export</code> (exportAnswer)</td>
+<td>already in factory (<code>session.py</code>)</td>
+</tr>
+<tr>
+<td><code>/model &lt;id&gt;</code></td>
+<td><code>GET /providers/models</code> + UI swap</td>
+<td>already in factory (<code>provider.py</code>)</td>
+</tr>
+<tr>
+<td><code>/provider &lt;id&gt;</code></td>
+<td><code>GET /providers</code> + UI swap</td>
+<td>already in factory (<code>provider.py</code>)</td>
+</tr>
+<tr>
+<td><code>/tools …</code> (status/list/help/agent/set/config)</td>
+<td><code>GET /tools</code>, <code>POST /tools/config</code>, <code>GET /tools/help/&lt;name&gt;</code></td>
+<td>already in factory (<code>tools.py</code>)</td>
+</tr>
+<tr>
+<td><code>/checkpoint …</code> (list/info/clear/undo/backend)</td>
+<td>5 separate <code>/checkpoint/*</code> endpoints</td>
+<td>already in factory (<code>utility.py</code>)</td>
+</tr>
+<tr>
+<td><code>/status</code></td>
+<td><code>GET /status</code> (getStatus)</td>
+<td>already in factory (<code>system.py</code>)</td>
+</tr>
+<tr>
+<td><code>/context …</code> (info/clear/reload/hints/bootstrap)</td>
+<td>5 <code>/context/*</code> endpoints</td>
+<td>already in factory (<code>utility.py</code>)</td>
+</tr>
+<tr>
+<td><code>/cd &lt;path&gt;</code></td>
+<td><code>POST /working-dir</code></td>
+<td>already in factory (<code>utility.py</code>)</td>
+</tr>
+<tr>
+<td><code>/pwd</code></td>
+<td><code>GET /working-dir</code></td>
+<td>already in factory (<code>utility.py</code>)</td>
+</tr>
+<tr>
+<td><code>/config</code></td>
+<td><code>GET /config/path</code></td>
+<td>already in factory (<code>system.py</code>)</td>
+</tr>
+<tr>
+<td><code>/ls &lt;path&gt;</code></td>
+<td><code>GET /files?path=</code></td>
+<td>already in factory (<code>utility.py</code>)</td>
+</tr>
+<tr>
+<td><code>/tree &lt;path&gt;</code></td>
+<td><code>GET /files/tree</code></td>
+<td>already in factory (<code>utility.py</code>)</td>
+</tr>
+<tr>
+<td><code>/show &lt;file&gt;</code>, <code>/cat &lt;file&gt;</code></td>
+<td><code>GET /files/read</code></td>
+<td>already in factory (<code>display.py</code>)</td>
+</tr>
+</tbody>
+</table>
+<p>The bespoke REST endpoints stay alive for now (they back non-command UI: dropdowns, file-tree widget, autosave). What changes is the <strong>command dispatch path</strong> — <code>command-dispatcher.js</code> no longer calls <code>apiClient.getStatus()</code>, it calls <code>apiClient.executeCommand('status')</code>. Several endpoints become candidates for retirement once nothing dispatches commands through them; that audit happens in a follow-up PR (Phase 3 below).</p>
+<h3 id="b-web-commands-handled-locally-in-js-migrate-to-factory-5">B. Web commands handled locally in JS → migrate to factory (5)<a class="headerlink" href="#b-web-commands-handled-locally-in-js-migrate-to-factory-5" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Current local handler</th>
+<th>Migration</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/help</code></td>
+<td><code>showHelp()</code> builds markdown locally from <code>SharedCommands</code></td>
+<td>factory <code>system.help</code> exists; envelope returns <code>MarkdownResult</code></td>
+</tr>
+<tr>
+<td><code>/theme &lt;name&gt;</code></td>
+<td><code>handleThemeCommand</code> swaps CSS class locally</td>
+<td>factory has <code>system.theme</code>; <code>side_effects: [{kind:"set_theme", name}]</code></td>
+</tr>
+<tr>
+<td><code>/preview &lt;file&gt;</code></td>
+<td>builds URL locally, opens panel</td>
+<td>factory <code>display.preview</code> exists; <code>side_effects: [{kind:"open_preview", url, filepath}]</code></td>
+</tr>
+<tr>
+<td><code>/terminal</code>, <code>/term</code>, <code>/sh</code></td>
+<td><code>handleTerminalCommand</code> opens terminal panel</td>
+<td>factory <code>system.terminal</code> exists; <code>side_effects: [{kind:"spawn_terminal", cwd}]</code></td>
+</tr>
+<tr>
+<td><code>/edit &lt;file&gt;</code></td>
+<td><code>app.handleEditCommand</code> opens editor panel</td>
+<td>factory has <code>display.show</code> (read_only=false variant); add <code>display.edit</code> or extend <code>show</code>; <code>side_effects: [{kind:"open_editor", filepath, read_only:false}]</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="c-factory-commands-unreachable-from-web-8-add-web-entries">C. Factory commands unreachable from web (8) → add web entries<a class="headerlink" href="#c-factory-commands-unreachable-from-web-8-add-web-entries" title="Permanent link">&para;</a></h3>
+<p>These commands are registered server-side but the web JS dispatcher has no <code>case</code> for them:</p>
+<p><code>/copy</code>, <code>/autoroute</code>, <code>/undo</code>, <code>/attach</code>, <code>/doctor</code>, <code>/keys</code>, <code>/debug-log</code>, <code>/mycommand</code></p>
+<p>After Phase 1's switch table refactor (see below), the JS dispatcher becomes a generic forward-to-factory function — these commands work automatically. Phase 2 explicitly tests each one to confirm.</p>
+<h3 id="d-streaming-commands-generate-explain-test-docs-debug-implement-convert-spec">D. Streaming commands (<code>/generate</code>, <code>/explain</code>, <code>/test</code>, <code>/docs</code>, <code>/debug</code>, <code>/implement</code>, <code>/convert</code>, <code>/spec</code>)<a class="headerlink" href="#d-streaming-commands-generate-explain-test-docs-debug-implement-convert-spec" title="Permanent link">&para;</a></h3>
+<p>These keep using <code>POST /chat</code> because they're <strong>chat-message-shaped</strong> — the factory lookup just decides what system prompt to use, but the streaming response itself isn't a command result. <strong>No change</strong> to their dispatch path; they're listed here only to document why they're excluded from the migration.</p>
+<h3 id="e-side-effect-emission-per-command">E. Side-effect emission per command<a class="headerlink" href="#e-side-effect-emission-per-command" title="Permanent link">&para;</a></h3>
+<p>Each of the commands below emits one or more side-effects. Clients pick the rendering — see the full kind→behavior matrix in "Side-effect kinds" above:</p>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>side_effect kind</th>
+<th>Payload</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/preview &lt;file&gt;</code></td>
+<td><code>open_html_preview</code></td>
+<td><code>{url, filepath}</code></td>
+</tr>
+<tr>
+<td><code>/preview &lt;file&gt; --serve</code></td>
+<td><code>open_html_preview</code></td>
+<td><code>{url, filepath, served: true}</code></td>
+</tr>
+<tr>
+<td><code>/preview &lt;file&gt; --proxy &lt;port&gt;</code></td>
+<td><code>open_html_preview</code></td>
+<td><code>{url, filepath, proxied: true}</code></td>
+</tr>
+<tr>
+<td><code>/terminal</code>, <code>/term</code>, <code>/sh</code></td>
+<td><code>open_terminal</code></td>
+<td><code>{cwd}</code></td>
+</tr>
+<tr>
+<td><code>/edit &lt;file[:line[:col]]&gt;</code></td>
+<td><code>open_editor</code></td>
+<td><code>{filepath, line?, column?}</code></td>
+</tr>
+<tr>
+<td><code>/show &lt;text-file&gt;</code></td>
+<td><code>open_viewer</code></td>
+<td><code>{filepath}</code></td>
+</tr>
+<tr>
+<td><code>/show &lt;image&gt;</code></td>
+<td><code>show_image</code></td>
+<td><code>{filepath}</code></td>
+</tr>
+<tr>
+<td><code>/show &lt;pdf&gt;</code></td>
+<td><code>show_pdf</code></td>
+<td><code>{filepath}</code></td>
+</tr>
+<tr>
+<td><code>/cd &lt;path&gt;</code></td>
+<td><code>refresh_file_tree</code></td>
+<td><code>{cwd}</code></td>
+</tr>
+<tr>
+<td><code>/theme &lt;name&gt;</code></td>
+<td><code>set_theme</code></td>
+<td><code>{name}</code> (web only honors; VSCode no-ops)</td>
+</tr>
+<tr>
+<td><code>/show @query</code> (multiple matches)</td>
+<td><code>prompt_quick_pick</code></td>
+<td><code>{title, items: [{label, value}], request_id}</code></td>
+</tr>
+<tr>
+<td><code>/edit @query</code> (multiple matches)</td>
+<td><code>prompt_quick_pick</code></td>
+<td>same shape</td>
+</tr>
+<tr>
+<td>any handler that wants to surface a recoverable error</td>
+<td><code>notify</code></td>
+<td><code>{level, message}</code></td>
+</tr>
+</tbody>
+</table>
+<p>Other commands return <code>side_effects: []</code>.</p>
+<p><strong>Quick-pick result roundtrip.</strong> When the user picks an option from a <code>prompt_quick_pick</code>, the client POSTs <code>/command/{name}/resume?request_id=...&amp;choice=&lt;value&gt;</code> (or similar — exact endpoint TBD in Phase 2). The factory looks up the pending continuation by <code>request_id</code> and resumes the handler. This lets the engine emit "I need a choice" without blocking on a synchronous prompt, and lets both clients render the prompt natively.</p>
+<h2 id="implementation-phases">Implementation phases<a class="headerlink" href="#implementation-phases" title="Permanent link">&para;</a></h2>
+<h3 id="phase-1-server-envelope-dispatcher-rewrite">Phase 1 — Server: envelope + dispatcher rewrite<a class="headerlink" href="#phase-1-server-envelope-dispatcher-rewrite" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong><code>ppxai/server/routes/commands.py</code></strong> — wrap response in envelope. Build <code>side_effects</code> list from <code>result.metadata.side_effects</code> (a typed list the handlers populate). Keep envelope construction in the route, not in the handlers.</li>
+<li><strong><code>ppxai/commands/results.py</code></strong> — add <code>SideEffect</code> dataclass and <code>CommandResult.side_effects: List[SideEffect]</code> field. Helpers: <code>add_side_effect(kind, **payload)</code>. Each existing handler that opens panels gets a one-line addition.</li>
+<li><strong>Tests</strong> — <code>tests/test_command_envelope.py</code> — pin the envelope shape, exercise every kind. Sentinel test for <code>version=1</code>.</li>
+<li><strong>Existing factory handlers updated</strong> to emit side_effects: <code>display.preview</code>, <code>display.show</code> (when image/pdf), <code>system.terminal</code>, <code>display.edit</code> (new — see Phase 2), <code>utility.cd</code>, <code>system.theme</code>.</li>
+</ol>
+<h3 id="phase-2-server-gaps-in-factory-new-side-effect-kinds">Phase 2 — Server: gaps in factory + new side-effect kinds<a class="headerlink" href="#phase-2-server-gaps-in-factory-new-side-effect-kinds" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Rename + split side-effect kinds</strong> in <code>ppxai/commands/results.py</code> SideEffect documentation:</li>
+<li><code>spawn_terminal</code> → <code>open_terminal</code></li>
+<li>Split single <code>open_editor</code> (with <code>read_only</code> flag) into separate <code>open_editor</code> (editable) + <code>open_viewer</code> (read-only)</li>
+<li>Add <code>run_shell</code>, <code>reveal_in_explorer</code>, <code>prompt_quick_pick</code>, <code>vscode_delegate</code> as new kinds</li>
+<li>Update existing handlers wired in Phase 1 (<code>/preview</code>, <code>/show</code>, <code>/cd</code>, <code>/theme</code>, <code>/terminal</code>) to emit the renamed kinds</li>
+<li><strong>Add <code>display.edit</code></strong> (port from Textual <code>cmd_edit</code> in <code>ppxai/tui/commands.py:169</code>, including new-file creation) to handle <code>/edit &lt;file&gt;</code>. Emits <code>open_editor</code> side-effect with <code>{filepath, line, column}</code> (no <code>read_only</code> field — the kind itself signals editability).</li>
+<li><strong>Update <code>/show</code></strong> to emit <code>open_viewer</code> for text files (currently just returns the result; clients infer the kind from <code>result.type</code>). Image and PDF paths already emit <code>show_image</code> / <code>show_pdf</code> (Phase 1).</li>
+<li><strong>Quick-pick refactor.</strong> Move the "multiple matches" logic out of <code>chatPanel.ts:751,814,870</code> and <code>app.js handleShowCommand</code> into <code>display.show</code> and <code>display.edit</code> — the factory handler emits <code>prompt_quick_pick</code> when fuzzy search returns multiple hits, instead of forcing each client to build its own picker.</li>
+<li><strong>Verify each of the 8 unreachable commands</strong> runs through <code>POST /command/</code>. Many are TUI-only today (<code>/keys</code>, <code>/copy</code>, <code>/debug-log</code>, <code>/mycommand</code>); web/VSCode renderers may render them no-op or emit <code>notify</code> side_effects. Decision per command, documented in this file.</li>
+<li><strong><code>/help</code> web parity</strong> — confirm <code>system.help</code> returns a <code>MarkdownResult</code> whose content matches the JS-built version, or pick one canonical source.</li>
+</ol>
+<h3 id="phase-3-web-app-rewrite-command-dispatcherjs">Phase 3 — Web app: rewrite <code>command-dispatcher.js</code><a class="headerlink" href="#phase-3-web-app-rewrite-command-dispatcherjs" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Replace 35-case switch with a thin shell</strong>:
+   <div class="language-js highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="k">async</span><span class="w"> </span><span class="nx">dispatch</span><span class="p">(</span><span class="nx">input</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="p">[</span><span class="nx">cmd</span><span class="p">,</span><span class="w"> </span><span class="p">...</span><span class="nx">rest</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">input</span><span class="p">.</span><span class="nx">trim</span><span class="p">().</span><span class="nx">split</span><span class="p">(</span><span class="sr">/\s+/</span><span class="p">);</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">args</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">rest</span><span class="p">.</span><span class="nx">join</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">);</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">  </span><span class="c1">// Streaming commands keep using /chat</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nx">STREAMING_COMMANDS</span><span class="p">.</span><span class="nx">has</span><span class="p">(</span><span class="nx">cmd</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">    </span><span class="k">this</span><span class="p">.</span><span class="nx">app</span><span class="p">.</span><span class="nx">addMessage</span><span class="p">(</span><span class="s1">&#39;user&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">input</span><span class="p">);</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="k">this</span><span class="p">.</span><span class="nx">app</span><span class="p">.</span><span class="nx">streamChat</span><span class="p">(</span><span class="nx">input</span><span class="p">);</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">  </span><span class="p">}</span>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">  </span><span class="k">this</span><span class="p">.</span><span class="nx">app</span><span class="p">.</span><span class="nx">showSystemMessage</span><span class="p">(</span><span class="sb">`&gt; </span><span class="si">${</span><span class="nx">input</span><span class="si">}</span><span class="sb">`</span><span class="p">);</span>
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="w">  </span><span class="kd">const</span><span class="w"> </span><span class="nx">envelope</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">await</span><span class="w"> </span><span class="k">this</span><span class="p">.</span><span class="nx">app</span><span class="p">.</span><span class="nx">apiClient</span><span class="p">.</span><span class="nx">executeCommand</span><span class="p">(</span><span class="nx">cmd</span><span class="p">.</span><span class="nx">slice</span><span class="p">(</span><span class="mf">1</span><span class="p">),</span><span class="w"> </span><span class="nx">args</span><span class="p">);</span>
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="w">  </span><span class="k">this</span><span class="p">.</span><span class="nx">renderer</span><span class="p">.</span><span class="nx">render</span><span class="p">(</span><span class="nx">envelope</span><span class="p">.</span><span class="nx">result</span><span class="p">);</span>
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="w">  </span><span class="k">this</span><span class="p">.</span><span class="nx">sideEffects</span><span class="p">.</span><span class="nx">apply</span><span class="p">(</span><span class="nx">envelope</span><span class="p">.</span><span class="nx">side_effects</span><span class="p">);</span>
+</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="p">}</span>
+</span></code></pre></div></li>
+<li><strong><code>renderer.js</code></strong> — type-based renderer keyed off <code>result.type</code> (already the convention from v1.15.0 type-based dispatch). Most types already have web renderers; this consolidates them.</li>
+<li><strong><code>side-effects.js</code></strong> — small handler that maps <code>kind</code> → DOM action (open panel, refresh file tree, etc.). Replaces the inline panel-opening code scattered across <code>app.js</code> / <code>command-dispatcher.js</code>.</li>
+<li><strong>Smoke-test every command</strong> from the migration scope tables in a dev server.</li>
+</ol>
+<h3 id="phase-4-vscode-extension-same-migration-with-platform-delegation">Phase 4 — VSCode extension: same migration with platform delegation<a class="headerlink" href="#phase-4-vscode-extension-same-migration-with-platform-delegation" title="Permanent link">&para;</a></h3>
+<p>The big advantage of VSCode is that we can delegate to first-party APIs and installed extensions. This phase preserves the existing delegations (see audit table in "Side-effect kinds") and routes them through the new envelope-driven dispatcher.</p>
+<ol>
+<li>
+<p><strong><code>vscode-extension/src/chatPanel.ts</code></strong> — replace the per-command <code>case '/edit':</code> / <code>case '/show':</code> / <code>case '/preview':</code> branches (lines ~921-947) with a single dispatcher: <code>httpClient.executeCommand(cmd, args)</code> → envelope renderer + side-effect mapper. The existing methods (<code>handleEditCommand</code>, <code>handleShowCommand</code>, <code>handlePreviewCommand</code>) get rewritten as side-effect handlers, not command branches.</p>
+</li>
+<li>
+<p><strong><code>vscode-extension/media/webview/main.js</code></strong> — webview-side type renderer mirrors the web app's <code>renderer.js</code>. The webview only renders the <code>result</code> payload; all side effects round-trip to the extension host via <code>vscode.postMessage</code> because only the extension has the <code>vscode.*</code> API.</p>
+</li>
+<li>
+<p><strong>Side-effect handler</strong> — <code>vscode-extension/src/sideEffects.ts</code> (new) maps each kind to the right VSCode API. <strong>Audit table from earlier MUST be honored 1:1</strong> — these are existing behaviors users depend on:</p>
+</li>
+<li>
+<p><code>open_editor</code> → <code>workspace.openTextDocument</code> + <code>showTextDocument({viewColumn: One, preview: false})</code> with line/column jump</p>
+</li>
+<li><code>open_viewer</code> → <code>executeCommand('vscode.open', uri, {preview: true, viewColumn: Beside})</code></li>
+<li><code>open_terminal</code> → <code>window.createTerminal({cwd, name: 'ppxai'}).show()</code></li>
+<li><code>run_shell</code> → <code>createTerminal + sendText(command)</code> (port from existing <code>runCommandInTerminal</code>)</li>
+<li><code>open_html_preview</code> → existing <code>previewPanel.ts</code> <code>WebviewPanel</code> (no change to that module)</li>
+<li><code>show_image</code> / <code>show_pdf</code> → <code>executeCommand('vscode.open', uri)</code> (delegates to the user's image/PDF extension; works for <code>.png</code>, <code>.jpg</code>, <code>.svg</code>, <code>.pdf</code>, etc.)</li>
+<li><code>reveal_in_explorer</code> → <code>executeCommand('revealInExplorer', uri)</code></li>
+<li><code>refresh_file_tree</code> → <code>executeCommand('workbench.files.action.refreshFilesExplorer')</code> (or no-op if VSCode auto-watches)</li>
+<li><code>set_theme</code> → no-op on extension; the webview applies it to its own DOM</li>
+<li><code>prompt_quick_pick</code> → <code>window.showQuickPick(items)</code>; the chosen value POSTs back via <code>/command/{name}/resume</code></li>
+<li><code>notify</code> → <code>showInformationMessage</code> / <code>showWarningMessage</code> / <code>showErrorMessage</code> based on <code>level</code></li>
+<li>
+<p><code>vscode_delegate</code> → <code>executeCommand(payload.command, ...payload.args)</code> — escape hatch</p>
+</li>
+<li>
+<p><strong>Don't regress existing delegations.</strong> Anything from the audit table that already works (terminal-command execution, native editor open, image-via-<code>vscode.open</code>) MUST keep working byte-for-byte. The migration changes WHERE the delegation is triggered (envelope <code>kind</code> instead of inline <code>case '/...':</code>) — not WHAT it does.</p>
+</li>
+<li>
+<p><strong>Smoke-test every command</strong> in a packaged <code>.vsix</code> against <code>ppxai-server</code>. Particular attention to:</p>
+</li>
+<li><code>/edit</code> → opens in primary editor with line jump, NOT preview mode</li>
+<li><code>/show &lt;pdf&gt;</code> → opens with user's PDF extension (or built-in fallback)</li>
+<li><code>/terminal</code> → integrated terminal at session cwd, with the user's chosen shell profile</li>
+<li><code>/preview index.html</code> → existing WebviewPanel, no regression in live-reload behavior</li>
+</ol>
+<h3 id="phase-5-tests-doc">Phase 5 — Tests + doc<a class="headerlink" href="#phase-5-tests-doc" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong><code>tests/test_command_envelope.py</code></strong> — envelope shape pinning.</li>
+<li><strong><code>tests/test_command_factory_completeness.py</code></strong> — every command name documented in <code>slashCommands</code> (web <code>app.js</code>) AND in VSCode <code>package.json</code> contributions exists in <code>CommandFactory</code>. Catches additions that drift the three sources.</li>
+<li><strong><code>tests/test_pyinstaller_spec_completeness.py</code></strong> (already exists) — already covers the hidden-imports failure mode.</li>
+<li><strong>End-to-end tests</strong> — <code>tests/test_command_e2e_web.py</code> hitting the FastAPI app via <code>httpx.AsyncClient</code>, exercising each command's envelope. ~40 tests total.</li>
+<li><strong>Update <code>CLAUDE.md</code></strong> — Critical Architecture Pattern: "All command dispatch goes through <code>POST /command/&lt;name&gt;</code>. No bespoke REST endpoints for command logic. Side effects are envelope-driven."</li>
+<li><strong>Update <code>docs/ARCHITECTURE.md</code></strong> — add command dispatch flow diagram.</li>
+</ol>
+<h2 id="risk-register">Risk register<a class="headerlink" href="#risk-register" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Risk</th>
+<th>Mitigation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Breaking <code>/usage</code> (currently the only factory-routed command)</td>
+<td>Keep envelope backward-compatible: clients can still read <code>result.*</code> directly; envelope just adds <code>result</code> and <code>side_effects</code> wrappers. Old <code>/usage</code> client code keeps working until ported.</td>
+</tr>
+<tr>
+<td>Wire-protocol drift between Python factory + JS slashCommands list + VSCode package.json</td>
+<td>Phase 5 completeness test</td>
+</tr>
+<tr>
+<td><code>/preview</code> server already emits ad-hoc URL — must not double-emit</td>
+<td>Audit <code>display.preview</code> handler; consolidate URL build in one place</td>
+</tr>
+<tr>
+<td>VSCode webview ↔ extension-host hop adds latency on side_effects</td>
+<td>Acceptable — side_effects fire on user-initiated commands, not in stream loop</td>
+</tr>
+<tr>
+<td>TUI handlers (Rich + Textual) currently call factory in-process — envelope must work for in-process callers too</td>
+<td>Envelope is HTTP-shaped; TUIs unwrap <code>envelope.result</code> immediately. Or: factory returns <code>(CommandResult, List[SideEffect])</code> tuple internally; route wraps it for HTTP.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="out-of-scope-for-v1181">Out of scope for v1.18.1<a class="headerlink" href="#out-of-scope-for-v1181" title="Permanent link">&para;</a></h2>
+<ul>
+<li>AppState codegen (deferred to v1.18.2 — see <code>docs/TODO-appstate-codegen.md</code>)</li>
+<li>Multi-model routing infrastructure (deferred to v1.18.2 — see <code>docs/TODO-routing.md</code>)</li>
+<li>Per-client keyboard binding registries for <code>/keys</code> (deferred to v1.18.2 — see <code>docs/TODO-v1.18.2-keys-binding-registries.md</code> and <code>docs/decisions/0001-keys-command-cross-client.md</code>). v1.18.1 ships Option B (universal markdown + <code>vscode_delegate</code>); Option A is the proper solution when triggers fire.</li>
+<li>Retiring bespoke REST endpoints (Phase 6, separate PR after migration is stable)</li>
+</ul>
+<h2 id="acceptance-criteria">Acceptance criteria<a class="headerlink" href="#acceptance-criteria" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[ ] <code>POST /command/&lt;name&gt;</code> returns the v1 envelope for every registered command.</li>
+<li>[ ] Web <code>command-dispatcher.js</code> has zero <code>case '/...':</code> branches outside the streaming-command set; everything else flows through <code>executeCommand</code>.</li>
+<li>[ ] VSCode <code>chatPanel.ts</code> has zero per-command branches outside the streaming-command set; envelope dispatcher routes everything.</li>
+<li>[ ] Every command name in web <code>slashCommands</code> and VSCode <code>package.json</code> exists in <code>CommandFactory</code> (verified by test).</li>
+<li>[ ] Every side-effect kind documented in this file has a handler in BOTH <code>web/sideEffects.js</code> and <code>vscode-extension/src/sideEffects.ts</code>. Unknown kinds are silently ignored (open-enum contract).</li>
+<li>[ ] VSCode delegations from the audit table are preserved byte-for-byte: <code>/edit</code> opens in primary editor (not preview), <code>/terminal</code> uses integrated terminal with user's shell profile, <code>/show &lt;pdf&gt;</code> delegates to installed PDF extension.</li>
+<li>[ ] <code>prompt_quick_pick</code> round-trip works: server emits, client renders (web list / VSCode quick-pick), choice POSTs back, handler resumes.</li>
+<li>[ ] <code>vscode_delegate</code> escape hatch exists and is documented; web ignores it cleanly.</li>
+<li>[ ] <code>tests/test_command_envelope.py</code> + <code>tests/test_command_e2e_web.py</code> green; <code>tests/test_command_factory_completeness.py</code> blocks future drift.</li>
+<li>[ ] PyInstaller spec completeness test still green.</li>
+</ul>
+<h2 id="open-questions-for-next-session">Open questions for next session<a class="headerlink" href="#open-questions-for-next-session" title="Permanent link">&para;</a></h2>
+<ol>
+<li>Should the in-process factory call (TUI) also go through the envelope, or should the route layer be the only place that wraps? <strong>Tentative pick:</strong> route wraps; TUI keeps direct factory access. Less churn, no functional difference.</li>
+<li><code>/help</code> content — is the JS-side help text richer than what <code>system.help</code> returns? Need to compare and consolidate.</li>
+<li>Should we add a <code>kind: "follow_up_chat"</code> side effect for commands that want to inject a chat message after rendering? (Edge case, may not need.)</li>
+<li><strong><code>prompt_quick_pick</code> resume protocol.</strong> Two options: (a) new <code>POST /command/{name}/resume?request_id=...</code> endpoint with a registry of pending continuations on the server; (b) treat the user's choice as a fresh <code>POST /command/&lt;name&gt;</code> with the <code>args</code> containing the resolved value. (b) is simpler but requires every <code>prompt_quick_pick</code>-emitting command to have idempotent semantics. <strong>Tentative pick:</strong> (b) for v1.18.1 — defer (a) until a command actually needs mid-flight state preserved.</li>
+<li><strong>VSCode delegate audit.</strong> Beyond the listed kinds, are there VSCode features the engine should be aware of so it can emit a <code>vscode_delegate</code> proactively? Examples: <code>git.openChange</code> for diff views, <code>workbench.action.openSettings</code> for <code>/config</code>, <code>workbench.action.tasks.runTask</code> for <code>/run</code>. None are blockers — <code>vscode_delegate</code> is the escape hatch, so this can grow organically.</li>
+</ol>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/rcconsult/ppxai" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

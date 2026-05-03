@@ -1,0 +1,1760 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Multi-LLM Interface for Developers - Terminal & VSCode">
+      
+      
+      
+        <link rel="canonical" href="https://rcconsult.github.io/ppxai/1.18.3/CONSENT-CONTRACT/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Consent Contract - ppxai Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#consent-contract" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="ppxai Documentation" class="md-header__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ppxai Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Consent Contract
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="ppxai Documentation" class="md-nav__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ppxai Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../INSTALLATION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../PROVIDER_SETUP/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provider Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../AGENT_MODE_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agent Mode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../BOOTSTRAP_CONTEXT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bootstrap Context
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CONTEXT-INJECTION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Context Injection
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CHECKPOINT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Checkpoint & Undo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../FILE_EDITING_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    File Editing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../SHELL_CONSENT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shell Consent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CUSTOM_TOOL_DEVELOPMENT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CUSTOM_COMMAND_DEVELOPMENT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ARCHITECTURE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ollama-limitations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ollama Limitations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vllm-tool-calling-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    vLLM Tool Calling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CONTAINER_TOOLS_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Container Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../AUTOROUTER-CONFIG/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autorouter Config
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release Notes
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Release Notes
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../RELEASE-NOTES-v1.16.1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../RELEASE-NOTES-v1.16.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../RELEASE-NOTES-v1.15.6/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.15.6
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#tldr" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TL;DR
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#file-edit-consent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        File edit consent
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="File edit consent">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what-this-covers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What this covers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-this-does-not-cover" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What this does NOT cover
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#shell-command-consent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shell command consent
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Shell command consent">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#default-fail-safe-behavior" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Default fail-safe behavior
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#never-patterns-catastrophic-cant-be-overridden" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        NEVER patterns (catastrophic — can't be overridden)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#safe-patterns-bypass-no-prompt" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SAFE patterns (bypass — no prompt)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dangerous-default-prompts-each-time-unless-always" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DANGEROUS (default — prompts each time unless ALWAYS)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-this-covers_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What this covers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-this-does-not-cover_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What this does NOT cover
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#document-tool-reads-csvpdfdocxxlsxpptx" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Document tool reads (CSV/PDF/DOCX/XLSX/PPTX)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#whats-not-covered-by-the-consent-layer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What's NOT covered by the consent layer
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#test-coverage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Test coverage
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#when-to-update-this-doc" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When to update this doc
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#related-documents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Related documents
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="consent-contract">Consent Contract<a class="headerlink" href="#consent-contract" title="Permanent link">&para;</a></h1>
+<p><strong>Status:</strong> Reference. Update when consent layer behavior changes.
+<strong>Audience:</strong> ppxai contributors and security reviewers.
+<strong>Last verified:</strong> 2026-04-26 (covered by <code>tests/test_tool_security.py</code> +
+<code>tests/test_file_editing_tools.py</code>).</p>
+<p>This doc is the single source of truth for what triggers a consent
+prompt in ppxai, what the prompt covers, what bypasses it, and what
+remains the user's responsibility outside the consent layer.</p>
+<p>The contract is enforced by:</p>
+<ul>
+<li><a href="../ppxai/engine/consent_ops.py"><code>ppxai/engine/consent_ops.py</code></a>
+  — file edit + shell consent flows</li>
+<li><a href="../ppxai/common/consent.py"><code>ppxai/common/consent.py</code></a>
+  — <code>classify_shell_command</code> + ConsentResponse normalization</li>
+<li><a href="../ppxai/engine/tools/builtin/editor.py"><code>ppxai/engine/tools/builtin/editor.py</code></a>
+  — every editor tool calls <code>request_file_edit_consent</code> first</li>
+<li><a href="../ppxai/engine/tools/builtin/shell.py"><code>ppxai/engine/tools/builtin/shell.py</code></a>
+  — <code>ShellExecuteTool</code> calls <code>request_shell_consent</code> first</li>
+<li><a href="../ppxai/engine/tools/builtin/container.py"><code>ppxai/engine/tools/builtin/container.py</code></a>
+  — <code>ConsentCLITool</code> (and subclasses: <code>DockerConsentTool</code>,
+  <code>KubeConsentTool</code>) call <code>request_shell_consent</code> before subprocess</li>
+</ul>
+<h2 id="tldr">TL;DR<a class="headerlink" href="#tldr" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Operation</th>
+<th>Triggers consent?</th>
+<th>Default if no callback</th>
+<th>Persistence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>apply_patch</code> / <code>replace_block</code> / <code>insert_text</code> / <code>delete_lines</code></td>
+<td>YES</td>
+<td><strong>Allow</strong> (back-compat)</td>
+<td>Per-file in session.allowed_files; mode YES/ALWAYS/NEVER session-wide</td>
+</tr>
+<tr>
+<td><code>read_file</code> / <code>list_directory</code> / <code>search_files</code></td>
+<td>NO</td>
+<td>n/a</td>
+<td>n/a — read-only</td>
+</tr>
+<tr>
+<td><code>shell_execute</code> (NEVER pattern)</td>
+<td>NO — blocked</td>
+<td>n/a</td>
+<td>n/a</td>
+</tr>
+<tr>
+<td><code>shell_execute</code> (SAFE pattern)</td>
+<td>NO — bypasses</td>
+<td>n/a</td>
+<td>n/a</td>
+</tr>
+<tr>
+<td><code>shell_execute</code> (DANGEROUS or unclassified)</td>
+<td>YES</td>
+<td><strong>Deny</strong> (fail-safe)</td>
+<td>Per-command in session.allowed_commands; mode YES/ALWAYS/NEVER session-wide</td>
+</tr>
+<tr>
+<td><code>ConsentCLITool</code> (Docker, kubectl write paths)</td>
+<td>YES (via shell consent)</td>
+<td><strong>Deny</strong></td>
+<td>Same as shell_execute</td>
+</tr>
+<tr>
+<td>Document tool reads (CSV/PDF/DOCX/XLSX/PPTX)</td>
+<td>NO</td>
+<td>n/a</td>
+<td>n/a — read-only</td>
+</tr>
+<tr>
+<td>Network/HTTP tools</td>
+<td>NO</td>
+<td>n/a</td>
+<td>n/a — see "What's NOT covered" below</td>
+</tr>
+</tbody>
+</table>
+<h2 id="file-edit-consent">File edit consent<a class="headerlink" href="#file-edit-consent" title="Permanent link">&para;</a></h2>
+<p>Triggered by every editor tool's first call per file in a session. Flow:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>editor.execute(file_path, ...)
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>  → engine.request_file_edit_consent(file_path)
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    → resolve to absolute path (Path.resolve())
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    → if agent_mode AND first edit AND checkpoint_manager: create checkpoint
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    → if session.edit_consent_mode == ALWAYS: return True
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    → if session.edit_consent_mode == NEVER: return False
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    → if path in session.allowed_files: return True (already consented)
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    → if no callback: return True (back-compat default)
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    → emit CONSENT_REQUEST event
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    → await consent_callback(absolute_path)
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    → response in {YES, ALWAYS, NEVER, NO}
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>        YES    → add to allowed_files, return True
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>        ALWAYS → set session.edit_consent_mode = ALWAYS, return True
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>        NEVER  → set session.edit_consent_mode = NEVER, return False
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>        NO     → return False (does NOT add to allowed_files)
+</span></code></pre></div>
+<h3 id="what-this-covers">What this covers<a class="headerlink" href="#what-this-covers" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Path traversal at the consent layer</strong> — the path is resolved via
+  <code>Path.resolve()</code> <em>before</em> the callback fires, so the user sees the
+  fully-normalized absolute path. A malicious LLM passing <code>../../etc/passwd</code>
+  cannot hide the target.</li>
+<li><strong>Symlinks</strong> — <code>Path.resolve()</code> follows them. The callback sees the
+  <em>real</em> target, not the link path. The user-facing prompt shows where
+  the edit will land.</li>
+<li><strong>Per-file granularity</strong> — saying YES to <code>/path/a.txt</code> does not
+  pre-approve <code>/path/b.txt</code>. Each file gets its own prompt unless the
+  user picks ALWAYS.</li>
+<li><strong>Session-wide modes</strong> — ALWAYS and NEVER persist across all
+  subsequent file edits in the current session, but NOT across sessions
+  (the next ppxai run starts fresh in mode NORMAL).</li>
+<li><strong>Agent-mode checkpoint</strong> — first file edit in agent_mode creates a
+  recovery checkpoint before the change. <code>/undo</code> rolls back to the
+  pre-edit state.</li>
+</ul>
+<h3 id="what-this-does-not-cover">What this does NOT cover<a class="headerlink" href="#what-this-does-not-cover" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Read-only operations</strong> — <code>read_file</code>, <code>list_directory</code>,
+  <code>search_files</code>. The LLM may legitimately need to read system config
+  (<code>/etc/hosts</code>, <code>~/.gitconfig</code>, <code>/proc/meminfo</code>) to give correct
+  advice. Reads are unrestricted at the tool layer; sensitivity of
+  what's accessible is controlled by the <strong>OS-level permissions</strong> of
+  the user running ppxai, not the consent layer.</li>
+<li><strong>Cross-session memory</strong> — ALWAYS in session A does not affect
+  session B. Each new session boots into mode NORMAL.</li>
+<li><strong>Per-edit checkpoints in non-agent mode</strong> — <code>/undo</code> works only
+  inside agent_mode and only for the first edit per file. For
+  long edit chains the user is expected to use git.</li>
+<li><strong>Path-traversal at the tool layer</strong> — the consent layer is the
+  only barrier. Tools accept any path the consent layer approves.
+  This is intentional: the security boundary is the human, not the
+  filename string.</li>
+</ul>
+<h2 id="shell-command-consent">Shell command consent<a class="headerlink" href="#shell-command-consent" title="Permanent link">&para;</a></h2>
+<p>Triggered by every <code>shell_execute</code> call. Flow:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>shell.execute(command, working_dir)
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>  → engine.request_shell_consent(command, working_dir)
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>    → classify_shell_command(command, shell_config)
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>        match never_allow regex   → NEVER  → return False (no callback)
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>        match allowed_commands    → SAFE   → return True (no callback)
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>        match dangerous_commands  → DANGEROUS → continue
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>        no match                  → DANGEROUS (fail-safe default)
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>    → if session.shell_consent_mode == ALWAYS: return True
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>    → if session.shell_consent_mode == NEVER: return False
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>    → if command in session.allowed_commands: return True
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>    → if no callback: return False (FAIL-SAFE — different from file edit!)
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>    → emit CONSENT_REQUEST event with risk_level
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>    → await shell_consent_callback(command, working_dir, risk_level)
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>    → response in {YES, ALWAYS, NEVER, NO}
+</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>        YES    → add to allowed_commands (verbatim string), return True
+</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>        ALWAYS → set session.shell_consent_mode = ALWAYS, return True
+</span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>        NEVER  → set session.shell_consent_mode = NEVER, return False
+</span><span id="__span-1-18"><a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a>        NO     → return False
+</span></code></pre></div>
+<h3 id="default-fail-safe-behavior">Default fail-safe behavior<a class="headerlink" href="#default-fail-safe-behavior" title="Permanent link">&para;</a></h3>
+<p>The contract is <strong>deliberately asymmetric</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>No callback installed</th>
+<th>Reason</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>File edit</td>
+<td>Allow</td>
+<td>Back-compat with pre-v1.11.0 — file edits had no consent layer at all and tests / scripts relied on it.</td>
+</tr>
+<tr>
+<td>Shell</td>
+<td><strong>Deny</strong></td>
+<td>New feature in v1.11.2; no back-compat surface. Shell can <code>rm -rf</code> or exfiltrate, the cost of a missed prompt is too high.</td>
+</tr>
+</tbody>
+</table>
+<p>Shell-tool callers in production ALWAYS install a callback (Rich
+TUI's <code>console_consent_callback</code>, Textual TUI's
+<code>textual_consent_callback</code>, web's HTTP callback). The "no callback"
+branch is a safety net for embedding contexts where the host
+forgot to wire it.</p>
+<h3 id="never-patterns-catastrophic-cant-be-overridden">NEVER patterns (catastrophic — can't be overridden)<a class="headerlink" href="#never-patterns-catastrophic-cant-be-overridden" title="Permanent link">&para;</a></h3>
+<p>Configured in <code>~/.ppxai/ppxai-config.json</code> under <code>tools.shell.never_allow</code>.
+Default install ships with patterns for:</p>
+<ul>
+<li><code>rm -rf /</code> and similar root-of-filesystem deletions</li>
+<li><code>dd of=/dev/...</code> block-device writes</li>
+<li><code>mkfs.*</code> filesystem reformat</li>
+<li><code>:(){ :|:&amp; };:</code> fork bombs</li>
+</ul>
+<p>A NEVER classification short-circuits <strong>before</strong> the callback runs.
+The user can NOT override it — the pattern would have to be removed
+from config, which is an explicit, out-of-band action. Tests in
+<a href="../tests/test_tool_security.py"><code>tests/test_tool_security.py::TestShellSecurityContract</code></a>
+pin this — even an always-yes callback can't unblock a NEVER command.</p>
+<h3 id="safe-patterns-bypass-no-prompt">SAFE patterns (bypass — no prompt)<a class="headerlink" href="#safe-patterns-bypass-no-prompt" title="Permanent link">&para;</a></h3>
+<p>Configured under <code>tools.shell.allowed_commands</code>. Default ships with
+common read-only and dev commands: <code>ls</code>, <code>cat</code>, <code>pwd</code>, <code>git status</code>,
+<code>git diff</code>, <code>pytest</code>, etc. Matching these returns True immediately
+— no callback, no event, no log.</p>
+<h3 id="dangerous-default-prompts-each-time-unless-always">DANGEROUS (default — prompts each time unless ALWAYS)<a class="headerlink" href="#dangerous-default-prompts-each-time-unless-always" title="Permanent link">&para;</a></h3>
+<p>Anything not matching NEVER or SAFE is DANGEROUS. The default config
+ships explicit dangerous patterns (<code>git push</code>, <code>git reset --hard</code>,
+<code>npm install</code>) but the catch-all rule "unknown command → DANGEROUS"
+is the real protection — adding a new binary to the system doesn't
+silently grant it free execution.</p>
+<h3 id="what-this-covers_1">What this covers<a class="headerlink" href="#what-this-covers_1" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Catastrophic commands always blocked</strong> — NEVER patterns survive
+  all consent overrides.</li>
+<li><strong>Per-exact-string memory</strong> — <code>git push origin main</code> consented
+  doesn't pre-approve <code>git push --force</code>. The string match is
+  literal.</li>
+<li><strong>Risk-level visible to UI</strong> — the <code>risk_level</code> argument lets
+  TUI/web render different prompt styling for DANGEROUS vs
+  unclassified.</li>
+<li><strong>Container CLI tools</strong> — every <code>ConsentCLITool</code> (Docker, kubectl
+  write ops) routes through <code>request_shell_consent</code>, so the same
+  classification + per-command memory applies.</li>
+</ul>
+<h3 id="what-this-does-not-cover_1">What this does NOT cover<a class="headerlink" href="#what-this-does-not-cover_1" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Argument injection in safe-classified commands</strong> — if <code>ls</code> is
+  in <code>allowed_commands</code> and the LLM sends <code>ls; rm -rf /</code>, the regex
+  matches <code>^ls\b</code> and the consent layer returns SAFE. The shell
+  tool's compound-command detection (<code>&amp;&amp;</code>, <code>||</code>, <code>;</code>, <code>|</code>) is
+  intended to catch this, but the contract is: <strong>shell metacharacters
+  in args are the user's risk surface</strong>. Don't put broad regex
+  patterns in <code>allowed_commands</code>.</li>
+<li><strong>Process group escapes</strong> — <code>nohup</code>, <code>setsid</code>, etc., backgrounded
+  processes outlive the timeout. Subprocess timeout (default 30s)
+  kills the immediate child, not detached descendants.</li>
+<li><strong>Working directory traversal</strong> — the <code>working_dir</code> argument is
+  not validated against the engine's tracked working directory.
+  Tools can be invoked with any cwd; this is intentional (LLM might
+  legitimately want to run a command in a sibling project).</li>
+<li><strong>Env vars / FD inheritance</strong> — subprocess inherits the parent's
+  environment. API keys, etc., visible to spawned commands.</li>
+</ul>
+<h2 id="document-tool-reads-csvpdfdocxxlsxpptx">Document tool reads (CSV/PDF/DOCX/XLSX/PPTX)<a class="headerlink" href="#document-tool-reads-csvpdfdocxxlsxpptx" title="Permanent link">&para;</a></h2>
+<p>These tools (<code>read_csv</code>, <code>read_pdf</code>, <code>get_pdf_page_image</code>,
+<code>read_excel</code>, <code>read_pptx</code>, etc.) are <strong>read-only</strong> and bypass consent.</p>
+<p>Rationale: they're functionally equivalent to <code>read_file</code> —
+extracting text/structure from a file the user has already given the
+LLM access to via attachment or filesystem permission. The trust
+boundary is the OS-level read permission of the ppxai process.</p>
+<p>The document parsers are the OS-level read; corruption or
+malformed-input crashes (e.g., a malicious PDF) are tested per-tool
+in <code>test_pdf_tools.py</code>, <code>test_csv_tools.py</code>, <code>test_excel_pptx_tools.py</code>.</p>
+<h2 id="whats-not-covered-by-the-consent-layer">What's NOT covered by the consent layer<a class="headerlink" href="#whats-not-covered-by-the-consent-layer" title="Permanent link">&para;</a></h2>
+<p>These categories are <strong>out of scope</strong> for this doc and need
+separate review/hardening:</p>
+<ol>
+<li>
+<p><strong>Network/HTTP tools</strong> — provider API calls, web search, URL
+   fetches. The consent layer does not prompt before sending data
+   to OpenAI/Perplexity/Gemini/etc. The user accepts this when
+   they configure the provider.</p>
+</li>
+<li>
+<p><strong>Plugin/MCP tools</strong> — third-party MCP servers register tools
+   with arbitrary semantics. The consent layer doesn't classify
+   them. Plugin authors are responsible for their own prompts. See
+   <a href="MCP-TRUST-MODEL.md"><code>docs/MCP-TRUST-MODEL.md</code></a> (TODO — not yet
+   written).</p>
+</li>
+<li>
+<p><strong>Engine reload of config</strong> — <code>engine.reload_config()</code> re-reads
+   <code>ppxai-config.json</code> on every chat. A user-edited config takes
+   effect immediately, including changes to <code>never_allow</code> and
+   <code>allowed_commands</code>. There is no signature-checking — the user
+   is trusted to manage their own config file.</p>
+</li>
+<li>
+<p><strong>Session restore</strong> — loading a previously-saved session restores
+   the message history but <strong>not</strong> <code>allowed_files</code> or
+   <code>allowed_commands</code>. Restored sessions start with empty allow-lists
+   so prior consent decisions don't silently carry forward into a
+   new working context. Session-wide mode (ALWAYS/NEVER/NORMAL) is
+   also reset.</p>
+</li>
+<li>
+<p><strong>Tool argument logging</strong> — full tool arguments are logged at
+   DEBUG level. Sensitive args (API keys passed as command args,
+   tokens in URLs) end up in <code>~/.ppxai/logs/</code> if debug logging is
+   on. The consent layer does not redact.</p>
+</li>
+</ol>
+<h2 id="test-coverage">Test coverage<a class="headerlink" href="#test-coverage" title="Permanent link">&para;</a></h2>
+<p>Behavior pinned by the following test classes:</p>
+<table>
+<thead>
+<tr>
+<th>Class</th>
+<th>File</th>
+<th>What it pins</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>TestEditorPathHandling</code></td>
+<td>tests/test_tool_security.py</td>
+<td>relative-via-engine-working-dir, absolute verbatim, symlink follow, malformed patch no-op, consent denial blocks all 4 editor tools</td>
+</tr>
+<tr>
+<td><code>TestFilesystemPathHandling</code></td>
+<td>tests/test_tool_security.py</td>
+<td>relative-via-engine-working-dir, absolute bypass, symlink follow, missing file returns error string, directory target returns error</td>
+</tr>
+<tr>
+<td><code>TestShellSecurityContract</code></td>
+<td>tests/test_tool_security.py</td>
+<td>NEVER blocks pre-callback, SAFE bypasses callback, DANGEROUS+no-callback denies, DANGEROUS+callback works, per-command memory, timeout returns error message</td>
+</tr>
+<tr>
+<td><code>TestContainerConsentFlow</code></td>
+<td>tests/test_tool_security.py</td>
+<td>ConsentCLITool denial blocks subprocess, runtime_check short-circuits consent</td>
+</tr>
+<tr>
+<td><code>Test*</code> (consent flow)</td>
+<td>tests/test_file_editing_tools.py</td>
+<td>YES/ALWAYS/NEVER/NO responses, mode persistence, default-allow without callback</td>
+</tr>
+</tbody>
+</table>
+<h2 id="when-to-update-this-doc">When to update this doc<a class="headerlink" href="#when-to-update-this-doc" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>A new tool gets a consent prompt.</strong> Add it to the TL;DR table
+  and to "What this covers" / "What this does NOT cover."</li>
+<li><strong>The fail-safe default for an existing tool family changes.</strong> The
+  asymmetry between file-edit (default-allow) and shell
+  (default-deny) is load-bearing — flipping either needs an explicit
+  ADR.</li>
+<li><strong>A new ConsentResponse value is added.</strong> Currently {YES, ALWAYS,
+  NEVER, NO} — anything else needs the response normalization
+  function in <code>ppxai/common/consent.py</code> updated and a test class
+  added under <code>test_file_editing_tools.py</code>.</li>
+<li><strong>NEVER patterns or the catch-all "unknown → dangerous" rule
+  changes.</strong> Update the test in
+  <code>TestShellSecurityContract::test_dangerous_without_callback_denied_failsafe</code>.</li>
+</ul>
+<h2 id="related-documents">Related documents<a class="headerlink" href="#related-documents" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../ARCHITECTURE/">docs/ARCHITECTURE.md</a> — broader engine architecture</li>
+<li><a href="../MODEL-SELECTION-GUIDE/">docs/MODEL-SELECTION-GUIDE.md</a> — planner/executor pattern</li>
+<li><a href="../DEBUG-LOGGING/">docs/DEBUG-LOGGING.md</a> — log persistence flow</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/rcconsult/ppxai" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
