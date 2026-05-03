@@ -608,7 +608,24 @@ def create_and_push_tag(version: str):
 
 
 def wait_for_ci(version: str, timeout_minutes: int = 10) -> bool:
-    """Wait for GitHub Actions CI to complete for the specific version tag."""
+    """Wait for GitHub Actions CI to complete for the specific version tag.
+
+    v1.18.4 fix for false-negative on a stale failed run from a prior
+    tag-cycle: when a `--redo` deletes the tag and re-pushes, GitHub
+    needs a few seconds to register the new run. During that window
+    `gh run list` still returns the OLD failed run as the most recent.
+    The previous logic accepted that as authoritative whenever the
+    conclusion was non-success, returning False before the new run
+    even started.
+
+    The contract now: NEVER trust a "completed" status until we have
+    observed the run go through "queued" or "in_progress". Treat a
+    completed run we never saw running as stale and keep polling.
+    This is correct as long as the workflow takes longer than the
+    poll interval (15s) — Build Executables takes minutes, so the
+    new run is guaranteed to be caught in the queued/in_progress
+    state before it completes.
+    """
     tag = f"v{version}"
     print(f"  Waiting for CI run on tag {tag} (timeout: {timeout_minutes}min)...")
 
@@ -654,20 +671,28 @@ def wait_for_ci(version: str, timeout_minutes: int = 10) -> bool:
                 seen_in_progress = True
 
             if status == "completed":
-                # Only accept completion if we saw it actually run (not stale completed run)
-                if seen_in_progress or conclusion != "success":
-                    if conclusion == "success":
-                        print(f"  ✅ CI completed successfully for {tag}")
-                        return True
-                    else:
-                        print(f"  ❌ CI failed with: {conclusion}")
-                        return False
-                else:
-                    # Stale completed run, wait for new one
+                # CRITICAL: only trust a completed run if we observed it
+                # in progress. Otherwise it's a stale completion from a
+                # previous tag-cycle (e.g. after --redo) — the new run
+                # hasn't been scheduled yet on GitHub's side. Treating
+                # such a stale failure as authoritative was the v1.18.3
+                # release bug; v1.18.4 makes the policy uniform: stale
+                # success AND stale failure both keep us polling.
+                if not seen_in_progress:
                     elapsed = int(time.time() - start_time)
-                    print(f"  ⏳ Waiting for new CI run to start for {tag} ({elapsed}s elapsed)")
+                    print(
+                        f"  ⏳ Stale completed run (conclusion={conclusion}); "
+                        f"waiting for new CI run to start for {tag} "
+                        f"({elapsed}s elapsed)"
+                    )
                     time.sleep(5)
                     continue
+                if conclusion == "success":
+                    print(f"  ✅ CI completed successfully for {tag}")
+                    return True
+                else:
+                    print(f"  ❌ CI failed with: {conclusion}")
+                    return False
             else:
                 elapsed = int(time.time() - start_time)
                 print(f"  ⏳ CI status: {status} ({elapsed}s elapsed)")
