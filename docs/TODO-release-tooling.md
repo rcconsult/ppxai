@@ -1,7 +1,7 @@
 # TODO: Release tooling hardening (v1.18.1+)
 
-**Status:** Open. Captured 2026-04-25 after the v1.18.0 release exposed
-three real defects in the release flow plus two procedural lessons.
+**Status:** Closed 2026-05-03. All three confirmed defects have landed
+fixes; acceptance criteria met. See "Closed" section at the bottom.
 
 The v1.18.0 release shipped successfully but the path was bumpy. This
 document tracks the specific fixes so they don't get lost.
@@ -23,16 +23,15 @@ state.
 **Effect.** If trusted, the script publishes "release complete" with
 no binaries on the GitHub Release. The user has to notice manually.
 
-**Fix.** Filter the run lookup to the specific workflow name (`Build
-Executables`) — that's the one that creates the release object and
-uploads the binaries. Other concurrent workflows (docs, etc.) are
-informational; their status doesn't gate the release.
+**Fix.** **Landed 2026-05-03.** `wait_for_ci` now passes
+`--workflow="Build Executables"` to `gh run list`, so docs deploys
+and any other concurrent workflows on the tag are excluded from the
+gate. The existing `seen_in_progress` guard remains as a second
+defense against stale completed runs.
 
-**Files.** `scripts/release.py::wait_for_ci`, around line 660.
+**Files.** `scripts/release.py::wait_for_ci` (~line 619).
 
-**Effort.** ~1 hour. Add a `workflow_name` filter to the `gh run list`
-call; pin to "Build Executables"; fail fast if no run found for that
-specific workflow.
+**Status.** Done.
 
 ### 2. `release.py --dry-run` performs the master merge
 
@@ -49,9 +48,12 @@ manually reset.
 `merge_to_master_if_needed` now accepts `dry_run=True` and prints the
 four git commands without executing them.
 
-**Status.** Done. Needs a regression test that runs `--dry-run` and
-asserts `git status --porcelain` is unchanged afterwards — covered by
-acceptance criterion #2 below.
+**Status.** Done. **Regression test landed 2026-05-03** in
+`tests/test_release_dry_run.py`: three tests pin the contract that
+`merge_to_master_if_needed(..., dry_run=True)` invokes zero
+subprocess calls, plus a sanity test that `dry_run=False` still
+calls the real git commands (catches a "always skip side effects"
+rewrite regression).
 
 ### 3. Cross-language test passes locally, fails in CI
 
@@ -85,6 +87,11 @@ Two options:
   direction.
 
 Recommend (a) — single source of truth for the version.
+
+**Generalisation status.** **Landed 2026-05-03.** `.nvmrc` at repo
+root pins `20`. nvm/fnm/asdf and most CI setup-node actions read
+this file when no explicit version is specified, so local node
+invocations from tests will match CI by default.
 
 ## Procedural lessons
 

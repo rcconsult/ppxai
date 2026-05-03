@@ -617,9 +617,14 @@ def wait_for_ci(version: str, timeout_minutes: int = 10) -> bool:
     seen_in_progress = False  # Track if we've seen this run actually start
 
     while time.time() - start_time < timeout_seconds:
-        # Get runs filtered by head branch (tag) with createdAt to check recency
+        # Filter to the workflow that builds + uploads release assets.
+        # Other workflows (Deploy Documentation, etc.) can complete much
+        # faster and would otherwise get picked up first, causing the
+        # script to declare success while binaries are still building or
+        # already failing. See docs/TODO-release-tooling.md defect #1.
         result = run_gh_command(
-            "run list --limit 5 --json status,conclusion,name,headBranch,createdAt",
+            'run list --workflow="Build Executables" --limit 5 '
+            '--json status,conclusion,name,headBranch,createdAt',
             check=False
         )
 
