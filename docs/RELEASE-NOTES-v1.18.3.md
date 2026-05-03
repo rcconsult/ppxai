@@ -1,29 +1,35 @@
 # Release Notes — v1.18.3
 
-> **Scope:** NVIDIA NIM provider goes from "config-only support" to
-> "first-class engine support" (Tier 1 + Tier 2). The engine helpers
-> introduced for NIM are then extended across every other provider
-> (Perplexity, OpenAI-native, Gemini-native), so 403/429 throttle
-> telemetry and `extra_body` pass-through become a uniform contract
-> rather than a NIM-only feature. A separate refactor pass collapses
-> the 13 places the release script used to patch down to 3 sources of
-> truth, with a CI-enforced sentinel test that makes drift between
-> releases impossible.
+> **Scope:** A multi-theme release. The headline thread takes NVIDIA NIM
+> from "config-only support" to "first-class engine support" (Tier 1 +
+> Tier 2), then extends the new engine helpers across every other
+> provider (Perplexity, OpenAI-native, Gemini-native) so 403/429
+> throttle telemetry and `extra_body` pass-through become a uniform
+> contract. A second thread surfaced from a real demo-app debugging
+> session: three engine resilience fixes (async shell tool, composite
+> result serialization, `/preview` flag wiring) that unblock the live
+> preview workflow. A third thread opens a new external-facing surface:
+> `POST /v1/oneshot` is the first endpoint of a stable `/v1` API
+> gateway tier with semver-style stability commitments, paired with
+> opt-in bearer-token auth. A fourth thread addresses release tooling
+> drift, version-string consolidation, and CLAUDE.md slimming.
 >
-> **Tests:** 2785 passing, 2 skipped (was 2842 at v1.18.2 baseline →
-> +43 added by NIM helpers, +29 by provider gap-fill, +14 by the
-> version-consistency sentinel). The skip count drop is a test-suite
-> tightening unrelated to v1.18.3, not a coverage regression. Counts
-> are non-TUI; full Linux CI runs cover the TUI tests too.
+> **Tests:** 2866 collected, 9 skipped (was 2785 at the start of the
+> branch → +81 added). Distribution: +43 NIM helpers, +29 cross-provider
+> gap-fill, +14 version-consistency sentinel, +25 engine resilience
+> (theme 6), +8 prompt_text, +14 /v1/oneshot route, +19 auth middleware,
+> +3 release dry-run regression. The skip count is unchanged from
+> v1.18.2 (the 7 Unix-only `TestKillPreviewBackend` tests). Counts are
+> non-TUI; full Linux CI runs cover the TUI tests too.
 
 ## Summary
 
-v1.18.3 has two threads. The first takes NVIDIA NIM from "you can
-configure it as a custom provider and it mostly works" to "the engine
-knows about NIM-style models, throttle events, and reasoning-mode
-toggles" (themes 1–3 below). The second cleans up the cross-provider
-gaps that work surfaced (theme 4) and addresses an unrelated
-release-tooling drift risk (theme 5):
+v1.18.3 grew across several focused threads. Themes 1–5 take NIM
+first-class plus the cross-provider clean-up. Themes 6–10 ship
+independently-useful work that surfaced during the branch: engine
+resilience, `prompt_text` side-effect kind, the v1 API gateway tier
+and bearer-token auth, release tooling closure, and the documentation
+restructure (CLAUDE.md slim + two ADRs).
 
 1. **NVIDIA NIM provider + Tier A benchmark sweep** (2026-05-01,
    committed at `b37e6a01` — already on master pre-branch). Provider
@@ -67,16 +73,124 @@ release-tooling drift risk (theme 5):
    a build failure on the contributing PR, not a "we shipped the
    wrong string" surprise on tag day.
 
-The user-visible change is most evident on three error paths: a NIM 403
-"Operation not allowed" now produces a clear "Provider quota /
-permission error... wait, switch model, or use paid tier" message
-rather than a generic API-error wrapping the JSON body; the agent loop
-tags the resulting `AGENT_RUN_ERROR` with `reason="provider_throttled"`
-so post-mortems can distinguish quota blocks from genuine model
-failures; and the throttle counters silently accumulate from EVERY
-provider (not just NIM) so a follow-up `/usage` rendering pass (debt
-Item 16) can show "OpenAI returned 3 rate-limits today, Perplexity
-returned 1, Gemini returned 8" without re-running benchmarks.
+6. **Engine resilience for live preview workflow** (`a746a7c6`,
+   `848b4d99`, `61240f0d`). Three independent fixes surfaced from a
+   real demo-app debugging session: (a) async + cancellable shell
+   tool — `subprocess.run` (sync) → `asyncio.create_subprocess_*` so
+   the event loop keeps servicing `POST /interrupt` while a tool runs;
+   trailing `&` / `nohup` detected → backgrounded uvicorn can't
+   deadlock the captured pipes; new `_active_subprocesses` registry
+   that `interrupt_stream()` SIGTERMs. (b) `CommandResult.to_dict()`
+   override on `CompositeResult` — the inherited path silently
+   dropped the `results` list, so any `/usage` after a NIM throttle
+   was recorded delivered an empty container to web/VSCode. (c)
+   `/preview` flag wiring — `--serve [cmd]`, `--proxy port`, `--port N`
+   were advertised in `commands.js` since v1.17.1 but never reached
+   `handle_preview` (the literal flag string was being resolved as a
+   file path). New `_parse_preview_args` (shlex). +25 tests.
+
+7. **`prompt_text` side-effect kind** (`74afd5a2`). Companion to
+   v1.18.1's `prompt_quick_pick`. Quick-pick covers finite choices;
+   `prompt_text` covers free-text follow-ups. First user:
+   `validate_agent_task` rejection. `/agent fix` → engine returns
+   `NotificationResult(WARNING)` + `prompt_text` side-effect → web
+   (inline form) / VSCode (`showInputBox`) auto-resume the elaboration
+   without the user retyping the slash command. Reply concatenated with
+   em-dash separator: `args = "<original_args> — <reply>"`. TUI ignores
+   the kind (open-enum invariant); the notification text serves as the
+   user-visible nudge in that fallback path. +8 tests. Closes
+   [docs/TODO-v1.18.2-prompt-text-kind.md](TODO-v1.18.2-prompt-text-kind.md).
+
+8. **v1 API gateway tier** (`38c2743d`, `9953b1df`). New external-facing
+   surface with semver-style stability commitments, paired with opt-in
+   bearer-token auth. Two-tier separation:
+   - `/v1/<endpoint>` — stable, semver-versioned, designed for external
+     agents and integrations.
+   - `/<endpoint>` — internal endpoints that evolve with ppxai's own
+     clients (Rich, Textual, web app, VSCode).
+
+   First gateway endpoint is `POST /v1/oneshot`: stateless single-turn
+   completion. No session, no streaming, no history. Designed for
+   classifiers, routers, structured-extraction pipelines that want
+   ppxai-server as a thin LLM gateway without managing sessions per
+   call. Supports `response_format` for OpenAI-style JSON-mode output.
+   v1 supports `OpenAICompatibleProvider` (covers `local`, `custom`,
+   NIM, vLLM, Ollama, OpenRouter); native OpenAI / Perplexity /
+   Gemini providers grow oneshot in subsequent releases. +14 tests.
+
+   Bearer-token auth middleware is opt-in via `PPXAI_API_TOKEN` env
+   var. Default off — preserves localhost UX. When enabled, every
+   non-OPTIONS request needs `Authorization: Bearer <token>` matching
+   the value or gets 401 with `WWW-Authenticate: Bearer realm="ppxai"`.
+   Token read per-request so operators can rotate without restart.
+   +19 tests.
+
+   See [docs/API-GATEWAY.md](API-GATEWAY.md) for the policy, threat
+   model, deployment-shape table, and future direction (multi-token
+   `/v1/tokens` registry, OIDC/JWT validation under `/v1/auth/...`).
+
+9. **Release tooling closure** (`f82c9878`). Three confirmed defects
+   from `docs/TODO-release-tooling.md` landed: (a) `wait_for_ci`
+   filters `gh run list --workflow="Build Executables"` so a faster
+   docs deploy on the same tag can no longer satisfy the gate
+   prematurely. (b) `.nvmrc` pins Node 20 to match CI — local test
+   runs that shell out to node match the CI version by default.
+   (c) `tests/test_release_dry_run.py` (3 tests) pins
+   `merge_to_master_if_needed(..., dry_run=True)` invokes zero
+   subprocess calls; sanity test confirms dry_run=False still calls
+   git. Closes [docs/TODO-release-tooling.md](TODO-release-tooling.md).
+
+10. **Documentation restructure: CLAUDE.md slim + two ADRs**
+    (`8a899051`, `0ed03d26`, `e9b8733d`). CLAUDE.md was 59 KB,
+    triggering Claude Code's "large CLAUDE.md will impact performance"
+    warning at 40 KB. v1.18.3 extracts pattern docs into
+    `docs/patterns/*.md` (transactional-state,
+    protocol-dependency-inversion, appstate, command-envelope,
+    state-sync-determinism), `docs/DEV-SETUP.md` (uv resolution,
+    Windows Store Python recovery), `docs/PPXAIDE-IMPL.md` (Textual
+    TUI internals + terminal images), `docs/VLLM-NOTES.md` (Hermes
+    vs Harmony cheat sheet). CLAUDE.md becomes a slim navigable map
+    (16.9 KB) with one-line links. Two ADRs filed:
+    [`0003-agent-platform-architecture.md`](decisions/0003-agent-platform-architecture.md)
+    captures the design space for sub-agents and autonomous agents
+    (status: Proposed, pending Stage 1 instrumentation).
+    [`0004-llm-gateway-features.md`](decisions/0004-llm-gateway-features.md)
+    is the retroactive rationale for the v1 gateway shipped this
+    release.
+
+The user-visible changes span several paths:
+
+- **Throttle telemetry uniform across providers.** A NIM 403
+  "Operation not allowed" now produces a clear "Provider quota /
+  permission error... wait, switch model, or use paid tier" message
+  instead of a generic API-error wrapping the JSON body. The agent
+  loop tags the resulting `AGENT_RUN_ERROR` with
+  `reason="provider_throttled"` so post-mortems can distinguish quota
+  blocks from genuine model failures. Throttle counters silently
+  accumulate from EVERY provider (not just NIM) so a follow-up
+  `/usage` rendering pass (debt Item 16) can show "OpenAI returned 3
+  rate-limits today, Perplexity returned 1, Gemini returned 8"
+  without re-running benchmarks.
+- **`/agent fix` no longer requires retyping.** When the validator
+  rejects a vague task, web (inline form) and VSCode (`showInputBox`)
+  prompt for the elaboration and auto-resume the command. TUI users
+  see the existing notification text and retype as before.
+- **`/preview index.html --serve` actually works.** The flag was
+  advertised in the web UI's command help since v1.17.1 but never
+  reached the engine handler. Now `--serve [cmd]` autodetects /
+  explicitly runs a backend, `--proxy port` connects to an
+  already-running one, and `--port N` sets the HTTP server port.
+- **Esc / `/interrupt` works during long shell commands.** Pre-fix,
+  `subprocess.run` (sync) blocked the event loop, so `/interrupt`
+  HTTP requests sat in the queue until the tool finished. Now the
+  shell tool is async and registers itself for SIGTERM-on-interrupt.
+- **New external-facing surface: `POST /v1/oneshot`.** Stateless
+  single-turn LLM call for classifiers, routers, and structured-
+  extraction pipelines. See [docs/API-GATEWAY.md](API-GATEWAY.md)
+  for the full contract and stability commitments.
+- **Optional bearer-token auth.** Set `PPXAI_API_TOKEN` to require
+  `Authorization: Bearer <token>` on every non-OPTIONS request.
+  Default off; localhost desktop UX unchanged.
 
 ## What's new
 
@@ -363,18 +477,276 @@ becomes a CI failure on the contributing PR — not a "we shipped the
 wrong string" surprise during release. Verified the sentinel
 actually catches drift via synthetic-regression test.
 
+### Engine resilience for live preview workflow (theme 6)
+
+Three independent fixes surfaced during a live demo-app debugging
+session, all converging on "the engine should remain responsive
+under load."
+
+**Async + cancellable shell tool (`a746a7c6`).** Pre-fix, the shell
+tool used `subprocess.run(...)` (synchronous) inside an async handler,
+which blocks the FastAPI event loop. While `npm run dev` ran for
+~5 minutes, every `POST /interrupt` request piled up unanswered until
+the shell call returned. Plus `subprocess.run(... capture_output=True)`
+deadlocks when the spawned process is backgrounded with `&` or `nohup`
+because pipes stay open across the daemon's lifetime — `npm run dev &`
+in a background-detected command would hang for 300 seconds (the
+default timeout) every time. Fix: switch to
+`asyncio.create_subprocess_*`, detect trailing `&` / `nohup` and pass
+`stdin/stdout/stderr=DEVNULL` + `start_new_session=True` so detached
+processes can't deadlock the captured pipes. New
+`_active_subprocesses` registry on `EngineClient` (with
+`register_subprocess` / `unregister_subprocess` on
+`ToolEngineProtocol`); `interrupt_stream()` SIGTERMs them. +7 tests.
+
+**`CompositeResult.to_dict()` override (`848b4d99`).** The base
+`CommandResult.to_dict()` only serializes `type/status/message/metadata`;
+`CompositeResult.results` (the list of sub-results) was silently
+dropped on the wire. After `/usage` started returning a
+`CompositeResult` with throttle counters (theme 5 #5), web/VSCode
+saw an empty container. Fix: override `to_dict()` to recursively
+serialize each sub-result via its own `to_dict()`. Surfaced via the
+fixup in `tests/test_usage_integration.py` where `_extract_usage_table`
+unwraps the composite.
+
+**`/preview` flag wiring (`61240f0d`).** `--serve [cmd]` /
+`--proxy port` / `--port N` were advertised in
+`web/shared/commands.js` since v1.17.1 but never reached
+`handle_preview` — slash commands like `/preview index.html --serve`
+resolved the literal string `index.html --serve` as a filepath, so
+the autodetect backend code at `POST /preview/serve` was unreachable
+from the slash command. Fix: new `_parse_preview_args` (shlex-based)
+that extracts the flags before path resolution. The side-effect
+payload now carries `{mode, command, port}` so web's
+`open_html_preview` handler dispatches on `mode` →
+`openServedPreview` / `openProxiedPreview` / static iframe path.
+Backwards-compatible — the legacy `{served, proxied}` boolean shape
+still works. +18 tests across parser branches and end-to-end
+side-effect emission.
+
+### `prompt_text` SideEffectKind (theme 7)
+
+Companion to v1.18.1's `prompt_quick_pick`. The earlier kind covers
+finite-choice follow-ups (engine emits `[{label, value}, ...]`,
+client renders a picker, choice IS the literal next args). The new
+kind covers free-text follow-ups where the answer is prose, not a
+pick.
+
+Wire shape:
+
+```json
+{
+  "kind": "prompt_text",
+  "title": "I need more detail to run safely",
+  "question": "What file or area should I work on?",
+  "command_to_resume": "agent",
+  "original_args": "fix",
+  "placeholder": "e.g. Fix the off-by-one in src/parser.py:line_count()"
+}
+```
+
+Resume protocol mirrors `prompt_quick_pick` (per ADR 0001 Q3 (b)):
+**no server-side continuation state**. Client re-issues
+`POST /command/<command_to_resume>` with
+`args = "<original_args> — <user_reply>"` (em-dash separator so
+handlers can distinguish original vs elaboration if they want).
+
+Renderers:
+- **Web** — inline form rendered as a system message; submit
+  listener bound once via `_promptTextWired` sentinel (mirrors
+  quick-pick).
+- **VSCode** — `vscode.window.showInputBox({prompt, placeHolder})`.
+  Non-empty reply dispatches via `dispatchCommandFromSideEffect`.
+- **TUI** — ignores the kind (open-enum invariant). The
+  accompanying `NotificationResult` message serves as the
+  user-visible nudge; user retypes `/agent` themselves.
+
+First user: `validate_agent_task` rejection. `/agent fix` now emits
+`NotificationResult(WARNING)` + a `prompt_text` side-effect →
+web/VSCode auto-resume the elaboration without retyping the slash
+command. Closes [TODO-v1.18.2-prompt-text-kind.md](TODO-v1.18.2-prompt-text-kind.md).
+
+### v1 API gateway tier (theme 8)
+
+ppxai-server now exposes two tiers of HTTP endpoints. The
+documented split:
+
+| Tier | URL prefix | Stability | Consumers |
+|---|---|---|---|
+| **v1 gateway** | `/v1/<endpoint>` | Stable; semver-style | External agents, integrations |
+| **Internal** | `/<endpoint>` (no prefix) | Unstable | ppxai's own clients (Rich, Textual, web, VSCode) |
+
+For `/v1/<endpoint>`: required fields don't disappear, new optional
+fields can be added, documented status codes are stable. Breaking
+changes ship as `/v2/<endpoint>` with a deprecation window
+(minimum: one minor release).
+
+**`POST /v1/oneshot` is the first endpoint** (`38c2743d`). Stateless
+single-turn LLM call — no session, no streaming, no history.
+Designed for classifiers, routers, and structured-extraction
+pipelines that want ppxai-server as a thin LLM gateway without
+managing sessions per call.
+
+```http
+POST /v1/oneshot
+Content-Type: application/json
+
+{
+  "prompt": "Classify this email...",
+  "provider": "nvidia",                  // optional
+  "model": "qwen/qwen3.5-122b-a10b",     // optional
+  "system": "You are a classifier...",   // optional
+  "response_format": {"type": "json_object"},  // optional
+  "max_tokens": 512,
+  "temperature": 0.0
+}
+
+→ 200 {"content": "...", "finish_reason": "stop", "model": "...",
+       "provider": "...", "usage": {...}}
+```
+
+`OpenAICompatibleProvider.oneshot()` is the underlying primitive.
+Builds messages, applies `_apply_reasoning_trigger`, forwards
+`extra_body` from config (so vendor knobs like NIM
+`chat_template_kwargs.enable_thinking` carry through). Request-level
+`response_format` / `max_tokens` / `temperature` win over per-model
+config. v1 supports OpenAI-compatible providers (covers `local`,
+`custom`, NIM, vLLM, Ollama, OpenRouter); native OpenAI, Perplexity,
+Gemini providers grow `oneshot()` in subsequent releases — until
+then they return 400 with a clear message. +14 tests.
+
+**Bearer-token auth middleware (`9953b1df`).** Opt-in via
+`PPXAI_API_TOKEN` env var. Default off — preserves localhost UX
+where the Rich/Textual TUI, web app, and VSCode extension talk to
+ppxai-server on loopback without an `Authorization` header. When
+set, every non-OPTIONS request needs `Authorization: Bearer <token>`
+matching the value or gets `401` with `WWW-Authenticate: Bearer
+realm="ppxai"`. Token read on every request so operators can rotate
+without restart; empty/whitespace values treated as auth disabled
+(prevents lockout from a stray empty config). CORS preflight
+exempted — browsers don't send `Authorization` on OPTIONS by spec.
+Authorization scheme parsed case-insensitively per RFC 7235.
++19 tests.
+
+What v1 auth is NOT (deliberately): multi-token per-agent identity,
+token rotation/expiry, scoped tokens, rate limiting, OIDC/JWT
+integration. Single shared token is the foot-in-the-door for v1.
+The future direction `/v1/tokens` (CRUD on API tokens, GitHub-PAT
+style) is documented in [docs/API-GATEWAY.md](API-GATEWAY.md)
+"Future directions"; OIDC/JWT lands as `/v1/auth/...` if that
+direction is taken.
+
+See [`docs/API-GATEWAY.md`](API-GATEWAY.md) for the full policy
+(stability tiers, threat model, deployment shapes, future
+directions) and [ADR 0004](decisions/0004-llm-gateway-features.md)
+for the rationale.
+
+### Release tooling closure (theme 9)
+
+`f82c9878` lands the three confirmed defects from
+`docs/TODO-release-tooling.md`:
+
+- **Defect #1 (workflow filter):** `wait_for_ci` now filters
+  `gh run list --workflow="Build Executables"` so concurrent
+  workflows on the same tag (Deploy Documentation, etc.) can't
+  satisfy the gate prematurely. The pre-existing `seen_in_progress`
+  guard remains as a second-line defense against stale completed
+  runs.
+- **Defect #2 regression test:** `tests/test_release_dry_run.py`
+  pins `merge_to_master_if_needed(..., dry_run=True)` invokes zero
+  subprocess calls (the v1.18.0 silent-merge bug); plus a sanity
+  test that `dry_run=False` still calls git checkout / merge so a
+  "always skip side effects" rewrite would fail too.
+- **Defect #3 generalisation:** `.nvmrc` pins Node 20 at the repo
+  root. nvm / fnm / asdf and `setup-node` actions read this when no
+  explicit version is specified, so local test runs that shell out
+  to node match CI by default — preventing the next "passes locally,
+  fails in CI" cross-language drift.
+
+### Documentation restructure (theme 10)
+
+**CLAUDE.md slim 59 KB → 17 KB (`8a899051`).** Claude Code emits a
+"large CLAUDE.md will impact performance" warning at 40 KB. v1.18.3
+extracts the long-form pattern docs into dedicated files and keeps
+CLAUDE.md as a slim navigable map with one-line pointers. Extracted:
+
+| Doc | Was in CLAUDE.md as | Now |
+|---|---|---|
+| `docs/patterns/transactional-state.md` | "Critical Pattern: Transactional State Management" (~70 lines) | Linked |
+| `docs/patterns/protocol-dependency-inversion.md` | "Critical Pattern: Protocol-Based Dependency Inversion" (~50 lines) | Linked |
+| `docs/patterns/appstate.md` | "Critical Pattern: Cross-Client State Through AppState" (~120 lines) | Linked |
+| `docs/patterns/command-envelope.md` | "Critical Pattern: Command Dispatch via Envelope" (~90 lines) | Linked + extended with `prompt_text` |
+| `docs/patterns/state-sync-determinism.md` | "Critical Pattern: State-Sync Determinism" (~70 lines) | Linked |
+| `docs/DEV-SETUP.md` | "Development Setup" + "Windows Store Python Recovery" (~80 lines) | Linked |
+| `docs/PPXAIDE-IMPL.md` | "ppxaide TUI Implementation" + "Terminal Image Rendering" (~120 lines) | Linked |
+| `docs/VLLM-NOTES.md` | "vLLM Tool Calling Reference" (~150 lines) | Linked (defers depth to existing `vllm-tool-calling-guide.md`) |
+
+CLAUDE.md retains the project overview, architectural pattern
+bullet-list with links, codebase stats, install-location table,
+file tree, common commands, release process summary, key design
+decisions, the "Verify, Don't Assume" rule, commit guidelines, and
+the graphify section.
+
+**Two ADRs filed** capturing strategic decisions surfaced during the
+branch:
+
+- [`ADR 0003 — Agent platform architecture`](decisions/0003-agent-platform-architecture.md)
+  (`0ed03d26`). Status: Proposed. Captures the design space for
+  sub-agents and autonomous (long-running) agents. Three-stage path:
+  Stage 1 instruments the outer continuation-loop firing rate over
+  one week; Stage 2 builds an `AgentRunRegistry` filesystem layout +
+  background-task agent runs (closes the agent-loop unification TODO
+  as a side effect); Stage 3 ships the `spawn_subagent` built-in
+  tool with `parent_run_id` link. Four open design questions
+  enumerated with recommended defaults: outer-loop value (needs
+  data), registry storage (filesystem first), sub-agent execution
+  model (asyncio.Task to start), engine lifecycle per sub-agent
+  (per-sub-agent `EngineClient` if construction is cheap).
+- [`ADR 0004 — LLM gateway features`](decisions/0004-llm-gateway-features.md)
+  (`e9b8733d`). Status: Accepted. Retroactive rationale for the v1
+  gateway shipped this release. Documents three sub-decisions
+  (path-versioned `/v1/...` prefix, stateless `oneshot` bypassing
+  `EngineClient`, opt-in single-token auth) and six "why this not
+  that" alternatives explicitly considered and rejected. Triggers-
+  to-revisit table for future amendments (second native provider
+  growing `oneshot()`, multi-agent attribution, OIDC integration,
+  streaming/tool-calls in oneshot).
+
+The agent-loop unification TODO
+([`docs/TODO-v1.18.2-agent-loop-unification.md`](TODO-v1.18.2-agent-loop-unification.md))
+was re-scoped in `6f1201ef` based on actual code state (premise was
+partly outdated: AGENT_BEAT events already fire from
+`engine/chat.py`; web doesn't run a client-side loop; only VSCode's
+`handleAgentCommand` is the real divergence). Now superseded by
+ADR 0003.
+
 ## Internal
 
-- **2785 tests passing, 2 skipped** (was 2742 at branch start →
-  +43 across v1.18.3). Distribution:
-  * 8 NIM profile sentinels + 9 throttle classification + 7 extra_body
-    + 9 reasoning_trigger + 8 provider-error telemetry = 41 (NIM
-    Tier 1 + Tier 2)
-  * 7 Perplexity wiring + 11 OpenAI-native wiring + 11 Gemini wiring
-    = 29 (cross-provider gap-fill)
+- **2866 tests collected, 9 skipped** (was 2785 in the original NIM-themed
+  draft of these notes → +81 across the full v1.18.3 scope).
+  Distribution:
+  * 41 NIM Tier 1 + Tier 2 (8 NIM profile sentinels, 9 throttle
+    classification, 7 `extra_body`, 9 reasoning_trigger, 8
+    provider-error telemetry)
+  * 29 cross-provider gap-fill (7 Perplexity, 11 OpenAI-native,
+    11 Gemini)
   * 14 version-consistency sentinel
-  All run in <1s on the .venv interpreter except the agentic-task
-  validation suite which dominates wall time.
+  * 25 engine resilience theme 6 (7 async shell + 18 `/preview` flag
+    parsing + side-effect emission)
+  * 8 `prompt_text` SideEffectKind
+  * 14 `/v1/oneshot` route (request validation, provider resolution,
+    response shape pinning, parameter plumbing, error paths,
+    capability check)
+  * 19 auth middleware (auth-disabled passthrough variants,
+    wrong-token / missing-token / malformed-scheme / valid-token,
+    401 response shape, OPTIONS preflight exemption, helper unit
+    tests)
+  * 3 release dry-run regression
+  Skip count of 9 = 7 Unix-only `TestKillPreviewBackend` (unchanged
+  from v1.18.2; can't `patch()` `os.getpgid` / `os.killpg` on
+  Windows — the cross-platform Windows branch is tested separately)
+  + 2 carry-over skips. Counts are non-TUI; full Linux CI runs cover
+  the TUI tests too.
 - **`docs/DEBT-INVENTORY-v1.18.3.md`** filed with 4 new items (16:
   /usage rendering, 17: 480b paid-tier rerun, 18: kimi/deepseek/397b
   probes, 19: extra_body wiring example) plus 5 carried-over from
