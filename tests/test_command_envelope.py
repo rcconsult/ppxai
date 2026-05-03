@@ -74,6 +74,7 @@ class TestSideEffectKindTaxonomy:
         "copy_to_clipboard",
         "attach_file",
         "prompt_quick_pick",
+        "prompt_text",     # added v1.18.3 — free-text follow-up
         "notify",
         "vscode_delegate",
     })

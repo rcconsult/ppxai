@@ -125,6 +125,7 @@ class TestSideEffectsHandlerModule:
             "copy_to_clipboard",
             "attach_file",
             "prompt_quick_pick",
+            "prompt_text",
             "notify",
             "vscode_delegate",
         ):
@@ -340,7 +341,7 @@ class TestCrossClientParity:
             "reveal_in_explorer", "open_terminal", "run_shell",
             "open_html_preview", "refresh_file_tree", "set_theme",
             "copy_to_clipboard", "attach_file", "prompt_quick_pick",
-            "notify", "vscode_delegate",
+            "prompt_text", "notify", "vscode_delegate",
         ):
             assert kind in web_src, f"web missing kind: {kind}"
             assert kind in vscode_src, f"VSCode missing kind: {kind}"

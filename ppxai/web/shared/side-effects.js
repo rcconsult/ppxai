@@ -217,6 +217,56 @@ SideEffectsHandler._handlers = {
         }
     },
 
+    // ─── Free-text prompt ────────────────────────────────────────────────
+    prompt_text({title, question, command_to_resume, original_args, placeholder}) {
+        if (!command_to_resume) return;
+
+        // Render an inline form with the question and an input field.
+        // On submit, dispatch /<command_to_resume> "<original_args> — <reply>".
+        // Per ADR Q3 (b): no server continuation state; args carry the resume.
+        const escaped = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c =>
+            ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c])
+        );
+        const heading = escaped(title || question || 'More detail needed');
+        const sub = title && question ? `<div class="pt-question">${escaped(question)}</div>` : '';
+        const ph = escaped(placeholder || '');
+        const orig = escaped(original_args || '');
+        const cmd = escaped(command_to_resume);
+        const formId = `pt-form-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+        const html = (
+            `**${heading}**\n\n${sub}` +
+            `<form class="pt-form" data-form-id="${formId}" ` +
+            `data-cmd="${cmd}" data-original-args="${orig}">` +
+            `<input type="text" class="pt-input" placeholder="${ph}" autofocus />` +
+            `<button type="submit" class="pt-submit">Send</button>` +
+            `</form>`
+        );
+        this.app.addMessage('system', html);
+
+        // Wire submit delegation once. Same pattern as quick-pick.
+        if (!SideEffectsHandler._promptTextWired) {
+            SideEffectsHandler._promptTextWired = true;
+            document.addEventListener('submit', (e) => {
+                const form = e.target?.closest?.('.pt-form');
+                if (!form) return;
+                e.preventDefault();
+                const cmd = form.dataset.cmd;
+                const orig = form.dataset.originalArgs || '';
+                const input = form.querySelector('.pt-input');
+                const reply = (input?.value || '').trim();
+                if (!cmd || !reply) return;
+                const args = orig ? `${orig} — ${reply}` : reply;
+                if (window.ppxai?.commandDispatcher?.dispatch) {
+                    window.ppxai.commandDispatcher.dispatch(`/${cmd} ${args}`);
+                }
+                // Disable the form so the user can't double-submit.
+                if (input) input.disabled = true;
+                const btn = form.querySelector('.pt-submit');
+                if (btn) btn.disabled = true;
+            });
+        }
+    },
+
     // ─── Notify ──────────────────────────────────────────────────────────
     notify({level, message}) {
         if (!message) return;
@@ -237,8 +287,9 @@ SideEffectsHandler._handlers = {
     },
 };
 
-// Sentinel so the click listener is bound exactly once.
+// Sentinels so listeners bind exactly once.
 SideEffectsHandler._quickPickWired = false;
+SideEffectsHandler._promptTextWired = false;
 
 
 // CommonJS export for tests; window-global for browser.

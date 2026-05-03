@@ -42,6 +42,16 @@ When an engine handler needs the user to pick one of N options, it emits `PROMPT
 
 Example: `/show @config` finds 3 matches → emits `PROMPT_QUICK_PICK` with each item's `value` set to the absolute path. User picks one → client POSTs `/command/show` with `args=<absolute path>`. Second pass takes the direct branch, returns the rendered file view.
 
+## `prompt_text` resume protocol (v1.18.3)
+
+For free-text follow-ups (where the answer isn't from a finite set), engine emits `PROMPT_TEXT` with `{title, question, command_to_resume, original_args, placeholder}`. **The reply is concatenated to the original args with an em-dash separator** — `args = "<original_args> — <user_reply>"` — so handlers can distinguish the brief from the elaboration if they want. No server-side continuation state.
+
+- **Web** — renders an inline form below the notification; on submit, dispatches `/<command_to_resume> <args>`.
+- **VSCode** — `vscode.window.showInputBox({prompt: question, placeHolder})`; on non-empty reply, dispatches via `dispatchCommandFromSideEffect`.
+- **TUI** — ignores the kind (open-enum invariant). The notification message that accompanies the side-effect serves as the user-visible nudge; the user retypes `/agent` themselves with more detail.
+
+First user: `validate_agent_task` rejection. `/agent fix` → engine returns `NotificationResult(WARNING)` + `prompt_text` side-effect → web/VSCode auto-resume the elaboration without the user retyping the slash command.
+
 ## Rules
 
 1. **Never add a bespoke REST endpoint for command logic.** Routes like `/sessions`, `/checkpoint/list` exist for non-command UI (dropdowns, file-tree widget); they MUST NOT duplicate handler logic that lives in the factory.

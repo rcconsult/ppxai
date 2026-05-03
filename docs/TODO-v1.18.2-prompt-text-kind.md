@@ -1,9 +1,9 @@
 # v1.18.2 — `prompt_text` side-effect kind (free-text follow-up)
 
-**Status:** Deferred from v1.18.1.
-**Trigger to revisit:** any command that wants to ask the user a
-free-text question and act on the typed reply (currently only
-`/agent <vague>` would benefit, but `/save` / `/export` could too).
+**Status:** Closed 2026-05-03 (landed in v1.18.3).
+**Original deferral:** from v1.18.1; trigger was any command that
+wants to ask the user a free-text question and act on the typed
+reply. `validate_agent_task` rejection is the first user.
 
 ## Background
 
@@ -63,6 +63,34 @@ The resume args carry everything needed.
    Dispatch via Envelope" alongside `prompt_quick_pick`.
 
 Estimated cost: ~120 LoC + tests.
+
+## Implementation summary (2026-05-03)
+
+All 7 scope items landed:
+
+1. `SideEffectKind.PROMPT_TEXT = "prompt_text"` in `ppxai/commands/results.py`.
+2. `EXPECTED_KINDS_V1` in `tests/test_command_envelope.py` extended;
+   the parity sentinel test in `tests/test_vscode_step5a_helpers.py`
+   covers both web + VSCode now.
+3. Web handler in `ppxai/web/shared/side-effects.js` — renders an
+   inline form with a question and an input, on submit dispatches
+   `/<command_to_resume> <original_args> — <reply>` via the
+   command dispatcher. Submit listener bound once via the
+   `_promptTextWired` sentinel (mirrors quick-pick's pattern).
+4. VSCode handler in `vscode-extension/src/sideEffectsHandler.ts` —
+   uses `vscode.window.showInputBox({prompt, placeHolder})`. On
+   non-empty reply, dispatches via `dispatchCommandFromSideEffect`.
+5. Cross-client parity test passes — both clients honor `prompt_text`.
+6. `validate_agent_task` now adds the side-effect on every rejection.
+   The notification message stays as the user-visible nudge for TUI
+   clients (open-enum invariant — they ignore unknown kinds and the
+   user retypes manually).
+7. CLAUDE.md / `docs/patterns/command-envelope.md` updated alongside
+   `prompt_quick_pick`.
+
+8 new tests in `tests/test_prompt_text_side_effect.py` covering
+constant exposure, validator behavior on short/empty/valid tasks,
+metadata backward compat, and renderer presence checks.
 
 ## Why deferred
 

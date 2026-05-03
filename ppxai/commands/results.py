@@ -86,6 +86,7 @@ class SideEffectKind:
 
     # Interactive prompts (engine asks the user a follow-up)
     PROMPT_QUICK_PICK = "prompt_quick_pick"
+    PROMPT_TEXT = "prompt_text"
 
     # User-facing messages
     NOTIFY = "notify"
@@ -197,6 +198,19 @@ class SideEffect:
             issuing a fresh POST /command/<command_to_resume> with
             args = resolved_arg_template.format(value=<choice>).
             See ADR 0001 for the resume protocol decision.
+
+      - "prompt_text"        payload: {title, question, command_to_resume,
+                                       original_args?, placeholder?}
+            Engine needs a free-text follow-up before the command
+            can complete (e.g. /agent rejected for being too vague).
+            Web → input field rendered in chat. VSCode →
+            window.showInputBox({prompt: question}). On submit,
+            the client re-issues POST /command/<command_to_resume>
+            with args = "<original_args> — <user_reply>" (em-dash
+            separator so handlers can distinguish the elaboration
+            from the original brief). No server-side continuation
+            state per the ADR 0001 resume protocol — the args
+            carry everything.
 
       - "notify"             payload: {level: "info"|"warn"|"error",
                                        message}

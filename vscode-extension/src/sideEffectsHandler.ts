@@ -54,6 +54,7 @@ export const KIND = {
     COPY_TO_CLIPBOARD: 'copy_to_clipboard',
     ATTACH_FILE: 'attach_file',
     PROMPT_QUICK_PICK: 'prompt_quick_pick',
+    PROMPT_TEXT: 'prompt_text',
     NOTIFY: 'notify',
     VSCODE_DELEGATE: 'vscode_delegate',
 } as const;
@@ -265,6 +266,29 @@ export class SideEffectsHandler {
                 if (cmd && value != null) {
                     await this._provider.dispatchCommandFromSideEffect(cmd, value);
                 }
+                return;
+            }
+
+            case KIND.PROMPT_TEXT: {
+                // Native InputBox. Per ADR Q3 (b): no server
+                // continuation state — args carry the resume.
+                // Pre-fill with original_args followed by an em-dash
+                // separator so the user types only the elaboration.
+                const question = (se.title as string) || (se.question as string) || 'More detail needed';
+                const placeholder = (se.placeholder as string) || '';
+                const originalArgs = (se.original_args as string) || '';
+                const reply = await vscode.window.showInputBox({
+                    prompt: question,
+                    placeHolder: placeholder,
+                    ignoreFocusOut: true,
+                });
+                if (reply == null || reply.trim().length === 0) return;
+                const cmd = se.command_to_resume as string;
+                if (!cmd) return;
+                const args = originalArgs
+                    ? `${originalArgs} — ${reply.trim()}`
+                    : reply.trim();
+                await this._provider.dispatchCommandFromSideEffect(cmd, args);
                 return;
             }
 

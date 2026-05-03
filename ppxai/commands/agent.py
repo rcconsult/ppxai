@@ -23,6 +23,7 @@ from .results import (
     ErrorResult,
     KeyValueResult,
     NotificationResult,
+    SideEffectKind,
     TableResult,
     TextResult,
 )
@@ -216,7 +217,7 @@ def validate_agent_task(
         f"  `/agent Review @git changes and suggest improvements`\n"
         f"  `/agent Investigate why login.test.js times out and fix the cause`\n"
     )
-    return NotificationResult(
+    result = NotificationResult(
         status=ResultStatus.WARNING,
         message=msg,
         metadata={
@@ -226,6 +227,24 @@ def validate_agent_task(
             "task": task,
         },
     )
+    # v1.18.3: emit a prompt_text side-effect so web/VSCode auto-resume
+    # the elaboration via showInputBox / inline form. Per ADR Q3 (b),
+    # the args carry the resume — no server-side continuation state.
+    # TUI clients ignore unknown kinds (open-enum invariant) and the
+    # user retypes /agent themselves; the notification text above is
+    # the user-visible nudge in that fallback path.
+    result.add_side_effect(
+        SideEffectKind.PROMPT_TEXT,
+        title="I need more detail to run safely",
+        question=(
+            "What file or area should I work on? "
+            "Add any acceptance criteria you have."
+        ),
+        command_to_resume="agent",
+        original_args=task,
+        placeholder="e.g. Fix the off-by-one in src/parser.py:line_count()",
+    )
+    return result
 
 
 # =============================================================================
