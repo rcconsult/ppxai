@@ -2,7 +2,9 @@
 
 **Status:** Deferred from v1.18.1. **Re-scoped 2026-05-03** —
 investigation shows the original premise was partly outdated.
-See "Refined scope" section below.
+See "Refined scope" section below. **Superseded by**
+[ADR 0003 — Agent platform architecture](decisions/0003-agent-platform-architecture.md),
+which folds this refactor into the v1.19.x agent-platform plan.
 **Trigger to revisit:** when web/VSCode users complain about
 divergent agent UX, OR when ADRs/agents work needs server-side
 agent loop control (e.g. cross-client agent state machine).
