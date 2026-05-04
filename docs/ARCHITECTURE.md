@@ -404,8 +404,10 @@ heartbeat-reconnect path AND the visibility/focus path both
 delegate to it. Future channels (REST piggyback, persistent
 SSE) feed the same shape into the same mirror.
 
-For the open / planned items see
-[docs/TODO-v1.18.1-state-sync-determinism.md](TODO-v1.18.1-state-sync-determinism.md).
+Phases A–E shipped in v1.18.1; Phase F (persistent SSE `GET /events`)
+is intentionally deferred — escalate only if observation says A–E
+are insufficient. Original planning doc archived at
+[docs/archive/TODO-v1.18.1-state-sync-determinism.md](archive/TODO-v1.18.1-state-sync-determinism.md).
 
 ### DAG Dependency Rule (v1.16.1)
 

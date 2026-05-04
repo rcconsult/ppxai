@@ -1,5 +1,17 @@
 # v1.18.1 — State-Sync Determinism
 
+> **Status:** **CLOSED — archived 2026-05-05.** Phases A through E shipped
+> in v1.18.1 (verified 2026-05-05 by code audit: visibility re-anchor in
+> `web/app.js:241` + `vscode-extension/src/chatPanel.ts:178`, REST
+> piggyback via `with_drained_events` in `server/routes/{agent,commands,context}.py`,
+> `_fileTreeCurrentPath` parallel state removed, `cwd_anchor` 409 in
+> `server/routes/files.py:30`, e2e tests in
+> `tests/test_{files_cwd_anchor,vscode_step5c_state_sync,vscode_visibility_reanchor,web_cwd_anchor_client,web_visibility_reanchor}.py`).
+> Phase F (persistent SSE `GET /events`) is intentionally deferred —
+> escalate only if observation says A–E are insufficient. The unchecked
+> `[ ]` checkboxes in "Acceptance criteria" below are stale planning
+> artifacts; treat the section as historical context.
+
 **Branch:** `feature/v1.18.1` (parallel workstream to command unification)
 **Goal:** Make engine ↔ client state synchronization deterministic across the entire user session, not just during active `/chat` streams. Eliminate the "rare working-dir misalignment" + "file not found" class of bugs that block trustworthy agent execution.
 
