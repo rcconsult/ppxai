@@ -789,8 +789,10 @@ impractical.
 
 ### v1.19.x - Anthropic Provider (planned)
 
-Moved from `docs/DEBT-INVENTORY-v1.18.3.md` Item 14 on 2026-05-05 — feature
-work, not a fix, so it belongs on the roadmap rather than the debt list.
+Moved from the debt inventory on 2026-05-05 — feature work, not a fix, so
+it belongs on the roadmap rather than the debt list. The original Item 14
+design rationale (TOS warning text, OAuth fallback caveats) is preserved
+in [docs/archive/DEBT-INVENTORY-v1.18.2.md](docs/archive/DEBT-INVENTORY-v1.18.2.md#item-14--add-anthropic-provider-with-explicit-tos-aware-auth-fallback).
 Pairs well with the multi-model routing work below: Claude as a coding-model
 option in the routing layer is one of the listed motivations.
 

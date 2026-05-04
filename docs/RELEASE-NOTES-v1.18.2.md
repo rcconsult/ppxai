@@ -11,7 +11,7 @@
 ## Summary
 
 v1.18.2 is intentionally not a feature release. The branch closed
-9 of 10 open items in [DEBT-INVENTORY-v1.18.2.md](DEBT-INVENTORY-v1.18.2.md)
+9 of 10 open items in [DEBT-INVENTORY-v1.18.2.md](archive/DEBT-INVENTORY-v1.18.2.md)
 and added 476 tests via the gpt-5.5 critique sweep + production
 testing on 2026-04-26. The user-visible product surface barely
 changes; the codebase health and the discipline around it does.

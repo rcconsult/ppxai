@@ -220,7 +220,7 @@ The 480B's 19% is **NOT** a quality measurement — only 9 tool calls
 in 75s vs 74-89 calls in 197-1836s for healthy peers, with multiple
 test results showing `{"message":"Operation not allowed"}` from NIM's
 free-tier 403 quota-block. See `__comment_benchmark` in both repo
-configs and Item 17 in [DEBT-INVENTORY-v1.18.3.md](DEBT-INVENTORY-v1.18.3.md)
+configs and Item 17 in [DEBT-INVENTORY-v1.18.3.md](archive/DEBT-INVENTORY-v1.18.3.md)
 for the paid-tier rerun plan.
 
 ### ModelProfile entries for namespaced NIM IDs (Tier 1 #3)
@@ -793,7 +793,7 @@ as compliance.
 ## Resume context
 
 If picking this up on a different machine, see
-[DEBT-INVENTORY-v1.18.3.md](DEBT-INVENTORY-v1.18.3.md) for the open
+[DEBT-INVENTORY-v1.18.3.md](archive/DEBT-INVENTORY-v1.18.3.md) for the open
 follow-ups. The branch is `feature/v1.18.3`. Commits over master, in
 chronological order:
 

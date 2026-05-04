@@ -261,9 +261,10 @@ data-driven. With it, the team has a real benchmark.
 - `docs/decisions/0002-command-context-three-pattern-split.md` — the
   three-pattern split (Pattern A proxy / Pattern B explicit / no
   adapter) translates cleanly to Go interfaces if/when ported.
-- `docs/DEBT-INVENTORY-v1.18.2.md` Item 14 (Anthropic provider with
-  TOS-aware auth fallback) — pure Python work; would need separate
-  Go-side equivalent if Option B is taken.
+- `docs/archive/DEBT-INVENTORY-v1.18.2.md` Item 14 (Anthropic provider
+  with TOS-aware auth fallback) — pure Python work; would need separate
+  Go-side equivalent if Option B is taken. (Item moved to ROADMAP v1.19.x
+  on 2026-05-05; original entry preserved in archive snapshot.)
 - `memory/release-lessons.md` — captures the operational pain points
   of Python long-running processes (PyInstaller silent module drop,
   binary metadata staleness).
