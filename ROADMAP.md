@@ -787,6 +787,39 @@ impractical.
 | **`/preset` command** | List, switch, show preset bindings | [TODO-routing.md](docs/TODO-routing.md) Phase 5 |
 | **Status bar preset badge** | Show active preset name in TUI/Web | [TODO-routing.md](docs/TODO-routing.md) Phase 5 |
 
+### v1.19.x - Anthropic Provider (planned)
+
+Moved from `docs/DEBT-INVENTORY-v1.18.3.md` Item 14 on 2026-05-05 — feature
+work, not a fix, so it belongs on the roadmap rather than the debt list.
+Pairs well with the multi-model routing work below: Claude as a coding-model
+option in the routing layer is one of the listed motivations.
+
+| Phase | Description | Effort |
+|---|---|---|
+| **Phase 1: API key (mainline)** | New `ppxai/engine/providers/anthropic.py` using the official `anthropic` Python SDK. Same shape as `openai_native.py` / `gemini.py`. `ModelProfile` entries for `claude-opus-4-7`, `claude-sonnet-4-6`, `claude-haiku-4-5-20251001`. Auth via `ANTHROPIC_API_KEY`. Ships behind a `[anthropic]` extra in `pyproject.toml` so users opt into the dependency. | ~2-3 days |
+| **Phase 2: TOS-aware OAuth fallback (opt-in)** | When `ANTHROPIC_API_KEY` is unset AND `ANTHROPIC_AUTH_TOKEN` is set (or detectable from `~/.claude/.credentials.json`), allow auth-token path. **Must:** (1) emit runtime WARNING the first time the fallback is invoked stating that reusing Claude Code credentials from non-Claude-Code clients may violate Anthropic TOS; (2) NOT auto-read `~/.claude/.credentials.json` without explicit `providers.anthropic.allow_claude_code_oauth: true` config flag; (3) implement token-refresh awareness — re-read credentials per request when opted in, fail loudly with "run `claude /login` and retry" on 401. | ~1 day |
+| **Documentation** | New `docs/ANTHROPIC-PROVIDER.md` covering API-key setup (mainline, recommended), opt-in OAuth-reuse with the full TOS warning quoted verbatim, troubleshooting expired tokens. README provider table gets an Anthropic row. | ~half day |
+
+**Why this matters:** Claude is currently the strongest coding model in the
+v4.x generation; first-class support unlocks `/explain`, `/test`, `/docs`,
+`/agent` against Claude with the same UX as the other providers.
+
+**Caveats pinned so they don't get re-litigated:**
+- The project does NOT endorse / guarantee / take legal responsibility for
+  users using their Claude Code subscription credentials with ppxai. The
+  runtime warning is the project's due-diligence boundary.
+- The mainline (API-key) path has no TOS concerns and is the recommended
+  setup. Phase 2 exists for users who explicitly choose the experimentation
+  path.
+- Auto-reading `~/.claude/.credentials.json` without opt-in is the project
+  taking the user's TOS decision for them — not acceptable.
+
+**Branch when ready:** `feat/anthropic-provider`. Phase 2 can be a follow-up
+commit on the same branch or split into `feat/anthropic-oauth-fallback` if
+the TOS-warning UX needs review independently.
+
+---
+
 ### v1.19.x - Prompt Analyzer + Adaptive Routing (Future)
 
 | Feature | Description | Plan |

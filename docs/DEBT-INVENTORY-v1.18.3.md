@@ -39,11 +39,15 @@ The remaining open work is in "## Carried over" below.)
 [DEBT-INVENTORY-v1.18.2.md](DEBT-INVENTORY-v1.18.2.md#item-3--k8s-session-manager-security-tests-critique-8).
 Not addressable until in a k8s context environment.
 
-### Item 14 — Anthropic provider
+### Item 14 — Anthropic provider — moved to ROADMAP 2026-05-05
 
-**Status:** carried over. Pre-work + ADR done; Phase 1 (API key)
-implementation pending. ~half day with TOS-aware OAuth fallback in
-Phase 2. [DEBT-INVENTORY-v1.18.2.md](DEBT-INVENTORY-v1.18.2.md#item-14--add-anthropic-provider-with-explicit-tos-aware-auth-fallback).
+**Status:** moved from debt list to [ROADMAP.md §"v1.19.x - Anthropic
+Provider (planned)"](../ROADMAP.md#v119x---anthropic-provider-planned).
+Anthropic provider is feature work, not bug-fix-class debt — it belongs
+on the roadmap, not the debt inventory. Original v1.18.2 entry preserved
+at
+[DEBT-INVENTORY-v1.18.2.md](DEBT-INVENTORY-v1.18.2.md#item-14--add-anthropic-provider-with-explicit-tos-aware-auth-fallback)
+for the full design rationale (TOS warning text, OAuth fallback caveats).
 
 ---
 
