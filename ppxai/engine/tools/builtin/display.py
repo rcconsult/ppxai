@@ -82,7 +82,12 @@ class DisplayFileTool(BaseTool):
 
             # DISPLAY_FILE event is emitted by chat.py after tool execution (v1.15.1)
             # This allows the event to be properly yielded in the event stream
-            msg = f"Opening {path.name} in viewer"
+            # v1.18.4: use the resolved absolute path in the message
+            # instead of just the basename, so the model can ground
+            # its summary in the actual file location (matches the
+            # cwd-grounding fix shape applied to list_directory and
+            # execute_shell_command).
+            msg = f"Opening {path} in viewer"
             logger.debug(f"[display_file tool] returning success: {msg}")
             return msg
 

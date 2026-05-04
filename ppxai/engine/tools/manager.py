@@ -352,11 +352,25 @@ class ToolManager:
         prompt = "# IMPORTANT: You Have Access to Tools\n\n"
 
         # Include current working directory if available (v1.15.2)
-        # This ensures LLM knows the current directory even after /cd commands
+        # This ensures LLM knows the current directory even after /cd commands.
+        # v1.18.4 strengthening: the previous wording ("do NOT rely on
+        # previous tool results") was insufficient — models were observed
+        # confabulating paths from earlier conversation turns even when the
+        # cwd above was correct. The fortified instruction below tells the
+        # model the cwd is the SOLE source of truth and that tool outputs
+        # from earlier turns may have run in a different directory.
         if working_dir:
             prompt += f"**Current Working Directory:** `{working_dir}`\n"
-            prompt += "All relative paths in tool calls will be resolved relative to this directory.\n"
-            prompt += "When the user asks about the current directory, use this value - do NOT rely on previous tool results.\n\n"
+            prompt += "All relative paths in tool calls are resolved against this directory.\n"
+            prompt += (
+                "**This cwd is the ONLY source of truth for your current location.** "
+                "Tool results earlier in this conversation may have run in a different "
+                "directory (the user can `/cd` between turns). When summarizing tool "
+                "output that references a path or directory, verify against the cwd "
+                "above before quoting any other path. If a tool's output starts with "
+                "a header like `Listing of /path/to/dir:` or `[cwd: /path/to/dir]`, "
+                "quote that path verbatim — do not substitute a path from memory.\n\n"
+            )
 
         prompt += "You MUST use these tools when the user asks for information you don't have access to natively.\n"
         prompt += "You are an AI assistant with tool capabilities. You have access to the user's filesystem, can run commands, search the web, and more. Use the tools proactively - don't ask the user for information you can get yourself!\n\n"

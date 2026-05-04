@@ -255,12 +255,16 @@ class SearchFilesTool(BaseTool):
                     search_dir = expanded
 
             results = glob_module.glob(f"{search_dir}/**/{pattern}", recursive=True)
+            # v1.18.4: ground every result (including zero-match) in
+            # the directory that was searched, so the model knows
+            # where the search ran instead of guessing.
+            header = f"Searched for '{pattern}' in {search_dir}:"
             if not results:
-                return f"No files found matching '{pattern}'"
+                return f"{header}\n(no matches)"
             output = "\n".join(results[:50])
             if len(results) > 50:
                 output += f"\n... ({len(results) - 50} more files)"
-            return output
+            return f"{header}\n{output}"
         except Exception as e:
             return f"Error: {str(e)}"
 

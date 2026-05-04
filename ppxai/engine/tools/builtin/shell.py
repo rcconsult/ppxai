@@ -374,6 +374,13 @@ class ShellExecuteTool(BaseTool):
                 if stderr_text:
                     if output:
                         output += "\n--- stderr ---\n"
+                    else:
+                        # v1.18.4: explicit separator even when stdout
+                        # is empty so the model can tell the source —
+                        # commands like `gh auth status` write only to
+                        # stderr and the model would otherwise treat
+                        # the stderr content as authoritative stdout.
+                        output = "--- stderr ---\n"
                     output += stderr_text
 
                 if proc.returncode and proc.returncode != 0:
@@ -384,7 +391,23 @@ class ShellExecuteTool(BaseTool):
                 if len(output) > max_output:
                     output = output[:max_output] + f"\n\n... (output truncated, {len(output) - max_output} chars omitted)"
 
-                return output if output else f"Command completed successfully (exit code: {proc.returncode})"
+                # v1.18.4: prefix the cwd so the model can ground its
+                # summary in the actual directory where the command
+                # ran. Without this, an `ls` or `git status` returned
+                # bare stdout with no path; the LLM confabulated a
+                # path in its response (matched the `list_directory`
+                # bug class fixed in commit ee90bff4). The exit code
+                # is included for non-zero outcomes so the model
+                # can't paraphrase failure as success.
+                rc_part = f", exit: {proc.returncode}" if proc.returncode else ""
+                header = f"[cwd: {working_dir}{rc_part}]"
+
+                if not output:
+                    return (
+                        f"{header}\n"
+                        f"Command completed successfully (exit code: {proc.returncode})"
+                    )
+                return f"{header}\n{output}"
             finally:
                 self.engine.unregister_subprocess(proc)
 

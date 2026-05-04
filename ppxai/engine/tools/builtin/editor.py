@@ -160,14 +160,20 @@ class ApplyPatchTool(BaseTool):
                 # Track edited file for agent auto-commit
                 self.engine._agent_edited_files.add(str(path))
 
+                # v1.18.4: report the resolved absolute `path` in the
+                # success message instead of the input arg `file_path`
+                # (which may be relative like "foo.py"). The model can
+                # then ground later references in the actual file
+                # location, not the relpath that was relative to a
+                # since-changed cwd.
                 if is_new_file and not original_lines:
-                    return f"✓ Successfully created {file_path} ({len(new_lines)} lines)"
+                    return f"✓ Successfully created {path} ({len(new_lines)} lines)"
                 elif is_delete_recreate:
-                    return f"✓ Successfully replaced {file_path} ({len(new_lines)} lines)"
+                    return f"✓ Successfully replaced {path} ({len(new_lines)} lines)"
                 else:
                     lines_changed = sum(1 for a, b in zip(original_lines, new_lines) if a != b)
                     lines_added = len(new_lines) - len(original_lines)
-                    return f"✓ Successfully applied patch to {file_path} ({lines_changed} lines modified, {lines_added:+d} lines)"
+                    return f"✓ Successfully applied patch to {path} ({lines_changed} lines modified, {lines_added:+d} lines)"
 
             except Exception as e:
                 # Rollback on failure (only if we had backup)
@@ -299,7 +305,8 @@ class ReplaceBlockTool(BaseTool):
                 lines_added = replace.count('\n') - search.count('\n')
                 # Track edited file for agent auto-commit
                 self.engine._agent_edited_files.add(str(path))
-                return f"✓ Successfully replaced block in {file_path} at line {line_num} ({lines_added:+d} lines)"
+                # v1.18.4: resolved absolute path, not the input relpath.
+                return f"✓ Successfully replaced block in {path} at line {line_num} ({lines_added:+d} lines)"
 
             except Exception as e:
                 # Rollback on failure
@@ -431,10 +438,11 @@ class InsertTextTool(BaseTool):
                 # Track edited file for agent auto-commit
                 self.engine._agent_edited_files.add(str(path))
 
+                # v1.18.4: resolved absolute path, not the input relpath.
                 if is_new_file:
-                    return f"✓ Successfully created {file_path} ({num_lines} lines)"
+                    return f"✓ Successfully created {path} ({num_lines} lines)"
                 else:
-                    return f"✓ Successfully inserted text in {file_path} at lines {line_number}-{end_line}"
+                    return f"✓ Successfully inserted text in {path} at lines {line_number}-{end_line}"
 
             except Exception as e:
                 # Rollback on failure (only if we had backup)
@@ -569,7 +577,8 @@ class DeleteLinesTool(BaseTool):
                 preview = deleted_content[:100] + "..." if len(deleted_content) > 100 else deleted_content
                 # Track edited file for agent auto-commit
                 self.engine._agent_edited_files.add(str(path))
-                return f"✓ Successfully deleted lines {start_line}-{end_line} from {file_path} ({num_deleted} lines)\nDeleted content:\n{preview}"
+                # v1.18.4: resolved absolute path, not the input relpath.
+                return f"✓ Successfully deleted lines {start_line}-{end_line} from {path} ({num_deleted} lines)\nDeleted content:\n{preview}"
 
             except Exception as e:
                 # Rollback on failure
