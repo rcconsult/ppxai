@@ -2972,18 +2972,19 @@ class PpxaiApp {
                     if (externalUrl) {
                         src = externalUrl;
                     } else {
-                        // Strip the working_dir prefix if filepath is absolute under cwd,
-                        // otherwise just strip the leading slash. The server route
-                        // `/preview/{filepath:path}` resolves relative to working_dir,
-                        // and double-slash in URL collapses to single, which would
-                        // otherwise turn `/workspace/x.html` into `workspace/x.html`
-                        // and look it up as `/workspace/workspace/x.html` (404).
+                        // Strip the working_dir prefix when filepath is absolute
+                        // under cwd, so the resulting URL does not contain a
+                        // `//` between `/preview/` and the rest. Behind a
+                        // proxy (e.g. K8s nginx ingress) `//` collapses to `/`
+                        // and the server then resolves `workspace/x.html`
+                        // relative to `/workspace/` → `/workspace/workspace/x.html`
+                        // → 404. When filepath is outside working_dir we leave
+                        // the leading slash so the server treats it as absolute
+                        // (path-traversal guard allows files under $HOME).
                         let pathForUrl = filepath;
                         const wd = app.state?.workingDir || '';
                         if (wd && filepath.startsWith(wd + '/')) {
                             pathForUrl = filepath.slice(wd.length + 1);
-                        } else if (pathForUrl.startsWith('/')) {
-                            pathForUrl = pathForUrl.slice(1);
                         }
                         const encodedPath = pathForUrl.split('/').map(encodeURIComponent).join('/');
                         src = `${this._serverUrl}/preview/${encodedPath}?session=${encodeURIComponent(this._sessionId)}`;
