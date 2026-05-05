@@ -2972,7 +2972,20 @@ class PpxaiApp {
                     if (externalUrl) {
                         src = externalUrl;
                     } else {
-                        const encodedPath = filepath.split('/').map(encodeURIComponent).join('/');
+                        // Strip the working_dir prefix if filepath is absolute under cwd,
+                        // otherwise just strip the leading slash. The server route
+                        // `/preview/{filepath:path}` resolves relative to working_dir,
+                        // and double-slash in URL collapses to single, which would
+                        // otherwise turn `/workspace/x.html` into `workspace/x.html`
+                        // and look it up as `/workspace/workspace/x.html` (404).
+                        let pathForUrl = filepath;
+                        const wd = app.state?.workingDir || '';
+                        if (wd && filepath.startsWith(wd + '/')) {
+                            pathForUrl = filepath.slice(wd.length + 1);
+                        } else if (pathForUrl.startsWith('/')) {
+                            pathForUrl = pathForUrl.slice(1);
+                        }
+                        const encodedPath = pathForUrl.split('/').map(encodeURIComponent).join('/');
                         src = `${this._serverUrl}/preview/${encodedPath}?session=${encodeURIComponent(this._sessionId)}`;
                     }
                     // Header bar with stop button (--serve and --proxy modes)
