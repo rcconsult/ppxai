@@ -1,0 +1,25 @@
+{
+  "provider": "vllm-qwen36",
+  "model": "Qwen/Qwen3.6-27B-FP8",
+  "timestamp": "2026-05-05T14:28:34.989895",
+  "overall_score": 0.0,
+  "tests_passed": 0,
+  "tests_total": 36,
+  "duration_seconds": 0.0,
+  "category_scores": {},
+  "test_results": [
+    {
+      "name": "initialization",
+      "category": "system",
+      "passed": false,
+      "details": {
+        "error": "Client initialization failed"
+      },
+      "weight": 0
+    }
+  ],
+  "metadata": {
+    "error": "Client initialization failed",
+    "agents_md_mode": "without"
+  }
+}
