@@ -64,6 +64,21 @@ class OpenAICompatibleProvider(BaseProvider):
     # Reserve tokens for response generation
     MIN_RESPONSE_TOKENS = 2048
 
+    def _get_response_reservation(self, model: str) -> int:
+        """Tokens to subtract from context_limit when validating prompt size.
+
+        Backends reject the request when `prompt_tokens + max_tokens >
+        max_model_len`. Reserving the configured `max_tokens` (when set)
+        keeps ppxai's pre-flight aligned with what the wire actually
+        accepts; the 2048 floor preserves the legacy guard for models
+        that omit `max_tokens`.
+        """
+        try:
+            configured = self._get_max_tokens(model) or 0
+        except Exception:
+            configured = 0
+        return max(self.MIN_RESPONSE_TOKENS, configured)
+
     def _get_context_limit(self, model: str) -> int:
         """Get context limit for the current model from config.
 
@@ -185,7 +200,7 @@ class OpenAICompatibleProvider(BaseProvider):
             # This prevents the "max_tokens must be at least 1" error from vLLM
             estimated_tokens = self._estimate_tokens(api_messages)
             context_limit = self._get_context_limit(model)
-            max_allowed = context_limit - self.MIN_RESPONSE_TOKENS
+            max_allowed = context_limit - self._get_response_reservation(model)
             warn_percent = self._get_warn_percent()
 
             if estimated_tokens > max_allowed:

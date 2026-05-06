@@ -177,6 +177,19 @@ class EngineClient:
         # Set by set_model() when reset_context strips messages
         self.last_model_switch_reset: int = 0
 
+        # Authoritative token-count baseline for the context indicator
+        # (v1.18.4 Item A). After every successful turn the provider
+        # returns exact `prompt_tokens` and `completion_tokens` for the
+        # request it just processed; together they describe the BPE
+        # token count of `session.messages` immediately after the
+        # assistant reply is appended. Storing the snapshot here lets
+        # `get_context_info()` fall back to chars/4 only for messages
+        # added since the last usage event (e.g. the user's pending
+        # next message), eliminating the 20-30% under-count that
+        # chars/4 produces for code-heavy contexts.
+        self._last_known_message_tokens: int = 0
+        self._last_known_message_count: int = 0
+
         # Suppress hint logging during internal set_model calls from set_provider()
         # Initialized here so the flag always exists on the instance (not just on first
         # set_provider call).  _log_model_hints_transition reads it via getattr so a
@@ -294,6 +307,14 @@ class EngineClient:
 
     def _sync_usage_to_state(self, usage: 'UsageStats') -> None:
         """Callback from session.update_usage() — sync totals to AppState."""
+        # Refresh the authoritative token-count baseline BEFORE computing
+        # the percentage so `get_context_info()` returns the just-received
+        # provider numbers instead of the stale chars/4 estimate.
+        self._last_known_message_tokens = (
+            (usage.prompt_tokens or 0) + (usage.completion_tokens or 0)
+        )
+        self._last_known_message_count = len(self.session.messages)
+
         # Context percentage — derived from session message history
         try:
             context_info = self.get_context_info()

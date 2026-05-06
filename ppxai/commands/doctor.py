@@ -26,6 +26,8 @@ classification logic via `audit_user_config()`.
 from __future__ import annotations
 
 import json
+import os
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -45,6 +47,10 @@ from .results import (
     NotificationResult,
     ResultStatus,
 )
+
+# Per-endpoint timeout (seconds) for /doctor probe. Short on purpose:
+# /doctor must stay snappy even when one of N providers is unreachable.
+_PROBE_TIMEOUT_S = 2.0
 
 
 def _extract_provider_models(config_data: Dict[str, Any]) -> Dict[str, List[str]]:
@@ -280,12 +286,220 @@ def _summarize_startup(audit: Dict[str, Any]) -> Optional[str]:
     )
 
 
+def _probe_provider_endpoint(
+    provider_name: str, provider_cfg: Dict[str, Any]
+) -> Dict[str, Any]:
+    """Hit `<base_url>/models` and return what the endpoint advertises.
+
+    Returns a dict shaped like:
+
+        {
+            "reachable": bool,
+            "endpoint_models": {model_id: max_model_len, ...},
+            "error": str | None,
+        }
+
+    Best-effort: any network/parse failure is swallowed and surfaces
+    as `reachable: False` with a short error string. Never raises.
+    """
+    result: Dict[str, Any] = {
+        "reachable": False,
+        "endpoint_models": {},
+        "error": None,
+    }
+    base_url = provider_cfg.get("base_url")
+    if not base_url:
+        result["error"] = "no base_url"
+        return result
+
+    api_key_env = provider_cfg.get("api_key_env")
+    api_key = os.getenv(api_key_env, "") if api_key_env else ""
+    headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
+    url = base_url.rstrip("/") + "/models"
+
+    try:
+        # Lazy import — keeps /doctor importable when httpx is missing
+        # (we only need it for the probe path, never the offline audit).
+        import httpx
+    except ImportError:
+        result["error"] = "httpx not installed"
+        return result
+
+    try:
+        with httpx.Client(timeout=_PROBE_TIMEOUT_S) as client:
+            response = client.get(url, headers=headers)
+            response.raise_for_status()
+            payload = response.json()
+    except Exception as exc:
+        result["error"] = f"{type(exc).__name__}: {str(exc)[:80]}"
+        return result
+
+    endpoint_models: Dict[str, int] = {}
+    for entry in payload.get("data", []) or []:
+        if not isinstance(entry, dict):
+            continue
+        model_id = entry.get("id")
+        max_len = entry.get("max_model_len")
+        if isinstance(model_id, str) and isinstance(max_len, int) and max_len > 0:
+            endpoint_models[model_id] = max_len
+
+    result["reachable"] = True
+    result["endpoint_models"] = endpoint_models
+    return result
+
+
+def probe_all_providers(config_data: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
+    """Run `_probe_provider_endpoint` for every configured provider in parallel.
+
+    Returns `{provider_name: probe_dict}`. Providers without a `base_url`
+    or that error out still appear in the result with `reachable: False`
+    so the formatter can show them as "could not reach".
+    """
+    providers = config_data.get("providers", {})
+    if not isinstance(providers, dict):
+        return {}
+
+    targets = [
+        (name, cfg)
+        for name, cfg in providers.items()
+        if isinstance(cfg, dict) and cfg.get("base_url")
+    ]
+    if not targets:
+        return {}
+
+    results: Dict[str, Dict[str, Any]] = {}
+    with ThreadPoolExecutor(max_workers=min(8, len(targets))) as pool:
+        futures = {
+            pool.submit(_probe_provider_endpoint, name, cfg): name
+            for name, cfg in targets
+        }
+        for future in futures:
+            name = futures[future]
+            try:
+                results[name] = future.result(timeout=_PROBE_TIMEOUT_S + 1.0)
+            except Exception as exc:
+                results[name] = {
+                    "reachable": False,
+                    "endpoint_models": {},
+                    "error": f"timeout/{type(exc).__name__}",
+                }
+    return results
+
+
+def detect_context_limit_drift(
+    config_data: Dict[str, Any], probe_results: Dict[str, Dict[str, Any]]
+) -> List[Dict[str, Any]]:
+    """Compare each model's `context_limit` to the endpoint's `max_model_len`.
+
+    Returns a list of drift entries; over-claim is the dangerous case
+    (ppxai admits prompts the backend rejects), under-claim is just a
+    missed-headroom note. Models whose endpoint omits `max_model_len`
+    or whose config omits `context_limit` are skipped silently.
+    """
+    drift: List[Dict[str, Any]] = []
+    providers = config_data.get("providers", {})
+    if not isinstance(providers, dict):
+        return drift
+
+    for provider_name, provider_cfg in providers.items():
+        if not isinstance(provider_cfg, dict):
+            continue
+        probe = probe_results.get(provider_name)
+        if not probe or not probe.get("reachable"):
+            continue
+        models = provider_cfg.get("models", {})
+        if not isinstance(models, dict):
+            continue
+        for model_id, model_cfg in models.items():
+            if model_id.startswith("__comment") or not isinstance(model_cfg, dict):
+                continue
+            config_limit = model_cfg.get("context_limit")
+            actual_limit = probe["endpoint_models"].get(model_id)
+            if not isinstance(config_limit, int) or not isinstance(actual_limit, int):
+                continue
+            if config_limit == actual_limit:
+                continue
+            drift.append({
+                "provider": provider_name,
+                "model": model_id,
+                "config_limit": config_limit,
+                "actual_limit": actual_limit,
+                "severity": "over-claim" if config_limit > actual_limit else "under-claim",
+            })
+    return drift
+
+
+def _format_probe_section(
+    probe_results: Dict[str, Dict[str, Any]],
+    drift: List[Dict[str, Any]],
+) -> List[str]:
+    """Render the probe results + drift table as plain-text lines."""
+    lines: List[str] = []
+    lines.append("Endpoint probe (live `/v1/models`):")
+    if not probe_results:
+        lines.append("   (no providers with base_url configured)")
+        return lines
+
+    unreachable = [
+        (name, p) for name, p in probe_results.items() if not p.get("reachable")
+    ]
+    reachable = [
+        (name, p) for name, p in probe_results.items() if p.get("reachable")
+    ]
+
+    if reachable:
+        reachable_names = ", ".join(name for name, _ in reachable)
+        lines.append(f"   ✓ Reachable: {len(reachable)} ({reachable_names})")
+    if unreachable:
+        unreachable_parts = [
+            f"{name} [{(probe.get('error') or '?')}]"
+            for name, probe in unreachable
+        ]
+        lines.append(
+            f"   ⚠ Unreachable: {len(unreachable)} ({', '.join(unreachable_parts)})"
+        )
+
+    over = [d for d in drift if d["severity"] == "over-claim"]
+    under = [d for d in drift if d["severity"] == "under-claim"]
+
+    if over:
+        lines.append("")
+        lines.append(
+            f"⚠ Context-limit OVER-CLAIM ({len(over)} — config exceeds backend `--max-model-len`):"
+        )
+        for d in over:
+            lines.append(
+                f"   providers.{d['provider']}.models.{d['model']}.context_limit = "
+                f"{d['config_limit']:,} but endpoint reports {d['actual_limit']:,}"
+            )
+            lines.append(
+                f"     → fix: lower context_limit to {d['actual_limit']:,} (or align backend)"
+            )
+    if under:
+        lines.append("")
+        lines.append(
+            f"ℹ Context-limit under-claim ({len(under)} — leaves headroom unused):"
+        )
+        for d in under:
+            lines.append(
+                f"   providers.{d['provider']}.models.{d['model']}.context_limit = "
+                f"{d['config_limit']:,} but endpoint allows {d['actual_limit']:,}"
+            )
+    if not over and not under and reachable:
+        lines.append("   ✓ context_limit values match endpoint advertisements")
+    return lines
+
+
 def handle_doctor(context: CommandContext, args: str) -> CommandResult:
     """Handle /doctor command — scan config and report deprecated models.
 
-    Accepts no arguments. Returns a NotificationResult with the full
-    audit report, or an ErrorResult if the config file cannot be read.
+    Without args, runs the offline config audit only.
+    With `probe`, additionally hits each provider's `<base_url>/models`
+    endpoint and reports drift between configured `context_limit` and
+    the backend's advertised `max_model_len`. The probe is opt-in so
+    /doctor stays fast and offline-safe by default.
     """
+    do_probe = "probe" in (args or "").split()
     audit = audit_user_config()
 
     if audit["error"]:
@@ -295,13 +509,28 @@ def handle_doctor(context: CommandContext, args: str) -> CommandResult:
         )
 
     report = _format_audit_report(audit)
+    probe_results: Dict[str, Dict[str, Any]] = {}
+    drift: List[Dict[str, Any]] = []
+
+    if do_probe and audit.get("config_path"):
+        try:
+            with open(audit["config_path"], "r", encoding="utf-8-sig") as f:
+                config_data = json.load(f)
+            probe_results = probe_all_providers(config_data)
+            drift = detect_context_limit_drift(config_data, probe_results)
+            probe_lines = _format_probe_section(probe_results, drift)
+            report = report + "\n\n" + "\n".join(probe_lines)
+        except (FileNotFoundError, json.JSONDecodeError, OSError):
+            # Probe is opt-in best-effort; never fail /doctor over it.
+            report = report + "\n\n(probe skipped — could not re-read config)"
 
     # Escalate the result status when dead models are present so clients
     # that color by status highlight the warning appropriately.
     has_dead = bool(audit["dead"])
     has_warnings = bool(audit["upcoming"]) or bool(audit["default_warnings"])
+    has_drift_overclaim = any(d["severity"] == "over-claim" for d in drift)
 
-    if has_dead:
+    if has_dead or has_drift_overclaim:
         status = ResultStatus.WARNING
     elif has_warnings:
         status = ResultStatus.WARNING
@@ -316,6 +545,9 @@ def handle_doctor(context: CommandContext, args: str) -> CommandResult:
             "upcoming_count": len(audit["upcoming"]),
             "missing_recommended_count": len(audit["missing_recommended"]),
             "default_warnings_count": len(audit["default_warnings"]),
+            "probed": do_probe,
+            "drift_overclaim_count": sum(1 for d in drift if d["severity"] == "over-claim"),
+            "drift_underclaim_count": sum(1 for d in drift if d["severity"] == "under-claim"),
         },
     )
 
@@ -326,8 +558,8 @@ def handle_doctor(context: CommandContext, args: str) -> CommandResult:
 
 CommandFactory.register(CommandSpec(
     name="doctor",
-    description="Scan config for deprecated models + health check",
+    description="Scan config for deprecated models; `/doctor probe` also checks live endpoints",
     handler=handle_doctor,
     category="utility",
-    usage="/doctor",
+    usage="/doctor [probe]",
 ))

@@ -126,9 +126,35 @@ def get_status(engine) -> Dict[str, Any]:
 
 
 def get_context_info(engine) -> Dict[str, Any]:
-    """Get context usage information for /context command."""
-    total_chars = sum(len(m.text_content()) for m in engine.session.messages)
-    estimated_tokens = total_chars // 4
+    """Get context usage information for /context command.
+
+    Token-count source (v1.18.4 Item A): prefer the authoritative
+    provider-reported counts captured in `_last_known_message_tokens`
+    after the most recent turn, then add a chars/4 estimate for any
+    messages appended since (typically just the user's pending next
+    message). Falls back to whole-history chars/4 only when no usage
+    has been observed yet (fresh session, first turn).
+    """
+    messages = engine.session.messages
+    total_chars = sum(len(m.text_content()) for m in messages)
+    baseline_tokens_raw = getattr(engine, "_last_known_message_tokens", 0)
+    baseline_count_raw = getattr(engine, "_last_known_message_count", 0)
+    # Defensive: tests sometimes inject a MagicMock for `engine`. Treat
+    # non-int baselines as "no usage observed yet" so the chars/4
+    # fallback still fires deterministically.
+    baseline_tokens = baseline_tokens_raw if isinstance(baseline_tokens_raw, int) else 0
+    baseline_count = baseline_count_raw if isinstance(baseline_count_raw, int) else 0
+
+    if baseline_tokens > 0 and 0 < baseline_count <= len(messages):
+        # Authoritative count for everything up to baseline_count, then
+        # chars/4 for the suffix (almost always 0 or 1 short message).
+        suffix_chars = sum(
+            len(m.text_content()) for m in messages[baseline_count:]
+        )
+        estimated_tokens = baseline_tokens + (suffix_chars // 4)
+    else:
+        estimated_tokens = total_chars // 4
+
     context_limit = get_model_context_limit(engine.provider_name, engine.model)
     usage_percent = (estimated_tokens / context_limit) * 100 if context_limit > 0 else 0
 
@@ -141,7 +167,7 @@ def get_context_info(engine) -> Dict[str, Any]:
         "usage_percent": usage_percent,
         "injected_contexts": engine._injected_contexts.copy(),
         "injected_tokens": injected_tokens,
-        "message_count": len(engine.session.messages),
+        "message_count": len(messages),
         "total_chars": total_chars,
         "provider": engine.provider_name,
         "model": engine.model

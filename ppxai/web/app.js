@@ -979,10 +979,14 @@ class PpxaiApp {
                 this.loadModels();
                 // Hints are provider-specific — refresh
                 this.loadHintsStatus();
+                // Context limit changes with provider — refresh badge
+                this.updateContextInfo();
             } else if (pyKey === 'model') {
                 this.elements.modelSelect.value = value;
                 // Hints are model-specific — refresh
                 this.loadHintsStatus();
+                // Context limit changes with model — refresh badge
+                this.updateContextInfo();
             } else if (pyKey === 'tools_enabled') {
                 this.updateToolsBadge();
             } else if (pyKey === 'working_dir') {

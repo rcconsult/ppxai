@@ -483,6 +483,12 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         this._eventBus.on('state:sync', (changes: Record<string, any>) => {
             const mapped = this._appState.updateFromPython(changes);
             postMessage({ type: 'stateSync', changes: mapped });
+            // Provider/model switches change context_limit — refresh the
+            // status payload so the context badge re-renders against the
+            // new model. Mirrors web's handleStateSync hook.
+            if ('provider' in changes || 'model' in changes) {
+                this.updateStatus();
+            }
         });
 
         // UI events

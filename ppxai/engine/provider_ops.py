@@ -223,7 +223,16 @@ def _apply_model_switch(engine, model_id: str, reset_context: bool) -> bool:
                 f"Reset context for model switch to {model_id}: removed {removed} messages"
             )
     _log_model_hints_transition(engine, model_id)
+    _refresh_context_percentage(engine)
     return True
+
+
+def _refresh_context_percentage(engine) -> None:
+    try:
+        info = engine.get_context_info()
+        engine.state.set("context_percentage", info.get("usage_percent", 0.0))
+    except Exception:
+        pass
 
 
 def _log_model_hints_transition(engine, model_id: str) -> None:
