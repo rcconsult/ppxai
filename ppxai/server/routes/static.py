@@ -172,10 +172,17 @@ async def serve_styles(filename: str):
 
 @router.get("/favicon.ico")
 async def serve_favicon_ico():
-    """Serve favicon.ico (redirect to favicon.png)."""
-    file_path = WEB_UI_DIR / 'favicon.png'
-    if file_path.exists():
-        return FileResponse(file_path, media_type='image/png')
+    """Serve favicon.ico — multi-resolution ICO when present, else fall
+    back to the legacy PNG. Browsers prefer ICO for tabs/bookmarks/
+    taskbar pinning because it carries multiple resolutions in one
+    file; we keep the PNG fallback so older deployments that haven't
+    re-synced ~/.ppxai/web/ still get *something*."""
+    ico_path = WEB_UI_DIR / 'favicon.ico'
+    if ico_path.exists():
+        return FileResponse(ico_path, media_type='image/x-icon')
+    png_path = WEB_UI_DIR / 'favicon.png'
+    if png_path.exists():
+        return FileResponse(png_path, media_type='image/png')
     raise HTTPException(status_code=404, detail="Favicon not found")
 
 
