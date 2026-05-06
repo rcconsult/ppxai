@@ -1798,6 +1798,17 @@ class PpxaiApp {
                 msg += ` (${data.context_reset} messages cleared from context)`;
             }
             this.showSystemMessage(msg);
+
+            // Refresh badges directly. The server piggybacks `events:
+            // [...]` on the response with state_sync entries that
+            // would also fire handleStateSync, but those events are
+            // only drained when the next /chat SSE stream pulls them
+            // from the engine queue — so without this direct call the
+            // context badge stays on the old model's limit until the
+            // user sends a message. VSCode does the symmetric direct
+            // updateStatus() call (extension.ts:switchProvider/Model).
+            await this.updateContextInfo();
+            await this.updateUsage();
         } catch (error) {
             this.showError(`Failed to switch provider: ${error.message}`);
         }
@@ -1813,6 +1824,9 @@ class PpxaiApp {
                 msg += ` (${data.context_reset} messages cleared from context)`;
             }
             this.showSystemMessage(msg);
+            // See handleProviderChange — same envelope-drain caveat.
+            await this.updateContextInfo();
+            await this.updateUsage();
         } catch (error) {
             this.showError(`Failed to switch model: ${error.message}`);
         }
