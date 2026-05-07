@@ -305,15 +305,30 @@ class EngineClient:
             self._event_queue = []
         return events
 
-    def _sync_usage_to_state(self, usage: 'UsageStats') -> None:
-        """Callback from session.update_usage() — sync totals to AppState."""
-        # Refresh the authoritative token-count baseline BEFORE computing
-        # the percentage so `get_context_info()` returns the just-received
-        # provider numbers instead of the stale chars/4 estimate.
-        self._last_known_message_tokens = (
-            (usage.prompt_tokens or 0) + (usage.completion_tokens or 0)
-        )
-        self._last_known_message_count = len(self.session.messages)
+    def _sync_usage_to_state(
+        self,
+        usage: 'UsageStats',
+        usage_delta: Optional['UsageStats'] = None,
+    ) -> None:
+        """Callback from session.update_usage() — sync totals to AppState.
+
+        ``usage`` is the cumulative session total (used for the usage
+        badge). ``usage_delta`` is the per-turn delta added by this
+        call — its ``prompt_tokens`` is the BPE size of every message
+        sent on the latest provider request (= history that was on
+        the wire), and its ``completion_tokens`` is just the
+        assistant reply that was appended afterwards. Together they
+        equal the token count of ``session.messages`` *after* the
+        turn, which is what the context badge needs to display
+        ``X / context_limit`` honestly. (v1.18.4 Item A: prior code
+        used the cumulative numbers here, which over-claimed by a
+        factor of N for an N-turn session.)
+        """
+        if usage_delta is not None:
+            delta_total = (usage_delta.prompt_tokens or 0) + (usage_delta.completion_tokens or 0)
+            if delta_total > 0:
+                self._last_known_message_tokens = delta_total
+                self._last_known_message_count = len(self.session.messages)
 
         # Context percentage — derived from session message history
         try:

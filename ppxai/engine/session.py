@@ -805,9 +805,18 @@ class SessionManager:
             # Tool costs contribute to session total
             self.usage.estimated_cost += tool_usage.estimated_cost
 
-        # Notify listener (AppState sync)
+        # Notify listener (AppState sync). v1.18.4: pass the per-turn
+        # delta as a second positional arg so the listener can tell
+        # "tokens currently in session.messages" (= last delta) apart
+        # from "tokens accumulated across all turns" (= cumulative).
+        # Older listeners that accept only one positional arg keep
+        # working — the call below uses a try/except shim to stay
+        # backwards-compatible.
         if self.on_usage_updated:
-            self.on_usage_updated(self.usage)
+            try:
+                self.on_usage_updated(self.usage, usage)
+            except TypeError:
+                self.on_usage_updated(self.usage)
 
     def get_usage(self) -> Dict[str, Any]:
         """Get usage statistics.
