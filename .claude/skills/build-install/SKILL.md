@@ -110,14 +110,47 @@ Get-ChildItem dist\*.exe
 ```
 
 **Windows PowerShell (parallel via Start-Job):**
+
+Two gotchas that the obvious form trips on, both verified 2026-05-10
+on this checkout (rtk 0.39.0, PowerShell 7.6.1):
+
+1. **Don't put `Start-Job { ... }` calls inside a comma-separated array
+   literal.** PowerShell parses the comma-list as one big call with
+   multiple `-ScriptBlock` arguments and errors with `Cannot bind
+   parameter because parameter 'Name' is specified more than once`.
+   Assign each job to its own variable first, then build the array.
+2. **`Start-Job` runs the scriptblock in a fresh PowerShell child
+   process with CWD = `$HOME`.** A bare `uv run ...` inside the
+   scriptblock won't find `.\.uv\uv.exe` because the child isn't in
+   the project dir. Pass the working directory in via `-ArgumentList`
+   and `Set-Location` before invoking `uv`.
+
+Use this form, which works:
+
 ```powershell
-$jobs = @(
-  Start-Job { uv run --no-sync pyinstaller ppxaide.spec --noconfirm },
-  Start-Job { uv run --no-sync pyinstaller ppxai-server.spec --noconfirm },
-  Start-Job { uv run --no-sync pyinstaller ppxai-desktop.spec --noconfirm }
-)
-$jobs | Wait-Job | Receive-Job; $jobs | Remove-Job
+$wd = (Get-Location).Path
+$j1 = Start-Job -Name ppxaide -ScriptBlock {
+    param($wd) Set-Location $wd
+    .\.uv\uv.exe run --no-sync pyinstaller ppxaide.spec --noconfirm
+} -ArgumentList $wd
+$j2 = Start-Job -Name server -ScriptBlock {
+    param($wd) Set-Location $wd
+    .\.uv\uv.exe run --no-sync pyinstaller ppxai-server.spec --noconfirm
+} -ArgumentList $wd
+$j3 = Start-Job -Name desktop -ScriptBlock {
+    param($wd) Set-Location $wd
+    .\.uv\uv.exe run --no-sync pyinstaller ppxai-desktop.spec --noconfirm
+} -ArgumentList $wd
+$jobs = $j1, $j2, $j3
+$jobs | Wait-Job | Out-Null
+foreach ($j in $jobs) { "=== $($j.Name) ==="; Receive-Job -Job $j | Select-Object -Last 2 }
+$jobs | Remove-Job
 ```
+
+Replace `.\.uv\uv.exe` with `uv` if you have a system uv on PATH.
+Verified parallel run: ~84s for the three binaries on this machine
+vs ~159s for the first sequential build, so parallelization is
+working as intended. Use `Get-Job` to inspect state mid-run.
 
 All four binaries should appear in `dist/`. Each is roughly 33–40 MB
 (macOS / Linux) or 35–45 MB (Windows .exe).
