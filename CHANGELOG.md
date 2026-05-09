@@ -5,7 +5,7 @@ All notable changes to ppxai will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.18.4] - unreleased
+## [1.18.4] - 2026-05-10
 
 Branch: `bugfix/v1.18.4`. Scope: post-v1.18.3 fixes only — no new
 features. The v1 API gateway shape (`POST /v1/oneshot`, bearer-token
