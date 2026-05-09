@@ -1335,7 +1335,7 @@
 <p><strong>Date:</strong> 2026-05-03
 <strong>Status:</strong> Proposed (decision pending — see "Open decisions" below)
 <strong>Related:</strong>
-- <a href="../../TODO-v1.18.2-agent-loop-unification/"><code>docs/TODO-v1.18.2-agent-loop-unification.md</code></a> — the immediate refactor blocked on this ADR
+- <a href="../../archive/TODO-v1.18.2-agent-loop-unification/"><code>docs/archive/TODO-v1.18.2-agent-loop-unification.md</code></a> — the immediate refactor blocked on this ADR
 - <code>ppxai/commands/agent.py</code> — TUI-side outer continuation loop (<code>handle_agent</code>)
 - <code>ppxai/engine/chat.py</code> — <code>chat_with_tools</code> inner tool loop, AGENT_BEAT emission (lines 559, 875, 1066, 1138)
 - <code>ppxai/engine/types.py</code> — <code>EventType.AGENT_BEAT</code> / <code>AGENT_RUN_START</code> / <code>AGENT_RUN_COMPLETE</code> / <code>AGENT_RUN_ERROR</code> / <code>AGENT_ZOMBIE</code> (v1.18.0)
@@ -1650,7 +1650,7 @@ choice, its own tool budget. Two ways to model this:</p>
 <h2 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">&para;</a></h2>
 <p>If accepted (post-Stage-1 instrumentation):</p>
 <ul>
-<li>Agent-loop unification (<code>docs/TODO-v1.18.2-agent-loop-unification.md</code>)
+<li>Agent-loop unification (<code>docs/archive/TODO-v1.18.2-agent-loop-unification.md</code>)
   is closed by Stage 2 — it's no longer a standalone refactor.</li>
 <li>Sub-agent tool (currently a roadmap wishlist item) becomes a
   concrete v1.19.x deliverable.</li>

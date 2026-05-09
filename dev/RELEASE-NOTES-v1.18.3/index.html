@@ -1486,7 +1486,7 @@ restructure (CLAUDE.md slim + two ADRs).</p>
    em-dash separator: <code>args = "&lt;original_args&gt; — &lt;reply&gt;"</code>. TUI ignores
    the kind (open-enum invariant); the notification text serves as the
    user-visible nudge in that fallback path. +8 tests. Closes
-   <a href="../TODO-v1.18.2-prompt-text-kind/">docs/TODO-v1.18.2-prompt-text-kind.md</a>.</p>
+   <a href="../archive/TODO-v1.18.2-prompt-text-kind/">docs/archive/TODO-v1.18.2-prompt-text-kind.md</a>.</p>
 </li>
 <li>
 <p><strong>v1 API gateway tier</strong> (<code>38c2743d</code>, <code>9953b1df</code>). New external-facing
@@ -1518,7 +1518,7 @@ restructure (CLAUDE.md slim + two ADRs).</p>
 <ol>
 <li>
 <p><strong>Release tooling closure</strong> (<code>f82c9878</code>). Three confirmed defects
-   from <code>docs/TODO-release-tooling.md</code> landed: (a) <code>wait_for_ci</code>
+   from <code>docs/archive/TODO-release-tooling.md</code> landed: (a) <code>wait_for_ci</code>
    filters <code>gh run list --workflow="Build Executables"</code> so a faster
    docs deploy on the same tag can no longer satisfy the gate
    prematurely. (b) <code>.nvmrc</code> pins Node 20 to match CI — local test
@@ -1526,7 +1526,7 @@ restructure (CLAUDE.md slim + two ADRs).</p>
    (c) <code>tests/test_release_dry_run.py</code> (3 tests) pins
    <code>merge_to_master_if_needed(..., dry_run=True)</code> invokes zero
    subprocess calls; sanity test confirms dry_run=False still calls
-   git. Closes <a href="../TODO-release-tooling/">docs/TODO-release-tooling.md</a>.</p>
+   git. Closes <a href="../archive/TODO-release-tooling/">docs/archive/TODO-release-tooling.md</a>.</p>
 </li>
 <li>
 <p><strong>Documentation restructure: CLAUDE.md slim + two ADRs</strong>
@@ -1650,7 +1650,7 @@ native tools for that model.</p>
 in 75s vs 74-89 calls in 197-1836s for healthy peers, with multiple
 test results showing <code>{"message":"Operation not allowed"}</code> from NIM's
 free-tier 403 quota-block. See <code>__comment_benchmark</code> in both repo
-configs and Item 17 in <a href="../DEBT-INVENTORY-v1.18.3/">DEBT-INVENTORY-v1.18.3.md</a>
+configs and Item 17 in <a href="../archive/DEBT-INVENTORY-v1.18.3/">DEBT-INVENTORY-v1.18.3.md</a>
 for the paid-tier rerun plan.</p>
 <h3 id="modelprofile-entries-for-namespaced-nim-ids-tier-1-3">ModelProfile entries for namespaced NIM IDs (Tier 1 #3)<a class="headerlink" href="#modelprofile-entries-for-namespaced-nim-ids-tier-1-3" title="Permanent link">&para;</a></h3>
 <p><code>ppxai/engine/model_profiles.py</code> gains seven <code>*/&lt;model&gt;*</code> patterns
@@ -1964,7 +1964,7 @@ handlers can distinguish original vs elaboration if they want).</p>
 <p>First user: <code>validate_agent_task</code> rejection. <code>/agent fix</code> now emits
 <code>NotificationResult(WARNING)</code> + a <code>prompt_text</code> side-effect →
 web/VSCode auto-resume the elaboration without retyping the slash
-command. Closes <a href="../TODO-v1.18.2-prompt-text-kind/">TODO-v1.18.2-prompt-text-kind.md</a>.</p>
+command. Closes <a href="../archive/TODO-v1.18.2-prompt-text-kind/">TODO-v1.18.2-prompt-text-kind.md</a>.</p>
 <h3 id="v1-api-gateway-tier-theme-8">v1 API gateway tier (theme 8)<a class="headerlink" href="#v1-api-gateway-tier-theme-8" title="Permanent link">&para;</a></h3>
 <p>ppxai-server now exposes two tiers of HTTP endpoints. The
 documented split:</p>
@@ -2051,7 +2051,7 @@ directions) and <a href="../decisions/0004-llm-gateway-features/">ADR 0004</a>
 for the rationale.</p>
 <h3 id="release-tooling-closure-theme-9">Release tooling closure (theme 9)<a class="headerlink" href="#release-tooling-closure-theme-9" title="Permanent link">&para;</a></h3>
 <p><code>f82c9878</code> lands the three confirmed defects from
-<code>docs/TODO-release-tooling.md</code>:</p>
+<code>docs/archive/TODO-release-tooling.md</code>:</p>
 <ul>
 <li><strong>Defect #1 (workflow filter):</strong> <code>wait_for_ci</code> now filters
   <code>gh run list --workflow="Build Executables"</code> so concurrent
@@ -2157,7 +2157,7 @@ branch:</p>
   streaming/tool-calls in oneshot).</li>
 </ul>
 <p>The agent-loop unification TODO
-(<a href="../TODO-v1.18.2-agent-loop-unification/"><code>docs/TODO-v1.18.2-agent-loop-unification.md</code></a>)
+(<a href="../archive/TODO-v1.18.2-agent-loop-unification/"><code>docs/archive/TODO-v1.18.2-agent-loop-unification.md</code></a>)
 was re-scoped in <code>6f1201ef</code> based on actual code state (premise was
 partly outdated: AGENT_BEAT events already fire from
 <code>engine/chat.py</code>; web doesn't run a client-side loop; only VSCode's
@@ -2230,7 +2230,7 @@ describe defaults, user instructions override defaults, and pre-deciding
 as compliance.</p>
 <h2 id="resume-context">Resume context<a class="headerlink" href="#resume-context" title="Permanent link">&para;</a></h2>
 <p>If picking this up on a different machine, see
-<a href="../DEBT-INVENTORY-v1.18.3/">DEBT-INVENTORY-v1.18.3.md</a> for the open
+<a href="../archive/DEBT-INVENTORY-v1.18.3/">DEBT-INVENTORY-v1.18.3.md</a> for the open
 follow-ups. The branch is <code>feature/v1.18.3</code>. Commits over master, in
 chronological order:</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>0f986d36 feat(engine): NVIDIA NIM Tier 1 — profiles, throttle event, extra_body

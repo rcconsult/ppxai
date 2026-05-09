@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://rcconsult.github.io/ppxai/dev/decisions/0001-keys-command-cross-client/">
+        <link rel="canonical" href="https://rcconsult.github.io/ppxai/dev/research/2026-05-10-openshell-coordination-patterns/">
       
       
       
@@ -23,7 +23,7 @@
     
     
       
-        <title>ADR 0001 — /keys cross-client behavior in v1.18.1 - ppxai Documentation</title>
+        <title>Research note: OpenShell multi-agent coordination patterns and what (and what not) to lift into ppxai - ppxai Documentation</title>
       
     
     
@@ -74,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#adr-0001-keys-cross-client-behavior-in-v1181" class="md-skip">
+        <a href="#research-note-openshell-multi-agent-coordination-patterns-and-what-and-what-not-to-lift-into-ppxai" class="md-skip">
           Skip to content
         </a>
       
@@ -114,7 +114,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              ADR 0001 — /keys cross-client behavior in v1.18.1
+              Research note: OpenShell multi-agent coordination patterns and what (and what not) to lift into ppxai
             
           </span>
         </div>
@@ -1118,10 +1118,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#context" class="md-nav__link">
+  <a href="#tldr" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Context
+        TL;DR
       
     </span>
   </a>
@@ -1129,22 +1129,44 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#options-considered" class="md-nav__link">
+  <a href="#1-what-openshells-multi-agent-notepad-actually-does" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Options considered
+        1. What OpenShell's multi-agent-notepad actually does
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Options considered">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-reframe-ppxai-is-single-user-openshell-is-a-platform" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Reframe: ppxai is single-user; OpenShell is a platform
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-the-three-patterns-worth-lifting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. The three patterns worth lifting
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. The three patterns worth lifting">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#option-a-per-client-binding-registries-served-by-the-engine" class="md-nav__link">
+  <a href="#31-sha-conditional-writes-http-409-retry" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Option A — Per-client binding registries served by the engine
+        3.1 SHA-conditional writes / HTTP 409 retry
       
     </span>
   </a>
@@ -1152,10 +1174,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#option-b-markdownresult-of-cross-client-universals-native-delegation" class="md-nav__link">
+  <a href="#32-runsrun-idagent-n-artifact-namespace" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Option B — MarkdownResult of cross-client universals + native delegation
+        3.2 runs/&lt;run-id&gt;/agent-&lt;n&gt;/ artifact namespace
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#33-map-reduce-shape-as-the-canonical-sub-agent-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.3 Map-reduce shape as the canonical sub-agent example
       
     </span>
   </a>
@@ -1168,10 +1201,82 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#decision" class="md-nav__link">
+  <a href="#4-what-we-dont-take-and-why" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Decision
+        4. What we don't take — and why
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. What we don&#39;t take — and why">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#41-per-agent-containers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.1 Per-agent containers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#42-bash-host-orchestration-external-cli-agent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.2 Bash host orchestration + external CLI agent
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#43-provider-backed-credentials-at-network-boundary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.3 Provider-backed credentials at network boundary
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#44-gh-jq-on-the-host" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.4 gh + jq on the host
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#45-network-policy-as-yaml-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.5 Network policy as YAML data
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-specific-recommendations-for-adr-0003-stage-2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Specific recommendations for ADR 0003 Stage 2
       
     </span>
   </a>
@@ -1179,10 +1284,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#why-this-and-not-option-a" class="md-nav__link">
+  <a href="#6-whats-not-in-scope-for-this-note" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Why this and not Option A
+        6. What's NOT in scope for this note
       
     </span>
   </a>
@@ -1190,32 +1295,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#future-proper-solution" class="md-nav__link">
+  <a href="#related-documents" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Future / proper solution
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#triggers-to-revisit" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Triggers to revisit
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#implementation-notes-for-v1181" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Implementation notes for v1.18.1
+        Related documents
       
     </span>
   </a>
@@ -1242,175 +1325,287 @@
   
 
 
-<h1 id="adr-0001-keys-cross-client-behavior-in-v1181">ADR 0001 — <code>/keys</code> cross-client behavior in v1.18.1<a class="headerlink" href="#adr-0001-keys-cross-client-behavior-in-v1181" title="Permanent link">&para;</a></h1>
-<p><strong>Date:</strong> 2026-04-25
-<strong>Status:</strong> Accepted
-<strong>Related:</strong> <code>docs/archive/TODO-v1.18.1-command-unification.md</code> Phase 2 step 1f</p>
-<h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
-<p><code>/keys</code> is a TUI-introspection command. Today its server-side handler
-(<code>ppxai/commands/system.py::handle_keys</code>) returns a <code>TextResult</code>
-built from <code>ppxai.tui.keys.get_keys_table()</code> — a formatted table of
-the <strong>Textual binding registry</strong> (<code>ALL_KEYS</code> in <code>ppxai/tui/keys.py</code>).</p>
-<p>That registry is meaningless to web and VSCode clients because:</p>
-<ul>
-<li><strong>Textual bindings</strong> name widgets that don't exist outside the
-  Textual TUI (file tree, side panel, data viewer, full-screen editor).</li>
-<li><strong>VSCode</strong> has its own keybinding system: command IDs registered in
-  <code>vscode-extension/package.json::contributes.keybindings</code>, plus the
-  user's <code>keybindings.json</code> overrides. Reading the Textual table tells
-  a VSCode user nothing about which keys actually do something inside
-  their VSCode session.</li>
-<li><strong>Web</strong> has DOM keyboard-event mappings inside <code>app.js</code> and the
-  webview components. There is no central registry today.</li>
-</ul>
-<p>The command unification migration in v1.18.1 routes every command
-through <code>POST /command/&lt;name&gt;</code> so all three clients exercise the same
-factory handler. That forces us to answer: what should <code>/keys</code> say
-when it isn't running in a Textual TUI?</p>
-<h2 id="options-considered">Options considered<a class="headerlink" href="#options-considered" title="Permanent link">&para;</a></h2>
-<h3 id="option-a-per-client-binding-registries-served-by-the-engine">Option A — Per-client binding registries served by the engine<a class="headerlink" href="#option-a-per-client-binding-registries-served-by-the-engine" title="Permanent link">&para;</a></h3>
-<p>Each client maintains its own structured binding registry (web in JS,
-VSCode contributed via <code>package.json</code>, Textual via <code>tui/keys.py</code>).
-The HTTP request includes an <code>X-Client: web|vscode|textual</code> header.
-The factory handler <code>handle_keys</code> looks up the client-specific
-registry and returns it.</p>
-<p><strong>Cost.</strong> Adds two new registries that don't exist today. Web bindings
-are scattered across <code>app.js</code>, components, and webview event handlers
-— consolidating them is a real refactor (~150 LoC across three or
-four files plus a structured manifest). VSCode bindings live in
-<code>package.json</code> but the engine has to either bundle a snapshot or
-fetch them from the extension host (round-trip + caching).</p>
-<p><strong>Benefit.</strong> <code>/keys</code> works correctly and gives the user actionable
-information specific to where they are.</p>
-<h3 id="option-b-markdownresult-of-cross-client-universals-native-delegation">Option B — <code>MarkdownResult</code> of cross-client universals + native delegation<a class="headerlink" href="#option-b-markdownresult-of-cross-client-universals-native-delegation" title="Permanent link">&para;</a></h3>
-<p><code>/keys</code> returns a small <code>MarkdownResult</code> listing the bindings that
-ARE universal across all three clients (essentially: chat-input
-controls — <code>Enter</code>/<code>Ctrl+Enter</code> to submit, <code>Esc</code> to interrupt,
-<code>↑/↓</code> for history). Plus client-specific side-effects:</p>
-<ul>
-<li>VSCode: <code>{kind: "vscode_delegate", command: "workbench.action.openGlobalKeybindings"}</code>
-  → opens the user's keybinding editor where they can find anything</li>
-<li>Web: <code>{kind: "notify", level: "info", message: "Web keyboard shortcuts are listed at &lt;docs URL&gt;"}</code></li>
-<li>Textual: existing rich table via the current handler (unchanged)</li>
-</ul>
-<p><strong>Cost.</strong> Trivial. Reuses the existing handler for Textual, adds two
-side-effects for the other clients, lists ~5 universal bindings.
-~30 LoC change to <code>handle_keys</code>.</p>
-<p><strong>Benefit.</strong> <code>/keys</code> does <em>something</em> useful in every client without
-building new infrastructure. The VSCode user gets directly to the
-canonical place to inspect/edit keys; the web user gets pointed at
-docs (which we'd need to write — but we'd need to write them anyway
-for Option A).</p>
-<p><strong>Limitation.</strong> The "universal" list is small and somewhat
-hand-curated. The web fallback is weak (a docs link is worse UX
-than a real binding table). VSCode's native keybinding editor doesn't
-filter to ppxai-specific bindings — the user has to type "ppxai" to
-find them.</p>
-<h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h2>
-<p><strong>Option B.</strong> For v1.18.1.</p>
-<h2 id="why-this-and-not-option-a">Why this and not Option A<a class="headerlink" href="#why-this-and-not-option-a" title="Permanent link">&para;</a></h2>
-<ul>
-<li><strong>Scope discipline.</strong> v1.18.1 is already large (command unification</li>
-<li>state-sync determinism). Adding two new structured registries
-  expands the surface area without solving a hot user pain point —
-  there's no evidence users are blocked on <code>/keys</code> in web/VSCode today
-  (the command essentially didn't reach them before this migration).</li>
-<li><strong>Cheap to upgrade later.</strong> Option B's <code>vscode_delegate</code> and
-  <code>notify</code> paths are still valid even after Option A lands —
-  Option A would just augment them with a pre-built table. The two
-  options compose; (B) is a strict subset of (A).</li>
-<li><strong>Forces us to write the docs.</strong> Web's <code>notify(docs URL)</code> only
-  works if the URL exists. Writing that doc is a forcing function
-  for a piece of cross-client documentation we owe users anyway.</li>
-</ul>
-<h2 id="future-proper-solution">Future / proper solution<a class="headerlink" href="#future-proper-solution" title="Permanent link">&para;</a></h2>
-<p>When we revisit, <strong>Option A</strong> is the target:</p>
-<ol>
-<li><strong>Web binding registry.</strong> Consolidate the scattered DOM keyboard
-   handlers in <code>app.js</code> and components into a single
-   <code>ppxai/web/shared/keys.js</code> mirror of <code>ppxai/tui/keys.py</code> — a
-   structured array of <code>{key, owner, description, action}</code> records
-   with a <code>get_keys_table()</code> analogue.</li>
-<li><strong>VSCode binding registry.</strong> Either (a) the extension contributes
-   a <code>package.json::contributes.keybindings</code> block and the engine
-   reads it via <code>keybindings.json</code> parser, or (b) the extension
-   posts its own registry to the server on activation
-   (<code>POST /clients/keys</code>) and the server caches it per-session.
-   (a) is purer; (b) is more flexible if VSCode keybindings ever
-   need to be dynamic.</li>
-<li><strong>Engine handler.</strong> <code>handle_keys</code> reads <code>X-Client</code> header (already
-   used elsewhere for telemetry) and returns the matching registry's
-   formatted table as a <code>MarkdownResult</code> or <code>TableResult</code>.</li>
-<li><strong>Cross-client universals.</strong> Tag bindings with a <code>universal: true</code>
-   flag in each registry so the engine can synthesize a "common keys"
-   section even when called without a client header.</li>
-</ol>
-<p>Estimated cost when we do it: ~250–350 LoC across web, VSCode, and
-engine — not enormous, but only worth doing when there's a user
-signal that <code>/keys</code> matters in web/VSCode.</p>
-<h2 id="triggers-to-revisit">Triggers to revisit<a class="headerlink" href="#triggers-to-revisit" title="Permanent link">&para;</a></h2>
-<p>Re-evaluate this decision if any of these become true:</p>
-<ul>
-<li>Users (1+ in the wild) report confusion about which keys work in
-  web or VSCode and ask for a <code>/keys</code>-style introspection.</li>
-<li>Web grows enough keyboard-driven UI (file tree navigation,
-  panel switching, command palette) that hand-tracking the bindings
-  in docs becomes a maintenance burden.</li>
-<li>VSCode's keybinding system gains an API for "let extensions list
-  their own bindings" (today this requires reading <code>package.json</code> +
-  the user's <code>keybindings.json</code>, which is brittle).</li>
-<li>We ship a major refactor that touches the web event-handler layout
-  anyway (e.g. moving to a state machine for input handling) — fold
-  the registry migration into that work for free.</li>
-</ul>
-<h2 id="implementation-notes-for-v1181">Implementation notes for v1.18.1<a class="headerlink" href="#implementation-notes-for-v1181" title="Permanent link">&para;</a></h2>
-<p>The Option B handler in <code>ppxai/commands/system.py::handle_keys</code>:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">handle_keys</span><span class="p">(</span><span class="n">context</span><span class="p">:</span> <span class="n">CommandContext</span><span class="p">,</span> <span class="n">args</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">CommandResult</span><span class="p">:</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="c1"># Textual path: existing rich table (unchanged)</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="k">if</span> <span class="n">context</span><span class="o">.</span><span class="n">is_textual_client</span><span class="p">():</span>  <span class="c1"># to be added; falls back to True if env says TUI</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>        <span class="k">try</span><span class="p">:</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>            <span class="kn">from</span><span class="w"> </span><span class="nn">..tui.keys</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_keys_table</span><span class="p">,</span> <span class="n">get_conflicts_table</span>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>            <span class="o">...</span>
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>        <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>            <span class="k">pass</span>  <span class="c1"># fall through to universal-only</span>
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>
-</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    <span class="c1"># Universal cross-client bindings</span>
-</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    <span class="n">md</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;## Keyboard Shortcuts (universal)</span>
-</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>
-</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="s2">| Key | Action |</span>
-</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="s2">|---|---|</span>
-</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="s2">| `Enter` | Submit message (web/VSCode) |</span>
-</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="s2">| `Shift+Enter` | New line in input |</span>
-</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="s2">| `↑` / `↓` | Command history |</span>
-</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="s2">| `Esc` | Interrupt streaming |</span>
-</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a><span class="s2">| `Ctrl+Enter` (or `Ctrl+J`) | Submit (Textual TUI) |</span>
-</span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>
-</span><span id="__span-0-21"><a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a><span class="s2">For client-specific shortcuts:</span>
-</span><span id="__span-0-22"><a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a><span class="s2">- **Web:** see https://ppxai.dev/docs/keys/web</span>
-</span><span id="__span-0-23"><a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a><span class="s2">- **VSCode:** opening keybinding editor — search &quot;ppxai&quot;</span>
-</span><span id="__span-0-24"><a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a><span class="s2">- **Textual TUI:** run `/keys` inside the TUI&quot;&quot;&quot;</span>
-</span><span id="__span-0-25"><a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a>
-</span><span id="__span-0-26"><a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a>    <span class="n">result</span> <span class="o">=</span> <span class="n">MarkdownResult</span><span class="p">(</span>
-</span><span id="__span-0-27"><a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a>        <span class="n">status</span><span class="o">=</span><span class="n">ResultStatus</span><span class="o">.</span><span class="n">INFO</span><span class="p">,</span>
-</span><span id="__span-0-28"><a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a>        <span class="n">message</span><span class="o">=</span><span class="s2">&quot;Keyboard Shortcuts&quot;</span><span class="p">,</span>
-</span><span id="__span-0-29"><a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a>        <span class="n">content</span><span class="o">=</span><span class="n">md</span><span class="p">,</span>
-</span><span id="__span-0-30"><a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a>    <span class="p">)</span>
-</span><span id="__span-0-31"><a id="__codelineno-0-31" name="__codelineno-0-31" href="#__codelineno-0-31"></a>    <span class="c1"># Side-effects per client capability — unknown kinds are no-ops</span>
-</span><span id="__span-0-32"><a id="__codelineno-0-32" name="__codelineno-0-32" href="#__codelineno-0-32"></a>    <span class="n">result</span><span class="o">.</span><span class="n">add_side_effect</span><span class="p">(</span><span class="s2">&quot;vscode_delegate&quot;</span><span class="p">,</span>
-</span><span id="__span-0-33"><a id="__codelineno-0-33" name="__codelineno-0-33" href="#__codelineno-0-33"></a>                           <span class="n">command</span><span class="o">=</span><span class="s2">&quot;workbench.action.openGlobalKeybindings&quot;</span><span class="p">)</span>
-</span><span id="__span-0-34"><a id="__codelineno-0-34" name="__codelineno-0-34" href="#__codelineno-0-34"></a>    <span class="k">return</span> <span class="n">result</span>
+<h1 id="research-note-openshell-multi-agent-coordination-patterns-and-what-and-what-not-to-lift-into-ppxai">Research note: OpenShell multi-agent coordination patterns and what (and what not) to lift into ppxai<a class="headerlink" href="#research-note-openshell-multi-agent-coordination-patterns-and-what-and-what-not-to-lift-into-ppxai" title="Permanent link">&para;</a></h1>
+<p><strong>Date:</strong> 2026-05-10
+<strong>Status:</strong> Research / exploratory — not a decision
+<strong>Triggered by:</strong> review of NVIDIA's OpenShell multi-agent-notepad
+example (https://github.com/NVIDIA/OpenShell/tree/main/examples/multi-agent-notepad)
+in the context of <a href="../../decisions/0003-agent-platform-architecture/">ADR 0003 — Agent platform architecture</a>
+<strong>Author:</strong> Captured from a research conversation; not vetted against a build.
+<strong>Not blocking:</strong> v1.19.x agent-platform planning can proceed without
+this. It exists so the patterns OpenShell got right (and the ones that
+don't fit ppxai) are documented before Stage 2 sub-agent design starts.</p>
+<p>This is a research note, not an architecture decision record. If the
+patterns lifted from here actually inform a v1.19.x design choice,
+amend ADR 0003 with a reference back to this note.</p>
+<h2 id="tldr">TL;DR<a class="headerlink" href="#tldr" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>OpenShell pattern</th>
+<th>Adopt?</th>
+<th>Where in ppxai</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Per-agent container sandboxing</td>
+<td>❌ No</td>
+<td>ppxai is single-user, not a multi-tenant platform</td>
+</tr>
+<tr>
+<td>Bash + external CLI agent (Codex) orchestration</td>
+<td>❌ No</td>
+<td>ppxai's engine runs in-process Python, not shell-spawned agents</td>
+</tr>
+<tr>
+<td>Provider-backed credential injection at network boundary</td>
+<td>❌ No</td>
+<td>Conflicts with ppxai's <code>~/.ppxai/.env</code> single-user value prop</td>
+</tr>
+<tr>
+<td><code>gh + jq</code> host-side orchestration scripts</td>
+<td>❌ No</td>
+<td>ppxai-server IS the orchestrator</td>
+</tr>
+<tr>
+<td>Network policy as data (<code>policy.template.yaml</code>)</td>
+<td>⚠️ Partial</td>
+<td>Could extend resource budgets to network egress in v1.19.x; not urgent</td>
+</tr>
+<tr>
+<td><strong>SHA-conditional writes / 409-retry coordination</strong></td>
+<td>✅ Yes (already use this)</td>
+<td>ppxai already does this with <code>cwd_anchor</code> 409 in state-sync; pattern generalizes to multi-agent file artifacts</td>
+</tr>
+<tr>
+<td><strong><code>runs/&lt;run-id&gt;/agent-&lt;n&gt;/</code> artifact namespace</strong></td>
+<td>✅ Yes</td>
+<td>Solves four "what's missing" items from ADR 0003 in one shape (run_id, persistence, parent/child, scoped budgets)</td>
+</tr>
+<tr>
+<td><strong>Map-reduce demo shape (N workers + 1 synthesizer)</strong></td>
+<td>✅ Yes</td>
+<td>Tight, easy-to-explain canonical sub-agent example for ppxai docs</td>
+</tr>
+</tbody>
+</table>
+<h2 id="1-what-openshells-multi-agent-notepad-actually-does">1. What OpenShell's multi-agent-notepad actually does<a class="headerlink" href="#1-what-openshells-multi-agent-notepad-actually-does" title="Permanent link">&para;</a></h2>
+<p>A bash-script demonstration of N coding agents (NVIDIA's "Codex" agent)
+running in <strong>isolated containers</strong>, coordinating only through a
+<strong>shared GitHub repo</strong> with one note file per worker and one synthesis
+file written by the parent.</p>
+<p>File layout:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>runs/&lt;run-id&gt;/notes/agent-1.md    ← worker 1 writes
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>runs/&lt;run-id&gt;/notes/agent-2.md    ← worker 2 writes
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>runs/&lt;run-id&gt;/notes/agent-N.md    ← worker N writes
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>runs/&lt;run-id&gt;/summary.md          ← synthesis agent writes
 </span></code></pre></div>
-<p>The web client honors the <code>MarkdownResult</code> rendering and ignores
-<code>vscode_delegate</code> (per the open-enum contract). VSCode honors both:
-the panel renders the markdown AND the keybinding editor opens.
-Textual doesn't take this path — its <code>is_textual_client()</code> short-circuit
-returns the existing rich table.</p>
-<p><code>is_textual_client()</code> is a small helper on <code>CommandContext</code> to be
-added in step 1f. Initial implementation: returns <code>True</code> if the
-context was constructed by Rich/Textual TUI (in-process call), <code>False</code>
-if constructed by <code>ServerCommandContext</code> (HTTP call). This isn't
-strictly Textual vs not-Textual — it's "was this the in-process
-TUI path?" — which is what we actually want.</p>
+<p>Coordination model: workers never share filesystems or containers.
+Concurrency control comes from GitHub's "every PUT must include the
+current file SHA" — concurrent writers get HTTP 409, retry.</p>
+<p>Stack:
+- <code>openshell</code> Go CLI
+- Docker gateway
+- <code>demo.sh</code> host orchestrator + <code>runner.sh</code> per-sandbox script
+- <code>gh</code> + <code>jq</code> on the host
+- Bash everywhere
+- Codex preinstalled in the sandbox image
+- <code>policy.template.yaml</code> declaring network egress allowlist per sandbox</p>
+<h2 id="2-reframe-ppxai-is-single-user-openshell-is-a-platform">2. Reframe: ppxai is single-user; OpenShell is a platform<a class="headerlink" href="#2-reframe-ppxai-is-single-user-openshell-is-a-platform" title="Permanent link">&para;</a></h2>
+<p>OpenShell is solving the <strong>multi-tenant cloud-platform</strong> problem:
+how do you let many agents from many users run in the same
+infrastructure without leaking secrets, files, or network access
+across tenants? The answer is "containers + network policies +
+credential brokers + shared-storage coordination," and that's a
+correct answer for that problem.</p>
+<p>ppxai is solving a different problem: <strong>a single user wants their
+local agent to do useful parallel work.</strong> No multi-tenancy. No
+shared infrastructure. No external user supplying credentials. The
+"tenant" is the human running ppxai locally; the "agents" are
+sub-tasks of that human's intent. Per-agent containers would 100x
+the install footprint for zero benefit.</p>
+<p>The k8s session-manager (Item 3 in <a href="../../DEBT-INVENTORY/">DEBT-INVENTORY.md</a>)
+is the <strong>only</strong> place ppxai uses containers, and that's for tenant
+isolation in the multi-user deploy shape — orthogonal to per-agent
+isolation.</p>
+<p>So most of OpenShell's design surface is <em>correct for OpenShell</em> and
+<em>wrong for ppxai</em>. The patterns that DO transplant are the ones that
+solve coordination problems independent of the multi-tenant question.</p>
+<h2 id="3-the-three-patterns-worth-lifting">3. The three patterns worth lifting<a class="headerlink" href="#3-the-three-patterns-worth-lifting" title="Permanent link">&para;</a></h2>
+<h3 id="31-sha-conditional-writes-http-409-retry">3.1 SHA-conditional writes / HTTP 409 retry<a class="headerlink" href="#31-sha-conditional-writes-http-409-retry" title="Permanent link">&para;</a></h3>
+<p><strong>OpenShell's use:</strong> Workers write to GitHub. Every PUT carries the
+expected current SHA; concurrent writers get HTTP 409; retry with
+the new SHA.</p>
+<p><strong>Why ppxai already does this:</strong> the <code>cwd_anchor</code> 409 in v1.18.1's
+state-sync determinism work uses the same pattern — client sends
+expected anchor, server returns 409 if state moved, client re-anchors
+from <code>GET /state</code>. See [docs/patterns/state-sync-determinism.md].</p>
+<p><strong>What to take:</strong> confirmation that the pattern scales to multi-agent
+file artifacts. When sub-agents write to a shared workspace,
+<code>POST /workspace/file/&lt;path&gt;</code> can carry the expected SHA and return
+409 on conflict. No new infrastructure — generalize the existing
+protocol from session-state to workspace-state. Cheap.</p>
+<h3 id="32-runsrun-idagent-n-artifact-namespace">3.2 <code>runs/&lt;run-id&gt;/agent-&lt;n&gt;/</code> artifact namespace<a class="headerlink" href="#32-runsrun-idagent-n-artifact-namespace" title="Permanent link">&para;</a></h3>
+<p><strong>OpenShell's use:</strong> Every multi-agent run gets a unique run-id;
+each worker has its own slot under <code>runs/&lt;run-id&gt;/notes/agent-&lt;n&gt;.md</code>;
+the synthesizer reads all slots and writes the summary in the
+parent slot.</p>
+<p><strong>Why ppxai needs this:</strong> ADR 0003's "what's missing" list names
+seven gaps. This namespace shape solves four of them at once:</p>
+<table>
+<thead>
+<tr>
+<th>ADR 0003 gap</th>
+<th>How the namespace solves it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Run identity</strong> ("No run_id. Can't address a running agent later")</td>
+<td>The directory name IS the run_id</td>
+</tr>
+<tr>
+<td><strong>Run persistence</strong> ("Engine restart loses everything mid-run")</td>
+<td>Sub-agents recover by re-reading their slot — slot is the persistence boundary</td>
+</tr>
+<tr>
+<td><strong>Parent/child relationship</strong> ("No model for sub-agents")</td>
+<td>Slot ownership IS the relationship — <code>agent-1/</code> is owned by sub-agent 1, parent reads <code>agent-N/output.md</code></td>
+</tr>
+<tr>
+<td><strong>Resource budgets</strong> ("Implicit max_iterations; no token/time caps")</td>
+<td><code>runs/&lt;run-id&gt;/meta.json</code> carries <code>{budget, started_at, status}</code> per run</td>
+</tr>
+</tbody>
+</table>
+<p>Concrete shape for ppxai (local filesystem, not GitHub):</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>~/.ppxai/runs/&lt;run_id&gt;/
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>  meta.json              # {parent_run, status, started_at, budget, model}
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>  agent-1/
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    output.md            # what subagent 1 produced
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    log.jsonl            # event stream (ANALOG of AGENT_BEAT/RUN_*)
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>    state.json           # checkpoint for resume
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>  agent-2/
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>    output.md
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>    log.jsonl
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>    state.json
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>  ...
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>  synthesis.md           # parent reads agent-N/output.md, writes here
+</span></code></pre></div>
+<p>This is the <strong>artifact-isolation model</strong>: "different files, same
+workspace." It gets you OpenShell's coordination guarantees without
+OpenShell's container infrastructure.</p>
+<h3 id="33-map-reduce-shape-as-the-canonical-sub-agent-example">3.3 Map-reduce shape as the canonical sub-agent example<a class="headerlink" href="#33-map-reduce-shape-as-the-canonical-sub-agent-example" title="Permanent link">&para;</a></h3>
+<p><strong>OpenShell's framing:</strong> "N worker agents fan out and write one note
+each; one synthesis agent reads them and writes a summary."</p>
+<p><strong>Why this is the right canonical example for ppxai:</strong> the
+fan-out/fan-in shape maps onto common dev tasks:</p>
+<ul>
+<li><strong>Research + summarize:</strong> "Research these 5 frameworks; summarize trade-offs." Worker per framework, synthesizer writes the comparison.</li>
+<li><strong>Parallel benchmark + compare:</strong> Worker per model/provider runs the benchmark; synthesizer writes the leaderboard. Already kind of how <code>tests/benchmarks/</code> is structured manually.</li>
+<li><strong>Fan-out search + consolidate:</strong> "Search these 3 codebases for X; consolidate findings." One subagent per repo.</li>
+<li><strong>Per-file refactor + assemble:</strong> "Refactor each of these 12 files to pattern Y; report a single PR description." Worker per file, synthesizer writes the PR body.</li>
+</ul>
+<p>When ADR 0003 Stage 2 lands, the docs should ship with this canonical
+example. It's tight, easy to explain, and demonstrates all the
+sub-agent primitives (<code>spawn_subagent</code>, <code>await_subagent</code>, <code>read_subagent_output</code>).</p>
+<h2 id="4-what-we-dont-take-and-why">4. What we don't take — and why<a class="headerlink" href="#4-what-we-dont-take-and-why" title="Permanent link">&para;</a></h2>
+<p>For each rejected pattern, the explicit "this is correct for OpenShell
+but wrong for ppxai" reasoning, so future contributors don't
+re-litigate it:</p>
+<h3 id="41-per-agent-containers">4.1 Per-agent containers<a class="headerlink" href="#41-per-agent-containers" title="Permanent link">&para;</a></h3>
+<p><strong>OpenShell:</strong> sandbox-per-agent for isolation across untrusted
+tenants and untrusted agent code.</p>
+<p><strong>ppxai:</strong> the user's own machine, the user's own files, the user's
+own agents. Containers would add 100s of MB to install footprint and
+cold-start latency to every sub-agent spawn. No security benefit
+because the threat model is "the user can already do everything the
+agent does." Only place this changes is the k8s deployment shape
+(Item 3 in DEBT-INVENTORY) where k8s already provides tenant
+isolation per-session.</p>
+<h3 id="42-bash-host-orchestration-external-cli-agent">4.2 Bash host orchestration + external CLI agent<a class="headerlink" href="#42-bash-host-orchestration-external-cli-agent" title="Permanent link">&para;</a></h3>
+<p><strong>OpenShell:</strong> <code>demo.sh</code> on the host invokes <code>openshell</code> to spawn
+sandboxes, each running <code>runner.sh</code> which invokes <code>codex</code> agent.
+Multi-process, shell-glued.</p>
+<p><strong>ppxai:</strong> <code>chat_with_tools</code> runs in-process inside the engine.
+Sub-agents will be <strong>another in-process call</strong> with scoped state,
+not a spawned external process. Shell-glue would force serialization
+through subprocess overhead, defeating most of the parallelism win.</p>
+<h3 id="43-provider-backed-credentials-at-network-boundary">4.3 Provider-backed credentials at network boundary<a class="headerlink" href="#43-provider-backed-credentials-at-network-boundary" title="Permanent link">&para;</a></h3>
+<p><strong>OpenShell:</strong> sandboxes start with placeholder credentials; real
+ones are injected at the network gateway based on policy. Designed
+so the agent code can never exfiltrate the real key.</p>
+<p><strong>ppxai:</strong> API keys live in <code>~/.ppxai/.env</code> because the user owns
+both the keys and the agent. Adding a credential broker would
+require a long-running daemon process, complicate the install, and
+add an attack surface (the broker itself). The whole "single-user
+local app" value prop dies if you bolt on tenant-isolation infra.</p>
+<h3 id="44-gh-jq-on-the-host">4.4 <code>gh</code> + <code>jq</code> on the host<a class="headerlink" href="#44-gh-jq-on-the-host" title="Permanent link">&para;</a></h3>
+<p><strong>OpenShell:</strong> uses the GitHub repo as the durable coordination
+substrate, so the host needs <code>gh</code> for repo operations and <code>jq</code> for
+parsing API responses.</p>
+<p><strong>ppxai:</strong> ppxai-server already has session storage, file storage,
+event bus — those ARE the coordination substrate. Layering a GitHub
+dependency on top would mean every sub-agent run requires GitHub
+auth, which breaks offline use and adds a network round-trip per
+write. The local filesystem is faster, simpler, and already there.</p>
+<h3 id="45-network-policy-as-yaml-data">4.5 Network policy as YAML data<a class="headerlink" href="#45-network-policy-as-yaml-data" title="Permanent link">&para;</a></h3>
+<p><strong>OpenShell:</strong> <code>policy.template.yaml</code> per sandbox declares allowed
+hosts/paths/methods. Network gateway enforces.</p>
+<p><strong>ppxai:</strong> could be useful eventually as part of resource budgets
+("agent X may only call api.openai.com, not arbitrary hosts"), but:</p>
+<ol>
+<li>Tools layer already gates network access via the consent
+   contract — see [docs/CONSENT-CONTRACT.md].</li>
+<li>Sub-agents inherit the parent's tool consent, so policy lives at
+   the tool level, not the network level.</li>
+<li>Building a separate policy-enforcement layer is significant work
+   for marginal benefit when the existing tool gates already cover
+   the threat model.</li>
+</ol>
+<p>If autonomous agents (long-running, client-disconnect-survivable)
+ever need finer-grained egress control, revisit this. For now, ADR
+0003's "implicit max_iterations" gap is more pressing than network
+policy.</p>
+<h2 id="5-specific-recommendations-for-adr-0003-stage-2">5. Specific recommendations for ADR 0003 Stage 2<a class="headerlink" href="#5-specific-recommendations-for-adr-0003-stage-2" title="Permanent link">&para;</a></h2>
+<p>When <code>spawn_subagent</code> is designed:</p>
+<ol>
+<li><strong>Adopt the <code>runs/&lt;run_id&gt;/agent-&lt;n&gt;/</code> namespace as the
+   coordination contract.</strong> It collapses four "what's missing"
+   items into one shape.</li>
+<li><strong>Use SHA-conditional file writes</strong> when sub-agents share write
+   targets. Generalize the existing <code>cwd_anchor</code> 409 protocol from
+   session-state to workspace-state.</li>
+<li><strong>Ship the map-reduce example</strong> in the v1.19.x sub-agent docs.
+   <code>examples/sub-agents/research-and-summarize/</code> analogous to the
+   OpenShell layout, but with a 50-line ppxai prompt instead of a
+   500-line bash script.</li>
+<li><strong>Don't import OpenShell as a dependency.</strong> The architectural
+   gap is too large; the patterns transplant, the code does not.</li>
+</ol>
+<h2 id="6-whats-not-in-scope-for-this-note">6. What's NOT in scope for this note<a class="headerlink" href="#6-whats-not-in-scope-for-this-note" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Code-signing or verification of sub-agent prompts (no analog in
+  OpenShell either)</li>
+<li>Multi-machine or distributed agent coordination (ppxai is
+  single-machine; the deploy session-manager is a separate axis)</li>
+<li>Cross-agent message bus / pub-sub (the artifact-namespace pattern
+  intentionally avoids needing one — workers don't talk to each
+  other, only to their slot)</li>
+</ul>
+<p>If those become real requirements, write follow-up notes; don't
+try to retrofit them into this one.</p>
+<h2 id="related-documents">Related documents<a class="headerlink" href="#related-documents" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../../decisions/0003-agent-platform-architecture/">docs/decisions/0003-agent-platform-architecture.md</a> — the active ADR this note feeds into</li>
+<li><a href="../../patterns/state-sync-determinism/">docs/patterns/state-sync-determinism.md</a> — the existing 409-retry pattern that generalizes</li>
+<li><a href="../../CONSENT-CONTRACT/">docs/CONSENT-CONTRACT.md</a> — current security boundary (per-tool, not per-network)</li>
+<li><a href="../2026-04-29-python-vs-go-for-agents/">docs/research/2026-04-29-python-vs-go-for-agents.md</a> — sibling research note on language choice for autonomous agents</li>
+<li><a href="../../DEBT-INVENTORY/">DEBT-INVENTORY.md</a> Item 3 — k8s session-manager (the only multi-tenant context in ppxai today)</li>
+<li>OpenShell upstream: https://github.com/NVIDIA/OpenShell</li>
+<li>multi-agent-notepad example: https://github.com/NVIDIA/OpenShell/tree/main/examples/multi-agent-notepad</li>
+</ul>
 
 
 

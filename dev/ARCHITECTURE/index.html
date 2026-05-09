@@ -2841,8 +2841,10 @@ point that reads <code>/state</code> and writes the AppState mirror. The
 heartbeat-reconnect path AND the visibility/focus path both
 delegate to it. Future channels (REST piggyback, persistent
 SSE) feed the same shape into the same mirror.</p>
-<p>For the open / planned items see
-<a href="../TODO-v1.18.1-state-sync-determinism/">docs/TODO-v1.18.1-state-sync-determinism.md</a>.</p>
+<p>Phases A–E shipped in v1.18.1; Phase F (persistent SSE <code>GET /events</code>)
+is intentionally deferred — escalate only if observation says A–E
+are insufficient. Original planning doc archived at
+<a href="../archive/TODO-v1.18.1-state-sync-determinism/">docs/archive/TODO-v1.18.1-state-sync-determinism.md</a>.</p>
 <h3 id="dag-dependency-rule-v1161">DAG Dependency Rule (v1.16.1)<a class="headerlink" href="#dag-dependency-rule-v1161" title="Permanent link">&para;</a></h3>
 <p>The <code>commands/</code> layer is <strong>shared</strong> between both clients. It must NOT import from
 or know the internals of either <code>rich/</code> or <code>tui/</code>.</p>

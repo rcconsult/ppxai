@@ -1548,8 +1548,8 @@ determinism (Phases A–D) + <code>validate_agent_task</code> safety gate +
 <p><strong>Suite: 2926 passing, 0 skipped</strong> (was 2924 + 2 poppler-skipped at v1.18.0). 4 unrelated Perplexity-API integration failures pre-date this branch.</p>
 <h2 id="deferred-to-v1182">Deferred to v1.18.2<a class="headerlink" href="#deferred-to-v1182" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>Agent loop unification across HTTP clients.</strong> Validation unified in v1.18.1; the loop body still runs client-side in VSCode and via the streaming <code>/chat</code> path on web because factory's <code>handle_agent</code> is TUI-shaped (<code>asyncio.run</code>, <code>console.print</code>). <a href="../TODO-v1.18.2-agent-loop-unification/">docs/TODO-v1.18.2-agent-loop-unification.md</a> tracks the work.</li>
-<li><strong><code>prompt_text</code> side-effect kind</strong> for free-text follow-ups when <code>prompt_quick_pick</code>'s finite-choice shape doesn't fit. <a href="../TODO-v1.18.2-prompt-text-kind/">docs/TODO-v1.18.2-prompt-text-kind.md</a>.</li>
+<li><strong>Agent loop unification across HTTP clients.</strong> Validation unified in v1.18.1; the loop body still runs client-side in VSCode and via the streaming <code>/chat</code> path on web because factory's <code>handle_agent</code> is TUI-shaped (<code>asyncio.run</code>, <code>console.print</code>). <a href="../archive/TODO-v1.18.2-agent-loop-unification/">docs/archive/TODO-v1.18.2-agent-loop-unification.md</a> tracks the work.</li>
+<li><strong><code>prompt_text</code> side-effect kind</strong> for free-text follow-ups when <code>prompt_quick_pick</code>'s finite-choice shape doesn't fit. <a href="../archive/TODO-v1.18.2-prompt-text-kind/">docs/archive/TODO-v1.18.2-prompt-text-kind.md</a>.</li>
 </ul>
 <h2 id="upgrade-notes">Upgrade notes<a class="headerlink" href="#upgrade-notes" title="Permanent link">&para;</a></h2>
 <ul>
