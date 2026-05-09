@@ -156,8 +156,8 @@ Major test additions:
 
 ## Deferred to v1.18.2
 
-- **Agent loop unification across HTTP clients.** Validation unified in v1.18.1; the loop body still runs client-side in VSCode and via the streaming `/chat` path on web because factory's `handle_agent` is TUI-shaped (`asyncio.run`, `console.print`). [docs/TODO-v1.18.2-agent-loop-unification.md](TODO-v1.18.2-agent-loop-unification.md) tracks the work.
-- **`prompt_text` side-effect kind** for free-text follow-ups when `prompt_quick_pick`'s finite-choice shape doesn't fit. [docs/TODO-v1.18.2-prompt-text-kind.md](TODO-v1.18.2-prompt-text-kind.md).
+- **Agent loop unification across HTTP clients.** Validation unified in v1.18.1; the loop body still runs client-side in VSCode and via the streaming `/chat` path on web because factory's `handle_agent` is TUI-shaped (`asyncio.run`, `console.print`). [docs/archive/TODO-v1.18.2-agent-loop-unification.md](archive/TODO-v1.18.2-agent-loop-unification.md) tracks the work.
+- **`prompt_text` side-effect kind** for free-text follow-ups when `prompt_quick_pick`'s finite-choice shape doesn't fit. [docs/archive/TODO-v1.18.2-prompt-text-kind.md](archive/TODO-v1.18.2-prompt-text-kind.md).
 
 ## Upgrade notes
 

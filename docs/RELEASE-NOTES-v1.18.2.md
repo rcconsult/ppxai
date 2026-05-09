@@ -292,10 +292,10 @@ are pre-existing.
 - **Agent loop unification across HTTP clients.** Inherited from
   v1.18.1 deferred list. Factory's `handle_agent` is TUI-shaped
   (`asyncio.run`, `console.print`); web/VSCode keep client-side
-  loops. See [docs/TODO-v1.18.2-agent-loop-unification.md](TODO-v1.18.2-agent-loop-unification.md).
+  loops. See [docs/archive/TODO-v1.18.2-agent-loop-unification.md](archive/TODO-v1.18.2-agent-loop-unification.md).
 - **`prompt_text` side-effect kind** for free-text follow-ups when
   `prompt_quick_pick`'s finite-choice shape doesn't fit. See
-  [docs/TODO-v1.18.2-prompt-text-kind.md](TODO-v1.18.2-prompt-text-kind.md).
+  [docs/archive/TODO-v1.18.2-prompt-text-kind.md](archive/TODO-v1.18.2-prompt-text-kind.md).
 - **AppState codegen + client wiring.** Inherited from v1.18.0
   deferred list. See `docs/TODO-appstate-codegen.md`.
 - **Multi-model routing infrastructure.** `RoutingRole`,

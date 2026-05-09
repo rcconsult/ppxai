@@ -3,7 +3,7 @@
 **Date:** 2026-05-03
 **Status:** Proposed (decision pending — see "Open decisions" below)
 **Related:**
-- [`docs/TODO-v1.18.2-agent-loop-unification.md`](../TODO-v1.18.2-agent-loop-unification.md) — the immediate refactor blocked on this ADR
+- [`docs/archive/TODO-v1.18.2-agent-loop-unification.md`](../archive/TODO-v1.18.2-agent-loop-unification.md) — the immediate refactor blocked on this ADR
 - `ppxai/commands/agent.py` — TUI-side outer continuation loop (`handle_agent`)
 - `ppxai/engine/chat.py` — `chat_with_tools` inner tool loop, AGENT_BEAT emission (lines 559, 875, 1066, 1138)
 - `ppxai/engine/types.py` — `EventType.AGENT_BEAT` / `AGENT_RUN_START` / `AGENT_RUN_COMPLETE` / `AGENT_RUN_ERROR` / `AGENT_ZOMBIE` (v1.18.0)
@@ -275,7 +275,7 @@ These are gaps this ADR cannot close without input or measurement:
 
 If accepted (post-Stage-1 instrumentation):
 
-- Agent-loop unification (`docs/TODO-v1.18.2-agent-loop-unification.md`)
+- Agent-loop unification (`docs/archive/TODO-v1.18.2-agent-loop-unification.md`)
   is closed by Stage 2 — it's no longer a standalone refactor.
 - Sub-agent tool (currently a roadmap wishlist item) becomes a
   concrete v1.19.x deliverable.

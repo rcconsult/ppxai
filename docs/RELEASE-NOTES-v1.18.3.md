@@ -99,7 +99,7 @@ restructure (CLAUDE.md slim + two ADRs).
    em-dash separator: `args = "<original_args> — <reply>"`. TUI ignores
    the kind (open-enum invariant); the notification text serves as the
    user-visible nudge in that fallback path. +8 tests. Closes
-   [docs/TODO-v1.18.2-prompt-text-kind.md](TODO-v1.18.2-prompt-text-kind.md).
+   [docs/archive/TODO-v1.18.2-prompt-text-kind.md](archive/TODO-v1.18.2-prompt-text-kind.md).
 
 8. **v1 API gateway tier** (`38c2743d`, `9953b1df`). New external-facing
    surface with semver-style stability commitments, paired with opt-in
@@ -130,7 +130,7 @@ restructure (CLAUDE.md slim + two ADRs).
    `/v1/tokens` registry, OIDC/JWT validation under `/v1/auth/...`).
 
 9. **Release tooling closure** (`f82c9878`). Three confirmed defects
-   from `docs/TODO-release-tooling.md` landed: (a) `wait_for_ci`
+   from `docs/archive/TODO-release-tooling.md` landed: (a) `wait_for_ci`
    filters `gh run list --workflow="Build Executables"` so a faster
    docs deploy on the same tag can no longer satisfy the gate
    prematurely. (b) `.nvmrc` pins Node 20 to match CI — local test
@@ -138,7 +138,7 @@ restructure (CLAUDE.md slim + two ADRs).
    (c) `tests/test_release_dry_run.py` (3 tests) pins
    `merge_to_master_if_needed(..., dry_run=True)` invokes zero
    subprocess calls; sanity test confirms dry_run=False still calls
-   git. Closes [docs/TODO-release-tooling.md](TODO-release-tooling.md).
+   git. Closes [docs/archive/TODO-release-tooling.md](archive/TODO-release-tooling.md).
 
 10. **Documentation restructure: CLAUDE.md slim + two ADRs**
     (`8a899051`, `0ed03d26`, `e9b8733d`). CLAUDE.md was 59 KB,
@@ -564,7 +564,7 @@ Renderers:
 First user: `validate_agent_task` rejection. `/agent fix` now emits
 `NotificationResult(WARNING)` + a `prompt_text` side-effect →
 web/VSCode auto-resume the elaboration without retyping the slash
-command. Closes [TODO-v1.18.2-prompt-text-kind.md](TODO-v1.18.2-prompt-text-kind.md).
+command. Closes [TODO-v1.18.2-prompt-text-kind.md](archive/TODO-v1.18.2-prompt-text-kind.md).
 
 ### v1 API gateway tier (theme 8)
 
@@ -644,7 +644,7 @@ for the rationale.
 ### Release tooling closure (theme 9)
 
 `f82c9878` lands the three confirmed defects from
-`docs/TODO-release-tooling.md`:
+`docs/archive/TODO-release-tooling.md`:
 
 - **Defect #1 (workflow filter):** `wait_for_ci` now filters
   `gh run list --workflow="Build Executables"` so concurrent
@@ -713,7 +713,7 @@ branch:
   streaming/tool-calls in oneshot).
 
 The agent-loop unification TODO
-([`docs/TODO-v1.18.2-agent-loop-unification.md`](TODO-v1.18.2-agent-loop-unification.md))
+([`docs/archive/TODO-v1.18.2-agent-loop-unification.md`](archive/TODO-v1.18.2-agent-loop-unification.md))
 was re-scoped in `6f1201ef` based on actual code state (premise was
 partly outdated: AGENT_BEAT events already fire from
 `engine/chat.py`; web doesn't run a client-side loop; only VSCode's

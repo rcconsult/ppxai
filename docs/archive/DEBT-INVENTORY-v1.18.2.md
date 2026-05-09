@@ -705,7 +705,7 @@ pin four contracts:
 The fix is intentionally narrow — it does not refactor the agent
 loop, just corrects the logger handoff. The "agent loop unification
 across HTTP clients" work tracked in
-[docs/TODO-v1.18.2-agent-loop-unification.md](TODO-v1.18.2-agent-loop-unification.md)
+[docs/archive/TODO-v1.18.2-agent-loop-unification.md](TODO-v1.18.2-agent-loop-unification.md)
 remains separate; this fix lets the existing TUI path actually run.
 
 ### Item 10 — Introduce `EngineClientProtocol` for the commands layer — closed 2026-04-28
@@ -924,10 +924,10 @@ ones not in "Open" above were closed during the test sweep on
 
 - [docs/CONSENT-CONTRACT.md](CONSENT-CONTRACT.md) — security boundary for tool execution (created with critique #5)
 - [docs/MODEL-SELECTION-GUIDE.md](MODEL-SELECTION-GUIDE.md) — planner/executor pricing strategy
-- [docs/TODO-v1.18.2-agent-loop-unification.md](TODO-v1.18.2-agent-loop-unification.md) — separate in-flight work (HTTP-streaming agent loop)
-- [docs/TODO-v1.18.2-keys-binding-registries.md](TODO-v1.18.2-keys-binding-registries.md) — separate in-flight work
-- [docs/TODO-v1.18.2-prompt-text-kind.md](TODO-v1.18.2-prompt-text-kind.md) — separate in-flight work
-- [docs/TODO-v1.18.2-inline-markdown-images-tui.md](TODO-v1.18.2-inline-markdown-images-tui.md) — separate in-flight work
+- [docs/archive/TODO-v1.18.2-agent-loop-unification.md](TODO-v1.18.2-agent-loop-unification.md) — separate in-flight work (HTTP-streaming agent loop)
+- [docs/TODO-v1.18.2-keys-binding-registries.md](../TODO-v1.18.2-keys-binding-registries.md) — separate in-flight work
+- [docs/archive/TODO-v1.18.2-prompt-text-kind.md](TODO-v1.18.2-prompt-text-kind.md) — separate in-flight work
+- [docs/TODO-v1.18.2-inline-markdown-images-tui.md](../TODO-v1.18.2-inline-markdown-images-tui.md) — separate in-flight work
 
 The `TODO-v1.18.2-*.md` files describe in-flight planning for v1.18.2.
 This doc tracks debt **not** in any version's plan yet — items needing

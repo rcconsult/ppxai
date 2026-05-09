@@ -2,7 +2,7 @@
 
 **Date:** 2026-04-25
 **Status:** Accepted
-**Related:** `docs/TODO-v1.18.1-command-unification.md` Phase 2 step 1f
+**Related:** `docs/archive/TODO-v1.18.1-command-unification.md` Phase 2 step 1f
 
 ## Context
 
