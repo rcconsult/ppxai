@@ -822,6 +822,84 @@ the TOS-warning UX needs review independently.
 
 ---
 
+### v1.19.x - Agent platform Stage 2 + v1 gateway extensions for ppxai-sre (planned)
+
+Bundles the ppxai-side work required to support [ppxai-sre](https://github.com/rcconsult/ppxai-sre)'s
+planned features (heartbeat scheduler, multi-agent routing,
+manager-executor pattern, policy engine — see
+[RELATED-PROJECTS.md](RELATED-PROJECTS.md)). Today ppxai-sre uses
+ppxai through one endpoint (`POST /v1/oneshot`, consumed by the
+outlook-monitor agent — see [ADR 0004](docs/decisions/0004-llm-gateway-features.md)).
+Everything else its planned features need has to land in ppxai
+first.
+
+Full gap analysis with rationale for each item (and explicit list of
+what NOT to build in ppxai because it belongs in ppxai-sre's repo)
+is in [docs/research/2026-05-10-ppxai-sre-requirements.md](docs/research/2026-05-10-ppxai-sre-requirements.md).
+Coordination patterns for the run namespace are in
+[docs/research/2026-05-10-openshell-coordination-patterns.md](docs/research/2026-05-10-openshell-coordination-patterns.md).
+The agent-platform substrate ADR is
+[docs/decisions/0003-agent-platform-architecture.md](docs/decisions/0003-agent-platform-architecture.md).
+
+#### Must-have for v1.19.x (blocks ppxai-sre planned features)
+
+| Phase | Description | Effort |
+|---|---|---|
+| **Phase 1: ADR 0003 Stage 2 — agent platform primitives** | `runs/<run_id>/agent-<n>/` artifact namespace per the OpenShell research note. New endpoints: `POST /v1/agent/run → {run_id}`, `GET /v1/agent/runs`, `GET /v1/agent/runs/<id>`, `POST /v1/agent/runs/<id>/cancel`. Adds 4 of the 7 ADR 0003 "what's missing" items in one shape: run identity, persistence, parent/child relationship, scoped budgets. | ~5-7 days |
+| **Phase 2: Sub-agent primitive** | New `spawn_subagent` tool gated by the consent contract. Parent reads `agent-N/output.md` from each spawned slot; map-reduce shape from the OpenShell research note is the canonical example. Required for the manager-executor pattern listed as a planned ppxai-sre feature. | ~3-4 days |
+| **Phase 3: Run persistence + recovery** | Checkpoint to `state.json` per agent slot. Engine restart recovers in-flight runs by re-reading slots. Required for long-lived SRE agents (cert-monitor: hourly; incident-responder: on-call). | ~2-3 days |
+| **Phase 4: Resource budgets** | `meta.json` carrying `{token_budget, time_budget, iteration_budget, started_at, status}`. Runtime enforcement at `chat_with_tools` boundary. Autonomous agents without budgets are how cloud bills explode. | ~2 days |
+| **Phase 5: Network policy enforcement** | Per-run egress allowlist (host + path globs), fail-closed default, audit logging on deny. New middleware in `ppxai/engine/tools/network_policy.py` hooks the outbound-HTTP path of network-touching tools. Load-bearing for ppxai-sre's policy engine planned feature; per-tool consent (today's primitive) is the wrong shape for unattended agents. | ~3-5 days |
+| **Phase 6: k8s session-manager hardening** (promoted from [DEBT-INVENTORY.md](docs/DEBT-INVENTORY.md) Item 3) | 30-50 tests around the 8 named functions in `deploy/images/session-manager/main.py`: `_list_sessions`, `_teardown_session`, `create_session`, `delete_session`, `heartbeat`, `startup`, `LDAPAuthenticator._hash_password`, `authenticate`. Quick pass (~half day) is the v1.19.x release-readiness gate; full pass is the should-have. ppxai-sre IS the k8s context, so Item 3 stops being trigger-deferred. | ~half day to ~1 day |
+
+#### Should-have for v1.19.x (operationally important)
+
+| Phase | Description | Effort |
+|---|---|---|
+| **Phase 7: `/v1/tokens` multi-agent registry** | Per-agent identity for workload attribution: `POST /v1/tokens`, `GET /v1/tokens`, `DELETE /v1/tokens/<id>`. Storage: `~/.ppxai/tokens.json` (single-machine) OR k8s secret (cluster). Becomes urgent the moment ppxai-sre ships agent #2; safe to ship in v1.19.x even if agent #2 is downstream. Per [ADR 0004](docs/decisions/0004-llm-gateway-features.md) "Triggers to revisit" row "Multiple agents need per-call attribution". | ~3-5 days |
+
+#### Deferred to v1.20.x (operational maturity, not v1.19.x blockers)
+
+- **Credential broker** — pluggable resolver protocol in `ppxai/server/credentials.py` so production keys live in k8s secrets / Vault / AWS Secrets Manager, not in `~/.ppxai/.env`. Important production hygiene for unattended SRE agents, but ppxai-sre v1 can ship with today's env-var model.
+- **Native-provider `oneshot()` parity** (Claude / Gemini / Perplexity / OpenAI-native) — only matters when an SRE agent actively wants a non-NIM reasoning model. Anthropic-provider v1.19.x section above unblocks Claude.
+- **Rate limiting** — only matters in multi-tenant deployments where one runaway agent could starve others. Tied to `/v1/tokens` landing first.
+- **OIDC/JWT auth** under `/v1/auth/...` — only matters with SSO/audit integration request.
+- **Streaming `/v1/oneshot`** — only matters with live-feedback SRE agent that doesn't yet exist.
+
+**Why this matters:** ppxai-sre's planned features (heartbeat
+scheduler, multi-agent routing, policy engine) all depend on ppxai
+exposing run identity, persistence, sub-agents, and a network-policy
+primitive. Without these, ppxai-sre would have to reimplement them
+in its own repo on top of fragile workarounds — losing the "imports
+ppxai as dependency" separation that RELATED-PROJECTS.md commits to.
+
+**Caveats pinned so they don't get re-litigated:**
+- The heartbeat scheduler itself belongs in ppxai-sre, NOT in ppxai.
+  ppxai exposes `AGENT_BEAT` events as the substrate; ppxai-sre owns
+  the cron-like scheduling and health-check layer above. Same
+  separation rule as MCP servers (k8s, Prom, Grafana, PagerDuty —
+  ppxai supports MCP, ppxai-sre ships the SRE-flavored servers).
+- The policy engine itself belongs in ppxai-sre, NOT in ppxai.
+  ppxai's per-tool consent contract + the new network-policy
+  primitive (Phase 5) are the substrate; ppxai-sre wraps them with
+  tiered-permissions logic.
+- Per-agent containers in ppxai itself are explicitly OUT of scope.
+  k8s already provides per-tenant container isolation via the
+  session-manager (Phase 6). Adding ppxai-internal containers would
+  double-wrap the isolation for zero benefit. See OpenShell research
+  note Section 4.1 for full reasoning.
+
+**Branch when ready:**
+- Phases 1-4: `feat/agent-platform-stage-2`
+- Phase 5: `feat/network-policy-enforcement` (could merge into 1-4 if developed alongside)
+- Phase 6: `feat/k8s-session-manager-tests` (already reserved per DEBT-INVENTORY Item 3)
+- Phase 7: `feat/v1-tokens-registry`
+
+Each phase is independently releasable as a v1.19.x point release if
+needed; the full bundle is what makes v1.19.x "ready for ppxai-sre."
+
+---
+
 ### v1.19.x - Prompt Analyzer + Adaptive Routing (Future)
 
 | Feature | Description | Plan |
