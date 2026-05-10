@@ -770,6 +770,28 @@ CommandFactory.register(CommandSpec(
 ))
 
 
+def handle_preview_log(context: CommandContext, args: str) -> CommandResult:
+    """`/preview-log [N]` — top-level alias for `/preview logs [N]`.
+
+    Surfaces the active /preview --serve backend log inline in the chat.
+    Same handler as the `/preview logs` subcommand; lives as a separate
+    top-level slash so users who type `/preview-log` or `/preview-logs`
+    (singular/plural, with hyphen) all reach the same destination
+    instead of getting "Unknown command" or "File not found: log".
+    """
+    return handle_preview(context, "logs" + (" " + args.strip() if args.strip() else ""))
+
+
+CommandFactory.register(CommandSpec(
+    name="preview-log",
+    description="Show the active /preview --serve backend log (alias for `/preview logs`)",
+    handler=handle_preview_log,
+    category="display",
+    usage="/preview-log [N]",
+    aliases=["preview-logs"],
+))
+
+
 # ============================================================================
 # /edit — open file in editor (v1.18.1)
 # ============================================================================

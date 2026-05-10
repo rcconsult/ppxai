@@ -587,3 +587,67 @@ class TestPreviewBackendDrainTask:
         # is intermittent — we'll test the no-log path as a proxy.
         await _drain_backend_output(proc, log_path=log_path)
         # If we got here, the drain loop didn't crash on the log path.
+
+
+# ---------------------------------------------------------------------------
+# v1.18.5: /preview-log alias resolves to handle_preview("logs")
+# ---------------------------------------------------------------------------
+
+
+class TestPreviewLogAlias:
+    """Top-level `/preview-log` and `/preview-logs` aliases route to the
+    same handler as `/preview logs`. Added because users naturally type
+    the singular form (`/preview log`, which falls through to "File not
+    found"); the alias absorbs both spellings."""
+
+    def test_preview_log_resolves_to_logs_subcommand(self):
+        from ppxai.commands.factory import CommandFactory
+        from ppxai.commands.display import handle_preview_log
+        # Aliased spec exists and resolves to the canonical name.
+        spec = CommandFactory.get("preview-log")
+        assert spec is not None
+        assert spec.name == "preview-log"
+        assert spec.handler is handle_preview_log
+
+    def test_preview_logs_plural_also_routes(self):
+        from ppxai.commands.factory import CommandFactory
+        from ppxai.commands.display import handle_preview_log
+        spec = CommandFactory.get("preview-logs")
+        assert spec is not None
+        # CommandFactory.get follows the alias to its canonical spec.
+        assert spec.name == "preview-log"
+        assert spec.handler is handle_preview_log
+
+    def test_handler_calls_handle_preview_with_logs_prefix(self, tmp_path):
+        """handle_preview_log("50") should invoke handle_preview with
+        args="logs 50" — same destination as the user typing
+        `/preview logs 50` directly."""
+        from ppxai.commands.display import handle_preview_log
+        from ppxai.commands.protocol import CommandContext
+        from unittest.mock import MagicMock, patch
+
+        ec = MagicMock()
+        ec.get_working_dir = MagicMock(return_value=str(tmp_path))
+        ctx = MagicMock(spec=CommandContext)
+        ctx.engine_client = ec
+        ctx.cwd = str(tmp_path)
+
+        with patch("ppxai.commands.display.handle_preview") as inner:
+            inner.return_value = MagicMock()
+            handle_preview_log(ctx, "50")
+        inner.assert_called_once_with(ctx, "logs 50")
+
+    def test_handler_with_no_args_passes_logs(self, tmp_path):
+        from ppxai.commands.display import handle_preview_log
+        from ppxai.commands.protocol import CommandContext
+        from unittest.mock import MagicMock, patch
+
+        ec = MagicMock()
+        ec.get_working_dir = MagicMock(return_value=str(tmp_path))
+        ctx = MagicMock(spec=CommandContext)
+        ctx.engine_client = ec
+
+        with patch("ppxai.commands.display.handle_preview") as inner:
+            inner.return_value = MagicMock()
+            handle_preview_log(ctx, "")
+        inner.assert_called_once_with(ctx, "logs")
