@@ -550,63 +550,144 @@ class SessionManager:
         # result loop, OR when a tool execution is cancelled mid-loop.
         # Drop the orphan assistant message; the model will re-emit the
         # tool calls on the next turn.
-        cleaned: list = []
-        i = 0
-        while i < len(fixed_messages):
-            msg = fixed_messages[i]
-            if msg.role == "assistant" and msg.tool_calls:
-                expected_ids = {
-                    tc.get("id") for tc in msg.tool_calls if tc.get("id")
-                }
-                # Collect tool_call_ids in following consecutive tool messages.
-                seen_ids: set = set()
-                j = i + 1
-                while j < len(fixed_messages) and fixed_messages[j].role == "tool":
-                    tcid = fixed_messages[j].tool_call_id
-                    if tcid:
-                        seen_ids.add(tcid)
-                    j += 1
-                missing = expected_ids - seen_ids
-                if expected_ids and missing:
-                    # Drop this orphan assistant + any partial tool results.
-                    # Partial results without their assistant context are
-                    # also invalid for the next API call.
-                    removed_count += 1 + (j - i - 1)
-                    logger.warning(
-                        f"Session alternation fix: dropped orphan "
-                        f"assistant.tool_calls + {j - i - 1} partial tool "
-                        f"messages (missing {len(missing)} tool_call_ids: "
-                        f"{', '.join(sorted(missing))[:120]}). "
-                        f"Likely a KeyboardInterrupt mid-tool-iteration."
-                    )
-                    i = j
-                    continue
-            cleaned.append(msg)
-            i += 1
-        fixed_messages = cleaned
+        #
+        # v1.18.5: this cleanup runs in a loop with the trailing-strip
+        # below because step 3 stripping trailing tools can introduce a
+        # NEW orphan at the new tail (the assistant.tool_calls whose
+        # response we just popped becomes orphaned). Without re-running
+        # the cleanup we'd hand a freshly-broken history to the API.
+        # Each iteration removes at most a finite number of messages, so
+        # the loop terminates in at most len(messages) passes.
+        def _strip_orphan_tool_calls(msgs: list) -> tuple[list, int]:
+            """Single pass of orphan-assistant.tool_calls cleanup.
 
-        # Also ensure session ends with assistant message (not orphan user)
-        # A trailing user message without assistant response will cause alternation
-        # errors when the next message is sent
-        # Tool messages at the end are also problematic — they need a following assistant
-        while fixed_messages and fixed_messages[-1].role in ("user", "tool"):
+            Returns (cleaned, removed_count). Pure function; doesn't
+            mutate the input list.
+            """
+            cleaned: list = []
+            removed = 0
+            i = 0
+            while i < len(msgs):
+                msg = msgs[i]
+                if msg.role == "assistant" and msg.tool_calls:
+                    expected_ids = {
+                        tc.get("id") for tc in msg.tool_calls if tc.get("id")
+                    }
+                    seen_ids: set = set()
+                    j = i + 1
+                    while j < len(msgs) and msgs[j].role == "tool":
+                        tcid = msgs[j].tool_call_id
+                        if tcid:
+                            seen_ids.add(tcid)
+                        j += 1
+                    missing = expected_ids - seen_ids
+                    if expected_ids and missing:
+                        removed += 1 + (j - i - 1)
+                        logger.warning(
+                            f"Session alternation fix: dropped orphan "
+                            f"assistant.tool_calls + {j - i - 1} partial tool "
+                            f"messages (missing {len(missing)} tool_call_ids: "
+                            f"{', '.join(sorted(missing))[:120]})."
+                        )
+                        i = j
+                        continue
+                cleaned.append(msg)
+                i += 1
+            return cleaned, removed
+
+        fixed_messages, _orphan_removed = _strip_orphan_tool_calls(fixed_messages)
+        removed_count += _orphan_removed
+
+        # Also ensure session ends in a state where appending a new user
+        # message would be valid alternation.
+        #
+        # Trailing user = unsent prompt; drop it and warn (load-bearing
+        # behavior — without this, a session saved mid-turn would keep
+        # the unsent text and we'd silently double-send on next /continue).
+        #
+        # Trailing tool = result of the prior assistant's tool_calls.
+        # PREVIOUSLY (pre-v1.18.5) this was unconditionally popped, but
+        # that was wrong: stripping a valid tool result orphans its parent
+        # assistant.tool_calls (the new tail) — and step 2's orphan
+        # cleanup already ran. Cascading damage propagated all the way
+        # back to user-only history. The user-visible symptom was
+        # repeated `OpenAI 400 — tool_call_id X did not have response`
+        # across `/continue` retries with progressively earlier orphan
+        # positions, surfaced 2026-05-10 in v1.18.5 testing.
+        #
+        # v1.18.5 fix: keep a trailing tool ONLY if it completes its
+        # parent's tool_call_ids. Drop it only when it's actually
+        # orphaned. The model handles `tool → user` and
+        # `tool → assistant_response` cleanly in the next turn.
+        while fixed_messages and fixed_messages[-1].role == "user":
             removed = fixed_messages.pop()
             removed_count += 1
-            # Trailing user = unsent prompt. Make the loss unambiguous in logs
-            # so regressions like "session saved mid-turn lost my question" are
-            # visible instead of silently buried in an info-level roll-up (R9).
-            if removed.role == "user":
+            logger.warning(
+                f"Session alternation fix: DROPPED UNSENT USER PROMPT "
+                f"(len={len(removed.text_content())}) — "
+                f"session was saved before the assistant responded. "
+                f"Preview: {removed.text_content()[:120]!r}"
+            )
+
+        # Trailing tool: only strip if it's truly orphan (no parent
+        # assistant.tool_calls covers its tool_call_id, OR the parent
+        # has unfilled IDs that step 2 should have caught but somehow
+        # left behind). In the common case of a valid-pair tail the
+        # tool stays — the next turn's API call has a valid shape.
+        while fixed_messages and fixed_messages[-1].role == "tool":
+            tail = fixed_messages[-1]
+            # Walk backward to find this tool's assistant.tool_calls parent.
+            parent_idx = None
+            for k in range(len(fixed_messages) - 2, -1, -1):
+                if fixed_messages[k].role == "tool":
+                    continue
+                if fixed_messages[k].role == "assistant" and fixed_messages[k].tool_calls:
+                    parent_idx = k
+                break
+            if parent_idx is None:
+                # No parent — pure orphan tool.
+                removed = fixed_messages.pop()
+                removed_count += 1
                 logger.warning(
-                    f"Session alternation fix: DROPPED UNSENT USER PROMPT "
-                    f"(len={len(removed.text_content())}) — "
-                    f"session was saved before the assistant responded. "
-                    f"Preview: {removed.text_content()[:120]!r}"
-                )
-            else:
-                logger.warning(
-                    f"Session alternation fix: removed trailing {removed.role} message "
+                    f"Session alternation fix: removed orphan trailing tool "
+                    f"(no parent assistant.tool_calls) "
                     f"(len={len(removed.text_content())})"
                 )
+                continue
+            # Parent found. Check if all parent's tool_call_ids are covered
+            # by the consecutive tool messages from parent_idx+1 to end.
+            expected = {
+                tc.get("id") for tc in fixed_messages[parent_idx].tool_calls
+                if tc.get("id")
+            }
+            seen = {
+                fixed_messages[m].tool_call_id
+                for m in range(parent_idx + 1, len(fixed_messages))
+                if fixed_messages[m].role == "tool"
+                and fixed_messages[m].tool_call_id
+            }
+            if expected - seen:
+                # Parent has unfilled IDs — step 2 missed it (shouldn't
+                # happen but defensive). Drop the partial pair.
+                while fixed_messages and (
+                    fixed_messages[-1].role == "tool"
+                    or (
+                        fixed_messages[-1].role == "assistant"
+                        and fixed_messages[-1].tool_calls
+                        and len(fixed_messages) - 1 >= parent_idx
+                    )
+                ):
+                    removed = fixed_messages.pop()
+                    removed_count += 1
+                    if len(fixed_messages) < parent_idx:
+                        break
+                logger.warning(
+                    "Session alternation fix: dropped partial trailing "
+                    "assistant.tool_calls + tool tail (step 2 didn't catch)."
+                )
+                continue
+            # Valid pair — keep the trailing tool. Done with trailing-strip.
+            break
 
         if removed_count > 0:
             self.messages = fixed_messages

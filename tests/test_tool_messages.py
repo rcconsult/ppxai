@@ -432,8 +432,20 @@ class TestAlternationValidationWithToolMessages:
                 prev = session.messages[i - 1]
                 assert (prev.role == "assistant" and prev.tool_calls) or prev.role == "tool"
 
-    def test_trailing_tool_message_removed(self, tmp_path):
-        """Tool message at end of session is removed."""
+    def test_trailing_tool_message_kept_when_paired(self, tmp_path):
+        """Pre-v1.18.5: trailing tool was unconditionally stripped.
+
+        v1.18.5 fix: a trailing tool whose parent assistant.tool_calls
+        has all IDs covered IS a valid state — the next API call would
+        accept it (tool→user→assistant_response is valid alternation).
+        Stripping it caused a destructive cascade that ORPHANED the
+        parent assistant.tool_calls, surfacing as repeated OpenAI 400
+        errors during /continue retries (regression discovered in
+        live v1.18.5 testing on 2026-05-10).
+
+        The new contract: keep trailing tool when paired; only drop
+        when truly orphaned (no parent or parent missing IDs).
+        """
         session = SessionManager(sessions_dir=tmp_path, exports_dir=tmp_path / "exports")
         session.messages = [
             Message("user", "read foo"),
@@ -444,10 +456,28 @@ class TestAlternationValidationWithToolMessages:
             Message("tool", "contents", tool_call_id="call_1"),
         ]
         removed = session.validate_and_fix_alternation()
-        # Trailing tool (and then possibly trailing assistant with tool_calls) should be cleaned
-        assert removed > 0
-        if session.messages:
-            assert session.messages[-1].role == "assistant"
+        # Valid pair — nothing should be removed.
+        assert removed == 0, (
+            f"v1.18.5 fix regression: valid trailing tool pair was modified. "
+            f"removed={removed}, roles={[m.role for m in session.messages]}"
+        )
+        assert [m.role for m in session.messages] == ["user", "assistant", "tool"]
+
+    def test_trailing_orphan_tool_with_no_parent_removed(self, tmp_path):
+        """Tool message at end with NO parent assistant.tool_calls IS
+        an orphan and gets stripped (the leading-tool path or
+        a session ending in a stray tool with no caller)."""
+        session = SessionManager(sessions_dir=tmp_path, exports_dir=tmp_path / "exports")
+        session.messages = [
+            Message("user", "hello"),
+            Message("assistant", "hi"),
+            # No assistant.tool_calls before this tool message — orphan
+            Message("tool", "stray", tool_call_id="call_x"),
+        ]
+        removed = session.validate_and_fix_alternation()
+        assert removed >= 1
+        # The orphan tool got dropped; final session is user → assistant.
+        assert all(m.role != "tool" for m in session.messages)
 
     def test_leading_tool_message_removed(self, tmp_path):
         """Leading tool message is removed."""

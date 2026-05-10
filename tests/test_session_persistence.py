@@ -1266,6 +1266,54 @@ class TestOrphanToolCallsCleanup:
                 f"{ids - seen_ids}"
             )
 
+    def test_cascading_orphan_from_trailing_tool_strip(self, tmp_path):
+        """v1.18.5 regression: trailing-tool strip in step 3 ORPHANS the
+        prior assistant.tool_calls, but step 2 already ran and won't see it.
+        Result: surviving assistant.tool_calls without paired tool response
+        → next OpenAI request rejects with HTTP 400.
+
+        Surfaced 2026-05-10 from a real ppxai session that ended on a
+        zombie circuit-breaker (apply_patch fail×2). The orphan persisted
+        across `/continue` retries with messages.[N].role pointing at
+        progressively earlier positions as the alternation fix kept
+        nibbling without ever covering the new tail.
+
+        Shape: complete sequence of assistant(tool_calls)+tool ending
+        with a final orphan assistant.tool_calls. Step 2 drops the
+        final orphan → ends with tool. Step 3 pops trailing tool →
+        ends with assistant.tool_calls whose response just got popped.
+        Without re-running step 2, the new tail orphan ships to the API.
+        """
+        from ppxai.engine.types import Message
+        sm = self._sm(tmp_path)
+        sm.messages = [
+            Message(role="user", content="diagnose"),
+            self._assistant_with_tool_calls(["call_A"]),
+            self._tool_result("call_A", "ok"),
+            self._assistant_with_tool_calls(["call_B"]),
+            # call_B's response is the LAST tool message — when it gets
+            # stripped by step 3 (after step 2 drops the trailing orphan),
+            # call_B becomes orphan. Without v1.18.5 fix, this survived.
+            self._tool_result("call_B", "ok2"),
+            self._assistant_with_tool_calls(["call_orphan"]),  # the visible orphan
+        ]
+        sm.validate_and_fix_alternation()
+        # ALL surviving assistant.tool_calls must have paired responses.
+        for msg in sm.messages:
+            if msg.role == "assistant" and msg.tool_calls:
+                expected = {t.get("id") for t in msg.tool_calls}
+                idx = sm.messages.index(msg)
+                seen = {
+                    m.tool_call_id for m in sm.messages[idx + 1:]
+                    if m.role == "tool"
+                }
+                missing = expected - seen
+                assert not missing, (
+                    f"v1.18.5 regression: orphan assistant.tool_calls survived "
+                    f"validation. Missing tool_call_ids: {missing}. "
+                    f"Final roles: {[m.role for m in sm.messages]}"
+                )
+
     def test_save_then_load_clean_session_with_orphan(self, tmp_path):
         """End-to-end: save a corrupted session, load it, validation
         fires implicitly via load() and cleans the orphan."""
