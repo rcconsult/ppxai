@@ -288,9 +288,15 @@ def create_release_notes(version: str, date: str):
         print(f"  ⏭️  Release notes already exist: {notes_file.name}")
         return
 
-    template = f"""# Release Notes: v{version}
+    template = f"""# Release Notes — v{version}
 
-**Release Date:** {date}
+## Scope
+
+[1-3 sentence summary: what kind of release (bugfix / feature / multi-theme),
+the headline change, and any stability commitments. This replaces the
+older `> **Scope:**` blockquote convention that became visually subtle
+under GitHub's 2026-04 release-page CSS update — keep it as a top-level
+heading so it remains obvious in any styling.]
 
 ## Summary
 
