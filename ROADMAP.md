@@ -927,27 +927,34 @@ Coordination patterns for the run namespace are in
 [docs/research/2026-05-10-openshell-coordination-patterns.md](docs/research/2026-05-10-openshell-coordination-patterns.md).
 The agent-platform substrate ADR is
 [docs/decisions/0003-agent-platform-architecture.md](docs/decisions/0003-agent-platform-architecture.md).
+Consumer-side migration plan with caveats and asks against this
+plan is at [`../ppxai-sre-repo/docs/PPXAI-INTEGRATION-V1.19.md`](../ppxai-sre-repo/docs/PPXAI-INTEGRATION-V1.19.md);
+those caveats (C1-C4) and asks (A1-A3) are folded into ADR 0003
+"Open decisions" §6-§12 with recommended positions, and the phase
+rows below carry the load-bearing wire-shape commitments inline.
 
 #### Must-have for v1.19.x (blocks ppxai-sre planned features)
 
 | Phase | Description | Effort |
 |---|---|---|
-| **Phase 1: ADR 0003 Stage 2 — agent platform primitives** | `runs/<run_id>/agent-<n>/` artifact namespace per the OpenShell research note. New endpoints: `POST /v1/agent/run → {run_id}`, `GET /v1/agent/runs`, `GET /v1/agent/runs/<id>`, `POST /v1/agent/runs/<id>/cancel`. Adds 4 of the 7 ADR 0003 "what's missing" items in one shape: run identity, persistence, parent/child relationship, scoped budgets. | ~5-7 days |
+| **Phase 1: ADR 0003 Stage 2 — agent platform primitives** | `runs/<run_id>/agent-<n>/` artifact namespace per the OpenShell research note. New endpoints: `POST /v1/agent/run → {run_id}` (with mandatory `tools` field per ADR 0003 §6 / caveat C4), `GET /v1/agent/runs`, `GET /v1/agent/runs/<id>`, `GET /v1/agent/runs/<id>/events` as SSE channel for live updates (per ADR 0003 §7 / caveat C3 — polling stays as status-snapshot path), `POST /v1/agent/runs/<id>/cancel`. `EventType.AGENT_RUN_START` payload extended with additive `{run_id, parent_run_id}` fields (per ADR 0003 §10 / ask A3) — no new event type. Adds 4 of the 7 ADR 0003 "what's missing" items in one shape: run identity, persistence, parent/child relationship, scoped budgets. | ~6-8 days |
 | **Phase 2: Sub-agent primitive** | New `spawn_subagent` tool gated by the consent contract. Parent reads `agent-N/output.md` from each spawned slot; map-reduce shape from the OpenShell research note is the canonical example. Required for the manager-executor pattern listed as a planned ppxai-sre feature. | ~3-4 days |
 | **Phase 3: Run persistence + recovery** | Checkpoint to `state.json` per agent slot. Engine restart recovers in-flight runs by re-reading slots. Required for long-lived SRE agents (cert-monitor: hourly; incident-responder: on-call). | ~2-3 days |
 | **Phase 4: Resource budgets** | `meta.json` carrying `{token_budget, time_budget, iteration_budget, started_at, status}`. Runtime enforcement at `chat_with_tools` boundary. Autonomous agents without budgets are how cloud bills explode. | ~2 days |
-| **Phase 5: Network policy enforcement** | Per-run egress allowlist (host + path globs), fail-closed default, audit logging on deny. New middleware in `ppxai/engine/tools/network_policy.py` hooks the outbound-HTTP path of network-touching tools. Load-bearing for ppxai-sre's policy engine planned feature; per-tool consent (today's primitive) is the wrong shape for unattended agents. | ~3-5 days |
+| **Phase 5: Network policy enforcement** | Per-run egress allowlist (host + path globs), fail-closed default, audit logging on deny. New middleware in `ppxai/engine/tools/network_policy.py` hooks the outbound-HTTP path of network-touching tools. Emits typed `EventType.NETWORK_POLICY_DENIED` and `EventType.NETWORK_POLICY_ALLOWED` events with `{tool, target_host, target_path, reason, allowlist_rule_id, run_id}` payload (per ADR 0003 §8 / caveat C1 — analogous to existing `EventType.PROVIDER_THROTTLED`) so consumer audit loggers consume them as data, not by tapping internals. Load-bearing for ppxai-sre's policy engine planned feature; per-tool consent (today's primitive) is the wrong shape for unattended agents. | ~4-6 days |
 | **Phase 6: k8s session-manager hardening** (promoted from [DEBT-INVENTORY.md](docs/DEBT-INVENTORY.md) Item 3) | 30-50 tests around the 8 named functions in `deploy/images/session-manager/main.py`: `_list_sessions`, `_teardown_session`, `create_session`, `delete_session`, `heartbeat`, `startup`, `LDAPAuthenticator._hash_password`, `authenticate`. Quick pass (~half day) is the v1.19.x release-readiness gate; full pass is the should-have. ppxai-sre IS the k8s context, so Item 3 stops being trigger-deferred. | ~half day to ~1 day |
 
 #### Should-have for v1.19.x (operationally important)
 
 | Phase | Description | Effort |
 |---|---|---|
-| **Phase 7: `/v1/tokens` multi-agent registry** | Per-agent identity for workload attribution: `POST /v1/tokens`, `GET /v1/tokens`, `DELETE /v1/tokens/<id>`. Storage: `~/.ppxai/tokens.json` (single-machine) OR k8s secret (cluster). Becomes urgent the moment ppxai-sre ships agent #2; safe to ship in v1.19.x even if agent #2 is downstream. Per [ADR 0004](docs/decisions/0004-llm-gateway-features.md) "Triggers to revisit" row "Multiple agents need per-call attribution". | ~3-5 days |
+| **Phase 7: `/v1/tokens` multi-agent registry** | Per-agent identity for workload attribution: `POST /v1/tokens`, `GET /v1/tokens`, `DELETE /v1/tokens/<id>`. **Pluggable resolver protocol from day one** (per ADR 0003 §9 / caveat C2): same code path supports `~/.ppxai/tokens.json` (single-machine), k8s secret (cluster), and v1.20.x credential broker (Vault / AWS Secrets Manager) without re-shaping the wire surface. Becomes urgent the moment ppxai-sre ships agent #2; safe to ship in v1.19.x even if agent #2 is downstream. Per [ADR 0004](docs/decisions/0004-llm-gateway-features.md) "Triggers to revisit" row "Multiple agents need per-call attribution". | ~4-6 days |
 
 #### Deferred to v1.20.x (operational maturity, not v1.19.x blockers)
 
-- **Credential broker** — pluggable resolver protocol in `ppxai/server/credentials.py` so production keys live in k8s secrets / Vault / AWS Secrets Manager, not in `~/.ppxai/.env`. Important production hygiene for unattended SRE agents, but ppxai-sre v1 can ship with today's env-var model.
+- **Credential broker** — pluggable resolver protocol in `ppxai/server/credentials.py` so production keys live in k8s secrets / Vault / AWS Secrets Manager, not in `~/.ppxai/.env`. Important production hygiene for unattended SRE agents, but ppxai-sre v1 can ship with today's env-var model. Phase 7 above commits to the resolver protocol shape in v1.19.x so this v1.20.x work doesn't re-shape the wire surface (per ADR 0003 §9).
+- **`EventType.CONSENT_DECISION`** (per ADR 0003 §11 / ask A1) — symmetric event for non-network consent decisions (allow/deny/approval_required) so consumer audit loggers stop tapping internals. Phase 5 (C1) covers the network case which is the threat model ppxai-sre ships in v1.19.x; consent-decision audit can ride a v1.20.x release with no v1.19.x feature blocked.
+- **Pre-tool-call hook / consent contract "headless mode"** (per ADR 0003 §12 / ask A2) — for ppxai-sre's 3-tier classification to fire before ppxai's consent dialog. Recommendation pinned in ADR: option (b) headless-mode policy callable, not a parallel hook surface. Doesn't block v1.19.x; ppxai-sre's policy engine works without it.
 - **Native-provider `oneshot()` parity** (Claude / Gemini / Perplexity / OpenAI-native) — only matters when an SRE agent actively wants a non-NIM reasoning model. Anthropic-provider v1.19.x section above unblocks Claude.
 - **Rate limiting** — only matters in multi-tenant deployments where one runaway agent could starve others. Tied to `/v1/tokens` landing first.
 - **OIDC/JWT auth** under `/v1/auth/...` — only matters with SSO/audit integration request.

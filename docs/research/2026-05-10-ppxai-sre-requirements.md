@@ -426,7 +426,7 @@ retrofit them into this one.
 ## Related documents
 
 - [RELATED-PROJECTS.md](../../RELATED-PROJECTS.md) — ppxai-sre overview and separation rationale
-- [docs/decisions/0003-agent-platform-architecture.md](../decisions/0003-agent-platform-architecture.md) — agent platform ADR (the load-bearing one for v1.19.x)
+- [docs/decisions/0003-agent-platform-architecture.md](../decisions/0003-agent-platform-architecture.md) — agent platform ADR (the load-bearing one for v1.19.x); "Open decisions" §6-§12 fold in the consumer-side caveats and asks raised against this gap analysis
 - [docs/decisions/0004-llm-gateway-features.md](../decisions/0004-llm-gateway-features.md) — v1 gateway tier; "Triggers to revisit" table is the future-work checklist
 - [docs/API-GATEWAY.md](../API-GATEWAY.md) — v1 gateway public spec
 - [docs/CONSENT-CONTRACT.md](../CONSENT-CONTRACT.md) — current security boundary (per-tool, the hook ppxai-sre's policy engine wraps)
@@ -434,4 +434,5 @@ retrofit them into this one.
 - [docs/research/2026-05-10-openshell-coordination-patterns.md](2026-05-10-openshell-coordination-patterns.md) — coordination-pattern research note (the load-bearing design for ADR 0003 Stage 2)
 - [DEBT-INVENTORY.md](../DEBT-INVENTORY.md) Item 3 — k8s session-manager (multi-tenant deploy shape)
 - [ROADMAP.md](../../ROADMAP.md) — v1.19.x agent-platform entry references this note
+- [`../../../ppxai-sre-repo/docs/PPXAI-INTEGRATION-V1.19.md`](../../../ppxai-sre-repo/docs/PPXAI-INTEGRATION-V1.19.md) — consumer-side integration plan with caveats C1-C4 + asks A1-A3 filed against the v1.19.x scope here
 - ppxai-sre repository: https://github.com/rcconsult/ppxai-sre (private)

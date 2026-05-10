@@ -8,6 +8,8 @@
 - `ppxai/engine/chat.py` — `chat_with_tools` inner tool loop, AGENT_BEAT emission (lines 559, 875, 1066, 1138)
 - `ppxai/engine/types.py` — `EventType.AGENT_BEAT` / `AGENT_RUN_START` / `AGENT_RUN_COMPLETE` / `AGENT_RUN_ERROR` / `AGENT_ZOMBIE` (v1.18.0)
 - `vscode-extension/src/chatPanel.ts::handleAgentCommand` — VSCode-side replica of the outer loop (~150 LoC)
+- [`../../../ppxai-sre-repo/docs/PPXAI-INTEGRATION-V1.19.md`](../../../ppxai-sre-repo/docs/PPXAI-INTEGRATION-V1.19.md) — consumer-side integration plan with caveats (C1-C4) and asks (A1-A3) folded into "Open decisions" §6-§12 below
+- [`../research/2026-05-10-ppxai-sre-requirements.md`](../research/2026-05-10-ppxai-sre-requirements.md) — gap analysis driving Stage 2 scope
 
 ## Context
 
@@ -253,7 +255,12 @@ POST /agent/runs/<id>/cancel → {ok, status: "cancelling"}
 
 ## Open decisions
 
-These are gaps this ADR cannot close without input or measurement:
+These are gaps this ADR cannot close without input or measurement.
+Items 1-5 are ppxai-internal; items 6-12 are consumer-driven, surfaced
+2026-05-10 in [`../../../ppxai-sre-repo/docs/PPXAI-INTEGRATION-V1.19.md`](../../../ppxai-sre-repo/docs/PPXAI-INTEGRATION-V1.19.md)
+(caveats C1-C4 and asks A1-A3) and need answers before Stage 2 implementation
+lands. Each carries a recommended position; items marked LOAD-BEARING block
+ppxai-sre's planned features in their current shape.
 
 1. **Question A** — outer-loop value. Needs instrumentation data.
 2. **Question B** — filesystem vs SQLite for the registry. Recommend
@@ -270,6 +277,72 @@ These are gaps this ADR cannot close without input or measurement:
    mid-tool-call cleanly. Today's `_active_subprocesses` cleanup
    (commit `a746a7c6`) is the foundation; needs extending to a
    per-run budget tracker.
+6. **C4 — Tools first-class on `POST /v1/agent/run`** [LOAD-BEARING].
+   Without a `tools` field on the run-spawn request, ppxai-sre's
+   manager-executor pattern would have to reimplement the runtime
+   itself. **Recommended position:** mandatory in v1.19.x Phase 1.
+   Same `tools` shape `/v1/oneshot` would accept once it grows tool
+   support, so the wire surfaces stay consistent. ROADMAP Phase 1
+   row to be amended.
+7. **C3 — SSE on `GET /v1/agent/runs/<id>/events`**. Polling gates
+   the manager-executor pattern on round-trip latency
+   (`incident-responder` needs live triage commentary while the
+   executor runs `kubectl describe`, Prom queries, etc.). The ADR's
+   own "Wire shape for runs" section already proposes
+   `GET /agent/runs/<id>/events` as SSE; this elevates that proposal
+   from notional to committed. **Recommended position:** SSE channel
+   in v1.19.x Phase 1; polling `GET /v1/agent/runs/<id>` stays as
+   the status-snapshot path. ROADMAP Phase 1 row to be amended.
+8. **C1 — Typed `EventType.NETWORK_POLICY_DENIED` /
+   `NETWORK_POLICY_ALLOWED`** [LOAD-BEARING for ppxai-sre audit].
+   Phase 5's network-policy primitive must emit stable typed events
+   (analogous to `EventType.PROVIDER_THROTTLED`) so ppxai-sre's
+   `AuditLogger` consumes them as data, not by tapping internal
+   code paths. Payload shape:
+   `{tool, target_host, target_path, reason, allowlist_rule_id, run_id}`.
+   **Recommended position:** add to v1.19.x Phase 5 scope. ROADMAP
+   Phase 5 row to be amended.
+9. **C2 — `/v1/tokens` pluggable resolver from day one**
+   [LOAD-BEARING for v1.20.x migration cost]. ROADMAP today says
+   "`~/.ppxai/tokens.json` (single-machine) OR k8s secret (cluster)" —
+   left unspecified. SRE agents deploy to k8s; the k8s-secret path
+   is load-bearing. If we ship v1.19.x with a single hardcoded
+   storage shape, the v1.20.x credential broker becomes a wire
+   re-shape. **Recommended position:** define the resolver protocol
+   in v1.19.x Phase 7 even though the credential broker proper is
+   v1.20.x. Same code path supports `~/.ppxai/.env` / k8s secret /
+   Vault. ROADMAP Phase 7 row to be amended.
+10. **A3 — `run_id` and `parent_run_id` on `EventType.AGENT_RUN_START`**.
+    Phase 1 introduces a `run_id` per run; ppxai-sre's audit JSONL
+    keys by `run_id`. The native v1.18.0 `AGENT_RUN_START` payload
+    predates the run namespace and doesn't carry one. **Recommended
+    position:** additive fields on the existing event type, no new
+    event needed. The namespace is the only new state. Fold into
+    Phase 1 implementation note (no separate ROADMAP row).
+11. **A1 — `EventType.CONSENT_DECISION` event stream**.
+    Symmetric with C1 for non-network consent decisions. ppxai-sre's
+    `AuditLogger` records every consent decision (allow/deny/
+    approval_required) keyed by tool + args hash. Today the consent
+    contract is per-call dialog; without an event stream they tap
+    internals. Payload:
+    `{tool, args_hash, decision, reason, source: user|policy, run_id}`.
+    **Recommended position:** v1.19.x should-have. Cheap to add
+    once the consent flow is event-emitting; cheap to defer to
+    v1.20.x if Phase 5 (C1) is enough for the threat model
+    ppxai-sre is shipping in v1.19.x.
+12. **A2 — Pre-tool-call hook for tier classification**.
+    ppxai-sre's 3-tier classification (Autonomous / Notify-and-Act /
+    Require-Approval) must fire **before** ppxai's consent dialog —
+    otherwise the user sees a dialog for tier-1 read-only verbs that
+    should auto-approve. Two options proposed by the consumer: (a)
+    `ToolEngineProtocol.pre_execute(tool_name, args) → AllowReason
+    | DenyReason | DefaultConsent`, or (b) consent contract documents
+    a "headless mode" where decisions come from a registered policy
+    callable. **Recommended position:** option (b), defer to
+    v1.20.x. Keeps the consent contract as the single boundary and
+    avoids adding a parallel hook surface. Doesn't block v1.19.x;
+    ppxai-sre's policy engine works without it (just renders dialogs
+    that the autonomous agent auto-approves via test harness).
 
 ## Consequences
 
