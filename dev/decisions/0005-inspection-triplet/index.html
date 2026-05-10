@@ -10,29 +10,27 @@
       
       
       
-        <link rel="canonical" href="https://rcconsult.github.io/ppxai/dev/">
+        <link rel="canonical" href="https://rcconsult.github.io/ppxai/dev/decisions/0005-inspection-triplet/">
       
       
-      
-        <link rel="next" href="INSTALLATION/">
       
       
         
       
       
-      <link rel="icon" href="assets/images/favicon.png">
+      <link rel="icon" href="../../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
-        <title>ppxai Documentation</title>
+        <title>ADR 0005 — Inspection Triplet pattern for runtime observability - ppxai Documentation</title>
       
     
     
-      <link rel="stylesheet" href="assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
       
         
-        <link rel="stylesheet" href="assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -51,7 +49,7 @@
       
     
     
-    <script>__md_scope=new URL(".",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -76,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#ppxai-documentation" class="md-skip">
+        <a href="#adr-0005-inspection-triplet-pattern-for-runtime-observability" class="md-skip">
           Skip to content
         </a>
       
@@ -96,7 +94,7 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="." title="ppxai Documentation" class="md-header__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+    <a href="../.." title="ppxai Documentation" class="md-header__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -116,7 +114,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Home
+              ADR 0005 — Inspection Triplet pattern for runtime observability
             
           </span>
         </div>
@@ -234,7 +232,7 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="." title="ppxai Documentation" class="md-nav__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+    <a href="../.." title="ppxai Documentation" class="md-nav__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -261,37 +259,10 @@
       
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Home
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="." class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
         
   
   
@@ -307,170 +278,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#why-ppxai" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Why ppxai?
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#quick-start" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Quick Start
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Quick Start">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#installation" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Installation
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#configure-api-keys" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Configure API Keys
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#run" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Run
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#features" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Features
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Features">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#multi-provider-support" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Multi-Provider Support
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#four-interfaces" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Four Interfaces
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#agent-mode" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Agent Mode
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#bootstrap-context" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Bootstrap Context
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#documentation" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Documentation
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#resources" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Resources
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -536,7 +343,7 @@
   
   
     <li class="md-nav__item">
-      <a href="INSTALLATION/" class="md-nav__link">
+      <a href="../../INSTALLATION/" class="md-nav__link">
         
   
   
@@ -564,7 +371,7 @@
   
   
     <li class="md-nav__item">
-      <a href="PROVIDER_SETUP/" class="md-nav__link">
+      <a href="../../PROVIDER_SETUP/" class="md-nav__link">
         
   
   
@@ -653,7 +460,7 @@
   
   
     <li class="md-nav__item">
-      <a href="AGENT_MODE_GUIDE/" class="md-nav__link">
+      <a href="../../AGENT_MODE_GUIDE/" class="md-nav__link">
         
   
   
@@ -681,7 +488,7 @@
   
   
     <li class="md-nav__item">
-      <a href="BOOTSTRAP_CONTEXT_GUIDE/" class="md-nav__link">
+      <a href="../../BOOTSTRAP_CONTEXT_GUIDE/" class="md-nav__link">
         
   
   
@@ -709,7 +516,7 @@
   
   
     <li class="md-nav__item">
-      <a href="CONTEXT-INJECTION/" class="md-nav__link">
+      <a href="../../CONTEXT-INJECTION/" class="md-nav__link">
         
   
   
@@ -737,7 +544,7 @@
   
   
     <li class="md-nav__item">
-      <a href="CHECKPOINT_GUIDE/" class="md-nav__link">
+      <a href="../../CHECKPOINT_GUIDE/" class="md-nav__link">
         
   
   
@@ -765,7 +572,7 @@
   
   
     <li class="md-nav__item">
-      <a href="FILE_EDITING_GUIDE/" class="md-nav__link">
+      <a href="../../FILE_EDITING_GUIDE/" class="md-nav__link">
         
   
   
@@ -793,7 +600,7 @@
   
   
     <li class="md-nav__item">
-      <a href="SHELL_CONSENT_GUIDE/" class="md-nav__link">
+      <a href="../../SHELL_CONSENT_GUIDE/" class="md-nav__link">
         
   
   
@@ -882,7 +689,7 @@
   
   
     <li class="md-nav__item">
-      <a href="CUSTOM_TOOL_DEVELOPMENT_GUIDE/" class="md-nav__link">
+      <a href="../../CUSTOM_TOOL_DEVELOPMENT_GUIDE/" class="md-nav__link">
         
   
   
@@ -910,7 +717,7 @@
   
   
     <li class="md-nav__item">
-      <a href="CUSTOM_COMMAND_DEVELOPMENT_GUIDE/" class="md-nav__link">
+      <a href="../../CUSTOM_COMMAND_DEVELOPMENT_GUIDE/" class="md-nav__link">
         
   
   
@@ -938,7 +745,7 @@
   
   
     <li class="md-nav__item">
-      <a href="ARCHITECTURE/" class="md-nav__link">
+      <a href="../../ARCHITECTURE/" class="md-nav__link">
         
   
   
@@ -1027,7 +834,7 @@
   
   
     <li class="md-nav__item">
-      <a href="ollama-limitations/" class="md-nav__link">
+      <a href="../../ollama-limitations/" class="md-nav__link">
         
   
   
@@ -1055,7 +862,7 @@
   
   
     <li class="md-nav__item">
-      <a href="vllm-tool-calling-guide/" class="md-nav__link">
+      <a href="../../vllm-tool-calling-guide/" class="md-nav__link">
         
   
   
@@ -1083,7 +890,7 @@
   
   
     <li class="md-nav__item">
-      <a href="CONTAINER_TOOLS_GUIDE/" class="md-nav__link">
+      <a href="../../CONTAINER_TOOLS_GUIDE/" class="md-nav__link">
         
   
   
@@ -1111,7 +918,7 @@
   
   
     <li class="md-nav__item">
-      <a href="AUTOROUTER-CONFIG/" class="md-nav__link">
+      <a href="../../AUTOROUTER-CONFIG/" class="md-nav__link">
         
   
   
@@ -1200,7 +1007,7 @@
   
   
     <li class="md-nav__item">
-      <a href="RELEASE-NOTES-v1.16.1/" class="md-nav__link">
+      <a href="../../RELEASE-NOTES-v1.16.1/" class="md-nav__link">
         
   
   
@@ -1228,7 +1035,7 @@
   
   
     <li class="md-nav__item">
-      <a href="RELEASE-NOTES-v1.16.0/" class="md-nav__link">
+      <a href="../../RELEASE-NOTES-v1.16.0/" class="md-nav__link">
         
   
   
@@ -1256,7 +1063,7 @@
   
   
     <li class="md-nav__item">
-      <a href="RELEASE-NOTES-v1.15.6/" class="md-nav__link">
+      <a href="../../RELEASE-NOTES-v1.15.6/" class="md-nav__link">
         
   
   
@@ -1311,10 +1118,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#why-ppxai" class="md-nav__link">
+  <a href="#context" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Why ppxai?
+        Context
       
     </span>
   </a>
@@ -1322,22 +1129,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#quick-start" class="md-nav__link">
+  <a href="#decision" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Quick Start
+        Decision
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Quick Start">
+    <nav class="md-nav" aria-label="Decision">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#installation" class="md-nav__link">
+  <a href="#state-layer-statejson" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Installation
+        State layer (state.json)
       
     </span>
   </a>
@@ -1345,10 +1152,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#configure-api-keys" class="md-nav__link">
+  <a href="#event-layer-eventsjsonl" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Configure API Keys
+        Event layer (events.jsonl)
       
     </span>
   </a>
@@ -1356,10 +1163,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#run" class="md-nav__link">
+  <a href="#control-layer-admin-optional" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Run
+        Control layer (admin/, optional)
       
     </span>
   </a>
@@ -1372,22 +1179,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#features" class="md-nav__link">
+  <a href="#consequences" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Features
+        Consequences
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Features">
+    <nav class="md-nav" aria-label="Consequences">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#multi-provider-support" class="md-nav__link">
+  <a href="#what-this-enables" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Multi-Provider Support
+        What this enables
       
     </span>
   </a>
@@ -1395,10 +1202,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#four-interfaces" class="md-nav__link">
+  <a href="#what-this-requires" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Four Interfaces
+        What this requires
       
     </span>
   </a>
@@ -1406,10 +1213,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#agent-mode" class="md-nav__link">
+  <a href="#migration-plan" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Agent Mode
+        Migration plan
       
     </span>
   </a>
@@ -1417,10 +1224,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#bootstrap-context" class="md-nav__link">
+  <a href="#open-decisions" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Bootstrap Context
+        Open decisions
       
     </span>
   </a>
@@ -1433,10 +1240,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#documentation" class="md-nav__link">
+  <a href="#why-now" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Documentation
+        Why now
       
     </span>
   </a>
@@ -1444,10 +1251,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#resources" class="md-nav__link">
+  <a href="#what-this-is-not" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Resources
+        What this is NOT
       
     </span>
   </a>
@@ -1474,204 +1281,248 @@
   
 
 
-<h1 id="ppxai-documentation">ppxai Documentation<a class="headerlink" href="#ppxai-documentation" title="Permanent link">&para;</a></h1>
-<p><strong>Multi-LLM Interface for Developers</strong> - Use your favorite AI provider in terminal or VSCode with zero vendor lock-in.</p>
-<p><a href="https://github.com/rcconsult/ppxai/releases"><img alt="Version" src="https://img.shields.io/badge/version-1.18.5-blue" /></a>
-<a href="https://github.com/rcconsult/ppxai/blob/master/LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-brightgreen" /></a></p>
-<h2 id="why-ppxai">Why ppxai?<a class="headerlink" href="#why-ppxai" title="Permanent link">&para;</a></h2>
+<h1 id="adr-0005-inspection-triplet-pattern-for-runtime-observability">ADR 0005 — Inspection Triplet pattern for runtime observability<a class="headerlink" href="#adr-0005-inspection-triplet-pattern-for-runtime-observability" title="Permanent link">&para;</a></h1>
+<p><strong>Date:</strong> 2026-05-10
+<strong>Status:</strong> Proposed (formalizing a pattern already half-implemented)
+<strong>Related:</strong>
+- <a href="../0003-agent-platform-architecture/">ADR 0003</a> — Agent platform architecture; Stage 2's <code>runs/&lt;run_id&gt;/agent-&lt;n&gt;/</code> namespace IS this pattern, scoped to agent runs only
+- <a href="../../research/2026-05-10-openshell-coordination-patterns/"><code>docs/research/2026-05-10-openshell-coordination-patterns.md</code></a> — prior art (NVIDIA OpenShell <code>runs/&lt;run_id&gt;/</code> namespace)
+- <a href="../../../ppxai-sre-repo/docs/PPXAI-INTEGRATION-V1.19.md"><code>../../../ppxai-sre-repo/docs/PPXAI-INTEGRATION-V1.19.md</code></a> — caveat C5 (agent-served services routing) builds on this pattern
+- <code>ppxai/server/routes/preview.py</code> — v1.18.5 preview-backend log file is an <code>events.jsonl</code>-shaped artifact today
+- <code>ppxai/engine/session.py</code> — session JSON files are <code>state.json</code>-shaped artifacts today</p>
+<h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
+<p>ppxai already has multiple runtime artifacts that expose internal
+state for inspection:</p>
+<ul>
+<li><code>~/.ppxai/sessions/&lt;id&gt;.json</code> — atomic-write conversation snapshots</li>
+<li><code>~/.ppxai/logs/&lt;component&gt;-debug.log</code> — per-component debug streams</li>
+<li><code>~/.ppxai/logs/preview-backend-&lt;pid&gt;.log</code> (v1.18.5) — captured
+  subprocess output from <code>/preview --serve</code></li>
+<li><code>~/.ppxai/usage/usage.json</code> — provider call counters and costs</li>
+<li><code>~/.ppxai/checkpoints/&lt;id&gt;/</code> — git checkpoints for <code>/agent</code> rollback</li>
+</ul>
+<p>The ADR 0003 Stage 2 plan adds another:</p>
+<ul>
+<li><code>~/.ppxai/runs/&lt;run_id&gt;/agent-&lt;n&gt;/{meta.json, state.json,
+  events.jsonl, transcript.md}</code> — agent run namespace</li>
+</ul>
+<p>Each artifact was designed independently. They share an underlying
+shape — atomic-write snapshot + append-only event log + sometimes
+a control surface — but no document names that shape, so:</p>
+<ol>
+<li><strong>New components reinvent.</strong> Every time someone needs runtime
+   inspection of a new piece (preview backend, MCP server, an
+   autonomous SRE agent's dashboard), the artifact layout gets
+   negotiated from scratch. preview backends ended up with plain text
+   log files; agent runs ended up with structured JSON. Same
+   conceptual layer, different shape.</li>
+<li><strong>Cross-context inspection is awkward.</strong> ppxai's Textual TUI uses
+   an event bus for live UI updates. ppxai-sre's autonomous agents
+   run in k8s pods with no shared bus. Today there's no single
+   pattern that works in both contexts — the bus-equipped clients
+   subscribe to in-process events; the bus-free clients have to
+   tail log files; cross-pod readers have to invent yet a third
+   protocol.</li>
+<li><strong>The agent-platform Stage 2 work is about to commit a shape</strong>
+   (<code>runs/&lt;run_id&gt;/agent-&lt;n&gt;/</code>) that, under the surface, is the
+   right shape for everything. Calling it "the agent thing" instead
+   of "the inspection thing" hides the generality and makes the next
+   inspectable component an awkward retrofit.</li>
+</ol>
+<p>The question raised 2026-05-10: what's the architectural pattern that
+allows any background component / service / activity to be inspected
+for <strong>debugging, monitoring, or control</strong>, in both event-bus-equipped
+contexts (Textual TUI, web app, VSCode ext) and bus-free contexts
+(Rich TUI direct read, ppxai-sre autonomous agents in k8s pods,
+external operators using <code>kubectl exec</code>)?</p>
+<h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h2>
+<p><strong>Adopt the Inspection Triplet as a project-wide pattern</strong> for any
+component whose runtime state is worth observing. Three artifacts at
+a known per-component filesystem path:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>&lt;component_root&gt;/
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    state.json       atomic-write current snapshot
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    events.jsonl     append-only time-ordered log
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    admin/           optional bidirectional control surface
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>        (Unix socket, HTTP port, or absent)
+</span></code></pre></div>
+<h3 id="state-layer-statejson">State layer (<code>state.json</code>)<a class="headerlink" href="#state-layer-statejson" title="Permanent link">&para;</a></h3>
+<p>Atomic-write snapshot of the component's current state. Updated on
+every state change via the standard "write-temp-then-rename" pattern
+(POSIX rename is atomic on the same filesystem; readers always see
+either the old or the new file, never a half-write). Schema is
+component-specific.</p>
+<p>Reader contract: <code>cat state.json | jq</code> always returns valid JSON.
+Concurrent readers don't need locks; concurrent writers serialize
+through the atomic-rename invariant.</p>
+<h3 id="event-layer-eventsjsonl">Event layer (<code>events.jsonl</code>)<a class="headerlink" href="#event-layer-eventsjsonl" title="Permanent link">&para;</a></h3>
+<p>Append-only log; one JSON object per line. Each event minimally
+carries <code>{ts, type, ...payload}</code>. Old entries are NEVER mutated.
+Truncation/rotation is a separate operational concern (cron / logrotate)
+not part of the contract.</p>
+<p>Reader contracts (multiple, equally first-class):
+- <code>tail -f events.jsonl | jq 'select(.type=="ERROR")'</code> — live filtering
+- <code>cat events.jsonl | jq -s '.[-100:]'</code> — last N for replay
+- HTTP <code>GET /events?since=&lt;offset&gt;</code> — event-bus adapter on top of
+  the file (<code>offset</code> is byte-position or sequence number)</p>
+<p>Crucially: <strong>events flow ONE WAY into the file</strong>. Anything that wants
+to consume them is a reader, regardless of transport. The Textual TUI's
+in-process event bus becomes a CACHE/FANOUT layer that tails
+<code>events.jsonl</code> and rebroadcasts; an <code>kubectl exec cat</code> is equally a
+valid consumer.</p>
+<h3 id="control-layer-admin-optional">Control layer (<code>admin/</code>, optional)<a class="headerlink" href="#control-layer-admin-optional" title="Permanent link">&para;</a></h3>
+<p>Where bidirectional interaction is needed (start/stop a service,
+trigger a reload, query a derived value, mutate config), expose a
+control surface at a known relative path:</p>
+<ul>
+<li><code>admin.sock</code> — Unix domain socket (in-host components)</li>
+<li><code>admin/</code> HTTP endpoints — when reachable across hosts (k8s pods,
+  remote ops); routes are component-specific but conventionally
+  include <code>GET admin/state</code> (return current <code>state.json</code>),
+  <code>POST admin/reload</code>, <code>POST admin/stop</code>, etc.</li>
+</ul>
+<p>Components that don't need a control plane omit this layer entirely.
+Read-only inspectables (logs, metrics, snapshots) often don't need it.</p>
+<h2 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">&para;</a></h2>
+<h3 id="what-this-enables">What this enables<a class="headerlink" href="#what-this-enables" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>One pattern, all contexts.</strong> Bus-equipped clients (Textual /
+  Web / VSCode SSE) layer their bus ON TOP of the file artifacts as
+  a cache. Bus-free clients (Rich TUI, ppxai-sre k8s agents,
+  CLI inspection tools, k8s <code>kubectl exec</code>) read the same files
+  directly. No transport gating who can inspect.</li>
+<li><strong>Cross-pod inspection is free.</strong> PVC-mounted <code>runs/&lt;id&gt;/</code> on a
+  shared volume + <code>kubectl exec &lt;other-pod&gt; cat</code> works without any
+  custom protocol. Sibling agents in ppxai-sre's manager-executor
+  pattern read peers' <code>state.json</code> as their own input.</li>
+<li><strong>Replay and audit are first-class.</strong> <code>events.jsonl</code> is the audit
+  log. ppxai-sre's <code>AuditLogger</code> (per gap-analysis §5.2) consumes
+  the file directly; the same file feeds a real-time dashboard via
+  WebSocket; the same file backs CLI debugging via <code>tail -f</code>. One
+  source of truth.</li>
+<li><strong>New components inherit the pattern.</strong> When the next inspectable
+  appears (an MCP server, a long-running benchmark run, a
+  ppxai-sre <code>cert-monitor</code> heartbeat) the layout is decided up
+  front — same three files at a known root.</li>
+</ul>
+<h3 id="what-this-requires">What this requires<a class="headerlink" href="#what-this-requires" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Atomic-write discipline on <code>state.json</code>.</strong> A non-atomic write
+  during a reader's <code>cat</code> produces a parse failure. The
+  ConfigStore module already uses the temp-then-rename pattern;
+  formalize it as a shared helper (<code>ppxai/common/atomic_write.py</code>).</li>
+<li><strong>Schema discipline on <code>events.jsonl</code>.</strong> Each event type's payload
+  shape needs documenting somewhere — likely a per-component
+  <code>EVENTS.md</code> next to the file, or a JSON schema in
+  <code>ppxai/engine/events_schema.json</code>. Without this, downstream
+  consumers parse defensively and break on shape changes.</li>
+<li><strong>Decision discipline on the admin layer.</strong> Opt-in per component;
+  not every artifact needs control. Avoid making <code>admin/</code> mandatory
+  — read-only artifacts stay simpler without it.</li>
+</ul>
+<h3 id="migration-plan">Migration plan<a class="headerlink" href="#migration-plan" title="Permanent link">&para;</a></h3>
+<p>The pattern is retroactive. The migration is a series of "rename and
+formalize" passes, not rewrites:</p>
 <table>
 <thead>
 <tr>
-<th>Problem</th>
-<th>ppxai Solution</th>
+<th>Existing artifact</th>
+<th>Triplet shape today</th>
+<th>Migration</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Locked to one AI vendor</td>
-<td>Switch between Perplexity, Gemini, OpenAI, OpenRouter, Ollama anytime</td>
+<td><code>~/.ppxai/sessions/&lt;id&gt;.json</code></td>
+<td><code>state.json</code>-equivalent</td>
+<td>Rename to <code>~/.ppxai/runs/session-&lt;id&gt;/state.json</code> over time; add <code>events.jsonl</code> for the chat-event-stream</td>
 </tr>
 <tr>
-<td>Can't use local models</td>
-<td>Full Ollama/vLLM support with same interface</td>
+<td><code>~/.ppxai/logs/preview-backend-&lt;pid&gt;.log</code> (v1.18.5)</td>
+<td><code>events.jsonl</code>-equivalent (text, not JSON)</td>
+<td>Promote to JSONL: each subprocess output line becomes <code>{ts, type: "stdout", line: "..."}</code>. Add companion <code>state.json</code> (pid, port, command, started_at)</td>
 </tr>
 <tr>
-<td>AI modifies files without asking</td>
-<td>Consent-based safety for all file operations</td>
+<td><code>~/.ppxai/usage/usage.json</code></td>
+<td><code>state.json</code>-equivalent</td>
+<td>Already correct shape; add <code>usage-events.jsonl</code> for per-call event log if/when needed</td>
 </tr>
 <tr>
-<td>Lost context when switching models</td>
-<td>Preserve conversation across provider changes</td>
+<td>ADR 0003 Stage 2 <code>runs/&lt;run_id&gt;/agent-&lt;n&gt;/</code></td>
+<td><strong>Already the full Triplet</strong></td>
+<td>Rename "agent run namespace" to "the canonical Triplet for an agent run" in docs; reuse the pattern outside agents</td>
 </tr>
 <tr>
-<td>Expensive cloud-only pricing</td>
-<td>Mix cloud and local models per task</td>
+<td>Future: ppxai-sre <code>cert-monitor</code>, <code>incident-responder</code></td>
+<td>Per ppxai-sre integration plan</td>
+<td>Each agent's pod writes its own Triplet to a PVC-mounted path; ppxai-server (or a sibling agent) reads via <code>kubectl exec</code> or admin HTTP</td>
 </tr>
 </tbody>
 </table>
-<h2 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h2>
-<h3 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h3>
-<div class="tabbed-set tabbed-alternate" data-tabs="1:3"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><input id="__tabbed_1_3" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Linux/macOS</label><label for="__tabbed_1_2">Windows</label><label for="__tabbed_1_3">pip</label></div>
-<div class="tabbed-content">
-<div class="tabbed-block">
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>curl<span class="w"> </span>-sSL<span class="w"> </span>https://raw.githubusercontent.com/rcconsult/ppxai/master/scripts/install.sh<span class="w"> </span><span class="p">|</span><span class="w"> </span>bash
-</span></code></pre></div>
-</div>
-<div class="tabbed-block">
-<div class="language-powershell highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nb">irm </span><span class="n">https</span><span class="p">://</span><span class="n">raw</span><span class="p">.</span><span class="n">githubusercontent</span><span class="p">.</span><span class="n">com</span><span class="p">/</span><span class="n">rcconsult</span><span class="p">/</span><span class="n">ppxai</span><span class="p">/</span><span class="n">master</span><span class="p">/</span><span class="n">scripts</span><span class="p">/</span><span class="n">install</span><span class="p">.</span><span class="n">ps1</span> <span class="p">|</span> <span class="nb">iex</span>
-</span></code></pre></div>
-</div>
-<div class="tabbed-block">
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>pip<span class="w"> </span>install<span class="w"> </span>ppxai
-</span></code></pre></div>
-</div>
-</div>
-</div>
-<h3 id="configure-api-keys">Configure API Keys<a class="headerlink" href="#configure-api-keys" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Create ~/.ppxai/.env with your keys</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="nv">PERPLEXITY_API_KEY</span><span class="o">=</span>pplx-xxx
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="nv">GEMINI_API_KEY</span><span class="o">=</span>xxx
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="nv">OPENAI_API_KEY</span><span class="o">=</span>sk-xxx
-</span></code></pre></div>
-<h3 id="run">Run<a class="headerlink" href="#run" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>ppxai<span class="w">              </span><span class="c1"># Rich TUI (original)</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>ppxaide<span class="w">            </span><span class="c1"># Textual TUI (v1.15.0+)</span>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>ppxai-server<span class="w">       </span><span class="c1"># HTTP server for VSCode</span>
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>ppxai-desktop<span class="w">      </span><span class="c1"># Desktop web app</span>
-</span></code></pre></div>
-<h2 id="features">Features<a class="headerlink" href="#features" title="Permanent link">&para;</a></h2>
-<h3 id="multi-provider-support">Multi-Provider Support<a class="headerlink" href="#multi-provider-support" title="Permanent link">&para;</a></h3>
+<p>No code change in v1.18.5; the migration lands incrementally with
+each new component or refactor that touches an existing artifact.</p>
+<h3 id="open-decisions">Open decisions<a class="headerlink" href="#open-decisions" title="Permanent link">&para;</a></h3>
+<ol>
+<li>
+<p><strong>Common path root.</strong> Today <code>~/.ppxai/</code> is split into <code>sessions/</code>,
+   <code>logs/</code>, <code>usage/</code>, <code>checkpoints/</code>. The Stage 2 plan introduces
+   <code>runs/</code>. Should existing artifacts migrate under <code>runs/</code> over
+   time (one root, many subdirectories) or stay split? Recommend
+   keeping the split to avoid v1.20.x churn, but commit to <code>runs/</code>
+   for new artifacts.</p>
+</li>
+<li>
+<p><strong>Event schema versioning.</strong> <code>events.jsonl</code> entries should carry
+   a <code>schema_version</code> field per record so a consumer reading a
+   long-lived file across ppxai upgrades knows what to expect.
+   Recommend <code>{"v": 1, "ts": ..., "type": ..., ...}</code>.</p>
+</li>
+<li>
+<p><strong>Truncation policy.</strong> <code>events.jsonl</code> grows unboundedly. Cron-style
+   rotation (preserving last N MB / last N events) belongs at the
+   per-component level, not the pattern level. Components that need
+   rotation document their policy in their own README.</p>
+</li>
+<li>
+<p><strong>Control-plane authentication.</strong> When the <code>admin/</code> layer is HTTP,
+   reuse the <code>PPXAI_API_TOKEN</code> mechanism from ADR 0004 (bearer
+   middleware); when Unix socket, file permissions are sufficient.
+   Cross-pod authentication is a v1.20.x credential-broker concern.</p>
+</li>
+</ol>
+<h2 id="why-now">Why now<a class="headerlink" href="#why-now" title="Permanent link">&para;</a></h2>
+<p>Three motivating items in flight:</p>
+<ol>
+<li><strong>v1.18.5 <code>read_preview_log</code> follow-up tool</strong> would benefit from
+   a structured event stream; designing it as Triplet-shaped now
+   avoids the v1.20.x retrofit.</li>
+<li><strong>v1.19.x ADR 0003 Stage 2 implementation</strong> is about to commit
+   the <code>runs/&lt;run_id&gt;/agent-&lt;n&gt;/</code> shape; naming it as the Triplet
+   pattern (not "the agent thing") means the next inspectable
+   doesn't reinvent.</li>
+<li><strong>ppxai-sre integration caveat C5</strong> (agent-served services
+   routing — see <code>PPXAI-INTEGRATION-V1.19.md</code>) needs an inspection
+   surface for the agent's dashboard / REST API. The Triplet is
+   the substrate that supports it without coupling to the agent's
+   internal event bus.</li>
+</ol>
+<p>Capturing the pattern as an ADR now means Stage 2 implementation
+ships with the right vocabulary, and follow-on work (read_preview_log,
+C5 service-binding, sibling-agent reads) doesn't relitigate the
+shape each time.</p>
+<h2 id="what-this-is-not">What this is NOT<a class="headerlink" href="#what-this-is-not" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>Perplexity AI</strong> - Real-time web search with citations</li>
-<li><strong>Google Gemini</strong> - 1M token context, search grounding</li>
-<li><strong>OpenAI</strong> - GPT-4o, o1 reasoning models</li>
-<li><strong>OpenRouter</strong> - 100+ models including Claude</li>
-<li><strong>Local Models</strong> - Ollama, vLLM, LMStudio</li>
-</ul>
-<h3 id="four-interfaces">Four Interfaces<a class="headerlink" href="#four-interfaces" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>Feature</th>
-<th>ppxai (Rich TUI)</th>
-<th>ppxaide (Textual TUI)</th>
-<th>VSCode</th>
-<th>Web App</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Streaming responses</td>
-<td>✅</td>
-<td>✅</td>
-<td>✅</td>
-<td>✅</td>
-</tr>
-<tr>
-<td>Syntax highlighting</td>
-<td>✅</td>
-<td>✅</td>
-<td>✅</td>
-<td>✅</td>
-</tr>
-<tr>
-<td>File editing tools</td>
-<td>✅</td>
-<td>✅</td>
-<td>✅</td>
-<td>✅</td>
-</tr>
-<tr>
-<td>Agent mode</td>
-<td>✅</td>
-<td>✅</td>
-<td>✅</td>
-<td>✅</td>
-</tr>
-<tr>
-<td>Checkpoint/undo</td>
-<td>✅</td>
-<td>✅</td>
-<td>✅</td>
-<td>✅</td>
-</tr>
-<tr>
-<td>Markdown in chat</td>
-<td>Limited</td>
-<td>✅ Full rendering</td>
-<td>✅</td>
-<td>✅</td>
-</tr>
-<tr>
-<td>Themes</td>
-<td>6 themes</td>
-<td>17+ themes</td>
-<td>N/A</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>Tab completion</td>
-<td>✅</td>
-<td>✅</td>
-<td>N/A</td>
-<td>N/A</td>
-</tr>
-</tbody>
-</table>
-<h3 id="agent-mode">Agent Mode<a class="headerlink" href="#agent-mode" title="Permanent link">&para;</a></h3>
-<p>Enable autonomous multi-step task execution:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>/agent on
-</span></code></pre></div>
-<p>The AI can chain tool calls, edit files, run commands - all with your consent.</p>
-<h3 id="bootstrap-context">Bootstrap Context<a class="headerlink" href="#bootstrap-context" title="Permanent link">&para;</a></h3>
-<p>Load project-specific instructions from <code>AGENTS.md</code>:</p>
-<div class="language-markdown highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>---
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>provider_hints:
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>  local:
-</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">    </span><span class="k">-</span><span class="w"> </span>&quot;Complete tasks fully without stopping.&quot;
-</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>model_hints:
-</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>  &quot;deepseek-r1*&quot;:
-</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="gu">    - &quot;Show reasoning before actions.&quot;</span>
-</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="gu">---</span>
-</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>
-</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="gh"># Project Instructions</span>
-</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>Python 3.11+, pytest for testing.
-</span></code></pre></div>
-<h2 id="documentation">Documentation<a class="headerlink" href="#documentation" title="Permanent link">&para;</a></h2>
-<div class="grid cards">
-<ul>
-<li>
-<p><span class="twemoji lg middle"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M5 20h14v-2H5m14-9h-4V3H9v6H5l7 7z"/></svg></span> <strong>Installation</strong></p>
-<hr />
-<p>Install ppxai on Linux, macOS, or Windows</p>
-<p><a href="INSTALLATION/"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13.22 19.03a.75.75 0 0 1 0-1.06L18.19 13H3.75a.75.75 0 0 1 0-1.5h14.44l-4.97-4.97a.749.749 0 0 1 .326-1.275.75.75 0 0 1 .734.215l6.25 6.25a.75.75 0 0 1 0 1.06l-6.25 6.25a.75.75 0 0 1-1.06 0"/></svg></span> Installation Guide</a></p>
-</li>
-<li>
-<p><span class="twemoji lg middle"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2M7.5 13A2.5 2.5 0 0 0 5 15.5 2.5 2.5 0 0 0 7.5 18a2.5 2.5 0 0 0 2.5-2.5A2.5 2.5 0 0 0 7.5 13m9 0a2.5 2.5 0 0 0-2.5 2.5 2.5 2.5 0 0 0 2.5 2.5 2.5 2.5 0 0 0 2.5-2.5 2.5 2.5 0 0 0-2.5-2.5"/></svg></span> <strong>Agent Mode</strong></p>
-<hr />
-<p>Autonomous task execution with tools</p>
-<p><a href="AGENT_MODE_GUIDE/"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13.22 19.03a.75.75 0 0 1 0-1.06L18.19 13H3.75a.75.75 0 0 1 0-1.5h14.44l-4.97-4.97a.749.749 0 0 1 .326-1.275.75.75 0 0 1 .734.215l6.25 6.25a.75.75 0 0 1 0 1.06l-6.25 6.25a.75.75 0 0 1-1.06 0"/></svg></span> Agent Mode Guide</a></p>
-</li>
-<li>
-<p><span class="twemoji lg middle"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 9h5.5L13 3.5zM6 2h8l6 6v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4c0-1.11.89-2 2-2m9 16v-2H6v2zm3-4v-2H6v2z"/></svg></span> <strong>Bootstrap Context</strong></p>
-<hr />
-<p>Project-specific AI instructions</p>
-<p><a href="BOOTSTRAP_CONTEXT_GUIDE/"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13.22 19.03a.75.75 0 0 1 0-1.06L18.19 13H3.75a.75.75 0 0 1 0-1.5h14.44l-4.97-4.97a.749.749 0 0 1 .326-1.275.75.75 0 0 1 .734.215l6.25 6.25a.75.75 0 0 1 0 1.06l-6.25 6.25a.75.75 0 0 1-1.06 0"/></svg></span> Bootstrap Context Guide</a></p>
-</li>
-<li>
-<p><span class="twemoji lg middle"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 15.5A3.5 3.5 0 0 1 8.5 12 3.5 3.5 0 0 1 12 8.5a3.5 3.5 0 0 1 3.5 3.5 3.5 3.5 0 0 1-3.5 3.5m7.43-2.53c.04-.32.07-.64.07-.97s-.03-.66-.07-1l2.11-1.63c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.31-.61-.22l-2.49 1c-.52-.39-1.06-.73-1.69-.98l-.37-2.65A.506.506 0 0 0 14 2h-4c-.25 0-.46.18-.5.42l-.37 2.65c-.63.25-1.17.59-1.69.98l-2.49-1c-.22-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64L4.57 11c-.04.34-.07.67-.07 1s.03.65.07.97l-2.11 1.66c-.19.15-.25.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1.01c.52.4 1.06.74 1.69.99l.37 2.65c.04.24.25.42.5.42h4c.25 0 .46-.18.5-.42l.37-2.65c.63-.26 1.17-.59 1.69-.99l2.49 1.01c.22.08.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64z"/></svg></span> <strong>Provider Setup</strong></p>
-<hr />
-<p>Configure AI providers</p>
-<p><a href="PROVIDER_SETUP/"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13.22 19.03a.75.75 0 0 1 0-1.06L18.19 13H3.75a.75.75 0 0 1 0-1.5h14.44l-4.97-4.97a.749.749 0 0 1 .326-1.275.75.75 0 0 1 .734.215l6.25 6.25a.75.75 0 0 1 0 1.06l-6.25 6.25a.75.75 0 0 1-1.06 0"/></svg></span> Provider Setup</a></p>
-</li>
-</ul>
-</div>
-<h2 id="resources">Resources<a class="headerlink" href="#resources" title="Permanent link">&para;</a></h2>
-<ul>
-<li><a href="https://github.com/rcconsult/ppxai">GitHub Repository</a></li>
-<li><a href="https://github.com/rcconsult/ppxai/releases">Releases</a></li>
-<li><a href="https://github.com/rcconsult/ppxai/issues">Issue Tracker</a></li>
-<li><a href="https://github.com/rcconsult/ppxai/blob/master/CHANGELOG.md">Changelog</a></li>
+<li><strong>Not a replacement for the Textual TUI / Web / VSCode event bus.</strong>
+  Those buses keep their value as caching/fanout/UI-update layers.
+  The Triplet says: the bus reads from the filesystem, not the other
+  way around. Components write events ONCE to the file; the bus is
+  one consumer.</li>
+<li><strong>Not a logging framework.</strong> ppxai's per-component
+  <code>~/.ppxai/logs/&lt;component&gt;-debug.log</code> files are a separate concern
+  (debug-level human-readable text). <code>events.jsonl</code> is structured,
+  schema-documented, intended for programmatic consumption.</li>
+<li><strong>Not a metrics system.</strong> Numerical time-series belongs in
+  Prometheus / OpenTelemetry. The Triplet tracks state and discrete
+  events; metrics are a different consumer of those events at most.</li>
 </ul>
 
 
@@ -1744,10 +1595,10 @@
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": ".", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
       
     
   </body>
