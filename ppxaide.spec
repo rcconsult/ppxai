@@ -18,6 +18,8 @@ a = Analysis(
         ('ppxai-config.example.json', '.'),
         ('ppxai/tui/themes', 'ppxai/tui/themes'),  # Include CSS themes
         (_highlights_src, 'textual/tree-sitter/highlights'),  # Syntax highlight queries
+        # v1.18.5: shell wrapper prompt-block files (loaded via importlib.resources).
+        ('ppxai/engine/tools/wrappers/RTK.md', 'ppxai/engine/tools/wrappers'),
     ],
     hiddenimports=[
         'textual',

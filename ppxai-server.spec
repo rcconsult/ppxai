@@ -11,6 +11,8 @@ a = Analysis(
         ('ppxai/engine/app_state_schema.json', 'ppxai/engine'),
         ('.env.example', '.'),
         ('ppxai-config.example.json', '.'),
+        # v1.18.5: shell wrapper prompt-block files (loaded via importlib.resources).
+        ('ppxai/engine/tools/wrappers/RTK.md', 'ppxai/engine/tools/wrappers'),
     ],
     hiddenimports=[
         # Core dependencies
