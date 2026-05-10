@@ -787,18 +787,35 @@ impractical.
 | **`/preset` command** | List, switch, show preset bindings | [TODO-routing.md](docs/TODO-routing.md) Phase 5 |
 | **Status bar preset badge** | Show active preset name in TUI/Web | [TODO-routing.md](docs/TODO-routing.md) Phase 5 |
 
-### v1.18.5 - Optional rtk wrapping in `execute_shell_command` (planned)
+### v1.18.5 - Optional rtk integration (planned)
 
 When [rtk](https://github.com/rtk-ai/rtk) (Rust Token Killer — a CLI
 proxy that filters/compresses common dev-tool outputs) is installed
-on the user's machine, `execute_shell_command` would internally
-forward wrappable commands as `rtk <command>` instead of running them
-raw. The LLM still asks for `git status`; ppxai's engine wraps it
-into `rtk git status` before the subprocess fires; the model sees
-the compact rtk output (typically 40-80% smaller for git/gh
-operations) instead of the verbose raw output. This is a
-compression layer at the engine boundary — no schema changes, no
-side effects, no behavior changes when rtk isn't installed.
+on the user's machine, ppxai integrates with it on two complementary
+layers, both gated on rtk being detected on PATH and on the user not
+having opted out:
+
+- **Layer A — engine-side rewrite (always-on when enabled):**
+  `execute_shell_command` calls `rtk hook check <cmd>` before
+  spawning. If rtk would rewrite, ppxai spawns the rewritten form
+  (`rtk git status` instead of `git status`); otherwise, raw. The
+  LLM is unaware: it asks for `git status`, gets compact output back.
+- **Layer B — system-prompt hint (default-on when rtk available):**
+  short `<rtk_context>` block appended to the system prompt informing
+  the model that shell-tool output may be rtk-compressed. Helps the
+  model interpret what it sees; doesn't ask it to wrap commands
+  itself (the engine already does that).
+
+Layers are idempotent — if the model emits `rtk <cmd>` directly,
+`rtk hook check` returns the same string, no double-wrapping.
+
+**Key planning insight (2026-05-10):** rtk ships its own dry-run,
+`rtk hook check <cmd>`. Exit 0 + the rewritten command on stdout,
+exit 1 + "No rewrite for: <cmd>" otherwise. **rtk is the source of
+truth for what's safely wrappable on the current platform.** ppxai
+delegates the per-platform allow/deny knowledge to rtk instead of
+maintaining its own tables — significant simplification of the
+original plan.
 
 **Why this matters:** agent loops that shell out a lot (git
 inspection, CI checking, file searching) consume LLM context
@@ -806,58 +823,39 @@ proportional to the raw tool output. Compressing that output before
 it enters the conversation directly reduces token cost per
 iteration. Real-world reference: a Windows user with the manual
 RTK.md instruction-mode setup measured 47% savings averaged across
-1355 commands over multiple sessions; a Unix user with the bash
-auto-rewrite hook measured 66% over 4338 commands. The agent loop
-is the natural beneficiary because it shells out repeatedly per task.
-
-**Why optional and degrades gracefully:** rtk is a separate Rust
-binary that 99% of ppxai users won't have installed. Bundling it
-would add ~63 MB (~30%) to the install footprint for marginal
-benefit. The right design is "use rtk if it's on PATH, otherwise no
-behavior change." Single PATH check at engine startup, cached.
-
-**Per-platform safety:** rtk's wrapper coverage differs by platform.
-On Windows several subcommands (`rtk ls`, `rtk wc`, `rtk json`,
-`rtk diff`, `rtk tree`, `rtk grep -r`, `rtk pytest`, `rtk python`,
-`rtk npm`, `rtk pnpm`) are broken because rtk shells out to Unix
-binaries that don't exist on PowerShell. The allow/deny lists must
-be **derived from RTK.md and verified per-platform** — not blanket
-"wrap everything." See `~/.claude/RTK.md` for the verified working
-matrix on Windows.
-
-| Phase | Description | Effort |
-|---|---|---|
-| **Phase 1: detection + config** | `rtk_is_available()` (PATH check, cached at engine init) + new config field `tools.shell.use_rtk: auto\|always\|never` (default `auto` = wrap when available, skip when not). Per-platform allow/deny lists encoded as data, derived from RTK.md verified-working tables. | ~30 LoC + ~15 tests |
-| **Phase 2: wrapper logic** | `is_rtk_wrappable(command)` checks first token + flag combinations against the platform-specific allow list. Skips known-broken patterns (Windows `rtk ls`, `rtk grep -r`, etc.). Returns the wrapped command or the original. | ~40 LoC + ~30 tests covering platform variants |
-| **Phase 3: integration at shell.py** | Single touch point at the existing `asyncio.create_subprocess_shell` call (currently `shell.py:319`). Pre-process the command via the wrapper before spawning. Preserve all existing cancellation, cwd, and grounding behavior. | ~10 LoC + ~10 tests |
-| **Phase 4: graceful fallback** | If `rtk <command>` exits non-zero in a way that suggests rtk-side breakage (binary not found, unknown subcommand fallback exit codes), retry once as raw `command`. Avoid breaking the user when rtk has a bug. | ~15 LoC + ~5 tests |
-| **Phase 5: docs + opt-out** | New `docs/RTK-INTEGRATION.md` covering the install (`winget install rtk-ai.rtk` / `brew install rtk` / etc.), the config knob, the per-platform caveats, and how to disable if it's causing problems. | ~half day |
-
-**Why this matters:** agent loops that shell out heavily benefit
-without any user-visible change. Single-shot chat sessions get a
-small implicit savings on the occasional `git status` /
-`git diff` / `gh run list` call. Sub-agents (when ADR 0003 Stage 2
-ships in v1.19.x) inherit this for free since they use the same
+1355 commands; a Unix user with the bash auto-rewrite hook measured
+66% over 4338 commands. Sub-agents (when ADR 0003 Stage 2 ships in
+v1.19.x) inherit this for free since they use the same
 `execute_shell_command` substrate.
 
+**Why optional and degrades gracefully:** rtk is a separate Rust
+binary that most ppxai users won't have. Bundling would add ~63 MB
+(~30% of install footprint) for marginal benefit. The design is
+"use rtk if it's on PATH, otherwise no behavior change." Single
+`shutil.which("rtk")` at module load, cached.
+
+**Net effort:** ~95 LoC + ~36 tests + 2 new docs. About 1.5 days.
+Detailed plan including phase breakdown, file touch points, settled
+decisions, open questions, and acceptance criteria lives at
+[`docs/TODO-v1.18.5-rtk-integration.md`](docs/TODO-v1.18.5-rtk-integration.md).
+
+**Settled in planning:**
+- Default `tools.shell.use_rtk: auto` — wrap silently when rtk is
+  on PATH; users who installed rtk likely want the savings.
+- Hybrid approach (Layer A + Layer B), not either alone.
+- Zero list maintenance — delegated to `rtk hook check` upstream.
+
 **Caveats pinned so they don't get re-litigated:**
-- DO NOT bundle rtk in the install (~63 MB for 99% of users who won't notice). Optional dependency, period.
-- DO NOT reimplement rtk's filters in Python — 26+ wrapper categories, would never catch up to upstream. Rely on the existing tool.
-- DO NOT enable `rtk pytest`, `rtk python`, `rtk npm`, `rtk pnpm` on Windows (broken upstream — issues #866, #1363, #950). The allow list is a positive list, not "everything except deny."
-- The output format the model sees changes when rtk wraps. Existing prompts/tests that pattern-match on raw `git status` output may need adjustment. LLMs are generally robust to this; called out for sentinel-test authors.
-- `rtk gain` analytics aggregate user + agent calls. If a user wants to separate "what did I run" from "what did the agent run," that's a future rtk-side feature, not ppxai's problem.
+- DO NOT bundle rtk in the install. Optional dependency, period.
+- DO NOT reimplement rtk's filters in Python — 26+ wrapper
+  categories, would never catch up to upstream.
+- DO NOT enable rtk wrapping for commands rtk itself declines to
+  rewrite. `rtk hook check` is authoritative.
+- The output format the model sees changes when rtk wraps; the
+  Layer B prompt block is the mitigation. Sentinel tests that
+  pattern-match on raw `git status` output may need adjustment.
 
-**Prior context (memory):**
-[feedback_rtk_windows_manual_use.md](https://github.com/rcconsult/ppxai)
-captures the Windows allow/deny matrix the assistant uses today via
-RTK.md instruction mode. The phase 1 allow/deny lists should be
-seeded from that file's "verified working" table.
-
-**Branch when ready:** `feat/rtk-shell-wrap`. Could ship in a v1.18.5
-point release (small, scoped, low-risk) or fold into v1.19.x agent
-platform work since it directly benefits sub-agent execution. v1.18.5
-is the natural fit because it's bugfix-class scope and doesn't
-depend on Stage 2 primitives.
+**Branch:** `feature/v1.18.5`.
 
 ### v1.19.x - Anthropic Provider (planned)
 
