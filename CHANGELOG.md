@@ -5,6 +5,40 @@ All notable changes to ppxai will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.18.5] - unreleased
+
+Branch: `feature/v1.18.5`. Theme: shell wrapper framework — a generic
+JSON-driven extension surface for transparent CLI proxies on the shell
+tool, with rtk (Rust Token Killer) shipping as the first concrete wrapper.
+
+### Added
+
+- **Shell wrapper framework** in `ppxai/engine/tools/wrappers/`. Generic factory + registry + base classes for transparent shell-command wrappers. Two integration layers: (a) engine-side rewrite at `engine/tools/builtin/shell.py:319` calls `WrapperRegistry.find_first_rewrite()` before spawning the subprocess and uses the rewritten form on first match; (b) system-prompt hint via `manager.py::get_tools_prompt` calls `WrapperRegistry.compose_prompt_blocks()` to inject per-wrapper markdown sections under a single `## Shell wrapper context` header. Two generic concrete classes cover every realistic wrapper without per-wrapper Python: `ProbeWrapper` (calls a dry-run command like `rtk hook check <cmd>` and parses exit code + stdout) and `AlwaysWrapper` (no dry-run; prefixes every command with a fixed string — for `time`, `nice`, perf profilers). Bespoke wrappers can subclass `Wrapper` directly and register a new `type` value in `factory._TYPE_REGISTRY`. Thread-safe lazy init: `threading.Lock` around the registry singleton + each wrapper's PATH-resolution cache, so future sub-agent worker threads (planned for v1.19.x ADR 0003 Stage 2) won't race the check-then-create pattern.
+
+- **rtk as the first concrete wrapper.** Ships in `DEFAULT_SHELL_WRAPPERS` (`ppxai/config/defaults.py`) as a `type: "probe"` config entry — identical schema to anything a user adds. No privileged Python class for rtk; future rtk-specific tuning becomes config fields the framework consumes generically. Default `enabled: "auto"` — wrap silently when rtk is on PATH; users who installed rtk likely want the savings. Real-world reference numbers from prior rtk integrations: 47% savings on Windows manual mode (1355 commands), 66% on Unix bash hook (4338 commands). The integration degrades gracefully — without rtk on PATH, behavior is byte-identical to v1.18.4.
+
+- **Read-only git and gh verbs in `DEFAULT_ALLOWED_COMMANDS`.** Surfaced from v1.18.5 dogfooding: `git status` was triggering `Risk Level: DANGEROUS` consent prompts because no git/gh patterns existed in the allowed list — every git command (read-only or write) fell through to the unknown-command-is-dangerous default. Added conservative regex patterns for read-only git verbs (`status`, `log`, `diff`, `show`, `branch`, `blame`, `describe`, `rev-parse`, `rev-list`, `ls-files`, `ls-tree`, `reflog`, `shortlog`, `cat-file`, `grep`, `whatchanged`, `stash list`, `remote -v`, `config --get|--list`, `tag -l`) and read-only gh verbs (`auth status`, `<noun> view|list|status` for the standard nouns). Mutating verbs (`commit`, `push`, `reset`, `rebase`, `checkout`, `merge`, `fetch`, `pull`, `stash` without `list`, `tag <name>`) stay DANGEROUS so the user reviews before they fire.
+
+- **Transparent-prefix safety stripping.** The consent classifier's `classify_shell_command` now strips leading wrapper tokens via `WrapperRegistry.strip_transparent_prefixes()` before pattern matching, so safety verdicts are invariant under wrapping. A user (or model) typing `rtk git status` directly classifies the same as `git status`. Only **active** wrappers with `transparent_for_safety: true` license stripping; inactive wrappers and non-transparent wrappers (a hypothetical sandbox where you DO want consent on the wrapped form) are left alone. Stacked wrappers strip in order: `time rtk git status` → strip `time` → strip `rtk` → classify `git status`.
+
+- **Sentinel test suite for the wrapper framework** (`tests/test_wrapper_framework.py`, 49 cases). Base class detection caching + thread-safety (8-thread race test on `is_available()`); `is_active` gating across `auto` / `always` / `never`; failure-marker heuristic. ProbeWrapper happy / sad / spawn-error / timeout / quoted-args paths. AlwaysWrapper happy / unavailable / empty-prefix-rejected. Factory dispatch on `type` field, required-field validation, prompt-block path resolution from package data and absolute path. Registry first-match-wins, exception swallowing, prompt-block composition (active wrappers only), transparent-prefix stripping (single + stacked + inactive-skipped), thread-safe singleton lazy init. Config integration: `_resolve_wrappers` merges defaults + user entries by name, legacy `use_rtk` / `use_rtk_prompt_hint` shim, malformed entries skipped.
+
+- **Sentinel test suite for shell-command safety classification** (`tests/test_consent_classification.py`, 70 cases). Read-only git verbs (28 commands) are SAFE; mutating git verbs (13 commands) stay DANGEROUS; read-only gh verbs are SAFE. Transparent-prefix stripping integration: `rtk git status` classifies SAFE; inactive wrappers don't license stripping; stacked transparent wrappers strip in order; safety invariant under wrapping (read-only stays SAFE, dangerous stays DANGEROUS, never stays NEVER). Pre-v1.18.5 patterns (`ls`, `cat`, `pwd`, `rm`, `sudo`, `rm -rf /`) keep their verdicts.
+
+- **User-facing docs** at [docs/SHELL-WRAPPERS.md](docs/SHELL-WRAPPERS.md): framework overview, "how to add a wrapper" recipe, schema reference, decision rules, safety-classification interaction, rtk install + config, troubleshooting. Plan / acceptance / settled-decisions doc at [docs/TODO-v1.18.5-shell-wrappers.md](docs/TODO-v1.18.5-shell-wrappers.md).
+
+### Changed
+
+- **Back-compat shim for rtk-specific config fields.** `tools.shell.use_rtk` (string) and `tools.shell.use_rtk_prompt_hint` (bool) — fields that briefly existed in earlier `feature/v1.18.5` iterations — are translated internally into the rtk wrappers entry's `enabled` and `prompt_block_path` fields. Plan to retire the shim in v1.20.x. New configs should use `tools.shell.wrappers: [...]` directly.
+
+### Tests
+
+3219 pass, 2 skipped. New: 49 framework tests + 70 consent classification tests. Pre-v1.18.5 sentinel suites green: `test_cwd_grounding` 13/13, `test_command_result_serialization` 87/87, `test_shell_tool` 32/32, `test_common_consent` 9/9.
+
+### Phase 4 deferred
+
+Graceful fallback (retry raw command on detected wrapper-side breakage) is wired-but-dormant: the framework has the hooks (`failure_markers`, `retry_raw_on_failure`, `Wrapper.is_wrapper_side_failure()`, `WrapperRegistry.find_active_wrapper_by_prefix()`), but the post-spawn detect-and-retry logic in `shell.py` is deferred until there's evidence of wrapper-side failures in real use. Adding it later is a localized edit (~15 LoC + 6 tests) plus populating `failure_markers` on the rtk default config entry.
+
 ## [1.18.4] - 2026-05-10
 
 Branch: `bugfix/v1.18.4`. Scope: post-v1.18.3 fixes only — no new

@@ -104,10 +104,17 @@ def classify_shell_command(command: str, config: Dict[str, List[str]]) -> str:
     Returns:
         ShellRiskLevel value: NEVER, DANGEROUS, or SAFE
     """
+    # v1.18.5: strip leading transparent-wrapper tokens so safety
+    # classification is invariant under engine-side wrapping. A user
+    # (or model) typing `rtk git status` should classify the same as
+    # `git status`. The registry knows which wrappers are marked
+    # `transparent_for_safety` and only strips active ones.
+    classify_target = _strip_transparent_wrapper_prefixes(command)
+
     # Check never-allow patterns (catastrophic commands)
     for pattern in config.get("never_allow", []):
         try:
-            if re.search(pattern, command):
+            if re.search(pattern, classify_target):
                 return ShellRiskLevel.NEVER
         except re.error as e:
             logger.warning(f"Invalid never_allow regex pattern '{pattern}': {e}")
@@ -115,7 +122,7 @@ def classify_shell_command(command: str, config: Dict[str, List[str]]) -> str:
     # Check dangerous patterns (require consent)
     for pattern in config.get("dangerous_commands", []):
         try:
-            if re.search(pattern, command):
+            if re.search(pattern, classify_target):
                 return ShellRiskLevel.DANGEROUS
         except re.error as e:
             logger.warning(f"Invalid dangerous_commands regex pattern '{pattern}': {e}")
@@ -123,13 +130,29 @@ def classify_shell_command(command: str, config: Dict[str, List[str]]) -> str:
     # Check allowed patterns (safe, no consent needed)
     for pattern in config.get("allowed_commands", []):
         try:
-            if re.search(pattern, command):
+            if re.search(pattern, classify_target):
                 return ShellRiskLevel.SAFE
         except re.error as e:
             logger.warning(f"Invalid allowed_commands regex pattern '{pattern}': {e}")
 
     # Unknown commands are treated as dangerous for safety
     return ShellRiskLevel.DANGEROUS
+
+
+def _strip_transparent_wrapper_prefixes(command: str) -> str:
+    """Best-effort strip of transparent wrapper prefixes via the registry.
+
+    Lazy-imported to avoid a circular dependency: the wrapper framework
+    pulls in config code that imports parts of common; importing
+    consent at module load from inside the framework would cycle.
+    Falls back to the raw command on any error so safety classification
+    is never blocked by a misconfigured registry.
+    """
+    try:
+        from ..engine.tools.wrappers import get_registry
+        return get_registry().strip_transparent_prefixes(command)
+    except Exception:
+        return command
 
 
 @dataclass
@@ -270,6 +293,10 @@ class BaseConsentManager:
         Returns:
             str: Risk level - ShellRiskLevel value
         """
+        # v1.18.5: see classify_shell_command — strip transparent wrapper
+        # prefixes before pattern matching so safety verdicts are invariant
+        # under engine-side wrapping.
+        command = _strip_transparent_wrapper_prefixes(command)
         if self._is_never_allowed_command(command):
             return ShellRiskLevel.NEVER
         elif self._is_dangerous_command(command):

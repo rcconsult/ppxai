@@ -14,6 +14,7 @@ session of 2026-05-02.
 """
 
 import asyncio
+import logging
 import os
 import re
 import platform
@@ -23,6 +24,9 @@ from typing import List
 from ....config import get_shell_config
 from ...types import ToolEngineProtocol, ToolManagerProtocol
 from ..base import BaseTool
+from ..wrappers import get_registry as get_wrapper_registry
+
+logger = logging.getLogger(__name__)
 
 
 def terminate_subprocess_tree(proc) -> None:
@@ -277,6 +281,25 @@ class ShellExecuteTool(BaseTool):
                 return f"Error: Working directory does not exist: {working_dir}"
 
             backgrounded = _is_backgrounded(command)
+
+            # v1.18.5: shell wrapper framework. Ask the registry whether any
+            # active wrapper (rtk by default, plus anything declared in
+            # tools.shell.wrappers) wants to rewrite this command. The
+            # rewrite happens AFTER consent, AFTER cd handling, AFTER the
+            # interactive-command check, and AFTER backgrounded detection
+            # (all of which reason about the user's intent on the raw form).
+            # First-match-wins semantics — see WrapperRegistry docstring.
+            try:
+                rewritten = await get_wrapper_registry().find_first_rewrite(command)
+                if rewritten and rewritten != command:
+                    logger.debug("Wrapper applied: %r -> %r", command, rewritten)
+                    command = rewritten
+            except Exception as e:
+                # Registry/config errors must never break the shell tool —
+                # log loudly and run the raw command. This is the only
+                # try/except that swallows broadly because the framework
+                # is invoked on every shell call.
+                logger.warning("Wrapper framework failed for %r: %s; running raw", command, e)
 
             # Resolve shell binary and login mode from config.
             shell_bin = shell_config.get("shell_bin") if not is_windows else None

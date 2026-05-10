@@ -787,73 +787,90 @@ impractical.
 | **`/preset` command** | List, switch, show preset bindings | [TODO-routing.md](docs/TODO-routing.md) Phase 5 |
 | **Status bar preset badge** | Show active preset name in TUI/Web | [TODO-routing.md](docs/TODO-routing.md) Phase 5 |
 
-### v1.18.5 - Optional rtk integration (planned)
+### v1.18.5 - Shell wrapper framework — rtk as first wrapper (planned)
 
-When [rtk](https://github.com/rtk-ai/rtk) (Rust Token Killer — a CLI
-proxy that filters/compresses common dev-tool outputs) is installed
-on the user's machine, ppxai integrates with it on two complementary
-layers, both gated on rtk being detected on PATH and on the user not
-having opted out:
+ppxai gains a generic **wrapper framework** for the shell tool. A wrapper
+is a transparent CLI proxy that ppxai applies to commands the shell tool
+is about to spawn — the LLM asks for `git status`, ppxai's engine
+forwards it through the wrapper, the LLM receives the wrapper's output.
+Two layers, both gated on the wrapper being installed and not opted out:
 
-- **Layer A — engine-side rewrite (always-on when enabled):**
-  `execute_shell_command` calls `rtk hook check <cmd>` before
-  spawning. If rtk would rewrite, ppxai spawns the rewritten form
-  (`rtk git status` instead of `git status`); otherwise, raw. The
-  LLM is unaware: it asks for `git status`, gets compact output back.
-- **Layer B — system-prompt hint (default-on when rtk available):**
-  short `<rtk_context>` block appended to the system prompt informing
-  the model that shell-tool output may be rtk-compressed. Helps the
-  model interpret what it sees; doesn't ask it to wrap commands
-  itself (the engine already does that).
+- **Layer A — engine-side rewrite.** Before spawning the subprocess,
+  the wrapper registry asks the active wrappers (in declaration order)
+  whether to rewrite this command. First-match-wins. The LLM is unaware.
+- **Layer B — system-prompt hint.** When wrappers are active, ppxai
+  appends each wrapper's prompt block under a single
+  `## Shell wrapper context` header so the model interprets the
+  potentially-transformed output correctly.
 
-Layers are idempotent — if the model emits `rtk <cmd>` directly,
-`rtk hook check` returns the same string, no double-wrapping.
+The framework is **JSON-driven**. Each wrapper is a config entry under
+`tools.shell.wrappers`. Two generic decision strategies cover every
+realistic case:
 
-**Key planning insight (2026-05-10):** rtk ships its own dry-run,
-`rtk hook check <cmd>`. Exit 0 + the rewritten command on stdout,
-exit 1 + "No rewrite for: <cmd>" otherwise. **rtk is the source of
-truth for what's safely wrappable on the current platform.** ppxai
-delegates the per-platform allow/deny knowledge to rtk instead of
-maintaining its own tables — significant simplification of the
-original plan.
+- `type: "probe"` — wrapper has its own dry-run command (e.g., rtk's
+  `rtk hook check <cmd>` returns the rewritten command on exit 0,
+  "No rewrite for: ..." on exit 1).
+- `type: "always"` — no dry-run; user opted in, so wrap every command
+  via a fixed prefix (e.g., `time`, `nice`, perf profilers).
 
-**Why this matters:** agent loops that shell out a lot (git
-inspection, CI checking, file searching) consume LLM context
-proportional to the raw tool output. Compressing that output before
-it enters the conversation directly reduces token cost per
-iteration. Real-world reference: a Windows user with the manual
-RTK.md instruction-mode setup measured 47% savings averaged across
-1355 commands; a Unix user with the bash auto-rewrite hook measured
-66% over 4338 commands. Sub-agents (when ADR 0003 Stage 2 ships in
+Adding a new wrapper that fits one of the two patterns requires
+**zero ppxai code changes** — write a JSON entry, drop a markdown
+hint file, restart ppxai. Bespoke wrappers (rare; would need a custom
+IPC protocol for the dry-run) drop a Python subclass of `Wrapper` in
+the framework package.
+
+**rtk is the first concrete wrapper.** It ships in
+`DEFAULT_SHELL_WRAPPERS` as a `type: "probe"` entry — identical schema
+to anything a user adds. No privileged Python class. Future
+rtk-specific tuning (Phase 4 graceful fallback, additional probe
+heuristics) becomes config fields the framework consumes generically.
+
+**Why this matters:** agent loops that shell out a lot consume LLM
+context proportional to the raw tool output. Compressing that output
+before it enters the conversation directly reduces token cost per
+iteration. Real-world reference numbers from prior rtk integrations:
+47% savings on Windows manual mode (1355 commands), 66% on Unix bash
+hook (4338 commands). Sub-agents (when ADR 0003 Stage 2 ships in
 v1.19.x) inherit this for free since they use the same
 `execute_shell_command` substrate.
 
-**Why optional and degrades gracefully:** rtk is a separate Rust
-binary that most ppxai users won't have. Bundling would add ~63 MB
-(~30% of install footprint) for marginal benefit. The design is
-"use rtk if it's on PATH, otherwise no behavior change." Single
-`shutil.which("rtk")` at module load, cached.
+**Why optional and degrades gracefully:** wrappers are separate
+binaries most ppxai users won't have. Bundling rtk alone would add
+~63 MB. The design is "use wrappers if they're on PATH, otherwise no
+behavior change." Detection caches at first call per process.
 
-**Net effort:** ~95 LoC + ~36 tests + 2 new docs. About 1.5 days.
-Detailed plan including phase breakdown, file touch points, settled
-decisions, open questions, and acceptance criteria lives at
-[`docs/TODO-v1.18.5-rtk-integration.md`](docs/TODO-v1.18.5-rtk-integration.md).
+**Thread-safe** lazy init (registry singleton + per-wrapper detection
+cache) so future sub-agent worker threads don't race.
 
-**Settled in planning:**
-- Default `tools.shell.use_rtk: auto` — wrap silently when rtk is
-  on PATH; users who installed rtk likely want the savings.
-- Hybrid approach (Layer A + Layer B), not either alone.
-- Zero list maintenance — delegated to `rtk hook check` upstream.
+**Net effort:** ~700 LoC including tests + docs. Detailed plan at
+[`docs/TODO-v1.18.5-shell-wrappers.md`](docs/TODO-v1.18.5-shell-wrappers.md).
+User-facing reference at [`docs/SHELL-WRAPPERS.md`](docs/SHELL-WRAPPERS.md).
 
-**Caveats pinned so they don't get re-litigated:**
-- DO NOT bundle rtk in the install. Optional dependency, period.
-- DO NOT reimplement rtk's filters in Python — 26+ wrapper
-  categories, would never catch up to upstream.
-- DO NOT enable rtk wrapping for commands rtk itself declines to
-  rewrite. `rtk hook check` is authoritative.
-- The output format the model sees changes when rtk wraps; the
-  Layer B prompt block is the mitigation. Sentinel tests that
-  pattern-match on raw `git status` output may need adjustment.
+**Settled design:**
+- JSON-driven factory + registry; no privileged built-in classes.
+- rtk ships as a default config entry (no Python class, identical
+  schema to any user-declared wrapper).
+- Default `enabled: auto` — wrap silently when binary is on PATH.
+- Hybrid: engine-side rewrite (Layer A) + system-prompt hint (Layer B).
+- First-match-wins decision; no pipelining today.
+- Transparent-prefix safety stripping: wrappers marked
+  `transparent_for_safety: true` are stripped before consent
+  classification, so safety verdicts are invariant under wrapping.
+- Back-compat shim for `use_rtk` / `use_rtk_prompt_hint` config
+  fields — translated internally into a wrappers entry. Plan to
+  retire the shim in v1.20.x.
+
+**Caveats pinned:**
+- DO NOT bundle wrapper binaries. Optional dependencies, period.
+- DO NOT reimplement wrapper filters in Python.
+- DO NOT enable wrapping for commands the wrapper itself declines.
+- The output format changes under wrapping; the Layer B prompt block
+  is the mitigation.
+
+**Phase 4 (graceful fallback) deferred** — the framework has the hooks
+(`failure_markers`, `retry_raw_on_failure`,
+`Wrapper.is_wrapper_side_failure()`); the actual fallback wiring lands
+when there's evidence of wrapper-side failures in real use.
 
 **Branch:** `feature/v1.18.5`.
 

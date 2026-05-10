@@ -5,7 +5,7 @@ This is a LEAF MODULE - no ppxai imports allowed.
 Provides centralized default constants that can be overridden by user config.
 """
 
-from typing import List
+from typing import Any, Dict, List
 
 
 # =============================================================================
@@ -48,6 +48,64 @@ DEFAULT_ALLOWED_COMMANDS: List[str] = [
     r"^whoami$",
     r"^date$",
     r"^uname\s+",
+    # v1.18.5: read-only git verbs — don't mutate refs, working tree, or
+    # remotes. Conservative on purpose: write verbs (commit, push, reset,
+    # rebase, checkout, merge, fetch, pull, stash without "list", tag <name>)
+    # stay DANGEROUS so the user reviews before they fire.
+    r"^git\s+(status|log|diff|show|branch|blame|describe|rev-parse|rev-list|ls-files|ls-tree|reflog|shortlog|cat-file|grep|whatchanged)(\s+|$)",
+    r"^git\s+stash\s+list(\s+|$)",
+    r"^git\s+remote(\s+-v|\s+--verbose)?\s*$",
+    r"^git\s+config\s+(--get|--list|-l)(\s+|$)",
+    r"^git\s+tag(\s+-l|\s+--list)?\s*$",
+    # v1.18.5: gh (GitHub CLI) read-only verbs — `view` / `list` / `status`
+    # on the standard nouns are always read-only per the gh contract.
+    r"^gh\s+auth\s+status(\s+|$)",
+    r"^gh\s+(repo|pr|issue|release|run|workflow|gist|api|browse|search|status|cache|ruleset|variable|secret|label|codespace|extension|alias|attestation|project)\s+(view|list|status)(\s+|$)",
+]
+
+
+# =============================================================================
+# Shell Wrapper Defaults (v1.18.5)
+# =============================================================================
+#
+# Generic shell-command wrapper framework. Each entry is a JSON-shaped dict
+# the factory turns into a Wrapper instance. rtk ships as the canonical first
+# wrapper; users add more by appending to `tools.shell.wrappers` in
+# ppxai-config.json — no ppxai code changes required for the common cases.
+#
+# Schema (see ppxai/engine/tools/wrappers/factory.py for full validation):
+#   name              required — identifier; conflict with user entries
+#                     resolves by name (user entries WIN, override or replace).
+#   type              required — "probe" or "always".
+#   binary            required — name to look up via shutil.which.
+#   enabled           "auto" (default) | "always" | "never".
+#   transparent_for_safety  bool — consent classifier strips this prefix.
+#   prompt_block_path optional — relative to package, ~/.ppxai/wrappers/, or absolute.
+#   failure_markers   list of stderr substrings signaling wrapper-side failure
+#                     (used by graceful-fallback retry, when enabled).
+#   retry_raw_on_failure  bool — retry raw command if wrapper-side failure detected.
+#   probe_args        required for type=probe — args to the dry-run command.
+#   no_rewrite_marker probe-only — stdout starts with this on no-rewrite.
+#   probe_timeout_seconds  probe-only — default 5.0.
+#   prefix            required for type=always — string to prepend.
+
+DEFAULT_SHELL_WRAPPERS: List[Dict[str, Any]] = [
+    {
+        "name": "rtk",
+        "type": "probe",
+        "binary": "rtk",
+        "probe_args": ["hook", "check"],
+        "no_rewrite_marker": "No rewrite for:",
+        "transparent_for_safety": True,
+        "prompt_block_path": "RTK.md",
+        "enabled": "auto",
+        # Phase 4 graceful fallback ships as a follow-up commit when there's
+        # evidence of rtk-side failures in the wild. Markers stay empty until
+        # then so we don't preemptively retry on rtk's own non-zero exits
+        # that aren't actually breakage.
+        "failure_markers": [],
+        "retry_raw_on_failure": False,
+    },
 ]
 
 

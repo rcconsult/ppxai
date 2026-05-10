@@ -6,9 +6,13 @@ Handles tool registration, filtering by provider, and execution.
 
 from typing import Dict, List, Optional, Any, Tuple
 import json
+import logging
 from .base import BaseTool, FunctionTool
 from ..types import Event, EventType, ToolCallInfo
 from ...config import get_tool_description_overrides
+from .wrappers import get_registry as get_wrapper_registry
+
+logger = logging.getLogger(__name__)
 
 
 class ToolManager:
@@ -374,6 +378,19 @@ class ToolManager:
 
         prompt += "You MUST use these tools when the user asks for information you don't have access to natively.\n"
         prompt += "You are an AI assistant with tool capabilities. You have access to the user's filesystem, can run commands, search the web, and more. Use the tools proactively - don't ask the user for information you can get yourself!\n\n"
+
+        # v1.18.5: append per-wrapper prompt blocks. The registry composes
+        # blocks from all active wrappers (those with their binary on PATH,
+        # not opted out) under a single header. Wrappers without prompt
+        # blocks contribute nothing. Failures fall back silently.
+        try:
+            wrapper_blocks = get_wrapper_registry().compose_prompt_blocks()
+            if wrapper_blocks:
+                prompt += "## Shell wrapper context\n\n"
+                prompt += wrapper_blocks + "\n\n"
+        except Exception as e:
+            logger.debug("Wrapper prompt-block composition skipped: %s", e)
+
         prompt += "## How to Call a Tool\n\n"
         prompt += "To use a tool, respond ONLY with a JSON code block in this exact format:\n\n"
         prompt += "```json\n{\n  \"tool\": \"tool_name\",\n  \"arguments\": {\"param\": \"value\"}\n}\n```\n\n"

@@ -2,7 +2,7 @@
 Tool, shell, agent, visualization, and container configuration.
 """
 
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 from .defaults import (
     DEFAULT_AGENT_AUTO_RETRY_EMPTY,
@@ -15,6 +15,7 @@ from .defaults import (
     DEFAULT_ALLOWED_COMMANDS,
     DEFAULT_DANGEROUS_COMMANDS,
     DEFAULT_NEVER_ALLOW,
+    DEFAULT_SHELL_WRAPPERS,
 )
 from .store import ConfigStore
 
@@ -83,7 +84,63 @@ def get_shell_config() -> Dict[str, Any]:
         "interactive_commands": shell_config.get("interactive_commands", default_interactive),
         "non_interactive_with_args": shell_config.get("non_interactive_with_args", default_non_interactive_with_args),
         "timeout": shell_config.get("timeout", 30),  # Default 30 seconds, configurable (v1.15.2)
+        # v1.18.5: shell wrapper framework. User-facing config field
+        # `tools.shell.wrappers` is merged with `DEFAULT_SHELL_WRAPPERS`
+        # (the latter ships rtk as the canonical first wrapper). Conflict
+        # resolution by name: user entries WIN, either overriding individual
+        # fields or replacing the default entry wholesale.
+        "wrappers": _resolve_wrappers(shell_config),
     }
+
+
+def _resolve_wrappers(shell_config: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Merge default wrapper entries with user-declared overrides.
+
+    Resolution rules:
+    - Each default entry is matched against user entries by `name`.
+    - If a user entry shares a name, its fields are merged on top of the
+      default (shallow merge — `failure_markers` etc. replace, don't extend).
+    - User entries with names not in the defaults are appended verbatim.
+    - The order of the result preserves the default order; new user
+      entries follow.
+
+    Back-compat shim (v1.18.5 → v1.20.x):
+    - `tools.shell.use_rtk` (str) overrides the rtk default's `enabled` field.
+    - `tools.shell.use_rtk_prompt_hint` (bool) — when False, drops rtk's
+      `prompt_block_path` so no prompt block ships even though the
+      engine-side wrap stays on.
+    These let users testing the v1.18.5 branch prior to the framework
+    landing keep their existing config working with no edits.
+    """
+    user_wrappers = shell_config.get("wrappers")
+    use_rtk_legacy = shell_config.get("use_rtk")
+    use_rtk_prompt_hint_legacy = shell_config.get("use_rtk_prompt_hint")
+
+    # Start with deep-ish copies of the defaults so we don't mutate the constant.
+    merged: List[Dict[str, Any]] = [dict(d) for d in DEFAULT_SHELL_WRAPPERS]
+    by_name = {entry["name"]: entry for entry in merged}
+
+    # Apply legacy use_rtk* shim on the rtk default if it exists.
+    if "rtk" in by_name:
+        if isinstance(use_rtk_legacy, str):
+            by_name["rtk"]["enabled"] = use_rtk_legacy
+        if use_rtk_prompt_hint_legacy is False:
+            by_name["rtk"]["prompt_block_path"] = None
+
+    # Apply explicit user wrappers on top.
+    if isinstance(user_wrappers, list):
+        for user_entry in user_wrappers:
+            if not isinstance(user_entry, dict) or "name" not in user_entry:
+                continue
+            name = user_entry["name"]
+            if name in by_name:
+                by_name[name].update(user_entry)
+            else:
+                new_entry = dict(user_entry)
+                merged.append(new_entry)
+                by_name[name] = new_entry
+
+    return merged
 
 
 def get_agent_config() -> Dict[str, Any]:

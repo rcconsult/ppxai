@@ -232,6 +232,10 @@ For Hermes vs Harmony parsers, GPT-OSS quirks, Qwen3/2.5 setup, and the "I'll us
 
 - Perplexity/Gemini may use shell commands for web data instead of native search when tools enabled (accepted behavior).
 
+## Shell wrapper framework (v1.18.5)
+
+Generic JSON-driven framework for transparent CLI wrappers (rtk, time, nice, perf profilers, etc.) on the shell tool. Two integration layers — engine-side rewrite + system-prompt hint — both gated on the wrapper's binary being on PATH. Adding a wrapper is a config-only operation when it fits the `probe` or `always` decision strategy. Code lives at `ppxai/engine/tools/wrappers/`; rtk ships as the canonical first wrapper in `DEFAULT_SHELL_WRAPPERS`. See [docs/SHELL-WRAPPERS.md](docs/SHELL-WRAPPERS.md) for the user-facing reference.
+
 ## Debug Logging
 
 Default: **off** for fresh installs. Toggle with `/debug-log on|off` (Rich + Textual) or `POST /config/debug-log` (web/VSCode). Persisted to `ppxai-config.json → tui.debug_log` and restored inside `config.initialize()`, so logging is active **before** any client code runs — critical for diagnosing early-startup regressions like silent session-recovery failures.
