@@ -25,8 +25,17 @@ from rich.panel import Panel
 from rich.markdown import Markdown
 from rich.prompt import Prompt
 
+import asyncio
+
 from .base import Renderer
 from ..preview_server import PreviewServer
+from ..engine.preview_backend import (
+    PreviewBackend,
+    PreviewBackendError,
+    start_proxied_backend,
+    start_served_backend,
+    stop_backend,
+)
 from ..commands.results import (
     ResultStatus,
     NotificationResult,
@@ -489,35 +498,126 @@ def render_tool_execution(result: ToolExecutionResult) -> None:
 # Preview Result Renderer
 # ============================================================================
 
-# Module-level active preview server (singleton)
+# Module-level active preview state (singletons).
+# Static-file PreviewServer (always used). Backend subprocess (only for
+# `--serve` / `--proxy` modes since v1.18.5).
 _active_preview = None
+_active_preview_backend: PreviewBackend = None
+
+
+def _run_async(coro):
+    """Run a coroutine to completion from sync Rich-renderer context.
+
+    The Rich TUI doesn't keep an event loop alive between chat turns —
+    `chat_with_tools` is invoked via `asyncio.run(...)` per turn and the
+    loop tears down before the renderer fires. So a fresh `asyncio.run`
+    here is safe; if a loop IS somehow active (test contexts, future
+    refactors) the helper falls back to `loop.run_until_complete` on
+    a thread-pool executor to avoid the "cannot run loop within loop"
+    error.
+    """
+    try:
+        return asyncio.run(coro)
+    except RuntimeError as e:
+        if "already running" not in str(e):
+            raise
+        # Active loop in this thread — run on a worker thread.
+        import concurrent.futures
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+            return pool.submit(asyncio.run, coro).result()
 
 
 @RichRenderer.register(PreviewResult)
 def render_preview(result: PreviewResult) -> None:
-    """Render preview result - start PreviewServer and open browser."""
-    global _active_preview
+    """Render preview result - start PreviewServer and (if `--serve` /
+    `--proxy`) the backend, open browser.
 
-    # Handle close action
+    v1.18.5 (gap-fill): pre-fix, this renderer ignored
+    `result.metadata["mode"]` and unconditionally started a static-file
+    PreviewServer regardless of `--serve` / `--proxy` flags. The flags
+    were parsed by `commands/display.py::handle_preview` and packaged
+    into the metadata, then silently dropped here. Now `mode=served`
+    actually spawns the backend (same engine helper the Web/VSCode flow
+    uses); `mode=proxied` validates port reachability and proceeds.
+    """
+    global _active_preview, _active_preview_backend
+
+    # Handle close action — stop both static and backend.
     if result.metadata and result.metadata.get("action") == "close":
+        msgs = []
         if _active_preview and _active_preview.is_running:
             _active_preview.stop()
             _active_preview = None
-            console.print("[green]Preview server stopped[/green]")
+            msgs.append("static preview server")
+        if _active_preview_backend is not None:
+            _run_async(stop_backend(_active_preview_backend))
+            _active_preview_backend = None
+            msgs.append("backend")
+        if msgs:
+            console.print(f"[green]Stopped: {', '.join(msgs)}[/green]")
         else:
             console.print("[dim]No active preview[/dim]")
         return
 
-    # Stop existing preview if running
+    # Stop any existing preview before starting a new one.
     if _active_preview and _active_preview.is_running:
         _active_preview.stop()
+    if _active_preview_backend is not None:
+        _run_async(stop_backend(_active_preview_backend))
+        _active_preview_backend = None
 
-    working_dir = result.metadata.get("working_dir", ".") if result.metadata else "."
+    metadata = result.metadata or {}
+    working_dir = metadata.get("working_dir", ".")
+    mode = metadata.get("mode", "static")
+
+    # Spawn / proxy the backend FIRST so any failure surfaces before the
+    # browser opens at a URL that won't load.
+    if mode == "served":
+        try:
+            backend = _run_async(start_served_backend(
+                command=metadata.get("command"),
+                port=metadata.get("port"),
+                working_dir=working_dir,
+            ))
+        except PreviewBackendError as e:
+            console.print(f"[red]Failed to start backend:[/red] {e}")
+            return
+        _active_preview_backend = backend
+    elif mode == "proxied":
+        port = metadata.get("port")
+        if not port:
+            console.print("[red]Proxied mode requires --proxy <port>[/red]")
+            return
+        try:
+            backend = _run_async(start_proxied_backend(
+                port=int(port), working_dir=working_dir
+            ))
+        except PreviewBackendError as e:
+            console.print(f"[red]{e}[/red]")
+            return
+        _active_preview_backend = backend
+
+    # Static-file PreviewServer always runs to serve the HTML.
     _active_preview = PreviewServer(result.filepath, working_dir)
-    url = _active_preview.start(open_browser=True)
-    result.url = url
+    static_url = _active_preview.start(open_browser=True)
+    result.url = static_url
+
     console.print(f"[green]Preview opened:[/green] {result.filepath}")
-    console.print(f"[dim]URL: {url}[/dim]")
+    console.print(f"[dim]Static URL: {static_url}[/dim]")
+    if _active_preview_backend is not None:
+        console.print(
+            f"[dim]Backend URL: {_active_preview_backend.url}"
+            + (
+                f" (pid {_active_preview_backend.process.pid})"
+                if _active_preview_backend.process
+                else " (proxied)"
+            )
+            + "[/dim]"
+        )
+        if _active_preview_backend.log_path:
+            console.print(
+                f"[dim]Backend log: {_active_preview_backend.log_path}[/dim]"
+            )
 
 
 # ============================================================================

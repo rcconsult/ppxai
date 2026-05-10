@@ -463,7 +463,7 @@ class TestPreviewBackendDrainTask:
 
     @pytest.mark.asyncio
     async def test_drain_reads_until_eof(self):
-        from ppxai.server.routes.preview import _drain_backend_output
+        from ppxai.engine.preview_backend import drain_backend_output as _drain_backend_output
         proc = MagicMock()
         proc.pid = 99999
 
@@ -487,7 +487,7 @@ class TestPreviewBackendDrainTask:
         users get nicer output via `jq -r '.line // .type'`.
         """
         import json as _json
-        from ppxai.server.routes.preview import _drain_backend_output
+        from ppxai.engine.preview_backend import drain_backend_output as _drain_backend_output
         proc = MagicMock()
         proc.pid = 88888
 
@@ -526,7 +526,7 @@ class TestPreviewBackendDrainTask:
         CancelledError inside the drain so awaiting the cancelled task
         completes cleanly without forcing kill_preview_backend to wrap
         every await in try/except."""
-        from ppxai.server.routes.preview import _drain_backend_output
+        from ppxai.engine.preview_backend import drain_backend_output as _drain_backend_output
         proc = MagicMock()
         proc.pid = 77777
 
@@ -546,7 +546,7 @@ class TestPreviewBackendDrainTask:
     @pytest.mark.asyncio
     async def test_drain_swallows_unicode_errors_in_log(self, tmp_path):
         """Bytes that aren't valid UTF-8 must not crash the drain loop."""
-        from ppxai.server.routes.preview import _drain_backend_output
+        from ppxai.engine.preview_backend import drain_backend_output as _drain_backend_output
         proc = MagicMock()
         proc.pid = 66666
 
@@ -567,7 +567,7 @@ class TestPreviewBackendDrainTask:
         """If the log file becomes unwritable mid-stream, we must keep
         draining the PIPE so the backend doesn't block. Logging is
         best-effort — the PIPE drain is load-bearing."""
-        from ppxai.server.routes.preview import _drain_backend_output
+        from ppxai.engine.preview_backend import drain_backend_output as _drain_backend_output
         proc = MagicMock()
         proc.pid = 55555
 

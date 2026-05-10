@@ -2,15 +2,14 @@
 HTML preview endpoints (v1.15.4, v1.17.1 --serve flag).
 
 Route order matters: poll and static must be defined BEFORE the catch-all.
+
+v1.18.5: spawn-and-drain logic for `--serve` lives in
+`ppxai/engine/preview_backend.py` (transport-agnostic) so TUI clients
+share the same code path. This route is now a thin HTTP wrapper.
 """
 
-import asyncio
-import json
 import os
-import re
-import shlex
 import time
-from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 from urllib.parse import parse_qs, urlparse
 
@@ -21,6 +20,12 @@ from typing import Optional
 
 from ...common.logger import get_logger
 from ...common.preview import inject_reload_script, resolve_preview_path, rewrite_asset_paths
+from ...engine.preview_backend import (
+    PreviewBackendError,
+    start_proxied_backend,
+    start_served_backend,
+    wait_for_port,
+)
 from ..models import PreviewServeRequest
 from ..state import (
     Session, get_or_create_session, get_session,
@@ -102,210 +107,8 @@ async def preview_static(
 
 
 # === Preview --serve: full-stack backend management (v1.17.1) ===
-
-# Port detection patterns for common frameworks
-_PORT_PATTERNS = [
-    re.compile(r'https?://(?:localhost|127\.0\.0\.1|0\.0\.0\.0):(\d+)'),
-    re.compile(r'(?:listening|running|started|serving)\s+(?:on\s+)?(?:port\s+)?(\d+)', re.IGNORECASE),
-    re.compile(r'port\s*[:=]\s*(\d+)', re.IGNORECASE),
-]
-
-_FRAMEWORK_DEFAULTS = {
-    'uvicorn': 8000, 'fastapi': 8000, 'gunicorn': 8000,
-    'flask': 5000, 'django': 8000,
-    'express': 3000, 'next': 3000, 'node': 3000,
-    'vite': 5173, 'webpack': 8080, 'http-server': 8080,
-}
-
-
-def _detect_command(working_dir: str) -> Optional[str]:
-    """Auto-detect the backend start command from project files."""
-    wd = Path(working_dir)
-
-    # package.json with start script
-    pkg = wd / "package.json"
-    if pkg.exists():
-        try:
-            data = json.loads(pkg.read_text(encoding="utf-8"))
-            if data.get("scripts", {}).get("start"):
-                return "npm start"
-        except (json.JSONDecodeError, OSError):
-            pass
-
-    # Python files — prefer venv python if available, else python3
-    if os.name == "nt":
-        venv_python = wd / "venv" / "Scripts" / "python.exe"
-        fallback_python = "python"
-    else:
-        venv_python = wd / "venv" / "bin" / "python"
-        fallback_python = "python3"
-    # Also check .venv (common convention)
-    if not venv_python.exists():
-        venv_python = wd / ".venv" / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
-    python = str(venv_python) if venv_python.exists() else fallback_python
-    for name in ("main.py", "app.py", "server.py"):
-        if (wd / name).exists():
-            return f"{python} {name}"
-
-    # Makefile with run target
-    makefile = wd / "Makefile"
-    if makefile.exists():
-        try:
-            content = makefile.read_text(encoding="utf-8")
-            if re.search(r'^run\s*:', content, re.MULTILINE):
-                return "make run"
-        except OSError:
-            pass
-
-    return None
-
-
-def _guess_port_from_command(command: str) -> int:
-    """Guess default port from the command string."""
-    cmd_lower = command.lower()
-    for framework, port in _FRAMEWORK_DEFAULTS.items():
-        if framework in cmd_lower:
-            return port
-    # Check for explicit --port or -p flags
-    port_match = re.search(r'(?:--port|-p)\s+(\d+)', command)
-    if port_match:
-        return int(port_match.group(1))
-    return 8000  # safe default
-
-
-async def _detect_port_from_output(process: asyncio.subprocess.Process, collected_output: list, timeout: float = 5.0) -> Optional[int]:
-    """Read process stdout/stderr for port announcements.
-
-    Args:
-        process: The subprocess to read from
-        collected_output: List to append output lines to (for error reporting)
-        timeout: Max seconds to wait for port detection
-    """
-    deadline = time.time() + timeout
-    while time.time() < deadline:
-        if process.returncode is not None:
-            return None
-        try:
-            line = await asyncio.wait_for(process.stdout.readline(), timeout=0.5)
-            if not line:
-                continue
-            text = line.decode("utf-8", errors="replace")
-            collected_output.append(text)
-            for pattern in _PORT_PATTERNS:
-                m = pattern.search(text)
-                if m:
-                    return int(m.group(1))
-        except asyncio.TimeoutError:
-            continue
-    return None
-
-
-async def _drain_backend_output(
-    process: asyncio.subprocess.Process,
-    log_path: Optional[Path] = None,
-) -> None:
-    """Continuously read the backend's stdout/stderr until it exits.
-
-    v1.18.5: without an active reader the OS PIPE buffer (~64 KB) fills
-    up after enough log lines and the backend blocks on its next write —
-    preview appears to hang while the user is interacting with their
-    app. This task runs for the lifetime of the backend, draining each
-    line and (optionally) appending it to a per-backend log file under
-    ~/.ppxai/logs/preview-backend-<pid>.log so failures are debuggable.
-
-    v1.18.5 (later same day): the log file is JSONL — one JSON object
-    per line — so the new `read_preview_log` tool and Inspection
-    Triplet-aware consumers can parse it programmatically. Each record:
-
-        {"ts": "2026-05-10T22:30:00.123Z",
-         "type": "drain_start" | "stdout" | "drain_end",
-         "pid": 12345,
-         "line": "INFO: ..."}      # only for type=stdout
-
-    Plain `tail -f` still works (each line is a complete JSON object,
-    readable enough for human eyes); jq users get nicer output via
-    `jq -r '.line // (.type + " pid=" + (.pid|tostring))'`.
-
-    Cancellation: kill_preview_backend cancels this task before
-    terminating the process. We swallow CancelledError + the
-    ConnectionResetError that asyncio raises when the child's stdout
-    closes mid-read. EOF (empty bytes) terminates the loop cleanly when
-    the backend exits on its own.
-    """
-    log_handle = None
-
-    def _emit(record: dict) -> None:
-        """Append a single JSON record + newline. Best-effort; on OSError
-        (disk full, etc.) the caller drops to PIPE-only draining."""
-        nonlocal log_handle
-        if log_handle is None:
-            return
-        try:
-            log_handle.write(json.dumps(record, ensure_ascii=False) + "\n")
-            log_handle.flush()
-        except OSError:
-            log_handle = None
-
-    if log_path is not None:
-        try:
-            log_path.parent.mkdir(parents=True, exist_ok=True)
-            log_handle = log_path.open("a", encoding="utf-8")
-        except OSError as e:
-            logger.warning(f"Preview drain: could not open log {log_path}: {e}")
-            log_handle = None
-
-    _emit({
-        "ts": datetime.now(timezone.utc).isoformat(timespec="milliseconds"),
-        "type": "drain_start",
-        "pid": process.pid,
-    })
-
-    try:
-        while True:
-            try:
-                line = await process.stdout.readline()
-            except (asyncio.CancelledError, ConnectionResetError):
-                raise
-            if not line:
-                # EOF — backend exited; readline returns b'' and won't unblock again
-                break
-            _emit({
-                "ts": datetime.now(timezone.utc).isoformat(timespec="milliseconds"),
-                "type": "stdout",
-                "pid": process.pid,
-                "line": line.decode("utf-8", errors="replace").rstrip("\n"),
-            })
-    except asyncio.CancelledError:
-        # Normal cancellation from kill_preview_backend; suppress and exit.
-        pass
-    except Exception as e:
-        logger.warning(f"Preview drain: unexpected error pid {process.pid}: {e}")
-    finally:
-        _emit({
-            "ts": datetime.now(timezone.utc).isoformat(timespec="milliseconds"),
-            "type": "drain_end",
-            "pid": process.pid,
-        })
-        if log_handle is not None:
-            try:
-                log_handle.close()
-            except OSError:
-                pass
-
-
-async def _wait_for_port(port: int, timeout: float = 10.0) -> bool:
-    """Poll localhost:port until it responds or timeout."""
-    deadline = time.time() + timeout
-    url = f"http://localhost:{port}/"
-    while time.time() < deadline:
-        try:
-            async with httpx.AsyncClient(timeout=1.0) as client:
-                await client.get(url)
-                return True
-        except Exception:
-            await asyncio.sleep(0.2)
-    return False
-
+# v1.18.5: spawn/drain/port-detection helpers moved to
+# `ppxai/engine/preview_backend.py` so TUI clients share the path.
 
 @router.post("/preview/serve")
 async def start_preview_serve(
@@ -314,120 +117,34 @@ async def start_preview_serve(
 ):
     """Start a backend process for full-stack preview.
 
-    Detects or uses the given command, starts the process, waits for the
-    port to become reachable, and returns the backend URL.
+    Thin HTTP wrapper around `engine.preview_backend.start_served_backend`.
+    The actual spawn-and-drain logic lives in the engine helper so TUI
+    clients (Rich `ppxai`, Textual `ppxaide`) share the path.
     """
     working_dir = s.engine.get_working_dir() or os.getcwd()
 
-    # Kill any existing backend for this session
+    # Kill any existing backend for this session.
     existing = get_preview_backend(s.id)
     if existing:
         await kill_preview_backend(existing)
         remove_preview_backend(s.id)
 
-    # Resolve command — normalize python → python3 on macOS/Linux
-    command = request.command or _detect_command(working_dir)
-    if command and os.name != "nt":
-        command = re.sub(r'^python(\s)', r'python3\1', command)
-    if not command:
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                "Could not auto-detect backend command. "
-                "No main.py, app.py, server.py, or package.json with start script found. "
-                "Specify the command explicitly: /preview index.html --serve \"python main.py\""
-            ),
-        )
-
-    # Resolve port
-    port = request.port or _guess_port_from_command(command)
-
-    logger.info(f"Preview serve: starting '{command}' in {working_dir} (expected port {port})")
-
-    # Start the process with its own process group for clean cleanup
     try:
-        process = await asyncio.create_subprocess_exec(
-            *shlex.split(command),
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.STDOUT,
-            cwd=working_dir,
-            preexec_fn=os.setsid,
+        backend = await start_served_backend(
+            command=request.command,
+            port=request.port,
+            working_dir=working_dir,
         )
-    except FileNotFoundError as e:
-        raise HTTPException(status_code=400, detail=f"Command not found: {e}")
-    except OSError as e:
-        raise HTTPException(status_code=500, detail=f"Failed to start process: {e}")
+    except PreviewBackendError as e:
+        raise HTTPException(status_code=e.status_code, detail=str(e))
 
-    # Try to detect port from stdout first, fall back to guessed port
-    collected_output = []
-    detected_port = await _detect_port_from_output(process, collected_output, timeout=5.0)
-    if detected_port:
-        port = detected_port
-        logger.info(f"Preview serve: detected port {port} from stdout")
-
-    # Check if process died during startup
-    if process.returncode is not None:
-        remaining = await process.stdout.read(2000)
-        error_text = remaining.decode("utf-8", errors="replace")
-        all_output = "".join(collected_output) + error_text
-        error_msg = all_output.strip()[-500:]  # Last 500 chars
-        raise HTTPException(
-            status_code=500,
-            detail=f"Backend exited with code {process.returncode}:\n{error_msg}",
-        )
-
-    # Wait for port to become reachable
-    url = f"http://localhost:{port}"
-    if not await _wait_for_port(port, timeout=10.0):
-        # Check if process is still alive
-        if process.returncode is not None:
-            remaining = await process.stdout.read(2000)
-            error_text = remaining.decode("utf-8", errors="replace")
-            all_output = "".join(collected_output) + error_text
-            error_msg = all_output.strip()[-500:]
-            raise HTTPException(
-                status_code=500,
-                detail=f"Backend died during startup (exit {process.returncode}):\n{error_msg}",
-            )
-        # Process alive but port not reachable — it might use a different port
-        raise HTTPException(
-            status_code=408,
-            detail=(
-                f"Backend started (pid {process.pid}) but port {port} not reachable after 10s. "
-                f"Try specifying the correct port: /preview index.html --serve \"{command}\" --port NNNN"
-            ),
-        )
-
-    # v1.18.5: spawn a continuous-drain task on the backend's stdout/stderr.
-    # Port detection above only read the first ~5s of output. After that
-    # the PIPE would fill on its own and block the backend without an
-    # active reader. Per-backend log file lives under ~/.ppxai/logs/.
-    log_path = Path.home() / ".ppxai" / "logs" / f"preview-backend-{process.pid}.log"
-    drain_task = asyncio.create_task(
-        _drain_backend_output(process, log_path),
-        name=f"preview-drain-{process.pid}",
-    )
-
-    # Store the backend
-    backend = PreviewBackend(
-        process=process,
-        port=port,
-        command=command,
-        url=url,
-        working_dir=working_dir,
-        drain_task=drain_task,
-    )
     set_preview_backend(s.id, backend)
 
-    logger.info(
-        f"Preview serve: backend running at {url} (pid {process.pid}, log {log_path})"
-    )
-
     return {
-        "url": url,
-        "port": port,
-        "command": command,
-        "pid": process.pid,
+        "url": backend.url,
+        "port": backend.port,
+        "command": backend.command,
+        "pid": backend.process.pid if backend.process else None,
     }
 
 
@@ -488,8 +205,8 @@ async def start_preview_proxy(
     body = await request.json()
     port = int(body.get("port", 8000))
 
-    # Check if port is reachable
-    if not await _wait_for_port(port, timeout=3.0):
+    # Check if port is reachable.
+    if not await wait_for_port(port, timeout=3.0):
         raise HTTPException(
             status_code=400,
             detail=f"Port {port} is not reachable. Start your backend first (e.g., from /terminal).",

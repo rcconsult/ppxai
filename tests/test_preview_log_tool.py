@@ -349,7 +349,7 @@ class TestDrainTaskEmitsJsonl:
 
     @pytest.mark.asyncio
     async def test_drain_writes_jsonl_records(self, tmp_path):
-        from ppxai.server.routes.preview import _drain_backend_output
+        from ppxai.engine.preview_backend import drain_backend_output as _drain_backend_output
 
         proc = MagicMock()
         proc.pid = 88888

@@ -20,6 +20,13 @@ from textual.containers import VerticalScroll
 
 from .base import AsyncRenderer
 from ..preview_server import PreviewServer
+from ..engine.preview_backend import (
+    PreviewBackend,
+    PreviewBackendError,
+    start_proxied_backend,
+    start_served_backend,
+    stop_backend,
+)
 from ..tui.widgets.dialog import ConsentDialog, PromptDialog
 from ..commands.results import (
     ResultStatus,
@@ -568,36 +575,98 @@ async def render_tool_execution(renderer: TextualRenderer, result: ToolExecution
 # Preview Result Renderer
 # ============================================================================
 
-# Module-level active preview server (singleton)
+# Module-level active preview state (singletons).
+# Static-file PreviewServer (always used). Backend subprocess (only for
+# `--serve` / `--proxy` modes since v1.18.5).
 _active_preview = None
+_active_preview_backend: Optional[PreviewBackend] = None
 
 
 @TextualRenderer.register(PreviewResult)
 async def render_preview(renderer: TextualRenderer, result: PreviewResult) -> None:
-    """Render preview result - start PreviewServer and open browser."""
-    global _active_preview
+    """Render preview result - start PreviewServer and (if `--serve` /
+    `--proxy`) the backend, open browser.
+
+    v1.18.5 (gap-fill): pre-fix, this renderer ignored
+    `result.metadata["mode"]` and unconditionally started a static-file
+    PreviewServer regardless of `--serve` / `--proxy` flags. Now
+    `mode=served` actually spawns the backend (same engine helper the
+    Web/VSCode flow uses); `mode=proxied` validates port reachability.
+    """
+    global _active_preview, _active_preview_backend
     chat_view = renderer._get_chat_view()
 
-    # Handle close action
+    # Handle close action — stop both static and backend.
     if result.metadata and result.metadata.get("action") == "close":
+        msgs = []
         if _active_preview and _active_preview.is_running:
             _active_preview.stop()
             _active_preview = None
-            chat_view.add_system_message("[green]Preview server stopped[/green]")
+            msgs.append("static preview server")
+        if _active_preview_backend is not None:
+            await stop_backend(_active_preview_backend)
+            _active_preview_backend = None
+            msgs.append("backend")
+        if msgs:
+            chat_view.add_system_message(f"[green]Stopped: {', '.join(msgs)}[/green]")
         else:
             chat_view.add_system_message("[dim]No active preview[/dim]")
         return
 
-    # Stop existing preview if running
+    # Stop any existing preview before starting a new one.
     if _active_preview and _active_preview.is_running:
         _active_preview.stop()
+    if _active_preview_backend is not None:
+        await stop_backend(_active_preview_backend)
+        _active_preview_backend = None
 
-    working_dir = result.metadata.get("working_dir", ".") if result.metadata else "."
+    metadata = result.metadata or {}
+    working_dir = metadata.get("working_dir", ".")
+    mode = metadata.get("mode", "static")
+
+    # Spawn / proxy the backend FIRST so any failure surfaces before the
+    # browser opens at a URL that won't load.
+    if mode == "served":
+        try:
+            _active_preview_backend = await start_served_backend(
+                command=metadata.get("command"),
+                port=metadata.get("port"),
+                working_dir=working_dir,
+            )
+        except PreviewBackendError as e:
+            chat_view.add_system_message(f"[red]Failed to start backend: {e}[/red]")
+            return
+    elif mode == "proxied":
+        port = metadata.get("port")
+        if not port:
+            chat_view.add_system_message("[red]Proxied mode requires --proxy <port>[/red]")
+            return
+        try:
+            _active_preview_backend = await start_proxied_backend(
+                port=int(port), working_dir=working_dir
+            )
+        except PreviewBackendError as e:
+            chat_view.add_system_message(f"[red]{e}[/red]")
+            return
+
+    # Static-file PreviewServer always runs.
     _active_preview = PreviewServer(result.filepath, working_dir)
-    url = _active_preview.start(open_browser=True)
-    chat_view.add_system_message(
-        f"[dim]Preview opened: {result.filepath}\nURL: {url}[/dim]"
-    )
+    static_url = _active_preview.start(open_browser=True)
+
+    msg_lines = [f"Preview opened: {result.filepath}", f"Static URL: {static_url}"]
+    if _active_preview_backend is not None:
+        backend_label = (
+            f"Backend URL: {_active_preview_backend.url}"
+            + (
+                f" (pid {_active_preview_backend.process.pid})"
+                if _active_preview_backend.process
+                else " (proxied)"
+            )
+        )
+        msg_lines.append(backend_label)
+        if _active_preview_backend.log_path:
+            msg_lines.append(f"Backend log: {_active_preview_backend.log_path}")
+    chat_view.add_system_message("[dim]" + "\n".join(msg_lines) + "[/dim]")
 
 
 # ============================================================================

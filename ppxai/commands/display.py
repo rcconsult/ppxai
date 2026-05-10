@@ -685,12 +685,12 @@ def handle_preview(context: CommandContext, args: str) -> CommandResult:
             status=ResultStatus.ERROR,
             message="Usage: /preview <file.html> [--serve [\"cmd\"]] [--proxy port] [--port N]",
             suggestions=[
-                "/preview index.html                       — static preview",
-                "/preview index.html --serve               — autostart backend (autodetect command)",
+                "/preview index.html                       — static preview only",
+                "/preview index.html --serve               — autostart backend (autodetect command, all clients)",
                 "/preview index.html --serve \"python main.py\"  — autostart backend with explicit command",
                 "/preview index.html --proxy 8000           — proxy to already-running backend",
-                "/preview close                             — close preview",
-                "/preview logs [N]                          — show the last N lines from the active backend log (default 100)",
+                "/preview close                             — close static preview AND backend",
+                "/preview logs [N]                          — show last N lines from the active backend log (default 100)",
             ]
         )
 
