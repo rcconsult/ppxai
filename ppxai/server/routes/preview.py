@@ -10,6 +10,7 @@ import os
 import re
 import shlex
 import time
+from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 from urllib.parse import parse_qs, urlparse
 
@@ -212,6 +213,19 @@ async def _drain_backend_output(
     line and (optionally) appending it to a per-backend log file under
     ~/.ppxai/logs/preview-backend-<pid>.log so failures are debuggable.
 
+    v1.18.5 (later same day): the log file is JSONL — one JSON object
+    per line — so the new `read_preview_log` tool and Inspection
+    Triplet-aware consumers can parse it programmatically. Each record:
+
+        {"ts": "2026-05-10T22:30:00.123Z",
+         "type": "drain_start" | "stdout" | "drain_end",
+         "pid": 12345,
+         "line": "INFO: ..."}      # only for type=stdout
+
+    Plain `tail -f` still works (each line is a complete JSON object,
+    readable enough for human eyes); jq users get nicer output via
+    `jq -r '.line // (.type + " pid=" + (.pid|tostring))'`.
+
     Cancellation: kill_preview_backend cancels this task before
     terminating the process. We swallow CancelledError + the
     ConnectionResetError that asyncio raises when the child's stdout
@@ -219,15 +233,32 @@ async def _drain_backend_output(
     the backend exits on its own.
     """
     log_handle = None
+
+    def _emit(record: dict) -> None:
+        """Append a single JSON record + newline. Best-effort; on OSError
+        (disk full, etc.) the caller drops to PIPE-only draining."""
+        nonlocal log_handle
+        if log_handle is None:
+            return
+        try:
+            log_handle.write(json.dumps(record, ensure_ascii=False) + "\n")
+            log_handle.flush()
+        except OSError:
+            log_handle = None
+
     if log_path is not None:
         try:
             log_path.parent.mkdir(parents=True, exist_ok=True)
             log_handle = log_path.open("a", encoding="utf-8")
-            log_handle.write(f"\n=== Preview backend pid {process.pid} drain start ===\n")
-            log_handle.flush()
         except OSError as e:
             logger.warning(f"Preview drain: could not open log {log_path}: {e}")
             log_handle = None
+
+    _emit({
+        "ts": datetime.now(timezone.utc).isoformat(timespec="milliseconds"),
+        "type": "drain_start",
+        "pid": process.pid,
+    })
 
     try:
         while True:
@@ -238,23 +269,25 @@ async def _drain_backend_output(
             if not line:
                 # EOF — backend exited; readline returns b'' and won't unblock again
                 break
-            if log_handle is not None:
-                try:
-                    log_handle.write(line.decode("utf-8", errors="replace"))
-                    log_handle.flush()
-                except OSError:
-                    # Disk full / permissions / etc — keep draining the PIPE
-                    # so the backend doesn't block, but stop trying to log.
-                    log_handle = None
+            _emit({
+                "ts": datetime.now(timezone.utc).isoformat(timespec="milliseconds"),
+                "type": "stdout",
+                "pid": process.pid,
+                "line": line.decode("utf-8", errors="replace").rstrip("\n"),
+            })
     except asyncio.CancelledError:
         # Normal cancellation from kill_preview_backend; suppress and exit.
         pass
     except Exception as e:
         logger.warning(f"Preview drain: unexpected error pid {process.pid}: {e}")
     finally:
+        _emit({
+            "ts": datetime.now(timezone.utc).isoformat(timespec="milliseconds"),
+            "type": "drain_end",
+            "pid": process.pid,
+        })
         if log_handle is not None:
             try:
-                log_handle.write(f"=== Preview backend pid {process.pid} drain end ===\n")
                 log_handle.close()
             except OSError:
                 pass

@@ -6,7 +6,7 @@ These tools are registered automatically when the engine starts.
 
 from typing import Optional
 
-from . import filesystem, calculator, datetime_tool, web
+from . import filesystem, calculator, datetime_tool, preview_log, web
 from ...types import ToolEngineProtocol, ToolManagerProtocol
 
 
@@ -23,6 +23,7 @@ def register_all_builtin_tools(manager: ToolManagerProtocol, provider: str = Non
     filesystem.register_tools(manager, engine)
     calculator.register_tools(manager)
     datetime_tool.register_tools(manager)
+    preview_log.register_tools(manager)  # v1.18.5
 
     # Web search: Try premium first (v1.13.4), fall back to free
     try:

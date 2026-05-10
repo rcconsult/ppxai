@@ -690,6 +690,7 @@ def handle_preview(context: CommandContext, args: str) -> CommandResult:
                 "/preview index.html --serve \"python main.py\"  — autostart backend with explicit command",
                 "/preview index.html --proxy 8000           — proxy to already-running backend",
                 "/preview close                             — close preview",
+                "/preview logs [N]                          — show the last N lines from the active backend log (default 100)",
             ]
         )
 
@@ -698,6 +699,20 @@ def handle_preview(context: CommandContext, args: str) -> CommandResult:
             status=ResultStatus.INFO,
             message="Preview closed",
             metadata={"action": "close"}
+        )
+
+    # v1.18.5: `/preview logs [N]` — show the active backend's log tail.
+    # Thin wrapper over the read_preview_log tool so user-driven and
+    # AI-driven inspection share one source of truth.
+    logs_match = re.match(r"^logs(?:\s+(\d+))?\s*$", args.strip(), re.IGNORECASE)
+    if logs_match:
+        from ppxai.engine.tools.builtin.preview_log import read_preview_log
+        n_lines = int(logs_match.group(1)) if logs_match.group(1) else 100
+        log_text = read_preview_log(lines=n_lines)
+        return TextResult(
+            status=ResultStatus.SUCCESS,
+            message=log_text,
+            metadata={"action": "preview-logs", "lines_requested": n_lines},
         )
 
     err, parsed = _parse_preview_args(args)

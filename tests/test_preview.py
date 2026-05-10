@@ -479,6 +479,14 @@ class TestPreviewBackendDrainTask:
 
     @pytest.mark.asyncio
     async def test_drain_writes_to_log_file_when_provided(self, tmp_path):
+        """v1.18.5 (later): drain task writes structured JSONL records
+        instead of plain text, so the read_preview_log tool and any
+        Inspection-Triplet-aware consumer can parse it programmatically.
+        Each record carries `{ts, type, pid, line?}`. Plain `tail -f`
+        still works (each line is a self-contained JSON object); jq
+        users get nicer output via `jq -r '.line // .type'`.
+        """
+        import json as _json
         from ppxai.server.routes.preview import _drain_backend_output
         proc = MagicMock()
         proc.pid = 88888
@@ -496,11 +504,21 @@ class TestPreviewBackendDrainTask:
         log_path = tmp_path / "preview-backend-88888.log"
         await _drain_backend_output(proc, log_path=log_path)
 
-        content = log_path.read_text(encoding="utf-8")
-        assert "drain start" in content
-        assert "drain end" in content
-        assert "Started server" in content
-        assert "Application startup complete" in content
+        records = []
+        for raw_line in log_path.read_text(encoding="utf-8").splitlines():
+            if raw_line.strip():
+                records.append(_json.loads(raw_line))
+
+        # Expected sequence: drain_start, two stdout records, drain_end.
+        assert [r["type"] for r in records] == [
+            "drain_start", "stdout", "stdout", "drain_end"
+        ]
+        assert records[1]["line"] == "INFO:     Started server"
+        assert records[2]["line"] == "INFO:     Application startup complete"
+        # Every record carries pid + ts (the Inspection Triplet event-shape contract).
+        for r in records:
+            assert r["pid"] == 88888
+            assert r["ts"]
 
     @pytest.mark.asyncio
     async def test_drain_handles_cancellation(self):
