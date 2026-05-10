@@ -191,6 +191,54 @@ class TestTransparentPrefixStripping:
             assert classify_shell_command("git status", _config()) == ShellRiskLevel.SAFE
 
 
+class TestRtkMetaCommands:
+    """Meta-rtk operations (rtk inspecting itself) are read-only and SAFE."""
+
+    @pytest.mark.parametrize("cmd", [
+        "rtk --help",
+        "rtk --version",
+        "rtk gain",
+        "rtk gain --history",
+        "rtk discover",
+        "rtk hook check git status",
+        "rtk hook check 'grep \"hello world\" file'",
+    ])
+    def test_meta_rtk_is_safe(self, cmd):
+        # No registry override needed — these are matched purely by the
+        # `^rtk\s+...` allowed_commands pattern, no transparent-prefix
+        # stripping involved (which would peel `rtk` off and miss the meta
+        # context). The classifier checks dangerous_commands first, then
+        # allowed_commands; the rtk meta pattern matches before the
+        # unknown-command-is-dangerous fallthrough.
+        assert classify_shell_command(cmd, _config()) == ShellRiskLevel.SAFE
+
+    @pytest.mark.parametrize("cmd", [
+        # `rtk init` writes config files — must stay DANGEROUS.
+        "rtk init",
+        "rtk init -g",
+        "rtk init --uninstall",
+        # `rtk proxy <cmd>` bypasses rtk filtering and runs the raw command.
+        # The inner command's risk dominates; meta-rtk auto-approve is wrong.
+        # NB: the transparent-prefix strip would peel `rtk` then see `proxy`
+        # which is unknown → DANGEROUS. So this falls through correctly
+        # whether the registry strips or not.
+        "rtk proxy rm -rf /tmp/x",
+    ])
+    def test_unsafe_rtk_meta_stays_dangerous(self, cmd):
+        verdict = classify_shell_command(cmd, _config())
+        assert verdict in (ShellRiskLevel.DANGEROUS, ShellRiskLevel.NEVER), \
+            f"{cmd!r} should not be auto-approved, got {verdict}"
+
+    def test_rtk_help_does_not_match_helper_word_boundary(self):
+        """Sanity: the (\\s+|$) word boundary on --help must reject
+        non-flag substrings like `--helper`. (No real rtk subcommand
+        named --helper exists, but defensive regex is cheap.)"""
+        # rtk --helper is unknown → strip `rtk` → `--helper` is unknown
+        # → DANGEROUS. This proves the regex isn't matching `--help` as
+        # a prefix of `--helper`.
+        assert classify_shell_command("rtk --helper", _config()) == ShellRiskLevel.DANGEROUS
+
+
 class TestExistingPatternsStillWork:
     """Sanity: the pre-v1.18.5 patterns (ls, cat, etc.) keep their verdicts."""
 

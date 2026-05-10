@@ -104,34 +104,51 @@ def classify_shell_command(command: str, config: Dict[str, List[str]]) -> str:
     Returns:
         ShellRiskLevel value: NEVER, DANGEROUS, or SAFE
     """
-    # v1.18.5: strip leading transparent-wrapper tokens so safety
-    # classification is invariant under engine-side wrapping. A user
-    # (or model) typing `rtk git status` should classify the same as
-    # `git status`. The registry knows which wrappers are marked
-    # `transparent_for_safety` and only strips active ones.
-    classify_target = _strip_transparent_wrapper_prefixes(command)
+    # v1.18.5: classify under TWO targets — the original command and the
+    # transparent-wrapper-stripped form — and take the worst-of-original
+    # never-allow plus best-of-either allowed match. Why both?
+    #
+    # 1. Original-first matters for wrapper meta-commands: `rtk gain`
+    #    must match the `^rtk\s+...` allowed pattern. If we stripped
+    #    `rtk` first we'd be classifying just `gain`, which is unknown
+    #    → DANGEROUS for a read-only operation. Wrong.
+    # 2. Stripped form matters for wrapper-prefixed inner commands:
+    #    `rtk git status` doesn't match the rtk meta pattern (because
+    #    `git` isn't in the meta list), but stripping yields
+    #    `git status` which matches the git read-only pattern. SAFE.
+    #
+    # Order: NEVER (either form) → DANGEROUS (either form) → SAFE
+    # (either form) → DANGEROUS (default).
+    stripped = _strip_transparent_wrapper_prefixes(command)
+    targets = [command] if stripped == command else [command, stripped]
 
-    # Check never-allow patterns (catastrophic commands)
+    # Check never-allow patterns on every target — catastrophic patterns
+    # like `rm -rf /` must trigger NEVER even when wrapped (`rtk proxy
+    # rm -rf /` strips to `proxy rm -rf /` which still substring-matches).
     for pattern in config.get("never_allow", []):
         try:
-            if re.search(pattern, classify_target):
-                return ShellRiskLevel.NEVER
+            for target in targets:
+                if re.search(pattern, target):
+                    return ShellRiskLevel.NEVER
         except re.error as e:
             logger.warning(f"Invalid never_allow regex pattern '{pattern}': {e}")
 
-    # Check dangerous patterns (require consent)
+    # Check dangerous patterns on every target.
     for pattern in config.get("dangerous_commands", []):
         try:
-            if re.search(pattern, classify_target):
-                return ShellRiskLevel.DANGEROUS
+            for target in targets:
+                if re.search(pattern, target):
+                    return ShellRiskLevel.DANGEROUS
         except re.error as e:
             logger.warning(f"Invalid dangerous_commands regex pattern '{pattern}': {e}")
 
-    # Check allowed patterns (safe, no consent needed)
+    # Check allowed patterns — original first so wrapper meta-commands
+    # match, stripped second so wrapper-prefixed inner commands match.
     for pattern in config.get("allowed_commands", []):
         try:
-            if re.search(pattern, classify_target):
-                return ShellRiskLevel.SAFE
+            for target in targets:
+                if re.search(pattern, target):
+                    return ShellRiskLevel.SAFE
         except re.error as e:
             logger.warning(f"Invalid allowed_commands regex pattern '{pattern}': {e}")
 
@@ -293,19 +310,19 @@ class BaseConsentManager:
         Returns:
             str: Risk level - ShellRiskLevel value
         """
-        # v1.18.5: see classify_shell_command — strip transparent wrapper
-        # prefixes before pattern matching so safety verdicts are invariant
-        # under engine-side wrapping.
-        command = _strip_transparent_wrapper_prefixes(command)
-        if self._is_never_allowed_command(command):
+        # v1.18.5: classify under both the original and wrapper-stripped
+        # forms — see classify_shell_command for the full rationale.
+        stripped = _strip_transparent_wrapper_prefixes(command)
+        targets = [command] if stripped == command else [command, stripped]
+
+        if any(self._is_never_allowed_command(t) for t in targets):
             return ShellRiskLevel.NEVER
-        elif self._is_dangerous_command(command):
+        if any(self._is_dangerous_command(t) for t in targets):
             return ShellRiskLevel.DANGEROUS
-        elif self._is_allowed_command(command):
+        if any(self._is_allowed_command(t) for t in targets):
             return ShellRiskLevel.SAFE
-        else:
-            # Unknown command - treat as dangerous for safety
-            return ShellRiskLevel.DANGEROUS
+        # Unknown command - treat as dangerous for safety
+        return ShellRiskLevel.DANGEROUS
 
     def reset(self):
         """Reset all consent decisions (new session)."""

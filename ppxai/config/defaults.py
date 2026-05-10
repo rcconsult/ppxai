@@ -61,6 +61,14 @@ DEFAULT_ALLOWED_COMMANDS: List[str] = [
     # on the standard nouns are always read-only per the gh contract.
     r"^gh\s+auth\s+status(\s+|$)",
     r"^gh\s+(repo|pr|issue|release|run|workflow|gist|api|browse|search|status|cache|ruleset|variable|secret|label|codespace|extension|alias|attestation|project)\s+(view|list|status)(\s+|$)",
+    # v1.18.5: rtk meta-commands — read-only operations on rtk itself (NOT
+    # rtk wrapping another tool, which is handled by transparent-prefix
+    # stripping). `gain` / `discover` are analytics, `hook check` is the
+    # dry-run, `--help` / `--version` are universal CLI conventions.
+    # Explicitly excluded (stay DANGEROUS): `rtk init` (writes config),
+    # `rtk init --uninstall` (deletes config), `rtk proxy <cmd>` (bypasses
+    # rtk filtering — inner command's risk should still be classified).
+    r"^rtk\s+(--help|--version|gain|discover|hook\s+check)(\s+|$)",
 ]
 
 
