@@ -30,13 +30,21 @@ class Session:
 
 @dataclass
 class PreviewBackend:
-    """A child process started by /preview --serve."""
+    """A child process started by /preview --serve.
+
+    `drain_task` (v1.18.5) is the asyncio Task that continuously reads
+    the backend's stdout/stderr after port detection completes. Without
+    a drain, the OS PIPE buffer (~64 KB) fills up after enough log lines
+    and the backend blocks on writes — preview hangs indefinitely. Same
+    bug class as v1.18.3 commit a746a7c6 fixed for the shell tool.
+    """
     process: asyncio.subprocess.Process
     port: int
     command: str
     url: str
     working_dir: str
     last_seen: float = field(default_factory=time.time)
+    drain_task: Optional[asyncio.Task] = None
 
 
 # Preview backend processes, keyed by session ID (one per session)
@@ -68,6 +76,17 @@ def all_preview_backends() -> dict[str, PreviewBackend]:
 
 async def kill_preview_backend(backend: PreviewBackend) -> None:
     """Terminate a preview backend process, killing the process group."""
+    # v1.18.5: cancel the stdout drain task FIRST so it doesn't see the
+    # PIPE close as a spurious ConnectionResetError after we kill the
+    # process. The task closes its log file on cancellation (suppressed
+    # via the asyncio.CancelledError path in _drain_backend_output).
+    if backend.drain_task is not None and not backend.drain_task.done():
+        backend.drain_task.cancel()
+        try:
+            await backend.drain_task
+        except (asyncio.CancelledError, Exception):
+            pass
+
     try:
         if platform.system() != "Windows":
             # Kill process group (handles npm/node child processes)

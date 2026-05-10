@@ -405,3 +405,100 @@ class TestKillPreviewBackend:
             await kill_preview_backend(backend)
 
         assert captured["timeout"] == 2
+
+
+# ---------------------------------------------------------------------------
+# v1.18.5 — drain task wiring on PreviewBackend
+# ---------------------------------------------------------------------------
+
+class TestKillPreviewBackendDrainTask:
+    """kill_preview_backend cancels the drain task BEFORE killing the process,
+    so the task doesn't see the PIPE close as a spurious error.
+    """
+
+    def _backend_with_drain(self, drain_task):
+        proc = MagicMock()
+        proc.pid = 12345
+        proc.wait = AsyncMock()
+        proc.terminate = MagicMock()
+        proc.kill = MagicMock()
+        return PreviewBackend(
+            process=proc,
+            port=3000,
+            command="npm start",
+            url="http://127.0.0.1:3000",
+            working_dir="/tmp",
+            drain_task=drain_task,
+        ), proc
+
+    @_unix_only
+    @pytest.mark.asyncio
+    async def test_drain_task_cancelled_before_kill(self):
+        """Cancellation must precede process termination so the drain
+        task doesn't observe a closed PIPE as a real error."""
+        async def long_running():
+            await asyncio.sleep(60)
+
+        drain = asyncio.create_task(long_running())
+        await asyncio.sleep(0)  # let the task actually start
+        backend, proc = self._backend_with_drain(drain)
+
+        with patch("ppxai.server.state.platform.system", return_value="Linux"), \
+             patch("ppxai.server.state.os.getpgid", return_value=12345), \
+             patch("ppxai.server.state.os.killpg"):
+            await kill_preview_backend(backend)
+
+        assert drain.cancelled() or drain.done()
+
+    @_unix_only
+    @pytest.mark.asyncio
+    async def test_drain_task_already_done_skipped(self):
+        """An already-completed drain task must not be re-cancelled."""
+        async def quick():
+            return None
+
+        drain = asyncio.create_task(quick())
+        await drain  # ensure done
+        backend, proc = self._backend_with_drain(drain)
+
+        with patch("ppxai.server.state.platform.system", return_value="Linux"), \
+             patch("ppxai.server.state.os.getpgid", return_value=12345), \
+             patch("ppxai.server.state.os.killpg"):
+            await kill_preview_backend(backend)  # must not raise
+
+        proc.wait.assert_awaited()
+
+    @_unix_only
+    @pytest.mark.asyncio
+    async def test_no_drain_task_legacy_path(self):
+        """Backends constructed without drain_task (legacy callers, tests)
+        must still kill cleanly — the field is Optional with default None."""
+        backend, proc = self._backend_with_drain(None)
+
+        with patch("ppxai.server.state.platform.system", return_value="Linux"), \
+             patch("ppxai.server.state.os.getpgid", return_value=12345), \
+             patch("ppxai.server.state.os.killpg"):
+            await kill_preview_backend(backend)
+
+        proc.wait.assert_awaited()
+
+    @_unix_only
+    @pytest.mark.asyncio
+    async def test_drain_task_raising_on_await_swallowed(self):
+        """If the drain task raises (other than CancelledError) when we
+        await it post-cancel, kill_preview_backend must still proceed
+        to terminate the process."""
+        async def raising():
+            await asyncio.sleep(0.01)
+            raise RuntimeError("drain blew up")
+
+        drain = asyncio.create_task(raising())
+        await asyncio.sleep(0)
+        backend, proc = self._backend_with_drain(drain)
+
+        with patch("ppxai.server.state.platform.system", return_value="Linux"), \
+             patch("ppxai.server.state.os.getpgid", return_value=12345), \
+             patch("ppxai.server.state.os.killpg"):
+            await kill_preview_backend(backend)  # must not raise
+
+        proc.wait.assert_awaited()

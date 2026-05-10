@@ -199,6 +199,67 @@ async def _detect_port_from_output(process: asyncio.subprocess.Process, collecte
     return None
 
 
+async def _drain_backend_output(
+    process: asyncio.subprocess.Process,
+    log_path: Optional[Path] = None,
+) -> None:
+    """Continuously read the backend's stdout/stderr until it exits.
+
+    v1.18.5: without an active reader the OS PIPE buffer (~64 KB) fills
+    up after enough log lines and the backend blocks on its next write —
+    preview appears to hang while the user is interacting with their
+    app. This task runs for the lifetime of the backend, draining each
+    line and (optionally) appending it to a per-backend log file under
+    ~/.ppxai/logs/preview-backend-<pid>.log so failures are debuggable.
+
+    Cancellation: kill_preview_backend cancels this task before
+    terminating the process. We swallow CancelledError + the
+    ConnectionResetError that asyncio raises when the child's stdout
+    closes mid-read. EOF (empty bytes) terminates the loop cleanly when
+    the backend exits on its own.
+    """
+    log_handle = None
+    if log_path is not None:
+        try:
+            log_path.parent.mkdir(parents=True, exist_ok=True)
+            log_handle = log_path.open("a", encoding="utf-8")
+            log_handle.write(f"\n=== Preview backend pid {process.pid} drain start ===\n")
+            log_handle.flush()
+        except OSError as e:
+            logger.warning(f"Preview drain: could not open log {log_path}: {e}")
+            log_handle = None
+
+    try:
+        while True:
+            try:
+                line = await process.stdout.readline()
+            except (asyncio.CancelledError, ConnectionResetError):
+                raise
+            if not line:
+                # EOF — backend exited; readline returns b'' and won't unblock again
+                break
+            if log_handle is not None:
+                try:
+                    log_handle.write(line.decode("utf-8", errors="replace"))
+                    log_handle.flush()
+                except OSError:
+                    # Disk full / permissions / etc — keep draining the PIPE
+                    # so the backend doesn't block, but stop trying to log.
+                    log_handle = None
+    except asyncio.CancelledError:
+        # Normal cancellation from kill_preview_backend; suppress and exit.
+        pass
+    except Exception as e:
+        logger.warning(f"Preview drain: unexpected error pid {process.pid}: {e}")
+    finally:
+        if log_handle is not None:
+            try:
+                log_handle.write(f"=== Preview backend pid {process.pid} drain end ===\n")
+                log_handle.close()
+            except OSError:
+                pass
+
+
 async def _wait_for_port(port: int, timeout: float = 10.0) -> bool:
     """Poll localhost:port until it responds or timeout."""
     deadline = time.time() + timeout
@@ -304,6 +365,16 @@ async def start_preview_serve(
             ),
         )
 
+    # v1.18.5: spawn a continuous-drain task on the backend's stdout/stderr.
+    # Port detection above only read the first ~5s of output. After that
+    # the PIPE would fill on its own and block the backend without an
+    # active reader. Per-backend log file lives under ~/.ppxai/logs/.
+    log_path = Path.home() / ".ppxai" / "logs" / f"preview-backend-{process.pid}.log"
+    drain_task = asyncio.create_task(
+        _drain_backend_output(process, log_path),
+        name=f"preview-drain-{process.pid}",
+    )
+
     # Store the backend
     backend = PreviewBackend(
         process=process,
@@ -311,10 +382,13 @@ async def start_preview_serve(
         command=command,
         url=url,
         working_dir=working_dir,
+        drain_task=drain_task,
     )
     set_preview_backend(s.id, backend)
 
-    logger.info(f"Preview serve: backend running at {url} (pid {process.pid})")
+    logger.info(
+        f"Preview serve: backend running at {url} (pid {process.pid}, log {log_path})"
+    )
 
     return {
         "url": url,
