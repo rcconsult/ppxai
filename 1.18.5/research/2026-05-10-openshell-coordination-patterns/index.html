@@ -1,0 +1,1687 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Multi-LLM Interface for Developers - Terminal & VSCode">
+      
+      
+      
+        <link rel="canonical" href="https://rcconsult.github.io/ppxai/1.18.5/research/2026-05-10-openshell-coordination-patterns/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Research note: OpenShell multi-agent coordination patterns and what (and what not) to lift into ppxai - ppxai Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#research-note-openshell-multi-agent-coordination-patterns-and-what-and-what-not-to-lift-into-ppxai" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="ppxai Documentation" class="md-header__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ppxai Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Research note: OpenShell multi-agent coordination patterns and what (and what not) to lift into ppxai
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="ppxai Documentation" class="md-nav__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ppxai Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../INSTALLATION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../PROVIDER_SETUP/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provider Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../AGENT_MODE_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agent Mode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../BOOTSTRAP_CONTEXT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bootstrap Context
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../CONTEXT-INJECTION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Context Injection
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../CHECKPOINT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Checkpoint & Undo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../FILE_EDITING_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    File Editing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../SHELL_CONSENT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shell Consent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../CUSTOM_TOOL_DEVELOPMENT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../CUSTOM_COMMAND_DEVELOPMENT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ARCHITECTURE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ollama-limitations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ollama Limitations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../vllm-tool-calling-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    vLLM Tool Calling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../CONTAINER_TOOLS_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Container Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../AUTOROUTER-CONFIG/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autorouter Config
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release Notes
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Release Notes
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../RELEASE-NOTES-v1.16.1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../RELEASE-NOTES-v1.16.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../RELEASE-NOTES-v1.15.6/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.15.6
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#tldr" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TL;DR
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1-what-openshells-multi-agent-notepad-actually-does" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. What OpenShell's multi-agent-notepad actually does
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-reframe-ppxai-is-single-user-openshell-is-a-platform" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Reframe: ppxai is single-user; OpenShell is a platform
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-the-three-patterns-worth-lifting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. The three patterns worth lifting
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. The three patterns worth lifting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#31-sha-conditional-writes-http-409-retry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.1 SHA-conditional writes / HTTP 409 retry
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#32-runsrun-idagent-n-artifact-namespace" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.2 runs/&lt;run-id&gt;/agent-&lt;n&gt;/ artifact namespace
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#33-map-reduce-shape-as-the-canonical-sub-agent-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.3 Map-reduce shape as the canonical sub-agent example
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-what-we-dont-take-and-why" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. What we don't take — and why
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. What we don&#39;t take — and why">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#41-per-agent-containers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.1 Per-agent containers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#42-bash-host-orchestration-external-cli-agent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.2 Bash host orchestration + external CLI agent
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#43-provider-backed-credentials-at-network-boundary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.3 Provider-backed credentials at network boundary
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#44-gh-jq-on-the-host" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.4 gh + jq on the host
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#45-network-policy-as-yaml-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.5 Network policy as YAML data
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-specific-recommendations-for-adr-0003-stage-2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Specific recommendations for ADR 0003 Stage 2
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-whats-not-in-scope-for-this-note" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. What's NOT in scope for this note
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#related-documents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Related documents
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="research-note-openshell-multi-agent-coordination-patterns-and-what-and-what-not-to-lift-into-ppxai">Research note: OpenShell multi-agent coordination patterns and what (and what not) to lift into ppxai<a class="headerlink" href="#research-note-openshell-multi-agent-coordination-patterns-and-what-and-what-not-to-lift-into-ppxai" title="Permanent link">&para;</a></h1>
+<p><strong>Date:</strong> 2026-05-10
+<strong>Status:</strong> Research / exploratory — not a decision
+<strong>Triggered by:</strong> review of NVIDIA's OpenShell multi-agent-notepad
+example (https://github.com/NVIDIA/OpenShell/tree/main/examples/multi-agent-notepad)
+in the context of <a href="../../decisions/0003-agent-platform-architecture/">ADR 0003 — Agent platform architecture</a>
+<strong>Author:</strong> Captured from a research conversation; not vetted against a build.
+<strong>Not blocking:</strong> v1.19.x agent-platform planning can proceed without
+this. It exists so the patterns OpenShell got right (and the ones that
+don't fit ppxai) are documented before Stage 2 sub-agent design starts.</p>
+<p>This is a research note, not an architecture decision record. If the
+patterns lifted from here actually inform a v1.19.x design choice,
+amend ADR 0003 with a reference back to this note.</p>
+<h2 id="tldr">TL;DR<a class="headerlink" href="#tldr" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>OpenShell pattern</th>
+<th>Adopt?</th>
+<th>Where in ppxai</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Per-agent container sandboxing</td>
+<td>❌ No</td>
+<td>ppxai is single-user, not a multi-tenant platform</td>
+</tr>
+<tr>
+<td>Bash + external CLI agent (Codex) orchestration</td>
+<td>❌ No</td>
+<td>ppxai's engine runs in-process Python, not shell-spawned agents</td>
+</tr>
+<tr>
+<td>Provider-backed credential injection at network boundary</td>
+<td>❌ No</td>
+<td>Conflicts with ppxai's <code>~/.ppxai/.env</code> single-user value prop</td>
+</tr>
+<tr>
+<td><code>gh + jq</code> host-side orchestration scripts</td>
+<td>❌ No</td>
+<td>ppxai-server IS the orchestrator</td>
+</tr>
+<tr>
+<td>Network policy as data (<code>policy.template.yaml</code>)</td>
+<td>⚠️ Partial</td>
+<td>Could extend resource budgets to network egress in v1.19.x; not urgent</td>
+</tr>
+<tr>
+<td><strong>SHA-conditional writes / 409-retry coordination</strong></td>
+<td>✅ Yes (already use this)</td>
+<td>ppxai already does this with <code>cwd_anchor</code> 409 in state-sync; pattern generalizes to multi-agent file artifacts</td>
+</tr>
+<tr>
+<td><strong><code>runs/&lt;run-id&gt;/agent-&lt;n&gt;/</code> artifact namespace</strong></td>
+<td>✅ Yes</td>
+<td>Solves four "what's missing" items from ADR 0003 in one shape (run_id, persistence, parent/child, scoped budgets)</td>
+</tr>
+<tr>
+<td><strong>Map-reduce demo shape (N workers + 1 synthesizer)</strong></td>
+<td>✅ Yes</td>
+<td>Tight, easy-to-explain canonical sub-agent example for ppxai docs</td>
+</tr>
+</tbody>
+</table>
+<h2 id="1-what-openshells-multi-agent-notepad-actually-does">1. What OpenShell's multi-agent-notepad actually does<a class="headerlink" href="#1-what-openshells-multi-agent-notepad-actually-does" title="Permanent link">&para;</a></h2>
+<p>A bash-script demonstration of N coding agents (NVIDIA's "Codex" agent)
+running in <strong>isolated containers</strong>, coordinating only through a
+<strong>shared GitHub repo</strong> with one note file per worker and one synthesis
+file written by the parent.</p>
+<p>File layout:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>runs/&lt;run-id&gt;/notes/agent-1.md    ← worker 1 writes
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>runs/&lt;run-id&gt;/notes/agent-2.md    ← worker 2 writes
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>runs/&lt;run-id&gt;/notes/agent-N.md    ← worker N writes
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>runs/&lt;run-id&gt;/summary.md          ← synthesis agent writes
+</span></code></pre></div>
+<p>Coordination model: workers never share filesystems or containers.
+Concurrency control comes from GitHub's "every PUT must include the
+current file SHA" — concurrent writers get HTTP 409, retry.</p>
+<p>Stack:
+- <code>openshell</code> Go CLI
+- Docker gateway
+- <code>demo.sh</code> host orchestrator + <code>runner.sh</code> per-sandbox script
+- <code>gh</code> + <code>jq</code> on the host
+- Bash everywhere
+- Codex preinstalled in the sandbox image
+- <code>policy.template.yaml</code> declaring network egress allowlist per sandbox</p>
+<h2 id="2-reframe-ppxai-is-single-user-openshell-is-a-platform">2. Reframe: ppxai is single-user; OpenShell is a platform<a class="headerlink" href="#2-reframe-ppxai-is-single-user-openshell-is-a-platform" title="Permanent link">&para;</a></h2>
+<p>OpenShell is solving the <strong>multi-tenant cloud-platform</strong> problem:
+how do you let many agents from many users run in the same
+infrastructure without leaking secrets, files, or network access
+across tenants? The answer is "containers + network policies +
+credential brokers + shared-storage coordination," and that's a
+correct answer for that problem.</p>
+<p>ppxai is solving a different problem: <strong>a single user wants their
+local agent to do useful parallel work.</strong> No multi-tenancy. No
+shared infrastructure. No external user supplying credentials. The
+"tenant" is the human running ppxai locally; the "agents" are
+sub-tasks of that human's intent. Per-agent containers would 100x
+the install footprint for zero benefit.</p>
+<p>The k8s session-manager (Item 3 in <a href="../../DEBT-INVENTORY/">DEBT-INVENTORY.md</a>)
+is the <strong>only</strong> place ppxai uses containers, and that's for tenant
+isolation in the multi-user deploy shape — orthogonal to per-agent
+isolation.</p>
+<p>So most of OpenShell's design surface is <em>correct for OpenShell</em> and
+<em>wrong for ppxai</em>. The patterns that DO transplant are the ones that
+solve coordination problems independent of the multi-tenant question.</p>
+<h2 id="3-the-three-patterns-worth-lifting">3. The three patterns worth lifting<a class="headerlink" href="#3-the-three-patterns-worth-lifting" title="Permanent link">&para;</a></h2>
+<h3 id="31-sha-conditional-writes-http-409-retry">3.1 SHA-conditional writes / HTTP 409 retry<a class="headerlink" href="#31-sha-conditional-writes-http-409-retry" title="Permanent link">&para;</a></h3>
+<p><strong>OpenShell's use:</strong> Workers write to GitHub. Every PUT carries the
+expected current SHA; concurrent writers get HTTP 409; retry with
+the new SHA.</p>
+<p><strong>Why ppxai already does this:</strong> the <code>cwd_anchor</code> 409 in v1.18.1's
+state-sync determinism work uses the same pattern — client sends
+expected anchor, server returns 409 if state moved, client re-anchors
+from <code>GET /state</code>. See [docs/patterns/state-sync-determinism.md].</p>
+<p><strong>What to take:</strong> confirmation that the pattern scales to multi-agent
+file artifacts. When sub-agents write to a shared workspace,
+<code>POST /workspace/file/&lt;path&gt;</code> can carry the expected SHA and return
+409 on conflict. No new infrastructure — generalize the existing
+protocol from session-state to workspace-state. Cheap.</p>
+<h3 id="32-runsrun-idagent-n-artifact-namespace">3.2 <code>runs/&lt;run-id&gt;/agent-&lt;n&gt;/</code> artifact namespace<a class="headerlink" href="#32-runsrun-idagent-n-artifact-namespace" title="Permanent link">&para;</a></h3>
+<p><strong>OpenShell's use:</strong> Every multi-agent run gets a unique run-id;
+each worker has its own slot under <code>runs/&lt;run-id&gt;/notes/agent-&lt;n&gt;.md</code>;
+the synthesizer reads all slots and writes the summary in the
+parent slot.</p>
+<p><strong>Why ppxai needs this:</strong> ADR 0003's "what's missing" list names
+seven gaps. This namespace shape solves four of them at once:</p>
+<table>
+<thead>
+<tr>
+<th>ADR 0003 gap</th>
+<th>How the namespace solves it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Run identity</strong> ("No run_id. Can't address a running agent later")</td>
+<td>The directory name IS the run_id</td>
+</tr>
+<tr>
+<td><strong>Run persistence</strong> ("Engine restart loses everything mid-run")</td>
+<td>Sub-agents recover by re-reading their slot — slot is the persistence boundary</td>
+</tr>
+<tr>
+<td><strong>Parent/child relationship</strong> ("No model for sub-agents")</td>
+<td>Slot ownership IS the relationship — <code>agent-1/</code> is owned by sub-agent 1, parent reads <code>agent-N/output.md</code></td>
+</tr>
+<tr>
+<td><strong>Resource budgets</strong> ("Implicit max_iterations; no token/time caps")</td>
+<td><code>runs/&lt;run-id&gt;/meta.json</code> carries <code>{budget, started_at, status}</code> per run</td>
+</tr>
+</tbody>
+</table>
+<p>Concrete shape for ppxai (local filesystem, not GitHub):</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>~/.ppxai/runs/&lt;run_id&gt;/
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>  meta.json              # {parent_run, status, started_at, budget, model}
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>  agent-1/
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    output.md            # what subagent 1 produced
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    log.jsonl            # event stream (ANALOG of AGENT_BEAT/RUN_*)
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>    state.json           # checkpoint for resume
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>  agent-2/
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>    output.md
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>    log.jsonl
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>    state.json
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>  ...
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>  synthesis.md           # parent reads agent-N/output.md, writes here
+</span></code></pre></div>
+<p>This is the <strong>artifact-isolation model</strong>: "different files, same
+workspace." It gets you OpenShell's coordination guarantees without
+OpenShell's container infrastructure.</p>
+<h3 id="33-map-reduce-shape-as-the-canonical-sub-agent-example">3.3 Map-reduce shape as the canonical sub-agent example<a class="headerlink" href="#33-map-reduce-shape-as-the-canonical-sub-agent-example" title="Permanent link">&para;</a></h3>
+<p><strong>OpenShell's framing:</strong> "N worker agents fan out and write one note
+each; one synthesis agent reads them and writes a summary."</p>
+<p><strong>Why this is the right canonical example for ppxai:</strong> the
+fan-out/fan-in shape maps onto common dev tasks:</p>
+<ul>
+<li><strong>Research + summarize:</strong> "Research these 5 frameworks; summarize trade-offs." Worker per framework, synthesizer writes the comparison.</li>
+<li><strong>Parallel benchmark + compare:</strong> Worker per model/provider runs the benchmark; synthesizer writes the leaderboard. Already kind of how <code>tests/benchmarks/</code> is structured manually.</li>
+<li><strong>Fan-out search + consolidate:</strong> "Search these 3 codebases for X; consolidate findings." One subagent per repo.</li>
+<li><strong>Per-file refactor + assemble:</strong> "Refactor each of these 12 files to pattern Y; report a single PR description." Worker per file, synthesizer writes the PR body.</li>
+</ul>
+<p>When ADR 0003 Stage 2 lands, the docs should ship with this canonical
+example. It's tight, easy to explain, and demonstrates all the
+sub-agent primitives (<code>spawn_subagent</code>, <code>await_subagent</code>, <code>read_subagent_output</code>).</p>
+<h2 id="4-what-we-dont-take-and-why">4. What we don't take — and why<a class="headerlink" href="#4-what-we-dont-take-and-why" title="Permanent link">&para;</a></h2>
+<p>For each rejected pattern, the explicit "this is correct for OpenShell
+but wrong for ppxai" reasoning, so future contributors don't
+re-litigate it:</p>
+<h3 id="41-per-agent-containers">4.1 Per-agent containers<a class="headerlink" href="#41-per-agent-containers" title="Permanent link">&para;</a></h3>
+<p><strong>OpenShell:</strong> sandbox-per-agent for isolation across untrusted
+tenants and untrusted agent code.</p>
+<p><strong>ppxai:</strong> the user's own machine, the user's own files, the user's
+own agents. Containers would add 100s of MB to install footprint and
+cold-start latency to every sub-agent spawn. No security benefit
+because the threat model is "the user can already do everything the
+agent does." Only place this changes is the k8s deployment shape
+(Item 3 in DEBT-INVENTORY) where k8s already provides tenant
+isolation per-session.</p>
+<h3 id="42-bash-host-orchestration-external-cli-agent">4.2 Bash host orchestration + external CLI agent<a class="headerlink" href="#42-bash-host-orchestration-external-cli-agent" title="Permanent link">&para;</a></h3>
+<p><strong>OpenShell:</strong> <code>demo.sh</code> on the host invokes <code>openshell</code> to spawn
+sandboxes, each running <code>runner.sh</code> which invokes <code>codex</code> agent.
+Multi-process, shell-glued.</p>
+<p><strong>ppxai:</strong> <code>chat_with_tools</code> runs in-process inside the engine.
+Sub-agents will be <strong>another in-process call</strong> with scoped state,
+not a spawned external process. Shell-glue would force serialization
+through subprocess overhead, defeating most of the parallelism win.</p>
+<h3 id="43-provider-backed-credentials-at-network-boundary">4.3 Provider-backed credentials at network boundary<a class="headerlink" href="#43-provider-backed-credentials-at-network-boundary" title="Permanent link">&para;</a></h3>
+<p><strong>OpenShell:</strong> sandboxes start with placeholder credentials; real
+ones are injected at the network gateway based on policy. Designed
+so the agent code can never exfiltrate the real key.</p>
+<p><strong>ppxai:</strong> API keys live in <code>~/.ppxai/.env</code> because the user owns
+both the keys and the agent. Adding a credential broker would
+require a long-running daemon process, complicate the install, and
+add an attack surface (the broker itself). The whole "single-user
+local app" value prop dies if you bolt on tenant-isolation infra.</p>
+<h3 id="44-gh-jq-on-the-host">4.4 <code>gh</code> + <code>jq</code> on the host<a class="headerlink" href="#44-gh-jq-on-the-host" title="Permanent link">&para;</a></h3>
+<p><strong>OpenShell:</strong> uses the GitHub repo as the durable coordination
+substrate, so the host needs <code>gh</code> for repo operations and <code>jq</code> for
+parsing API responses.</p>
+<p><strong>ppxai:</strong> ppxai-server already has session storage, file storage,
+event bus — those ARE the coordination substrate. Layering a GitHub
+dependency on top would mean every sub-agent run requires GitHub
+auth, which breaks offline use and adds a network round-trip per
+write. The local filesystem is faster, simpler, and already there.</p>
+<h3 id="45-network-policy-as-yaml-data">4.5 Network policy as YAML data<a class="headerlink" href="#45-network-policy-as-yaml-data" title="Permanent link">&para;</a></h3>
+<p><strong>OpenShell:</strong> <code>policy.template.yaml</code> per sandbox declares allowed
+hosts/paths/methods. Network gateway enforces.</p>
+<p><strong>ppxai:</strong> could be useful eventually as part of resource budgets
+("agent X may only call api.openai.com, not arbitrary hosts"), but:</p>
+<ol>
+<li>Tools layer already gates network access via the consent
+   contract — see [docs/CONSENT-CONTRACT.md].</li>
+<li>Sub-agents inherit the parent's tool consent, so policy lives at
+   the tool level, not the network level.</li>
+<li>Building a separate policy-enforcement layer is significant work
+   for marginal benefit when the existing tool gates already cover
+   the threat model.</li>
+</ol>
+<p>If autonomous agents (long-running, client-disconnect-survivable)
+ever need finer-grained egress control, revisit this. For now, ADR
+0003's "implicit max_iterations" gap is more pressing than network
+policy.</p>
+<h2 id="5-specific-recommendations-for-adr-0003-stage-2">5. Specific recommendations for ADR 0003 Stage 2<a class="headerlink" href="#5-specific-recommendations-for-adr-0003-stage-2" title="Permanent link">&para;</a></h2>
+<p>When <code>spawn_subagent</code> is designed:</p>
+<ol>
+<li><strong>Adopt the <code>runs/&lt;run_id&gt;/agent-&lt;n&gt;/</code> namespace as the
+   coordination contract.</strong> It collapses four "what's missing"
+   items into one shape.</li>
+<li><strong>Use SHA-conditional file writes</strong> when sub-agents share write
+   targets. Generalize the existing <code>cwd_anchor</code> 409 protocol from
+   session-state to workspace-state.</li>
+<li><strong>Ship the map-reduce example</strong> in the v1.19.x sub-agent docs.
+   <code>examples/sub-agents/research-and-summarize/</code> analogous to the
+   OpenShell layout, but with a 50-line ppxai prompt instead of a
+   500-line bash script.</li>
+<li><strong>Don't import OpenShell as a dependency.</strong> The architectural
+   gap is too large; the patterns transplant, the code does not.</li>
+</ol>
+<h2 id="6-whats-not-in-scope-for-this-note">6. What's NOT in scope for this note<a class="headerlink" href="#6-whats-not-in-scope-for-this-note" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Code-signing or verification of sub-agent prompts (no analog in
+  OpenShell either)</li>
+<li>Multi-machine or distributed agent coordination (ppxai is
+  single-machine; the deploy session-manager is a separate axis)</li>
+<li>Cross-agent message bus / pub-sub (the artifact-namespace pattern
+  intentionally avoids needing one — workers don't talk to each
+  other, only to their slot)</li>
+</ul>
+<p>If those become real requirements, write follow-up notes; don't
+try to retrofit them into this one.</p>
+<h2 id="related-documents">Related documents<a class="headerlink" href="#related-documents" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../../decisions/0003-agent-platform-architecture/">docs/decisions/0003-agent-platform-architecture.md</a> — the active ADR this note feeds into</li>
+<li><a href="../../patterns/state-sync-determinism/">docs/patterns/state-sync-determinism.md</a> — the existing 409-retry pattern that generalizes</li>
+<li><a href="../../CONSENT-CONTRACT/">docs/CONSENT-CONTRACT.md</a> — current security boundary (per-tool, not per-network)</li>
+<li><a href="../2026-04-29-python-vs-go-for-agents/">docs/research/2026-04-29-python-vs-go-for-agents.md</a> — sibling research note on language choice for autonomous agents</li>
+<li><a href="../../DEBT-INVENTORY/">DEBT-INVENTORY.md</a> Item 3 — k8s session-manager (the only multi-tenant context in ppxai today)</li>
+<li>OpenShell upstream: https://github.com/NVIDIA/OpenShell</li>
+<li>multi-agent-notepad example: https://github.com/NVIDIA/OpenShell/tree/main/examples/multi-agent-notepad</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/rcconsult/ppxai" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
