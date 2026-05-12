@@ -1484,6 +1484,12 @@
         "timestamp": "2026-05-12T16:28:22.394286",
         "overall_score": 67.22772277227723,
         "agents_md_mode": "without"
+      },
+      {
+        "filename": "dgx-cluster_Qwen_Qwen3.5-122B-A10B-NVFP4_2026-05-12_04cc9664.json",
+        "timestamp": "2026-05-12T17:27:07.166053",
+        "overall_score": 76.23762376237624,
+        "agents_md_mode": "without"
       }
     ]
   },
@@ -3103,6 +3109,13 @@
       "filename": "dgx-cluster_Qwen_Qwen3.5-122B-A10B-NVFP4_2026-05-12_6fcddb58.json",
       "timestamp": "2026-05-12T16:28:22.394286",
       "overall_score": 67.22772277227723,
+      "agents_md_mode": "without"
+    },
+    {
+      "pair": "dgx-cluster/Qwen/Qwen3.5-122B-A10B-NVFP4",
+      "filename": "dgx-cluster_Qwen_Qwen3.5-122B-A10B-NVFP4_2026-05-12_04cc9664.json",
+      "timestamp": "2026-05-12T17:27:07.166053",
+      "overall_score": 76.23762376237624,
       "agents_md_mode": "without"
     }
   ]
