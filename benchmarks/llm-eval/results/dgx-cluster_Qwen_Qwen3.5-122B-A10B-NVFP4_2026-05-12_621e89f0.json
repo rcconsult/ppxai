@@ -1,0 +1,58 @@
+{
+  "provider": "dgx-cluster",
+  "model": "Qwen/Qwen3.5-122B-A10B-NVFP4",
+  "timestamp": "2026-05-12T16:14:34.388800",
+  "overall_score": 100.0,
+  "tests_passed": 3,
+  "tests_total": 3,
+  "duration_seconds": 29.033458948135376,
+  "category_scores": {
+    "instruction_following": 100.0
+  },
+  "test_results": [
+    {
+      "name": "do_not_explain",
+      "category": "instruction_following",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "content_length": 119
+      },
+      "weight": 1.0
+    },
+    {
+      "name": "constraint_respect",
+      "category": "instruction_following",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "line_count": 6
+      },
+      "weight": 1.5
+    },
+    {
+      "name": "format_specification",
+      "category": "instruction_following",
+      "passed": true,
+      "score": 1.0,
+      "details": {
+        "blocks": 3
+      },
+      "weight": 1.0
+    }
+  ],
+  "metadata": {
+    "runner": "engine",
+    "timeout": 180,
+    "retries": 1,
+    "sdk_versions": {
+      "google-genai": "1.56.0",
+      "openai": "2.11.0"
+    },
+    "model_fingerprint": "8aa7060bfbcb",
+    "tool_calling_method": "prompt_based",
+    "total_tokens": 0,
+    "total_tool_calls": 0,
+    "agents_md_mode": "without"
+  }
+}

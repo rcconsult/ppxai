@@ -1471,6 +1471,20 @@
         "overall_score": 85.14851485148515,
         "agents_md_mode": "without"
       }
+    ],
+    "dgx-cluster/Qwen/Qwen3.5-122B-A10B-NVFP4": [
+      {
+        "filename": "dgx-cluster_Qwen_Qwen3.5-122B-A10B-NVFP4_2026-05-12_621e89f0.json",
+        "timestamp": "2026-05-12T16:14:34.388800",
+        "overall_score": 100.0,
+        "agents_md_mode": "without"
+      },
+      {
+        "filename": "dgx-cluster_Qwen_Qwen3.5-122B-A10B-NVFP4_2026-05-12_6fcddb58.json",
+        "timestamp": "2026-05-12T16:28:22.394286",
+        "overall_score": 67.22772277227723,
+        "agents_md_mode": "without"
+      }
     ]
   },
   "runs": [
@@ -3075,6 +3089,20 @@
       "filename": "vllm-qwen35_Qwen_Qwen3.5-27B-FP8_2026-05-05_b57e4c00.json",
       "timestamp": "2026-05-05T14:52:39.929845",
       "overall_score": 93.96039603960396,
+      "agents_md_mode": "without"
+    },
+    {
+      "pair": "dgx-cluster/Qwen/Qwen3.5-122B-A10B-NVFP4",
+      "filename": "dgx-cluster_Qwen_Qwen3.5-122B-A10B-NVFP4_2026-05-12_621e89f0.json",
+      "timestamp": "2026-05-12T16:14:34.388800",
+      "overall_score": 100.0,
+      "agents_md_mode": "without"
+    },
+    {
+      "pair": "dgx-cluster/Qwen/Qwen3.5-122B-A10B-NVFP4",
+      "filename": "dgx-cluster_Qwen_Qwen3.5-122B-A10B-NVFP4_2026-05-12_6fcddb58.json",
+      "timestamp": "2026-05-12T16:28:22.394286",
+      "overall_score": 67.22772277227723,
       "agents_md_mode": "without"
     }
   ]
