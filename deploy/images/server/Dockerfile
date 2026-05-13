@@ -77,13 +77,22 @@ RUN curl -fsSL -o /usr/local/bin/yq \
 # DEFAULT_SHELL_WRAPPERS ships rtk as the canonical first entry, so the
 # in-image binary + the engine-side rewrite hook line up. Bump RTK_VERSION
 # as new releases land; double-check the rewrite-command shape didn't change.
+#
+# Why musl tarball, not the .deb: the official .deb is built against
+# glibc >= 2.39 (Trixie / Ubuntu 24.04). python:3.12-slim-bookworm ships
+# glibc 2.36, so the .deb fails dependency resolution. The
+# x86_64-unknown-linux-musl tarball is statically linked — no glibc
+# dependency at all, works on any kernel >=3.2.
 ARG RTK_VERSION=0.39.0
-RUN curl -fsSL -o /tmp/rtk.deb \
-        https://github.com/rtk-ai/rtk/releases/download/v${RTK_VERSION}/rtk_${RTK_VERSION}-1_amd64.deb \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends /tmp/rtk.deb \
-    && rm -f /tmp/rtk.deb \
-    && rm -rf /var/lib/apt/lists/*
+RUN set -eux \
+    && mkdir -p /tmp/rtk-install \
+    && curl -fsSL -o /tmp/rtk-install/rtk.tar.gz \
+        https://github.com/rtk-ai/rtk/releases/download/v${RTK_VERSION}/rtk-x86_64-unknown-linux-musl.tar.gz \
+    && tar -xzf /tmp/rtk-install/rtk.tar.gz -C /tmp/rtk-install \
+    && find /tmp/rtk-install -name rtk -type f -executable \
+        -exec install -m 0755 {} /usr/local/bin/rtk \; \
+    && rm -rf /tmp/rtk-install \
+    && /usr/local/bin/rtk --version
 
 # Web UI files — served by the HTTP server from ~/.ppxai/web/
 COPY --from=builder /build/ppxai/web/ /root/.ppxai/web/
