@@ -143,7 +143,13 @@ class ServerCommandContext:
         pass
 
     def get_tools_available(self) -> bool:
-        return self._engine.state.get("tools_enabled")
+        # "available" means "tool support is installed", NOT "currently on".
+        # The engine always ships builtin tools — so this is unconditionally
+        # True for any context backed by EngineClient. Matches RichCommandContext.
+        # Returning `state.tools_enabled` here was the bug that broke `/tools enable`
+        # from web/VSCode: when tools were OFF, the command refused to turn them on
+        # with the nonsense error "Tool support not available".
+        return True
 
     def get_tools_verbose(self) -> bool:
         return False
