@@ -80,6 +80,22 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # corporate certs to install.
 COPY deploy/images/server/extra-certs/ /usr/local/share/ca-certificates/
 RUN update-ca-certificates
+# Python's TLS (httpx, openai-sdk, requests) uses certifi's bundled CA list,
+# NOT the system bundle. update-ca-certificates above only updates the
+# system bundle (used by curl, OS tools). Append our corporate CAs to
+# certifi's bundle too so Python clients trust them. Guarded so that if
+# extra-certs/ is empty the cat-glob doesn't error.
+RUN CERTIFI_BUNDLE=$(/opt/venv/bin/python -c "import certifi; print(certifi.where())") \
+    && if ls /usr/local/share/ca-certificates/*.crt >/dev/null 2>&1; then \
+         cat /usr/local/share/ca-certificates/*.crt >> "$CERTIFI_BUNDLE" ; \
+         echo "appended corporate CAs to $CERTIFI_BUNDLE" ; \
+       fi
+# Belt + suspenders: tell Python's ssl module to use the system bundle by
+# default. Some libraries bypass certifi (e.g. anything that calls
+# ssl.create_default_context() with no cafile argument). The system bundle
+# is now authoritative thanks to update-ca-certificates.
+ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+ENV REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
 
 # yq (Go binary from mikefarah/yq — apt's yq is the slow Python wrapper)
 RUN curl -fsSL -o /usr/local/bin/yq \
