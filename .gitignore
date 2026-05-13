@@ -125,3 +125,6 @@ graphify-out-*/
 # so the v1.18.2 banner doesn't show "n/a, n/a"). Never committed —
 # regenerated per build.
 ppxai/_build_info.py
+
+# Corporate CA certs baked into coder-server image (operator-side state)
+deploy/images/server/extra-certs/*.crt

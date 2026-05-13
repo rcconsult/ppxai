@@ -67,6 +67,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && ln -sf /usr/bin/fdfind /usr/local/bin/fd \
     && rm -rf /var/lib/apt/lists/*
 
+# Corporate / org CA certificates — install into the image's trust store so
+# httpx + openai-sdk + curl can verify TLS to enterprise-CA-signed endpoints
+# (e.g. dgx-cluster.trad.int presents a cert chain from CN=CA Compagnie
+# Financiere Tradition; default debian trust doesn't include it, so without
+# this every call fails with "unable to get local issuer certificate").
+#
+# The extra-certs/ directory is gitignored except for .gitkeep. Operators
+# drop their org's *.crt files in before running build.sh. An empty
+# directory is fine — `update-ca-certificates` is a no-op when nothing is
+# new, so this Dockerfile slice still works in fresh checkouts with no
+# corporate certs to install.
+COPY deploy/images/server/extra-certs/ /usr/local/share/ca-certificates/
+RUN update-ca-certificates
+
 # yq (Go binary from mikefarah/yq — apt's yq is the slow Python wrapper)
 RUN curl -fsSL -o /usr/local/bin/yq \
         https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 \
