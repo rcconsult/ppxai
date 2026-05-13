@@ -39,11 +39,50 @@ COPY --from=builder /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 # Runtime system deps:
-#   poppler-utils  — pdf2image (GetPdfPageImageTool)
+#   poppler-utils    — pdf2image (GetPdfPageImageTool)
 #   libreoffice-nogui — PPTX/DOCX slide rasterization (RenderPptxSlideTool)
+#   git              — version control (essential for any coding workflow)
+#   curl, wget, ca-certificates — HTTP fetch + TLS for yq/rtk downloads below
+#   jq               — JSON wrangling in shell
+#   ripgrep, fd-find — fast code search (fd binary is named fdfind; symlinked below)
+#   tree, less, unzip, zip — common shell utilities
+#   vim-tiny, nano   — minimal editors (vim-tiny for sed-style; nano for non-vim agents)
+# Rationale + alternatives considered: docs/TODO-v1.18.6-coder-image-tools.md
 RUN apt-get update && apt-get install -y --no-install-recommends \
     poppler-utils \
     libreoffice-nogui \
+    git \
+    curl \
+    wget \
+    jq \
+    ripgrep \
+    fd-find \
+    tree \
+    less \
+    unzip \
+    zip \
+    vim-tiny \
+    nano \
+    ca-certificates \
+    && ln -sf /usr/bin/fdfind /usr/local/bin/fd \
+    && rm -rf /var/lib/apt/lists/*
+
+# yq (Go binary from mikefarah/yq — apt's yq is the slow Python wrapper)
+RUN curl -fsSL -o /usr/local/bin/yq \
+        https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 \
+    && chmod +x /usr/local/bin/yq
+
+# rtk — Rust Token Killer (github.com/rtk-ai/rtk, NOT reachingforthejack/rtk).
+# Pinned for reproducibility. Pairs with v1.18.5 shell-wrapper framework —
+# DEFAULT_SHELL_WRAPPERS ships rtk as the canonical first entry, so the
+# in-image binary + the engine-side rewrite hook line up. Bump RTK_VERSION
+# as new releases land; double-check the rewrite-command shape didn't change.
+ARG RTK_VERSION=0.39.0
+RUN curl -fsSL -o /tmp/rtk.deb \
+        https://github.com/rtk-ai/rtk/releases/download/v${RTK_VERSION}/rtk_${RTK_VERSION}-1_amd64.deb \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends /tmp/rtk.deb \
+    && rm -f /tmp/rtk.deb \
     && rm -rf /var/lib/apt/lists/*
 
 # Web UI files — served by the HTTP server from ~/.ppxai/web/
