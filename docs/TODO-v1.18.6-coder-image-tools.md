@@ -30,16 +30,40 @@ Coder pods are general-purpose developer sandboxes — users run `ppxai-server` 
 | `tree` | `tree` | ~100 KB | Directory visualization. Useful for "show me the repo layout" prompts. |
 | `unzip` / `zip` | `unzip` `zip` | ~1 MB | Archive handling. Comes up in build/asset workflows. |
 | `less` | `less` | ~500 KB | Paging. Agents pipe long output to `less`-friendly format checks. |
-| `vim-tiny` | `vim-tiny` | ~2 MB | Minimal vim for `:%s/foo/bar/g` -style edits. NOT full vim (~50 MB) — agents use apply_patch, not interactive vim. |
-| `gh` | (install via apt repo, NOT in base debian) | ~30 MB | GitHub CLI — agents create PRs, comment, view issues. Big win for any GitHub-centric workflow. |
+| `vim-tiny` | `vim-tiny` | ~2 MB | Minimal vim for `:%s/foo/bar/g`-style edits. NOT full vim (~50 MB) — agents use apply_patch, not interactive vim. |
+| `nano` | `nano` | ~1 MB | Beginner-friendly editor — covers the few cases where vim's modal model trips an agent up. |
 
-**Total estimated size delta:** ~110 MB (mostly `git` + `gh`).
+**Total estimated size delta:** ~80 MB (mostly `git`).
 
-**Conservative omissions (worth discussing before adding):**
-- `kubectl` (~50 MB) — useful for in-cluster inspection from inside the pod, but might encourage agents to make changes to the cluster they shouldn't.
-- `make`, `build-essential` (~250 MB) — large; only useful for projects that compile native code in the workspace. Add if a project demands it.
-- `node` + `npm` (~150 MB) — for JS work. Likely worth adding given how common JS tooling is, but defer for now to keep the image lean.
-- Language runtimes (Go, Rust, Ruby) — defer until requested.
+## What's NOT in the list (and why)
+
+- **`gh` (GitHub CLI, ~30 MB)** — initially proposed, removed by maintainer. Agents that need PR/issue/release work via `gh` can install it on-demand inside the session:
+  ```bash
+  curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+    | sudo tee /usr/share/keyrings/githubcli-archive-keyring.gpg > /dev/null
+  echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
+    | sudo tee /etc/apt/sources.list.d/github-cli.list
+  sudo apt update && sudo apt install gh
+  ```
+  (The runtime pod runs as root per the Dockerfile, so `sudo` is a no-op.)
+
+- **`pwsh` (PowerShell v7.6.1, ~180 MB installed)** — `.deb` is 56 MB compressed, installed footprint ~150 MB plus `libicu72` (~30 MB dep). That's **more than the entire rest of the list combined.** Deferred for two reasons:
+  1. Bash is the lingua franca on Linux coder pods; pwsh usage is niche (Azure-heavy workflows, ports from Windows-heritage scripts).
+  2. Users who genuinely need pwsh can install it on-demand in their session:
+     ```bash
+     curl -fsSL -o /tmp/pwsh.deb \
+       https://github.com/PowerShell/PowerShell/releases/download/v7.6.1/powershell_7.6.1-1.deb_amd64.deb
+     apt update && apt install -y /tmp/pwsh.deb && rm /tmp/pwsh.deb
+     ```
+  Revisit if more than a handful of users hit the "I need pwsh" wall.
+
+- **`kubectl` (~50 MB)** — useful for in-cluster inspection from inside the pod, but might encourage agents to make changes to the cluster they shouldn't. Skip.
+
+- **`make`, `build-essential` (~250 MB)** — large; only useful for projects that compile native code in the workspace. Add if a project demands it.
+
+- **`node` + `npm` (~150 MB)** — for JS work. Likely worth adding given how common JS tooling is, but defer until requested to keep the image lean.
+
+- **Language runtimes (Go, Rust, Ruby)** — defer until requested.
 
 ## Suggested Dockerfile patch (Stage-2 only)
 
@@ -52,7 +76,7 @@ Coder pods are general-purpose developer sandboxes — users run `ppxai-server` 
 #   jq               — JSON wrangling in shell
 #   ripgrep, fd-find — fast code search (fd binary is named fdfind; we symlink)
 #   tree, less, unzip, zip — common shell utilities
-#   vim-tiny         — minimal editor for sed-style fixes
+#   vim-tiny, nano   — minimal editors (vim-tiny for sed-style; nano for non-vim agents)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     poppler-utils \
     libreoffice-nogui \
@@ -67,6 +91,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     unzip \
     zip \
     vim-tiny \
+    nano \
     ca-certificates \
     && ln -sf /usr/bin/fdfind /usr/local/bin/fd \
     && rm -rf /var/lib/apt/lists/*
@@ -75,28 +100,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN curl -fsSL -o /usr/local/bin/yq \
     https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 \
     && chmod +x /usr/local/bin/yq
-
-# GitHub CLI — needed for agents that file PRs, comment on issues
-RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
-      | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \
-    && chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg \
-    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
-      > /etc/apt/sources.list.d/github-cli.list \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends gh \
-    && rm -rf /var/lib/apt/lists/*
 ```
 
 ## Verify after the rebuild
 
 ```bash
 # Once Kaniko has pushed :latest, spawn a fresh pod and shell in:
-microk8s kubectl exec -n coder coder-server-<user> -- which git jq yq rg fd tree gh
-# Expect 7 paths, no "not found".
+microk8s kubectl exec -n coder coder-server-<user> -- which git jq yq rg fd tree nano vim.tiny
+# Expect 8 paths, no "not found".
 
 # Quick sanity on tool versions:
 microk8s kubectl exec -n coder coder-server-<user> -- bash -c \
-  'git --version; jq --version; yq --version; rg --version | head -1; gh --version | head -1'
+  'git --version; jq --version; yq --version; rg --version | head -1; nano --version | head -1'
 ```
 
 ## Effort
