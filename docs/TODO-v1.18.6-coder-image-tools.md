@@ -1,8 +1,16 @@
 # TODO: v1.18.6 — Rebuild coder image with latest code + utility tools
 
-**Status:** Not started.
-**Target:** v1.18.6 (or first release that ships `deploy/images/server/Dockerfile` changes).
-**Branch:** `bugfix/v1.18.6` (already carries the context-indicator fixes; image rebuild lives here too).
+**Status:** ✅ DONE — both phases shipped 2026-05-13.
+**Target:** v1.18.6.
+**Branch:** `bugfix/v1.18.6`.
+
+## Outcome
+
+- **Phase 1 (latest code)** — image rebuilt 2026-05-13 from `bugfix/v1.18.6` HEAD, registry digest `sha256:7151576c9c60665b74308fc84ca49f7d4abb340aadde7d50f49ebc191bd7ef2e`. Carries: context-indicator fixes (`a4002844`, `1507e5ca`, `f5c84b7e`, `70a0457f`), benchmark commits (`68624251`, `c7a35b01`), version bump to 1.18.6 (`ea21f244`).
+- **Phase 2 (utility tools)** — Dockerfile Stage-2 patched in `e2737da4` + musl-tarball fix in `9a9343ef`. Image rebuilt 2026-05-13, registry digest `sha256:80bed0680306ab785f5a733af0af3f2b9b0f7719e1cfa95bd047762524ab0cec`. Verified in a fresh pod: all 14 tools (`git jq yq rg fd tree nano vim.tiny rtk curl wget unzip zip less`) resolve to expected paths, `rtk hook check git status` returns the expected `rtk git status` rewrite, and ppxai's wrapper-registry probe reports `is_available=True, is_active=True` against rtk.
+- **rtk integration ppxai-in-pod ≡ ppxai-on-host** — confirmed identical. No filters.toml or history.db needed in the image: rtk is fully passive (binary on PATH + ppxai `DEFAULT_SHELL_WRAPPERS` auto-detection). Per-pod state (history.db) is the right scoping — each developer's pod tracks its own analytics.
+
+The rest of this doc preserves the design rationale for future audits + the install-on-demand snippets for the deferred tools.
 
 ## Two changes in one image rebuild
 
