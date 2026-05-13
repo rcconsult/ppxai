@@ -5,6 +5,32 @@ All notable changes to ppxai will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.18.6] - 2026-05-12
+
+Branch: `bugfix/v1.18.6`. Theme: context-indicator honesty + cluster operations.
+
+### Fixed
+
+- **Context indicator stale on provider/model switch.** Engine `provider_ops._apply_model_switch` now refreshes `context_percentage` against the new model immediately. Web `app.js:handleStateSync` and VSCode `chatPanel.ts:state:sync` handler both re-fetch `/context/info` when `provider` or `model` arrives via state_sync. Web `handleProviderChange` / `handleModelChange` also call `updateContextInfo()` + `updateUsage()` directly so the badge refreshes before any message is sent. Commit `a4002844`, `f5c84b7e`.
+
+- **Context-window over-claim (the 376% bug).** `_sync_usage_to_state` was treating cumulative session totals as per-turn token counts. After 16 turns on a 131K-cap model it reported 493K / 131K (376%). `session.update_usage` now passes the per-turn delta as a second positional arg; `client._sync_usage_to_state` uses delta for `_last_known_message_tokens` (the BPE token count of `session.messages` immediately after the turn). One-arg-listener back-compat preserved via `try/except TypeError`. Commit `70a0457f`.
+
+- **Hard-coded MIN_RESPONSE_TOKENS=2048** in `openai_compat.py` ignored configured per-model `max_tokens`. New `_get_response_reservation()` returns `max(2048, configured_max_tokens)`, closing the spillover where ppxai admitted prompts vLLM rejected with HTTP 400. Commit `a4002844`.
+
+- **chars/4 estimator under-counted code by 20-30%.** `get_context_info` now uses provider-reported `prompt_tokens + completion_tokens` as the authoritative baseline; chars/4 only fires for the suffix appended since the last usage event (typically the user's pending next message). Commit `a4002844`.
+
+### Added
+
+- **`/doctor probe` subcommand.** Opt-in network probe that hits each configured provider's `<base_url>/models` in parallel (2s timeout, max 8 concurrent), reads each model's `max_model_len`, and warns when `context_limit` exceeds the backend's actual cap (over-claim) or under-uses available headroom (under-claim). Default `/doctor` stays offline-fast. Commit `a4002844`.
+
+- **Multi-resolution ICO favicon** (`ppxai/web/favicon.ico`, 110 KB, 6 sizes up to 256×256). `/favicon.ico` serves the .ico directly instead of redirecting to PNG; `index.html` keeps both `<link rel="icon">` entries for fallback. Commit `1507e5ca`.
+
+- **`dgx-cluster` provider in coder cluster ConfigMap.** New PP=2 Qwen3.5-122B-A10B-NVFP4 at `dgx-cluster.trad.int/vllm/v1`. Native tool calling (qwen3_coder parser), prefix-caching, 128K max-model-len. Benchmark 2026-05-12 (native, no AGENTS.md): 76.2% (26/36) — +9pp over the prompt_based baseline (67.2%), with +34pp on `agentic_tool_loops` specifically. Side-by-side results committed in `benchmarks/llm-eval/results/dgx-cluster_*`.
+
+### Deferred (tracked)
+
+- **Coder image rebuild + utility-tools expansion** ([docs/TODO-v1.18.6-coder-image-tools.md](docs/TODO-v1.18.6-coder-image-tools.md)). Add `git jq yq curl wget ripgrep fd-find tree less unzip zip vim-tiny nano rtk` (~83 MB) to Stage-2 of `deploy/images/server/Dockerfile`. `gh`, `pwsh`, `kubectl`, `node`/`npm` explicitly deferred — install-on-demand snippets in the doc.
+
 ## [1.18.5] - 2026-05-10
 
 Branch: `feature/v1.18.5`. Theme: shell wrapper framework — a generic
