@@ -32,8 +32,9 @@ Coder pods are general-purpose developer sandboxes — users run `ppxai-server` 
 | `less` | `less` | ~500 KB | Paging. Agents pipe long output to `less`-friendly format checks. |
 | `vim-tiny` | `vim-tiny` | ~2 MB | Minimal vim for `:%s/foo/bar/g`-style edits. NOT full vim (~50 MB) — agents use apply_patch, not interactive vim. |
 | `nano` | `nano` | ~1 MB | Beginner-friendly editor — covers the few cases where vim's modal model trips an agent up. |
+| `rtk` | (install from GH release `.deb` — `rtk-ai/rtk` v0.39.0) | ~3 MB | **Rust Token Killer** — token-optimized CLI proxy (60-90% savings on dev ops). Once installed + integrated via the Claude Code hook, `git status` → `rtk git status` transparently. Wrapper framework in v1.18.5 already ships `rtk` as the canonical first entry in `DEFAULT_SHELL_WRAPPERS` — so the in-image binary + the engine-side rewrite hook line up. NOTE: a different `reachingforthejack/rtk` (Rust Type Kit) exists on GH — we explicitly want `rtk-ai/rtk`. |
 
-**Total estimated size delta:** ~80 MB (mostly `git`).
+**Total estimated size delta:** ~83 MB (mostly `git`).
 
 ## What's NOT in the list (and why)
 
@@ -100,18 +101,34 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN curl -fsSL -o /usr/local/bin/yq \
     https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 \
     && chmod +x /usr/local/bin/yq
+
+# rtk — Rust Token Killer (github.com/rtk-ai/rtk, NOT reachingforthejack/rtk).
+# Pin the version explicitly so the Dockerfile is reproducible. Bump as new
+# releases land — also bump the v1.18.5 DEFAULT_SHELL_WRAPPERS rtk entry if
+# the rewrite-command shape ever changes.
+ARG RTK_VERSION=0.39.0
+RUN curl -fsSL -o /tmp/rtk.deb \
+    https://github.com/rtk-ai/rtk/releases/download/v${RTK_VERSION}/rtk_${RTK_VERSION}-1_amd64.deb \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends /tmp/rtk.deb \
+    && rm -f /tmp/rtk.deb \
+    && rm -rf /var/lib/apt/lists/*
 ```
 
 ## Verify after the rebuild
 
 ```bash
 # Once Kaniko has pushed :latest, spawn a fresh pod and shell in:
-microk8s kubectl exec -n coder coder-server-<user> -- which git jq yq rg fd tree nano vim.tiny
-# Expect 8 paths, no "not found".
+microk8s kubectl exec -n coder coder-server-<user> -- which git jq yq rg fd tree nano vim.tiny rtk
+# Expect 9 paths, no "not found".
 
 # Quick sanity on tool versions:
 microk8s kubectl exec -n coder coder-server-<user> -- bash -c \
-  'git --version; jq --version; yq --version; rg --version | head -1; nano --version | head -1'
+  'git --version; jq --version; yq --version; rg --version | head -1; nano --version | head -1; rtk --version'
+
+# Confirm rtk-ai/rtk (NOT reachingforthejack/rtk) — the "gain" subcommand
+# only exists on rtk-ai/rtk:
+microk8s kubectl exec -n coder coder-server-<user> -- rtk gain --help | head -3
 ```
 
 ## Effort
