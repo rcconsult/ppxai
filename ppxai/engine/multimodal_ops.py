@@ -94,7 +94,7 @@ def refresh_context_attachments(engine) -> None:
             btype = block.get("type")
             if btype == "image_url":
                 # ADR 0006 Phase 2b: resolve_attachment handles the
-                # AttachmentRef-first-with-in-block-fallback lookup in
+                # ImageAttachmentRef-first-with-in-block-fallback lookup in
                 # one place — see Message.resolve_attachment docstring.
                 # hasattr guard supports test stubs that don't pass
                 # real Message instances.
@@ -117,7 +117,7 @@ def refresh_context_attachments(engine) -> None:
                 # Prefer authoritative metadata from the file store
                 # (populated in Phase 2.1a). Falls back to parsing the
                 # data URI for pure-Phase-1 content blocks. Block lookup
-                # by index is still needed here — AttachmentRef carries
+                # by index is still needed here — ImageAttachmentRef carries
                 # only name/file_id, not the URL we parse for media_type
                 # in the file_store-unavailable case.
                 media_type = ""

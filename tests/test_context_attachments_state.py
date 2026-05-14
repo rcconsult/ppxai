@@ -399,13 +399,13 @@ class TestCallbackResilience:
 # in user-visible badges.
 
 
-class TestScanAttachmentsUsesAttachmentRef:
+class TestScanAttachmentsUsesImageAttachmentRef:
     def test_uses_attachment_ref_name_when_populated(self, engine):
         """When Message.attachments carries a name, the scanner uses it
         even if the in-block `name` differs. Phase 3 will drop the
         in-block name entirely; until then it must be IGNORED when
-        AttachmentRef is present."""
-        from ppxai.engine.types import AttachmentRef
+        ImageAttachmentRef is present."""
+        from ppxai.engine.types import ImageAttachmentRef
         engine.session.add_message(Message(
             role="user",
             content=[
@@ -415,7 +415,7 @@ class TestScanAttachmentsUsesAttachmentRef:
                  "image_url": {"url": "data:image/png;base64,X"}},
             ],
             attachments=[
-                AttachmentRef(block_index=1, name="authoritative.png",
+                ImageAttachmentRef(block_index=1, name="authoritative.png",
                               file_id="sha:authoritative", media_type="image/png"),
             ],
         ))
@@ -426,12 +426,12 @@ class TestScanAttachmentsUsesAttachmentRef:
 
     def test_block_index_correctness_on_mixed_content(self, engine):
         """Mixed-content message (text + image + text + image) — both
-        AttachmentRefs must point at the correct image blocks. If
+        ImageAttachmentRefs must point at the correct image blocks. If
         block_index is computed wrong (e.g. counting only image_url
-        blocks instead of all blocks), the wrong AttachmentRef would
+        blocks instead of all blocks), the wrong ImageAttachmentRef would
         match and the scanner would return swapped names.
         """
-        from ppxai.engine.types import AttachmentRef
+        from ppxai.engine.types import ImageAttachmentRef
         engine.session.add_message(Message(
             role="user",
             content=[
@@ -442,9 +442,9 @@ class TestScanAttachmentsUsesAttachmentRef:
                 {"type": "text", "text": "after"},
             ],
             attachments=[
-                AttachmentRef(block_index=1, name="first.png",
+                ImageAttachmentRef(block_index=1, name="first.png",
                               file_id="sha:1", media_type="image/png"),
-                AttachmentRef(block_index=3, name="second.png",
+                ImageAttachmentRef(block_index=3, name="second.png",
                               file_id="sha:2", media_type="image/png"),
             ],
         ))

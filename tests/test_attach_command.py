@@ -418,19 +418,19 @@ class TestCollectContextAttachments:
            scanning content blocks. Pinning the new code path so a
            future regression doesn't silently fall back to the legacy
            block-scan branch."""
-        from ppxai.engine.types import AttachmentRef
+        from ppxai.engine.types import ImageAttachmentRef
         msg = Message(
             role="user",
             content=[
                 {"type": "text", "text": "look at this"},
                 # Note: in-block name DELIBERATELY differs from
-                # AttachmentRef.name to prove the reader trusts
+                # ImageAttachmentRef.name to prove the reader trusts
                 # attachments, not in-block keys.
                 {"type": "image_url", "name": "wrong-name.png",
                  "image_url": {"url": "data:image/png;base64,X"}},
             ],
             attachments=[
-                AttachmentRef(block_index=1, name="correct-name.png",
+                ImageAttachmentRef(block_index=1, name="correct-name.png",
                               file_id="sha256:abc", media_type="image/png"),
             ],
         )

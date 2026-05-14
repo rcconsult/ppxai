@@ -762,7 +762,7 @@ def collect_context_attachments(session: Any) -> List[ContextAttachment]:
         # (SessionManager._deserialize_message) both populate
         # Message.attachments via extract_attachment_refs, so the
         # invariant "every image_url block with a name has an
-        # AttachmentRef" holds for every Message in memory.
+        # ImageAttachmentRef" holds for every Message in memory.
         # Fallback to legacy block-walk only when attachments is empty
         # AND content has list shape — covers test fixtures + Message
         # objects built without going through the producer pipeline.
@@ -777,7 +777,7 @@ def collect_context_attachments(session: Any) -> List[ContextAttachment]:
             continue
 
         # Legacy fallback for messages constructed without the
-        # AttachmentRef projection (test stubs, manual constructors,
+        # ImageAttachmentRef projection (test stubs, manual constructors,
         # pre-Phase-1 sessions loaded by old build).
         content = getattr(msg, "content", None)
         if not isinstance(content, list):

@@ -217,7 +217,7 @@ class TestTextContentRendersNewType:
         assert m.text_content() == "[File: thing]"
 
 
-class TestTextContentReadsAttachmentRef:
+class TestTextContentReadsImageAttachmentRef:
     """ADR 0006 Phase 2a: Message.text_content's image_url branch reads
     the filename from Message.attachments (via block_index) instead of
     from the in-block `name` key. Pins the new code path so a future
@@ -225,11 +225,11 @@ class TestTextContentReadsAttachmentRef:
     """
 
     def test_image_url_uses_attachment_ref_name_when_present(self):
-        """In-block name and AttachmentRef.name deliberately differ —
-           reader must trust the AttachmentRef. Phase 3 will drop the
+        """In-block name and ImageAttachmentRef.name deliberately differ —
+           reader must trust the ImageAttachmentRef. Phase 3 will drop the
            in-block name entirely; until then it must be IGNORED when
-           AttachmentRef is present."""
-        from ppxai.engine.types import AttachmentRef
+           ImageAttachmentRef is present."""
+        from ppxai.engine.types import ImageAttachmentRef
         m = Message(
             role="user",
             content=[
@@ -238,7 +238,7 @@ class TestTextContentReadsAttachmentRef:
                  "image_url": {"url": "data:image/png;base64,X"}},
             ],
             attachments=[
-                AttachmentRef(block_index=1, name="authoritative.png",
+                ImageAttachmentRef(block_index=1, name="authoritative.png",
                               file_id="sha256:abc", media_type="image/png"),
             ],
         )
@@ -261,7 +261,7 @@ class TestTextContentReadsAttachmentRef:
         assert "[Image: legacy.png]" in rendered
 
     def test_image_url_falls_back_to_url_when_no_ref_no_name(self):
-        """Final fallback chain: no AttachmentRef, no in-block name →
+        """Final fallback chain: no ImageAttachmentRef, no in-block name →
            parse the URL. Behavior preserved from pre-Phase-2a."""
         m = Message(
             role="user",

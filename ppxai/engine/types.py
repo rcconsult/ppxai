@@ -203,7 +203,7 @@ class Event:
 
 
 @dataclass
-class AttachmentRef:
+class ImageAttachmentRef:
     """Per-attachment metadata living alongside Message.content (ADR 0006, Phase 1).
 
     Engine-internal bookkeeping that documents an attachment without
@@ -236,13 +236,13 @@ class AttachmentRef:
     media_type: str = ""
 
 
-def extract_attachment_refs(content: Any) -> List["AttachmentRef"]:
+def extract_attachment_refs(content: Any) -> List["ImageAttachmentRef"]:
     """Walk a multimodal content list and pull out attachment metadata.
 
     Reads the legacy in-block `name` + `file_id` keys that producers
     (`file_preprocessing._preprocess_image`) and the session
     serialize/deserialize round-trip embed inside `image_url` blocks
-    today. Returns an `AttachmentRef` for each block that carries either
+    today. Returns an `ImageAttachmentRef` for each block that carries either
     `name` or `file_id`.
 
     This is the bridge between today's "metadata inside content blocks"
@@ -255,7 +255,7 @@ def extract_attachment_refs(content: Any) -> List["AttachmentRef"]:
     """
     if not isinstance(content, list):
         return []
-    refs: List[AttachmentRef] = []
+    refs: List[ImageAttachmentRef] = []
     for idx, block in enumerate(content):
         if not isinstance(block, dict):
             continue
@@ -276,7 +276,7 @@ def extract_attachment_refs(content: Any) -> List["AttachmentRef"]:
             # going through the preprocessing pipeline (manual API
             # caller, test fixture). Skip silently.
             continue
-        refs.append(AttachmentRef(
+        refs.append(ImageAttachmentRef(
             block_index=idx,
             name=name,
             file_id=file_id,
@@ -308,16 +308,16 @@ class Message:
     content: MessageContent
     tool_calls: Optional[List[Dict[str, Any]]] = None   # For assistant messages with native calls
     tool_call_id: Optional[str] = None                    # For tool role messages
-    attachments: List["AttachmentRef"] = field(default_factory=list)  # ADR 0006 Phase 1
+    attachments: List["ImageAttachmentRef"] = field(default_factory=list)  # ADR 0006 Phase 1
 
-    def attachment_for_block(self, block_index: int) -> Optional["AttachmentRef"]:
-        """Return the AttachmentRef whose block_index == `block_index`, or None.
+    def attachment_for_block(self, block_index: int) -> Optional["ImageAttachmentRef"]:
+        """Return the ImageAttachmentRef whose block_index == `block_index`, or None.
 
         ADR 0006 Phase 2a low-level lookup. Most readers should use the
         higher-level `resolve_attachment(idx)` instead — that one handles
-        the AttachmentRef-first-with-in-block-fallback pattern in one
+        the ImageAttachmentRef-first-with-in-block-fallback pattern in one
         place. Direct `attachment_for_block` is for callers that
-        deliberately want to know whether AttachmentRef is present or
+        deliberately want to know whether ImageAttachmentRef is present or
         absent (e.g. tests asserting Phase 1 invariants).
 
         Linear scan is fine — `attachments` is bounded by the number of
@@ -330,26 +330,26 @@ class Message:
                 return ref
         return None
 
-    def resolve_attachment(self, block_index: int) -> "AttachmentRef":
-        """Get the effective AttachmentRef for a content block, deriving
-        from in-block keys when no explicit AttachmentRef exists.
+    def resolve_attachment(self, block_index: int) -> "ImageAttachmentRef":
+        """Get the effective ImageAttachmentRef for a content block, deriving
+        from in-block keys when no explicit ImageAttachmentRef exists.
 
         ADR 0006 Phase 2a/2b shared helper. Single source of truth for
-        the AttachmentRef-first-with-fallback lookup pattern that ADR
+        the ImageAttachmentRef-first-with-fallback lookup pattern that ADR
         0006 readers use during the migration:
 
           1. Look up self.attachments by block_index (fast path —
              every Message constructed via the producer pipeline OR
              loaded via _deserialize_message satisfies this)
-          2. Synthesize an AttachmentRef from the in-block `name` and
+          2. Synthesize an ImageAttachmentRef from the in-block `name` and
              `file_id` keys (fallback for messages built outside the
              producer pipeline — test fixtures, manual API callers,
              pre-Phase-1 sessions loaded by old builds)
-          3. Return an empty AttachmentRef as last resort (block isn't
+          3. Return an empty ImageAttachmentRef as last resort (block isn't
              image_url, or block_index is out of range, or block has
              no attachable metadata)
 
-        ALWAYS returns an AttachmentRef — never None. Callers can read
+        ALWAYS returns an ImageAttachmentRef — never None. Callers can read
         `.name` / `.file_id` without None-handling. Empty values are
         the empty string, not None, so existing code paths that do
         `name = ref.name or "image"` work unchanged.
@@ -366,13 +366,13 @@ class Message:
         if isinstance(self.content, list) and 0 <= block_index < len(self.content):
             block = self.content[block_index]
             if isinstance(block, dict) and block.get("type") == "image_url":
-                return AttachmentRef(
+                return ImageAttachmentRef(
                     block_index=block_index,
                     name=block.get("name") or "",
                     file_id=block.get("file_id") or "",
                     media_type="",
                 )
-        return AttachmentRef(block_index=block_index, name="", file_id="", media_type="")
+        return ImageAttachmentRef(block_index=block_index, name="", file_id="", media_type="")
 
     def text_content(self) -> str:
         """Extract plain text from the message content.
@@ -394,11 +394,11 @@ class Message:
             if btype == "text":
                 parts.append(block.get("text", ""))
             elif btype == "image_url":
-                # ADR 0006 Phase 2a/2b: get the effective AttachmentRef
-                # via resolve_attachment (handles AttachmentRef-first
+                # ADR 0006 Phase 2a/2b: get the effective ImageAttachmentRef
+                # via resolve_attachment (handles ImageAttachmentRef-first
                 # lookup with in-block-key fallback in one place — see
                 # docstring). Falls back to URL-derived guessing only
-                # when both AttachmentRef and in-block name are empty,
+                # when both ImageAttachmentRef and in-block name are empty,
                 # which only happens for remote-URL image_url blocks
                 # built outside any preprocessing pipeline.
                 ref = self.resolve_attachment(idx)
@@ -409,7 +409,7 @@ class Message:
                     name = _guess_name_from_url(url) or "image"
                 parts.append(f"[Image: {name}]")
             elif btype == "input_file" or btype == "file":
-                # Intentionally NOT migrated to AttachmentRef — these
+                # Intentionally NOT migrated to ImageAttachmentRef — these
                 # block types' name is intrinsic to the block schema,
                 # not bookkeeping pollution. Phase 1's
                 # extract_attachment_refs scope was image_url only.
@@ -423,7 +423,7 @@ class Message:
                 # like. Providers never see this branch because they
                 # flatten uploaded_file to text before calling this.
                 # Same intrinsic-metadata rationale as input_file/file —
-                # not migrated to AttachmentRef.
+                # not migrated to ImageAttachmentRef.
                 name = block.get("name") or "file"
                 media = block.get("media_type") or ""
                 parts.append(f"[File: {name} ({media})]" if media else f"[File: {name}]")
