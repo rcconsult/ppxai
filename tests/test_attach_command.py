@@ -408,6 +408,51 @@ class TestCollectContextAttachments:
         assert len(result) == 1
         assert result[0].name == "chart.png"
 
+    # ------------------------------------------------------------------
+    # ADR 0006 Phase 2a — readers walk Message.attachments first
+    # ------------------------------------------------------------------
+
+    def test_phase2a_walks_attachments_when_populated(self):
+        """When Message.attachments is populated (ADR 0006 Phase 1+
+           production path), the reader uses it directly without
+           scanning content blocks. Pinning the new code path so a
+           future regression doesn't silently fall back to the legacy
+           block-scan branch."""
+        from ppxai.engine.types import AttachmentRef
+        msg = Message(
+            role="user",
+            content=[
+                {"type": "text", "text": "look at this"},
+                # Note: in-block name DELIBERATELY differs from
+                # AttachmentRef.name to prove the reader trusts
+                # attachments, not in-block keys.
+                {"type": "image_url", "name": "wrong-name.png",
+                 "image_url": {"url": "data:image/png;base64,X"}},
+            ],
+            attachments=[
+                AttachmentRef(block_index=1, name="correct-name.png",
+                              file_id="sha256:abc", media_type="image/png"),
+            ],
+        )
+        result = collect_context_attachments(self._session([msg]))
+        assert len(result) == 1
+        assert result[0].name == "correct-name.png"
+
+    def test_phase2a_legacy_fallback_when_attachments_empty(self):
+        """Pre-Phase-1 messages (no attachments populated) fall back to
+           the legacy block-walk so the migration is non-breaking."""
+        msg = Message(
+            role="user",
+            content=[
+                {"type": "image_url", "name": "legacy.png",
+                 "image_url": {"url": "data:image/png;base64,X"}},
+            ],
+            # attachments deliberately empty — simulates pre-Phase-1 shape
+        )
+        result = collect_context_attachments(self._session([msg]))
+        assert len(result) == 1
+        assert result[0].name == "legacy.png"
+
     def test_ignores_text_parts(self):
         # Text-only list content never produces an attachment entry.
         msg = Message(role="user", content=[{"type": "text", "text": "just text"}])

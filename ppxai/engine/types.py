@@ -310,6 +310,26 @@ class Message:
     tool_call_id: Optional[str] = None                    # For tool role messages
     attachments: List["AttachmentRef"] = field(default_factory=list)  # ADR 0006 Phase 1
 
+    def attachment_for_block(self, block_index: int) -> Optional["AttachmentRef"]:
+        """Return the AttachmentRef whose block_index == `block_index`, or None.
+
+        ADR 0006 Phase 2a helper. Several readers (text_content,
+        multimodal_ops.scan_attachments, future Phase 3+ rewriters) need
+        "given a content block I'm currently iterating, what does its
+        AttachmentRef say?" Without this helper each reader writes the
+        same `next((a for a in self.attachments if a.block_index == idx),
+        None)` lookup; with it the readers stay readable.
+
+        Linear scan is fine — `attachments` is bounded by the number of
+        image_url blocks in a single message, which in practice is 1-5.
+        Don't index it; the call cost is dwarfed by the surrounding
+        block-walk anyway.
+        """
+        for ref in self.attachments:
+            if ref.block_index == block_index:
+                return ref
+        return None
+
     def text_content(self) -> str:
         """Extract plain text from the message content.
 
@@ -323,19 +343,32 @@ class Message:
         if not isinstance(self.content, list):
             return str(self.content)
         parts: List[str] = []
-        for block in self.content:
+        for idx, block in enumerate(self.content):
             if not isinstance(block, dict):
                 continue
             btype = block.get("type")
             if btype == "text":
                 parts.append(block.get("text", ""))
             elif btype == "image_url":
-                # Surface a placeholder so callers that slice/len the result
-                # still see something meaningful (e.g. logger previews).
-                url = (block.get("image_url") or {}).get("url", "")
-                name = block.get("name") or _guess_name_from_url(url) or "image"
+                # ADR 0006 Phase 2a: read filename from
+                # Message.attachments via block_index. Falls back to the
+                # in-block `name` key (Phase 1+2 transitional state) and
+                # finally to URL-derived guessing for blocks built
+                # outside the producer pipeline (manual API callers,
+                # legacy fixtures). Phase 3 drops the in-block fallback
+                # once producers stop emitting it.
+                ref = self.attachment_for_block(idx)
+                if ref is not None and ref.name:
+                    name = ref.name
+                else:
+                    url = (block.get("image_url") or {}).get("url", "")
+                    name = block.get("name") or _guess_name_from_url(url) or "image"
                 parts.append(f"[Image: {name}]")
             elif btype == "input_file" or btype == "file":
+                # Intentionally NOT migrated to AttachmentRef — these
+                # block types' name is intrinsic to the block schema,
+                # not bookkeeping pollution. Phase 1's
+                # extract_attachment_refs scope was image_url only.
                 name = block.get("name") or block.get("filename") or "file"
                 parts.append(f"[File: {name}]")
             elif btype == "uploaded_file":
@@ -345,6 +378,8 @@ class Message:
                 # output matches what `input_file` / `file` blocks look
                 # like. Providers never see this branch because they
                 # flatten uploaded_file to text before calling this.
+                # Same intrinsic-metadata rationale as input_file/file —
+                # not migrated to AttachmentRef.
                 name = block.get("name") or "file"
                 media = block.get("media_type") or ""
                 parts.append(f"[File: {name} ({media})]" if media else f"[File: {name}]")

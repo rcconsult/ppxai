@@ -215,3 +215,60 @@ class TestTextContentRendersNewType:
             ),
         ])
         assert m.text_content() == "[File: thing]"
+
+
+class TestTextContentReadsAttachmentRef:
+    """ADR 0006 Phase 2a: Message.text_content's image_url branch reads
+    the filename from Message.attachments (via block_index) instead of
+    from the in-block `name` key. Pins the new code path so a future
+    refactor doesn't silently regress to the legacy in-block read.
+    """
+
+    def test_image_url_uses_attachment_ref_name_when_present(self):
+        """In-block name and AttachmentRef.name deliberately differ —
+           reader must trust the AttachmentRef. Phase 3 will drop the
+           in-block name entirely; until then it must be IGNORED when
+           AttachmentRef is present."""
+        from ppxai.engine.types import AttachmentRef
+        m = Message(
+            role="user",
+            content=[
+                {"type": "text", "text": "look:"},
+                {"type": "image_url", "name": "stale-in-block-name.png",
+                 "image_url": {"url": "data:image/png;base64,X"}},
+            ],
+            attachments=[
+                AttachmentRef(block_index=1, name="authoritative.png",
+                              file_id="sha256:abc", media_type="image/png"),
+            ],
+        )
+        rendered = m.text_content()
+        assert "[Image: authoritative.png]" in rendered
+        assert "stale-in-block-name.png" not in rendered
+
+    def test_image_url_falls_back_to_in_block_name_when_no_ref(self):
+        """Pre-Phase-1 messages have empty attachments. Reader falls
+           back to in-block `name` so legacy fixtures + manual API
+           callers keep working."""
+        m = Message(
+            role="user",
+            content=[
+                {"type": "image_url", "name": "legacy.png",
+                 "image_url": {"url": "data:image/png;base64,X"}},
+            ],
+        )
+        rendered = m.text_content()
+        assert "[Image: legacy.png]" in rendered
+
+    def test_image_url_falls_back_to_url_when_no_ref_no_name(self):
+        """Final fallback chain: no AttachmentRef, no in-block name →
+           parse the URL. Behavior preserved from pre-Phase-2a."""
+        m = Message(
+            role="user",
+            content=[
+                {"type": "image_url",
+                 "image_url": {"url": "https://example.com/path/foo.png"}},
+            ],
+        )
+        rendered = m.text_content()
+        assert "[Image: foo.png]" in rendered

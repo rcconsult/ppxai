@@ -756,6 +756,29 @@ def collect_context_attachments(session: Any) -> List[ContextAttachment]:
     seen: set[str] = set()
     result: List[ContextAttachment] = []
     for msg in messages:
+        # ADR 0006 Phase 2a: walk Message.attachments instead of
+        # scanning content blocks for image_url + name. The producer
+        # path (EngineClient.chat) and the load path
+        # (SessionManager._deserialize_message) both populate
+        # Message.attachments via extract_attachment_refs, so the
+        # invariant "every image_url block with a name has an
+        # AttachmentRef" holds for every Message in memory.
+        # Fallback to legacy block-walk only when attachments is empty
+        # AND content has list shape — covers test fixtures + Message
+        # objects built without going through the producer pipeline.
+        attachments = getattr(msg, "attachments", None) or []
+        if attachments:
+            for ref in attachments:
+                name = ref.name or "image"
+                if name in seen:
+                    continue
+                seen.add(name)
+                result.append(ContextAttachment(name=name, kind="image"))
+            continue
+
+        # Legacy fallback for messages constructed without the
+        # AttachmentRef projection (test stubs, manual constructors,
+        # pre-Phase-1 sessions loaded by old build).
         content = getattr(msg, "content", None)
         if not isinstance(content, list):
             continue
