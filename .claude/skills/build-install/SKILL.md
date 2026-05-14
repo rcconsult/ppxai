@@ -332,20 +332,35 @@ Notes:
 Universal across all platforms:
 
 ```bash
-# macOS / Linux / Git Bash
-code --install-extension vscode-extension/ppxai-*.vsix --force
+# macOS / Linux / Git Bash — version-pinned (avoids the multi-VSIX
+# glob hazard documented below).
+VER=$(grep '^version' pyproject.toml | head -1 | cut -d'"' -f2)
+code --install-extension "vscode-extension/ppxai-$VER.vsix" --force
 ```
 
 ```powershell
-# Windows PowerShell — explicit path, no glob; resolve the CLI shim
-# explicitly because plain `code` may resolve to Code.exe (the GUI)
-# which rejects --install-extension with `bad option`.
+# Windows PowerShell — explicit version-pinned path (no glob).
+# Resolve the CLI shim explicitly because plain `code` may resolve
+# to Code.exe (the GUI) which rejects --install-extension with
+# `bad option`.
 $codeCli = "$env:LOCALAPPDATA\Programs\Microsoft VS Code\bin\code.cmd"
 if (-not (Test-Path $codeCli)) {
     # Fallback: assume `code` is the proper shim
     $codeCli = "code"
 }
-& $codeCli --install-extension (Resolve-Path vscode-extension\ppxai-*.vsix).Path --force
+# Pin to the version we just built — derived from pyproject.toml so
+# the install always matches the build, and stale older VSIXes
+# lingering in the directory don't get picked up first.
+$ver = (Select-String -Path pyproject.toml -Pattern '^version = "(.+)"').Matches[0].Groups[1].Value
+$vsix = "vscode-extension\ppxai-$ver.vsix"
+if (-not (Test-Path $vsix)) { throw "Expected VSIX not found: $vsix" }
+& $codeCli --install-extension $vsix --force
+
+# Optional cleanup — delete older VSIXes from the directory so the
+# Bash glob form below doesn't trip on them on future builds.
+Get-ChildItem vscode-extension\ppxai-*.vsix | Where-Object {
+    $_.Name -ne "ppxai-$ver.vsix"
+} | Remove-Item -Force
 ```
 
 `--force` overwrites a previously-installed version of the same
@@ -363,6 +378,17 @@ plain `code` resolves to `Code.exe` (the GUI exe) which rejects
 The PowerShell snippet above handles this by going straight to
 `bin\code.cmd`. On Git Bash, `~/.bashrc` typically aliases `code` to
 the shim; verify with `type code` if the install fails.
+
+**Multi-VSIX gotcha — `ppxai-*.vsix` glob picks the OLDEST.**
+Caught 2026-05-15 v1.18.6 build-install: the directory had
+`ppxai-1.18.2.vsix`, `ppxai-1.18.3.vsix`, `ppxai-1.18.4.vsix`, AND
+`ppxai-1.18.6.vsix`. `Resolve-Path ppxai-*.vsix` returns an array,
+PowerShell collapses it into space-separated args, and `code.cmd`
+installs only the FIRST (which alphabetically is the oldest
+version). The same hazard applies to the Bash form above. The
+version-pinned snippet here avoids it. The Bash form should
+similarly be updated to pin: `code --install-extension
+"vscode-extension/ppxai-$(grep '^version' pyproject.toml | cut -d'\"' -f2).vsix" --force`.
 
 ### 8. Verify versions agree AND web sync took effect
 
