@@ -11,6 +11,43 @@ import os
 from ppxai.common.logger import get_logger, Logger
 
 
+@pytest.fixture(autouse=True)
+def _isolate_debug_env(monkeypatch):
+    """Strip PPXAI_DEBUG from the environment for every test in this module.
+
+    Without this fixture, `test_logger_enable`, `test_logger_disable`, and
+    `test_logger_log_methods_when_disabled` all fail when the developer's
+    home `~/.ppxai/ppxai-config.json` has `tui.debug_log: true`. The
+    failure chain (verified 2026-05-15):
+
+      1. `tests/conftest.py::pytest_configure` calls `ppxai.config.initialize()`
+      2. `config/__init__.py:210` reads `tui.debug_log` from user config
+         and runs `os.environ.setdefault("PPXAI_DEBUG", "1")`
+      3. From that point on, every fresh `Logger(...)` constructed in any
+         test sees `PPXAI_DEBUG=1` in `os.getenv` and self-enables —
+         breaking the "default disabled" assumption these tests pin.
+
+    The flake doesn't fire on CI (CI doesn't have a user config) but
+    bites every developer who has `/debug-log on` enabled. Surfaced
+    while running the suite for ADR 0006 Phase 1.
+
+    The fixture is autouse + module-scoped so individual tests don't
+    have to opt in. Doesn't touch the user's actual config file —
+    `monkeypatch.delenv` only mutates the test-process environment.
+    """
+    monkeypatch.delenv("PPXAI_DEBUG", raising=False)
+    # Per-component env vars too — Logger.__init__ checks both
+    # PPXAI_DEBUG (universal) and PPXAI_<NAME>_DEBUG (per-component).
+    # Nothing in test names today collides with real component names but
+    # covering all of them keeps the isolation robust.
+    for name in ["TUI", "SERVER", "ENGINE", "TEST_ENABLE", "TEST_DISABLE_AFTER",
+                 "TEST_DISABLED_METHODS", "TEST_LOGFILE", "TEST_METHODS",
+                 "TEST_USER_MSG", "TEST_ASSISTANT_MSG", "TEST_COMMAND",
+                 "TEST_TOOL_CALL", "TEST_API_ERROR", "TEST_HTTP_REQ",
+                 "TEST_CLEAR", "TEST_TRUNCATE"]:
+        monkeypatch.delenv(f"PPXAI_{name}_DEBUG", raising=False)
+
+
 def test_get_logger_singleton():
     """Test that get_logger returns same instance for same name."""
     logger1 = get_logger("test")
