@@ -278,21 +278,18 @@ def _preprocess_image(
     # Routing decision: vision-capable model vs text-only + fallbacks.
     if model and model_supports_vision(model):
         b64 = base64.b64encode(data).decode("ascii")
+        # ADR 0006 Step 7c (v1.18.6): block carries ONLY OpenAI-spec
+        # keys ({type, image_url}). Engine-internal metadata
+        # (name, file_id, media_type) lives on the ImageAttachmentRef
+        # below, in Message.attachments. The wire validator
+        # (uploaded_file.assert_wire_blocks_clean) enforces this
+        # cleanliness defensively in __debug__ builds.
         block: Dict[str, Any] = {
             "type": "image_url",
-            "name": name,
             "image_url": {
                 "url": f"data:{canonical_mt};base64,{b64}",
             },
         }
-        if file_id:
-            block["file_id"] = file_id
-        # ADR 0006 Step 1: also surface ImageAttachmentRef so callers
-        # populate Message.attachments without re-deriving from in-block
-        # keys. block_index=0 — build_multimodal_content re-bases when
-        # assembling multi-file content list. The block STILL carries
-        # name+file_id for back-compat with sites that haven't been
-        # migrated to read from Message.attachments; Step 7 drops them.
         ref = ImageAttachmentRef(
             block_index=0,
             name=name,

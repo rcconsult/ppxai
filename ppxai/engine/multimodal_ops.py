@@ -398,8 +398,41 @@ def remove_context_attachment(engine, target: str) -> int:
                 if fid:
                     matched_file_ids.add(fid)
 
-    def _block_matches(block: Dict[str, Any]) -> bool:
-        """True if this structured block should be removed."""
+    def _block_matches(msg: Any, idx: int, block: Dict[str, Any]) -> bool:
+        """True if this structured block should be removed.
+
+        ADR 0006 Step 7c (v1.18.6): for image blocks (which no longer
+        carry name/file_id keys after Step 7c), look up the matching
+        ImageAttachmentRef in `msg.attachments` by block_index.
+        For uploaded_file / input_file / file blocks (engine-internal
+        or legacy shapes that still carry in-block keys), continue
+        reading raw block keys.
+        """
+        btype = block.get("type")
+
+        # Image blocks: post-Step-7c shape has zero in-block metadata.
+        # Source of truth is Message.attachments[block_index].
+        # Pre-Step-7c blocks may still have in-block keys (transition);
+        # the attachments-first lookup wins, fall through to in-block
+        # only for the rare case of a block built by-hand without
+        # populating attachments.
+        if btype == "image_url":
+            for ref in getattr(msg, "attachments", None) or []:
+                if getattr(ref, "block_index", -1) != idx:
+                    continue
+                fid = getattr(ref, "file_id", "") or ""
+                rname = getattr(ref, "name", "") or ""
+                if fid and fid in matched_file_ids:
+                    return True
+                if rname and rname in matched_names and not fid:
+                    return True
+                if not fid and rname == target:
+                    return True
+                return False
+            # Image block with no Message.attachments entry — last-resort
+            # raw-key read for the transition period (test fixtures,
+            # manual constructors). Same matching rules as below.
+
         fid = block.get("file_id") or ""
         bname = block.get("name") or block.get("filename") or ""
         if fid and fid in matched_file_ids:
@@ -426,7 +459,7 @@ def remove_context_attachment(engine, target: str) -> int:
 
         kept: List[Dict[str, Any]] = []
         had_attachment = False
-        for block in content:
+        for idx, block in enumerate(content):
             if not isinstance(block, dict):
                 kept.append(block)
                 continue
@@ -434,7 +467,7 @@ def remove_context_attachment(engine, target: str) -> int:
 
             # Structured attachment blocks — drop on match.
             if btype in ("image_url", "input_file", "file"):
-                if remove_all or _block_matches(block):
+                if remove_all or _block_matches(msg, idx, block):
                     removed_count += 1
                     had_attachment = True
                     continue
@@ -443,10 +476,11 @@ def remove_context_attachment(engine, target: str) -> int:
 
             # R5 (v1.17.6): first-class uploaded_file block — same
             # dispatch as image_url/input_file/file. `_block_matches`
-            # already reads `name` / `file_id` keys from the block so
-            # no special handling is needed beyond dispatching here.
+            # reads `name` / `file_id` keys from the block (uploaded_file
+            # blocks legitimately carry these — engine-internal block
+            # type, not on the wire).
             if btype == "uploaded_file":
-                if remove_all or _block_matches(block):
+                if remove_all or _block_matches(msg, idx, block):
                     removed_count += 1
                     had_attachment = True
                     continue

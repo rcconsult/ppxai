@@ -66,6 +66,64 @@ def _ext_from_media_type(media_type: str) -> str:
     return _MEDIA_TYPE_TO_EXT.get(media_type, "bin")
 
 
+def _attachments_from_serialized_content(
+    content: List[Dict[str, Any]],
+) -> List[Any]:
+    """Synthesize ImageAttachmentRefs from serialized image_url blocks.
+
+    ADR 0006 Step 7c (v1.18.6): used by `_serialize_message` to fill
+    in `Message.attachments` when the in-memory Message arrived
+    without it (test fixtures, manual constructors). Reads the
+    `file://uploads/<file_id>/<name>` URL written by the serialize
+    rewrite — guaranteed canonical.
+
+    Skips blocks whose URL is not a `file://uploads/` reference
+    (data: URIs that didn't go through the file store, http URLs,
+    etc.) — those have no file_id to record.
+    """
+    from .types import ImageAttachmentRef
+
+    refs: List[Any] = []
+    for idx, block in enumerate(content):
+        if not isinstance(block, dict) or block.get("type") != "image_url":
+            continue
+        url = (block.get("image_url") or {}).get("url", "")
+        parsed = _parse_file_uploads_url(url)
+        if parsed is None:
+            continue
+        file_id, name = parsed
+        refs.append(ImageAttachmentRef(
+            block_index=idx,
+            name=name,
+            file_id=file_id,
+            media_type="",
+        ))
+    return refs
+
+
+def _parse_file_uploads_url(url: str) -> Optional[tuple[str, str]]:
+    """Parse a `file://uploads/<file_id>/<name>` reference into (file_id, name).
+
+    ADR 0006 Step 7c (v1.18.6): the on-disk image_url block carries
+    file_store metadata exclusively in the URL — in-block name+file_id
+    keys are gone. Both round-trip directions (serialize-write +
+    deserialize-read) parse the URL via this helper so the encoding
+    convention has exactly one definition.
+
+    Returns None when `url` is not a `file://uploads/...` reference
+    (data: URI, http(s), file:// without uploads prefix, malformed,
+    etc.) so callers can branch into the legacy / non-store path.
+    """
+    if not url.startswith("file://uploads/"):
+        return None
+    # `file://uploads/<file_id>/<name>` → tail = `<file_id>/<name>`
+    tail = url[len("file://uploads/"):]
+    parts = tail.split("/", 1)
+    if len(parts) != 2 or not parts[0] or not parts[1]:
+        return None
+    return parts[0], parts[1]
+
+
 def _message_has_multimodal(msg: Any) -> bool:
     """True if `msg.content` carries any multimodal content parts (R10).
 
@@ -251,13 +309,25 @@ class SessionManager:
         if self.file_store is not None and isinstance(content, list):
             content = self._rewrite_content_for_serialize(content)
 
+        # ADR 0006 Step 7c (v1.18.6): synthesize the attachments array
+        # from the SERIALIZED content's URLs when the in-memory Message
+        # didn't carry an attachments list. Bridges Messages constructed
+        # without populating attachments (test fixtures, manual API
+        # callers) — the v2 `attachments` field still gets written
+        # so the load-side finds the file_id even without in-block keys.
+        # Producer-pipeline messages have m.attachments populated already
+        # and skip this branch.
+        effective_attachments = m.attachments
+        if not effective_attachments and isinstance(content, list):
+            effective_attachments = _attachments_from_serialized_content(content)
+
         msg: Dict[str, Any] = {"role": m.role, "content": content}
         if m.tool_calls:
             msg["tool_calls"] = m.tool_calls
         if m.tool_call_id:
             msg["tool_call_id"] = m.tool_call_id
-        if m.attachments:
-            msg["attachments"] = [ref.to_dict() for ref in m.attachments]
+        if effective_attachments:
+            msg["attachments"] = [ref.to_dict() for ref in effective_attachments]
         return msg
 
     def _deserialize_message(
@@ -298,9 +368,12 @@ class SessionManager:
         regardless of on-disk schema version.
         """
         content = m["content"]
-        if self.file_store is not None and isinstance(content, list):
-            content = self._rewrite_content_for_deserialize(content)
 
+        # ADR 0006 Step 7c (v1.18.6): for v1 sessions, extract attachment
+        # metadata from the ORIGINAL pre-rewrite content (which still
+        # carries the legacy in-block name+file_id keys). The rewrite
+        # below produces spec-clean blocks, so deferring extraction
+        # until after the rewrite would lose all in-block metadata.
         attachments: List[Any]
         if schema_version >= 2 and isinstance(m.get("attachments"), list):
             # v2: explicit attachments array. ArtifactRegistry.deserialize
@@ -313,7 +386,12 @@ class SessionManager:
                     attachments.append(ref)
         else:
             # v1 (or v2 with no attachments field — text-only message).
+            # Read from the pre-rewrite content while in-block keys
+            # are still present.
             attachments = extract_attachment_refs(content)
+
+        if self.file_store is not None and isinstance(content, list):
+            content = self._rewrite_content_for_deserialize(content)
 
         return Message(
             role=m["role"],
@@ -352,34 +430,47 @@ class SessionManager:
         if self.file_store is None:
             return content
 
+        # ADR 0006 Step 7c (v1.18.6): in-block name+file_id keys are
+        # gone. Round-trip metadata lives in:
+        #  - `image_url.url` itself (encodes file_id + name as
+        #    `file://uploads/<file_id>/<name>` after serialize)
+        #  - `Message.attachments[i]` for callers that have the
+        #    Message handle
+        # This function takes only `content`, so it derives the
+        # serialize target from the URL (data: → file_store save →
+        # file:// reference; existing file:// → idempotent pass-through).
         rewritten: List[Dict[str, Any]] = []
         for block in content:
             if not isinstance(block, dict) or block.get("type") != "image_url":
                 rewritten.append(block)
                 continue
 
-            # Already-registered block — rewrite URL only.
-            existing_file_id = block.get("file_id")
             url = (block.get("image_url") or {}).get("url", "")
 
-            if existing_file_id:
-                meta = self.file_store.get_metadata(existing_file_id)
+            # Already-serialized form: `file://uploads/<file_id>/<name>`.
+            # Parse the file_id from the URL, verify it's still in the
+            # store, pass through unchanged.
+            existing = _parse_file_uploads_url(url)
+            if existing is not None:
+                file_id_from_url, _ = existing
+                meta = self.file_store.get_metadata(file_id_from_url)
                 if meta is not None:
-                    new_block = dict(block)
-                    new_block["image_url"] = {
-                        "url": f"file://uploads/{existing_file_id}/{meta.name}"
-                    }
-                    new_block["file_id"] = existing_file_id
-                    rewritten.append(new_block)
+                    rewritten.append(block)
                     continue
-                # file_id is stale — fall through to re-register from URL.
-
-            if not url.startswith("data:"):
-                # Non-data URL (http, file://, etc.) — pass through.
+                # Stale file_id — fall through to re-register from URL,
+                # but only if the URL is data: (re-encoded inline). A
+                # stale file:// URL with no inline bytes can't be
+                # recovered; preserve as-is so the deserializer can
+                # surface a missing-file placeholder later.
                 rewritten.append(block)
                 continue
 
-            # data:image/png;base64,HELLO...  →  decode, save, rewrite
+            if not url.startswith("data:"):
+                # Non-data, non-file:// URL (http, etc.) — pass through.
+                rewritten.append(block)
+                continue
+
+            # data:image/png;base64,HELLO...  →  decode, save, rewrite URL.
             try:
                 header, b64data = url.split(",", 1)
                 media_type = header[5:].split(";", 1)[0] or "application/octet-stream"
@@ -391,23 +482,30 @@ class SessionManager:
                 rewritten.append(block)
                 continue
 
+            # Prefer caller-provided in-block name (transitional —
+            # supports test fixtures and pre-Step-7c shapes), fall
+            # back to synthesizing from media_type. The OUTPUT block
+            # is still spec-clean; this read just feeds the
+            # file_store so the canonical filename survives the save.
             name = block.get("name") or f"attachment.{_ext_from_media_type(media_type)}"
             try:
                 meta = self.file_store.save(name, raw, media_type=media_type)
             except OSError as exc:
                 logger.warning(
-                    f"Session serialize: file_store.save failed for {name}: {exc}"
+                    f"Session serialize: file_store.save failed: {exc}"
                 )
                 rewritten.append(block)
                 continue
 
-            new_block = dict(block)
-            new_block["image_url"] = {
-                "url": f"file://uploads/{meta.file_id}/{meta.name}"
-            }
-            new_block["file_id"] = meta.file_id
-            new_block["name"] = meta.name  # Normalize in case caller omitted it
-            rewritten.append(new_block)
+            # ADR 0006 Step 7c: emit spec-clean block — strip any
+            # legacy in-block name/file_id keys the caller may have
+            # passed in. Only {type, image_url} survives.
+            rewritten.append({
+                "type": "image_url",
+                "image_url": {
+                    "url": f"file://uploads/{meta.file_id}/{meta.name}"
+                },
+            })
 
         return rewritten
 
@@ -431,30 +529,39 @@ class SessionManager:
         if self.file_store is None:
             return content
 
+        # ADR 0006 Step 7c (v1.18.6): file_id parsed from the URL
+        # itself (`file://uploads/<file_id>/<name>`) instead of from
+        # an in-block `file_id` key. Engine-internal metadata reaches
+        # callers via Message.attachments, populated separately by
+        # _deserialize_message.
         rewritten: List[Dict[str, Any]] = []
         for block in content:
             if not isinstance(block, dict) or block.get("type") != "image_url":
                 rewritten.append(block)
                 continue
 
-            file_id = block.get("file_id")
-            if not file_id:
-                # Legacy shape — no file_id, already has inline data URI.
+            url = (block.get("image_url") or {}).get("url", "")
+            parsed = _parse_file_uploads_url(url)
+            if parsed is None:
+                # Legacy shape — no file:// reference, already has
+                # inline data URI (or http URL). Pass through unchanged.
                 rewritten.append(block)
                 continue
+            file_id, name_from_url = parsed
 
             meta = self.file_store.get_metadata(file_id)
             if meta is None or not meta.path.exists():
                 # File vanished — replace with a text placeholder so the
-                # conversation remains loadable.
-                name = block.get("name") or file_id
+                # conversation remains loadable. Prefer the URL-parsed
+                # name (which serialize wrote) over the file_id for the
+                # user-visible message.
                 logger.warning(
-                    f"Session deserialize: attachment missing for file_id={file_id}, "
-                    f"replacing with placeholder"
+                    f"Session deserialize: attachment missing for "
+                    f"file_id={file_id}, replacing with placeholder"
                 )
                 rewritten.append({
                     "type": "text",
-                    "text": f"[Attachment missing: {name}]",
+                    "text": f"[Attachment missing: {name_from_url or file_id}]",
                 })
                 continue
 
@@ -472,13 +579,16 @@ class SessionManager:
                 continue
 
             b64 = base64.b64encode(raw).decode("ascii")
-            new_block = dict(block)
-            new_block["image_url"] = {
-                "url": f"data:{meta.media_type};base64,{b64}",
-            }
-            new_block["file_id"] = file_id
-            new_block["name"] = meta.name
-            rewritten.append(new_block)
+            # ADR 0006 Step 7c: emit spec-clean block on deserialize
+            # too, so the in-memory shape matches what providers will
+            # receive. Engine-internal metadata reaches consumers via
+            # Message.attachments only.
+            rewritten.append({
+                "type": "image_url",
+                "image_url": {
+                    "url": f"data:{meta.media_type};base64,{b64}",
+                },
+            })
 
         return rewritten
 
@@ -1641,8 +1751,17 @@ class SessionManager:
         for msg in self.messages:
             if not isinstance(msg.content, list):
                 continue
+            # ADR 0006 Step 7c (v1.18.6): in-block name+file_id keys
+            # are stripped by the deserializer before this migration
+            # runs. Read attachment metadata from Message.attachments
+            # (populated upstream by extract_attachment_refs from the
+            # ORIGINAL pre-rewrite content — see _deserialize_message).
+            ref_by_index = {
+                getattr(ref, "block_index", -1): ref
+                for ref in (msg.attachments or [])
+            }
             new_content: List[Dict[str, Any]] = []
-            for block in msg.content:
+            for idx, block in enumerate(msg.content):
                 if not isinstance(block, dict):
                     new_content.append(block)
                     continue
@@ -1650,15 +1769,20 @@ class SessionManager:
                 if btype not in ("image_url", "uploaded_file"):
                     new_content.append(block)
                     continue
-                # Build a human-readable placeholder. Producer-set
-                # `name` is the canonical filename; if absent (rare —
-                # manually-built test fixture), fall back to file_id or
-                # a generic label. Don't crash on missing keys.
-                attached_name = (
-                    block.get("name")
-                    or block.get("file_id")
-                    or "<unnamed attachment>"
-                )
+                # Lookup canonical name from the attachments list
+                # (preserved from the v1 in-block keys at deserialize
+                # time). Fall back to in-block name/file_id for
+                # uploaded_file blocks (whose engine-internal keys ARE
+                # still preserved on disk and not stripped by 7c).
+                ref = ref_by_index.get(idx)
+                if ref is not None and getattr(ref, "name", ""):
+                    attached_name = ref.name
+                else:
+                    attached_name = (
+                        block.get("name")
+                        or block.get("file_id")
+                        or "<unnamed attachment>"
+                    )
                 new_content.append({
                     "type": "text",
                     "text": (

@@ -123,36 +123,41 @@ class TestContentRewriting:
 
         # Text part unchanged.
         assert serialized["content"][0] == {"type": "text", "text": "describe this"}
-        # Image part now has a file_id and a file:// reference.
+        # ADR 0006 Step 7c (v1.18.6): image_url blocks carry only
+        # {type, image_url}; file_id + name encoded in the URL.
         img_block = serialized["content"][1]
         assert img_block["type"] == "image_url"
-        assert img_block["file_id"]  # non-empty file_id populated
-        assert img_block["image_url"]["url"].startswith("file://uploads/")
-        assert "chart.png" in img_block["image_url"]["url"]
+        assert set(img_block.keys()) == {"type", "image_url"}
+        url = img_block["image_url"]["url"]
+        assert url.startswith("file://uploads/")
+        assert "chart.png" in url
+        # file_id parses out of the URL (file://uploads/<file_id>/<name>).
+        file_id = url[len("file://uploads/"):].split("/", 1)[0]
+        assert file_id  # non-empty
         # Bytes are on disk in the store.
-        file_id = img_block["file_id"]
         path = engine.file_store.get(file_id)
         assert path is not None
         assert path.read_bytes() == _RED_PIXEL_PNG
 
-    def test_serialize_passes_through_blocks_with_existing_file_id(self, engine):
-        # Pre-register the file, then build a content block that already
-        # has the file_id attached (as /attach would produce post-Phase-2.1a).
+    def test_serialize_already_referenced_url_passes_through(self, engine):
+        """ADR 0006 Step 7c (v1.18.6): a block whose URL is already a
+        `file://uploads/<file_id>/<name>` reference (e.g. on second save
+        of a session) passes through unchanged — same file_id, same URL.
+        Previously this test pre-populated an in-block `file_id` key,
+        which is no longer the round-trip contract."""
         meta = engine.file_store.save("preset.png", _RED_PIXEL_PNG, media_type="image/png")
         msg = Message(
             role="user",
             content=[{
                 "type": "image_url",
-                "name": "preset.png",
-                "file_id": meta.file_id,
-                "image_url": {"url": _RED_DATA_URI},
+                "image_url": {"url": f"file://uploads/{meta.file_id}/{meta.name}"},
             }],
         )
         serialized = engine.session._serialize_message(msg)
         img_block = serialized["content"][0]
-        assert img_block["file_id"] == meta.file_id
-        # URL rewritten to the file_id reference, bytes not re-hashed.
-        assert img_block["image_url"]["url"].startswith("file://uploads/")
+        # Pass-through: same URL, no extra keys, content-addressed id
+        # preserved without re-hashing.
+        assert img_block == msg.content[0]
 
     def test_deserialize_expands_file_id_to_data_uri(self, engine):
         # Round-trip a block: serialize to file_id, then deserialize and
@@ -170,11 +175,13 @@ class TestContentRewriting:
         img_block = restored.content[0]
         # Provider adapters see a data URI identical to the original.
         assert img_block["image_url"]["url"] == _RED_DATA_URI
-        # file_id is preserved so downstream callers (context_attachments)
-        # can still reference it.
-        assert img_block["file_id"]
-        # Name normalized from store metadata.
-        assert img_block["name"] == "chart.png"
+        # ADR 0006 Step 7c (v1.18.6): in-block name+file_id keys are
+        # gone. The block is spec-clean. Downstream consumers
+        # (context_attachments) read metadata from
+        # Message.attachments which _deserialize_message populates
+        # via extract_attachment_refs synthesis from the v1 blocks
+        # the test serialized.
+        assert set(img_block.keys()) == {"type", "image_url"}
 
     def test_deserialize_missing_file_replaces_with_placeholder(self, engine):
         # Simulate a manually-deleted attachment between save and load.
@@ -187,7 +194,10 @@ class TestContentRewriting:
             }],
         )
         serialized = engine.session._serialize_message(msg)
-        file_id = serialized["content"][0]["file_id"]
+        # ADR 0006 Step 7c: file_id encoded in the URL, not as a
+        # separate key. Parse it out.
+        url = serialized["content"][0]["image_url"]["url"]
+        file_id = url[len("file://uploads/"):].split("/", 1)[0]
         # Wipe the on-disk bytes out from under the store.
         path = engine.file_store.get(file_id)
         path.unlink()
@@ -265,10 +275,14 @@ class TestSessionRoundTrip:
 
         # The image_url URL in the saved JSON is a file:// reference,
         # not a data URI. This is the whole point of Phase 2.1a.
+        # ADR 0006 Step 7c: file_id encoded in the URL, no in-block key.
         img_block = data["messages"][0]["content"][0]
-        assert img_block["image_url"]["url"].startswith("file://uploads/")
-        assert "data:image" not in img_block["image_url"]["url"]
-        assert img_block["file_id"]
+        url = img_block["image_url"]["url"]
+        assert url.startswith("file://uploads/")
+        assert "data:image" not in url
+        # file_id parses from the URL itself
+        file_id = url[len("file://uploads/"):].split("/", 1)[0]
+        assert file_id
 
     def test_full_round_trip_with_fresh_engine(self, engine, isolated_dirs):
         # Save a session with an image, then load it from a completely
@@ -295,9 +309,17 @@ class TestSessionRoundTrip:
         # In-memory message has the expanded data URI — provider adapters
         # see exactly what they saw before the save.
         assert user_msg.content[1]["image_url"]["url"] == _RED_DATA_URI
-        assert user_msg.content[1]["file_id"]
-        # The bytes are on disk in the correct place.
-        restored_file_id = user_msg.content[1]["file_id"]
+        # ADR 0006 Step 7c: file_id lives on Message.attachments, not
+        # in the block. extract_attachment_refs synthesizes the
+        # ImageAttachmentRef from the legacy save's in-block name
+        # (the test wrote it before Step 7c, so the v1-shaped pre-save
+        # block had a name). Post-Step-7c saves write spec-clean blocks
+        # but the load-side reconstructs attachments from session JSON's
+        # `attachments` field instead. Either way, the bytes are on disk.
+        # Find the file_id from the v2 attachments side.
+        assert user_msg.attachments
+        restored_file_id = user_msg.attachments[0].file_id
+        assert restored_file_id
         restored_path = fresh.file_store.get(restored_file_id)
         assert restored_path is not None
         assert restored_path.read_bytes() == _RED_PIXEL_PNG
@@ -321,21 +343,27 @@ class TestSessionRoundTrip:
         engine.session.add_message(Message(role="assistant", content="ok"))
         engine.session.save("id_stability")
 
-        # Read the file_id straight from the persisted JSON (the
-        # in-memory message still has the data URI; file_id lives in
-        # the serialized form).
+        # Read the file_id from the persisted JSON.
+        # ADR 0006 Step 7c: file_id lives in the URL
+        # (file://uploads/<file_id>/<name>), not as a separate in-block key.
+        # ADR 0006 Step 4: also surfaces in `attachments` array.
         session_json = (
             isolated_dirs["sessions_dir"] / "id_stability" / "session.json"
         )
         with open(session_json, encoding="utf-8") as f:
             data = json.load(f)
-        original_id = data["messages"][0]["content"][0]["file_id"]
+        # Either source is canonical; check both.
+        url = data["messages"][0]["content"][0]["image_url"]["url"]
+        original_id_from_url = url[len("file://uploads/"):].split("/", 1)[0]
+        original_id_from_attachments = data["messages"][0]["attachments"][0]["file_id"]
+        assert original_id_from_url == original_id_from_attachments
+        original_id = original_id_from_url
         assert original_id  # non-empty
 
         fresh = EngineClient()
         fresh.session.sessions_dir = isolated_dirs["sessions_dir"]
         fresh.session.load("id_stability")
-        loaded_id = fresh.session.messages[0].content[0]["file_id"]
+        loaded_id = fresh.session.messages[0].attachments[0].file_id
         # Same content-addressed id in both engines.
         assert loaded_id == original_id
         # And the restored bytes resolve through the fresh store.
@@ -363,8 +391,12 @@ class TestSessionRoundTrip:
         assert len(blocks) == 2
         assert blocks[0]["image_url"]["url"] == _RED_DATA_URI
         assert blocks[1]["image_url"]["url"] == _BLUE_DATA_URI
+        # ADR 0006 Step 7c: file_ids live on Message.attachments, not
+        # in-block. Each block has its own ImageAttachmentRef.
+        attachments = fresh.session.messages[0].attachments
+        assert len(attachments) == 2
         # Different file_ids for different bytes.
-        assert blocks[0]["file_id"] != blocks[1]["file_id"]
+        assert attachments[0].file_id != attachments[1].file_id
 
 
 # -----------------------------------------------------------------------------

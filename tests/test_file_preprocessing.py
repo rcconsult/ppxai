@@ -97,12 +97,21 @@ class TestImageVisionModel:
         assert len(result.parts) == 1
 
         block = result.parts[0]
+        # ADR 0006 Step 7c (v1.18.6): image_url blocks carry ONLY the
+        # OpenAI-spec keys ({type, image_url}). Engine-internal metadata
+        # (name, file_id, media_type) lives on the ImageAttachmentRef
+        # surfaced via result.attachment_ref + Message.attachments.
         assert block["type"] == "image_url"
-        assert block["name"] == "chart.png"
-        assert block["file_id"] == result.file_id
+        assert set(block.keys()) == {"type", "image_url"}
         # Data URI carries the same bytes back in base64.
         url = block["image_url"]["url"]
         assert url.startswith("data:image/png;base64,")
+        # Engine-internal metadata available via the attachment ref.
+        ref = result.attachment_ref
+        assert ref is not None
+        assert ref.name == "chart.png"
+        assert ref.file_id == result.file_id
+        assert ref.media_type == "image/png"
 
     def test_jpeg_with_gemini_emits_image_url_part(self, store):
         result = preprocess_file(

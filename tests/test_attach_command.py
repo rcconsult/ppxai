@@ -135,10 +135,14 @@ class TestBuildMultimodalContent:
         parts, refs = build_multimodal_content("describe this", [pf], model="gpt-5.2")
         assert len(parts) == 2
         assert parts[0] == {"type": "text", "text": "describe this"}
+        # ADR 0006 Step 7c (v1.18.6): image_url block carries only
+        # OpenAI-spec keys ({type, image_url}); engine-internal metadata
+        # lives on the ImageAttachmentRef.
         assert parts[1]["type"] == "image_url"
-        assert parts[1]["name"] == "chart.png"
+        assert set(parts[1].keys()) == {"type", "image_url"}
         assert parts[1]["image_url"]["url"].startswith("data:image/png;base64,")
-        # ADR 0006 Step 2: ImageAttachmentRef populated, block_index=1 (after combined-text block)
+        # ADR 0006 Step 2: ImageAttachmentRef populated, block_index=1
+        # (after combined-text block).
         assert len(refs) == 1
         assert refs[0].kind == "image"
         assert refs[0].name == "chart.png"
