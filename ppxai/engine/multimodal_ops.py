@@ -88,13 +88,24 @@ def refresh_context_attachments(engine) -> None:
         content = getattr(msg, "content", None)
         if not isinstance(content, list):
             continue
-        for block in content:
+        for idx, block in enumerate(content):
             if not isinstance(block, dict):
                 continue
             btype = block.get("type")
             if btype == "image_url":
-                name = block.get("name") or "image"
-                file_id = block.get("file_id") or ""
+                # ADR 0006 Phase 2b: resolve_attachment handles the
+                # AttachmentRef-first-with-in-block-fallback lookup in
+                # one place — see Message.resolve_attachment docstring.
+                # hasattr guard supports test stubs that don't pass
+                # real Message instances.
+                if hasattr(msg, "resolve_attachment"):
+                    ref = msg.resolve_attachment(idx)
+                    name = ref.name or "image"
+                    file_id = ref.file_id or ""
+                else:
+                    name = block.get("name") or "image"
+                    file_id = block.get("file_id") or ""
+
                 # Content-addressed dedup (R7). When file_id is empty
                 # (legacy blocks), do NOT collapse by name — two
                 # different same-named files should produce two badges.
@@ -105,7 +116,10 @@ def refresh_context_attachments(engine) -> None:
 
                 # Prefer authoritative metadata from the file store
                 # (populated in Phase 2.1a). Falls back to parsing the
-                # data URI for pure-Phase-1 content blocks.
+                # data URI for pure-Phase-1 content blocks. Block lookup
+                # by index is still needed here — AttachmentRef carries
+                # only name/file_id, not the URL we parse for media_type
+                # in the file_store-unavailable case.
                 media_type = ""
                 if file_id and engine.file_store is not None:
                     meta = engine.file_store.get_metadata(file_id)

@@ -387,3 +387,90 @@ class TestCallbackResilience:
         session.add_message(Message(role="user", content="hi"))
         session.clear()
         assert session.messages == []
+
+
+# -----------------------------------------------------------------------------
+# ADR 0006 Phase 2b — scan_attachments reads via Message.resolve_attachment
+# -----------------------------------------------------------------------------
+# These sentinels pin the new code path so a future regression doesn't
+# silently fall back to the legacy in-block-key read. The scanner is the
+# producer of the AppState `context_attachments` field that 3 client
+# surfaces (web, vscode, both TUIs) consume — drift here = wrong file
+# in user-visible badges.
+
+
+class TestScanAttachmentsUsesAttachmentRef:
+    def test_uses_attachment_ref_name_when_populated(self, engine):
+        """When Message.attachments carries a name, the scanner uses it
+        even if the in-block `name` differs. Phase 3 will drop the
+        in-block name entirely; until then it must be IGNORED when
+        AttachmentRef is present."""
+        from ppxai.engine.types import AttachmentRef
+        engine.session.add_message(Message(
+            role="user",
+            content=[
+                {"type": "text", "text": "look:"},
+                {"type": "image_url", "name": "stale-in-block.png",
+                 "file_id": "sha:stalefromblock",
+                 "image_url": {"url": "data:image/png;base64,X"}},
+            ],
+            attachments=[
+                AttachmentRef(block_index=1, name="authoritative.png",
+                              file_id="sha:authoritative", media_type="image/png"),
+            ],
+        ))
+        entries = engine.get_context_attachments()
+        assert len(entries) == 1
+        assert entries[0]["name"] == "authoritative.png"
+        assert entries[0]["file_id"] == "sha:authoritative"
+
+    def test_block_index_correctness_on_mixed_content(self, engine):
+        """Mixed-content message (text + image + text + image) — both
+        AttachmentRefs must point at the correct image blocks. If
+        block_index is computed wrong (e.g. counting only image_url
+        blocks instead of all blocks), the wrong AttachmentRef would
+        match and the scanner would return swapped names.
+        """
+        from ppxai.engine.types import AttachmentRef
+        engine.session.add_message(Message(
+            role="user",
+            content=[
+                {"type": "text", "text": "before"},
+                {"type": "image_url", "image_url": {"url": "data:image/png;base64,A"}},
+                {"type": "text", "text": "between"},
+                {"type": "image_url", "image_url": {"url": "data:image/png;base64,B"}},
+                {"type": "text", "text": "after"},
+            ],
+            attachments=[
+                AttachmentRef(block_index=1, name="first.png",
+                              file_id="sha:1", media_type="image/png"),
+                AttachmentRef(block_index=3, name="second.png",
+                              file_id="sha:2", media_type="image/png"),
+            ],
+        ))
+        entries = engine.get_context_attachments()
+        assert len(entries) == 2
+        # Order matches block iteration order, not attachment-list order.
+        assert entries[0]["name"] == "first.png"
+        assert entries[0]["file_id"] == "sha:1"
+        assert entries[1]["name"] == "second.png"
+        assert entries[1]["file_id"] == "sha:2"
+
+    def test_legacy_messages_without_attachments_still_work(self, engine):
+        """Pre-Phase-1 messages have empty attachments. The scanner
+        falls back via resolve_attachment's in-block-key synthesis
+        branch so legacy fixtures + sessions loaded by old builds
+        keep working."""
+        engine.session.add_message(Message(
+            role="user",
+            content=[
+                {"type": "image_url", "name": "legacy.png",
+                 "file_id": "sha:legacy",
+                 "image_url": {"url": "data:image/png;base64,X"}},
+            ],
+            # attachments deliberately empty
+        ))
+        entries = engine.get_context_attachments()
+        assert len(entries) == 1
+        assert entries[0]["name"] == "legacy.png"
+        assert entries[0]["file_id"] == "sha:legacy"

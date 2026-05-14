@@ -313,12 +313,12 @@ class Message:
     def attachment_for_block(self, block_index: int) -> Optional["AttachmentRef"]:
         """Return the AttachmentRef whose block_index == `block_index`, or None.
 
-        ADR 0006 Phase 2a helper. Several readers (text_content,
-        multimodal_ops.scan_attachments, future Phase 3+ rewriters) need
-        "given a content block I'm currently iterating, what does its
-        AttachmentRef say?" Without this helper each reader writes the
-        same `next((a for a in self.attachments if a.block_index == idx),
-        None)` lookup; with it the readers stay readable.
+        ADR 0006 Phase 2a low-level lookup. Most readers should use the
+        higher-level `resolve_attachment(idx)` instead — that one handles
+        the AttachmentRef-first-with-in-block-fallback pattern in one
+        place. Direct `attachment_for_block` is for callers that
+        deliberately want to know whether AttachmentRef is present or
+        absent (e.g. tests asserting Phase 1 invariants).
 
         Linear scan is fine — `attachments` is bounded by the number of
         image_url blocks in a single message, which in practice is 1-5.
@@ -329,6 +329,50 @@ class Message:
             if ref.block_index == block_index:
                 return ref
         return None
+
+    def resolve_attachment(self, block_index: int) -> "AttachmentRef":
+        """Get the effective AttachmentRef for a content block, deriving
+        from in-block keys when no explicit AttachmentRef exists.
+
+        ADR 0006 Phase 2a/2b shared helper. Single source of truth for
+        the AttachmentRef-first-with-fallback lookup pattern that ADR
+        0006 readers use during the migration:
+
+          1. Look up self.attachments by block_index (fast path —
+             every Message constructed via the producer pipeline OR
+             loaded via _deserialize_message satisfies this)
+          2. Synthesize an AttachmentRef from the in-block `name` and
+             `file_id` keys (fallback for messages built outside the
+             producer pipeline — test fixtures, manual API callers,
+             pre-Phase-1 sessions loaded by old builds)
+          3. Return an empty AttachmentRef as last resort (block isn't
+             image_url, or block_index is out of range, or block has
+             no attachable metadata)
+
+        ALWAYS returns an AttachmentRef — never None. Callers can read
+        `.name` / `.file_id` without None-handling. Empty values are
+        the empty string, not None, so existing code paths that do
+        `name = ref.name or "image"` work unchanged.
+
+        Phase 3 simplifies this to just step 1 + step 3 (drop step 2)
+        once producers stop emitting in-block keys. Callers don't
+        change — only the helper internals do.
+        """
+        ref = self.attachment_for_block(block_index)
+        if ref is not None:
+            return ref
+        # Synthesize from in-block keys for messages built outside the
+        # producer pipeline. Phase 3 drops this branch.
+        if isinstance(self.content, list) and 0 <= block_index < len(self.content):
+            block = self.content[block_index]
+            if isinstance(block, dict) and block.get("type") == "image_url":
+                return AttachmentRef(
+                    block_index=block_index,
+                    name=block.get("name") or "",
+                    file_id=block.get("file_id") or "",
+                    media_type="",
+                )
+        return AttachmentRef(block_index=block_index, name="", file_id="", media_type="")
 
     def text_content(self) -> str:
         """Extract plain text from the message content.
@@ -350,19 +394,19 @@ class Message:
             if btype == "text":
                 parts.append(block.get("text", ""))
             elif btype == "image_url":
-                # ADR 0006 Phase 2a: read filename from
-                # Message.attachments via block_index. Falls back to the
-                # in-block `name` key (Phase 1+2 transitional state) and
-                # finally to URL-derived guessing for blocks built
-                # outside the producer pipeline (manual API callers,
-                # legacy fixtures). Phase 3 drops the in-block fallback
-                # once producers stop emitting it.
-                ref = self.attachment_for_block(idx)
-                if ref is not None and ref.name:
+                # ADR 0006 Phase 2a/2b: get the effective AttachmentRef
+                # via resolve_attachment (handles AttachmentRef-first
+                # lookup with in-block-key fallback in one place — see
+                # docstring). Falls back to URL-derived guessing only
+                # when both AttachmentRef and in-block name are empty,
+                # which only happens for remote-URL image_url blocks
+                # built outside any preprocessing pipeline.
+                ref = self.resolve_attachment(idx)
+                if ref.name:
                     name = ref.name
                 else:
                     url = (block.get("image_url") or {}).get("url", "")
-                    name = block.get("name") or _guess_name_from_url(url) or "image"
+                    name = _guess_name_from_url(url) or "image"
                 parts.append(f"[Image: {name}]")
             elif btype == "input_file" or btype == "file":
                 # Intentionally NOT migrated to AttachmentRef — these
