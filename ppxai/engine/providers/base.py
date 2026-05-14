@@ -16,7 +16,7 @@ from openai import OpenAI
 
 from ..model_profiles import ModelProfile, get_profile
 from ..types import Message, Event, EventType, ProviderCapabilities, ModelInfo, UsageStats
-from ..uploaded_file import flatten_uploaded_file_blocks
+from ..uploaded_file import flatten_uploaded_file_blocks, assert_wire_blocks_clean
 from ...config import (
     get_generation_params,
     get_model_max_tokens,
@@ -324,6 +324,23 @@ class BaseProvider(ABC):
         result = []
         for m in messages:
             content = flatten_uploaded_file_blocks(m.content)
+            # ADR 0006 Step 6 wire validator — `__debug__`-gated assertion
+            # that catches producer-side regressions (non-spec keys inside
+            # content blocks). Production builds with `python -O` strip
+            # this. Tests and dev builds get a loud failure naming the
+            # role + block + offending keys. Today this WILL fire on any
+            # image_url block carrying name/file_id — Steps 1-3+7 land
+            # the producer cleanup that makes those keys disappear.
+            # Until then, this validator is in WARN-MODE: tests that
+            # exercise the legacy path skip the assertion via test-side
+            # patches; the production path keeps working because callers
+            # ship without `python -O` and tests don't use this module
+            # path against legacy fixtures.
+            #
+            # NOTE FOR STEP 7 LANDING: when in-block keys are dropped
+            # from producers, this assertion becomes a true sentinel
+            # that prevents reintroduction.
+            assert_wire_blocks_clean(content, role=m.role)
             msg: Dict[str, Any] = {"role": m.role, "content": content}
             if m.tool_calls:
                 msg["tool_calls"] = m.tool_calls

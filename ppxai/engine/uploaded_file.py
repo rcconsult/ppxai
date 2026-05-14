@@ -233,6 +233,120 @@ def uploaded_file_block_to_text(block: Dict[str, Any]) -> str:
     )
 
 
+# =============================================================================
+# Wire-format validator (ADR 0006 Step 6 — defensive sentinel)
+# =============================================================================
+#
+# OpenAI-style content blocks have a documented spec; engine-internal
+# producers historically jammed extra metadata inside (e.g. `name` and
+# `file_id` on `image_url` blocks for ppxai's bookkeeping). Real OpenAI
+# silently ignores the extra keys; strict OpenAI-compat endpoints
+# (corporate gateways, NIM, vLLM with strict validators) reject the
+# whole request with `Invalid chat format. Unexpected keys in a message
+# content image dict.`
+#
+# The validator below catches non-spec keys at the wire boundary —
+# specifically inside `BaseProvider._convert_messages`, after
+# `flatten_uploaded_file_blocks` has already converted engine-internal
+# block types to text markers. It is `__debug__`-gated: tests + dev
+# builds get a loud assertion failure naming the offending block;
+# production builds compiled with `python -O` strip the assertion
+# entirely, so production never pays the walk cost.
+#
+# This is a SENTINEL, not a runtime fix. Producers MUST emit spec-clean
+# blocks; the validator just guarantees no producer-side regression
+# slips through. ADR 0006 Steps 1-3 + 7 do the producer-side cleanup.
+
+# Per OpenAI Chat Completions spec (https://platform.openai.com/docs/api-reference/chat/create).
+# Keys allowed at the top level of each content block, by block `type`.
+# Anything outside these is non-spec and the validator flags it.
+_WIRE_ALLOWED_BLOCK_KEYS: Dict[str, frozenset] = {
+    "text": frozenset({"type", "text"}),
+    # image_url's inner dict accepts {url, detail} per spec; the validator
+    # checks the OUTER block keys only — inner dict shape is provider-
+    # specific (Gemini parses it differently anyway).
+    "image_url": frozenset({"type", "image_url"}),
+    # Audio (preview API) — OpenAI gpt-4o-audio-preview shape.
+    "input_audio": frozenset({"type", "input_audio"}),
+    # File attachments (OpenAI Assistants-style file references).
+    "file": frozenset({"type", "file"}),
+    # Engine-internal types that should NEVER reach the wire because
+    # `flatten_uploaded_file_blocks` converts them to text first. Listed
+    # here as `frozenset()` (empty) so the validator flags them LOUDLY
+    # if the flatten step was somehow skipped — a real bug indicator.
+    "uploaded_file": frozenset(),
+}
+
+
+def assert_wire_blocks_clean(content: Any, *, role: str = "?") -> None:
+    """Assert every content block matches the OpenAI wire-format spec.
+
+    ADR 0006 Step 6 defensive sentinel. Called from
+    `BaseProvider._convert_messages` AFTER `flatten_uploaded_file_blocks`
+    so engine-internal types have already been converted. Any remaining
+    non-spec keys indicate a producer bug — typically a Phase 7
+    regression where someone re-introduced `name` or `file_id` inside
+    an `image_url` block.
+
+    `__debug__`-gated: production builds with `python -O` strip the
+    `assert`, so this has zero runtime cost in production. Tests and
+    dev builds (the default) get a loud assertion failure naming the
+    block, the role, and the offending key.
+
+    Pure read-only — never mutates `content`. Safe to call from
+    multiple threads (no shared state). Identity-preserved (returns
+    None — caller already has the content).
+
+    Identity-preserving on the data: `content` itself is not modified.
+    Identity-preserving on absence: non-list content (string, None)
+    short-circuits without walking — pure-text messages cost nothing.
+
+    Args:
+        content: The Message.content value about to be sent on the wire.
+            String content and non-list content are no-ops.
+        role: Optional message role for richer error messages
+            ("user", "assistant", "tool", "system"). Helps diagnose
+            which producer site is the culprit.
+
+    Raises:
+        AssertionError (only under __debug__): when a content block has
+            keys outside the spec for its `type`. Message names the
+            block index, the role, the type, and the offending keys.
+    """
+    if not __debug__:
+        return  # pragma: no cover — production builds skip the call entirely
+    if not isinstance(content, list):
+        return
+    for idx, block in enumerate(content):
+        if not isinstance(block, dict):
+            # Non-dict blocks (None, strings, etc.) are themselves a
+            # producer bug, but flagging them here would be noise — a
+            # later provider call will fail with a more specific error.
+            continue
+        btype = block.get("type")
+        allowed = _WIRE_ALLOWED_BLOCK_KEYS.get(btype)
+        if allowed is None:
+            # Unknown block type. Could be a future-spec block (audio
+            # variant we haven't catalogued) or a producer bug. The
+            # validator's job is to catch ppxai-internal pollution,
+            # not to police every block type — pass through.
+            continue
+        actual = set(block.keys())
+        extra = actual - allowed
+        if extra:
+            # Sort the extra-keys list for deterministic message output —
+            # set iteration order would make test failures non-reproducible.
+            extras_sorted = sorted(extra)
+            assert False, (
+                f"ADR 0006 wire-format violation: message[role={role!r}] "
+                f"content block #{idx} (type={btype!r}) carries non-spec "
+                f"keys {extras_sorted}. Allowed keys for this type: "
+                f"{sorted(allowed)}. Producer must emit spec-clean blocks; "
+                f"engine-internal metadata belongs in Message.attachments. "
+                f"See docs/decisions/0006-content-block-schema-separation.md."
+            )
+
+
 def flatten_uploaded_file_blocks(content: Any) -> Any:
     """Convert every uploaded_file block in `content` to a text block.
 
