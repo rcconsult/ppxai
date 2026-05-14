@@ -328,6 +328,252 @@ Test fixture: a v1.18.4 session JSON checked into `tests/fixtures/`
 that deserializes correctly under v1.19.x, with `attachments`
 populated and content blocks stripped of non-spec keys.
 
+## Migration plan revision (2026-05-15)
+
+**Context for the revision:** Phases 1 + 2 landed as planned (commits
+`b07bd0fa`, `fb46ee32`, `e91c71aa`) — additive `Message.attachments`
+field, populated at producer + deserialize sites, with three reader
+sites switched to walk it via the shared `Message.resolve_attachment`
+helper. Phase 3 dependency analysis surfaced an architectural
+conclusion the original ADR sketch had missed: **Phase 3 cannot ship
+cleanly as a standalone commit.** The 3 candidate Phase 3a strategies
+each had a real architectural cost:
+
+- **Wire-boundary strip** (`sanitize_content_blocks_for_wire` helper
+  in `_convert_messages`) — closes the strict-endpoint user-facing
+  bug TODAY but introduces a permanent "wire sees a different shape
+  than engine" contract. Fractures the single-source-of-truth invariant
+  for `Message.content`. Encourages future engine-internal pollution
+  ("just throw it in the block, the strip handles it"). The strip
+  exists because we didn't fix the schema, not because the schema
+  needs the strip. **Pollution-tolerant architecture — rejected.**
+
+- **Producer-side cleanup via `(parts, refs)` tuple return** — touches
+  the public `EngineClientProtocol.chat()` surface, ripples into mocks
+  / fakes / integration tests, and re-splits the "Message.attachments
+  populated" invariant that Phase 1 unified (producer-side via explicit
+  refs, deserialize-side still via `extract_attachment_refs`). Then
+  Phase 4's schema_v2 work would have to re-integrate the producer
+  pipeline anyway. **Two passes through the same surface — rejected.**
+
+- **Skip Phase 3a, fold producer cleanup into Phase 4** — accepts
+  that the strict-endpoint bug stays open for ~1 release cycle.
+  Workaround already in place (gpt-5.4 family registry fix, commit
+  `e10e4847`, plus cross-client UX warning, commit `2887194a`,
+  surface the silent-drop as a structured warning before the API
+  rejection happens). **Coherent single-pass refactor — accepted.**
+
+The original ADR ordering ("Phase 3 removes non-spec keys; Phase 4
+adds backward-compat loader") only works if Phase 3's producer
+cleanup can land independently. Dependency analysis showed it can't:
+
+```
+Phase 3 producer cleanup needs ──► AttachmentRef populated WITHOUT
+                                    relying on in-block keys
+                                    │
+                                    ▼
+                              Either Phase 4 (session JSON carries
+                              attachments separately, producer
+                              populates Message.attachments at
+                              construction)
+                              OR a producer-pipeline tuple-return
+                              refactor (rejected above)
+```
+
+The two operations — "stop emitting in-block keys" and "switch the
+on-disk schema to carry attachments separately" — are structurally
+ONE refactor:
+
+- The producer (`file_preprocessing._preprocess_image`) writes
+  in-block keys today because that's how `extract_attachment_refs`
+  derives `Message.attachments`. Stop one without the other and the
+  derive breaks.
+- The serialize path (`session._rewrite_content_for_serialize`)
+  writes in-block keys back into the on-disk JSON because
+  `_deserialize_message` needs them to re-derive `Message.attachments`
+  on load. Stop one without the other and session restore breaks.
+
+So the original Phase 3 (drop in-block keys) and original Phase 4
+(schema_v2 + migration) collapse into a single Phase 3+4 commit. The
+revised plan below replaces the original Phase 3 + Phase 4 sections.
+
+### Revised Phase 3+4 — Producer-pipeline refactor + session schema_version: 2
+
+**Single coherent change.** Producer stops emitting in-block keys at
+the same moment session schema_v2 lands so the metadata flow stays
+consistent end-to-end:
+
+```
+PRODUCER: file_preprocessing._preprocess_image returns (block, ref)
+          where block is spec-clean and ref carries name+file_id.
+            ↓
+ASSEMBLY: build_multimodal_content threads (parts, refs) through
+          the producer pipeline; EngineClient.chat receives both
+          and constructs Message(content=parts, attachments=refs).
+            ↓
+WIRE:     BaseProvider._convert_messages walks Message.content as-is.
+          Spec-clean by construction — no strip needed.
+          Wire validator (__debug__-gated) asserts no non-spec keys
+          ever reach a provider; any future producer regression
+          fails LOUD in tests.
+            ↓
+PERSIST:  session JSON carries `schema_version: 2` and persists
+          Message.attachments alongside content. _serialize_message
+          writes content (spec-clean) + attachments (typed list).
+          _deserialize_message reads both directly — no in-block-key
+          re-derivation needed for v2 sessions.
+            ↓
+LEGACY:   v1 session loader detects absent schema_version field +
+          in-block name/file_id keys, reconstructs attachments via
+          extract_attachment_refs (existing helper), strips the
+          in-block keys from content, marks the message for re-save
+          in v2 shape. One-shot migration on first load.
+```
+
+#### Implementation steps
+
+Each step ships in a green state. CI + targeted test suites green
+before moving to the next.
+
+1. **Producer return-shape change.** `_preprocess_image` returns
+   `(block, AttachmentRef)` instead of jamming metadata into the
+   block. `PreprocessResult` already carries `name` + `file_id` as
+   dataclass fields — the producer just stops duplicating them
+   inside the content block.
+
+2. **Assembly pipeline plumbing.** `build_multimodal_content` returns
+   `(parts, attachment_refs)` instead of just `parts`. 3 callers
+   update to unpack the tuple:
+   - `commands/attach.py` callers (Rich TUI, Textual TUI)
+   - `tui/app.py:876`
+   - `rich/main.py:535`
+   The server route (`server/routes/chat.py::_build_chat_payload`)
+   already returns a tuple post-Phase-1 (the UX warning work made it
+   `(payload, warnings)`); extend it to `(payload, warnings, refs)`.
+
+3. **EngineClient.chat receives refs explicitly.** Two options:
+   - (a) New keyword arg `attachment_refs: Optional[List[AttachmentRef]] = None`
+     on `chat()` — backwards-compatible default; old callers fall
+     through to today's `extract_attachment_refs` derivation.
+   - (b) New method `chat_with_attachments(content, refs)` — the new
+     primary path; `chat(message)` becomes a thin shim that derives
+     refs from in-block keys (legacy) and forwards.
+   **Pick (a) — the kwarg.** Smaller protocol surface, avoids a
+   second method that has to be kept in sync.
+
+4. **Session schema_version: 2.** Top-level field in session JSON.
+   `_serialize_message` writes `attachments` field on every message
+   that has them. `_deserialize_message` reads `schema_version` from
+   the parent dict and routes to v2 vs v1 paths.
+
+5. **Legacy v1 loader.** When `schema_version` is absent or `1`,
+   for each message:
+   - Run `extract_attachment_refs(content)` to synthesize attachments
+     from in-block keys (existing helper, unchanged)
+   - Strip `name` + `file_id` keys from content blocks (one-shot
+     in-place mutation during load)
+   - Mark the session as "needs re-save in v2 shape" (a transient
+     flag, NOT persisted) so the next save writes the migrated
+     shape
+   On v2 sessions: read `attachments` from JSON directly, no
+   re-derivation, content blocks already spec-clean.
+
+6. **Wire validator (`__debug__`-gated).** `assert_wire_blocks_clean`
+   helper in `engine/uploaded_file.py` (joins the existing
+   `flatten_uploaded_file_blocks` and `extract_attachment_refs`
+   helpers — same module, same "content-block hygiene" theme).
+   Called from `BaseProvider._convert_messages` after flatten.
+   Uses `assert` (not `raise`) so production builds with `python -O`
+   strip the check; tests + dev builds get the loud failure.
+
+7. **Drop in-block keys from producer.** `file_preprocessing.py`
+   line 264-272 emits the spec-clean `{"type": "image_url",
+   "image_url": {"url": ...}}` shape only. The corresponding writes
+   in `session._rewrite_content_for_serialize` (lines 339-340,
+   349-350) also drop — the function still rewrites data URIs to
+   `file://uploads/...` references but doesn't re-populate name/file_id
+   inside the block.
+
+#### Dependency graph
+
+```
+Step 1 (producer return shape) ──► Step 2 (assembly tuple)
+                                    │
+                                    ├──► Step 3 (chat kwarg)
+                                    │
+                                    └──► Step 7 (drop in-block keys)
+                                                 ↑
+Step 4 (schema_v2) ────────────────► Step 7 ─────┘
+        │
+        └──► Step 5 (legacy loader)
+
+Step 6 (wire validator) ──► independent; can land first as a
+                              "guard against the bug we're about to fix"
+                              sentinel. Tests pass today because the
+                              strip happens at write time before the
+                              validator runs.
+```
+
+**Recommended commit order:**
+1. Step 6 (wire validator) — defensive sentinel, ships green
+2. Steps 1+2+3 (producer + pipeline + chat kwarg) — single commit,
+   all callers updated atomically; legacy `extract_attachment_refs`
+   path still works for tests not using the new pipeline
+3. Step 4 (schema_v2 + serialize/deserialize updates)
+4. Step 5 (legacy loader)
+5. Step 7 (drop in-block keys + producer cleanup) — last because all
+   readers must already be migrated AND session-restore must already
+   work via schema_v2 OR the legacy loader
+
+Total estimated effort: 3-4 hours focused work, splittable across
+multiple sessions if Phase 4-style risk on Step 4-5 warrants pausing
+between commits.
+
+#### Deliverables checklist
+
+- [ ] Step 6: `assert_wire_blocks_clean` helper in
+  `engine/uploaded_file.py` + 6-8 sentinel cases
+- [ ] Step 6: `BaseProvider._convert_messages` calls the validator
+  under `__debug__`
+- [ ] Steps 1-3: `_preprocess_image` returns tuple,
+  `build_multimodal_content` returns tuple, `EngineClient.chat`
+  takes optional `attachment_refs` kwarg
+- [ ] Steps 1-3: 3 TUI/server call sites updated atomically
+- [ ] Steps 1-3: sentinel test pinning that producer-emitted blocks
+  are spec-clean even before the wire validator runs
+- [ ] Step 4: `schema_version: 2` field in session JSON top level
+- [ ] Step 4: `_serialize_message` persists `attachments` separately
+- [ ] Step 4: `_deserialize_message` reads `attachments` directly
+  on v2 sessions
+- [ ] Step 5: legacy v1 loader migration path with `extract_attachment_refs`
+  + in-block-key strip + transient "needs re-save" flag
+- [ ] Step 5: permanent regression fixture from a real v1.18.x
+  session (use `~/.ppxai/sessions.backup.20260514-161938-before-content-block-refactor/`
+  as the source — checked-in fixture in `tests/fixtures/sessions/v1/`)
+- [ ] Step 5: round-trip test: load v1 fixture → assert in-memory
+  shape correct → save → assert on-disk JSON now in v2 shape
+- [ ] Step 7: producer drops in-block keys
+- [ ] Step 7: serialize stops writing in-block keys back
+- [ ] Step 7: full ppxai test suite green (the moment the wire
+  validator's __debug__ assertions and the round-trip tests both
+  pass, the refactor is complete)
+
+#### Why this is the right call
+
+- **Single source of truth restored.** `Message.content` is the
+  spec-clean wire payload. `Message.attachments` is the engine-internal
+  metadata. No place in the codebase needs to ask "which shape am I
+  reading?"
+- **No permanent strip.** The wire validator catches future
+  regressions; it doesn't paper over them.
+- **Producer pipeline refactored once, not twice.** The original
+  Phase 3a tuple-return change would have been re-touched in Phase 4.
+- **Phase 4 is no harder than originally scoped.** Original Phase 4
+  was already going to handle session schema migration; combining it
+  with producer cleanup adds the producer return-shape change but
+  removes the orphan "drop in-block keys but session-restore still
+  needs them" intermediate state.
+
 ## Consequences
 
 ### What this enables
