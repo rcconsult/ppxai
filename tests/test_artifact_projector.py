@@ -113,7 +113,10 @@ class TestMechanicalDispatch:
             media_type="application/pdf", page_count=42,
         )
         marker = TextMarkerProjector.project(ref)
-        assert marker == "[Attached PDF: doc.pdf (42 pages)]"
+        # Matches pre-Step-7b Message.text_content() shape: [File: name (media_type)].
+        # page_count intentionally NOT in marker — preserved on ref for
+        # message-box projection / future richer-marker initiative.
+        assert marker == "[File: doc.pdf (application/pdf)]"
 
     def test_office_dispatches_through_message_box_projector(self):
         ref = OfficeAttachmentRef(
@@ -322,21 +325,33 @@ class TestProjectionOutputShape:
         ref = ImageAttachmentRef(block_index=0, name="x.png", file_id="")
         assert TextMarkerProjector.project(ref) == "[Image: x.png]"
 
-    def test_pdf_text_marker_includes_page_count_when_known(self):
-        with_pages = PdfAttachmentRef(
-            block_index=0, name="doc.pdf", file_id="", page_count=10,
+    def test_pdf_text_marker_includes_media_type_when_known(self):
+        """Matches pre-Step-7b Message.text_content() shape:
+        [File: name (media_type)] when media_type populated, else [File: name]."""
+        with_media = PdfAttachmentRef(
+            block_index=0, name="doc.pdf", file_id="",
+            media_type="application/pdf", page_count=10,
         )
-        without_pages = PdfAttachmentRef(
-            block_index=0, name="other.pdf", file_id="", page_count=None,
+        without_media = PdfAttachmentRef(
+            block_index=0, name="other.pdf", file_id="",
+            media_type="", page_count=None,
         )
-        assert "10 pages" in TextMarkerProjector.project(with_pages)
-        assert "pages" not in TextMarkerProjector.project(without_pages)
+        assert TextMarkerProjector.project(with_media) == "[File: doc.pdf (application/pdf)]"
+        assert TextMarkerProjector.project(without_media) == "[File: other.pdf]"
 
-    def test_office_and_text_share_attached_marker_shape(self):
-        office = OfficeAttachmentRef(block_index=0, name="s.xlsx", file_id="")
-        text = TextAttachmentRef(block_index=0, name="n.md", file_id="")
-        assert TextMarkerProjector.project(office) == "[Attached: s.xlsx]"
-        assert TextMarkerProjector.project(text) == "[Attached: n.md]"
+    def test_office_and_text_share_file_marker_shape(self):
+        """Office + text artifacts use the same `[File: name (media_type)]`
+        shape as PDF — matches pre-Step-7b Message.text_content() output."""
+        office = OfficeAttachmentRef(
+            block_index=0, name="s.xlsx", file_id="",
+            media_type="application/vnd.ms-excel",
+        )
+        text = TextAttachmentRef(
+            block_index=0, name="n.md", file_id="",
+            media_type="text/markdown",
+        )
+        assert TextMarkerProjector.project(office) == "[File: s.xlsx (application/vnd.ms-excel)]"
+        assert TextMarkerProjector.project(text) == "[File: n.md (text/markdown)]"
 
     def test_message_box_labels_are_non_empty_strings(self):
         """Light contract — every kind produces something the message-box

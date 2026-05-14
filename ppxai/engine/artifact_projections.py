@@ -103,11 +103,17 @@ def _pdf_to_context_dto(ref: PdfAttachmentRef) -> Dict[str, Any]:
 
 @TextMarkerProjector.register("pdf")
 def _pdf_to_text_marker(ref: PdfAttachmentRef) -> str:
-    """PDF → `[Attached PDF: name (N pages)]` placeholder."""
+    """PDF → `[File: name (media_type)]` placeholder.
+
+    Matches the pre-Step-7b shape from `Message.text_content()` so
+    token-estimation consumers (logging, markdown export) see
+    identical output. page_count is intentionally NOT in the marker
+    today — it's surfaced via the message-box projection instead.
+    A future v1.19.x richer-marker initiative can promote it here
+    after the token-count consumers are reviewed."""
     name = ref.name or "file"
-    if ref.page_count:
-        return f"[Attached PDF: {name} ({ref.page_count} pages)]"
-    return f"[Attached PDF: {name}]"
+    media = ref.media_type or ""
+    return f"[File: {name} ({media})]" if media else f"[File: {name}]"
 
 
 @MessageBoxProjector.register("pdf")
@@ -139,12 +145,12 @@ def _office_to_context_dto(ref: OfficeAttachmentRef) -> Dict[str, Any]:
 
 @TextMarkerProjector.register("office")
 def _office_to_text_marker(ref: OfficeAttachmentRef) -> str:
-    """Office doc → `[Attached: name]` placeholder. Detail (sheet
-    count, slide count) intentionally omitted from the marker — keeps
-    text-content stable for token estimation; UI surfaces detail via
-    the message-box projection instead."""
+    """Office doc → `[File: name (media_type)]` placeholder.
+    Matches pre-Step-7b shape from Message.text_content(). Detail
+    (sheet count, slide count) surfaced via message-box projection."""
     name = ref.name or "file"
-    return f"[Attached: {name}]"
+    media = ref.media_type or ""
+    return f"[File: {name} ({media})]" if media else f"[File: {name}]"
 
 
 @MessageBoxProjector.register("office")
@@ -174,10 +180,11 @@ def _text_to_context_dto(ref: TextAttachmentRef) -> Dict[str, Any]:
 
 @TextMarkerProjector.register("text")
 def _text_to_text_marker(ref: TextAttachmentRef) -> str:
-    """Text artifact → `[Attached: name]` placeholder. char_count
-    omitted from the marker (same reasoning as office)."""
+    """Text artifact → `[File: name (media_type)]` placeholder.
+    Matches pre-Step-7b shape from Message.text_content()."""
     name = ref.name or "file"
-    return f"[Attached: {name}]"
+    media = ref.media_type or ""
+    return f"[File: {name} ({media})]" if media else f"[File: {name}]"
 
 
 @MessageBoxProjector.register("text")

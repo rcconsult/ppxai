@@ -753,45 +753,32 @@ def collect_context_attachments(session: Any) -> List[ContextAttachment]:
     except Exception:
         return []
 
+    # ADR 0006 Step 7b (v1.18.6): all artifact dispatch goes through
+    # ContextAttachmentProjector. Two ref-source paths converge on
+    # the projector — Message.attachments (producer path / loaded
+    # session) OR synthesis from raw content blocks (test fixtures,
+    # direct constructors, pre-Phase-1 sessions). Same convergence
+    # the engine.multimodal_ops scanner uses; kept here purely to
+    # keep this standalone fallback usable in tests without booting
+    # an engine.
+    from ..engine.artifact_projector import ContextAttachmentProjector
+    from ..engine.multimodal_ops import _synthesize_refs_from_content
+
     seen: set[str] = set()
     result: List[ContextAttachment] = []
     for msg in messages:
-        # ADR 0006 Phase 2a: walk Message.attachments instead of
-        # scanning content blocks for image_url + name. The producer
-        # path (EngineClient.chat) and the load path
-        # (SessionManager._deserialize_message) both populate
-        # Message.attachments via extract_attachment_refs, so the
-        # invariant "every image_url block with a name has an
-        # ImageAttachmentRef" holds for every Message in memory.
-        # Fallback to legacy block-walk only when attachments is empty
-        # AND content has list shape — covers test fixtures + Message
-        # objects built without going through the producer pipeline.
-        attachments = getattr(msg, "attachments", None) or []
-        if attachments:
-            for ref in attachments:
-                name = ref.name or "image"
-                if name in seen:
-                    continue
-                seen.add(name)
-                result.append(ContextAttachment(name=name, kind="image"))
-            continue
-
-        # Legacy fallback for messages constructed without the
-        # ImageAttachmentRef projection (test stubs, manual constructors,
-        # pre-Phase-1 sessions loaded by old build).
-        content = getattr(msg, "content", None)
-        if not isinstance(content, list):
-            continue
-        for block in content:
-            if not isinstance(block, dict):
+        refs = list(getattr(msg, "attachments", None) or [])
+        if not refs:
+            refs = _synthesize_refs_from_content(getattr(msg, "content", None))
+        for ref in refs:
+            entry = ContextAttachmentProjector.project_optional(ref)
+            if entry is None:
                 continue
-            if block.get("type") != "image_url":
-                continue
-            name = block.get("name") or "image"
+            name = entry.get("name") or "image"
             if name in seen:
                 continue
             seen.add(name)
-            result.append(ContextAttachment(name=name, kind="image"))
+            result.append(ContextAttachment(name=name, kind=entry.get("kind") or "file"))
     return result
 
 

@@ -30,29 +30,38 @@ def normalize_content_to_text(content: Any) -> str:
         return content
     if not isinstance(content, list):
         return str(content)
+
+    # ADR 0006 Step 7b (v1.18.6): non-text blocks dispatch through
+    # TextMarkerProjector — same projection used by
+    # `Message.text_content()`. Keeping both surfaces on the same
+    # projector guarantees ppxaide MessageBox + Rich TUI + web +
+    # VSCode all show identical `[File: name (media_type)]` markers.
+    # Local imports — keeps tui/widgets independent from engine
+    # registration ordering at module load time.
+    from ppxai.engine.artifact_projector import TextMarkerProjector
+    from ppxai.engine.types import _synthesize_block_ref
+
     parts: List[str] = []
-    for block in content:
+    for idx, block in enumerate(content):
         if not isinstance(block, dict):
             continue
         btype = block.get("type")
         if btype == "text":
             parts.append(block.get("text", ""))
-        elif btype == "image_url":
-            name = block.get("name") or "image"
-            parts.append(f"[Image: {name}]")
-        elif btype in ("input_file", "file"):
-            name = block.get("name") or block.get("filename") or "file"
-            parts.append(f"[File: {name}]")
-        elif btype == "uploaded_file":
-            # R5 (v1.17.6): first-class uploaded_file content block.
-            # Mirror Message.text_content()'s rendering so the ppxaide
-            # MessageBox stays consistent with Rich TUI, web, and
-            # VSCode clients — all four show `[File: name (media_type)]`.
-            name = block.get("name") or "file"
-            media = block.get("media_type") or ""
-            parts.append(f"[File: {name} ({media})]" if media else f"[File: {name}]")
-        else:
-            parts.append(f"[{btype or 'part'}]")
+            continue
+
+        # No Message instance available here (this helper takes raw
+        # content) so we always synthesize a ref from the block. The
+        # helper's `_synthesize_block_ref` returns None for blocks
+        # without a registered kind mapping; fall through to the
+        # generic `[btype]` placeholder in that case.
+        ref = _synthesize_block_ref(block, idx)
+        marker = (
+            TextMarkerProjector.project_optional(ref)
+            if ref is not None
+            else None
+        )
+        parts.append(marker if marker is not None else f"[{btype or 'part'}]")
     return "\n".join(parts)
 
 

@@ -32,6 +32,8 @@ from typing import Any, Dict, List
 
 from ..common.logger import get_logger
 from ..config import get_vision_model_config
+from .artifact_projector import ContextAttachmentProjector
+from .types import OfficeAttachmentRef, PdfAttachmentRef
 from .uploaded_file import (
     parse_uploaded_file_markers,
     strip_uploaded_file_marker,
@@ -85,136 +87,229 @@ def refresh_context_attachments(engine) -> None:
         # is invisible to this scanner by design.
         if getattr(msg, "role", None) != "user":
             continue
+
+        # ADR 0006 Step 7b (v1.18.6): all artifact dispatch goes through
+        # `ContextAttachmentProjector.project(ref)`. Two ref-source paths
+        # converge on the projector:
+        #
+        #   (A) `Message.attachments` — populated by the producer pipeline
+        #       (Steps 1-3) for every multimodal Message constructed via
+        #       EngineClient.chat. Also populated by `_deserialize_message`
+        #       for v2 sessions (Step 4) and legacy v1 sessions (via
+        #       extract_attachment_refs synthesis).
+        #
+        #   (B) Synthesized from raw content blocks — for in-memory
+        #       Message objects built outside the producer pipeline
+        #       (test fixtures, direct constructors). Synthesis happens
+        #       once via `_synthesize_refs_from_content`, then dispatch
+        #       is uniform with path (A).
+        #
+        # Plus the legacy `<uploaded_file>` text-marker branch for
+        # pre-v1.17.6 sessions where attachments arrived as XML markers
+        # embedded in text blocks (no content-block kind to synthesize from).
+        refs = list(getattr(msg, "attachments", None) or [])
+        if not refs:
+            refs = _synthesize_refs_from_content(getattr(msg, "content", None))
+
+        for ref in refs:
+            entry = _project_with_media_type_enrichment(
+                ref, msg.content, engine.file_store,
+            )
+            if entry is None:
+                continue
+            file_id = entry["file_id"]
+            # Content-addressed dedup (R7). When file_id is empty
+            # (legacy / inline blocks), do NOT collapse by name —
+            # two same-named files are two distinct attachments.
+            if file_id:
+                if file_id in seen_keys:
+                    continue
+                seen_keys.add(file_id)
+            entry["turn_index"] = turn_index
+            attachments.append(entry)
+
+        # Legacy text-marker fallback — pre-v1.17.6 sessions only.
+        # New v1.18.6 producers don't emit these; new v2 sessions
+        # don't load these. Kept to keep transition-period sessions
+        # discoverable in the badge.
         content = getattr(msg, "content", None)
         if not isinstance(content, list):
             continue
-        for idx, block in enumerate(content):
-            if not isinstance(block, dict):
+        for block in content:
+            if not isinstance(block, dict) or block.get("type") != "text":
                 continue
-            btype = block.get("type")
-            if btype == "image_url":
-                # ADR 0006 Phase 2b: resolve_attachment handles the
-                # ImageAttachmentRef-first-with-in-block-fallback lookup in
-                # one place — see Message.resolve_attachment docstring.
-                # hasattr guard supports test stubs that don't pass
-                # real Message instances.
-                if hasattr(msg, "resolve_attachment"):
-                    ref = msg.resolve_attachment(idx)
-                    name = ref.name or "image"
-                    file_id = ref.file_id or ""
-                else:
-                    name = block.get("name") or "image"
-                    file_id = block.get("file_id") or ""
-
-                # Content-addressed dedup (R7). When file_id is empty
-                # (legacy blocks), do NOT collapse by name — two
-                # different same-named files should produce two badges.
-                if file_id:
-                    if file_id in seen_keys:
-                        continue
-                    seen_keys.add(file_id)
-
-                # Prefer authoritative metadata from the file store
-                # (populated in Phase 2.1a). Falls back to parsing the
-                # data URI for pure-Phase-1 content blocks. Block lookup
-                # by index is still needed here — ImageAttachmentRef carries
-                # only name/file_id, not the URL we parse for media_type
-                # in the file_store-unavailable case.
-                media_type = ""
-                if file_id and engine.file_store is not None:
-                    meta = engine.file_store.get_metadata(file_id)
-                    if meta is not None:
-                        media_type = meta.media_type
-                        # Keep the filename from the store canonical
-                        # — it survives save→load round trips.
-                        name = meta.name
-                if not media_type:
-                    url = (block.get("image_url") or {}).get("url", "")
-                    if url.startswith("data:"):
-                        try:
-                            media_type = url[5:].split(";", 1)[0] or ""
-                        except Exception:
-                            media_type = ""
-
-                attachments.append({
-                    "name": name,
-                    "kind": "image",
-                    "media_type": media_type,
-                    "turn_index": turn_index,
-                    "file_id": file_id,
-                })
-            elif btype in ("input_file", "file"):
-                name = block.get("name") or block.get("filename") or "file"
-                file_id = block.get("file_id") or ""
-                # Content-addressed dedup (R7) — same semantics as image_url.
-                if file_id:
-                    if file_id in seen_keys:
-                        continue
-                    seen_keys.add(file_id)
-                attachments.append({
-                    "name": name,
-                    "kind": "file",
-                    "media_type": block.get("media_type") or "",
-                    "turn_index": turn_index,
-                    "file_id": file_id,
-                })
-            elif btype == "uploaded_file":
-                # R5 (v1.17.6): first-class uploaded_file content block.
-                # Preferred shape for non-image attachments going forward.
-                # Dedup + badge-kind rules mirror the legacy text-marker
-                # branch below so the two shapes can coexist in the
-                # same session (useful during the rollout and for
-                # sessions loaded from pre-R5 ppxai builds).
-                uf_name = block.get("name") or "file"
-                uf_type = block.get("media_type") or ""
-                uf_fid = block.get("file_id") or ""
-                if uf_fid:
-                    if uf_fid in seen_keys:
-                        continue
-                    seen_keys.add(uf_fid)
-                kind = "pdf" if "pdf" in uf_type else "file"
-                attachments.append({
-                    "name": uf_name,
-                    "kind": kind,
-                    "media_type": uf_type,
-                    "turn_index": turn_index,
-                    "file_id": uf_fid,
-                })
-            elif btype == "text":
-                # Legacy path (pre-R5): PDF/Office/large-CSV attachments
-                # were embedded as `<uploaded_file>` XML markers inside
-                # text blocks. Kept for backward compat — sessions saved
-                # by pre-v1.17.6 code still load correctly and their
-                # attachments are tracked and removable.
-                text = block.get("text") or ""
-                if "<uploaded_file " not in text:
+            text = block.get("text") or ""
+            if "<uploaded_file " not in text:
+                continue
+            for marker in parse_uploaded_file_markers(text):
+                ref = _ref_from_legacy_text_marker(marker)
+                if ref is None:
                     continue
-                for marker in parse_uploaded_file_markers(text):
-                    uf_name = marker.get("name") or "file"
-                    uf_type = marker.get("type") or ""
-                    uf_fid = marker.get("file_id") or ""
-                    # Dedup semantics (R7): content-addressed when
-                    # file_id is present; when absent, do NOT collapse
-                    # by name — two empty-file_id markers sharing a
-                    # name are two distinct attachments from the user's
-                    # perspective, and silently collapsing them is the
-                    # badge-count bug we're fixing.
-                    if uf_fid:
-                        if uf_fid in seen_keys:
-                            continue
-                        seen_keys.add(uf_fid)
-                    kind = "pdf" if "pdf" in uf_type else "file"
-                    attachments.append({
-                        "name": uf_name,
-                        "kind": kind,
-                        "media_type": uf_type,
-                        "turn_index": turn_index,
-                        "file_id": uf_fid,
-                    })
+                entry = ContextAttachmentProjector.project(ref)
+                file_id = entry["file_id"]
+                if file_id:
+                    if file_id in seen_keys:
+                        continue
+                    seen_keys.add(file_id)
+                entry["turn_index"] = turn_index
+                attachments.append(entry)
 
     # AppState.set() short-circuits on equality so unchanged lists don't
     # fire listeners or SSE events.
     engine.state.set("context_attachments", attachments)
+
+
+def _project_with_media_type_enrichment(
+    ref: Any, content: Any, file_store: Any,
+) -> Dict[str, Any] | None:
+    """Project an artifact ref via ContextAttachmentProjector, then
+    enrich `media_type` from the file store / data URI when the ref
+    didn't carry one.
+
+    The producer pipeline (Steps 1-3) populates `ref.media_type` for
+    every kind today, so the enrichment branch fires only for refs
+    constructed outside the pipeline (test fixtures, legacy v1 sessions
+    loaded via `extract_attachment_refs` synthesis where media_type
+    is empty by design).
+
+    Returns None if the projector doesn't know this kind — caller
+    skips silently for forward-compat (e.g. v1.19.x sub-agent kinds
+    loaded by an older ppxai build).
+    """
+    entry = ContextAttachmentProjector.project_optional(ref)
+    if entry is None:
+        return None
+    if entry.get("media_type"):
+        return entry
+
+    # Enrichment — file store wins (canonical), data URI parse next.
+    file_id = entry.get("file_id") or ""
+    if file_id and file_store is not None:
+        meta = file_store.get_metadata(file_id)
+        if meta is not None:
+            entry["media_type"] = meta.media_type
+            # Canonical store-name beats the ref name — survives
+            # save→load round trips identically.
+            entry["name"] = meta.name
+            return entry
+
+    # Last-resort: parse `data:image/png;base64,...` URI from the
+    # matching content block. Only meaningful for image kind today.
+    block_index = getattr(ref, "block_index", -1)
+    if (
+        isinstance(content, list)
+        and 0 <= block_index < len(content)
+        and isinstance(content[block_index], dict)
+        and content[block_index].get("type") == "image_url"
+    ):
+        url = (content[block_index].get("image_url") or {}).get("url", "")
+        if url.startswith("data:"):
+            try:
+                entry["media_type"] = url[5:].split(";", 1)[0] or ""
+            except Exception:
+                pass
+    return entry
+
+
+def _synthesize_refs_from_content(content: Any) -> List[Any]:
+    """Build artifact refs from raw content blocks for messages whose
+    `Message.attachments` field is empty.
+
+    Used when a Message arrives outside the producer pipeline (test
+    fixtures, manual constructors). Mirrors the kind dispatch the
+    producer would have applied: `image_url` → ImageAttachmentRef,
+    `uploaded_file` → Pdf/Office/Text ref by media_type. Empty
+    `name`+`file_id` blocks are skipped (not actionable for the badge).
+
+    The synthesis happens here (one place) so the rest of the scanner
+    walks a uniform List[ArtifactRef] regardless of construction path.
+    Avoids re-introducing kind-dispatch in the reader body itself.
+    """
+    if not isinstance(content, list):
+        return []
+    refs: List[Any] = []
+    # Local import — avoid circular dep at module load (artifact_projections
+    # imports types which imports artifact_registry which... etc.)
+    from .types import ImageAttachmentRef, TextAttachmentRef
+
+    for idx, block in enumerate(content):
+        if not isinstance(block, dict):
+            continue
+        btype = block.get("type")
+        name = block.get("name") or block.get("filename") or ""
+        file_id = block.get("file_id") or ""
+        media_type = block.get("media_type") or ""
+
+        if btype == "image_url":
+            # Image blocks always synthesize a ref even when name+file_id
+            # are both empty — the badge surfaces a generic "image"
+            # entry so users see SOMETHING attached. Pre-Step-7b
+            # behavior; preserved for parity. Non-image kinds skip
+            # silently because their badge would be misleading without
+            # a name (no way for the user to identify what's there).
+            refs.append(ImageAttachmentRef(
+                block_index=idx, name=name or "image",
+                file_id=file_id, media_type=media_type,
+            ))
+        elif btype == "uploaded_file":
+            if not name and not file_id:
+                continue
+            if "pdf" in media_type:
+                refs.append(PdfAttachmentRef(
+                    block_index=idx, name=name or "file",
+                    file_id=file_id, media_type=media_type,
+                ))
+            else:
+                # Includes input_file, file, and any non-PDF uploaded_file
+                # — collapses to OfficeAttachmentRef for projector dispatch.
+                # Pre-Step-7b code mapped these to kind="file" too.
+                refs.append(OfficeAttachmentRef(
+                    block_index=idx, name=name or "file",
+                    file_id=file_id, media_type=media_type,
+                ))
+        elif btype in ("input_file", "file"):
+            if not name and not file_id:
+                continue
+            # input_file/file blocks are first-party OpenAI shapes that
+            # arrive outside the v1.18.6 producer pipeline. Map to
+            # OfficeAttachmentRef (kind="office", projects as kind="file"
+            # in DTO — preserving pre-Step-7b mapping).
+            refs.append(OfficeAttachmentRef(
+                block_index=idx, name=name or "file",
+                file_id=file_id, media_type=media_type,
+            ))
+    return refs
+
+
+def _ref_from_legacy_text_marker(marker: Dict[str, str]) -> Any:
+    """Synthesize a kind-specific MarshallableArtifact from a parsed
+    `<uploaded_file>` XML marker (pre-v1.17.6 session shape).
+
+    Lets the legacy text-marker branch reuse the same projector
+    dispatch as the modern Message.attachments path — no kind-specific
+    if/elif in the scanner. Marker `type` discriminates between PDF
+    and other documents, matching the pre-Step-7b kind mapping
+    (`"pdf" if "pdf" in type else "file"`).
+
+    Returns None for malformed markers (no name + no file_id) so
+    the scanner can skip silently.
+    """
+    name = marker.get("name") or ""
+    file_id = marker.get("file_id") or ""
+    media_type = marker.get("type") or ""
+    if not name and not file_id:
+        return None
+    # Synthesize block_index = -1 sentinel — legacy text markers
+    # don't have a corresponding content block index in the v1.18.6
+    # sense. Projector handlers don't read block_index, so this is
+    # purely diagnostic.
+    if "pdf" in media_type:
+        return PdfAttachmentRef(
+            block_index=-1, name=name, file_id=file_id, media_type=media_type,
+        )
+    return OfficeAttachmentRef(
+        block_index=-1, name=name, file_id=file_id, media_type=media_type,
+    )
 
 
 def get_context_attachments(engine) -> List[Dict[str, Any]]:

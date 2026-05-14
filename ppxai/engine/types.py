@@ -736,6 +736,24 @@ class Message:
             return self.content
         if not isinstance(self.content, list):
             return str(self.content)
+
+        # ADR 0006 Step 7b (v1.18.6): non-text blocks dispatch through
+        # TextMarkerProjector. Build a block_index → ref map so each
+        # block can find its registered projection in O(1) without
+        # an inner loop. Handles both producer-pipeline messages
+        # (Message.attachments populated) AND messages built outside
+        # the pipeline (synthesize a transient ref from in-block keys
+        # for the lookup — same bridge `_synthesize_refs_from_content`
+        # uses in multimodal_ops, kept local here to avoid the import
+        # cycle with engine.multimodal_ops).
+        from .artifact_projector import TextMarkerProjector
+
+        ref_by_index: Dict[int, "ArtifactRef"] = {
+            ref.block_index: ref
+            for ref in self.attachments
+            if hasattr(ref, "block_index")
+        }
+
         parts: List[str] = []
         for idx, block in enumerate(self.content):
             if not isinstance(block, dict):
@@ -743,43 +761,18 @@ class Message:
             btype = block.get("type")
             if btype == "text":
                 parts.append(block.get("text", ""))
-            elif btype == "image_url":
-                # ADR 0006 Phase 2a/2b: get the effective ImageAttachmentRef
-                # via resolve_attachment (handles ImageAttachmentRef-first
-                # lookup with in-block-key fallback in one place — see
-                # docstring). Falls back to URL-derived guessing only
-                # when both ImageAttachmentRef and in-block name are empty,
-                # which only happens for remote-URL image_url blocks
-                # built outside any preprocessing pipeline.
-                ref = self.resolve_attachment(idx)
-                if ref.name:
-                    name = ref.name
-                else:
-                    url = (block.get("image_url") or {}).get("url", "")
-                    name = _guess_name_from_url(url) or "image"
-                parts.append(f"[Image: {name}]")
-            elif btype == "input_file" or btype == "file":
-                # Intentionally NOT migrated to ImageAttachmentRef — these
-                # block types' name is intrinsic to the block schema,
-                # not bookkeeping pollution. Phase 1's
-                # extract_attachment_refs scope was image_url only.
-                name = block.get("name") or block.get("filename") or "file"
-                parts.append(f"[File: {name}]")
-            elif btype == "uploaded_file":
-                # R5 (v1.17.6): first-class uploaded-file block. For
-                # human-readable display (logs, token estimates, markdown
-                # exports) render `[File: name (media_type)]` so the
-                # output matches what `input_file` / `file` blocks look
-                # like. Providers never see this branch because they
-                # flatten uploaded_file to text before calling this.
-                # Same intrinsic-metadata rationale as input_file/file —
-                # not migrated to ImageAttachmentRef.
-                name = block.get("name") or "file"
-                media = block.get("media_type") or ""
-                parts.append(f"[File: {name} ({media})]" if media else f"[File: {name}]")
-            else:
-                # Unknown part type — include a marker but don't crash.
-                parts.append(f"[{btype or 'part'}]")
+                continue
+
+            ref = ref_by_index.get(idx) or _synthesize_block_ref(block, idx)
+            if ref is not None:
+                marker = TextMarkerProjector.project_optional(ref)
+                if marker is not None:
+                    parts.append(marker)
+                    continue
+
+            # Unknown / un-projectable block type — include a marker
+            # but don't crash. Mirrors pre-Step-7b fallback.
+            parts.append(f"[{btype or 'part'}]")
         return "\n".join(parts)
 
 
@@ -790,6 +783,56 @@ def _guess_name_from_url(url: str) -> str:
     # Strip query string, take basename.
     tail = url.split("?", 1)[0].rstrip("/")
     return tail.rsplit("/", 1)[-1] if "/" in tail else tail
+
+
+def _synthesize_block_ref(block: Dict[str, Any], idx: int) -> Optional[Any]:
+    """Synthesize an artifact ref from a raw content block when the
+    parent Message has no `attachments` entry for this index.
+
+    ADR 0006 Step 7b (v1.18.6): bridges the projector framework to
+    Messages constructed outside the producer pipeline (test fixtures,
+    direct constructors, pre-Phase-1 sessions). The reader can dispatch
+    through TextMarkerProjector uniformly without an if/elif ladder.
+
+    Mirrors the kind-mapping `multimodal_ops._synthesize_refs_from_content`
+    uses; kept local to avoid the import cycle (types ← multimodal_ops
+    via artifact_projections). The two synthesizers must stay aligned —
+    if a new content-block kind shows up, both files need updating.
+    Centralized in a future helper module if a third synthesizer appears.
+    """
+    btype = block.get("type")
+    name = block.get("name") or block.get("filename") or ""
+    file_id = block.get("file_id") or ""
+    media_type = block.get("media_type") or ""
+
+    if btype == "image_url":
+        url = (block.get("image_url") or {}).get("url", "")
+        if not name:
+            name = _guess_name_from_url(url) or "image"
+        return ImageAttachmentRef(
+            block_index=idx, name=name,
+            file_id=file_id, media_type=media_type,
+        )
+    if btype == "uploaded_file":
+        if not name and not file_id:
+            return None
+        if "pdf" in media_type:
+            return PdfAttachmentRef(
+                block_index=idx, name=name or "file",
+                file_id=file_id, media_type=media_type,
+            )
+        return OfficeAttachmentRef(
+            block_index=idx, name=name or "file",
+            file_id=file_id, media_type=media_type,
+        )
+    if btype in ("input_file", "file"):
+        if not name and not file_id:
+            return None
+        return OfficeAttachmentRef(
+            block_index=idx, name=name or "file",
+            file_id=file_id, media_type=media_type,
+        )
+    return None
 
 
 @dataclass
