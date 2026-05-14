@@ -15,7 +15,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Callable, List, Dict, Any, Optional
 
-from .types import Message, ToolUsage, UsageStats, SessionInfo
+from .types import Message, ToolUsage, UsageStats, SessionInfo, extract_attachment_refs
 from .session_store import SessionFileStore
 from ..common.logger import get_logger
 from ..constants import ConsentMode
@@ -242,6 +242,15 @@ class SessionManager:
         - New file_id-referenced list content (Phase 2.1a sessions) —
           expanded back into data URIs via `self.file_store` so in-memory
           messages look identical to what provider adapters expect.
+
+        ADR 0006 Phase 1 (v1.18.6): re-derives `Message.attachments` from
+        the in-block `name`+`file_id` keys via `extract_attachment_refs`.
+        Today the on-disk format doesn't carry attachments separately
+        (Phase 4 versions session JSON to persist both fields), so the
+        deserialize path reconstructs attachments from the same keys
+        that the serialize path preserves. Net effect: every loaded
+        Message satisfies the same "attachments populated" invariant
+        as a freshly-constructed one.
         """
         content = m["content"]
         if self.file_store is not None and isinstance(content, list):
@@ -252,6 +261,7 @@ class SessionManager:
             content=content,
             tool_calls=m.get("tool_calls"),
             tool_call_id=m.get("tool_call_id"),
+            attachments=extract_attachment_refs(content),
         )
 
     # ------------------------------------------------------------------

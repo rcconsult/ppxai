@@ -15,7 +15,8 @@ from pathlib import Path
 
 from .types import (
     Message, MessageContent, Event, EventType, UsageStats,
-    ProviderInfo, ModelInfo, ProviderCapabilities
+    ProviderInfo, ModelInfo, ProviderCapabilities,
+    extract_attachment_refs,
 )
 from ..prompts import CODING_PROMPTS
 from .providers import create_provider
@@ -948,8 +949,19 @@ class EngineClient:
                 else:
                     self._injected_contexts.append(injection_entry)
 
-        # Add message to history (with injected content if applicable)
-        self.session.add_message(Message("user", message))
+        # Add message to history (with injected content if applicable).
+        # ADR 0006 Phase 1: also populate Message.attachments by walking
+        # the content list for image_url blocks carrying name/file_id.
+        # Today this duplicates the in-block keys (read by multimodal_ops,
+        # session serialize, attach context-listing); Phase 2 will switch
+        # those readers to walk attachments instead, Phase 3 drops the
+        # in-block keys, Phase 4 versions session JSON. Until then both
+        # representations coexist with zero behavioral change.
+        self.session.add_message(Message(
+            role="user",
+            content=message,
+            attachments=extract_attachment_refs(message),
+        ))
 
         try:
             if self.tools_enabled:

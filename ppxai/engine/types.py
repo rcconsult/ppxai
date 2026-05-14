@@ -203,6 +203,89 @@ class Event:
 
 
 @dataclass
+class AttachmentRef:
+    """Per-attachment metadata living alongside Message.content (ADR 0006, Phase 1).
+
+    Engine-internal bookkeeping that documents an attachment without
+    polluting the wire-format content block. `block_index` is the join
+    key — `message.attachments[i]` describes
+    `message.content[message.attachments[i].block_index]`.
+
+    Today (Phase 1, v1.18.6): populated alongside the legacy in-block
+    `name` + `file_id` keys at message-construction time. Existing
+    readers continue to use the in-block keys; this field is purely
+    additive. The field exists so Phase 2 can switch readers over and
+    Phase 3 can drop the in-block keys without churning every call site
+    in one pass.
+
+    Attributes:
+        block_index: Position in `message.content` of the block this
+            attachment annotates. Stable across serialize/deserialize
+            because content list ordering is preserved.
+        name: Canonical filename (basename only). Comes from the
+            preprocessing pipeline (`engine.session_store` canonicalizes).
+        file_id: SessionFileStore identifier (sha256 prefix). Empty
+            string when the attachment wasn't persisted (rare —
+            test fixtures, in-memory previews, file_store unavailable).
+        media_type: Canonical MIME type. May differ from what the
+            caller declared because magic-byte sniffing wins.
+    """
+    block_index: int
+    name: str
+    file_id: str = ""
+    media_type: str = ""
+
+
+def extract_attachment_refs(content: Any) -> List["AttachmentRef"]:
+    """Walk a multimodal content list and pull out attachment metadata.
+
+    Reads the legacy in-block `name` + `file_id` keys that producers
+    (`file_preprocessing._preprocess_image`) and the session
+    serialize/deserialize round-trip embed inside `image_url` blocks
+    today. Returns an `AttachmentRef` for each block that carries either
+    `name` or `file_id`.
+
+    This is the bridge between today's "metadata inside content blocks"
+    state and Phase 2's "metadata in `Message.attachments`" target. Both
+    can coexist during the migration without behavioral change.
+
+    Returns an empty list when `content` is a string or has no
+    attachment-bearing blocks. Never raises — defensive against
+    malformed content (caller-supplied dicts may be missing keys).
+    """
+    if not isinstance(content, list):
+        return []
+    refs: List[AttachmentRef] = []
+    for idx, block in enumerate(content):
+        if not isinstance(block, dict):
+            continue
+        btype = block.get("type")
+        if btype != "image_url":
+            # Phase 1 scope: only image_url carries the entangled
+            # name/file_id keys. uploaded_file is its own engine-internal
+            # block type with its own metadata fields (`name`,
+            # `media_type`, `file_id`) but those are intrinsic to the
+            # block type, not bookkeeping pollution — leave them alone.
+            # Phase 4 may revisit if uploaded_file readers benefit from
+            # the same projection.
+            continue
+        name = block.get("name") or ""
+        file_id = block.get("file_id") or ""
+        if not name and not file_id:
+            # No metadata to extract — block was constructed without
+            # going through the preprocessing pipeline (manual API
+            # caller, test fixture). Skip silently.
+            continue
+        refs.append(AttachmentRef(
+            block_index=idx,
+            name=name,
+            file_id=file_id,
+            media_type="",  # producers don't set media_type inside the block today
+        ))
+    return refs
+
+
+@dataclass
 class Message:
     """A conversation message.
 
@@ -211,11 +294,21 @@ class Message:
     uploaded file references). Code that needs plain text for logging,
     serialization, or widget rendering must use `text_content()` rather than
     reading `content` directly.
+
+    `attachments` (ADR 0006 Phase 1, v1.18.6) is engine-internal
+    bookkeeping that runs alongside `content`. It is NOT sent on the
+    wire — provider adapters serialize `content` only. Today it
+    duplicates information that also lives inside content blocks
+    (`image_url.name`, `image_url.file_id`); Phase 2 switches readers
+    over to walk `attachments`, Phase 3 drops the in-block keys, Phase
+    4 versions the on-disk session JSON to carry both fields side by
+    side. See `docs/decisions/0006-content-block-schema-separation.md`.
     """
     role: str  # 'user', 'assistant', 'system', 'tool'
     content: MessageContent
     tool_calls: Optional[List[Dict[str, Any]]] = None   # For assistant messages with native calls
     tool_call_id: Optional[str] = None                    # For tool role messages
+    attachments: List["AttachmentRef"] = field(default_factory=list)  # ADR 0006 Phase 1
 
     def text_content(self) -> str:
         """Extract plain text from the message content.
