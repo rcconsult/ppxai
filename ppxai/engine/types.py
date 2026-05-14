@@ -5,7 +5,7 @@ These types are used across all layers (engine, server, clients) and have no UI 
 """
 
 from dataclasses import dataclass, field
-from typing import List, Dict, Any, Optional, Callable, Protocol, Set, Union, runtime_checkable
+from typing import ClassVar, List, Dict, Any, Optional, Callable, Protocol, Set, Union, runtime_checkable
 from enum import Enum
 
 
@@ -202,38 +202,373 @@ class Event:
     metadata: Optional[Dict[str, Any]] = None
 
 
+# =============================================================================
+# Artifact framework (ADR 0006 Foundation, v1.18.6)
+#
+# Engine-internal references to artifacts attached to a Message. The
+# ArtifactRef Protocol is the universal identity contract; concrete kinds
+# (ImageAttachmentRef, PdfAttachmentRef, OfficeAttachmentRef,
+# TextAttachmentRef) implement it + the MarshallableArtifact persistence
+# Protocol. Cross-process readers (session loaders, ADR 0003 agent-run
+# viewers, ADR 0005 events.jsonl consumers, ppxai-sre external tooling)
+# dispatch by `kind` discriminator via `engine.artifact_registry`.
+#
+# Pattern alignment: this mirrors `ppxai/rendering/base.py::Renderer` —
+# the same plug-n-play decorator-based registry that ppxai already uses
+# for type-based CommandResult dispatch. ArtifactRegistry adapts the
+# pattern for cross-process JSON dispatch (string discriminator → class)
+# while Renderer uses it for in-process polymorphism (Python class →
+# handler function). Same architectural style, different problem.
+# =============================================================================
+
+
+@runtime_checkable
+class ArtifactRef(Protocol):
+    """Identity contract — every Message attachment satisfies this.
+
+    Minimal Protocol: just `block_index` + `kind`. Concrete classes add
+    their own typed fields (name/file_id for images, page_count for
+    PDFs, sheet_count for spreadsheets, etc.). Adding a new kind in
+    v1.19.x is: define dataclass + register a deserializer — no
+    Protocol changes needed.
+
+    Why a Protocol and not an ABC: structural typing avoids forcing
+    every artifact kind to inherit from a common base. Concrete classes
+    can be plain dataclasses, frozen dataclasses, attrs, pydantic
+    models — all work as long as they expose the required attributes.
+    Same pattern as `EngineClientProtocol`, `ToolEngineProtocol`,
+    `ToolManagerProtocol` (per ADR's "Protocol-based dependency
+    inversion").
+    """
+
+    block_index: int
+    """Position in `message.content` of the block this artifact
+    annotates. Stable across serialize/deserialize because content list
+    ordering is preserved. Some artifacts (sub-agent outputs, plan
+    documents in v1.19.x) may not correspond to a content block and
+    use `block_index = -1` as the sentinel "no block reference"."""
+
+    kind: str
+    """Discriminator string used by `ArtifactRegistry` for cross-process
+    dispatch. Each concrete class declares a distinct kind: 'image',
+    'pdf', 'office', 'text' today; future v1.19.x kinds add their own.
+    Convention: lowercase snake_case, globally unique within ppxai."""
+
+
+@runtime_checkable
+class MarshallableArtifact(Protocol):
+    """Persistence contract — artifacts that round-trip through schema.
+
+    Every concrete artifact in `Message.attachments` MUST satisfy this
+    Protocol to be persisted in v2 session JSON (Step 4) and v1.19.x
+    agent-run state.json. Caller (`ArtifactRegistry.deserialize`)
+    routes by kind to the right concrete class then calls `from_dict`.
+
+    **Method names are version-stable forever.** Per-kind schema version
+    lives INSIDE the produced dict as `_schema_version: int`. When a
+    kind's payload shape evolves (e.g. ImageAttachmentRef gains a
+    `provenance` field in v1.20.x), `SCHEMA_VERSION` increments +
+    `from_dict` branches internally on the embedded `_schema_version`.
+    **Callers never see version numbers in API names** — `to_dict` /
+    `from_dict` is the stable contract.
+
+    Two version concerns evolve INDEPENDENTLY:
+      - **Session-level `schema_version`** (Step 4): the WHOLE-session
+        shape. Bumps on big migrations (this ADR's job).
+      - **Per-artifact `_schema_version`** (embedded in each artifact's
+        dict): the kind-specific payload shape. Each kind tracks its
+        own version independently. Branched inside the kind's
+        `from_dict`.
+
+    This separation matches ADR 0005 §"Open decisions" item 2
+    (schema_version per record in events.jsonl). Same pattern,
+    established in v1.18.6 sessions, inherited by v1.19.x agent-platform
+    artifacts.
+
+    Inherits structurally from `ArtifactRef` — every MarshallableArtifact
+    also has `block_index` + `kind`.
+    """
+
+    block_index: int  # From ArtifactRef.
+    kind: str
+
+    SCHEMA_VERSION: ClassVar[int]
+    """Latest schema version this class can both produce and consume.
+    Bump when the kind's `to_dict` payload shape changes incompatibly.
+    `from_dict` reads the embedded `_schema_version` from incoming data
+    and routes to the right deserialization branch — supporting older
+    payloads is the kind's responsibility. Unknown future versions raise
+    ValueError so a downgraded ppxai catches the mismatch loudly."""
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Serialize to a JSON-safe dict. Output MUST include `kind`
+        (discriminator), `_schema_version` (per-kind version), and
+        `block_index` (universal). Other fields are kind-specific.
+        Values must be JSON-serializable (no datetimes, no Path —
+        convert to str / int / etc.)."""
+        ...
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "MarshallableArtifact":
+        """Reconstruct from a JSON-loaded dict. Reads
+        `data["_schema_version"]` and branches per version internally.
+        Caller (`ArtifactRegistry.deserialize`) has already validated
+        `data["kind"]` matches; from_dict trusts the dispatch."""
+        ...
+
+
 @dataclass
 class ImageAttachmentRef:
-    """Per-attachment metadata living alongside Message.content (ADR 0006, Phase 1).
+    """Image attachment artifact — first concrete MarshallableArtifact.
 
-    Engine-internal bookkeeping that documents an attachment without
-    polluting the wire-format content block. `block_index` is the join
-    key — `message.attachments[i]` describes
+    Engine-internal bookkeeping for an image attached to a Message,
+    living alongside (not inside) the wire-format content block.
+    `block_index` is the join key — `message.attachments[i]` describes
     `message.content[message.attachments[i].block_index]`.
 
-    Today (Phase 1, v1.18.6): populated alongside the legacy in-block
+    Registered as `kind="image"` via `ArtifactRegistry.register("image")`
+    (decorator on the class). v2 session JSON persists each image
+    attachment as `{"kind": "image", "_schema_version": 1, ...}`.
+
+    Today (Phase 1+2, v1.18.6): populated alongside the legacy in-block
     `name` + `file_id` keys at message-construction time. Existing
     readers continue to use the in-block keys; this field is purely
-    additive. The field exists so Phase 2 can switch readers over and
-    Phase 3 can drop the in-block keys without churning every call site
-    in one pass.
+    additive. Step 7 drops the in-block keys.
 
     Attributes:
-        block_index: Position in `message.content` of the block this
-            attachment annotates. Stable across serialize/deserialize
-            because content list ordering is preserved.
-        name: Canonical filename (basename only). Comes from the
-            preprocessing pipeline (`engine.session_store` canonicalizes).
+        block_index: Position in `message.content` of the image_url block.
+        name: Canonical filename (basename only). Canonicalized by
+            `engine.session_store`.
         file_id: SessionFileStore identifier (sha256 prefix). Empty
-            string when the attachment wasn't persisted (rare —
-            test fixtures, in-memory previews, file_store unavailable).
-        media_type: Canonical MIME type. May differ from what the
-            caller declared because magic-byte sniffing wins.
+            string when the attachment wasn't persisted (rare — test
+            fixtures, in-memory previews, file_store unavailable).
+        media_type: Canonical MIME type. May differ from what the caller
+            declared because magic-byte sniffing wins.
+        kind: Always "image". Defaulted last so existing constructor
+            calls (positional or keyword) work unchanged.
     """
+    SCHEMA_VERSION: ClassVar[int] = 1
+    """Per-kind payload version. Bump when the dict shape produced by
+    to_dict changes incompatibly. from_dict branches internally."""
+
     block_index: int
     name: str
     file_id: str = ""
     media_type: str = ""
+    kind: str = "image"
+
+    def to_dict(self) -> Dict[str, Any]:
+        """MarshallableArtifact contract — serialize to v2-schema dict."""
+        return {
+            "kind": self.kind,
+            "_schema_version": self.SCHEMA_VERSION,
+            "block_index": self.block_index,
+            "name": self.name,
+            "file_id": self.file_id,
+            "media_type": self.media_type,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "ImageAttachmentRef":
+        """MarshallableArtifact contract — reconstruct from v2-schema dict.
+
+        Branches on `data["_schema_version"]` (defaulting to 1 when
+        absent for graceful migration from any pre-v1 unstamped data).
+        Future v2+ payload shapes add their own branches.
+        """
+        version = data.get("_schema_version", 1)
+        if version == 1:
+            return cls(
+                block_index=int(data["block_index"]),
+                name=str(data.get("name", "")),
+                file_id=str(data.get("file_id", "")),
+                media_type=str(data.get("media_type", "")),
+            )
+        raise ValueError(
+            f"ImageAttachmentRef.from_dict: unsupported _schema_version={version}. "
+            f"This ppxai build understands versions 1..{cls.SCHEMA_VERSION}. "
+            f"Upgrade ppxai or check the data source."
+        )
+
+
+@dataclass
+class PdfAttachmentRef:
+    """PDF attachment artifact (kind="pdf").
+
+    Pairs with the producer's `_preprocess_pdf` branch which today emits
+    an `uploaded_file` block carrying intrinsic metadata (name, file_id,
+    media_type, page_count). PdfAttachmentRef gives that metadata a
+    typed home in `Message.attachments` instead of relying on
+    block-internal dict keys.
+
+    Sub-agents (v1.19.x per ADR 0003) will produce PdfAttachmentRefs
+    when they generate or fetch PDFs — same dataclass, no new framework.
+
+    Attributes:
+        block_index: Position in `message.content` (the uploaded_file
+            block for this PDF). May be -1 for PDFs that arrive via
+            sub-agent output without a corresponding content block.
+        name: Canonical filename.
+        file_id: SessionFileStore identifier.
+        media_type: Always "application/pdf" today; carried for
+            consistency with the framework.
+        page_count: Number of pages. None when pypdf is unavailable
+            or the PDF was malformed (warning logged at preprocess time).
+        kind: Always "pdf".
+    """
+    SCHEMA_VERSION: ClassVar[int] = 1
+
+    block_index: int
+    name: str
+    file_id: str = ""
+    media_type: str = "application/pdf"
+    page_count: Optional[int] = None
+    kind: str = "pdf"
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "kind": self.kind,
+            "_schema_version": self.SCHEMA_VERSION,
+            "block_index": self.block_index,
+            "name": self.name,
+            "file_id": self.file_id,
+            "media_type": self.media_type,
+            "page_count": self.page_count,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "PdfAttachmentRef":
+        version = data.get("_schema_version", 1)
+        if version == 1:
+            page_count = data.get("page_count")
+            return cls(
+                block_index=int(data["block_index"]),
+                name=str(data.get("name", "")),
+                file_id=str(data.get("file_id", "")),
+                media_type=str(data.get("media_type", "application/pdf")),
+                page_count=int(page_count) if page_count is not None else None,
+            )
+        raise ValueError(
+            f"PdfAttachmentRef.from_dict: unsupported _schema_version={version}. "
+            f"This ppxai build understands versions 1..{cls.SCHEMA_VERSION}."
+        )
+
+
+@dataclass
+class OfficeAttachmentRef:
+    """Office document attachment (kind="office").
+
+    Pairs with `_preprocess_office` which handles xlsx, pptx, docx
+    today. Each subtype lives behind the same MarshallableArtifact —
+    the document type lives in `media_type`, not in the kind string,
+    so all office formats share one registry slot.
+
+    Attributes:
+        block_index: Position in `message.content` (uploaded_file block).
+        name: Canonical filename.
+        file_id: SessionFileStore identifier.
+        media_type: e.g. "application/vnd.openxmlformats-...".
+        sheet_count: For spreadsheets (xlsx). None for pptx/docx.
+        slide_count: For presentations (pptx). None for xlsx/docx.
+        kind: Always "office".
+    """
+    SCHEMA_VERSION: ClassVar[int] = 1
+
+    block_index: int
+    name: str
+    file_id: str = ""
+    media_type: str = ""
+    sheet_count: Optional[int] = None
+    slide_count: Optional[int] = None
+    kind: str = "office"
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "kind": self.kind,
+            "_schema_version": self.SCHEMA_VERSION,
+            "block_index": self.block_index,
+            "name": self.name,
+            "file_id": self.file_id,
+            "media_type": self.media_type,
+            "sheet_count": self.sheet_count,
+            "slide_count": self.slide_count,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "OfficeAttachmentRef":
+        version = data.get("_schema_version", 1)
+        if version == 1:
+            sc = data.get("sheet_count")
+            slc = data.get("slide_count")
+            return cls(
+                block_index=int(data["block_index"]),
+                name=str(data.get("name", "")),
+                file_id=str(data.get("file_id", "")),
+                media_type=str(data.get("media_type", "")),
+                sheet_count=int(sc) if sc is not None else None,
+                slide_count=int(slc) if slc is not None else None,
+            )
+        raise ValueError(
+            f"OfficeAttachmentRef.from_dict: unsupported _schema_version={version}. "
+            f"This ppxai build understands versions 1..{cls.SCHEMA_VERSION}."
+        )
+
+
+@dataclass
+class TextAttachmentRef:
+    """Text/markdown/code attachment (kind="text").
+
+    Pairs with `_preprocess_text` and `_preprocess_csv` which today
+    emit text content blocks (no separate block type — the file
+    contents are inlined into the prompt). file_id may be empty when
+    the file was small enough to inline directly without persisting.
+
+    Attributes:
+        block_index: Position in `message.content` (the text block
+            containing the inlined content).
+        name: Canonical filename (e.g. "config.yaml", "notes.md").
+        file_id: SessionFileStore identifier. May be empty for small
+            inline-only attachments.
+        media_type: e.g. "text/markdown", "text/csv", "application/json".
+        char_count: Character count of the inlined content. Useful for
+            token-budget tracking.
+        kind: Always "text".
+    """
+    SCHEMA_VERSION: ClassVar[int] = 1
+
+    block_index: int
+    name: str
+    file_id: str = ""
+    media_type: str = ""
+    char_count: int = 0
+    kind: str = "text"
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "kind": self.kind,
+            "_schema_version": self.SCHEMA_VERSION,
+            "block_index": self.block_index,
+            "name": self.name,
+            "file_id": self.file_id,
+            "media_type": self.media_type,
+            "char_count": self.char_count,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "TextAttachmentRef":
+        version = data.get("_schema_version", 1)
+        if version == 1:
+            return cls(
+                block_index=int(data["block_index"]),
+                name=str(data.get("name", "")),
+                file_id=str(data.get("file_id", "")),
+                media_type=str(data.get("media_type", "")),
+                char_count=int(data.get("char_count", 0)),
+            )
+        raise ValueError(
+            f"TextAttachmentRef.from_dict: unsupported _schema_version={version}. "
+            f"This ppxai build understands versions 1..{cls.SCHEMA_VERSION}."
+        )
 
 
 def extract_attachment_refs(content: Any) -> List["ImageAttachmentRef"]:
@@ -308,25 +643,40 @@ class Message:
     content: MessageContent
     tool_calls: Optional[List[Dict[str, Any]]] = None   # For assistant messages with native calls
     tool_call_id: Optional[str] = None                    # For tool role messages
-    attachments: List["ImageAttachmentRef"] = field(default_factory=list)  # ADR 0006 Phase 1
+    # ADR 0006 Phase 1 + Foundation. Typed as List[ArtifactRef] (Protocol)
+    # so v1.19.x agent-platform artifact kinds (sub-agent outputs, plan
+    # documents, tool artifacts) can be added to the same list without
+    # API churn. Today's concrete kinds: ImageAttachmentRef ("image"),
+    # PdfAttachmentRef ("pdf"), OfficeAttachmentRef ("office"),
+    # TextAttachmentRef ("text") — each registered with ArtifactRegistry.
+    # Callers that need image-specific fields use attachment_for_block
+    # which narrows via isinstance check; future kind-specific helpers
+    # follow the same pattern.
+    attachments: List["ArtifactRef"] = field(default_factory=list)
 
     def attachment_for_block(self, block_index: int) -> Optional["ImageAttachmentRef"]:
         """Return the ImageAttachmentRef whose block_index == `block_index`, or None.
 
-        ADR 0006 Phase 2a low-level lookup. Most readers should use the
-        higher-level `resolve_attachment(idx)` instead — that one handles
-        the ImageAttachmentRef-first-with-in-block-fallback pattern in one
+        ADR 0006 Phase 2a low-level lookup, image-narrowed. Most readers
+        should use `resolve_attachment(idx)` instead — that handles the
+        ImageAttachmentRef-first-with-in-block-fallback pattern in one
         place. Direct `attachment_for_block` is for callers that
-        deliberately want to know whether ImageAttachmentRef is present or
-        absent (e.g. tests asserting Phase 1 invariants).
+        deliberately want to know whether an ImageAttachmentRef is
+        present or absent (e.g. tests asserting Phase 1 invariants).
+
+        **Image-narrowed**: returns ONLY `ImageAttachmentRef` instances
+        even though `Message.attachments` is `List[ArtifactRef]`
+        (heterogeneous). Future kind-specific helpers
+        (`pdf_attachment_for_block`, `office_attachment_for_block`,
+        v1.19.x `subagent_artifact_for_block`) follow the same pattern
+        — narrow per kind via isinstance, never return mixed types.
 
         Linear scan is fine — `attachments` is bounded by the number of
-        image_url blocks in a single message, which in practice is 1-5.
-        Don't index it; the call cost is dwarfed by the surrounding
-        block-walk anyway.
+        attached files per message, which in practice is 1-5. Don't
+        index; the call cost is dwarfed by the surrounding block-walk.
         """
         for ref in self.attachments:
-            if ref.block_index == block_index:
+            if ref.block_index == block_index and isinstance(ref, ImageAttachmentRef):
                 return ref
         return None
 
@@ -603,3 +953,29 @@ class AgentBeatState:
             "failures": self.consecutive_failures,
             "elapsed_s": round(self.elapsed_s, 1),
         }
+
+
+# =============================================================================
+# Artifact kind registry (ADR 0006 Foundation, v1.18.6)
+#
+# Each concrete MarshallableArtifact registers its kind discriminator at
+# module-load time. Decorator-style registration mirrors the
+# ppxai/rendering/base.py::Renderer pattern (@MyRenderer.register(Type)
+# / @ArtifactRegistry.register("kind")) — one architectural style,
+# applied to two different kinds of dispatch.
+#
+# Lazy local import to avoid the circular dependency:
+#   types.py defines MarshallableArtifact (Protocol)
+#   artifact_registry.py imports MarshallableArtifact from types.py
+#   types.py imports ArtifactRegistry from artifact_registry.py — but
+#     ONLY at module-bottom, after the Protocol + classes are defined,
+#     so artifact_registry's `from .types import MarshallableArtifact`
+#     succeeds. Class-body decorators won't work without this order.
+# =============================================================================
+
+from .artifact_registry import ArtifactRegistry  # noqa: E402
+
+ArtifactRegistry.register("image")(ImageAttachmentRef)
+ArtifactRegistry.register("pdf")(PdfAttachmentRef)
+ArtifactRegistry.register("office")(OfficeAttachmentRef)
+ArtifactRegistry.register("text")(TextAttachmentRef)
