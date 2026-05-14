@@ -1,0 +1,424 @@
+# ADR 0006 — Separate engine-internal content schema from wire schema
+
+**Date:** 2026-05-14
+**Status:** Accepted — full implementation lands on `bugfix/v1.18.6` (all 4 phases). No stopgap; the producer-side fix is shipping directly.
+**Related:**
+- [ADR 0004](0004-llm-gateway-features.md) — v1 API gateway; this ADR's wire-schema discipline is what makes the gateway safe across strict OpenAI-compatible endpoints
+- [ADR 0005](0005-inspection-triplet.md) — runtime observability pattern; the `events.jsonl` artifact captures provider-bound payloads, so the wire-vs-internal split is also a debugging clarity win
+- `ppxai/engine/file_preprocessing.py:264` — image_url block producer (the entanglement point)
+- `ppxai/engine/multimodal_ops.py:91-199` — context-attachment scanner (the read-side that depends on the entanglement)
+- `ppxai/engine/session.py:286-389` — session serialize/deserialize (the persistence layer that *writes* the entanglement back)
+- `ppxai/engine/uploaded_file.py` — precedent for engine-internal block types that get flattened at the boundary (R5, v1.17.6)
+- `ppxai/web/app.js:1094, 3598` + `vscode-extension/src/{appState.ts:83, httpClient.ts:147}` — client-side mirrors
+
+## Context
+
+ppxai's multimodal content goes through a single shared shape: an
+OpenAI-style content list of `{"type": ..., ...}` blocks. The shape
+serves four very different consumers:
+
+1. **Producers** (`/attach` command, server `/chat` route, `file_preprocessing._preprocess_image`)
+   build the blocks from raw file bytes plus model+provider context.
+2. **Persistence** (`session.py::Session._rewrite_content_for_serialize`
+   / `_for_deserialize`) round-trips the blocks through
+   `~/.ppxai/sessions/<id>.json` + `~/.ppxai/sessions/<id>/uploads/`.
+3. **Engine-internal readers** (`multimodal_ops.py::scan_attachments`,
+   `Message.text_content()`, `attach.py::_collect_context_attachments`)
+   walk the list to maintain ppxai bookkeeping (the badge counts, the
+   AppState `context_attachments` DTO, the `[Image: name]` placeholders
+   in logs).
+4. **Wire emitters** (`base.BaseProvider._convert_messages`,
+   `gemini._content_to_gemini_parts`, `openai_native._convert_messages_for_responses`)
+   serialize to provider-specific HTTP payloads.
+
+To keep all four happy, the producers stuff **engine-internal
+bookkeeping inside provider wire-format blocks**. The image producer at
+`file_preprocessing.py:264-272` emits:
+
+```python
+{
+    "type": "image_url",
+    "name": name,                        # ← ppxai bookkeeping
+    "image_url": {"url": "data:..."},
+    "file_id": "sha256:...",             # ← ppxai bookkeeping
+}
+```
+
+The OpenAI Chat Completions spec only allows `{"type", "image_url"}` at
+the block level (and `{"url", "detail"}` inside `image_url`).
+**`name` and `file_id` are non-spec.** Real OpenAI silently ignores
+them; strict OpenAI-compatible endpoints reject the whole request.
+
+### How we got here
+
+R5 (v1.17.6) introduced `uploaded_file` as a first-class
+engine-internal block type AND the `flatten_uploaded_file_blocks`
+helper that converts it to a legacy text marker before sending. That
+established the right pattern: **distinct internal block types get
+flattened at the wire boundary.** Image blocks predate R5; they reused
+the spec-compliant `image_url` type but bolted ppxai metadata onto it
+in-place rather than declaring a separate internal type. The R5
+infrastructure for boundary translation already exists; it just doesn't
+cover this case.
+
+### Why it bites now
+
+Three concurrent pressures surfaced the entanglement on 2026-05-14:
+
+1. **A user attached a screenshot to gpt-5.5 on the corporate
+   `codeai.trad.int` OpenAI-compat endpoint.** The endpoint's strict
+   validator returned `"Invalid chat format. Unexpected keys in a
+   message content image dict."` The attachment was silently
+   dropped — the model never saw it.
+2. **ADR 0004's v1 gateway (`POST /v1/oneshot`) is the supported
+   external surface for ppxai-sre.** Future ppxai-sre agents will
+   forward through gateways that follow the same strict-validator
+   pattern (NIM, Azure OpenAI Service, internal corporate proxies).
+   Without a clean wire-format discipline, every such integration is
+   one strict validator away from a silent multimodal failure.
+3. **ADR 0005's `events.jsonl` inspection triplet captures
+   provider-bound payloads.** When debugging a "why did the model not
+   see my screenshot?" question, an operator inspecting the JSONL
+   benefits from seeing wire-clean blocks — not blocks polluted with
+   ppxai-internal `file_id` strings that look load-bearing but
+   aren't.
+
+### What's tangled, in scope
+
+A `grep -rn '"name":\|"file_id":'` across `ppxai/engine/`:
+
+| File | Sites | Role |
+|---|---|---|
+| `engine/file_preprocessing.py:266,272` | 2 | Image producer — adds `name`, `file_id` to image_url blocks |
+| `engine/session.py:286-343 (serialize), 345-389 (deserialize)` | ~15 | Persistence — reads `block.get("name")`, `block.get("file_id")`; writes them back on serialize |
+| `engine/multimodal_ops.py:91-199` | 8 | Context-attachment scanner — reads `block.get("name")`, `block.get("file_id")` to build the `context_attachments` AppState DTO |
+| `engine/types.py:243-247` | 2 | `Message.text_content()` reads `block.get("name")` for `[Image: name]` placeholder |
+| `commands/attach.py:741` | 1 | `_collect_context_attachments` reads `block.get("name")` |
+| `engine/providers/openai_compat.py` | 0 | Sends blocks as-is via base.py — ENTANGLEMENT IS WHAT BREAKS HERE |
+| `engine/providers/gemini.py:528-543` | 0 | Walks `image_url` blocks, ignores `name`/`file_id` (Gemini converts shape entirely) — accidentally robust |
+| `engine/providers/openai_native.py:740,749` | 0 | Calls `flatten_uploaded_file_blocks` then sends — same entanglement reaches the wire |
+| `web/app.js:1094, 3598` + `vscode-extension/src/{appState.ts, chatPanel.ts, httpClient.ts}` | ~10 | **Already read from `context_attachments[]` projection, NOT from message content blocks** |
+
+The last row is the architecturally important one: **the JS/TS
+clients have already been built against a separate projection
+(`context_attachments`).** They never read `image_url.name` or
+`image_url.file_id` directly. That projection is exactly the right
+shape — the refactor needs to make the Python side use the same
+projection internally rather than keeping a duplicate copy of the
+metadata inside content blocks.
+
+## Decision
+
+**Adopt a three-layer schema split for multimodal message content.** The
+same conceptual data lives in three explicit forms with explicit
+boundaries between them:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  ENGINE-INTERNAL (rich, ppxai-owned)                            │
+│                                                                  │
+│  Message.content     : List[ContentBlock]   ← spec-clean blocks │
+│  Message.attachments : List[AttachmentRef]  ← ppxai bookkeeping │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              │ (1) wire emission via _convert_messages
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  WIRE (provider-spec, lossy on internal metadata)               │
+│                                                                  │
+│  [{"type":"image_url","image_url":{"url":...}}, {"type":"text"...}]
+│                                                                  │
+│  No name, no file_id, no internal types.                        │
+└─────────────────────────────────────────────────────────────────┘
+
+                              ▲
+                              │ (2) projection via scan_attachments
+                              │
+┌─────────────────────────────────────────────────────────────────┐
+│  CLIENT-FACING (DTO, cross-language stable schema)              │
+│                                                                  │
+│  AppState.context_attachments : List[AttachmentDTO]             │
+│  {name, kind, media_type, turn_index, file_id}                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+Each layer has a single purpose and clean conversion to the others.
+
+### Layer 1 — Engine-internal: split content from metadata
+
+**Add a sibling field to `Message`:**
+
+```python
+@dataclass
+class AttachmentRef:
+    """Per-attachment metadata living alongside Message.content."""
+    block_index: int        # which content block this annotates
+    name: str               # canonical filename
+    file_id: str            # SessionFileStore identifier ("" if not persisted)
+    media_type: str         # canonical MIME
+
+@dataclass
+class Message:
+    role: str
+    content: MessageContent                          # SPEC-CLEAN blocks only
+    attachments: List[AttachmentRef] = field(default_factory=list)
+    tool_calls: Optional[List[Dict[str, Any]]] = None
+    tool_call_id: Optional[str] = None
+```
+
+The `block_index` field is the join key — given `attachments[i]`, the
+block it describes is `content[attachments[i].block_index]`. This
+preserves ordering across content+metadata without forcing ppxai
+metadata into the spec block.
+
+**Image producer simplifies to:**
+
+```python
+block = {
+    "type": "image_url",
+    "image_url": {"url": f"data:{canonical_mt};base64,{b64}"},
+}
+ref = AttachmentRef(
+    block_index=...,        # caller fills in when assembling the message
+    name=name,
+    file_id=file_id,
+    media_type=canonical_mt,
+)
+return PreprocessResult(parts=[block], attachment_refs=[ref], ...)
+```
+
+`build_multimodal_content` already knows the final block ordering, so
+it's the natural place to assign `block_index`.
+
+### Layer 2 — Wire: spec-clean by construction
+
+The producer emits spec-clean blocks. **No sanitizer needed.** Drop the
+v1.18.6 stopgap (`sanitize_content_blocks_for_wire`) once the producer
+is fixed.
+
+`flatten_uploaded_file_blocks` (R5) keeps doing its job for the
+`uploaded_file` engine-internal block type.
+
+`base.BaseProvider._convert_messages` becomes a one-liner: flatten
+uploaded_file blocks, return `{role, content, tool_calls, tool_call_id}`.
+
+### Layer 3 — Client-facing: AttachmentDTO is the canonical projection
+
+`multimodal_ops.scan_attachments` already produces this DTO and
+publishes it to AppState. Keep that contract — but **change its
+input** from "walk content blocks looking for sentinel keys" to "walk
+`message.attachments`." That's a one-loop simplification, removes
+duplicate dedup logic, and removes the legacy-block-shape fallback
+branches.
+
+Cross-language schema lives in `engine/app_state_schema.json` already.
+JS+TS mirrors at `web/shared/app-state.js` and
+`vscode-extension/src/appState.ts` already type the DTO. **Zero
+client-side change.** That's the architectural payoff: the clients
+have ALREADY been built against the right abstraction; we're just
+making the Python side honor it.
+
+### Persistence (session.py)
+
+Session JSON serializes `Message.content` AND `Message.attachments`
+side-by-side. The serialize/deserialize path:
+
+- **Serialize**: walk `attachments` to find `image_url` blocks needing
+  bytes-to-file_id rewrite. Store the rewritten URL in
+  `content[i]["image_url"]["url"]` (`file://uploads/<id>/<name>`).
+  Update `attachments[i].file_id` from the store. Write the message
+  with both fields populated.
+- **Deserialize**: read `attachments`, look up bytes by `file_id`,
+  rewrite `content[i]["image_url"]["url"]` back to a data URI.
+- **Backward compat**: when loading a pre-v1.19.x session, detect the
+  legacy "name/file_id inside image_url block" shape, extract them
+  into a synthesized `attachments` list, and strip them from the
+  block. One-shot migration on read; no on-disk format flag needed.
+
+### Validator chain at the wire boundary (defense in depth)
+
+Even with spec-clean producers, schema drift over time is inevitable.
+Add a **wire-payload validator** that runs in dev/test builds (skipped
+in production for performance) and asserts:
+
+- Every block matches `_WIRE_ALLOWED_BLOCK_KEYS[block["type"]]`
+- No `image_url` block has `name` or `file_id` keys
+- No engine-internal types (`uploaded_file`, hypothetical future
+  internal types) reach the wire
+
+Implemented as a 30-line pure-function check called from
+`_convert_messages` under `if __debug__`. Test suite asserts the
+validator catches each known violation.
+
+This validator is what `sanitize_content_blocks_for_wire` was — but
+inverted from "silently fix" to "loudly fail in tests." Production
+runs without it because the producers are now correct by
+construction.
+
+## Migration plan
+
+All 4 phases land on `bugfix/v1.18.6` as separate commits. Each commit
+ships in a green state — no half-done intermediate state. If a phase
+surfaces a problem during review the preceding phases stay clean and
+mergeable.
+
+### Phase 1 — Add `Message.attachments` field (additive, non-breaking)
+
+**Goal:** new field exists, populated by producers, consumed by
+new code paths. Old code paths still work because the legacy
+`name`/`file_id` keys still exist inside content blocks.
+
+Steps:
+1. Add `AttachmentRef` dataclass to `engine/types.py`
+2. Add `attachments: List[AttachmentRef]` field to `Message` (default empty)
+3. Update `build_multimodal_content` (`commands/attach.py`) to populate `attachments` alongside content
+4. Update producers in `file_preprocessing.py` to RETURN both block + ref tuple
+5. Add `Message.attachments` to session JSON serialize/deserialize
+6. Tests: round-trip Message with attachments through session save/load; assert ref ordering matches block ordering
+
+**No removals yet.** Old code keeps reading `block.get("name")` etc. —
+they get the same values they got before. Sentinel test enforces:
+"every content block with a name/file_id key has a matching entry in
+`attachments`."
+
+### Phase 2 — Switch readers to `attachments`
+
+Convert all 5 read sites:
+- `multimodal_ops.scan_attachments` → walk `message.attachments`
+- `Message.text_content()` → look up name from `self.attachments`
+- `commands/attach.py::_collect_context_attachments` → walk `message.attachments`
+- `session.py::_rewrite_content_for_serialize` → walk `attachments` for known image refs
+- `session.py::_rewrite_content_for_deserialize` → write into `attachments`, not block
+
+Sentinel tests for each: same input shape, same output. Fixtures from
+the v1.18.6 stopgap test suite serve as regression baselines.
+
+### Phase 3 — Remove non-spec keys from producers
+
+- Drop `name` and `file_id` from `file_preprocessing.py:264-272`
+- Drop the corresponding writes in `session.py::_rewrite_content_for_serialize`
+- Add the wire-format validator (`__debug__`-gated) — asserts every
+  block matches `_WIRE_ALLOWED_BLOCK_KEYS[block["type"]]`, loudly fails
+  in tests instead of silently fixing payloads at runtime
+
+Sentinel test (will live forever):
+
+```python
+def test_image_url_blocks_are_spec_clean():
+    """No image_url block emitted by ppxai contains non-spec keys."""
+    msg = Message(role="user", content=[{
+        "type": "image_url",
+        "image_url": {"url": "data:image/png;base64,iVBORw0..."},
+    }], attachments=[AttachmentRef(0, "img.png", "sha256:x", "image/png")])
+    api = OpenAICompatibleProvider(...)._convert_messages([msg])
+    block = api[0]["content"][0]
+    assert set(block.keys()) == {"type", "image_url"}
+    assert set(block["image_url"].keys()).issubset({"url", "detail"})
+```
+
+### Phase 4 — Backward-compat session loader
+
+When loading a session file written by v1.18.x or earlier, the
+deserialize path detects the legacy shape (`block["name"]` /
+`block["file_id"]` populated, `message["attachments"]` absent) and
+reconstructs an `attachments` list from those keys. One-shot migration
+on first load; subsequent saves use the new shape.
+
+Test fixture: a v1.18.4 session JSON checked into `tests/fixtures/`
+that deserializes correctly under v1.19.x, with `attachments`
+populated and content blocks stripped of non-spec keys.
+
+## Consequences
+
+### What this enables
+
+- **Strict OpenAI-compat endpoints work natively** (corporate
+  gateways, NIM, vLLM with strict validators). ppxai-sre's v1
+  gateway becomes safe to point at any compliant LLM endpoint.
+- **`events.jsonl` payloads are wire-clean** (per ADR 0005). An
+  operator inspecting "what did we send to the provider?" sees the
+  exact bytes, not ppxai-polluted blocks.
+- **Persistence schema is principled.** Storing `attachments` as a
+  sibling field documents that ppxai bookkeeping is distinct from
+  wire payload, instead of hiding metadata inside a payload field.
+- **JS/TS clients need zero change.** They already consume the
+  AttachmentDTO via AppState. The Python refactor just makes the
+  internal flow match what the clients have always assumed.
+- **Future block types are easier.** When v1.20.x adds (say) an
+  audio block, the schema choice "internal type that gets flattened
+  vs. spec-compliant from the start" has a clear precedent.
+
+### What this requires
+
+- **Phase 1 + Phase 2 are an additive 2-week refactor.** Phase 3 and
+  Phase 4 land together when all readers have been switched.
+- **`Message` schema change.** Adding a field is non-breaking but
+  requires care in equality checks, hash, and any JSON dumpers that
+  use `dataclasses.asdict`. Test coverage must include
+  `dataclasses.asdict(msg)` round-trip and pickle (used by
+  conversation-export tests).
+- **Session JSON schema bump.** Add a `schema_version: 2` field at
+  the top of session JSON files written by v1.19.x. Loader checks
+  the version and routes to the legacy-migration path if absent or
+  `1`.
+- **Sentinel test discipline.** Two new permanent sentinels:
+  - `test_image_url_blocks_are_spec_clean` (Phase 3)
+  - `test_legacy_session_loads_correctly` (Phase 4)
+
+### Risks
+
+| Risk | Mitigation |
+|---|---|
+| `Message.attachments` and `Message.content` get out of sync (block deleted but ref remains, etc.) | Validator helper `Message.validate_attachments()` runs in `__debug__` builds; called after every mutation |
+| Legacy session files with weird shapes (manual edits, third-party tools) crash the migration | Migration wraps in try/except, falls back to legacy in-block reads with a warning logged once per session |
+| Phase 2 reader switch missed a site | Whole-repo grep for `block.get("name")` / `block.get("file_id")` in CI; sentinel test with a fully-populated multimodal Message asserts every projection layer sees the same name/file_id |
+| ppxai-sre or other downstream consumers depend on the legacy shape | Search ppxai-sre repo for content-block reads before Phase 3; if any exist, bump v1 gateway schema_version and document the change in `docs/API-GATEWAY.md` |
+| VSCode extension's TypeScript types drift | Run `python scripts/regen_appstate_types.py` (existing script per `ppxai/engine/app_state_schema.json`) after Phase 1; CI sentinel asserts TS types match |
+
+### What this is NOT
+
+- **Not a wire-protocol change.** Real OpenAI keeps accepting the same
+  payload it always has (it ignored the extra keys anyway). The change
+  is internal cleanup.
+- **Not a session-format break.** v1.19.x readers handle v1.18.x
+  files; v1.18.x readers WILL fail on v1.19.x files (forward compat
+  is one-way only). Document in `RELEASE-NOTES-v1.19.0.md`.
+- **Not an architectural pattern other than "boundary types matter."**
+  The Triplet (ADR 0005), the AppState schema (ADR 0001-style work),
+  and now this content-block split are all the same instinct: when
+  one shape serves multiple consumers with different validity rules,
+  give each consumer its own type and translate at the boundary.
+
+## Why now
+
+Three forcing functions overlap on 2026-05-14:
+
+1. **The 2026-05-14 user incident** (gpt-5.5 silently dropped a
+   screenshot attachment) is the visible bug. It will recur every
+   time someone points ppxai at a strict OpenAI-compat endpoint
+   until producers are clean.
+2. **ADR 0004's v1 gateway expansion for ppxai-sre** is queued for
+   v1.19.x. Pointing the gateway at downstream LLMs without first
+   establishing wire-format discipline guarantees one of those
+   downstream endpoints will be strict and the issue resurfaces in
+   production traffic.
+3. **The R5 precedent (`flatten_uploaded_file_blocks`) shows the
+   pattern works.** This ADR codifies the same boundary-translation
+   discipline for image_url blocks, completing the pattern.
+
+Capturing the decision now means v1.19.x can implement mechanically
+against a clear plan rather than relitigating shape choices each
+phase. The v1.18.6 stopgap unblocks today's user without taking the
+shortcut as the permanent answer.
+
+## Scope guards
+
+- Not a `Message` rewrite. Adding one field (`attachments`), keeping the others.
+- Not a content-block-type expansion. The block types stay
+  (`text`, `image_url`, `uploaded_file`, `input_file`, `file`). Only
+  the *contents* of `image_url` blocks change.
+- Not a provider rewrite. `gemini.py` already correctly ignores
+  non-spec keys (it uses its own shape entirely); `openai_native.py`
+  inherits from `base.py` which inherits the cleanup automatically.
+- Not a JS/TS client change. The clients have already been on the
+  right side of this since AppState DTOs landed in v1.17.x.
