@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Callable, List, Dict, Any, Optional
 
 from .types import Message, ToolUsage, UsageStats, SessionInfo, extract_attachment_refs
+from .artifact_registry import ArtifactRegistry
 from .session_store import SessionFileStore
 from ..common.logger import get_logger
 from ..constants import ConsentMode
@@ -26,6 +27,23 @@ logger = get_logger("session")
 
 # Session state file location
 SESSION_STATE_FILE = Path.home() / ".ppxai" / "session-state.json"
+
+
+# ADR 0006 Step 4 (v1.18.6): on-disk session JSON schema version. Bumped
+# from implicit-v1 (no field) to explicit v2 when each message persists
+# `attachments` as a list of MarshallableArtifact dicts (round-tripped via
+# ArtifactRegistry.deserialize) instead of relying on the legacy
+# in-block name+file_id keys.
+#
+# Loaders MUST tolerate both:
+#   * v2 (or absent + new attachments key) — primary path
+#   * v1 (absent + legacy in-block keys)   — fallback for sessions
+#                                            saved by ppxai <= 1.18.5
+#
+# Bump again only when the on-disk shape changes incompatibly across
+# the WHOLE session JSON. Per-artifact payload changes use each kind's
+# own SCHEMA_VERSION (embedded in the artifact dict) — independent track.
+SESSION_SCHEMA_VERSION = 2
 
 
 # Minimal media-type → extension map used when a content block arrives
@@ -221,6 +239,13 @@ class SessionManager:
         matches what providers expect. All provider adapters (Gemini,
         OpenAI, Perplexity) continue to see identical data URIs whether
         the session was just loaded or built mid-conversation.
+
+        ADR 0006 Step 4 (v1.18.6): when `m.attachments` is non-empty,
+        emits each ref via its `to_dict()` under the `"attachments"`
+        key. The combination of session-level `schema_version: 2` (set
+        by `save()`) + per-message `attachments` array is the v2 wire
+        contract. Empty `attachments` lists are dropped from the JSON
+        to keep text-only messages compact.
         """
         content = m.content
         if self.file_store is not None and isinstance(content, list):
@@ -231,9 +256,16 @@ class SessionManager:
             msg["tool_calls"] = m.tool_calls
         if m.tool_call_id:
             msg["tool_call_id"] = m.tool_call_id
+        if m.attachments:
+            msg["attachments"] = [ref.to_dict() for ref in m.attachments]
         return msg
 
-    def _deserialize_message(self, m: Dict[str, Any]) -> Message:
+    def _deserialize_message(
+        self,
+        m: Dict[str, Any],
+        *,
+        schema_version: int = 1,
+    ) -> Message:
         """Deserialize a dict to a Message.
 
         Accepts every shape `_serialize_message` produces:
@@ -243,25 +275,52 @@ class SessionManager:
           expanded back into data URIs via `self.file_store` so in-memory
           messages look identical to what provider adapters expect.
 
-        ADR 0006 Phase 1 (v1.18.6): re-derives `Message.attachments` from
-        the in-block `name`+`file_id` keys via `extract_attachment_refs`.
-        Today the on-disk format doesn't carry attachments separately
-        (Phase 4 versions session JSON to persist both fields), so the
-        deserialize path reconstructs attachments from the same keys
-        that the serialize path preserves. Net effect: every loaded
-        Message satisfies the same "attachments populated" invariant
-        as a freshly-constructed one.
+        ADR 0006 Step 4 (v1.18.6): chooses the source for
+        `Message.attachments` based on the session's top-level
+        `schema_version`:
+
+        - schema_version >= 2 → consume the explicit `attachments` array
+          via `ArtifactRegistry.deserialize`. This is the v2 contract:
+          attachments live alongside content, decoupled from in-block
+          keys, and forward-compatible (unknown future kinds skipped).
+
+        - schema_version <= 1 (or absent) → fall back to walking the
+          in-block `name`+`file_id` keys via `extract_attachment_refs`.
+          Sessions saved by ppxai <= 1.18.5 have no `attachments` field;
+          this fallback keeps them loadable without the legacy v1 loader
+          (which Step 5 will add for the explicit migration path).
+
+        The two paths produce equivalent `Message.attachments` for
+        round-tripped v1 sessions — both reconstruct one
+        `ImageAttachmentRef` per image_url block carrying a `name` or
+        `file_id`. Net effect: every loaded Message satisfies the same
+        "attachments populated" invariant as a freshly-constructed one,
+        regardless of on-disk schema version.
         """
         content = m["content"]
         if self.file_store is not None and isinstance(content, list):
             content = self._rewrite_content_for_deserialize(content)
+
+        attachments: List[Any]
+        if schema_version >= 2 and isinstance(m.get("attachments"), list):
+            # v2: explicit attachments array. ArtifactRegistry.deserialize
+            # returns None for unknown kinds (forward-compat) — drop those
+            # silently rather than crashing the whole session load.
+            attachments = []
+            for raw in m["attachments"]:
+                ref = ArtifactRegistry.deserialize(raw)
+                if ref is not None:
+                    attachments.append(ref)
+        else:
+            # v1 (or v2 with no attachments field — text-only message).
+            attachments = extract_attachment_refs(content)
 
         return Message(
             role=m["role"],
             content=content,
             tool_calls=m.get("tool_calls"),
             tool_call_id=m.get("tool_call_id"),
-            attachments=extract_attachment_refs(content),
+            attachments=attachments,
         )
 
     # ------------------------------------------------------------------
@@ -1197,6 +1256,9 @@ class SessionManager:
         self.validate_and_fix_alternation()
 
         session_data = {
+            # ADR 0006 Step 4 (v1.18.6): explicit on-disk schema version.
+            # Loaders branch on this; absence is treated as v1 (legacy).
+            "schema_version": SESSION_SCHEMA_VERSION,
             "session_name": self.session_name,
             "metadata": self.metadata,
             "messages": [self._serialize_message(m) for m in self.messages],
@@ -1325,10 +1387,16 @@ class SessionManager:
             with open(filepath, 'r', encoding='utf-8') as f:
                 data = json.load(f)
 
+            # ADR 0006 Step 4 (v1.18.6): branch deserialization on
+            # explicit schema_version. Absence ≡ v1 (sessions saved by
+            # ppxai <= 1.18.5). Per-message deserialize uses this to
+            # decide between explicit attachments-array and
+            # legacy in-block-keys derivation.
+            schema_version = int(data.get("schema_version", 1))
             self.session_name = data.get("session_name", name)
             self.metadata = data.get("metadata", {})
             self.messages = [
-                self._deserialize_message(m)
+                self._deserialize_message(m, schema_version=schema_version)
                 for m in data.get("messages", [])
             ]
             # R10: reset the multimodal cache — one scan on the first save()
@@ -1648,6 +1716,8 @@ class SessionManager:
             Session name
         """
         session_data = {
+            # ADR 0006 Step 4 (v1.18.6): explicit on-disk schema version.
+            "schema_version": SESSION_SCHEMA_VERSION,
             "session_name": self.session_name,
             "metadata": self.metadata,
             "messages": [self._serialize_message(m) for m in self.messages],
