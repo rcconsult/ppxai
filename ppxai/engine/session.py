@@ -1453,12 +1453,228 @@ class SessionManager:
                     f"Loaded session '{name}' had {fixed_count} message alternation issues - auto-fixed"
                 )
 
+            # ADR 0006 Step 5 (v1.18.6): one-way migration v1 → v2 on
+            # first load. Drops multimodal uploads with text placeholders
+            # pointing at the preserved v1 backup folder; rewrites session
+            # JSON with schema_version: 2. Best-effort — failures are
+            # logged but don't block the load (the in-memory session is
+            # already valid and operable for the user this session).
+            self._migrate_v1_to_v2_if_needed(name, session_dir, schema_version)
+
             self._notify_messages_changed()
             return True
 
         except Exception as e:
             logger.warning(f"Session load failed for '{name}': {e}")
             return False
+
+    # ------------------------------------------------------------------
+    # ADR 0006 Step 5 — v1 → v2 migration
+    # ------------------------------------------------------------------
+
+    def _migrate_v1_to_v2_if_needed(
+        self,
+        name: str,
+        session_dir: Optional[Path],
+        schema_version: int,
+    ) -> None:
+        """One-way v1 → v2 migration on first load by a 1.18.6 build.
+
+        Triggered when a session was saved by ppxai <= 1.18.5
+        (`schema_version` absent or `== 1`) AND any message carries
+        multimodal blocks (image_url / uploaded_file). Pure-text v1
+        sessions don't need migration — the v1 deserialize fallback
+        already produced a correct in-memory state, and the next save()
+        will write v2 naturally.
+
+        Migration policy (per user spec, 2026-05-14):
+        - Text content + tool_calls + metadata: PRESERVED verbatim
+        - image_url + uploaded_file blocks: REPLACED with text placeholder
+          pointing at the v1 backup folder
+        - v1 folder: PRESERVED at `<sessions_dir>/<name>.v1.backup/`
+          (or `<name>.v1.backup.json` for flat sessions). User can
+          delete manually after verifying the v2 version.
+        - No interactive prompt — best-effort migration; failures logged
+          but don't block load.
+
+        Atomicity: the order is (1) backup the v1 folder, (2) rewrite
+        in-memory messages, (3) save() as v2. If backup fails we abort
+        WITHOUT mutating in-memory state, so a re-load on next launch
+        re-attempts the migration from clean v1 state.
+
+        Idempotence: runs only when `schema_version <= 1`. Once save()
+        writes v2, subsequent loads see schema_version=2 and skip this
+        path entirely.
+        """
+        if schema_version >= SESSION_SCHEMA_VERSION:
+            return
+
+        # Don't migrate when the user is loading a pre-existing v1
+        # backup directly — it's an inspect-only operation, not a
+        # session they want to evolve. Prevents `<x>.v1.backup.v1.backup/`
+        # nesting from accidental re-migration loops.
+        if name.endswith(".v1.backup"):
+            logger.info(
+                f"Session '{name}' is a v1 backup; skipping migration "
+                f"(loaded read-only for inspection)."
+            )
+            return
+
+        # Detect multimodal content. Pure-text v1 sessions don't trigger
+        # the backup or content rewrite — but they still get re-saved as
+        # v2 implicitly on the next normal save() (see save() callers).
+        has_multimodal = any(_message_has_multimodal(m) for m in self.messages)
+        if not has_multimodal:
+            logger.info(
+                f"Session '{name}' loaded as v1 (text-only); v2 schema "
+                f"will be written on next save."
+            )
+            return
+
+        # Step 1: backup v1 on-disk state. We don't know which format
+        # the session is in (flat vs directory) — _resolve_session_load_path
+        # already told us via session_dir, but its return type doesn't
+        # plumb the flat-path back here. Re-derive from sessions_dir.
+        backup_succeeded = self._backup_v1_session(name, session_dir)
+        if not backup_succeeded:
+            logger.warning(
+                f"Session '{name}': v1 backup failed; skipping migration. "
+                f"In-memory state is loaded normally; the on-disk session "
+                f"stays at v1 until next launch retries."
+            )
+            return
+
+        # Step 2: rewrite in-memory messages — drop multimodal blocks,
+        # leave text placeholders behind. Tool messages and assistant
+        # responses pass through unchanged.
+        dropped_count = self._strip_multimodal_blocks_for_v1_migration(name)
+
+        # Step 3: persist as v2 immediately — don't wait for the next
+        # save_dirty cycle, because if the user just chats normally the
+        # save will happen anyway with v2 schema. But forcing it here
+        # gives us deterministic post-migration state on disk for any
+        # crash before the first natural save.
+        try:
+            self.save(name)
+        except OSError as exc:
+            logger.warning(
+                f"Session '{name}': v2 save after migration failed: {exc}. "
+                f"In-memory state is migrated; on-disk save will retry on "
+                f"next save_dirty cycle."
+            )
+            return
+
+        backup_label = (
+            f"{name}.v1.backup/" if session_dir is not None
+            else f"{name}.v1.backup.json"
+        )
+        logger.info(
+            f"Migrated session '{name}' from v1 → v2. Dropped "
+            f"{dropped_count} multimodal block(s); v1 backup preserved at "
+            f"{backup_label}. Delete the backup manually when no longer needed."
+        )
+
+    def _backup_v1_session(
+        self, name: str, session_dir: Optional[Path]
+    ) -> bool:
+        """Copy the on-disk v1 session to a `.v1.backup` sibling.
+
+        Directory format: `sessions/<name>/` → `sessions/<name>.v1.backup/`
+        Flat format: `sessions/<name>.json` → `sessions/<name>.v1.backup.json`
+
+        If a backup with that name already exists (re-attempted migration
+        after a previous failure), it's left in place — we never
+        overwrite user-visible backups. Returns True on success or
+        existing-backup, False on copy failure.
+        """
+        if session_dir is not None:
+            backup_dir = self.sessions_dir / f"{name}.v1.backup"
+            if backup_dir.exists():
+                logger.info(
+                    f"Session '{name}': v1 backup directory already exists "
+                    f"at {backup_dir.name} (prior migration attempt). "
+                    f"Reusing — not overwriting."
+                )
+                return True
+            try:
+                shutil.copytree(session_dir, backup_dir)
+                return True
+            except OSError as exc:
+                logger.warning(
+                    f"Session '{name}': failed to copy {session_dir} → "
+                    f"{backup_dir}: {exc}"
+                )
+                return False
+
+        # Flat-file fallback.
+        flat = self.sessions_dir / f"{name}.json"
+        backup_flat = self.sessions_dir / f"{name}.v1.backup.json"
+        if backup_flat.exists():
+            logger.info(
+                f"Session '{name}': v1 backup file already exists "
+                f"({backup_flat.name}). Reusing."
+            )
+            return True
+        try:
+            shutil.copy2(flat, backup_flat)
+            return True
+        except OSError as exc:
+            logger.warning(
+                f"Session '{name}': failed to copy {flat} → "
+                f"{backup_flat}: {exc}"
+            )
+            return False
+
+    def _strip_multimodal_blocks_for_v1_migration(self, name: str) -> int:
+        """Replace image_url / uploaded_file blocks with text placeholders.
+
+        Walks every message; for each multimodal block, substitutes a
+        `{"type": "text", "text": "[v1 migration: <name> dropped — see <backup>/]"}`
+        placeholder in-place. Text blocks pass through unchanged so
+        users keep the surrounding prompt context.
+
+        Returns the total count of blocks rewritten — used for the
+        post-migration log message.
+        """
+        backup_label = f"{name}.v1.backup/"
+        dropped = 0
+        for msg in self.messages:
+            if not isinstance(msg.content, list):
+                continue
+            new_content: List[Dict[str, Any]] = []
+            for block in msg.content:
+                if not isinstance(block, dict):
+                    new_content.append(block)
+                    continue
+                btype = block.get("type")
+                if btype not in ("image_url", "uploaded_file"):
+                    new_content.append(block)
+                    continue
+                # Build a human-readable placeholder. Producer-set
+                # `name` is the canonical filename; if absent (rare —
+                # manually-built test fixture), fall back to file_id or
+                # a generic label. Don't crash on missing keys.
+                attached_name = (
+                    block.get("name")
+                    or block.get("file_id")
+                    or "<unnamed attachment>"
+                )
+                new_content.append({
+                    "type": "text",
+                    "text": (
+                        f"[v1 migration: {btype} '{attached_name}' dropped — "
+                        f"original bytes preserved at {backup_label}]"
+                    ),
+                })
+                dropped += 1
+            msg.content = new_content
+            # Attachments list referenced the dropped blocks — clear it
+            # so v2 save doesn't persist stale ImageAttachmentRefs that
+            # no longer have a matching content block.
+            msg.attachments = []
+        # Invalidate the multimodal cache — content shapes just changed.
+        self._multimodal_cache = None
+        return dropped
 
     def list_sessions(self) -> List[SessionInfo]:
         """List all saved sessions.
@@ -1476,12 +1692,20 @@ class SessionManager:
         candidates: List[tuple[Path, str]] = []
 
         # Flat format: ~/.ppxai/sessions/<name>.json
+        # ADR 0006 Step 5: skip *.v1.backup.json — those are pre-migration
+        # snapshots, not active sessions; surfacing them would put two
+        # entries with the same logical name in the user's session list.
         for filepath in self.sessions_dir.glob("*.json"):
+            if filepath.name.endswith(".v1.backup.json"):
+                continue
             candidates.append((filepath, filepath.stem))
 
         # Directory format: ~/.ppxai/sessions/<name>/session.json
+        # ADR 0006 Step 5: skip *.v1.backup/ directories — same reason.
         for entry in self.sessions_dir.iterdir():
             if not entry.is_dir():
+                continue
+            if entry.name.endswith(".v1.backup"):
                 continue
             session_json = entry / "session.json"
             if session_json.is_file():

@@ -1,0 +1,57 @@
+{
+  "session_name": "v1_with_image",
+  "metadata": {
+    "created_at": "2026-04-15T10:00:00",
+    "provider": "openai",
+    "model": "gpt-5.5",
+    "message_count": 4
+  },
+  "messages": [
+    {
+      "role": "user",
+      "content": [
+        {"type": "text", "text": "What's in this screenshot?"},
+        {
+          "type": "image_url",
+          "image_url": {"url": "file://uploads/abc123def456_screenshot.png/screenshot.png"},
+          "name": "screenshot.png",
+          "file_id": "abc123def456_screenshot.png"
+        }
+      ]
+    },
+    {
+      "role": "assistant",
+      "content": "I see a dashboard with several charts. The top-left shows CPU usage at 73%."
+    },
+    {
+      "role": "user",
+      "content": "Can you focus on the bottom panel?"
+    },
+    {
+      "role": "assistant",
+      "content": "The bottom panel shows network throughput averaging 1.2 GB/s."
+    }
+  ],
+  "usage": {
+    "total_tokens": 1247,
+    "prompt_tokens": 982,
+    "completion_tokens": 265,
+    "estimated_cost": 0.0034,
+    "by_model": {
+      "gpt-5.5": {
+        "total_tokens": 1247,
+        "prompt_tokens": 982,
+        "completion_tokens": 265,
+        "estimated_cost": 0.0034
+      }
+    }
+  },
+  "saved_at": "2026-04-15T10:05:32",
+  "command_history": [
+    "/attach screenshot.png",
+    "What's in this screenshot?",
+    "Can you focus on the bottom panel?"
+  ],
+  "working_dir": "/home/user/projects/ops",
+  "tools_enabled": false
+}

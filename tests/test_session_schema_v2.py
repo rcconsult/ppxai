@@ -317,12 +317,20 @@ class TestV1LegacyLoad:
     loadable in 1.18.6 builds without explicit migration. Step 5 will add
     the explicit migrate-to-v2 path with multimodal-drop policy."""
 
-    def test_v1_session_no_schema_field_uses_legacy_extraction(
+    def test_v1_session_no_schema_field_triggers_migration(
         self, session_with_store, temp_sessions_dir
     ):
         """Hand-craft a v1-shape session JSON (no schema_version, no
         attachments key, in-block name+file_id) and verify load
-        reconstructs ImageAttachmentRef from the in-block keys."""
+        triggers the Step 5 v1 → v2 migration: image dropped + replaced
+        with text placeholder, backup file created.
+
+        (Pre-Step-5 behavior — preserve the ImageAttachmentRef via legacy
+        extraction — is no longer reachable. Once Step 5 ships, the
+        migration always wins for multimodal v1 sessions. The deserialize
+        fallback is still exercised internally as the load step that
+        feeds into migration; the post-load observable state is the
+        migrated v2 shape.)"""
         # Persist bytes for the file_id so the deserialize path can
         # round-trip the data URI without warning about missing files.
         meta = session_with_store.file_store.save("legacy.png", _PNG_BYTES, media_type="image/png")
@@ -367,13 +375,18 @@ class TestV1LegacyLoad:
         loaded.file_store = session_with_store.file_store
         assert loaded.load("v1-legacy") is True
         assert len(loaded.messages) == 2
-        attachments = loaded.messages[0].attachments
-        # Legacy fallback reconstructed one ref from the in-block keys.
-        assert len(attachments) == 1
-        assert isinstance(attachments[0], ImageAttachmentRef)
-        assert attachments[0].block_index == 1
-        assert attachments[0].name == meta.name
-        assert attachments[0].file_id == meta.file_id
+        # Step 5 migration: image dropped, attachments cleared,
+        # block replaced with a text placeholder.
+        first = loaded.messages[0]
+        assert first.attachments == []
+        assert isinstance(first.content, list)
+        assert first.content[0]["type"] == "text"
+        assert first.content[0]["text"] == "look"
+        assert first.content[1]["type"] == "text"
+        assert "v1 migration" in first.content[1]["text"]
+        assert meta.name in first.content[1]["text"]
+        # Backup file preserved (flat-format because we wrote a flat session).
+        assert (temp_sessions_dir / "v1-legacy.v1.backup.json").is_file()
 
     def test_v1_text_only_message_yields_empty_attachments(
         self, session_with_store, temp_sessions_dir
@@ -424,8 +437,8 @@ class TestSchemaVersionConstant:
         self, session_with_store, temp_sessions_dir
     ):
         """A session JSON with explicit schema_version: 1 behaves identically
-        to a session JSON with no schema_version field — both route to the
-        legacy in-block extraction."""
+        to a session JSON with no schema_version field — both route through
+        the Step 5 v1 → v2 migration when multimodal content is present."""
         flat_path = temp_sessions_dir / "v1-explicit.json"
         meta = session_with_store.file_store.save("a.png", _PNG_BYTES, media_type="image/png")
         v1_data = {
@@ -462,5 +475,8 @@ class TestSchemaVersionConstant:
         )
         loaded.file_store = session_with_store.file_store
         assert loaded.load("v1-explicit") is True
-        assert len(loaded.messages[0].attachments) == 1
-        assert isinstance(loaded.messages[0].attachments[0], ImageAttachmentRef)
+        # Step 5 migration fired (same as schema_version-absent case):
+        # image dropped, attachments cleared, backup preserved.
+        assert loaded.messages[0].attachments == []
+        assert "v1 migration" in loaded.messages[0].content[1]["text"]
+        assert (temp_sessions_dir / "v1-explicit.v1.backup.json").is_file()

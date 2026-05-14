@@ -441,8 +441,18 @@ class TestContextAttachmentsWithFileId:
 
 class TestLegacySessionCompat:
     def test_load_phase1_session_with_inline_base64(self, engine, isolated_dirs):
-        # Simulate a pre-Phase-2.1a session file on disk: flat .json with
-        # inline base64 data URIs and no file_id field.
+        """Simulate a pre-Phase-2.1a session file on disk: flat .json with
+        inline base64 data URIs and no file_id field.
+
+        ADR 0006 Step 5 (v1.18.6): on first load by a 1.18.6+ build,
+        v1 multimodal sessions auto-migrate to v2. The image_url block
+        is dropped + replaced with a text placeholder; the original v1
+        bytes are preserved at `<name>.v1.backup.json` for forensic
+        recovery. The session is still loadable; the user-visible
+        content has shifted from "image + provider can read it" to
+        "text placeholder pointing at backup". Documented breaking
+        change in v1.18.6 release notes.
+        """
         legacy_data = {
             "session_name": "phase1_legacy",
             "metadata": {"created_at": "2026-04-01", "provider": "gemini",
@@ -470,13 +480,18 @@ class TestLegacySessionCompat:
         with open(legacy_path, "w", encoding="utf-8") as f:
             json.dump(legacy_data, f)
 
-        # Load with the new engine — must succeed and preserve the data URI.
+        # Load with the v1.18.6+ engine — load itself must succeed.
         assert engine.session.load("phase1_legacy")
         assert len(engine.session.messages) == 2
-        img_block = engine.session.messages[0].content[1]
-        assert img_block["image_url"]["url"] == _RED_DATA_URI
-        # No file_id in the legacy block — stays empty.
-        assert img_block.get("file_id", "") == ""
+        # Step 5 migration fired: image_url replaced with text placeholder.
+        first_msg = engine.session.messages[0]
+        assert isinstance(first_msg.content, list)
+        assert first_msg.content[0]["text"] == "what is this"  # text preserved
+        assert first_msg.content[1]["type"] == "text"
+        assert "v1 migration" in first_msg.content[1]["text"]
+        assert "legacy.png" in first_msg.content[1]["text"]
+        # Original v1 file preserved at the backup location.
+        assert (isolated_dirs["sessions_dir"] / "phase1_legacy.v1.backup.json").is_file()
 
     def test_list_sessions_finds_both_formats(self, engine, isolated_dirs):
         # Create one flat session and one directory session side by side.
