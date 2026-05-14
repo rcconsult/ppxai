@@ -3,8 +3,9 @@
 **Date:** 2026-05-14
 **Status:** Accepted — full implementation lands on `bugfix/v1.18.6` (all 4 phases). No stopgap; the producer-side fix is shipping directly.
 **Related:**
+- [ADR 0003](0003-agent-platform-architecture.md) — agent platform (sub-agents + autonomous agents) for v1.19.x. Strategic motivation for v1.18.6's schema_version: 2 work — every architectural primitive ADR 0003 needs (run identity, persistence, cross-process readers, sub-agent message construction) inherits or extends what this ADR establishes. See "Strategic rationale" section below.
 - [ADR 0004](0004-llm-gateway-features.md) — v1 API gateway; this ADR's wire-schema discipline is what makes the gateway safe across strict OpenAI-compatible endpoints
-- [ADR 0005](0005-inspection-triplet.md) — runtime observability pattern; the `events.jsonl` artifact captures provider-bound payloads, so the wire-vs-internal split is also a debugging clarity win
+- [ADR 0005](0005-inspection-triplet.md) — runtime observability pattern; the `events.jsonl` artifact captures provider-bound payloads, so the wire-vs-internal split is also a debugging clarity win. ADR 0005 §"Open decisions" item 2 ("Event schema versioning") explicitly anticipates a `schema_version` field per record — v1.18.6's session schema_version: 2 establishes the discipline that ADR 0005's events.jsonl pattern needs
 - `ppxai/engine/file_preprocessing.py:264` — image_url block producer (the entanglement point)
 - `ppxai/engine/multimodal_ops.py:91-199` — context-attachment scanner (the read-side that depends on the entanglement)
 - `ppxai/engine/session.py:286-389` — session serialize/deserialize (the persistence layer that *writes* the entanglement back)
@@ -573,6 +574,147 @@ between commits.
   with producer cleanup adds the producer return-shape change but
   removes the orphan "drop in-block keys but session-restore still
   needs them" intermediate state.
+
+## Strategic rationale (2026-05-15) — v1.18.6 establishes the v1.19.x agent platform foundation
+
+**The original ADR 0006 framed v2 as session schema cleanup driven by
+the strict-endpoint user-facing bug. That framing UNDERSELLS the work.**
+Re-evaluation through the v1.19.x agent platform lens (per ADR 0003)
+shows v2 is load-bearing for the upcoming sub-agent + autonomous-agent
+roadmap, not just a bug fix.
+
+### What the agent platform actually persists per run
+
+ADR 0003 §"Proposed architecture" specifies the per-agent-run namespace:
+
+```
+~/.ppxai/agent-runs/<run_id>/
+    ├── meta.json     (task, parent, status, ...)
+    ├── events.jsonl  (append-only)
+    ├── state.json    (iteration, budget, tools)
+    └── transcript.md
+```
+
+**Each run carries its own message history.** Sub-agents and autonomous
+agents both produce conversations — same `Message` shape, same content
+blocks, same potential for image attachments. Whatever schema we use
+for `~/.ppxai/sessions/` will be inherited by `agent-runs/<run_id>/`.
+The schema we ship in v1.18.6 IS the schema v1.19.x agents inherit.
+
+### Four agent-platform pressures that strengthen the v2 case
+
+1. **Cross-process readers.** ADR 0003 commits to "agent runs survive
+   engine restart." That means an artifact written by ppxai process A
+   may be read by:
+   - A different ppxai process (after restart)
+   - A run-viewer tool (`ppxai agent show <run_id>`)
+   - `kubectl exec cat` (per ADR 0005 inspection triplet)
+   - Parent-agent observability code in a different EngineClient
+   - External operator tooling
+
+   If the persisted shape requires "re-derive `Message.attachments`
+   from in-block keys via `extract_attachment_refs`," that derivation
+   logic must live in EVERY reader. **v2 schema (self-describing,
+   attachments persisted separately) lets readers consume the artifact
+   without knowing the producer's derivation rules.** The wire-strip
+   alternative does NOT solve this — strip happens at engine→wire,
+   doesn't help cross-process disk readers.
+
+2. **Long-lived `events.jsonl` per run.** ADR 0005 §"Open decisions"
+   item 2 explicitly says: *"events.jsonl entries should carry a
+   schema_version field per record so a consumer reading a long-lived
+   file across ppxai upgrades knows what to expect."* If a sub-agent
+   writes events spanning an hour and ppxai is upgraded mid-run (the
+   autonomous-agent use case explicitly survives restarts), readers
+   need to handle multiple schema versions in the same file.
+
+   **The schema_version discipline isn't bug-fix infrastructure — it's
+   the foundational primitive for long-lived artifacts.** v1.18.6
+   establishes it on `sessions/` so v1.19.x agent runs inherit a
+   working pattern, not invent it in haste.
+
+3. **Sub-agent message construction.** ADR 0003 Question D recommends
+   D1 (new EngineClient per sub-agent run). Sub-agents construct
+   messages programmatically, NOT from user input flowing through
+   `build_multimodal_content`. With v2 (Phases 1+2 already shipped):
+
+   ```python
+   # Sub-agent code is direct, no producer pipeline indirection:
+   sub_engine.chat(
+       content=[{"type": "text", "text": task},
+                {"type": "image_url", "image_url": {"url": data_uri}}],
+       attachment_refs=[AttachmentRef(block_index=1, name="x.png", file_id="...", media_type="image/png")],
+   )
+   ```
+
+   **Without v2 (wire-strip alternative), sub-agent code must either
+   re-emit the messy in-block-keys convention or bypass the producer
+   pipeline entirely** — both fracture the architectural story.
+
+4. **ppxai-sre external integrations** (per ADR 0004 v1 gateway + the
+   ppxai-sre research note). The v1 gateway is the supported external
+   surface; future ppxai-sre agents pass payloads through it. Strict
+   OpenAI-compat endpoints (NIM, corporate gateways) are the SAME
+   class of consumer that hit the original `Invalid chat format` bug.
+
+   **Wire-strip works for now but is a permanent tax** on every wire
+   path; v2 makes wire-clean an INVARIANT, not a runtime check.
+
+### Updated technical reasons for v2 (rewriting the original rationale)
+
+| Reason | Original framing | v1.19.x agent-platform framing | Strength |
+|---|---|---|---|
+| A. Wire payload spec-clean | Closes strict-endpoint bug | Required for v1 gateway → ppxai-sre integration to be reliable across strict downstreams | **Strong** (was strong, now strategic) |
+| B. Message.attachments as source of truth | Architectural cleanliness | Sub-agents construct Message directly without producer pipeline indirection | **Strong** (was medium, now load-bearing) |
+| C. Producer cleanup at the producer | Stops engine-internal pollution | Sub-agent message construction is uniform with user-input construction | **Strong** (was weak, now load-bearing) |
+| D. Future block types inherit clean pattern | Speculative | Agent runs introduce new persisted artifact types (meta/state/events/transcript) — pattern matters | **Strong** (was speculative, now imminent) |
+| E. events.jsonl inspection clarity | Speculative | ADR 0005 EXPLICITLY needs schema_version per record; v2 establishes the discipline on sessions first | **Strong** (was speculative, now precondition) |
+
+All five reasons strengthen under the agent-platform lens.
+
+### Concrete benefit chain
+
+1. **v1.18.6**: `sessions/<id>.json` gets `schema_version: 2`. Migration loader pattern established. Wire validator in place. Producer pipeline cleaned.
+2. **v1.19.x Stage 2** (agent run registry): agent runs get `meta.json` / `state.json` / `events.jsonl` with their own `schema_version: 1` (own track) — but the migration loader pattern is already battle-tested from v1.18.6.
+3. **v1.19.x Stage 3** (sub-agent spawning): sub-agents construct `Message(content=..., attachments=[...])` directly. Same pattern as parent's session messages. No producer pipeline import in agent code.
+4. **ppxai-sre external integration**: v1 gateway promises spec-clean wire payloads invariant of provider strictness.
+
+### Migration policy (per user direction 2026-05-15)
+
+When v1.18.6 loads a v1.18.5-or-earlier session:
+
+- ✅ **Preserve**: text message history (user + assistant + tool turns), tool calls, tool results, session name, model, provider, working_dir, usage stats, costs, session metadata, non-image attachments (PDF/code/Excel `uploaded_file` blocks)
+- ❌ **Drop**: image attachments (`image_url` blocks). Replace with text placeholder noting what was lost: `[Image attachment dropped during v1→v2 migration: <name>]`
+- 📁 **Old uploads directory** (`~/.ppxai/sessions/<id>/uploads/`) is NOT auto-deleted. Migration prompts the user (next time they open the affected session) whether to keep it for reference or delete it. Default: keep.
+- 📝 **Optional future enhancement** (not v1.18.6 hard requirement): the migrated v2 message could carry an `AttachmentRef` whose `file_id` points at the v1 uploads path so the artifact is recoverable through the file_store API. **Decision deferred** — adds complexity for a workflow user explicitly de-prioritized. Revisit if a v1.18.6 user requests it.
+
+This policy is documented in the v1.18.6 release notes as a breaking
+change. The `~/.ppxai/sessions.backup.20260514-161938-before-content-block-refactor/`
+directory created during this work serves as the reference v1 backup
+for both the developer's own data and the test fixture source.
+
+### Why this beats the wire-strip alternative
+
+The wire-strip (`sanitize_content_blocks_for_wire` helper called from
+`BaseProvider._convert_messages`) was considered as a smaller v1.18.6
+fix:
+
+- ✅ Closes the strict-endpoint user bug today
+- ✅ ~80 LoC vs ~700 LoC for full v2
+- ❌ **Doesn't solve cross-process disk readers** — strip is engine→wire,
+  not disk-write. Agent run viewers still see polluted blocks.
+- ❌ **Doesn't establish schema_version discipline** — v1.19.x agent
+  runs would have to invent it
+- ❌ **Producer pollution stays permanent** — encourages future engine-
+  internal metadata to ride inside content blocks because the strip
+  "handles it"
+- ❌ **Sub-agent message construction stays messy** — sub-agent code
+  must know to emit the in-block-keys convention OR import producer
+  pipeline OR contribute to drift
+
+**Strategic verdict:** wire-strip is a tactical band-aid for one bug
+class. v2 is foundational infrastructure for the next major release.
+Same 5 hours of focused work; vastly different long-term return.
 
 ## Consequences
 
