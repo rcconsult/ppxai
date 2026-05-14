@@ -245,7 +245,10 @@ class TestAppStateFieldCoverage:
         # v1.17.4: schema-driven from app_state_schema.json; 18 fields total.
         # v1.18.0 P0:   +`agent_beat` for agent heartbeat state → 19.
         # v1.18.0 Ph3: +`last_message_role` for alternation checks → 20.
-        assert len(AppState.FIELDS) == 20
+        # v1.18.6:     +`model_supports_vision` drives attach-button
+        #              badge + per-file warning when image attached to
+        #              non-vision model → 21.
+        assert len(AppState.FIELDS) == 21
 
     def test_mutable_defaults_not_shared_between_instances(self):
         """Each AppState instance must get its own copy of list/dict
@@ -308,7 +311,8 @@ class TestSchemaDTO:
         assert "fields" in self.schema
         assert isinstance(self.schema["fields"], dict)
         # Bump when adding fields — keep in sync with test_field_count above.
-        assert len(self.schema["fields"]) == 20
+        # v1.18.6: +`model_supports_vision` → 21.
+        assert len(self.schema["fields"]) == 21
 
     def test_schema_fields_match_app_state_fields(self):
         """Every schema field must appear in AppState.FIELDS with the
@@ -533,12 +537,13 @@ class TestSseSyncFieldsContract:
         AppState facades pick up schema additions automatically —
         the only thing to update besides the engine is this count.
 
-        Current entries (v1.18.0):
-            provider, model, tools_enabled, tools_verbose,
-            agent_mode, auto_route, working_dir, session_name,
-            debug_log, context_attachments, agent_beat (P0)
+        Current entries:
+            v1.18.0: provider, model, tools_enabled, tools_verbose,
+                agent_mode, auto_route, working_dir, session_name,
+                debug_log, context_attachments, agent_beat (P0).
+            v1.18.6: +model_supports_vision → 12.
         """
-        assert len(self.sse_sync_fields) == 11
+        assert len(self.sse_sync_fields) == 12
 
     def test_sync_fields_have_client_names_in_schema(self):
         """Every sync field must declare a `client` name in the

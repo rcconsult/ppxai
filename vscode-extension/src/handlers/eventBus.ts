@@ -86,6 +86,23 @@ export interface StreamEvents {
     'stream:status': (content: string) => void;
     'stream:done': (content: string) => void;
     'stream:error': (content: string) => void;
+    'stream:warning': (data: WarningEventData) => void;
+}
+
+/** Engine WARNING event payload (v1.18.6).
+ *  Mirrors the validator-warning shape the web client renders. Today's
+ *  known sender: chat route emits this when an image is attached to a
+ *  non-vision model so the user sees the silent-drop case in the
+ *  transcript instead of inferring it from the model's confused
+ *  response. The shape is open enough to grow into other warning kinds
+ *  (deprecation, throttle, etc.) without a schema bump. */
+export interface WarningEventData {
+    type?: string;
+    severity?: string;
+    message?: string;
+    details?: string;
+    suggested_action?: string;
+    [key: string]: unknown;
 }
 
 /** Events emitted by consent handlers */

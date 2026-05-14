@@ -98,6 +98,19 @@ export function processStreamEvent(event: StreamEvent, eventBus: ChatEventBus): 
             eventBus.emit('stream:error', event.content);
             break;
 
+        case 'warning':
+            // v1.18.6: surface engine WARNING events (e.g. attached image
+            // dropped to text placeholder on non-vision model). Payload
+            // shape: {type, severity, message, details?, suggested_action?}
+            // — same as the validator-warning shape the web client renders.
+            try {
+                const data = JSON.parse(event.content);
+                eventBus.emit('stream:warning', data);
+            } catch {
+                eventBus.emit('stream:warning', { message: String(event.content) });
+            }
+            break;
+
         case 'done':
             eventBus.emit('stream:done', event.content);
             break;

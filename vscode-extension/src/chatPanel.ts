@@ -39,7 +39,8 @@ import {
     AgentStateMachine,
     handleFileConsent,
     handleShellConsent,
-    ConsentContext
+    ConsentContext,
+    WarningEventData
 } from './handlers';
 
 // Cross-language state translation lives on the AppState class itself
@@ -435,6 +436,13 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
 
         this._eventBus.on('stream:error', (content) => {
             postMessage({ type: 'error', content });
+        });
+
+        // v1.18.6: forward engine WARNING events to webview. Payload
+        // shape mirrors the web client's validator-warning shape so the
+        // same renderer (in main.js below) handles both.
+        this._eventBus.on('stream:warning', (data: WarningEventData) => {
+            postMessage({ type: 'warning', data });
         });
 
         this._eventBus.on('stream:status', (content) => {

@@ -214,6 +214,13 @@ def _apply_model_switch(engine, model_id: str, reset_context: bool) -> bool:
     """Apply a confirmed model switch: update state, optionally reset context."""
     engine.model = model_id
     engine.state.set("model", model_id)
+    # v1.18.6: drives the cross-client attach-button badge and per-file
+    # warning when user attaches an image to a model that can't accept
+    # it. Single source of truth lives in model_profiles.supports_vision();
+    # this just projects it onto AppState so the SSE_SYNC_FIELDS push
+    # reaches every connected web/VSCode client transparently.
+    from .model_profiles import supports_vision as _supports_vision
+    engine.state.set("model_supports_vision", _supports_vision(model_id))
     engine.session.set_model(model_id)
     if reset_context and engine.session.messages:
         removed = engine.session.reset_for_model_switch()

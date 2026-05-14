@@ -389,6 +389,13 @@ let isSending = false;
 // === File attachment staging (v1.17.4 Phase 6.1) ===
 let pendingFiles = [];
 
+// v1.18.6: tracks AppState.modelSupportsVision for the active model.
+// Used by stageFile() to warn proactively when an image is staged on a
+// non-vision model AND by the attach-button badge update below to
+// surface a passive ⚠ marker before the user clicks. Updated from the
+// SSE stateSync handler (search for `modelSupportsVision` below).
+let activeModelSupportsVision = false;
+
 const attachBtn = document.getElementById('attachBtn');
 const fileInput = document.getElementById('fileInput');
 const attachmentBadgesEl = document.getElementById('attachmentBadges');
@@ -401,6 +408,24 @@ if (attachBtn && fileInput) {
         }
         fileInput.value = '';
     });
+}
+
+// v1.18.6: passive vision-disabled badge on the attach button. Mirrors
+// the web client's behavior. Toggled by the stateSync handler when
+// modelSupportsVision changes.
+function updateAttachBadge(hasVision) {
+    if (!attachBtn) return;
+    if (hasVision === false) {
+        attachBtn.classList.add('vision-disabled');
+        attachBtn.title = (
+            "Active model doesn't accept images. " +
+            "Non-image files (PDF, code, Excel) still work. " +
+            "Switch to a vision-capable model for images."
+        );
+    } else {
+        attachBtn.classList.remove('vision-disabled');
+        attachBtn.title = 'Attach files';
+    }
 }
 
 // Drag-drop on the input container + body-level overlay
@@ -449,13 +474,29 @@ function stageFile(file) {
     const reader = new FileReader();
     reader.onload = () => {
         const b64 = reader.result.split(',')[1] || '';
+        const mediaType = file.type || 'application/octet-stream';
         pendingFiles.push({
             name: file.name,
-            media_type: file.type || 'application/octet-stream',
+            media_type: mediaType,
             data: b64,
             size: file.size,
         });
         renderPendingBadges();
+
+        // v1.18.6: warn proactively when staging an image on a
+        // non-vision model. Catches the silent-drop trap before send.
+        const isImage = mediaType.startsWith('image/');
+        if (isImage && activeModelSupportsVision === false) {
+            const activeModel = (modelSpan && modelSpan.textContent) || 'unknown';
+            addMessage(
+                'system',
+                `⚠ ${file.name} is an image, but the active model ` +
+                `(${activeModel}) does not accept images. It will be sent ` +
+                `as a text placeholder. Switch to a vision-capable model ` +
+                `(e.g. gpt-5.5, gemini-3-flash) before sending.`,
+                false
+            );
+        }
     };
     reader.readAsDataURL(file);
 }
@@ -990,6 +1031,23 @@ window.addEventListener('message', (event) => {
             isSending = false;
             break;
 
+        case 'warning':
+            // v1.18.6: render engine WARNING events as system messages.
+            // Payload shape: {type, severity, message, details?, suggested_action?}.
+            // Today's known sender: chat route emits this when an image is
+            // attached to a non-vision model so the user sees the silent-drop
+            // case in transcript instead of inferring it from the model's
+            // confused response.
+            if (message.data) {
+                const d = message.data;
+                let text = `⚠ ${d.message || 'Warning'}`;
+                if (d.suggested_action) {
+                    text += `\n${d.suggested_action}`;
+                }
+                addMessage('system', text, false);
+            }
+            break;
+
         case 'status':
             providerSpan.textContent = message.provider;
             modelSpan.textContent = message.model;
@@ -1084,6 +1142,14 @@ window.addEventListener('message', (event) => {
                 // reflecting any failure streak.
                 if (c.agentBeat !== undefined) {
                     updateAgentBeatBadge(c.agentBeat || {});
+                }
+                // v1.18.6: drives the attach-button badge + the per-file
+                // warning in stageFile(). Single source of truth is the
+                // engine's AppState.model_supports_vision (synced on
+                // every model switch via SSE_SYNC_FIELDS).
+                if (c.modelSupportsVision !== undefined) {
+                    activeModelSupportsVision = !!c.modelSupportsVision;
+                    updateAttachBadge(activeModelSupportsVision);
                 }
             }
             break;

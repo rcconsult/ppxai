@@ -65,6 +65,7 @@ SSE_SYNC_FIELDS = frozenset({
     "session_name", "debug_log",
     "context_attachments",  # v1.17.4 Phase 3.3
     "agent_beat",  # P0 (v1.18.0) — per-iteration heartbeat state
+    "model_supports_vision",  # v1.18.6 — drives attach-button badge + per-file warning
 })
 
 

@@ -25,6 +25,7 @@ from typing import Any, Dict, List, Optional
 
 from ...common.logger import get_logger
 from ...engine.file_preprocessing import preprocess_file
+from ...engine.types import Event, EventType
 from ..models import ChatRequest, CodingTaskRequest
 from ..state import Session, get_session
 from ..streaming import sse_event_generator, sse_coding_task_generator
@@ -71,25 +72,32 @@ def _build_chat_payload(
     message: str,
     files: list,
     engine: Any,
-) -> Any:
+) -> tuple:
     """Build the chat payload from the user's text + attached files.
 
-    When `files` is empty, returns the plain text string so context
-    injection (@file/@git/@tree) still works as before. When files are
+    When `files` is empty, returns `(message, [])`. When files are
     present, each is preprocessed through `preprocess_file` and the
     result is merged into a multimodal content list — identical to what
     the Rich TUI's `build_multimodal_content` does. The engine receives
     either a string or a list, and `EngineClient.chat()` handles both.
+
+    Returns a `(payload, warnings)` tuple. `payload` is what gets sent
+    to the engine; `warnings` is a list of per-attachment dicts the
+    caller surfaces via `Event(EventType.WARNING, ...)` BEFORE the
+    chat starts. The vision-capability warning lives here so users see
+    "image dropped → text placeholder" in chat transcript instead of
+    inferring it from the model's confused response (v1.18.6).
 
     Errors from individual file preprocessing (oversized, wrong format,
     etc.) are surfaced as inline text annotations in the content list
     rather than failing the entire request, matching the `/attach` UX.
     """
     if not files:
-        return message
+        return message, []
 
     text_chunks: List[str] = [message] if message else []
     non_text_parts: List[Dict[str, Any]] = []
+    attachment_warnings: List[Dict[str, Any]] = []
 
     model = engine.model or ""
     provider = engine.provider_name or ""
@@ -99,6 +107,12 @@ def _build_chat_payload(
         if hasattr(engine, "has_vision_sidecar") and engine.has_vision_sidecar()
         else None
     )
+
+    # v1.18.6: precompute vision capability so we can detect the
+    # image-on-non-vision-model case and emit a structured warning the
+    # client can render distinctly from generic preprocess warnings.
+    from ...engine.model_profiles import supports_vision as _supports_vision
+    model_has_vision = _supports_vision(model) if model else False
 
     for attachment in files:
         # Decode base64 → raw bytes. Reject on decode failure with an
@@ -127,6 +141,34 @@ def _build_chat_payload(
             )
             continue
 
+        # v1.18.6: surface the silent image-dropped-to-placeholder case
+        # as a structured WARNING event. The placeholder text remains in
+        # the message content (so the model still sees "this image was
+        # attempted") but the user now ALSO sees a system-level warning
+        # in chat — not just inferred from the model's confused response.
+        is_image = (attachment.media_type or "").startswith("image/")
+        if is_image and not model_has_vision:
+            # Payload shape mirrors the existing validator-warning renderer
+            # (`web/app.js::showValidationWarning`): {type, severity,
+            # message, details?, suggested_action?}. The web client lights
+            # this up as a warning chip in the chat transcript with no new
+            # render code. The TUI/Rich/Textual renderers treat it as a
+            # generic system warning. v1.18.6.
+            attachment_warnings.append({
+                "type": "vision_unsupported",
+                "severity": "warning",
+                "message": (
+                    f"{attachment.name} attached but the active model "
+                    f"({model or 'unknown'}) does not accept images. "
+                    f"It was sent as a text placeholder."
+                ),
+                "suggested_action": (
+                    "Switch to a vision-capable model "
+                    "(e.g. gpt-5.5, gemini-3-flash) before attaching images."
+                ),
+                "details": f"attachment: {attachment.name}, model: {model}",
+            })
+
         for part in result.parts:
             if part.get("type") == "text":
                 text_chunks.append(part["text"])
@@ -142,7 +184,7 @@ def _build_chat_payload(
     if not parts:
         parts.append({"type": "text", "text": ""})
 
-    return parts
+    return parts, attachment_warnings
 
 
 @router.post("/chat")
@@ -254,10 +296,18 @@ async def chat(
             s.engine.set_model(request.model, reset_context=False)
 
         # Build the chat payload — plain string when no files, multimodal
-        # content list when files are attached (Phase 3.2).
-        chat_payload = _build_chat_payload(
+        # content list when files are attached (Phase 3.2). v1.18.6: also
+        # returns per-attachment warnings (e.g. image attached to non-vision
+        # model) which we enqueue as WARNING events so the SSE drain
+        # surfaces them in chat transcript before the assistant response.
+        chat_payload, attachment_warnings = _build_chat_payload(
             request.message, request.files, s.engine
         )
+        for w in attachment_warnings:
+            s.engine.enqueue_event(Event(
+                type=EventType.WARNING,
+                data=w,
+            ))
 
         # Wrap generator to ensure lock is held during streaming
         async def locked_generator():

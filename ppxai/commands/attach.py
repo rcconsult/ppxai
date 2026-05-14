@@ -651,6 +651,32 @@ def handle_attach(context: Any, args: str) -> CommandResult:
     lines.append("")
     lines.append("Will be sent with your next message.")
 
+    # v1.18.6: proactive warning when an image was just staged but the
+    # active model can't accept images. Catches the silent-drop trap
+    # before the user wastes a turn. Read from AppState (single source
+    # of truth — same field the web/VSCode badge subscribes to). Fall
+    # back to model_profiles.supports_vision direct call if the engine
+    # doesn't expose state (test stubs etc.).
+    image_attachments = [pf for pf in added if pf.kind == "image"]
+    if image_attachments and engine_client is not None:
+        active_model = getattr(engine_client, "model", "") or ""
+        try:
+            model_has_vision = bool(
+                engine_client.state.get("model_supports_vision")
+            )
+        except (AttributeError, KeyError):
+            from ..engine.model_profiles import supports_vision as _sv
+            model_has_vision = _sv(active_model) if active_model else False
+        if not model_has_vision:
+            names = ", ".join(pf.name for pf in image_attachments)
+            lines.append("")
+            lines.append(
+                f"⚠ The active model ({active_model or 'unknown'}) does not "
+                f"accept images. {names} will be sent as a text placeholder "
+                f"unless you switch to a vision-capable model first "
+                f"(e.g. gpt-5.5, gemini-3-flash)."
+            )
+
     # Metadata carries image paths so the Rich client can render an inline
     # preview right after /attach completes without re-reading the files.
     result = NotificationResult(

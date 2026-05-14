@@ -693,6 +693,29 @@ class PpxaiApp {
                 }
                 fileInput.value = '';  // reset so same file can be re-selected
             });
+
+            // v1.18.6: passive vision-disabled badge on attach button.
+            // Subscribes to AppState.modelSupportsVision (push-synced from
+            // the engine on every model switch). When the active model
+            // can't accept images, the button gets a `vision-disabled`
+            // class — CSS turns the paperclip muted + adds a warning
+            // tooltip so users see the gap BEFORE they click. The
+            // per-file toast in `_stageFile` is the second-line catch.
+            const updateAttachBadge = (hasVision) => {
+                if (hasVision === false) {
+                    attachBtn.classList.add('vision-disabled');
+                    attachBtn.title = (
+                        `Active model doesn't accept images. ` +
+                        `Non-image files (PDF, code, Excel) still work. ` +
+                        `Switch to a vision-capable model for images.`
+                    );
+                } else {
+                    attachBtn.classList.remove('vision-disabled');
+                    attachBtn.title = 'Attach files (images, PDF, Excel, PowerPoint, code)';
+                }
+            };
+            updateAttachBadge(this.state.modelSupportsVision);
+            this.state.on('modelSupportsVision', updateAttachBadge);
         }
 
         // Drag-drop on the input container
@@ -1159,13 +1182,31 @@ class PpxaiApp {
         reader.onload = () => {
             // result is "data:<mime>;base64,<b64>"
             const b64 = reader.result.split(',')[1] || '';
+            const mediaType = file.type || 'application/octet-stream';
             this.pendingFiles.push({
                 name: file.name,
-                media_type: file.type || 'application/octet-stream',
+                media_type: mediaType,
                 data: b64,
                 size: file.size,
             });
             this._renderPendingBadges();
+
+            // v1.18.6: warn proactively when the user stages an image
+            // but the active model can't accept images. Catches the
+            // silent-drop trap before send. Source of truth is AppState
+            // model_supports_vision (push-synced from the engine on every
+            // model switch). Non-image attachments stay silent.
+            const isImage = mediaType.startsWith('image/');
+            if (isImage && this.state.modelSupportsVision === false) {
+                const activeModel = this.state.currentModel || 'unknown';
+                this.showSystemMessage(
+                    `\u26A0 ${file.name} is an image, but the active model ` +
+                    `(${activeModel}) does not accept images. It will be sent ` +
+                    `as a text placeholder. Switch to a vision-capable model ` +
+                    `(e.g. gpt-5.5, gemini-3-flash) before sending.`,
+                    'warning'
+                );
+            }
         };
         reader.onerror = () => {
             this.addMessage('system', `\u274C Failed to read ${file.name}`);

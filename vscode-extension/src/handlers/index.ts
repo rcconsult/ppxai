@@ -26,7 +26,8 @@ export {
     ToolCallData,
     ToolResultData,
     ContextData,
-    ConsentResolvedData
+    ConsentResolvedData,
+    WarningEventData
 } from './eventBus';
 
 // Re-export consent types from httpClient via eventBus

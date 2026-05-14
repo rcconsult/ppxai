@@ -1409,6 +1409,27 @@ body {
     border-color: var(--accent-color);
 }
 
+/* v1.18.6: passive vision-disabled badge. Toggled by app.js when
+ * AppState.modelSupportsVision is false. Mutes the button + adds a
+ * subtle ⚠ marker via ::after so users notice BEFORE clicking. The
+ * button stays clickable — non-image attachments (PDF, Excel, code)
+ * still work; only images would be silently dropped. */
+.attach-btn.vision-disabled {
+    opacity: 0.55;
+    border-color: var(--border-color);
+    border-style: dashed;
+}
+.attach-btn.vision-disabled::after {
+    content: "⚠";
+    font-size: 11px;
+    margin-left: 4px;
+    color: var(--warning-color, #f0a020);
+    line-height: 1;
+}
+.attach-btn.vision-disabled:hover {
+    opacity: 0.85;
+}
+
 /* Attachment badges strip (v1.17.4 Phase 5.2) */
 .attachment-badges {
     display: flex;
