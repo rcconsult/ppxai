@@ -337,8 +337,15 @@ code --install-extension vscode-extension/ppxai-*.vsix --force
 ```
 
 ```powershell
-# Windows PowerShell — explicit path, no glob
-code --install-extension (Resolve-Path vscode-extension\ppxai-*.vsix) --force
+# Windows PowerShell — explicit path, no glob; resolve the CLI shim
+# explicitly because plain `code` may resolve to Code.exe (the GUI)
+# which rejects --install-extension with `bad option`.
+$codeCli = "$env:LOCALAPPDATA\Programs\Microsoft VS Code\bin\code.cmd"
+if (-not (Test-Path $codeCli)) {
+    # Fallback: assume `code` is the proper shim
+    $codeCli = "code"
+}
+& $codeCli --install-extension (Resolve-Path vscode-extension\ppxai-*.vsix).Path --force
 ```
 
 `--force` overwrites a previously-installed version of the same
@@ -348,6 +355,14 @@ build automatically; no restart needed.
 If `code` is not on `$PATH` on Windows, ensure VS Code's `bin/` is
 shimmed (some installers don't add it). On this user's setup,
 `~/.bashrc` holds a `code` alias to the Microsoft VS Code shim.
+
+**Windows gotcha — `code` may resolve to the GUI binary.** If your
+PATH includes the VS Code install root before its `bin/` subdirectory,
+plain `code` resolves to `Code.exe` (the GUI exe) which rejects
+`--install-extension` with `Code.exe: bad option: --install-extension`.
+The PowerShell snippet above handles this by going straight to
+`bin\code.cmd`. On Git Bash, `~/.bashrc` typically aliases `code` to
+the shim; verify with `type code` if the install fails.
 
 ### 8. Verify versions agree AND web sync took effect
 
