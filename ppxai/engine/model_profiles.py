@@ -136,6 +136,45 @@ BUILTIN_PROFILES: Dict[str, ModelProfile] = {
         supports_vision=True,
         tier="A",
     ),
+
+    # NOTE: gpt-5.4-mini MUST come before gpt-5.4 to avoid glob shadowing
+    # ("gpt-5.4*" would match "gpt-5.4-mini" if listed first, denying the
+    # mini its dedicated 400K context limit).
+    "gpt-5.4-mini*": ModelProfile(
+        # Released 2026-03-17. 400K context per OpenAI announcement;
+        # supports vision per the project's example config description
+        # ("everyday coding, edits, explanations" — flagship-family
+        # capabilities). Registry gap surfaced 2026-05-14 when an attached
+        # screenshot was silently dropped via the supports_vision=False
+        # conservative-default fallback. Same tool-calling shape as the
+        # full gpt-5.4 below.
+        tool_calling=ToolCallingProfile(
+            mode="native",
+            strip_json_from_text=True,
+            fallback_on_empty=True,
+        ),
+        max_tokens=128_000,
+        supports_vision=True,
+        tier="A",
+    ),
+    "gpt-5.4*": ModelProfile(
+        # Released 2026-03-05. Project's default model since v1.17.4
+        # (see ppxai-config.example.json:default_model). 1M context,
+        # 75% computer-use benchmark (which requires vision). Same
+        # native-tool-calling shape as gpt-5.2 / gpt-5.5; restricted
+        # sampling params for reasoning models. Registry entry added
+        # 2026-05-14 to close a gap that had silently routed image
+        # attachments through the text-placeholder fallback.
+        tool_calling=ToolCallingProfile(
+            mode="native",
+            strip_json_from_text=True,
+            parallel_tool_calls=True,
+        ),
+        max_tokens=128_000,
+        restricted_params=["temperature", "top_p"],
+        supports_vision=True,
+        tier="A",
+    ),
     "gpt-5.3-codex*": ModelProfile(
         # Code-specialized variant ("most capable agentic coding model
         # to date" per OpenAI). Uses Responses API like other Codex

@@ -64,6 +64,14 @@ class TestOpenAIVisionCapability:
     @pytest.mark.parametrize("model", [
         "gpt-5", "gpt-5.2", "gpt-5-mini", "gpt-5-nano",
         "gpt-5.1-codex", "gpt-5.1-codex-mini",
+        # gpt-5.4 family — registry entry added 2026-05-14 (closed gap
+        # surfaced when an attached screenshot was silently routed to the
+        # text-placeholder fallback because supports_vision returned False
+        # via conservative default).
+        "gpt-5.4", "gpt-5.4-pro", "gpt-5.4-mini",
+        # gpt-5.5 family — registered alongside gpt-5.4 to keep the
+        # whole flagship line covered.
+        "gpt-5.5", "gpt-5.5-mini",
         "gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano",
         "gpt-4o", "gpt-4o-mini",
     ])
