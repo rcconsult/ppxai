@@ -13,7 +13,7 @@ Built multimodal from day one. All major models handle text, image, audio, video
 |---|---|---|---|---|---|---|
 | `gemini-3.1-pro-preview` | ✅ | ✅ | ✅ | ✅ | ❌ | Flagship; 1M context; 77.1% ARC-AGI-2 |
 | `gemini-2.5-flash` | ✅ | ✅ | ✅ | ✅ | ❌ | Best price/perf; production-stable |
-| `gemini-3.1-flash-lite-preview` | ✅ | ✅ | ❌ | ❌ | ❌ | Cheapest Gemini 3 tier |
+| `gemini-3.1-flash-lite` | ✅ | ✅ | ❌ | ❌ | ❌ | Cheapest Gemini 3 tier (GA 2026-05; preview alias retires 2026-05-25) |
 | `gemini-3.1-flash-image-preview` | ✅ | ✅ | ❌ | ❌ | ✅ | Image gen/edit (Nano Banana 2); 4K output |
 | `gemini-3-pro-image-preview` | ✅ | ✅ | ❌ | ❌ | ✅ | Nano Banana Pro; highest quality image gen |
 | `gemini-live-*` | ✅ | ❌ | ✅ bidirectional | ✅ | ❌ | Real-time streaming via WebSocket |

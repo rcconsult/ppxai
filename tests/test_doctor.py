@@ -152,19 +152,19 @@ class TestFindMissingRecommended:
         missing = find_missing_recommended(provider_models)
         # Every Gemini recommendation should surface.
         missing_names = {m["model"] for m in missing}
-        assert "gemini-3.1-flash-lite-preview" in missing_names
+        assert "gemini-3.1-flash-lite" in missing_names
         assert "gemma-4-31b-it" in missing_names
 
     def test_already_configured_models_not_recommended(self):
         provider_models = {
             "gemini": [
                 "gemini-3-flash-preview",
-                "gemini-3.1-flash-lite-preview",  # already have this
+                "gemini-3.1-flash-lite",  # already have this
             ],
         }
         missing = find_missing_recommended(provider_models)
         missing_names = {m["model"] for m in missing}
-        assert "gemini-3.1-flash-lite-preview" not in missing_names
+        assert "gemini-3.1-flash-lite" not in missing_names
 
     def test_provider_absent_skips_its_recommendations(self):
         # No gemini provider at all → no gemini recommendations.
@@ -294,7 +294,7 @@ class TestAuditUserConfig:
         result = audit_user_config(path, today=date(2026, 4, 6))
         # User has gemini configured but none of the new 3.1 / Gemma 4 models.
         names = {m["model"] for m in result["missing_recommended"]}
-        assert "gemini-3.1-flash-lite-preview" in names
+        assert "gemini-3.1-flash-lite" in names
 
 
 # -----------------------------------------------------------------------------
@@ -513,9 +513,10 @@ class TestDeprecationTableInvariants:
 
     def test_gemini_deprecation_count(self):
         # Gemini family — bump when adding a new shutdown.
-        # Current (verified 2026-04-12): 3-pro-preview, 2.0-flash, 2.0-flash-lite,
-        # 2.5-pro, 2.5-flash, 2.5-flash-lite, 2.5-flash-image.
-        assert len(GEMINI_DEPRECATIONS) == 7
+        # Current (verified 2026-05-14): 3-pro-preview, 2.0-flash, 2.0-flash-lite,
+        # 2.5-pro, 2.5-flash, 2.5-flash-lite, 2.5-flash-image,
+        # 3.1-flash-lite-preview (preview→GA migration, retires 2026-05-25).
+        assert len(GEMINI_DEPRECATIONS) == 8
 
     def test_openai_deprecation_count(self):
         # OpenAI family — bump when adding a new shutdown.

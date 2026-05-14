@@ -66,7 +66,7 @@ GEMINI_DEPRECATIONS: Dict[str, Deprecation] = {
     ),
     "gemini-2.0-flash-lite": Deprecation(
         shutdown_date="2026-06-01",
-        replacement="gemini-3.1-flash-lite-preview",
+        replacement="gemini-3.1-flash-lite",
         reason="Gemini 2.0 family end-of-life.",
     ),
     "gemini-2.5-pro": Deprecation(
@@ -81,8 +81,13 @@ GEMINI_DEPRECATIONS: Dict[str, Deprecation] = {
     ),
     "gemini-2.5-flash-lite": Deprecation(
         shutdown_date="2026-07-22",
-        replacement="gemini-3.1-flash-lite-preview",
+        replacement="gemini-3.1-flash-lite",
         reason="2.5 Flash Lite retiring; 3.1 Flash Lite same price tier, better quality.",
+    ),
+    "gemini-3.1-flash-lite-preview": Deprecation(
+        shutdown_date="2026-05-25",
+        replacement="gemini-3.1-flash-lite",
+        reason="Preview graduated to GA; identical model architecture, only the identifier changes.",
     ),
     "gemini-2.5-flash-image": Deprecation(
         shutdown_date="2026-10-02",
@@ -272,7 +277,7 @@ RECOMMENDED_NEW_MODELS: List[Dict[str, str]] = [
     },
     {
         "provider": "gemini",
-        "model": "gemini-3.1-flash-lite-preview",
+        "model": "gemini-3.1-flash-lite",
         "reason": "Cheapest Gemini 3 tier — good for high-volume workflows and VSCode inline suggestions.",
     },
     {

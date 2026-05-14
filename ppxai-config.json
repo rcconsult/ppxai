@@ -148,9 +148,9 @@
           "description": "Optimized for custom tool usage and agentic workflows with 1M context",
           "context_limit": 1000000
         },
-        "gemini-3.1-flash-lite-preview": {
-          "name": "Gemini 3.1 Flash Lite Preview",
-          "description": "Cheapest Gemini 3 tier with text + image + video input. Replaces gemini-2.5-flash-lite.",
+        "gemini-3.1-flash-lite": {
+          "name": "Gemini 3.1 Flash Lite",
+          "description": "Cheapest Gemini 3 tier with text + image + video input. Replaces gemini-2.5-flash-lite. GA as of 2026-05; preview alias retires 2026-05-25.",
           "context_limit": 1000000,
           "__comment_best_for": "High-volume, cost-sensitive workloads where full Gemini 3 Pro isn't needed."
         },
@@ -192,7 +192,7 @@
           "input": 2.0,
           "output": 12.0
         },
-        "gemini-3.1-flash-lite-preview": {
+        "gemini-3.1-flash-lite": {
           "input": 0.1,
           "output": 0.4
         },

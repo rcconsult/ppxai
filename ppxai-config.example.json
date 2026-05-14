@@ -142,7 +142,7 @@
         "temperature": 0.2,
         "top_p": 0.9
       },
-      "__comment_deprecations": "Gemini deprecation timeline (verified 2026-04-12 against https://ai.google.dev/gemini-api/docs/deprecations). The Gemini 2.0 and 2.5 families were REMOVED from this example file in v1.17.4 because all variants are scheduled for shutdown between 2026-06-01 and 2026-07-22. `/doctor` still knows about them via `ppxai/engine/model_deprecations.py` — users with old local configs get a warning with upgrade targets. Recommended replacements: gemini-3-flash-preview (best benchmark score, 100%) for general coding, gemini-3.1-pro-preview for complex reasoning, gemini-3.1-flash-lite-preview for high-volume cost-sensitive workloads. gemini-3-pro-preview was SHUT DOWN 2026-03-09.",
+      "__comment_deprecations": "Gemini deprecation timeline (verified 2026-04-12 against https://ai.google.dev/gemini-api/docs/deprecations; gemini-3.1-flash-lite GA migration verified 2026-05-14). The Gemini 2.0 and 2.5 families were REMOVED from this example file in v1.17.4 because all variants are scheduled for shutdown between 2026-06-01 and 2026-07-22. `/doctor` still knows about them via `ppxai/engine/model_deprecations.py` — users with old local configs get a warning with upgrade targets. Recommended replacements: gemini-3-flash-preview (best benchmark score, 100%) for general coding, gemini-3.1-pro-preview for complex reasoning, gemini-3.1-flash-lite (GA 2026-05) for high-volume cost-sensitive workloads. gemini-3-pro-preview was SHUT DOWN 2026-03-09. gemini-3.1-flash-lite-preview retires 2026-05-25 — use the GA name gemini-3.1-flash-lite.",
       "models": {
         "gemini-3-flash-preview": {
           "name": "Gemini 3 Flash Preview",
@@ -150,9 +150,9 @@
           "context_limit": 1000000,
           "__comment_best_for": "Code editing, refactoring, debugging. Achieved 100% quality score with balanced AGENTS.md hints."
         },
-        "gemini-3.1-flash-lite-preview": {
-          "name": "Gemini 3.1 Flash Lite Preview",
-          "description": "Cheapest Gemini 3 tier with text + image + video input. Replaces gemini-2.5-flash-lite.",
+        "gemini-3.1-flash-lite": {
+          "name": "Gemini 3.1 Flash Lite",
+          "description": "Cheapest Gemini 3 tier with text + image + video input. Replaces gemini-2.5-flash-lite. GA as of 2026-05; preview alias retires 2026-05-25.",
           "context_limit": 1000000,
           "__comment_best_for": "High-volume, cost-sensitive workloads where full Gemini 3 Pro isn't needed."
         },
@@ -199,7 +199,7 @@
       },
       "pricing": {
         "gemini-3-flash-preview": {"input": 0.50, "output": 3.00},
-        "gemini-3.1-flash-lite-preview": {"input": 0.10, "output": 0.40},
+        "gemini-3.1-flash-lite": {"input": 0.10, "output": 0.40},
         "gemini-3.1-flash-image-preview": {"input": 0.50, "output": 3.00, "__comment": "Image generation pricing, per-image output"},
         "gemini-3.1-pro-preview": {"input": 2.00, "output": 12.00},
         "gemini-3.1-pro-preview-customtools": {"input": 2.00, "output": 12.00},
