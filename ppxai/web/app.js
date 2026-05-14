@@ -1196,16 +1196,29 @@ class PpxaiApp {
             // silent-drop trap before send. Source of truth is AppState
             // model_supports_vision (push-synced from the engine on every
             // model switch). Non-image attachments stay silent.
+            //
+            // Routes through showValidationWarning (the v1.15.2 hallucination-
+            // detection renderer) so the staging-time warning gets the SAME
+            // orange .warning-message visual treatment as the send-time
+            // engine WARNING event. Without this, users see two different
+            // visual styles for the same conceptual warning depending on
+            // when it fires \u2014 breaks visual consistency within the client.
             const isImage = mediaType.startsWith('image/');
             if (isImage && this.state.modelSupportsVision === false) {
                 const activeModel = this.state.currentModel || 'unknown';
-                this.showSystemMessage(
-                    `\u26A0 ${file.name} is an image, but the active model ` +
-                    `(${activeModel}) does not accept images. It will be sent ` +
-                    `as a text placeholder. Switch to a vision-capable model ` +
-                    `(e.g. gpt-5.5, gemini-3-flash) before sending.`,
-                    'warning'
-                );
+                this.showValidationWarning({
+                    type: 'vision_unsupported',
+                    severity: 'warning',
+                    message: (
+                        `${file.name} is an image, but the active model ` +
+                        `(${activeModel}) does not accept images. It will be ` +
+                        `sent as a text placeholder.`
+                    ),
+                    suggested_action: (
+                        'Switch to a vision-capable model ' +
+                        '(e.g. gpt-5.5, gemini-3-flash) before sending.'
+                    ),
+                });
             }
         };
         reader.onerror = () => {

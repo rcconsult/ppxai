@@ -485,11 +485,14 @@ function stageFile(file) {
 
         // v1.18.6: warn proactively when staging an image on a
         // non-vision model. Catches the silent-drop trap before send.
+        // Uses the same 'warning' role as the engine WARNING SSE event
+        // handler above so both sites render with identical orange
+        // treatment — visual consistency within the client.
         const isImage = mediaType.startsWith('image/');
         if (isImage && activeModelSupportsVision === false) {
             const activeModel = (modelSpan && modelSpan.textContent) || 'unknown';
             addMessage(
-                'system',
+                'warning',
                 `⚠ ${file.name} is an image, but the active model ` +
                 `(${activeModel}) does not accept images. It will be sent ` +
                 `as a text placeholder. Switch to a vision-capable model ` +
@@ -1032,8 +1035,9 @@ window.addEventListener('message', (event) => {
             break;
 
         case 'warning':
-            // v1.18.6: render engine WARNING events as system messages.
-            // Payload shape: {type, severity, message, details?, suggested_action?}.
+            // v1.18.6: render engine WARNING events with the orange
+            // .message.warning treatment (defined in styles.css). Payload
+            // shape: {type, severity, message, details?, suggested_action?}.
             // Today's known sender: chat route emits this when an image is
             // attached to a non-vision model so the user sees the silent-drop
             // case in transcript instead of inferring it from the model's
@@ -1044,7 +1048,7 @@ window.addEventListener('message', (event) => {
                 if (d.suggested_action) {
                     text += `\n${d.suggested_action}`;
                 }
-                addMessage('system', text, false);
+                addMessage('warning', text, false);
             }
             break;
 

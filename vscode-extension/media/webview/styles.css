@@ -509,6 +509,20 @@ body {
     font-size: 12px;
 }
 
+/* v1.18.6: warning messages — same conceptual class as web's
+ * .warning-message. Used by both per-file staging warnings (image on
+ * non-vision model) and engine-emitted WARNING SSE events so they
+ * render with the same orange/amber treatment. Distinct from .system
+ * so users can visually scan for warnings vs informational status. */
+.message.warning {
+    background: var(--vscode-inputValidation-warningBackground,
+                rgba(255, 152, 0, 0.15));
+    border-left: 4px solid var(--vscode-editorWarning-foreground, #ff9800);
+    color: var(--vscode-editorWarning-foreground, #ff9800);
+    font-size: 13px;
+    padding: 8px 12px;
+}
+
 .message.command {
     background: var(--vscode-textCodeBlock-background);
     font-family: var(--vscode-editor-font-family);
