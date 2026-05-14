@@ -803,7 +803,7 @@ def build_multimodal_content(
     provider: str = "",
     file_store: Any = None,
     vl_captioner: Any = None,
-) -> List[Dict[str, Any]]:
+) -> tuple:
     """Assemble OpenAI-format multimodal content from text + staged files.
 
     v1.17.4 Phase 2.2: delegates to `engine.file_preprocessing.preprocess_file`
@@ -827,10 +827,28 @@ def build_multimodal_content(
     3. Appends `image_url` parts (or any other non-text kind) as
        separate content blocks following the merged text.
 
-    Returns a list of content parts ready to pass to `EngineClient.chat()`.
+    ADR 0006 Step 2 (v1.18.6): also returns the list of `ArtifactRef`s
+    the producer branches populated for each file, with `block_index`
+    re-based to match positions in the assembled content list. Caller
+    threads these refs through `EngineClient.chat(attachment_refs=)`
+    so `Message.attachments` is populated from the producer side
+    without re-deriving via `extract_attachment_refs` from in-block
+    keys.
+
+    Returns:
+        Tuple of (parts, attachment_refs):
+          - parts: list of content blocks ready to pass to
+            `EngineClient.chat()` as the message content.
+          - attachment_refs: list of ArtifactRef objects (Image / Pdf /
+            Office / Text / future kinds) describing artifacts attached
+            to this message. block_index re-based to match positions
+            in `parts`. Empty list when no attachments produced one
+            (e.g., text-only call, or all attachments failed).
     """
     text_chunks: List[str] = [text] if text else []
     non_text_parts: List[Dict[str, Any]] = []
+    text_artifact_refs: List[Any] = []  # refs whose blocks merge into combined-text
+    non_text_artifact_refs: List[Any] = []  # refs whose blocks become non-text parts
 
     for pf in pending:
         result = preprocess_file(
@@ -851,11 +869,25 @@ def build_multimodal_content(
             text_chunks.append(f"[Attachment error: {pf.name} — {result.error}]")
             continue
 
+        # Track which output channel this PreprocessResult landed in:
+        # text-block (merged into combined-text) or non-text (own block).
+        # The artifact_ref's block_index gets re-based accordingly below.
+        produced_non_text = False
         for part in result.parts:
             if part.get("type") == "text":
                 text_chunks.append(part["text"])
             else:
                 non_text_parts.append(part)
+                produced_non_text = True
+
+        # ADR 0006 Step 2: route artifact_ref into the right rebase
+        # bucket. PreprocessResult emits block_index=0 (single-block
+        # context); we re-base after assembly knows the final layout.
+        if result.attachment_ref is not None:
+            if produced_non_text:
+                non_text_artifact_refs.append(result.attachment_ref)
+            else:
+                text_artifact_refs.append(result.attachment_ref)
 
     combined_text = "\n".join(chunk for chunk in text_chunks if chunk)
 
@@ -867,7 +899,35 @@ def build_multimodal_content(
     # Guarantee at least one part — providers reject empty messages.
     if not parts:
         parts.append({"type": "text", "text": ""})
-    return parts
+
+    # Re-base block_index on each ArtifactRef to match positions in the
+    # final assembled content list. Text-class artifacts (Pdf/Office/
+    # Text/CSV via uploaded_file blocks merged into combined-text) all
+    # point at the merged text block (index 0 when combined_text is
+    # non-empty). Non-text artifacts (Image) get sequential indices
+    # starting after the merged text block.
+    #
+    # Multiple text artifacts sharing block_index=0 is correct — the
+    # join key is "which content block does this artifact's payload
+    # contribute to," not a uniqueness constraint.
+    attachment_refs: List[Any] = []
+    has_combined_text = bool(combined_text)
+    text_block_index = 0 if has_combined_text else -1  # -1 sentinel: no text block
+
+    for ref in text_artifact_refs:
+        # Replace block_index using dataclass.replace would require
+        # importing it for each kind; instead mutate the existing field
+        # since AttachmentRef-family dataclasses are mutable by default.
+        ref.block_index = text_block_index
+        attachment_refs.append(ref)
+
+    # Non-text parts start at index `1 if has_combined_text else 0`
+    non_text_start = 1 if has_combined_text else 0
+    for offset, ref in enumerate(non_text_artifact_refs):
+        ref.block_index = non_text_start + offset
+        attachment_refs.append(ref)
+
+    return parts, attachment_refs
 
 
 # =============================================================================

@@ -367,7 +367,8 @@ class TestPreprocessingWithSidecar:
             with patch("openai.OpenAI", return_value=mock_client):
                 # Text-only model → preprocess_file should call the
                 # captioner rather than emit a placeholder.
-                parts = build_multimodal_content(
+                # ADR 0006 Step 2: build_multimodal_content returns tuple.
+                parts, _refs = build_multimodal_content(
                     "describe",
                     [pf],
                     model="openai/gpt-oss-120b",  # text-only
@@ -407,7 +408,8 @@ class TestPreprocessingWithSidecar:
             data=red_png,
         )
 
-        parts = build_multimodal_content(
+        # ADR 0006 Step 2: build_multimodal_content returns tuple.
+        parts, _refs = build_multimodal_content(
             "describe",
             [pf],
             model="openai/gpt-oss-120b",

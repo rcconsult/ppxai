@@ -869,7 +869,8 @@ class EngineClient:
     async def chat(
         self,
         message: MessageContent,
-        stream: bool = True
+        stream: bool = True,
+        attachment_refs: Optional[List[Any]] = None,
     ) -> AsyncIterator[Event]:
         """Send a chat message, yielding events.
 
@@ -893,6 +894,18 @@ class EngineClient:
         Args:
             message: User message (string or multimodal content list)
             stream: Whether to stream the response
+            attachment_refs: ADR 0006 Step 3 (v1.18.6) — optional list of
+                ArtifactRefs (Image/Pdf/Office/Text/future kinds) the
+                producer pipeline (`build_multimodal_content` /
+                server `_build_chat_payload`) computed for this message.
+                When provided: used directly to populate
+                Message.attachments — no derivation needed. When None
+                (legacy callers, in-process .chat() with bare content):
+                falls back to `extract_attachment_refs(message)` which
+                synthesizes from in-block name/file_id keys (Phase 1
+                transitional path, dropped in Step 7). The kwarg
+                avoids the producer-pipeline tuple-return rippling
+                through every chat() caller — opt-in.
 
         Yields:
             Event objects
@@ -950,17 +963,22 @@ class EngineClient:
                     self._injected_contexts.append(injection_entry)
 
         # Add message to history (with injected content if applicable).
-        # ADR 0006 Phase 1: also populate Message.attachments by walking
-        # the content list for image_url blocks carrying name/file_id.
-        # Today this duplicates the in-block keys (read by multimodal_ops,
-        # session serialize, attach context-listing); Phase 2 will switch
-        # those readers to walk attachments instead, Phase 3 drops the
-        # in-block keys, Phase 4 versions session JSON. Until then both
-        # representations coexist with zero behavioral change.
+        # ADR 0006 Phase 1 + Step 3: populate Message.attachments from
+        # the explicit attachment_refs kwarg when provided (producer
+        # pipeline path); fall back to extract_attachment_refs(message)
+        # for legacy callers that pass bare content (in-process chat()
+        # without going through build_multimodal_content). Step 7 drops
+        # the in-block-keys-derivation fallback once producers stop
+        # emitting those keys.
+        effective_attachments = (
+            list(attachment_refs)
+            if attachment_refs is not None
+            else extract_attachment_refs(message)
+        )
         self.session.add_message(Message(
             role="user",
             content=message,
-            attachments=extract_attachment_refs(message),
+            attachments=effective_attachments,
         ))
 
         try:

@@ -873,7 +873,11 @@ class PPXAIDEApp(App):
             # doesn't leave orphaned attachments on the next turn.
             pending = list(self.pending_files)
             if pending:
-                chat_payload = build_multimodal_content(
+                # ADR 0006 Step 2/3: build_multimodal_content now returns
+                # (parts, attachment_refs); refs threaded into engine.chat
+                # below so Message.attachments is populated from producer
+                # side without re-deriving from in-block keys.
+                chat_payload, attachment_refs = build_multimodal_content(
                     message,
                     pending,
                     model=self._engine_client.model or "",
@@ -888,10 +892,12 @@ class PPXAIDEApp(App):
                 self.pending_files.clear()
                 self._log.info(
                     f"Sending multimodal: {len(pending)} file(s), "
-                    f"{len(chat_payload)} part(s)"
+                    f"{len(chat_payload)} part(s), "
+                    f"{len(attachment_refs)} artifact ref(s)"
                 )
             else:
                 chat_payload = message
+                attachment_refs = []
 
             # Setup in main thread (UI-safe)
             status_bar = self._status_bar
@@ -914,7 +920,7 @@ class PPXAIDEApp(App):
             # Worker will use call_from_thread() to emit events in main thread
             thread = threading.Thread(
                 target=self._stream_response_thread,
-                args=(chat_payload, self._engine_client),
+                args=(chat_payload, self._engine_client, attachment_refs or None),
                 daemon=True
             )
             thread.start()
@@ -925,9 +931,14 @@ class PPXAIDEApp(App):
 
     # === Streaming (delegated to stream_handler.py) ===
 
-    def _stream_response_thread(self, user_input: str, engine_client) -> None:
-        """Worker thread: stream from engine. Delegated to stream_handler."""
-        stream_handler.stream_response_thread(self, user_input, engine_client)
+    def _stream_response_thread(self, user_input, engine_client, attachment_refs=None) -> None:
+        """Worker thread: stream from engine. Delegated to stream_handler.
+
+        ADR 0006 Step 3: `attachment_refs` is the producer-pipeline output
+        (kind-specific ArtifactRefs from build_multimodal_content); None
+        for plain-text turns.
+        """
+        stream_handler.stream_response_thread(self, user_input, engine_client, attachment_refs)
 
     def _handle_stream_event(self, event_type: str, event_data: any) -> None:
         """Handle stream event in main thread. Delegated to stream_handler."""

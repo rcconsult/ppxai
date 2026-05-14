@@ -194,22 +194,24 @@ class TestBuildChatPayloadVisionWarning:
         )
 
     def test_returns_tuple(self):
-        """`_build_chat_payload` must return `(payload, warnings)` after v1.18.6.
-        Old callers expecting a bare payload would silently break — sentinel."""
+        """`_build_chat_payload` must return `(payload, warnings, refs)`
+        3-tuple after ADR 0006 Steps 2-3 (v1.18.6). Old callers expecting
+        2-tuple or bare payload would silently break — sentinel."""
         from ppxai.server.routes.chat import _build_chat_payload
         result = _build_chat_payload("hello", [], self._make_engine())
         assert isinstance(result, tuple)
-        assert len(result) == 2
-        payload, warnings = result
+        assert len(result) == 3
+        payload, warnings, refs = result
         assert payload == "hello"
         assert warnings == []
+        assert refs == []
 
     def test_image_on_non_vision_model_emits_warning(self):
         from ppxai.server.routes.chat import _build_chat_payload
         engine = self._make_engine(model="text-only-model", provider="custom")
         attachment = self._make_attachment("shot.png", "image/png", _RED_PIXEL_PNG)
 
-        payload, warnings = _build_chat_payload("look at this", [attachment], engine)
+        payload, warnings, refs = _build_chat_payload("look at this", [attachment], engine)
 
         assert len(warnings) == 1
         w = warnings[0]
@@ -221,26 +223,39 @@ class TestBuildChatPayloadVisionWarning:
         assert "text-only-model" in w["message"]
         assert "vision-capable" in w["suggested_action"]
         assert w["details"]  # non-empty for debugging
+        # refs is empty here because text-only-model uses the placeholder
+        # path which doesn't produce an attachment_ref.
+        assert refs == []
 
     def test_image_on_vision_model_no_warning(self):
-        """gpt-5.5 has supports_vision=True per registry — must not warn."""
+        """gpt-5.5 has supports_vision=True per registry — must not warn.
+        ADR 0006 Step 2/3: producer pipeline produces ImageAttachmentRef
+        in the refs list when vision-capable model accepts the image."""
         from ppxai.server.routes.chat import _build_chat_payload
         engine = self._make_engine(model="gpt-5.5", provider="openai")
         attachment = self._make_attachment("shot.png", "image/png", _RED_PIXEL_PNG)
 
-        payload, warnings = _build_chat_payload("look at this", [attachment], engine)
+        payload, warnings, refs = _build_chat_payload("look at this", [attachment], engine)
 
         assert warnings == []
+        # ImageAttachmentRef populated for the accepted image
+        assert len(refs) == 1
+        assert refs[0].kind == "image"
+        assert refs[0].name == "shot.png"
 
     def test_text_attachment_no_warning_regardless_of_model(self):
-        """PDFs / code — vision branch only fires for image/* media types."""
+        """PDFs / code — vision branch only fires for image/* media types.
+        ADR 0006 Step 2/3: TextAttachmentRef populated for text files."""
         from ppxai.server.routes.chat import _build_chat_payload
         engine = self._make_engine(model="text-only-model", provider="custom")
         attachment = self._make_attachment("notes.txt", "text/plain", b"hello world")
 
-        payload, warnings = _build_chat_payload("read this", [attachment], engine)
+        payload, warnings, refs = _build_chat_payload("read this", [attachment], engine)
 
         assert warnings == []
+        # TextAttachmentRef populated; text artifacts merge into combined-text block.
+        assert len(refs) == 1
+        assert refs[0].kind == "text"
 
     def test_multiple_images_one_warning_each(self):
         """Two images on a non-vision model → two warnings, each naming
@@ -250,7 +265,7 @@ class TestBuildChatPayloadVisionWarning:
         a1 = self._make_attachment("first.png", "image/png", _RED_PIXEL_PNG)
         a2 = self._make_attachment("second.png", "image/png", _RED_PIXEL_PNG)
 
-        payload, warnings = _build_chat_payload("compare these", [a1, a2], engine)
+        payload, warnings, refs = _build_chat_payload("compare these", [a1, a2], engine)
 
         assert len(warnings) == 2
         names = [w["message"] for w in warnings]
@@ -260,6 +275,7 @@ class TestBuildChatPayloadVisionWarning:
     def test_empty_files_returns_message_unchanged(self):
         from ppxai.server.routes.chat import _build_chat_payload
         engine = self._make_engine(model="any", provider="any")
-        payload, warnings = _build_chat_payload("just text", [], engine)
+        payload, warnings, refs = _build_chat_payload("just text", [], engine)
         assert payload == "just text"
         assert warnings == []
+        assert refs == []

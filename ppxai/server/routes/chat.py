@@ -93,11 +93,17 @@ def _build_chat_payload(
     rather than failing the entire request, matching the `/attach` UX.
     """
     if not files:
-        return message, []
+        return message, [], []
 
     text_chunks: List[str] = [message] if message else []
     non_text_parts: List[Dict[str, Any]] = []
     attachment_warnings: List[Dict[str, Any]] = []
+    # ADR 0006 Step 2/3: collect kind-specific ArtifactRefs from each
+    # PreprocessResult for re-basing into the final content list. Same
+    # routing logic as build_multimodal_content — text-class attachments
+    # share the merged text block; non-text attachments get their own.
+    text_artifact_refs: List[Any] = []
+    non_text_artifact_refs: List[Any] = []
 
     model = engine.model or ""
     provider = engine.provider_name or ""
@@ -169,11 +175,21 @@ def _build_chat_payload(
                 "details": f"attachment: {attachment.name}, model: {model}",
             })
 
+        produced_non_text = False
         for part in result.parts:
             if part.get("type") == "text":
                 text_chunks.append(part["text"])
             else:
                 non_text_parts.append(part)
+                produced_non_text = True
+
+        # ADR 0006 Step 2/3: route artifact_ref to the right rebase
+        # bucket per which output channel its block landed in.
+        if result.attachment_ref is not None:
+            if produced_non_text:
+                non_text_artifact_refs.append(result.attachment_ref)
+            else:
+                text_artifact_refs.append(result.attachment_ref)
 
     combined_text = "\n".join(chunk for chunk in text_chunks if chunk)
     parts: List[Dict[str, Any]] = []
@@ -184,7 +200,24 @@ def _build_chat_payload(
     if not parts:
         parts.append({"type": "text", "text": ""})
 
-    return parts, attachment_warnings
+    # Re-base block_index on each ArtifactRef to match positions in
+    # the final assembled content list. Mirrors the logic in
+    # build_multimodal_content (commands/attach.py) so server route +
+    # TUI/Rich path produce identical Message.attachments shape.
+    attachment_refs: List[Any] = []
+    has_combined_text = bool(combined_text)
+    text_block_index = 0 if has_combined_text else -1
+
+    for ref in text_artifact_refs:
+        ref.block_index = text_block_index
+        attachment_refs.append(ref)
+
+    non_text_start = 1 if has_combined_text else 0
+    for offset, ref in enumerate(non_text_artifact_refs):
+        ref.block_index = non_text_start + offset
+        attachment_refs.append(ref)
+
+    return parts, attachment_warnings, attachment_refs
 
 
 @router.post("/chat")
@@ -296,11 +329,19 @@ async def chat(
             s.engine.set_model(request.model, reset_context=False)
 
         # Build the chat payload — plain string when no files, multimodal
-        # content list when files are attached (Phase 3.2). v1.18.6: also
-        # returns per-attachment warnings (e.g. image attached to non-vision
-        # model) which we enqueue as WARNING events so the SSE drain
-        # surfaces them in chat transcript before the assistant response.
-        chat_payload, attachment_warnings = _build_chat_payload(
+        # content list when files are attached (Phase 3.2). Returns a
+        # 3-tuple (chat_payload, attachment_warnings, attachment_refs):
+        #   - attachment_warnings (v1.18.6): per-attachment vision-warning
+        #     events enqueued before the SSE drain so users see them in
+        #     chat transcript before the assistant response.
+        #   - attachment_refs (ADR 0006 Step 2/3, v1.18.6): kind-specific
+        #     ArtifactRefs (Image/Pdf/Office/Text) the producer pipeline
+        #     populated with block_index re-based to match the assembled
+        #     content list. Threaded into engine.chat(attachment_refs=)
+        #     so Message.attachments is populated from the producer side
+        #     without re-deriving via extract_attachment_refs. Empty
+        #     list when no files attached or all preprocesses failed.
+        chat_payload, attachment_warnings, attachment_refs = _build_chat_payload(
             request.message, request.files, s.engine
         )
         for w in attachment_warnings:
@@ -312,7 +353,10 @@ async def chat(
         # Wrap generator to ensure lock is held during streaming
         async def locked_generator():
             """Generator that streams events while holding the lock."""
-            async for event in sse_event_generator(chat_payload, s.engine, s.id, request=raw_request):
+            async for event in sse_event_generator(
+                chat_payload, s.engine, s.id, request=raw_request,
+                attachment_refs=attachment_refs,
+            ):
                 yield event
             logger.info(f"Chat request completed for session {s.id} - releasing lock")
 

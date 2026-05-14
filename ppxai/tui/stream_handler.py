@@ -20,12 +20,17 @@ from ppxai.tui.event_bus import Events
 from ppxai.tui.widgets.message_box import MessageBox
 
 
-def stream_response_thread(app, user_input: str, engine_client) -> None:
-    """Worker thread: stream from engine without blocking Textual's event loop."""
+def stream_response_thread(app, user_input, engine_client, attachment_refs=None) -> None:
+    """Worker thread: stream from engine without blocking Textual's event loop.
+
+    ADR 0006 Step 3: `attachment_refs` is the producer-pipeline output
+    threaded into engine.chat() so Message.attachments is populated
+    from the producer side. None for plain-text turns.
+    """
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     try:
-        loop.run_until_complete(_stream_response(app, user_input, engine_client))
+        loop.run_until_complete(_stream_response(app, user_input, engine_client, attachment_refs))
     finally:
         app.call_from_thread(handle_stream_end, app)
         loop.close()
@@ -140,13 +145,26 @@ def handle_stream_event(app, event_type: str, event_data: Any) -> None:
         )
 
 
-async def _stream_response(app, user_input: str, engine_client) -> None:
-    """Stream AI response from engine (runs in thread's event loop)."""
+async def _stream_response(app, user_input, engine_client, attachment_refs=None) -> None:
+    """Stream AI response from engine (runs in thread's event loop).
+
+    ADR 0006 Step 3: `attachment_refs` (Optional[List[ArtifactRef]]) is
+    the producer-pipeline output threaded through engine.chat() so
+    Message.attachments is populated from the producer side. None for
+    plain-text turns; legacy callers fall through to the engine-side
+    extract_attachment_refs derivation.
+    """
     try:
-        app._log.info(f"Thread: Starting stream for: {user_input[:50]}...")
+        # user_input may be a multimodal content list (when refs present);
+        # log just the text-portion preview to keep log lines readable.
+        log_preview = (
+            user_input[:50] if isinstance(user_input, str)
+            else f"[multimodal content list, {len(user_input)} parts]"
+        )
+        app._log.info(f"Thread: Starting stream for: {log_preview}...")
         event_count = 0
 
-        async for event in engine_client.chat(user_input, stream=True):
+        async for event in engine_client.chat(user_input, stream=True, attachment_refs=attachment_refs):
             if engine_client.state.get("cancel_requested"):
                 app._log.info("Thread: Cancellation requested, stopping stream")
                 app.call_from_thread(handle_stream_cancelled, app)

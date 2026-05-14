@@ -101,15 +101,23 @@ class TestClassify:
 
 
 class TestBuildMultimodalContent:
+    """ADR 0006 Step 2: build_multimodal_content returns (parts, attachment_refs)
+    tuple. Tests unpack both. attachment_refs are kind-specific
+    ArtifactRefs the producer pipeline populated; consumers thread
+    them into engine.chat(attachment_refs=) to populate
+    Message.attachments without re-deriving from in-block keys."""
+
     def test_text_only(self):
-        parts = build_multimodal_content("hello world", [])
+        parts, refs = build_multimodal_content("hello world", [])
         assert parts == [{"type": "text", "text": "hello world"}]
+        assert refs == []  # no attachments produced no refs
 
     def test_empty_message_empty_pending_still_has_one_part(self):
         # Providers reject empty content — we must always return at least one part.
-        parts = build_multimodal_content("", [])
+        parts, refs = build_multimodal_content("", [])
         assert len(parts) == 1
         assert parts[0]["type"] == "text"
+        assert refs == []
 
     def test_image_becomes_data_uri(self):
         # v1.17.4 Phase 2.2: build_multimodal_content now delegates to
@@ -124,12 +132,17 @@ class TestBuildMultimodalContent:
             kind="image",
             data=_RED_PIXEL_PNG,
         )
-        parts = build_multimodal_content("describe this", [pf], model="gpt-5.2")
+        parts, refs = build_multimodal_content("describe this", [pf], model="gpt-5.2")
         assert len(parts) == 2
         assert parts[0] == {"type": "text", "text": "describe this"}
         assert parts[1]["type"] == "image_url"
         assert parts[1]["name"] == "chart.png"
         assert parts[1]["image_url"]["url"].startswith("data:image/png;base64,")
+        # ADR 0006 Step 2: ImageAttachmentRef populated, block_index=1 (after combined-text block)
+        assert len(refs) == 1
+        assert refs[0].kind == "image"
+        assert refs[0].name == "chart.png"
+        assert refs[0].block_index == 1  # non-text block sits after merged-text block 0
 
     def test_text_file_inlined_into_text_part(self):
         pf = PendingFile(
@@ -140,13 +153,18 @@ class TestBuildMultimodalContent:
             kind="text",
             data=b'print("hi")',
         )
-        parts = build_multimodal_content("review this", [pf])
+        parts, refs = build_multimodal_content("review this", [pf])
         assert len(parts) == 1  # text file merged into the single text part
         assert parts[0]["type"] == "text"
         assert 'review this' in parts[0]["text"]
         assert '<file name="hello.py"' in parts[0]["text"]
         assert 'print("hi")' in parts[0]["text"]
         assert '</file>' in parts[0]["text"]
+        # ADR 0006 Step 2: TextAttachmentRef populated; block_index=0 (the merged text block)
+        assert len(refs) == 1
+        assert refs[0].kind == "text"
+        assert refs[0].name == "hello.py"
+        assert refs[0].block_index == 0  # text-class artifact merges into combined-text block
 
     def test_mixed_text_and_image(self):
         img = PendingFile(
@@ -157,13 +175,18 @@ class TestBuildMultimodalContent:
             name="config.yaml", path="/tmp/config.yaml", media_type="text/yaml",
             size=10, kind="text", data=b"key: value",
         )
-        parts = build_multimodal_content("explain", [img, txt], model="gpt-5.2")
+        parts, refs = build_multimodal_content("explain", [img, txt], model="gpt-5.2")
         # One merged text part (user prompt + text file), one image part.
         assert len(parts) == 2
         assert parts[0]["type"] == "text"
         assert "explain" in parts[0]["text"]
         assert "config.yaml" in parts[0]["text"]
         assert parts[1]["type"] == "image_url"
+        # ADR 0006 Step 2: 2 refs — image at block_index=1, text at block_index=0
+        assert len(refs) == 2
+        kinds_by_block = {ref.block_index: ref.kind for ref in refs}
+        assert kinds_by_block[0] == "text"  # text artifact in merged-text block
+        assert kinds_by_block[1] == "image"  # image artifact in non-text block
 
 
 # -----------------------------------------------------------------------------

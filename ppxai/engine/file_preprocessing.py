@@ -62,6 +62,13 @@ from typing import Any, Callable, Dict, List, Optional
 
 from .image_validation import sniff_media_type, validate_image
 from .model_profiles import supports_vision as model_supports_vision
+from .types import (
+    ArtifactRef,
+    ImageAttachmentRef,
+    OfficeAttachmentRef,
+    PdfAttachmentRef,
+    TextAttachmentRef,
+)
 from .uploaded_file import make_uploaded_file_block
 from .session_store import (
     KIND_IMAGE,
@@ -115,6 +122,16 @@ class PreprocessResult:
     kind: str = ""
     warnings: List[str] = field(default_factory=list)
     error: str = ""
+    # ADR 0006 Step 1 (v1.18.6) — kind-specific ArtifactRef the producer
+    # branch populated for this file. Caller threads this through
+    # build_multimodal_content → EngineClient.chat(attachment_refs=)
+    # so Message.attachments is populated from the producer side
+    # WITHOUT re-deriving via extract_attachment_refs from in-block keys.
+    # block_index=0 here (single block per PreprocessResult);
+    # build_multimodal_content re-bases when assembling multi-file message.
+    # None for failed preprocesses (ok=False) and for placeholder-text
+    # fallback paths where no actual artifact survives.
+    attachment_ref: Optional[ArtifactRef] = None
 
 
 # Defer pypdf import to the caller of _count_pdf_pages — pypdf is an
@@ -270,6 +287,18 @@ def _preprocess_image(
         }
         if file_id:
             block["file_id"] = file_id
+        # ADR 0006 Step 1: also surface ImageAttachmentRef so callers
+        # populate Message.attachments without re-deriving from in-block
+        # keys. block_index=0 — build_multimodal_content re-bases when
+        # assembling multi-file content list. The block STILL carries
+        # name+file_id for back-compat with sites that haven't been
+        # migrated to read from Message.attachments; Step 7 drops them.
+        ref = ImageAttachmentRef(
+            block_index=0,
+            name=name,
+            file_id=file_id,
+            media_type=canonical_mt,
+        )
         return PreprocessResult(
             ok=True,
             parts=[block],
@@ -278,6 +307,7 @@ def _preprocess_image(
             media_type=canonical_mt,
             kind=KIND_IMAGE,
             warnings=warnings,
+            attachment_ref=ref,
         )
 
     # Text-only model path. Try the VL sidecar captioner if one is wired.
@@ -439,6 +469,17 @@ def _preprocess_csv(
         },
     )
 
+    # ADR 0006 Step 1: surface TextAttachmentRef for CSV (large CSVs
+    # use the lazy-load path with file_store; char_count uses the
+    # row*col approximation since the bytes aren't inlined).
+    csv_ref = TextAttachmentRef(
+        block_index=0,
+        name=name,
+        file_id=file_id,
+        media_type="text/csv",
+        char_count=len(data),  # raw byte count as proxy for inlined char count
+    )
+
     return PreprocessResult(
         ok=True,
         parts=[block],
@@ -447,6 +488,7 @@ def _preprocess_csv(
         media_type=media_type,
         kind=KIND_TEXT,
         warnings=warnings,
+        attachment_ref=csv_ref,
     )
 
 
@@ -483,12 +525,25 @@ def _preprocess_text(
             f"</file>"
         ),
     }
+    # ADR 0006 Step 1: surface TextAttachmentRef. file_id is empty for
+    # inlined text (the file content lives in the prompt, no store
+    # round-trip needed). char_count from the decoded text — useful
+    # for token-budget tracking. block_index=0; build_multimodal_content
+    # re-bases for multi-file content.
+    text_ref = TextAttachmentRef(
+        block_index=0,
+        name=name,
+        file_id="",
+        media_type=media_type,
+        char_count=len(text),
+    )
     return PreprocessResult(
         ok=True,
         parts=[block],
         name=name,
         media_type=media_type,
         kind=KIND_TEXT,
+        attachment_ref=text_ref,
     )
 
 
@@ -558,6 +613,17 @@ def _preprocess_pdf(
         },
     )
 
+    # ADR 0006 Step 1: surface PdfAttachmentRef for v2 schema persistence.
+    # block_index=0 (single block per PreprocessResult);
+    # build_multimodal_content re-bases when assembling multi-file content.
+    pdf_ref = PdfAttachmentRef(
+        block_index=0,
+        name=name,
+        file_id=file_id,
+        media_type="application/pdf",
+        page_count=page_count,
+    )
+
     return PreprocessResult(
         ok=True,
         parts=[block],
@@ -566,6 +632,7 @@ def _preprocess_pdf(
         media_type=media_type,
         kind=KIND_PDF,
         warnings=warnings,
+        attachment_ref=pdf_ref,
     )
 
 
@@ -632,6 +699,21 @@ def _preprocess_office(
         extra={"size_kb": f"{size_kb:.1f}"},
     )
 
+    # ADR 0006 Step 1: surface OfficeAttachmentRef for v2 schema persistence.
+    # sheet_count + slide_count are None today — file_preprocessing
+    # doesn't extract them at attach time (read_excel_sheet /
+    # list_pptx_slides tools surface them on-demand). v1.19.x or later
+    # may extend the producer to populate these eagerly. block_index=0
+    # — build_multimodal_content re-bases for multi-file content.
+    office_ref = OfficeAttachmentRef(
+        block_index=0,
+        name=meta.name,
+        file_id=meta.file_id,
+        media_type=media_type,
+        sheet_count=None,
+        slide_count=None,
+    )
+
     return PreprocessResult(
         ok=True,
         parts=[block],
@@ -639,6 +721,7 @@ def _preprocess_office(
         name=meta.name,
         media_type=media_type,
         kind=KIND_OFFICE,
+        attachment_ref=office_ref,
     )
 
 

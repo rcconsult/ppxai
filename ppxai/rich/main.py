@@ -532,7 +532,12 @@ def main():
                         if handler.engine_client.has_vision_sidecar()
                         else None
                     )
-                    chat_payload = build_multimodal_content(
+                    # ADR 0006 Step 2/3: build_multimodal_content now
+                    # returns (parts, attachment_refs); refs threaded
+                    # into engine.chat(attachment_refs=) below so
+                    # Message.attachments is populated from the producer
+                    # side without re-deriving from in-block keys.
+                    chat_payload, attachment_refs = build_multimodal_content(
                         user_input,
                         pending_files,
                         model=handler.current_model,
@@ -542,10 +547,12 @@ def main():
                     )
                     logger.info(
                         f"Sending multimodal message: {len(pending_files)} attachment(s), "
-                        f"{len(chat_payload)} content part(s)"
+                        f"{len(chat_payload)} content part(s), "
+                        f"{len(attachment_refs)} artifact ref(s)"
                     )
                 else:
                     chat_payload = user_input
+                    attachment_refs = []
 
                 # Use engine with event-based streaming
                 # EngineClient handles all context injection (@file, @git, @tree) internally
@@ -566,8 +573,13 @@ def main():
                     # Process events using shared handler
                     # chat_payload is either the raw user_input (context
                     # injection still runs) or a multimodal content list
-                    # when attachments are present.
-                    async for event in handler.engine_client.chat(chat_payload, stream=True):
+                    # when attachments are present. attachment_refs
+                    # passes the producer-side ArtifactRefs through —
+                    # None when chat_payload is plain text.
+                    async for event in handler.engine_client.chat(
+                        chat_payload, stream=True,
+                        attachment_refs=attachment_refs or None,
+                    ):
                         should_continue = await event_handler.handle_event(event)
                         if not should_continue:
                             break

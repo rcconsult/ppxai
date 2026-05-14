@@ -15,7 +15,7 @@ from ..engine import EngineClient, EventType
 logger = get_logger("server")
 
 
-async def sse_event_generator(prompt, engine: EngineClient, session_id: str = "default", request: Request = None) -> AsyncGenerator[str, None]:
+async def sse_event_generator(prompt, engine: EngineClient, session_id: str = "default", request: Request = None, attachment_refs=None) -> AsyncGenerator[str, None]:
     """Generate SSE events from engine chat.
 
     SSE format: data: {json}\n\n
@@ -27,6 +27,11 @@ async def sse_event_generator(prompt, engine: EngineClient, session_id: str = "d
     route can pass multimodal content lists with file attachments directly
     through to EngineClient.chat().
     v1.16.0: B11 — Detects client disconnect and cancels background engine task.
+    v1.18.6 (ADR 0006 Step 3): `attachment_refs` is the list of kind-specific
+    ArtifactRefs the producer pipeline (`_build_chat_payload`) computed for
+    this prompt's attached files. Threaded into engine.chat() so
+    Message.attachments is populated from the producer side without
+    re-deriving from in-block keys via extract_attachment_refs.
     """
     if not engine:
         logger.error("SSE event generator called but engine not initialized")
@@ -47,7 +52,7 @@ async def sse_event_generator(prompt, engine: EngineClient, session_id: str = "d
         # v1.16.0: Use racing iterator to poll consent queue while engine is blocked.
         # The engine generator suspends during consent (await Future), so `async for`
         # never advances and the old inline poll never ran — causing a deadlock.
-        engine_iter = engine.chat(prompt).__aiter__()
+        engine_iter = engine.chat(prompt, attachment_refs=attachment_refs).__aiter__()
         engine_done = False
         pending_next = None  # asyncio.Task for the next engine event
         last_event_time = asyncio.get_event_loop().time()
