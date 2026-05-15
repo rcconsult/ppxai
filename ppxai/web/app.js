@@ -1863,6 +1863,13 @@ class PpxaiApp {
             // updateStatus() call (extension.ts:switchProvider/Model).
             await this.updateContextInfo();
             await this.updateUsage();
+            // v1.18.6 fix: re-anchor full AppState (including
+            // modelSupportsVision) so the attach-button badge reflects
+            // the new model's vision capability immediately. Without
+            // this, the badge tooltip lies until the user sends the
+            // first chat (which is when state_sync events finally drain
+            // from the engine queue per the comment block above).
+            await this._reanchorFromServer();
         } catch (error) {
             this.showError(`Failed to switch provider: ${error.message}`);
         }
@@ -1881,6 +1888,9 @@ class PpxaiApp {
             // See handleProviderChange — same envelope-drain caveat.
             await this.updateContextInfo();
             await this.updateUsage();
+            // v1.18.6 fix: re-anchor modelSupportsVision (see
+            // handleProviderChange for the rationale).
+            await this._reanchorFromServer();
         } catch (error) {
             this.showError(`Failed to switch model: ${error.message}`);
         }
