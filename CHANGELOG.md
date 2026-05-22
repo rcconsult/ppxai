@@ -7,29 +7,63 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.18.6] - 2026-05-12
 
-Branch: `bugfix/v1.18.6`. Theme: context-indicator honesty + cluster operations.
-
-### Fixed
-
-- **Context indicator stale on provider/model switch.** Engine `provider_ops._apply_model_switch` now refreshes `context_percentage` against the new model immediately. Web `app.js:handleStateSync` and VSCode `chatPanel.ts:state:sync` handler both re-fetch `/context/info` when `provider` or `model` arrives via state_sync. Web `handleProviderChange` / `handleModelChange` also call `updateContextInfo()` + `updateUsage()` directly so the badge refreshes before any message is sent. Commit `a4002844`, `f5c84b7e`.
-
-- **Context-window over-claim (the 376% bug).** `_sync_usage_to_state` was treating cumulative session totals as per-turn token counts. After 16 turns on a 131K-cap model it reported 493K / 131K (376%). `session.update_usage` now passes the per-turn delta as a second positional arg; `client._sync_usage_to_state` uses delta for `_last_known_message_tokens` (the BPE token count of `session.messages` immediately after the turn). One-arg-listener back-compat preserved via `try/except TypeError`. Commit `70a0457f`.
-
-- **Hard-coded MIN_RESPONSE_TOKENS=2048** in `openai_compat.py` ignored configured per-model `max_tokens`. New `_get_response_reservation()` returns `max(2048, configured_max_tokens)`, closing the spillover where ppxai admitted prompts vLLM rejected with HTTP 400. Commit `a4002844`.
-
-- **chars/4 estimator under-counted code by 20-30%.** `get_context_info` now uses provider-reported `prompt_tokens + completion_tokens` as the authoritative baseline; chars/4 only fires for the suffix appended since the last usage event (typically the user's pending next message). Commit `a4002844`.
+Branch: `bugfix/v1.18.6`. Theme: **foundation release** — ADR 0006 content-block schema separation establishes the artifact framework that v1.19.x agent platform work will consume; v1 → v2 session migration with documented breaking change; context-indicator honesty; coder-image hardening.
 
 ### Added
+
+- **ADR 0006: ArtifactRegistry + ArtifactProjector plug-n-play framework.** Two architectural primitives mirror the existing `rendering/base.py::Renderer` per-subclass `_registry` model. `ArtifactRegistry.register("image")` decorates the dataclass for kind-discriminated serialize / deserialize. `<Projector>.register("image")` decorates a per-consumer projection handler. Three concrete consumers ship: `ContextAttachmentProjector` (badge DTO), `TextMarkerProjector` (token-counted text placeholder), `MessageBoxProjector` (TUI chip label). Adding a v1.19.x sub-agent artifact kind = decorate one new dataclass + one handler per consumer; zero reader edits. New files `ppxai/engine/artifact_registry.py`, `artifact_projector.py`, `artifact_projections.py`. Foundation work folded through Phases 1-7 across commits `b07bd0fa`, `fb46ee32`, `e91c71aa`, `676e0bec`, `a432f923`, `af63e482`, `02ef33ab`, `02d4e07a`, `4e93bf0b`, `21dd226d`.
+
+- **`MarshallableArtifact` Protocol + 4 typed dataclasses** in `ppxai/engine/types.py`: `ImageAttachmentRef`, `PdfAttachmentRef`, `OfficeAttachmentRef`, `TextAttachmentRef`. `Message.attachments` is a sibling field next to `content` carrying engine-internal metadata that used to live inside `image_url` blocks. `engine.chat()` accepts an `attachment_refs` kwarg plumbed through from the server / TUI. Commit `57923452`.
+
+- **Wire-format validator** (`ppxai/engine/uploaded_file.py::assert_wire_blocks_clean`) hooked into `BaseProvider._convert_messages`. Asserts that outbound `image_url` blocks carry ONLY spec keys (`{type, image_url}`) — engine-internal metadata is rejected at the wire boundary as a defensive sentinel. 20-case test suite in `tests/test_wire_block_validator.py`. Closes the class of bug where strict OpenAI-compat endpoints (corporate gateways, NIM, strict-validator vLLM) reject requests with *"Invalid chat format. Unexpected keys in a message content image dict."* Commit `1346e8c4`.
+
+- **Cross-client warning when image attached to non-vision model.** Attach-time site (`commands/attach.py`) and send-time site (`server/routes/chat.py`) emit `Event(EventType.WARNING, ...)` with a unified render path so Rich, Textual, web, and VSCode all surface the same message. Closes the silent text-placeholder fallback that previously hid the routing bug. Commits `2887194a`, `b187fb5c`.
 
 - **`/doctor probe` subcommand.** Opt-in network probe that hits each configured provider's `<base_url>/models` in parallel (2s timeout, max 8 concurrent), reads each model's `max_model_len`, and warns when `context_limit` exceeds the backend's actual cap (over-claim) or under-uses available headroom (under-claim). Default `/doctor` stays offline-fast. Commit `a4002844`.
 
 - **Multi-resolution ICO favicon** (`ppxai/web/favicon.ico`, 110 KB, 6 sizes up to 256×256). `/favicon.ico` serves the .ico directly instead of redirecting to PNG; `index.html` keeps both `<link rel="icon">` entries for fallback. Commit `1507e5ca`.
 
-- **`dgx-cluster` provider in coder cluster ConfigMap.** New PP=2 Qwen3.5-122B-A10B-NVFP4 at `dgx-cluster.trad.int/vllm/v1`. Native tool calling (qwen3_coder parser), prefix-caching, 128K max-model-len. Benchmark 2026-05-12 (native, no AGENTS.md): 76.2% (26/36) — +9pp over the prompt_based baseline (67.2%), with +34pp on `agentic_tool_loops` specifically. Side-by-side results committed in `benchmarks/llm-eval/results/dgx-cluster_*`.
+- **`dgx-cluster` provider in coder cluster ConfigMap.** New PP=2 Qwen3.5-122B-A10B-NVFP4 at `dgx-cluster.trad.int/vllm/v1`. Native tool calling (qwen3_coder parser), prefix-caching, 128K max-model-len. Benchmark 2026-05-12 (native, no AGENTS.md): 76.2% (26/36) — +9pp over the prompt_based baseline (67.2%), with +34pp on `agentic_tool_loops` specifically. Side-by-side results in `benchmarks/llm-eval/results/dgx-cluster_*`. Commits `68624251`, `c7a35b01`.
 
-### Deferred (tracked)
+- **Coder image rebuild + utility-tools expansion** (shipped 2026-05-13; see [docs/TODO-v1.18.6-coder-image-tools.md](docs/TODO-v1.18.6-coder-image-tools.md)). Stage-2 of `deploy/images/server/Dockerfile` now bundles `git jq yq curl wget ripgrep fd-find tree less unzip zip vim-tiny nano rtk` (~83 MB). Registry digest `sha256:80bed068...ab0cec`. `rtk hook check git status` returns the expected rewrite; wrapper-registry probe reports `is_available=True, is_active=True`. `gh`, `pwsh`, `kubectl`, `node`/`npm` deferred — install-on-demand snippets in the doc. Commits `e2737da4`, `9a9343ef`, `fe190b41`.
 
-- **Coder image rebuild + utility-tools expansion** ([docs/TODO-v1.18.6-coder-image-tools.md](docs/TODO-v1.18.6-coder-image-tools.md)). Add `git jq yq curl wget ripgrep fd-find tree less unzip zip vim-tiny nano rtk` (~83 MB) to Stage-2 of `deploy/images/server/Dockerfile`. `gh`, `pwsh`, `kubectl`, `node`/`npm` explicitly deferred — install-on-demand snippets in the doc.
+### Changed
+
+- **Session JSON `schema_version: 2`** (`ppxai/engine/session.py`). Per-message `attachments` array serializes via `ArtifactRegistry`. v1 sessions auto-migrate on first load by a 1.18.6 build: text content + tool_calls + metadata preserved verbatim; image / uploaded_file blocks dropped with text placeholders pointing at a preserved `<name>.v1.backup/` sibling folder. Migration is idempotent and safe — `list_sessions()` filters out `*.v1.backup` entries so they don't pollute the session list. Pure-text v1 sessions migrate transparently on next save with no backup needed. **See `### Breaking` below for the multimodal-session consequence.** Permanent regression fixture at `tests/fixtures/sessions/v1_with_image/`. Commits `af63e482`, `02ef33ab`.
+
+- **`image_url` content blocks now carry ONLY OpenAI-spec keys.** Before v1.18.6: `{"type": "image_url", "name": "shot.png", "file_id": "abc123", "image_url": {"url": "..."}}`. After: `{"type": "image_url", "image_url": {"url": "..."}}`. Engine-internal `name` / `file_id` live on `Message.attachments` as typed `ImageAttachmentRef` instead. Producers (`file_preprocessing.py`) and readers (`multimodal_ops.py`, `uploaded_file.py`) migrated through 7 ADR 0006 steps; legacy in-block keys produce no wire emission. Commit `21dd226d`.
+
+- **Gemini 3.1 Flash Lite preview → GA.** Google announced retirement of `gemini-3.1-flash-lite-preview` on 2026-05-25. v1.18.6 renames to the GA identifier `gemini-3.1-flash-lite` across `model_deprecations.py`, `ppxai-config.json`, `ppxai-config.example.json`, `multimodal-api-models-reference.md`, and test assertions in `test_doctor.py` + `test_model_vision.py`. The wildcard `gemini-3.1-flash-lite*` glob in `model_profiles.py` already covered both names. Commit `6d319213`.
+
+### Breaking
+
+- **Multimodal v1 sessions lose in-conversation image rendering on migration to v2.** Original bytes are preserved at `<session>.v1.backup/<name>.<ext>` for forensic recovery, but in-app image display only works for v2 sessions saved by 1.18.6+. Pure-text v1 sessions are unaffected. Driven by ADR 0006's schema separation: legacy `{type: image_url, name, file_id, image_url}` blocks can't be losslessly reconstructed without an ArtifactRegistry kind for the missing dataclass shape, so the migration substitutes a text placeholder pointing at the backup folder.
+
+### Fixed
+
+- **`gpt-5.4-mini` registry gap routed images to text-placeholder fallback.** The default model since v1.17.4 had no entry in `BUILTIN_PROFILES`. `supports_vision()` returned False via the conservative default ⇒ screenshot attachments silently fell through to the text-placeholder branch in `file_preprocessing.py:309-325`. Fix: added `gpt-5.4-mini*` + `gpt-5.4*` glob entries to `BUILTIN_PROFILES`, cloned from the gpt-5.5/gpt-5.2 shape (supports_vision=True, tier A). Test parametrize extended to cover gpt-5.4 family. This bug is what motivated the ADR 0006 overhaul. Commit `e10e4847`.
+
+- **Context indicator stale on provider/model switch.** Engine `provider_ops._apply_model_switch` now refreshes `context_percentage` against the new model immediately. Web `app.js:handleStateSync` and VSCode `chatPanel.ts:state:sync` handler both re-fetch `/context/info` when `provider` or `model` arrives via state_sync. Web `handleProviderChange` / `handleModelChange` also call `updateContextInfo()` + `updateUsage()` directly so the badge refreshes before any message is sent. Commits `a4002844`, `f5c84b7e`.
+
+- **Web AppState re-anchors on provider/model dropdown change.** Selecting a different model via the dropdown previously left AppState's `cwd_anchor` pointing at the old session anchor until the next user message. Fix: `_reanchorFromServer()` fires from the dropdown-change handlers (cwd-anchor stays in sync the moment the model switches, not on the next turn). Commit `5f292725`.
+
+- **Context-window over-claim (the 376% bug).** `_sync_usage_to_state` was treating cumulative session totals as per-turn token counts. After 16 turns on a 131K-cap model it reported 493K / 131K (376%). `session.update_usage` now passes the per-turn delta as a second positional arg; `client._sync_usage_to_state` uses delta for `_last_known_message_tokens` (the BPE token count of `session.messages` immediately after the turn). One-arg-listener back-compat preserved via `try/except TypeError`. Commit `70a0457f`.
+
+- **Hard-coded `MIN_RESPONSE_TOKENS=2048`** in `openai_compat.py` ignored configured per-model `max_tokens`. New `_get_response_reservation()` returns `max(2048, configured_max_tokens)`, closing the spillover where ppxai admitted prompts vLLM rejected with HTTP 400. Commit `a4002844`.
+
+- **chars/4 estimator under-counted code by 20-30%.** `get_context_info` now uses provider-reported `prompt_tokens + completion_tokens` as the authoritative baseline; chars/4 only fires for the suffix appended since the last usage event (typically the user's pending next message). Commit `a4002844`.
+
+- **VSCode extension shipped without a gallery icon.** Pre-v1.18.6 extension had no top-level `"icon"` field in `package.json`, so VS Code rendered a generic Lego-brick placeholder in the installed-extensions list. Fix: wires `"icon": "resources/icon.png"` to the existing 128×128 RGBA chat-bubble asset (brand-consistent with the web favicon). Reload Window to see the icon. Commit `cfb1d4ae`.
+
+- **`/tools enable` falsely reported "Tool support not available"** even when the active provider/model supported tools. Surfaced when the autodetected provider state lagged a `/use` switch. Commit `6fff861d`.
+
+- **build-install skill: Windows `code.cmd` resolution.** The skill assumed `code` on PATH resolves to the CLI shim; on machines where it points to `Code.exe` (the GUI), `--install-extension` fails. Fixed to resolve `$env:LOCALAPPDATA\Programs\Microsoft VS Code\bin\code.cmd` directly. Skill commit `114d16f3`. Companion `adc3ce7f` version-pins the VSIX install to avoid multi-VSIX glob hazards.
+
+- **Coder image TLS + rtk install.** Corporate `trad.int` TLS handshakes failed because the runtime stage had no CA bundle; `certifi`'s store also needed extending so the Python TLS stack could verify. Fix: install corporate CAs into `/usr/local/share/ca-certificates/`, run `update-ca-certificates`, append to `certifi`, set `SSL_CERT_FILE`. rtk install switched from `.deb` (glibc 2.36 incompatible with the base image's 2.39) to the musl static tarball. Commits `2206e212`, `117e2d56`, `9a9343ef`.
+
+### Tests
+
+3695 pass, 2 skipped on macOS. New ADR 0006 sentinel suites: 39 cases in `test_artifact_registry.py`, 30 in `test_artifact_projector.py`, 9 in `test_session_schema_v2.py`, 9 in `test_v1_session_migration.py`, 20 in `test_wire_block_validator.py`. Zero regressions across the 17 reader/producer-affected suites under the ADR 0006 migration. The 2 macOS skips are `tests/test_gemini_extras.py` (conditional on `google-genai` install). Windows runs additionally skip the 11 `@_unix_only`-marked tests in `test_server_state.py` (TestKillPreviewBackend + TestKillPreviewBackendDrainTask) because they mock Unix-specific `os.getpgid` / `os.killpg`.
 
 ## [1.18.5] - 2026-05-10
 

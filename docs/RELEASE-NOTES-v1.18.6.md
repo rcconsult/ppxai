@@ -53,8 +53,13 @@
 > (no more Lego-brick placeholder). build-install skill +
 > Windows `code.cmd` shim path correction.
 >
-> **Tests:** 467 pass, 6 skipped, zero regressions across 17
-> reader/producer-affected suites. New ADR 0006 sentinel suites:
+> **Tests:** 3695 pass, 2 skipped (whole-suite count on macOS, run
+> 2026-05-15); zero regressions across the 17 ADR-0006-affected
+> reader/producer suites. The 2 macOS skips are `tests/test_gemini_extras.py`
+> (conditional on `google-genai` install). Windows runs additionally
+> skip the 11 `@_unix_only`-marked tests in `tests/test_server_state.py`
+> (TestKillPreviewBackend + TestKillPreviewBackendDrainTask). New ADR
+> 0006 sentinel suites:
 > 39 cases in `test_artifact_registry.py`, 30 in
 > `test_artifact_projector.py`, 9 in `test_session_schema_v2.py`,
 > 9 in `test_v1_session_migration.py`, 20 in

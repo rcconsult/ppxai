@@ -73,6 +73,73 @@ disclosure procedures need this code to have minimum test coverage.
 
 ---
 
+### Item 20 — v1.19.x alignment paperwork for ppxai-sre integration
+
+**Affected files:** `ROADMAP.md` v1.19.x section,
+`docs/decisions/0003-agent-platform-architecture.md` §6–§13 (planned).
+Tracking branch: `docs/v1.19.x-stage2-alignment` (unmerged since
+2026-05-10, single commit `42ed8f00`).
+
+**What's pending:** three doc-only follow-ups that must land on
+`master` before v1.19.x Phase 1 implementation opens. The consumer
+([ppxai-sre](https://github.com/rcconsult/ppxai-sre)) has filed
+caveats and asks against our Stage-2 plan; some are folded into the
+unmerged alignment branch, one (C5) was filed after that commit and
+is not folded anywhere on our side yet.
+
+1. **Merge `docs/v1.19.x-stage2-alignment` to master** — folds peer
+   caveats C1–C4 + asks A1–A3 into ADR 0003 §6–§12 and amends
+   ROADMAP Phase 1/5/7 rows inline. The peer's resolution log
+   (`PPXAI-INTEGRATION-V1.19.md` lines 259, 261) calls out the
+   unmerged state twice and treats merge as load-bearing wire-shape
+   commitment.
+2. **Fold caveat C5 (agent-served services routing)** — peer commits
+   `a604b0c` + `b3ba0f6` (2026-05-10) post-date `42ed8f00`, so C5 is
+   outside the stage-2 alignment fold and needs a fresh commit
+   extending ADR 0003 §13 + amending ROADMAP Phase 1 with the
+   `services` field on `POST /v1/agent/run`. Five sub-question
+   resolutions to pin (C5.1–C5.5), plus the `(port, path)` routing
+   key and CronJob-compat clarifications. Full text in the
+   [ROADMAP v1.19.x "Pending alignment paperwork" subsection](../ROADMAP.md#pending-alignment-paperwork-pre-implementation-doc-only).
+3. **Add `EventType.AGENT_SERVICE_DOWN`** — symmetric with the
+   existing `AGENT_ZOMBIE`. Peer C5 cross-references it at
+   `PPXAI-INTEGRATION-V1.19.md` line 184. Doc-only addition to ADR
+   0003 §10 planned-event-types list until Phase 1 ships.
+
+**Why deferred:** this is **coordination paperwork**, not code or
+bug-fix work. The peer's `outlook-monitor` Phase 4 ships against
+ppxai v1.18.5 + v1.18.6 transparently (FastAPI bound directly until
+our runtime lands), so there is no consumer-side blockage. The
+debt is that we have a negotiated set of v1.19.x wire-shape
+commitments sitting half-folded; if we open v1.19.x Phase 1 work
+without resolving this first, we risk re-litigating settled
+questions.
+
+**Planned:** before v1.19.x Phase 1 opens. Land as one master-targeted
+PR (rebase the existing alignment branch + append C5 + add the new
+event type), or split into three small PRs.
+
+**Branch when ready:** rebase + extend `docs/v1.19.x-stage2-alignment`
+(don't open a parallel branch — keep the planning history in one
+place).
+
+**Trigger to revisit:** before any commit lands on
+`feat/agent-platform-stage-2` (Phase 1 branch named in the
+[v1.19.x ROADMAP entry](../ROADMAP.md#v119x---agent-platform-stage-2--v1-gateway-extensions-for-ppxai-sre-planned)).
+
+**Effort:** ~1-2 hours total — rebase (~15 min), C5 §13 + ROADMAP
+amendment (~45 min, mostly drafting), AGENT_SERVICE_DOWN addition
+(~10 min), PR description + cross-refs (~30 min).
+
+**Related:**
+- Peer integration doc:
+  `../ppxai-sre-repo/docs/PPXAI-INTEGRATION-V1.19.md` (also pushed
+  to https://github.com/rcconsult/ppxai-sre).
+- Research note: [docs/research/2026-05-10-ppxai-sre-requirements.md](research/2026-05-10-ppxai-sre-requirements.md).
+- Stage-2 ADR: [docs/decisions/0003-agent-platform-architecture.md](decisions/0003-agent-platform-architecture.md).
+
+---
+
 ## Recently moved out of debt scope
 
 These items left the debt inventory because they're not bug-fix-class
