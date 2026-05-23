@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://rcconsult.github.io/ppxai/dev/DEBT-INVENTORY/">
+        <link rel="canonical" href="https://rcconsult.github.io/ppxai/dev/TODO-v1.18.6-coder-image-tools/">
       
       
       
@@ -23,7 +23,7 @@
     
     
       
-        <title>ppxai Debt Inventory — Open Items - ppxai Documentation</title>
+        <title>TODO: v1.18.6 — Rebuild coder image with latest code + utility tools - ppxai Documentation</title>
       
     
     
@@ -74,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#ppxai-debt-inventory-open-items" class="md-skip">
+        <a href="#todo-v1186-rebuild-coder-image-with-latest-code-utility-tools" class="md-skip">
           Skip to content
         </a>
       
@@ -114,7 +114,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              ppxai Debt Inventory — Open Items
+              TODO: v1.18.6 — Rebuild coder image with latest code + utility tools
             
           </span>
         </div>
@@ -1118,10 +1118,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#how-to-use-this-file" class="md-nav__link">
+  <a href="#outcome" class="md-nav__link">
     <span class="md-ellipsis">
       
-        How to use this file
+        Outcome
       
     </span>
   </a>
@@ -1129,22 +1129,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#open" class="md-nav__link">
+  <a href="#two-changes-in-one-image-rebuild" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Open
+        Two changes in one image rebuild
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Open">
+    <nav class="md-nav" aria-label="Two changes in one image rebuild">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#item-3-k8s-session-manager-security-tests-originally-critique-8-in-v1182" class="md-nav__link">
+  <a href="#1-pick-up-the-latest-code" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Item 3 — k8s session-manager security tests [originally Critique #8 in v1.18.2]
+        1. Pick up the latest code
       
     </span>
   </a>
@@ -1152,10 +1152,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#item-20-v119x-alignment-paperwork-for-ppxai-sre-integration" class="md-nav__link">
+  <a href="#2-add-utility-tools-to-the-runtime-stage" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Item 20 — v1.19.x alignment paperwork for ppxai-sre integration
+        2. Add utility tools to the runtime stage
       
     </span>
   </a>
@@ -1168,10 +1168,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#recently-moved-out-of-debt-scope" class="md-nav__link">
+  <a href="#whats-not-in-the-list-and-why" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Recently moved out of debt scope
+        What's NOT in the list (and why)
       
     </span>
   </a>
@@ -1179,10 +1179,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#closed-recent" class="md-nav__link">
+  <a href="#suggested-dockerfile-patch-stage-2-only" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Closed (recent)
+        Suggested Dockerfile patch (Stage-2 only)
       
     </span>
   </a>
@@ -1190,10 +1190,32 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#related-documents" class="md-nav__link">
+  <a href="#verify-after-the-rebuild" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Related documents
+        Verify after the rebuild
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#effort" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Effort
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cross-references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cross-references
       
     </span>
   </a>
@@ -1220,167 +1242,223 @@
   
 
 
-<h1 id="ppxai-debt-inventory-open-items">ppxai Debt Inventory — Open Items<a class="headerlink" href="#ppxai-debt-inventory-open-items" title="Permanent link">&para;</a></h1>
-<p><strong>Status:</strong> Rolling. This file holds the <strong>currently open</strong> deferred items
-across all branches. When an item lands, it moves to "## Closed" with the
-commit hash + date. New deferred work added during a branch lands here at
-that branch's commit.</p>
-<p>This is the canonical location replacing the per-version
-<code>DEBT-INVENTORY-v1.18.2.md</code> / <code>DEBT-INVENTORY-v1.18.3.md</code> pattern (those
-are now archived under <a href="archive/">docs/archive/</a> as historical snapshots).</p>
-<hr />
-<h2 id="how-to-use-this-file">How to use this file<a class="headerlink" href="#how-to-use-this-file" title="Permanent link">&para;</a></h2>
+<h1 id="todo-v1186-rebuild-coder-image-with-latest-code-utility-tools">TODO: v1.18.6 — Rebuild coder image with latest code + utility tools<a class="headerlink" href="#todo-v1186-rebuild-coder-image-with-latest-code-utility-tools" title="Permanent link">&para;</a></h1>
+<p><strong>Status:</strong> ✅ DONE — both phases shipped 2026-05-13.
+<strong>Target:</strong> v1.18.6.
+<strong>Branch:</strong> <code>bugfix/v1.18.6</code>.</p>
+<h2 id="outcome">Outcome<a class="headerlink" href="#outcome" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>Update on every release branch.</strong> When an item lands, move it under
-  "## Closed" with commit hash + date. When new debt surfaces, add it
-  to the appropriate section with a <code>**Planned:**</code> tag.</li>
-<li><strong>Tag every open item with where it'll be addressed.</strong> Either a target
-  release (<code>v1.19.x</code>), a target branch (<code>feat/&lt;name&gt;</code>), or a trigger
-  condition (<code>when k8s context</code>). Untagged items become invisible in
-  release planning.</li>
-<li><strong>Don't mix in feature work.</strong> Debt is bug-class follow-up. Roadmap
-  features (Anthropic provider, multi-model routing, etc.) live in
-  <a href="../ROADMAP.md">ROADMAP.md</a>.</li>
-<li><strong>Don't mix in TODOs scoped to a specific in-flight version.</strong> Those
-  describe in-flight planning (<code>TODO-v1.18.x-*.md</code>); debt describes
-  work intentionally <strong>not</strong> in any version's plan yet.</li>
-<li><strong>Keep entries scannable.</strong> Lead with one short paragraph + the
-  <code>**Planned:**</code> and <code>**Trigger to revisit:**</code> lines + an effort
-  estimate. Long context goes in linked docs / archive snapshots.</li>
+<li><strong>Phase 1 (latest code)</strong> — image rebuilt 2026-05-13 from <code>bugfix/v1.18.6</code> HEAD, registry digest <code>sha256:7151576c9c60665b74308fc84ca49f7d4abb340aadde7d50f49ebc191bd7ef2e</code>. Carries: context-indicator fixes (<code>a4002844</code>, <code>1507e5ca</code>, <code>f5c84b7e</code>, <code>70a0457f</code>), benchmark commits (<code>68624251</code>, <code>c7a35b01</code>), version bump to 1.18.6 (<code>ea21f244</code>).</li>
+<li><strong>Phase 2 (utility tools)</strong> — Dockerfile Stage-2 patched in <code>e2737da4</code> + musl-tarball fix in <code>9a9343ef</code>. Image rebuilt 2026-05-13, registry digest <code>sha256:80bed0680306ab785f5a733af0af3f2b9b0f7719e1cfa95bd047762524ab0cec</code>. Verified in a fresh pod: all 14 tools (<code>git jq yq rg fd tree nano vim.tiny rtk curl wget unzip zip less</code>) resolve to expected paths, <code>rtk hook check git status</code> returns the expected <code>rtk git status</code> rewrite, and ppxai's wrapper-registry probe reports <code>is_available=True, is_active=True</code> against rtk.</li>
+<li><strong>rtk integration ppxai-in-pod ≡ ppxai-on-host</strong> — confirmed identical. No filters.toml or history.db needed in the image: rtk is fully passive (binary on PATH + ppxai <code>DEFAULT_SHELL_WRAPPERS</code> auto-detection). Per-pod state (history.db) is the right scoping — each developer's pod tracks its own analytics.</li>
 </ul>
-<hr />
-<h2 id="open">Open<a class="headerlink" href="#open" title="Permanent link">&para;</a></h2>
-<h3 id="item-3-k8s-session-manager-security-tests-originally-critique-8-in-v1182">Item 3 — k8s session-manager security tests [originally Critique #8 in v1.18.2]<a class="headerlink" href="#item-3-k8s-session-manager-security-tests-originally-critique-8-in-v1182" title="Permanent link">&para;</a></h3>
-<p><strong>Affected files:</strong> <code>deploy/images/session-manager/main.py</code> (~648 LOC),
-<code>deploy/images/session-manager/ldap_auth.py</code> (~130 LOC).</p>
-<p><strong>What's wrong:</strong> untested high-risk functions in the multi-tenant
-deployment service: <code>_list_sessions</code> (risk 0.85), <code>_teardown_session</code>
-(risk 0.7), <code>create_session</code>, <code>delete_session</code>, <code>heartbeat</code>, <code>startup</code>,
-<code>LDAPAuthenticator._hash_password</code>, <code>authenticate</code>. Recommended
-scenarios: auth failure, timing-safe hash comparison, K8s resource
-naming validation (escape via <code>..</code> / <code>/</code> in usernames), teardown
-idempotency, stale heartbeat cleanup, permissions/secrets handling.</p>
-<p><strong>Why deferred:</strong> zero blast radius for single-user macOS / Windows
-ppxai installs (the mainline use case). Only deployers running the
-Helm chart in a multi-tenant K8s cluster touch this code.</p>
-<p><strong>Planned:</strong> trigger-deferred — no version target. Open until at least
-one of the three triggers fires.</p>
-<p><strong>Branch when ready:</strong> <code>feat/k8s-session-manager-tests</code>.</p>
-<p><strong>Trigger to revisit:</strong> when a third-party deploys ppxai multi-tenant,
-OR when a security audit demands LDAP/RBAC test coverage, OR when CVE
-disclosure procedures need this code to have minimum test coverage.</p>
-<p><strong>Effort:</strong>
-- Quick pass (~1 hour): 10 unit tests around <code>_hash_password</code>
-  (timing-safe), <code>authenticate</code> (denial fail-closed), naming validation.
-- Full pass (~half day): 30-50 tests with mocked <code>kubernetes.client</code>,
-  covering all 8 functions.
-- Defensive sweep (+ ~half day): LDAP injection patterns, secret-in-log
-  scrubbing, kubeconfig path validation.</p>
-<p><strong>Original entry (full design rationale):</strong>
-<a href="../archive/DEBT-INVENTORY-v1.18.2/#item-3--k8s-session-manager-security-tests-critique-8">docs/archive/DEBT-INVENTORY-v1.18.2.md</a>.</p>
-<hr />
-<h3 id="item-20-v119x-alignment-paperwork-for-ppxai-sre-integration">Item 20 — v1.19.x alignment paperwork for ppxai-sre integration<a class="headerlink" href="#item-20-v119x-alignment-paperwork-for-ppxai-sre-integration" title="Permanent link">&para;</a></h3>
-<p><strong>Affected files:</strong> <code>ROADMAP.md</code> v1.19.x section,
-<code>docs/decisions/0003-agent-platform-architecture.md</code> §6–§13 (planned).
-Tracking branch: <code>docs/v1.19.x-stage2-alignment</code> (unmerged since
-2026-05-10, single commit <code>42ed8f00</code>).</p>
-<p><strong>What's pending:</strong> three doc-only follow-ups that must land on
-<code>master</code> before v1.19.x Phase 1 implementation opens. The consumer
-(<a href="https://github.com/rcconsult/ppxai-sre">ppxai-sre</a>) has filed
-caveats and asks against our Stage-2 plan; some are folded into the
-unmerged alignment branch, one (C5) was filed after that commit and
-is not folded anywhere on our side yet.</p>
-<ol>
-<li><strong>Merge <code>docs/v1.19.x-stage2-alignment</code> to master</strong> — folds peer
-   caveats C1–C4 + asks A1–A3 into ADR 0003 §6–§12 and amends
-   ROADMAP Phase 1/5/7 rows inline. The peer's resolution log
-   (<code>PPXAI-INTEGRATION-V1.19.md</code> lines 259, 261) calls out the
-   unmerged state twice and treats merge as load-bearing wire-shape
-   commitment.</li>
-<li><strong>Fold caveat C5 (agent-served services routing)</strong> — peer commits
-   <code>a604b0c</code> + <code>b3ba0f6</code> (2026-05-10) post-date <code>42ed8f00</code>, so C5 is
-   outside the stage-2 alignment fold and needs a fresh commit
-   extending ADR 0003 §13 + amending ROADMAP Phase 1 with the
-   <code>services</code> field on <code>POST /v1/agent/run</code>. Five sub-question
-   resolutions to pin (C5.1–C5.5), plus the <code>(port, path)</code> routing
-   key and CronJob-compat clarifications. Full text in the
-   <a href="../ROADMAP.md#pending-alignment-paperwork-pre-implementation-doc-only">ROADMAP v1.19.x "Pending alignment paperwork" subsection</a>.</li>
-<li><strong>Add <code>EventType.AGENT_SERVICE_DOWN</code></strong> — symmetric with the
-   existing <code>AGENT_ZOMBIE</code>. Peer C5 cross-references it at
-   <code>PPXAI-INTEGRATION-V1.19.md</code> line 184. Doc-only addition to ADR
-   0003 §10 planned-event-types list until Phase 1 ships.</li>
-</ol>
-<p><strong>Why deferred:</strong> this is <strong>coordination paperwork</strong>, not code or
-bug-fix work. The peer's <code>outlook-monitor</code> Phase 4 ships against
-ppxai v1.18.5 + v1.18.6 transparently (FastAPI bound directly until
-our runtime lands), so there is no consumer-side blockage. The
-debt is that we have a negotiated set of v1.19.x wire-shape
-commitments sitting half-folded; if we open v1.19.x Phase 1 work
-without resolving this first, we risk re-litigating settled
-questions.</p>
-<p><strong>Planned:</strong> before v1.19.x Phase 1 opens. Land as one master-targeted
-PR (rebase the existing alignment branch + append C5 + add the new
-event type), or split into three small PRs.</p>
-<p><strong>Branch when ready:</strong> rebase + extend <code>docs/v1.19.x-stage2-alignment</code>
-(don't open a parallel branch — keep the planning history in one
-place).</p>
-<p><strong>Trigger to revisit:</strong> before any commit lands on
-<code>feat/agent-platform-stage-2</code> (Phase 1 branch named in the
-<a href="../ROADMAP.md#v119x---agent-platform-stage-2--v1-gateway-extensions-for-ppxai-sre-planned">v1.19.x ROADMAP entry</a>).</p>
-<p><strong>Effort:</strong> ~1-2 hours total — rebase (~15 min), C5 §13 + ROADMAP
-amendment (~45 min, mostly drafting), AGENT_SERVICE_DOWN addition
-(~10 min), PR description + cross-refs (~30 min).</p>
-<p><strong>Related:</strong>
-- Peer integration doc:
-  <code>../ppxai-sre-repo/docs/PPXAI-INTEGRATION-V1.19.md</code> (also pushed
-  to https://github.com/rcconsult/ppxai-sre).
-- Research note: <a href="../research/2026-05-10-ppxai-sre-requirements/">docs/research/2026-05-10-ppxai-sre-requirements.md</a>.
-- Stage-2 ADR: <a href="../decisions/0003-agent-platform-architecture/">docs/decisions/0003-agent-platform-architecture.md</a>.</p>
-<hr />
-<h2 id="recently-moved-out-of-debt-scope">Recently moved out of debt scope<a class="headerlink" href="#recently-moved-out-of-debt-scope" title="Permanent link">&para;</a></h2>
-<p>These items left the debt inventory because they're not bug-fix-class
-follow-up — they're feature work belonging on the roadmap, or they
-shipped already.</p>
-<ul>
-<li><strong>Item 14 — Anthropic provider</strong> → moved to roadmap 2026-05-05.
-  See <a href="../ROADMAP.md#v119x---anthropic-provider-planned">ROADMAP.md §"v1.19.x - Anthropic Provider (planned)"</a>.
-  Original v1.18.2 entry preserved at
-  <a href="../archive/DEBT-INVENTORY-v1.18.2/#item-14--add-anthropic-provider-with-explicit-tos-aware-auth-fallback">docs/archive/DEBT-INVENTORY-v1.18.2.md</a>
-  for full design rationale (TOS warning text, OAuth fallback caveats).</li>
-</ul>
-<hr />
-<h2 id="closed-recent">Closed (recent)<a class="headerlink" href="#closed-recent" title="Permanent link">&para;</a></h2>
-<p>For full closed-item rationale with commit references, see the per-version
-archived snapshots:</p>
+<p>The rest of this doc preserves the design rationale for future audits + the install-on-demand snippets for the deferred tools.</p>
+<h2 id="two-changes-in-one-image-rebuild">Two changes in one image rebuild<a class="headerlink" href="#two-changes-in-one-image-rebuild" title="Permanent link">&para;</a></h2>
+<h3 id="1-pick-up-the-latest-code">1. Pick up the latest code<a class="headerlink" href="#1-pick-up-the-latest-code" title="Permanent link">&para;</a></h3>
+<p>The current <code>localhost:32000/coder-server:latest</code> (<code>sha256:de680b6d</code>) was built on <strong>2026-05-06</strong> from the previous <code>bugfix/v1.18.4</code> branch with the four context-indicator commits (<code>a4002844</code>, <code>1507e5ca</code>, <code>f5c84b7e</code>, <code>70a0457f</code>). Master has since released v1.18.4 and v1.18.5 (master tip = <code>f1e0579f</code>). The current <code>bugfix/v1.18.6</code> branch is v1.18.5 + the same four cherry-picked fixes (<code>a4002844</code>, <code>1507e5ca</code>, <code>f5c84b7e</code>, <code>70a0457f</code>) + two benchmark commits (<code>68624251</code>, <code>c7a35b01</code>).</p>
+<p><strong>Action:</strong> rerun <code>deploy/microk8s/build.sh server</code> from <code>bugfix/v1.18.6</code>. Kaniko mounts <code>/home/itadmin/tools/ppxai</code> directly, so no further setup needed.</p>
+<h3 id="2-add-utility-tools-to-the-runtime-stage">2. Add utility tools to the runtime stage<a class="headerlink" href="#2-add-utility-tools-to-the-runtime-stage" title="Permanent link">&para;</a></h3>
+<p>Coder pods are general-purpose developer sandboxes — users run <code>ppxai-server</code> AND the AI agents inside execute shell commands on their behalf. Right now the runtime image (Stage 2 in <code>deploy/images/server/Dockerfile</code>) only has <code>poppler-utils</code> + <code>libreoffice-nogui</code> baked in. Common tools agents reach for are missing, which forces the agent into awkward workarounds (e.g. <code>python3 -c "import json; ..."</code> instead of <code>jq</code>).</p>
+<p><strong>Action:</strong> extend the Stage-2 <code>RUN apt-get install</code> to add these:</p>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Apt package</th>
+<th style="text-align: right;">Size</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>git</code></td>
+<td><code>git</code></td>
+<td style="text-align: right;">~50 MB</td>
+<td>Essential for any <code>git status</code>/<code>git log</code>/<code>git diff</code> agent action. Coder pods do version-control work all day.</td>
+</tr>
+<tr>
+<td><code>jq</code></td>
+<td><code>jq</code></td>
+<td style="text-align: right;">~1 MB</td>
+<td>JSON parsing in <code>Bash</code> tool calls. Used constantly when agents inspect API responses.</td>
+</tr>
+<tr>
+<td><code>yq</code></td>
+<td>(install via curl, NOT apt — apt's <code>yq</code> is the Python wrapper, slow)</td>
+<td style="text-align: right;">~5 MB</td>
+<td>YAML parsing. K8s manifests, GitHub Actions, Docker Compose files.</td>
+</tr>
+<tr>
+<td><code>curl</code></td>
+<td><code>curl</code></td>
+<td style="text-align: right;">~5 MB</td>
+<td>Likely already pulled in by other deps, but pin it explicitly.</td>
+</tr>
+<tr>
+<td><code>wget</code></td>
+<td><code>wget</code></td>
+<td style="text-align: right;">~3 MB</td>
+<td>Sometimes scripts pipe <code>\| sh</code>; <code>curl</code> is fine but <code>wget</code> is the more idiomatic GET-to-file.</td>
+</tr>
+<tr>
+<td><code>ripgrep</code></td>
+<td><code>ripgrep</code></td>
+<td style="text-align: right;">~5 MB</td>
+<td><strong>High-impact</strong> — orders of magnitude faster than <code>grep -r</code> for code search. Most coding agents reach for <code>rg</code> reflexively.</td>
+</tr>
+<tr>
+<td><code>fd</code> (fd-find)</td>
+<td><code>fd-find</code> (binary is <code>fdfind</code>; symlink to <code>fd</code>)</td>
+<td style="text-align: right;">~3 MB</td>
+<td>Fast <code>find</code> replacement. Common agent companion to <code>rg</code>.</td>
+</tr>
+<tr>
+<td><code>tree</code></td>
+<td><code>tree</code></td>
+<td style="text-align: right;">~100 KB</td>
+<td>Directory visualization. Useful for "show me the repo layout" prompts.</td>
+</tr>
+<tr>
+<td><code>unzip</code> / <code>zip</code></td>
+<td><code>unzip</code> <code>zip</code></td>
+<td style="text-align: right;">~1 MB</td>
+<td>Archive handling. Comes up in build/asset workflows.</td>
+</tr>
+<tr>
+<td><code>less</code></td>
+<td><code>less</code></td>
+<td style="text-align: right;">~500 KB</td>
+<td>Paging. Agents pipe long output to <code>less</code>-friendly format checks.</td>
+</tr>
+<tr>
+<td><code>vim-tiny</code></td>
+<td><code>vim-tiny</code></td>
+<td style="text-align: right;">~2 MB</td>
+<td>Minimal vim for <code>:%s/foo/bar/g</code>-style edits. NOT full vim (~50 MB) — agents use apply_patch, not interactive vim.</td>
+</tr>
+<tr>
+<td><code>nano</code></td>
+<td><code>nano</code></td>
+<td style="text-align: right;">~1 MB</td>
+<td>Beginner-friendly editor — covers the few cases where vim's modal model trips an agent up.</td>
+</tr>
+<tr>
+<td><code>rtk</code></td>
+<td>(install from GH release <code>.deb</code> — <code>rtk-ai/rtk</code> v0.39.0)</td>
+<td style="text-align: right;">~3 MB</td>
+<td><strong>Rust Token Killer</strong> — token-optimized CLI proxy (60-90% savings on dev ops). Once installed + integrated via the Claude Code hook, <code>git status</code> → <code>rtk git status</code> transparently. Wrapper framework in v1.18.5 already ships <code>rtk</code> as the canonical first entry in <code>DEFAULT_SHELL_WRAPPERS</code> — so the in-image binary + the engine-side rewrite hook line up. NOTE: a different <code>reachingforthejack/rtk</code> (Rust Type Kit) exists on GH — we explicitly want <code>rtk-ai/rtk</code>.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Total estimated size delta:</strong> ~83 MB (mostly <code>git</code>).</p>
+<h2 id="whats-not-in-the-list-and-why">What's NOT in the list (and why)<a class="headerlink" href="#whats-not-in-the-list-and-why" title="Permanent link">&para;</a></h2>
 <ul>
 <li>
-<p><strong>v1.18.3 branch (closed 2026-05-02):</strong> Items 12 (Node.js 20 → v5),
-  13 (release.py step 14 silent-failure), 15 (<code>deploy/shared/AGENTS.md</code>
-  stale copy), 16 (throttle counters in <code>/usage</code>), 17 (qwen3-coder-480b
-  excluded after rerun confirmed contamination), 18 (NIM probe rerun),
-  19 (Qwen3.5 <code>enable_thinking</code> config example), plus Tier 1 #1-3 and
-  Tier 2 #4-5 from the v1.18.3 NIM engine work. See
-  <a href="../archive/DEBT-INVENTORY-v1.18.3/">docs/archive/DEBT-INVENTORY-v1.18.3.md</a>.</p>
+<p><strong><code>gh</code> (GitHub CLI, ~30 MB)</strong> — initially proposed, removed by maintainer. Agents that need PR/issue/release work via <code>gh</code> can install it on-demand inside the session:
+  <div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>curl<span class="w"> </span>-fsSL<span class="w"> </span>https://cli.github.com/packages/githubcli-archive-keyring.gpg<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="p">|</span><span class="w"> </span>sudo<span class="w"> </span>tee<span class="w"> </span>/usr/share/keyrings/githubcli-archive-keyring.gpg<span class="w"> </span>&gt;<span class="w"> </span>/dev/null
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;deb [arch=</span><span class="k">$(</span>dpkg<span class="w"> </span>--print-architecture<span class="k">)</span><span class="s2"> signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main&quot;</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span><span class="p">|</span><span class="w"> </span>sudo<span class="w"> </span>tee<span class="w"> </span>/etc/apt/sources.list.d/github-cli.list
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>sudo<span class="w"> </span>apt<span class="w"> </span>update<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>gh
+</span></code></pre></div>
+  (The runtime pod runs as root per the Dockerfile, so <code>sudo</code> is a no-op.)</p>
 </li>
 <li>
-<p><strong>v1.18.2 branch (closed 2026-04-29):</strong> Items 1 (god-node refactoring
-  narrowed to session_restore_ops), 2 (resolveWebviewView contract
-  refactor), 4 (focused-subtree graphify runs), 5 (esbuild VSIX bundle),
-  6 (Windows <code>code</code> CLI shim), 7-9 (Tier 1 observability), 10
-  (EngineClientProtocol), 11 (agent.py logger AttributeError). See
-  <a href="../archive/DEBT-INVENTORY-v1.18.2/">docs/archive/DEBT-INVENTORY-v1.18.2.md</a>.</p>
+<p><strong><code>pwsh</code> (PowerShell v7.6.1, ~180 MB installed)</strong> — <code>.deb</code> is 56 MB compressed, installed footprint ~150 MB plus <code>libicu72</code> (~30 MB dep). That's <strong>more than the entire rest of the list combined.</strong> Deferred for two reasons:</p>
+</li>
+<li>Bash is the lingua franca on Linux coder pods; pwsh usage is niche (Azure-heavy workflows, ports from Windows-heritage scripts).</li>
+<li>
+<p>Users who genuinely need pwsh can install it on-demand in their session:
+     <div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>curl<span class="w"> </span>-fsSL<span class="w"> </span>-o<span class="w"> </span>/tmp/pwsh.deb<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span>https://github.com/PowerShell/PowerShell/releases/download/v7.6.1/powershell_7.6.1-1.deb_amd64.deb
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>apt<span class="w"> </span>update<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>-y<span class="w"> </span>/tmp/pwsh.deb<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>rm<span class="w"> </span>/tmp/pwsh.deb
+</span></code></pre></div>
+  Revisit if more than a handful of users hit the "I need pwsh" wall.</p>
+</li>
+<li>
+<p><strong><code>kubectl</code> (~50 MB)</strong> — useful for in-cluster inspection from inside the pod, but might encourage agents to make changes to the cluster they shouldn't. Skip.</p>
+</li>
+<li>
+<p><strong><code>make</code>, <code>build-essential</code> (~250 MB)</strong> — large; only useful for projects that compile native code in the workspace. Add if a project demands it.</p>
+</li>
+<li>
+<p><strong><code>node</code> + <code>npm</code> (~150 MB)</strong> — for JS work. Likely worth adding given how common JS tooling is, but defer until requested to keep the image lean.</p>
+</li>
+<li>
+<p><strong>Language runtimes (Go, Rust, Ruby)</strong> — defer until requested.</p>
 </li>
 </ul>
-<hr />
-<h2 id="related-documents">Related documents<a class="headerlink" href="#related-documents" title="Permanent link">&para;</a></h2>
+<h2 id="suggested-dockerfile-patch-stage-2-only">Suggested Dockerfile patch (Stage-2 only)<a class="headerlink" href="#suggested-dockerfile-patch-stage-2-only" title="Permanent link">&para;</a></h2>
+<div class="language-dockerfile highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c"># Runtime system deps:</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="c">#   poppler-utils    — pdf2image (GetPdfPageImageTool)</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="c">#   libreoffice-nogui — PPTX/DOCX slide rasterization</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c">#   git              — version control (essential for any coding workflow)</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="c">#   curl, wget       — HTTP fetch</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="c">#   jq               — JSON wrangling in shell</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="c">#   ripgrep, fd-find — fast code search (fd binary is named fdfind; we symlink)</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="c">#   tree, less, unzip, zip — common shell utilities</span>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="c">#   vim-tiny, nano   — minimal editors (vim-tiny for sed-style; nano for non-vim agents)</span>
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="k">RUN</span><span class="w"> </span>apt-get<span class="w"> </span>update<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>apt-get<span class="w"> </span>install<span class="w"> </span>-y<span class="w"> </span>--no-install-recommends<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="w">    </span>poppler-utils<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="w">    </span>libreoffice-nogui<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="w">    </span>git<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="w">    </span>curl<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="w">    </span>wget<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a><span class="w">    </span>jq<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-2-17"><a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a><span class="w">    </span>ripgrep<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-2-18"><a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a><span class="w">    </span>fd-find<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-2-19"><a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a><span class="w">    </span>tree<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-2-20"><a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a><span class="w">    </span>less<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-2-21"><a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a><span class="w">    </span>unzip<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-2-22"><a id="__codelineno-2-22" name="__codelineno-2-22" href="#__codelineno-2-22"></a><span class="w">    </span>zip<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-2-23"><a id="__codelineno-2-23" name="__codelineno-2-23" href="#__codelineno-2-23"></a><span class="w">    </span>vim-tiny<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-2-24"><a id="__codelineno-2-24" name="__codelineno-2-24" href="#__codelineno-2-24"></a><span class="w">    </span>nano<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-2-25"><a id="__codelineno-2-25" name="__codelineno-2-25" href="#__codelineno-2-25"></a><span class="w">    </span>ca-certificates<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-2-26"><a id="__codelineno-2-26" name="__codelineno-2-26" href="#__codelineno-2-26"></a><span class="w">    </span><span class="o">&amp;&amp;</span><span class="w"> </span>ln<span class="w"> </span>-sf<span class="w"> </span>/usr/bin/fdfind<span class="w"> </span>/usr/local/bin/fd<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-2-27"><a id="__codelineno-2-27" name="__codelineno-2-27" href="#__codelineno-2-27"></a><span class="w">    </span><span class="o">&amp;&amp;</span><span class="w"> </span>rm<span class="w"> </span>-rf<span class="w"> </span>/var/lib/apt/lists/*
+</span><span id="__span-2-28"><a id="__codelineno-2-28" name="__codelineno-2-28" href="#__codelineno-2-28"></a>
+</span><span id="__span-2-29"><a id="__codelineno-2-29" name="__codelineno-2-29" href="#__codelineno-2-29"></a><span class="c"># yq (Go binary — apt&#39;s yq is the slow Python wrapper)</span>
+</span><span id="__span-2-30"><a id="__codelineno-2-30" name="__codelineno-2-30" href="#__codelineno-2-30"></a><span class="k">RUN</span><span class="w"> </span>curl<span class="w"> </span>-fsSL<span class="w"> </span>-o<span class="w"> </span>/usr/local/bin/yq<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-2-31"><a id="__codelineno-2-31" name="__codelineno-2-31" href="#__codelineno-2-31"></a><span class="w">    </span>https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-2-32"><a id="__codelineno-2-32" name="__codelineno-2-32" href="#__codelineno-2-32"></a><span class="w">    </span><span class="o">&amp;&amp;</span><span class="w"> </span>chmod<span class="w"> </span>+x<span class="w"> </span>/usr/local/bin/yq
+</span><span id="__span-2-33"><a id="__codelineno-2-33" name="__codelineno-2-33" href="#__codelineno-2-33"></a>
+</span><span id="__span-2-34"><a id="__codelineno-2-34" name="__codelineno-2-34" href="#__codelineno-2-34"></a><span class="c"># rtk — Rust Token Killer (github.com/rtk-ai/rtk, NOT reachingforthejack/rtk).</span>
+</span><span id="__span-2-35"><a id="__codelineno-2-35" name="__codelineno-2-35" href="#__codelineno-2-35"></a><span class="c"># Pin the version explicitly so the Dockerfile is reproducible. Bump as new</span>
+</span><span id="__span-2-36"><a id="__codelineno-2-36" name="__codelineno-2-36" href="#__codelineno-2-36"></a><span class="c"># releases land — also bump the v1.18.5 DEFAULT_SHELL_WRAPPERS rtk entry if</span>
+</span><span id="__span-2-37"><a id="__codelineno-2-37" name="__codelineno-2-37" href="#__codelineno-2-37"></a><span class="c"># the rewrite-command shape ever changes.</span>
+</span><span id="__span-2-38"><a id="__codelineno-2-38" name="__codelineno-2-38" href="#__codelineno-2-38"></a><span class="k">ARG</span><span class="w"> </span><span class="nv">RTK_VERSION</span><span class="o">=</span><span class="m">0</span>.39.0
+</span><span id="__span-2-39"><a id="__codelineno-2-39" name="__codelineno-2-39" href="#__codelineno-2-39"></a><span class="k">RUN</span><span class="w"> </span>curl<span class="w"> </span>-fsSL<span class="w"> </span>-o<span class="w"> </span>/tmp/rtk.deb<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-2-40"><a id="__codelineno-2-40" name="__codelineno-2-40" href="#__codelineno-2-40"></a><span class="w">    </span>https://github.com/rtk-ai/rtk/releases/download/v<span class="si">${</span><span class="nv">RTK_VERSION</span><span class="si">}</span>/rtk_<span class="si">${</span><span class="nv">RTK_VERSION</span><span class="si">}</span>-1_amd64.deb<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-2-41"><a id="__codelineno-2-41" name="__codelineno-2-41" href="#__codelineno-2-41"></a><span class="w">    </span><span class="o">&amp;&amp;</span><span class="w"> </span>apt-get<span class="w"> </span>update<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-2-42"><a id="__codelineno-2-42" name="__codelineno-2-42" href="#__codelineno-2-42"></a><span class="w">    </span><span class="o">&amp;&amp;</span><span class="w"> </span>apt-get<span class="w"> </span>install<span class="w"> </span>-y<span class="w"> </span>--no-install-recommends<span class="w"> </span>/tmp/rtk.deb<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-2-43"><a id="__codelineno-2-43" name="__codelineno-2-43" href="#__codelineno-2-43"></a><span class="w">    </span><span class="o">&amp;&amp;</span><span class="w"> </span>rm<span class="w"> </span>-f<span class="w"> </span>/tmp/rtk.deb<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-2-44"><a id="__codelineno-2-44" name="__codelineno-2-44" href="#__codelineno-2-44"></a><span class="w">    </span><span class="o">&amp;&amp;</span><span class="w"> </span>rm<span class="w"> </span>-rf<span class="w"> </span>/var/lib/apt/lists/*
+</span></code></pre></div>
+<h2 id="verify-after-the-rebuild">Verify after the rebuild<a class="headerlink" href="#verify-after-the-rebuild" title="Permanent link">&para;</a></h2>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Once Kaniko has pushed :latest, spawn a fresh pod and shell in:</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>microk8s<span class="w"> </span>kubectl<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>-n<span class="w"> </span>coder<span class="w"> </span>coder-server-&lt;user&gt;<span class="w"> </span>--<span class="w"> </span>which<span class="w"> </span>git<span class="w"> </span>jq<span class="w"> </span>yq<span class="w"> </span>rg<span class="w"> </span>fd<span class="w"> </span>tree<span class="w"> </span>nano<span class="w"> </span>vim.tiny<span class="w"> </span>rtk
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="c1"># Expect 9 paths, no &quot;not found&quot;.</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="c1"># Quick sanity on tool versions:</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>microk8s<span class="w"> </span>kubectl<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>-n<span class="w"> </span>coder<span class="w"> </span>coder-server-&lt;user&gt;<span class="w"> </span>--<span class="w"> </span>bash<span class="w"> </span>-c<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">  </span><span class="s1">&#39;git --version; jq --version; yq --version; rg --version | head -1; nano --version | head -1; rtk --version&#39;</span>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="c1"># Confirm rtk-ai/rtk (NOT reachingforthejack/rtk) — the &quot;gain&quot; subcommand</span>
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="c1"># only exists on rtk-ai/rtk:</span>
+</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>microk8s<span class="w"> </span>kubectl<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>-n<span class="w"> </span>coder<span class="w"> </span>coder-server-&lt;user&gt;<span class="w"> </span>--<span class="w"> </span>rtk<span class="w"> </span>gain<span class="w"> </span>--help<span class="w"> </span><span class="p">|</span><span class="w"> </span>head<span class="w"> </span>-3
+</span></code></pre></div>
+<h2 id="effort">Effort<a class="headerlink" href="#effort" title="Permanent link">&para;</a></h2>
+<p>~30 min total:
+- 5 min: Dockerfile edit + commit on <code>bugfix/v1.18.6</code>
+- 5 min: Kaniko rebuild (depends on cache state — first rebuild after Stage-2 change is ~2-3 min)
+- 5 min: spawn a fresh pod, run the verify commands above
+- ~15 min: write up the result + close this TODO with the commit SHA</p>
+<h2 id="cross-references">Cross-references<a class="headerlink" href="#cross-references" title="Permanent link">&para;</a></h2>
 <ul>
-<li><a href="../ROADMAP.md">ROADMAP.md</a> — feature work + future direction (multi-model
-  routing, Anthropic provider, prompt analyzer, etc.)</li>
-<li><a href="../CHANGELOG.md">CHANGELOG.md</a> — what shipped per release</li>
-<li><a href="archive/">docs/archive/</a> — frozen historical snapshots, including the
-  per-version debt inventories</li>
-<li><code>docs/TODO-*.md</code> — in-flight planning for the current branch (kept
-  separate from debt — those are not "deferred", they're "planned now")</li>
+<li>Dockerfile current state: <a href="../deploy/images/server/Dockerfile">deploy/images/server/Dockerfile</a></li>
+<li>Build script: <a href="../deploy/microk8s/build.sh">deploy/microk8s/build.sh</a> (<code>./build.sh server</code>)</li>
+<li>Kaniko job: <a href="../deploy/microk8s/kaniko-server-job.yaml">deploy/microk8s/kaniko-server-job.yaml</a> — mounts <code>/home/itadmin/tools/ppxai</code> as build context, so the current working-tree commit IS the build source</li>
+<li>Live registry: <code>localhost:32000/coder-server:latest</code> (<code>sha256:de680b6d</code>, 2026-05-06; needs refresh)</li>
 </ul>
 
 
