@@ -1025,6 +1025,37 @@ releases. Tracked as [DEBT-INVENTORY.md Item 20](docs/DEBT-INVENTORY.md#item-20-
 
 ---
 
+### v1.20.x - MCP integration Day-0 (planned)
+
+Wire MCP (Model Context Protocol) stdio servers into the engine. The
+`mcp>=0.1.0` optional extras dep has been declared since v1.9.x but
+the actual client code, registry, lifecycle, slash command, and
+per-client surface are **not present in ppxai today** (verified
+2026-05-23 via grep; the old `tool_manager.py` MCP loader was deleted
+in v1.11.7 during EngineClient migration). Day-0 surface is the
+ppxai-sre [`ppxai-outlook-agent
+mcp`](https://github.com/rcconsult/ppxai-sre/tree/master/agents/outlook-monitor)
+server (6 tools: `search_messages`, `scan_headers`, `get_message`,
+`list_recent`, `top_senders`, `sync_status`); the same plumbing
+accepts code-review-graph, k8s, Prometheus, Grafana, PagerDuty
+servers without per-server code.
+
+Why v1.20.x and not sooner: v1.18.6 stays scoped to ADR 0006; v1.19.x
+is already committed to agent-platform Stage 2 + the credential
+broker, and MCP touches the same `ppxai/engine/` real estate as
+those. The credential-broker work in v1.19.x → v1.20.x is the
+natural partner for MCP's per-server `env` handling.
+
+Full plan with phasing, gap list, security hardening (output
+truncation + `<mcp_tool_output>` envelope + tier-1/2/3 consent
+mapping), and acceptance criteria:
+[docs/MCP-INTEGRATION-PLAN.md](docs/MCP-INTEGRATION-PLAN.md).
+
+**Effort estimate:** ~6-8 days bundled across 5 phases. **Branch when
+ready:** `feat/mcp-integration-day-0`.
+
+---
+
 ## Future Considerations
 
 These are tracked but not prioritized:
