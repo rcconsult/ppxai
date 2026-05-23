@@ -1,0 +1,2227 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Multi-LLM Interface for Developers - Terminal & VSCode">
+      
+      
+      
+        <link rel="canonical" href="https://rcconsult.github.io/ppxai/1.18.6/archive/v1.15.2-completed/TODO-v1.15.2-CONTEXT-INJECTOR-PARITY/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>TODO: Context Injector Feature Parity (v1.15.2) - ppxai Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#todo-context-injector-feature-parity-v1152" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../../.." title="ppxai Documentation" class="md-header__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ppxai Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              TODO: Context Injector Feature Parity (v1.15.2)
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../.." title="ppxai Documentation" class="md-nav__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ppxai Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../INSTALLATION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../PROVIDER_SETUP/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provider Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../AGENT_MODE_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agent Mode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../BOOTSTRAP_CONTEXT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bootstrap Context
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../CONTEXT-INJECTION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Context Injection
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../CHECKPOINT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Checkpoint & Undo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../FILE_EDITING_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    File Editing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../SHELL_CONSENT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shell Consent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../CUSTOM_TOOL_DEVELOPMENT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../CUSTOM_COMMAND_DEVELOPMENT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../ARCHITECTURE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../ollama-limitations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ollama Limitations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../vllm-tool-calling-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    vLLM Tool Calling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../CONTAINER_TOOLS_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Container Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../AUTOROUTER-CONFIG/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autorouter Config
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release Notes
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Release Notes
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../RELEASE-NOTES-v1.16.1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../RELEASE-NOTES-v1.16.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../RELEASE-NOTES-v1.15.6/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.15.6
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#current-state-analysis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Current State Analysis
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Current State Analysis">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#engine-complete" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Engine (✅ Complete)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rich-tui-15-complete" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rich TUI (⚠️ 1/5 Complete)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#textual-tui-35-complete" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Textual TUI (⚠️ 3/5 Complete)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#vscode-extension-35-complete" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        VSCode Extension (⚠️ 3/5 Complete)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#web-app-35-complete" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Web App (⚠️ 3/5 Complete)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#action-items" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Action Items
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Action Items">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-rich-tui-add-all-special-providers-priority-1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Rich TUI - Add All Special Providers (⚠️ Priority 1)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. Rich TUI - Add All Special Providers (⚠️ Priority 1)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#11-update-autocomplete-lines-314-331" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.1 Update Autocomplete (Lines 314-331)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#12-update-hint-text-line-691" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.2 Update Hint Text (Line 691)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#13-update-code-comment-line-738" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.3 Update Code Comment (Line 738)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-textual-tui-add-gittree-providers-priority-2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Textual TUI - Add Git/Tree Providers (⚠️ Priority 2)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Textual TUI - Add Git/Tree Providers (⚠️ Priority 2)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#21-update-context_providers-lines-26-30" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.1 Update CONTEXT_PROVIDERS (Lines 26-30)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-vscode-extension-add-clipboardurl-priority-3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. VSCode Extension - Add Clipboard/URL (⚠️ Priority 3)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. VSCode Extension - Add Clipboard/URL (⚠️ Priority 3)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#31-update-file-picker-autocomplete-lines-348-351" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.1 Update File Picker Autocomplete (Lines 348-351)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#32-update-help-text-lines-1834-1836" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.2 Update Help Text (Lines 1834-1836)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#33-update-special-providers-list-line-544" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.3 Update Special Providers List (Line 544)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-web-app-add-clipboardurl-priority-4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Web App - Add Clipboard/URL (⚠️ Priority 4)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Web App - Add Clipboard/URL (⚠️ Priority 4)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#41-update-autocomplete-fallback-lines-2198-2199" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.1 Update Autocomplete Fallback (Lines 2198-2199)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#42-update-second-fallback-lines-2210-2211" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.2 Update Second Fallback (Lines 2210-2211)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#43-update-help-text-lines-1141-1143" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.3 Update Help Text (Lines 1141-1143)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-update-shared-command-definitions-optional" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Update Shared Command Definitions (Optional)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testing-checklist" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Testing Checklist
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Testing Checklist">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#per-client-testing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Per-Client Testing
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Per-Client Testing">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#autocomplete-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Autocomplete Tests
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#functional-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Functional Tests
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#uihelp-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UI/Help Tests
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#integration-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Integration Tests
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dependencies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dependencies
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Dependencies">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#already-installed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Already Installed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#platform-notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Platform Notes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#documentation-updates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Documentation Updates
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Documentation Updates">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#files-to-update" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Files to Update
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#estimated-effort" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Estimated Effort
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#success-criteria" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Success Criteria
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Notes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Notes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#why-this-matters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why This Matters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#design-decision-url-pattern" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Design Decision: URL Pattern
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#backward-compatibility" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Backward Compatibility
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#related-documents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Related Documents
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#implementation-order" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Implementation Order
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="todo-context-injector-feature-parity-v1152">TODO: Context Injector Feature Parity (v1.15.2)<a class="headerlink" href="#todo-context-injector-feature-parity-v1152" title="Permanent link">&para;</a></h1>
+<p><strong>Status:</strong> Planning
+<strong>Priority:</strong> Medium
+<strong>Effort:</strong> Low (2-3 hours)
+<strong>Created:</strong> 2026-01-29</p>
+<h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
+<p>The engine fully supports 5 context injectors since v1.14.2, but UIs inconsistently expose them:</p>
+<table>
+<thead>
+<tr>
+<th>Injector</th>
+<th>Engine</th>
+<th>Rich TUI</th>
+<th>Textual TUI</th>
+<th>VSCode</th>
+<th>Web</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>@file</strong></td>
+<td>✅ v1.8.0</td>
+<td>✅ Full</td>
+<td>✅ Full</td>
+<td>✅ Full</td>
+<td>✅ Full</td>
+</tr>
+<tr>
+<td><strong>@git</strong></td>
+<td>✅ v1.11.4</td>
+<td>⚠️ No UI</td>
+<td>⚠️ No UI</td>
+<td>✅ Full</td>
+<td>✅ Full</td>
+</tr>
+<tr>
+<td><strong>@tree</strong></td>
+<td>✅ v1.11.4</td>
+<td>⚠️ No UI</td>
+<td>⚠️ No UI</td>
+<td>✅ Full</td>
+<td>✅ Full</td>
+</tr>
+<tr>
+<td><strong>@clipboard</strong></td>
+<td>✅ v1.14.2</td>
+<td>❌ Hidden</td>
+<td>✅ Full</td>
+<td>❌ Hidden</td>
+<td>❌ Hidden</td>
+</tr>
+<tr>
+<td><strong>@url</strong></td>
+<td>✅ v1.14.2</td>
+<td>❌ Hidden</td>
+<td>✅ Full</td>
+<td>❌ Hidden</td>
+<td>❌ Hidden</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Problem:</strong> Users cannot discover <code>@clipboard</code> and <code>@url</code> in most clients, and TUIs don't expose <code>@git</code>/<code>@tree</code> in autocomplete despite working when typed manually.</p>
+<p><strong>Goal:</strong> Achieve 100% feature parity - all 5 injectors autocomplete + documented in all 4 clients.</p>
+<h2 id="current-state-analysis">Current State Analysis<a class="headerlink" href="#current-state-analysis" title="Permanent link">&para;</a></h2>
+<h3 id="engine-complete">Engine (✅ Complete)<a class="headerlink" href="#engine-complete" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>File:</strong> <a href="../ppxai/engine/context.py">ppxai/engine/context.py</a></li>
+<li><strong>Status:</strong> All 5 injectors fully implemented with hash deduplication, size limits, truncation</li>
+</ul>
+<h3 id="rich-tui-15-complete">Rich TUI (⚠️ 1/5 Complete)<a class="headerlink" href="#rich-tui-15-complete" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>File:</strong> <a href="../ppxai/rich/main.py:167-331">ppxai/rich/main.py</a></li>
+<li><strong>Has:</strong> <code>@file</code> only in autocomplete</li>
+<li><strong>Missing:</strong> <code>@git</code>, <code>@tree</code>, <code>@clipboard</code>, <code>@url</code> autocomplete</li>
+<li><strong>Hint text:</strong> <a href="../ppxai/rich/main.py:691">Line 691</a> - Only mentions <code>@file</code></li>
+<li><strong>Comment:</strong> <a href="../ppxai/rich/main.py:738">Line 738</a> - Outdated, only mentions 3 injectors</li>
+</ul>
+<h3 id="textual-tui-35-complete">Textual TUI (⚠️ 3/5 Complete)<a class="headerlink" href="#textual-tui-35-complete" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>File:</strong> <a href="../ppxai/tui/completer.py:26-30">ppxai/tui/completer.py</a></li>
+<li><strong>Has:</strong> <code>@file</code>, <code>@clipboard</code>, <code>@url</code> in <code>CONTEXT_PROVIDERS</code></li>
+<li><strong>Missing:</strong> <code>@git</code>, <code>@tree</code> autocomplete</li>
+</ul>
+<h3 id="vscode-extension-35-complete">VSCode Extension (⚠️ 3/5 Complete)<a class="headerlink" href="#vscode-extension-35-complete" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>File:</strong> <a href="../vscode-extension/src/chatPanel.ts">vscode-extension/src/chatPanel.ts</a></li>
+<li><strong>Has:</strong> <code>@file</code>, <code>@git</code>, <code>@tree</code> in autocomplete (lines 348-351) and help (lines 1834-1836)</li>
+<li><strong>Missing:</strong> <code>@clipboard</code>, <code>@url</code> in autocomplete and help</li>
+</ul>
+<h3 id="web-app-35-complete">Web App (⚠️ 3/5 Complete)<a class="headerlink" href="#web-app-35-complete" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>File:</strong> <a href="../ppxai/web/app.js">ppxai/web/app.js</a></li>
+<li><strong>Has:</strong> <code>@file</code>, <code>@git</code>, <code>@tree</code> in autocomplete (lines 2198-2199, 2210-2211) and help (lines 1141-1143)</li>
+<li><strong>Missing:</strong> <code>@clipboard</code>, <code>@url</code> in autocomplete and help</li>
+</ul>
+<h2 id="action-items">Action Items<a class="headerlink" href="#action-items" title="Permanent link">&para;</a></h2>
+<h3 id="1-rich-tui-add-all-special-providers-priority-1">1. Rich TUI - Add All Special Providers (⚠️ Priority 1)<a class="headerlink" href="#1-rich-tui-add-all-special-providers-priority-1" title="Permanent link">&para;</a></h3>
+<p><strong>File:</strong> <a href="../ppxai/rich/main.py">ppxai/rich/main.py</a></p>
+<h4 id="11-update-autocomplete-lines-314-331">1.1 Update Autocomplete (Lines 314-331)<a class="headerlink" href="#11-update-autocomplete-lines-314-331" title="Permanent link">&para;</a></h4>
+<p>Replace file-only autocomplete with special providers + files:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">get_completions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">document</span><span class="p">,</span> <span class="n">complete_event</span><span class="p">):</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">text</span> <span class="o">=</span> <span class="n">document</span><span class="o">.</span><span class="n">text_before_cursor</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="c1"># Check for @reference anywhere in the text</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">at_pos</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">rfind</span><span class="p">(</span><span class="s1">&#39;@&#39;</span><span class="p">)</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="k">if</span> <span class="n">at_pos</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>        <span class="n">query</span> <span class="o">=</span> <span class="n">text</span><span class="p">[</span><span class="n">at_pos</span> <span class="o">+</span> <span class="mi">1</span><span class="p">:]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>        <span class="c1"># Special context providers (NEW)</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>        <span class="n">CONTEXT_PROVIDERS</span> <span class="o">=</span> <span class="p">[</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>            <span class="p">(</span><span class="s1">&#39;git&#39;</span><span class="p">,</span> <span class="s1">&#39;Include git diff (staged + unstaged)&#39;</span><span class="p">),</span>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>            <span class="p">(</span><span class="s1">&#39;tree&#39;</span><span class="p">,</span> <span class="s1">&#39;Include project directory structure&#39;</span><span class="p">),</span>
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>            <span class="p">(</span><span class="s1">&#39;clipboard&#39;</span><span class="p">,</span> <span class="s1">&#39;Include clipboard text content&#39;</span><span class="p">),</span>
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>            <span class="p">(</span><span class="s1">&#39;url&#39;</span><span class="p">,</span> <span class="s1">&#39;Fetch and include URL content&#39;</span><span class="p">),</span>
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>        <span class="p">]</span>
+</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>
+</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>        <span class="c1"># Show special providers first</span>
+</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>        <span class="k">for</span> <span class="n">provider</span><span class="p">,</span> <span class="n">desc</span> <span class="ow">in</span> <span class="n">CONTEXT_PROVIDERS</span><span class="p">:</span>
+</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>            <span class="k">if</span> <span class="n">provider</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">query</span><span class="p">):</span>
+</span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>                <span class="n">replace_len</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">text</span><span class="p">)</span> <span class="o">-</span> <span class="n">at_pos</span>
+</span><span id="__span-0-21"><a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>                <span class="k">yield</span> <span class="n">Completion</span><span class="p">(</span>
+</span><span id="__span-0-22"><a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>                    <span class="sa">f</span><span class="s1">&#39;@</span><span class="si">{</span><span class="n">provider</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
+</span><span id="__span-0-23"><a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>                    <span class="n">start_position</span><span class="o">=-</span><span class="n">replace_len</span><span class="p">,</span>
+</span><span id="__span-0-24"><a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>                    <span class="n">display</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;@</span><span class="si">{</span><span class="n">provider</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
+</span><span id="__span-0-25"><a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a>                    <span class="n">display_meta</span><span class="o">=</span><span class="n">desc</span>
+</span><span id="__span-0-26"><a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a>                <span class="p">)</span>
+</span><span id="__span-0-27"><a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a>
+</span><span id="__span-0-28"><a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a>        <span class="c1"># Then show file completions (existing logic)</span>
+</span><span id="__span-0-29"><a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a>        <span class="k">for</span> <span class="n">filename</span><span class="p">,</span> <span class="n">filepath</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_files</span><span class="p">():</span>
+</span><span id="__span-0-30"><a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a>            <span class="k">if</span> <span class="ow">not</span> <span class="n">query</span> <span class="ow">or</span> <span class="n">query</span> <span class="ow">in</span> <span class="n">filename</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">or</span> <span class="n">query</span> <span class="ow">in</span> <span class="n">filepath</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+</span><span id="__span-0-31"><a id="__codelineno-0-31" name="__codelineno-0-31" href="#__codelineno-0-31"></a>                <span class="n">replace_len</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">text</span><span class="p">)</span> <span class="o">-</span> <span class="n">at_pos</span>
+</span><span id="__span-0-32"><a id="__codelineno-0-32" name="__codelineno-0-32" href="#__codelineno-0-32"></a>                <span class="k">yield</span> <span class="n">Completion</span><span class="p">(</span>
+</span><span id="__span-0-33"><a id="__codelineno-0-33" name="__codelineno-0-33" href="#__codelineno-0-33"></a>                    <span class="s1">&#39;@&#39;</span> <span class="o">+</span> <span class="n">filename</span><span class="p">,</span>
+</span><span id="__span-0-34"><a id="__codelineno-0-34" name="__codelineno-0-34" href="#__codelineno-0-34"></a>                    <span class="n">start_position</span><span class="o">=-</span><span class="n">replace_len</span><span class="p">,</span>
+</span><span id="__span-0-35"><a id="__codelineno-0-35" name="__codelineno-0-35" href="#__codelineno-0-35"></a>                    <span class="n">display</span><span class="o">=</span><span class="n">filename</span><span class="p">,</span>
+</span><span id="__span-0-36"><a id="__codelineno-0-36" name="__codelineno-0-36" href="#__codelineno-0-36"></a>                    <span class="n">display_meta</span><span class="o">=</span><span class="n">filepath</span>
+</span><span id="__span-0-37"><a id="__codelineno-0-37" name="__codelineno-0-37" href="#__codelineno-0-37"></a>                <span class="p">)</span>
+</span><span id="__span-0-38"><a id="__codelineno-0-38" name="__codelineno-0-38" href="#__codelineno-0-38"></a>        <span class="k">return</span>
+</span><span id="__span-0-39"><a id="__codelineno-0-39" name="__codelineno-0-39" href="#__codelineno-0-39"></a>
+</span><span id="__span-0-40"><a id="__codelineno-0-40" name="__codelineno-0-40" href="#__codelineno-0-40"></a>    <span class="c1"># ... rest of command autocomplete logic</span>
+</span></code></pre></div>
+<h4 id="12-update-hint-text-line-691">1.2 Update Hint Text (Line 691)<a class="headerlink" href="#12-update-hint-text-line-691" title="Permanent link">&para;</a></h4>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># OLD</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">console</span><span class="o">.</span><span class="n">print</span><span class="p">(</span><span class="s2">&quot;[dim]Tab: autocomplete • @file: reference files • ↑/↓: history • Ctrl-C twice to exit[/dim]</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="c1"># NEW</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="n">console</span><span class="o">.</span><span class="n">print</span><span class="p">(</span><span class="s2">&quot;[dim]Tab: autocomplete • @file/@git/@tree/@clipboard/@url: inject context • ↑/↓: history • Ctrl-C twice to exit[/dim]</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+</span></code></pre></div>
+<h4 id="13-update-code-comment-line-738">1.3 Update Code Comment (Line 738)<a class="headerlink" href="#13-update-code-comment-line-738" title="Permanent link">&para;</a></h4>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># OLD</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="c1"># This ensures @git/@tree/@file context injection always works</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1"># NEW</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="c1"># This ensures @file/@git/@tree/@clipboard/@url context injection always works</span>
+</span></code></pre></div>
+<hr />
+<h3 id="2-textual-tui-add-gittree-providers-priority-2">2. Textual TUI - Add Git/Tree Providers (⚠️ Priority 2)<a class="headerlink" href="#2-textual-tui-add-gittree-providers-priority-2" title="Permanent link">&para;</a></h3>
+<p><strong>File:</strong> <a href="../ppxai/tui/completer.py">ppxai/tui/completer.py</a></p>
+<h4 id="21-update-context_providers-lines-26-30">2.1 Update CONTEXT_PROVIDERS (Lines 26-30)<a class="headerlink" href="#21-update-context_providers-lines-26-30" title="Permanent link">&para;</a></h4>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># OLD</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">CONTEXT_PROVIDERS</span> <span class="o">=</span> <span class="p">[</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>    <span class="p">(</span><span class="s1">&#39;@file&#39;</span><span class="p">,</span> <span class="s1">&#39;Include file contents&#39;</span><span class="p">),</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>    <span class="p">(</span><span class="s1">&#39;@clipboard&#39;</span><span class="p">,</span> <span class="s1">&#39;Include clipboard contents&#39;</span><span class="p">),</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>    <span class="p">(</span><span class="s1">&#39;@url&#39;</span><span class="p">,</span> <span class="s1">&#39;Fetch and include URL contents&#39;</span><span class="p">),</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="p">]</span>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="c1"># NEW</span>
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="n">CONTEXT_PROVIDERS</span> <span class="o">=</span> <span class="p">[</span>
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>    <span class="p">(</span><span class="s1">&#39;@file&#39;</span><span class="p">,</span> <span class="s1">&#39;Include file contents&#39;</span><span class="p">),</span>
+</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>    <span class="p">(</span><span class="s1">&#39;@git&#39;</span><span class="p">,</span> <span class="s1">&#39;Include git diff (staged + unstaged)&#39;</span><span class="p">),</span>
+</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>    <span class="p">(</span><span class="s1">&#39;@tree&#39;</span><span class="p">,</span> <span class="s1">&#39;Include project directory structure&#39;</span><span class="p">),</span>
+</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>    <span class="p">(</span><span class="s1">&#39;@clipboard&#39;</span><span class="p">,</span> <span class="s1">&#39;Include clipboard text content&#39;</span><span class="p">),</span>
+</span><span id="__span-3-14"><a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a>    <span class="p">(</span><span class="s1">&#39;@url&#39;</span><span class="p">,</span> <span class="s1">&#39;Fetch and include URL content&#39;</span><span class="p">),</span>
+</span><span id="__span-3-15"><a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a><span class="p">]</span>
+</span></code></pre></div>
+<hr />
+<h3 id="3-vscode-extension-add-clipboardurl-priority-3">3. VSCode Extension - Add Clipboard/URL (⚠️ Priority 3)<a class="headerlink" href="#3-vscode-extension-add-clipboardurl-priority-3" title="Permanent link">&para;</a></h3>
+<p><strong>File:</strong> <a href="../vscode-extension/src/chatPanel.ts">vscode-extension/src/chatPanel.ts</a></p>
+<h4 id="31-update-file-picker-autocomplete-lines-348-351">3.1 Update File Picker Autocomplete (Lines 348-351)<a class="headerlink" href="#31-update-file-picker-autocomplete-lines-348-351" title="Permanent link">&para;</a></h4>
+<div class="language-typescript highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1">// OLD</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="p">{</span><span class="w"> </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;@git&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">path</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;Include git diff&#39;</span><span class="w"> </span><span class="p">},</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="p">{</span><span class="w"> </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;@tree&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">path</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;Include project structure&#39;</span><span class="w"> </span><span class="p">},</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="c1">// NEW</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="p">{</span><span class="w"> </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;@git&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">path</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;Include git diff&#39;</span><span class="w"> </span><span class="p">},</span>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="p">{</span><span class="w"> </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;@tree&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">path</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;Include project structure&#39;</span><span class="w"> </span><span class="p">},</span>
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="p">{</span><span class="w"> </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;@clipboard&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">path</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;Include clipboard contents&#39;</span><span class="w"> </span><span class="p">},</span>
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="p">{</span><span class="w"> </span><span class="nx">name</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;@url&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">path</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;Fetch URL contents (e.g., @https://...)&#39;</span><span class="w"> </span><span class="p">},</span>
+</span></code></pre></div>
+<h4 id="32-update-help-text-lines-1834-1836">3.2 Update Help Text (Lines 1834-1836)<a class="headerlink" href="#32-update-help-text-lines-1834-1836" title="Permanent link">&para;</a></h4>
+<div class="language-typescript highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1">// OLD</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="nx">helpText</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="s1">&#39;- `@file` - Reference a file\n&#39;</span><span class="p">;</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="nx">helpText</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="s1">&#39;- `@git` - Include git diff\n&#39;</span><span class="p">;</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="nx">helpText</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="s1">&#39;- `@tree` - Include project structure\n&#39;</span><span class="p">;</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="c1">// NEW</span>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="nx">helpText</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="s1">&#39;- `@file` - Reference a file\n&#39;</span><span class="p">;</span>
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="nx">helpText</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="s1">&#39;- `@git` - Include git diff\n&#39;</span><span class="p">;</span>
+</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="nx">helpText</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="s1">&#39;- `@tree` - Include project structure\n&#39;</span><span class="p">;</span>
+</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="nx">helpText</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="s1">&#39;- `@clipboard` - Include clipboard contents\n&#39;</span><span class="p">;</span>
+</span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="nx">helpText</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="s1">&#39;- `@url` - Fetch URL contents (e.g., @https://example.com)\n&#39;</span><span class="p">;</span>
+</span></code></pre></div>
+<h4 id="33-update-special-providers-list-line-544">3.3 Update Special Providers List (Line 544)<a class="headerlink" href="#33-update-special-providers-list-line-544" title="Permanent link">&para;</a></h4>
+<div class="language-typescript highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1">// OLD</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="kd">const</span><span class="w"> </span><span class="nx">specialContextProviders</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s1">&#39;tree&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;git&#39;</span><span class="p">];</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="c1">// NEW</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="kd">const</span><span class="w"> </span><span class="nx">specialContextProviders</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s1">&#39;tree&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;git&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;clipboard&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;url&#39;</span><span class="p">];</span>
+</span></code></pre></div>
+<p><strong>Note:</strong> URL pattern detection should skip <code>@url</code> prefix when checking for actual URLs:
+- <code>@clipboard</code> → Skip, let backend handle
+- <code>@url</code> → Skip, let backend handle
+- <code>@https://...</code> → This is the actual URL pattern (already handled by backend)</p>
+<hr />
+<h3 id="4-web-app-add-clipboardurl-priority-4">4. Web App - Add Clipboard/URL (⚠️ Priority 4)<a class="headerlink" href="#4-web-app-add-clipboardurl-priority-4" title="Permanent link">&para;</a></h3>
+<p><strong>File:</strong> <a href="../ppxai/web/app.js">ppxai/web/app.js</a></p>
+<h4 id="41-update-autocomplete-fallback-lines-2198-2199">4.1 Update Autocomplete Fallback (Lines 2198-2199)<a class="headerlink" href="#41-update-autocomplete-fallback-lines-2198-2199" title="Permanent link">&para;</a></h4>
+<div class="language-javascript highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1">// OLD</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="p">{</span><span class="w"> </span><span class="nx">label</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;@git&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">description</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;Include git diff&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">value</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;@git&#39;</span><span class="w"> </span><span class="p">},</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="p">{</span><span class="w"> </span><span class="nx">label</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;@tree&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">description</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;Include project structure&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">value</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;@tree&#39;</span><span class="w"> </span><span class="p">},</span>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="c1">// NEW</span>
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="p">{</span><span class="w"> </span><span class="nx">label</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;@git&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">description</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;Include git diff&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">value</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;@git&#39;</span><span class="w"> </span><span class="p">},</span>
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="p">{</span><span class="w"> </span><span class="nx">label</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;@tree&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">description</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;Include project structure&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">value</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;@tree&#39;</span><span class="w"> </span><span class="p">},</span>
+</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="p">{</span><span class="w"> </span><span class="nx">label</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;@clipboard&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">description</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;Include clipboard contents&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">value</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;@clipboard&#39;</span><span class="w"> </span><span class="p">},</span>
+</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="p">{</span><span class="w"> </span><span class="nx">label</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;@url&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">description</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;Fetch URL (e.g., @https://...)&#39;</span><span class="p">,</span><span class="w"> </span><span class="nx">value</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;@url&#39;</span><span class="w"> </span><span class="p">},</span>
+</span></code></pre></div>
+<h4 id="42-update-second-fallback-lines-2210-2211">4.2 Update Second Fallback (Lines 2210-2211)<a class="headerlink" href="#42-update-second-fallback-lines-2210-2211" title="Permanent link">&para;</a></h4>
+<p>Same change as 4.1 (code appears twice)</p>
+<h4 id="43-update-help-text-lines-1141-1143">4.3 Update Help Text (Lines 1141-1143)<a class="headerlink" href="#43-update-help-text-lines-1141-1143" title="Permanent link">&para;</a></h4>
+<div class="language-javascript highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1">// OLD</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="nx">helpText</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="s1">&#39;- `@file` - Reference a file\n&#39;</span><span class="p">;</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="nx">helpText</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="s1">&#39;- `@git` - Include git diff\n&#39;</span><span class="p">;</span>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="nx">helpText</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="s1">&#39;- `@tree` - Include project structure\n&#39;</span><span class="p">;</span>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="c1">// NEW</span>
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="nx">helpText</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="s1">&#39;- `@file` - Reference a file\n&#39;</span><span class="p">;</span>
+</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="nx">helpText</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="s1">&#39;- `@git` - Include git diff\n&#39;</span><span class="p">;</span>
+</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="nx">helpText</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="s1">&#39;- `@tree` - Include project structure\n&#39;</span><span class="p">;</span>
+</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a><span class="nx">helpText</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="s1">&#39;- `@clipboard` - Include clipboard contents\n&#39;</span><span class="p">;</span>
+</span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a><span class="nx">helpText</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="s1">&#39;- `@url` - Fetch URL contents (e.g., @https://example.com)\n&#39;</span><span class="p">;</span>
+</span></code></pre></div>
+<hr />
+<h3 id="5-update-shared-command-definitions-optional">5. Update Shared Command Definitions (Optional)<a class="headerlink" href="#5-update-shared-command-definitions-optional" title="Permanent link">&para;</a></h3>
+<p><strong>Files:</strong>
+- <a href="../vscode-extension/src/shared/commands.ts:164,169,184">vscode-extension/src/shared/commands.ts</a>
+- <a href="../ppxai/web/shared/commands.js:146,151,166">ppxai/web/shared/commands.js</a></p>
+<p>Update usage strings that mention <code>@file</code> to include other providers:</p>
+<div class="language-typescript highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1">// Example: /test command</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="nx">usage</span><span class="o">:</span><span class="w"> </span><span class="s1">&#39;/test &lt;code or @file/@git&gt;&#39;</span><span class="p">,</span>
+</span></code></pre></div>
+<hr />
+<h2 id="testing-checklist">Testing Checklist<a class="headerlink" href="#testing-checklist" title="Permanent link">&para;</a></h2>
+<h3 id="per-client-testing">Per-Client Testing<a class="headerlink" href="#per-client-testing" title="Permanent link">&para;</a></h3>
+<p>For <strong>each client</strong> (Rich TUI, Textual TUI, VSCode, Web):</p>
+<h4 id="autocomplete-tests">Autocomplete Tests<a class="headerlink" href="#autocomplete-tests" title="Permanent link">&para;</a></h4>
+<ul>
+<li>[ ] Type <code>@</code> → Shows all 5 providers in autocomplete</li>
+<li>[ ] Type <code>@f</code> → Shows <code>@file</code> + files starting with 'f'</li>
+<li>[ ] Type <code>@g</code> → Shows <code>@git</code> provider</li>
+<li>[ ] Type <code>@t</code> → Shows <code>@tree</code> provider</li>
+<li>[ ] Type <code>@c</code> → Shows <code>@clipboard</code> provider</li>
+<li>[ ] Type <code>@u</code> → Shows <code>@url</code> provider</li>
+<li>[ ] Type <code>@http</code> → Shows URL suggestion or files matching "http"</li>
+<li>[ ] Tab completion works for each provider</li>
+<li>[ ] Autocomplete doesn't break file path completion</li>
+</ul>
+<h4 id="functional-tests">Functional Tests<a class="headerlink" href="#functional-tests" title="Permanent link">&para;</a></h4>
+<ul>
+<li>[ ] <code>@file</code> - Injects file content correctly</li>
+<li>[ ] <code>@git</code> - Shows git diff when typed manually</li>
+<li>[ ] <code>@tree</code> - Shows directory tree when typed manually</li>
+<li>[ ] <code>@clipboard</code> - Injects clipboard content (requires pyperclip)</li>
+<li>[ ] <code>@https://example.com</code> - Fetches URL content (requires httpx)</li>
+<li>[ ] Multiple providers in one message work (e.g., <code>@git @tree</code>)</li>
+<li>[ ] Context deduplication works (same content not injected twice)</li>
+<li>[ ] Size limits respected (100KB per file, 200KB total)</li>
+</ul>
+<h4 id="uihelp-tests">UI/Help Tests<a class="headerlink" href="#uihelp-tests" title="Permanent link">&para;</a></h4>
+<ul>
+<li>[ ] <code>/help</code> shows all 5 context providers</li>
+<li>[ ] Hint/status text mentions context providers</li>
+<li>[ ] Error messages for missing dependencies (clipboard, URL fetch)</li>
+</ul>
+<h3 id="integration-tests">Integration Tests<a class="headerlink" href="#integration-tests" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[ ] All clients produce identical behavior for same input</li>
+<li>[ ] Backend <code>context_injected</code> events emitted for all providers</li>
+<li>[ ] <code>/context show</code> command lists all injected contexts correctly</li>
+</ul>
+<hr />
+<h2 id="dependencies">Dependencies<a class="headerlink" href="#dependencies" title="Permanent link">&para;</a></h2>
+<h3 id="already-installed">Already Installed<a class="headerlink" href="#already-installed" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>httpx</code> - Required for <code>@url</code> (already in requirements)</li>
+<li><code>pyperclip</code> - Required for <code>@clipboard</code> (already in requirements)</li>
+</ul>
+<h3 id="platform-notes">Platform Notes<a class="headerlink" href="#platform-notes" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Clipboard (Linux):</strong> Requires <code>xclip</code> or <code>xsel</code> installed</li>
+<li><strong>Clipboard (macOS/Windows):</strong> Works out of the box with pyperclip</li>
+<li><strong>URL Fetching:</strong> Requires network access</li>
+</ul>
+<hr />
+<h2 id="documentation-updates">Documentation Updates<a class="headerlink" href="#documentation-updates" title="Permanent link">&para;</a></h2>
+<h3 id="files-to-update">Files to Update<a class="headerlink" href="#files-to-update" title="Permanent link">&para;</a></h3>
+<ol>
+<li><a href="../docs/CONTEXT-INJECTION.md">docs/CONTEXT-INJECTION.md</a></li>
+<li>Already documents all 5 providers correctly ✅</li>
+<li>
+<p>No changes needed</p>
+</li>
+<li>
+<p><a href="../README.md">README.md</a></p>
+</li>
+<li>Check if context providers are mentioned</li>
+<li>
+<p>Update examples if needed</p>
+</li>
+<li>
+<p><a href="../CLAUDE.md">CLAUDE.md</a></p>
+</li>
+<li>
+<p>Update v1.14.2 highlights to emphasize all clients now expose <code>@clipboard/@url</code></p>
+</li>
+<li>
+<p><a href="../CHANGELOG.md">CHANGELOG.md</a></p>
+</li>
+<li>Add v1.15.2 entry:
+     <div class="language-markdown highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="gu">## [1.15.2] - YYYY-MM-DD</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="gu">### Added</span>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="k">-</span><span class="w"> </span>Context injector feature parity: All clients now expose <span class="ni">@clipboard</span> and <span class="ni">@url</span> in autocomplete
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="k">-</span><span class="w"> </span>Rich TUI: Added <span class="ni">@git</span>, <span class="ni">@tree</span>, <span class="ni">@clipboard</span>, <span class="ni">@url</span> to autocomplete
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="k">-</span><span class="w"> </span>Textual TUI: Added <span class="ni">@git</span>, <span class="ni">@tree</span> to autocomplete
+</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="k">-</span><span class="w"> </span>VSCode/Web: Added <span class="ni">@clipboard</span>, <span class="ni">@url</span> to autocomplete and help text
+</span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>
+</span><span id="__span-10-8"><a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="gu">### Fixed</span>
+</span><span id="__span-10-9"><a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="k">-</span><span class="w"> </span>Inconsistent context provider discovery across clients
+</span></code></pre></div></li>
+</ol>
+<hr />
+<h2 id="estimated-effort">Estimated Effort<a class="headerlink" href="#estimated-effort" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Task</th>
+<th>Files</th>
+<th>Lines Changed</th>
+<th>Time</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Rich TUI autocomplete</td>
+<td>1</td>
+<td>~30</td>
+<td>30 min</td>
+</tr>
+<tr>
+<td>Rich TUI hints/comments</td>
+<td>1</td>
+<td>~3</td>
+<td>5 min</td>
+</tr>
+<tr>
+<td>Textual TUI providers</td>
+<td>1</td>
+<td>~2</td>
+<td>5 min</td>
+</tr>
+<tr>
+<td>VSCode autocomplete</td>
+<td>1</td>
+<td>~5</td>
+<td>10 min</td>
+</tr>
+<tr>
+<td>VSCode help text</td>
+<td>1</td>
+<td>~3</td>
+<td>5 min</td>
+</tr>
+<tr>
+<td>Web autocomplete</td>
+<td>1</td>
+<td>~8</td>
+<td>10 min</td>
+</tr>
+<tr>
+<td>Web help text</td>
+<td>1</td>
+<td>~3</td>
+<td>5 min</td>
+</tr>
+<tr>
+<td>Testing (all clients)</td>
+<td>-</td>
+<td>-</td>
+<td>60 min</td>
+</tr>
+<tr>
+<td>Documentation</td>
+<td>2-3</td>
+<td>~10</td>
+<td>15 min</td>
+</tr>
+<tr>
+<td><strong>Total</strong></td>
+<td><strong>~8 files</strong></td>
+<td><strong>~64 lines</strong></td>
+<td><strong>~2.5 hours</strong></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="success-criteria">Success Criteria<a class="headerlink" href="#success-criteria" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[ ] All 4 clients show identical autocomplete for <code>@</code> (5 providers + files)</li>
+<li>[ ] All help texts mention all 5 context providers</li>
+<li>[ ] All functional tests pass for all providers in all clients</li>
+<li>[ ] Documentation updated (CHANGELOG, CLAUDE.md if needed)</li>
+<li>[ ] No regressions in existing <code>@file</code> functionality</li>
+<li>[ ] Code comments accurate (no outdated provider lists)</li>
+</ul>
+<hr />
+<h2 id="notes">Notes<a class="headerlink" href="#notes" title="Permanent link">&para;</a></h2>
+<h3 id="why-this-matters">Why This Matters<a class="headerlink" href="#why-this-matters" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Discoverability:</strong> Users can't use features they don't know exist</li>
+<li><strong>Consistency:</strong> Same UX across all clients reduces confusion</li>
+<li><strong>Documentation:</strong> Help text matches implementation reality</li>
+</ul>
+<h3 id="design-decision-url-pattern">Design Decision: URL Pattern<a class="headerlink" href="#design-decision-url-pattern" title="Permanent link">&para;</a></h3>
+<p>The <code>@url</code> autocomplete suggestion is educational - users should type:
+- <code>@https://example.com</code> (actual syntax)
+- NOT <code>@url https://example.com</code> (would be clearer but changes existing behavior)</p>
+<p>Backend already handles URL pattern detection via regex: <code>r'@(https?://[^\s&lt;&gt;\"\']+)'</code></p>
+<h3 id="backward-compatibility">Backward Compatibility<a class="headerlink" href="#backward-compatibility" title="Permanent link">&para;</a></h3>
+<ul>
+<li>All changes are additive (new autocomplete entries)</li>
+<li>No breaking changes to existing behavior</li>
+<li>Users who type providers manually will see no difference</li>
+</ul>
+<hr />
+<h2 id="related-documents">Related Documents<a class="headerlink" href="#related-documents" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../docs/CONTEXT-INJECTION.md">docs/CONTEXT-INJECTION.md</a> - User-facing guide (already complete)</li>
+<li><a href="../docs/BOOTSTRAP_CONTEXT_GUIDE.md">docs/BOOTSTRAP_CONTEXT_GUIDE.md</a> - Bootstrap context (different feature)</li>
+<li><a href="../ppxai/engine/context.py">ppxai/engine/context.py</a> - Implementation reference</li>
+<li><a href="../CHANGELOG.md">CHANGELOG.md</a> - Release notes</li>
+</ul>
+<hr />
+<h2 id="implementation-order">Implementation Order<a class="headerlink" href="#implementation-order" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>Start with TUIs</strong> (quickest wins, most users)</li>
+<li>Rich TUI autocomplete + hints</li>
+<li>
+<p>Textual TUI providers list</p>
+</li>
+<li>
+<p><strong>Then Web/VSCode</strong> (shared users)</p>
+</li>
+<li>VSCode autocomplete + help</li>
+<li>
+<p>Web autocomplete + help</p>
+</li>
+<li>
+<p><strong>Test thoroughly</strong> (critical for UX)</p>
+</li>
+<li>Per-client functional tests</li>
+<li>
+<p>Cross-client consistency tests</p>
+</li>
+<li>
+<p><strong>Update docs</strong> (final step)</p>
+</li>
+<li>CHANGELOG entry</li>
+<li>CLAUDE.md if needed</li>
+</ol>
+<hr />
+<p><strong>Ready to implement:</strong> All changes are small, isolated, and low-risk. No architectural changes needed - engine already supports everything.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/rcconsult/ppxai" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

@@ -1,0 +1,2963 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Multi-LLM Interface for Developers - Terminal & VSCode">
+      
+      
+      
+        <link rel="canonical" href="https://rcconsult.github.io/ppxai/1.18.6/AGENT_MODE_GUIDE/">
+      
+      
+        <link rel="prev" href="../PROVIDER_SETUP/">
+      
+      
+        <link rel="next" href="../BOOTSTRAP_CONTEXT_GUIDE/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Agent Mode - ppxai Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#agent-mode-user-guide" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="ppxai Documentation" class="md-header__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ppxai Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Agent Mode
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="ppxai Documentation" class="md-nav__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ppxai Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../INSTALLATION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../PROVIDER_SETUP/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provider Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agent Mode
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agent Mode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#table-of-contents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Table of Contents
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Overview">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#how-it-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How It Works
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#comparison-turn-based-vs-agent-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Comparison: Turn-Based vs Agent Mode
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#getting-started" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Getting Started
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Getting Started">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prerequisites" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prerequisites
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#quick-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick Start
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#your-first-agent-task" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Your First Agent Task
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#commands-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Commands Reference
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Commands Reference">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#agent-task-run-autonomous-task" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        /agent &lt;task&gt; - Run Autonomous Task
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tools-agent-manage-agent-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        /tools agent - Manage Agent Mode
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#context-providers-with-agent-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Context Providers with Agent Mode
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#research-workflows" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Research Workflows
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Research Workflows">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#codebase-analysis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Codebase Analysis
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#code-review-workflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Code Review Workflow
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#documentation-research" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Documentation Research
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#development-workflows" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Development Workflows
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Development Workflows">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#bug-fixing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bug Fixing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#feature-implementation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Feature Implementation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#refactoring" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Refactoring
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#test-development" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Test Development
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#vscode-extension" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        VSCode Extension
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="VSCode Extension">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#agent-toggle-button" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Agent Toggle Button
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#using-agent-mode-in-vscode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using Agent Mode in VSCode
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#http-api-endpoints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        HTTP API Endpoints
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#best-practices" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Best Practices
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Best Practices">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#writing-effective-tasks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Writing Effective Tasks
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#managing-consent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Managing Consent
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#handling-interrupts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Handling Interrupts
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#iteration-limits" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Iteration Limits
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#bootstrap-context-for-agents-v1140" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bootstrap Context for Agents (v1.14.0)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#configuration-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration Options
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why-these-settings-exist" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why These Settings Exist
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#shell-command-safety" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shell Command Safety
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Troubleshooting
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Troubleshooting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#agent-not-starting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Agent Not Starting
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agent-gets-stuck" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Agent Gets Stuck
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#consent-prompts-interrupting-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consent Prompts Interrupting Flow
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#max-iterations-reached" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Max Iterations Reached
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tool-errors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tool Errors
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#examples-complete-workflows" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Examples: Complete Workflows
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Examples: Complete Workflows">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#example-1-debug-and-fix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example 1: Debug and Fix
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-2-code-review" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example 2: Code Review
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-3-feature-implementation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example 3: Feature Implementation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#related-documentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Related Documentation
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../BOOTSTRAP_CONTEXT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bootstrap Context
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CONTEXT-INJECTION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Context Injection
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CHECKPOINT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Checkpoint & Undo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../FILE_EDITING_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    File Editing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../SHELL_CONSENT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shell Consent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CUSTOM_TOOL_DEVELOPMENT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CUSTOM_COMMAND_DEVELOPMENT_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ARCHITECTURE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ollama-limitations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ollama Limitations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vllm-tool-calling-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    vLLM Tool Calling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CONTAINER_TOOLS_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Container Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../AUTOROUTER-CONFIG/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autorouter Config
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release Notes
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Release Notes
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../RELEASE-NOTES-v1.16.1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../RELEASE-NOTES-v1.16.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../RELEASE-NOTES-v1.15.6/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.15.6
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#table-of-contents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Table of Contents
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Overview">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#how-it-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How It Works
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#comparison-turn-based-vs-agent-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Comparison: Turn-Based vs Agent Mode
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#getting-started" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Getting Started
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Getting Started">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prerequisites" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prerequisites
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#quick-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick Start
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#your-first-agent-task" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Your First Agent Task
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#commands-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Commands Reference
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Commands Reference">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#agent-task-run-autonomous-task" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        /agent &lt;task&gt; - Run Autonomous Task
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tools-agent-manage-agent-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        /tools agent - Manage Agent Mode
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#context-providers-with-agent-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Context Providers with Agent Mode
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#research-workflows" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Research Workflows
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Research Workflows">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#codebase-analysis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Codebase Analysis
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#code-review-workflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Code Review Workflow
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#documentation-research" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Documentation Research
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#development-workflows" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Development Workflows
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Development Workflows">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#bug-fixing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bug Fixing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#feature-implementation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Feature Implementation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#refactoring" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Refactoring
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#test-development" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Test Development
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#vscode-extension" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        VSCode Extension
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="VSCode Extension">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#agent-toggle-button" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Agent Toggle Button
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#using-agent-mode-in-vscode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using Agent Mode in VSCode
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#http-api-endpoints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        HTTP API Endpoints
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#best-practices" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Best Practices
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Best Practices">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#writing-effective-tasks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Writing Effective Tasks
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#managing-consent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Managing Consent
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#handling-interrupts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Handling Interrupts
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#iteration-limits" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Iteration Limits
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#bootstrap-context-for-agents-v1140" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bootstrap Context for Agents (v1.14.0)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#configuration-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration Options
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why-these-settings-exist" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why These Settings Exist
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#shell-command-safety" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shell Command Safety
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Troubleshooting
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Troubleshooting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#agent-not-starting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Agent Not Starting
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agent-gets-stuck" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Agent Gets Stuck
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#consent-prompts-interrupting-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consent Prompts Interrupting Flow
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#max-iterations-reached" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Max Iterations Reached
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tool-errors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tool Errors
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#examples-complete-workflows" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Examples: Complete Workflows
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Examples: Complete Workflows">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#example-1-debug-and-fix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example 1: Debug and Fix
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-2-code-review" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example 2: Code Review
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-3-feature-implementation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example 3: Feature Implementation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#related-documentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Related Documentation
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="agent-mode-user-guide">Agent Mode User Guide<a class="headerlink" href="#agent-mode-user-guide" title="Permanent link">&para;</a></h1>
+<p><strong>Version</strong>: v1.14.2+
+<strong>Status</strong>: Production Ready</p>
+<p>This guide explains how to use autonomous agent mode for multi-step task execution. Agent mode works with both <strong>ppxai</strong> (Rich TUI) and <strong>ppxaide</strong> (Textual TUI).</p>
+<hr />
+<h2 id="table-of-contents">Table of Contents<a class="headerlink" href="#table-of-contents" title="Permanent link">&para;</a></h2>
+<ol>
+<li><a href="#overview">Overview</a></li>
+<li><a href="#getting-started">Getting Started</a></li>
+<li><a href="#commands-reference">Commands Reference</a></li>
+<li><a href="#research-workflows">Research Workflows</a></li>
+<li><a href="#development-workflows">Development Workflows</a></li>
+<li><a href="#vscode-extension">VSCode Extension</a></li>
+<li><a href="#best-practices">Best Practices</a></li>
+<li><a href="#troubleshooting">Troubleshooting</a></li>
+</ol>
+<hr />
+<h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
+<p>Agent mode transforms the TUI from a turn-based chat assistant into an autonomous developer agent. Instead of requiring manual direction for each step, the agent can:</p>
+<ul>
+<li><strong>Plan</strong> - Analyze tasks and create execution strategies</li>
+<li><strong>Execute</strong> - Use tools to read, edit files, and run commands</li>
+<li><strong>Verify</strong> - Check results and iterate until complete</li>
+<li><strong>Report</strong> - Summarize what was accomplished</li>
+</ul>
+<h3 id="how-it-works">How It Works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h3>
+<p><img alt="Agent Flow Diagram" src="../archive/future-agentic-flow.png" /></p>
+<ol>
+<li>You issue an <code>/agent &lt;task&gt;</code> command</li>
+<li>The agent enters an autonomous loop (max 10 iterations by default)</li>
+<li>Each iteration: Plan → Execute tools → Check completion</li>
+<li>Loop continues until:</li>
+<li>AI signals <code>TASK_COMPLETE:</code> (success)</li>
+<li>Max iterations reached (configurable, default: 10)</li>
+<li>User interrupts with Ctrl-C</li>
+</ol>
+<h3 id="comparison-turn-based-vs-agent-mode">Comparison: Turn-Based vs Agent Mode<a class="headerlink" href="#comparison-turn-based-vs-agent-mode" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Aspect</th>
+<th>Turn-Based (Default)</th>
+<th>Agent Mode</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>User involvement</td>
+<td>Every step</td>
+<td>Initial task only</td>
+</tr>
+<tr>
+<td>Tool calls</td>
+<td>Single per turn</td>
+<td>Multiple per iteration</td>
+</tr>
+<tr>
+<td>Iterations</td>
+<td>Manual</td>
+<td>Automatic (up to 10)</td>
+</tr>
+<tr>
+<td>Best for</td>
+<td>Simple queries</td>
+<td>Multi-step tasks</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="getting-started">Getting Started<a class="headerlink" href="#getting-started" title="Permanent link">&para;</a></h2>
+<h3 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Tools must be available (they are auto-enabled with agent mode)</li>
+<li>For file editing, you'll need to approve edits (consent system)</li>
+</ol>
+<h3 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Start ppxai (Rich TUI) or ppxaide (Textual TUI)</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>ppxai<span class="w">    </span><span class="c1"># or ppxaide</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># Enable agent mode (optional - auto-enabled when using /agent)</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>/tools<span class="w"> </span>agent<span class="w"> </span>on
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="c1"># Run an autonomous task</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>/agent<span class="w"> </span>Fix<span class="w"> </span>the<span class="w"> </span>failing<span class="w"> </span><span class="nb">test</span><span class="w"> </span><span class="k">in</span><span class="w"> </span>test_auth.py
+</span></code></pre></div>
+<h3 id="your-first-agent-task">Your First Agent Task<a class="headerlink" href="#your-first-agent-task" title="Permanent link">&para;</a></h3>
+<p>Try this simple task to see agent mode in action:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>/agent<span class="w"> </span>Create<span class="w"> </span>a<span class="w"> </span>hello.py<span class="w"> </span>file<span class="w"> </span>that<span class="w"> </span>prints<span class="w"> </span><span class="s2">&quot;Hello, Agent Mode!&quot;</span>
+</span></code></pre></div>
+<p>The agent will:
+1. Analyze the task
+2. Use <code>insert_text</code> tool to create the file
+3. Signal completion with a summary</p>
+<hr />
+<h2 id="commands-reference">Commands Reference<a class="headerlink" href="#commands-reference" title="Permanent link">&para;</a></h2>
+<h3 id="agent-task-run-autonomous-task"><code>/agent &lt;task&gt;</code> - Run Autonomous Task<a class="headerlink" href="#agent-task-run-autonomous-task" title="Permanent link">&para;</a></h3>
+<p>The main command for agent mode. Runs an autonomous loop until the task is complete.</p>
+<p><strong>Syntax:</strong>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>/agent<span class="w"> </span>&lt;task<span class="w"> </span>description&gt;
+</span></code></pre></div></p>
+<p><strong>Examples:</strong>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Simple file creation</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>/agent<span class="w"> </span>Create<span class="w"> </span>a<span class="w"> </span>Python<span class="w"> </span>script<span class="w"> </span>that<span class="w"> </span>calculates<span class="w"> </span>fibonacci<span class="w"> </span>numbers
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="c1"># Bug fixing</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>/agent<span class="w"> </span>Fix<span class="w"> </span>the<span class="w"> </span>TypeError<span class="w"> </span><span class="k">in</span><span class="w"> </span>utils.py<span class="w"> </span>line<span class="w"> </span><span class="m">42</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="c1"># Code review with context</span>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>/agent<span class="w"> </span>Review<span class="w"> </span>@git<span class="w"> </span>changes<span class="w"> </span>and<span class="w"> </span>fix<span class="w"> </span>any<span class="w"> </span>issues
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="c1"># Refactoring with structure awareness</span>
+</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>/agent<span class="w"> </span>Reorganize<span class="w"> </span>the<span class="w"> </span>API<span class="w"> </span>module<span class="w"> </span>based<span class="w"> </span>on<span class="w"> </span>@tree
+</span></code></pre></div></p>
+<p><strong>Interrupt:</strong> Press <code>Ctrl-C</code> at any time to stop the agent loop.</p>
+<h3 id="tools-agent-manage-agent-mode"><code>/tools agent</code> - Manage Agent Mode<a class="headerlink" href="#tools-agent-manage-agent-mode" title="Permanent link">&para;</a></h3>
+<p>Enable, disable, or check agent mode status.</p>
+<p><strong>Syntax:</strong>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>/tools<span class="w"> </span>agent<span class="w">          </span><span class="c1"># Show current status</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>/tools<span class="w"> </span>agent<span class="w"> </span>on<span class="w">       </span><span class="c1"># Enable agent mode</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>/tools<span class="w"> </span>agent<span class="w"> </span>off<span class="w">      </span><span class="c1"># Disable agent mode</span>
+</span></code></pre></div></p>
+<p><strong>Notes:</strong>
+- Enabling agent mode automatically enables tools
+- Agent mode is session-scoped (resets on restart)</p>
+<h3 id="context-providers-with-agent-mode">Context Providers with Agent Mode<a class="headerlink" href="#context-providers-with-agent-mode" title="Permanent link">&para;</a></h3>
+<p>Agent mode works seamlessly with context providers:</p>
+<table>
+<thead>
+<tr>
+<th>Provider</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>@file</code></td>
+<td>Include file contents</td>
+<td><code>/agent Refactor @auth.py</code></td>
+</tr>
+<tr>
+<td><code>@git</code></td>
+<td>Include git diff</td>
+<td><code>/agent Review @git and fix issues</code></td>
+</tr>
+<tr>
+<td><code>@tree</code></td>
+<td>Include project structure</td>
+<td><code>/agent Suggest improvements for @tree</code></td>
+</tr>
+<tr>
+<td><code>@clipboard</code></td>
+<td>Include clipboard text (v1.14.2+)</td>
+<td><code>/agent Debug this error @clipboard</code></td>
+</tr>
+<tr>
+<td><code>@url</code></td>
+<td>Fetch web content (v1.14.2+)</td>
+<td><code>/agent Summarize @https://docs.example.com</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Combined usage:</strong>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>/agent<span class="w"> </span>Review<span class="w"> </span>my<span class="w"> </span>changes<span class="w"> </span>@git<span class="w"> </span><span class="k">in</span><span class="w"> </span>the<span class="w"> </span>context<span class="w"> </span>of<span class="w"> </span>@tree<span class="w"> </span>and<span class="w"> </span>fix<span class="w"> </span>any<span class="w"> </span>bugs
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="c1"># Debug an error from clipboard</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>/agent<span class="w"> </span>Analyze<span class="w"> </span>this<span class="w"> </span>stack<span class="w"> </span>trace<span class="w"> </span>@clipboard<span class="w"> </span>and<span class="w"> </span>suggest<span class="w"> </span>fixes
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="c1"># Implement based on documentation</span>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>/agent<span class="w"> </span>Implement<span class="w"> </span>the<span class="w"> </span>API<span class="w"> </span>from<span class="w"> </span>@https://api.example.com/spec.json
+</span></code></pre></div></p>
+<hr />
+<h2 id="research-workflows">Research Workflows<a class="headerlink" href="#research-workflows" title="Permanent link">&para;</a></h2>
+<p>Agent mode excels at research and analysis tasks that require multiple steps.</p>
+<h3 id="codebase-analysis">Codebase Analysis<a class="headerlink" href="#codebase-analysis" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Find and explain a pattern</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>/agent<span class="w"> </span>Find<span class="w"> </span>all<span class="w"> </span>uses<span class="w"> </span>of<span class="w"> </span>the<span class="w"> </span>Observer<span class="w"> </span>pattern<span class="w"> </span><span class="k">in</span><span class="w"> </span>this<span class="w"> </span>codebase<span class="w"> </span>and<span class="w"> </span>explain<span class="w"> </span>how<span class="w"> </span>they<span class="w"> </span>work
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="c1"># Security audit</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>/agent<span class="w"> </span>Analyze<span class="w"> </span>@tree<span class="w"> </span><span class="k">for</span><span class="w"> </span>potential<span class="w"> </span>security<span class="w"> </span>issues<span class="w"> </span>and<span class="w"> </span>list<span class="w"> </span>them
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="c1"># Dependency analysis</span>
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>/agent<span class="w"> </span>Review<span class="w"> </span>the<span class="w"> </span>imports<span class="w"> </span><span class="k">in</span><span class="w"> </span>@main.py<span class="w"> </span>and<span class="w"> </span>identify<span class="w"> </span>any<span class="w"> </span>unused<span class="w"> </span>or<span class="w"> </span>deprecated<span class="w"> </span>dependencies
+</span></code></pre></div>
+<h3 id="code-review-workflow">Code Review Workflow<a class="headerlink" href="#code-review-workflow" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># Review staged changes</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>/agent<span class="w"> </span>Review<span class="w"> </span>@git<span class="w"> </span>changes<span class="w"> </span><span class="k">for</span><span class="w"> </span>bugs,<span class="w"> </span>security<span class="w"> </span>issues,<span class="w"> </span>and<span class="w"> </span>style<span class="w"> </span>problems
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="c1"># Compare with design doc</span>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>/agent<span class="w"> </span>Compare<span class="w"> </span>my<span class="w"> </span>implementation<span class="w"> </span>@git<span class="w"> </span>against<span class="w"> </span>the<span class="w"> </span>spec<span class="w"> </span><span class="k">in</span><span class="w"> </span>DESIGN.md
+</span></code></pre></div>
+<h3 id="documentation-research">Documentation Research<a class="headerlink" href="#documentation-research" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># Generate documentation</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>/agent<span class="w"> </span>Read<span class="w"> </span>@utils.py<span class="w"> </span>and<span class="w"> </span>generate<span class="w"> </span>comprehensive<span class="w"> </span>docstrings<span class="w"> </span><span class="k">for</span><span class="w"> </span>all<span class="w"> </span>functions
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="c1"># Update outdated docs</span>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>/agent<span class="w"> </span>Compare<span class="w"> </span>@README.md<span class="w"> </span>with<span class="w"> </span>the<span class="w"> </span>current<span class="w"> </span>@tree<span class="w"> </span>structure<span class="w"> </span>and<span class="w"> </span>update<span class="w"> </span>outdated<span class="w"> </span>sections
+</span></code></pre></div>
+<hr />
+<h2 id="development-workflows">Development Workflows<a class="headerlink" href="#development-workflows" title="Permanent link">&para;</a></h2>
+<p>Agent mode is powerful for development tasks that span multiple files.</p>
+<h3 id="bug-fixing">Bug Fixing<a class="headerlink" href="#bug-fixing" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># Single file fix</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>/agent<span class="w"> </span>Fix<span class="w"> </span>the<span class="w"> </span>failing<span class="w"> </span><span class="nb">test</span><span class="w"> </span><span class="k">in</span><span class="w"> </span>test_auth.py
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="c1"># Multi-file fix</span>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>/agent<span class="w"> </span>The<span class="w"> </span>login<span class="w"> </span>fails<span class="w"> </span>with<span class="w"> </span><span class="m">401</span><span class="w"> </span>-<span class="w"> </span>find<span class="w"> </span>the<span class="w"> </span>cause<span class="w"> </span><span class="k">in</span><span class="w"> </span>auth.py<span class="w"> </span>and<span class="w"> </span>fix<span class="w"> </span>it
+</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>
+</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="c1"># With test verification</span>
+</span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a>/agent<span class="w"> </span>Fix<span class="w"> </span>the<span class="w"> </span>bug<span class="w"> </span><span class="k">in</span><span class="w"> </span>parser.py<span class="w"> </span>and<span class="w"> </span>verify<span class="w"> </span>the<span class="w"> </span>tests<span class="w"> </span>pass
+</span></code></pre></div>
+<h3 id="feature-implementation">Feature Implementation<a class="headerlink" href="#feature-implementation" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># Simple feature</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>/agent<span class="w"> </span>Add<span class="w"> </span>a<span class="w"> </span>--verbose<span class="w"> </span>flag<span class="w"> </span>to<span class="w"> </span>the<span class="w"> </span>CLI
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="c1"># Multi-step feature</span>
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>/agent<span class="w"> </span>Implement<span class="w"> </span>user<span class="w"> </span>session<span class="w"> </span>management<span class="w"> </span>with<span class="w"> </span>tests
+</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>
+</span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="c1"># With context</span>
+</span><span id="__span-10-8"><a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>/agent<span class="w"> </span>Based<span class="w"> </span>on<span class="w"> </span>@tree,<span class="w"> </span>add<span class="w"> </span>a<span class="w"> </span>caching<span class="w"> </span>layer<span class="w"> </span><span class="k">in</span><span class="w"> </span>the<span class="w"> </span>appropriate<span class="w"> </span>location
+</span></code></pre></div>
+<h3 id="refactoring">Refactoring<a class="headerlink" href="#refactoring" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1"># Rename across files</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>/agent<span class="w"> </span>Rename<span class="w"> </span>the<span class="w"> </span>class<span class="w"> </span><span class="s1">&#39;OldName&#39;</span><span class="w"> </span>to<span class="w"> </span><span class="s1">&#39;NewName&#39;</span><span class="w"> </span><span class="k">in</span><span class="w"> </span>all<span class="w"> </span>files
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>
+</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="c1"># Extract function</span>
+</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>/agent<span class="w"> </span>Extract<span class="w"> </span>the<span class="w"> </span>validation<span class="w"> </span>logic<span class="w"> </span>from<span class="w"> </span>auth.py<span class="w"> </span>into<span class="w"> </span>a<span class="w"> </span>separate<span class="w"> </span>validator.py
+</span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>
+</span><span id="__span-11-7"><a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="c1"># Restructure</span>
+</span><span id="__span-11-8"><a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a>/agent<span class="w"> </span>Based<span class="w"> </span>on<span class="w"> </span>@tree,<span class="w"> </span>move<span class="w"> </span>utility<span class="w"> </span>functions<span class="w"> </span>from<span class="w"> </span>main.py<span class="w"> </span>to<span class="w"> </span>utils.py
+</span></code></pre></div>
+<h3 id="test-development">Test Development<a class="headerlink" href="#test-development" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="c1"># Generate tests</span>
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>/agent<span class="w"> </span>Generate<span class="w"> </span>unit<span class="w"> </span>tests<span class="w"> </span><span class="k">for</span><span class="w"> </span>@calculator.py
+</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>
+</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="c1"># Fix failing tests</span>
+</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>/agent<span class="w"> </span>Fix<span class="w"> </span>all<span class="w"> </span>failing<span class="w"> </span>tests<span class="w"> </span><span class="k">in</span><span class="w"> </span>tests/test_api.py
+</span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>
+</span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="c1"># Add test coverage</span>
+</span><span id="__span-12-8"><a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>/agent<span class="w"> </span>Add<span class="w"> </span>edge<span class="w"> </span><span class="k">case</span><span class="w"> </span>tests<span class="w"> </span><span class="k">for</span><span class="w"> </span>the<span class="w"> </span>parse_date<span class="w"> </span><span class="k">function</span><span class="w"> </span><span class="k">in</span><span class="w"> </span>utils.py
+</span></code></pre></div>
+<hr />
+<h2 id="vscode-extension">VSCode Extension<a class="headerlink" href="#vscode-extension" title="Permanent link">&para;</a></h2>
+<p>The VSCode extension provides a graphical interface for agent mode.</p>
+<h3 id="agent-toggle-button">Agent Toggle Button<a class="headerlink" href="#agent-toggle-button" title="Permanent link">&para;</a></h3>
+<p>In the ppxai chat panel, you'll see an <strong>Agent</strong> button next to the <strong>Tools</strong> button:</p>
+<ul>
+<li><strong>Gray (OFF)</strong>: Agent mode disabled</li>
+<li><strong>Purple (ON)</strong>: Agent mode enabled</li>
+</ul>
+<p>Click to toggle. When enabled, tools are automatically enabled.</p>
+<h3 id="using-agent-mode-in-vscode">Using Agent Mode in VSCode<a class="headerlink" href="#using-agent-mode-in-vscode" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Click the <strong>Agent</strong> button to enable agent mode</li>
+<li>Type your task in the chat input</li>
+<li>The agent will execute autonomously</li>
+<li>Watch the streaming output for progress</li>
+<li>Use Esc or the stop button to interrupt</li>
+</ol>
+<h3 id="http-api-endpoints">HTTP API Endpoints<a class="headerlink" href="#http-api-endpoints" title="Permanent link">&para;</a></h3>
+<p>If using the HTTP server directly:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="c1"># Check status</span>
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>curl<span class="w"> </span>http://127.0.0.1:54320/agent/status
+</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>
+</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="c1"># Enable</span>
+</span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>http://127.0.0.1:54320/agent/enable
+</span><span id="__span-13-6"><a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>
+</span><span id="__span-13-7"><a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a><span class="c1"># Disable</span>
+</span><span id="__span-13-8"><a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>http://127.0.0.1:54320/agent/disable
+</span></code></pre></div>
+<hr />
+<h2 id="best-practices">Best Practices<a class="headerlink" href="#best-practices" title="Permanent link">&para;</a></h2>
+<h3 id="writing-effective-tasks">Writing Effective Tasks<a class="headerlink" href="#writing-effective-tasks" title="Permanent link">&para;</a></h3>
+<p><strong>Be specific:</strong>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c1"># Good - specific target and action</span>
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>/agent<span class="w"> </span>Fix<span class="w"> </span>the<span class="w"> </span>TypeError<span class="w"> </span>on<span class="w"> </span>line<span class="w"> </span><span class="m">42</span><span class="w"> </span>of<span class="w"> </span>utils.py
+</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>
+</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="c1"># Less effective - vague</span>
+</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>/agent<span class="w"> </span>Fix<span class="w"> </span>bugs
+</span></code></pre></div></p>
+<p><strong>Include context:</strong>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="c1"># Good - context provided</span>
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>/agent<span class="w"> </span>Review<span class="w"> </span>@git<span class="w"> </span>changes<span class="w"> </span><span class="k">for</span><span class="w"> </span>security<span class="w"> </span>issues<span class="w"> </span><span class="k">in</span><span class="w"> </span>the<span class="w"> </span>auth<span class="w"> </span>module
+</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>
+</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="c1"># Less effective - missing context</span>
+</span><span id="__span-15-5"><a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a>/agent<span class="w"> </span>Check<span class="w"> </span><span class="k">for</span><span class="w"> </span>security<span class="w"> </span>issues
+</span></code></pre></div></p>
+<p><strong>Define success criteria:</strong>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="c1"># Good - clear completion criteria</span>
+</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>/agent<span class="w"> </span>Implement<span class="w"> </span>user<span class="w"> </span>validation<span class="w"> </span>and<span class="w"> </span>ensure<span class="w"> </span>all<span class="w"> </span>tests<span class="w"> </span>pass
+</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>
+</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="c1"># Less effective - unclear when done</span>
+</span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a>/agent<span class="w"> </span>Add<span class="w"> </span>validation
+</span></code></pre></div></p>
+<h3 id="managing-consent">Managing Consent<a class="headerlink" href="#managing-consent" title="Permanent link">&para;</a></h3>
+<p>The agent requires consent for file edits:</p>
+<table>
+<thead>
+<tr>
+<th>Response</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>y</code> (yes)</td>
+<td>Allow this specific file edit</td>
+</tr>
+<tr>
+<td><code>n</code> (no)</td>
+<td>Deny this edit</td>
+</tr>
+<tr>
+<td><code>always</code></td>
+<td>Allow all edits this session (autonomous mode)</td>
+</tr>
+<tr>
+<td><code>never</code></td>
+<td>Block all edits this session</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Tip:</strong> For fully autonomous execution, respond <code>always</code> to the first consent prompt.</p>
+<h3 id="handling-interrupts">Handling Interrupts<a class="headerlink" href="#handling-interrupts" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Ctrl-C (once)</strong>: Gracefully stops the current iteration</li>
+<li><strong>Ctrl-C (twice within 2s)</strong>: Force stops immediately</li>
+</ul>
+<p>After interrupting, the agent will summarize progress made.</p>
+<h3 id="iteration-limits">Iteration Limits<a class="headerlink" href="#iteration-limits" title="Permanent link">&para;</a></h3>
+<p>The default max is 10 iterations (configurable via <code>tools.agent.max_iterations</code>). If your task needs more:</p>
+<ol>
+<li>Let the agent complete its iterations</li>
+<li>Review the output</li>
+<li>Run <code>/agent continue</code> or issue a follow-up task</li>
+</ol>
+<hr />
+<h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
+<p>Agent mode behavior can be customized in <code>ppxai-config.json</code>:</p>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="p">{</span>
+</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="w">  </span><span class="nt">&quot;tools&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="w">    </span><span class="nt">&quot;agent&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="w">      </span><span class="nt">&quot;max_iterations&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span>
+</span><span id="__span-17-5"><a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a><span class="w">      </span><span class="nt">&quot;context_char_limit&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2000</span><span class="p">,</span>
+</span><span id="__span-17-6"><a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a><span class="w">      </span><span class="nt">&quot;min_task_words&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span>
+</span><span id="__span-17-7"><a id="__codelineno-17-7" name="__codelineno-17-7" href="#__codelineno-17-7"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-17-8"><a id="__codelineno-17-8" name="__codelineno-17-8" href="#__codelineno-17-8"></a><span class="w">  </span><span class="p">}</span>
+</span><span id="__span-17-9"><a id="__codelineno-17-9" name="__codelineno-17-9" href="#__codelineno-17-9"></a><span class="p">}</span>
+</span></code></pre></div>
+<h3 id="bootstrap-context-for-agents-v1140">Bootstrap Context for Agents (v1.14.0)<a class="headerlink" href="#bootstrap-context-for-agents-v1140" title="Permanent link">&para;</a></h3>
+<p>You can provide agent-specific guidance via <code>AGENTS.md</code> bootstrap files. This is especially useful for:
+- Guiding agent behavior based on provider/model capabilities
+- Setting project-specific coding standards
+- Improving small model performance with targeted hints</p>
+<p><strong>Example AGENTS.md for agent workflows:</strong></p>
+<div class="language-markdown highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>---
+</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>provider_hints:
+</span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a>  local:
+</span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="w">    </span><span class="k">-</span><span class="w"> </span>&quot;Complete tasks fully without stopping on empty responses.&quot;
+</span><span id="__span-18-5"><a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a><span class="w">    </span><span class="k">-</span><span class="w"> </span>&quot;Use tools proactively - don&#39;t ask for permission.&quot;
+</span><span id="__span-18-6"><a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a><span class="w">    </span><span class="k">-</span><span class="w"> </span>&quot;When editing files, make all changes in a single edit_file call.&quot;
+</span><span id="__span-18-7"><a id="__codelineno-18-7" name="__codelineno-18-7" href="#__codelineno-18-7"></a>  ollama:
+</span><span id="__span-18-8"><a id="__codelineno-18-8" name="__codelineno-18-8" href="#__codelineno-18-8"></a><span class="w">    </span><span class="k">-</span><span class="w"> </span>&quot;Keep responses concise - limited context window.&quot;
+</span><span id="__span-18-9"><a id="__codelineno-18-9" name="__codelineno-18-9" href="#__codelineno-18-9"></a><span class="w">    </span><span class="k">-</span><span class="w"> </span>&quot;Prefer smaller, focused tool calls over complex multi-step operations.&quot;
+</span><span id="__span-18-10"><a id="__codelineno-18-10" name="__codelineno-18-10" href="#__codelineno-18-10"></a>model_hints:
+</span><span id="__span-18-11"><a id="__codelineno-18-11" name="__codelineno-18-11" href="#__codelineno-18-11"></a>  &quot;qwen2.5-coder:3b&quot;:
+</span><span id="__span-18-12"><a id="__codelineno-18-12" name="__codelineno-18-12" href="#__codelineno-18-12"></a><span class="w">    </span><span class="k">-</span><span class="w"> </span>&quot;Focus on code quality and correctness.&quot;
+</span><span id="__span-18-13"><a id="__codelineno-18-13" name="__codelineno-18-13" href="#__codelineno-18-13"></a><span class="w">    </span><span class="k">-</span><span class="w"> </span>&quot;Use edit_file for surgical changes, write_file only for new files.&quot;
+</span><span id="__span-18-14"><a id="__codelineno-18-14" name="__codelineno-18-14" href="#__codelineno-18-14"></a>  &quot;deepseek-r1*&quot;:
+</span><span id="__span-18-15"><a id="__codelineno-18-15" name="__codelineno-18-15" href="#__codelineno-18-15"></a><span class="w">    </span><span class="k">-</span><span class="w"> </span>&quot;Show your reasoning process before taking actions.&quot;
+</span><span id="__span-18-16"><a id="__codelineno-18-16" name="__codelineno-18-16" href="#__codelineno-18-16"></a><span class="gu">    - &quot;Think step-by-step for complex problems.&quot;</span>
+</span><span id="__span-18-17"><a id="__codelineno-18-17" name="__codelineno-18-17" href="#__codelineno-18-17"></a><span class="gu">---</span>
+</span><span id="__span-18-18"><a id="__codelineno-18-18" name="__codelineno-18-18" href="#__codelineno-18-18"></a>
+</span><span id="__span-18-19"><a id="__codelineno-18-19" name="__codelineno-18-19" href="#__codelineno-18-19"></a><span class="gh"># Project: My App</span>
+</span><span id="__span-18-20"><a id="__codelineno-18-20" name="__codelineno-18-20" href="#__codelineno-18-20"></a>
+</span><span id="__span-18-21"><a id="__codelineno-18-21" name="__codelineno-18-21" href="#__codelineno-18-21"></a><span class="gu">## Agent Guidelines</span>
+</span><span id="__span-18-22"><a id="__codelineno-18-22" name="__codelineno-18-22" href="#__codelineno-18-22"></a><span class="k">-</span><span class="w"> </span>Run tests after making changes: <span class="sb">`pytest tests/ -v`</span>
+</span><span id="__span-18-23"><a id="__codelineno-18-23" name="__codelineno-18-23" href="#__codelineno-18-23"></a><span class="k">-</span><span class="w"> </span>Follow PEP 8 style guidelines
+</span><span id="__span-18-24"><a id="__codelineno-18-24" name="__codelineno-18-24" href="#__codelineno-18-24"></a><span class="k">-</span><span class="w"> </span>Add docstrings to new functions
+</span><span id="__span-18-25"><a id="__codelineno-18-25" name="__codelineno-18-25" href="#__codelineno-18-25"></a>
+</span><span id="__span-18-26"><a id="__codelineno-18-26" name="__codelineno-18-26" href="#__codelineno-18-26"></a><span class="gu">## Code Standards</span>
+</span><span id="__span-18-27"><a id="__codelineno-18-27" name="__codelineno-18-27" href="#__codelineno-18-27"></a><span class="k">-</span><span class="w"> </span>Python 3.11+, type hints required
+</span><span id="__span-18-28"><a id="__codelineno-18-28" name="__codelineno-18-28" href="#__codelineno-18-28"></a><span class="k">-</span><span class="w"> </span>Use dataclasses for data structures
+</span></code></pre></div>
+<p>Use <code>/context hints</code> to see which hints are active for your current provider/model.</p>
+<p>See <a href="../BOOTSTRAP_CONTEXT_GUIDE/">Bootstrap Context Guide</a> for full documentation.</p>
+<h3 id="configuration-options">Configuration Options<a class="headerlink" href="#configuration-options" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>max_iterations</code></td>
+<td>10</td>
+<td>Maximum autonomous loop iterations before stopping</td>
+</tr>
+<tr>
+<td><code>context_char_limit</code></td>
+<td>2000</td>
+<td>Character limit for context display in tool results</td>
+</tr>
+<tr>
+<td><code>min_task_words</code></td>
+<td>3</td>
+<td>Minimum word count required for agent tasks</td>
+</tr>
+</tbody>
+</table>
+<h3 id="why-these-settings-exist">Why These Settings Exist<a class="headerlink" href="#why-these-settings-exist" title="Permanent link">&para;</a></h3>
+<p><strong><code>max_iterations</code></strong>: Prevents runaway agent loops that could consume excessive API tokens or run indefinitely. The default of 10 balances giving the agent enough room to complete complex tasks while preventing infinite loops.</p>
+<ul>
+<li><strong>Lower values (3-5)</strong>: Safer for simple tasks, uses fewer tokens, faster completion</li>
+<li><strong>Higher values (15-20)</strong>: Allows complex multi-step tasks, but risks more API usage</li>
+<li><strong>Warning</strong>: Values above 20 may lead to excessive token consumption</li>
+</ul>
+<p><strong><code>context_char_limit</code></strong>: Controls how much context from tool results is shown in the UI and passed back to the AI. Higher limits provide more context for accurate decisions but increase token usage.</p>
+<ul>
+<li><strong>Lower values (500-1000)</strong>: Faster, cheaper, but may miss important details</li>
+<li><strong>Higher values (3000-5000)</strong>: Better context retention, but more expensive</li>
+<li><strong>Warning</strong>: Very high limits (&gt;5000) may cause context overflow in some models</li>
+</ul>
+<p><strong><code>min_task_words</code></strong>: Safety feature that rejects vague single-word tasks. This prevents accidental dangerous actions from ambiguous commands like <code>/agent on</code> or <code>/agent delete</code>.</p>
+<ul>
+<li><strong>Default (3)</strong>: Requires descriptive tasks like "Fix the bug in auth.py"</li>
+<li><strong>Lower values (1-2)</strong>: Less safe, allows vague tasks</li>
+<li><strong>Warning</strong>: Setting to 1 removes this safety check entirely</li>
+</ul>
+<h3 id="shell-command-safety">Shell Command Safety<a class="headerlink" href="#shell-command-safety" title="Permanent link">&para;</a></h3>
+<p>Agent mode includes built-in shell command safety patterns. These patterns are always active even without a config file:</p>
+<p><strong>Dangerous patterns (require consent):</strong>
+- <code>rm</code>, <code>mv</code>, <code>dd</code>, <code>chmod</code>, <code>chown</code>, <code>sudo</code>
+- <code>kill</code>, <code>pkill</code>, <code>killall</code>
+- <code>curl | bash</code>, <code>wget | bash</code></p>
+<p><strong>Never-allow patterns (always blocked):</strong>
+- <code>rm -rf /</code>, <code>dd of=/dev/</code>
+- Fork bombs and system-level destructive commands</p>
+<p>You can customize these in <code>ppxai-config.json</code>:</p>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="p">{</span>
+</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="w">  </span><span class="nt">&quot;tools&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a><span class="w">    </span><span class="nt">&quot;shell&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-19-4"><a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a><span class="w">      </span><span class="nt">&quot;safe_patterns&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;^ls\\s*&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;^cat\\s+&quot;</span><span class="p">],</span>
+</span><span id="__span-19-5"><a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a><span class="w">      </span><span class="nt">&quot;dangerous_patterns&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;^rm\\s+&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;^kill\\s+&quot;</span><span class="p">],</span>
+</span><span id="__span-19-6"><a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a><span class="w">      </span><span class="nt">&quot;never_allow_patterns&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;^rm\\s+-rf\\s+/&quot;</span><span class="p">]</span>
+</span><span id="__span-19-7"><a id="__codelineno-19-7" name="__codelineno-19-7" href="#__codelineno-19-7"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-19-8"><a id="__codelineno-19-8" name="__codelineno-19-8" href="#__codelineno-19-8"></a><span class="w">  </span><span class="p">}</span>
+</span><span id="__span-19-9"><a id="__codelineno-19-9" name="__codelineno-19-9" href="#__codelineno-19-9"></a><span class="p">}</span>
+</span></code></pre></div>
+<p>See <a href="../SHELL_CONSENT_GUIDE/">Shell Consent Guide</a> for complete documentation.</p>
+<hr />
+<h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
+<h3 id="agent-not-starting">Agent Not Starting<a class="headerlink" href="#agent-not-starting" title="Permanent link">&para;</a></h3>
+<p><strong>Problem:</strong> <code>/agent</code> command shows error</p>
+<p><strong>Solutions:</strong>
+1. Ensure engine client is available: Check if ppxai started correctly
+2. Try enabling tools manually: <code>/tools enable</code>
+3. Check provider supports tools: Not all providers have tool support</p>
+<h3 id="agent-gets-stuck">Agent Gets Stuck<a class="headerlink" href="#agent-gets-stuck" title="Permanent link">&para;</a></h3>
+<p><strong>Problem:</strong> Agent loops without making progress</p>
+<p><strong>Solutions:</strong>
+1. Interrupt with Ctrl-C
+2. Provide more specific instructions
+3. Break the task into smaller sub-tasks</p>
+<h3 id="consent-prompts-interrupting-flow">Consent Prompts Interrupting Flow<a class="headerlink" href="#consent-prompts-interrupting-flow" title="Permanent link">&para;</a></h3>
+<p><strong>Problem:</strong> Too many consent prompts</p>
+<p><strong>Solutions:</strong>
+1. Respond <code>always</code> to enable autonomous file editing
+2. Pre-approve directories in config (future feature)</p>
+<h3 id="max-iterations-reached">Max Iterations Reached<a class="headerlink" href="#max-iterations-reached" title="Permanent link">&para;</a></h3>
+<p><strong>Problem:</strong> Task incomplete after max iterations</p>
+<p><strong>Solutions:</strong>
+1. Review the agent's progress
+2. Run a follow-up <code>/agent</code> command with updated context
+3. Consider if the task should be split into smaller parts</p>
+<h3 id="tool-errors">Tool Errors<a class="headerlink" href="#tool-errors" title="Permanent link">&para;</a></h3>
+<p><strong>Problem:</strong> Agent reports tool execution failed</p>
+<p><strong>Solutions:</strong>
+1. Check file permissions
+2. Verify the target file exists
+3. Enable verbose mode: <code>/tools set verbose on</code></p>
+<hr />
+<h2 id="examples-complete-workflows">Examples: Complete Workflows<a class="headerlink" href="#examples-complete-workflows" title="Permanent link">&para;</a></h2>
+<h3 id="example-1-debug-and-fix">Example 1: Debug and Fix<a class="headerlink" href="#example-1-debug-and-fix" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="c1"># Start agent mode</span>
+</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>/tools<span class="w"> </span>agent<span class="w"> </span>on
+</span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a>
+</span><span id="__span-20-4"><a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a><span class="c1"># Run autonomous debugging</span>
+</span><span id="__span-20-5"><a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a>/agent<span class="w"> </span>The<span class="w"> </span>tests<span class="w"> </span><span class="k">in</span><span class="w"> </span>test_parser.py<span class="w"> </span>are<span class="w"> </span>failing.<span class="w"> </span>Find<span class="w"> </span>the<span class="w"> </span>bug<span class="w"> </span>and<span class="w"> </span>fix<span class="w"> </span>it.
+</span><span id="__span-20-6"><a id="__codelineno-20-6" name="__codelineno-20-6" href="#__codelineno-20-6"></a>
+</span><span id="__span-20-7"><a id="__codelineno-20-7" name="__codelineno-20-7" href="#__codelineno-20-7"></a><span class="c1"># Agent output:</span>
+</span><span id="__span-20-8"><a id="__codelineno-20-8" name="__codelineno-20-8" href="#__codelineno-20-8"></a><span class="c1"># ━━━ Iteration 1/5 ━━━</span>
+</span><span id="__span-20-9"><a id="__codelineno-20-9" name="__codelineno-20-9" href="#__codelineno-20-9"></a><span class="c1"># Analyzing test failures...</span>
+</span><span id="__span-20-10"><a id="__codelineno-20-10" name="__codelineno-20-10" href="#__codelineno-20-10"></a><span class="c1"># [Uses read_file to check test_parser.py]</span>
+</span><span id="__span-20-11"><a id="__codelineno-20-11" name="__codelineno-20-11" href="#__codelineno-20-11"></a><span class="c1"># Found assertion error on line 45...</span>
+</span><span id="__span-20-12"><a id="__codelineno-20-12" name="__codelineno-20-12" href="#__codelineno-20-12"></a><span class="c1">#</span>
+</span><span id="__span-20-13"><a id="__codelineno-20-13" name="__codelineno-20-13" href="#__codelineno-20-13"></a><span class="c1"># ━━━ Iteration 2/5 ━━━</span>
+</span><span id="__span-20-14"><a id="__codelineno-20-14" name="__codelineno-20-14" href="#__codelineno-20-14"></a><span class="c1"># Reading parser.py to find the bug...</span>
+</span><span id="__span-20-15"><a id="__codelineno-20-15" name="__codelineno-20-15" href="#__codelineno-20-15"></a><span class="c1"># [Uses read_file to check parser.py]</span>
+</span><span id="__span-20-16"><a id="__codelineno-20-16" name="__codelineno-20-16" href="#__codelineno-20-16"></a><span class="c1"># Found issue: off-by-one error on line 78...</span>
+</span><span id="__span-20-17"><a id="__codelineno-20-17" name="__codelineno-20-17" href="#__codelineno-20-17"></a><span class="c1">#</span>
+</span><span id="__span-20-18"><a id="__codelineno-20-18" name="__codelineno-20-18" href="#__codelineno-20-18"></a><span class="c1"># ━━━ Iteration 3/5 ━━━</span>
+</span><span id="__span-20-19"><a id="__codelineno-20-19" name="__codelineno-20-19" href="#__codelineno-20-19"></a><span class="c1"># Applying fix...</span>
+</span><span id="__span-20-20"><a id="__codelineno-20-20" name="__codelineno-20-20" href="#__codelineno-20-20"></a><span class="c1"># [Uses replace_block to fix parser.py]</span>
+</span><span id="__span-20-21"><a id="__codelineno-20-21" name="__codelineno-20-21" href="#__codelineno-20-21"></a><span class="c1"># [Uses execute_shell_command to run tests]</span>
+</span><span id="__span-20-22"><a id="__codelineno-20-22" name="__codelineno-20-22" href="#__codelineno-20-22"></a><span class="c1"># Tests pass!</span>
+</span><span id="__span-20-23"><a id="__codelineno-20-23" name="__codelineno-20-23" href="#__codelineno-20-23"></a><span class="c1">#</span>
+</span><span id="__span-20-24"><a id="__codelineno-20-24" name="__codelineno-20-24" href="#__codelineno-20-24"></a><span class="c1"># ✅ Task completed!</span>
+</span><span id="__span-20-25"><a id="__codelineno-20-25" name="__codelineno-20-25" href="#__codelineno-20-25"></a><span class="c1"># Summary: Fixed off-by-one error in parser.py line 78. All tests now pass.</span>
+</span></code></pre></div>
+<h3 id="example-2-code-review">Example 2: Code Review<a class="headerlink" href="#example-2-code-review" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="c1"># Review git changes</span>
+</span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a>/agent<span class="w"> </span>Review<span class="w"> </span>@git<span class="w"> </span>changes<span class="w"> </span><span class="k">for</span><span class="w"> </span>bugs<span class="w"> </span>and<span class="w"> </span>security<span class="w"> </span>issues
+</span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a>
+</span><span id="__span-21-4"><a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a><span class="c1"># Agent output:</span>
+</span><span id="__span-21-5"><a id="__codelineno-21-5" name="__codelineno-21-5" href="#__codelineno-21-5"></a><span class="c1"># ━━━ Iteration 1/5 ━━━</span>
+</span><span id="__span-21-6"><a id="__codelineno-21-6" name="__codelineno-21-6" href="#__codelineno-21-6"></a><span class="c1"># Analyzing git diff...</span>
+</span><span id="__span-21-7"><a id="__codelineno-21-7" name="__codelineno-21-7" href="#__codelineno-21-7"></a><span class="c1"># Found changes in: auth.py, api.py, utils.py</span>
+</span><span id="__span-21-8"><a id="__codelineno-21-8" name="__codelineno-21-8" href="#__codelineno-21-8"></a><span class="c1">#</span>
+</span><span id="__span-21-9"><a id="__codelineno-21-9" name="__codelineno-21-9" href="#__codelineno-21-9"></a><span class="c1"># Issues found:</span>
+</span><span id="__span-21-10"><a id="__codelineno-21-10" name="__codelineno-21-10" href="#__codelineno-21-10"></a><span class="c1"># 1. SQL injection risk in api.py line 42</span>
+</span><span id="__span-21-11"><a id="__codelineno-21-11" name="__codelineno-21-11" href="#__codelineno-21-11"></a><span class="c1"># 2. Hardcoded secret in auth.py line 15</span>
+</span><span id="__span-21-12"><a id="__codelineno-21-12" name="__codelineno-21-12" href="#__codelineno-21-12"></a><span class="c1"># 3. Missing input validation in utils.py</span>
+</span><span id="__span-21-13"><a id="__codelineno-21-13" name="__codelineno-21-13" href="#__codelineno-21-13"></a><span class="c1">#</span>
+</span><span id="__span-21-14"><a id="__codelineno-21-14" name="__codelineno-21-14" href="#__codelineno-21-14"></a><span class="c1"># ━━━ Iteration 2/5 ━━━</span>
+</span><span id="__span-21-15"><a id="__codelineno-21-15" name="__codelineno-21-15" href="#__codelineno-21-15"></a><span class="c1"># Fixing SQL injection...</span>
+</span><span id="__span-21-16"><a id="__codelineno-21-16" name="__codelineno-21-16" href="#__codelineno-21-16"></a><span class="c1"># [Uses replace_block to parameterize query]</span>
+</span><span id="__span-21-17"><a id="__codelineno-21-17" name="__codelineno-21-17" href="#__codelineno-21-17"></a><span class="c1">#</span>
+</span><span id="__span-21-18"><a id="__codelineno-21-18" name="__codelineno-21-18" href="#__codelineno-21-18"></a><span class="c1"># ━━━ Iteration 3/5 ━━━</span>
+</span><span id="__span-21-19"><a id="__codelineno-21-19" name="__codelineno-21-19" href="#__codelineno-21-19"></a><span class="c1"># Moving secret to environment variable...</span>
+</span><span id="__span-21-20"><a id="__codelineno-21-20" name="__codelineno-21-20" href="#__codelineno-21-20"></a><span class="c1"># [Uses replace_block in auth.py]</span>
+</span><span id="__span-21-21"><a id="__codelineno-21-21" name="__codelineno-21-21" href="#__codelineno-21-21"></a><span class="c1">#</span>
+</span><span id="__span-21-22"><a id="__codelineno-21-22" name="__codelineno-21-22" href="#__codelineno-21-22"></a><span class="c1"># ✅ Task completed!</span>
+</span><span id="__span-21-23"><a id="__codelineno-21-23" name="__codelineno-21-23" href="#__codelineno-21-23"></a><span class="c1"># Summary: Fixed 2 security issues. auth.py now uses env var, api.py uses parameterized queries.</span>
+</span></code></pre></div>
+<h3 id="example-3-feature-implementation">Example 3: Feature Implementation<a class="headerlink" href="#example-3-feature-implementation" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="c1"># Implement a feature</span>
+</span><span id="__span-22-2"><a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a>/agent<span class="w"> </span>Add<span class="w"> </span>a<span class="w"> </span>--dry-run<span class="w"> </span>flag<span class="w"> </span>to<span class="w"> </span>the<span class="w"> </span>CLI<span class="w"> </span>that<span class="w"> </span>shows<span class="w"> </span>what<span class="w"> </span>would<span class="w"> </span>happen<span class="w"> </span>without<span class="w"> </span>making<span class="w"> </span>changes
+</span><span id="__span-22-3"><a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a>
+</span><span id="__span-22-4"><a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a><span class="c1"># Agent iterates through:</span>
+</span><span id="__span-22-5"><a id="__codelineno-22-5" name="__codelineno-22-5" href="#__codelineno-22-5"></a><span class="c1"># 1. Reading CLI entry point</span>
+</span><span id="__span-22-6"><a id="__codelineno-22-6" name="__codelineno-22-6" href="#__codelineno-22-6"></a><span class="c1"># 2. Adding argument parser option</span>
+</span><span id="__span-22-7"><a id="__codelineno-22-7" name="__codelineno-22-7" href="#__codelineno-22-7"></a><span class="c1"># 3. Implementing dry-run logic</span>
+</span><span id="__span-22-8"><a id="__codelineno-22-8" name="__codelineno-22-8" href="#__codelineno-22-8"></a><span class="c1"># 4. Updating help text</span>
+</span><span id="__span-22-9"><a id="__codelineno-22-9" name="__codelineno-22-9" href="#__codelineno-22-9"></a><span class="c1"># 5. Testing the feature</span>
+</span><span id="__span-22-10"><a id="__codelineno-22-10" name="__codelineno-22-10" href="#__codelineno-22-10"></a><span class="c1">#</span>
+</span><span id="__span-22-11"><a id="__codelineno-22-11" name="__codelineno-22-11" href="#__codelineno-22-11"></a><span class="c1"># ✅ Task completed!</span>
+</span></code></pre></div>
+<hr />
+<h2 id="related-documentation">Related Documentation<a class="headerlink" href="#related-documentation" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../CHECKPOINT_GUIDE/">Checkpoint Guide</a> - Atomic rollback for agent tasks</li>
+<li><a href="../SHELL_CONSENT_GUIDE/">Shell Consent Guide</a> - Shell command security</li>
+<li><a href="../CUSTOM_TOOL_DEVELOPMENT_GUIDE/">Custom Tools Guide</a> - Creating custom tools</li>
+<li><a href="../archive/v1.15.1-completed/v1.11.0-agentic-workflow-plan/">Agentic Workflow Plan</a> - Technical implementation details</li>
+</ul>
+<hr />
+<p><strong>Last Updated:</strong> 2026-01-03
+<strong>Version:</strong> v1.13.0</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/rcconsult/ppxai" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
