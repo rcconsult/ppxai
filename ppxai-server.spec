@@ -118,13 +118,17 @@ a = Analysis(
         'google.auth.transport',
         'google.auth.transport.requests',
         'google.auth.crypt',
-        'google.auth.crypt._cryptography_rsa',
-        'cryptography',
-        'cryptography.hazmat',
-        'cryptography.hazmat.primitives',
-        'cryptography.hazmat.primitives.asymmetric',
-        'cryptography.hazmat.primitives.asymmetric.rsa',
-        'cryptography.hazmat.backends',
+        # NB: 'google.auth.crypt._cryptography_rsa' + 'cryptography.hazmat.*'
+        # used to be hiddenimports here for the google-auth service-account
+        # JWT verification path. Removed 2026-05-23: that path is unreachable
+        # in ppxai (the Gemini provider authenticates with an API key, not
+        # service-account credentials), and `cryptography` is not declared
+        # in the `gemini` extras in pyproject.toml. Listing them produced
+        # PyInstaller ERROR-level `Hidden import 'cryptography.hazmat.*'
+        # not found` log noise on every server build. If we ever wire up
+        # service-account auth, add `cryptography` to the `gemini` extras
+        # AND restore: google.auth.crypt._cryptography_rsa + cryptography +
+        # cryptography.hazmat{,.primitives{,.asymmetric{,.rsa}},.backends}.
         # websockets (required by google.genai live/streaming + uvicorn)
         'websockets',
         'websockets.asyncio',
