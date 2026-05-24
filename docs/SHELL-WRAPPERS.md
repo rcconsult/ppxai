@@ -196,7 +196,7 @@ by a wide margin but YMMV.
 
 ## Reference
 
-- v1.18.5 plan: [`docs/TODO-v1.18.5-shell-wrappers.md`](TODO-v1.18.5-shell-wrappers.md)
+- v1.18.5 plan: [`docs/archive/TODO-v1.18.5-shell-wrappers.md`](archive/TODO-v1.18.5-shell-wrappers.md)
 - ROADMAP entry: [`ROADMAP.md`](../ROADMAP.md) §"v1.18.5 - Shell wrapper framework"
 - rtk upstream: https://github.com/rtk-ai/rtk
 - Framework code: `ppxai/engine/tools/wrappers/`

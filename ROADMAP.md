@@ -739,7 +739,7 @@ ppxai/tui/                     # New module (Textual-based)
 
 Targeted cleanup pass between heartbeat P0 and the next feature
 workstream. Pays down architectural drift accumulated across v1.16.x
-/ v1.17.x. See [STABILIZATION-v1.18.0.md](docs/STABILIZATION-v1.18.0.md)
+/ v1.17.x. See [STABILIZATION-v1.18.0.md](docs/archive/STABILIZATION-v1.18.0.md)
 for the full pass summary.
 
 | Phase | Feature | Status |
@@ -843,7 +843,7 @@ behavior change." Detection caches at first call per process.
 cache) so future sub-agent worker threads don't race.
 
 **Net effort:** ~700 LoC including tests + docs. Detailed plan at
-[`docs/TODO-v1.18.5-shell-wrappers.md`](docs/TODO-v1.18.5-shell-wrappers.md).
+[`docs/archive/TODO-v1.18.5-shell-wrappers.md`](docs/archive/TODO-v1.18.5-shell-wrappers.md).
 User-facing reference at [`docs/SHELL-WRAPPERS.md`](docs/SHELL-WRAPPERS.md).
 
 **Settled design:**
