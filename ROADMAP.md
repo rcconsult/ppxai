@@ -506,7 +506,7 @@ ppxai/tui/                     # New module (Textual-based)
 
 **Status:** ✅ All items done, pre-release (pending merge)
 **Branch:** feature/benchmark-openai-models
-**Release Notes:** [docs/RELEASE-NOTES-v1.15.6.md](docs/RELEASE-NOTES-v1.15.6.md)
+**Release Notes:** [docs/archive/release-notes/RELEASE-NOTES-v1.15.6.md](docs/archive/release-notes/RELEASE-NOTES-v1.15.6.md)
 **Debug Sessions:** [docs/ARCHIVE-v1.15.6-debug-sessions.md](docs/archive/ARCHIVE-v1.15.6-debug-sessions.md)
 
 | Feature | Description | Status |
@@ -531,7 +531,7 @@ ppxai/tui/                     # New module (Textual-based)
 
 **Status:** ✅ Released (2026-02-26)
 **Branch:** feature/v1.16.0
-**Release Notes:** [docs/RELEASE-NOTES-v1.16.0.md](docs/RELEASE-NOTES-v1.16.0.md)
+**Release Notes:** [docs/archive/release-notes/RELEASE-NOTES-v1.16.0.md](docs/archive/release-notes/RELEASE-NOTES-v1.16.0.md)
 
 **Why major version bump:** Changes to `chat.py` tool loop affect every provider and every client.
 
@@ -570,7 +570,7 @@ ppxai/tui/                     # New module (Textual-based)
 
 **Status:** ✅ Complete (2026-03-01)
 **Branch:** feature/v1.16.1
-**Release Notes:** [docs/RELEASE-NOTES-v1.16.1.md](docs/RELEASE-NOTES-v1.16.1.md)
+**Release Notes:** [docs/archive/release-notes/RELEASE-NOTES-v1.16.1.md](docs/archive/release-notes/RELEASE-NOTES-v1.16.1.md)
 
 #### Gemini 3 Model Updates (Priority: High)
 
@@ -622,7 +622,7 @@ ppxai/tui/                     # New module (Textual-based)
 
 **Status:** ✅ Complete (2026-03-07)
 **Branch:** bugfix/1.16.2
-**Release Notes:** [docs/RELEASE-NOTES-v1.16.2.md](docs/RELEASE-NOTES-v1.16.2.md)
+**Release Notes:** [docs/archive/release-notes/RELEASE-NOTES-v1.16.2.md](docs/archive/release-notes/RELEASE-NOTES-v1.16.2.md)
 
 | Feature | Description | Status |
 |---------|-------------|--------|
@@ -646,7 +646,7 @@ ppxai/tui/                     # New module (Textual-based)
 ### v1.17.0 - Server + Config Modularization, K8s POC ✅
 
 **Status:** ✅ Complete (2026-03-15)
-**Release Notes:** [docs/RELEASE-NOTES-v1.17.0.md](docs/RELEASE-NOTES-v1.17.0.md)
+**Release Notes:** [docs/archive/release-notes/RELEASE-NOTES-v1.17.0.md](docs/archive/release-notes/RELEASE-NOTES-v1.17.0.md)
 
 | Feature | Description | Status |
 |---------|-------------|--------|
@@ -663,7 +663,7 @@ ppxai/tui/                     # New module (Textual-based)
 ### v1.17.1 - AppState Wiring + EngineClient Decomposition ✅
 
 **Status:** ✅ Complete (2026-03-26)
-**Release Notes:** [docs/RELEASE-NOTES-v1.17.1.md](docs/RELEASE-NOTES-v1.17.1.md)
+**Release Notes:** [docs/archive/release-notes/RELEASE-NOTES-v1.17.1.md](docs/archive/release-notes/RELEASE-NOTES-v1.17.1.md)
 
 | Feature | Description | Status |
 |---------|-------------|--------|
@@ -681,7 +681,7 @@ ppxai/tui/                     # New module (Textual-based)
 ### v1.17.2 - SSE State Sync + Benchmark Infra ✅
 
 **Status:** ✅ Complete (2026-03-28)
-**Release Notes:** [docs/RELEASE-NOTES-v1.17.2.md](docs/RELEASE-NOTES-v1.17.2.md)
+**Release Notes:** [docs/archive/release-notes/RELEASE-NOTES-v1.17.2.md](docs/archive/release-notes/RELEASE-NOTES-v1.17.2.md)
 
 | Feature | Description | Status |
 |---------|-------------|--------|

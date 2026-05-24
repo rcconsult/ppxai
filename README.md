@@ -138,7 +138,7 @@ if isinstance(result, CodeResult):
 
 This enables **single-source command logic** that renders correctly in any UI—terminal, VSCode webview, or browser—just by swapping the renderer implementation.
 
-See [Architecture Docs](docs/ARCHITECTURE.md) and [v1.15.0 Release Notes](docs/RELEASE-NOTES-v1.15.0.md) for details.
+See [Architecture Docs](docs/ARCHITECTURE.md) and [v1.15.0 Release Notes](docs/archive/release-notes/RELEASE-NOTES-v1.15.0.md) for details.
 
 ### Live HTML Preview (v1.15.4)
 
@@ -368,9 +368,9 @@ No telemetry. No tracking. Data only goes to the LLM provider you choose.
 | [Specifications](SPECIFICATIONS.md) | Code generation templates |
 | [Architecture](docs/ARCHITECTURE.md) | Type-based renderer design (v1.15.0) |
 | [Tool Calling](docs/TOOL_CALLING.md) | Native vs prompt-based tool calling |
-| [Release Notes v1.16.1](docs/RELEASE-NOTES-v1.16.1.md) | FileTree widget, CommandFactory server pattern, unified session restore |
-| [Release Notes v1.16.0](docs/RELEASE-NOTES-v1.16.0.md) | Profile-driven tool loop, multi-tool support, agent UI, benchmark v2 |
-| [Release Notes v1.15.6](docs/RELEASE-NOTES-v1.15.6.md) | Native OpenAI provider, model profiles, benchmark analysis |
+| [Release Notes v1.16.1](docs/archive/release-notes/RELEASE-NOTES-v1.16.1.md) | FileTree widget, CommandFactory server pattern, unified session restore |
+| [Release Notes v1.16.0](docs/archive/release-notes/RELEASE-NOTES-v1.16.0.md) | Profile-driven tool loop, multi-tool support, agent UI, benchmark v2 |
+| [Release Notes v1.15.6](docs/archive/release-notes/RELEASE-NOTES-v1.15.6.md) | Native OpenAI provider, model profiles, benchmark analysis |
 
 ## Project Structure
 

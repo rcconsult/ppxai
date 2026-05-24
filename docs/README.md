@@ -37,19 +37,19 @@
 | [Prompt-Based Tool Calling](prompt-based-tool-calling.md) | Developer guide for non-native tool calling |
 | [Release Notes v1.18.0 (draft)](RELEASE-NOTES-v1.18.0.md) | **In progress** — P0 agent heartbeat primitives (`AGENT_BEAT` / `_RUN_START` / `_RUN_COMPLETE` / `_RUN_ERROR` / `_ZOMBIE`), zombie circuit-breaker, cross-client renderers |
 | [Stabilization v1.18.0](archive/STABILIZATION-v1.18.0.md) | **Landed** — five-phase cleanup pass: `GET /state` reconnect endpoint, AppState `last_message_role`, `format_tokens`/`format_usage_badge` cross-language helpers, `AutosaveFailureGuard`, public-API promotion of 8 helpers, removed `has_vision_model` alias |
-| [Release Notes v1.17.7](RELEASE-NOTES-v1.17.7.md) | `ppxai-desktop --version` stale-fallback fix |
-| [Release Notes v1.17.6](RELEASE-NOTES-v1.17.6.md) | R5 first-class `uploaded_file` content type, R19 multimodal rendering gap |
-| [Release Notes v1.17.5](RELEASE-NOTES-v1.17.5.md) | R8–R18 bugfix batch (alternation, CSV streaming, Gemini null-parts, /attach UX) |
-| [Release Notes v1.17.4](RELEASE-NOTES-v1.17.4.md) | File upload Phases 0–7, CompletionProvider, schema DTO, EngineClient decomposition |
-| [Release Notes v1.17.3](RELEASE-NOTES-v1.17.3.md) | CodeMirror modular split, verbose tools toggle, benchmark infra |
-| [Release Notes v1.17.2](RELEASE-NOTES-v1.17.2.md) | SSE state_sync, thread-safe AppState, iTerm2 images, preview venv detect |
-| [Release Notes v1.17.1](RELEASE-NOTES-v1.17.1.md) | AppState wiring, EngineClient decomposition, web terminal, preview serve |
-| [Release Notes v1.17.0](RELEASE-NOTES-v1.17.0.md) | Server/config modularization, K8s POC, key bindings registry, Textual 8.1.1, protocol-based imports |
-| [Release Notes v1.16.2](RELEASE-NOTES-v1.16.2.md) | RightPanelFrame, file tree sidebar, inline images, web refactor, shell config |
-| [Release Notes v1.16.1](RELEASE-NOTES-v1.16.1.md) | FileTree widget, CommandFactory server pattern, unified session restore |
-| [Release Notes v1.15.6](RELEASE-NOTES-v1.15.6.md) | Native OpenAI provider, model profiles, benchmark analysis |
-| [Release Notes v1.15.5](RELEASE-NOTES-v1.15.5.md) | Multi-line input, Escape key fix, build fix |
-| [Release Notes v1.15.4](RELEASE-NOTES-v1.15.4.md) | Live preview, SSL fixes, debug logging |
+| [Release Notes v1.17.7](archive/release-notes/RELEASE-NOTES-v1.17.7.md) | `ppxai-desktop --version` stale-fallback fix |
+| [Release Notes v1.17.6](archive/release-notes/RELEASE-NOTES-v1.17.6.md) | R5 first-class `uploaded_file` content type, R19 multimodal rendering gap |
+| [Release Notes v1.17.5](archive/release-notes/RELEASE-NOTES-v1.17.5.md) | R8–R18 bugfix batch (alternation, CSV streaming, Gemini null-parts, /attach UX) |
+| [Release Notes v1.17.4](archive/release-notes/RELEASE-NOTES-v1.17.4.md) | File upload Phases 0–7, CompletionProvider, schema DTO, EngineClient decomposition |
+| [Release Notes v1.17.3](archive/release-notes/RELEASE-NOTES-v1.17.3.md) | CodeMirror modular split, verbose tools toggle, benchmark infra |
+| [Release Notes v1.17.2](archive/release-notes/RELEASE-NOTES-v1.17.2.md) | SSE state_sync, thread-safe AppState, iTerm2 images, preview venv detect |
+| [Release Notes v1.17.1](archive/release-notes/RELEASE-NOTES-v1.17.1.md) | AppState wiring, EngineClient decomposition, web terminal, preview serve |
+| [Release Notes v1.17.0](archive/release-notes/RELEASE-NOTES-v1.17.0.md) | Server/config modularization, K8s POC, key bindings registry, Textual 8.1.1, protocol-based imports |
+| [Release Notes v1.16.2](archive/release-notes/RELEASE-NOTES-v1.16.2.md) | RightPanelFrame, file tree sidebar, inline images, web refactor, shell config |
+| [Release Notes v1.16.1](archive/release-notes/RELEASE-NOTES-v1.16.1.md) | FileTree widget, CommandFactory server pattern, unified session restore |
+| [Release Notes v1.15.6](archive/release-notes/RELEASE-NOTES-v1.15.6.md) | Native OpenAI provider, model profiles, benchmark analysis |
+| [Release Notes v1.15.5](archive/release-notes/RELEASE-NOTES-v1.15.5.md) | Multi-line input, Escape key fix, build fix |
+| [Release Notes v1.15.4](archive/release-notes/RELEASE-NOTES-v1.15.4.md) | Live preview, SSL fixes, debug logging |
 | [Release Plan v1.15.x](archive/RELEASE-PLAN-v1.15.x.md) | Development plan for v1.15.x series (archived) |
 
 ### Archived Documentation
