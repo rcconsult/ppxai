@@ -343,7 +343,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../INSTALLATION/" class="md-nav__link">
+      <a href="../../installation/" class="md-nav__link">
         
   
   
@@ -371,7 +371,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../PROVIDER_SETUP/" class="md-nav__link">
+      <a href="../../provider-setup/" class="md-nav__link">
         
   
   
@@ -460,7 +460,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../AGENT_MODE_GUIDE/" class="md-nav__link">
+      <a href="../../agent-mode-guide/" class="md-nav__link">
         
   
   
@@ -488,7 +488,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../BOOTSTRAP_CONTEXT_GUIDE/" class="md-nav__link">
+      <a href="../../bootstrap-context-guide/" class="md-nav__link">
         
   
   
@@ -516,7 +516,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../CONTEXT-INJECTION/" class="md-nav__link">
+      <a href="../../context-injection/" class="md-nav__link">
         
   
   
@@ -544,7 +544,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../CHECKPOINT_GUIDE/" class="md-nav__link">
+      <a href="../../checkpoint-guide/" class="md-nav__link">
         
   
   
@@ -572,7 +572,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../FILE_EDITING_GUIDE/" class="md-nav__link">
+      <a href="../../file-editing-guide/" class="md-nav__link">
         
   
   
@@ -600,7 +600,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../SHELL_CONSENT_GUIDE/" class="md-nav__link">
+      <a href="../../shell-consent-guide/" class="md-nav__link">
         
   
   
@@ -689,7 +689,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../CUSTOM_TOOL_DEVELOPMENT_GUIDE/" class="md-nav__link">
+      <a href="../../custom-tool-development-guide/" class="md-nav__link">
         
   
   
@@ -717,7 +717,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../CUSTOM_COMMAND_DEVELOPMENT_GUIDE/" class="md-nav__link">
+      <a href="../../custom-command-development-guide/" class="md-nav__link">
         
   
   
@@ -745,7 +745,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../ARCHITECTURE/" class="md-nav__link">
+      <a href="../../architecture/" class="md-nav__link">
         
   
   
@@ -890,7 +890,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../CONTAINER_TOOLS_GUIDE/" class="md-nav__link">
+      <a href="../../container-tools-guide/" class="md-nav__link">
         
   
   
@@ -918,7 +918,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../AUTOROUTER-CONFIG/" class="md-nav__link">
+      <a href="../../autorouter-config/" class="md-nav__link">
         
   
   
@@ -1007,7 +1007,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../RELEASE-NOTES-v1.16.1/" class="md-nav__link">
+      <a href="../../RELEASE-NOTES-v1.16.1.md" class="md-nav__link">
         
   
   
@@ -1035,7 +1035,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../RELEASE-NOTES-v1.16.0/" class="md-nav__link">
+      <a href="../../RELEASE-NOTES-v1.16.0.md" class="md-nav__link">
         
   
   
@@ -1063,7 +1063,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../RELEASE-NOTES-v1.15.6/" class="md-nav__link">
+      <a href="../../RELEASE-NOTES-v1.15.6.md" class="md-nav__link">
         
   
   
@@ -1346,7 +1346,7 @@
 <p><strong>Date:</strong> 2026-05-03
 <strong>Status:</strong> Accepted
 <strong>Related:</strong>
-- <a href="../../API-GATEWAY/"><code>docs/API-GATEWAY.md</code></a> — user-facing spec for the v1 gateway
+- <a href="../../api-gateway/"><code>docs/api-gateway.md</code></a> — user-facing spec for the v1 gateway
 - <code>ppxai/server/routes/oneshot.py</code> — first gateway endpoint
 - <code>ppxai/server/auth.py</code> — bearer-token middleware
 - ADR 0003 — Agent platform architecture (server-driven agents; orthogonal concern)</p>
@@ -1410,7 +1410,7 @@ gets <code>401</code> with <code>WWW-Authenticate: Bearer realm="ppxai"</code>. 
 server runs unauthenticated (preserves localhost desktop UX).</p>
 <p>Single shared token in v1. Per-agent identity, scoped tokens,
 rotation, OIDC/JWT — all explicitly NOT in v1 (see
-<a href="../../API-GATEWAY/"><code>docs/API-GATEWAY.md</code></a> "Future directions").</p>
+<a href="../../api-gateway/"><code>docs/api-gateway.md</code></a> "Future directions").</p>
 <h2 id="why-these-and-not-the-alternatives">Why these and not the alternatives<a class="headerlink" href="#why-these-and-not-the-alternatives" title="Permanent link">&para;</a></h2>
 <h3 id="why-a-separate-v1-prefix-instead-of-versioning-chat">Why a separate <code>/v1/...</code> prefix instead of versioning <code>/chat</code>?<a class="headerlink" href="#why-a-separate-v1-prefix-instead-of-versioning-chat" title="Permanent link">&para;</a></h3>
 <p><code>/chat</code> is <strong>session-scoped, SSE-streaming, history-mutating, multimodal</strong>.
@@ -1454,7 +1454,7 @@ X-Session-Id for now."</code></p>
 <h3 id="why-single-shared-token-for-v1-auth-not-multi-token">Why single shared token for v1 auth, not multi-token?<a class="headerlink" href="#why-single-shared-token-for-v1-auth-not-multi-token" title="Permanent link">&para;</a></h3>
 <p>Multi-token requires a registry, persistence, rotation mechanism,
 revocation API — see ADR 0004's complement in
-<a href="../../API-GATEWAY/"><code>docs/API-GATEWAY.md</code></a> "Future directions" for
+<a href="../../api-gateway/"><code>docs/api-gateway.md</code></a> "Future directions" for
 the <code>/v1/tokens</code> design. That's ~500 LoC + storage migration policy
 + a separate stability commitment. Single token is ~50 LoC and
 unblocks the loopback-leaving deployments today. We'd need to ship

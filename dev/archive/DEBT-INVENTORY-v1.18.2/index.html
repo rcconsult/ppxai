@@ -343,7 +343,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../INSTALLATION/" class="md-nav__link">
+      <a href="../../installation/" class="md-nav__link">
         
   
   
@@ -371,7 +371,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../PROVIDER_SETUP/" class="md-nav__link">
+      <a href="../../provider-setup/" class="md-nav__link">
         
   
   
@@ -460,7 +460,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../AGENT_MODE_GUIDE/" class="md-nav__link">
+      <a href="../../agent-mode-guide/" class="md-nav__link">
         
   
   
@@ -488,7 +488,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../BOOTSTRAP_CONTEXT_GUIDE/" class="md-nav__link">
+      <a href="../../bootstrap-context-guide/" class="md-nav__link">
         
   
   
@@ -516,7 +516,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../CONTEXT-INJECTION/" class="md-nav__link">
+      <a href="../../context-injection/" class="md-nav__link">
         
   
   
@@ -544,7 +544,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../CHECKPOINT_GUIDE/" class="md-nav__link">
+      <a href="../../checkpoint-guide/" class="md-nav__link">
         
   
   
@@ -572,7 +572,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../FILE_EDITING_GUIDE/" class="md-nav__link">
+      <a href="../../file-editing-guide/" class="md-nav__link">
         
   
   
@@ -600,7 +600,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../SHELL_CONSENT_GUIDE/" class="md-nav__link">
+      <a href="../../shell-consent-guide/" class="md-nav__link">
         
   
   
@@ -689,7 +689,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../CUSTOM_TOOL_DEVELOPMENT_GUIDE/" class="md-nav__link">
+      <a href="../../custom-tool-development-guide/" class="md-nav__link">
         
   
   
@@ -717,7 +717,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../CUSTOM_COMMAND_DEVELOPMENT_GUIDE/" class="md-nav__link">
+      <a href="../../custom-command-development-guide/" class="md-nav__link">
         
   
   
@@ -745,7 +745,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../ARCHITECTURE/" class="md-nav__link">
+      <a href="../../architecture/" class="md-nav__link">
         
   
   
@@ -890,7 +890,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../CONTAINER_TOOLS_GUIDE/" class="md-nav__link">
+      <a href="../../container-tools-guide/" class="md-nav__link">
         
   
   
@@ -918,7 +918,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../AUTOROUTER-CONFIG/" class="md-nav__link">
+      <a href="../../autorouter-config/" class="md-nav__link">
         
   
   
@@ -1007,7 +1007,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../RELEASE-NOTES-v1.16.1/" class="md-nav__link">
+      <a href="../../RELEASE-NOTES-v1.16.1.md" class="md-nav__link">
         
   
   
@@ -1035,7 +1035,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../RELEASE-NOTES-v1.16.0/" class="md-nav__link">
+      <a href="../../RELEASE-NOTES-v1.16.0.md" class="md-nav__link">
         
   
   
@@ -1063,7 +1063,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../RELEASE-NOTES-v1.15.6/" class="md-nav__link">
+      <a href="../../RELEASE-NOTES-v1.15.6.md" class="md-nav__link">
         
   
   
@@ -1523,7 +1523,7 @@ code don't realise the release page never materialised.</p>
 <li><strong>v1.18.2 second failure (2026-04-29 ~00:26 UTC, after build-dmg
   rerun)</strong> — release object now existed but <code>body</code> contained ONLY
   the auto-generated <code>**Full Changelog**: https://...</code> link
-  (80 chars), NOT the rich <code>docs/RELEASE-NOTES-v1.18.2.md</code> content
+  (80 chars), NOT the rich <code>docs/release-notes-v1.18.2.md</code> content
   (~18,000 chars). release.py's "Publish Notes" step took 338s
   (5.6 min — wildly long for a <code>gh release edit --notes-file</code> call);
   it likely retried internally and timed out gracefully without
@@ -1532,7 +1532,7 @@ code don't realise the release page never materialised.</p>
   happens to be near-empty. <strong>Caught only because the user noticed
   the release page</strong> ~1 hour later showed only the changelog link.
   Fixed manually with <code>gh release edit v1.18.2 --notes-file
-  docs/RELEASE-NOTES-v1.18.2.md</code>.</li>
+  docs/release-notes-v1.18.2.md</code>.</li>
 </ul>
 <p><strong>Why this matters:</strong> the fix to v1.18.1's silent-failure mode
 was discipline (<code>gh release view</code> after every release). That's
@@ -2016,7 +2016,7 @@ needed — <code>~/.bashrc</code> is per-developer config, not project state.</p
 prior text (variants a / b / c) has the smallest-blast-radius fix
 first. If a second developer reports the issue, that's the trigger
 to fold a "Windows developer setup" subsection into
-<code>docs/INSTALLATION.md</code> per the original "trigger to revisit"
+<code>docs/installation.md</code> per the original "trigger to revisit"
 condition.</p>
 <h3 id="item-11-latent-attributeerror-in-agentpy-rich-tui-path-closed-2026-04-28">Item 11 — Latent AttributeError in <code>agent.py</code> Rich-TUI path — closed 2026-04-28<a class="headerlink" href="#item-11-latent-attributeerror-in-agentpy-rich-tui-path-closed-2026-04-28" title="Permanent link">&para;</a></h3>
 <p><a href="../ppxai/commands/agent.py#L680"><code>ppxai/commands/agent.py:680</code></a>
@@ -2289,7 +2289,7 @@ ones not in "Open" above were closed during the test sweep on
 </tr>
 <tr>
 <td>#5</td>
-<td>Tool security pass + <code>docs/CONSENT-CONTRACT.md</code> (18 tests)</td>
+<td>Tool security pass + <code>docs/consent-contract.md</code> (18 tests)</td>
 <td>79b54757</td>
 </tr>
 <tr>
@@ -2371,12 +2371,12 @@ ones not in "Open" above were closed during the test sweep on
 <hr />
 <h2 id="related-documents">Related documents<a class="headerlink" href="#related-documents" title="Permanent link">&para;</a></h2>
 <ul>
-<li><a href="CONSENT-CONTRACT.md">docs/CONSENT-CONTRACT.md</a> — security boundary for tool execution (created with critique #5)</li>
-<li><a href="MODEL-SELECTION-GUIDE.md">docs/MODEL-SELECTION-GUIDE.md</a> — planner/executor pricing strategy</li>
+<li><a href="consent-contract.md">docs/consent-contract.md</a> — security boundary for tool execution (created with critique #5)</li>
+<li><a href="model-selection-guide.md">docs/model-selection-guide.md</a> — planner/executor pricing strategy</li>
 <li><a href="../TODO-v1.18.2-agent-loop-unification/">docs/archive/TODO-v1.18.2-agent-loop-unification.md</a> — separate in-flight work (HTTP-streaming agent loop)</li>
-<li><a href="../../TODO-v1.18.2-keys-binding-registries/">docs/TODO-v1.18.2-keys-binding-registries.md</a> — separate in-flight work</li>
+<li><a href="../TODO-v1.18.2-keys-binding-registries.md">docs/TODO-v1.18.2-keys-binding-registries.md</a> — separate in-flight work</li>
 <li><a href="../TODO-v1.18.2-prompt-text-kind/">docs/archive/TODO-v1.18.2-prompt-text-kind.md</a> — separate in-flight work</li>
-<li><a href="../../TODO-v1.18.2-inline-markdown-images-tui/">docs/TODO-v1.18.2-inline-markdown-images-tui.md</a> — separate in-flight work</li>
+<li><a href="../TODO-v1.18.2-inline-markdown-images-tui.md">docs/TODO-v1.18.2-inline-markdown-images-tui.md</a> — separate in-flight work</li>
 </ul>
 <p>The <code>TODO-v1.18.2-*.md</code> files describe in-flight planning for v1.18.2.
 This doc tracks debt <strong>not</strong> in any version's plan yet — items needing

@@ -343,7 +343,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../INSTALLATION/" class="md-nav__link">
+      <a href="../../installation/" class="md-nav__link">
         
   
   
@@ -371,7 +371,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../PROVIDER_SETUP/" class="md-nav__link">
+      <a href="../../provider-setup/" class="md-nav__link">
         
   
   
@@ -460,7 +460,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../AGENT_MODE_GUIDE/" class="md-nav__link">
+      <a href="../../agent-mode-guide/" class="md-nav__link">
         
   
   
@@ -488,7 +488,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../BOOTSTRAP_CONTEXT_GUIDE/" class="md-nav__link">
+      <a href="../../bootstrap-context-guide/" class="md-nav__link">
         
   
   
@@ -516,7 +516,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../CONTEXT-INJECTION/" class="md-nav__link">
+      <a href="../../context-injection/" class="md-nav__link">
         
   
   
@@ -544,7 +544,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../CHECKPOINT_GUIDE/" class="md-nav__link">
+      <a href="../../checkpoint-guide/" class="md-nav__link">
         
   
   
@@ -572,7 +572,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../FILE_EDITING_GUIDE/" class="md-nav__link">
+      <a href="../../file-editing-guide/" class="md-nav__link">
         
   
   
@@ -600,7 +600,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../SHELL_CONSENT_GUIDE/" class="md-nav__link">
+      <a href="../../shell-consent-guide/" class="md-nav__link">
         
   
   
@@ -689,7 +689,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../CUSTOM_TOOL_DEVELOPMENT_GUIDE/" class="md-nav__link">
+      <a href="../../custom-tool-development-guide/" class="md-nav__link">
         
   
   
@@ -717,7 +717,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../CUSTOM_COMMAND_DEVELOPMENT_GUIDE/" class="md-nav__link">
+      <a href="../../custom-command-development-guide/" class="md-nav__link">
         
   
   
@@ -745,7 +745,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../ARCHITECTURE/" class="md-nav__link">
+      <a href="../../architecture/" class="md-nav__link">
         
   
   
@@ -890,7 +890,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../CONTAINER_TOOLS_GUIDE/" class="md-nav__link">
+      <a href="../../container-tools-guide/" class="md-nav__link">
         
   
   
@@ -918,7 +918,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../AUTOROUTER-CONFIG/" class="md-nav__link">
+      <a href="../../autorouter-config/" class="md-nav__link">
         
   
   
@@ -1007,7 +1007,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../RELEASE-NOTES-v1.16.1/" class="md-nav__link">
+      <a href="../../RELEASE-NOTES-v1.16.1.md" class="md-nav__link">
         
   
   
@@ -1035,7 +1035,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../RELEASE-NOTES-v1.16.0/" class="md-nav__link">
+      <a href="../../RELEASE-NOTES-v1.16.0.md" class="md-nav__link">
         
   
   
@@ -1063,7 +1063,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../RELEASE-NOTES-v1.15.6/" class="md-nav__link">
+      <a href="../../RELEASE-NOTES-v1.15.6.md" class="md-nav__link">
         
   
   
@@ -1425,7 +1425,7 @@ shared infrastructure. No external user supplying credentials. The
 "tenant" is the human running ppxai locally; the "agents" are
 sub-tasks of that human's intent. Per-agent containers would 100x
 the install footprint for zero benefit.</p>
-<p>The k8s session-manager (Item 3 in <a href="../../DEBT-INVENTORY/">DEBT-INVENTORY.md</a>)
+<p>The k8s session-manager (Item 3 in <a href="../../debt-inventory/">debt-inventory.md</a>)
 is the <strong>only</strong> place ppxai uses containers, and that's for tenant
 isolation in the multi-user deploy shape — orthogonal to per-agent
 isolation.</p>
@@ -1557,7 +1557,7 @@ hosts/paths/methods. Network gateway enforces.</p>
 ("agent X may only call api.openai.com, not arbitrary hosts"), but:</p>
 <ol>
 <li>Tools layer already gates network access via the consent
-   contract — see [docs/CONSENT-CONTRACT.md].</li>
+   contract — see [docs/consent-contract.md].</li>
 <li>Sub-agents inherit the parent's tool consent, so policy lives at
    the tool level, not the network level.</li>
 <li>Building a separate policy-enforcement layer is significant work
@@ -1600,9 +1600,9 @@ try to retrofit them into this one.</p>
 <ul>
 <li><a href="../../decisions/0003-agent-platform-architecture/">docs/decisions/0003-agent-platform-architecture.md</a> — the active ADR this note feeds into</li>
 <li><a href="../../patterns/state-sync-determinism/">docs/patterns/state-sync-determinism.md</a> — the existing 409-retry pattern that generalizes</li>
-<li><a href="../../CONSENT-CONTRACT/">docs/CONSENT-CONTRACT.md</a> — current security boundary (per-tool, not per-network)</li>
+<li><a href="../../consent-contract/">docs/consent-contract.md</a> — current security boundary (per-tool, not per-network)</li>
 <li><a href="../2026-04-29-python-vs-go-for-agents/">docs/research/2026-04-29-python-vs-go-for-agents.md</a> — sibling research note on language choice for autonomous agents</li>
-<li><a href="../../DEBT-INVENTORY/">DEBT-INVENTORY.md</a> Item 3 — k8s session-manager (the only multi-tenant context in ppxai today)</li>
+<li><a href="../../debt-inventory/">debt-inventory.md</a> Item 3 — k8s session-manager (the only multi-tenant context in ppxai today)</li>
 <li>OpenShell upstream: https://github.com/NVIDIA/OpenShell</li>
 <li>multi-agent-notepad example: https://github.com/NVIDIA/OpenShell/tree/main/examples/multi-agent-notepad</li>
 </ul>

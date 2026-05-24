@@ -5,222 +5,6 @@
          <lastmod>2026-05-24</lastmod>
     </url>
     <url>
-         <loc>https://rcconsult.github.io/ppxai/dev/AGENT_MODE_GUIDE/</loc>
-         <lastmod>2026-05-24</lastmod>
-    </url>
-    <url>
-         <loc>https://rcconsult.github.io/ppxai/dev/API-GATEWAY/</loc>
-         <lastmod>2026-05-24</lastmod>
-    </url>
-    <url>
-         <loc>https://rcconsult.github.io/ppxai/dev/ARCHITECTURE/</loc>
-         <lastmod>2026-05-24</lastmod>
-    </url>
-    <url>
-         <loc>https://rcconsult.github.io/ppxai/dev/AUTOROUTER-CONFIG/</loc>
-         <lastmod>2026-05-24</lastmod>
-    </url>
-    <url>
-         <loc>https://rcconsult.github.io/ppxai/dev/BOOTSTRAP_CONTEXT_GUIDE/</loc>
-         <lastmod>2026-05-24</lastmod>
-    </url>
-    <url>
-         <loc>https://rcconsult.github.io/ppxai/dev/CHECKPOINT_GUIDE/</loc>
-         <lastmod>2026-05-24</lastmod>
-    </url>
-    <url>
-         <loc>https://rcconsult.github.io/ppxai/dev/CONSENT-CONTRACT/</loc>
-         <lastmod>2026-05-24</lastmod>
-    </url>
-    <url>
-         <loc>https://rcconsult.github.io/ppxai/dev/CONTAINER_TOOLS_GUIDE/</loc>
-         <lastmod>2026-05-24</lastmod>
-    </url>
-    <url>
-         <loc>https://rcconsult.github.io/ppxai/dev/CONTEXT-INJECTION/</loc>
-         <lastmod>2026-05-24</lastmod>
-    </url>
-    <url>
-         <loc>https://rcconsult.github.io/ppxai/dev/CUSTOM_COMMAND_DEVELOPMENT_GUIDE/</loc>
-         <lastmod>2026-05-24</lastmod>
-    </url>
-    <url>
-         <loc>https://rcconsult.github.io/ppxai/dev/CUSTOM_TOOL_DEVELOPMENT_GUIDE/</loc>
-         <lastmod>2026-05-24</lastmod>
-    </url>
-    <url>
-         <loc>https://rcconsult.github.io/ppxai/dev/DEBT-INVENTORY/</loc>
-         <lastmod>2026-05-24</lastmod>
-    </url>
-    <url>
-         <loc>https://rcconsult.github.io/ppxai/dev/DEBUG-LOGGING/</loc>
-         <lastmod>2026-05-24</lastmod>
-    </url>
-    <url>
-         <loc>https://rcconsult.github.io/ppxai/dev/DEV-SETUP/</loc>
-         <lastmod>2026-05-24</lastmod>
-    </url>
-    <url>
-         <loc>https://rcconsult.github.io/ppxai/dev/DGX-SPARK-SETUP/</loc>
-         <lastmod>2026-05-24</lastmod>
-    </url>
-    <url>
-         <loc>https://rcconsult.github.io/ppxai/dev/DISCUSSION-agents-framework/</loc>
-         <lastmod>2026-05-24</lastmod>
-    </url>
-    <url>
-         <loc>https://rcconsult.github.io/ppxai/dev/EXCEPTION-HANDLING-AUDIT/</loc>
-         <lastmod>2026-05-24</lastmod>
-    </url>
-    <url>
-         <loc>https://rcconsult.github.io/ppxai/dev/FILE_EDITING_GUIDE/</loc>
-         <lastmod>2026-05-24</lastmod>
-    </url>
-    <url>
-         <loc>https://rcconsult.github.io/ppxai/dev/INSTALLATION/</loc>
-         <lastmod>2026-05-24</lastmod>
-    </url>
-    <url>
-         <loc>https://rcconsult.github.io/ppxai/dev/KNOWN-ISSUES/</loc>
-         <lastmod>2026-05-24</lastmod>
-    </url>
-    <url>
-         <loc>https://rcconsult.github.io/ppxai/dev/LINUX-TERMINAL-SETUP/</loc>
-         <lastmod>2026-05-24</lastmod>
-    </url>
-    <url>
-         <loc>https://rcconsult.github.io/ppxai/dev/MCP-INTEGRATION-PLAN/</loc>
-         <lastmod>2026-05-24</lastmod>
-    </url>
-    <url>
-         <loc>https://rcconsult.github.io/ppxai/dev/MODEL-BEHAVIOR-ANALYSIS/</loc>
-         <lastmod>2026-05-24</lastmod>
-    </url>
-    <url>
-         <loc>https://rcconsult.github.io/ppxai/dev/MODEL-SELECTION-GUIDE/</loc>
-         <lastmod>2026-05-24</lastmod>
-    </url>
-    <url>
-         <loc>https://rcconsult.github.io/ppxai/dev/PPXAIDE-IMPL/</loc>
-         <lastmod>2026-05-24</lastmod>
-    </url>
-    <url>
-         <loc>https://rcconsult.github.io/ppxai/dev/PROVIDER_SETUP/</loc>
-         <lastmod>2026-05-24</lastmod>
-    </url>
-    <url>
-         <loc>https://rcconsult.github.io/ppxai/dev/RELEASE-NOTES-v1.15.0/</loc>
-         <lastmod>2026-05-24</lastmod>
-    </url>
-    <url>
-         <loc>https://rcconsult.github.io/ppxai/dev/RELEASE-NOTES-v1.15.1/</loc>
-         <lastmod>2026-05-24</lastmod>
-    </url>
-    <url>
-         <loc>https://rcconsult.github.io/ppxai/dev/RELEASE-NOTES-v1.15.2/</loc>
-         <lastmod>2026-05-24</lastmod>
-    </url>
-    <url>
-         <loc>https://rcconsult.github.io/ppxai/dev/RELEASE-NOTES-v1.15.3/</loc>
-         <lastmod>2026-05-24</lastmod>
-    </url>
-    <url>
-         <loc>https://rcconsult.github.io/ppxai/dev/RELEASE-NOTES-v1.15.4/</loc>
-         <lastmod>2026-05-24</lastmod>
-    </url>
-    <url>
-         <loc>https://rcconsult.github.io/ppxai/dev/RELEASE-NOTES-v1.15.5/</loc>
-         <lastmod>2026-05-24</lastmod>
-    </url>
-    <url>
-         <loc>https://rcconsult.github.io/ppxai/dev/RELEASE-NOTES-v1.15.6/</loc>
-         <lastmod>2026-05-24</lastmod>
-    </url>
-    <url>
-         <loc>https://rcconsult.github.io/ppxai/dev/RELEASE-NOTES-v1.16.0/</loc>
-         <lastmod>2026-05-24</lastmod>
-    </url>
-    <url>
-         <loc>https://rcconsult.github.io/ppxai/dev/RELEASE-NOTES-v1.16.1/</loc>
-         <lastmod>2026-05-24</lastmod>
-    </url>
-    <url>
-         <loc>https://rcconsult.github.io/ppxai/dev/RELEASE-NOTES-v1.16.2/</loc>
-         <lastmod>2026-05-24</lastmod>
-    </url>
-    <url>
-         <loc>https://rcconsult.github.io/ppxai/dev/RELEASE-NOTES-v1.17.0/</loc>
-         <lastmod>2026-05-24</lastmod>
-    </url>
-    <url>
-         <loc>https://rcconsult.github.io/ppxai/dev/RELEASE-NOTES-v1.17.1/</loc>
-         <lastmod>2026-05-24</lastmod>
-    </url>
-    <url>
-         <loc>https://rcconsult.github.io/ppxai/dev/RELEASE-NOTES-v1.17.2/</loc>
-         <lastmod>2026-05-24</lastmod>
-    </url>
-    <url>
-         <loc>https://rcconsult.github.io/ppxai/dev/RELEASE-NOTES-v1.17.3/</loc>
-         <lastmod>2026-05-24</lastmod>
-    </url>
-    <url>
-         <loc>https://rcconsult.github.io/ppxai/dev/RELEASE-NOTES-v1.17.4/</loc>
-         <lastmod>2026-05-24</lastmod>
-    </url>
-    <url>
-         <loc>https://rcconsult.github.io/ppxai/dev/RELEASE-NOTES-v1.17.5/</loc>
-         <lastmod>2026-05-24</lastmod>
-    </url>
-    <url>
-         <loc>https://rcconsult.github.io/ppxai/dev/RELEASE-NOTES-v1.17.6/</loc>
-         <lastmod>2026-05-24</lastmod>
-    </url>
-    <url>
-         <loc>https://rcconsult.github.io/ppxai/dev/RELEASE-NOTES-v1.17.7/</loc>
-         <lastmod>2026-05-24</lastmod>
-    </url>
-    <url>
-         <loc>https://rcconsult.github.io/ppxai/dev/RELEASE-NOTES-v1.18.0/</loc>
-         <lastmod>2026-05-24</lastmod>
-    </url>
-    <url>
-         <loc>https://rcconsult.github.io/ppxai/dev/RELEASE-NOTES-v1.18.1/</loc>
-         <lastmod>2026-05-24</lastmod>
-    </url>
-    <url>
-         <loc>https://rcconsult.github.io/ppxai/dev/RELEASE-NOTES-v1.18.2/</loc>
-         <lastmod>2026-05-24</lastmod>
-    </url>
-    <url>
-         <loc>https://rcconsult.github.io/ppxai/dev/RELEASE-NOTES-v1.18.3/</loc>
-         <lastmod>2026-05-24</lastmod>
-    </url>
-    <url>
-         <loc>https://rcconsult.github.io/ppxai/dev/RELEASE-NOTES-v1.18.4/</loc>
-         <lastmod>2026-05-24</lastmod>
-    </url>
-    <url>
-         <loc>https://rcconsult.github.io/ppxai/dev/RELEASE-NOTES-v1.18.5/</loc>
-         <lastmod>2026-05-24</lastmod>
-    </url>
-    <url>
-         <loc>https://rcconsult.github.io/ppxai/dev/RELEASE-NOTES-v1.18.6/</loc>
-         <lastmod>2026-05-24</lastmod>
-    </url>
-    <url>
-         <loc>https://rcconsult.github.io/ppxai/dev/SHELL-WRAPPERS/</loc>
-         <lastmod>2026-05-24</lastmod>
-    </url>
-    <url>
-         <loc>https://rcconsult.github.io/ppxai/dev/SHELL_CONSENT_GUIDE/</loc>
-         <lastmod>2026-05-24</lastmod>
-    </url>
-    <url>
-         <loc>https://rcconsult.github.io/ppxai/dev/STABILIZATION-v1.18.0/</loc>
-         <lastmod>2026-05-24</lastmod>
-    </url>
-    <url>
          <loc>https://rcconsult.github.io/ppxai/dev/TODO-appstate-codegen/</loc>
          <lastmod>2026-05-24</lastmod>
     </url>
@@ -229,27 +13,99 @@
          <lastmod>2026-05-24</lastmod>
     </url>
     <url>
-         <loc>https://rcconsult.github.io/ppxai/dev/TODO-v1.18.2-inline-markdown-images-tui/</loc>
+         <loc>https://rcconsult.github.io/ppxai/dev/agent-mode-guide/</loc>
          <lastmod>2026-05-24</lastmod>
     </url>
     <url>
-         <loc>https://rcconsult.github.io/ppxai/dev/TODO-v1.18.2-keys-binding-registries/</loc>
+         <loc>https://rcconsult.github.io/ppxai/dev/api-gateway/</loc>
          <lastmod>2026-05-24</lastmod>
     </url>
     <url>
-         <loc>https://rcconsult.github.io/ppxai/dev/TODO-v1.18.5-shell-wrappers/</loc>
+         <loc>https://rcconsult.github.io/ppxai/dev/architecture/</loc>
          <lastmod>2026-05-24</lastmod>
     </url>
     <url>
-         <loc>https://rcconsult.github.io/ppxai/dev/TODO-v1.18.6-coder-image-tools/</loc>
+         <loc>https://rcconsult.github.io/ppxai/dev/autorouter-config/</loc>
          <lastmod>2026-05-24</lastmod>
     </url>
     <url>
-         <loc>https://rcconsult.github.io/ppxai/dev/TOOL_CALLING/</loc>
+         <loc>https://rcconsult.github.io/ppxai/dev/bootstrap-context-guide/</loc>
          <lastmod>2026-05-24</lastmod>
     </url>
     <url>
-         <loc>https://rcconsult.github.io/ppxai/dev/VLLM-NOTES/</loc>
+         <loc>https://rcconsult.github.io/ppxai/dev/checkpoint-guide/</loc>
+         <lastmod>2026-05-24</lastmod>
+    </url>
+    <url>
+         <loc>https://rcconsult.github.io/ppxai/dev/consent-contract/</loc>
+         <lastmod>2026-05-24</lastmod>
+    </url>
+    <url>
+         <loc>https://rcconsult.github.io/ppxai/dev/container-tools-guide/</loc>
+         <lastmod>2026-05-24</lastmod>
+    </url>
+    <url>
+         <loc>https://rcconsult.github.io/ppxai/dev/context-injection/</loc>
+         <lastmod>2026-05-24</lastmod>
+    </url>
+    <url>
+         <loc>https://rcconsult.github.io/ppxai/dev/custom-command-development-guide/</loc>
+         <lastmod>2026-05-24</lastmod>
+    </url>
+    <url>
+         <loc>https://rcconsult.github.io/ppxai/dev/custom-tool-development-guide/</loc>
+         <lastmod>2026-05-24</lastmod>
+    </url>
+    <url>
+         <loc>https://rcconsult.github.io/ppxai/dev/debt-inventory/</loc>
+         <lastmod>2026-05-24</lastmod>
+    </url>
+    <url>
+         <loc>https://rcconsult.github.io/ppxai/dev/debug-logging/</loc>
+         <lastmod>2026-05-24</lastmod>
+    </url>
+    <url>
+         <loc>https://rcconsult.github.io/ppxai/dev/dev-setup/</loc>
+         <lastmod>2026-05-24</lastmod>
+    </url>
+    <url>
+         <loc>https://rcconsult.github.io/ppxai/dev/dgx-spark-setup/</loc>
+         <lastmod>2026-05-24</lastmod>
+    </url>
+    <url>
+         <loc>https://rcconsult.github.io/ppxai/dev/discussion-agents-framework/</loc>
+         <lastmod>2026-05-24</lastmod>
+    </url>
+    <url>
+         <loc>https://rcconsult.github.io/ppxai/dev/exception-handling-audit/</loc>
+         <lastmod>2026-05-24</lastmod>
+    </url>
+    <url>
+         <loc>https://rcconsult.github.io/ppxai/dev/file-editing-guide/</loc>
+         <lastmod>2026-05-24</lastmod>
+    </url>
+    <url>
+         <loc>https://rcconsult.github.io/ppxai/dev/installation/</loc>
+         <lastmod>2026-05-24</lastmod>
+    </url>
+    <url>
+         <loc>https://rcconsult.github.io/ppxai/dev/known-issues/</loc>
+         <lastmod>2026-05-24</lastmod>
+    </url>
+    <url>
+         <loc>https://rcconsult.github.io/ppxai/dev/linux-terminal-setup/</loc>
+         <lastmod>2026-05-24</lastmod>
+    </url>
+    <url>
+         <loc>https://rcconsult.github.io/ppxai/dev/mcp-integration-plan/</loc>
+         <lastmod>2026-05-24</lastmod>
+    </url>
+    <url>
+         <loc>https://rcconsult.github.io/ppxai/dev/model-behavior-analysis/</loc>
+         <lastmod>2026-05-24</lastmod>
+    </url>
+    <url>
+         <loc>https://rcconsult.github.io/ppxai/dev/model-selection-guide/</loc>
          <lastmod>2026-05-24</lastmod>
     </url>
     <url>
@@ -261,7 +117,59 @@
          <lastmod>2026-05-24</lastmod>
     </url>
     <url>
+         <loc>https://rcconsult.github.io/ppxai/dev/ppxaide-impl/</loc>
+         <lastmod>2026-05-24</lastmod>
+    </url>
+    <url>
          <loc>https://rcconsult.github.io/ppxai/dev/prompt-based-tool-calling/</loc>
+         <lastmod>2026-05-24</lastmod>
+    </url>
+    <url>
+         <loc>https://rcconsult.github.io/ppxai/dev/provider-setup/</loc>
+         <lastmod>2026-05-24</lastmod>
+    </url>
+    <url>
+         <loc>https://rcconsult.github.io/ppxai/dev/release-notes-v1.18.0/</loc>
+         <lastmod>2026-05-24</lastmod>
+    </url>
+    <url>
+         <loc>https://rcconsult.github.io/ppxai/dev/release-notes-v1.18.1/</loc>
+         <lastmod>2026-05-24</lastmod>
+    </url>
+    <url>
+         <loc>https://rcconsult.github.io/ppxai/dev/release-notes-v1.18.2/</loc>
+         <lastmod>2026-05-24</lastmod>
+    </url>
+    <url>
+         <loc>https://rcconsult.github.io/ppxai/dev/release-notes-v1.18.3/</loc>
+         <lastmod>2026-05-24</lastmod>
+    </url>
+    <url>
+         <loc>https://rcconsult.github.io/ppxai/dev/release-notes-v1.18.4/</loc>
+         <lastmod>2026-05-24</lastmod>
+    </url>
+    <url>
+         <loc>https://rcconsult.github.io/ppxai/dev/release-notes-v1.18.5/</loc>
+         <lastmod>2026-05-24</lastmod>
+    </url>
+    <url>
+         <loc>https://rcconsult.github.io/ppxai/dev/release-notes-v1.18.6/</loc>
+         <lastmod>2026-05-24</lastmod>
+    </url>
+    <url>
+         <loc>https://rcconsult.github.io/ppxai/dev/shell-consent-guide/</loc>
+         <lastmod>2026-05-24</lastmod>
+    </url>
+    <url>
+         <loc>https://rcconsult.github.io/ppxai/dev/shell-wrappers/</loc>
+         <lastmod>2026-05-24</lastmod>
+    </url>
+    <url>
+         <loc>https://rcconsult.github.io/ppxai/dev/tool-calling/</loc>
+         <lastmod>2026-05-24</lastmod>
+    </url>
+    <url>
+         <loc>https://rcconsult.github.io/ppxai/dev/vllm-notes/</loc>
          <lastmod>2026-05-24</lastmod>
     </url>
     <url>
@@ -294,6 +202,10 @@
     </url>
     <url>
          <loc>https://rcconsult.github.io/ppxai/dev/archive/RELEASE-PLAN-v1.15.x/</loc>
+         <lastmod>2026-05-24</lastmod>
+    </url>
+    <url>
+         <loc>https://rcconsult.github.io/ppxai/dev/archive/STABILIZATION-v1.18.0/</loc>
          <lastmod>2026-05-24</lastmod>
     </url>
     <url>
@@ -353,7 +265,23 @@
          <lastmod>2026-05-24</lastmod>
     </url>
     <url>
+         <loc>https://rcconsult.github.io/ppxai/dev/archive/TODO-v1.18.2-inline-markdown-images-tui/</loc>
+         <lastmod>2026-05-24</lastmod>
+    </url>
+    <url>
+         <loc>https://rcconsult.github.io/ppxai/dev/archive/TODO-v1.18.2-keys-binding-registries/</loc>
+         <lastmod>2026-05-24</lastmod>
+    </url>
+    <url>
          <loc>https://rcconsult.github.io/ppxai/dev/archive/TODO-v1.18.2-prompt-text-kind/</loc>
+         <lastmod>2026-05-24</lastmod>
+    </url>
+    <url>
+         <loc>https://rcconsult.github.io/ppxai/dev/archive/TODO-v1.18.5-shell-wrappers/</loc>
+         <lastmod>2026-05-24</lastmod>
+    </url>
+    <url>
+         <loc>https://rcconsult.github.io/ppxai/dev/archive/TODO-v1.18.6-coder-image-tools/</loc>
          <lastmod>2026-05-24</lastmod>
     </url>
     <url>
@@ -522,6 +450,78 @@
     </url>
     <url>
          <loc>https://rcconsult.github.io/ppxai/dev/archive/release-notes/RELEASE-NOTES-v1.14.2/</loc>
+         <lastmod>2026-05-24</lastmod>
+    </url>
+    <url>
+         <loc>https://rcconsult.github.io/ppxai/dev/archive/release-notes/RELEASE-NOTES-v1.15.0/</loc>
+         <lastmod>2026-05-24</lastmod>
+    </url>
+    <url>
+         <loc>https://rcconsult.github.io/ppxai/dev/archive/release-notes/RELEASE-NOTES-v1.15.1/</loc>
+         <lastmod>2026-05-24</lastmod>
+    </url>
+    <url>
+         <loc>https://rcconsult.github.io/ppxai/dev/archive/release-notes/RELEASE-NOTES-v1.15.2/</loc>
+         <lastmod>2026-05-24</lastmod>
+    </url>
+    <url>
+         <loc>https://rcconsult.github.io/ppxai/dev/archive/release-notes/RELEASE-NOTES-v1.15.3/</loc>
+         <lastmod>2026-05-24</lastmod>
+    </url>
+    <url>
+         <loc>https://rcconsult.github.io/ppxai/dev/archive/release-notes/RELEASE-NOTES-v1.15.4/</loc>
+         <lastmod>2026-05-24</lastmod>
+    </url>
+    <url>
+         <loc>https://rcconsult.github.io/ppxai/dev/archive/release-notes/RELEASE-NOTES-v1.15.5/</loc>
+         <lastmod>2026-05-24</lastmod>
+    </url>
+    <url>
+         <loc>https://rcconsult.github.io/ppxai/dev/archive/release-notes/RELEASE-NOTES-v1.15.6/</loc>
+         <lastmod>2026-05-24</lastmod>
+    </url>
+    <url>
+         <loc>https://rcconsult.github.io/ppxai/dev/archive/release-notes/RELEASE-NOTES-v1.16.0/</loc>
+         <lastmod>2026-05-24</lastmod>
+    </url>
+    <url>
+         <loc>https://rcconsult.github.io/ppxai/dev/archive/release-notes/RELEASE-NOTES-v1.16.1/</loc>
+         <lastmod>2026-05-24</lastmod>
+    </url>
+    <url>
+         <loc>https://rcconsult.github.io/ppxai/dev/archive/release-notes/RELEASE-NOTES-v1.16.2/</loc>
+         <lastmod>2026-05-24</lastmod>
+    </url>
+    <url>
+         <loc>https://rcconsult.github.io/ppxai/dev/archive/release-notes/RELEASE-NOTES-v1.17.0/</loc>
+         <lastmod>2026-05-24</lastmod>
+    </url>
+    <url>
+         <loc>https://rcconsult.github.io/ppxai/dev/archive/release-notes/RELEASE-NOTES-v1.17.1/</loc>
+         <lastmod>2026-05-24</lastmod>
+    </url>
+    <url>
+         <loc>https://rcconsult.github.io/ppxai/dev/archive/release-notes/RELEASE-NOTES-v1.17.2/</loc>
+         <lastmod>2026-05-24</lastmod>
+    </url>
+    <url>
+         <loc>https://rcconsult.github.io/ppxai/dev/archive/release-notes/RELEASE-NOTES-v1.17.3/</loc>
+         <lastmod>2026-05-24</lastmod>
+    </url>
+    <url>
+         <loc>https://rcconsult.github.io/ppxai/dev/archive/release-notes/RELEASE-NOTES-v1.17.4/</loc>
+         <lastmod>2026-05-24</lastmod>
+    </url>
+    <url>
+         <loc>https://rcconsult.github.io/ppxai/dev/archive/release-notes/RELEASE-NOTES-v1.17.5/</loc>
+         <lastmod>2026-05-24</lastmod>
+    </url>
+    <url>
+         <loc>https://rcconsult.github.io/ppxai/dev/archive/release-notes/RELEASE-NOTES-v1.17.6/</loc>
+         <lastmod>2026-05-24</lastmod>
+    </url>
+    <url>
+         <loc>https://rcconsult.github.io/ppxai/dev/archive/release-notes/RELEASE-NOTES-v1.17.7/</loc>
          <lastmod>2026-05-24</lastmod>
     </url>
     <url>
