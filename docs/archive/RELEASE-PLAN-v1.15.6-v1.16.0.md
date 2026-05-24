@@ -367,7 +367,7 @@ The previously planned v1.16.0 content (file navigation) fits naturally alongsid
 
 **What:** [GenAIScript](https://microsoft.github.io/genaiscript/) — Microsoft's JS-based LLM orchestration framework with built-in evaluation via [promptfoo](https://promptfoo.dev/). Runs tests across multiple models in a single command.
 
-**Reference docs:** [genaiscript-llms.txt](genaiscript-llms.txt) (index) | [genaiscript-getting-started.txt](genaiscript-getting-started.txt) | [genaiscript-reference-cli.txt](genaiscript-reference-cli.txt) | [genaiscript-llms-full.txt](genaiscript-llms-full.txt) (complete, 1.4MB)
+**Reference docs:** [genaiscript-llms.txt](external-refs/genaiscript-llms.txt) (index) | [genaiscript-getting-started.txt](external-refs/genaiscript-getting-started.txt) | [genaiscript-reference-cli.txt](external-refs/genaiscript-reference-cli.txt) | [genaiscript-llms-full.txt](external-refs/genaiscript-llms-full.txt) (complete, 1.4MB)
 
 **Why:** Complements the existing Python benchmark suite. GenAIScript excels at multi-model comparison, rubric-based grading (LLM-as-judge), and agent loop testing with `defTool()` for simulated file systems. The Python suite remains the engine regression layer.
 

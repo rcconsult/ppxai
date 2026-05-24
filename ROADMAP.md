@@ -1053,7 +1053,7 @@ These are tracked but not prioritized:
 
 ### Multi-Model Orchestration (Research)
 
-**Reference:** [docs/2512.15943v1.pdf](docs/archive/2512.15943v1.pdf) - "Small Language Models for Efficient Agentic Tool Calling" (AWS, Dec 2025)
+**Reference:** [docs/archive/external-refs/2512.15943v1.pdf](docs/archive/external-refs/2512.15943v1.pdf) - "Small Language Models for Efficient Agentic Tool Calling" (AWS, Dec 2025)
 
 **Paper Summary:**
 - Fine-tuned `facebook/opt-350m` (350M params) on ToolBench dataset (187,542 examples, 16,000+ APIs)

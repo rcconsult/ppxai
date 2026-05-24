@@ -277,5 +277,5 @@ Got: "To execute npm install, you can use the shell function..."
 
 - [Ollama Documentation](https://ollama.ai/docs)
 - [Qwen2.5-Coder Model Card](https://huggingface.co/Qwen/Qwen2.5-Coder-3B)
-- [AWS Paper: Small LLMs for Tool Calling](archive/2512.15943v1.pdf) - Referenced in ROADMAP
+- [AWS Paper: Small LLMs for Tool Calling](archive/external-refs/2512.15943v1.pdf) - Referenced in ROADMAP
 - [ppxai Benchmark Script](../scripts/benchmark_tool_routing.py)
