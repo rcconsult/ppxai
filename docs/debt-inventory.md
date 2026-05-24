@@ -73,6 +73,132 @@ disclosure procedures need this code to have minimum test coverage.
 
 ---
 
+### Item 21 — `chat_with_tools` decomposition
+
+**Affected file:** `ppxai/engine/chat.py:475-1147` (single function,
+673 LoC, fan-out 169 — the largest function in the codebase).
+
+**What's wrong:** the engine's core tool loop is one monolithic
+function with no direct unit-test coverage. The only existing test is
+`tests/test_chat_profile_routing.py` which exercises it through a
+"Minimal mock provider" — integration paths only, no isolated
+coverage of the inner-loop state transitions (tool call → tool result
+→ continuation, abort handling, budget enforcement, AGENT_BEAT
+emission, retry semantics).
+
+**Why deferred:** the function IS the engine's hot path. Refactoring
+it without a comprehensive unit-test scaffold first risks behavioral
+regressions across every provider + every tool. Decomposition needs
+to be ADR-backed (proposed split: outer-loop / inner-loop / state
+machine), with a per-stage test sweep before any code moves.
+
+**Planned:** v1.19.x or later. Likely shares ADR space with the
+agent-platform Stage 2 work (ADR 0003) since `chat_with_tools` is
+where the run-namespace, budget enforcement, and sub-agent spawn all
+intersect.
+
+**Branch when ready:** `feat/chat-with-tools-decomp` (ADR + tests
+first commit; code split as a follow-on).
+
+**Trigger to revisit:** when ADR 0003 Stage 2 implementation opens
+(the run-state machine refactor is the natural companion), OR when
+the function grows beyond 800 LoC.
+
+**Effort:**
+- ADR + behavior-pinning test scaffold (~half day to ~1 day): map
+  every distinct control-flow path, write assertions for each.
+- Split into outer-loop / inner-loop / state machine (~2-3 days).
+- Per-provider regression sweep (~1 day across OpenAI-compat, Gemini,
+  Perplexity, native OpenAI).
+
+**Surfaced by:** CRG `find_large_functions` + `get_hub_nodes` on
+bugfix/v1.18.7 (graphify hyperedge "chat_with_tools dispatcher"
+captured the same shape).
+
+---
+
+### Item 22 — `PpxaiApp` (web/app.js) further decomposition
+
+**Affected file:** `ppxai/web/app.js` — `PpxaiApp` class, 3,749 LoC
+(down from 3,679 before the v1.18.7 `_previewAttachment` extract —
+extract added 71 lines of method boilerplate; the dispatcher itself
+shrank 8x).
+
+**What's wrong:** still the single biggest god class in the codebase
+even after the v1.18.7 split. Other long methods inside it (e.g.
+`setupEventListeners` at degree 103, `cacheElements` at degree 64)
+remain candidates. The class also still owns SSE handling, AppState
+sync, slash-command dispatch, the markdown renderer wrappers, and
+the right-panel orchestration — five distinct responsibilities.
+
+**Why deferred:** decomposing a god class in non-bundled JS without
+introducing a build step is painful (`AttachmentView` was extractable
+because it had no state; most other methods touch `this.state`,
+`this.apiClient`, `this.eventBus`, and DOM elements all at once). The
+right shape is probably a "responsibilities-as-mixins" refactor or
+the introduction of esbuild on the web side (mirror of the
+vscode-extension bundler from v1.18.2). Neither fits a bugfix branch.
+
+**Planned:** trigger-deferred — no version target. Revisit when (a)
+web client gets a build step, OR (b) a specific responsibility (e.g.
+SSE handling) needs to be reused by ppxai-desktop / another consumer.
+
+**Branch when ready:** `feat/web-client-decomp` (with explicit
+sub-step plan in the branch's first commit).
+
+**Trigger to revisit:** when ppxai-desktop or another client wants to
+share part of `PpxaiApp`'s logic, OR when adding a build step to the
+web client is on the table for other reasons.
+
+**Effort:** unknown until shape is chosen. Likely 3-5 days for a
+mixin-based split; longer if introducing esbuild.
+
+**Recent progress (v1.18.7):** `_previewAttachment` (347 LoC) split
+into 6 per-format renderers + dispatcher — file +71 LoC net but each
+branch individually browseable. See commit on bugfix/v1.18.7.
+
+---
+
+### Item 23 — `SessionManager` growth drift (flag-only, not action)
+
+**Affected file:** `ppxai/engine/session.py` — `SessionManager`
+class, 2,091 LoC (was 1,648 at v1.18.2 baseline — grew +443 LoC, +27%,
+in 3 weeks).
+
+**What's wrong:** noted as a drift signal during bugfix/v1.18.7
+analysis. After verification per the CLAUDE.md "verify before
+flagging" rule, the growth is **fully explained by intentional
+recent feature work** — every commit accounting for the +443 LoC is
+ADR 0006 wiring:
+- `02ef33ab` Step 5: v1→v2 session migration on first load (+224)
+- `21dd226d` Step 7c: producer drops in-block keys (+174/-50, +124 net)
+- `b20cb1b0` fix: trailing-tool strip cascade (+132/-51, +81 net)
+- `af63e482` Step 4: `schema_version: 2` + ArtifactRegistry (+81/-11)
+- `b07bd0fa` Phase 1: AttachmentRef + Message.attachments (+11/-1)
+- `70a0457f` fix: per-turn delta for context baseline (+11/-2)
+
+Channel ratio (`event_bus.emit/subscribe`, `state.on/set/get`) = 0:
+all coupling is direct. Production-only inbound = 47 textual
+references across 13 files — above the 30-ref threshold but
+proportionate to the type-spine role.
+
+**Why "flag-only":** the growth is not architectural decay. It's
+load-bearing v1.18.6 release work that landed on this file.
+
+**Planned:** no action required. **If** decomposition is ever needed,
+the natural carve-out is the schema-migration block (lines covering
+`migrate_v1_to_v2`, the `.v1.backup/` sibling-folder logic, and the
+schema_version dispatch) — that's where the recent growth
+concentrated, and it's a self-contained sub-responsibility.
+
+**Trigger to revisit:** when SessionManager crosses 2,500 LoC, OR when
+schema_version: 3 is proposed (the migration block becomes a natural
+extract at that point).
+
+**Surfaced by:** CRG analysis on bugfix/v1.18.7.
+
+---
+
 ## Recently moved out of debt scope
 
 These items left the debt inventory because they're not bug-fix-class
