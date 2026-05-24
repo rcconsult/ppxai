@@ -34,6 +34,33 @@
 // updateFromPython). This file only consumes AppState via
 // `this.state.updateFromPython(pythonPayload)` — no keyMaps here.
 
+/**
+ * Inline attachment view extending BaseView. Module-level so each
+ * renderer (image / pdf / spreadsheet / presentation / word / generic)
+ * builds the same shape — RightPanelFrame's promote / dedup / stack-info
+ * machinery requires a real BaseView subclass.
+ *
+ * Hoisted out of PpxaiApp._previewAttachment in v1.18.7 so the
+ * previewer dispatcher could be split into per-format renderers
+ * without re-declaring this class six times. Behavior preserved.
+ */
+class AttachmentView extends BaseView {
+    constructor(title, path, icon, mountFn) {
+        super();
+        this._title = title;
+        this._path = path;
+        this._icon = icon;
+        this._mountFn = mountFn;
+    }
+    getTitle() { return this._title; }
+    getPath() { return this._path; }
+    getIcon() { return this._icon; }
+    mount(container) { this._mountFn(container); }
+    unmount() {}
+    focus() {}
+    onKeyDown() { return false; }
+}
+
 class PpxaiApp {
     constructor() {
         // Configuration
@@ -1298,339 +1325,349 @@ class PpxaiApp {
             return;
         }
 
-        // Create a BaseView subclass that renders directly from the
-        // base64 data without a server round trip. Must extend BaseView
-        // so RightPanelFrame's promote/dedup/stack-info all work.
-        const frame = this.rightPanelFrame;
-        const name = entry.name;
-        const mediaType = entry.media_type;
-        const b64 = entry.data;
-        const sizeKB = (b64.length * 3 / 4 / 1024).toFixed(1);
-
-        /** Inline attachment view extending BaseView for full RPF compat. */
-        class AttachmentView extends BaseView {
-            constructor(title, path, icon, mountFn) {
-                super();
-                this._title = title;
-                this._path = path;
-                this._icon = icon;
-                this._mountFn = mountFn;
-            }
-            getTitle() { return this._title; }
-            getPath() { return this._path; }
-            getIcon() { return this._icon; }
-            mount(container) { this._mountFn(container); }
-            unmount() {}
-            focus() {}
-            onKeyDown() { return false; }
-        }
+        // Build a shared context bag once; each renderer destructures
+        // what it needs. Centralizes the b64-bytes-to-KB size math too.
+        const ctx = {
+            frame: this.rightPanelFrame,
+            name: entry.name,
+            mediaType: entry.media_type,
+            b64: entry.data,
+            sizeKB: (entry.data.length * 3 / 4 / 1024).toFixed(1),
+        };
+        const { mediaType, name } = ctx;
 
         if (mediaType.startsWith('image/')) {
-            const view = new AttachmentView(name, `attachment:${name}`, '\u{1F5BC}', (container) => {
-                container.innerHTML = `
-                    <div class="rpf-view-toolbar">
-                        <span class="rpf-view-info">Image \u2022 ${sizeKB} KB</span>
-                        <button class="rpf-btn ifv-zoom-btn" title="Toggle zoom">\u{1F50D} Zoom</button>
-                    </div>
-                    <div class="ifv-img-wrapper">
-                        <img class="ifv-img"
-                             src="data:${mediaType};base64,${b64}"
-                             alt="${name}"
-                             title="Click to toggle zoom"
-                             style="max-width:100%; max-height:100%;">
-                    </div>`;
-                let zoomed = false;
-                const img = container.querySelector('.ifv-img');
-                const zoomBtn = container.querySelector('.ifv-zoom-btn');
-                const toggleZoom = () => {
-                    zoomed = !zoomed;
-                    img.style.maxWidth = zoomed ? 'none' : '100%';
-                    img.style.maxHeight = zoomed ? 'none' : '100%';
-                    zoomBtn.textContent = zoomed ? '\u{1F50D} Fit' : '\u{1F50D} Zoom';
-                };
-                if (img) img.addEventListener('click', toggleZoom);
-                if (zoomBtn) zoomBtn.addEventListener('click', toggleZoom);
-            });
-            frame.push(view);
+            this._renderImageAttachment(ctx);
         } else if (mediaType === 'application/pdf') {
-            // Use Blob URL instead of data: URI — large base64 PDFs
-            // exceed browser limits for embed src attributes.
-            const byteStr = atob(b64);
-            const bytes = new Uint8Array(byteStr.length);
-            for (let i = 0; i < byteStr.length; i++) bytes[i] = byteStr.charCodeAt(i);
-            const blob = new Blob([bytes], { type: 'application/pdf' });
-            const blobUrl = URL.createObjectURL(blob);
-            const view = new AttachmentView(name, `attachment:${name}`, '\u{1F4D5}', (container) => {
-                container.innerHTML = `
-                    <div class="rpf-view-toolbar">
-                        <span class="rpf-view-info">PDF \u2022 ${sizeKB} KB</span>
-                    </div>
-                    <div class="pfv-embed-wrapper" style="flex:1; min-height:0;">
-                        <iframe src="${blobUrl}"
-                                style="width:100%; height:100%; border:none;">
-                        </iframe>
-                    </div>`;
-            });
-            // Clean up Blob URL when view is evicted from stack
-            const origUnmount = view.unmount.bind(view);
-            view.unmount = () => { URL.revokeObjectURL(blobUrl); origUnmount(); };
-            frame.push(view);
+            this._renderPdfAttachment(ctx);
         } else if (mediaType.includes('sheet') || mediaType.includes('excel')
                    || name.endsWith('.xlsx') || name.endsWith('.xls') || name.endsWith('.csv')) {
-            // Excel / CSV preview via SheetJS (lazy-loaded)
-            const view = new AttachmentView(name, `attachment:${name}`, '\u{1F4CA}', (container) => {
-                container.innerHTML = `
-                    <div class="rpf-view-toolbar">
-                        <span class="rpf-view-info">Loading spreadsheet\u2026</span>
-                    </div>
-                    <div class="xlsx-preview" style="flex:1; overflow:auto;"></div>`;
-                const previewEl = container.querySelector('.xlsx-preview');
-                const infoEl = container.querySelector('.rpf-view-info');
-
-                const render = () => {
-                    try {
-                        const wb = window.XLSX.read(b64, { type: 'base64' });
-                        infoEl.textContent = `${wb.SheetNames.length} sheet${wb.SheetNames.length > 1 ? 's' : ''} \u2022 ${sizeKB} KB`;
-
-                        // Sheet tabs
-                        const tabsEl = document.createElement('div');
-                        tabsEl.className = 'xlsx-tabs';
-                        previewEl.appendChild(tabsEl);
-
-                        // Table container
-                        const tableEl = document.createElement('div');
-                        tableEl.className = 'xlsx-table-wrapper';
-                        previewEl.appendChild(tableEl);
-
-                        const showSheet = (idx) => {
-                            tabsEl.querySelectorAll('.xlsx-tab').forEach((t, i) => {
-                                t.classList.toggle('active', i === idx);
-                            });
-                            const ws = wb.Sheets[wb.SheetNames[idx]];
-                            const json = window.XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-                            if (!json.length) {
-                                tableEl.innerHTML = '<p style="padding:16px; color:var(--text-muted);">Empty sheet</p>';
-                                return;
-                            }
-                            // First row as headers, rest as data rows
-                            const headers = json[0].map(h => String(h));
-                            const rows = json.slice(1).map(r => r.map(c => String(c)));
-                            tableEl.innerHTML = '';
-                            new DataTableViewer(tableEl, {
-                                headers,
-                                rows,
-                                rowCount: rows.length,
-                            }, {
-                                maxHeight: 'none',
-                                pageSize: 200,
-                                sortable: true,
-                                filterable: true,
-                                showRowNumbers: true,
-                            });
-                        };
-
-                        wb.SheetNames.forEach((sn, i) => {
-                            const tab = document.createElement('button');
-                            tab.className = 'xlsx-tab';
-                            tab.textContent = sn;
-                            tab.addEventListener('click', () => showSheet(i));
-                            tabsEl.appendChild(tab);
-                        });
-
-                        showSheet(0);
-                    } catch (e) {
-                        previewEl.innerHTML = `<p style="padding:16px; color:var(--error-color);">
-                            Failed to parse spreadsheet: ${e.message}</p>`;
-                    }
-                };
-
-                // SheetJS is loaded via index.html <script> tag
-                render();
-            });
-            frame.push(view);
+            this._renderSpreadsheetAttachment(ctx);
         } else if (mediaType.includes('presentation') || mediaType.includes('powerpoint')
                    || name.endsWith('.pptx') || name.endsWith('.ppt')) {
-            // PPTX slide viewer — renders slides via server-side LibreOffice
-            const fileId = (this.state.contextAttachments || []).find(
-                a => a.name === name
-            )?.file_id || '';
-            const view = new AttachmentView(name, `attachment:${name}`, '\u{1F4CA}', (container) => {
-                container.innerHTML = `
-                    <div class="rpf-view-toolbar">
-                        <span class="rpf-view-info">Loading slides\u2026</span>
-                    </div>
-                    <div class="pptx-preview" style="flex:1; display:flex; flex-direction:column; overflow:hidden;"></div>`;
-                const previewEl = container.querySelector('.pptx-preview');
-                const infoEl = container.querySelector('.rpf-view-info');
-
-                if (!fileId) {
-                    previewEl.innerHTML = '<p style="padding:16px; color:var(--text-muted);">No file_id — cannot render slides. Re-attach the file.</p>';
-                    infoEl.textContent = 'PowerPoint Presentation';
-                    return;
-                }
-
-                // Fetch total slide count, then render slide navigator
-                fetch(`files/preview/${fileId}?total=true`, {
-                    headers: this.apiClient.getHeaders(),
-                })
-                    .then(r => r.ok ? r.json() : Promise.reject(r.statusText))
-                    .then(info => {
-                        const total = info.total;
-                        infoEl.textContent = `${total} slide${total !== 1 ? 's' : ''} \u2022 ${sizeKB} KB`;
-
-                        let current = 1;
-
-                        // Navigation bar
-                        const nav = document.createElement('div');
-                        nav.className = 'pptx-nav';
-                        nav.innerHTML = `
-                            <button class="pptx-nav-btn" id="pptxPrev" title="Previous slide">\u25C0</button>
-                            <span class="pptx-slide-counter">Slide <span class="pptx-current">1</span> / ${total}</span>
-                            <button class="pptx-nav-btn" id="pptxNext" title="Next slide">\u25B6</button>`;
-                        previewEl.appendChild(nav);
-
-                        // Slide image container
-                        const imgContainer = document.createElement('div');
-                        imgContainer.className = 'pptx-slide-container';
-                        previewEl.appendChild(imgContainer);
-
-                        const counterEl = nav.querySelector('.pptx-current');
-                        const prevBtn = nav.querySelector('#pptxPrev');
-                        const nextBtn = nav.querySelector('#pptxNext');
-
-                        const sessionHeaders = this.apiClient.getHeaders();
-                        const showSlide = (n) => {
-                            current = n;
-                            counterEl.textContent = n;
-                            prevBtn.disabled = n <= 1;
-                            nextBtn.disabled = n >= total;
-                            imgContainer.innerHTML = '<p style="padding:16px; color:var(--text-muted);">Rendering\u2026</p>';
-                            fetch(`files/preview/${fileId}?slide=${n}`, { headers: sessionHeaders })
-                                .then(r => r.ok ? r.blob() : Promise.reject('Failed'))
-                                .then(blob => {
-                                    const img = new Image();
-                                    img.className = 'pptx-slide-img';
-                                    img.alt = `Slide ${n}`;
-                                    img.src = URL.createObjectURL(blob);
-                                    imgContainer.innerHTML = '';
-                                    imgContainer.appendChild(img);
-                                })
-                                .catch(() => {
-                                    imgContainer.innerHTML = '<p style="padding:16px; color:var(--error-color);">Failed to load slide.</p>';
-                                });
-                        };
-
-                        prevBtn.addEventListener('click', () => { if (current > 1) showSlide(current - 1); });
-                        nextBtn.addEventListener('click', () => { if (current < total) showSlide(current + 1); });
-
-                        showSlide(1);
-                    })
-                    .catch(err => {
-                        previewEl.innerHTML = `<p style="padding:16px; color:var(--error-color);">
-                            Slide rendering unavailable: ${err}</p>
-                            <p style="padding:0 16px; font-size:13px; color:var(--text-muted);">
-                            The model can still use <code>list_pptx_slides</code> and <code>read_pptx_slide_text</code> tools.</p>`;
-                        infoEl.textContent = `PowerPoint \u2022 ${sizeKB} KB`;
-                    });
-            });
-            frame.push(view);
+            this._renderPresentationAttachment(ctx);
         } else if (mediaType.includes('word') || mediaType === 'application/msword'
                    || name.endsWith('.docx') || name.endsWith('.doc')) {
-            // Word document preview — convert to PDF via server-side LibreOffice
-            const fileId = (this.state.contextAttachments || []).find(
-                a => a.name === name
-            )?.file_id || '';
+            this._renderWordAttachment(ctx);
+        } else {
+            this._renderGenericAttachment(ctx);
+        }
+    }
+
+    _renderImageAttachment({ frame, name, mediaType, b64, sizeKB }) {
+        const view = new AttachmentView(name, `attachment:${name}`, '\u{1F5BC}', (container) => {
+            container.innerHTML = `
+                <div class="rpf-view-toolbar">
+                    <span class="rpf-view-info">Image • ${sizeKB} KB</span>
+                    <button class="rpf-btn ifv-zoom-btn" title="Toggle zoom">\u{1F50D} Zoom</button>
+                </div>
+                <div class="ifv-img-wrapper">
+                    <img class="ifv-img"
+                         src="data:${mediaType};base64,${b64}"
+                         alt="${name}"
+                         title="Click to toggle zoom"
+                         style="max-width:100%; max-height:100%;">
+                </div>`;
+            let zoomed = false;
+            const img = container.querySelector('.ifv-img');
+            const zoomBtn = container.querySelector('.ifv-zoom-btn');
+            const toggleZoom = () => {
+                zoomed = !zoomed;
+                img.style.maxWidth = zoomed ? 'none' : '100%';
+                img.style.maxHeight = zoomed ? 'none' : '100%';
+                zoomBtn.textContent = zoomed ? '\u{1F50D} Fit' : '\u{1F50D} Zoom';
+            };
+            if (img) img.addEventListener('click', toggleZoom);
+            if (zoomBtn) zoomBtn.addEventListener('click', toggleZoom);
+        });
+        frame.push(view);
+    }
+
+    _renderPdfAttachment({ frame, name, b64, sizeKB }) {
+        // Use Blob URL instead of data: URI - large base64 PDFs
+        // exceed browser limits for embed src attributes.
+        const byteStr = atob(b64);
+        const bytes = new Uint8Array(byteStr.length);
+        for (let i = 0; i < byteStr.length; i++) bytes[i] = byteStr.charCodeAt(i);
+        const blob = new Blob([bytes], { type: 'application/pdf' });
+        const blobUrl = URL.createObjectURL(blob);
+        const view = new AttachmentView(name, `attachment:${name}`, '\u{1F4D5}', (container) => {
+            container.innerHTML = `
+                <div class="rpf-view-toolbar">
+                    <span class="rpf-view-info">PDF • ${sizeKB} KB</span>
+                </div>
+                <div class="pfv-embed-wrapper" style="flex:1; min-height:0;">
+                    <iframe src="${blobUrl}"
+                            style="width:100%; height:100%; border:none;">
+                    </iframe>
+                </div>`;
+        });
+        // Clean up Blob URL when view is evicted from stack
+        const origUnmount = view.unmount.bind(view);
+        view.unmount = () => { URL.revokeObjectURL(blobUrl); origUnmount(); };
+        frame.push(view);
+    }
+
+    _renderSpreadsheetAttachment({ frame, name, b64, sizeKB }) {
+        // Excel / CSV preview via SheetJS (lazy-loaded)
+        const view = new AttachmentView(name, `attachment:${name}`, '\u{1F4CA}', (container) => {
+            container.innerHTML = `
+                <div class="rpf-view-toolbar">
+                    <span class="rpf-view-info">Loading spreadsheet…</span>
+                </div>
+                <div class="xlsx-preview" style="flex:1; overflow:auto;"></div>`;
+            const previewEl = container.querySelector('.xlsx-preview');
+            const infoEl = container.querySelector('.rpf-view-info');
+
+            const render = () => {
+                try {
+                    const wb = window.XLSX.read(b64, { type: 'base64' });
+                    infoEl.textContent = `${wb.SheetNames.length} sheet${wb.SheetNames.length > 1 ? 's' : ''} • ${sizeKB} KB`;
+
+                    // Sheet tabs
+                    const tabsEl = document.createElement('div');
+                    tabsEl.className = 'xlsx-tabs';
+                    previewEl.appendChild(tabsEl);
+
+                    // Table container
+                    const tableEl = document.createElement('div');
+                    tableEl.className = 'xlsx-table-wrapper';
+                    previewEl.appendChild(tableEl);
+
+                    const showSheet = (idx) => {
+                        tabsEl.querySelectorAll('.xlsx-tab').forEach((t, i) => {
+                            t.classList.toggle('active', i === idx);
+                        });
+                        const ws = wb.Sheets[wb.SheetNames[idx]];
+                        const json = window.XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+                        if (!json.length) {
+                            tableEl.innerHTML = '<p style="padding:16px; color:var(--text-muted);">Empty sheet</p>';
+                            return;
+                        }
+                        // First row as headers, rest as data rows
+                        const headers = json[0].map(h => String(h));
+                        const rows = json.slice(1).map(r => r.map(c => String(c)));
+                        tableEl.innerHTML = '';
+                        new DataTableViewer(tableEl, {
+                            headers,
+                            rows,
+                            rowCount: rows.length,
+                        }, {
+                            maxHeight: 'none',
+                            pageSize: 200,
+                            sortable: true,
+                            filterable: true,
+                            showRowNumbers: true,
+                        });
+                    };
+
+                    wb.SheetNames.forEach((sn, i) => {
+                        const tab = document.createElement('button');
+                        tab.className = 'xlsx-tab';
+                        tab.textContent = sn;
+                        tab.addEventListener('click', () => showSheet(i));
+                        tabsEl.appendChild(tab);
+                    });
+
+                    showSheet(0);
+                } catch (e) {
+                    previewEl.innerHTML = `<p style="padding:16px; color:var(--error-color);">
+                        Failed to parse spreadsheet: ${e.message}</p>`;
+                }
+            };
+
+            // SheetJS is loaded via index.html <script> tag
+            render();
+        });
+        frame.push(view);
+    }
+
+    _renderPresentationAttachment({ frame, name, b64, sizeKB }) {
+        // PPTX slide viewer - renders slides via server-side LibreOffice
+        const fileId = (this.state.contextAttachments || []).find(
+            a => a.name === name
+        )?.file_id || '';
+        const apiClient = this.apiClient;
+        const view = new AttachmentView(name, `attachment:${name}`, '\u{1F4CA}', (container) => {
+            container.innerHTML = `
+                <div class="rpf-view-toolbar">
+                    <span class="rpf-view-info">Loading slides…</span>
+                </div>
+                <div class="pptx-preview" style="flex:1; display:flex; flex-direction:column; overflow:hidden;"></div>`;
+            const previewEl = container.querySelector('.pptx-preview');
+            const infoEl = container.querySelector('.rpf-view-info');
+
+            if (!fileId) {
+                previewEl.innerHTML = '<p style="padding:16px; color:var(--text-muted);">No file_id - cannot render slides. Re-attach the file.</p>';
+                infoEl.textContent = 'PowerPoint Presentation';
+                return;
+            }
+
+            // Fetch total slide count, then render slide navigator
+            fetch(`files/preview/${fileId}?total=true`, {
+                headers: apiClient.getHeaders(),
+            })
+                .then(r => r.ok ? r.json() : Promise.reject(r.statusText))
+                .then(info => {
+                    const total = info.total;
+                    infoEl.textContent = `${total} slide${total !== 1 ? 's' : ''} • ${sizeKB} KB`;
+
+                    let current = 1;
+
+                    // Navigation bar
+                    const nav = document.createElement('div');
+                    nav.className = 'pptx-nav';
+                    nav.innerHTML = `
+                        <button class="pptx-nav-btn" id="pptxPrev" title="Previous slide">◀</button>
+                        <span class="pptx-slide-counter">Slide <span class="pptx-current">1</span> / ${total}</span>
+                        <button class="pptx-nav-btn" id="pptxNext" title="Next slide">▶</button>`;
+                    previewEl.appendChild(nav);
+
+                    // Slide image container
+                    const imgContainer = document.createElement('div');
+                    imgContainer.className = 'pptx-slide-container';
+                    previewEl.appendChild(imgContainer);
+
+                    const counterEl = nav.querySelector('.pptx-current');
+                    const prevBtn = nav.querySelector('#pptxPrev');
+                    const nextBtn = nav.querySelector('#pptxNext');
+
+                    const sessionHeaders = apiClient.getHeaders();
+                    const showSlide = (n) => {
+                        current = n;
+                        counterEl.textContent = n;
+                        prevBtn.disabled = n <= 1;
+                        nextBtn.disabled = n >= total;
+                        imgContainer.innerHTML = '<p style="padding:16px; color:var(--text-muted);">Rendering…</p>';
+                        fetch(`files/preview/${fileId}?slide=${n}`, { headers: sessionHeaders })
+                            .then(r => r.ok ? r.blob() : Promise.reject('Failed'))
+                            .then(blob => {
+                                const img = new Image();
+                                img.className = 'pptx-slide-img';
+                                img.alt = `Slide ${n}`;
+                                img.src = URL.createObjectURL(blob);
+                                imgContainer.innerHTML = '';
+                                imgContainer.appendChild(img);
+                            })
+                            .catch(() => {
+                                imgContainer.innerHTML = '<p style="padding:16px; color:var(--error-color);">Failed to load slide.</p>';
+                            });
+                    };
+
+                    prevBtn.addEventListener('click', () => { if (current > 1) showSlide(current - 1); });
+                    nextBtn.addEventListener('click', () => { if (current < total) showSlide(current + 1); });
+
+                    showSlide(1);
+                })
+                .catch(err => {
+                    previewEl.innerHTML = `<p style="padding:16px; color:var(--error-color);">
+                        Slide rendering unavailable: ${err}</p>
+                        <p style="padding:0 16px; font-size:13px; color:var(--text-muted);">
+                        The model can still use <code>list_pptx_slides</code> and <code>read_pptx_slide_text</code> tools.</p>`;
+                    infoEl.textContent = `PowerPoint • ${sizeKB} KB`;
+                });
+        });
+        frame.push(view);
+    }
+
+    _renderWordAttachment({ frame, name, sizeKB }) {
+        // Word document preview - convert to PDF via server-side LibreOffice
+        const fileId = (this.state.contextAttachments || []).find(
+            a => a.name === name
+        )?.file_id || '';
+        const apiClient = this.apiClient;
+        const view = new AttachmentView(name, `attachment:${name}`, '\u{1F4C4}', (container) => {
+            container.innerHTML = `
+                <div class="rpf-view-toolbar">
+                    <span class="rpf-view-info">Loading document…</span>
+                </div>
+                <div class="docx-preview" style="flex:1; min-height:0;"></div>`;
+            const previewEl = container.querySelector('.docx-preview');
+            const infoEl = container.querySelector('.rpf-view-info');
+
+            if (!fileId) {
+                previewEl.innerHTML = '<p style="padding:16px; color:var(--text-muted);">No file_id — cannot render document. Re-attach the file.</p>';
+                infoEl.textContent = `Word Document • ${sizeKB} KB`;
+                return;
+            }
+
+            // Fetch the converted PDF from the preview endpoint
+            fetch(`files/preview/${fileId}?slide=1`, {
+                headers: apiClient.getHeaders(),
+            })
+                .then(r => r.ok ? r.blob() : Promise.reject(r.statusText))
+                .then(blob => {
+                    infoEl.textContent = `Word Document • ${sizeKB} KB`;
+                    const blobUrl = URL.createObjectURL(blob);
+                    previewEl.innerHTML = `
+                        <iframe src="${blobUrl}"
+                                style="width:100%; height:100%; border:none;">
+                        </iframe>`;
+                    // Store blobUrl for cleanup
+                    previewEl._blobUrl = blobUrl;
+                })
+                .catch(err => {
+                    // Fallback to info panel if conversion unavailable
+                    infoEl.textContent = `Word Document • ${sizeKB} KB`;
+                    previewEl.innerHTML = `<div style="padding:24px; color:var(--text-secondary);">
+                        <h3 style="margin-bottom:12px; color:var(--text-primary);">${name}</h3>
+                        <p style="margin-bottom:8px;">Word Document • ${sizeKB} KB</p>
+                        <p style="font-size:12px; opacity:0.7;">
+                            PDF conversion unavailable: ${err}<br>
+                            Ask the model to summarize or analyze its contents.
+                        </p>
+                    </div>`;
+                });
+        });
+        // Clean up Blob URL when view is evicted from stack
+        const origUnmount = view.unmount.bind(view);
+        view.unmount = () => {
+            const el = document.querySelector('.docx-preview');
+            if (el && el._blobUrl) URL.revokeObjectURL(el._blobUrl);
+            origUnmount();
+        };
+        frame.push(view);
+    }
+
+    _renderGenericAttachment({ frame, name, mediaType, b64, sizeKB }) {
+        // Other office files -> info panel; anything else -> decode as text.
+        const officeMimes = [
+            'application/vnd.openxmlformats-officedocument.',
+            'application/msword',
+        ];
+        const isOffice = officeMimes.some(m => mediaType.startsWith(m));
+        if (isOffice) {
+            const typeLabel = `${name.split('.').pop().toUpperCase()} Document`;
             const view = new AttachmentView(name, `attachment:${name}`, '\u{1F4C4}', (container) => {
                 container.innerHTML = `
                     <div class="rpf-view-toolbar">
-                        <span class="rpf-view-info">Loading document\u2026</span>
+                        <span class="rpf-view-info">${typeLabel} • ${sizeKB} KB</span>
                     </div>
-                    <div class="docx-preview" style="flex:1; min-height:0;"></div>`;
-                const previewEl = container.querySelector('.docx-preview');
-                const infoEl = container.querySelector('.rpf-view-info');
-
-                if (!fileId) {
-                    previewEl.innerHTML = '<p style="padding:16px; color:var(--text-muted);">No file_id \u2014 cannot render document. Re-attach the file.</p>';
-                    infoEl.textContent = `Word Document \u2022 ${sizeKB} KB`;
-                    return;
-                }
-
-                // Fetch the converted PDF from the preview endpoint
-                fetch(`files/preview/${fileId}?slide=1`, {
-                    headers: this.apiClient.getHeaders(),
-                })
-                    .then(r => r.ok ? r.blob() : Promise.reject(r.statusText))
-                    .then(blob => {
-                        infoEl.textContent = `Word Document \u2022 ${sizeKB} KB`;
-                        const blobUrl = URL.createObjectURL(blob);
-                        previewEl.innerHTML = `
-                            <iframe src="${blobUrl}"
-                                    style="width:100%; height:100%; border:none;">
-                            </iframe>`;
-                        // Store blobUrl for cleanup
-                        previewEl._blobUrl = blobUrl;
-                    })
-                    .catch(err => {
-                        // Fallback to info panel if conversion unavailable
-                        infoEl.textContent = `Word Document \u2022 ${sizeKB} KB`;
-                        previewEl.innerHTML = `<div style="padding:24px; color:var(--text-secondary);">
-                            <h3 style="margin-bottom:12px; color:var(--text-primary);">${name}</h3>
-                            <p style="margin-bottom:8px;">Word Document \u2022 ${sizeKB} KB</p>
-                            <p style="font-size:12px; opacity:0.7;">
-                                PDF conversion unavailable: ${err}<br>
-                                Ask the model to summarize or analyze its contents.
-                            </p>
-                        </div>`;
-                    });
+                    <div style="padding:24px; color:var(--text-secondary);">
+                        <h3 style="margin-bottom:12px; color:var(--text-primary);">${name}</h3>
+                        <p style="margin-bottom:8px;">${typeLabel} • ${sizeKB} KB</p>
+                        <p style="font-size:12px; opacity:0.7;">
+                            Browser preview is not available for this file type.
+                            Ask the model to summarize or analyze its contents.
+                        </p>
+                    </div>`;
             });
-            // Clean up Blob URL when view is evicted from stack
-            const origUnmount = view.unmount.bind(view);
-            view.unmount = () => {
-                const el = document.querySelector('.docx-preview');
-                if (el && el._blobUrl) URL.revokeObjectURL(el._blobUrl);
-                origUnmount();
-            };
             frame.push(view);
-        } else {
-            // Other office files — info panel
-            const officeMimes = [
-                'application/vnd.openxmlformats-officedocument.',
-                'application/msword',
-            ];
-            const isOffice = officeMimes.some(m => mediaType.startsWith(m));
-            if (isOffice) {
-                const typeLabel = `${name.split('.').pop().toUpperCase()} Document`;
-                const view = new AttachmentView(name, `attachment:${name}`, '\u{1F4C4}', (container) => {
-                    container.innerHTML = `
-                        <div class="rpf-view-toolbar">
-                            <span class="rpf-view-info">${typeLabel} \u2022 ${sizeKB} KB</span>
-                        </div>
-                        <div style="padding:24px; color:var(--text-secondary);">
-                            <h3 style="margin-bottom:12px; color:var(--text-primary);">${name}</h3>
-                            <p style="margin-bottom:8px;">${typeLabel} \u2022 ${sizeKB} KB</p>
-                            <p style="font-size:12px; opacity:0.7;">
-                                Browser preview is not available for this file type.
-                                Ask the model to summarize or analyze its contents.
-                            </p>
-                        </div>`;
-                });
-                frame.push(view);
-            } else {
-                // Text/code files — decode and show as pre
-                try {
-                    const text = atob(b64);
-                    const view = new AttachmentView(name, `attachment:${name}`, '\u{1F4C4}', (container) => {
-                        container.innerHTML = `
-                            <div class="rpf-view-toolbar">
-                                <span class="rpf-view-info">File \u2022 ${sizeKB} KB</span>
-                            </div>
-                            <pre style="padding:16px; overflow:auto; flex:1;">${text.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</pre>`;
-                    });
-                    frame.push(view);
-                } catch (e) {
-                    console.error('[ppxai] File preview failed:', e);
-                }
-            }
+            return;
+        }
+        // Text/code files - decode and show as pre
+        try {
+            const text = atob(b64);
+            const view = new AttachmentView(name, `attachment:${name}`, '\u{1F4C4}', (container) => {
+                container.innerHTML = `
+                    <div class="rpf-view-toolbar">
+                        <span class="rpf-view-info">File • ${sizeKB} KB</span>
+                    </div>
+                    <pre style="padding:16px; overflow:auto; flex:1;">${text.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</pre>`;
+            });
+            frame.push(view);
+        } catch (e) {
+            console.error('[ppxai] File preview failed:', e);
         }
     }
 
