@@ -277,7 +277,7 @@ You: Implement user profile editing:
 ## Full Guide
 
 For complete documentation with advanced patterns:
-📖 See `docs/FILE_EDITING_GUIDE.md`
+📖 See `docs/file-editing-guide.md`
 
 ---
 

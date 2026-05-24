@@ -161,7 +161,7 @@ for the per-phase breakdown.
 ## Architecture
 
 See the new §"Agent Heartbeat Primitives (v1.18.0)" in
-[docs/ARCHITECTURE.md](ARCHITECTURE.md) for:
+[docs/architecture.md](architecture.md) for:
 
 - The emission contract for `chat_with_tools` (which events fire
   where, and what payload invariants to assume).

@@ -10,7 +10,7 @@ Both **ppxai** (Rich TUI) and **ppxaide** (Textual TUI) support two types of con
 1. **Runtime injection** (`@file`, `@git`, `@tree`, `@clipboard`, `@url`) - Include content in specific messages
 2. **Bootstrap context** (`AGENTS.md`) - Project instructions loaded at session start
 
-This guide covers runtime injection. For bootstrap context, see [Bootstrap Context Guide](BOOTSTRAP_CONTEXT_GUIDE.md).
+This guide covers runtime injection. For bootstrap context, see [Bootstrap Context Guide](bootstrap-context-guide.md).
 
 ### Runtime Injection
 
@@ -461,7 +461,7 @@ class InjectedContext:
 
 ## Related Documentation
 
-- [Bootstrap Context Guide](BOOTSTRAP_CONTEXT_GUIDE.md) - Session-level project instructions (v1.14.0+)
+- [Bootstrap Context Guide](bootstrap-context-guide.md) - Session-level project instructions (v1.14.0+)
 - [v1.11.0 Agentic Workflow Plan](archive/v1.15.1-completed/v1.11.0-agentic-workflow-plan.md) - Context injection roadmap
 - [Architecture Refactoring](archive/v1.15.2-completed/architecture-refactoring.md) - Engine layer design
 - [CLAUDE.md](../CLAUDE.md) - AI assistant development guide
@@ -469,7 +469,7 @@ class InjectedContext:
 ## Version History
 
 - **v1.14.2** (2026-01-23): Added `@clipboard` and `@url` context providers
-- **v1.14.0** (2026-01-19): Added bootstrap context (AGENTS.md) - see [Bootstrap Context Guide](BOOTSTRAP_CONTEXT_GUIDE.md)
+- **v1.14.0** (2026-01-19): Added bootstrap context (AGENTS.md) - see [Bootstrap Context Guide](bootstrap-context-guide.md)
 - **v1.11.4** (2025-12-24): Added `@git` and `@tree` context providers
 - **v1.8.0** (2025-01-XX): Initial `@file` context injection
 - **v1.7.0** (2025-01-XX): Engine layer foundation

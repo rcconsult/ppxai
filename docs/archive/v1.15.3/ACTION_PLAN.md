@@ -139,7 +139,7 @@ metadata={
 
 ### 5. Create Documentation (30 min)
 
-**File:** `docs/TOOL_CALLING.md` (NEW)
+**File:** `docs/tool-calling.md` (NEW)
 
 ```markdown
 # Tool Calling in ppxai
@@ -384,7 +384,7 @@ All tests should pass.
 - Backward compatible
 
 **Documentation Updates Required:**
-- docs/TOOL_CALLING.md (new)
+- docs/tool-calling.md (new)
 - ppxai-config.example.json
 - CHANGELOG.md entry
 

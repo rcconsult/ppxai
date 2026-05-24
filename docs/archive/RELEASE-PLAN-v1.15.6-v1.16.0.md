@@ -4,7 +4,7 @@
 **Status:** v1.15.6 done (pending merge), v1.16.0 planning
 **Predecessor:** v1.15.5 (released 2026-02-15)
 **Active Branch:** `feature/benchmark-openai-models` (native OpenAI provider + benchmarks)
-**Analysis:** [MODEL-BEHAVIOR-ANALYSIS.md](../MODEL-BEHAVIOR-ANALYSIS.md)
+**Analysis:** [model-behavior-analysis.md](../model-behavior-analysis.md)
 **Debug Sessions:** [ARCHIVE-v1.15.6-debug-sessions.md](ARCHIVE-v1.15.6-debug-sessions.md)
 
 ---
@@ -15,7 +15,7 @@ The `feature/benchmark-openai-models` branch introduced:
 1. **`OpenAINativeProvider`** — correct OpenAI API handling (Chat Completions + Responses API)
 2. **49+ benchmark runs** across 27 models revealing 5 architectural gaps in `chat.py`
 
-The benchmark analysis ([MODEL-BEHAVIOR-ANALYSIS.md](../MODEL-BEHAVIOR-ANALYSIS.md)) identified that the current binary `native_tool_calling: bool` decision is too coarse. Models like gpt-4.1-mini (71.9% prompt-based vs 60.9% native) and o4-mini (62.5% prompt-based vs 10.9% native) perform significantly worse when forced into the wrong mode.
+The benchmark analysis ([model-behavior-analysis.md](../model-behavior-analysis.md)) identified that the current binary `native_tool_calling: bool` decision is too coarse. Models like gpt-4.1-mini (71.9% prompt-based vs 60.9% native) and o4-mini (62.5% prompt-based vs 10.9% native) perform significantly worse when forced into the wrong mode.
 
 **Key insight:** The benchmark runner bypasses `chat.py` entirely (calls `provider.chat()` directly), so none of the identified gaps are testable without a real client. The TUI (`ppxai`/`ppxaide`) is the primary test vehicle for these changes.
 

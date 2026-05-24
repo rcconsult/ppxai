@@ -409,7 +409,7 @@ model_hints:
 
 Use `/context hints` to see which hints are active for your current provider/model.
 
-See [Bootstrap Context Guide](BOOTSTRAP_CONTEXT_GUIDE.md) for full documentation.
+See [Bootstrap Context Guide](bootstrap-context-guide.md) for full documentation.
 
 ### Configuration Options
 
@@ -466,7 +466,7 @@ You can customize these in `ppxai-config.json`:
 }
 ```
 
-See [Shell Consent Guide](SHELL_CONSENT_GUIDE.md) for complete documentation.
+See [Shell Consent Guide](shell-consent-guide.md) for complete documentation.
 
 ---
 
@@ -598,9 +598,9 @@ See [Shell Consent Guide](SHELL_CONSENT_GUIDE.md) for complete documentation.
 
 ## Related Documentation
 
-- [Checkpoint Guide](CHECKPOINT_GUIDE.md) - Atomic rollback for agent tasks
-- [Shell Consent Guide](SHELL_CONSENT_GUIDE.md) - Shell command security
-- [Custom Tools Guide](CUSTOM_TOOL_DEVELOPMENT_GUIDE.md) - Creating custom tools
+- [Checkpoint Guide](checkpoint-guide.md) - Atomic rollback for agent tasks
+- [Shell Consent Guide](shell-consent-guide.md) - Shell command security
+- [Custom Tools Guide](custom-tool-development-guide.md) - Creating custom tools
 - [Agentic Workflow Plan](archive/v1.15.1-completed/v1.11.0-agentic-workflow-plan.md) - Technical implementation details
 
 ---

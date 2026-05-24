@@ -133,9 +133,9 @@ No configuration changes required. Existing `~/.ppxai/.env` and `~/.ppxai/ppxai-
 
 ## Documentation
 
-- [Installation Guide](INSTALLATION.md) - Updated with desktop app instructions
-- [Agent Mode Guide](AGENT_MODE_GUIDE.md) - Works in web app
-- [Checkpoint Guide](CHECKPOINT_GUIDE.md) - Works in web app
+- [Installation Guide](installation.md) - Updated with desktop app instructions
+- [Agent Mode Guide](agent-mode-guide.md) - Works in web app
+- [Checkpoint Guide](checkpoint-guide.md) - Works in web app
 
 ## Testing
 

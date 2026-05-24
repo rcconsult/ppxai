@@ -125,7 +125,7 @@ restructure (CLAUDE.md slim + two ADRs).
    Token read per-request so operators can rotate without restart.
    +19 tests.
 
-   See [docs/API-GATEWAY.md](API-GATEWAY.md) for the policy, threat
+   See [docs/api-gateway.md](api-gateway.md) for the policy, threat
    model, deployment-shape table, and future direction (multi-token
    `/v1/tokens` registry, OIDC/JWT validation under `/v1/auth/...`).
 
@@ -146,9 +146,9 @@ restructure (CLAUDE.md slim + two ADRs).
     warning at 40 KB. v1.18.3 extracts pattern docs into
     `docs/patterns/*.md` (transactional-state,
     protocol-dependency-inversion, appstate, command-envelope,
-    state-sync-determinism), `docs/DEV-SETUP.md` (uv resolution,
-    Windows Store Python recovery), `docs/PPXAIDE-IMPL.md` (Textual
-    TUI internals + terminal images), `docs/VLLM-NOTES.md` (Hermes
+    state-sync-determinism), `docs/dev-setup.md` (uv resolution,
+    Windows Store Python recovery), `docs/ppxaide-impl.md` (Textual
+    TUI internals + terminal images), `docs/vllm-notes.md` (Hermes
     vs Harmony cheat sheet). CLAUDE.md becomes a slim navigable map
     (16.9 KB) with one-line links. Two ADRs filed:
     [`0003-agent-platform-architecture.md`](decisions/0003-agent-platform-architecture.md)
@@ -186,7 +186,7 @@ The user-visible changes span several paths:
   shell tool is async and registers itself for SIGTERM-on-interrupt.
 - **New external-facing surface: `POST /v1/oneshot`.** Stateless
   single-turn LLM call for classifiers, routers, and structured-
-  extraction pipelines. See [docs/API-GATEWAY.md](API-GATEWAY.md)
+  extraction pipelines. See [docs/api-gateway.md](api-gateway.md)
   for the full contract and stability commitments.
 - **Optional bearer-token auth.** Set `PPXAI_API_TOKEN` to require
   `Authorization: Bearer <token>` on every non-OPTIONS request.
@@ -632,11 +632,11 @@ What v1 auth is NOT (deliberately): multi-token per-agent identity,
 token rotation/expiry, scoped tokens, rate limiting, OIDC/JWT
 integration. Single shared token is the foot-in-the-door for v1.
 The future direction `/v1/tokens` (CRUD on API tokens, GitHub-PAT
-style) is documented in [docs/API-GATEWAY.md](API-GATEWAY.md)
+style) is documented in [docs/api-gateway.md](api-gateway.md)
 "Future directions"; OIDC/JWT lands as `/v1/auth/...` if that
 direction is taken.
 
-See [`docs/API-GATEWAY.md`](API-GATEWAY.md) for the full policy
+See [`docs/api-gateway.md`](api-gateway.md) for the full policy
 (stability tiers, threat model, deployment shapes, future
 directions) and [ADR 0004](decisions/0004-llm-gateway-features.md)
 for the rationale.
@@ -677,9 +677,9 @@ CLAUDE.md as a slim navigable map with one-line pointers. Extracted:
 | `docs/patterns/appstate.md` | "Critical Pattern: Cross-Client State Through AppState" (~120 lines) | Linked |
 | `docs/patterns/command-envelope.md` | "Critical Pattern: Command Dispatch via Envelope" (~90 lines) | Linked + extended with `prompt_text` |
 | `docs/patterns/state-sync-determinism.md` | "Critical Pattern: State-Sync Determinism" (~70 lines) | Linked |
-| `docs/DEV-SETUP.md` | "Development Setup" + "Windows Store Python Recovery" (~80 lines) | Linked |
-| `docs/PPXAIDE-IMPL.md` | "ppxaide TUI Implementation" + "Terminal Image Rendering" (~120 lines) | Linked |
-| `docs/VLLM-NOTES.md` | "vLLM Tool Calling Reference" (~150 lines) | Linked (defers depth to existing `vllm-tool-calling-guide.md`) |
+| `docs/dev-setup.md` | "Development Setup" + "Windows Store Python Recovery" (~80 lines) | Linked |
+| `docs/ppxaide-impl.md` | "ppxaide TUI Implementation" + "Terminal Image Rendering" (~120 lines) | Linked |
+| `docs/vllm-notes.md` | "vLLM Tool Calling Reference" (~150 lines) | Linked (defers depth to existing `vllm-tool-calling-guide.md`) |
 
 CLAUDE.md retains the project overview, architectural pattern
 bullet-list with links, codebase stats, install-location table,

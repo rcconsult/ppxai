@@ -547,7 +547,7 @@ The web tools (`get_weather`, `fetch_url`, `web_search`) support corporate proxy
 
 ### Shell wrapper framework (v1.18.5)
 
-- Generic JSON-driven framework for transparent CLI wrappers (rtk, time, nice, perf profilers, etc.). Code: `ppxai/engine/tools/wrappers/`. User-facing reference: [docs/SHELL-WRAPPERS.md](docs/SHELL-WRAPPERS.md).
+- Generic JSON-driven framework for transparent CLI wrappers (rtk, time, nice, perf profilers, etc.). Code: `ppxai/engine/tools/wrappers/`. User-facing reference: [docs/shell-wrappers.md](docs/shell-wrappers.md).
 - When a wrapper is active, shell-tool output may already be in the wrapper's transformed form — **interpret tool output as it arrives without assuming a particular layout** (e.g. raw `git status` porcelain v1 vs rtk's compact `* branch / ~ Modified: N / ? Untracked: N`). Per-wrapper hint blocks under `## Shell wrapper context` in the system prompt explain the format.
 - Wrappers are registered in `tools.shell.wrappers` config; rtk ships as the default. Adding a new wrapper that fits `type: "probe"` or `type: "always"` requires zero ppxai code changes.
 
@@ -556,7 +556,7 @@ The web tools (`get_weather`, `fetch_url`, `web_search`) support corporate proxy
 - `CLAUDE.md` - Detailed project instructions for Claude Code
 - `ROADMAP.md` - Feature roadmap and version planning
 - `docs/TODO-v1.16.2.md` - Current task list
-- `docs/KNOWN-ISSUES.md` - Known issues tracker (KI-001: google-genai SDK pin)
+- `docs/known-issues.md` - Known issues tracker (KI-001: google-genai SDK pin)
 
 ### Current version
 

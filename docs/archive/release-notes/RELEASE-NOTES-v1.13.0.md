@@ -22,7 +22,7 @@ Major release with **one-line installer**, server binary fix, premium web search
 - **Platform Detection** - Automatically detects OS (Linux/macOS/Windows) and architecture (ARM64/Intel)
 - **Options** - `--version`, `--server-only`, `--tui-only`, `--with-extension`, `--install-dir`
 - **Post-Install Guidance** - PATH setup instructions and API key configuration
-- **Documentation** - Comprehensive [INSTALLATION.md](docs/INSTALLATION.md) guide
+- **Documentation** - Comprehensive [installation.md](docs/installation.md) guide
 
 ### Premium Web Search Tool
 - **Custom Provider Support** - vLLM, Ollama, and other custom providers can now use premium web search
@@ -68,7 +68,7 @@ Major release with **one-line installer**, server binary fix, premium web search
 - Updated test counts from 406 to 525 tests across README.md and ROADMAP.md
 - Fixed Gemini `web_search` capability flag (was false, now true)
 - Replaced deprecated `sonar-reasoning` with `sonar-reasoning-pro` and `sonar-deep-research`
-- Added "Advanced Features" section to PROVIDER_SETUP.md
+- Added "Advanced Features" section to provider-setup.md
 
 ## Installation
 
@@ -102,7 +102,7 @@ For native tool calling with vLLM:
 
 ### New Files
 - `install.sh` - One-line curl installer for binary installation
-- `docs/INSTALLATION.md` - Comprehensive installation guide
+- `docs/installation.md` - Comprehensive installation guide
 - `ppxai/version.py` - Isolated version module (fixes server binary import chain)
 - `ppxai/engine/tools/builtin/web_premium.py` - Premium web search with Perplexity/Gemini fallback
 - `tests/test_engine_tool_parsing.py` - 440+ lines of tool parsing tests
@@ -138,7 +138,7 @@ ProviderCapabilities(
 | File | Changes |
 |------|---------|
 | `install.sh` | **New** - One-line curl installer |
-| `docs/INSTALLATION.md` | **New** - Comprehensive installation guide |
+| `docs/installation.md` | **New** - Comprehensive installation guide |
 | `ppxai/version.py` | **New** - Isolated version module for server binary |
 | `ppxai/engine/types.py` | Added `ToolUsage`, `native_tool_calling` capability |
 | `ppxai/engine/providers/openai_compat.py` | Native tool calling, streaming tool calls |
@@ -151,7 +151,7 @@ ProviderCapabilities(
 | `tests/test_web_premium.py` | Premium web search tests |
 | `README.md` | Test count update (406 -> 525) |
 | `ROADMAP.md` | v1.13.0 section, test count update |
-| `docs/PROVIDER_SETUP.md` | Gemini capabilities, Advanced Features |
+| `docs/provider-setup.md` | Gemini capabilities, Advanced Features |
 
 ## Compatibility
 

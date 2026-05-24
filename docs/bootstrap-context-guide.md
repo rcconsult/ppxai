@@ -519,10 +519,10 @@ Returns active hints for current session
 
 ## Related Documentation
 
-- [Context Injection Guide](CONTEXT-INJECTION.md) - `@file`, `@git`, `@tree` runtime injection
-- [Provider Setup Guide](PROVIDER_SETUP.md) - Configure AI providers
+- [Context Injection Guide](context-injection.md) - `@file`, `@git`, `@tree` runtime injection
+- [Provider Setup Guide](provider-setup.md) - Configure AI providers
 - [Ollama Limitations](ollama-limitations.md) - Small model behavior
-- [Agent Mode Guide](AGENT_MODE_GUIDE.md) - Autonomous task execution
+- [Agent Mode Guide](agent-mode-guide.md) - Autonomous task execution
 
 ---
 

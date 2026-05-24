@@ -555,7 +555,7 @@ ppxai/tui/                     # New module (Textual-based)
 | **Benchmark v2** | 36 tests/9 categories, AGENTS.md delta testing, partial credit | ✅ Done |
 | **1,536 tests passing** | 187 new tests (provider hierarchy, routing, tool messages, config) | ✅ Done |
 
-**Gaps addressed (from MODEL-BEHAVIOR-ANALYSIS.md):**
+**Gaps addressed (from model-behavior-analysis.md):**
 1. Binary decision at wrong layer → Profile-driven routing
 2. Tool results as synthetic messages → Proper `tool` role messages
 3. Single tool call per iteration → Multi-tool support
@@ -733,7 +733,7 @@ ppxai/tui/                     # New module (Textual-based)
 | **`AppState.agent_beat` field** | Schema-driven across Python/JS/TS; pushed via `state_sync` SSE; cleared on run end. | ✅ Landed |
 | **Zombie circuit-breaker** | `tools.agent.zombie_threshold` (default 3, 0 disables) stops the tool loop after N consecutive failed iterations. | ✅ Landed |
 | **Client renderers** | Rich dim line, ppxaide status badge (success/warning/error variants), Web + VSCode header badge. | ✅ Landed |
-| **Architecture doc** | [ARCHITECTURE.md §"Agent Heartbeat Primitives"](docs/ARCHITECTURE.md) + [RELEASE-NOTES-v1.18.0.md](docs/RELEASE-NOTES-v1.18.0.md). | ✅ Landed |
+| **Architecture doc** | [architecture.md §"Agent Heartbeat Primitives"](docs/architecture.md) + [release-notes-v1.18.0.md](docs/release-notes-v1.18.0.md). | ✅ Landed |
 
 ### v1.18.0 - Stabilization Pass (Phases 1–5 — landed on branch)
 
@@ -844,7 +844,7 @@ cache) so future sub-agent worker threads don't race.
 
 **Net effort:** ~700 LoC including tests + docs. Detailed plan at
 [`docs/archive/TODO-v1.18.5-shell-wrappers.md`](docs/archive/TODO-v1.18.5-shell-wrappers.md).
-User-facing reference at [`docs/SHELL-WRAPPERS.md`](docs/SHELL-WRAPPERS.md).
+User-facing reference at [`docs/shell-wrappers.md`](docs/shell-wrappers.md).
 
 **Settled design:**
 - JSON-driven factory + registry; no privileged built-in classes.
@@ -942,7 +942,7 @@ rows below carry the load-bearing wire-shape commitments inline.
 | **Phase 3: Run persistence + recovery** | Checkpoint to `state.json` per agent slot. Engine restart recovers in-flight runs by re-reading slots. Required for long-lived SRE agents (cert-monitor: hourly; incident-responder: on-call). | ~2-3 days |
 | **Phase 4: Resource budgets** | `meta.json` carrying `{token_budget, time_budget, iteration_budget, started_at, status}`. Runtime enforcement at `chat_with_tools` boundary. Autonomous agents without budgets are how cloud bills explode. | ~2 days |
 | **Phase 5: Network policy enforcement** | Per-run egress allowlist (host + path globs), fail-closed default, audit logging on deny. New middleware in `ppxai/engine/tools/network_policy.py` hooks the outbound-HTTP path of network-touching tools. Emits typed `EventType.NETWORK_POLICY_DENIED` and `EventType.NETWORK_POLICY_ALLOWED` events with `{tool, target_host, target_path, reason, allowlist_rule_id, run_id}` payload (per ADR 0003 §8 / caveat C1 — analogous to existing `EventType.PROVIDER_THROTTLED`) so consumer audit loggers consume them as data, not by tapping internals. Load-bearing for ppxai-sre's policy engine planned feature; per-tool consent (today's primitive) is the wrong shape for unattended agents. | ~4-6 days |
-| **Phase 6: k8s session-manager hardening** (promoted from [DEBT-INVENTORY.md](docs/DEBT-INVENTORY.md) Item 3) | 30-50 tests around the 8 named functions in `deploy/images/session-manager/main.py`: `_list_sessions`, `_teardown_session`, `create_session`, `delete_session`, `heartbeat`, `startup`, `LDAPAuthenticator._hash_password`, `authenticate`. Quick pass (~half day) is the v1.19.x release-readiness gate; full pass is the should-have. ppxai-sre IS the k8s context, so Item 3 stops being trigger-deferred. | ~half day to ~1 day |
+| **Phase 6: k8s session-manager hardening** (promoted from [debt-inventory.md](docs/debt-inventory.md) Item 3) | 30-50 tests around the 8 named functions in `deploy/images/session-manager/main.py`: `_list_sessions`, `_teardown_session`, `create_session`, `delete_session`, `heartbeat`, `startup`, `LDAPAuthenticator._hash_password`, `authenticate`. Quick pass (~half day) is the v1.19.x release-readiness gate; full pass is the should-have. ppxai-sre IS the k8s context, so Item 3 stops being trigger-deferred. | ~half day to ~1 day |
 
 #### Should-have for v1.19.x (operationally important)
 
@@ -1030,7 +1030,7 @@ natural partner for MCP's per-server `env` handling.
 Full plan with phasing, gap list, security hardening (output
 truncation + `<mcp_tool_output>` envelope + tier-1/2/3 consent
 mapping), and acceptance criteria:
-[docs/MCP-INTEGRATION-PLAN.md](docs/MCP-INTEGRATION-PLAN.md).
+[docs/mcp-integration-plan.md](docs/mcp-integration-plan.md).
 
 **Effort estimate:** ~6-8 days bundled across 5 phases. **Branch when
 ready:** `feat/mcp-integration-day-0`.

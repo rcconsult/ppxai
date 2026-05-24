@@ -258,7 +258,7 @@ The big advantage of VSCode is that we can delegate to first-party APIs and inst
 3. **`tests/test_pyinstaller_spec_completeness.py`** (already exists) — already covers the hidden-imports failure mode.
 4. **End-to-end tests** — `tests/test_command_e2e_web.py` hitting the FastAPI app via `httpx.AsyncClient`, exercising each command's envelope. ~40 tests total.
 5. **Update `CLAUDE.md`** — Critical Architecture Pattern: "All command dispatch goes through `POST /command/<name>`. No bespoke REST endpoints for command logic. Side effects are envelope-driven."
-6. **Update `docs/ARCHITECTURE.md`** — add command dispatch flow diagram.
+6. **Update `docs/architecture.md`** — add command dispatch flow diagram.
 
 ## Risk register
 

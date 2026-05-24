@@ -35,7 +35,7 @@ Key binding management in ppxaide is inconsistent and fragile:
 - `ppxai/tui/widgets/chat_text_area.py` — same audit
 - `ppxai/tui/widgets/file_tree.py` — same audit
 - `ppxai/tui/app.py` — consolidate `BINDINGS`, remove redundant widget-level overrides
-- `docs/LINUX-TERMINAL-SETUP.md` — update if ghostty keybind workaround becomes unnecessary
+- `docs/linux-terminal-setup.md` — update if ghostty keybind workaround becomes unnecessary
 
 ### Priority
 

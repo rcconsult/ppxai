@@ -340,7 +340,7 @@ on every NIM 403.
 
 ## Related documents
 
-- [docs/RELEASE-NOTES-v1.18.3.md](RELEASE-NOTES-v1.18.3.md) — user-facing summary of the release
+- [docs/release-notes-v1.18.3.md](release-notes-v1.18.3.md) — user-facing summary of the release
 - [docs/DEBT-INVENTORY-v1.18.2.md](DEBT-INVENTORY-v1.18.2.md) — prior version's tracking
 - [memory/feedback_benchmark_rate_limit_contamination.md] — diagnostic pattern for the Item 17 contamination signal
 - [AGENTS.md] `nvidia:` provider_hint block — runtime guidance for models on NIM endpoint

@@ -30,7 +30,7 @@ Critical safety fixes for Agent Mode. The `/agent on|off` commands now correctly
 
 ## Documentation
 
-- Updated [Agent Mode Guide](docs/AGENT_MODE_GUIDE.md) with configuration section explaining:
+- Updated [Agent Mode Guide](docs/agent-mode-guide.md) with configuration section explaining:
   - Why each setting exists
   - Safe value ranges
   - Warnings about extreme configurations

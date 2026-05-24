@@ -8,7 +8,7 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 
 **Current version:** see [pyproject.toml](pyproject.toml) (single source of truth) or [the latest release](https://github.com/rcconsult/ppxai/releases/latest).
 
-**Release state:** v1.18.3 **released** 2026-05-03 (https://github.com/rcconsult/ppxai/releases/tag/v1.18.3, 20 assets). v1.18.3 is the surface ppxai-sre's outlook-monitor agent consumes — preserve gateway shape (`POST /v1/oneshot`, bearer auth) byte-identical on `bugfix/v1.18.4`. Active branch: `bugfix/v1.18.4`, scope: post-release fixes only, no new features. See [docs/RELEASE-NOTES-v1.18.3.md](docs/RELEASE-NOTES-v1.18.3.md) for what shipped. Open deferred work lives in the rolling [docs/DEBT-INVENTORY.md](docs/DEBT-INVENTORY.md) (per-version snapshots `DEBT-INVENTORY-v1.18.2.md` and `DEBT-INVENTORY-v1.18.3.md` are archived under [docs/archive/](docs/archive/)).
+**Release state:** v1.18.3 **released** 2026-05-03 (https://github.com/rcconsult/ppxai/releases/tag/v1.18.3, 20 assets). v1.18.3 is the surface ppxai-sre's outlook-monitor agent consumes — preserve gateway shape (`POST /v1/oneshot`, bearer auth) byte-identical on `bugfix/v1.18.4`. Active branch: `bugfix/v1.18.4`, scope: post-release fixes only, no new features. See [docs/release-notes-v1.18.3.md](docs/release-notes-v1.18.3.md) for what shipped. Open deferred work lives in the rolling [docs/debt-inventory.md](docs/debt-inventory.md) (per-version snapshots `DEBT-INVENTORY-v1.18.2.md` and `DEBT-INVENTORY-v1.18.3.md` are archived under [docs/archive/](docs/archive/)).
 
 For per-version release notes, see [CHANGELOG.md](CHANGELOG.md) and `docs/RELEASE-NOTES-v*.md`. For architecture decisions, see `docs/decisions/`.
 
@@ -21,7 +21,7 @@ Each has a dedicated doc — read it before changing code in that area.
 - **Server modularization** (v1.17.x) — `http.py` 411 lines + 17 route modules under `server/routes/`. DI via `Depends(get_session)`.
 - **Command Dispatch via Envelope** (v1.18.1) — every slash command flows through `POST /command/<name>` returning `{ok, result, side_effects, events, version}`. → [docs/patterns/command-envelope.md](docs/patterns/command-envelope.md)
 - **State-Sync Determinism** (v1.18.1) — `/state` snapshot + visibility/focus re-anchor + REST event piggyback + `cwd_anchor` 409. → [docs/patterns/state-sync-determinism.md](docs/patterns/state-sync-determinism.md)
-- **Agent Heartbeat Primitives** (v1.18.0) — `EventType.AGENT_BEAT` / `AGENT_RUN_*` / `AGENT_ZOMBIE`; zombie circuit-breaker via `tools.agent.zombie_threshold`. → [docs/ARCHITECTURE.md] §"Agent Heartbeat Primitives".
+- **Agent Heartbeat Primitives** (v1.18.0) — `EventType.AGENT_BEAT` / `AGENT_RUN_*` / `AGENT_ZOMBIE`; zombie circuit-breaker via `tools.agent.zombie_threshold`. → [docs/architecture.md] §"Agent Heartbeat Primitives".
 - **Transactional State Management** (v1.15.0) — checkpoint/commit/rollback for atomic multi-step operations. → [docs/patterns/transactional-state.md](docs/patterns/transactional-state.md)
 - **Protocol-based dependency inversion** (v1.17.0) — define `Protocol` in leaf modules to break circular imports. No `TYPE_CHECKING`. → [docs/patterns/protocol-dependency-inversion.md](docs/patterns/protocol-dependency-inversion.md)
 - **EngineClientProtocol** (v1.18.2) — commands type against the protocol, not the concrete `EngineClient`. See [ppxai/engine/types.py].
@@ -33,7 +33,7 @@ Each has a dedicated doc — read it before changing code in that area.
 - File upload + multimodal — `/attach` command, `SessionFileStore`, file preprocessing, image validation, VL sidecar, PDF/Excel/PPTX/DOCX tools.
 - `/doctor` config advisor — deprecation table, dead/deprecated/new/recommended model scanning.
 - VSCode extension bundled via esbuild (v1.18.2) — 128 KB VSIX (was 1.1 MB), 15 files (was 804); CI has 500 KB size-budget gate.
-- **v1 API gateway** (v1.18.3) — `POST /v1/oneshot` is the first stable, semver-versioned external surface. Internal endpoints (`/chat`, `/command/*`, etc.) keep evolving. See [docs/API-GATEWAY.md](docs/API-GATEWAY.md).
+- **v1 API gateway** (v1.18.3) — `POST /v1/oneshot` is the first stable, semver-versioned external surface. Internal endpoints (`/chat`, `/command/*`, etc.) keep evolving. See [docs/api-gateway.md](docs/api-gateway.md).
 
 ## Codebase Statistics (v1.18.2, approximate)
 
@@ -112,7 +112,7 @@ vscode-extension/        # TypeScript VSCode extension
 
 ## Development Setup
 
-For uv resolution, Quick Start, Windows Store Python recovery, corporate proxy/TLS, and PyInstaller details, see [docs/DEV-SETUP.md](docs/DEV-SETUP.md).
+For uv resolution, Quick Start, Windows Store Python recovery, corporate proxy/TLS, and PyInstaller details, see [docs/dev-setup.md](docs/dev-setup.md).
 
 Quick reminder:
 ```bash
@@ -152,7 +152,7 @@ cd vscode-extension && npm run compile && npx vsce package --allow-missing-repos
 bash scripts/create-macos-app.sh
 ```
 
-If pytest collection fails with `No module named 'blinker'`, exclude TUI tests via the helper in [docs/DEV-SETUP.md](docs/DEV-SETUP.md).
+If pytest collection fails with `No module named 'blinker'`, exclude TUI tests via the helper in [docs/dev-setup.md](docs/dev-setup.md).
 
 ## Release Process
 
@@ -220,13 +220,13 @@ Commands: `ppxai.openChat`, `ppxai.explainSelection`, `ppxai.generateTests`, `pp
 
 ## ppxaide / Terminal Images
 
-For Textual TUI internals (theme synchronization, key bindings, kitty keyboard protocol, syntax highlighting requirements) and terminal image rendering details, see [docs/PPXAIDE-IMPL.md](docs/PPXAIDE-IMPL.md).
+For Textual TUI internals (theme synchronization, key bindings, kitty keyboard protocol, syntax highlighting requirements) and terminal image rendering details, see [docs/ppxaide-impl.md](docs/ppxaide-impl.md).
 
 DO NOT BREAK: key registry in `ppxai/tui/keys.py`, theme sync chain (`watch_theme()` → `get_syntax_theme_for_app_theme()` → `CodeEditor.syntax_theme`), tree-sitter dependencies in `pyproject.toml`, language detection via `EXTENSION_TO_LANGUAGE`.
 
 ## vLLM Tool Calling
 
-For Hermes vs Harmony parsers, GPT-OSS quirks, Qwen3/2.5 setup, and the "I'll use X tool" JSON-text issue, see [docs/VLLM-NOTES.md](docs/VLLM-NOTES.md), [docs/vllm-tool-calling-guide.md](docs/vllm-tool-calling-guide.md), [docs/prompt-based-tool-calling.md](docs/prompt-based-tool-calling.md).
+For Hermes vs Harmony parsers, GPT-OSS quirks, Qwen3/2.5 setup, and the "I'll use X tool" JSON-text issue, see [docs/vllm-notes.md](docs/vllm-notes.md), [docs/vllm-tool-calling-guide.md](docs/vllm-tool-calling-guide.md), [docs/prompt-based-tool-calling.md](docs/prompt-based-tool-calling.md).
 
 ## Known Issues
 
@@ -234,13 +234,13 @@ For Hermes vs Harmony parsers, GPT-OSS quirks, Qwen3/2.5 setup, and the "I'll us
 
 ## Shell wrapper framework (v1.18.5)
 
-Generic JSON-driven framework for transparent CLI wrappers (rtk, time, nice, perf profilers, etc.) on the shell tool. Two integration layers — engine-side rewrite + system-prompt hint — both gated on the wrapper's binary being on PATH. Adding a wrapper is a config-only operation when it fits the `probe` or `always` decision strategy. Code lives at `ppxai/engine/tools/wrappers/`; rtk ships as the canonical first wrapper in `DEFAULT_SHELL_WRAPPERS`. See [docs/SHELL-WRAPPERS.md](docs/SHELL-WRAPPERS.md) for the user-facing reference.
+Generic JSON-driven framework for transparent CLI wrappers (rtk, time, nice, perf profilers, etc.) on the shell tool. Two integration layers — engine-side rewrite + system-prompt hint — both gated on the wrapper's binary being on PATH. Adding a wrapper is a config-only operation when it fits the `probe` or `always` decision strategy. Code lives at `ppxai/engine/tools/wrappers/`; rtk ships as the canonical first wrapper in `DEFAULT_SHELL_WRAPPERS`. See [docs/shell-wrappers.md](docs/shell-wrappers.md) for the user-facing reference.
 
 ## Debug Logging
 
 Default: **off** for fresh installs. Toggle with `/debug-log on|off` (Rich + Textual) or `POST /config/debug-log` (web/VSCode). Persisted to `ppxai-config.json → tui.debug_log` and restored inside `config.initialize()`, so logging is active **before** any client code runs — critical for diagnosing early-startup regressions like silent session-recovery failures.
 
-See [docs/DEBUG-LOGGING.md](docs/DEBUG-LOGGING.md) and [memory/feedback_session_recovery_ordering.md](memory/feedback_session_recovery_ordering.md).
+See [docs/debug-logging.md](docs/debug-logging.md) and [memory/feedback_session_recovery_ordering.md](memory/feedback_session_recovery_ordering.md).
 
 ## Verify, Don't Assume
 

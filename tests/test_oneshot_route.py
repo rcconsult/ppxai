@@ -111,7 +111,7 @@ class TestProviderResolution:
 
 
 class TestResponseShape:
-    """Pin the v1 response contract — semver-stable per docs/API-GATEWAY.md."""
+    """Pin the v1 response contract — semver-stable per docs/api-gateway.md."""
 
     def test_success_returns_full_envelope(self, http_client, stub_provider):
         with patch(

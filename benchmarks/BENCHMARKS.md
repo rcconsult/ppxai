@@ -295,7 +295,7 @@ ppxai supports **two different tool calling architectures**:
 }
 ```
 
-**Reference:** [docs/TOOL_CALLING.md](../docs/TOOL_CALLING.md)
+**Reference:** [docs/tool-calling.md](../docs/tool-calling.md)
 
 ---
 
@@ -713,10 +713,10 @@ def get_categories() -> list[str]:
 
 ## See Also
 
-- **Tool Calling Guide:** [docs/TOOL_CALLING.md](../docs/TOOL_CALLING.md)
+- **Tool Calling Guide:** [docs/tool-calling.md](../docs/tool-calling.md)
 - **vLLM Setup:** [docs/vllm-tool-calling-guide.md](../docs/vllm-tool-calling-guide.md)
 - **Prompt-Based Tools:** [docs/prompt-based-tool-calling.md](../docs/prompt-based-tool-calling.md)
-- **DGX Spark Setup:** [docs/DGX-SPARK-SETUP.md](../docs/DGX-SPARK-SETUP.md)
+- **DGX Spark Setup:** [docs/dgx-spark-setup.md](../docs/dgx-spark-setup.md)
 - **Test Definitions:** [benchmarks/llm-eval/test_cases.py](llm-eval/test_cases.py)
 
 ---

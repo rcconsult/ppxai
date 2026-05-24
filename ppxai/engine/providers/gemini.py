@@ -150,7 +150,7 @@ class GeminiProvider(BaseProvider):
         """Filter out empty parts to work around SDK v1.57.0+ regression.
 
         SDK is pinned to <1.57.0 in pyproject.toml. This workaround is kept as
-        a defensive layer in case the pin is ever relaxed. See docs/KNOWN-ISSUES.md
+        a defensive layer in case the pin is ever relaxed. See docs/known-issues.md
         for full context, affected versions, and upgrade verification steps.
 
         Issue: https://github.com/googleapis/python-genai/issues/1789

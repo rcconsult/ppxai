@@ -85,7 +85,7 @@ tool, with rtk (Rust Token Killer) shipping as the first concrete wrapper.
 
 - **Sentinel test suite for shell-command safety classification** (`tests/test_consent_classification.py`, 70 cases). Read-only git verbs (28 commands) are SAFE; mutating git verbs (13 commands) stay DANGEROUS; read-only gh verbs are SAFE. Transparent-prefix stripping integration: `rtk git status` classifies SAFE; inactive wrappers don't license stripping; stacked transparent wrappers strip in order; safety invariant under wrapping (read-only stays SAFE, dangerous stays DANGEROUS, never stays NEVER). Pre-v1.18.5 patterns (`ls`, `cat`, `pwd`, `rm`, `sudo`, `rm -rf /`) keep their verdicts.
 
-- **User-facing docs** at [docs/SHELL-WRAPPERS.md](docs/SHELL-WRAPPERS.md): framework overview, "how to add a wrapper" recipe, schema reference, decision rules, safety-classification interaction, rtk install + config, troubleshooting. Plan / acceptance / settled-decisions doc at [docs/TODO-v1.18.5-shell-wrappers.md](docs/TODO-v1.18.5-shell-wrappers.md).
+- **User-facing docs** at [docs/shell-wrappers.md](docs/shell-wrappers.md): framework overview, "how to add a wrapper" recipe, schema reference, decision rules, safety-classification interaction, rtk install + config, troubleshooting. Plan / acceptance / settled-decisions doc at [docs/TODO-v1.18.5-shell-wrappers.md](docs/TODO-v1.18.5-shell-wrappers.md).
 
 ### Changed
 
@@ -143,7 +143,7 @@ preserve it byte-identical.
 - **Engine resilience for live preview workflow.** Three independent fixes from a real demo-app debugging session: (a) **async + cancellable shell tool** (`a746a7c6`) — `subprocess.run` (sync) → `asyncio.create_subprocess_*` so the event loop keeps servicing `POST /interrupt` while a tool runs; trailing `&` / `nohup` detected → `stdin/stdout/stderr=DEVNULL` + `start_new_session=True` so backgrounded uvicorn can't deadlock the captured pipes for 300s. New `_active_subprocesses` registry on `EngineClient` (with `register_subprocess` / `unregister_subprocess` on `ToolEngineProtocol`); `interrupt_stream()` SIGTERMs them. +7 tests. (b) **`CompositeResult.to_dict()` override** (`848b4d99`) — the inherited path emitted only `type/status/message/metadata` and silently dropped the `results` list, so any `/usage` after a NIM throttle was recorded delivered an empty container to web/VSCode. Override recursively serializes each sub-result via its own `to_dict()`. (c) **`/preview` flag wiring** (`61240f0d`) — `--serve [cmd]`, `--proxy port`, `--port N` advertised in `web/shared/commands.js` since v1.17.1 but never reached `handle_preview`; the literal flag string was being resolved as a filepath. New shlex-based `_parse_preview_args`. Web's `open_html_preview` dispatches on `mode` → `openServedPreview` / `openProxiedPreview` / static iframe path; backwards-compatible with the legacy `{served, proxied}` boolean shape. +18 tests.
 - **`prompt_text` SideEffectKind** (`74afd5a2`) — companion to v1.18.1's `prompt_quick_pick` for free-text follow-ups when the answer isn't from a finite set. Wire shape `{kind, title, question, command_to_resume, original_args, placeholder}`. Resume protocol mirrors quick-pick (no server continuation state): client re-issues `POST /command/<command_to_resume>` with `args = "<original_args> — <reply>"` (em-dash separator). Web → inline form rendered as a system message. VSCode → `vscode.window.showInputBox({prompt, placeHolder})`. TUI ignores the kind (open-enum invariant); the accompanying `NotificationResult` text serves as the user-visible nudge. First user: `validate_agent_task` rejection — `/agent fix` now auto-resumes the elaboration from web/VSCode without retyping the slash command. +8 tests across `tests/test_prompt_text_side_effect.py`. Closes [docs/archive/TODO-v1.18.2-prompt-text-kind.md](docs/archive/TODO-v1.18.2-prompt-text-kind.md).
 - **`POST /v1/oneshot` — first endpoint of a new v1 API gateway tier** (`38c2743d`). Stateless single-turn LLM call — no session, no streaming, no history. Designed for external agents (classifiers, routers, structured-extraction pipelines) that want ppxai-server as a thin LLM gateway without managing sessions per call. `OpenAICompatibleProvider.oneshot()` builds messages, applies `_apply_reasoning_trigger`, forwards `extra_body` from config (so vendor knobs like NIM `chat_template_kwargs.enable_thinking` carry through). Request-level `response_format` / `max_tokens` / `temperature` win over per-model config. Returns `{content, finish_reason, model, provider, usage}`. v1 supports `OpenAICompatibleProvider` (covers `local`, `custom`, NIM, vLLM, Ollama, OpenRouter); native OpenAI / Perplexity / Gemini providers grow `oneshot()` in subsequent releases. +14 tests.
-- **v1 API gateway tier with semver-style stability commitments.** Two-tier separation: `/v1/<endpoint>` is the stable external-facing surface; `/<endpoint>` (no prefix) is internal and evolves with ppxai's own clients. Required fields don't disappear, new optional fields can be added, documented status codes are stable. Breaking changes ship as `/v2/<endpoint>` with a deprecation window. New [docs/API-GATEWAY.md](docs/API-GATEWAY.md) documents the policy, threat model for auth, deployment-shape table, and the future direction (multi-token `/v1/tokens` registry, OIDC/JWT validation under `/v1/auth/...`).
+- **v1 API gateway tier with semver-style stability commitments.** Two-tier separation: `/v1/<endpoint>` is the stable external-facing surface; `/<endpoint>` (no prefix) is internal and evolves with ppxai's own clients. Required fields don't disappear, new optional fields can be added, documented status codes are stable. Breaking changes ship as `/v2/<endpoint>` with a deprecation window. New [docs/api-gateway.md](docs/api-gateway.md) documents the policy, threat model for auth, deployment-shape table, and the future direction (multi-token `/v1/tokens` registry, OIDC/JWT validation under `/v1/auth/...`).
 - **Bearer-token auth middleware** (`9953b1df`) — opt-in via `PPXAI_API_TOKEN` env var; default off so localhost desktop UX is unchanged. When set, every non-OPTIONS request needs `Authorization: Bearer <token>` matching the value or gets `401` with `WWW-Authenticate: Bearer realm="ppxai"`. Token read on every request (rotation friendly). Empty / whitespace values treated as auth disabled (prevents lockout from a stray empty config). CORS preflight exempted (browsers don't send Authorization on OPTIONS by spec). Authorization scheme parsed case-insensitively per RFC 7235. Single shared token in v1; multi-token registry under `/v1/tokens` and OIDC/JWT direction documented as future work. +19 tests across `tests/test_auth_middleware.py`.
 - **Release tooling closure** (`f82c9878`) — three confirmed defects from `docs/archive/TODO-release-tooling.md`: (a) `wait_for_ci` filters `gh run list --workflow="Build Executables"` so faster concurrent workflows on the same tag (Deploy Documentation, etc.) can't satisfy the gate prematurely (defect #1). (b) `.nvmrc` pins Node 20 to match CI — local test runs that shell out to node match the CI version by default, preventing the next "passes locally, fails in CI" cross-language drift (defect #3 generalisation). (c) `tests/test_release_dry_run.py` (3 tests) pins `merge_to_master_if_needed(..., dry_run=True)` invokes zero subprocess calls + sanity test that `dry_run=False` still calls git (defect #2 acceptance). Closes [docs/archive/TODO-release-tooling.md](docs/archive/TODO-release-tooling.md).
 
@@ -151,7 +151,7 @@ preserve it byte-identical.
 
 - **Release pre-flight green during dev.** `validate-release.py` now accepts either `## [X.Y.Z] - YYYY-MM-DD` or `## [X.Y.Z] - unreleased` as a valid CHANGELOG entry. `release.py` substitutes `unreleased` → today's date as a release-time step (`update_changelog_date`), so the released artifact still carries the actual ship date. Idempotent re-runs are safe.
 - **Agent-loop unification TODO re-scoped** (`6f1201ef`) based on 2026-05-03 code investigation. Original premise was partly outdated: `AGENT_BEAT` / `AGENT_RUN_*` events already fire from `engine/chat.py`; web doesn't run a client-side loop (sends `/agent <task>` to `/chat` which gates with `validate_agent_task`); only VSCode's `chatPanel.ts::handleAgentCommand` is the real divergence (~150 LoC). The outer multi-iteration continuation loop in `handle_agent` is meta-orchestration on top of `chat_with_tools`'s inner tool loop. Two design questions named: (A) does the outer loop earn its keep on modern frontier models? (needs instrumentation data, not opinion) (B) where should it run? Now superseded by [ADR 0003](docs/decisions/0003-agent-platform-architecture.md).
-- **CLAUDE.md slim 59 KB → 17 KB** (`8a899051`) — Claude Code emits a "large CLAUDE.md will impact performance" warning at 40 KB. Long-form pattern docs extracted to `docs/patterns/*.md` (transactional-state, protocol-dependency-inversion, appstate, command-envelope, state-sync-determinism), `docs/DEV-SETUP.md` (uv resolution, Windows Store Python recovery, PyInstaller flow, corporate-proxy TLS notes), `docs/PPXAIDE-IMPL.md` (Textual TUI internals + terminal images), `docs/VLLM-NOTES.md` (Hermes vs Harmony cheat sheet; defers depth to existing `vllm-tool-calling-guide.md`). CLAUDE.md retains project overview, pattern bullet-list with links, codebase stats, install-location table, file tree, common commands, release process summary, key design decisions, "Verify, Don't Assume" rule, commit guidelines, graphify section.
+- **CLAUDE.md slim 59 KB → 17 KB** (`8a899051`) — Claude Code emits a "large CLAUDE.md will impact performance" warning at 40 KB. Long-form pattern docs extracted to `docs/patterns/*.md` (transactional-state, protocol-dependency-inversion, appstate, command-envelope, state-sync-determinism), `docs/dev-setup.md` (uv resolution, Windows Store Python recovery, PyInstaller flow, corporate-proxy TLS notes), `docs/ppxaide-impl.md` (Textual TUI internals + terminal images), `docs/vllm-notes.md` (Hermes vs Harmony cheat sheet; defers depth to existing `vllm-tool-calling-guide.md`). CLAUDE.md retains project overview, pattern bullet-list with links, codebase stats, install-location table, file tree, common commands, release process summary, key design decisions, "Verify, Don't Assume" rule, commit guidelines, graphify section.
 
 ### Internal
 
@@ -162,11 +162,11 @@ preserve it byte-identical.
 
 ### Docs
 
-- New [docs/RELEASE-NOTES-v1.18.3.md](docs/RELEASE-NOTES-v1.18.3.md) covers all ten themes.
-- New [docs/DEBT-INVENTORY-v1.18.3.md](docs/archive/DEBT-INVENTORY-v1.18.3.md) (now archived; current debt lives in [docs/DEBT-INVENTORY.md](docs/DEBT-INVENTORY.md)).
-- New [docs/API-GATEWAY.md](docs/API-GATEWAY.md) — v1 gateway policy, threat model for auth, deployment-shape table, future-direction sketch for multi-token registry / OIDC.
+- New [docs/release-notes-v1.18.3.md](docs/release-notes-v1.18.3.md) covers all ten themes.
+- New [docs/DEBT-INVENTORY-v1.18.3.md](docs/archive/DEBT-INVENTORY-v1.18.3.md) (now archived; current debt lives in [docs/debt-inventory.md](docs/debt-inventory.md)).
+- New [docs/api-gateway.md](docs/api-gateway.md) — v1 gateway policy, threat model for auth, deployment-shape table, future-direction sketch for multi-token registry / OIDC.
 - New `docs/patterns/*.md` — five extracted architecture pattern docs (linked from CLAUDE.md): transactional-state, protocol-dependency-inversion, appstate, command-envelope, state-sync-determinism.
-- New `docs/DEV-SETUP.md`, `docs/PPXAIDE-IMPL.md`, `docs/VLLM-NOTES.md` — extracted from CLAUDE.md.
+- New `docs/dev-setup.md`, `docs/ppxaide-impl.md`, `docs/vllm-notes.md` — extracted from CLAUDE.md.
 - New [ADR 0003 — Agent platform architecture](docs/decisions/0003-agent-platform-architecture.md) (Status: Proposed). Captures the design space for sub-agents and autonomous (long-running) agents. Three-stage path: Stage 1 instruments outer-loop firing rate; Stage 2 builds `AgentRunRegistry` filesystem layout + background-task agent runs (closes the agent-loop unification TODO as a side effect); Stage 3 ships `spawn_subagent` built-in tool.
 - New [ADR 0004 — LLM gateway features](docs/decisions/0004-llm-gateway-features.md) (Status: Accepted). Retroactive rationale for the v1 gateway shipped this release. Three sub-decisions accepted (path-versioned `/v1/...`, stateless `oneshot` bypassing `EngineClient`, opt-in single-token auth) with six "why this not that" alternatives explicitly considered and rejected.
 - [CLAUDE.md](CLAUDE.md) "Files Updated by Release Script" table slimmed from 12 rows → 6 to reflect the new SoT layout. "Current Version" header replaced with link to `releases/latest`. ROADMAP.md / AGENTS.md / docs/README.md similarly slimmed.
@@ -185,7 +185,7 @@ preserve it byte-identical.
 - **`tui/session_restore_ops.py` extracted from `tui/app.py`** (272 LoC ops module). Mirrors the engine's `session_ops.py` decomposition pattern. `app.py` shrinks 1947 → 1744 LoC. `_check_session_restoration` and `_restore_session` become thin wrappers calling into the ops module. Same shape applied to TUI as v1.17.x applied to engine and v1.17.4 applied to server. (Item 1, narrowed)
 - **`ADR 0002` — CommandContext three-pattern split.** Documents why Rich uses Pattern A (`__getattr__` proxy via `RichCommandContext(handler)`), Textual passes `self` directly (no adapter), and Server uses Pattern B (explicit `ServerCommandContext` delegating against `EngineClientProtocol`). Pins the rationale so reviewers don't re-litigate. Triggers to revisit: 4th context type, 5+ new CommandContext members in one release, or external SDK consumer needing `commands/`.
 - **GPT-5.5 family models registered.** `gpt-5.5`, `gpt-5.5-pro`, `gpt-5.3-codex`, `gpt-5-pro` added to model profiles + benchmark sweep against the gpt-5.4 baseline.
-- **`docs/MODEL-SELECTION-GUIDE.md`** — planner/executor selection guide with surgical hint strip validation.
+- **`docs/model-selection-guide.md`** — planner/executor selection guide with surgical hint strip validation.
 - **Runtime version banner** in Rich/Textual/server logger headers — `ppxai vX.Y.Z (commit X, source Y, python Z, platform W)`. Critical for editable-install setups where a stale Python process can outlive its source.
 - **9 new tests in `tests/test_engine_client_protocol.py`** (protocol surface + structural satisfaction + import hygiene).
 - **4 new tests in `tests/test_agent_logger_attribute.py`** pinning the Item 11 fix with REAL `EngineClient` (no mocks — the bug existed precisely because mocks substituted the missing attribute).
@@ -195,7 +195,7 @@ preserve it byte-identical.
 - **`commands/agent.py:680` uses `get_logger("tui")` directly** instead of `context.engine_client.logger` (which raised `AttributeError` because `EngineClient` has no `logger` attribute). Pre-fix, the Rich-TUI `/agent <task>` path crashed mid-construction; existing tests substituted `Mock()` for the logger arg, masking the missing attribute. (Item 11)
 - **CHANGELOG/CLAUDE.md trim.** CLAUDE.md's accumulated v1.17.x / v1.18.0-in-progress version highlights (~67 lines of marketing copy that duplicated CHANGELOG content) replaced with a short pointer block referencing the durable architectural pattern sections + ADRs. Net change: +14 lines (added discipline rules — verify-both-directions, graphify noise hygiene, subtree-build pattern).
 - **`commands/context.py` documentation rewritten** to describe the actual three-pattern architecture (Pattern A proxy for Rich, no adapter for Textual, Pattern B explicit for Server). Old docstring claimed `TextualCommandContext` was the Textual adapter — but it was dead code never wired into `app.py`.
-- **`docs/ARCHITECTURE.md`** updated to drop stale `TextualCommandContext` reference + document the three-pattern split with pointer to ADR 0002.
+- **`docs/architecture.md`** updated to drop stale `TextualCommandContext` reference + document the three-pattern split with pointer to ADR 0002.
 - **`gpt-5.5-mini` becomes the default OpenAI `default_model` and `coding_model`** (was `gpt-4.1-mini` and `gpt-5.1-codex-mini` respectively).
 - **Engine `chat_with_tools` per-turn usage flush.** Rich + Textual TUIs now call `save_usage_to_persistent_storage()` per turn, matching server-side behaviour. Pre-fix, TUI usage tracking only flushed on `/save` or session exit — losing data on Ctrl+C interrupt or crash.
 
@@ -214,19 +214,19 @@ preserve it byte-identical.
 - **`.graphifyignore` exclusions added** (`tests/`, `benchmarks/`, `scripts/`, `examples/`, `docs/archive/`). Pre-fix, a single `tests/test_tui.py` (4,788 LoC) drove 71-79% of the "god class" edges on `PPXAIDEApp` / `MessageBox` / `ChatView`, biasing whole-repo god-node ranking with test-coverage volume. Whole-repo graph 11,628 → 4,481 nodes (−61%); 46,971 → 16,602 edges (−65%). Post-exclusion top hubs reflect actual architecture (`EventType`, `CommandResult`, `SessionManager`, `BaseTool`, `BaseProvider`, `ToolManagerProtocol`).
 - **Subtree-build script** used multiple times this branch (`engine`, `server`, `commands`, `vscode`, `tui`) to surface subsystem-internal structure that the whole-repo graph hides. Pattern documented in CLAUDE.md graphify section.
 - **Verify-don't-assume both directions.** When a signal flags X as a problem AND when someone pushes back saying the signal is wrong, both readings need the same Tier-2-style verification (production-code-only inbound counts, channel-ratio inspection, source-code grep). Pattern-matched three times before discipline pinned: `EngineClient` (Tier 2 — turned out to be design working as intended), `ChatViewProvider` (Item 2 — turned out to be a real refactor), `PPXAIDEApp` (Item 1 — turned out to be test inflation).
-- **476 tests added across the gpt-5.5 critique sweep.** Test count: 2591 → 3067 passing, 9 skipped (the 7 Unix-only `TestKillPreviewBackend` + 2 pre-existing). Coverage now spans server/state.py (28 tests across 4 classes), `_execute_ai_task` (20 tests across 7 sub-cases), tool security + `docs/CONSENT-CONTRACT.md` (18 tests), server route edges (17 tests), session persistence (44 tests across multiple files), benchmark CI gate (9 tests).
+- **476 tests added across the gpt-5.5 critique sweep.** Test count: 2591 → 3067 passing, 9 skipped (the 7 Unix-only `TestKillPreviewBackend` + 2 pre-existing). Coverage now spans server/state.py (28 tests across 4 classes), `_execute_ai_task` (20 tests across 7 sub-cases), tool security + `docs/consent-contract.md` (18 tests), server route edges (17 tests), session persistence (44 tests across multiple files), benchmark CI gate (9 tests).
 - **Dead `TextualCommandContext` class deleted** from `commands/context.py`. Created v1.15.0, never wired into `app.py` (which passes `self` directly), survived 13 releases as dead code. Detection during Item 10's protocol enumeration.
 - **CommandContext methods on `PPXAIDEApp` retained** (16 inline methods, ~100 LoC). They're the actual Pattern A implementation, NOT boilerplate to remove. ADR 0002 documents this.
 - **DEBT-INVENTORY-v1.18.2.md** is the canonical home for deferred items. 9 items closed in this branch (Items 1, 2, 4, 5, 6, 7, 8, 9, 10, 11). Item 3 (k8s session-manager security tests) remains trigger-deferred — to be addressed when in k8s context environment so tests can be exercised end-to-end.
 
 ### Docs
 
-- New [docs/RELEASE-NOTES-v1.18.2.md](docs/RELEASE-NOTES-v1.18.2.md).
+- New [docs/release-notes-v1.18.2.md](docs/release-notes-v1.18.2.md).
 - New [docs/decisions/0002-command-context-three-pattern-split.md](docs/decisions/0002-command-context-three-pattern-split.md) (second ADR).
-- New [docs/MODEL-SELECTION-GUIDE.md](docs/MODEL-SELECTION-GUIDE.md).
-- New [docs/CONSENT-CONTRACT.md](docs/CONSENT-CONTRACT.md) (security boundary for tool execution).
+- New [docs/model-selection-guide.md](docs/model-selection-guide.md).
+- New [docs/consent-contract.md](docs/consent-contract.md) (security boundary for tool execution).
 - [CLAUDE.md](CLAUDE.md) trimmed obsolete version-marketing; gained verify-both-directions discipline + graphify noise-hygiene + subtree-build pattern guidance + pointer to ADR 0002.
-- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) updated for the three-pattern CommandContext split.
+- [docs/architecture.md](docs/architecture.md) updated for the three-pattern CommandContext split.
 
 ## [1.18.1] - 2026-04-25
 
@@ -265,7 +265,7 @@ preserve it byte-identical.
 
 ### Docs
 
-- New [docs/RELEASE-NOTES-v1.18.1.md](docs/RELEASE-NOTES-v1.18.1.md).
+- New [docs/release-notes-v1.18.1.md](docs/release-notes-v1.18.1.md).
 - New [docs/decisions/0001-keys-command-cross-client.md](docs/decisions/0001-keys-command-cross-client.md) (first ADR).
 - [CLAUDE.md](CLAUDE.md) gains the §"Critical Architecture Pattern: Command Dispatch via Envelope (v1.18.1)" and §"Critical Architecture Pattern: State-Sync Determinism (v1.18.1)" sections (added during the work, not at release).
 
@@ -291,8 +291,8 @@ preserve it byte-identical.
 
 ### Docs
 
-- New [docs/RELEASE-NOTES-v1.18.0.md](docs/RELEASE-NOTES-v1.18.0.md).
-- New §"Agent Heartbeat Primitives (v1.18.0)" in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) documenting the emission contract, zombie-breaker semantics, and the AppState lifecycle.
+- New [docs/release-notes-v1.18.0.md](docs/release-notes-v1.18.0.md).
+- New §"Agent Heartbeat Primitives (v1.18.0)" in [docs/architecture.md](docs/architecture.md) documenting the emission contract, zombie-breaker semantics, and the AppState lifecycle.
 - [ROADMAP.md](ROADMAP.md) v1.18.0 section split into "P0 heartbeat (landed)" and "AppState codegen + routing (planned)" blocks.
 
 ## [1.17.7] - 2026-04-19
@@ -525,7 +525,7 @@ persistence, disk-scan fallback) all landed this day.
   `PPXAI_DEBUG=1` environment variable so Loggers created later
   (engine, chat, server) pick it up too. Every client gets
   persistence for free: Rich `/debug-log`, Textual `toggle_debug_logging`,
-  Web/VSCode `POST /config/debug-log`. New `docs/DEBUG-LOGGING.md`
+  Web/VSCode `POST /config/debug-log`. New `docs/debug-logging.md`
   explains the flow.
 - **AppState `debug_log` synced from config on startup.**
   `EngineClient.__init__` now calls `get_debug_log_enabled()` and
@@ -859,7 +859,7 @@ proper `tool` role messages, multi-tool support, and grouped tool call UI across
 ### Added - Benchmark System Improvements
 
 - **Benchmark results** for 27 model variants (54+ runs across 7 categories, 26 tests each)
-- **Model behavior analysis** (`docs/MODEL-BEHAVIOR-ANALYSIS.md`) — 5 behavior tiers (S/A/B/C/D), per-category scores, 5 architectural gap findings
+- **Model behavior analysis** (`docs/model-behavior-analysis.md`) — 5 behavior tiers (S/A/B/C/D), per-category scores, 5 architectural gap findings
 - **`--tool-calling-method`** CLI flag — Force `native`, `prompt_based`, or `auto` mode per benchmark run
 - **`--debug`** flag — Saves per-request JSON to `debug/` with full AI response content, tool_calls, and errors
 - **Profile-aware benchmark runner** — Consults `ModelProfile` for native vs prompt-based routing
@@ -1060,7 +1060,7 @@ proper `tool` role messages, multi-tool support, and grouped tool call UI across
 
 ### Documentation
 
-- **INSTALLATION.md** - Added platform-specific notes section
+- **installation.md** - Added platform-specific notes section
   - Clipboard support requirements per platform
   - Signal handling (Ctrl+C, SIGTERM) on all platforms (v1.15.3+)
   - Linux headless requirements (`xclip`/`xsel`)
@@ -1161,7 +1161,7 @@ proper `tool` role messages, multi-tool support, and grouped tool call UI across
 
 ### Documentation
 
-- Comprehensive terminal image display guide in INSTALLATION.md
+- Comprehensive terminal image display guide in installation.md
 - GPT-OSS "explain before calling" tool issue and `max_tokens` mitigation
 
 ### Technical
@@ -1401,7 +1401,7 @@ proper `tool` role messages, multi-tool support, and grouped tool call UI across
 - Refactored container tools to `CLITool` hierarchy reducing boilerplate by 40%
 - Replaced dangerous `eval()` with AST-based safe evaluation in calculator
 - Added selective logging to 22 silent error handling instances
-- Documented DAG import structure in `ARCHITECTURE.md`
+- Documented DAG import structure in `architecture.md`
 - Replaced `os._exit()` with graceful shutdown via `asyncio.Event` for proper cleanup
 - Refactored `client.py` via 5-phase extraction (2,037→1,311 lines, 36% reduction)
 - Refactored `chatPanel.ts` with EventBus + State Machine architecture (5,123→2,773 lines, 46% reduction)
@@ -1715,7 +1715,7 @@ proper `tool` role messages, multi-tool support, and grouped tool call UI across
 - **DMG installation** - Downloads, mounts, copies app, removes quarantine attribute
 
 #### Documentation
-- **INSTALLATION.md** - Comprehensive guide with all new options and platform-specific instructions
+- **installation.md** - Comprehensive guide with all new options and platform-specific instructions
 
 ---
 
@@ -1742,7 +1742,7 @@ proper `tool` role messages, multi-tool support, and grouped tool call UI across
 - **Usage tables** - Formatted markdown tables for `/usage` reports
 
 ### Documentation
-- Updated INSTALLATION.md with desktop app instructions for all platforms
+- Updated installation.md with desktop app instructions for all platforms
 - Added Linux and Windows platform-specific behavior notes
 - Added troubleshooting guide for desktop app
 
@@ -1960,7 +1960,7 @@ This release introduces a checkpoint system for atomic multi-file rollback and r
 - Session cleanup on interrupted requests
 
 #### Documentation
-- [CHECKPOINT_GUIDE.md](docs/CHECKPOINT_GUIDE.md) - Comprehensive checkpoint system guide
+- [checkpoint-guide.md](docs/checkpoint-guide.md) - Comprehensive checkpoint system guide
 - [RELEASE-NOTES-v1.12.0.md](docs/archive/release-notes/RELEASE-NOTES-v1.12.0.md) - Full release notes
 
 #### Testing
@@ -1994,7 +1994,7 @@ This release fixes a critical safety issue where `/agent on|off` commands were b
   - Added `/tools agent`, `/tools set verbose on|off`, `/tools help <tool>` to extension
 
 #### Documentation
-- Updated [Agent Mode Guide](docs/AGENT_MODE_GUIDE.md) with configuration section
+- Updated [Agent Mode Guide](docs/agent-mode-guide.md) with configuration section
 
 #### Testing
 - 337 tests passing
@@ -2014,14 +2014,14 @@ This release introduces Agent Mode for autonomous task execution in the VSCode e
   - `POST /agent/enable` - Enable agent mode (auto-enables tools)
   - `POST /agent/disable` - Disable agent mode
 - **EngineClient Support** - `agent_mode` property, `enable_agent_mode()`, `disable_agent_mode()` methods
-- **Agent Mode Guide** - Comprehensive documentation at [docs/AGENT_MODE_GUIDE.md](docs/AGENT_MODE_GUIDE.md)
+- **Agent Mode Guide** - Comprehensive documentation at [docs/agent-mode-guide.md](docs/agent-mode-guide.md)
 
 #### Release Process Fixes
 - **GitHub "Latest" Release Tag** - Releases now correctly marked as latest
   - Added `make_latest: true` to GitHub Actions workflow
   - Release script now uses `--latest` flag when publishing notes
 - **Documentation Links** - Fixed 12 broken internal links
-  - `custom-tools-guide.md` â†’ `CUSTOM_TOOL_DEVELOPMENT_GUIDE.md`
+  - `custom-tools-guide.md` â†’ `custom-tool-development-guide.md`
   - Archived docs now properly reference `docs/archive/` paths
 
 ### Fixed
@@ -2105,7 +2105,7 @@ This release completes the migration to EngineClient and adds clickable citation
 #### New Features
 - **`/tools help <tool-name>`** - Detailed documentation for any tool
 - **Autocomplete for `/tools`** - Tab completion for subcommands and tool names
-- **Custom Tool Development Guide** - [docs/CUSTOM_TOOL_DEVELOPMENT_GUIDE.md](docs/CUSTOM_TOOL_DEVELOPMENT_GUIDE.md)
+- **Custom Tool Development Guide** - [docs/custom-tool-development-guide.md](docs/custom-tool-development-guide.md)
 
 ### Fixed - Clickable Citations ðŸ”—
 
@@ -2297,7 +2297,7 @@ This release introduces two major improvements: a comprehensive shell command co
 - `ppxai/commands.py` - TUI shell consent handler
 - `vscode-extension/src/chatPanel.ts` - QuickPick consent UI implementation
 - `ppxai-config.json` - Added tools.shell configuration section
-- `docs/SHELL_CONSENT_GUIDE.md` - NEW: Comprehensive 642-line security guide
+- `docs/shell-consent-guide.md` - NEW: Comprehensive 642-line security guide
 - `docs/RELEASE-NOTES-v1.11.2.md` - NEW: Detailed release notes
 
 **Shared Modules:**
@@ -2319,7 +2319,7 @@ This release introduces two major improvements: a comprehensive shell command co
 - TUI and VSCode consent flow end-to-end tested
 
 #### Documentation
-- [docs/SHELL_CONSENT_GUIDE.md](docs/SHELL_CONSENT_GUIDE.md) - Complete security guide
+- [docs/shell-consent-guide.md](docs/shell-consent-guide.md) - Complete security guide
 - [docs/RELEASE-NOTES-v1.11.2.md](docs/archive/release-notes/RELEASE-NOTES-v1.11.2.md) - Full release notes
 - Updated README.md with shell consent features
 - Updated CLAUDE.md with v1.11.2 summary
@@ -2441,7 +2441,7 @@ This release introduces **autonomous file editing** capabilities with a comprehe
   - Available in both TUI and VSCode extension
 
 #### Documentation
-- **NEW:** [docs/FILE_EDITING_GUIDE.md](docs/FILE_EDITING_GUIDE.md) - 400+ lines comprehensive user guide
+- **NEW:** [docs/file-editing-guide.md](docs/file-editing-guide.md) - 400+ lines comprehensive user guide
 - **NEW:** [vscode-extension/TESTING.md](vscode-extension/TESTING.md) - Testing documentation for VSCode extension
 - **Updated:** README.md with File Editing Tools section
 - **Updated:** CLAUDE.md with v1.11.0 feature summary and version alignment

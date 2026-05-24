@@ -188,7 +188,7 @@ human-in-the-loop assumption breaks. That needs durable policy,
 not per-call consent.
 
 **What ppxai DOES provide:** the consent contract
-([CONSENT-CONTRACT.md](../CONSENT-CONTRACT.md)) is the security
+([consent-contract.md](../consent-contract.md)) is the security
 boundary. ppxai-sre's policy engine wraps it: "for tool X, auto-grant
 consent if (agent role + namespace + verb) match the policy; deny
 loudly otherwise; log everything." The hook is at the consent-grant
@@ -209,7 +209,7 @@ them via the same MCP protocol everyone else uses.
 Already covered in the OpenShell research note (Section 4.1):
 ppxai's single-user shape doesn't justify per-agent containers.
 ppxai-sre's k8s deployment shape gets isolation from k8s itself
-(via the session-manager from DEBT-INVENTORY.md Item 3, when those
+(via the session-manager from debt-inventory.md Item 3, when those
 tests land).
 
 ## 6. Recommendation: bundle for v1.19.x
@@ -406,7 +406,7 @@ when v1.19.x planning starts:
   ppxai-sre has its own release cadence and imports ppxai as a
   dependency. If ppxai-sre runs in k8s and ppxai-server is the
   gateway, the deploy/session-manager from Item 3 in
-  [DEBT-INVENTORY.md](../DEBT-INVENTORY.md) is on the critical
+  [debt-inventory.md](../debt-inventory.md) is on the critical
   path. Worth confirming whose roadmap that work is on.
 - **Manager-executor wire shape.** Manager spawns executor; how does
   the executor stream results back? Polling vs. SSE vs. push to
@@ -428,11 +428,11 @@ retrofit them into this one.
 - [RELATED-PROJECTS.md](../../RELATED-PROJECTS.md) — ppxai-sre overview and separation rationale
 - [docs/decisions/0003-agent-platform-architecture.md](../decisions/0003-agent-platform-architecture.md) — agent platform ADR (the load-bearing one for v1.19.x); "Open decisions" §6-§12 fold in the consumer-side caveats and asks raised against this gap analysis
 - [docs/decisions/0004-llm-gateway-features.md](../decisions/0004-llm-gateway-features.md) — v1 gateway tier; "Triggers to revisit" table is the future-work checklist
-- [docs/API-GATEWAY.md](../API-GATEWAY.md) — v1 gateway public spec
-- [docs/CONSENT-CONTRACT.md](../CONSENT-CONTRACT.md) — current security boundary (per-tool, the hook ppxai-sre's policy engine wraps)
+- [docs/api-gateway.md](../api-gateway.md) — v1 gateway public spec
+- [docs/consent-contract.md](../consent-contract.md) — current security boundary (per-tool, the hook ppxai-sre's policy engine wraps)
 - [docs/research/2026-04-29-python-vs-go-for-agents.md](2026-04-29-python-vs-go-for-agents.md) — language-choice research note for autonomous agents (sibling)
 - [docs/research/2026-05-10-openshell-coordination-patterns.md](2026-05-10-openshell-coordination-patterns.md) — coordination-pattern research note (the load-bearing design for ADR 0003 Stage 2)
-- [DEBT-INVENTORY.md](../DEBT-INVENTORY.md) Item 3 — k8s session-manager (multi-tenant deploy shape)
+- [debt-inventory.md](../debt-inventory.md) Item 3 — k8s session-manager (multi-tenant deploy shape)
 - [ROADMAP.md](../../ROADMAP.md) — v1.19.x agent-platform entry references this note
 - [`../../../ppxai-sre-repo/docs/PPXAI-INTEGRATION-V1.19.md`](../../../ppxai-sre-repo/docs/PPXAI-INTEGRATION-V1.19.md) — consumer-side integration plan with caveats C1-C4 + asks A1-A3 filed against the v1.19.x scope here
 - ppxai-sre repository: https://github.com/rcconsult/ppxai-sre (private)

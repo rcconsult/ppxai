@@ -211,7 +211,7 @@ def get_bin_search_paths() -> List[str]:
 - `ppxai/tui/__init__.py` - Signal handling for all platforms
 - `ppxai/config/__init__.py` - Platform-aware binary search
 - `ppxai-desktop.py` - Use filtered paths, add comments
-- `docs/INSTALLATION.md` - Platform-specific documentation
+- `docs/installation.md` - Platform-specific documentation
 
 **Documentation Added:**
 - Clipboard support per platform (Windows/macOS/Linux/headless)
@@ -309,7 +309,7 @@ async def _on_engine_warning(self, sender, data, **kwargs) -> None:
 - `tests/test_commands.py` - Fix patch decorators
 
 **Docs:**
-- `docs/INSTALLATION.md` - Platform-specific notes
+- `docs/installation.md` - Platform-specific notes
 - `docs/RELEASE-NOTES-v1.15.3.md` - This file
 - `CHANGELOG.md` - v1.15.3 entry
 - `TODO-v1.15.3.md` - Status updates

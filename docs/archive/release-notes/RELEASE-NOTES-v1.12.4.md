@@ -56,5 +56,5 @@ pip install --upgrade ppxai[search]
 
 ## Links
 
-- [CHECKPOINT_GUIDE.md](CHECKPOINT_GUIDE.md) - Full checkpoint documentation
+- [checkpoint-guide.md](checkpoint-guide.md) - Full checkpoint documentation
 - [CHANGELOG.md](../CHANGELOG.md) - Detailed changelog

@@ -281,7 +281,7 @@ python benchmark.py --provider perplexity --categories prompt_tools
 
 #### 6. Document the Distinction
 
-**File:** `docs/TOOL_CALLING.md` (NEW)
+**File:** `docs/tool-calling.md` (NEW)
 
 Create comprehensive doc explaining:
 - Native vs prompt-based tool calling
@@ -386,7 +386,7 @@ TOOL_CALL events:
 2. ✅ **Gemini SDK verification** - ALREADY using correct SDK (google-genai 1.56.0)
 3. ⏳ **Update capability flags** - perplexity.py already has `native_tool_calling=False`
 4. ⏳ **Update benchmarks** - Add native vs prompt-based distinction to metadata
-5. ⏳ **Document behavior** - Create TOOL_CALLING.md explaining both methods
+5. ⏳ **Document behavior** - Create tool-calling.md explaining both methods
 6. ⏳ **Consider SDK upgrade** - google-genai 1.56.0 → 1.62.0 (minor improvements only)
 
 ---

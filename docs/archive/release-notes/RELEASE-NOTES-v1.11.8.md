@@ -35,12 +35,12 @@ Agent mode allows the AI to autonomously execute multi-step tasks using availabl
   - Added `make_latest: true` to CI workflow
   - Release script now uses `--latest` flag when publishing notes
 - **FIX:** 12 broken documentation links corrected
-  - `custom-tools-guide.md` -> `CUSTOM_TOOL_DEVELOPMENT_GUIDE.md`
+  - `custom-tools-guide.md` -> `custom-tool-development-guide.md`
   - Archived docs now properly reference `docs/archive/` paths
 
 ## Documentation Updates
 
-- **NEW:** [docs/AGENT_MODE_GUIDE.md](AGENT_MODE_GUIDE.md) - Comprehensive agent mode documentation
+- **NEW:** [docs/agent-mode-guide.md](agent-mode-guide.md) - Comprehensive agent mode documentation
 - **NEW:** Agent flow diagrams (current-non-agentic-flow.png, future-agentic-flow.png)
 - **FIXED:** All broken internal documentation links
 
@@ -63,4 +63,4 @@ To use Agent Mode in VSCode:
 
 - **GitHub Release:** https://github.com/rcconsult/ppxai/releases/tag/v1.11.8
 - **Full Changelog:** [CHANGELOG.md](../CHANGELOG.md)
-- **Agent Mode Guide:** [AGENT_MODE_GUIDE.md](AGENT_MODE_GUIDE.md)
+- **Agent Mode Guide:** [agent-mode-guide.md](agent-mode-guide.md)

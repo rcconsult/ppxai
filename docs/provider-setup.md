@@ -629,7 +629,7 @@ Use `/context hints` to see which hints are active for your current provider/mod
 /context hints
 ```
 
-See [Bootstrap Context Guide](BOOTSTRAP_CONTEXT_GUIDE.md) for full documentation.
+See [Bootstrap Context Guide](bootstrap-context-guide.md) for full documentation.
 
 ---
 

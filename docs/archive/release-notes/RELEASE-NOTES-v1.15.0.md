@@ -481,7 +481,7 @@ ppxai-server:     38MB
 
 **Development:** Phase 6-7 TUI integration (January 20-28, 2026)
 **Testing:** 1105 unit tests + validation scripts
-**Documentation:** PHASE-6-PROGRESS.md, ARCHITECTURE.md, SESSION-SUMMARY-*.md
+**Documentation:** PHASE-6-PROGRESS.md, architecture.md, SESSION-SUMMARY-*.md
 **Contributors:** Claude Code (Claude Opus 4.5)
 
 ---
@@ -518,6 +518,6 @@ ppxai-server:     38MB
 
 - **Phase 6 Progress:** [docs/PHASE-6-PROGRESS.md](archive/v1.15.1-completed/PHASE-6-PROGRESS.md)
 - **Phase 7 Plan:** [docs/PHASE-7-POLISH-RELEASE.md](archive/v1.15.1-completed/PHASE-7-POLISH-RELEASE.md)
-- **Architecture:** [docs/ARCHITECTURE.md](ARCHITECTURE.md)
+- **Architecture:** [docs/architecture.md](architecture.md)
 - **Changelog:** [CHANGELOG.md](../CHANGELOG.md)
 - **Validation Scripts:** [scripts/validate_tui_*.py](../scripts/)

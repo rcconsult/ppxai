@@ -329,7 +329,7 @@ All integration tests passing (7/7). TUI engine integration fully validated with
 
 ## References
 
-- **Architecture:** `docs/ARCHITECTURE.md`
+- **Architecture:** `docs/architecture.md`
 - **Work Review:** `docs/WORK-REVIEW-JAN-26-2026.md`
 - **Validation Scripts:**
   - Command Factory: `scripts/validate_tui_commands.py`

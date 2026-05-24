@@ -86,7 +86,7 @@ Added `blinker` to `ppxaide.spec` hiddenimports. The `blinker` library is used b
   - **ppxaide** (Textual TUI) - Uses Ghostty for Ctrl+Enter support
   - **ppxai-desktop** (Web App) - Launches in browser
 - Application icons (256×256 for ppxai, 1024×1024 for ppxaide, 128×128 logo for desktop)
-- `docs/LINUX-TERMINAL-SETUP.md` - Comprehensive 293-line terminal setup guide
+- `docs/linux-terminal-setup.md` - Comprehensive 293-line terminal setup guide
 
 **Ghostty Terminal Configuration:**
 ppxaide requires Ghostty (or Kitty/WezTerm) for proper Ctrl+Enter support. Standard terminals (GNOME Terminal, Konsole) send identical escape codes for Enter and Ctrl+Enter, making multi-line input impossible.
@@ -117,13 +117,13 @@ Ghostty 1.2.3 AppImage has incomplete Kitty keyboard protocol negotiation. The e
 **Documentation updates:**
 - `README.md` - Added Linux desktop integration section, terminal requirements, updated project structure
 - `desktop/README.md` - Comprehensive terminal requirements guide with alternatives table
-- `docs/INSTALLATION.md` - Added Linux terminal requirements section before TUI usage
+- `docs/installation.md` - Added Linux terminal requirements section before TUI usage
 
 **Key files:**
 - `desktop/install-desktop-integration.sh` — Installer
 - `desktop/uninstall-desktop-integration.sh` — Uninstaller
 - `desktop/README.md` — Installation guide
-- `docs/LINUX-TERMINAL-SETUP.md` — Terminal setup guide
+- `docs/linux-terminal-setup.md` — Terminal setup guide
 
 ---
 

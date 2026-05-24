@@ -554,7 +554,7 @@ All 4 sub-tasks implemented and documented:
    - Remaining `os.path.expanduser()` uses are correct (handle `~username` syntax)
 
 4. ✅ **Documentation** - Platform-specific behaviors documented
-   - File: `docs/INSTALLATION.md` lines 978-1040
+   - File: `docs/installation.md` lines 978-1040
    - Covers clipboard support, signal handling, Linux headless requirements
 
 ### Issues Identified
@@ -705,7 +705,7 @@ Add platform-aware filtering to `get_bin_search_paths()`.
 
 #### Step 4: Document Platform-Specific Behaviors (0.2 days)
 
-**Add to INSTALLATION.md:**
+**Add to installation.md:**
 - Windows: Clipboard requires pyperclip (auto-installed)
 - Linux headless: Clipboard requires xclip or xsel (`apt install xclip`)
 - macOS: All clipboard ops work out of box
@@ -720,7 +720,7 @@ Add platform-aware filtering to `get_bin_search_paths()`.
 | `ppxai-desktop.py` | Use filtered paths from config | ~5 |
 | `ppxai/usage.py` | Standardize to `Path.home()` | ~5 |
 | `ppxai/checkpoint.py` | Standardize to `Path.home()` | ~5 |
-| `docs/INSTALLATION.md` | Document platform-specific requirements | ~30 |
+| `docs/installation.md` | Document platform-specific requirements | ~30 |
 | `CLAUDE.md` | Update platform alignment notes | ~10 |
 
 ### Migration Safety
@@ -913,7 +913,7 @@ async def run_async(self, categories: Optional[list[str]] = None):
 
 #### Step 5: Create Documentation (0.1 days)
 
-**File:** `docs/TOOL_CALLING.md` (NEW)
+**File:** `docs/tool-calling.md` (NEW)
 
 Create comprehensive documentation:
 - Native vs prompt-based tool calling
@@ -969,7 +969,7 @@ Create comprehensive documentation:
 | 2 | Update provider docstrings | ✅ Done | Already existed in v1.15.2 |
 | 3 | Fix Gemini SDK | ✅ Done | Migrated to google.genai in v1.15.2 |
 | 4 | Update benchmarks | ✅ Done | engine_runner.py (+13 lines) |
-| 5 | Create documentation | ✅ Done | docs/TOOL_CALLING.md (exists, 267 lines) |
+| 5 | Create documentation | ✅ Done | docs/tool-calling.md (exists, 267 lines) |
 | 6 | Update config example | ✅ Done | ppxai-config.example.json (+6 lines) |
 
 **Changes made (commit 26217e0):**
@@ -1041,7 +1041,7 @@ Create comprehensive documentation:
 | `ppxai/engine/providers/gemini.py` | Migrate to new SDK | ~50 |
 | `ppxai/config/loader.py` | Add native_tool_calling to defaults | ~2 |
 | `benchmarks/llm-eval/engine_runner.py` | Add method detection and metadata | ~15 |
-| `docs/TOOL_CALLING.md` | Create new documentation | ~150 (new) |
+| `docs/tool-calling.md` | Create new documentation | ~150 (new) |
 | `ppxai-config.example.json` | Add capability comments | ~10 |
 
 ### Impact
@@ -1138,7 +1138,7 @@ High priority for release:
   - Update provider docstrings
   - Fix Gemini SDK (migrate to google.genai)
   - Update benchmarks with tool_calling_method metadata
-  - Create docs/TOOL_CALLING.md
+  - Create docs/tool-calling.md
 
 See: `benchmarks/llm-eval/ACTION_PLAN.md` for detailed steps
 

@@ -116,7 +116,7 @@ Python 3.11+, pytest for testing.
 
     Install ppxai on Linux, macOS, or Windows
 
-    [:octicons-arrow-right-24: Installation Guide](INSTALLATION.md)
+    [:octicons-arrow-right-24: Installation Guide](installation.md)
 
 -   :material-robot:{ .lg .middle } **Agent Mode**
 
@@ -124,7 +124,7 @@ Python 3.11+, pytest for testing.
 
     Autonomous task execution with tools
 
-    [:octicons-arrow-right-24: Agent Mode Guide](AGENT_MODE_GUIDE.md)
+    [:octicons-arrow-right-24: Agent Mode Guide](agent-mode-guide.md)
 
 -   :material-file-document:{ .lg .middle } **Bootstrap Context**
 
@@ -132,7 +132,7 @@ Python 3.11+, pytest for testing.
 
     Project-specific AI instructions
 
-    [:octicons-arrow-right-24: Bootstrap Context Guide](BOOTSTRAP_CONTEXT_GUIDE.md)
+    [:octicons-arrow-right-24: Bootstrap Context Guide](bootstrap-context-guide.md)
 
 -   :material-cog:{ .lg .middle } **Provider Setup**
 
@@ -140,7 +140,7 @@ Python 3.11+, pytest for testing.
 
     Configure AI providers
 
-    [:octicons-arrow-right-24: Provider Setup](PROVIDER_SETUP.md)
+    [:octicons-arrow-right-24: Provider Setup](provider-setup.md)
 
 </div>
 

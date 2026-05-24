@@ -161,7 +161,7 @@ Both `ConsentManager` (async) and `SyncConsentManager` now inherit from `BaseCon
 **Refactoring Done:**
 - Removed unnecessary lazy imports from `commands.py` (moved to top-level)
 - Verified no circular dependencies exist in the codebase
-- Updated `docs/ARCHITECTURE.md` with accurate DAG documentation
+- Updated `docs/architecture.md` with accurate DAG documentation
 
 **Note:** The only pattern truly needed is `TYPE_CHECKING` in `tools/builtin/*.py`.
 
@@ -394,7 +394,7 @@ Items moved here after being addressed:
 | #3 | Silent error handling - Added selective logging to 22 instances | v1.13.10 | 2026-01-15 |
 | #4 | Container tools code duplication - refactored to CLITool hierarchy | v1.13.10 | 2026-01-14 |
 | #5 | Consent Manager duplication - Extracted BaseConsentManager class | v1.13.10 | 2026-01-15 |
-| #6 | Import structure - Refactored commands.py to DAG imports, updated ARCHITECTURE.md | v1.13.10 | 2026-01-15 |
+| #6 | Import structure - Refactored commands.py to DAG imports, updated architecture.md | v1.13.10 | 2026-01-15 |
 | #7 | eval() usage - Replaced with AST-based safe evaluation | v1.13.10 | 2026-01-15 |
 | #10 | config.py complexity - Split into config/ package with ConfigStore pattern | v1.13.10 | 2026-01-16 |
 | #9 | HTTP error handling - Standardized on HTTPException, removed unused JSONResponse | v1.13.10 | 2026-01-16 |

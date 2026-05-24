@@ -200,7 +200,7 @@ EOF
 
 If using GNOME Terminal or Konsole, **Ctrl+J works universally** as an alternative to Ctrl+Enter.
 
-For comprehensive terminal setup, see [docs/LINUX-TERMINAL-SETUP.md](LINUX-TERMINAL-SETUP.md).
+For comprehensive terminal setup, see [docs/linux-terminal-setup.md](linux-terminal-setup.md).
 
 ## Using the Terminal UI (TUI)
 

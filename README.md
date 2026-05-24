@@ -71,7 +71,7 @@ Provides one-click launching of ppxai, ppxaide, and ppxai-desktop from your appl
 
 **Windows options:** `install.ps1 -Force` (reinstall), `-Version v1.16.0` (specific version), `-Uninstall`
 
-See [docs/INSTALLATION.md](docs/INSTALLATION.md) for detailed installation options including Windows.
+See [docs/installation.md](docs/installation.md) for detailed installation options including Windows.
 
 ### Option 2: Download Binaries
 
@@ -111,7 +111,7 @@ mkdir -p ~/.config/ghostty && echo 'keybind = ctrl+enter=text:\x1b[13;5u' >> ~/.
 **Alternatives:** Kitty, WezTerm (work out-of-the-box)
 **Fallback:** Use Ctrl+J instead of Ctrl+Enter (works in all terminals)
 
-See [docs/LINUX-TERMINAL-SETUP.md](docs/LINUX-TERMINAL-SETUP.md) for comprehensive setup guide.
+See [docs/linux-terminal-setup.md](docs/linux-terminal-setup.md) for comprehensive setup guide.
 
 ## Features
 
@@ -138,7 +138,7 @@ if isinstance(result, CodeResult):
 
 This enables **single-source command logic** that renders correctly in any UI—terminal, VSCode webview, or browser—just by swapping the renderer implementation.
 
-See [Architecture Docs](docs/ARCHITECTURE.md) and [v1.15.0 Release Notes](docs/archive/release-notes/RELEASE-NOTES-v1.15.0.md) for details.
+See [Architecture Docs](docs/architecture.md) and [v1.15.0 Release Notes](docs/archive/release-notes/RELEASE-NOTES-v1.15.0.md) for details.
 
 ### Live HTML Preview (v1.15.4)
 
@@ -214,7 +214,7 @@ Enable with `/agent on` or click the Agent button in VSCode:
 - Consent-based safety for file edits and shell commands
 - Works with any provider that supports tool calling
 
-See [docs/AGENT_MODE_GUIDE.md](docs/AGENT_MODE_GUIDE.md) for details.
+See [docs/agent-mode-guide.md](docs/agent-mode-guide.md) for details.
 
 ### Bootstrap Context (v1.14.0+)
 Load project-specific instructions from `AGENTS.md` or `CLAUDE.md`:
@@ -252,7 +252,7 @@ Atomic rollback for multi-file agent operations:
 - Git backend: auto-commits before tasks, `git revert` to undo
 - File backend (fallback): snapshots to `~/.ppxai/checkpoints/`
 
-See [docs/CHECKPOINT_GUIDE.md](docs/CHECKPOINT_GUIDE.md) for details.
+See [docs/checkpoint-guide.md](docs/checkpoint-guide.md) for details.
 
 ### AI Tools
 Enable with `/tools enable` (or use Agent Mode):
@@ -338,7 +338,7 @@ OPENROUTER_API_KEY=sk-or-xxxxx
 
 **Generation Parameters (v1.15.0+):** Configure `temperature`, `top_p`, `frequency_penalty`, `presence_penalty` per-provider or per-model. Lower temperature (0.1-0.3) recommended for coding tasks.
 
-See [docs/PROVIDER_SETUP.md](docs/PROVIDER_SETUP.md) for detailed examples.
+See [docs/provider-setup.md](docs/provider-setup.md) for detailed examples.
 
 ## Data Privacy
 
@@ -355,19 +355,19 @@ No telemetry. No tracking. Data only goes to the LLM provider you choose.
 
 | Guide | Description |
 |-------|-------------|
-| [Installation](docs/INSTALLATION.md) | Detailed installation options (all platforms) |
+| [Installation](docs/installation.md) | Detailed installation options (all platforms) |
 | [Linux Desktop Integration](desktop/README.md) | One-click app launcher integration (v1.15.5) |
-| [Linux Terminal Setup](docs/LINUX-TERMINAL-SETUP.md) | Ghostty/Kitty for Ctrl+Enter support (v1.15.5) |
+| [Linux Terminal Setup](docs/linux-terminal-setup.md) | Ghostty/Kitty for Ctrl+Enter support (v1.15.5) |
 | [VSCode Extension](vscode-extension/README.md) | Installation and usage |
-| [Agent Mode](docs/AGENT_MODE_GUIDE.md) | Iterative tool execution |
-| [Checkpoint & Undo](docs/CHECKPOINT_GUIDE.md) | Atomic rollback for agent tasks |
-| [Provider Setup](docs/PROVIDER_SETUP.md) | Configure any OpenAI-compatible API |
-| [Tool Development](docs/CUSTOM_TOOL_DEVELOPMENT_GUIDE.md) | Add custom tools |
-| [Shell Consent](docs/SHELL_CONSENT_GUIDE.md) | Command safety system |
-| [File Editing](docs/FILE_EDITING_GUIDE.md) | Consent-based file operations |
+| [Agent Mode](docs/agent-mode-guide.md) | Iterative tool execution |
+| [Checkpoint & Undo](docs/checkpoint-guide.md) | Atomic rollback for agent tasks |
+| [Provider Setup](docs/provider-setup.md) | Configure any OpenAI-compatible API |
+| [Tool Development](docs/custom-tool-development-guide.md) | Add custom tools |
+| [Shell Consent](docs/shell-consent-guide.md) | Command safety system |
+| [File Editing](docs/file-editing-guide.md) | Consent-based file operations |
 | [Specifications](SPECIFICATIONS.md) | Code generation templates |
-| [Architecture](docs/ARCHITECTURE.md) | Type-based renderer design (v1.15.0) |
-| [Tool Calling](docs/TOOL_CALLING.md) | Native vs prompt-based tool calling |
+| [Architecture](docs/architecture.md) | Type-based renderer design (v1.15.0) |
+| [Tool Calling](docs/tool-calling.md) | Native vs prompt-based tool calling |
 | [Release Notes v1.16.1](docs/archive/release-notes/RELEASE-NOTES-v1.16.1.md) | FileTree widget, CommandFactory server pattern, unified session restore |
 | [Release Notes v1.16.0](docs/archive/release-notes/RELEASE-NOTES-v1.16.0.md) | Profile-driven tool loop, multi-tool support, agent UI, benchmark v2 |
 | [Release Notes v1.15.6](docs/archive/release-notes/RELEASE-NOTES-v1.15.6.md) | Native OpenAI provider, model profiles, benchmark analysis |
@@ -452,11 +452,11 @@ ppxai/
 │   ├── test_commands.py        # Command tests
 │   └── test_*.py               # Provider, tool, config tests
 ├── docs/                       # Documentation
-│   ├── AGENT_MODE_GUIDE.md     # Iterative tool execution guide
-│   ├── CHECKPOINT_GUIDE.md     # Atomic rollback guide
-│   ├── LINUX-TERMINAL-SETUP.md # Ghostty/Kitty setup for Ctrl+Enter
-│   ├── PROVIDER_SETUP.md       # Multi-provider configuration
-│   ├── ARCHITECTURE.md         # Type-based renderer design
+│   ├── agent-mode-guide.md     # Iterative tool execution guide
+│   ├── checkpoint-guide.md     # Atomic rollback guide
+│   ├── linux-terminal-setup.md # Ghostty/Kitty setup for Ctrl+Enter
+│   ├── provider-setup.md       # Multi-provider configuration
+│   ├── architecture.md         # Type-based renderer design
 │   └── RELEASE-NOTES-*.md      # Version release notes
 ├── benchmarks/                 # LLM performance benchmarks
 └── kubernetes/                 # K8s deployment configs

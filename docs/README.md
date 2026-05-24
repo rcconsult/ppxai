@@ -3,9 +3,9 @@
 ## Quick Start
 
 **New to ppxai?** Start here:
-1. [Bootstrap Context Guide](BOOTSTRAP_CONTEXT_GUIDE.md) - Project-specific instructions via AGENTS.md
-2. [File Editing Guide](FILE_EDITING_GUIDE.md) - AI-powered file editing with consent
-3. [Shell Consent Guide](SHELL_CONSENT_GUIDE.md) - Secure shell command execution
+1. [Bootstrap Context Guide](bootstrap-context-guide.md) - Project-specific instructions via AGENTS.md
+2. [File Editing Guide](file-editing-guide.md) - AI-powered file editing with consent
+3. [Shell Consent Guide](shell-consent-guide.md) - Secure shell command execution
 
 ## Documentation Index
 
@@ -13,29 +13,29 @@
 
 | Document | Description |
 |----------|-------------|
-| [Bootstrap Context Guide](BOOTSTRAP_CONTEXT_GUIDE.md) | Project-specific instructions via AGENTS.md (v1.14.0+, hierarchical scopes v1.14.2+) |
-| [File Editing Guide](FILE_EDITING_GUIDE.md) | AI-powered file editing with user consent |
-| [Shell Consent Guide](SHELL_CONSENT_GUIDE.md) | Shell command security with consent system |
-| [Context Injection Guide](CONTEXT-INJECTION.md) | `@file`, `@git`, `@tree`, `@clipboard`, `@url` context providers |
-| [Provider Setup Guide](PROVIDER_SETUP.md) | Configure AI providers (OpenAI, Gemini, Perplexity) |
-| [Autorouter Config](AUTOROUTER-CONFIG.md) | Automatic model routing for coding tasks |
-| [Custom Tool Development](CUSTOM_TOOL_DEVELOPMENT_GUIDE.md) | Create your own tools for ppxai |
-| [Agent Mode Guide](AGENT_MODE_GUIDE.md) | Autonomous multi-step task execution |
-| [Checkpoint Guide](CHECKPOINT_GUIDE.md) | Undo and rollback agent operations |
+| [Bootstrap Context Guide](bootstrap-context-guide.md) | Project-specific instructions via AGENTS.md (v1.14.0+, hierarchical scopes v1.14.2+) |
+| [File Editing Guide](file-editing-guide.md) | AI-powered file editing with user consent |
+| [Shell Consent Guide](shell-consent-guide.md) | Shell command security with consent system |
+| [Context Injection Guide](context-injection.md) | `@file`, `@git`, `@tree`, `@clipboard`, `@url` context providers |
+| [Provider Setup Guide](provider-setup.md) | Configure AI providers (OpenAI, Gemini, Perplexity) |
+| [Autorouter Config](autorouter-config.md) | Automatic model routing for coding tasks |
+| [Custom Tool Development](custom-tool-development-guide.md) | Create your own tools for ppxai |
+| [Agent Mode Guide](agent-mode-guide.md) | Autonomous multi-step task execution |
+| [Checkpoint Guide](checkpoint-guide.md) | Undo and rollback agent operations |
 | [Ollama Limitations](ollama-limitations.md) | Local model constraints and workarounds |
-| [Tool Calling](TOOL_CALLING.md) | Native vs prompt-based tool calling (v1.15.3+) |
-| [Installation Guide](INSTALLATION.md) | Install ppxai on any platform |
-| [Debug Logging](DEBUG-LOGGING.md) | `/debug-log` command, persistence, early-startup diagnostics |
+| [Tool Calling](tool-calling.md) | Native vs prompt-based tool calling (v1.15.3+) |
+| [Installation Guide](installation.md) | Install ppxai on any platform |
+| [Debug Logging](debug-logging.md) | `/debug-log` command, persistence, early-startup diagnostics |
 
 ### Technical Reference
 
 | Document | Description |
 |----------|-------------|
-| [Architecture](ARCHITECTURE.md) | Module hierarchy, import patterns, transactional state |
-| [DGX Spark Setup](DGX-SPARK-SETUP.md) | vLLM + Ollama on NVIDIA DGX Spark |
+| [Architecture](architecture.md) | Module hierarchy, import patterns, transactional state |
+| [DGX Spark Setup](dgx-spark-setup.md) | vLLM + Ollama on NVIDIA DGX Spark |
 | [vLLM Tool Calling](vllm-tool-calling-guide.md) | Hermes vs Harmony, native vs prompt-based |
 | [Prompt-Based Tool Calling](prompt-based-tool-calling.md) | Developer guide for non-native tool calling |
-| [Release Notes v1.18.0 (draft)](RELEASE-NOTES-v1.18.0.md) | **In progress** — P0 agent heartbeat primitives (`AGENT_BEAT` / `_RUN_START` / `_RUN_COMPLETE` / `_RUN_ERROR` / `_ZOMBIE`), zombie circuit-breaker, cross-client renderers |
+| [Release Notes v1.18.0 (draft)](release-notes-v1.18.0.md) | **In progress** — P0 agent heartbeat primitives (`AGENT_BEAT` / `_RUN_START` / `_RUN_COMPLETE` / `_RUN_ERROR` / `_ZOMBIE`), zombie circuit-breaker, cross-client renderers |
 | [Stabilization v1.18.0](archive/STABILIZATION-v1.18.0.md) | **Landed** — five-phase cleanup pass: `GET /state` reconnect endpoint, AppState `last_message_role`, `format_tokens`/`format_usage_badge` cross-language helpers, `AutosaveFailureGuard`, public-API promotion of 8 helpers, removed `has_vision_model` alias |
 | [Release Notes v1.17.7](archive/release-notes/RELEASE-NOTES-v1.17.7.md) | `ppxai-desktop --version` stale-fallback fix |
 | [Release Notes v1.17.6](archive/release-notes/RELEASE-NOTES-v1.17.6.md) | R5 first-class `uploaded_file` content type, R19 multimodal rendering gap |
@@ -212,7 +212,7 @@ ppxai/
 │   └── ...                               # Additional tests
 └── docs/
     ├── README.md                          # This file
-    ├── FILE_EDITING_GUIDE.md             # File editing guide
+    ├── file-editing-guide.md             # File editing guide
     └── archive/                           # Archived documentation
 ```
 
@@ -222,16 +222,16 @@ ppxai/
 A: The unified client interface for all AI interactions. It replaces the legacy AIClient.
 
 **Q: How do I add a new AI provider?**
-A: See [Provider Setup Guide](PROVIDER_SETUP.md) for configuration examples.
+A: See [Provider Setup Guide](provider-setup.md) for configuration examples.
 
 **Q: How do tools work?**
 A: Tools are registered with `ToolManager` and available to the AI when enabled. The AI can call tools by outputting JSON with the tool name and arguments.
 
 **Q: Is consent required for file editing?**
-A: Yes! All file edits require user consent. See [File Editing Guide](FILE_EDITING_GUIDE.md).
+A: Yes! All file edits require user consent. See [File Editing Guide](file-editing-guide.md).
 
 **Q: How do I use context injection?**
-A: Type `@filename`, `@git`, or `@tree` in your messages. See [Context Injection Guide](CONTEXT-INJECTION.md).
+A: Type `@filename`, `@git`, or `@tree` in your messages. See [Context Injection Guide](context-injection.md).
 
 ## Support
 

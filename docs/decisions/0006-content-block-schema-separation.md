@@ -760,7 +760,7 @@ Same 5 hours of focused work; vastly different long-term return.
 | `Message.attachments` and `Message.content` get out of sync (block deleted but ref remains, etc.) | Validator helper `Message.validate_attachments()` runs in `__debug__` builds; called after every mutation |
 | Legacy session files with weird shapes (manual edits, third-party tools) crash the migration | Migration wraps in try/except, falls back to legacy in-block reads with a warning logged once per session |
 | Phase 2 reader switch missed a site | Whole-repo grep for `block.get("name")` / `block.get("file_id")` in CI; sentinel test with a fully-populated multimodal Message asserts every projection layer sees the same name/file_id |
-| ppxai-sre or other downstream consumers depend on the legacy shape | Search ppxai-sre repo for content-block reads before Phase 3; if any exist, bump v1 gateway schema_version and document the change in `docs/API-GATEWAY.md` |
+| ppxai-sre or other downstream consumers depend on the legacy shape | Search ppxai-sre repo for content-block reads before Phase 3; if any exist, bump v1 gateway schema_version and document the change in `docs/api-gateway.md` |
 | VSCode extension's TypeScript types drift | Run `python scripts/regen_appstate_types.py` (existing script per `ppxai/engine/app_state_schema.json`) after Phase 1; CI sentinel asserts TS types match |
 
 ### What this is NOT

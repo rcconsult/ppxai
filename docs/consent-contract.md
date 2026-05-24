@@ -277,6 +277,6 @@ Behavior pinned by the following test classes:
 
 ## Related documents
 
-- [docs/ARCHITECTURE.md](ARCHITECTURE.md) — broader engine architecture
-- [docs/MODEL-SELECTION-GUIDE.md](MODEL-SELECTION-GUIDE.md) — planner/executor pattern
-- [docs/DEBUG-LOGGING.md](DEBUG-LOGGING.md) — log persistence flow
+- [docs/architecture.md](architecture.md) — broader engine architecture
+- [docs/model-selection-guide.md](model-selection-guide.md) — planner/executor pattern
+- [docs/debug-logging.md](debug-logging.md) — log persistence flow

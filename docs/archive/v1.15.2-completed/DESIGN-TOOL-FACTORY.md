@@ -258,7 +258,7 @@ class EngineClient:
 3. Hot-reload capability via `/reload` command
 
 ### Phase 5: Documentation
-1. Create CUSTOM_TOOL_DEVELOPMENT_GUIDE.md (similar to [CUSTOM_COMMAND_DEVELOPMENT_GUIDE.md](CUSTOM_COMMAND_DEVELOPMENT_GUIDE.md))
+1. Create custom-tool-development-guide.md (similar to [custom-command-development-guide.md](custom-command-development-guide.md))
 2. Add examples to `~/.ppxai/tools/examples/`
 3. Update README with custom tools section
 

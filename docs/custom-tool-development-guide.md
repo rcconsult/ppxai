@@ -1122,8 +1122,8 @@ print(result)
 
 ## See Also
 
-- [File Editing Guide](FILE_EDITING_GUIDE.md) - Built-in file editing tools
-- [Shell Consent Guide](SHELL_CONSENT_GUIDE.md) - Shell command consent system
+- [File Editing Guide](file-editing-guide.md) - Built-in file editing tools
+- [Shell Consent Guide](shell-consent-guide.md) - Shell command consent system
 - [Architecture Refactoring](archive/v1.15.2-completed/architecture-refactoring.md) - EngineClient design
 - [Agentic Workflow Plan](archive/v1.15.1-completed/v1.11.0-agentic-workflow-plan.md) - Tool system internals
 

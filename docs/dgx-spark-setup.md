@@ -422,5 +422,5 @@ vLLM automatically selects the MoE backend based on quantization:
 
 - [vLLM Documentation](https://docs.vllm.ai/)
 - [Qwen3-Coder-30B-A3B-Instruct-FP8 Model Card](https://huggingface.co/Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8)
-- [ppxai Provider Setup Guide](PROVIDER_SETUP.md)
+- [ppxai Provider Setup Guide](provider-setup.md)
 - [ppxai vLLM Tool Calling Guide](vllm-tool-calling-guide.md)

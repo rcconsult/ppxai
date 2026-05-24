@@ -20,7 +20,7 @@
 > tag-cycle near-miss); web preview URLs handle absolute-vs-relative
 > paths correctly across `working_dir`; deploy `values.yaml` no
 > longer ships placeholder providers; the rolling
-> `docs/DEBT-INVENTORY.md` replaces the per-version snapshot pattern;
+> `docs/debt-inventory.md` replaces the per-version snapshot pattern;
 > four closed TODOs moved to `docs/archive/` with all 17 inbound
 > links rewritten; the `build-install` skill grew cross-platform
 > coverage (with a Windows PowerShell `Start-Job` snippet bug fixed
@@ -229,7 +229,7 @@ the connective narrative.
 
 10. **Doc hygiene: rolling DEBT-INVENTORY + 4 archived TODOs**
     (`95808272`, `8d06e1c0`, `bdabf511`). Three doc-organization
-    moves landed during the branch. (a) `docs/DEBT-INVENTORY.md`
+    moves landed during the branch. (a) `docs/debt-inventory.md`
     becomes a rolling open-items list; per-version snapshots
     (`DEBT-INVENTORY-v1.18.2.md`, `DEBT-INVENTORY-v1.18.3.md`)
     moved to `docs/archive/` as historical "what closed in vX.Y.Z"

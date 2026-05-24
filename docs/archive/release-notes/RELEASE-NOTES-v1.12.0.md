@@ -207,7 +207,7 @@ Response: {"ok": true, "backend": "git"}
 ### 8. Documentation
 
 **New User Guides:**
-- [docs/CHECKPOINT_GUIDE.md](../docs/CHECKPOINT_GUIDE.md) - Comprehensive 550+ line user guide
+- [docs/checkpoint-guide.md](../docs/checkpoint-guide.md) - Comprehensive 550+ line user guide
   - Quick start and configuration
   - Git vs file backend comparison
   - Workflow examples and troubleshooting
@@ -327,7 +327,7 @@ Response: {"ok": true, "backend": "git"}
 9. **ppxai-config.example.json** - Checkpoint configuration examples
 10. **tests/test_checkpoint.py** (NEW - 464 lines, 28 tests)
 11. **tests/test_commands.py** - Fixed coroutine warnings
-12. **docs/CHECKPOINT_GUIDE.md** (NEW - 558 lines)
+12. **docs/checkpoint-guide.md** (NEW - 558 lines)
 13. **docs/VSCODE-CHECKPOINT-UI-SPEC.md** (NEW - 216 lines)
 
 ### Commits on Feature Branch
@@ -610,7 +610,7 @@ You: /agent update dependencies
 
 ### User Guides
 
-- [Checkpoint System User Guide](../docs/CHECKPOINT_GUIDE.md) - Comprehensive guide (558 lines)
+- [Checkpoint System User Guide](../docs/checkpoint-guide.md) - Comprehensive guide (558 lines)
   - Quick start, configuration, troubleshooting
   - Git vs file backend comparison
   - Workflow examples and FAQ
@@ -672,7 +672,7 @@ You: /agent update dependencies
 - **Feature Branch:** `feature/agent-multi-file-atomic-edit`
 - **Previous Release:** [v1.11.9](https://github.com/rcconsult/ppxai/releases/tag/v1.11.9)
 - **Roadmap:** [ROADMAP.md](../ROADMAP.md)
-- **User Guide:** [CHECKPOINT_GUIDE.md](CHECKPOINT_GUIDE.md)
+- **User Guide:** [checkpoint-guide.md](checkpoint-guide.md)
 
 ---
 

@@ -471,7 +471,7 @@ commands/__init__.py                         (re-exports)
 2. Update `ppxai/__init__.py` lazy loading path
 
 ### Phase 6: Documentation
-1. Finalize [CUSTOM_COMMAND_DEVELOPMENT_GUIDE.md](CUSTOM_COMMAND_DEVELOPMENT_GUIDE.md)
+1. Finalize [custom-command-development-guide.md](custom-command-development-guide.md)
 2. Add examples to `~/.ppxai/commands/examples/`
 3. Update README with custom command section
 

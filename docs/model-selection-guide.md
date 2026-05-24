@@ -11,7 +11,7 @@ suite](../benchmarks/llm-eval/) and the cost structure of the OpenAI API
 as of 2026-04-26.
 
 For broader model taxonomy across providers (Tier S/A/B/C/D, parser quirks,
-behavior archetypes), see [MODEL-BEHAVIOR-ANALYSIS.md](MODEL-BEHAVIOR-ANALYSIS.md).
+behavior archetypes), see [model-behavior-analysis.md](model-behavior-analysis.md).
 For deferred multi-model routing automation, see [TODO-routing.md](TODO-routing.md).
 
 ## TL;DR
@@ -230,7 +230,7 @@ worth more than 1 point); the passing count is the strict count.
 
 ## Related documents
 
-- [MODEL-BEHAVIOR-ANALYSIS.md](MODEL-BEHAVIOR-ANALYSIS.md) — broader taxonomy across all providers
+- [model-behavior-analysis.md](model-behavior-analysis.md) — broader taxonomy across all providers
 - [TODO-routing.md](TODO-routing.md) — multi-model routing automation work
 - [AGENTS.md](../AGENTS.md) — project-level model hint blocks
 - `~/.ppxai/AGENTS.md` — user-level model hint blocks (per-machine)

@@ -5,7 +5,7 @@ file upload (shipped). Pseudocode below is illustrative — the live
 API has evolved (e.g. `has_vision_model` was renamed to
 `has_vision_sidecar` in v1.17.4 and the back-compat alias was
 removed in v1.18.0). For the current architecture see
-[docs/ARCHITECTURE.md](../ARCHITECTURE.md) and the engine source.
+[docs/architecture.md](../architecture.md) and the engine source.
 
 ---
 

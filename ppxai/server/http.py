@@ -211,7 +211,7 @@ async def auth_middleware(request: Request, call_next):
     `WWW-Authenticate: Bearer ...` when set and the request is
     missing/malformed/wrong-token. OPTIONS preflight is exempted.
 
-    See ppxai/server/auth.py and docs/API-GATEWAY.md for the policy.
+    See ppxai/server/auth.py and docs/api-gateway.md for the policy.
     """
     rejected = _auth_check_request(request)
     if rejected is not None:

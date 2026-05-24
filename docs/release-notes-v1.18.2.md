@@ -224,7 +224,7 @@ high-risk code via the code-review-graph. Closed by this release:
 | #2 | `server/state.py` (Session, get_or_create_session, get_session_or_query, preview backend, kill_preview_backend) | 28 |
 | #3 | Session persistence (write-failure propagation, symlinks, state-pointer staleness, concurrent IO, path-traversal in `load()`) | 44 |
 | #4 | `_execute_ai_task` (model swap+restore, stream accumulation, async context, code blocks) | 20 |
-| #5 | Tool security pass + new `docs/CONSENT-CONTRACT.md` | 18 |
+| #5 | Tool security pass + new `docs/consent-contract.md` | 18 |
 | #9 | Server route edges (X-Session-Id edges, invalid restore, preview referer parsing) | 17 |
 
 Plus 9 tests for the benchmark CI gate, gemini provider None-iter
@@ -342,7 +342,7 @@ be8de79c fix(session): orphan tool_calls cleanup + usage_by_model round-trip on 
 2736f8e9 test+harden: 9 tests for benchmark CI gate, gemini None-iter guards
 57c45fdc config(openai): default_model gpt-4.1-mini -> gpt-5.4-mini, coding gpt-5.4-mini
 36c73777 test(server/routes): 17 tests for X-Session-Id edges, invalid restore (#9)
-79b54757 test(tools)+docs: 18 security tests + CONSENT-CONTRACT.md (#5)
+79b54757 test(tools)+docs: 18 security tests + consent-contract.md (#5)
 7f7a578d test(coding): 20 tests for _execute_ai_task — model swap+restore, stream accum
 c5cb8b7e test(session): 23 tests for write-failure propagation, symlinks, state-pointer
 f8e913d9 test(server/state): 28 tests for get_or_create_session, get_session_or_query

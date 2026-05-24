@@ -23,7 +23,7 @@ streams via SSE — overkill for "given this prompt, return one response."
            "provider": "...", "usage": {...}}
 
 The `/v1/` prefix is the **stable API boundary** — semver-style guarantees
-on the request/response shape, see [docs/API-GATEWAY.md] for the policy.
+on the request/response shape, see [docs/api-gateway.md] for the policy.
 Internal endpoints (`/chat`, `/command/*`, `/files/*`) keep evolving and
 are not part of the gateway contract.
 
@@ -74,7 +74,7 @@ class OneshotRequest(BaseModel):
     """Stateless single-turn completion request.
 
     The shape is part of the stable v1 gateway contract — see
-    docs/API-GATEWAY.md. Adding optional fields is non-breaking;
+    docs/api-gateway.md. Adding optional fields is non-breaking;
     removing or repurposing fields requires a `/v2/oneshot`.
     """
     prompt: str = Field(..., min_length=1, description="User message content.")

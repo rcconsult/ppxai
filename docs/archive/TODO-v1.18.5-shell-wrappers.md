@@ -101,7 +101,7 @@ adding `failure_markers: ["rtk: error:", "rtk panicked"]` and
 | `ppxai/common/consent.py` | wire to `strip_transparent_prefixes()` | +20 |
 | `tests/test_wrapper_framework.py` | NEW (49 cases) | ~430 |
 | `tests/test_consent_classification.py` | NEW (70 cases — git/gh verbs + transparent strip) | ~165 |
-| `docs/SHELL-WRAPPERS.md` | NEW (replaces RTK-INTEGRATION.md) | ~190 |
+| `docs/shell-wrappers.md` | NEW (replaces RTK-INTEGRATION.md) | ~190 |
 | this file | NEW (replaces `TODO-v1.18.5-rtk-integration.md`) | — |
 | `ROADMAP.md` v1.18.5 entry | rewrite | — |
 | `CLAUDE.md` | one-paragraph pointer update | — |
@@ -153,7 +153,7 @@ populating `failure_markers` on the rtk default.
 
 ## Cross-references
 
-- [SHELL-WRAPPERS.md](SHELL-WRAPPERS.md) — user-facing documentation
+- [shell-wrappers.md](shell-wrappers.md) — user-facing documentation
 - [ROADMAP.md](../ROADMAP.md) §"v1.18.5 - Shell wrapper framework — rtk as first wrapper"
 - [reference_rtk_install.md](../../.claude/projects/-Users-rado-git-utils-ppxai/memory/reference_rtk_install.md) — host install state on rado's machine
 - rtk upstream: https://github.com/rtk-ai/rtk

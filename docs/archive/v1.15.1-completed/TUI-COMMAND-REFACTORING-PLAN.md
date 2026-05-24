@@ -1544,7 +1544,7 @@ async def test_textual_save_command():
 ### Post-Migration
 - [ ] Run full test suite
 - [ ] Manual testing: both TUIs, all commands
-- [ ] Update ARCHITECTURE.md
+- [ ] Update architecture.md
 - [ ] Update CHANGELOG.md
 - [ ] Create PR
 

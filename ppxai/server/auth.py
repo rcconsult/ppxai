@@ -14,7 +14,7 @@ Enable for cluster-internal deployments behind a NetworkPolicy
 (defense-in-depth) and any deployment where the server is
 reachable beyond loopback (mandatory).
 
-What this does NOT include (deliberately, see docs/API-GATEWAY.md
+What this does NOT include (deliberately, see docs/api-gateway.md
 "Future directions"): multi-token per-agent identity, token
 rotation/expiry, scoped tokens, rate limiting per token, OIDC/JWT
 integration. Single shared token is the foot-in-the-door for v1.

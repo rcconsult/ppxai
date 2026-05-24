@@ -136,7 +136,7 @@ code --install-extension ppxai-1.13.2.vsix
 | `tests/*` | Cross-platform fixes |
 | `pyproject.toml` | PEP 735 dependency-groups |
 | `install.sh` | New flags: --with-config, --with-macos-app, --with-launchagent, --uninstall |
-| `docs/INSTALLATION.md` | Comprehensive install documentation |
+| `docs/installation.md` | Comprehensive install documentation |
 | `README.md` | Updated install options |
 
 ## New - Enhanced Install Script (Linux/macOS)

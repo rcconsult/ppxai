@@ -255,7 +255,7 @@ GET /usage/export?format=csv  # Export usage data
 - HTTP endpoints: `/checkpoint/list`, `/checkpoint/backend`, `/checkpoint/clear`
 
 #### Documentation
-- Updated [CHECKPOINT_GUIDE.md](CHECKPOINT_GUIDE.md) to v1.12.4
+- Updated [checkpoint-guide.md](checkpoint-guide.md) to v1.12.4
 
 ### Tests
 - 400 tests passing

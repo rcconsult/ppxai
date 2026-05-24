@@ -104,7 +104,7 @@ model_hints:
 - Model-specific hints refine behavior for each model size
 - Use `/context hints` to verify which hints are active
 
-See [Bootstrap Context Guide](BOOTSTRAP_CONTEXT_GUIDE.md) for full documentation.
+See [Bootstrap Context Guide](bootstrap-context-guide.md) for full documentation.
 
 ### 1. Tool Loop Detection (v1.13.10)
 

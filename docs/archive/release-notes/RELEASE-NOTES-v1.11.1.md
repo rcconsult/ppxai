@@ -73,7 +73,7 @@ A comprehensive debug logging system for troubleshooting TUI issues, mirroring V
 18:50:19.713 | DEBUG    | After adding assistant message, session has 6 messages
 ```
 
-**Documentation**: See [docs/TUI-DEBUG-LOGGING.md](TUI-DEBUG-LOGGING.md)
+**Documentation**: See [docs/TUI-debug-logging.md](TUI-debug-logging.md)
 
 **Implementation**:
 - New file: `ppxai/tui_logger.py` - Singleton logger with file output
@@ -127,7 +127,7 @@ A comprehensive debug logging system for troubleshooting TUI issues, mirroring V
 
 ### New Documentation:
 - [docs/archive/400-ERROR-INVESTIGATION.md](archive/400-ERROR-INVESTIGATION.md) - Complete investigation and fix details
-- [docs/TUI-DEBUG-LOGGING.md](TUI-DEBUG-LOGGING.md) - Debug logging user guide
+- [docs/TUI-debug-logging.md](TUI-debug-logging.md) - Debug logging user guide
 - [docs/RELEASE-NOTES-v1.11.1.md](RELEASE-NOTES-v1.11.1.md) - This document
 
 ### Updated Documentation:

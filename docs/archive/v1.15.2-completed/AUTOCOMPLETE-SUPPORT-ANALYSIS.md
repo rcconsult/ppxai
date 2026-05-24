@@ -619,7 +619,7 @@ For each client:
 ## Related Documents
 
 - [TODO-v1.15.2-CONTEXT-INJECTOR-PARITY.md](TODO-v1.15.2-CONTEXT-INJECTOR-PARITY.md) - Context injector autocomplete fixes
-- [CONTEXT-INJECTION.md](CONTEXT-INJECTION.md) - Context injection user guide
+- [context-injection.md](context-injection.md) - Context injection user guide
 - [ppxai/web/shared/commands.js](../ppxai/web/shared/commands.js) - Shared command definitions
 - [vscode-extension/src/shared/commands.ts](../vscode-extension/src/shared/commands.ts) - VSCode command definitions
 

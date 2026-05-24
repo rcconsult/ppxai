@@ -61,7 +61,7 @@ Ghostty 1.2.3 AppImage has incomplete Kitty keyboard protocol negotiation. The e
 
 If you prefer to use GNOME Terminal or Konsole, **Ctrl+J works universally** in all terminals as an alternative to Ctrl+Enter.
 
-For detailed terminal setup instructions, see **[Linux Terminal Setup Guide](../docs/LINUX-TERMINAL-SETUP.md)**.
+For detailed terminal setup instructions, see **[Linux Terminal Setup Guide](../docs/linux-terminal-setup.md)**.
 
 ## What Gets Installed
 

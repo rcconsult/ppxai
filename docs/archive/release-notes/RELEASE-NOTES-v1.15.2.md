@@ -318,10 +318,10 @@ code --install-extension ppxai-1.15.2.vsix
 
 ## Documentation
 
-- [Installation Guide](../docs/INSTALLATION.md)
-- [Provider Setup](../docs/PROVIDER_SETUP.md)
-- [Agent Mode Guide](../docs/AGENT_MODE_GUIDE.md)
-- [Architecture](../docs/ARCHITECTURE.md)
+- [Installation Guide](../docs/installation.md)
+- [Provider Setup](../docs/provider-setup.md)
+- [Agent Mode Guide](../docs/agent-mode-guide.md)
+- [Architecture](../docs/architecture.md)
 - [vLLM Tool Calling Guide](../docs/vllm-tool-calling-guide.md)
 
 ---

@@ -356,10 +356,10 @@ agent-platform Stage 2 work opens).  v1.20.x feels right because:
 
 - [pyproject.toml](../pyproject.toml) — `[mcp]` optional extras
   (currently the only ppxai-side MCP artifact)
-- [docs/CUSTOM_TOOL_DEVELOPMENT_GUIDE.md](CUSTOM_TOOL_DEVELOPMENT_GUIDE.md)
+- [docs/custom-tool-development-guide.md](custom-tool-development-guide.md)
   — native-tool development pattern that MCP's `MCPTool(BaseTool)`
   wrapper hooks into
-- [docs/CONSENT-CONTRACT.md](CONSENT-CONTRACT.md) — current consent
+- [docs/consent-contract.md](consent-contract.md) — current consent
   primitive; the tier-1/2/3 mapping above extends this
 - [docs/decisions/0003-agent-platform-architecture.md](decisions/0003-agent-platform-architecture.md)
   — v1.19.x Stage 2; MCP touches the same `ppxai/engine/` surface,

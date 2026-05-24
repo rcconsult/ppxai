@@ -77,7 +77,7 @@ class ModelProfile:
 # ──────────────────────────────────────────────────────────────────────
 # Built-in model profiles
 #
-# Derived from MODEL-BEHAVIOR-ANALYSIS.md (27 models, 7 categories).
+# Derived from model-behavior-analysis.md (27 models, 7 categories).
 # Keys are glob patterns matched against model IDs (case-insensitive).
 # First match wins — order matters (specific before generic).
 # ──────────────────────────────────────────────────────────────────────

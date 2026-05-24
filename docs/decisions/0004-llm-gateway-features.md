@@ -3,7 +3,7 @@
 **Date:** 2026-05-03
 **Status:** Accepted
 **Related:**
-- [`docs/API-GATEWAY.md`](../API-GATEWAY.md) — user-facing spec for the v1 gateway
+- [`docs/api-gateway.md`](../api-gateway.md) — user-facing spec for the v1 gateway
 - `ppxai/server/routes/oneshot.py` — first gateway endpoint
 - `ppxai/server/auth.py` — bearer-token middleware
 - ADR 0003 — Agent platform architecture (server-driven agents; orthogonal concern)
@@ -81,7 +81,7 @@ server runs unauthenticated (preserves localhost desktop UX).
 
 Single shared token in v1. Per-agent identity, scoped tokens,
 rotation, OIDC/JWT — all explicitly NOT in v1 (see
-[`docs/API-GATEWAY.md`](../API-GATEWAY.md) "Future directions").
+[`docs/api-gateway.md`](../api-gateway.md) "Future directions").
 
 ## Why these and not the alternatives
 
@@ -137,7 +137,7 @@ X-Session-Id for now."`
 
 Multi-token requires a registry, persistence, rotation mechanism,
 revocation API — see ADR 0004's complement in
-[`docs/API-GATEWAY.md`](../API-GATEWAY.md) "Future directions" for
+[`docs/api-gateway.md`](../api-gateway.md) "Future directions" for
 the `/v1/tokens` design. That's ~500 LoC + storage migration policy
 + a separate stability commitment. Single token is ~50 LoC and
 unblocks the loopback-leaving deployments today. We'd need to ship

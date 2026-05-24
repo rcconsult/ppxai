@@ -64,7 +64,7 @@ A consent-based security system for shell commands executed by AI tools.
 - `ppxai-config.json` - Added default shell patterns
 - `ppxai-config.example.json` - Added shell configuration template
 
-**Documentation**: See [docs/SHELL_CONSENT_GUIDE.md](SHELL_CONSENT_GUIDE.md)
+**Documentation**: See [docs/shell-consent-guide.md](shell-consent-guide.md)
 
 ---
 
@@ -87,7 +87,7 @@ A consent-based security system for shell commands executed by AI tools.
 **Files Changed**:
 - `ppxai-config.json` - Fixed allowed_commands patterns
 - `ppxai-config.example.json` - Fixed allowed_commands patterns
-- `docs/SHELL_CONSENT_GUIDE.md` - Documented pattern syntax
+- `docs/shell-consent-guide.md` - Documented pattern syntax
 
 ---
 
@@ -207,7 +207,7 @@ Added `tools.shell` configuration section to `ppxai-config.json`:
 ## Documentation
 
 ### New Documentation:
-- [docs/SHELL_CONSENT_GUIDE.md](SHELL_CONSENT_GUIDE.md) - Comprehensive shell consent guide (500+ lines)
+- [docs/shell-consent-guide.md](shell-consent-guide.md) - Comprehensive shell consent guide (500+ lines)
   - Command classification reference
   - Consent flow explanation
   - Configuration examples
@@ -260,7 +260,7 @@ uv pip install --upgrade ppxai
 **Configuration**:
 - Default shell patterns work for most use cases
 - Copy `ppxai-config.example.json` to customize patterns
-- See [docs/SHELL_CONSENT_GUIDE.md](SHELL_CONSENT_GUIDE.md) for examples
+- See [docs/shell-consent-guide.md](shell-consent-guide.md) for examples
 
 ---
 
@@ -334,7 +334,7 @@ See [ROADMAP.md](../ROADMAP.md) for details.
 
 - **GitHub Release**: https://github.com/rcconsult/ppxai/releases/tag/v1.11.2
 - **PyPI**: https://pypi.org/project/ppxai/1.11.2/
-- **Documentation**: [docs/SHELL_CONSENT_GUIDE.md](SHELL_CONSENT_GUIDE.md)
+- **Documentation**: [docs/shell-consent-guide.md](shell-consent-guide.md)
 - **Security**: [SECURITY.md](../SECURITY.md)
 
 ---

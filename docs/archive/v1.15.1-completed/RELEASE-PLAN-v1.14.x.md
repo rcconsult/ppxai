@@ -636,8 +636,8 @@ provider_hints:
 ```
 ppxai/
 ├── docs/                      # Existing - source markdown
-│   ├── INSTALLATION.md
-│   ├── AGENT_MODE_GUIDE.md
+│   ├── installation.md
+│   ├── agent-mode-guide.md
 │   └── ...
 ├── mkdocs.yml                 # NEW: Site configuration
 └── .github/workflows/
@@ -672,14 +672,14 @@ theme:
 nav:
   - Home: index.md
   - Getting Started:
-    - Installation: INSTALLATION.md
+    - Installation: installation.md
     - Quick Start: ../README.md
   - User Guides:
-    - Agent Mode: AGENT_MODE_GUIDE.md
-    - Checkpoint & Undo: CHECKPOINT_GUIDE.md
-    - Provider Setup: PROVIDER_SETUP.md
+    - Agent Mode: agent-mode-guide.md
+    - Checkpoint & Undo: checkpoint-guide.md
+    - Provider Setup: provider-setup.md
   - Development:
-    - Custom Tools: CUSTOM_TOOL_DEVELOPMENT_GUIDE.md
+    - Custom Tools: custom-tool-development-guide.md
     - VSCode Extension: ../vscode-extension/README.md
   - Release Notes:
     - v1.14.x: RELEASE-NOTES-v1.14.0.md

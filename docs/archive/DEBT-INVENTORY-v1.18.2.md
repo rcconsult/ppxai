@@ -161,7 +161,7 @@ code don't realise the release page never materialised.
 - **v1.18.2 second failure (2026-04-29 ~00:26 UTC, after build-dmg
   rerun)** — release object now existed but `body` contained ONLY
   the auto-generated `**Full Changelog**: https://...` link
-  (80 chars), NOT the rich `docs/RELEASE-NOTES-v1.18.2.md` content
+  (80 chars), NOT the rich `docs/release-notes-v1.18.2.md` content
   (~18,000 chars). release.py's "Publish Notes" step took 338s
   (5.6 min — wildly long for a `gh release edit --notes-file` call);
   it likely retried internally and timed out gracefully without
@@ -170,7 +170,7 @@ code don't realise the release page never materialised.
   happens to be near-empty. **Caught only because the user noticed
   the release page** ~1 hour later showed only the changelog link.
   Fixed manually with `gh release edit v1.18.2 --notes-file
-  docs/RELEASE-NOTES-v1.18.2.md`.
+  docs/release-notes-v1.18.2.md`.
 
 **Why this matters:** the fix to v1.18.1's silent-failure mode
 was discipline (`gh release view` after every release). That's
@@ -676,7 +676,7 @@ needed — `~/.bashrc` is per-developer config, not project state.
 prior text (variants a / b / c) has the smallest-blast-radius fix
 first. If a second developer reports the issue, that's the trigger
 to fold a "Windows developer setup" subsection into
-`docs/INSTALLATION.md` per the original "trigger to revisit"
+`docs/installation.md` per the original "trigger to revisit"
 condition.
 
 ### Item 11 — Latent AttributeError in `agent.py` Rich-TUI path — closed 2026-04-28
@@ -896,7 +896,7 @@ ones not in "Open" above were closed during the test sweep on
 | #2 | server/state.py — 28 tests across 4 classes | f8e913d9 |
 | #3 | Session persistence — 44 tests + path-traversal fix in `load()` | 34377a40, c5cb8b7e, be8de79c |
 | #4 | `_execute_ai_task` — 20 tests across 7 sub-cases | 7f7a578d |
-| #5 | Tool security pass + `docs/CONSENT-CONTRACT.md` (18 tests) | 79b54757 |
+| #5 | Tool security pass + `docs/consent-contract.md` (18 tests) | 79b54757 |
 | #9 | Server route edges (a, d, f) — 17 tests; (b, c, e) already covered | 36c73777 |
 | #10 | Improve graph/report usefulness — absorbed into #1 | (with #1) |
 
@@ -922,8 +922,8 @@ ones not in "Open" above were closed during the test sweep on
 
 ## Related documents
 
-- [docs/CONSENT-CONTRACT.md](CONSENT-CONTRACT.md) — security boundary for tool execution (created with critique #5)
-- [docs/MODEL-SELECTION-GUIDE.md](MODEL-SELECTION-GUIDE.md) — planner/executor pricing strategy
+- [docs/consent-contract.md](consent-contract.md) — security boundary for tool execution (created with critique #5)
+- [docs/model-selection-guide.md](model-selection-guide.md) — planner/executor pricing strategy
 - [docs/archive/TODO-v1.18.2-agent-loop-unification.md](TODO-v1.18.2-agent-loop-unification.md) — separate in-flight work (HTTP-streaming agent loop)
 - [docs/TODO-v1.18.2-keys-binding-registries.md](../TODO-v1.18.2-keys-binding-registries.md) — separate in-flight work
 - [docs/archive/TODO-v1.18.2-prompt-text-kind.md](TODO-v1.18.2-prompt-text-kind.md) — separate in-flight work

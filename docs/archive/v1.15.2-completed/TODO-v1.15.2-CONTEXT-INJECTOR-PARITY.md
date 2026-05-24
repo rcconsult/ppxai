@@ -301,7 +301,7 @@ For **each client** (Rich TUI, Textual TUI, VSCode, Web):
 ## Documentation Updates
 
 ### Files to Update
-1. [docs/CONTEXT-INJECTION.md](../docs/CONTEXT-INJECTION.md)
+1. [docs/context-injection.md](../docs/context-injection.md)
    - Already documents all 5 providers correctly ✅
    - No changes needed
 
@@ -379,8 +379,8 @@ Backend already handles URL pattern detection via regex: `r'@(https?://[^\s<>\"\
 
 ## Related Documents
 
-- [docs/CONTEXT-INJECTION.md](../docs/CONTEXT-INJECTION.md) - User-facing guide (already complete)
-- [docs/BOOTSTRAP_CONTEXT_GUIDE.md](../docs/BOOTSTRAP_CONTEXT_GUIDE.md) - Bootstrap context (different feature)
+- [docs/context-injection.md](../docs/context-injection.md) - User-facing guide (already complete)
+- [docs/bootstrap-context-guide.md](../docs/bootstrap-context-guide.md) - Bootstrap context (different feature)
 - [ppxai/engine/context.py](../ppxai/engine/context.py) - Implementation reference
 - [CHANGELOG.md](../CHANGELOG.md) - Release notes
 

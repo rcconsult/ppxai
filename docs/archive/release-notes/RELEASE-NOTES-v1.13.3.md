@@ -152,7 +152,7 @@ code --install-extension ppxai-1.13.3.vsix
 | Tool Parsing | `ppxai/engine/tool_parsing.py` |
 | Error Handling | `ppxai/server/http.py`, `vscode-extension/src/httpClient.ts` |
 | Windows Compat | `ppxai/config.py`, `ppxai/common/logger.py` |
-| Documentation | `docs/PROVIDER_SETUP.md` |
+| Documentation | `docs/provider-setup.md` |
 
 ## Known Issues
 

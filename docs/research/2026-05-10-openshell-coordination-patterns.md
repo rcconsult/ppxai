@@ -72,7 +72,7 @@ shared infrastructure. No external user supplying credentials. The
 sub-tasks of that human's intent. Per-agent containers would 100x
 the install footprint for zero benefit.
 
-The k8s session-manager (Item 3 in [DEBT-INVENTORY.md](../DEBT-INVENTORY.md))
+The k8s session-manager (Item 3 in [debt-inventory.md](../debt-inventory.md))
 is the **only** place ppxai uses containers, and that's for tenant
 isolation in the multi-user deploy shape — orthogonal to per-agent
 isolation.
@@ -218,7 +218,7 @@ hosts/paths/methods. Network gateway enforces.
 ("agent X may only call api.openai.com, not arbitrary hosts"), but:
 
 1. Tools layer already gates network access via the consent
-   contract — see [docs/CONSENT-CONTRACT.md].
+   contract — see [docs/consent-contract.md].
 2. Sub-agents inherit the parent's tool consent, so policy lives at
    the tool level, not the network level.
 3. Building a separate policy-enforcement layer is significant work
@@ -264,8 +264,8 @@ try to retrofit them into this one.
 
 - [docs/decisions/0003-agent-platform-architecture.md](../decisions/0003-agent-platform-architecture.md) — the active ADR this note feeds into
 - [docs/patterns/state-sync-determinism.md](../patterns/state-sync-determinism.md) — the existing 409-retry pattern that generalizes
-- [docs/CONSENT-CONTRACT.md](../CONSENT-CONTRACT.md) — current security boundary (per-tool, not per-network)
+- [docs/consent-contract.md](../consent-contract.md) — current security boundary (per-tool, not per-network)
 - [docs/research/2026-04-29-python-vs-go-for-agents.md](2026-04-29-python-vs-go-for-agents.md) — sibling research note on language choice for autonomous agents
-- [DEBT-INVENTORY.md](../DEBT-INVENTORY.md) Item 3 — k8s session-manager (the only multi-tenant context in ppxai today)
+- [debt-inventory.md](../debt-inventory.md) Item 3 — k8s session-manager (the only multi-tenant context in ppxai today)
 - OpenShell upstream: https://github.com/NVIDIA/OpenShell
 - multi-agent-notepad example: https://github.com/NVIDIA/OpenShell/tree/main/examples/multi-agent-notepad

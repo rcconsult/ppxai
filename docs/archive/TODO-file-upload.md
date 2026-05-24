@@ -8,7 +8,7 @@
 > This document drove the v1.17.4 file-upload implementation and is
 > kept here as a record of the staged design. Current usage and
 > architecture live in [vscode-extension/README.md](../../vscode-extension/README.md#file-upload--multimodal-v1174)
-> and [docs/ARCHITECTURE.md](../ARCHITECTURE.md). Don't update this
+> and [docs/architecture.md](../architecture.md). Don't update this
 > file — open a new TODO for follow-on work instead.
 **Research:**
 - `docs/ppxai-file-upload-data-processing.md` — design & preprocessing architecture

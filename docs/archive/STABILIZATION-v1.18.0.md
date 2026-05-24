@@ -245,7 +245,7 @@ Two doc-only additions with no code change:
   the lock, safe to call `state.get()`, must NOT synchronously call
   `state.set()` on another field (nested-dispatch ordering becomes
   observable, infinite-loop risk).
-- New **Error Routing Conventions** section in `docs/ARCHITECTURE.md`:
+- New **Error Routing Conventions** section in `docs/architecture.md`:
   three channels (event bus / logger / raise), when to use each, and
   the two narrow cases where `except Exception:` is acceptable
   (Textual `NoMatches` guards and AppState listener isolation).

@@ -22,7 +22,7 @@ Architecture note: path validation is INTENTIONALLY at the consent
 layer (`engine/consent_ops.py`), not the tool layer. The LLM may
 legitimately need to read system files (`/etc/hosts`, etc.) so the
 tool itself accepts any path the consent layer approves. See
-docs/CONSENT-CONTRACT.md for the full contract.
+docs/consent-contract.md for the full contract.
 """
 
 from __future__ import annotations

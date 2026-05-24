@@ -35,24 +35,24 @@ theme:
 nav:
   - Home: index.md
   - Getting Started:
-    - Installation: INSTALLATION.md
-    - Provider Setup: PROVIDER_SETUP.md
+    - Installation: installation.md
+    - Provider Setup: provider-setup.md
   - User Guides:
-    - Agent Mode: AGENT_MODE_GUIDE.md
-    - Bootstrap Context: BOOTSTRAP_CONTEXT_GUIDE.md
-    - Context Injection: CONTEXT-INJECTION.md
-    - Checkpoint & Undo: CHECKPOINT_GUIDE.md
-    - File Editing: FILE_EDITING_GUIDE.md
-    - Shell Consent: SHELL_CONSENT_GUIDE.md
+    - Agent Mode: agent-mode-guide.md
+    - Bootstrap Context: bootstrap-context-guide.md
+    - Context Injection: context-injection.md
+    - Checkpoint & Undo: checkpoint-guide.md
+    - File Editing: file-editing-guide.md
+    - Shell Consent: shell-consent-guide.md
   - Development:
-    - Custom Tools: CUSTOM_TOOL_DEVELOPMENT_GUIDE.md
-    - Custom Commands: CUSTOM_COMMAND_DEVELOPMENT_GUIDE.md
-    - Architecture: ARCHITECTURE.md
+    - Custom Tools: custom-tool-development-guide.md
+    - Custom Commands: custom-command-development-guide.md
+    - Architecture: architecture.md
   - Reference:
     - Ollama Limitations: ollama-limitations.md
     - vLLM Tool Calling: vllm-tool-calling-guide.md
-    - Container Tools: CONTAINER_TOOLS_GUIDE.md
-    - Autorouter Config: AUTOROUTER-CONFIG.md
+    - Container Tools: container-tools-guide.md
+    - Autorouter Config: autorouter-config.md
   - Release Notes:
     - v1.16.1: RELEASE-NOTES-v1.16.1.md
     - v1.16.0: RELEASE-NOTES-v1.16.0.md

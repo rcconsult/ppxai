@@ -56,7 +56,7 @@ Phase 7 is the final phase before merging feature/new-tui-command to master and 
 - `CHANGELOG.md`
 - `CLAUDE.md`
 - `README.md`
-- `docs/ARCHITECTURE.md`
+- `docs/architecture.md`
 - `docs/PHASE-6-PROGRESS.md`
 
 ---
@@ -204,7 +204,7 @@ Phase 7 is complete when:
 ## References
 
 - **Phase 6 Progress:** `docs/PHASE-6-PROGRESS.md`
-- **Architecture:** `docs/ARCHITECTURE.md`
+- **Architecture:** `docs/architecture.md`
 - **Changelog:** `CHANGELOG.md`
 - **Release Script:** `scripts/release.py`
 - **Validation Scripts:** `scripts/validate_tui_*.py`
