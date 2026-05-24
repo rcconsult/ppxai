@@ -992,32 +992,6 @@ ppxai as dependency" separation that RELATED-PROJECTS.md commits to.
 Each phase is independently releasable as a v1.19.x point release if
 needed; the full bundle is what makes v1.19.x "ready for ppxai-sre."
 
-#### Pending alignment paperwork (pre-implementation, doc-only)
-
-Three items that need to land on `master` **before** v1.19.x
-implementation opens, so the wire-shape commitments to ppxai-sre are
-not re-litigated when the code work starts. None of these are code;
-they are doc/ADR/ROADMAP edits that have already been negotiated with
-the consumer but not all yet folded into our tree.
-
-| Item | Where it lives today | What needs to land |
-|---|---|---|
-| **Stage-2 alignment fold (C1–C4 + A1–A3)** | Branch `docs/v1.19.x-stage2-alignment`, single commit `42ed8f00` (2026-05-10), pushed but **unmerged** to master since 2026-05-10 | Merge to master. Adds ADR 0003 §6–§12 (tools field, SSE events, policy event types, tokens resolver, run_id additive fields, deferred CONSENT_DECISION, deferred pre-tool hook) + Phase 1/5/7 row amendments. Peer's [PPXAI-INTEGRATION-V1.19.md resolution log](https://github.com/rcconsult/ppxai-sre/blob/master/docs/PPXAI-INTEGRATION-V1.19.md) calls out the unmerged state twice and treats merge as the load-bearing wire-shape commitment. |
-| **Caveat C5 — agent-served services routing** | Filed by peer in commits `a604b0c` + `b3ba0f6` (2026-05-10), **post-`42ed8f00`** so explicitly outside the stage-2 alignment fold | Extend ADR 0003 with §13 "C5 — agent-served services routing" and amend Phase 1 row with the `services` field on `POST /v1/agent/run` request + `services: {name → URL}` response. Pin the five sub-question resolutions per peer's recommendations: **C5.1** narrow v1.19.x auth to `bearer \| none` (defer `session` to v1.20.x with OIDC); **C5.2** allow `token_source: "v1-tokens" \| "header:X-Custom-Token"` per service; **C5.3** symmetric `network.allow_inbound` shape in `meta.json` alongside Phase 5's outbound allowlist; **C5.4** explicit `POST /v1/agent/runs/<id>/terminate` to short-circuit restart loops on clean exit; **C5.5** reverse-proxy injects `X-Forwarded-Prefix`. Plus two clarifications: routing key is `(port, path)` not `port` alone (outlook-monitor binds `/metrics` + `/healthz` on 9090); `services` is optional/empty for CronJob runs. |
-| **`EventType.AGENT_SERVICE_DOWN`** | Referenced by peer in C5 cross-references (PPXAI-INTEGRATION-V1.19.md line 184) | Add to ADR 0003 §10 planned-event-types list, symmetric with `AGENT_ZOMBIE`. Emitted when a bound service exits or stops responding. Doc-only addition until Phase 1 implementation opens. |
-
-**Why this is paperwork, not code:** the peer's outlook-monitor Phase
-4 already plans to ship FastAPI binding ports directly (see their
-`docs/DESIGN-outlook-agent.md §"C5 mapping"`) until our runtime lands,
-so there is no urgency on implementation — only on having the
-committed shape on master so v1.19.x Phase 1 work doesn't re-open
-settled questions.
-
-**How to land:** rebase `docs/v1.19.x-stage2-alignment` onto current
-master, extend the single planning commit with C5 §13 +
-`AGENT_SERVICE_DOWN`, open a master-targeted PR after v1.18.6
-releases. Tracked as [DEBT-INVENTORY.md Item 20](docs/DEBT-INVENTORY.md#item-20--v119x-alignment-paperwork-for-ppxai-sre-integration).
-
 ---
 
 ### v1.19.x - Prompt Analyzer + Adaptive Routing (Future)
