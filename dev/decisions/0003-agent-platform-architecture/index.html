@@ -1338,8 +1338,10 @@
 - <a href="../../archive/TODO-v1.18.2-agent-loop-unification/"><code>docs/archive/TODO-v1.18.2-agent-loop-unification.md</code></a> — the immediate refactor blocked on this ADR
 - <code>ppxai/commands/agent.py</code> — TUI-side outer continuation loop (<code>handle_agent</code>)
 - <code>ppxai/engine/chat.py</code> — <code>chat_with_tools</code> inner tool loop, AGENT_BEAT emission (lines 559, 875, 1066, 1138)
-- <code>ppxai/engine/types.py</code> — <code>EventType.AGENT_BEAT</code> / <code>AGENT_RUN_START</code> / <code>AGENT_RUN_COMPLETE</code> / <code>AGENT_RUN_ERROR</code> / <code>AGENT_ZOMBIE</code> (v1.18.0)
-- <code>vscode-extension/src/chatPanel.ts::handleAgentCommand</code> — VSCode-side replica of the outer loop (~150 LoC)</p>
+- <code>ppxai/engine/types.py</code> — <code>EventType.AGENT_BEAT</code> / <code>AGENT_RUN_START</code> / <code>AGENT_RUN_COMPLETE</code> / <code>AGENT_RUN_ERROR</code> / <code>AGENT_ZOMBIE</code> (v1.18.0); planned v1.19.x additions: <code>AGENT_SERVICE_DOWN</code> (per §13 / caveat C5)
+- <code>vscode-extension/src/chatPanel.ts::handleAgentCommand</code> — VSCode-side replica of the outer loop (~150 LoC)
+- <a href="../../../ppxai-sre-repo/docs/PPXAI-INTEGRATION-V1.19.md"><code>../../../ppxai-sre-repo/docs/PPXAI-INTEGRATION-V1.19.md</code></a> — consumer-side integration plan with caveats (C1-C5) and asks (A1-A3) folded into "Open decisions" §6-§13 below
+- <a href="../../research/2026-05-10-ppxai-sre-requirements/"><code>../research/2026-05-10-ppxai-sre-requirements.md</code></a> — gap analysis driving Stage 2 scope</p>
 <h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
 <p>ppxai has agent execution today, but the design predates the
 "agents-platform" use cases that are now driving the roadmap:
@@ -1629,7 +1631,17 @@ choice, its own tool budget. Two ways to model this:</p>
 <li>Run-level RBAC / multi-user (single-user tool today).</li>
 </ul>
 <h2 id="open-decisions">Open decisions<a class="headerlink" href="#open-decisions" title="Permanent link">&para;</a></h2>
-<p>These are gaps this ADR cannot close without input or measurement:</p>
+<p>These are gaps this ADR cannot close without input or measurement.
+Items 1-5 are ppxai-internal; items 6-13 are consumer-driven, surfaced
+2026-05-10 in <a href="../../../ppxai-sre-repo/docs/PPXAI-INTEGRATION-V1.19.md"><code>../../../ppxai-sre-repo/docs/PPXAI-INTEGRATION-V1.19.md</code></a>
+(caveats C1-C5 and asks A1-A3) and need answers before Stage 2 implementation
+lands. Items 6-12 (C1-C4, A1-A3) were folded in commit <code>42ed8f00</code> (2026-05-10).
+Item 13 (C5 — agent-served services routing) was filed by the consumer in
+peer commits <code>a604b0c</code> + <code>b3ba0f6</code> (2026-05-10) <strong>after</strong> <code>42ed8f00</code>, with the
+C5.1-C5.5 open-shape questions surfaced via the outlook-monitor Phase-4
+fit-test; folded here as a follow-on. Each carries a recommended position;
+items marked LOAD-BEARING block ppxai-sre's planned features in their current
+shape.</p>
 <ol>
 <li><strong>Question A</strong> — outer-loop value. Needs instrumentation data.</li>
 <li><strong>Question B</strong> — filesystem vs SQLite for the registry. Recommend
@@ -1646,6 +1658,155 @@ choice, its own tool budget. Two ways to model this:</p>
    mid-tool-call cleanly. Today's <code>_active_subprocesses</code> cleanup
    (commit <code>a746a7c6</code>) is the foundation; needs extending to a
    per-run budget tracker.</li>
+<li><strong>C4 — Tools first-class on <code>POST /v1/agent/run</code></strong> [LOAD-BEARING].
+   Without a <code>tools</code> field on the run-spawn request, ppxai-sre's
+   manager-executor pattern would have to reimplement the runtime
+   itself. <strong>Recommended position:</strong> mandatory in v1.19.x Phase 1.
+   Same <code>tools</code> shape <code>/v1/oneshot</code> would accept once it grows tool
+   support, so the wire surfaces stay consistent. ROADMAP Phase 1
+   row to be amended.</li>
+<li><strong>C3 — SSE on <code>GET /v1/agent/runs/&lt;id&gt;/events</code></strong>. Polling gates
+   the manager-executor pattern on round-trip latency
+   (<code>incident-responder</code> needs live triage commentary while the
+   executor runs <code>kubectl describe</code>, Prom queries, etc.). The ADR's
+   own "Wire shape for runs" section already proposes
+   <code>GET /agent/runs/&lt;id&gt;/events</code> as SSE; this elevates that proposal
+   from notional to committed. <strong>Recommended position:</strong> SSE channel
+   in v1.19.x Phase 1; polling <code>GET /v1/agent/runs/&lt;id&gt;</code> stays as
+   the status-snapshot path. ROADMAP Phase 1 row to be amended.</li>
+<li><strong>C1 — Typed <code>EventType.NETWORK_POLICY_DENIED</code> /
+   <code>NETWORK_POLICY_ALLOWED</code></strong> [LOAD-BEARING for ppxai-sre audit].
+   Phase 5's network-policy primitive must emit stable typed events
+   (analogous to <code>EventType.PROVIDER_THROTTLED</code>) so ppxai-sre's
+   <code>AuditLogger</code> consumes them as data, not by tapping internal
+   code paths. Payload shape:
+   <code>{tool, target_host, target_path, reason, allowlist_rule_id, run_id}</code>.
+   <strong>Recommended position:</strong> add to v1.19.x Phase 5 scope. ROADMAP
+   Phase 5 row to be amended.</li>
+<li><strong>C2 — <code>/v1/tokens</code> pluggable resolver from day one</strong>
+   [LOAD-BEARING for v1.20.x migration cost]. ROADMAP today says
+   "<code>~/.ppxai/tokens.json</code> (single-machine) OR k8s secret (cluster)" —
+   left unspecified. SRE agents deploy to k8s; the k8s-secret path
+   is load-bearing. If we ship v1.19.x with a single hardcoded
+   storage shape, the v1.20.x credential broker becomes a wire
+   re-shape. <strong>Recommended position:</strong> define the resolver protocol
+   in v1.19.x Phase 7 even though the credential broker proper is
+   v1.20.x. Same code path supports <code>~/.ppxai/.env</code> / k8s secret /
+   Vault. ROADMAP Phase 7 row to be amended.</li>
+<li><strong>A3 — <code>run_id</code> and <code>parent_run_id</code> on <code>EventType.AGENT_RUN_START</code></strong>.
+    Phase 1 introduces a <code>run_id</code> per run; ppxai-sre's audit JSONL
+    keys by <code>run_id</code>. The native v1.18.0 <code>AGENT_RUN_START</code> payload
+    predates the run namespace and doesn't carry one. <strong>Recommended
+    position:</strong> additive fields on the existing event type, no new
+    event needed. The namespace is the only new state. Fold into
+    Phase 1 implementation note (no separate ROADMAP row).</li>
+<li><strong>A1 — <code>EventType.CONSENT_DECISION</code> event stream</strong>.
+    Symmetric with C1 for non-network consent decisions. ppxai-sre's
+    <code>AuditLogger</code> records every consent decision (allow/deny/
+    approval_required) keyed by tool + args hash. Today the consent
+    contract is per-call dialog; without an event stream they tap
+    internals. Payload:
+    <code>{tool, args_hash, decision, reason, source: user|policy, run_id}</code>.
+    <strong>Recommended position:</strong> v1.19.x should-have. Cheap to add
+    once the consent flow is event-emitting; cheap to defer to
+    v1.20.x if Phase 5 (C1) is enough for the threat model
+    ppxai-sre is shipping in v1.19.x.</li>
+<li><strong>A2 — Pre-tool-call hook for tier classification</strong>.
+    ppxai-sre's 3-tier classification (Autonomous / Notify-and-Act /
+    Require-Approval) must fire <strong>before</strong> ppxai's consent dialog —
+    otherwise the user sees a dialog for tier-1 read-only verbs that
+    should auto-approve. Two options proposed by the consumer: (a)
+    <code>ToolEngineProtocol.pre_execute(tool_name, args) → AllowReason
+    | DenyReason | DefaultConsent</code>, or (b) consent contract documents
+    a "headless mode" where decisions come from a registered policy
+    callable. <strong>Recommended position:</strong> option (b), defer to
+    v1.20.x. Keeps the consent contract as the single boundary and
+    avoids adding a parallel hook surface. Doesn't block v1.19.x;
+    ppxai-sre's policy engine works without it (just renders dialogs
+    that the autonomous agent auto-approves via test harness).</li>
+<li>
+<p><strong>C5 — Agent-served services routing</strong> [LOAD-BEARING for ppxai-sre
+    long-lived service agents]. Several planned ppxai-sre agents are
+    not "compute and exit" — they run as long-lived services that
+    ALSO bind their own HTTP endpoints for human and machine
+    consumers (<code>incident-responder</code> on-call dashboard,
+    <code>cost-optimizer</code> FinOps approval queue, <code>cert-monitor</code> health
+    endpoint, <code>log-analyst</code> <code>POST /query</code> interface). Each agent
+    must declare "I bind a UI on port X and a REST API on port Y"
+    as part of its run spec; ppxai's runtime (or k8s session-manager
+    in production) reverse-proxies external traffic to those
+    bindings.</p>
+<p><strong>Recommended position:</strong> v1.19.x Phase 1 extends
+<code>POST /v1/agent/run</code>'s request body with an optional <code>services</code>
+object mapping name → <code>{port, path, auth}</code>; the response carries
+a <code>services</code> map of name → externally-reachable URL of the form
+<code>…/v1/agent/runs/&lt;id&gt;/services/&lt;name&gt;/</code>. ROADMAP Phase 1 row
+amended. When <code>services</code> is omitted or empty, ppxai's runtime
+skips reverse-proxy registration (the CronJob case, where the
+agent doesn't stay up to receive inbound traffic). The bound
+service's logs / state are exposed via the <strong>Inspection
+Triplet pattern</strong> (per <a href="../0005-inspection-triplet/">ADR 0005</a>)
+at <code>runs/&lt;run_id&gt;/agent-&lt;n&gt;/services/&lt;name&gt;/{state.json, events.jsonl}</code>
+— the C5 ask doesn't need to invent an inspection surface.</p>
+<p>Five sub-question resolutions pinned by peer outlook-monitor
+Phase-4 fit-test (sharpened in peer commit <code>b3ba0f6</code>):</p>
+<ul>
+<li><strong>C5.1 — Auth surface scope.</strong> Narrow v1.19.x to
+  <code>bearer | none</code>. The proposed <code>session</code> auth (cookie domain,
+  CSRF, SameSite, Secure all unspecified) is deferred to v1.20.x
+  alongside the OIDC work that's already deferred. One protocol
+  fully specified beats three half-specified.</li>
+<li><strong>C5.2 — Bearer auth source.</strong> <code>auth: "bearer"</code> does NOT
+  mandate the <code>/v1/tokens</code> source. Per-service field
+  <code>token_source: "v1-tokens"</code> (default) or
+  <code>token_source: "header:X-Custom-Token"</code> for per-deployment
+  static-secret models. outlook-monitor uses the latter
+  (<code>OUTLOOK_ADMIN_TOKEN</code> env var rotated via secret update); the
+  Phase 7 <code>/v1/tokens</code> registry is the default but not the
+  only validator.</li>
+<li><strong>C5.3 — Inbound network policy shape.</strong> Symmetric primitive
+  on the same allowlist as Phase 5's outbound. In <code>meta.json</code>:</li>
+</ul>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nt">network</span><span class="p">:</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">allow_outbound</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">...</span><span class="p p-Indicator">]</span><span class="w">   </span><span class="c1"># C1, Phase 5</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span><span class="nt">allow_inbound</span><span class="p">:</span><span class="w">          </span><span class="c1"># C5</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">    </span><span class="nt">services/dashboard</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">sources</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">token-role</span><span class="p p-Indicator">:</span><span class="nv">oncall</span><span class="p p-Indicator">],</span><span class="nt"> paths</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">/</span><span class="p p-Indicator">]}</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">    </span><span class="nt">services/api</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">sources</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">token-role</span><span class="p p-Indicator">:</span><span class="nv">slackbot</span><span class="p p-Indicator">],</span><span class="nt"> paths</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">/v1/</span><span class="p p-Indicator">]}</span>
+</span></code></pre></div>
+<p>Committed in v1.19.x to avoid a v1.20.x retrofit.
+- <strong>C5.4 — Lifecycle: restart policy + drain.</strong> Adopt k8s
+  vocabulary: <code>restart_policy: "Always" | "OnFailure" | "Never"</code>
+  per service. Clean-exit drain via explicit
+  <code>POST /v1/agent/runs/&lt;id&gt;/terminate</code> that marks the run as
+  terminating before the next <code>AGENT_SERVICE_DOWN</code> fires (so
+  ppxai's restart loop doesn't re-spawn an agent that intends to
+  exit, e.g. outlook-monitor's <code>/admin/drain</code>). Pinned: explicit
+  terminate API, not exit-code conventions.
+- <strong>C5.5 — Reverse-proxy path semantics.</strong> ppxai injects
+  <code>X-Forwarded-Prefix</code> and the agent renders relative URLs
+  assuming that prefix. Standard ASGI/WSGI middleware handles it
+  on the agent side without code changes; avoids the
+  double-prefix / broken-relative-URL trap.</p>
+<p>Plus two clarifications folded directly into the wire shape:</p>
+<ul>
+<li><strong>Multi-name-same-port.</strong> Routing key is <code>(port, path)</code>, not
+  <code>port</code> alone. Outlook-monitor binds <code>/metrics</code> and <code>/healthz</code>
+  on port 9090; the <code>services</code> map allows multiple name entries
+  on the same port.</li>
+<li><strong>CronJob compatibility.</strong> <code>services</code> is optional and
+  explicitly empty for CronJob runs; ppxai's runtime skips
+  reverse-proxy registration when omitted.</li>
+</ul>
+<p><strong>Companion event type — <code>EventType.AGENT_SERVICE_DOWN</code>.</strong>
+Symmetric with the existing <code>EventType.AGENT_ZOMBIE</code> (v1.18.0).
+Emitted by ppxai's runtime when a bound service exits or stops
+responding to liveness probes; consumers' restart policy
+(managed by ppxai per <code>C5.4</code> vs. agent-internal supervision)
+decides what happens next. Payload shape:
+<code>{run_id, service_name, port, reason: "exited" | "unresponsive", exit_code?}</code>.
+Doc-only addition to ADR 0003 until Phase 1 implementation ships;
+extends the v1.18.0 event-type list at line 9 (kept in sync there).</p>
+</li>
 </ol>
 <h2 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">&para;</a></h2>
 <p>If accepted (post-Stage-1 instrumentation):</p>
