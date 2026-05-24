@@ -6,9 +6,9 @@
 - [`docs/archive/TODO-v1.18.2-agent-loop-unification.md`](../archive/TODO-v1.18.2-agent-loop-unification.md) — the immediate refactor blocked on this ADR
 - `ppxai/commands/agent.py` — TUI-side outer continuation loop (`handle_agent`)
 - `ppxai/engine/chat.py` — `chat_with_tools` inner tool loop, AGENT_BEAT emission (lines 559, 875, 1066, 1138)
-- `ppxai/engine/types.py` — `EventType.AGENT_BEAT` / `AGENT_RUN_START` / `AGENT_RUN_COMPLETE` / `AGENT_RUN_ERROR` / `AGENT_ZOMBIE` (v1.18.0)
+- `ppxai/engine/types.py` — `EventType.AGENT_BEAT` / `AGENT_RUN_START` / `AGENT_RUN_COMPLETE` / `AGENT_RUN_ERROR` / `AGENT_ZOMBIE` (v1.18.0); planned v1.19.x additions: `AGENT_SERVICE_DOWN` (per §13 / caveat C5)
 - `vscode-extension/src/chatPanel.ts::handleAgentCommand` — VSCode-side replica of the outer loop (~150 LoC)
-- [`../../../ppxai-sre-repo/docs/PPXAI-INTEGRATION-V1.19.md`](../../../ppxai-sre-repo/docs/PPXAI-INTEGRATION-V1.19.md) — consumer-side integration plan with caveats (C1-C4) and asks (A1-A3) folded into "Open decisions" §6-§12 below
+- [`../../../ppxai-sre-repo/docs/PPXAI-INTEGRATION-V1.19.md`](../../../ppxai-sre-repo/docs/PPXAI-INTEGRATION-V1.19.md) — consumer-side integration plan with caveats (C1-C5) and asks (A1-A3) folded into "Open decisions" §6-§13 below
 - [`../research/2026-05-10-ppxai-sre-requirements.md`](../research/2026-05-10-ppxai-sre-requirements.md) — gap analysis driving Stage 2 scope
 
 ## Context
@@ -256,11 +256,16 @@ POST /agent/runs/<id>/cancel → {ok, status: "cancelling"}
 ## Open decisions
 
 These are gaps this ADR cannot close without input or measurement.
-Items 1-5 are ppxai-internal; items 6-12 are consumer-driven, surfaced
+Items 1-5 are ppxai-internal; items 6-13 are consumer-driven, surfaced
 2026-05-10 in [`../../../ppxai-sre-repo/docs/PPXAI-INTEGRATION-V1.19.md`](../../../ppxai-sre-repo/docs/PPXAI-INTEGRATION-V1.19.md)
-(caveats C1-C4 and asks A1-A3) and need answers before Stage 2 implementation
-lands. Each carries a recommended position; items marked LOAD-BEARING block
-ppxai-sre's planned features in their current shape.
+(caveats C1-C5 and asks A1-A3) and need answers before Stage 2 implementation
+lands. Items 6-12 (C1-C4, A1-A3) were folded in commit `42ed8f00` (2026-05-10).
+Item 13 (C5 — agent-served services routing) was filed by the consumer in
+peer commits `a604b0c` + `b3ba0f6` (2026-05-10) **after** `42ed8f00`, with the
+C5.1-C5.5 open-shape questions surfaced via the outlook-monitor Phase-4
+fit-test; folded here as a follow-on. Each carries a recommended position;
+items marked LOAD-BEARING block ppxai-sre's planned features in their current
+shape.
 
 1. **Question A** — outer-loop value. Needs instrumentation data.
 2. **Question B** — filesystem vs SQLite for the registry. Recommend
@@ -343,6 +348,92 @@ ppxai-sre's planned features in their current shape.
     avoids adding a parallel hook surface. Doesn't block v1.19.x;
     ppxai-sre's policy engine works without it (just renders dialogs
     that the autonomous agent auto-approves via test harness).
+13. **C5 — Agent-served services routing** [LOAD-BEARING for ppxai-sre
+    long-lived service agents]. Several planned ppxai-sre agents are
+    not "compute and exit" — they run as long-lived services that
+    ALSO bind their own HTTP endpoints for human and machine
+    consumers (`incident-responder` on-call dashboard,
+    `cost-optimizer` FinOps approval queue, `cert-monitor` health
+    endpoint, `log-analyst` `POST /query` interface). Each agent
+    must declare "I bind a UI on port X and a REST API on port Y"
+    as part of its run spec; ppxai's runtime (or k8s session-manager
+    in production) reverse-proxies external traffic to those
+    bindings.
+
+    **Recommended position:** v1.19.x Phase 1 extends
+    `POST /v1/agent/run`'s request body with an optional `services`
+    object mapping name → `{port, path, auth}`; the response carries
+    a `services` map of name → externally-reachable URL of the form
+    `…/v1/agent/runs/<id>/services/<name>/`. ROADMAP Phase 1 row
+    amended. When `services` is omitted or empty, ppxai's runtime
+    skips reverse-proxy registration (the CronJob case, where the
+    agent doesn't stay up to receive inbound traffic). The bound
+    service's logs / state are exposed via the **Inspection
+    Triplet pattern** (per [ADR 0005](0005-inspection-triplet.md))
+    at `runs/<run_id>/agent-<n>/services/<name>/{state.json, events.jsonl}`
+    — the C5 ask doesn't need to invent an inspection surface.
+
+    Five sub-question resolutions pinned by peer outlook-monitor
+    Phase-4 fit-test (sharpened in peer commit `b3ba0f6`):
+
+    - **C5.1 — Auth surface scope.** Narrow v1.19.x to
+      `bearer | none`. The proposed `session` auth (cookie domain,
+      CSRF, SameSite, Secure all unspecified) is deferred to v1.20.x
+      alongside the OIDC work that's already deferred. One protocol
+      fully specified beats three half-specified.
+    - **C5.2 — Bearer auth source.** `auth: "bearer"` does NOT
+      mandate the `/v1/tokens` source. Per-service field
+      `token_source: "v1-tokens"` (default) or
+      `token_source: "header:X-Custom-Token"` for per-deployment
+      static-secret models. outlook-monitor uses the latter
+      (`OUTLOOK_ADMIN_TOKEN` env var rotated via secret update); the
+      Phase 7 `/v1/tokens` registry is the default but not the
+      only validator.
+    - **C5.3 — Inbound network policy shape.** Symmetric primitive
+      on the same allowlist as Phase 5's outbound. In `meta.json`:
+
+      ```yaml
+      network:
+        allow_outbound: [...]   # C1, Phase 5
+        allow_inbound:          # C5
+          services/dashboard: {sources: [token-role:oncall], paths: [/]}
+          services/api: {sources: [token-role:slackbot], paths: [/v1/]}
+      ```
+
+      Committed in v1.19.x to avoid a v1.20.x retrofit.
+    - **C5.4 — Lifecycle: restart policy + drain.** Adopt k8s
+      vocabulary: `restart_policy: "Always" | "OnFailure" | "Never"`
+      per service. Clean-exit drain via explicit
+      `POST /v1/agent/runs/<id>/terminate` that marks the run as
+      terminating before the next `AGENT_SERVICE_DOWN` fires (so
+      ppxai's restart loop doesn't re-spawn an agent that intends to
+      exit, e.g. outlook-monitor's `/admin/drain`). Pinned: explicit
+      terminate API, not exit-code conventions.
+    - **C5.5 — Reverse-proxy path semantics.** ppxai injects
+      `X-Forwarded-Prefix` and the agent renders relative URLs
+      assuming that prefix. Standard ASGI/WSGI middleware handles it
+      on the agent side without code changes; avoids the
+      double-prefix / broken-relative-URL trap.
+
+    Plus two clarifications folded directly into the wire shape:
+
+    - **Multi-name-same-port.** Routing key is `(port, path)`, not
+      `port` alone. Outlook-monitor binds `/metrics` and `/healthz`
+      on port 9090; the `services` map allows multiple name entries
+      on the same port.
+    - **CronJob compatibility.** `services` is optional and
+      explicitly empty for CronJob runs; ppxai's runtime skips
+      reverse-proxy registration when omitted.
+
+    **Companion event type — `EventType.AGENT_SERVICE_DOWN`.**
+    Symmetric with the existing `EventType.AGENT_ZOMBIE` (v1.18.0).
+    Emitted by ppxai's runtime when a bound service exits or stops
+    responding to liveness probes; consumers' restart policy
+    (managed by ppxai per `C5.4` vs. agent-internal supervision)
+    decides what happens next. Payload shape:
+    `{run_id, service_name, port, reason: "exited" | "unresponsive", exit_code?}`.
+    Doc-only addition to ADR 0003 until Phase 1 implementation ships;
+    extends the v1.18.0 event-type list at line 9 (kept in sync there).
 
 ## Consequences
 

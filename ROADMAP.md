@@ -929,15 +929,15 @@ The agent-platform substrate ADR is
 [docs/decisions/0003-agent-platform-architecture.md](docs/decisions/0003-agent-platform-architecture.md).
 Consumer-side migration plan with caveats and asks against this
 plan is at [`../ppxai-sre-repo/docs/PPXAI-INTEGRATION-V1.19.md`](../ppxai-sre-repo/docs/PPXAI-INTEGRATION-V1.19.md);
-those caveats (C1-C4) and asks (A1-A3) are folded into ADR 0003
-"Open decisions" §6-§12 with recommended positions, and the phase
+those caveats (C1-C5) and asks (A1-A3) are folded into ADR 0003
+"Open decisions" §6-§13 with recommended positions, and the phase
 rows below carry the load-bearing wire-shape commitments inline.
 
 #### Must-have for v1.19.x (blocks ppxai-sre planned features)
 
 | Phase | Description | Effort |
 |---|---|---|
-| **Phase 1: ADR 0003 Stage 2 — agent platform primitives** | `runs/<run_id>/agent-<n>/` artifact namespace per the OpenShell research note. New endpoints: `POST /v1/agent/run → {run_id}` (with mandatory `tools` field per ADR 0003 §6 / caveat C4), `GET /v1/agent/runs`, `GET /v1/agent/runs/<id>`, `GET /v1/agent/runs/<id>/events` as SSE channel for live updates (per ADR 0003 §7 / caveat C3 — polling stays as status-snapshot path), `POST /v1/agent/runs/<id>/cancel`. `EventType.AGENT_RUN_START` payload extended with additive `{run_id, parent_run_id}` fields (per ADR 0003 §10 / ask A3) — no new event type. Adds 4 of the 7 ADR 0003 "what's missing" items in one shape: run identity, persistence, parent/child relationship, scoped budgets. | ~6-8 days |
+| **Phase 1: ADR 0003 Stage 2 — agent platform primitives** | `runs/<run_id>/agent-<n>/` artifact namespace per the OpenShell research note. New endpoints: `POST /v1/agent/run → {run_id}` (with mandatory `tools` field per ADR 0003 §6 / caveat C4 + optional `services` map per ADR 0003 §13 / caveat C5 for long-lived service agents — routing key `(port, path)`, `auth: bearer\|none`, `token_source`, `restart_policy`, `network.allow_inbound`), `GET /v1/agent/runs`, `GET /v1/agent/runs/<id>`, `GET /v1/agent/runs/<id>/events` as SSE channel for live updates (per ADR 0003 §7 / caveat C3 — polling stays as status-snapshot path), `POST /v1/agent/runs/<id>/cancel`, `POST /v1/agent/runs/<id>/terminate` (clean-exit drain per C5.4). Response from `/v1/agent/run` carries a `services: {name → URL}` map of externally-reachable reverse-proxy URLs at `…/v1/agent/runs/<id>/services/<name>/`; ppxai injects `X-Forwarded-Prefix` per C5.5. `services` is optional/empty for CronJob runs. `EventType.AGENT_RUN_START` payload extended with additive `{run_id, parent_run_id}` fields (per ADR 0003 §10 / ask A3) — no new event type. New `EventType.AGENT_SERVICE_DOWN` (per ADR 0003 §13, symmetric with `AGENT_ZOMBIE`) emitted when a bound service exits or stops responding. Adds 4 of the 7 ADR 0003 "what's missing" items in one shape: run identity, persistence, parent/child relationship, scoped budgets. | ~7-9 days |
 | **Phase 2: Sub-agent primitive** | New `spawn_subagent` tool gated by the consent contract. Parent reads `agent-N/output.md` from each spawned slot; map-reduce shape from the OpenShell research note is the canonical example. Required for the manager-executor pattern listed as a planned ppxai-sre feature. | ~3-4 days |
 | **Phase 3: Run persistence + recovery** | Checkpoint to `state.json` per agent slot. Engine restart recovers in-flight runs by re-reading slots. Required for long-lived SRE agents (cert-monitor: hourly; incident-responder: on-call). | ~2-3 days |
 | **Phase 4: Resource budgets** | `meta.json` carrying `{token_budget, time_budget, iteration_budget, started_at, status}`. Runtime enforcement at `chat_with_tools` boundary. Autonomous agents without budgets are how cloud bills explode. | ~2 days |
