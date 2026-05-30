@@ -61,6 +61,38 @@ your use case is internal-client-shaped and we should talk about it.
 
 ---
 
+## Version compatibility
+
+| | |
+|---|---|
+| Gateway version | **v1** |
+| Latest **released** ppxai | **v1.18.6** (2026-05-23) |
+| Recommended consumer pin | **`>=1.18.4`** |
+
+The v1 gateway surface (`POST /v1/oneshot`, bearer auth, error envelope)
+has been **byte-identical since v1.18.4**. This is verified, not
+asserted: the production diff of `ppxai/server` + `ppxai/engine` between
+released v1.18.6 and the in-flight `bugfix/v1.18.7` branch is **empty**,
+so every v1.18.4 → v1.18.7 change is a no-op for the gateway path.
+
+**For downstream consumers (e.g. ppxai-sre / outlook-monitor):**
+
+- Pin against **released** versions only: `>=1.18.4` (latest released is
+  **v1.18.6**). That pin is what buys you the v1 contract.
+- **`1.18.7` is not a release.** It exists only as the unmerged, untagged
+  `bugfix/v1.18.7` branch. The SoT version strings are bumped to `1.18.7`
+  there, but there is no tag, no CI assets, and no `gh release`. Do **not**
+  pin or align to `v1.18.7` as if it shipped — treat **v1.18.6** as the
+  current surface until a `v1.18.7` tag actually exists.
+- A breaking gateway change would ship as `/v2/<endpoint>` with a parallel
+  deprecation window (see [Stability tiers](#stability-tiers)), never as a
+  silent change within v1 — so aligning against the released surface is safe.
+
+_Last verified: 2026-05-31 against `bugfix/v1.18.7` @ `017b347b` (zero
+gateway-path production diff vs v1.18.6)._
+
+---
+
 ## Authentication
 
 **v1.18.3 status: optional bearer-token auth (opt-in, default off).**
