@@ -8,7 +8,7 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 
 **Current version:** see [pyproject.toml](pyproject.toml) (single source of truth) or [the latest release](https://github.com/rcconsult/ppxai/releases/latest).
 
-**Release state:** v1.18.3 **released** 2026-05-03 (https://github.com/rcconsult/ppxai/releases/tag/v1.18.3, 20 assets). v1.18.3 is the surface ppxai-sre's outlook-monitor agent consumes — preserve gateway shape (`POST /v1/oneshot`, bearer auth) byte-identical on `bugfix/v1.18.4`. Active branch: `bugfix/v1.18.4`, scope: post-release fixes only, no new features. See [docs/release-notes-v1.18.3.md](docs/release-notes-v1.18.3.md) for what shipped. Open deferred work lives in the rolling [docs/debt-inventory.md](docs/debt-inventory.md) (per-version snapshots `DEBT-INVENTORY-v1.18.2.md` and `DEBT-INVENTORY-v1.18.3.md` are archived under [docs/archive/](docs/archive/)).
+**Release state:** v1.18.6 **released** 2026-05-23 (https://github.com/rcconsult/ppxai/releases/tag/v1.18.6). v1.18.6 is the surface ppxai-sre's outlook-monitor agent consumes — preserve gateway shape (`POST /v1/oneshot`, bearer auth) byte-identical on `bugfix/v1.18.7`. Active branch: `bugfix/v1.18.7` (version bumped to 1.18.7, **not yet released**), scope: post-release fixes only, no new features. See [docs/release-notes-v1.18.6.md](docs/release-notes-v1.18.6.md) for what shipped and [docs/release-notes-v1.18.7.md](docs/release-notes-v1.18.7.md) for the in-flight bugfix work. Open deferred work lives in the rolling [docs/debt-inventory.md](docs/debt-inventory.md) (per-version snapshots `DEBT-INVENTORY-v1.18.2.md` and `DEBT-INVENTORY-v1.18.3.md` are archived under [docs/archive/](docs/archive/)).
 
 For per-version release notes, see [CHANGELOG.md](CHANGELOG.md) and `docs/RELEASE-NOTES-v*.md`. For architecture decisions, see `docs/decisions/`.
 
@@ -35,18 +35,18 @@ Each has a dedicated doc — read it before changing code in that area.
 - VSCode extension bundled via esbuild (v1.18.2) — 128 KB VSIX (was 1.1 MB), 15 files (was 804); CI has 500 KB size-budget gate.
 - **v1 API gateway** (v1.18.3) — `POST /v1/oneshot` is the first stable, semver-versioned external surface. Internal endpoints (`/chat`, `/command/*`, etc.) keep evolving. See [docs/api-gateway.md](docs/api-gateway.md).
 
-## Codebase Statistics (v1.18.2, approximate)
+## Codebase Statistics (v1.18.7, approximate)
 
 | Language | Files | Lines |
 |----------|------:|------:|
-| Python (core) | ~175 | ~55,000 |
-| Python (tests) | ~100 | ~38,000 |
-| TypeScript (VSCode) | 19 | ~9,000 |
-| JavaScript (Web) | 19 | ~9,400 |
-| CSS | 6 | ~3,400 |
-| **Total** | **~319** | **~115,000** |
+| Python (core) | ~187 | ~64,000 |
+| Python (tests) | ~158 | ~60,000 |
+| TypeScript (VSCode) | 19 | ~9,500 |
+| JavaScript (Web) | ~21 | ~9,900 |
+| CSS | 8 | ~4,900 |
+| **Total** | **~393** | **~148,000** |
 
-Tests: 3,067 passing, 9 skipped (7 are Unix-only `TestKillPreviewBackend` that can't `patch()` `os.getpgid`/`os.killpg` on Windows).
+Tests: 3,707 passing, 2 skipped on Unix (9 skipped on Windows — the 7 `TestKillPreviewBackend` cases skip only on Windows, where `os.getpgid`/`os.killpg` can't be `patch()`-ed; on Unix they run).
 
 ## Installation Locations (CRITICAL)
 

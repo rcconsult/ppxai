@@ -13,8 +13,8 @@
 
 ## Branch + commit ranges
 
-`bugfix/v1.18.7` (from master @ `fc60cd6f`). Five commits, all
-doc/test/refactor — zero runtime-path code changes.
+`bugfix/v1.18.7` (from master @ `fc60cd6f`). Six commits, all
+doc/test/refactor/chore — zero runtime-path code changes.
 
 | Theme | Commits |
 |---|---|
@@ -23,6 +23,7 @@ doc/test/refactor — zero runtime-path code changes.
 | Decomposition | `refactor(web): split PpxaiApp._previewAttachment into per-format renderers` |
 | Debt tracking | `docs(debt): file Items 21-23 from bugfix/v1.18.7 CRG analysis` |
 | Release notes | this file |
+| Version bump | `chore(version): bump to v1.18.7 across all SoT files` |
 
 ## Theme 1 — Repository hygiene
 
@@ -141,10 +142,14 @@ sections are unchanged.
 
 ## What did NOT change in v1.18.7
 
-- **No version bump in code.** The user has not asked to release —
-  this branch ships when they say so.
-- **No runtime-path code change.** Every commit is doc, test, or a
-  behavior-preserving JS refactor.
+- **Version strings bumped, but not released.** `chore(version):
+  bump to v1.18.7` moved `pyproject.toml`, `ppxai/version.py`,
+  `vscode-extension/package.json` + lock, `README.md`, and
+  `docs/index.md` to `1.18.7` so the SoT files agree. The release
+  itself (tag, CI assets, `gh release`) has **not** run — this
+  branch ships only when the user invokes `/release`.
+- **No runtime-path code change.** Every commit is doc, test, a
+  behavior-preserving JS refactor, or the version-string chore.
 - **v1 API gateway shape preserved byte-identical.** `POST /v1/oneshot`
   request/response, bearer-token auth, error envelope, and event
   stream are all unchanged. ppxai-sre's `>=1.18.4` pin still
