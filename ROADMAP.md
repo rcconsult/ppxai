@@ -1037,6 +1037,59 @@ ready:** `feat/mcp-integration-day-0`.
 
 ---
 
+### v1.20.x - /v1/embeddings gateway endpoint (planned)
+
+Add `POST /v1/embeddings` alongside the existing `POST /v1/oneshot`
+as a sibling stable v1 gateway surface. Mirrors `/v1/oneshot`'s
+shape (bearer auth, provider-routing-via-config, JSON request/response)
+but for embedding generation.
+
+**Why this is on the roadmap.** Surfaced by ppxai-sre's
+outlook-monitor write-tool RFC (peer `dba599c`+`87e421d`,
+2026-05-31). The peer's `Embedder` Protocol currently uses bundled
+FastEmbed CPU (bge-small-en-v1.5, 384-dim) for local-first reasons
+(no `/v1/embeddings` surface upstream; remote endpoint would defeat
+offline/air-gapped design; would couple vector dim to ppxai pin;
+would egress mailbox content). Today's local-first decision is
+documented and correct. The upstream ask is to make the swap
+**optional**: once `/v1/embeddings` exists, the peer's `Embedder`
+Protocol grows a `PpxaiEmbedder` impl (~30 lines) and consumers can
+opt in. Not a precondition for any peer work; pure capability
+expansion.
+
+**Design points to settle when this opens** (not specified here,
+deferred to the implementation branch):
+- Provider abstraction — which providers expose embeddings APIs,
+  what the routing config looks like (parallel to chat-model routing
+  or independent table?)
+- Pooling semantics (mean, cls, last-token) — request-level or
+  provider-config?
+- Dim negotiation — clients pin a dim, providers may not match;
+  reject vs project vs error contract
+- Auth — same bearer pattern as `/v1/oneshot` is the obvious default
+- Billing — embeddings tokens are a separate counter in provider
+  pricing; `/usage` would need a new column
+
+**Why v1.20.x and not sooner.** This is orthogonal to v1.19.x
+agent-platform Stage 2; it doesn't block any consumer work. v1.18.6
+is scoped to ADR 0006. Slotting alongside MCP Day-0 because both
+are v1-gateway-surface expansions and benefit from being designed
+together (consistent auth, error model, observability).
+
+**Effort estimate:** ~2-3 days for a single-provider POC (OpenAI-
+compat path); a few days more if provider abstraction needs to be
+generalized. **Branch when ready:** `feat/v1-embeddings`.
+
+Cross-references:
+- Peer RFC: [`../ppxai-sre/docs/DESIGN-outlook-write-tools.md`](https://github.com/rcconsult/ppxai-sre/blob/master/docs/DESIGN-outlook-write-tools.md) §6
+- Peer embeddings-stay-local decision: peer `master @ 67805fe`,
+  `agents/outlook-monitor/docs/DESIGN-outlook-agent.md` §"Embeddings
+  stay local"
+- ppxai v1 gateway shape to mirror: [docs/api-gateway.md](docs/api-gateway.md)
+  §"`POST /v1/oneshot`"
+
+---
+
 ## Future Considerations
 
 These are tracked but not prioritized:

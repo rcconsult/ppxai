@@ -265,6 +265,24 @@ Each item below blocks Day-0 unless explicitly marked "Day-1+".
   tools) — outlook-monitor declares one `@mcp.resource(...)`. ppxai
   Day-0 supports tools only; resources/prompts as Day-1+ extension
   once we know how clients want to surface them.
+- **Write-capable MCP tools (Tier 2/3)** — peer ppxai-sre's
+  outlook-monitor write-tool RFC (peer `87e421d`, 2026-05-31)
+  explicitly rejects write tools on the MCP surface for the
+  outlook case: Surface-A defenses (output framing, sender-trust
+  labels) cannot enforce consumer-LLM behavior, only frame the
+  content, and write blast radius (move/delete/forward) makes the
+  residual injection risk unacceptable. Day-0 MCP scope therefore
+  **stays read-only by default**; the Tier 2/3 plumbing above
+  (consent-once-per-session, always-prompt) is built but every
+  MCP server's Day-0 config should pin `tier: 1` unless the server
+  author has done a Surface-A red-team corpus proving its writes
+  are safe to expose. The peer's interim path for outlook writes
+  is CLI subcommands gated by per-invocation human approval, not
+  MCP. See [peer
+  RFC](https://github.com/rcconsult/ppxai-sre/blob/master/docs/DESIGN-outlook-write-tools.md)
+  for the full reasoning chain; this constraint applies broadly
+  to any MCP server reading attacker-controlled content (email,
+  PRs, web pages, etc.) — not just outlook.
 
 ## Phasing
 
@@ -376,3 +394,10 @@ agent-platform Stage 2 work opens).  v1.20.x feels right because:
   — the workaround code that the peer wrote to bridge MCP servers
   without a ppxai public API; this plan removes the need for that
   workaround
+- Peer:
+  `../ppxai-sre-repo/docs/DESIGN-outlook-write-tools.md` (commit
+  `87e421d`, 2026-05-31) — peer RFC concluding writes do NOT belong
+  on MCP for attacker-content-reading servers. Shapes the Day-0
+  "stay read-only by default" stance documented above; also surfaces
+  the `/v1/embeddings` upstream ask now on the roadmap as v1.20.x
+  sibling to this plan.
