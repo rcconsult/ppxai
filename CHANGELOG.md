@@ -5,6 +5,48 @@ All notable changes to ppxai will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+Branch: `bugfix/v1.18.7`. Theme: **bugfix-class follow-up to v1.18.6** — repository hygiene, test-coverage backfill, one targeted web-client decomposition, model-catalog refresh to the 2026-05-31 generation, plus paperwork for two v1.20.x upstream asks surfaced by peer ppxai-sre RFCs. The v1 API gateway shape (`POST /v1/oneshot`, bearer auth) is **byte-identical to v1.18.6** — ppxai-sre's outlook-monitor and any other v1-gateway consumer is unaffected.
+
+### Added
+
+- **`docs/lessons/` repo-tracked engineering hazards.** Two-tier memory: cross-host grep-verifiable facts live in `docs/lessons/` (syncs via `git pull`, visible to humans + AI agents on any clone), while per-host AI memory (`~/.claude/projects/<repo>/memory/`) stays for preferences + session scratchpads. Seeded with `docs/lessons/mcp-not-yet-integrated.md` documenting the three filename-level traps that make ppxai look MCP-enabled when it isn't (`[mcp]` optional extras, `.mcp.json` placeholder, `tests/test_mcp.py` diagnostic). CLAUDE.md "Shared lessons" section instructs future agents to propose promotion when they discover qualifying hazards. Commit `4f027b05` (cherry-picked from `bugfix/v1.18.6` `771685e9`).
+
+- **HTTP route tests for `/files/read`.** First sentinel suite for this endpoint — covers cwd-relative + absolute-path resolution, the `cwd_anchor` 409 mismatch case (v1.18.1 state-sync-determinism contract), the `Path("/a/b") / "../c"` path-traversal rejection, and the binary-content rejection branch. Commit `d06c5ee2`.
+
+### Changed
+
+- **`PpxaiApp._previewAttachment` decomposed into per-format renderers** (`ppxai/web/app.js`). The 347-LoC monolithic dispatcher (fan-out 51 — the largest method in the web client) split into 6 per-format renderers (`_renderImageAttachment`, `_renderPdfAttachment`, `_renderOfficeAttachment`, `_renderTextAttachment`, `_renderJsonAttachment`, `_renderUnknownAttachment`) + a 40-LoC dispatcher. Per-branch behavior preserved byte-for-byte; each format now individually browseable + testable. File net +71 LoC of method boilerplate; dispatcher shrank 8x. Commit `819b623c`. (Tracks toward Item 22 — see `docs/debt-inventory.md`.)
+
+- **Model catalog refresh to current generation (2026-05-31).** `ppxai/engine/model_profiles.py` + `ppxai-config.example.json` updated for the model lineup as of release date — adds current-gen entries, retires deprecated identifiers, syncs the deprecation table. Commit `b873ec2b`.
+
+- **`mkdocs` `site/` directory untracked.** CI publishes the rendered site to `gh-pages` via `.github/workflows/docs.yml`; keeping `site/` in `master` added 134 files of pure noise. The v1.18.6 doc rename to lowercase-kebab-case also left `site/` pointing at stale uppercase paths. CRG analysis flagged the vendored `site/assets/javascripts/lunr/wordcut.js` (365 LoC) as the 3rd-largest function in the codebase — a pure build-artifact false positive that self-resolves with this change. Added `graphify-out.bak.*/` to `.gitignore` for the same noise-reduction reason. Commit `2e842e6f`.
+
+### Documentation
+
+- **v1.20.x `/v1/embeddings` ROADMAP entry.** New sibling to MCP Day-0 under v1.20.x. Surfaced by peer ppxai-sre's outlook-monitor write-tool RFC (peer `87e421d`, 2026-05-31) — the peer's `Embedder` Protocol explicitly leaves room for a `PpxaiEmbedder` impl once `/v1/embeddings` exists upstream. Today's local-first decision (bundled FastEmbed CPU, bge-small-en-v1.5, 384-dim) is correct for offline/air-gapped + mailbox-content-stays-local reasons; this entry makes the swap **optional**. Design points captured but deferred to `feat/v1-embeddings` branch: provider abstraction, pooling semantics, dim negotiation, auth (bearer mirror of `/v1/oneshot`), billing. ~2-3 days for single-provider POC. Commit `1b056c0c`.
+
+- **MCP integration plan write-tool stance.** Same RFC surfaced a Day-0 scope refinement for `docs/mcp-integration-plan.md`: write-capable MCP tools (Tier 2/3) are deferred to Day-1+ for any server reading attacker-controlled content (email, PRs, web pages). Surface-A defenses (output framing, sender-trust labels) cannot enforce consumer-LLM behavior, only frame the content; write blast radius (move/delete/forward) makes residual injection risk unacceptable. Day-0 MCP servers should pin `tier: 1` (read-only auto-approve) unless the server author has a Surface-A red-team corpus proving safety. Tier 2/3 plumbing stays built. Commit `1b056c0c`.
+
+- **Debt inventory: Items 21-23 from `bugfix/v1.18.7` CRG scan.** Item 21 `chat_with_tools` decomposition (673 LoC, fan-out 169 — largest function in codebase; deferred to v1.19.x ADR-backed work with test scaffold first). Item 22 `PpxaiApp` further decomposition (3,749 LoC after the v1.18.7 split — trigger-deferred until a JS build step or cross-client reuse motivates it). Item 23 `SessionManager` growth drift (+443 LoC since v1.18.2, fully explained by ADR 0006 work — flag-only, no action). Commit `39e740f7`.
+
+- **Release notes draft for v1.18.7.** `docs/release-notes-v1.18.7.md`. Commit `2411028c`.
+
+### Chore
+
+- **Version bump to 1.18.7 across all SoT files** per `tests/test_version_consistency.py` registry. Commit `d11fa76c`.
+- **uv.lock sync to 1.18.7.** Commit `017b347b`.
+- **CLAUDE.md / CHANGELOG / release-notes refresh** to current v1.18.6+v1.18.7 state during today's pre-release sweep. Commit `91dfe8ce`.
+
+### Reverted
+
+- **`docs(api-gateway): add version-compatibility note for downstream consumers`** (commits `14249929` added, `01d7d013` reverted ~2 min apart on 2026-05-31). The note documented the v1 gateway's byte-identical compatibility window and recommended a `>=1.18.4` pin for downstream consumers. Reverted without explicit rationale recorded in the git history; most plausible reading is that the content was correct at write-time but inherently time-sensitive (the "Latest released: v1.18.6" + "1.18.7 is not a release" lines would silently rot the moment v1.18.7 ships, becoming wrong without a manual update). Net change to the repo: zero. Worth re-attempting in a release-evergreen form if pinning guidance for consumers is still wanted.
+
+### Tests
+
+3707 pass, 2 skipped on Unix (9 skipped on Windows due to `os.getpgid` / `os.killpg` `patch()` limitations on `TestKillPreviewBackend`). Test count delta from v1.18.6 = +12 (test count for v1.18.6 was 3695; +12 = the new HTTP route tests + a small handful of post-release additions on this branch).
+
 ## [1.18.6] - 2026-05-23
 
 Branch: `bugfix/v1.18.6`. Theme: **foundation release** — ADR 0006 content-block schema separation establishes the artifact framework that v1.19.x agent platform work will consume; v1 → v2 session migration with documented breaking change; context-indicator honesty; coder-image hardening.

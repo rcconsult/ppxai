@@ -1,29 +1,38 @@
 # Release Notes — v1.18.7
 
 > **Scope:** A bugfix-class follow-up to v1.18.6. Repository hygiene,
-> test-coverage backfill, and one targeted decomposition (the largest
-> method in the web client). The v1 API gateway shape
-> (`POST /v1/oneshot`, bearer-token auth) is preserved byte-identical
-> — ppxai-sre's outlook-monitor agent and any other v1-gateway
-> consumer is unaffected.
+> test-coverage backfill, one targeted decomposition (the largest
+> method in the web client), a model-catalog refresh to the
+> 2026-05-31 generation, and forward-looking paperwork for two
+> v1.20.x asks surfaced by peer ppxai-sre RFCs. The v1 API gateway
+> shape (`POST /v1/oneshot`, bearer-token auth) is preserved
+> byte-identical — ppxai-sre's outlook-monitor agent and any other
+> v1-gateway consumer is unaffected.
 >
-> **Three themes ran on this branch**, all driven by the post-v1.18.6
+> **Five themes ran on this branch**, opened by the post-v1.18.6
 > graphify + CRG scan that surfaced concrete, narrow fixes worth
-> landing before the next feature wave opens.
+> landing before the next feature wave, then extended by
+> cross-repo signal from ppxai-sre's outlook-monitor work week.
 
 ## Branch + commit ranges
 
-`bugfix/v1.18.7` (from master @ `fc60cd6f`). Six commits, all
-doc/test/refactor/chore — zero runtime-path code changes.
+`bugfix/v1.18.7` (from master @ `fc60cd6f`). 13 commits as of
+release prep, all doc/test/refactor/chore/data-table — zero
+runtime-path code changes.
 
 | Theme | Commits |
 |---|---|
-| Repo hygiene | `chore(repo): untrack site/` |
-| Test coverage | `test(server): add HTTP route tests for /files/read` |
-| Decomposition | `refactor(web): split PpxaiApp._previewAttachment into per-format renderers` |
-| Debt tracking | `docs(debt): file Items 21-23 from bugfix/v1.18.7 CRG analysis` |
-| Release notes | this file |
-| Version bump | `chore(version): bump to v1.18.7 across all SoT files` |
+| Repo hygiene | `2e842e6f` chore(repo): untrack `site/` |
+| Test coverage | `d06c5ee2` test(server): add HTTP route tests for `/files/read` |
+| Decomposition | `819b623c` refactor(web): split `PpxaiApp._previewAttachment` into per-format renderers |
+| Debt tracking | `39e740f7` docs(debt): file Items 21-23 from CRG analysis |
+| Release notes draft | `2411028c` docs(release): draft release notes for v1.18.7 |
+| Version bump | `d11fa76c` chore(version): bump to v1.18.7 across all SoT files |
+| Docs refresh | `91dfe8ce` CLAUDE/CHANGELOG/release-notes refresh; `017b347b` uv.lock sync |
+| api-gateway version-compat note | `14249929` added, `01d7d013` reverted — net-zero (see "Reverted" below) |
+| Model catalog refresh | `b873ec2b` feat(models): refresh provider model catalog to 2026-05-31 generation |
+| Two-tier memory | `4f027b05` docs(lessons): repo-tracked engineering hazards (cherry-picked from v1.18.6 `771685e9`) |
+| v1.20.x paperwork | `1b056c0c` docs(roadmap): /v1/embeddings entry + MCP plan write-tool stance |
 
 ## Theme 1 — Repository hygiene
 
@@ -140,6 +149,101 @@ too large for a bugfix branch:
 Item 3 (k8s session-manager security tests) unchanged. The closed
 sections are unchanged.
 
+## Theme 5 — Model catalog refresh (2026-05-31)
+
+`ppxai/engine/model_profiles.py` + `ppxai-config.example.json`
+updated for the model lineup as of release date. Current-gen entries
+added, deprecated identifiers retired, deprecation table synced.
+Pure data change — no engine code paths touched. Provider profiles
+preserve `supports_vision`, `supports_reasoning`, `max_tokens`,
+`tool_calling` shapes from their predecessors where the new model
+has the same capability surface (sub-tier moves explicitly called
+out in commit `b873ec2b`).
+
+This matters most for the `/doctor` advisor's deprecated/new/
+recommended model scan — outdated catalogs surface stale
+recommendations and miss new tiers worth surfacing to users.
+
+## Theme 6 — Forward-looking docs (v1.20.x paperwork)
+
+Two upstream asks surfaced this week by peer ppxai-sre RFCs were
+captured in ppxai docs so they reach the v1.20.x implementation
+branch without re-derivation.
+
+### `docs/lessons/` — two-tier memory infrastructure
+
+Cherry-picked from `bugfix/v1.18.6` (`771685e9` → `4f027b05`).
+Repo-tracked engineering hazards live in `docs/lessons/`, syncing
+via `git pull` and visible to humans + AI agents on any clone.
+Per-host AI memory (`~/.claude/projects/<repo>/memory/`) stays for
+user preferences + session scratchpads. Promotion criteria
+(cross-host + grep-verifiable), workflow, and format spec are in
+`docs/lessons/README.md`. CLAUDE.md "Shared lessons" section
+instructs agents to propose promotion when they discover qualifying
+hazards.
+
+Seeded with `docs/lessons/mcp-not-yet-integrated.md` documenting
+the three filename-level traps that make ppxai look MCP-enabled
+when it isn't:
+
+| Trap | What it is | Why it misleads |
+|---|---|---|
+| `pyproject.toml [mcp]` extras | Declared `mcp>=0.1.0` since v1.9.x | Dep is documented intent, not shipped functionality. Venv install excludes it; `import mcp` raises `ModuleNotFoundError` |
+| `.mcp.json` at repo root | Lists `code-review-graph` | Placeholder. Zero Python code in `ppxai/` loads it |
+| `tests/test_mcp.py` | Exists | Diagnostic script, not integration test against ppxai MCP wiring (which doesn't exist) |
+
+The full v1.20.x integration plan lives at
+`docs/mcp-integration-plan.md`.
+
+### v1.20.x `/v1/embeddings` ROADMAP entry
+
+New sibling to MCP Day-0 under v1.20.x in `ROADMAP.md`. Surfaced
+by peer outlook-monitor's RFC `DESIGN-outlook-write-tools.md`
+(peer master commit `87e421d`, 2026-05-31). The peer's `Embedder`
+Protocol currently uses bundled FastEmbed CPU (bge-small-en-v1.5,
+384-dim), explicitly designed as a swap seam for a future
+`PpxaiEmbedder` once `/v1/embeddings` exists upstream. Today's
+local-first decision is correct (offline/air-gapped, mailbox
+content stays local, no dim coupling to ppxai pin); the upstream
+ask makes the swap **opt-in**.
+
+Design points captured but deferred to `feat/v1-embeddings`
+implementation branch: provider abstraction (parallel to
+chat-model routing or independent?), pooling semantics
+(mean/cls/last-token, request-level or provider-config?), dim
+negotiation, auth (bearer pattern mirrors `/v1/oneshot`), billing
+(embeddings tokens are a separate counter in provider pricing —
+`/usage` needs a new column).
+
+### MCP plan write-tool stance refinement
+
+Same peer RFC also surfaced a Day-0 scope refinement for
+`docs/mcp-integration-plan.md`. The plan's consent-tier mapping
+had Tier 2 ("consent-once-per-session, e.g. write tools") as if
+write-capable MCP tools would ship from Day-0. The RFC §3
+explicitly rejects this for any MCP server reading attacker-
+controlled content (email, PRs, web pages, etc.) — Surface-A
+defenses (output framing, sender-trust labels) cannot enforce
+consumer-LLM behavior, only frame the content; write blast radius
+(move/delete/forward) makes residual injection risk unacceptable.
+
+Plan now says: Tier 2/3 plumbing still gets built, but **every
+Day-0 MCP server's config should pin `tier: 1`** unless the server
+author has done a Surface-A red-team corpus proving writes are
+safe. The peer's interim path for outlook-monitor writes is CLI
+subcommands gated by per-invocation human approval, not MCP. Both
+ppxai and ppxai-sre's planned write surfaces inherit this
+constraint.
+
+## Reverted
+
+The branch contains one revert pair worth flagging in the release
+record:
+
+- **`docs(api-gateway): add version-compatibility note for downstream consumers`** (commits `14249929` added, `01d7d013` reverted ~2 min apart on 2026-05-31). The note added a "Version compatibility" section to `docs/api-gateway.md` documenting the v1 gateway's byte-identical compatibility window (v1.18.4 → v1.18.7) and recommending a `>=1.18.4` consumer pin against released versions. Reverted without explicit rationale in the git history; most plausible reading is that the content was correct at write-time but inherently time-sensitive — lines like "Latest released: v1.18.6" and "1.18.7 is not a release" would silently rot the moment v1.18.7 ships, becoming wrong without a manual update step.
+- Net change to the repo: zero.
+- Worth re-attempting in a release-evergreen form (e.g. derived from `latest` tag at render time, or a CI step that updates the version-cells on each release) if downstream pinning guidance is still wanted. Not in v1.18.7 scope.
+
 ## What did NOT change in v1.18.7
 
 - **Version strings bumped, but not released.** `chore(version):
@@ -160,8 +264,15 @@ sections are unchanged.
 ## Tests
 
 All existing tests pass. New: 12 cases in `tests/test_files_route.py`,
-~4s additional runtime. Total test count remains as reported by
-v1.18.6 release notes plus 12.
+~4s additional runtime. Total reported test count: **3707 pass**, 2
+skipped on Unix (9 skipped on Windows due to `os.getpgid` / `os.killpg`
+`patch()` limitations on `TestKillPreviewBackend`). Up +12 from v1.18.6's
+3695 baseline — matches the new HTTP-route suite exactly, no other
+test churn.
+
+The model-catalog refresh (`b873ec2b`) is data-only and exercises the
+same existing test parametrizations under `test_model_vision.py` +
+`test_doctor.py`; no new test cases were needed.
 
 ## Acknowledgements
 
