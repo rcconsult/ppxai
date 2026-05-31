@@ -94,16 +94,16 @@
           "output": 0.2
         },
         "sonar-pro": {
-          "input": 3.0,
-          "output": 15.0
+          "input": 3,
+          "output": 15
         },
         "sonar-reasoning-pro": {
-          "input": 5.0,
-          "output": 15.0
+          "input": 5,
+          "output": 15
         },
         "sonar-deep-research": {
-          "input": 5.0,
-          "output": 15.0
+          "input": 5,
+          "output": 15
         }
       },
       "capabilities": {
@@ -119,8 +119,8 @@
       "name": "Google Gemini",
       "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
       "api_key_env": "GEMINI_API_KEY",
-      "default_model": "gemini-3-flash-preview",
-      "coding_model": "gemini-3-flash-preview",
+      "default_model": "gemini-3.5-flash",
+      "coding_model": "gemini-3.5-flash",
       "__comment_benchmark": "Benchmark results (v1.16.0): gemini-3-flash-preview 100% Tier S (#1), gemini-2.5-pro 85.1% Tier S. Flash preview is RECOMMENDED default. Power users: /model gemini-3.1-pro-preview.",
       "system_prompt": "You are an expert AI coding assistant with web search capabilities. Be concise and precise. When using tools, execute them directly and report results briefly. Focus on code quality, correctness, and best practices. Cite sources as markdown links when using web search.",
       "options": {
@@ -132,20 +132,9 @@
         "top_p": 0.9
       },
       "models": {
-        "gemini-3-flash-preview": {
-          "name": "Gemini 3 Flash Preview",
-          "description": "Speed-optimized preview with frontier intelligence and 1M context. RECOMMENDED: Best code editing quality (100% benchmark).",
-          "context_limit": 1000000,
-          "__comment_best_for": "Code editing, refactoring, debugging. Achieved 100% quality score with balanced AGENTS.md hints."
-        },
         "gemini-3.1-pro-preview": {
           "name": "Gemini 3.1 Pro Preview",
           "description": "Advanced reasoning and agentic model with 1M context. SWE-Bench 80.6%, GPQA Diamond 94.3%.",
-          "context_limit": 1000000
-        },
-        "gemini-3.1-pro-preview-customtools": {
-          "name": "Gemini 3.1 Pro Preview (Custom Tools)",
-          "description": "Optimized for custom tool usage and agentic workflows with 1M context",
           "context_limit": 1000000
         },
         "gemini-3.1-flash-lite": {
@@ -166,55 +155,37 @@
           "context_limit": 262144,
           "__comment_best_for": "Workloads benefiting from MoE efficiency — lower latency per token with 3.8B active parameters."
         },
-        "gemma-4-e4b-it": {
-          "name": "Gemma 4 E4B (Edge)",
-          "description": "Edge-optimized 8B (4.5B effective) with text + vision + audio, 128K context. Designed for on-device deployment.",
-          "context_limit": 131072,
-          "__comment_best_for": "Laptop / edge deployments. Supports audio input alongside text and vision."
-        },
-        "gemma-4-e2b-it": {
-          "name": "Gemma 4 E2B (Edge)",
-          "description": "Smallest edge model at 5.1B (2.3B effective) with text + vision + audio, 128K context.",
-          "context_limit": 131072,
-          "__comment_best_for": "Resource-constrained edge deployments (laptops, phones, Raspberry Pi)."
+        "gemini-3.5-flash": {
+          "name": "Gemini 3.5 Flash",
+          "description": "Google's newest GA flash model (2026) — most intelligent flash tier for agentic and coding tasks. Supersedes gemini-3-flash-preview. 1M context, text + image + video input.",
+          "context_limit": 1048576,
+          "__comment_best_for": "Recommended default. Everyday coding, editing, agentic tool loops.",
+          "__comment_benchmark_status": "NOT YET BENCHMARKED — profile cloned from gemini-3-flash (Tier S). Run benchmarks/llm-eval before tuning."
         }
       },
       "pricing": {
-        "gemini-3-flash-preview": {
-          "input": 0.5,
-          "output": 3.0
-        },
         "gemini-3.1-pro-preview": {
-          "input": 2.0,
-          "output": 12.0
-        },
-        "gemini-3.1-pro-preview-customtools": {
-          "input": 2.0,
-          "output": 12.0
+          "input": 2,
+          "output": 12
         },
         "gemini-3.1-flash-lite": {
           "input": 0.1,
           "output": 0.4
         },
         "gemma-4-31b-it": {
-          "input": 0.0,
-          "output": 0.0,
+          "input": 0,
+          "output": 0,
           "__comment": "Free tier via Gemini API; self-host for unlimited"
         },
         "gemma-4-26b-a4b-it": {
-          "input": 0.0,
-          "output": 0.0,
+          "input": 0,
+          "output": 0,
           "__comment": "Free tier via Gemini API; self-host for unlimited"
         },
-        "gemma-4-e4b-it": {
-          "input": 0.0,
-          "output": 0.0,
-          "__comment": "Free tier via Gemini API; self-host for unlimited"
-        },
-        "gemma-4-e2b-it": {
-          "input": 0.0,
-          "output": 0.0,
-          "__comment": "Free tier via Gemini API; self-host for unlimited"
+        "gemini-3.5-flash": {
+          "input": 0.5,
+          "output": 3,
+          "__comment": "approximate — verify against current Gemini pricing"
         }
       },
       "capabilities": {
@@ -292,22 +263,6 @@
             "max_tokens": 8192
           }
         },
-        "gpt-5.2": {
-          "name": "GPT-5.2",
-          "description": "Newest flagship model with 400K context. Best overall intelligence.",
-          "context_limit": 400000,
-          "__comment_best_for": "Complex refactoring, architecture decisions, multi-file changes, code review."
-        },
-        "gpt-5.2-pro": {
-          "name": "GPT-5.2 Pro",
-          "description": "Premium tier with highest capability for difficult tasks",
-          "context_limit": 400000,
-          "__comment_best_for": "Hardest problems, novel algorithm design, critical code review. Expensive.",
-          "generation_params": {
-            "temperature": 0.1,
-            "max_tokens": 16384
-          }
-        },
         "gpt-5.3-codex": {
           "name": "GPT-5.3 Codex",
           "description": "Code-specialized model — \"most capable agentic coding model to date\" per OpenAI. 400K context, 128K max output. Note: gpt-5.4 mainline has absorbed these capabilities, but the Codex variant remains for users who want the dedicated coding-tuned model.",
@@ -316,136 +271,31 @@
           "generation_params": {
             "max_tokens": 16384
           }
-        },
-        "gpt-5.1": {
-          "name": "GPT-5.1",
-          "description": "Previous flagship, still excellent for general coding",
-          "context_limit": 400000,
-          "__comment_best_for": "General coding, debugging, explanations. Slightly cheaper than 5.2."
-        },
-        "gpt-5.1-codex": {
-          "name": "GPT-5.1 Codex",
-          "description": "Code-specialized model optimized for software engineering tasks. DEPRECATED upstream by OpenAI in favor of gpt-5.3-codex / gpt-5.4 — kept for backwards compat.",
-          "context_limit": 400000,
-          "__comment_best_for": "Code generation, refactoring, debugging. Tuned specifically for coding."
-        },
-        "gpt-5.1-codex-mini": {
-          "name": "GPT-5.1 Codex Mini",
-          "description": "Lightweight code-specialized model for fast coding tasks",
-          "context_limit": 400000,
-          "__comment_best_for": "Quick edits, simple code generation, file operations. Budget codex option.",
-          "generation_params": {
-            "max_tokens": 16384
-          }
-        },
-        "gpt-5-pro": {
-          "name": "GPT-5 Pro",
-          "description": "Premium tier of GPT-5 with extended reasoning. 400K context. Sits between gpt-5 and gpt-5.4-pro for users who want GPT-5-class with deeper reasoning.",
-          "context_limit": 400000,
-          "__comment_best_for": "Reasoning-heavy investigation work where gpt-5 isn't deep enough but gpt-5.4-pro is overkill.",
-          "generation_params": {
-            "max_tokens": 16384
-          }
-        },
-        "gpt-5": {
-          "name": "GPT-5",
-          "description": "Capable flagship with 400K context",
-          "context_limit": 400000,
-          "__comment_best_for": "General coding tasks. Consider gpt-5.1+ for newer capabilities."
-        },
-        "gpt-5-mini": {
-          "name": "GPT-5 Mini",
-          "description": "Balanced performance at lower cost with 400K context",
-          "context_limit": 400000,
-          "__comment_best_for": "Everyday coding, quick edits, explanations. Good price/performance."
-        },
-        "gpt-5-nano": {
-          "name": "GPT-5 Nano",
-          "description": "Ultra-fast and cheapest GPT-5 variant",
-          "context_limit": 400000,
-          "__comment_best_for": "Simple edits, file operations, quick Q&A. Lowest cost GPT-5.",
-          "generation_params": {
-            "max_tokens": 8192
-          }
-        },
-        "gpt-4.1": {
-          "name": "GPT-4.1",
-          "description": "Previous generation flagship with 1M context",
-          "context_limit": 1047576,
-          "__comment_best_for": "Large codebase analysis (1M context advantage). Superseded by GPT-5.x for most tasks."
-        },
-        "gpt-4.1-mini": {
-          "name": "GPT-4.1 Mini",
-          "description": "Budget option with 1M context",
-          "context_limit": 1047576,
-          "__comment_best_for": "When 1M context needed at low cost."
-        },
-        "gpt-4.1-nano": {
-          "name": "GPT-4.1 Nano",
-          "description": "Cheapest model with 1M context",
-          "context_limit": 1047576,
-          "__comment_best_for": "Cheapest option when massive context needed.",
-          "generation_params": {
-            "temperature": 0.1,
-            "top_p": 0.9,
-            "max_tokens": 2048
-          }
-        },
-        "o4-mini": {
-          "name": "o4 Mini",
-          "description": "Latest reasoning model with improved tool use",
-          "context_limit": 200000,
-          "__comment_best_for": "Reasoning + tool calling. Best reasoning model for agentic tasks.",
-          "generation_params": {
-            "temperature": 1.0,
-            "max_tokens": 8192
-          },
-          "__comment_temperature": "o-series models require temperature=1.0"
-        },
-        "o3": {
-          "name": "o3",
-          "description": "Advanced reasoning model with Chain of Thought",
-          "context_limit": 200000,
-          "__comment_best_for": "Algorithm design, complex logic, math, deep analysis. No streaming.",
-          "generation_params": {
-            "temperature": 1.0,
-            "max_tokens": 16384
-          }
-        },
-        "o3-mini": {
-          "name": "o3 Mini",
-          "description": "Fast reasoning model, good cost/performance for logic tasks",
-          "context_limit": 200000,
-          "__comment_best_for": "Reasoning on a budget. No streaming, no system prompts via Chat API.",
-          "generation_params": {
-            "temperature": 1.0,
-            "max_tokens": 8192
-          }
         }
       },
       "pricing": {
         "gpt-5.5": {
-          "input": 5.0,
-          "output": 30.0,
+          "input": 5,
+          "output": 30,
           "__comment": "Released 2026-04-23. 2× the price of gpt-5.4."
         },
         "gpt-5.5-pro": {
-          "input": 30.0,
-          "output": 180.0,
+          "input": 30,
+          "output": 180,
           "__comment": "Released 2026-04-23. 2× the price of gpt-5.4-pro. Verify against https://platform.openai.com/docs/pricing"
         },
         "gpt-5.4": {
           "input": 2.5,
-          "output": 15.0
+          "output": 15
         },
         "gpt-5.4-pro": {
-          "input": 15.0,
-          "output": 75.0,
+          "input": 15,
+          "output": 75,
           "__comment": "Premium tier — verify against https://platform.openai.com/docs/pricing"
         },
         "gpt-5.3-codex": {
           "input": 1.75,
-          "output": 14.0,
+          "output": 14,
           "__comment": "Code-specialized variant. Pricing per devtk.ai 2026-03 listing. Verify against https://developers.openai.com/codex/pricing"
         },
         "gpt-5.4-mini": {
@@ -455,67 +305,6 @@
         "gpt-5.4-nano": {
           "input": 0.2,
           "output": 1.25
-        },
-        "gpt-5.2": {
-          "input": 1.75,
-          "output": 14.0
-        },
-        "gpt-5.2-pro": {
-          "input": 21.0,
-          "output": 168.0
-        },
-        "gpt-5.1": {
-          "input": 1.25,
-          "output": 10.0
-        },
-        "gpt-5.1-codex": {
-          "input": 1.25,
-          "output": 10.0
-        },
-        "gpt-5.1-codex-mini": {
-          "input": 0.25,
-          "output": 2.0
-        },
-        "gpt-5-pro": {
-          "input": 12.5,
-          "output": 100.0,
-          "__comment": "Pro tier of GPT-5. Verify against https://platform.openai.com/docs/pricing"
-        },
-        "gpt-5": {
-          "input": 1.25,
-          "output": 10.0
-        },
-        "gpt-5-mini": {
-          "input": 0.25,
-          "output": 2.0
-        },
-        "gpt-5-nano": {
-          "input": 0.05,
-          "output": 0.4
-        },
-        "gpt-4.1": {
-          "input": 2.0,
-          "output": 8.0
-        },
-        "gpt-4.1-mini": {
-          "input": 0.4,
-          "output": 1.6
-        },
-        "gpt-4.1-nano": {
-          "input": 0.1,
-          "output": 0.4
-        },
-        "o4-mini": {
-          "input": 1.1,
-          "output": 4.4
-        },
-        "o3": {
-          "input": 2.0,
-          "output": 8.0
-        },
-        "o3-mini": {
-          "input": 1.1,
-          "output": 4.4
         }
       },
       "capabilities": {
@@ -561,16 +350,16 @@
       },
       "pricing": {
         "qwen2.5-coder:3b": {
-          "input": 0.0,
-          "output": 0.0
+          "input": 0,
+          "output": 0
         },
         "qwen2.5:3b": {
-          "input": 0.0,
-          "output": 0.0
+          "input": 0,
+          "output": 0
         },
         "qwen2.5-coder:0.5b": {
-          "input": 0.0,
-          "output": 0.0
+          "input": 0,
+          "output": 0
         }
       },
       "capabilities": {
@@ -629,17 +418,6 @@
             "top_p": 0.8
           }
         },
-        "qwen/qwen3-next-80b-a3b-thinking": {
-          "name": "Qwen3-Next 80B-A3B Thinking",
-          "description": "Reasoning variant of Qwen3-Next-80B. Auto-emits reasoning_content. NVIDIA-recommended params: temp=0.6, top_p=0.95, max_tokens=8192. Tier A benchmark: 76.6% (28/36).",
-          "context_limit": 262144,
-          "max_tokens": 8192,
-          "__comment_best_for": "Reasoning-heavy work — agentic_tool_loops (85.7%) and reasoning (100%) categories. ~9× slower than instruct sibling.",
-          "generation_params": {
-            "temperature": 0.6,
-            "top_p": 0.95
-          }
-        },
         "mistralai/mistral-large-3-675b-instruct-2512": {
           "name": "Mistral Large 3 675B",
           "description": "Mistral's frontier dense model. NVIDIA-recommended params: temp=0.2, top_p=0.95, max_tokens=4096. Tier A benchmark: hung at agentic_tool_loops on free tier (no score).",
@@ -664,39 +442,6 @@
           "reasoning_trigger": "/think",
           "__comment_reasoning_trigger": "v1.18.3: nemotron toggles reasoning via in-prompt '/think' (enable) or '/no_think' (disable). Engine appends this to the system message before sending."
         },
-        "qwen/qwen2.5-coder-32b-instruct": {
-          "name": "Qwen2.5 Coder 32B",
-          "description": "Older Qwen2.5 coder. NIM does NOT enable native tool calling for this model — set tool_calling.mode='prompt_based' to use it.",
-          "context_limit": 32768,
-          "max_tokens": 4096,
-          "tool_calling": {
-            "mode": "prompt_based",
-            "__comment_mode": "NIM rejects native tools with 'Tool use has not been enabled' for qwen2.5-coder-32b. Prompt-based works."
-          }
-        },
-        "moonshotai/kimi-k2-thinking": {
-          "name": "Kimi K2 Thinking",
-          "description": "Moonshot's reasoning model. Probe succeeded 2026-05-02 (endpoint healthy, returned 200 with reasoning_content). Auto-emits reasoning chain via `reasoning_content` field — the visible response is in `content` once thinking concludes. Set max_tokens high (8K+) so thinking has room to finish before truncation. Not yet benchmarked.",
-          "context_limit": 200000,
-          "max_tokens": 8192,
-          "__comment_best_for": "Reasoning-heavy work where chain-of-thought is required. Slower than non-thinking models — pair with a max_tokens budget that fits the reasoning."
-        },
-        "deepseek-ai/deepseek-v3.2": {
-          "name": "DeepSeek V3.2",
-          "description": "DeepSeek frontier. Probe failed both 2026-05-01 and 2026-05-02 (endpoint timeout >60s). Try again periodically — may be regional / cold-start.",
-          "context_limit": 131072,
-          "max_tokens": 8192
-        },
-        "mistralai/devstral-2-123b-instruct-2512": {
-          "name": "Devstral 2 123B",
-          "description": "Mistral's coding-specialized 123B. Native tools probed OK; not yet benchmarked.",
-          "context_limit": 131072,
-          "max_tokens": 4096,
-          "generation_params": {
-            "temperature": 0.2,
-            "top_p": 0.95
-          }
-        },
         "meta/llama-4-maverick-17b-128e-instruct": {
           "name": "Llama-4 Maverick 17B-128E",
           "description": "Meta's Llama-4 MoE (17B active, 128 experts). Regionally restricted — returns 'This NIM is unavailable in your location' from EU.",
@@ -708,53 +453,64 @@
           "description": "Larger sibling of qwen3.5-122b-a10b. Probe failed both 2026-05-01 and 2026-05-02 (endpoint timeout >60s). Try again periodically.",
           "context_limit": 256000,
           "max_tokens": 4096
+        },
+        "deepseek-ai/deepseek-v4-pro": {
+          "name": "DeepSeek V4 Pro",
+          "description": "DeepSeek frontier (1.6T MoE, multimodal). 1M-token context via Compressed Sparse Attention. Replaces retired deepseek-v3.2. Added 2026-05-31 from live NIM /models; not yet benchmarked.",
+          "context_limit": 1000000,
+          "max_tokens": 8192
+        },
+        "deepseek-ai/deepseek-v4-flash": {
+          "name": "DeepSeek V4 Flash",
+          "description": "Fast 284B variant of DeepSeek V4. 1M-token context, lower latency than V4 Pro. Added 2026-05-31; not yet benchmarked.",
+          "context_limit": 1000000,
+          "max_tokens": 8192
+        },
+        "moonshotai/kimi-k2.6": {
+          "name": "Kimi K2.6",
+          "description": "Moonshot K2.6 (non-reasoning). 262K context, strong open-weight coding/agentic. Replaces retired kimi-k2-thinking. Added 2026-05-31; not yet benchmarked.",
+          "context_limit": 262144,
+          "max_tokens": 8192
         }
       },
       "pricing": {
         "qwen/qwen3.5-122b-a10b": {
-          "input": 0.0,
-          "output": 0.0,
+          "input": 0,
+          "output": 0,
           "__comment": "NVIDIA NIM free tier (rate-limited)"
         },
         "qwen/qwen3-next-80b-a3b-instruct": {
-          "input": 0.0,
-          "output": 0.0
-        },
-        "qwen/qwen3-next-80b-a3b-thinking": {
-          "input": 0.0,
-          "output": 0.0
+          "input": 0,
+          "output": 0
         },
         "mistralai/mistral-large-3-675b-instruct-2512": {
-          "input": 0.0,
-          "output": 0.0
+          "input": 0,
+          "output": 0
         },
         "nvidia/llama-3.3-nemotron-super-49b-v1.5": {
-          "input": 0.0,
-          "output": 0.0
-        },
-        "qwen/qwen2.5-coder-32b-instruct": {
-          "input": 0.0,
-          "output": 0.0
-        },
-        "moonshotai/kimi-k2-thinking": {
-          "input": 0.0,
-          "output": 0.0
-        },
-        "deepseek-ai/deepseek-v3.2": {
-          "input": 0.0,
-          "output": 0.0
-        },
-        "mistralai/devstral-2-123b-instruct-2512": {
-          "input": 0.0,
-          "output": 0.0
+          "input": 0,
+          "output": 0
         },
         "meta/llama-4-maverick-17b-128e-instruct": {
-          "input": 0.0,
-          "output": 0.0
+          "input": 0,
+          "output": 0
         },
         "qwen/qwen3.5-397b-a17b": {
-          "input": 0.0,
-          "output": 0.0
+          "input": 0,
+          "output": 0
+        },
+        "deepseek-ai/deepseek-v4-pro": {
+          "input": 0,
+          "output": 0,
+          "__comment": "NVIDIA NIM free tier (rate-limited)"
+        },
+        "deepseek-ai/deepseek-v4-flash": {
+          "input": 0,
+          "output": 0
+        },
+        "moonshotai/kimi-k2.6": {
+          "input": 0,
+          "output": 0
         }
       },
       "capabilities": {
@@ -790,8 +546,8 @@
       },
       "pricing": {
         "Qwen3-4B-quantized.w4a16": {
-          "input": 0.0,
-          "output": 0.0
+          "input": 0,
+          "output": 0
         }
       },
       "capabilities": {
@@ -944,8 +700,8 @@
       "gemini_model": "gemini-2.5-flash",
       "pricing": {
         "perplexity": {
-          "input": 1.0,
-          "output": 1.0,
+          "input": 1,
+          "output": 1,
           "model": "per_token"
         },
         "gemini_grounding": {

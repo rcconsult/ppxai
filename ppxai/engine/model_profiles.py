@@ -469,6 +469,27 @@ BUILTIN_PROFILES: Dict[str, ModelProfile] = {
         max_tokens=4_096,
         tier="B",
     ),
+    # DeepSeek V4 (Pro 1.6T MoE / Flash 284B): NIM frontier, 1M-token
+    # context via Compressed Sparse Attention, multimodal. Replaced
+    # deepseek-v3.2 (retired from NIM) on 2026-05-31. Native tool calling;
+    # Tier B provisional pending a benchmark sweep. supports_vision=True
+    # per DeepSeek's "multimodal" V4 announcement.
+    "*/deepseek-v4*": ModelProfile(
+        tool_calling=ToolCallingProfile(mode="native"),
+        max_tokens=8_192,
+        max_tool_iterations=20,
+        supports_vision=True,
+        tier="B",
+    ),
+    # Kimi K2.6 (Moonshot): non-reasoning open-weight, 262K context,
+    # strong agentic coding. Replaced kimi-k2-thinking (retired from NIM)
+    # on 2026-05-31. Native tool calling; Tier B provisional, no vision.
+    "*/kimi-k2*": ModelProfile(
+        tool_calling=ToolCallingProfile(mode="native"),
+        max_tokens=8_192,
+        max_tool_iterations=20,
+        tier="B",
+    ),
     # RedHatAI Qwen3-30B: community fine-tune (60.94%), uses hermes parser
     "*/qwen3-30b*": ModelProfile(
         tool_calling=ToolCallingProfile(mode="native"),
@@ -542,6 +563,26 @@ BUILTIN_PROFILES: Dict[str, ModelProfile] = {
 
     # ── Gemini 3 models ─────────────────────────────────────────────
 
+    # Gemini 3.5 Flash: Google's newest GA flash model (2026), "most
+    # intelligent for agentic/coding" in the flash tier. Supersedes
+    # gemini-3-flash-preview. Same native + strip-JSON + fallback shape;
+    # vision-capable (text + image + video input). Added 2026-05-31 when
+    # the model became the recommended Gemini default — without this glob
+    # it would fall through to the default profile (supports_vision=False)
+    # and silently route image attachments through the text fallback.
+    # NOTE: "gemini-3-flash*" does NOT shadow this (the "." after
+    # "gemini-3" breaks that pattern's literal "gemini-3-" prefix).
+    "gemini-3.5-flash*": ModelProfile(
+        tool_calling=ToolCallingProfile(
+            mode="native",
+            strip_json_from_text=True,
+            fallback_on_empty=True,
+        ),
+        max_tokens=65_536,
+        max_tool_iterations=25,
+        supports_vision=True,
+        tier="S",
+    ),
     "gemini-3-flash*": ModelProfile(
         tool_calling=ToolCallingProfile(
             mode="native",

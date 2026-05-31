@@ -17,8 +17,12 @@ Sources:
                 + https://deprecations.info/v1/deprecations.json (cross-check)
     - Perplexity: https://docs.perplexity.ai/changelog/changelog
     - Anthropic: https://docs.anthropic.com/en/docs/about-claude/model-deprecations
+    - NVIDIA NIM: live /models catalog at https://integrate.api.nvidia.com/v1/models
+                (NVIDIA does not publish a deprecation calendar; "retired"
+                here means absent from the live catalog on the verification date).
 
-Verification date: 2026-04-12.
+Verification date: 2026-05-31 (live /models sweep across OpenAI, Gemini,
+NVIDIA NIM; Perplexity has no /models endpoint, verified via changelog).
 """
 
 from __future__ import annotations
@@ -224,6 +228,46 @@ PERPLEXITY_DEPRECATIONS: Dict[str, Deprecation] = {
 
 
 # =============================================================================
+# NVIDIA NIM deprecations — verified 2026-05-31 against live /models
+# =============================================================================
+#
+# NVIDIA does not publish a deprecation calendar; build.nvidia.com models
+# simply appear and disappear from the catalog. These 5 model IDs shipped in
+# earlier ppxai configs but are ABSENT from the live /models response as of
+# 2026-05-31, so calls now 404. The `shutdown_date` is the verification date
+# (the exact retirement date is unpublished); /doctor surfaces them so users
+# who still reference them in their own configs get a migration hint.
+
+NVIDIA_DEPRECATIONS: Dict[str, Deprecation] = {
+    "qwen/qwen3-next-80b-a3b-thinking": Deprecation(
+        shutdown_date="2026-05-31",
+        replacement="qwen/qwen3-next-80b-a3b-instruct",
+        reason="Retired from NIM catalog (absent from live /models 2026-05-31). Instruct sibling remains available.",
+    ),
+    "qwen/qwen2.5-coder-32b-instruct": Deprecation(
+        shutdown_date="2026-05-31",
+        replacement="deepseek-ai/deepseek-v4-pro",
+        reason="Retired from NIM catalog. Use a current coder/agentic model (DeepSeek V4 or qwen3.5-122b-a10b).",
+    ),
+    "moonshotai/kimi-k2-thinking": Deprecation(
+        shutdown_date="2026-05-31",
+        replacement="moonshotai/kimi-k2.6",
+        reason="Retired from NIM catalog; superseded by Kimi K2.6.",
+    ),
+    "deepseek-ai/deepseek-v3.2": Deprecation(
+        shutdown_date="2026-05-31",
+        replacement="deepseek-ai/deepseek-v4-pro",
+        reason="Retired from NIM catalog; superseded by DeepSeek V4 (Pro/Flash).",
+    ),
+    "mistralai/devstral-2-123b-instruct-2512": Deprecation(
+        shutdown_date="2026-05-31",
+        replacement="deepseek-ai/deepseek-v4-pro",
+        reason="Retired from NIM catalog (absent from live /models 2026-05-31).",
+    ),
+}
+
+
+# =============================================================================
 # Merged lookup — every known deprecation across all providers
 # =============================================================================
 
@@ -231,6 +275,7 @@ ALL_DEPRECATIONS: Dict[str, Deprecation] = {
     **GEMINI_DEPRECATIONS,
     **OPENAI_DEPRECATIONS,
     **PERPLEXITY_DEPRECATIONS,
+    **NVIDIA_DEPRECATIONS,
 }
 
 
@@ -277,6 +322,15 @@ RECOMMENDED_NEW_MODELS: List[Dict[str, str]] = [
     },
     {
         "provider": "gemini",
+        "model": "gemini-3.5-flash",
+        "reason": (
+            "Newest Gemini flash (GA 2026). Google's most intelligent flash "
+            "tier for agentic + coding work; supersedes gemini-3-flash-preview. "
+            "1M context, vision. Recommended default for the Gemini provider."
+        ),
+    },
+    {
+        "provider": "gemini",
         "model": "gemini-3.1-flash-lite",
         "reason": "Cheapest Gemini 3 tier — good for high-volume workflows and VSCode inline suggestions.",
     },
@@ -290,15 +344,31 @@ RECOMMENDED_NEW_MODELS: List[Dict[str, str]] = [
         "model": "gemma-4-26b-a4b-it",
         "reason": "MoE variant with 3.8B active params — faster inference than 31B dense.",
     },
+    {
+        "provider": "nvidia",
+        "model": "qwen/qwen3.5-122b-a10b",
+        "reason": "Best all-around NVIDIA NIM model (Tier A 77.4%). Frontier MoE, strong tool calling. Recommended default.",
+    },
+    {
+        "provider": "nvidia",
+        "model": "deepseek-ai/deepseek-v4-pro",
+        "reason": "DeepSeek V4 frontier (1.6T MoE, multimodal, 1M context). Replaces retired deepseek-v3.2.",
+    },
+    {
+        "provider": "nvidia",
+        "model": "moonshotai/kimi-k2.6",
+        "reason": "Strong open-weight agentic coder (262K context). Replaces retired kimi-k2-thinking.",
+    },
 ]
 
 # Models that the advisor recommends as safe defaults by provider.
 # Used both for "your default_model is deprecated, switch to this"
 # warnings and as the suggested default for a fresh config.
 RECOMMENDED_DEFAULTS: Dict[str, str] = {
-    "gemini": "gemini-3-flash-preview",
+    "gemini": "gemini-3.5-flash",     # Updated 2026-05-31 (was gemini-3-flash-preview; superseded by 3.5-flash GA)
     "openai": "gpt-5.4",              # Updated 2026-04-12 (was gpt-5.2)
     "perplexity": "sonar-pro",
+    "nvidia": "qwen/qwen3.5-122b-a10b",  # Added 2026-05-31 — best Tier A NIM model
     "anthropic": "claude-sonnet-4-6",
 }
 
@@ -425,6 +495,7 @@ __all__ = [
     "GEMINI_DEPRECATIONS",
     "OPENAI_DEPRECATIONS",
     "PERPLEXITY_DEPRECATIONS",
+    "NVIDIA_DEPRECATIONS",
     "ALL_DEPRECATIONS",
     "RECOMMENDED_NEW_MODELS",
     "RECOMMENDED_DEFAULTS",

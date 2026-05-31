@@ -36,6 +36,7 @@ from ppxai.commands.results import ResultStatus
 from ppxai.engine.model_deprecations import (
     ALL_DEPRECATIONS,
     GEMINI_DEPRECATIONS,
+    NVIDIA_DEPRECATIONS,
     OPENAI_DEPRECATIONS,
     PERPLEXITY_DEPRECATIONS,
     RECOMMENDED_DEFAULTS,
@@ -256,7 +257,7 @@ class TestAuditUserConfig:
         warn = result["default_warnings"][0]
         assert warn["provider"] == "gemini"
         assert warn["default_model"] == "gemini-2.5-flash"
-        assert warn["recommended_default"] == "gemini-3-flash-preview"
+        assert warn["recommended_default"] == "gemini-3.5-flash"
 
     def test_comment_keys_excluded_from_model_list(self, tmp_path):
         # __comment_deprecations and similar keys must be filtered.
@@ -538,6 +539,7 @@ class TestDeprecationTableInvariants:
             len(GEMINI_DEPRECATIONS)
             + len(OPENAI_DEPRECATIONS)
             + len(PERPLEXITY_DEPRECATIONS)
+            + len(NVIDIA_DEPRECATIONS)
         )
         assert len(ALL_DEPRECATIONS) == expected, (
             f"ALL_DEPRECATIONS ({len(ALL_DEPRECATIONS)}) != sum of provider "
@@ -547,6 +549,8 @@ class TestDeprecationTableInvariants:
         for k in GEMINI_DEPRECATIONS:
             assert k in ALL_DEPRECATIONS
         for k in OPENAI_DEPRECATIONS:
+            assert k in ALL_DEPRECATIONS
+        for k in NVIDIA_DEPRECATIONS:
             assert k in ALL_DEPRECATIONS
 
     def test_openai_default_is_current(self):
