@@ -272,6 +272,27 @@ grep -cE 'event_bus\.(emit|subscribe)|state\.(on|set|get)' file.py
 
 If textual references are <30 across production code AND bus/state/protocol channels carry communication, the class is NOT a god class regardless of whole-repo graphify edge count.
 
+## Shared lessons
+
+`docs/lessons/` holds cross-host, grep-verifiable engineering hazards
+and architectural facts that any agent (AI or human) should know
+before re-deriving them. Per-host AI memory
+(`~/.claude/projects/<repo>/memory/`) does NOT sync; lessons that
+belong to the codebase belong in the repo.
+
+**Read [docs/lessons/README.md](docs/lessons/README.md) first** for
+the format + promotion criteria. Examples: "MCP is not integrated
+despite filename evidence", "ADR 0006 wire validator catches in-block
+key regressions".
+
+**When you discover a cross-host engineering hazard during a session**
+— meaning the lesson is true on any machine running this repo AND a
+reader can `grep`/open-a-file to confirm it — propose adding a
+`docs/lessons/<topic>.md` file in your turn summary. Don't auto-commit;
+the user decides whether the lesson is worth the repo's permanent
+attention. Per-host preferences and ephemeral session state stay in
+per-host memory only.
+
 ## Commit Guidelines
 
 - Do NOT include Claude credits or co-authored-by lines.
