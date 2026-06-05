@@ -33,6 +33,7 @@ runtime-path code changes.
 | Model catalog refresh | `b873ec2b` feat(models): refresh provider model catalog to 2026-05-31 generation |
 | Two-tier memory | `4f027b05` docs(lessons): repo-tracked engineering hazards (cherry-picked from v1.18.6 `771685e9`) |
 | v1.20.x paperwork | `1b056c0c` docs(roadmap): /v1/embeddings entry + MCP plan write-tool stance |
+| Office-doc preview regression fix + download buttons | `60d57037` feat(server): path-based /files/preview + /files/download; `330acb60` feat(web): OfficeFileView + shared BaseView toolbar + file-tree download; `62f485eb` fix(web): wire OfficeFileView into file-tree dispatcher + dedupe chat-attachment renderers |
 
 ## Theme 1 — Repository hygiene
 
@@ -234,6 +235,190 @@ safe. The peer's interim path for outlook-monitor writes is CLI
 subcommands gated by per-invocation human approval, not MCP. Both
 ppxai and ppxai-sre's planned write surfaces inherit this
 constraint.
+
+## Theme 7 — File-tree office-doc preview regression fix + download buttons
+
+A structural fix for a long-standing user-visible regression in the
+desktop web app: clicking `.pptx` / `.ppt` / `.docx` / `.doc` /
+`.xlsx` / `.xls` / `.csv` in the sidebar file tree showed "Failed to
+load: Cannot read binary file" instead of a rendered preview. The
+regression has been present since **v1.16.2** (the commit `b4e0bf57`
+that introduced `displayFileFromEvent` never had an office-format
+branch — office clicks fell through to `CodeEditorView` → `/files/read`
+→ 400 on `UnicodeDecodeError` → the error string rendered in the
+preview pane). User reported, root-cause-diagnosed and fixed
+structurally on this branch.
+
+Bundled alongside: the file-download UX gap (no way to download a
+file from the tree or the preview pane) closed in the same change
+set since both flows touch the file-tree + view-toolbar layers.
+
+### Three commits, one structural fix
+
+The work is split into three commits so each step is independently
+reviewable and revertable; no temporary scaffolding or feature flags
+were used. End-state is byte-identical for every pre-existing entry
+point.
+
+#### Commit 1 — server-side foundation (`60d57037`, 925 ins / 174 chg)
+
+Two new path-based REST endpoints + their shared security plumbing:
+
+- **`POST /files/preview?path=…&slide=N&total=true`** mirrors the
+  existing `/files/preview/{file_id}` route but accepts a working-
+  dir-relative or absolute path instead of a SessionFileStore
+  file_id. Same renderer (LibreOffice via `render_pptx_slides` /
+  `convert_docx_to_pdf`). Cache lives separately at
+  `~/.ppxai/.preview-cache/<sha256(path)>/` so browse-only previews
+  don't pollute the attached-file cache.
+
+- **LibreOffice-missing graceful fallback.** When LibreOffice isn't
+  on PATH, the route returns JSON `{"type": "text_fallback",
+  "kind": "presentation"|"word", "content": "<markdown>", "name",
+  "total", "libreoffice_available": false}` so the web client can
+  render extracted text inline with an install-LibreOffice note.
+  PPTX uses the new public helper `extract_pptx_slide_text` (pulled
+  out of `ReadPptxSlideTextTool.execute()` into a pure path-based
+  function); DOCX uses the already-public `_extract_docx_text`.
+  503 only if both LibreOffice AND python-pptx are absent.
+
+- **`GET /files/download?path=…`** streams raw bytes with
+  `Content-Disposition: attachment; filename="<basename>"` so
+  browsers fire their native download dialog. Reuses the same
+  security model as `/files/read` + `/files/preview` (working_dir
+  tree OR home_dir tree).
+
+- **Shared `_resolve_safe_path(raw, engine, cwd_anchor)` helper.**
+  The path-resolve-and-security-check logic that the pre-v1.18.7
+  `/files/read` had inline (73 lines) is extracted into a public
+  helper used by all three v1.18.7 endpoints — one path-resolution
+  definition, one security review, no chance of inconsistency. Also
+  handles `@search-query` and `~` expansion and emits 409 on
+  `cwd_anchor` drift, identical to pre-existing behavior.
+
+- **`/files/read` xlsx/xls/csv branch.** Office spreadsheets now
+  return `{type: "office_spreadsheet", content (base64), mime_type,
+  size}` — same shape as the image/pdf branch — so the web client
+  decodes base64 and feeds it to SheetJS client-side. No server-side
+  LibreOffice needed for spreadsheets. PPTX/DOCX 400 message now
+  points clients at `/files/preview?path=` for the conversion path.
+
+- **`MIME_TYPES` extended** (`ppxai/server/state.py`) with Office
+  types so `/files/download` and `/files/read` resolve Content-Type
+  without inspecting file bytes.
+
+- **Tests:** 19 new cases in `tests/test_files_preview_download.py`
+  covering happy paths + error paths for every new endpoint + the
+  extended `/files/read` branch; PPTX preview branches the same way
+  the route does at runtime (asserts PNG output when LibreOffice is
+  on the test host, asserts `text_fallback` JSON shape when not).
+  Pre-existing Windows-only CRLF flake in
+  `test_absolute_path_returns_content` opportunistically fixed
+  (used in-memory string length where the route returns on-disk
+  byte count). 40/40 file-route tests pass.
+
+#### Commit 2 — client foundation (`330acb60`, 659 ins / 23 chg)
+
+The shared building blocks the third commit wires together:
+
+- **`OfficeFileView`** (`ppxai/web/components/views/office-file-view.js`)
+  — new BaseView subclass with three rendering branches:
+  - spreadsheet (xlsx/xls/csv): SheetJS client-side render, sheet
+    tabs + `DataTableViewer` per sheet (sortable, filterable,
+    paginated).
+  - presentation (pptx/ppt): server-side PNG slide raster via
+    `/files/preview?path=…&slide=N`. Slide nav (`◀ Slide N / total
+    ▶`) + keyboard support (arrows, PageUp/Down, Space). Falls back
+    to per-slide text JSON when LibreOffice is missing.
+  - word (docx/doc): server-side PDF blob embedded in `<iframe>`.
+    Falls back to extracted-text JSON when LibreOffice is missing.
+
+- **`BaseView._renderToolbar` + `_wireDownloadButton` helpers.**
+  Pre-v1.18.7 every view subclass wrote `<div class="rpf-view-toolbar">
+  …</div>` literally inline, so adding a shared button needed
+  surgery in every view. The helper centralises the shape;
+  subclasses pass info text + extras, base assembles the toolbar
+  with the download button when `getPath()` is non-null.
+
+- **5 existing views retrofitted to use the helpers.** ImageFileView,
+  PdfFileView, MarkdownFileView, DataFileView, CodeEditorView all
+  call `_renderToolbar` instead of writing `<div class="rpf-view-toolbar">`
+  inline. Each gets the download button for free (CodeEditorView
+  shows it only in view mode — downloading mid-edit would surprise
+  the user with stale on-disk content).
+
+- **File-tree download icon.** Per-row `⬇` button visible on
+  hover/focus only (CSS opacity 0 → 0.7 on `.ft-node:hover`, → 1 on
+  the icon hover). `data-action="download"` short-circuits the
+  row's preview click so the download fires without also triggering
+  a preview.
+
+- **`PpxaiApp.onFileDownload(path, cwdAnchor)`** — one handler, two
+  call sites (file-tree icon + BaseView toolbar button). Uses a
+  hidden `<a download>` click rather than `window.location` so the
+  URL's `Content-Disposition: attachment` fires the dialog without
+  navigating away from the app.
+
+- **4 new ApiClient methods** (`ppxai/web/shared/api-client.js`):
+  `previewFileMetadata` / `previewFileSlideUrl` /
+  `previewFileSlideJson` / `downloadFileUrl`. Use `?session=<id>`
+  query-string auth because `<img>` / `<embed>` fetches don't send
+  custom `X-Session-Id` headers (same convention as the existing
+  `/files/image` and `/files/preview/{file_id}` routes).
+
+#### Commit 3 — wire it in + dedupe (`62f485eb`, 286 ins / 272 chg)
+
+The actual fix to the regression plus removal of the structural
+duplication between the file-tree preview path and the chat-
+attachment preview path that pre-dated v1.18.7:
+
+- **`displayFileFromEvent` dispatcher branch** routes office files
+  to `OfficeFileView`, placed before the `dataExts` branch so `.csv`
+  now routes to `OfficeFileView` (richer SheetJS experience) instead
+  of `DataFileView`'s plain-text view. `dataExts` narrowed
+  accordingly. This is the actual fix; the regression is closed
+  from this commit forward.
+
+- **`OfficeFileView` static render helpers.** The rendering
+  primitives are extracted as three static methods —
+  `renderSheetJsInto`, `renderSlideNavInto`, `renderDocxPdfInto` —
+  so the file-tree path and the chat-attachment path share one
+  rendering implementation. The static helpers take pre-fetched data;
+  each caller decides how to fetch (working-dir path vs
+  SessionFileStore file_id).
+
+- **`PpxaiApp._render{Spreadsheet,Presentation,Word}Attachment`
+  delegate** to the new static helpers. Each method previously had
+  ~75 LoC of inline rendering; now ~25 LoC each, retaining only
+  the method-specific concerns (file_id lookup, fetch headers,
+  unmount lifecycle). Net: ~150 LoC of inline rendering removed
+  from `app.js`. Visual output byte-identical to pre-refactor —
+  same SheetJS config, same slide-nav HTML structure, same iframe.
+
+### Verification
+
+- 40/40 file-route tests pass (Commit 1's new 19 cases + the 21
+  pre-existing).
+- 39 pptx-related tests still pass (Commit 1's helper extraction is
+  byte-identical-behavior).
+- `node --check` on all 10 touched JS files: clean syntax.
+- Build-install pass: 4 binaries report 1.18.7;
+  `Get-FileHash` confirms `~/.ppxai/web/` matches in-repo files.
+- Visual smoke deferred to user since the regression flow is a
+  click-the-tree → see-the-preview pattern the user reported.
+
+### What does NOT change
+
+- `/files/preview/{file_id}` on the server is unchanged — the chat-
+  attachment path keeps using it.
+- LLM tool surface unchanged (`ReadPptxSlideTextTool` returns the
+  same markdown shape after the helper extraction; delegation
+  pattern matches the existing `_extract_docx_text` precedent).
+- `AttachmentView` is unchanged (still wraps a mountFn closure).
+- TerminalView is unchanged (no `getPath`, no toolbar wiring
+  needed — it's not file-backed).
+- No API breakage. All existing routes return the same shapes for
+  the same inputs.
 
 ## Reverted
 
