@@ -121,11 +121,24 @@ _shutdown_event: asyncio.Event = None
 # Server start time for uptime tracking (v1.13.10)
 _server_start_time: float = 0
 
-# MIME types for binary file serving (images + PDF)
+# MIME types for binary file serving (images + PDF + office docs).
+# Office types added v1.18.7 alongside the path-based preview endpoint
+# so the file-tree preview path can resolve Content-Type without
+# inspecting the file bytes.
 MIME_TYPES = {
     '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
     '.gif': 'image/gif', '.webp': 'image/webp', '.svg': 'image/svg+xml',
     '.bmp': 'image/bmp', '.ico': 'image/x-icon', '.pdf': 'application/pdf',
+    # Office: spreadsheets (rendered client-side via SheetJS — no LibreOffice needed)
+    '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    '.xls': 'application/vnd.ms-excel',
+    '.csv': 'text/csv',
+    # Office: presentations (LibreOffice slide-render server-side, text fallback)
+    '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    '.ppt': 'application/vnd.ms-powerpoint',
+    # Office: word processing (LibreOffice → PDF server-side, text fallback)
+    '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    '.doc': 'application/msword',
 }
 
 

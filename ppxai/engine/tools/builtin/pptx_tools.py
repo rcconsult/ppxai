@@ -20,6 +20,7 @@ follow-up step — they require system dependencies not all users have.
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any, List, Optional, Tuple
 
 from ...types import ToolEngineProtocol, ToolManagerProtocol
@@ -27,6 +28,103 @@ from ..base import BaseTool
 
 
 _MAX_TEXT_CHARS = 100_000
+
+
+def extract_pptx_slide_text(path: Path, slide_num: int) -> str:
+    """Extract title + body text + tables from one PPTX slide as markdown.
+
+    Pure, path-based public helper. Two callers today:
+    - `ReadPptxSlideTextTool.execute()` — the LLM-facing tool, resolves
+      `file_id` → `meta.path` then calls this
+    - `server/routes/file_serve.py` — the path-based preview endpoint's
+      LibreOffice-missing fallback (renders extracted text instead of
+      raster slides). Lets the file-tree preview path degrade gracefully
+      when LibreOffice is absent on the server.
+
+    Returns the same markdown shape `ReadPptxSlideTextTool` returned
+    historically (so the tool's downstream prompts don't shift). On
+    error returns a short "Error: ..." string instead of raising —
+    matches the existing tool's behavior. python-pptx is required.
+
+    Args:
+        path: Filesystem path to the .pptx/.ppt file.
+        slide_num: 1-based slide index.
+
+    Returns:
+        Markdown string with `# {name} — Slide N of M`, optional
+        `## Title`, body paragraphs, and `| ... |`-rendered tables.
+        Returns `"Error: <reason>"` on any failure (python-pptx
+        missing, file unreadable, slide_num out of range).
+    """
+    try:
+        from pptx import Presentation
+    except ImportError:
+        return "Error: python-pptx not installed. Install with: pip install 'ppxai[data]'"
+
+    try:
+        prs = Presentation(str(path))
+    except Exception as exc:
+        return f"Error opening {path.name!r}: {exc}"
+
+    total = len(prs.slides)
+    try:
+        slide_num = int(slide_num)
+    except (TypeError, ValueError):
+        return f"Error: slide must be an integer (got {slide_num!r})."
+
+    if slide_num < 1 or slide_num > total:
+        return f"Error: slide {slide_num} out of range (presentation has {total} slides)."
+
+    target_slide = prs.slides[slide_num - 1]
+    lines: List[str] = [f"# {path.name} — Slide {slide_num} of {total}\n"]
+
+    # Title
+    if target_slide.shapes.title and target_slide.shapes.title.has_text_frame:
+        title = target_slide.shapes.title.text_frame.text.strip()
+        if title:
+            lines.append(f"## {title}\n")
+
+    total_chars = sum(len(line) for line in lines)
+
+    for shape in target_slide.shapes:
+        if total_chars > _MAX_TEXT_CHARS:
+            lines.append(
+                f"\n[Output truncated at {_MAX_TEXT_CHARS:,} chars.]"
+            )
+            break
+
+        if shape.has_table:
+            table_md = _table_to_markdown(shape.table)
+            lines.append(table_md + "\n")
+            total_chars += len(table_md)
+
+        elif shape.has_text_frame:
+            # Skip the title shape (already rendered above)
+            if (
+                target_slide.shapes.title
+                and shape.shape_id == target_slide.shapes.title.shape_id
+            ):
+                continue
+
+            text = _text_frame_to_markdown(shape.text_frame)
+            if text.strip():
+                lines.append(text + "\n")
+                total_chars += len(text)
+
+        elif shape.has_chart:
+            lines.append(f"[Chart: {shape.name}]\n")
+            total_chars += 30
+
+        elif hasattr(shape, "image") and shape.shape_type == 13:
+            name = shape.name or "image"
+            lines.append(f"[Image: {name}]\n")
+            total_chars += 30
+
+    result = "\n".join(lines)
+    if not result.strip():
+        return f"Slide {slide_num}: no text content found."
+
+    return result
 
 
 def _resolve_file(engine: Any, file_id: str) -> Tuple[Optional[Any], Optional[str]]:
@@ -169,76 +267,11 @@ class ReadPptxSlideTextTool(BaseTool):
             return f"Error: {err}"
         if not _is_pptx(meta):
             return f"Error: {meta.name!r} is not a PowerPoint file."
-
-        try:
-            from pptx import Presentation
-        except ImportError:
-            return "Error: python-pptx not installed. Install with: pip install 'ppxai[data]'"
-
-        try:
-            prs = Presentation(str(meta.path))
-        except Exception as exc:
-            return f"Error opening {meta.name!r}: {exc}"
-
-        total = len(prs.slides)
-        try:
-            slide_num = int(slide)
-        except (TypeError, ValueError):
-            return f"Error: slide must be an integer (got {slide!r})."
-
-        if slide_num < 1 or slide_num > total:
-            return f"Error: slide {slide_num} out of range (presentation has {total} slides)."
-
-        target_slide = prs.slides[slide_num - 1]
-        lines: List[str] = [f"# {meta.name} — Slide {slide_num} of {total}\n"]
-
-        # Title
-        if target_slide.shapes.title and target_slide.shapes.title.has_text_frame:
-            title = target_slide.shapes.title.text_frame.text.strip()
-            if title:
-                lines.append(f"## {title}\n")
-
-        total_chars = sum(len(line) for line in lines)
-
-        for shape in target_slide.shapes:
-            if total_chars > _MAX_TEXT_CHARS:
-                lines.append(
-                    f"\n[Output truncated at {_MAX_TEXT_CHARS:,} chars.]"
-                )
-                break
-
-            if shape.has_table:
-                table_md = _table_to_markdown(shape.table)
-                lines.append(table_md + "\n")
-                total_chars += len(table_md)
-
-            elif shape.has_text_frame:
-                # Skip the title shape (already rendered above)
-                if (
-                    target_slide.shapes.title
-                    and shape.shape_id == target_slide.shapes.title.shape_id
-                ):
-                    continue
-
-                text = _text_frame_to_markdown(shape.text_frame)
-                if text.strip():
-                    lines.append(text + "\n")
-                    total_chars += len(text)
-
-            elif shape.has_chart:
-                lines.append(f"[Chart: {shape.name}]\n")
-                total_chars += 30
-
-            elif hasattr(shape, "image") and shape.shape_type == 13:
-                name = shape.name or "image"
-                lines.append(f"[Image: {name}]\n")
-                total_chars += 30
-
-        result = "\n".join(lines)
-        if not result.strip():
-            return f"Slide {slide_num}: no text content found."
-
-        return result
+        # Delegate to the path-based public helper. The slide-name
+        # prefix in the helper output uses `path.name` (== meta.name
+        # for store-resolved files), so the historical output shape
+        # is preserved byte-for-byte.
+        return extract_pptx_slide_text(meta.path, slide)
 
 
 def _text_frame_to_markdown(text_frame) -> str:

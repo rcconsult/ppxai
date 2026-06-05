@@ -63,7 +63,11 @@ class TestReadTextFile:
         body = resp.json()
         assert body["type"] == "text"
         assert body["content"] == "hello\nworld\n"
-        assert body["size"] == len("hello\nworld\n".encode("utf-8"))
+        # Use actual file size on disk — Path.write_text + Windows can
+        # introduce CRLF expansion making the on-disk byte count differ
+        # from the in-memory string's UTF-8 length. The route returns
+        # `os.stat().st_size` which matches the on-disk count.
+        assert body["size"] == target.stat().st_size
         assert body["lines"] == 3  # 2 newlines + 1
         assert body["filename"] == "greeting.txt"
 
