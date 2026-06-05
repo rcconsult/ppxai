@@ -123,6 +123,9 @@ class OfficeFileView extends BaseView {
             try { URL.revokeObjectURL(url); } catch (_) { /* ignore */ }
         }
         this._blobUrls = [];
+        // Static-helper revoke handles (PPTX slide nav, DOCX iframe).
+        if (this._slideNavRevoke) { this._slideNavRevoke(); this._slideNavRevoke = null; }
+        if (this._docxPdfRevoke)  { this._docxPdfRevoke();  this._docxPdfRevoke  = null; }
         if (this._container) {
             this._container.innerHTML = '';
             this._container = null;
@@ -153,79 +156,19 @@ class OfficeFileView extends BaseView {
             container.innerHTML = `<div class="rpf-error">Unexpected response type: ${_ofvEsc(data.type)}</div>`;
             return;
         }
-
         const sizeKB = (data.size / 1024).toFixed(1);
         container.innerHTML = `
             ${this._renderToolbar('Loading spreadsheet…')}
             <div class="xlsx-preview" style="flex:1; overflow:auto;"></div>
         `;
         this._wireDownloadButton(container);
-
         const previewEl = container.querySelector('.xlsx-preview');
-        const infoEl = container.querySelector('.rpf-view-info');
-
-        if (typeof window.XLSX === 'undefined') {
-            previewEl.innerHTML = `<p style="padding:16px;color:var(--error-color);">
-                SheetJS not loaded (window.XLSX missing). Check index.html script tag.</p>`;
-            return;
-        }
-
-        try {
-            // CSV path: SheetJS reads base64 as either ArrayBuffer or
-            // text depending on extension hint; 'string' is safer for CSV.
-            const isCsv = this._path.toLowerCase().endsWith('.csv');
-            const wb = isCsv
-                ? window.XLSX.read(atob(data.content), { type: 'string' })
-                : window.XLSX.read(data.content, { type: 'base64' });
-
-            infoEl.textContent = `${wb.SheetNames.length} sheet${wb.SheetNames.length > 1 ? 's' : ''} • ${sizeKB} KB`;
-
-            const tabsEl = document.createElement('div');
-            tabsEl.className = 'xlsx-tabs';
-            previewEl.appendChild(tabsEl);
-
-            const tableEl = document.createElement('div');
-            tableEl.className = 'xlsx-table-wrapper';
-            previewEl.appendChild(tableEl);
-
-            const showSheet = (idx) => {
-                tabsEl.querySelectorAll('.xlsx-tab').forEach((t, i) => {
-                    t.classList.toggle('active', i === idx);
-                });
-                const ws = wb.Sheets[wb.SheetNames[idx]];
-                const json = window.XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-                if (!json.length) {
-                    tableEl.innerHTML = '<p style="padding:16px;color:var(--text-muted);">Empty sheet</p>';
-                    return;
-                }
-                const headers = json[0].map(h => String(h));
-                const rows = json.slice(1).map(r => r.map(c => String(c)));
-                tableEl.innerHTML = '';
-                if (typeof DataTableViewer !== 'undefined') {
-                    new DataTableViewer(tableEl, {
-                        headers, rows, rowCount: rows.length,
-                    }, {
-                        maxHeight: 'none', pageSize: 200,
-                        sortable: true, filterable: true, showRowNumbers: true,
-                    });
-                } else {
-                    // Fallback: minimal HTML table if DataTableViewer absent.
-                    tableEl.innerHTML = _ofvBuildTableHtml(headers, rows);
-                }
-            };
-
-            wb.SheetNames.forEach((sn, i) => {
-                const tab = document.createElement('button');
-                tab.className = 'xlsx-tab';
-                tab.textContent = sn;
-                tab.addEventListener('click', () => showSheet(i));
-                tabsEl.appendChild(tab);
-            });
-            showSheet(0);
-        } catch (e) {
-            previewEl.innerHTML = `<p style="padding:16px;color:var(--error-color);">
-                Failed to parse spreadsheet: ${_ofvEsc(e.message)}</p>`;
-        }
+        const infoEl    = container.querySelector('.rpf-view-info');
+        const isCsv     = this._path.toLowerCase().endsWith('.csv');
+        // Delegate to the shared render helper so the chat-attachment
+        // renderer in app.js produces an identical UI from its own
+        // base64 fetch path. One render implementation, two entry points.
+        OfficeFileView.renderSheetJsInto(previewEl, infoEl, data.content, isCsv, sizeKB);
     }
 
     // ── Branch: presentation (pptx/ppt) ──────────────────────────────────────
@@ -233,78 +176,68 @@ class OfficeFileView extends BaseView {
     async _mountPresentation(container) {
         const meta = await this._appState.apiClient.previewFileMetadata(this._path, this._cwdAnchor);
         this._slideCount = meta.total;
+        this._libreofficeOk = meta.libreoffice_available !== false;
 
-        const navHtml = `
-            <button class="rpf-btn ofv-nav-prev" title="Previous slide">◀</button>
-            <span class="ofv-slide-counter">Slide <span class="ofv-current">1</span> / ${meta.total}</span>
-            <button class="rpf-btn ofv-nav-next" title="Next slide">▶</button>
-        `;
         const infoStr = `${meta.total} slide${meta.total !== 1 ? 's' : ''}`
-            + (meta.libreoffice_available === false ? ' • text fallback' : '');
+            + (this._libreofficeOk ? '' : ' • text fallback');
 
         container.innerHTML = `
-            ${this._renderToolbar(_ofvEsc(infoStr), navHtml)}
-            <div class="pptx-preview" style="flex:1; display:flex; flex-direction:column; overflow:hidden;">
-                <div class="pptx-slide-container" style="flex:1; overflow:auto;"></div>
-            </div>
+            ${this._renderToolbar(_ofvEsc(infoStr))}
+            <div class="pptx-preview" style="flex:1; display:flex; flex-direction:column; overflow:hidden;"></div>
         `;
         this._wireDownloadButton(container);
-
-        const prevBtn = container.querySelector('.ofv-nav-prev');
-        const nextBtn = container.querySelector('.ofv-nav-next');
-        prevBtn.addEventListener('click', () => {
-            if (this._currentSlide > 1) this._showSlide(this._currentSlide - 1);
-        });
-        nextBtn.addEventListener('click', () => {
-            if (this._currentSlide < this._slideCount) this._showSlide(this._currentSlide + 1);
-        });
-
-        this._libreofficeOk = meta.libreoffice_available !== false;
-        this._showSlide(1);
-    }
-
-    async _showSlide(n) {
-        const container = this._container;
-        if (!container) return;
-        this._currentSlide = n;
-
-        const counterEl = container.querySelector('.ofv-current');
-        const prevBtn   = container.querySelector('.ofv-nav-prev');
-        const nextBtn   = container.querySelector('.ofv-nav-next');
-        const slideEl   = container.querySelector('.pptx-slide-container');
-        if (!slideEl) return;
-
-        if (counterEl) counterEl.textContent = n;
-        if (prevBtn) prevBtn.disabled = n <= 1;
-        if (nextBtn) nextBtn.disabled = n >= this._slideCount;
-
-        slideEl.innerHTML = '<p style="padding:16px;color:var(--text-muted);">Rendering…</p>';
+        const previewEl = container.querySelector('.pptx-preview');
 
         if (this._libreofficeOk) {
-            // PNG raster path. Construct the URL and fetch with auth
-            // headers so we get bytes — then convert to a blob URL
-            // for an <img>. Pre-v1.18.7 the attachment renderer used
-            // .getHeaders() the same way; we keep that pattern.
-            const url = this._appState.apiClient.previewFileSlideUrl(this._path, n, this._cwdAnchor);
-            try {
+            // Delegate slide-nav UI to the shared static helper. The
+            // chat-attachment renderer in app.js uses the SAME helper
+            // with a file_id-based fetchSlide closure; both paths get
+            // an identical nav UI.
+            const fetchSlide = async (n) => {
+                const url = this._appState.apiClient.previewFileSlideUrl(this._path, n, this._cwdAnchor);
                 const resp = await fetch(url, { headers: this._appState.apiClient.getHeaders() });
                 if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-                const blob = await resp.blob();
-                const blobUrl = URL.createObjectURL(blob);
-                this._blobUrls.push(blobUrl);
-                slideEl.innerHTML = '';
-                const img = new Image();
-                img.className = 'pptx-slide-img';
-                img.alt = `Slide ${n}`;
-                img.src = blobUrl;
-                img.style.maxWidth = '100%';
-                slideEl.appendChild(img);
-            } catch (err) {
-                slideEl.innerHTML = `<p style="padding:16px;color:var(--error-color);">
-                    Failed to render slide ${n}: ${_ofvEsc(err.message ?? String(err))}</p>`;
-            }
+                return resp.blob();
+            };
+            const handle = OfficeFileView.renderSlideNavInto(previewEl, this._slideCount, fetchSlide);
+            // Wire revoke into our unmount cleanup
+            this._slideNavRevoke = handle.revoke;
+            // Track current slide for keyboard nav (onKeyDown). The
+            // shared helper owns the counter element directly, so we
+            // observe via the DOM rather than threading state through.
+            previewEl.addEventListener('click', () => {
+                const counterEl = previewEl.querySelector('.ofv-current');
+                if (counterEl) this._currentSlide = parseInt(counterEl.textContent, 10) || 1;
+            });
         } else {
-            // Text-fallback path. JSON body carries markdown content.
+            // Text-fallback path — render a per-slide nav that fetches
+            // JSON instead of binary PNG. Distinct UI from the static
+            // helper because the rendering target is markdown text,
+            // not an <img>.
+            this._mountPresentationTextFallback(previewEl);
+        }
+    }
+
+    _mountPresentationTextFallback(previewEl) {
+        previewEl.innerHTML = `
+            <div class="pptx-nav">
+                <button class="rpf-btn ofv-nav-prev" title="Previous slide">◀</button>
+                <span class="pptx-slide-counter">Slide <span class="ofv-current">1</span> / ${this._slideCount}</span>
+                <button class="rpf-btn ofv-nav-next" title="Next slide">▶</button>
+            </div>
+            <div class="pptx-slide-container" style="flex:1; overflow:auto;"></div>
+        `;
+        const counterEl = previewEl.querySelector('.ofv-current');
+        const prevBtn   = previewEl.querySelector('.ofv-nav-prev');
+        const nextBtn   = previewEl.querySelector('.ofv-nav-next');
+        const slideEl   = previewEl.querySelector('.pptx-slide-container');
+
+        const showTextSlide = async (n) => {
+            this._currentSlide = n;
+            counterEl.textContent = n;
+            prevBtn.disabled = n <= 1;
+            nextBtn.disabled = n >= this._slideCount;
+            slideEl.innerHTML = '<p style="padding:16px;color:var(--text-muted);">Loading…</p>';
             try {
                 const data = await this._appState.apiClient.previewFileSlideJson(this._path, n, this._cwdAnchor);
                 slideEl.innerHTML = `
@@ -319,6 +252,34 @@ class OfficeFileView extends BaseView {
                 slideEl.innerHTML = `<p style="padding:16px;color:var(--error-color);">
                     Failed to load slide ${n} text: ${_ofvEsc(err.message ?? String(err))}</p>`;
             }
+        };
+        prevBtn.addEventListener('click', () => {
+            if (this._currentSlide > 1) showTextSlide(this._currentSlide - 1);
+        });
+        nextBtn.addEventListener('click', () => {
+            if (this._currentSlide < this._slideCount) showTextSlide(this._currentSlide + 1);
+        });
+        this._showTextSlide = showTextSlide;  // used by onKeyDown
+        showTextSlide(1);
+    }
+
+    _showSlide(n) {
+        // Keyboard navigation entry. Branches the same way mount did:
+        // when LibreOffice is OK, click the rendered nav buttons (the
+        // static helper owns its handlers); when text-fallback, drive
+        // the local showTextSlide closure.
+        if (!this._libreofficeOk) {
+            if (this._showTextSlide) this._showTextSlide(n);
+            return;
+        }
+        const container = this._container;
+        if (!container) return;
+        if (n < this._currentSlide) {
+            const prev = container.querySelector('.ofv-nav-prev');
+            if (prev) prev.click();
+        } else if (n > this._currentSlide) {
+            const next = container.querySelector('.ofv-nav-next');
+            if (next) next.click();
         }
     }
 
@@ -334,20 +295,17 @@ class OfficeFileView extends BaseView {
             <div class="docx-preview" style="flex:1; min-height:0;"></div>
         `;
         this._wireDownloadButton(container);
-
         const previewEl = container.querySelector('.docx-preview');
 
         if (libreofficeOk) {
-            // PDF iframe path. Fetch with auth headers, blob it, embed.
+            // Fetch PDF blob, delegate iframe embed to the shared helper.
             const url = this._appState.apiClient.previewFileSlideUrl(this._path, 1, this._cwdAnchor);
             try {
                 const resp = await fetch(url, { headers: this._appState.apiClient.getHeaders() });
                 if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
                 const blob = await resp.blob();
-                const blobUrl = URL.createObjectURL(blob);
-                this._blobUrls.push(blobUrl);
-                previewEl.innerHTML = `<iframe src="${blobUrl}"
-                    style="width:100%;height:100%;border:none;"></iframe>`;
+                const handle = OfficeFileView.renderDocxPdfInto(previewEl, blob);
+                this._docxPdfRevoke = handle.revoke;
             } catch (err) {
                 previewEl.innerHTML = `<div style="padding:24px;color:var(--text-secondary);">
                     <h3 style="margin-bottom:12px;color:var(--text-primary);">${_ofvEsc(this.getTitle())}</h3>
@@ -395,6 +353,160 @@ class OfficeFileView extends BaseView {
         return _OFV_SPREADSHEET_EXTS.has(ext)
             || _OFV_PRESENTATION_EXTS.has(ext)
             || _OFV_WORD_EXTS.has(ext);
+    }
+
+    // ── Static render helpers (v1.18.7 Commit 3) ─────────────────────────────
+    //
+    // The chat-attachment renderers in PpxaiApp need the SAME visual output
+    // as this view but get their data via a different fetch path
+    // (SessionFileStore file_id, not a working-dir path). Extracting the
+    // rendering primitives as static helpers lets both call sites share one
+    // implementation. Each helper takes a pre-fetched data shape; the
+    // caller decides how to fetch.
+
+    /**
+     * Render a SheetJS spreadsheet into the given content element.
+     * @param {HTMLElement} contentEl    Element to fill with the rendered table.
+     * @param {HTMLElement} infoEl       Element whose textContent will be updated with
+     *                                   the "N sheets • size" label.
+     * @param {string} b64               Base64-encoded file content.
+     * @param {boolean} isCsv            Whether to read as CSV (string) vs binary.
+     * @param {string} sizeKB            Pre-formatted size string (e.g. "12.3 KB").
+     */
+    static renderSheetJsInto(contentEl, infoEl, b64, isCsv, sizeKB) {
+        if (typeof window.XLSX === 'undefined') {
+            contentEl.innerHTML = `<p style="padding:16px;color:var(--error-color);">
+                SheetJS not loaded (window.XLSX missing).</p>`;
+            return;
+        }
+        try {
+            const wb = isCsv
+                ? window.XLSX.read(atob(b64), { type: 'string' })
+                : window.XLSX.read(b64, { type: 'base64' });
+            if (infoEl) {
+                infoEl.textContent = `${wb.SheetNames.length} sheet${wb.SheetNames.length > 1 ? 's' : ''} • ${sizeKB} KB`;
+            }
+            const tabsEl = document.createElement('div');
+            tabsEl.className = 'xlsx-tabs';
+            contentEl.appendChild(tabsEl);
+            const tableEl = document.createElement('div');
+            tableEl.className = 'xlsx-table-wrapper';
+            contentEl.appendChild(tableEl);
+
+            const showSheet = (idx) => {
+                tabsEl.querySelectorAll('.xlsx-tab').forEach((t, i) => {
+                    t.classList.toggle('active', i === idx);
+                });
+                const ws = wb.Sheets[wb.SheetNames[idx]];
+                const json = window.XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+                if (!json.length) {
+                    tableEl.innerHTML = '<p style="padding:16px;color:var(--text-muted);">Empty sheet</p>';
+                    return;
+                }
+                const headers = json[0].map(h => String(h));
+                const rows = json.slice(1).map(r => r.map(c => String(c)));
+                tableEl.innerHTML = '';
+                if (typeof DataTableViewer !== 'undefined') {
+                    new DataTableViewer(tableEl, { headers, rows, rowCount: rows.length }, {
+                        maxHeight: 'none', pageSize: 200,
+                        sortable: true, filterable: true, showRowNumbers: true,
+                    });
+                } else {
+                    tableEl.innerHTML = _ofvBuildTableHtml(headers, rows);
+                }
+            };
+            wb.SheetNames.forEach((sn, i) => {
+                const tab = document.createElement('button');
+                tab.className = 'xlsx-tab';
+                tab.textContent = sn;
+                tab.addEventListener('click', () => showSheet(i));
+                tabsEl.appendChild(tab);
+            });
+            showSheet(0);
+        } catch (e) {
+            contentEl.innerHTML = `<p style="padding:16px;color:var(--error-color);">
+                Failed to parse spreadsheet: ${_ofvEsc(e.message)}</p>`;
+        }
+    }
+
+    /**
+     * Render a slide-navigation UI into the given preview element.
+     * @param {HTMLElement} previewEl    Element to fill with nav + slide container.
+     * @param {number} total             Total slide count.
+     * @param {Function} fetchSlideBlob  async (n) => Blob — caller's fetch implementation.
+     * @returns {{revoke: Function}}    Object with a revoke() that revokes
+     *                                   accumulated blob URLs. Caller wires this into
+     *                                   AttachmentView.unmount to avoid leaks.
+     */
+    static renderSlideNavInto(previewEl, total, fetchSlideBlob) {
+        const blobUrls = [];
+        const nav = document.createElement('div');
+        nav.className = 'pptx-nav';
+        nav.innerHTML = `
+            <button class="rpf-btn ofv-nav-prev" title="Previous slide">◀</button>
+            <span class="pptx-slide-counter">Slide <span class="ofv-current">1</span> / ${total}</span>
+            <button class="rpf-btn ofv-nav-next" title="Next slide">▶</button>`;
+        previewEl.appendChild(nav);
+
+        const imgContainer = document.createElement('div');
+        imgContainer.className = 'pptx-slide-container';
+        previewEl.appendChild(imgContainer);
+
+        const counterEl = nav.querySelector('.ofv-current');
+        const prevBtn = nav.querySelector('.ofv-nav-prev');
+        const nextBtn = nav.querySelector('.ofv-nav-next');
+
+        let current = 1;
+        const showSlide = async (n) => {
+            current = n;
+            counterEl.textContent = n;
+            prevBtn.disabled = n <= 1;
+            nextBtn.disabled = n >= total;
+            imgContainer.innerHTML = '<p style="padding:16px;color:var(--text-muted);">Rendering…</p>';
+            try {
+                const blob = await fetchSlideBlob(n);
+                const url = URL.createObjectURL(blob);
+                blobUrls.push(url);
+                const img = new Image();
+                img.className = 'pptx-slide-img';
+                img.alt = `Slide ${n}`;
+                img.src = url;
+                img.style.maxWidth = '100%';
+                imgContainer.innerHTML = '';
+                imgContainer.appendChild(img);
+            } catch (err) {
+                imgContainer.innerHTML = `<p style="padding:16px;color:var(--error-color);">
+                    Failed to load slide ${n}: ${_ofvEsc(err.message ?? String(err))}</p>`;
+            }
+        };
+        prevBtn.addEventListener('click', () => { if (current > 1) showSlide(current - 1); });
+        nextBtn.addEventListener('click', () => { if (current < total) showSlide(current + 1); });
+        showSlide(1);
+
+        return {
+            revoke: () => {
+                for (const u of blobUrls) {
+                    try { URL.revokeObjectURL(u); } catch (_) { /* ignore */ }
+                }
+            },
+        };
+    }
+
+    /**
+     * Render a Word document as an iframe-embedded PDF.
+     * @param {HTMLElement} previewEl    Element to fill with the iframe.
+     * @param {Blob} pdfBlob             The PDF blob.
+     * @returns {{revoke: Function}}    Caller wires revoke() into unmount.
+     */
+    static renderDocxPdfInto(previewEl, pdfBlob) {
+        const url = URL.createObjectURL(pdfBlob);
+        previewEl.innerHTML = `<iframe src="${url}"
+            style="width:100%;height:100%;border:none;"></iframe>`;
+        return {
+            revoke: () => {
+                try { URL.revokeObjectURL(url); } catch (_) { /* ignore */ }
+            },
+        };
     }
 }
 

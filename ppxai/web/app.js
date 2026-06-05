@@ -1408,8 +1408,15 @@ class PpxaiApp {
         frame.push(view);
     }
 
+    // v1.18.7: Office attachment renderers delegate the actual rendering
+    // to OfficeFileView's static helpers — same UI as the file-tree
+    // preview path, just driven from a SessionFileStore file_id / b64
+    // payload instead of a working-dir path. One render implementation,
+    // two entry points; the structural duplication that pre-dated v1.18.7
+    // is gone.
+
     _renderSpreadsheetAttachment({ frame, name, b64, sizeKB }) {
-        // Excel / CSV preview via SheetJS (lazy-loaded)
+        const isCsv = name.toLowerCase().endsWith('.csv');
         const view = new AttachmentView(name, `attachment:${name}`, '\u{1F4CA}', (container) => {
             container.innerHTML = `
                 <div class="rpf-view-toolbar">
@@ -1417,77 +1424,18 @@ class PpxaiApp {
                 </div>
                 <div class="xlsx-preview" style="flex:1; overflow:auto;"></div>`;
             const previewEl = container.querySelector('.xlsx-preview');
-            const infoEl = container.querySelector('.rpf-view-info');
-
-            const render = () => {
-                try {
-                    const wb = window.XLSX.read(b64, { type: 'base64' });
-                    infoEl.textContent = `${wb.SheetNames.length} sheet${wb.SheetNames.length > 1 ? 's' : ''} • ${sizeKB} KB`;
-
-                    // Sheet tabs
-                    const tabsEl = document.createElement('div');
-                    tabsEl.className = 'xlsx-tabs';
-                    previewEl.appendChild(tabsEl);
-
-                    // Table container
-                    const tableEl = document.createElement('div');
-                    tableEl.className = 'xlsx-table-wrapper';
-                    previewEl.appendChild(tableEl);
-
-                    const showSheet = (idx) => {
-                        tabsEl.querySelectorAll('.xlsx-tab').forEach((t, i) => {
-                            t.classList.toggle('active', i === idx);
-                        });
-                        const ws = wb.Sheets[wb.SheetNames[idx]];
-                        const json = window.XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-                        if (!json.length) {
-                            tableEl.innerHTML = '<p style="padding:16px; color:var(--text-muted);">Empty sheet</p>';
-                            return;
-                        }
-                        // First row as headers, rest as data rows
-                        const headers = json[0].map(h => String(h));
-                        const rows = json.slice(1).map(r => r.map(c => String(c)));
-                        tableEl.innerHTML = '';
-                        new DataTableViewer(tableEl, {
-                            headers,
-                            rows,
-                            rowCount: rows.length,
-                        }, {
-                            maxHeight: 'none',
-                            pageSize: 200,
-                            sortable: true,
-                            filterable: true,
-                            showRowNumbers: true,
-                        });
-                    };
-
-                    wb.SheetNames.forEach((sn, i) => {
-                        const tab = document.createElement('button');
-                        tab.className = 'xlsx-tab';
-                        tab.textContent = sn;
-                        tab.addEventListener('click', () => showSheet(i));
-                        tabsEl.appendChild(tab);
-                    });
-
-                    showSheet(0);
-                } catch (e) {
-                    previewEl.innerHTML = `<p style="padding:16px; color:var(--error-color);">
-                        Failed to parse spreadsheet: ${e.message}</p>`;
-                }
-            };
-
-            // SheetJS is loaded via index.html <script> tag
-            render();
+            const infoEl    = container.querySelector('.rpf-view-info');
+            OfficeFileView.renderSheetJsInto(previewEl, infoEl, b64, isCsv, sizeKB);
         });
         frame.push(view);
     }
 
     _renderPresentationAttachment({ frame, name, b64, sizeKB }) {
-        // PPTX slide viewer - renders slides via server-side LibreOffice
         const fileId = (this.state.contextAttachments || []).find(
             a => a.name === name
         )?.file_id || '';
         const apiClient = this.apiClient;
+        let revokeHandle = null;
         const view = new AttachmentView(name, `attachment:${name}`, '\u{1F4CA}', (container) => {
             container.innerHTML = `
                 <div class="rpf-view-toolbar">
@@ -1495,69 +1443,22 @@ class PpxaiApp {
                 </div>
                 <div class="pptx-preview" style="flex:1; display:flex; flex-direction:column; overflow:hidden;"></div>`;
             const previewEl = container.querySelector('.pptx-preview');
-            const infoEl = container.querySelector('.rpf-view-info');
-
+            const infoEl    = container.querySelector('.rpf-view-info');
             if (!fileId) {
-                previewEl.innerHTML = '<p style="padding:16px; color:var(--text-muted);">No file_id - cannot render slides. Re-attach the file.</p>';
+                previewEl.innerHTML = '<p style="padding:16px; color:var(--text-muted);">No file_id — cannot render slides. Re-attach the file.</p>';
                 infoEl.textContent = 'PowerPoint Presentation';
                 return;
             }
-
-            // Fetch total slide count, then render slide navigator
-            fetch(`files/preview/${fileId}?total=true`, {
-                headers: apiClient.getHeaders(),
-            })
+            fetch(`files/preview/${fileId}?total=true`, { headers: apiClient.getHeaders() })
                 .then(r => r.ok ? r.json() : Promise.reject(r.statusText))
                 .then(info => {
-                    const total = info.total;
-                    infoEl.textContent = `${total} slide${total !== 1 ? 's' : ''} • ${sizeKB} KB`;
-
-                    let current = 1;
-
-                    // Navigation bar
-                    const nav = document.createElement('div');
-                    nav.className = 'pptx-nav';
-                    nav.innerHTML = `
-                        <button class="pptx-nav-btn" id="pptxPrev" title="Previous slide">◀</button>
-                        <span class="pptx-slide-counter">Slide <span class="pptx-current">1</span> / ${total}</span>
-                        <button class="pptx-nav-btn" id="pptxNext" title="Next slide">▶</button>`;
-                    previewEl.appendChild(nav);
-
-                    // Slide image container
-                    const imgContainer = document.createElement('div');
-                    imgContainer.className = 'pptx-slide-container';
-                    previewEl.appendChild(imgContainer);
-
-                    const counterEl = nav.querySelector('.pptx-current');
-                    const prevBtn = nav.querySelector('#pptxPrev');
-                    const nextBtn = nav.querySelector('#pptxNext');
-
-                    const sessionHeaders = apiClient.getHeaders();
-                    const showSlide = (n) => {
-                        current = n;
-                        counterEl.textContent = n;
-                        prevBtn.disabled = n <= 1;
-                        nextBtn.disabled = n >= total;
-                        imgContainer.innerHTML = '<p style="padding:16px; color:var(--text-muted);">Rendering…</p>';
-                        fetch(`files/preview/${fileId}?slide=${n}`, { headers: sessionHeaders })
-                            .then(r => r.ok ? r.blob() : Promise.reject('Failed'))
-                            .then(blob => {
-                                const img = new Image();
-                                img.className = 'pptx-slide-img';
-                                img.alt = `Slide ${n}`;
-                                img.src = URL.createObjectURL(blob);
-                                imgContainer.innerHTML = '';
-                                imgContainer.appendChild(img);
-                            })
-                            .catch(() => {
-                                imgContainer.innerHTML = '<p style="padding:16px; color:var(--error-color);">Failed to load slide.</p>';
-                            });
+                    infoEl.textContent = `${info.total} slide${info.total !== 1 ? 's' : ''} • ${sizeKB} KB`;
+                    const fetchSlide = async (n) => {
+                        const r = await fetch(`files/preview/${fileId}?slide=${n}`, { headers: apiClient.getHeaders() });
+                        if (!r.ok) throw new Error('Failed');
+                        return r.blob();
                     };
-
-                    prevBtn.addEventListener('click', () => { if (current > 1) showSlide(current - 1); });
-                    nextBtn.addEventListener('click', () => { if (current < total) showSlide(current + 1); });
-
-                    showSlide(1);
+                    revokeHandle = OfficeFileView.renderSlideNavInto(previewEl, info.total, fetchSlide);
                 })
                 .catch(err => {
                     previewEl.innerHTML = `<p style="padding:16px; color:var(--error-color);">
@@ -1567,15 +1468,20 @@ class PpxaiApp {
                     infoEl.textContent = `PowerPoint • ${sizeKB} KB`;
                 });
         });
+        const origUnmount = view.unmount.bind(view);
+        view.unmount = () => {
+            if (revokeHandle) { revokeHandle.revoke(); revokeHandle = null; }
+            origUnmount();
+        };
         frame.push(view);
     }
 
     _renderWordAttachment({ frame, name, sizeKB }) {
-        // Word document preview - convert to PDF via server-side LibreOffice
         const fileId = (this.state.contextAttachments || []).find(
             a => a.name === name
         )?.file_id || '';
         const apiClient = this.apiClient;
+        let revokeHandle = null;
         const view = new AttachmentView(name, `attachment:${name}`, '\u{1F4C4}', (container) => {
             container.innerHTML = `
                 <div class="rpf-view-toolbar">
@@ -1583,31 +1489,19 @@ class PpxaiApp {
                 </div>
                 <div class="docx-preview" style="flex:1; min-height:0;"></div>`;
             const previewEl = container.querySelector('.docx-preview');
-            const infoEl = container.querySelector('.rpf-view-info');
-
+            const infoEl    = container.querySelector('.rpf-view-info');
             if (!fileId) {
                 previewEl.innerHTML = '<p style="padding:16px; color:var(--text-muted);">No file_id — cannot render document. Re-attach the file.</p>';
                 infoEl.textContent = `Word Document • ${sizeKB} KB`;
                 return;
             }
-
-            // Fetch the converted PDF from the preview endpoint
-            fetch(`files/preview/${fileId}?slide=1`, {
-                headers: apiClient.getHeaders(),
-            })
+            fetch(`files/preview/${fileId}?slide=1`, { headers: apiClient.getHeaders() })
                 .then(r => r.ok ? r.blob() : Promise.reject(r.statusText))
                 .then(blob => {
                     infoEl.textContent = `Word Document • ${sizeKB} KB`;
-                    const blobUrl = URL.createObjectURL(blob);
-                    previewEl.innerHTML = `
-                        <iframe src="${blobUrl}"
-                                style="width:100%; height:100%; border:none;">
-                        </iframe>`;
-                    // Store blobUrl for cleanup
-                    previewEl._blobUrl = blobUrl;
+                    revokeHandle = OfficeFileView.renderDocxPdfInto(previewEl, blob);
                 })
                 .catch(err => {
-                    // Fallback to info panel if conversion unavailable
                     infoEl.textContent = `Word Document • ${sizeKB} KB`;
                     previewEl.innerHTML = `<div style="padding:24px; color:var(--text-secondary);">
                         <h3 style="margin-bottom:12px; color:var(--text-primary);">${name}</h3>
@@ -1619,11 +1513,9 @@ class PpxaiApp {
                     </div>`;
                 });
         });
-        // Clean up Blob URL when view is evicted from stack
         const origUnmount = view.unmount.bind(view);
         view.unmount = () => {
-            const el = document.querySelector('.docx-preview');
-            if (el && el._blobUrl) URL.revokeObjectURL(el._blobUrl);
+            if (revokeHandle) { revokeHandle.revoke(); revokeHandle = null; }
             origUnmount();
         };
         frame.push(view);
@@ -3247,7 +3139,11 @@ class PpxaiApp {
         if (!this.rightPanelFrame) return;
         const ext = filepath.split('.').pop().toLowerCase();
         const imageExts = new Set(['png','jpg','jpeg','gif','svg','webp','bmp','ico','tiff']);
-        const dataExts  = new Set(['json','yaml','yml','toml','hcl','tf','tfvars','csv','tsv','tab']);
+        // v1.18.7: csv now routed to OfficeFileView for the richer
+        // SheetJS-based experience (sheet tabs, sortable/filterable
+        // table). DataFileView still handles tsv/tab and the
+        // structured-data formats (json/yaml/toml/hcl/tf/tfvars).
+        const dataExts  = new Set(['json','yaml','yml','toml','hcl','tf','tfvars','tsv','tab']);
         const mdExts    = new Set(['md','markdown']);
         const opts = { cwdAnchor };
         let view;
@@ -3257,6 +3153,12 @@ class PpxaiApp {
             view = new PdfFileView(filepath, this.state, opts);
         } else if (mdExts.has(ext)) {
             view = new MarkdownFileView(filepath, this.state, opts);
+        } else if (typeof OfficeFileView !== 'undefined' && OfficeFileView.canRender(filepath)) {
+            // v1.18.7: pptx/ppt/docx/doc/xlsx/xls/csv via OfficeFileView.
+            // Closes the file-tree office-preview regression (pre-v1.18.7
+            // these extensions fell through to CodeEditorView, which got
+            // "Cannot read binary file" 400 from /files/read).
+            view = new OfficeFileView(filepath, this.state, opts);
         } else if (dataExts.has(ext)) {
             view = new DataFileView(filepath, this.state, opts);
         } else {
