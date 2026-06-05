@@ -258,6 +258,7 @@
     text-align: left;
     font-weight: 600;
     border-bottom: 2px solid var(--table-border-color);
+    -webkit-user-select: none;
     user-select: none;
 }
 
@@ -468,6 +469,7 @@
     width: 16px;
     color: var(--tree-toggle-color);
     cursor: pointer;
+    -webkit-user-select: none;
     user-select: none;
     font-size: 10px;
     text-align: center;

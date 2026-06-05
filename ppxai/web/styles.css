@@ -1392,6 +1392,14 @@ body {
     font-size: 16px;
 }
 
+/* Hidden file input that the paperclip button triggers (v1.18.7:
+ * promoted from inline `style="display:none"` in index.html so the
+ * no-inline-styles lint passes and the rule lives next to its
+ * companion .attach-btn rule below). */
+.hidden-file-input {
+    display: none;
+}
+
 /* Attach button (v1.17.4 Phase 5.1) */
 .attach-btn {
     background: transparent;
