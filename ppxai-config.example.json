@@ -967,5 +967,10 @@
     "show_version": true,
     "show_cwd": true,
     "show_datetime": true
+  },
+  "file_tree": {
+    "__comment": "Web file tree + /files/list + /files/search settings (v1.18.7+)",
+    "__comment_ignore_dirs": "Directory names hidden from the file tree. REPLACE semantics (not merge) — your list is used verbatim. Empty list = show everything. Default: ['.git', 'node_modules', '__pycache__', '.venv', 'venv', '.tox', 'dist', 'build', '.eggs', '.mypy_cache']. Remove an entry from the default list to unhide that dir (e.g. drop 'venv' if you want it visible).",
+    "ignore_dirs": [".git", "node_modules", "__pycache__", ".venv", "venv", ".tox", "dist", "build", ".eggs", ".mypy_cache"]
   }
 }

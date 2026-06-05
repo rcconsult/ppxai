@@ -114,3 +114,60 @@ def get_auto_save_interval() -> int:
     """Get the auto-save interval (number of messages between saves)."""
     interval = get_session_config().get("auto_save_interval", 1)
     return max(0, int(interval))
+
+
+# =============================================================================
+# File Tree Configuration (v1.18.7)
+# =============================================================================
+
+# Directories the file-tree + search routes skip by default. Pre-v1.18.7
+# this was hard-coded in ppxai/server/routes/files.py:22 as a module-level
+# constant — invisible to users and not overridable. Promoted to config
+# in v1.18.7 because users with workflows that touch `venv/` or `build/`
+# directly need to see them in the sidebar (e.g. inspecting a packaged
+# wheel under dist/, or a freshly-built virtualenv).
+#
+# Override semantics:
+#   - If `file_tree.ignore_dirs` is unset → use DEFAULT_FILE_TREE_IGNORE_DIRS
+#   - If set to a list → use that list verbatim (REPLACE, not merge)
+#   - To add to the defaults, copy the default list into your config and
+#     extend it. To unhide a single dir, copy the default list minus that dir.
+#   - Empty list → show everything (no ignore)
+#
+# REPLACE-not-merge semantics keep the behavior predictable: what you write
+# is what you get. A merge would force users to learn an exclusion syntax
+# to remove a default, which is a worse UX than copy-edit.
+DEFAULT_FILE_TREE_IGNORE_DIRS = [
+    '.git', 'node_modules', '__pycache__',
+    '.venv', 'venv', '.tox', 'dist', 'build', '.eggs', '.mypy_cache',
+]
+
+
+def get_file_tree_config() -> Dict[str, Any]:
+    """Get file-tree-specific configuration."""
+    defaults = {
+        "ignore_dirs": list(DEFAULT_FILE_TREE_IGNORE_DIRS),
+    }
+    config = ConfigStore.get_instance().config
+    ft_config = config.get("file_tree", {})
+    return {**defaults, **ft_config}
+
+
+def get_file_tree_ignore_dirs() -> set:
+    """Get the directory-name set the file tree + search should skip.
+
+    Returns a set (not a list) because the only operations are membership
+    checks (`name in ignored_set` / `any(d in path.parts for d in ignored_set)`).
+    Set lookup is O(1); list lookup is O(n). The three call sites in
+    ppxai/server/routes/files.py would otherwise each pay the O(n) cost
+    per directory entry.
+    """
+    raw = get_file_tree_config().get("ignore_dirs", DEFAULT_FILE_TREE_IGNORE_DIRS)
+    # Defensive: tolerate user config where ignore_dirs is None / not-a-list
+    if not isinstance(raw, list):
+        logger.warning(
+            f"file_tree.ignore_dirs is not a list ({type(raw).__name__}); "
+            f"falling back to defaults"
+        )
+        raw = DEFAULT_FILE_TREE_IGNORE_DIRS
+    return set(raw)

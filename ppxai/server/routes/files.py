@@ -13,13 +13,18 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from typing import Optional
 
 from ...common.logger import get_logger
+from ...config import get_file_tree_ignore_dirs
 from ..models import FileReadRequest, FileSearchRequest, FileWriteRequest
 from ..state import Session, get_session, get_session_or_query, is_path_allowed, MIME_TYPES, with_drained_events
 
 logger = get_logger("server")
 
-# Directories to ignore when searching for files (same as TUI completer)
-IGNORE_DIRS = {'.git', 'node_modules', '__pycache__', '.venv', 'venv', '.tox', 'dist', 'build', '.eggs', '.mypy_cache'}
+# v1.18.7: promoted to config — `file_tree.ignore_dirs` in ppxai-config.json
+# (default list still {.git, node_modules, __pycache__, .venv, venv, .tox,
+# dist, build, .eggs, .mypy_cache} via DEFAULT_FILE_TREE_IGNORE_DIRS). Read
+# via get_file_tree_ignore_dirs() at request time so config changes take
+# effect without server restart. The four call sites below all use the
+# function, NOT a cached module-level constant.
 
 # v1.18.7: path-derived cache for /files/preview (path-based variant).
 # Each unique path gets its own subdir keyed by sha256, so re-rendering
@@ -257,6 +262,7 @@ async def search_files(
     working_dir = Path(s.engine.get_working_dir() or os.getcwd())
     query = request.query.lower()
     results = []
+    ignore_dirs = get_file_tree_ignore_dirs()  # v1.18.7: read once per request
 
     try:
         for path in working_dir.rglob('*'):
@@ -266,7 +272,7 @@ async def search_files(
                 # Check if file - can fail on network paths (WinError 4350)
                 if path.is_file():
                     # Skip files in ignored directories
-                    if any(ignored in path.parts for ignored in IGNORE_DIRS):
+                    if any(ignored in path.parts for ignored in ignore_dirs):
                         continue
                     try:
                         rel_path = str(path.relative_to(working_dir))
@@ -334,12 +340,13 @@ async def list_files(
     except PermissionError:
         raise HTTPException(status_code=403, detail="Permission denied")
 
+    ignore_dirs = get_file_tree_ignore_dirs()  # v1.18.7
     filtered = []
     for entry in entries:
         name = entry.name
         if not a and name.startswith('.'):
             continue
-        if entry.is_dir() and name in IGNORE_DIRS:
+        if entry.is_dir() and name in ignore_dirs:
             continue
         filtered.append(entry)
 
@@ -410,6 +417,7 @@ async def get_file_tree(
 
     dir_count = 0
     file_count = 0
+    ignore_dirs = get_file_tree_ignore_dirs()  # v1.18.7: resolved once per request
 
     def build_tree(directory: Path, current_depth: int) -> dict:
         nonlocal dir_count, file_count
@@ -427,7 +435,7 @@ async def get_file_tree(
             if name.startswith('.'):
                 continue
             if entry.is_dir():
-                if name in IGNORE_DIRS:
+                if name in ignore_dirs:
                     continue
                 dir_count += 1
                 children.append(build_tree(entry, current_depth + 1))

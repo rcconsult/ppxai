@@ -420,6 +420,60 @@ attachment preview path that pre-dated v1.18.7:
 - No API breakage. All existing routes return the same shapes for
   the same inputs.
 
+### Configurable file-tree ignore list (follow-up)
+
+User raised during smoke-test that the file tree never showed
+`venv/` directories. Root cause: the `IGNORE_DIRS` set in
+`ppxai/server/routes/files.py:22` was hard-coded and not
+user-overridable. Promoted to config as `file_tree.ignore_dirs` in
+`ppxai-config.json`:
+
+- **Default unchanged** — same 10 entries the legacy constant had,
+  so every existing user gets identical behavior without touching
+  config.
+- **REPLACE semantics** (not merge) — your list is used verbatim.
+  Predictable "what you write is what you get"; users copy-edit
+  the default list to add/remove entries.
+- **Empty list disables ignoring entirely** — useful for power
+  users who want to see node_modules etc.
+- **Read at request time** via `get_file_tree_ignore_dirs()` in
+  `ppxai/config/features.py`, so config changes take effect
+  without server restart.
+- **Set, not list, return type** — call sites do membership checks
+  in tight loops; O(1) lookup matters.
+- **Defensive fallback** — invalid types (string/int/dict instead
+  of list) log a warning and fall back to defaults rather than
+  crashing.
+
+The TUI completer at `ppxai/commands/utility.py:35` keeps its
+own constant (a parallel hard-coded set). Promoting that would
+broaden v1.18.7 scope into TUI command tests; left for a future
+unification pass.
+
+Wired through three call sites in `ppxai/server/routes/files.py`:
+`/files/search` (line 264-275), `/files/list` (line 343-348), and
+`/files/tree` (line 421-440 — set resolved once via closure over
+`build_tree`, not per-directory, so deep trees don't pay per-dir
+config-lookup cost).
+
+Example override in `~/.ppxai/ppxai-config.json` to unhide `venv/`:
+
+```json
+{
+  "file_tree": {
+    "ignore_dirs": [
+      ".git", "node_modules", "__pycache__", ".venv",
+      ".tox", "dist", "build", ".eggs", ".mypy_cache"
+    ]
+  }
+}
+```
+
+11 new tests in `tests/test_file_tree_ignore_config.py` covering:
+default behavior, REPLACE semantics, empty-list disabling, invalid-
+type fallback, `/files/list` end-to-end, `/files/tree` end-to-end.
+50/50 file-route tests pass (10 in new suite + existing 40).
+
 ## Reverted
 
 The branch contains one revert pair worth flagging in the release

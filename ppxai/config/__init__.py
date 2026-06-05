@@ -101,6 +101,9 @@ from .features import (
     get_auto_restore_mode,
     get_auto_save_interval,
     get_debug_log_enabled,
+    get_file_tree_config,
+    get_file_tree_ignore_dirs,
+    DEFAULT_FILE_TREE_IGNORE_DIRS,
 )
 
 # Paths, data directory, server
@@ -283,6 +286,10 @@ __all__ = [
     "get_session_config",
     "get_auto_restore_mode",
     "get_auto_save_interval",
+    # File tree functions (v1.18.7)
+    "get_file_tree_config",
+    "get_file_tree_ignore_dirs",
+    "DEFAULT_FILE_TREE_IGNORE_DIRS",
     # Paths functions
     "get_paths_config",
     "get_bin_search_paths",
