@@ -3208,6 +3208,34 @@ class PpxaiApp {
     }
 
     /**
+     * Trigger native browser download for a file (v1.18.7).
+     *
+     * Called by both the file-tree download icon (onFileDownload
+     * callback in FileTreeComponent) and the BaseView toolbar
+     * download button (via window.ppxai.onFileDownload). One
+     * implementation, two entry points.
+     *
+     * Uses a hidden <a download> click rather than window.location
+     * so that the URL's Content-Disposition: attachment header
+     * fires the browser's download dialog without navigating away
+     * from the app.
+     *
+     * @param {string} filepath  Working-dir-relative or absolute
+     * @param {string} [cwdAnchor]  cwd at click time for drift detection
+     */
+    onFileDownload(filepath, cwdAnchor = null) {
+        if (!this.apiClient?.downloadFileUrl) return;
+        const url = this.apiClient.downloadFileUrl(filepath, cwdAnchor);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filepath.split('/').pop();
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    }
+
+    /**
      * Display file from display_file event (v1.15.2)
      * Called when AI uses the display_file tool
      */
@@ -3389,6 +3417,7 @@ class PpxaiApp {
                         }
                     },
                     onFileInject: (relPath) => this._injectFileRef(relPath),
+                    onFileDownload: (relPath, cwdAnchor) => this.onFileDownload(relPath, cwdAnchor),
                     onDirCd: (path) => this.commandDispatcher.dispatch(`/cd ${path}`),
                 });
             } else {

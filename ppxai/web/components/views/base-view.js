@@ -105,6 +105,82 @@ class BaseView {
         this._pendingState = null;
         this.setState(state);
     }
+
+    // ── Toolbar template (v1.18.7) ─────────────────────────────────────────────
+    //
+    // Each view renders its own toolbar HTML in mount(). Pre-v1.18.7 every
+    // subclass wrote the `<div class="rpf-view-toolbar">…</div>` literal
+    // inline, which meant adding a shared button (like the download button
+    // for v1.18.7) needed surgery in every view. _renderToolbar() centralises
+    // the shape: subclasses pass the type-specific info text and any extra
+    // buttons; the base class assembles the toolbar with the download button
+    // appended when the view exposes a getPath().
+    //
+    // Convention: the returned HTML carries class `rpf-view-toolbar` (existing
+    // CSS still applies) and the download button has class `bv-download-btn`
+    // so _wireDownloadButton() can attach the click handler:
+    //
+    //     container.innerHTML = this._renderToolbar('Image • 12 KB',
+    //         '<button class="rpf-btn">🔍 Zoom</button>') + viewBody;
+    //     this._wireDownloadButton(container);
+    //
+    // Pass `download: false` to suppress the download button (e.g. for the
+    // terminal view which isn't backed by a downloadable file).
+
+    /**
+     * Render the standard toolbar HTML.
+     * @param {string} infoText     Short label rendered into <span class="rpf-view-info">. Pre-escaped.
+     * @param {string} extras       HTML for view-specific extra buttons (zoom, slide nav, etc.). Pre-escaped.
+     * @param {object} opts
+     * @param {boolean} opts.download  Show the download button. Default: true when getPath() is non-null.
+     * @returns {string} HTML for the toolbar (caller embeds it into container.innerHTML).
+     */
+    _renderToolbar(infoText, extras = '', opts = {}) {
+        const path = this.getPath();
+        const showDownload = opts.download ?? (path != null);
+        const downloadBtn = showDownload
+            ? `<button class="rpf-btn bv-download-btn" title="Download file">⬇ Download</button>`
+            : '';
+        return `<div class="rpf-view-toolbar">`
+            + `<span class="rpf-view-info">${infoText}</span>`
+            + extras
+            + downloadBtn
+            + `</div>`;
+    }
+
+    /**
+     * Wire up the download button rendered by _renderToolbar().
+     *
+     * Caller (subclass mount()) calls this AFTER setting container.innerHTML.
+     * Looks for `.bv-download-btn` inside the container and, on click,
+     * delegates to PpxaiApp.onFileDownload(path, cwdAnchor) — the same
+     * entry point the file-tree download icon uses. Single download
+     * implementation, two call sites.
+     *
+     * @param {HTMLElement} container
+     */
+    _wireDownloadButton(container) {
+        const btn = container?.querySelector?.('.bv-download-btn');
+        if (!btn) return;
+        const path = this.getPath();
+        if (!path) return;
+        btn.addEventListener('click', () => {
+            const anchor = this._cwdAnchor ?? null;
+            if (window.ppxai?.onFileDownload) {
+                window.ppxai.onFileDownload(path, anchor);
+            } else if (window.ppxai?.apiClient?.downloadFileUrl) {
+                // Fallback: direct navigation. Browser-native download dialog.
+                const url = window.ppxai.apiClient.downloadFileUrl(path, anchor);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = path.split('/').pop();
+                a.style.display = 'none';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            }
+        });
+    }
 }
 
 // Browser global export

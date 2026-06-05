@@ -131,17 +131,18 @@ class MarkdownFileView extends BaseView {
         const isSource   = this._mode === 'source';
         const isRendered = this._mode === 'rendered';
 
+        const modeBtns =
+            `<button class="rpf-btn${isRendered ? ' active' : ''} mfv-btn-rendered" title="Rendered view">📖 Rendered</button>`
+            + `<button class="rpf-btn${isSource   ? ' active' : ''} mfv-btn-source"   title="View source">📄 Source</button>`
+            + `<button class="rpf-btn${isEdit     ? ' active' : ''} mfv-btn-edit"     title="Edit source">✏️ Edit</button>`
+            + (isEdit ? '<button class="rpf-btn mfv-btn-save" title="Save (Ctrl+S)">💾 Save</button>' : '')
+            + `<span class="ev-status mfv-status"></span>`;
+
         this._container.innerHTML = `
-            <div class="rpf-view-toolbar">
-                <button class="rpf-btn${isRendered ? ' active' : ''} mfv-btn-rendered" title="Rendered view">📖 Rendered</button>
-                <button class="rpf-btn${isSource   ? ' active' : ''} mfv-btn-source"   title="View source">📄 Source</button>
-                <button class="rpf-btn${isEdit     ? ' active' : ''} mfv-btn-edit"     title="Edit source">✏️ Edit</button>
-                ${isEdit ? '<button class="rpf-btn mfv-btn-save" title="Save (Ctrl+S)">💾 Save</button>' : ''}
-                <span class="rpf-view-info">${_mfvEsc(this._lines + ' lines')}</span>
-                <span class="ev-status mfv-status"></span>
-            </div>
+            ${this._renderToolbar(_mfvEsc(this._lines + ' lines'), modeBtns)}
             <div class="mfv-content"></div>
         `;
+        this._wireDownloadButton(this._container);
 
         this._statusEl = this._container.querySelector('.mfv-status');
         const contentEl = this._container.querySelector('.mfv-content');

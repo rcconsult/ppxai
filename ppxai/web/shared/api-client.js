@@ -371,6 +371,52 @@ class ApiClient {
         return this.post('/files/write', body);
     }
 
+    // === Office preview + download (v1.18.7) ===
+
+    // Office preview metadata + slides go through the GET /files/preview
+    // path-based endpoint added in v1.18.7. The PPTX raster path returns
+    // image/png bytes (we read them as a blob URL for an <img> tag);
+    // LibreOffice-missing fallbacks return JSON. Caller decides which
+    // path to take based on `total=true` metadata + LibreOffice flag.
+
+    async previewFileMetadata(filepath, cwdAnchor = null) {
+        const params = new URLSearchParams({ path: filepath, total: 'true' });
+        if (cwdAnchor) params.set('cwd_anchor', cwdAnchor);
+        params.set('session', this.sessionId);
+        return this.get(`/files/preview?${params.toString()}`);
+    }
+
+    previewFileSlideUrl(filepath, slide, cwdAnchor = null) {
+        // Returns a URL suitable for <img src> / <embed src>. Used when
+        // metadata reports LibreOffice-available (type=pdf|pptx, NOT
+        // text_fallback). Session via query string because browsers don't
+        // send custom headers on <img>/<embed>.
+        const params = new URLSearchParams({ path: filepath, slide: String(slide) });
+        if (cwdAnchor) params.set('cwd_anchor', cwdAnchor);
+        params.set('session', this.sessionId);
+        return `${this.serverUrl}/files/preview?${params.toString()}`;
+    }
+
+    async previewFileSlideJson(filepath, slide, cwdAnchor = null) {
+        // For text_fallback responses — we need to read the JSON body
+        // (which carries `content` markdown). Caller uses metadata
+        // first to know which method to call.
+        const params = new URLSearchParams({ path: filepath, slide: String(slide) });
+        if (cwdAnchor) params.set('cwd_anchor', cwdAnchor);
+        params.set('session', this.sessionId);
+        return this.get(`/files/preview?${params.toString()}`);
+    }
+
+    downloadFileUrl(filepath, cwdAnchor = null) {
+        // Returns the URL the browser navigates to (or that we click
+        // via a hidden <a download>) to trigger the native download
+        // dialog. Server sets Content-Disposition: attachment.
+        const params = new URLSearchParams({ path: filepath });
+        if (cwdAnchor) params.set('cwd_anchor', cwdAnchor);
+        params.set('session', this.sessionId);
+        return `${this.serverUrl}/files/download?${params.toString()}`;
+    }
+
     // === Commands ===
 
     async executeCommand(name, args = '') {

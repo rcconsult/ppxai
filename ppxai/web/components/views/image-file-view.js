@@ -49,17 +49,19 @@ class ImageFileView extends BaseView {
 
             const dataUrl = `data:${data.mime_type};base64,${data.content}`;
 
+            const toolbar = this._renderToolbar(
+                `Image • ${_ifvEsc(sizeStr)}`,
+                `<button class="rpf-btn ifv-zoom-btn" title="Toggle zoom">🔍 Zoom</button>`
+            );
             container.innerHTML = `
-                <div class="rpf-view-toolbar">
-                    <span class="rpf-view-info">Image • ${_ifvEsc(sizeStr)}</span>
-                    <button class="rpf-btn ifv-zoom-btn" title="Toggle zoom">🔍 Zoom</button>
-                </div>
+                ${toolbar}
                 <div class="ifv-img-wrapper">
                     <img class="ifv-img" src="${_ifvEsc(dataUrl)}"
                          alt="${_ifvEsc(this.getTitle())}"
                          title="Click to toggle zoom">
                 </div>
             `;
+            this._wireDownloadButton(container);
 
             const img = container.querySelector('.ifv-img');
             const zoomBtn = container.querySelector('.ifv-zoom-btn');

@@ -231,6 +231,15 @@ class CodeEditorView extends BaseView {
         const isEdit  = this._mode === 'edit';
         const lineInfo = this._isNew ? 'new file' : `${this._lines ?? 0} lines`;
 
+        // v1.18.7: download button shown only in view mode. In edit
+        // mode the user has potentially-unsaved changes; downloading
+        // the on-disk file would surprise them with stale content.
+        // Skipping it for new files (no on-disk file to download).
+        const showDownload = !isEdit && !this._isNew && this.getPath() != null;
+        const downloadBtn = showDownload
+            ? `<button class="rpf-btn bv-download-btn" title="Download file">⬇ Download</button>`
+            : '';
+
         this._container.innerHTML = `
             <div class="rpf-editor-toolbar">
                 <button class="rpf-btn cev-mode-btn" title="${isEdit ? 'Switch to view mode' : 'Switch to edit mode'}">
@@ -242,10 +251,15 @@ class CodeEditorView extends BaseView {
                     ${_cevSyntaxOptions(this._currentLang)}
                 </select>` : ''}
                 <span class="rpf-view-info">${_cevEsc(lineInfo)}</span>
+                ${downloadBtn}
                 <span class="cev-status"></span>
             </div>
             <div class="cev-codemirror" style="flex:1;overflow:auto;"></div>
         `;
+        // Hooks into BaseView._wireDownloadButton — same dispatch as
+        // every other view, so the download path is identical (PpxaiApp
+        // .onFileDownload).
+        if (showDownload) this._wireDownloadButton(this._container);
 
         this._statusEl  = this._container.querySelector('.cev-status');
         this._modeBtn   = this._container.querySelector('.cev-mode-btn');

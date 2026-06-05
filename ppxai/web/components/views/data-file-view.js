@@ -141,17 +141,18 @@ class DataFileView extends BaseView {
             ? `${(this._size / 1024 / 1024).toFixed(2)} MB`
             : `${(this._size / 1024).toFixed(1)} KB`;
 
+        const modeBtns =
+            `<button class="rpf-btn${isRendered ? ' active' : ''} dfv-btn-rendered">${_dfvEsc(renderLabel)}</button>`
+            + `<button class="rpf-btn${isSource   ? ' active' : ''} dfv-btn-source">📄 Source</button>`
+            + `<button class="rpf-btn${isEdit     ? ' active' : ''} dfv-btn-edit">✏️ Edit</button>`
+            + (isEdit ? '<button class="rpf-btn dfv-btn-save" title="Save (Ctrl+S)">💾 Save</button>' : '')
+            + `<span class="ev-status dfv-status"></span>`;
+
         this._container.innerHTML = `
-            <div class="rpf-view-toolbar">
-                <button class="rpf-btn${isRendered ? ' active' : ''} dfv-btn-rendered">${_dfvEsc(renderLabel)}</button>
-                <button class="rpf-btn${isSource   ? ' active' : ''} dfv-btn-source">📄 Source</button>
-                <button class="rpf-btn${isEdit     ? ' active' : ''} dfv-btn-edit">✏️ Edit</button>
-                ${isEdit ? '<button class="rpf-btn dfv-btn-save" title="Save (Ctrl+S)">💾 Save</button>' : ''}
-                <span class="rpf-view-info">${_dfvEsc(this._lines + ' lines • ' + sizeStr)}</span>
-                <span class="ev-status dfv-status"></span>
-            </div>
+            ${this._renderToolbar(_dfvEsc(this._lines + ' lines • ' + sizeStr), modeBtns)}
             <div class="dfv-content"></div>
         `;
+        this._wireDownloadButton(this._container);
 
         this._statusEl = this._container.querySelector('.dfv-status');
         const contentEl = this._container.querySelector('.dfv-content');

@@ -48,15 +48,14 @@ class PdfFileView extends BaseView {
             const dataUrl = `data:application/pdf;base64,${data.content}`;
 
             container.innerHTML = `
-                <div class="rpf-view-toolbar">
-                    <span class="rpf-view-info">PDF • ${_pfvEsc(sizeStr)}</span>
-                </div>
+                ${this._renderToolbar(`PDF • ${_pfvEsc(sizeStr)}`)}
                 <div class="pfv-embed-wrapper">
                     <embed src="${_pfvEsc(dataUrl)}"
                            type="application/pdf"
                            style="width:100%;height:100%;border:none;">
                 </div>
             `;
+            this._wireDownloadButton(container);
         } catch (err) {
             // v1.18.1 Phase D: 409 = stale cwd_anchor. Recover by
             // applying the drained events; user can click again.

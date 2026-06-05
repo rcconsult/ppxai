@@ -37,6 +37,7 @@ class FileTreeComponent {
      * @param {Function} options.onFileClick - (relPath, cwdAnchor) → preview file (single-click)
      * @param {Function} options.onFileEdit  - (relPath, cwdAnchor) → open editor (double-click)
      * @param {Function} options.onFileInject - (relPath) → inject @file ref (right-click)
+     * @param {Function} options.onFileDownload - (relPath, cwdAnchor) → download file (download icon click) [v1.18.7]
      * @param {Function} options.onDirCd     - (path) → cd into directory
      *
      *   `cwdAnchor` (v1.18.1 Phase D) is the working_dir the most
@@ -53,6 +54,7 @@ class FileTreeComponent {
         this.onFileClick = options.onFileClick || (() => {});
         this.onFileEdit = options.onFileEdit || (() => {});
         this.onFileInject = options.onFileInject || (() => {});
+        this.onFileDownload = options.onFileDownload || (() => {});  // v1.18.7
         this.onDirCd = options.onDirCd || (() => {});
         this._clickTimer = null;
 
@@ -236,6 +238,10 @@ class FileTreeComponent {
             return html;
         } else {
             const icon = _ftFileIcon(name);
+            // v1.18.7: inline download icon. data-action="download" lets the
+            // click handler distinguish it from the row click (preview). The
+            // icon stays hidden until row-hover via CSS (.ft-download-btn
+            // opacity 0 → 1 on .ft-node:hover) so the tree stays uncluttered.
             return `
                 <div class="ft-node ft-file"
                      data-path="${_ftEscHtml(entryRelPath)}"
@@ -244,6 +250,9 @@ class FileTreeComponent {
                      title="${_ftEscHtml(entryRelPath)}">
                     <span class="ft-icon">${icon}</span>
                     <span class="ft-name">${_ftEscHtml(name)}</span>
+                    <button class="ft-download-btn"
+                            data-action="download"
+                            title="Download file">⬇</button>
                 </div>`;
         }
     }
@@ -262,6 +271,17 @@ class FileTreeComponent {
             const anchor = this.workingDirAtLoad;
 
             node.addEventListener('click', (e) => {
+                // v1.18.7: download-icon clicks short-circuit before
+                // any of the row dispatch logic, so the preview never
+                // fires alongside the download.
+                if (e.target && e.target.dataset && e.target.dataset.action === 'download') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    clearTimeout(this._clickTimer);
+                    if (!isDir) this.onFileDownload(path, anchor);
+                    return;
+                }
+
                 e.preventDefault();
                 e.stopPropagation();
                 if (isParent) {
