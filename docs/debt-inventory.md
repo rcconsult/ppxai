@@ -263,6 +263,50 @@ adds a new modality (audio/video) — same pattern likely lurks for those too.
 **Surfaced by:** coder.trad.int dogfooding 2026-06-08, drawio.png attach to
 the vllm-qwen35 provider.
 
+> **Update 2026-06-08 (same day):** the user pushed back that they're sure
+> they tested these 27B models and they support VL. Cross-repo search found
+> two artifacts that prove the user was right and reframe this item:
+>
+> 1. `/home/itadmin/ai/git/trad-ai-chat/scripts/test-vl-capabilities.sh`
+>    (commit `916772c`, 2026-04-23) — 9-test VL probe (Test 0 image accept,
+>    Test 1 OCR, Test 2 tables, Test 3 charts). Baseline run against
+>    `https://codeai.trad.int/qwen35/v1` model `Qwen/Qwen3.5-27B-FP8`
+>    scored **8/9 PASS**. The one fail (Test 2b) was arithmetic-over-OCR'd-data
+>    reasoning — NOT vision.
+> 2. `/home/itadmin/ai/git/trad-ai-chat/doc/research/qwen35-vs-qwen36-27b-comparison.md`
+>    (2026-04-30) — confirms Qwen3.6-27B-FP8 has an **explicit vision
+>    encoder** added in the architecture ("Text + image + video"); Qwen3.5
+>    is labeled "Text-only" on the HF card but empirically handles
+>    `image_url` content through vLLM. Comparison doc recommends the
+>    `test-vl-capabilities.sh` script as Gate A for the Qwen3-VL
+>    decommission (CR-v4.0.0 Part 2 Phase 6).
+>
+> **Reframed root cause:** ppxai's `model_profiles.py` has no entry for
+> `Qwen/Qwen3.5-27B-FP8` or `Qwen/Qwen3.6-27B-FP8` (`supports_vision()`
+> falls through to default `False`). The HF card "Text-only" label on 3.5
+> is wrong for the model's behavior through vLLM, and 3.6's vision encoder
+> is real. **The detection is wrong; the model would have shown the diagram
+> correctly if ppxai had sent the `image_url` block.**
+>
+> **Revised fix path (priority bump — Item 24 jumps above 21–23):**
+>
+> 1. Add `model_profiles.py` entries with `supports_vision=True` for both
+>    `Qwen/Qwen3.5-27B-FP8` and `Qwen/Qwen3.6-27B-FP8` (or a glob
+>    `Qwen/Qwen3.[56]-27B-FP8`). Sentinel test in
+>    `test_model_profiles.py`. **5-minute change.**
+> 2. Re-run `test-vl-capabilities.sh` against the coder cluster's actual
+>    endpoints to confirm both models still pass 8/9+; capture the run as a
+>    memory snapshot. **30 min.**
+> 3. The original sidecar-fallback diagnose (the "fallback wired but
+>    doesn't run" class) is now SECONDARY but still real — it would fire
+>    for genuinely text-only providers (e.g. `openai/gpt-5-nano`). Keep
+>    the half-day estimate for that part as a separate concern.
+>
+> See [[reference-qwen-27b-vl-empirical]] (memory) +
+> `docs/lessons/qwen-27b-vl-empirically-supported.md` (in-repo lesson, this
+> commit) for the cross-host evidence trail so the next session doesn't
+> have to re-derive.
+
 ---
 
 ## Recently moved out of debt scope
