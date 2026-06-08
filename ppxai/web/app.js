@@ -3128,6 +3128,92 @@ class PpxaiApp {
     }
 
     /**
+     * Upload one or more files from the user's local PC into the
+     * workspace (v1.18.7).
+     *
+     * The complement to multi-modal attach: attach stages files into
+     * conversation context; upload writes them to disk under
+     * working_dir/<destRelPath>/<file.name> so the agent can later
+     * read_file / edit_file / list_directory against them like any
+     * other workspace content.
+     *
+     * Closes the design gap that surfaced once coder.trad.int went
+     * live — pods spawn with empty /workspace and not every user is
+     * comfortable cloning a repo from the terminal. The same UI ships
+     * to ppxai-desktop too (where filesystem access is direct, so the
+     * affordance is convenient but not strictly necessary).
+     *
+     * Conflict policy: ask the user on the first conflict; if they
+     * confirm overwrite, apply it to the rest of the batch silently
+     * (so a 30-file upload doesn't ask 30 times). Server returns 409
+     * without overwrite=true.
+     *
+     * @param {string} destRelPath  Destination dir relative to working_dir,
+     *                              empty string = working_dir root
+     * @param {File[]} fileList     Browser File objects from drop or picker
+     * @param {string} [cwdAnchor]  cwd at click time for 409 drift detection
+     */
+    async onFileUpload(destRelPath, fileList, cwdAnchor = null) {
+        if (!fileList || fileList.length === 0) return;
+        if (!this.apiClient?.uploadFile) {
+            this.showError('Upload not supported by this server build');
+            return;
+        }
+
+        const destLabel = destRelPath || './';
+        let overwriteAll = false;
+        let uploaded = 0;
+        let skipped = 0;
+        const errors = [];
+
+        for (const file of fileList) {
+            try {
+                let resp;
+                try {
+                    resp = await this.apiClient.uploadFile(
+                        destRelPath, file, /*overwrite*/ overwriteAll, cwdAnchor
+                    );
+                } catch (e) {
+                    if (e?.status === 409) {
+                        // Ask once per batch.
+                        const ok = window.confirm(
+                            `"${file.name}" already exists in ${destLabel}.\n\n` +
+                            `Overwrite it (and any other conflicts in this batch)?`
+                        );
+                        if (!ok) { skipped += 1; continue; }
+                        overwriteAll = true;
+                        resp = await this.apiClient.uploadFile(
+                            destRelPath, file, /*overwrite*/ true, cwdAnchor
+                        );
+                    } else if (e?.status === 413) {
+                        errors.push(`${file.name}: too large (>100 MB)`);
+                        continue;
+                    } else {
+                        errors.push(`${file.name}: ${e?.message || 'upload failed'}`);
+                        continue;
+                    }
+                }
+                uploaded += 1;
+            } catch (e) {
+                errors.push(`${file.name}: ${e?.message || 'upload failed'}`);
+            }
+        }
+
+        // Refresh the tree so the user sees what they just uploaded.
+        // (Also refreshes if everything failed — better than leaving a
+        // confused stale view.)
+        if (this._fileTree) { this._fileTree.refresh(); }
+
+        const summary = [];
+        if (uploaded) summary.push(`Uploaded ${uploaded} file(s) to ${destLabel}`);
+        if (skipped) summary.push(`Skipped ${skipped} (conflict, kept existing)`);
+        if (errors.length) summary.push(`Errors: ${errors.join('; ')}`);
+        const msg = summary.join(' • ');
+        if (errors.length) this.showError(msg);
+        else if (msg) this.showSystemMessage(msg);
+    }
+
+    /**
      * Display file from display_file event (v1.15.2)
      * Called when AI uses the display_file tool
      */
@@ -3320,6 +3406,8 @@ class PpxaiApp {
                     },
                     onFileInject: (relPath) => this._injectFileRef(relPath),
                     onFileDownload: (relPath, cwdAnchor) => this.onFileDownload(relPath, cwdAnchor),
+                    onFileUpload: (destRelPath, files, cwdAnchor) =>
+                        this.onFileUpload(destRelPath, files, cwdAnchor),
                     onDirCd: (path) => this.commandDispatcher.dispatch(`/cd ${path}`),
                 });
             } else {

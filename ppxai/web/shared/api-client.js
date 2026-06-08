@@ -417,6 +417,53 @@ class ApiClient {
         return `${this.serverUrl}/files/download?${params.toString()}`;
     }
 
+    /**
+     * Upload a single file to a directory in the workspace (v1.18.7).
+     *
+     * POST multipart/form-data to /files/upload?path=<destRelPath>. The
+     * server writes the file at <destRelPath>/<file.name>. Throws an
+     * Error whose `.status` carries the HTTP code so callers can
+     * branch on 409 (conflict — prompt for overwrite) and 413 (too
+     * large).
+     *
+     * @param {string} destRelPath  Destination directory; empty string = working_dir root
+     * @param {File} file           Browser File object
+     * @param {boolean} overwrite   When true, server replaces existing file at the name
+     * @param {string|null} cwdAnchor  cwd at the time of the click, for 409 drift detection
+     * @returns {Promise<Object>}   {path, name, size, overwrote}
+     */
+    async uploadFile(destRelPath, file, overwrite = false, cwdAnchor = null) {
+        const params = new URLSearchParams({ path: destRelPath || '.' });
+        if (overwrite) params.set('overwrite', 'true');
+        if (cwdAnchor) params.set('cwd_anchor', cwdAnchor);
+        params.set('session', this.sessionId);
+
+        const form = new FormData();
+        form.append('file', file, file.name);
+
+        // We can't use `this.post` here because it always JSON-encodes
+        // the body. Use fetch directly and replicate the session-headers
+        // contract (which lives in `this.headers`).
+        const headers = { ...this.headers };
+        // DON'T set Content-Type — FormData picks its own boundary;
+        // overriding it here breaks multipart parsing on the server.
+        delete headers['Content-Type'];
+
+        const res = await fetch(`${this.serverUrl}/files/upload?${params.toString()}`, {
+            method: 'POST',
+            headers,
+            body: form,
+        });
+        if (!res.ok) {
+            let detail = '';
+            try { const j = await res.json(); detail = j.detail || ''; } catch { /* not JSON */ }
+            const err = new Error(detail || `HTTP ${res.status}`);
+            err.status = res.status;
+            throw err;
+        }
+        return res.json();
+    }
+
     // === Commands ===
 
     async executeCommand(name, args = '') {

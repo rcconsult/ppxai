@@ -8,7 +8,7 @@ import os
 import time
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, Response
 from typing import Optional
 
@@ -136,6 +136,7 @@ def _resolve_safe_path(
     raw: str,
     engine,
     cwd_anchor: Optional[str] = None,
+    allow_directory: bool = False,
 ) -> Path:
     """Resolve user-supplied path to an absolute, access-allowed Path.
 
@@ -234,8 +235,19 @@ def _resolve_safe_path(
             detail=f"File not found: {raw} (resolved: {path})",
         )
 
-    if not path.is_file():
-        raise HTTPException(status_code=400, detail=f"Not a file: {raw}")
+    # v1.18.7: opt-in directory targets for callers like /files/upload
+    # whose destination is a folder, not a file. read/preview/download
+    # still default to is_file() because rendering a directory makes no
+    # sense for them.
+    if allow_directory:
+        if not (path.is_file() or path.is_dir()):
+            raise HTTPException(
+                status_code=400,
+                detail=f"Not a file or directory: {raw}",
+            )
+    else:
+        if not path.is_file():
+            raise HTTPException(status_code=400, detail=f"Not a file: {raw}")
 
     return path
 
@@ -908,3 +920,134 @@ async def download_file(
             "Cache-Control": "private, no-cache",
         },
     )
+
+
+# Per-request upload size cap. Larger than the multi-modal-attach
+# limits because workspace uploads can be entire datasets or project
+# bundles being seeded into an empty /workspace (the coder.trad.int
+# use case where pods start with nothing on disk). 100 MB matches
+# the nginx ingress proxy-body-size on the coder ingress.
+UPLOAD_MAX_BYTES = 100 * 1024 * 1024  # 100 MB
+
+
+@router.post("/files/upload")
+async def upload_file(
+    file: UploadFile = File(..., description="The uploaded file"),
+    path: str = Query(..., description="Destination DIRECTORY (working-dir-relative or absolute)"),
+    overwrite: bool = Query(False, description="Overwrite existing file at the target name"),
+    cwd_anchor: Optional[str] = Query(None, description="Client cwd at click time"),
+    s: Session = Depends(get_session_or_query),
+):
+    """Upload a file from the user's local PC into the workspace.
+
+    v1.18.7. Complements the multi-modal attach path (which stages
+    files into conversation context) — this writes the bytes to disk
+    under ``<path>/<file.filename>`` so the agent can subsequently
+    ``read_file``, ``edit_file``, etc. against them like any
+    workspace file. Closes the gap in k8s deployments (coder.trad.int)
+    where pods start with empty /workspace and users have no
+    other way to populate it (not everyone uses git; many users are
+    not software developers).
+
+    Path conventions mirror ``/files/preview`` and ``/files/download``:
+
+    - relative paths resolve against working_dir
+    - absolute paths must sit inside working_dir tree or home_dir tree
+    - ``_resolve_safe_path`` security check (same 403/404 codes)
+
+    ``path`` is a DIRECTORY. The uploaded file lands at
+    ``<path>/<file.filename>`` where ``<file.filename>`` is sanitized
+    to its basename — no directory components from the upload are
+    honored (so e.g. ``../../etc/passwd`` in the filename can't escape
+    the destination directory).
+
+    Status codes:
+    - 200 OK with ``{"path", "name", "size", "overwrote"}`` on success
+    - 400 if ``path`` is not a directory, or filename is empty / invalid
+    - 403 if the destination would land outside allowed paths
+    - 404 if ``path`` doesn't exist
+    - 409 if destination exists and ``overwrite=false``
+    - 413 if upload exceeds ``UPLOAD_MAX_BYTES`` (100 MB)
+    - 500 on OSError during write
+    """
+    logger.info(
+        f"HTTP POST /files/upload - path: {path} filename: {file.filename!r}"
+    )
+
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="Missing filename in upload")
+
+    # Sanitize to basename only — drop any directory components that
+    # might have been smuggled in via the filename field. Forbid the
+    # special "." / ".." names so a malicious upload can't replace the
+    # destination directory itself.
+    safe_name = Path(file.filename).name
+    if not safe_name or safe_name in (".", ".."):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid filename {file.filename!r}",
+        )
+
+    # Resolve destination dir with the same security check the rest of
+    # /files/* uses. allow_directory=True opts into directory targets
+    # (read/preview/download keep their file-only default).
+    resolved_dir = _resolve_safe_path(path, s.engine, cwd_anchor, allow_directory=True)
+    if not resolved_dir.is_dir():
+        raise HTTPException(
+            status_code=400,
+            detail=f"Upload destination is not a directory: {path!r}",
+        )
+
+    dest = resolved_dir / safe_name
+    # The parent was security-checked by _resolve_safe_path. Path.name
+    # can't contain separators or `..`, so the join can't escape — the
+    # extra `is_path_allowed` defense was wrong-shaped (its signature
+    # is (target, base) not (target, engine)) and redundant anyway.
+
+    existed = dest.exists()
+    if existed and not overwrite:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"File exists: {safe_name!r}. "
+                f"Re-send with overwrite=true to replace."
+            ),
+        )
+
+    # Stream to disk with running size cap. Reading in 1 MB chunks
+    # bounds peak memory regardless of upload size, and the early
+    # abort + unlink on overflow keeps a partial file from lingering.
+    total = 0
+    CHUNK = 1024 * 1024
+    try:
+        with open(dest, "wb") as f_out:
+            while True:
+                chunk = await file.read(CHUNK)
+                if not chunk:
+                    break
+                total += len(chunk)
+                if total > UPLOAD_MAX_BYTES:
+                    # Truncate + remove the partial file before raising.
+                    f_out.close()
+                    dest.unlink(missing_ok=True)
+                    raise HTTPException(
+                        status_code=413,
+                        detail=(
+                            f"Upload exceeds limit "
+                            f"({UPLOAD_MAX_BYTES // (1024 * 1024)} MB). "
+                            f"Sent {total} bytes."
+                        ),
+                    )
+                f_out.write(chunk)
+    except HTTPException:
+        raise
+    except OSError as exc:
+        dest.unlink(missing_ok=True)
+        raise HTTPException(status_code=500, detail=f"Cannot write file: {exc}")
+
+    return {
+        "path": str(dest),
+        "name": safe_name,
+        "size": total,
+        "overwrote": existed,
+    }

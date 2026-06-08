@@ -53,7 +53,8 @@
     color: var(--text-secondary);
 }
 
-.ft-refresh-btn {
+.ft-refresh-btn,
+.ft-upload-btn {
     background: none;
     border: none;
     cursor: pointer;
@@ -65,9 +66,27 @@
     transition: color 0.15s, background 0.15s;
 }
 
-.ft-refresh-btn:hover {
+.ft-refresh-btn:hover,
+.ft-upload-btn:hover {
     color: var(--text-primary);
     background: var(--bg-hover);
+}
+
+/* v1.18.7: drag-over feedback for file uploads.
+ *   .ft-drag-over   — container background while a file is being dragged
+ *                     anywhere over the sidebar (drop lands at working_dir).
+ *   .ft-drag-target — specific directory row about to receive the drop
+ *                     (drop lands INTO that directory).
+ */
+.ft-body.ft-drag-over {
+    outline: 2px dashed var(--accent, #818cf8);
+    outline-offset: -2px;
+    background: color-mix(in srgb, var(--accent, #818cf8) 10%, transparent);
+}
+
+.ft-node.ft-drag-target {
+    background: color-mix(in srgb, var(--accent, #818cf8) 20%, transparent);
+    outline: 1px solid var(--accent, #818cf8);
 }
 
 /* Scrollable tree body */

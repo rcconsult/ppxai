@@ -38,6 +38,7 @@ class FileTreeComponent {
      * @param {Function} options.onFileEdit  - (relPath, cwdAnchor) → open editor (double-click)
      * @param {Function} options.onFileInject - (relPath) → inject @file ref (right-click)
      * @param {Function} options.onFileDownload - (relPath, cwdAnchor) → download file (download icon click) [v1.18.7]
+     * @param {Function} options.onFileUpload   - (destRelPath, fileList, cwdAnchor) → upload files INTO that directory [v1.18.7]
      * @param {Function} options.onDirCd     - (path) → cd into directory
      *
      *   `cwdAnchor` (v1.18.1 Phase D) is the working_dir the most
@@ -55,6 +56,7 @@ class FileTreeComponent {
         this.onFileEdit = options.onFileEdit || (() => {});
         this.onFileInject = options.onFileInject || (() => {});
         this.onFileDownload = options.onFileDownload || (() => {});  // v1.18.7
+        this.onFileUpload = options.onFileUpload || (() => {});      // v1.18.7
         this.onDirCd = options.onDirCd || (() => {});
         this._clickTimer = null;
 
@@ -167,15 +169,66 @@ class FileTreeComponent {
     // ── Rendering ────────────────────────────────────────────────────────────
 
     _render() {
+        // v1.18.7: Upload affordances. A header button picks files via the
+        // OS dialog; container-level drag/drop accepts files dropped
+        // anywhere in the sidebar background — both land at working_dir
+        // root. Per-directory drop happens on the row itself (wired in
+        // _attachListeners). Same UI ships to ppxai-desktop and the
+        // coder.trad.int per-user pod — the latter is the use case that
+        // actually motivated this (pods start with empty /workspace, and
+        // not every user is comfortable using git from the terminal).
         this.container.innerHTML = `
             <div class="ft-header">
                 <span class="ft-title">FILES</span>
+                <button class="ft-upload-btn" title="Upload file(s) to current working directory">⬆</button>
                 <button class="ft-refresh-btn" title="Refresh">⟳</button>
             </div>
             <div class="ft-body" id="ftBody"></div>
+            <input type="file" class="ft-upload-input" multiple style="display:none" />
         `;
         this.container.querySelector('.ft-refresh-btn').addEventListener('click', () => this.refresh());
+
+        const uploadBtn = this.container.querySelector('.ft-upload-btn');
+        const uploadInput = this.container.querySelector('.ft-upload-input');
+        uploadBtn.addEventListener('click', () => uploadInput.click());
+        uploadInput.addEventListener('change', (e) => {
+            if (e.target.files && e.target.files.length > 0) {
+                // Empty destRelPath = upload to working_dir root.
+                this.onFileUpload('', Array.from(e.target.files), this.workingDirAtLoad);
+                // Reset so re-selecting the same file fires `change` again.
+                e.target.value = '';
+            }
+        });
+
         this._treeEl = this.container.querySelector('#ftBody');
+
+        // Container-level drag/drop. Lets users drop a file onto the
+        // sidebar background (between rows / below the tree) and have
+        // it upload to working_dir root. Per-row drops bubble up to
+        // here and are short-circuited at the row handler with
+        // stopPropagation so they don't double-fire.
+        this._treeEl.addEventListener('dragover', (e) => {
+            // Only handle if the drag carries files (not text drags within the tree).
+            if (e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files')) {
+                e.preventDefault();
+                this._treeEl.classList.add('ft-drag-over');
+            }
+        });
+        this._treeEl.addEventListener('dragleave', (e) => {
+            // Only clear when leaving the container itself, not when
+            // moving between child rows.
+            if (e.target === this._treeEl) {
+                this._treeEl.classList.remove('ft-drag-over');
+            }
+        });
+        this._treeEl.addEventListener('drop', (e) => {
+            e.preventDefault();
+            this._treeEl.classList.remove('ft-drag-over');
+            const files = e.dataTransfer && e.dataTransfer.files;
+            if (files && files.length > 0) {
+                this.onFileUpload('', Array.from(files), this.workingDirAtLoad);
+            }
+        });
     }
 
     _renderTree() {
@@ -309,6 +362,37 @@ class FileTreeComponent {
                     this.onFileEdit(path, anchor);
                 }
             });
+
+            // v1.18.7: per-directory drop target. Dropping files on a
+            // directory row uploads them INTO that directory. The
+            // dragover handler highlights the row so users see where
+            // their drop will land. Parent ("..") doesn't accept drops
+            // because the relative-path semantics get confusing.
+            if (isDir && !isParent) {
+                node.addEventListener('dragover', (e) => {
+                    if (e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files')) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        node.classList.add('ft-drag-target');
+                    }
+                });
+                node.addEventListener('dragleave', (e) => {
+                    // Use relatedTarget to avoid flicker as cursor crosses
+                    // child spans inside the row.
+                    if (!node.contains(e.relatedTarget)) {
+                        node.classList.remove('ft-drag-target');
+                    }
+                });
+                node.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    node.classList.remove('ft-drag-target');
+                    const files = e.dataTransfer && e.dataTransfer.files;
+                    if (files && files.length > 0) {
+                        this.onFileUpload(path, Array.from(files), anchor);
+                    }
+                });
+            }
 
             node.addEventListener('contextmenu', (e) => {
                 e.preventDefault();
