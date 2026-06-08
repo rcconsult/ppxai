@@ -199,6 +199,72 @@ extract at that point).
 
 ---
 
+### Item 24 — VL sidecar `auto_caption` fallback silently no-ops on non-vision models
+
+**Affected files:** `ppxai/engine/multimodal_ops.py` (`auto_caption_image` and the
+`get_vision_model_config()` consumers around L575–640), `ppxai/engine/file_preprocessing.py`
+(L235–290, the `supports_vision(model)` routing branch), the chat-attachment path that
+delivers the "It was sent as a text placeholder" warning to the web UI.
+
+**What's wrong:** when the active model is text-only AND `tools.vision_model.auto_caption: true`
+is configured with an enabled, reachable VL sidecar (the documented "Qwen3-VL caption
+gateway" pattern used by the coder cluster — `Qwen/Qwen3-VL-8B-Instruct` at
+`vllm-qwen3-vl-8b-fp8-lmcache-mig.vllm.svc`), the image-attach pipeline is
+**expected** to call the sidecar, get a caption back, and inline it into the user
+message so the text-only model receives describable content. Dogfooded on
+coder.trad.int 2026-06-08 with the Qwen/Qwen3.5-27B-FP8 vllm-qwen35 provider: an
+attached `.drawio.png` network diagram surfaced the `vision_unsupported` warning
+("sent as a text placeholder") and the model then **hallucinated a fully
+fabricated description of "empty 35mm film reels"** — the worst of both worlds.
+Detection was correct (`supports_vision('Qwen/Qwen3.5-27B-FP8') = False`,
+conservative default — no Qwen3.5-base profile entry); the auto-caption fallback
+just never fired. Why is unconfirmed — candidates: sidecar unreachable from this
+namespace, 30s timeout silently swallowed, the drag-drop UI path taking a
+branch that bypasses `multimodal_ops.auto_caption_image`, or `enabled: true`
+but the actual call erroring with no surfaced message.
+
+**Why deferred:** detection logic is correct and the warning fires; the user
+sees "sent as a text placeholder", so the failure isn't silent at the UI layer.
+The downstream model hallucination is a model-quality issue, not a ppxai bug.
+Workaround: switch to a true VL provider (gemini-2.5-flash, gpt-5.5, dgx-cluster
+once the model swap lands), or check the VL sidecar health from the pod and
+attach again. The class of bug — "fallback that's wired but doesn't run" —
+deserves a sentinel; not a release blocker.
+
+**Planned:** `bugfix/v1.18.8` or whichever v1.18.x branch follows. Trigger an
+investigation pass that probes the actual auto_caption code path end-to-end on
+the coder cluster (image attach → does the sidecar receive the POST?), surfaces
+the failure mode in the user warning (currently "sent as a text placeholder" is
+indistinguishable from "tried sidecar and it failed"), and adds an integration
+test that mocks a text-only active model + a reachable VL sidecar and asserts
+the caption is inlined into the message rather than the placeholder.
+
+**Branch when ready:** `bugfix/v1.18.8` (open-items follow-up) or
+`fix/vl-sidecar-fallback` (focused).
+
+**Trigger to revisit:** any second report of "I attached an image and the
+model made up a description" on the coder cluster, OR before the dgx-cluster
+model swap to confirm we're not stacking another fallback gap, OR if anyone
+adds a new modality (audio/video) — same pattern likely lurks for those too.
+
+**Effort:**
+- Diagnose root cause (~1 hour): tail pod debug log on next image attach;
+  grep for `vision_model` / `caption` / `Qwen3-VL`; in-pod `curl` to the
+  sidecar to confirm reachability; check `multimodal_ops.auto_caption_image`
+  for swallowed exceptions.
+- Fix + surface (~half day): if cause is timeout or unreachability, distinguish
+  the warning text ("VL sidecar timed out (30s) — re-attach to retry" vs
+  "sent as text placeholder, active model is not vision-capable"); if cause
+  is a code-path bypass, route the drag-drop path through the same handler
+  as `/attach`.
+- Integration test (~1 hour): mock active=text-only model + mock vision_model
+  endpoint; assert caption inlined into user message.
+
+**Surfaced by:** coder.trad.int dogfooding 2026-06-08, drawio.png attach to
+the vllm-qwen35 provider.
+
+---
+
 ## Recently moved out of debt scope
 
 These items left the debt inventory because they're not bug-fix-class
