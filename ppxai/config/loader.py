@@ -386,6 +386,15 @@ def load_config() -> Dict[str, Any]:
             "bootstrap": json_config.get("bootstrap", {}),
             "visualization": json_config.get("visualization", {}),
             "paths": json_config.get("paths", {}),
+            # v1.18.7 added file_tree.ignore_dirs as user-overridable but
+            # forgot to plumb the key through here. Without this line the
+            # user's override was silently dropped and the hard-coded
+            # DEFAULT_FILE_TREE_IGNORE_DIRS always won. Caught dogfooding
+            # on coder.trad.int: ConfigMap removed venv from ignore_dirs
+            # but pods kept hiding it. The mounted JSON contained the
+            # override; ConfigStore.config['file_tree'] was None because
+            # load_config returned a dict without that key.
+            "file_tree": json_config.get("file_tree", {}),
         }
 
     else:

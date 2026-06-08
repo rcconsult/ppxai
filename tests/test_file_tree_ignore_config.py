@@ -82,6 +82,60 @@ class TestGetFileTreeIgnoreDirs:
             store.config.clear()
             store.config.update(original)
 
+    def test_loader_carries_file_tree_through(self, monkeypatch, tmp_path):
+        # Regression: v1.18.7 shipped the feature but forgot to add
+        # `file_tree` to the explicit allowlist of top-level keys in
+        # load_config() — so users could set the key in their JSON
+        # and the loader would silently drop it on the floor. The
+        # other unit tests in this file all patched store.config in
+        # memory, bypassing the loader entirely, so the bug stayed
+        # hidden until coder.trad.int dogfooding caught it.
+        #
+        # This test runs the loader on a real JSON file with the
+        # override set and asserts the file_tree key survives.
+        import json
+        cfg_path = tmp_path / "ppxai-config.json"
+        cfg_path.write_text(json.dumps({
+            "default_provider": "perplexity",
+            "providers": {
+                "perplexity": {
+                    "name": "Perplexity",
+                    "base_url": "https://api.perplexity.ai",
+                    "api_key_env": "PERPLEXITY_API_KEY",
+                    "models": {"sonar-pro": {"name": "Sonar Pro"}},
+                },
+            },
+            "file_tree": {
+                "ignore_dirs": [".git", "node_modules"],  # NO venv/.venv
+            },
+        }))
+        monkeypatch.setenv("PPXAI_CONFIG_FILE", str(cfg_path))
+
+        from ppxai.config.loader import load_config
+        cfg = load_config()
+        assert "file_tree" in cfg, (
+            "load_config() dropped the file_tree top-level key — see "
+            "the allowlist in ppxai/config/loader.py near 'paths'."
+        )
+        assert cfg["file_tree"] == {"ignore_dirs": [".git", "node_modules"]}
+
+        # And the full chain: ConfigStore.reload() picks it up, and
+        # get_file_tree_ignore_dirs() returns the override (not the
+        # default that has venv in it).
+        from ppxai.config.store import ConfigStore
+        from ppxai.config import get_file_tree_ignore_dirs
+        store = ConfigStore.get_instance()
+        original = dict(store.config)
+        try:
+            store.reload()
+            ignored = get_file_tree_ignore_dirs()
+            assert ignored == {".git", "node_modules"}
+            assert "venv" not in ignored
+            assert ".venv" not in ignored
+        finally:
+            store.config.clear()
+            store.config.update(original)
+
     def test_empty_list_disables_all_ignoring(self, monkeypatch):
         # An explicit empty list means "show everything" — useful for
         # power users who want to see node_modules etc. in the tree.
