@@ -56,6 +56,11 @@ server = [
     "fastapi>=0.104.0",
     "uvicorn[standard]>=0.24.0",
     "sse-starlette>=1.6.0",
+    # v1.18.7: required by /files/upload (FastAPI's UploadFile / Form
+    # raises RuntimeError at import time without this). Was a
+    # transitive dep of fastapi[standard] in local dev but not in the
+    # slim Dockerfile pip install of ".[server,search,data]".
+    "python-multipart>=0.0.6",
 ]
 
 # MCP tool support
