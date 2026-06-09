@@ -432,6 +432,35 @@ BUILTIN_PROFILES: Dict[str, ModelProfile] = {
         max_tokens=4_096,
         tier="A",
     ),
+    # Qwen3.5-27B-FP8 and Qwen3.6-27B-FP8 — empirically VL-capable
+    # through vLLM despite the HuggingFace card calling 3.5 "Text-only".
+    # Confirmed 2026-06-08 via:
+    #   1. Sister-session VL probe `trad-ai-chat/scripts/test-vl-capabilities.sh`
+    #      (commit 916772c, 2026-04-23) → 8/9 PASS on Qwen3.5-27B-FP8.
+    #   2. ai.trad.int (prod blue) OpenWebUI handed Qwen3.5-27B a wrong
+    #      pre-processed image description ("metal gears" for a network
+    #      diagram); model produced a correct detailed description that
+    #      cited exact host/switch IDs only visible in the image —
+    #      impossible without native image_url processing.
+    #   3. In-cluster probe 2026-06-08 against both endpoints:
+    #      256x128 PNG containing "VL TEST 8472" + the prompt
+    #      "What number is in this image?" with
+    #      `chat_template_kwargs={"enable_thinking": False}` and
+    #      max_tokens=1500 → both returned `"8472"` (finish_reason=stop).
+    # Without these entries `supports_vision()` falls through to the
+    # default False and ppxai sends a placeholder for images, the
+    # model hallucinates a fake description (the network-diagram /
+    # studio-light-box reports captured in the radovan pod debug log).
+    # Tier=A is provisional — re-benchmark on the 36-test suite to lock.
+    # See docs/lessons/qwen-27b-vl-empirically-supported.md for the
+    # cross-host evidence trail.
+    "Qwen/Qwen3.[56]-27B-FP8*": ModelProfile(
+        tool_calling=ToolCallingProfile(mode="native"),
+        max_tokens=8_192,
+        max_tool_iterations=20,
+        supports_vision=True,
+        tier="A",
+    ),
     # Qwen3.5-397B-A17B: larger sibling of 122b. Probe failed (endpoint
     # timeout) on 2026-05-01 — provisional Tier B inherited from family
     # quality + size. Re-tier after a successful sweep.

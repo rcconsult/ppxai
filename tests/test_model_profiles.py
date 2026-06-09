@@ -296,6 +296,21 @@ class TestBuiltinProfiles:
         assert profile.tool_calling.mode == "native"
         assert profile.max_tokens == 8_192
 
+    def test_qwen_35_36_27b_fp8_supports_vision(self):
+        """Both Qwen3.5-27B-FP8 and Qwen3.6-27B-FP8 are empirically VL-capable
+        through vLLM. Verified 2026-06-08 by an in-cluster probe (256x128 PNG
+        containing 'VL TEST 8472' + the prompt 'What number is in this image?'
+        with chat_template_kwargs={'enable_thinking': False}, max_tokens=1500)
+        — both endpoints returned the exact string '8472'. Cross-host evidence
+        in docs/lessons/qwen-27b-vl-empirically-supported.md."""
+        for model in ["Qwen/Qwen3.5-27B-FP8", "Qwen/Qwen3.6-27B-FP8"]:
+            profile = get_profile(model)
+            assert profile.supports_vision is True, \
+                f"{model}: empirically VL-capable but supports_vision={profile.supports_vision}"
+            assert profile.tool_calling.mode == "native", \
+                f"{model}: should use native tool calling"
+            assert profile.max_tokens == 8_192
+
     def test_dgx_vllm_qwen3_next_instruct(self):
         """Qwen3-Next-80B Instruct should match its profile."""
         profile = get_profile("Qwen/Qwen3-Next-80B-A3B-Instruct-FP8")
