@@ -275,7 +275,18 @@ def _create_server_pod(username: str, workspace_pvc: str, temp_pvc: str) -> str:
                     ports=[k8s.V1ContainerPort(container_port=54320)],
                     env=[
                         k8s.V1EnvVar(name="PPXAI_WORKING_DIR", value="/workspace"),
-                        k8s.V1EnvVar(name="PPXAI_DATA_DIR", value="/workspace/.ppxai"),
+                        # v1.18.7: HOME=/workspace makes Path.home() / ".ppxai"
+                        # resolve to /workspace/.ppxai, putting sessions / logs /
+                        # usage / debug-log toggle on the workspace PVC. Without
+                        # this, $HOME is /root and everything in ~/.ppxai lives in
+                        # ephemeral container storage — kubelet's first SIGKILL
+                        # (typically a liveness-probe timeout during a long LLM
+                        # stream) wipes the user's chat history mid-session.
+                        # The earlier PPXAI_DATA_DIR env was dead weight: ppxai's
+                        # loader hardcodes Path.home(), and that's the right
+                        # contract to use — we move the goal post via $HOME
+                        # rather than carry a parallel env var.
+                        k8s.V1EnvVar(name="HOME", value="/workspace"),
                         k8s.V1EnvVar(name="PPXAI_USERNAME", value=username),
                     ],
                     env_from=[
@@ -288,9 +299,12 @@ def _create_server_pod(username: str, workspace_pvc: str, temp_pvc: str) -> str:
                     volume_mounts=[
                         k8s.V1VolumeMount(name="workspace", mount_path="/workspace"),
                         k8s.V1VolumeMount(name="temp", mount_path="/tmp/session"),
+                        # v1.18.7: mount lands on the workspace PVC because
+                        # HOME=/workspace, so Path.home() / ".ppxai" =
+                        # /workspace/.ppxai. Survives pod restarts.
                         k8s.V1VolumeMount(
                             name="server-config",
-                            mount_path="/root/.ppxai/ppxai-config.json",
+                            mount_path="/workspace/.ppxai/ppxai-config.json",
                             sub_path="ppxai-config.json",
                         ),
                     ],
@@ -302,8 +316,14 @@ def _create_server_pod(username: str, workspace_pvc: str, temp_pvc: str) -> str:
                         http_get=k8s.V1HTTPGetAction(path="/health", port=54320),
                         initial_delay_seconds=30,
                         period_seconds=60,
-                        timeout_seconds=10,
-                        failure_threshold=5,
+                        # v1.18.7: bumped 10s→30s + threshold 5→10 after a
+                        # MiniMax-M2.7 long-reasoning stall blocked the event
+                        # loop for ~3 minutes and triggered SIGKILL mid-chat,
+                        # wiping the user's session. New budget tolerates up to
+                        # ~10 minutes of intermittent unresponsiveness before
+                        # giving up on a truly dead pod (10 × 60s period).
+                        timeout_seconds=30,
+                        failure_threshold=10,
                     ),
                     readiness_probe=k8s.V1Probe(
                         # TCP probe — succeeds when uvicorn binds the socket.
