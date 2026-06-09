@@ -1639,3 +1639,121 @@ class TestSyntaxValidator:
         ok, lang, err = sv.validate_candidate_content("x.py", "def f():\n    return 1\n")
         assert ok is True  # must fail-open
         assert err is None
+
+
+# === WriteFileTool Tests (v1.18.7) ===
+
+@pytest.mark.asyncio
+async def test_write_file_creates_new(tmp_path, engine_with_consent):
+    """write_file should create a new file when target doesn't exist."""
+    from ppxai.engine.tools.builtin.editor import WriteFileTool
+
+    tool = WriteFileTool(engine_with_consent)
+    target = tmp_path / "subdir" / "new.txt"
+
+    result = await tool.execute(
+        file_path=str(target),
+        content="hello world\nsecond line\n",
+    )
+
+    assert "Successfully created" in result
+    assert target.exists()
+    assert target.read_text(encoding="utf-8") == "hello world\nsecond line\n"
+
+
+@pytest.mark.asyncio
+async def test_write_file_overwrites_existing(tmp_path, engine_with_consent):
+    """write_file with overwrite=True (default) replaces existing content."""
+    from ppxai.engine.tools.builtin.editor import WriteFileTool
+
+    tool = WriteFileTool(engine_with_consent)
+    target = tmp_path / "exists.txt"
+    target.write_text("OLD\n", encoding="utf-8")
+
+    result = await tool.execute(
+        file_path=str(target),
+        content="NEW\n",
+    )
+
+    assert "Successfully overwrote" in result
+    assert target.read_text(encoding="utf-8") == "NEW\n"
+
+
+@pytest.mark.asyncio
+async def test_write_file_refuses_overwrite_when_disabled(tmp_path, engine_with_consent):
+    """write_file with overwrite=False on existing file should error and leave content."""
+    from ppxai.engine.tools.builtin.editor import WriteFileTool
+
+    tool = WriteFileTool(engine_with_consent)
+    target = tmp_path / "exists.txt"
+    target.write_text("OLD\n", encoding="utf-8")
+
+    result = await tool.execute(
+        file_path=str(target),
+        content="NEW\n",
+        overwrite=False,
+    )
+
+    assert "already exists" in result
+    assert target.read_text(encoding="utf-8") == "OLD\n"
+
+
+@pytest.mark.asyncio
+async def test_write_file_consent_denied(tmp_path):
+    """write_file should not touch the file when the user denies consent."""
+    from ppxai.engine.tools.builtin.editor import WriteFileTool
+
+    mock_callback = AsyncMock(return_value=(False, 'n'))
+    engine = EngineClient(consent_callback=mock_callback)
+    tool = WriteFileTool(engine)
+
+    target = tmp_path / "untouched.txt"
+    result = await tool.execute(file_path=str(target), content="X\n")
+
+    assert "User denied permission" in result
+    assert not target.exists()
+
+
+@pytest.mark.asyncio
+async def test_write_file_rejects_invalid_syntax(tmp_path, engine_with_consent):
+    """Pre-write syntax validator catches obviously broken Python and leaves
+    the file untouched (same R13 gate apply_patch uses)."""
+    from ppxai.engine.tools.builtin.editor import WriteFileTool
+
+    tool = WriteFileTool(engine_with_consent)
+    target = tmp_path / "broken.py"
+
+    result = await tool.execute(
+        file_path=str(target),
+        content="def f(:\n    return 1\n",
+    )
+
+    assert ("Syntax" in result) or ("syntax" in result) or ("parse" in result.lower())
+    assert not target.exists()
+
+
+def test_validator_FILE_WRITE_TOOLS_match_registered_builtin_names():
+    """Every name in FILE_WRITE_TOOLS must be a real builtin tool name —
+    otherwise the claim_without_action hint advertises tools the model
+    can't call (the bug captured in radovan's pod log 2026-06-09).
+    Sentinel for the v1.18.7 fix that added WriteFileTool."""
+    from ppxai.engine.tools.validator import ResponseValidator
+    from ppxai.engine.tools.builtin.editor import (
+        ApplyPatchTool, ReplaceBlockTool, InsertTextTool, DeleteLinesTool, WriteFileTool,
+    )
+
+    # Build the set of names the editor module actually registers.
+    fake_engine = MagicMock()
+    registered = {
+        ApplyPatchTool(fake_engine).name,
+        ReplaceBlockTool(fake_engine).name,
+        InsertTextTool(fake_engine).name,
+        DeleteLinesTool(fake_engine).name,
+        WriteFileTool(fake_engine).name,
+    }
+    missing = ResponseValidator.FILE_WRITE_TOOLS - registered
+    assert not missing, (
+        f"FILE_WRITE_TOOLS lists phantom tool name(s) not actually registered: "
+        f"{missing}. The validator's claim_without_action hint will advertise "
+        f"tools the model cannot call."
+    )

@@ -590,6 +590,122 @@ class DeleteLinesTool(BaseTool):
             return f"Error: {str(e)}"
 
 
+class WriteFileTool(BaseTool):
+    """Write content to a file, creating it if it doesn't exist.
+
+    v1.18.7: the validator's claim_without_action hint has been advertising
+    `write_file` since v1.15.x, apply_patch's own error message points models
+    at `write_file tool to overwrite the file directly`, and external models
+    (Anthropic-family tools, OpenAI assistants) call `write_file` from
+    training prior. Until this tool existed those calls all returned
+    `Tool not found`, and the model would either retry the same name in a
+    loop or fall through to `claim_without_action` after pretending it
+    succeeded. This is the simplest write primitive: full-content overwrite,
+    consent-gated, atomic.
+    """
+
+    def __init__(self, engine: ToolEngineProtocol):
+        self.engine = engine
+        self.name = "write_file"
+        self.description = (
+            "Write content to a file (creates if missing, overwrites by default). "
+            "Use this when you have the full new contents — simpler than apply_patch "
+            "for new files or whole-file rewrites. For partial edits to an existing "
+            "file prefer apply_patch / replace_block / insert_text / delete_lines."
+        )
+        self.parameters = {
+            "type": "object",
+            "properties": {
+                "file_path": {
+                    "type": "string",
+                    "description": "Path to file to write (absolute, or relative to working directory)",
+                },
+                "content": {
+                    "type": "string",
+                    "description": "Full file content to write. Will be encoded as UTF-8.",
+                },
+                "overwrite": {
+                    "type": "boolean",
+                    "description": "If false, return an error when the file already exists. Default: true.",
+                    "default": True,
+                },
+            },
+            "required": ["file_path", "content"],
+        }
+
+    async def execute(
+        self,
+        file_path: str,
+        content: str,
+        overwrite: bool = True,
+        **kwargs,
+    ) -> str:
+        try:
+            expanded = os.path.expanduser(file_path)
+            if not os.path.isabs(expanded):
+                working_dir = self.engine.get_working_dir()
+                if working_dir:
+                    path = (Path(working_dir) / expanded).resolve()
+                else:
+                    path = Path(expanded).resolve()
+            else:
+                path = Path(expanded).resolve()
+
+            if not await self.engine.request_file_edit_consent(str(path)):
+                return f"Error: User denied permission to edit {file_path}"
+
+            existed = path.exists()
+            if existed and not path.is_file():
+                return f"Error: Not a file: {file_path}"
+            if existed and not overwrite:
+                return (
+                    f"Error: File already exists: {file_path}. "
+                    f"Set overwrite=true to replace it."
+                )
+
+            # Backup for rollback if overwriting
+            backup_content = None
+            if existed:
+                with open(path, 'r', encoding='utf-8-sig') as f:
+                    backup_content = f.read()
+
+            # Pre-write syntax check — same gate apply_patch uses (R13).
+            # Failure leaves the file untouched; no rollback path needed.
+            ok, language, err = validate_candidate_content(str(path), content)
+            if not ok:
+                return format_validation_error(
+                    file_path, language or "file", err or "parse failed",
+                    tool_name="write_file",
+                )
+
+            path.parent.mkdir(parents=True, exist_ok=True)
+            _register_checkpoint_file(self.engine, path)
+
+            try:
+                temp_path = path.with_suffix(path.suffix + '.tmp')
+                with open(temp_path, 'w', encoding='utf-8') as f:
+                    f.write(content)
+                atomic_replace(temp_path, path)
+            except Exception as e:
+                if backup_content is not None:
+                    with open(path, 'w', encoding='utf-8') as f:
+                        f.write(backup_content)
+                    return f"Error writing file: {str(e)} (file restored)"
+                if path.exists():
+                    path.unlink()
+                return f"Error creating file: {str(e)}"
+
+            self.engine._agent_edited_files.add(str(path))
+
+            line_count = content.count('\n') + (0 if content.endswith('\n') or not content else 1)
+            byte_count = len(content.encode('utf-8'))
+            verb = "overwrote" if existed else "created"
+            return f"✓ Successfully {verb} {path} ({line_count} lines, {byte_count} bytes)"
+
+        except Exception as e:
+            return f"Error: {str(e)}"
+
+
 def _is_new_file_diff(diff_text: str) -> bool:
     """Check if diff represents a new file creation.
 
@@ -937,3 +1053,4 @@ def register_tools(manager: ToolManagerProtocol, engine: ToolEngineProtocol):
     manager.register_tool(ReplaceBlockTool(engine))
     manager.register_tool(InsertTextTool(engine))
     manager.register_tool(DeleteLinesTool(engine))
+    manager.register_tool(WriteFileTool(engine))
