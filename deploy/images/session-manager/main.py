@@ -272,6 +272,28 @@ def _create_server_pod(username: str, workspace_pvc: str, temp_pvc: str) -> str:
                     image=SERVER_IMAGE,
                     image_pull_policy="Always",
                     working_dir="/workspace",
+                    # v1.18.7: HOME=/workspace makes Path.home()/.ppxai
+                    # resolve to the workspace PVC for user state
+                    # (sessions, logs, usage). The image bundles
+                    # ~/.ppxai/web/ + ~/.ppxai/AGENTS.md at /root/.ppxai/
+                    # because BUILDER's HOME was /root — those are
+                    # image-versioned static assets, not user state.
+                    # We symlink them in on every container start so
+                    # the server (which looks at Path.home()/.ppxai/web)
+                    # finds them. Symlinks regenerate on each start, so
+                    # an image upgrade transparently delivers a new web
+                    # UI without touching the PVC. The symlink is
+                    # idempotent: ln -sfn replaces an existing symlink
+                    # but won't clobber a real directory if a user ever
+                    # creates one at that path.
+                    command=["bash", "-c"],
+                    args=[
+                        "set -e; "
+                        "mkdir -p /workspace/.ppxai; "
+                        "ln -sfn /root/.ppxai/web /workspace/.ppxai/web; "
+                        "ln -sfn /root/.ppxai/AGENTS.md /workspace/.ppxai/AGENTS.md; "
+                        "exec python -m ppxai.server.http --host 0.0.0.0 --port 54320"
+                    ],
                     ports=[k8s.V1ContainerPort(container_port=54320)],
                     env=[
                         k8s.V1EnvVar(name="PPXAI_WORKING_DIR", value="/workspace"),
