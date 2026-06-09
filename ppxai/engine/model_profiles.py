@@ -427,10 +427,56 @@ BUILTIN_PROFILES: Dict[str, ModelProfile] = {
     # Qwen3.5-122B-A10B: NIM Tier A benchmark winner (77.4%), best
     # all-around NVIDIA model on the 36-test suite. NVIDIA-portal
     # recommends temp=0.2, top_p=0.9 (matches our default).
+    #
+    # 2026-06-09: dgx-cluster deployment swapped from this model to
+    # MiniMax-M2.7-NVFP4. Entry kept so the profile resolves for any
+    # NIM/OpenRouter/external surface that still serves it, but it
+    # is no longer the active in-cluster default.
     "*/qwen3.5-122b*": ModelProfile(
         tool_calling=ToolCallingProfile(mode="native"),
         max_tokens=4_096,
         tier="A",
+    ),
+    # MiniMax-M2.7 NVFP4 (lukealonso): the current dgx-cluster MoE
+    # deployment as of 2026-06-09 — 230B total / 10B active, 256
+    # experts (8 active/token), pure-Transformer MoE (NO Mamba),
+    # 196,608 max_model_len. Served by vLLM with
+    # --tool-call-parser minimax_m2 + --reasoning-parser
+    # minimax_m2_append_think. Model id on the wire is lowercase
+    # `minimax-m2.7` (with a dot) — vllm rejects any other casing.
+    #
+    # Calling profile verified 2026-06-09:
+    #   * Text round-trip works on the standard OpenAI-compat shape;
+    #     no special headers / template-kwargs needed.
+    #   * NO vision: vLLM returns HTTP 400 + the explicit message
+    #     "minimax-m2.7 is not a multimodal model" if an image_url
+    #     content block is sent. supports_vision is therefore False.
+    #   * Reasoning is emitted INLINE in `content` wrapped in
+    #     <think>...</think> tags rather than the `reasoning_content`
+    #     channel — append_think parser keeps them inline. ppxai's
+    #     openai_compat provider already strips these
+    #     (openai_compat.py:419-423) so the user-facing answer is
+    #     clean; supports_reasoning=True still signals the model has
+    #     a reasoning chain to the rest of the engine.
+    #   * Provider config carries fallback_on_empty=True +
+    #     strip_json_from_text=True for tool calling; mirrored here
+    #     so the profile drives the same behavior whether the
+    #     provider config or the registry is the source of truth.
+    #
+    # Tier B is provisional — no benchmark yet on the M2.7 deployment.
+    # Re-tier after a 36-test run. parallel_tool_calls left False
+    # until probed (the minimax_m2 parser's behavior with parallel
+    # calls hasn't been tested).
+    "minimax-m2.7": ModelProfile(
+        tool_calling=ToolCallingProfile(
+            mode="native",
+            fallback_on_empty=True,
+            strip_json_from_text=True,
+        ),
+        max_tokens=32_768,
+        max_tool_iterations=20,
+        supports_reasoning=True,
+        tier="B",
     ),
     # Qwen3.5-27B-FP8 and Qwen3.6-27B-FP8 — empirically VL-capable
     # through vLLM despite the HuggingFace card calling 3.5 "Text-only".

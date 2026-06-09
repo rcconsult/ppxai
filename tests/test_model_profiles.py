@@ -311,6 +311,24 @@ class TestBuiltinProfiles:
                 f"{model}: should use native tool calling"
             assert profile.max_tokens == 8_192
 
+    def test_minimax_m27_profile_2026_06_09_dgx_cluster_swap(self):
+        """MiniMax-M2.7 (dgx-cluster MoE, 230B/10B-active) profile.
+        Verified 2026-06-09 against https://dgx-cluster.trad.int/vllm/v1:
+        text round-trip OK on OpenAI-compat shape; image_url is REJECTED
+        by vllm with HTTP 400 'minimax-m2.7 is not a multimodal model';
+        reasoning emitted inline as <think>...</think> in content
+        (ppxai's openai_compat provider strips these at lines 419-423)."""
+        profile = get_profile("minimax-m2.7")
+        assert profile.tool_calling.mode == "native"
+        assert profile.tool_calling.fallback_on_empty is True, \
+            "Provider config sets fallback_on_empty=True; profile must mirror"
+        assert profile.tool_calling.strip_json_from_text is True
+        assert profile.supports_vision is False, \
+            "vLLM serves MiniMax-M2.7 without a vision encoder — must be False"
+        assert profile.supports_reasoning is True
+        assert profile.max_tokens == 32_768
+        assert profile.max_tool_iterations == 20
+
     def test_qwen_36_35b_a3b_fp8_supports_vision(self):
         """Qwen3.6-35B-A3B-FP8 (DGX Spark MoE) is empirically VL-capable.
         Verified 2026-06-09 against http://gx10-93a7.trad.int:8000/v1 with the
