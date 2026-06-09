@@ -311,6 +311,22 @@ class TestBuiltinProfiles:
                 f"{model}: should use native tool calling"
             assert profile.max_tokens == 8_192
 
+    def test_qwen_36_35b_a3b_fp8_supports_vision(self):
+        """Qwen3.6-35B-A3B-FP8 (DGX Spark MoE) is empirically VL-capable.
+        Verified 2026-06-09 against http://gx10-93a7.trad.int:8000/v1 with the
+        same probe used for the 27B variants. Behaves cleaner than 27B: even
+        without chat_template_kwargs.enable_thinking=False, the default call
+        emits content directly. Tier S — 83.2% on the 36-test in-cluster
+        suite (Qwen3-Coder-30B sibling at 81.25%)."""
+        profile = get_profile("Qwen/Qwen3.6-35B-A3B-FP8")
+        assert profile.supports_vision is True, \
+            f"Qwen3.6-35B-A3B-FP8: empirically VL-capable but supports_vision={profile.supports_vision}"
+        assert profile.tool_calling.mode == "native"
+        assert profile.tool_calling.parallel_tool_calls is True, \
+            "Qwen3.6-35B-A3B-FP8 is MoE — should match Qwen3-Coder-30B parallel pattern"
+        assert profile.tier == "S"
+        assert profile.max_tokens == 8_192
+
     def test_dgx_vllm_qwen3_next_instruct(self):
         """Qwen3-Next-80B Instruct should match its profile."""
         profile = get_profile("Qwen/Qwen3-Next-80B-A3B-Instruct-FP8")

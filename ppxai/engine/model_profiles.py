@@ -461,6 +461,30 @@ BUILTIN_PROFILES: Dict[str, ModelProfile] = {
         supports_vision=True,
         tier="A",
     ),
+    # Qwen3.6-35B-A3B-FP8 (DGX Spark, MoE 35B/3B-active): the in-cluster
+    # benchmark high-water mark — 83.2% on the 36-test agents-md=without
+    # suite (628s), beating Qwen3-Coder-30B (81.25%, also tier S). Same
+    # MoE family + native-tool-calling pattern as Qwen3-Coder-30B, so
+    # inherits parallel_tool_calls=True + max_tool_iterations=20.
+    #
+    # Empirically VL-capable, verified 2026-06-09 against
+    # http://gx10-93a7.trad.int:8000/v1: 256x128 PNG containing
+    # 'VL TEST 8472' + the prompt "What number is in this image?"
+    # returned '8472' with finish_reason=stop in BOTH default settings
+    # (91 completion tokens) AND chat_template_kwargs.enable_thinking=False
+    # (5 completion tokens) — meaning unlike the 27B variants this MoE
+    # does NOT burn the token budget on a long reasoning chain by default,
+    # so the no-explicit-flag call path also works.
+    "Qwen/Qwen3.6-35B-A3B-FP8*": ModelProfile(
+        tool_calling=ToolCallingProfile(
+            mode="native",
+            parallel_tool_calls=True,
+        ),
+        max_tokens=8_192,
+        max_tool_iterations=20,
+        supports_vision=True,
+        tier="S",
+    ),
     # Qwen3.5-397B-A17B: larger sibling of 122b. Probe failed (endpoint
     # timeout) on 2026-05-01 — provisional Tier B inherited from family
     # quality + size. Re-tier after a successful sweep.
