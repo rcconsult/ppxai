@@ -66,6 +66,14 @@
     transition: color 0.15s, background 0.15s;
 }
 
+/* v1.18.7: explicit Upload label sits next to the ⬆ glyph; tighten letter
+ * spacing so it doesn't compete with the FILES title in the header. */
+.ft-upload-btn {
+    font-size: 12px;
+    padding: 2px 6px;
+    letter-spacing: 0.02em;
+}
+
 .ft-refresh-btn:hover,
 .ft-upload-btn:hover {
     color: var(--text-primary);

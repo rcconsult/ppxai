@@ -180,7 +180,7 @@ class FileTreeComponent {
         this.container.innerHTML = `
             <div class="ft-header">
                 <span class="ft-title">FILES</span>
-                <button class="ft-upload-btn" title="Upload file(s) to current working directory">⬆</button>
+                <button class="ft-upload-btn" title="Upload file(s) to current working directory">⬆ Upload</button>
                 <button class="ft-refresh-btn" title="Refresh">⟳</button>
             </div>
             <div class="ft-body" id="ftBody"></div>
