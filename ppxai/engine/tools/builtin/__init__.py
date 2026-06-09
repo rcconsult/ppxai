@@ -4,10 +4,13 @@ Built-in tools for the ppxai engine.
 These tools are registered automatically when the engine starts.
 """
 
+import logging
 from typing import Optional
 
 from . import filesystem, calculator, datetime_tool, preview_log, web
 from ...types import ToolEngineProtocol, ToolManagerProtocol
+
+logger = logging.getLogger(__name__)
 
 
 def register_all_builtin_tools(manager: ToolManagerProtocol, provider: str = None, engine: Optional[ToolEngineProtocol] = None):
@@ -70,23 +73,40 @@ def register_all_builtin_tools(manager: ToolManagerProtocol, provider: str = Non
         # block the whole engine from starting up.
         try:
             from . import pdf_tools
-            pdf_tools.register_tools(manager, engine)
+            if pdf_tools.register_tools(manager, engine) is False:
+                logger.warning(
+                    "PDF tools (read_pdf, get_pdf_page_image) NOT registered: "
+                    "pypdf missing. Install the [data] extras "
+                    "(pip install 'ppxai[data]')."
+                )
         except Exception:
-            pass
+            logger.warning("PDF tools failed to register", exc_info=True)
 
         # Excel tools (v1.17.4 Phase 4.1) — list_excel_sheets, read_excel_sheet.
         try:
             from . import excel_tools
-            excel_tools.register_tools(manager, engine)
+            if excel_tools.register_tools(manager, engine) is False:
+                logger.warning(
+                    "Excel tools (list_excel_sheets, read_excel_sheet) NOT "
+                    "registered: openpyxl missing. Install the [data] extras "
+                    "(pip install 'ppxai[data]')."
+                )
         except Exception:
-            pass
+            logger.warning("Excel tools failed to register", exc_info=True)
 
         # PowerPoint tools (v1.17.4 Phase 4.2) — list_pptx_slides, read_pptx_slide_text.
         try:
             from . import pptx_tools
-            pptx_tools.register_tools(manager, engine)
+            if pptx_tools.register_tools(manager, engine) is False:
+                logger.warning(
+                    "PowerPoint tools (list_pptx_slides, read_pptx_slide_text, "
+                    "render_pptx_slide, summarize_pptx_visual) NOT registered: "
+                    "python-pptx missing. Install the [data] extras "
+                    "(pip install 'ppxai[data]'). Without these the model falls "
+                    "back to ad-hoc shell scripts for .pptx files."
+                )
         except Exception:
-            pass
+            logger.warning("PowerPoint tools failed to register", exc_info=True)
 
         # CSV tools (v1.17.4) — read_csv, list_csv_columns.
         # No optional dependencies (csv is stdlib). Always registers
