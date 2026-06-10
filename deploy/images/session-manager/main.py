@@ -19,14 +19,19 @@ Authentication:
 """
 
 import asyncio
+import hashlib
+import hmac
 import json
 import logging
 import os
+import re
+import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
+from urllib.parse import urlparse
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import Response
 from kubernetes import client as k8s, config as k8s_config
 from pydantic import BaseModel
@@ -42,7 +47,16 @@ TTL_MINUTES = int(os.getenv("TTL_MINUTES", "10"))
 SERVER_IMAGE = os.getenv("SERVER_IMAGE", "registry.ppxai-system.svc:5000/ppxai-server:latest")
 WORKSPACE_SIZE = os.getenv("WORKSPACE_SIZE", "5Gi")
 TEMP_SIZE = os.getenv("TEMP_SIZE", "2Gi")
+# Unauthenticated ingress: /api + /login + catch-all. Static manifest,
+# NEVER patched by this service. (Was INGRESS_NAME; kept for back-compat.)
 INGRESS_NAME = os.getenv("INGRESS_NAME", "ppxai-sessions-ingress")
+# Authenticated ingress: per-user /s/<slug> paths only. Created + patched at
+# runtime by this service, carries the auth-url annotation (C1). Split from
+# INGRESS_NAME because ingress-nginx auth annotations apply to EVERY path in an
+# Ingress — gating /login/​/api would make login impossible (chicken-and-egg).
+SESSIONS_INGRESS_NAME = os.getenv("SESSIONS_INGRESS_NAME", f"{os.getenv('APP_PREFIX', 'ppxai')}-sessions-ingress-auth")
+# TLS secret shared with the unauth ingress (same host). Empty = no TLS block.
+TLS_SECRET_NAME = os.getenv("TLS_SECRET_NAME", "star-trad-int")
 
 # Naming & storage config — override these for different deployments
 APP_PREFIX = os.getenv("APP_PREFIX", "ppxai")
@@ -54,8 +68,31 @@ SECRET_NAME = os.getenv("SECRET_NAME", f"{APP_PREFIX}-api-keys")
 # Authentication: "stub" (no password) or "ldap" (AD bind)
 AUTH_MODE = os.getenv("AUTH_MODE", "stub")
 
+# --- C1: per-request session cookie auth --------------------------------------
+# Signed (HMAC-SHA256) cookie binds every /s/<slug>/ request to the
+# LDAP-authenticated identity. Verified by the /authz endpoint that
+# ingress-nginx calls via auth_request on each request. The signing key is a
+# persistent secret (stable across restarts, else all live cookies invalidate).
+SESSION_SIGNING_KEY = os.getenv("SESSION_SIGNING_KEY", "").encode()
+COOKIE_NAME = os.getenv("COOKIE_NAME", "coder_session")
+COOKIE_SECURE = os.getenv("COOKIE_SECURE", "true").lower() == "true"
+COOKIE_DOMAIN = os.getenv("COOKIE_DOMAIN", "") or None
+# When true, /authz also checks the slug still has a live registry entry so a
+# torn-down session's cookie stops working immediately (behind a short cache).
+REQUIRE_LIVE_SESSION = os.getenv("REQUIRE_LIVE_SESSION", "true").lower() == "true"
+_LIVE_SESSION_CACHE_TTL = float(os.getenv("LIVE_SESSION_CACHE_TTL", "5"))
+
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger("session-manager")
+
+# Fail closed: a running-but-unsigned session-manager would mint forgeable
+# cookies (or empty-key HMACs), silently defeating the C1 gate. Refuse to start.
+if not SESSION_SIGNING_KEY or len(SESSION_SIGNING_KEY) < 32:
+    raise RuntimeError(
+        "SESSION_SIGNING_KEY missing or <32 bytes — refusing to start. "
+        "Generate with `openssl rand -hex 32` and supply via the "
+        "coder-session-signing secret. Auth would be unsafe without it."
+    )
 
 # ---------------------------------------------------------------------------
 # LDAP authenticator (lazy init — only when AUTH_MODE=ldap)
@@ -165,10 +202,80 @@ def _now_iso() -> str:
 
 def _slug(username: str) -> str:
     """Convert username to a k8s-safe DNS label (lowercase, hyphenated, max 32 chars)."""
-    import re
     slug = re.sub(r"[^a-z0-9-]", "-", username.lower())
     slug = re.sub(r"-+", "-", slug).strip("-")
     return slug[:32]
+
+
+# --- C1: signed session cookie helpers ----------------------------------------
+#
+# Cookie value: "<slug>.<issued_at_unix>.<hex_hmac_sha256(key, slug.iat)>".
+# Slug (not raw username) so it matches the URL path exactly. issued_at gives
+# server-side expiry independent of the browser-controlled Max-Age. The slug
+# charset matches _slug()'s output ([a-z0-9-], <=32) so URL-slug extraction in
+# /authz lines up byte-for-byte.
+
+# Anchored on _slug()'s charset + length. Used to pull the requested slug out of
+# the original request path ingress-nginx forwards to /authz.
+_URL_SLUG_RE = re.compile(r"^/s/([a-z0-9-]{1,32})(?:/|$)")
+
+
+def _sign_slug(slug: str, issued_at: int) -> str:
+    msg = f"{slug}.{issued_at}".encode()
+    return hmac.new(SESSION_SIGNING_KEY, msg, hashlib.sha256).hexdigest()
+
+
+def _make_cookie_value(slug: str) -> str:
+    iat = int(time.time())
+    return f"{slug}.{iat}.{_sign_slug(slug, iat)}"
+
+
+def _verify_cookie(raw: str) -> Optional[str]:
+    """Return the authenticated slug if the cookie is valid + unexpired, else None."""
+    if not raw:
+        return None
+    parts = raw.split(".")
+    if len(parts) != 3:
+        return None
+    slug, iat_str, sig = parts
+    try:
+        iat = int(iat_str)
+    except ValueError:
+        return None
+    expected = _sign_slug(slug, iat)
+    if not hmac.compare_digest(sig, expected):
+        return None  # tampered / forged
+    if int(time.time()) - iat > TTL_MINUTES * 60:
+        return None  # server-side expiry (independent of browser Max-Age)
+    return slug
+
+
+def _extract_url_slug(headers) -> Optional[str]:
+    """Pull the requested slug from the original request URL ingress forwards.
+
+    ingress-nginx auth_request fires on the ORIGINAL $request_uri (pre
+    rewrite-target), so the /s/<slug>/... path is intact. X-Original-URL carries
+    scheme+host+path; X-Original-URI carries just the path. Prefer the former.
+    """
+    orig = headers.get("x-original-url") or headers.get("x-original-uri") or ""
+    path = urlparse(orig).path if "://" in orig else orig
+    m = _URL_SLUG_RE.match(path)
+    return m.group(1) if m else None
+
+
+# Tiny TTL cache so an SSE burst for one user collapses to one PVC scan per few
+# seconds (mirrors the LDAP_CACHE_TTL pattern). {slug: (exists, checked_at)}.
+_live_session_cache: dict[str, tuple[bool, float]] = {}
+
+
+def _slug_session_exists(slug: str) -> bool:
+    """True if the slug still maps to a live registry session (cached ~5s)."""
+    cached = _live_session_cache.get(slug)
+    if cached is not None and (time.monotonic() - cached[1]) < _LIVE_SESSION_CACHE_TTL:
+        return cached[0]
+    exists = any(_slug(m.username) == slug for m in _list_sessions())
+    _live_session_cache[slug] = (exists, time.monotonic())
+    return exists
 
 
 # ---------------------------------------------------------------------------
@@ -266,12 +373,27 @@ def _create_server_pod(username: str, workspace_pvc: str, temp_pvc: str) -> str:
         ),
         spec=k8s.V1PodSpec(
             restart_policy="Always",
+            # H2: fsGroup chowns the local-path PVC mounts so a process can write
+            # them without root file ownership. (runAsNonRoot is Phase 2 — the
+            # image is currently built to run as root; cap-drop + no-priv-esc +
+            # seccomp below shrink the blast radius without that image change.)
+            security_context=k8s.V1PodSecurityContext(fs_group=1000),
             containers=[
                 k8s.V1Container(
                     name="server",
                     image=SERVER_IMAGE,
                     image_pull_policy="Always",
                     working_dir="/workspace",
+                    # H2: drop all Linux capabilities, forbid privilege
+                    # escalation, pin the default seccomp profile. The agent runs
+                    # arbitrary shell in here; this caps what a container escape
+                    # can reach. readOnlyRootFilesystem is NOT set — the agent
+                    # writes throughout /workspace + the HOME-symlink wrapper.
+                    security_context=k8s.V1SecurityContext(
+                        allow_privilege_escalation=False,
+                        capabilities=k8s.V1Capabilities(drop=["ALL"]),
+                        seccomp_profile=k8s.V1SeccompProfile(type="RuntimeDefault"),
+                    ),
                     # v1.18.7: HOME=/workspace makes Path.home()/.ppxai
                     # resolve to the workspace PVC for user state
                     # (sessions, logs, usage). The image bundles
@@ -406,32 +528,50 @@ def _create_server_service(username: str) -> str:
 
 
 def _create_sessions_ingress(host: str, first_path: k8s.V1HTTPIngressPath) -> None:
-    """Create the sessions Ingress with the first user path (k8s requires at least one path)."""
+    """Create the AUTHENTICATED sessions Ingress with the first user path.
+
+    Separate from the static unauthenticated coder-ingress (which holds /api,
+    /login, catch-all). This Ingress holds only /s/<slug> paths and carries the
+    auth-url annotation so ingress-nginx calls /authz on every request (C1).
+    Same host + TLS secret as the unauth ingress; ingress-nginx merges paths
+    across same-host Ingresses, applying auth only to the paths defined here.
+    """
+    annotations = {
+        "nginx.ingress.kubernetes.io/rewrite-target": "/$2",
+        "nginx.ingress.kubernetes.io/use-regex": "true",
+        "nginx.ingress.kubernetes.io/force-ssl-redirect": "true",
+        "nginx.ingress.kubernetes.io/proxy-read-timeout": "3600",
+        "nginx.ingress.kubernetes.io/proxy-send-timeout": "3600",
+        "nginx.ingress.kubernetes.io/proxy-buffering": "off",
+        "nginx.ingress.kubernetes.io/proxy-http-version": "1.1",
+        # C1 auth gate: ingress-nginx calls /authz (this service) per request.
+        # 401 -> redirect to /login (auth-signin); 403 (slug mismatch) -> deny.
+        "nginx.ingress.kubernetes.io/auth-url": (
+            f"http://session-manager.{NAMESPACE}.svc.cluster.local:8080/authz"
+        ),
+        "nginx.ingress.kubernetes.io/auth-signin": f"https://{host}/login",
+    }
+    spec = k8s.V1IngressSpec(
+        ingress_class_name="nginx",
+        rules=[
+            k8s.V1IngressRule(
+                host=host,
+                http=k8s.V1HTTPIngressRuleValue(paths=[first_path]),
+            )
+        ],
+    )
+    if TLS_SECRET_NAME:
+        spec.tls = [k8s.V1IngressTLS(hosts=[host], secret_name=TLS_SECRET_NAME)]
     ingress = k8s.V1Ingress(
         metadata=k8s.V1ObjectMeta(
-            name=INGRESS_NAME,
+            name=SESSIONS_INGRESS_NAME,
             namespace=NAMESPACE,
-            annotations={
-                "nginx.ingress.kubernetes.io/rewrite-target": "/$2",
-                "nginx.ingress.kubernetes.io/use-regex": "true",
-                "nginx.ingress.kubernetes.io/proxy-read-timeout": "3600",
-                "nginx.ingress.kubernetes.io/proxy-send-timeout": "3600",
-                "nginx.ingress.kubernetes.io/proxy-buffering": "off",
-                "nginx.ingress.kubernetes.io/proxy-http-version": "1.1",
-            },
+            annotations=annotations,
         ),
-        spec=k8s.V1IngressSpec(
-            ingress_class_name="nginx",
-            rules=[
-                k8s.V1IngressRule(
-                    host=host,
-                    http=k8s.V1HTTPIngressRuleValue(paths=[first_path]),
-                )
-            ],
-        ),
+        spec=spec,
     )
     net.create_namespaced_ingress(NAMESPACE, ingress)
-    log.info(f"Created sessions Ingress {INGRESS_NAME}")
+    log.info(f"Created authenticated sessions Ingress {SESSIONS_INGRESS_NAME}")
 
 
 def _ingress_path_rule(slug: str, svc_name: str) -> k8s.V1HTTPIngressPath:
@@ -451,12 +591,12 @@ def _patch_ingress_add(username: str, svc_name: str) -> None:
     slug = _slug(username)
     path_rule = _ingress_path_rule(slug, svc_name)
     try:
-        ingress = net.read_namespaced_ingress(INGRESS_NAME, NAMESPACE)
+        ingress = net.read_namespaced_ingress(SESSIONS_INGRESS_NAME, NAMESPACE)
     except k8s.ApiException as e:
         if e.status == 404:
-            # First session — create the sessions ingress with this path
+            # First session — create the authenticated sessions ingress
             _create_sessions_ingress(INGRESS_HOST, path_rule)
-            log.info(f"Ingress created with /s/{slug}")
+            log.info(f"Sessions ingress created with /s/{slug}")
             return
         raise
     paths = ingress.spec.rules[0].http.paths or []
@@ -465,14 +605,14 @@ def _patch_ingress_add(username: str, svc_name: str) -> None:
     # Insert user path at front (nginx matches in order; more specific first)
     paths.insert(0, path_rule)
     ingress.spec.rules[0].http.paths = paths
-    net.replace_namespaced_ingress(INGRESS_NAME, NAMESPACE, ingress)
-    log.info(f"Ingress patched: added /s/{slug}")
+    net.replace_namespaced_ingress(SESSIONS_INGRESS_NAME, NAMESPACE, ingress)
+    log.info(f"Sessions ingress patched: added /s/{slug}")
 
 
 def _patch_ingress_remove(username: str) -> None:
     slug = _slug(username)
     try:
-        ingress = net.read_namespaced_ingress(INGRESS_NAME, NAMESPACE)
+        ingress = net.read_namespaced_ingress(SESSIONS_INGRESS_NAME, NAMESPACE)
     except k8s.ApiException as e:
         if e.status == 404:
             return
@@ -481,12 +621,12 @@ def _patch_ingress_remove(username: str) -> None:
     paths = [p for p in paths if slug not in (p.path or "")]
     if not paths:
         # Last session removed — delete the ingress rather than leaving empty paths
-        net.delete_namespaced_ingress(INGRESS_NAME, NAMESPACE)
-        log.info(f"Ingress deleted (no sessions remaining)")
+        net.delete_namespaced_ingress(SESSIONS_INGRESS_NAME, NAMESPACE)
+        log.info("Sessions ingress deleted (no sessions remaining)")
         return
     ingress.spec.rules[0].http.paths = paths
-    net.replace_namespaced_ingress(INGRESS_NAME, NAMESPACE, ingress)
-    log.info(f"Ingress patched: removed /s/{slug}")
+    net.replace_namespaced_ingress(SESSIONS_INGRESS_NAME, NAMESPACE, ingress)
+    log.info(f"Sessions ingress patched: removed /s/{slug}")
 
 
 def _teardown_session(meta: SessionMeta) -> None:
@@ -530,9 +670,23 @@ class CreateSessionRequest(BaseModel):
     password: Optional[str] = None
 
 
+def _set_session_cookie(response: Response, slug: str) -> None:
+    """Attach the signed C1 session cookie. Path=/ so it's always sent to /authz;
+    the authorization decision comes from the signed payload, not cookie scoping."""
+    response.set_cookie(
+        key=COOKIE_NAME,
+        value=_make_cookie_value(slug),
+        max_age=TTL_MINUTES * 60,
+        path="/",
+        domain=COOKIE_DOMAIN,
+        secure=COOKIE_SECURE,
+        httponly=True,
+        samesite="lax",
+    )
+
+
 @app.post("/sessions", status_code=201)
-def create_session(req: CreateSessionRequest):
-    import re
+def create_session(req: CreateSessionRequest, response: Response):
     username = req.username.strip()
     if not username or not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9_.-]{0,31}", username):
         raise HTTPException(400, "Invalid username — use letters, digits, dots, hyphens, underscores")
@@ -557,6 +711,7 @@ def create_session(req: CreateSessionRequest):
                 # Re-add ingress rule in case it was lost (e.g., Helm recreated ingress)
                 _patch_ingress_add(username, existing.svc_name)
                 slug = _slug(username)
+                _set_session_cookie(response, slug)
                 return {"status": "existing", "username": username, "path": f"/s/{slug}/"}
         except k8s.ApiException as e:
             if e.status != 404:
@@ -597,7 +752,35 @@ def create_session(req: CreateSessionRequest):
     _save_meta(meta)
     log.info(f"Session created for {username}")
     slug = _slug(username)
+    _set_session_cookie(response, slug)
     return {"status": "created", "username": username, "path": f"/s/{slug}/"}
+
+
+@app.get("/authz")
+def authz(request: Request):
+    """ingress-nginx auth_request backend (C1). Called on every /s/<slug>/ request.
+
+    200 -> allow. 401 -> missing/forged/expired cookie (auth-signin redirects to
+    /login). 403 -> valid cookie but slug mismatch (the cross-user attack; no
+    redirect, just forbidden).
+    """
+    cookie_slug = _verify_cookie(request.cookies.get(COOKIE_NAME, ""))
+    if cookie_slug is None:
+        raise HTTPException(401, "No valid session")
+
+    url_slug = _extract_url_slug(request.headers)
+    if url_slug is None:
+        # auth_request only annotates /s/ paths, so a non-/s URL here is anomalous.
+        raise HTTPException(403, "Forbidden")
+
+    if not hmac.compare_digest(cookie_slug, url_slug):
+        log.warning(f"Cross-user access denied: cookie={cookie_slug!r} url={url_slug!r}")
+        raise HTTPException(403, "Forbidden")
+
+    if REQUIRE_LIVE_SESSION and not _slug_session_exists(cookie_slug):
+        raise HTTPException(401, "Session no longer active")
+
+    return {"ok": True}
 
 
 @app.delete("/sessions/{username}", status_code=204)
