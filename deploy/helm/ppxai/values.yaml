@@ -33,6 +33,22 @@ auth:
     userFilter: "(objectClass=person)"
     usernameAttr: "sAMAccountName"
     cacheTtl: "300"
+  # -- C1: HMAC signing key for the per-user session cookie. The session-manager
+  #    binds every /s/<slug>/ request to the authenticated identity via this
+  #    cookie + an ingress auth_request to /authz, and FAILS CLOSED without it.
+  sessionSigning:
+    # -- Signing key (>=32 chars). Generate ONCE with `openssl rand -hex 32` and
+    #    keep it stable — rotating logs out all active users. For production,
+    #    prefer existingSecret so the key never lands in values/helm history.
+    key: ""
+    # -- Use a pre-created secret instead (key: SESSION_SIGNING_KEY by default).
+    existingSecret: ""
+    existingSecretKey: "SESSION_SIGNING_KEY"
+    # -- Secure cookie attribute (requires HTTPS). Set false only for local HTTP.
+    cookieSecure: true
+    # -- /authz also checks the slug still has a live session (immediate
+    #    revocation on teardown), behind a short in-process cache.
+    requireLiveSession: true
 
 # ============================================================
 # Registry (container image registry)
@@ -65,6 +81,32 @@ ingress:
   tls:
     enabled: false
     secretName: ""
+
+# ============================================================
+# NetworkPolicy (H2 — egress hardening for per-user server pods)
+# ============================================================
+# Requires a CNI that enforces NetworkPolicy (Calico, Cilium). Disabled by
+# default. When enabled, egress is DENY-by-default + the allowlist below.
+# DNS to dnsNamespace is always added automatically.
+networkPolicy:
+  enabled: false
+  # -- Namespace running CoreDNS/kube-dns (selected by name; do NOT use the
+  #    kube-dns Service ClusterIP — the CNI enforces the real pod IP).
+  dnsNamespace: kube-system
+  # -- Additional egress rules (k8s NetworkPolicyEgressRule list). Populate with
+  #    your providers' in-cluster namespaces + external CIDRs. Example:
+  #    egress:
+  #      - to:
+  #          - namespaceSelector:
+  #              matchLabels:
+  #                kubernetes.io/metadata.name: <inference-namespace>
+  #      - to:
+  #          - ipBlock:
+  #              cidr: <provider-cidr>/32
+  #        ports:
+  #          - protocol: TCP
+  #            port: 443
+  egress: []
 
 # ============================================================
 # Storage
@@ -188,6 +230,12 @@ serverConfig:
     shell:
       timeout: 300
       require_consent: true
+      # -- Launch the web terminal as a login shell (sources /etc/profile +
+      #    ~/.bash_profile / ~/.profile). With a persistent HOME on the
+      #    workspace PVC, user shell customization survives pod restarts.
+      login_shell: true
+      # -- Pin the terminal shell binary (else falls back to $SHELL or /bin/sh).
+      shell_bin: "/bin/bash"
     agent:
       max_iterations: 25
       max_tool_iterations: 25

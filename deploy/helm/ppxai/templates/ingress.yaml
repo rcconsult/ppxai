@@ -1,6 +1,13 @@
 {{/*
-Ingress is created by Helm on first install, then owned by session-manager
-which dynamically adds/removes per-user /s/{slug} path rules.
+UNAUTHENTICATED ingress — /api, /login, and the catch-all only. Created by Helm
+on first install and left alone thereafter.
+
+C1: per-user /s/{slug} routes do NOT live here. The session-manager creates a
+SEPARATE ingress (<ingressName>-auth, via SESSIONS_INGRESS_NAME) at runtime,
+carrying the auth-url annotation so every /s/ request is checked against the
+signed session cookie by the /authz endpoint. The split is required because
+ingress-nginx auth annotations apply to ALL paths in an Ingress — gating
+/login here would make login impossible (chicken-and-egg).
 
 On upgrade, Helm skips this resource if it already exists to avoid
 field manager conflicts with the session-manager's replace_namespaced_ingress.

@@ -83,6 +83,30 @@ spec:
             - name: LDAP_CACHE_TTL
               value: {{ .Values.auth.ldap.cacheTtl | quote }}
             {{- end }}
+            # --- C1: per-user session cookie auth ---
+            # session-manager FAILS CLOSED if SESSION_SIGNING_KEY is missing or
+            # <32 bytes — supply a real key (`openssl rand -hex 32`) via
+            # auth.sessionSigning.* before deploying, else the pod crash-loops.
+            - name: SESSION_SIGNING_KEY
+              valueFrom:
+                secretKeyRef:
+                  {{- if .Values.auth.sessionSigning.existingSecret }}
+                  name: {{ .Values.auth.sessionSigning.existingSecret }}
+                  key: {{ .Values.auth.sessionSigning.existingSecretKey }}
+                  {{- else }}
+                  name: {{ include "ppxai.fullname" . }}-session-signing
+                  key: SESSION_SIGNING_KEY
+                  {{- end }}
+            - name: SESSIONS_INGRESS_NAME
+              value: {{ include "ppxai.ingressName" . }}-auth
+            - name: TLS_SECRET_NAME
+              value: {{ .Values.ingress.tls.secretName | quote }}
+            - name: COOKIE_DOMAIN
+              value: {{ .Values.ingress.host | quote }}
+            - name: COOKIE_SECURE
+              value: {{ .Values.auth.sessionSigning.cookieSecure | quote }}
+            - name: REQUIRE_LIVE_SESSION
+              value: {{ .Values.auth.sessionSigning.requireLiveSession | quote }}
           volumeMounts:
             - name: registry
               mountPath: /registry

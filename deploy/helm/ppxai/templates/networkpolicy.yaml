@@ -1,0 +1,43 @@
+{{- /*
+H2: egress-deny-by-default NetworkPolicy for the per-user server pods.
+Requires a CNI that enforces NetworkPolicy (e.g. Calico, Cilium). Disabled by
+default — enable + populate networkPolicy.egress for your site.
+
+NOTE: NetworkPolicy is IP/namespace-based, NOT DNS-aware. Two common pitfalls:
+  * DNS: allow the kube-system namespace (CoreDNS), NOT the kube-dns Service
+    ClusterIP — the CNI enforces against the real CoreDNS pod IP after DNAT.
+  * Service ports: a Service mapping :80 -> a different targetPort means the CNI
+    sees the backing-pod port, not 80. Allow the namespace without pinning ports
+    for in-cluster inference services, or list the real container ports.
+*/ -}}
+{{- if .Values.networkPolicy.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "ppxai.fullname" . }}-server-egress
+  namespace: {{ include "ppxai.namespace" . }}
+  labels:
+    {{- include "ppxai.labels" . | nindent 4 }}
+    app.kubernetes.io/component: server-egress
+spec:
+  podSelector:
+    matchLabels:
+      app: {{ include "ppxai.fullname" . }}-server
+  policyTypes:
+    - Egress
+  egress:
+    # DNS — select the kube-system namespace (CoreDNS), not the Service IP.
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Values.networkPolicy.dnsNamespace }}
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    {{- with .Values.networkPolicy.egress }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+{{- end }}
