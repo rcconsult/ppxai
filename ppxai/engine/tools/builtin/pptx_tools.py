@@ -127,17 +127,21 @@ def extract_pptx_slide_text(path: Path, slide_num: int) -> str:
     return result
 
 
-def _resolve_file(engine: Any, file_id: str) -> Tuple[Optional[Any], Optional[str]]:
-    """Look up a file_id in the engine's SessionFileStore."""
-    file_store = getattr(engine, "file_store", None)
-    if file_store is None:
-        return None, "No SessionFileStore available. PPTX tools require the file store."
-    meta = file_store.get_metadata(file_id)
-    if meta is None:
-        return None, f"Unknown file_id: {file_id!r}. The attachment may have been removed."
-    if not meta.path.exists():
-        return None, f"File for {file_id!r} is missing on disk."
-    return meta, None
+def _resolve_file(
+    engine: Any,
+    file_id: Optional[str] = None,
+    path: Optional[str] = None,
+) -> Tuple[Optional[Any], Optional[str]]:
+    """Resolve a file reference via the unified engine resolver.
+
+    Accepts EITHER `file_id` (SessionFileStore chat attachment) or
+    `path` (workspace file). v1.18.7 — see `engine.file_ref` for the
+    full resolution rules. Kept as a thin module-level shim so existing
+    test fixtures using `SimpleNamespace(file_store=store)` keep
+    working unchanged.
+    """
+    from ...file_ref import resolve_file_reference
+    return resolve_file_reference(engine, file_id=file_id, path=path)
 
 
 def _is_pptx(meta: Any) -> bool:
@@ -168,25 +172,29 @@ class ListPptxSlidesTool(BaseTool):
         self.engine = engine
         self.name = "list_pptx_slides"
         self.description = (
-            "List all slides in an attached PowerPoint file. Returns slide "
-            "numbers, titles (if any), and an inventory of shape types "
-            "(TEXT, TABLE, CHART, IMAGE) per slide. Use this first to "
-            "understand the presentation structure before reading specific "
-            "slides. Pass the 'file_id' from the <uploaded_file> reference."
+            "List all slides in a PowerPoint file. Returns slide numbers, "
+            "titles (if any), and an inventory of shape types (TEXT, TABLE, "
+            "CHART, IMAGE) per slide. Use this first to understand the "
+            "presentation structure before reading specific slides. "
+            "Pass either 'file_id' (for a presentation attached to this "
+            "chat session, revived from the session cache on reload) or "
+            "'path' (for a workspace file visible in the file tree, "
+            "addressable from any session) — exactly one is required."
         )
+        from ...file_ref import FILE_REF_PROPERTIES
         self.parameters = {
             "type": "object",
-            "properties": {
-                "file_id": {
-                    "type": "string",
-                    "description": "The file_id from the <uploaded_file> reference.",
-                },
-            },
-            "required": ["file_id"],
+            "properties": dict(FILE_REF_PROPERTIES),
+            "required": [],
         }
 
-    async def execute(self, file_id: str, **kwargs) -> str:
-        meta, err = _resolve_file(self.engine, file_id)
+    async def execute(
+        self,
+        file_id: Optional[str] = None,
+        path: Optional[str] = None,
+        **kwargs,
+    ) -> str:
+        meta, err = _resolve_file(self.engine, file_id=file_id, path=path)
         if err:
             return f"Error: {err}"
         if not _is_pptx(meta):
@@ -241,28 +249,33 @@ class ReadPptxSlideTextTool(BaseTool):
         self.engine = engine
         self.name = "read_pptx_slide_text"
         self.description = (
-            "Read all text and tables from a specific slide of an attached "
-            "PowerPoint file. Returns the content as markdown. Tables are "
-            "rendered as markdown tables. Use list_pptx_slides first to see "
-            "available slides."
+            "Read all text and tables from a specific slide of a PowerPoint "
+            "file. Returns the content as markdown. Tables are rendered as "
+            "markdown tables. Use list_pptx_slides first to see available "
+            "slides. Pass either 'file_id' (chat attachment) or 'path' "
+            "(workspace file) — exactly one is required."
         )
+        from ...file_ref import FILE_REF_PROPERTIES
         self.parameters = {
             "type": "object",
             "properties": {
-                "file_id": {
-                    "type": "string",
-                    "description": "The file_id from the <uploaded_file> reference.",
-                },
+                **FILE_REF_PROPERTIES,
                 "slide": {
                     "type": "integer",
                     "description": "1-indexed slide number.",
                 },
             },
-            "required": ["file_id", "slide"],
+            "required": ["slide"],
         }
 
-    async def execute(self, file_id: str, slide: int = 1, **kwargs) -> str:
-        meta, err = _resolve_file(self.engine, file_id)
+    async def execute(
+        self,
+        file_id: Optional[str] = None,
+        path: Optional[str] = None,
+        slide: int = 1,
+        **kwargs,
+    ) -> str:
+        meta, err = _resolve_file(self.engine, file_id=file_id, path=path)
         if err:
             return f"Error: {err}"
         if not _is_pptx(meta):
@@ -339,12 +352,38 @@ def render_pptx_slides(pptx_path: Path, cache_dir: Path) -> List[Path]:
     """Render all slides of a PPTX to PNG files via LibreOffice headless.
 
     Results are cached in *cache_dir* keyed by the source file name.
+    The cache is invalidated when the source's mtime is newer than the
+    oldest cached PNG — prevents the file-tree preview from showing
+    stale slides after the model rewrites the .pptx (v1.18.7 fix).
     Returns a list of PNG paths sorted by slide number.
     """
-    # Check cache first
+    # Check cache first. v1.18.7: validate that the cache is at least as
+    # new as the source — otherwise the file-tree preview keeps showing
+    # the pre-edit slides after the model rewrites the .pptx.
     cached = sorted(cache_dir.glob("slide-*.png"))
     if cached:
-        return cached
+        try:
+            source_mtime = pptx_path.stat().st_mtime
+        except OSError:
+            # Source missing or unreadable. Keep the cache — at least the
+            # user sees the last known render rather than nothing; a
+            # re-render would just fail too.
+            return cached
+        try:
+            oldest_cache_mtime = min(p.stat().st_mtime for p in cached)
+        except OSError:
+            # Cache PNG vanished between glob and stat — fall through
+            # and re-render.
+            oldest_cache_mtime = 0.0
+        if oldest_cache_mtime >= source_mtime:
+            return cached
+        # Source is newer than the cache — invalidate so the next
+        # render reflects the user's / model's edits.
+        for p in cached:
+            try:
+                p.unlink()
+            except OSError:
+                pass
 
     cache_dir.mkdir(parents=True, exist_ok=True)
 
@@ -408,31 +447,35 @@ class SummarizePptxVisualTool(BaseTool):
         self.engine = engine
         self.name = "summarize_pptx_visual"
         self.description = (
-            "Visually summarize an attached PowerPoint file by rendering all "
-            "slides to images and sending them to a vision-language model. "
-            "Returns a description of each slide's visual content. Much faster "
-            "than reading slides one-by-one with read_pptx_slide_text. "
-            "Requires LibreOffice and a vision model. Pass the 'file_id' "
-            "from the <uploaded_file> reference."
+            "Visually summarize a PowerPoint file by rendering all slides "
+            "to images and sending them to a vision-language model. Returns "
+            "a description of each slide's visual content. Much faster than "
+            "reading slides one-by-one with read_pptx_slide_text. Requires "
+            "LibreOffice and a vision model. Pass either 'file_id' (chat "
+            "attachment) or 'path' (workspace file) — exactly one is required."
         )
+        from ...file_ref import FILE_REF_PROPERTIES
         self.parameters = {
             "type": "object",
             "properties": {
-                "file_id": {
-                    "type": "string",
-                    "description": "The file_id from the <uploaded_file> reference.",
-                },
+                **FILE_REF_PROPERTIES,
                 "slides": {
                     "type": "string",
                     "description": "Slide range: 'all' or '1-5' or '3,7,12'. Default: all.",
                     "default": "all",
                 },
             },
-            "required": ["file_id"],
+            "required": [],
         }
 
-    async def execute(self, file_id: str, slides: str = "all", **kwargs) -> str:
-        meta, err = _resolve_file(self.engine, file_id)
+    async def execute(
+        self,
+        file_id: Optional[str] = None,
+        path: Optional[str] = None,
+        slides: str = "all",
+        **kwargs,
+    ) -> str:
+        meta, err = _resolve_file(self.engine, file_id=file_id, path=path)
         if err:
             return f"Error: {err}"
         if not _is_pptx(meta):
@@ -494,32 +537,37 @@ class RenderPptxSlideTool(BaseTool):
         self.engine = engine
         self.name = "render_pptx_slide"
         self.description = (
-            "Render a specific slide from an attached PowerPoint file as a "
-            "PNG image. Returns the image as a base64 data URI. Requires "
-            "LibreOffice headless (installed in the container). Use "
-            "list_pptx_slides first to see available slides."
+            "Render a specific slide from a PowerPoint file as a PNG image. "
+            "Returns the image as a base64 data URI. Requires LibreOffice "
+            "headless (installed in the container). Use list_pptx_slides "
+            "first to see available slides. Pass either 'file_id' (chat "
+            "attachment) or 'path' (workspace file) — exactly one is required."
         )
+        from ...file_ref import FILE_REF_PROPERTIES
         self.parameters = {
             "type": "object",
             "properties": {
-                "file_id": {
-                    "type": "string",
-                    "description": "The file_id from the <uploaded_file> reference.",
-                },
+                **FILE_REF_PROPERTIES,
                 "slide": {
                     "type": "integer",
                     "description": "Slide number (1-based).",
                     "default": 1,
                 },
             },
-            "required": ["file_id"],
+            "required": [],
         }
 
-    async def execute(self, file_id: str, slide: int = 1, **kwargs) -> str:
+    async def execute(
+        self,
+        file_id: Optional[str] = None,
+        path: Optional[str] = None,
+        slide: int = 1,
+        **kwargs,
+    ) -> str:
         if not _libreoffice_available():
             return "Error: LibreOffice is not installed. Slide rendering unavailable."
 
-        meta, err = _resolve_file(self.engine, file_id)
+        meta, err = _resolve_file(self.engine, file_id=file_id, path=path)
         if err:
             return f"Error: {err}"
         if not _is_pptx(meta):
@@ -541,8 +589,43 @@ class RenderPptxSlideTool(BaseTool):
 
         png_path = pngs[slide - 1]
         png_bytes = png_path.read_bytes()
-        b64 = base64.b64encode(png_bytes).decode()
-        return f"data:image/png;base64,{b64}"
+
+        # v1.18.7: tool-produced multimodal artifacts go through the
+        # SessionFileStore — same lifecycle as user-uploaded chat
+        # attachments (revived from cache on session reload). Returning
+        # the inline base64 data URI used to cost ~80-110K tokens per
+        # call (rasterized slides at 150 DPI), enough to blow the
+        # context window on a single iteration. Now we save the PNG
+        # and return a compact reference; visual analysis is a
+        # follow-up tool call.
+        file_store = getattr(self.engine, "file_store", None)
+        if file_store is None:
+            # No store available (some test fixtures, unconfigured
+            # engines) — fall back to inline data URI for compat.
+            b64 = base64.b64encode(png_bytes).decode()
+            return f"data:image/png;base64,{b64}"
+
+        artifact_name = f"{Path(meta.name).stem}_slide_{slide}.png"
+        try:
+            saved = file_store.save(
+                artifact_name, png_bytes, media_type="image/png"
+            )
+        except OSError as exc:
+            return f"Error: failed to save rendered slide: {exc}"
+
+        size_kb = len(png_bytes) / 1024
+        return (
+            f"Rendered slide {slide} of {meta.name} "
+            f"({size_kb:.1f} KB PNG).\n"
+            f"Saved to session attachments: file_id={saved.file_id}\n\n"
+            f"The PNG is now in the session file store (same lifecycle "
+            f"as chat-uploaded files, revived on session reload). To "
+            f"analyze it visually, use summarize_pptx_visual on the "
+            f"original .pptx (file_id or path), which captions all "
+            f"slides via the vision sidecar. The plain shape inventory "
+            f"and text content are available without re-rendering via "
+            f"list_pptx_slides and read_pptx_slide_text."
+        )
 
 
 # =============================================================================

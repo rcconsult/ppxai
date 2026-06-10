@@ -329,15 +329,40 @@ class TestReadPdfTool:
 
 class TestGetPdfPageImageTool:
     def test_rasterize_single_page(self, fake_engine, three_page_pdf_meta):
+        # v1.18.7: tool saves the PNG to SessionFileStore and returns a
+        # compact reference (file_id), NOT inline base64. The huge
+        # data-URI used to bloat context by ~100K tokens per call.
         tool = GetPdfPageImageTool(fake_engine)
         result = asyncio.run(
             tool.execute(file_id=three_page_pdf_meta.file_id, page=1, dpi=72)
         )
-        # Result should be a summary including a data URI.
         assert "Rasterized page 1" in result
-        assert "data:image/png;base64," in result
         assert "Dimensions:" in result
         assert "KB PNG" in result
+        # The result must NOT contain inline base64 — that was the bug.
+        assert "data:image/png;base64," not in result
+        # The result must contain a file_id reference into SessionFileStore.
+        assert "file_id=" in result
+        # The bytes were actually saved to the store.
+        store_meta_list = fake_engine.file_store.list_all()
+        png_entries = [m for m in store_meta_list if m.media_type == "image/png"]
+        assert len(png_entries) >= 1
+        assert any(m.name.endswith("_page_1.png") for m in png_entries)
+
+    def test_rasterize_falls_back_to_data_uri_without_store(self, three_page_pdf_meta, store):
+        # Engine stub WITHOUT file_store: compat path keeps the inline
+        # data URI. Test fixtures that don't wire a store still see
+        # output, just at the legacy cost.
+        engine_no_store = SimpleNamespace()  # no file_store attribute
+        # Need to manually look up the file because the no-store engine
+        # can't resolve a file_id — pass the path directly via tmp.
+        tool = GetPdfPageImageTool(engine_no_store)
+        # We have to provide path, since file_id requires a store.
+        result = asyncio.run(
+            tool.execute(path=str(three_page_pdf_meta.path), page=1, dpi=72)
+        )
+        # Without a store, the tool falls back to inline data URI.
+        assert "data:image/png;base64," in result
 
     def test_dpi_capped(self, fake_engine, three_page_pdf_meta):
         tool = GetPdfPageImageTool(fake_engine)
@@ -441,3 +466,56 @@ class TestRegisterTools:
         # import so the rest of the suite sees a working pypdf.
         monkeypatch.undo()
         importlib.reload(mod)
+
+
+# -----------------------------------------------------------------------------
+# Workspace-path resolution (v1.18.7) — read_pdf and get_pdf_page_image
+# must accept `path=` for files dropped into the workspace via
+# /files/upload or the file tree (no SessionFileStore entry exists for
+# those). Engine layer is covered exhaustively in test_file_ref.py;
+# these are smoke tests through the tool boundary.
+# -----------------------------------------------------------------------------
+
+
+@pytest.fixture
+def workspace_engine(tmp_path, store):
+    """Engine stub with both a SessionFileStore and a working_dir."""
+    wd = tmp_path / "workspace"
+    wd.mkdir()
+    return SimpleNamespace(file_store=store, get_working_dir=lambda: str(wd))
+
+
+class TestPdfPathResolution:
+    def test_read_pdf_via_path(self, workspace_engine, tmp_path):
+        pdf = _make_pdf(["Workspace PDF content"])
+        (tmp_path / "workspace" / "doc.pdf").write_bytes(pdf)
+        tool = ReadPdfTool(workspace_engine)
+        result = asyncio.run(tool.execute(path="doc.pdf"))
+        assert "Error" not in result
+        assert "Workspace PDF content" in result
+
+    def test_get_pdf_page_image_via_path(self, workspace_engine, tmp_path):
+        pdf = _make_pdf(["Page one"])
+        (tmp_path / "workspace" / "doc.pdf").write_bytes(pdf)
+        tool = GetPdfPageImageTool(workspace_engine)
+        result = asyncio.run(tool.execute(page=1, path="doc.pdf"))
+        # pypdfium2 missing produces a clear error; otherwise the result
+        # contains a file_id reference (v1.18.7 fixed the 100K-token
+        # data-URI bloat by saving the PNG to SessionFileStore).
+        assert "file_id=" in result or "pypdfium2" in result
+        # And no inline base64 should leak through.
+        assert "data:image/png;base64," not in result
+
+    def test_read_pdf_path_outside_workspace_rejected(self, workspace_engine, tmp_path):
+        pdf = _make_pdf(["Secret"])
+        (tmp_path / "outside.pdf").write_bytes(pdf)
+        tool = ReadPdfTool(workspace_engine)
+        result = asyncio.run(tool.execute(path="../outside.pdf"))
+        assert "Error" in result
+        assert "outside the working directory" in result
+
+    def test_read_pdf_no_args_rejected(self, workspace_engine):
+        tool = ReadPdfTool(workspace_engine)
+        result = asyncio.run(tool.execute())
+        assert "Error" in result
+        assert "file_id" in result or "path" in result

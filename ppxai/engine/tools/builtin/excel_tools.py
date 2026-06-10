@@ -34,17 +34,18 @@ _MAX_ALLOWED_ROWS = 5000
 _MAX_TEXT_CHARS = 100_000
 
 
-def _resolve_file(engine: Any, file_id: str) -> Tuple[Optional[Any], Optional[str]]:
-    """Look up a file_id in the engine's SessionFileStore."""
-    file_store = getattr(engine, "file_store", None)
-    if file_store is None:
-        return None, "No SessionFileStore available. Excel tools require the file store."
-    meta = file_store.get_metadata(file_id)
-    if meta is None:
-        return None, f"Unknown file_id: {file_id!r}. The attachment may have been removed."
-    if not meta.path.exists():
-        return None, f"File for {file_id!r} is missing on disk."
-    return meta, None
+def _resolve_file(
+    engine: Any,
+    file_id: Optional[str] = None,
+    path: Optional[str] = None,
+) -> Tuple[Optional[Any], Optional[str]]:
+    """Resolve a file reference via the unified engine resolver.
+
+    Accepts EITHER `file_id` (SessionFileStore chat attachment) or
+    `path` (workspace file). v1.18.7 — see `engine.file_ref`.
+    """
+    from ...file_ref import resolve_file_reference
+    return resolve_file_reference(engine, file_id=file_id, path=path)
 
 
 def _is_excel(meta: Any) -> bool:
@@ -62,24 +63,26 @@ class ListExcelSheetsTool(BaseTool):
         self.engine = engine
         self.name = "list_excel_sheets"
         self.description = (
-            "List all sheets in an attached Excel file. Returns sheet names, "
-            "row/column counts, and a preview of column headers. Use this "
-            "first to understand the structure before reading specific sheets. "
-            "Pass the 'file_id' from the <uploaded_file> reference."
+            "List all sheets in an Excel file. Returns sheet names, row/column "
+            "counts, and a preview of column headers. Use this first to "
+            "understand the structure before reading specific sheets. Pass "
+            "either 'file_id' (chat attachment) or 'path' (workspace file) — "
+            "exactly one is required."
         )
+        from ...file_ref import FILE_REF_PROPERTIES
         self.parameters = {
             "type": "object",
-            "properties": {
-                "file_id": {
-                    "type": "string",
-                    "description": "The file_id from the <uploaded_file> reference.",
-                },
-            },
-            "required": ["file_id"],
+            "properties": dict(FILE_REF_PROPERTIES),
+            "required": [],
         }
 
-    async def execute(self, file_id: str, **kwargs) -> str:
-        meta, err = _resolve_file(self.engine, file_id)
+    async def execute(
+        self,
+        file_id: Optional[str] = None,
+        path: Optional[str] = None,
+        **kwargs,
+    ) -> str:
+        meta, err = _resolve_file(self.engine, file_id=file_id, path=path)
         if err:
             return f"Error: {err}"
         if not _is_excel(meta):
@@ -135,18 +138,18 @@ class ReadExcelSheetTool(BaseTool):
         self.engine = engine
         self.name = "read_excel_sheet"
         self.description = (
-            "Read data from a specific sheet of an attached Excel file. "
-            "Returns the data as a markdown table by default, or as CSV. "
-            "Use list_excel_sheets first to see available sheets and their "
-            "dimensions. Large sheets are automatically truncated."
+            "Read data from a specific sheet of an Excel file. Returns the "
+            "data as a markdown table by default, or as CSV. Use "
+            "list_excel_sheets first to see available sheets and their "
+            "dimensions. Large sheets are automatically truncated. Pass "
+            "either 'file_id' (chat attachment) or 'path' (workspace file) — "
+            "exactly one is required."
         )
+        from ...file_ref import FILE_REF_PROPERTIES
         self.parameters = {
             "type": "object",
             "properties": {
-                "file_id": {
-                    "type": "string",
-                    "description": "The file_id from the <uploaded_file> reference.",
-                },
+                **FILE_REF_PROPERTIES,
                 "sheet": {
                     "type": "string",
                     "description": (
@@ -172,18 +175,19 @@ class ReadExcelSheetTool(BaseTool):
                     "default": True,
                 },
             },
-            "required": ["file_id", "sheet"],
+            "required": ["sheet"],
         }
 
     async def execute(
         self,
-        file_id: str,
         sheet: str = "",
+        file_id: Optional[str] = None,
+        path: Optional[str] = None,
         rows: int = _DEFAULT_MAX_ROWS,
         as_markdown: bool = True,
         **kwargs,
     ) -> str:
-        meta, err = _resolve_file(self.engine, file_id)
+        meta, err = _resolve_file(self.engine, file_id=file_id, path=path)
         if err:
             return f"Error: {err}"
         if not _is_excel(meta):

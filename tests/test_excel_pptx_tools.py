@@ -355,3 +355,139 @@ class TestRegistration:
 
     def test_pptx_returns_false_without_engine(self):
         assert register_pptx(_FakeManager(), None) is False
+
+
+# -----------------------------------------------------------------------------
+# Workspace-path resolution (v1.18.7) — both Excel and PPTX tools must
+# accept `path=` as an alternative to `file_id=` so they work on files
+# landed via /files/upload or the file-tree drag-drop (no SessionFileStore
+# entry exists for those).
+# -----------------------------------------------------------------------------
+
+
+@pytest.fixture
+def workspace_engine(tmp_path, store):
+    """Engine stub with a workspace dir AND a SessionFileStore."""
+    wd = tmp_path / "workspace"
+    wd.mkdir()
+    return SimpleNamespace(file_store=store, get_working_dir=lambda: str(wd))
+
+
+class TestWorkspacePathResolution:
+    def test_list_excel_sheets_via_path(self, workspace_engine, tmp_path):
+        xlsx = _make_xlsx({"Sheet1": [["a", "b"], [1, 2]]})
+        (tmp_path / "workspace" / "data.xlsx").write_bytes(xlsx)
+        tool = ListExcelSheetsTool(workspace_engine)
+        result = asyncio.run(tool.execute(path="data.xlsx"))
+        assert "data.xlsx" in result
+        assert "Sheet1" in result
+        assert "Error" not in result
+
+    def test_read_excel_sheet_via_path(self, workspace_engine, tmp_path):
+        xlsx = _make_xlsx({"Sheet1": [["a", "b"], [1, 2]]})
+        (tmp_path / "workspace" / "data.xlsx").write_bytes(xlsx)
+        tool = ReadExcelSheetTool(workspace_engine)
+        result = asyncio.run(tool.execute(path="data.xlsx", sheet="Sheet1"))
+        assert "a" in result and "b" in result
+        assert "Error" not in result
+
+    def test_list_pptx_slides_via_path(self, workspace_engine, tmp_path):
+        pptx = _make_pptx([{"title": "Hello"}])
+        (tmp_path / "workspace" / "deck.pptx").write_bytes(pptx)
+        tool = ListPptxSlidesTool(workspace_engine)
+        result = asyncio.run(tool.execute(path="deck.pptx"))
+        assert "deck.pptx" in result
+        assert "1 slide" in result
+        assert "Error" not in result
+
+    def test_read_pptx_slide_text_via_path(self, workspace_engine, tmp_path):
+        pptx = _make_pptx([{"title": "Greetings", "content": "Body text here"}])
+        (tmp_path / "workspace" / "deck.pptx").write_bytes(pptx)
+        tool = ReadPptxSlideTextTool(workspace_engine)
+        result = asyncio.run(tool.execute(path="deck.pptx", slide=1))
+        assert "Greetings" in result or "Body text" in result
+
+    def test_path_escape_rejected(self, workspace_engine, tmp_path):
+        # File exists at tmp_path level (outside workspace) — must be rejected.
+        pptx = _make_pptx([{"title": "Secret"}])
+        (tmp_path / "outside.pptx").write_bytes(pptx)
+        tool = ListPptxSlidesTool(workspace_engine)
+        result = asyncio.run(tool.execute(path="../outside.pptx"))
+        assert "Error" in result
+        assert "outside the working directory" in result
+
+    def test_both_file_id_and_path_rejected(self, workspace_engine, sample_pptx_meta, tmp_path):
+        # Sending both at once must be an error, not pick-one silently.
+        pptx = _make_pptx([{"title": "Hello"}])
+        (tmp_path / "workspace" / "deck.pptx").write_bytes(pptx)
+        tool = ListPptxSlidesTool(workspace_engine)
+        result = asyncio.run(tool.execute(
+            file_id=sample_pptx_meta.file_id, path="deck.pptx"
+        ))
+        assert "Error" in result
+        assert "not both" in result.lower()
+
+    def test_neither_arg_rejected(self, workspace_engine):
+        tool = ListPptxSlidesTool(workspace_engine)
+        result = asyncio.run(tool.execute())
+        assert "Error" in result
+        assert "file_id" in result or "path" in result
+
+
+# -----------------------------------------------------------------------------
+# render_pptx_slide: artifact-save behavior (v1.18.7)
+# -----------------------------------------------------------------------------
+
+
+class TestRenderPptxSlideArtifactFlow:
+    """Rendered slide PNG must go into SessionFileStore, NOT inline as
+    base64 — the inline approach cost ~100K tokens per call and blew
+    the context window on every single render."""
+
+    def _render(self, workspace_engine, tmp_path, slide_num=1):
+        from ppxai.engine.tools.builtin.pptx_tools import (
+            RenderPptxSlideTool, _libreoffice_available,
+        )
+        if not _libreoffice_available():
+            pytest.skip("LibreOffice not installed — render tests need it")
+        pptx_bytes = _make_pptx([{"title": "Hello", "content": "Body"}])
+        (tmp_path / "workspace" / "deck.pptx").write_bytes(pptx_bytes)
+        tool = RenderPptxSlideTool(workspace_engine)
+        return asyncio.run(tool.execute(path="deck.pptx", slide=slide_num))
+
+    def test_render_saves_to_session_store(self, workspace_engine, tmp_path):
+        result = self._render(workspace_engine, tmp_path)
+        # No inline base64 — that was the bug.
+        assert "data:image/png;base64," not in result
+        # Compact reference present.
+        assert "file_id=" in result
+        # PNG actually saved.
+        store_meta = workspace_engine.file_store.list_all()
+        pngs = [m for m in store_meta if m.media_type == "image/png"]
+        assert len(pngs) >= 1
+        assert any(m.name.endswith("_slide_1.png") for m in pngs)
+
+    def test_render_result_is_compact(self, workspace_engine, tmp_path):
+        # Result string must be small — ~1KB max, not 100K+.
+        result = self._render(workspace_engine, tmp_path)
+        # Allow ample headroom for description text, but bytes far
+        # below the data-URI ceiling.
+        assert len(result) < 2048, f"render result too large ({len(result)} bytes)"
+
+    def test_render_falls_back_to_data_uri_without_store(self, tmp_path):
+        # Engine stub WITHOUT file_store: legacy inline path stays
+        # available so non-store callers still get pixels.
+        from ppxai.engine.tools.builtin.pptx_tools import (
+            RenderPptxSlideTool, _libreoffice_available,
+        )
+        if not _libreoffice_available():
+            pytest.skip("LibreOffice not installed")
+        wd = tmp_path / "workspace"
+        wd.mkdir()
+        engine = SimpleNamespace(get_working_dir=lambda: str(wd))
+        pptx_bytes = _make_pptx([{"title": "Hi"}])
+        (wd / "deck.pptx").write_bytes(pptx_bytes)
+        tool = RenderPptxSlideTool(engine)
+        result = asyncio.run(tool.execute(path="deck.pptx", slide=1))
+        # Without a store, the tool falls back to inline data URI.
+        assert "data:image/png;base64," in result

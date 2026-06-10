@@ -94,35 +94,21 @@ def _parse_pages_spec(spec: str, total_pages: int) -> List[int]:
     return sorted(indices)
 
 
-def _resolve_file(engine: Any, file_id: str) -> Tuple[Optional[Any], Optional[str]]:
-    """Look up a file_id in the engine's SessionFileStore.
+def _resolve_file(
+    engine: Any,
+    file_id: Optional[str] = None,
+    path: Optional[str] = None,
+) -> Tuple[Optional[Any], Optional[str]]:
+    """Resolve a file reference via the unified engine resolver.
 
-    Returns (FileMetadata, None) on success or (None, error_message) on
-    failure. Handles missing file_store (engine doesn't have one),
-    unknown file_id (user cleared the session), and on-disk path
-    disappearing between registration and tool invocation.
+    Accepts EITHER `file_id` (SessionFileStore chat attachment) or
+    `path` (workspace file). v1.18.7 — see `engine.file_ref` for the
+    full resolution rules. Kept as a thin module-level shim so existing
+    test fixtures using `SimpleNamespace(file_store=store)` keep
+    working unchanged.
     """
-    file_store = getattr(engine, "file_store", None)
-    if file_store is None:
-        return None, (
-            "No SessionFileStore available on the engine. PDF tools require "
-            "the file store to resolve file_id references."
-        )
-
-    meta = file_store.get_metadata(file_id)
-    if meta is None:
-        return None, (
-            f"Unknown file_id: {file_id!r}. The attachment may have been "
-            "removed or the session cleared. Ask the user to re-attach."
-        )
-
-    if not meta.path.exists():
-        return None, (
-            f"File for {file_id!r} is missing on disk at {meta.path}. "
-            "The session may be in an inconsistent state."
-        )
-
-    return meta, None
+    from ...file_ref import resolve_file_reference
+    return resolve_file_reference(engine, file_id=file_id, path=path)
 
 
 # =============================================================================
@@ -143,22 +129,19 @@ class ReadPdfTool(BaseTool):
         self.engine = engine
         self.name = "read_pdf"
         self.description = (
-            "Extract text from a PDF the user has attached to the conversation. "
-            "Use this to read the content of PDF files the user has sent you via "
-            "/attach or file upload. Pass the 'file_id' from the <uploaded_file> "
-            "reference in the conversation context. Optionally restrict to specific "
-            "pages with the 'pages' parameter (e.g., '1', '2-5', '1,3,5-7', or 'all')."
+            "Extract text from a PDF. Use this for PDF files attached to the "
+            "conversation OR for workspace PDFs visible in the file tree. "
+            "Pass either 'file_id' (chat attachment from /attach or upload — "
+            "revived from the session cache on reload) or 'path' (workspace "
+            "file, addressable from any session) — exactly one is required. "
+            "Optionally restrict to specific pages with 'pages' "
+            "(e.g., '1', '2-5', '1,3,5-7', or 'all')."
         )
+        from ...file_ref import FILE_REF_PROPERTIES
         self.parameters = {
             "type": "object",
             "properties": {
-                "file_id": {
-                    "type": "string",
-                    "description": (
-                        "The file_id from the <uploaded_file file_id=\"...\"> "
-                        "reference block in the conversation context."
-                    ),
-                },
+                **FILE_REF_PROPERTIES,
                 "pages": {
                     "type": "string",
                     "description": (
@@ -169,12 +152,18 @@ class ReadPdfTool(BaseTool):
                     "default": "all",
                 },
             },
-            "required": ["file_id"],
+            "required": [],
         }
 
-    async def execute(self, file_id: str, pages: str = "all", **kwargs) -> str:
-        # Resolve file_id via the engine's SessionFileStore.
-        meta, err = _resolve_file(self.engine, file_id)
+    async def execute(
+        self,
+        file_id: Optional[str] = None,
+        path: Optional[str] = None,
+        pages: str = "all",
+        **kwargs,
+    ) -> str:
+        # Resolve either reference via the unified resolver.
+        meta, err = _resolve_file(self.engine, file_id=file_id, path=path)
         if err:
             return f"Error: {err}"
 
@@ -265,23 +254,18 @@ class GetPdfPageImageTool(BaseTool):
         self.engine = engine
         self.name = "get_pdf_page_image"
         self.description = (
-            "Rasterize a single page of an attached PDF to a PNG image. Use this "
-            "when text extraction loses important visual information — diagrams, "
-            "charts, tables, or formatted layouts. Returns a base64-encoded data "
-            "URI the vision-capable model can see on the next turn. Pass the "
-            "'file_id' from the <uploaded_file> reference and the 1-indexed page "
-            "number."
+            "Rasterize a single page of a PDF to a PNG image. Use this when "
+            "text extraction loses important visual information — diagrams, "
+            "charts, tables, or formatted layouts. Returns a base64-encoded "
+            "data URI the vision-capable model can see on the next turn. "
+            "Pass either 'file_id' (chat attachment) or 'path' (workspace "
+            "file) — exactly one is required — plus the 1-indexed page number."
         )
+        from ...file_ref import FILE_REF_PROPERTIES
         self.parameters = {
             "type": "object",
             "properties": {
-                "file_id": {
-                    "type": "string",
-                    "description": (
-                        "The file_id from the <uploaded_file file_id=\"...\"> "
-                        "reference block in the conversation context."
-                    ),
-                },
+                **FILE_REF_PROPERTIES,
                 "page": {
                     "type": "integer",
                     "description": "1-indexed page number to rasterize.",
@@ -296,23 +280,24 @@ class GetPdfPageImageTool(BaseTool):
                     "default": _DEFAULT_DPI,
                 },
             },
-            "required": ["file_id", "page"],
+            "required": ["page"],
         }
 
     async def execute(
         self,
-        file_id: str,
         page: int,
+        file_id: Optional[str] = None,
+        path: Optional[str] = None,
         dpi: int = _DEFAULT_DPI,
         **kwargs,
     ) -> str:
-        meta, err = _resolve_file(self.engine, file_id)
+        meta, err = _resolve_file(self.engine, file_id=file_id, path=path)
         if err:
             return f"Error: {err}"
 
         if meta.media_type != "application/pdf":
             return (
-                f"Error: file_id {file_id!r} is not a PDF "
+                f"Error: {meta.name!r} is not a PDF "
                 f"(media_type={meta.media_type!r})."
             )
 
@@ -374,30 +359,55 @@ class GetPdfPageImageTool(BaseTool):
             if pdf is not None:
                 pdf.close()
 
-        # Encode the PIL image to PNG bytes in-memory, then base64 for
-        # data URI embedding. PNG is lossless and universally supported
-        # by every vision-capable provider.
+        # Encode the PIL image to PNG bytes in-memory.
         buf = io.BytesIO()
         try:
             img.save(buf, format="PNG")
         except Exception as exc:
             return f"Error encoding page {page} as PNG: {exc}"
         png_bytes = buf.getvalue()
-        b64 = base64.b64encode(png_bytes).decode("ascii")
-
-        # Return a structured summary plus the data URI. Including both
-        # lets the model know the dimensions + size without having to
-        # decode the image, and gives it a clear hint to include the
-        # data URI in its next message as an image_url content part.
         size_kb = len(png_bytes) / 1024
+
+        # v1.18.7: tool-produced multimodal artifacts go through the
+        # SessionFileStore — same lifecycle as user-uploaded chat
+        # attachments (revived from cache on session reload). Returning
+        # the inline base64 data URI used to cost ~80-110K tokens per
+        # call (rasterized pages at 150 DPI), enough to blow the
+        # context window on a single iteration. Now we save the PNG
+        # and return a compact reference; visual analysis is a
+        # follow-up tool call.
+        file_store = getattr(self.engine, "file_store", None)
+        if file_store is None:
+            # No store (some test fixtures) — fall back to inline data
+            # URI for compat.
+            b64 = base64.b64encode(png_bytes).decode("ascii")
+            return (
+                f"Rasterized page {page} of {meta.name}:\n"
+                f"- Dimensions: {width}x{height} pixels\n"
+                f"- DPI: {dpi_int}\n"
+                f"- Size: {size_kb:.1f} KB PNG\n"
+                f"- Data URI: data:image/png;base64,{b64}\n"
+            )
+
+        from pathlib import Path
+        artifact_name = f"{Path(meta.name).stem}_page_{page}.png"
+        try:
+            saved = file_store.save(
+                artifact_name, png_bytes, media_type="image/png"
+            )
+        except OSError as exc:
+            return f"Error: failed to save rasterized page: {exc}"
+
         return (
             f"Rasterized page {page} of {meta.name}:\n"
             f"- Dimensions: {width}x{height} pixels\n"
             f"- DPI: {dpi_int}\n"
             f"- Size: {size_kb:.1f} KB PNG\n"
-            f"- Data URI: data:image/png;base64,{b64}\n\n"
-            f"Include this data URI as an image_url content part in your next "
-            f"response if you want to analyze the page visually."
+            f"- Saved to session attachments: file_id={saved.file_id}\n\n"
+            f"The PNG is now in the session file store (same lifecycle as "
+            f"chat-uploaded files, revived on session reload). For visual "
+            f"analysis, use a tool that accepts a file_id rather than "
+            f"re-rasterizing — the bytes are kept once."
         )
 
 

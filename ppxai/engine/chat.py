@@ -152,6 +152,69 @@ def get_effective_profile(model: str, provider: str, ctx: ChatContext) -> ModelP
     )
 
 
+# Tool categories used by the success heuristic. Module-level so
+# `_compute_tool_success` is import-cheap and unit-testable.
+_READ_ONLY_TOOLS = frozenset({
+    'read_file', 'display_file', 'list_directory',
+    'search_files', 'get_working_directory',
+})
+_SHELL_TOOLS = frozenset({'execute_shell_command', 'execute_command'})
+
+
+def _compute_tool_success(tool_name: str, result: str) -> bool:
+    """Classify a tool call as success or failure for validator bookkeeping.
+
+    The classification is feed-stock for `ResponseValidator`'s
+    `claim_contradicts_result` warning and for the agent zombie-loop
+    circuit-breaker. False positives here cause spurious warnings to
+    the user; false negatives mask real errors.
+
+    Heuristics differ per tool category:
+
+    - Read-only tools (read_file, etc.): success unless the result
+      begins with `Error:` — read_file results ARE file content, so
+      substring-matching on error keywords inside the file would flag
+      source code as broken.
+
+    - Shell tools (execute_shell_command, execute_command): the tool
+      formats its output as `[cwd: <dir>]\\n...` on success and
+      `[cwd: <dir>, exit: <N>]\\n...` on non-zero exit. The bracketed
+      exit code is the authoritative signal. v1.18.7 fix: previously
+      this branch substring-matched on 'failed' / 'error:' in the
+      output, which flagged benign stderr noise (e.g. LibreOffice's
+      "Warning: failed to read path from javaldx") as a real error
+      and triggered false `claim_contradicts_result` warnings on
+      successful conversions.
+
+    - Everything else (write tools, native pdf/pptx/excel/docx tools,
+      web tools, …): substring-match a small set of error indicators.
+      Imperfect but covers the common failure modes for tools whose
+      output format we don't control.
+    """
+    if tool_name in _READ_ONLY_TOOLS:
+        return not result.startswith(('Error:', 'Error '))
+
+    if tool_name in _SHELL_TOOLS:
+        if not result.startswith("[cwd:"):
+            # Output didn't go through the wrapper — fall back to the
+            # generic heuristic so wrapper-bypassing custom shells
+            # still get classified.
+            return not any(
+                ind in result.lower()
+                for ind in ('error:', 'not found', 'failed',
+                            'does not exist', 'permission denied')
+            )
+        header = result.split("]", 1)[0]
+        # Success: "[cwd: X" with no ", exit: N" inside the header.
+        return ", exit:" not in header
+
+    return not any(
+        ind in result.lower()
+        for ind in ('error:', 'not found', 'failed',
+                    'does not exist', 'permission denied')
+    )
+
+
 def _get_zombie_threshold(ctx: ChatContext) -> int:
     """Read the P0 (v1.18.0) circuit-breaker threshold from agent config.
 
@@ -388,18 +451,7 @@ async def _execute_single_tool(
         result = await tool_task
 
         # Determine if tool succeeded based on result content
-        _READ_ONLY_TOOLS = {
-            'read_file', 'display_file', 'list_directory',
-            'search_files', 'get_working_directory',
-        }
-        if tool_name in _READ_ONLY_TOOLS:
-            tool_success = not result.startswith(('Error:', 'Error '))
-        else:
-            tool_success = not any(
-                indicator in result.lower()
-                for indicator in ['error:', 'not found', 'failed',
-                                  'does not exist', 'permission denied']
-            )
+        tool_success = _compute_tool_success(tool_name, result)
 
         # Record tool call for validation
         validator.record_tool_call(

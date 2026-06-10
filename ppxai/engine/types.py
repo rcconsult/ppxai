@@ -5,7 +5,7 @@ These types are used across all layers (engine, server, clients) and have no UI 
 """
 
 from dataclasses import dataclass, field
-from typing import ClassVar, List, Dict, Any, Optional, Callable, Protocol, Set, Union, runtime_checkable
+from typing import ClassVar, List, Dict, Any, Optional, Callable, Protocol, Set, Tuple, Union, runtime_checkable
 from enum import Enum
 
 
@@ -52,6 +52,11 @@ class ToolEngineProtocol(Protocol):
     async def request_shell_consent(self, command: str, working_dir: str = ".") -> bool: ...
     def register_subprocess(self, proc: Any) -> None: ...
     def unregister_subprocess(self, proc: Any) -> None: ...
+    def resolve_file_reference(
+        self,
+        file_id: Optional[str] = None,
+        path: Optional[str] = None,
+    ) -> Tuple[Optional[Any], Optional[str]]: ...
 
 
 @runtime_checkable

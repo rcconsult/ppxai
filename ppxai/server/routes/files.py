@@ -793,10 +793,17 @@ async def preview_file_by_path(
                 return JSONResponse({
                     "total": 1, "name": resolved.name, "type": "pdf", "kind": "word",
                 })
-            return Response(
-                content=pdf_path.read_bytes(),
+            # v1.18.7: FileResponse sends Last-Modified + ETag from the
+            # cached PDF and handles If-Modified-Since → 304 for free.
+            # Cache-Control: no-cache forces browsers to revalidate on
+            # every click; combined with the cached-PDF source-mtime
+            # check inside convert_docx_to_pdf, edits propagate instantly
+            # to the preview pane while the network round-trip stays
+            # cheap (304, no body).
+            return FileResponse(
+                pdf_path,
                 media_type="application/pdf",
-                headers={"Cache-Control": "private, max-age=3600"},
+                headers={"Cache-Control": "private, no-cache"},
             )
         # LibreOffice missing — return extracted text as fallback.
         from ...engine.tools.builtin.docx_tools import _extract_docx_text
@@ -831,10 +838,13 @@ async def preview_file_by_path(
                 status_code=404,
                 detail=f"Slide {slide} out of range (1-{len(pngs)})",
             )
-        return Response(
-            content=pngs[slide - 1].read_bytes(),
+        # v1.18.7: see Word path above. FileResponse handles 304
+        # revalidation; no-cache forces revalidation each click so the
+        # browser doesn't sit on a pre-edit PNG for an hour.
+        return FileResponse(
+            pngs[slide - 1],
             media_type="image/png",
-            headers={"Cache-Control": "private, max-age=3600"},
+            headers={"Cache-Control": "private, no-cache"},
         )
 
     # PPTX text-extraction fallback — extract requested slide as markdown.

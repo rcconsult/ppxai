@@ -81,6 +81,80 @@ class TestRenderPptxSlides:
         # No PNGs produced
         assert result == []
 
+    def test_cache_invalidated_when_source_is_newer(self, tmp_path):
+        """v1.18.7: cache must be re-rendered when source mtime > cache mtime.
+
+        The file-tree preview used to show stale slides after the user
+        (or model) rewrote a .pptx — `if cached: return cached` skipped
+        the freshness check entirely. This test pins the fix.
+        """
+        import os
+        from ppxai.engine.tools.builtin.pptx_tools import render_pptx_slides
+
+        # Source pptx exists with a known mtime (now)
+        source = tmp_path / "deck.pptx"
+        source.write_bytes(b"stub pptx bytes")
+
+        # Cache contains older PNGs (mtime in the past)
+        cache_dir = tmp_path / "slides"
+        cache_dir.mkdir()
+        stale_png = cache_dir / "slide-01.png"
+        stale_png.write_bytes(b"STALE")
+        old_time = source.stat().st_mtime - 3600  # 1 hour older
+        os.utime(stale_png, (old_time, old_time))
+
+        # When source is newer, LibreOffice is invoked to re-render. The
+        # cache should be wiped first. Patch subprocess so we don't need
+        # LibreOffice installed for the test.
+        with patch("ppxai.engine.tools.builtin.pptx_tools.subprocess") as mock_sub:
+            mock_sub.run.return_value = MagicMock(returncode=0)
+            # No PDF produced → falls back to empty after invalidating.
+            result = render_pptx_slides(source, cache_dir)
+
+        # The stale PNG must have been deleted (cache invalidated).
+        assert not stale_png.exists(), "stale cache PNG was not invalidated"
+        # LibreOffice was actually invoked (cache-skip path didn't fire).
+        assert mock_sub.run.called
+
+    def test_cache_kept_when_source_is_older(self, tmp_path):
+        """Inverse: when cache is up-to-date, no re-render happens."""
+        import os
+        from ppxai.engine.tools.builtin.pptx_tools import render_pptx_slides
+
+        # Source exists, but the cache is NEWER than the source.
+        source = tmp_path / "deck.pptx"
+        source.write_bytes(b"stub")
+        cache_dir = tmp_path / "slides"
+        cache_dir.mkdir()
+        cached = cache_dir / "slide-01.png"
+        cached.write_bytes(b"FRESH")
+        future_time = source.stat().st_mtime + 60
+        os.utime(cached, (future_time, future_time))
+
+        with patch("ppxai.engine.tools.builtin.pptx_tools.subprocess") as mock_sub:
+            result = render_pptx_slides(source, cache_dir)
+
+        # Cache hit — no LibreOffice call, cache file intact.
+        assert mock_sub.run.called is False
+        assert cached.exists()
+        assert result == [cached]
+
+    def test_missing_source_preserves_cache(self, tmp_path):
+        """If the source vanished but we have a cached render, serve it
+        — better than serving nothing while a re-render fails anyway."""
+        from ppxai.engine.tools.builtin.pptx_tools import render_pptx_slides
+
+        cache_dir = tmp_path / "slides"
+        cache_dir.mkdir()
+        cached = cache_dir / "slide-01.png"
+        cached.write_bytes(b"DATA")
+
+        # Source doesn't exist on disk
+        result = render_pptx_slides(tmp_path / "nonexistent.pptx", cache_dir)
+
+        assert result == [cached]
+        assert cached.exists()
+
 
 # ---------------------------------------------------------------------------
 # RenderPptxSlideTool
@@ -142,6 +216,10 @@ class TestRenderPptxSlideTool:
 
     @pytest.mark.asyncio
     async def test_successful_render(self, tmp_path):
+        # v1.18.7: rendered PNG goes to SessionFileStore (same lifecycle
+        # as user-uploaded chat attachments), tool result is a compact
+        # text reference. The pre-v1.18.7 inline-base64 path cost ~100K
+        # tokens per call and blew the context window on every render.
         from ppxai.engine.tools.builtin.pptx_tools import RenderPptxSlideTool
 
         store, meta = _make_file_store_with_pptx(tmp_path)
@@ -157,9 +235,18 @@ class TestRenderPptxSlideTool:
         with patch("ppxai.engine.tools.builtin.pptx_tools._libreoffice_available", return_value=True):
             result = await tool.execute(file_id="test_pptx_id", slide=1)
 
-        assert result.startswith("data:image/png;base64,")
-        decoded = base64.b64decode(result.split(",", 1)[1])
-        assert decoded == png_data
+        # Tool result is now a compact text reference, not inline base64.
+        assert "data:image/png;base64," not in result
+        assert "Rendered slide 1" in result
+        assert "file_id=" in result
+        # The bytes landed in SessionFileStore — store.save was called
+        # with the PNG bytes.
+        store.save.assert_called_once()
+        save_args, save_kwargs = store.save.call_args
+        # Positional args: (name, data, ...) or kw: name=, data=
+        # Inspect both forms.
+        passed_bytes = save_kwargs.get("data") if "data" in save_kwargs else save_args[1]
+        assert passed_bytes == png_data
 
 
 # ---------------------------------------------------------------------------

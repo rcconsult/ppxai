@@ -10,7 +10,7 @@ import base64
 import os
 import threading
 from datetime import datetime
-from typing import List, AsyncIterator, Optional, Dict, Any
+from typing import List, AsyncIterator, Optional, Dict, Any, Tuple
 from pathlib import Path
 
 from .types import (
@@ -406,6 +406,25 @@ class EngineClient:
         to the `context_attachments` AppState field directly.
         """
         return multimodal_ops.get_context_attachments(self)
+
+    def resolve_file_reference(
+        self,
+        file_id: Optional[str] = None,
+        path: Optional[str] = None,
+    ) -> Tuple[Optional[Any], Optional[str]]:
+        """Resolve either a SessionFileStore file_id or a workspace path.
+
+        v1.18.7. Lets office tools (pdf/pptx/excel/docx) address files in
+        BOTH namespaces without per-tool plumbing. SessionFileStore stays
+        the authority for chat attachments; workspace paths are resolved
+        relative to the engine's working_dir and confined to it.
+
+        See `engine.file_ref` for the resolution logic. Returns
+        `(FileMetadata | FileRef, None)` on success or `(None, error)`
+        on failure. Either argument may be passed but not both.
+        """
+        from .file_ref import resolve_file_reference as _resolve
+        return _resolve(self, file_id=file_id, path=path)
 
     def remove_context_attachment(self, name: str) -> int:
         """Drop all user-turn multimodal parts matching `name` from history.

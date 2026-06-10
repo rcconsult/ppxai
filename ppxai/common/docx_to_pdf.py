@@ -70,7 +70,26 @@ def convert_docx_to_pdf(source_path: Path, cache_dir: Path) -> Path:
     cache_dir = Path(cache_dir)
     cached_pdf = cache_dir / "preview.pdf"
     if cached_pdf.exists():
-        return cached_pdf
+        # v1.18.7: validate that the cached PDF is at least as new as
+        # the source — otherwise the file-tree preview keeps showing
+        # the pre-edit version after the user / model rewrites the
+        # .docx.
+        try:
+            source_mtime = source_path.stat().st_mtime
+        except OSError:
+            # Source missing or unreadable. Keep the cache rather than
+            # serve nothing.
+            return cached_pdf
+        try:
+            cache_mtime = cached_pdf.stat().st_mtime
+        except OSError:
+            cache_mtime = 0.0
+        if cache_mtime >= source_mtime:
+            return cached_pdf
+        try:
+            cached_pdf.unlink()
+        except OSError:
+            pass
 
     cache_dir.mkdir(parents=True, exist_ok=True)
 

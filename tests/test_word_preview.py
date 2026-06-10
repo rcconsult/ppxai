@@ -88,3 +88,56 @@ class TestConvertDocxToPdf:
         # Second call should return cached
         result2 = convert_docx_to_pdf(source, cache_dir)
         assert result2 == result
+
+    def test_cache_invalidated_when_source_is_newer(self, tmp_path):
+        """v1.18.7: cache must be re-generated when source mtime > cache mtime.
+
+        The file-tree preview used to keep showing the pre-edit Word doc
+        because `if cached_pdf.exists(): return cached_pdf` skipped the
+        freshness check entirely.
+        """
+        import os
+        from ppxai.common.docx_to_pdf import convert_docx_to_pdf
+
+        source = tmp_path / "memo.docx"
+        source.write_bytes(b"new content")
+
+        cache_dir = tmp_path / "preview"
+        cache_dir.mkdir()
+        stale = cache_dir / "preview.pdf"
+        stale.write_bytes(b"%PDF-1.4 STALE")
+        old_time = source.stat().st_mtime - 3600
+        os.utime(stale, (old_time, old_time))
+
+        def fake_libreoffice(cmd, **kwargs):
+            outdir = cmd[cmd.index("--outdir") + 1]
+            (Path(outdir) / (source.stem + ".pdf")).write_bytes(b"%PDF-1.4 FRESH")
+            return MagicMock(returncode=0)
+
+        with patch("subprocess.run", side_effect=fake_libreoffice) as mock_sub:
+            result = convert_docx_to_pdf(source, cache_dir)
+
+        # Should have re-rendered, not returned the stale cache.
+        assert mock_sub.called
+        assert result.read_bytes() == b"%PDF-1.4 FRESH"
+
+    def test_cache_kept_when_source_is_older(self, tmp_path):
+        """Inverse: when cache is up-to-date, no re-render happens."""
+        import os
+        from ppxai.common.docx_to_pdf import convert_docx_to_pdf
+
+        source = tmp_path / "memo.docx"
+        source.write_bytes(b"stub")
+
+        cache_dir = tmp_path / "preview"
+        cache_dir.mkdir()
+        fresh = cache_dir / "preview.pdf"
+        fresh.write_bytes(b"%PDF-1.4 CACHED")
+        future_time = source.stat().st_mtime + 60
+        os.utime(fresh, (future_time, future_time))
+
+        with patch("subprocess.run") as mock_sub:
+            result = convert_docx_to_pdf(source, cache_dir)
+
+        assert mock_sub.called is False
+        assert result.read_bytes() == b"%PDF-1.4 CACHED"
