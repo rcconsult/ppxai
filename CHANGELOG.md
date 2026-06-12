@@ -7,17 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Branch: `bugfix/v1.18.7`. Theme: **bugfix-class follow-up to v1.18.6** — repository hygiene, test-coverage backfill, one targeted web-client decomposition, model-catalog refresh to the 2026-05-31 generation, paperwork for two v1.20.x upstream asks surfaced by peer ppxai-sre RFCs, AND a structural fix to a long-standing file-tree office-doc preview regression (broken since v1.16.2). The v1 API gateway shape (`POST /v1/oneshot`, bearer auth) is **byte-identical to v1.18.6** — ppxai-sre's outlook-monitor and any other v1-gateway consumer is unaffected.
+Branch: `bugfix/v1.18.7`. Theme: **bugfix-class follow-up to v1.18.6** — a **critical multi-tenant auth fix** for the k8s session-manager (cross-user pod takeover), workspace file upload, repository hygiene, test-coverage backfill, one targeted web-client decomposition, model-catalog refresh to the 2026-05-31 generation, paperwork for two v1.20.x upstream asks surfaced by peer ppxai-sre RFCs, AND a structural fix to a long-standing file-tree office-doc preview regression (broken since v1.16.2). The v1 API gateway shape (`POST /v1/oneshot`, bearer auth) is **byte-identical to v1.18.6** — ppxai-sre's outlook-monitor and any other v1-gateway consumer is unaffected.
+
+### Security
+
+- **Critical: cross-user pod takeover in the multi-tenant k8s session-manager.** Until now the per-user ingress path `/s/<slug>/` had no per-request authorization — slugs are `firstname-lastname` (trivially enumerable), so any authenticated user could hit `/s/<other>/` and get full control of another user's pod (read/write their workspace, run shell as root, read chat history, pull shared provider keys). Fix (C1): on `POST /sessions`, after LDAP auth, set an HttpOnly+Secure+SameSite=Lax `coder_session` cookie `<slug>.<iat>.<hmac>` signed with `SESSION_SIGNING_KEY` (HMAC-SHA256, stdlib `hmac`, no new dep); a new `GET /authz` endpoint, called by ingress-nginx `auth_request` on every `/s/` request, verifies the HMAC + server-side expiry and `compare_digest`s the cookie slug against the URL slug — 401 on missing/forged/expired, **403 on slug mismatch (the attack)**. Optional live-session existence cross-check (`REQUIRE_LIVE_SESSION`, 5s TTL cache) so a torn-down session's cookie stops working immediately. Ingress is split so `/login` + `/api` stay on a separate unauth ingress (else login is chicken-and-egg). Commit `79fbdec4`.
+- **Fail-closed startup.** The session-manager **refuses to start** if `SESSION_SIGNING_KEY` is unset or <32 bytes — a running-but-unsigned manager would mint forgeable cookies, silently defeating the C1 gate. Commit `79fbdec4`.
+- **Pod hardening (H2).** Server pods run with a restricted `securityContext`. Commit `79fbdec4`.
+- **Helm chart wires up C1/H2.** The hardened image already shipped the logic via `main.py`, but the Helm chart — the shareable deploy surface — had no manifests to wire it, so a Helm deployer would get auth silently unwired (or a fail-closed crash-loop). Adds `templates/secret-session-signing.yaml` (the HMAC signing-key secret; `helm template` **fails with a clear message** if `auth.sessionSigning.key` is unset/<32 chars and no `existingSecret` is given), `templates/networkpolicy.yaml`, and the session-manager deployment/ingress wiring. All generic + templated, leak-scanned (no hostnames, CIDRs, storage-class names, or keys). Commit `6f8c94d4`.
+- **Quick-pass security test coverage** for the C1/H2 + LDAP auth surface (debt-inventory Item 3): 29 tests in `tests/test_session_manager_auth.py` — fail-closed startup, slug `../`/`/` path-escape neutralization, cookie HMAC (forged/tampered/expired/malformed rejection), the `/authz` cross-user-takeover gate (403 on mismatch), and LDAP hash/cache/fail-closed-on-bind-error. Verified real via mutation (neutering the `compare_digest` gate fails the cross-user test). Branch `feat/k8s-session-manager-tests`.
 
 ### Configurable
 
-- **`file_tree.ignore_dirs`** in `ppxai-config.json`. The directory-name set the web file tree, `/files/list`, `/files/search`, and `/files/tree` skip — promoted from the hard-coded `IGNORE_DIRS` constant in `ppxai/server/routes/files.py:22` to a user-overridable config list. Default unchanged (`.git`, `node_modules`, `__pycache__`, `.venv`, `venv`, `.tox`, `dist`, `build`, `.eggs`, `.mypy_cache`). REPLACE semantics: your list is used verbatim — drop an entry to unhide that directory (e.g. remove `venv` to see virtualenv dirs in the sidebar), or set to `[]` to disable hiding entirely. Read at request time so config changes take effect without server restart. Note: the TUI completer / commands at `ppxai/commands/utility.py:35` keep their own constant (not in v1.18.7 scope; touching the TUI surface would broaden test impact unnecessarily). 11 new tests in `tests/test_file_tree_ignore_config.py`. Commit pending.
+- **`file_tree.ignore_dirs`** in `ppxai-config.json`. The directory-name set the web file tree, `/files/list`, `/files/search`, and `/files/tree` skip — promoted from the hard-coded `IGNORE_DIRS` constant in `ppxai/server/routes/files.py:22` to a user-overridable config list. Default unchanged (`.git`, `node_modules`, `__pycache__`, `.venv`, `venv`, `.tox`, `dist`, `build`, `.eggs`, `.mypy_cache`). REPLACE semantics: your list is used verbatim — drop an entry to unhide that directory (e.g. remove `venv` to see virtualenv dirs in the sidebar), or set to `[]` to disable hiding entirely. Read at request time so config changes take effect without server restart. Note: the TUI completer / commands at `ppxai/commands/utility.py:35` keep their own constant (not in v1.18.7 scope; touching the TUI surface would broaden test impact unnecessarily). 11 new tests in `tests/test_file_tree_ignore_config.py`. Commit `40dda5ca`.
 
 ### Fixed
 
 - **File-tree office-doc preview regression** (broken since v1.16.2). Clicking `.pptx` / `.ppt` / `.docx` / `.doc` / `.xlsx` / `.xls` / `.csv` in the web sidebar file tree showed "Failed to load: Cannot read binary file" instead of a preview. Root cause: `PpxaiApp.displayFileFromEvent` in `ppxai/web/app.js` had no office-format branch — office clicks fell through to `CodeEditorView`, which called `/files/read`, got `UnicodeDecodeError` → 400, and rendered the error string. Fix is structural across three commits (`60d57037`, `330acb60`, `62f485eb`) — see Added + Changed below.
 
+- **Office-document tool resolution + cache invalidation.** The PDF/Excel/PPTX/DOCX tools now resolve attachments by both `file_id` and path, route artifacts through `SessionFileStore`, and invalidate the preview cache correctly when a file changes. Commit `c110b05a`.
+
+- **PDF/Excel/PPTX tools now log when they silently fail to register.** The document-tool families are gated on the `[data]` extras (`python-pptx`, `pypdf`, `openpyxl`); when those packages are absent, `register_tools()` returned `False` and the caller swallowed it via a bare `except Exception: pass`, so the engine started healthy with the tools simply absent — no log, no warning — and the model fell back to ad-hoc shell scripts that failed with the same missing dep. Now a `logger.warning` fires on the `False` return (with the `pip install 'ppxai[data]'` hint) and on unexpected exceptions. Commit `29cb2556`.
+
 ### Added
+
+- **`POST /files/upload` + file-tree drag-drop for workspace uploads.** Drag a file onto the web file tree (or use the new **⬆ Upload** button) to write it into the working directory. New multipart endpoint with the same `_resolve_safe_path` security check as the other file routes. Commit `2f70864f` (button label `c0e7e70c`).
+
+- **`write_file` builtin tool.** Closes the gap where the validator could hint at a write but no first-class write tool existed; `write_file` returns `{bytes_written, ...}`. Commit `59470546`.
 
 - **`/files/preview?path=` server endpoint** (path-based office-doc preview). Counterpart to the existing `/files/preview/{file_id}` route — accepts a working-dir-relative or absolute path instead of a SessionFileStore file_id, so the file-tree click path (files browsed in the sidebar were never registered with the store) can finally serve them. Same renderer (LibreOffice via `render_pptx_slides` / `convert_docx_to_pdf`); cache lives separately at `~/.ppxai/.preview-cache/<sha256(path)>/` so browse-only previews don't pollute the attached-file cache. LibreOffice-missing fallback returns JSON `{type: "text_fallback", content: "<markdown>", ...}` via `extract_pptx_slide_text` (new public helper) / `_extract_docx_text`. Commit `60d57037`.
 
@@ -59,6 +75,14 @@ Branch: `bugfix/v1.18.7`. Theme: **bugfix-class follow-up to v1.18.6** — repos
 
 - **Release notes draft for v1.18.7.** `docs/release-notes-v1.18.7.md`. Commit `2411028c`.
 
+- **Upload-feature defense-in-depth plan.** `docs/security/upload-defense-plan.md` — threat model + layered mitigations for the new `POST /files/upload` path. Commit `d73ebdd3`.
+
+- **Hermes Agent / OpenClaw comparative reference (pointer).** `docs/research/2026-06-12-hermes-openclaw-reference.md` points at the full source-verified comparative reference in the sibling ppxai-sre repo. Referential design/architecture evidence; not a decision. Commit `5c85ceb1`.
+
+### Dependencies
+
+- **`python-multipart>=0.0.6` added to the `[server]` extras.** Required by `POST /files/upload` (FastAPI's `UploadFile` / `Form` raises `RuntimeError` at import time without it). Was a transitive dep of `fastapi[standard]` in local dev but **not** in the slim Dockerfile `pip install ".[server,search,data]"`, so deploy images need it pinned explicitly. Commit `02a64303`.
+
 ### Chore
 
 - **Version bump to 1.18.7 across all SoT files** per `tests/test_version_consistency.py` registry. Commit `d11fa76c`.
@@ -71,7 +95,7 @@ Branch: `bugfix/v1.18.7`. Theme: **bugfix-class follow-up to v1.18.6** — repos
 
 ### Tests
 
-3707 pass, 2 skipped on Unix (9 skipped on Windows due to `os.getpgid` / `os.killpg` `patch()` limitations on `TestKillPreviewBackend`). Test count delta from v1.18.6 = +12 (test count for v1.18.6 was 3695; +12 = the new HTTP route tests + a small handful of post-release additions on this branch).
+Test count grows on this branch (exact total confirmed by the pre-tag sweep / `test_version_consistency`): the v1.18.6 baseline was 3695, plus this branch's additions — `/files/read` HTTP route tests (`d06c5ee2`), `file_tree.ignore_dirs` (`tests/test_file_tree_ignore_config.py`, 11), `/files/preview` + `/files/download` (`tests/test_files_preview_download.py`, 19), `POST /files/upload` (`tests/test_files_upload.py`), and the k8s session-manager C1/H2 + LDAP auth quick-pass suite (`tests/test_session_manager_auth.py`, 29 — landed on branch `feat/k8s-session-manager-tests`). 2 skipped on Unix; 9 skipped on Windows (`os.getpgid` / `os.killpg` `patch()` limitations on `TestKillPreviewBackend`).
 
 ## [1.18.6] - 2026-05-23
 
