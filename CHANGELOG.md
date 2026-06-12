@@ -95,7 +95,7 @@ Branch: `bugfix/v1.18.7`. Theme: **bugfix-class follow-up to v1.18.6** — a **c
 
 ### Tests
 
-Test count grows on this branch (exact total confirmed by the pre-tag sweep / `test_version_consistency`): the v1.18.6 baseline was 3695, plus this branch's additions — `/files/read` HTTP route tests (`d06c5ee2`), `file_tree.ignore_dirs` (`tests/test_file_tree_ignore_config.py`, 11), `/files/preview` + `/files/download` (`tests/test_files_preview_download.py`, 19), `POST /files/upload` (`tests/test_files_upload.py`), and the k8s session-manager C1/H2 + LDAP auth quick-pass suite (`tests/test_session_manager_auth.py`, 29 — landed on branch `feat/k8s-session-manager-tests`). 2 skipped on Unix; 9 skipped on Windows (`os.getpgid` / `os.killpg` `patch()` limitations on `TestKillPreviewBackend`).
+3827 collected (3816 passed, 87 skipped on Windows; exit 0) as of the v1.18.7 pre-tag full run. Grown from the v1.18.6 baseline of 3695 by this branch's additions — `/files/read` HTTP route tests (`d06c5ee2`), `file_tree.ignore_dirs` (`tests/test_file_tree_ignore_config.py`, 11), `/files/preview` + `/files/download` (`tests/test_files_preview_download.py`, 19), `POST /files/upload` (`tests/test_files_upload.py`), and the k8s session-manager C1/H2 + LDAP auth quick-pass suite (`tests/test_session_manager_auth.py`, 29). On Unix the Windows-only skips (incl. the 7 `TestKillPreviewBackend` cases that can't `patch()` `os.getpgid` / `os.killpg`, plus symlink/subprocess cases) run, so the Unix skip count is far lower.
 
 ## [1.18.6] - 2026-05-23
 
