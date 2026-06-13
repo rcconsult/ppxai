@@ -172,10 +172,19 @@ class MarkdownFileView extends BaseView {
     _renderMarkdown(contentEl) {
         const content = this._content ?? '';
         let html;
-        if (typeof marked !== 'undefined') {
+        if (typeof marked !== 'undefined' && typeof DOMPurify !== 'undefined') {
             marked.setOptions({ gfm: true, breaks: true, mangle: false, headerIds: false });
-            html = marked.parse(content);
+            // marked v11 emits raw HTML verbatim (no built-in sanitize option),
+            // so a previewed .md could carry <img onerror>, <script>, or a
+            // javascript: link. Sanitize the parsed output before innerHTML to
+            // prevent DOM-XSS in the app origin. DOMPurify's default config
+            // strips <script>, inline event handlers, and javascript:/data:
+            // script URLs while preserving the markup the renderer relies on
+            // (links, images, code-block classes for hljs).
+            html = DOMPurify.sanitize(marked.parse(content));
         } else {
+            // marked or the sanitizer is unavailable → render as escaped plain
+            // text rather than risk emitting unsanitized HTML.
             html = `<pre>${_mfvEsc(content)}</pre>`;
         }
         contentEl.innerHTML = `<div class="mfv-markdown-body">${html}</div>`;

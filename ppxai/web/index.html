@@ -15,6 +15,9 @@
     <script src="lib/xterm/xterm.min.js"></script>
     <script src="lib/xterm/addon-fit.min.js"></script>
     <script src="lib/marked.min.js"></script>
+    <!-- DOMPurify sanitizes marked.js output before innerHTML (prevents
+         DOM-XSS from a malicious .md previewed in rendered mode). -->
+    <script src="lib/dompurify.min.js"></script>
     <script src="lib/highlight.min.js"></script>
     <script src="lib/js-yaml.min.js"></script>
     <script src="lib/smol-toml.min.js"></script>

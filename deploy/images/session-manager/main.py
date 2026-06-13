@@ -102,6 +102,17 @@ ldap_auth = None
 if AUTH_MODE == "ldap":
     from ldap_auth import LDAPAuthenticator
     ldap_auth = LDAPAuthenticator()
+elif AUTH_MODE == "stub":
+    # stub mode issues a valid signed cookie for ANY username with no
+    # password (POC/dev only). The C1 per-user gate then enforces cookie
+    # integrity but cannot enforce identity, so any caller can mint a
+    # cookie for any victim's slug. Make this impossible to run silently
+    # in a shared/multi-tenant cluster by logging a loud startup warning.
+    log.warning(
+        "AUTH_MODE=stub — NO real authentication (any username, no "
+        "password). This is POC/dev only. Set AUTH_MODE=ldap for any "
+        "multi-tenant or production deployment."
+    )
     log.info("LDAP authentication enabled")
 
 # ---------------------------------------------------------------------------

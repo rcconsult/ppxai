@@ -299,3 +299,43 @@ class TestSpecialPathPrefixes:
         assert resp.status_code in (200, 403), resp.text
         if resp.status_code == 200:
             assert resp.json()["content"] == "from-home\n"
+
+
+class TestWithinTreeConfinement:
+    """Unit tests for `_within_tree` — the home-dir subtree check used by
+    `_resolve_safe_path` and `/files/write`.
+
+    v1.18.7: replaced a `str(path).startswith(str(home_dir))` prefix test,
+    which let a sibling directory whose name shares a prefix (e.g.
+    `/home/userEVIL` vs `/home/user`) pass the home-dir confinement.
+    """
+
+    def test_path_inside_base_passes(self):
+        from ppxai.server.routes.files import _within_tree
+        base = Path("/home/user").resolve()
+        assert _within_tree((base / "notes" / "a.txt"), base) is True
+
+    def test_base_itself_passes(self):
+        from ppxai.server.routes.files import _within_tree
+        base = Path("/home/user").resolve()
+        assert _within_tree(base, base) is True
+
+    def test_prefix_sibling_rejected(self):
+        """The exact bug the fix closes: a sibling sharing a name prefix."""
+        from ppxai.server.routes.files import _within_tree
+        base = Path("/home/user").resolve()
+        evil = Path("/home/userEVIL/.ssh/id_rsa").resolve()
+        assert _within_tree(evil, base) is False
+
+    def test_ancestor_rejected(self):
+        """One-directional: an ancestor of base must NOT pass (unlike the
+        bidirectional `is_path_allowed`)."""
+        from ppxai.server.routes.files import _within_tree
+        base = Path("/home/user").resolve()
+        assert _within_tree(Path("/home").resolve(), base) is False
+        assert _within_tree(Path("/").resolve(), base) is False
+
+    def test_unrelated_path_rejected(self):
+        from ppxai.server.routes.files import _within_tree
+        base = Path("/home/user").resolve()
+        assert _within_tree(Path("/etc/passwd").resolve(), base) is False

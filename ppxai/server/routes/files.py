@@ -132,6 +132,18 @@ OFFICE_PREVIEWABLE_EXTENSIONS = {
 }
 
 
+def _within_tree(path: Path, base: Path) -> bool:
+    """True iff `path` is `base` itself or sits inside `base`'s subtree.
+
+    Both arguments must already be `.resolve()`d. This compares path
+    *components*, so unlike a `str(path).startswith(str(base))` prefix
+    test it does NOT treat ``/home/userEVIL`` as inside ``/home/user``.
+    Unlike `is_path_allowed`, it is one-directional (child-only): an
+    ancestor of `base` does not pass.
+    """
+    return path == base or base in path.parents
+
+
 def _resolve_safe_path(
     raw: str,
     engine,
@@ -217,10 +229,12 @@ def _resolve_safe_path(
 
     path = path.resolve()
 
-    # Security: working_dir tree OR home_dir tree.
+    # Security: working_dir tree OR home_dir tree. The home check is a
+    # component-wise subtree test (_within_tree), not a string prefix, so a
+    # sibling like `/home/userEVIL` cannot pass as inside `/home/user`.
     working_dir = Path(engine.get_working_dir() or os.getcwd()).resolve()
     home_dir = Path.home().resolve()
-    if not (is_path_allowed(path, working_dir) or str(path).startswith(str(home_dir))):
+    if not (is_path_allowed(path, working_dir) or _within_tree(path, home_dir)):
         logger.warning(
             f"  Access denied: {path} not in {working_dir} tree or {home_dir}"
         )
@@ -516,8 +530,10 @@ async def write_file(
     working_dir = Path(s.engine.get_working_dir() or os.getcwd()).resolve()
     home_dir = Path.home().resolve()
 
-    # Allow files in working directory tree or home directory tree
-    if not (is_path_allowed(path, working_dir) or str(path).startswith(str(home_dir))):
+    # Allow files in working directory tree or home directory tree.
+    # _within_tree is a component-wise subtree test, not a string prefix,
+    # so `/home/userEVIL` cannot pass as inside `/home/user`.
+    if not (is_path_allowed(path, working_dir) or _within_tree(path, home_dir)):
         logger.warning(f"  Access denied: {path} not in {working_dir} tree or {home_dir}")
         raise HTTPException(
             status_code=403, detail="Access denied: path outside allowed directories"
@@ -1009,10 +1025,17 @@ async def upload_file(
         )
 
     dest = resolved_dir / safe_name
-    # The parent was security-checked by _resolve_safe_path. Path.name
-    # can't contain separators or `..`, so the join can't escape — the
-    # extra `is_path_allowed` defense was wrong-shaped (its signature
-    # is (target, base) not (target, engine)) and redundant anyway.
+    # The parent was security-checked by _resolve_safe_path (and `.resolve()`d,
+    # so it's canonical). Path.name can't contain separators or `..`, so the
+    # join can't escape via the name. The one remaining escape is `dest` itself
+    # being a pre-planted symlink: `open(dest, "wb")` would follow it and write
+    # outside the allowed tree. Refuse to write through a symlinked destination.
+    if dest.is_symlink():
+        logger.warning(f"  Upload denied: destination is a symlink: {dest}")
+        raise HTTPException(
+            status_code=403,
+            detail="Upload destination is a symlink; refusing to write through it",
+        )
 
     existed = dest.exists()
     if existed and not overwrite:

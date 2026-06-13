@@ -245,3 +245,58 @@ class TestSizeCap:
         assert resp.status_code == 413, resp.text
         # Partial-write cleanup: no half-written file left on disk
         assert not (tmp_path / "big.bin").exists()
+
+
+# ---------------------------------------------------------------------------
+# Security: symlinked destination (v1.18.7 hardening)
+# ---------------------------------------------------------------------------
+
+
+class TestSymlinkedDestination:
+    def test_upload_through_symlink_rejected(self, http_client, tmp_path):
+        """A pre-planted symlink named like the upload must NOT be followed.
+
+        The destination dir passes the security check, but if `<dir>/<name>`
+        is a symlink pointing outside the allowed tree, `open(dest, "wb")`
+        would write through it. The handler rejects symlinked destinations
+        with 403 and the outside target is left untouched.
+        """
+        outside = tmp_path / "outside"
+        outside.mkdir()
+        secret = outside / "secret.txt"
+        secret.write_bytes(b"original")
+
+        workdir = tmp_path / "work"
+        workdir.mkdir()
+        # Attacker plants a symlink inside the (allowed) working dir that
+        # points at a file outside it.
+        link = workdir / "report.txt"
+        link.symlink_to(secret)
+
+        headers = _session("symlink")
+        _anchor_to(http_client, headers, workdir)
+
+        resp = http_client.post(
+            "/files/upload",
+            params={"path": "."},
+            files={"file": ("report.txt", io.BytesIO(b"pwned"), "text/plain")},
+            headers=headers,
+        )
+        assert resp.status_code == 403, resp.text
+        # The symlink target outside the tree is NOT overwritten.
+        assert secret.read_bytes() == b"original"
+
+    def test_upload_overwrite_regular_file_still_works(self, http_client, tmp_path):
+        """The symlink guard must not break overwriting a normal file."""
+        headers = _session("symlink-regular")
+        _anchor_to(http_client, headers, tmp_path)
+        (tmp_path / "doc.txt").write_bytes(b"old")
+
+        resp = http_client.post(
+            "/files/upload",
+            params={"path": ".", "overwrite": "true"},
+            files={"file": ("doc.txt", io.BytesIO(b"new"), "text/plain")},
+            headers=headers,
+        )
+        assert resp.status_code == 200, resp.text
+        assert (tmp_path / "doc.txt").read_bytes() == b"new"
