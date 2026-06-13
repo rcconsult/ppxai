@@ -1,0 +1,3034 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Multi-LLM Interface for Developers - Terminal & VSCode">
+      
+      
+      
+        <link rel="canonical" href="https://rcconsult.github.io/ppxai/1.18.7/archive/RELEASE-PLAN-v1.15.6-v1.16.0/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Release Plan: v1.15.6 (Foundation) → v1.16.0 (Breaking Changes) - ppxai Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#release-plan-v1156-foundation-v1160-breaking-changes" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="ppxai Documentation" class="md-header__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ppxai Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Release Plan: v1.15.6 (Foundation) → v1.16.0 (Breaking Changes)
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="ppxai Documentation" class="md-nav__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ppxai Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../provider-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provider Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agent-mode-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agent Mode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../bootstrap-context-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bootstrap Context
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../context-injection/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Context Injection
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../checkpoint-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Checkpoint & Undo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../file-editing-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    File Editing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../shell-consent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shell Consent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../custom-tool-development-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../custom-command-development-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ollama-limitations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ollama Limitations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../vllm-tool-calling-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    vLLM Tool Calling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../container-tools-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Container Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../autorouter-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autorouter Config
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release Notes
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Release Notes
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../RELEASE-NOTES-v1.16.1.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../RELEASE-NOTES-v1.16.0.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../RELEASE-NOTES-v1.15.6.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.15.6
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#motivation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Motivation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#benchmark-findings-backlog-p0p4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Benchmark Findings Backlog (P0–P4)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Benchmark Findings Backlog (P0–P4)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#key-findings-unnumbered" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Findings (Unnumbered)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#release-strategy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Release Strategy
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Release Strategy">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#v1156-foundation-non-breaking" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v1.15.6 — Foundation (Non-Breaking)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v1160-breaking-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v1.16.0 — Breaking Changes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#v1156-foundation-non-breaking_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v1.15.6 — Foundation (Non-Breaking)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="v1.15.6 — Foundation (Non-Breaking)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#goal-1-merge-native-openai-provider-already-done" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Goal 1: Merge Native OpenAI Provider (Already Done)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#goal-2-immediate-wins-no-architecture-change" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Goal 2: Immediate Wins (No Architecture Change)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#goal-3-model-profile-system-data-structure-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Goal 3: Model Profile System (Data Structure Only)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#goal-4-benchmark-improvements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Goal 4: Benchmark Improvements
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v1156-testing-strategy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v1.15.6 Testing Strategy
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v1156-deliverables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v1.15.6 Deliverables
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="v1.15.6 Deliverables">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#debug-session-1-findings-2026-02-19-windows-v1156-items" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Debug Session 1 Findings (2026-02-19, Windows) — v1.15.6 Items
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#debug-session-2-findings-2026-02-20-macos-additional-v1156-items" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Debug Session 2 Findings (2026-02-20, macOS) — Additional v1.15.6 Items
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#v1160-breaking-changes_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v1.16.0 — Breaking Changes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="v1.16.0 — Breaking Changes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#why-v1160-not-v1157" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why v1.16.0 (Not v1.15.7)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#goal-1-profile-driven-tool-loop-gap-1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Goal 1: Profile-Driven Tool Loop (Gap 1)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#goal-2-proper-tool-message-format-gap-2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Goal 2: Proper Tool Message Format (Gap 2)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#goal-3-multi-tool-support-gap-3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Goal 3: Multi-Tool Support (Gap 3)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#goal-4-config-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Goal 4: Config Integration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#goal-5-file-navigation-from-todo-v1160md" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Goal 5: File Navigation (from TODO-v1.16.0.md)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#goal-6-provider-hierarchy-refactoring" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Goal 6: Provider Hierarchy Refactoring
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#goal-7-benchmark-v2-real-world-agent-evaluation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Goal 7: Benchmark v2 — Real-World Agent Evaluation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Goal 7: Benchmark v2 — Real-World Agent Evaluation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#phase-1-close-scoring-distortions-priority" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 1: Close Scoring Distortions (Priority)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-2-agentic-patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 2: Agentic Patterns
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-3-efficiency-hints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 3: Efficiency &amp; Hints
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#framework-genaiscript-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Framework: GenAIScript Integration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#new-category-agent-loop-proposed-5-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        New Category: Agent Loop (proposed, 5 tests)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scoring-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scoring Changes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#real-world-validation-matrix-2026-02-19-live-testing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Real-World Validation Matrix (2026-02-19 Live Testing)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#debug-session-findings-2026-02-19-2026-02-20-additional-v1160-items" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Debug Session Findings (2026-02-19 + 2026-02-20) — Additional v1.16.0 Items
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v1160-testing-strategy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v1.16.0 Testing Strategy
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v1160-risk-mitigation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v1.16.0 Risk Mitigation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-not-to-change" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What NOT to Change
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#timeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Timeline
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#roadmapmd-updates-required" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ROADMAP.md Updates Required
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#success-criteria" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Success Criteria
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Success Criteria">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#v1156-all-done" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v1.15.6 — All Done
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v1160" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v1.16.0
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="release-plan-v1156-foundation-v1160-breaking-changes">Release Plan: v1.15.6 (Foundation) → v1.16.0 (Breaking Changes)<a class="headerlink" href="#release-plan-v1156-foundation-v1160-breaking-changes" title="Permanent link">&para;</a></h1>
+<p><strong>Created:</strong> 2026-02-19
+<strong>Status:</strong> v1.15.6 done (pending merge), v1.16.0 planning
+<strong>Predecessor:</strong> v1.15.5 (released 2026-02-15)
+<strong>Active Branch:</strong> <code>feature/benchmark-openai-models</code> (native OpenAI provider + benchmarks)
+<strong>Analysis:</strong> <a href="../../model-behavior-analysis/">model-behavior-analysis.md</a>
+<strong>Debug Sessions:</strong> <a href="../ARCHIVE-v1.15.6-debug-sessions/">ARCHIVE-v1.15.6-debug-sessions.md</a></p>
+<hr />
+<h2 id="motivation">Motivation<a class="headerlink" href="#motivation" title="Permanent link">&para;</a></h2>
+<p>The <code>feature/benchmark-openai-models</code> branch introduced:
+1. <strong><code>OpenAINativeProvider</code></strong> — correct OpenAI API handling (Chat Completions + Responses API)
+2. <strong>49+ benchmark runs</strong> across 27 models revealing 5 architectural gaps in <code>chat.py</code></p>
+<p>The benchmark analysis (<a href="../../model-behavior-analysis/">model-behavior-analysis.md</a>) identified that the current binary <code>native_tool_calling: bool</code> decision is too coarse. Models like gpt-4.1-mini (71.9% prompt-based vs 60.9% native) and o4-mini (62.5% prompt-based vs 10.9% native) perform significantly worse when forced into the wrong mode.</p>
+<p><strong>Key insight:</strong> The benchmark runner bypasses <code>chat.py</code> entirely (calls <code>provider.chat()</code> directly), so none of the identified gaps are testable without a real client. The TUI (<code>ppxai</code>/<code>ppxaide</code>) is the primary test vehicle for these changes.</p>
+<hr />
+<h2 id="benchmark-findings-backlog-p0p4">Benchmark Findings Backlog (P0–P4)<a class="headerlink" href="#benchmark-findings-backlog-p0p4" title="Permanent link">&para;</a></h2>
+<p>Prioritized issues identified during the benchmark work (49+ runs, 27 models):</p>
+<table>
+<thead>
+<tr>
+<th>Priority</th>
+<th>Issue</th>
+<th>Target</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>P0</strong></td>
+<td><strong>Codex native tool calling works</strong> — Codex models via Responses API DO emit native <code>function_call</code> items when tools are sent as API params. Previous assumption was wrong (prompt-based mode failed because codex can't parse tool schemas from text). Fix: <code>get_capabilities_for_model()</code> returns <code>native_tool_calling=True</code> for codex models + belt-and-suspenders hint injection.</td>
+<td>v1.15.6 Goal 2</td>
+<td>✅ Fixed + verified (Session 3: codex 71+ calls, codex-mini 19 calls + synthesis)</td>
+</tr>
+<tr>
+<td><strong>P1</strong></td>
+<td><strong>AGENTS.md hints skipped for native providers</strong> — Bootstrap/AGENTS.md hints were only injected for prompt-based mode. Native providers (OpenAI, Gemini) never saw the hints. Fix: inject hints into system prompt for ALL modes.</td>
+<td>v1.15.6 Goal 1</td>
+<td>✅ Fixed (chat.py)</td>
+</tr>
+<tr>
+<td><strong>P2</strong></td>
+<td><strong>Port brace-counting JSON parser to engine</strong> — Engine's <code>tools/parser.py</code> uses regex which breaks on <code>apply_patch</code> with complex diff content containing braces. Benchmark runner already has <code>_find_json_objects()</code> with brace-counting. Port it.</td>
+<td>v1.15.6 Goal 2</td>
+<td>✅ Done (<code>_find_json_objects()</code> ported, <code>parse_tool_call()</code> + <code>strip_tool_json_from_text()</code> use brace-counting)</td>
+</tr>
+<tr>
+<td><strong>P3</strong></td>
+<td><strong>Re-benchmark all providers with fixed runner</strong> — All provider scores were artificially low due to engine tool conflicts (engine tools <code>read_file(filepath)</code> vs benchmark tools <code>read_file(path)</code>). Need to re-run for GPT-5.2, Gemini, Perplexity sonar.</td>
+<td>v1.15.6 Goal 4</td>
+<td>✅ Done (sonar 70.3%, sonar-pro 68.8%, gemini-2.5-pro 75.0%, gemini-3-flash 57.8%, gemini-3-pro 62.5%)</td>
+</tr>
+<tr>
+<td><strong>P4</strong></td>
+<td><strong>Belt-and-suspenders in real engine</strong> — Engine does either native OR prompt-based, never both. If native tool calling is flaky (vLLM HarmonyError), there's no fallback. <strong>Partially done:</strong> codex models now have belt-and-suspenders (tool hints in <code>instructions</code> field + native function tools). Generalize to other providers.</td>
+<td>v1.16.0 Goal 1</td>
+<td>⚡ Partially done (codex only)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="key-findings-unnumbered">Key Findings (Unnumbered)<a class="headerlink" href="#key-findings-unnumbered" title="Permanent link">&para;</a></h3>
+<p>Two critical behavioral findings that inform profile design but don't have direct code fixes:</p>
+<ol>
+<li>
+<p><strong><code>*** Begin Patch</code> format</strong> — GPT-5.2 and codex models use <code>*** Begin Patch</code> format instead of unified diff for code editing. This causes 0% code_editing scores. The Model Profile system needs to account for patch format preferences, or AGENTS.md hints must explicitly instruct unified diff.</p>
+</li>
+<li>
+<p><strong>Perplexity identity leak</strong> — Without AGENTS.md override, Perplexity sonar responds as "I'm Perplexity, a search assistant" and refuses tool use. Score dropped from 75.0% to 48.4% after the engine bypass fix removed implicit AGENTS.md injection. Confirms that AGENTS.md identity hints are critical for Perplexity models.</p>
+</li>
+</ol>
+<hr />
+<h2 id="release-strategy">Release Strategy<a class="headerlink" href="#release-strategy" title="Permanent link">&para;</a></h2>
+<h3 id="v1156-foundation-non-breaking">v1.15.6 — Foundation (Non-Breaking)<a class="headerlink" href="#v1156-foundation-non-breaking" title="Permanent link">&para;</a></h3>
+<p><strong>Theme:</strong> Model Profile System + Immediate Wins
+<strong>Goal:</strong> Ship the <code>OpenAINativeProvider</code>, benchmark results, and foundational profile infrastructure. All changes are additive — no existing behavior changes for users who don't use OpenAI models.
+<strong>Risk:</strong> Low. Default profiles reproduce current behavior.</p>
+<h3 id="v1160-breaking-changes">v1.16.0 — Breaking Changes<a class="headerlink" href="#v1160-breaking-changes" title="Permanent link">&para;</a></h3>
+<p><strong>Theme:</strong> Profile-Driven Tool Loop + Multi-Tool Support
+<strong>Goal:</strong> Replace the binary tool calling decision with profile-driven routing. Change tool result message format. Support parallel tool calls. These are breaking changes to the engine's chat loop that affect all providers.
+<strong>Risk:</strong> Medium. Requires thorough re-benchmarking across all providers.</p>
+<hr />
+<h2 id="v1156-foundation-non-breaking_1">v1.15.6 — Foundation (Non-Breaking)<a class="headerlink" href="#v1156-foundation-non-breaking_1" title="Permanent link">&para;</a></h2>
+<p><strong>Branch:</strong> <code>feature/benchmark-openai-models</code> (continue current branch)
+<strong>Estimated effort:</strong> 5-7 days</p>
+<h3 id="goal-1-merge-native-openai-provider-already-done">Goal 1: Merge Native OpenAI Provider (Already Done)<a class="headerlink" href="#goal-1-merge-native-openai-provider-already-done" title="Permanent link">&para;</a></h3>
+<p>Ship what's already on the branch:</p>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>OpenAINativeProvider</code> (812 lines)</td>
+<td>✅ Done</td>
+</tr>
+<tr>
+<td>Chat Completions + Responses API routing</td>
+<td>✅ Done</td>
+</tr>
+<tr>
+<td>404 auto-fallback (Chat → Responses)</td>
+<td>✅ Done</td>
+</tr>
+<tr>
+<td><code>max_completion_tokens</code> for GPT-5.x/o-series</td>
+<td>✅ Done</td>
+</tr>
+<tr>
+<td>Restricted param stripping</td>
+<td>✅ Done</td>
+</tr>
+<tr>
+<td>Reasoning token extraction</td>
+<td>✅ Done</td>
+</tr>
+<tr>
+<td>43 unit tests</td>
+<td>✅ Done</td>
+</tr>
+<tr>
+<td>AGENTS.md hints for OpenAI models</td>
+<td>✅ Done</td>
+</tr>
+<tr>
+<td>Benchmark results for 9 OpenAI models</td>
+<td>✅ Done</td>
+</tr>
+<tr>
+<td>Benchmark runner: AGENTS.md + engine bypass</td>
+<td>✅ Done</td>
+</tr>
+<tr>
+<td>Model behavior analysis document</td>
+<td>✅ Done</td>
+</tr>
+</tbody>
+</table>
+<h3 id="goal-2-immediate-wins-no-architecture-change">Goal 2: Immediate Wins (No Architecture Change)<a class="headerlink" href="#goal-2-immediate-wins-no-architecture-change" title="Permanent link">&para;</a></h3>
+<p>Quick fixes that improve scores without restructuring <code>chat.py</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Description</th>
+<th>Backlog</th>
+<th>Effort</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>o4-mini → prompt-based</strong></td>
+<td>Override <code>get_capabilities_for_model()</code> to return <code>native_tool_calling=False</code> for o4-mini</td>
+<td>—</td>
+<td>1 hour</td>
+</tr>
+<tr>
+<td><strong>gpt-4.1-mini → prompt-based</strong></td>
+<td>Same override for gpt-4.1-mini</td>
+<td>—</td>
+<td>1 hour</td>
+</tr>
+<tr>
+<td><strong>Codex → native</strong></td>
+<td>Enable native tool calling for codex: removed <code>_is_responses_api_model()</code> from prompt-based override, added belt-and-suspenders hint injection, updated model profiles and AGENTS.md hints</td>
+<td>P0</td>
+<td>✅ Done (Session 3)</td>
+</tr>
+<tr>
+<td><strong>JSON stripping in response text</strong></td>
+<td>When native <code>tool_calls</code> are present, strip <code>{"tool":...}</code> JSON from streamed text</td>
+<td>—</td>
+<td>3 hours</td>
+</tr>
+<tr>
+<td><strong>Brace-counting JSON parser</strong></td>
+<td>Port <code>_find_json_objects()</code> from benchmark runner to <code>engine/tools/parser.py</code> (regex breaks on apply_patch diffs with nested braces)</td>
+<td>P2</td>
+<td>3 hours</td>
+</tr>
+<tr>
+<td><strong>Index unindexed results</strong></td>
+<td>Add gpt-4.1-mini (71.9% prompt) and o4-mini (62.5% prompt) to benchmark index</td>
+<td>—</td>
+<td>30 min</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Validation:</strong> Re-run benchmarks for o4-mini and gpt-4.1-mini after overrides. Expected improvement:
+- o4-mini: 10.9% → ~62.5%
+- gpt-4.1-mini: 60.9% → ~71.9%</p>
+<h3 id="goal-3-model-profile-system-data-structure-only">Goal 3: Model Profile System (Data Structure Only)<a class="headerlink" href="#goal-3-model-profile-system-data-structure-only" title="Permanent link">&para;</a></h3>
+<p>Create the foundational data structures without wiring them into <code>chat.py</code>. This is the scaffolding for v1.16.0.</p>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Description</th>
+<th>Effort</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong><code>model_profiles.py</code></strong></td>
+<td>Create <code>ppxai/engine/model_profiles.py</code> with <code>ToolCallingProfile</code> and <code>ModelProfile</code> dataclasses</td>
+<td>2 hours</td>
+</tr>
+<tr>
+<td><strong>Profile registry</strong></td>
+<td><code>ModelProfileRegistry</code> with glob-pattern matching for model names</td>
+<td>2 hours</td>
+</tr>
+<tr>
+<td><strong>Built-in profiles</strong></td>
+<td>Populate profiles for all 27 benchmarked models based on analysis</td>
+<td>2 hours</td>
+</tr>
+<tr>
+<td><strong>Provider integration</strong></td>
+<td>Add <code>get_model_profile()</code> to <code>BaseProvider</code> interface (default: return None)</td>
+<td>1 hour</td>
+</tr>
+<tr>
+<td><strong>OpenAI profiles</strong></td>
+<td><code>OpenAINativeProvider.get_model_profile()</code> returns profiles for known models</td>
+<td>1 hour</td>
+</tr>
+<tr>
+<td><strong>Unit tests</strong></td>
+<td>Test profile matching, glob patterns, provider overrides, defaults</td>
+<td>2 hours</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Dataclass design</strong> (from analysis Part 6):</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nd">@dataclass</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">ToolCallingProfile</span><span class="p">:</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">mode</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;native&quot;</span><span class="p">,</span> <span class="s2">&quot;prompt_based&quot;</span><span class="p">,</span> <span class="s2">&quot;auto&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;native&quot;</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">fallback_on_empty</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">fallback_on_failure</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">strip_json_from_text</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">parallel_tool_calls</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">api_path</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;chat&quot;</span><span class="p">,</span> <span class="s2">&quot;responses&quot;</span><span class="p">,</span> <span class="s2">&quot;auto&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;chat&quot;</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="nd">@dataclass</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="k">class</span><span class="w"> </span><span class="nc">ModelProfile</span><span class="p">:</span>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>    <span class="n">tool_calling</span><span class="p">:</span> <span class="n">ToolCallingProfile</span>
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>    <span class="n">max_tokens</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">4096</span>
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>    <span class="n">supports_reasoning</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>    <span class="n">restricted_params</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
+</span></code></pre></div>
+<p><strong>No behavior change</strong> — profiles exist but aren't consulted by <code>chat.py</code> yet. The immediate wins (Goal 2) use the existing <code>get_capabilities_for_model()</code> override mechanism.</p>
+<h3 id="goal-4-benchmark-improvements">Goal 4: Benchmark Improvements<a class="headerlink" href="#goal-4-benchmark-improvements" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Description</th>
+<th>Effort</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Engine runner uses profiles</strong></td>
+<td>Update <code>engine_runner.py</code> to consult <code>ModelProfile</code> for native vs prompt routing</td>
+<td>2 hours</td>
+</tr>
+<tr>
+<td><strong>Prompt-based benchmark runs</strong></td>
+<td>Add <code>--tool-calling-method prompt_based</code> CLI flag to force prompt-based</td>
+<td>1 hour</td>
+</tr>
+<tr>
+<td><strong>Re-benchmark with overrides</strong></td>
+<td>Run o4-mini, gpt-4.1-mini, gpt-5-mini with correct modes</td>
+<td>2 hours</td>
+</tr>
+</tbody>
+</table>
+<h3 id="v1156-testing-strategy">v1.15.6 Testing Strategy<a class="headerlink" href="#v1156-testing-strategy" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Test Type</th>
+<th>What</th>
+<th>Target</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Unit tests</strong></td>
+<td>ModelProfile dataclasses, registry, glob matching</td>
+<td>15-20 new tests</td>
+</tr>
+<tr>
+<td><strong>Unit tests</strong></td>
+<td>OpenAI capability overrides (o4-mini, gpt-4.1-mini, codex)</td>
+<td>5 new tests</td>
+</tr>
+<tr>
+<td><strong>Unit tests</strong></td>
+<td>JSON stripping from response text</td>
+<td>5 new tests</td>
+</tr>
+<tr>
+<td><strong>Unit tests</strong></td>
+<td>Brace-counting JSON parser (nested braces, apply_patch diffs)</td>
+<td>5 new tests</td>
+</tr>
+<tr>
+<td><strong>Benchmarks</strong></td>
+<td>Re-run o4-mini, gpt-4.1-mini, gpt-5.2 to validate improvements</td>
+<td>Manual</td>
+</tr>
+<tr>
+<td><strong>TUI manual test</strong></td>
+<td>Verify o4-mini conversation with tools works in ppxaide</td>
+<td>Manual</td>
+</tr>
+<tr>
+<td><strong>Regression</strong></td>
+<td>Full <code>pytest tests/ -v</code> passes</td>
+<td>~1250 tests</td>
+</tr>
+</tbody>
+</table>
+<h3 id="v1156-deliverables">v1.15.6 Deliverables<a class="headerlink" href="#v1156-deliverables" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Native OpenAI provider (already done)</li>
+<li>Model behavior analysis document</li>
+<li>Benchmark results for 16 unique models</li>
+<li>Immediate capability overrides (o4-mini, gpt-4.1-mini, codex) — P0</li>
+<li>Brace-counting JSON parser ported to engine — P2</li>
+<li>JSON stripping for native tool calls</li>
+<li><code>model_profiles.py</code> module (data structures + registry)</li>
+<li>Benchmark runner profile integration</li>
+<li>Updated AGENTS.md hints</li>
+</ol>
+<h4 id="debug-session-1-findings-2026-02-19-windows-v1156-items">Debug Session 1 Findings (2026-02-19, Windows) — v1.15.6 Items<a class="headerlink" href="#debug-session-1-findings-2026-02-19-windows-v1156-items" title="Permanent link">&para;</a></h4>
+<p>From <a href="../DEBUG-SESSION-2026-02-19/">DEBUG-SESSION-2026-02-19.md</a> Section 5.1:</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Item</th>
+<th>Priority</th>
+<th>Effort</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A1</td>
+<td><strong>Read-claim validator</strong> — <code>_check_read_claims_without_tools()</code> in <code>validator.py</code> to catch fabricated "I read each file" with 0 <code>read_file</code> calls</td>
+<td>P1</td>
+<td>2h</td>
+<td>✅ Done (Session 5)</td>
+</tr>
+<tr>
+<td>A2</td>
+<td><strong>Stronger truncation retry</strong> — <code>[SYSTEM: ...]</code> framing in <code>chat.py:504-509</code></td>
+<td>P2</td>
+<td>30min</td>
+<td>✅ Done (Session 5)</td>
+</tr>
+<tr>
+<td>A3</td>
+<td><strong>Model switch warning</strong> — deferred to v1.16.0 (B1 session reset is the proper fix)</td>
+<td>P2</td>
+<td>—</td>
+<td>→ v1.16.0</td>
+</tr>
+<tr>
+<td>A4</td>
+<td><strong>gpt-4o AGENTS.md hints</strong> — multi-file reading + no-narration hints</td>
+<td>P2</td>
+<td>15min</td>
+<td>✅ Done (Session 2)</td>
+</tr>
+<tr>
+<td>A5</td>
+<td><strong>codex profiles</strong> — reversed: native works, changed to <code>mode="native"</code> + <code>api_path="responses"</code></td>
+<td>P2</td>
+<td>30min</td>
+<td>✅ Done (Session 3)</td>
+</tr>
+<tr>
+<td>A6</td>
+<td><strong>codex live validation</strong> — codex: 71+ calls, codex-mini: 19 + synthesis</td>
+<td>P3</td>
+<td>2h</td>
+<td>✅ Done (Session 3)</td>
+</tr>
+<tr>
+<td>A7</td>
+<td><strong>codex AGENTS.md hints</strong> — updated to "native function calling" language</td>
+<td>P3</td>
+<td>15min</td>
+<td>✅ Done (Session 3)</td>
+</tr>
+</tbody>
+</table>
+<h4 id="debug-session-2-findings-2026-02-20-macos-additional-v1156-items">Debug Session 2 Findings (2026-02-20, macOS) — Additional v1.15.6 Items<a class="headerlink" href="#debug-session-2-findings-2026-02-20-macos-additional-v1156-items" title="Permanent link">&para;</a></h4>
+<p>From <a href="../DEBUG-SESSION-2026-02-19/">DEBUG-SESSION-2026-02-19.md</a> Sections 9-13:</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Item</th>
+<th>Priority</th>
+<th>Effort</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A0</td>
+<td><strong>Bool sentinel crash fix</strong> — removed <code>openai_tools = True</code> in <code>chat.py:217</code> that caused <code>TypeError</code> for all Responses API models</td>
+<td>P0</td>
+<td>done</td>
+<td>✅ Fixed</td>
+</tr>
+<tr>
+<td>H1</td>
+<td><strong>"Make ONE" hint anti-pattern</strong> — replaced 24 "Make ONE tool call" hints with "Chain multiple DIFFERENT tool calls"</td>
+<td>P0</td>
+<td>done</td>
+<td>✅ Fixed</td>
+</tr>
+<tr>
+<td>H2</td>
+<td><strong>Interrupt during tool execution</strong> — <code>chat.py:372</code> now checks <code>is_interrupted</code> and cancels running tool task</td>
+<td>P0</td>
+<td>done</td>
+<td>✅ Fixed</td>
+</tr>
+<tr>
+<td>H3</td>
+<td><strong>Interrupt after provider.chat()</strong> — <code>chat.py:327</code> catches interrupt before processing tools</td>
+<td>P0</td>
+<td>done</td>
+<td>✅ Fixed</td>
+</tr>
+<tr>
+<td>A8</td>
+<td><strong>Codex native tool calling</strong> — removed prompt-based override, added belt-and-suspenders hint injection</td>
+<td>P0</td>
+<td>4h</td>
+<td>✅ Done (Session 3)</td>
+</tr>
+<tr>
+<td>A9</td>
+<td><strong>o3-mini provider routing</strong> — removed <code>openrouter</code> as built-in provider, o3-mini routes through <code>OpenAINativeProvider</code></td>
+<td>P2</td>
+<td>1h</td>
+<td>✅ Done (Session 4)</td>
+</tr>
+<tr>
+<td>A10</td>
+<td><strong>gpt-5-mini hints</strong> — "Do NOT ask permission before using tools"</td>
+<td>P2</td>
+<td>15min</td>
+<td>✅ Done (Session 4)</td>
+</tr>
+<tr>
+<td>A11</td>
+<td><strong>gpt-5-nano synthesis failure</strong> — max_tokens 2048→8192, added profile with <code>fallback_on_empty</code></td>
+<td>P2</td>
+<td>2h</td>
+<td>✅ Done (Session 5)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Key validation from Session 2:</strong> The "Make ONE" hint fix (H1) is confirmed transformative:
+- gpt-5.2: 1 tool/turn → 8 tools chained back-to-back
+- gemini-2.5-flash: 19 iterations, hit max — read every file in 2 agent directories
+- sonar-pro: 10 tools with efficient search_files strategy
+- gpt-5-nano: 11 tools chained perfectly (synthesis failed due to model capacity)
+- gpt-4.1-mini: <strong>no improvement</strong> — insufficient model capacity to follow hints</p>
+<hr />
+<h2 id="v1160-breaking-changes_1">v1.16.0 — Breaking Changes<a class="headerlink" href="#v1160-breaking-changes_1" title="Permanent link">&para;</a></h2>
+<p><strong>Branch:</strong> <code>feature/v1.16.0</code> (new branch from master after v1.15.6 merge)
+<strong>Estimated effort:</strong> 10-14 days
+<strong>Prerequisite:</strong> v1.15.6 merged and validated</p>
+<h3 id="why-v1160-not-v1157">Why v1.16.0 (Not v1.15.7)<a class="headerlink" href="#why-v1160-not-v1157" title="Permanent link">&para;</a></h3>
+<p>These changes modify the core tool loop in <code>chat.py</code> which affects <strong>every provider and every client</strong>:</p>
+<ol>
+<li><strong>Tool result message format changes</strong> — from synthetic <code>assistant</code>/<code>user</code> pairs to proper <code>tool</code> role messages (Gap 2)</li>
+<li><strong>Multi-tool processing</strong> — from <code>native_tool_calls[0]</code> to processing all calls (Gap 3)</li>
+<li><strong>Adaptive fallback</strong> — tool mode can change mid-conversation (Gap 5)</li>
+<li><strong>Profile-driven routing</strong> — replaces the binary decision at <code>chat.py:210</code> (Gap 1)</li>
+</ol>
+<p>Any of these could cause regressions in providers that rely on the current message format (especially local models via <code>OpenAICompatibleProvider</code>).</p>
+<h3 id="goal-1-profile-driven-tool-loop-gap-1">Goal 1: Profile-Driven Tool Loop (Gap 1)<a class="headerlink" href="#goal-1-profile-driven-tool-loop-gap-1" title="Permanent link">&para;</a></h3>
+<p>Replace the binary decision point in <code>chat.py:210</code>:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># BEFORE:</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">use_native_tools</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">provider_caps</span> <span class="ow">and</span> <span class="n">provider_caps</span><span class="o">.</span><span class="n">native_tool_calling</span><span class="p">)</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="c1"># AFTER:</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="n">profile</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">provider</span><span class="o">.</span><span class="n">get_model_profile</span><span class="p">(</span><span class="n">ctx</span><span class="o">.</span><span class="n">model</span><span class="p">)</span> <span class="ow">or</span> <span class="n">default_profile</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="n">tc_mode</span> <span class="o">=</span> <span class="n">profile</span><span class="o">.</span><span class="n">tool_calling</span><span class="o">.</span><span class="n">mode</span>
+</span></code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Description</th>
+<th>Effort</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Replace binary decision</strong></td>
+<td><code>chat.py:210</code> uses profile lookup instead of capability check</td>
+<td>2 hours</td>
+</tr>
+<tr>
+<td><strong><code>strip_json_from_text</code></strong></td>
+<td>When profile says strip AND native tool calls present, clean response text</td>
+<td>3 hours</td>
+</tr>
+<tr>
+<td><strong><code>fallback_on_empty</code></strong></td>
+<td>When native returns empty, fall back to prompt-based parsing</td>
+<td>3 hours</td>
+</tr>
+<tr>
+<td><strong><code>auto</code> mode</strong></td>
+<td>Start native, switch to prompt-based on first empty/failure</td>
+<td>2 hours</td>
+</tr>
+<tr>
+<td><strong>Belt-and-suspenders</strong></td>
+<td>Always inject tool descriptions into system prompt even for native providers, so fallback parsing has schema context (P4)</td>
+<td>2 hours</td>
+</tr>
+<tr>
+<td><strong>Backwards compat</strong></td>
+<td>Missing profile → default profile → current behavior</td>
+<td>1 hour</td>
+</tr>
+<tr>
+<td><strong>Tests</strong></td>
+<td>Profile-driven routing unit tests with mock provider</td>
+<td>4 hours</td>
+</tr>
+</tbody>
+</table>
+<h3 id="goal-2-proper-tool-message-format-gap-2">Goal 2: Proper Tool Message Format (Gap 2)<a class="headerlink" href="#goal-2-proper-tool-message-format-gap-2" title="Permanent link">&para;</a></h3>
+<p>Replace synthetic message pairs with proper <code>tool</code> role messages:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># BEFORE (chat.py:437-444):</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="n">ctx</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">add_message</span><span class="p">(</span><span class="n">Message</span><span class="p">(</span><span class="s2">&quot;assistant&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;I&#39;ll use the </span><span class="si">{</span><span class="n">tool_name</span><span class="si">}</span><span class="s2"> tool...&quot;</span><span class="p">))</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">ctx</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">add_message</span><span class="p">(</span><span class="n">Message</span><span class="p">(</span><span class="s2">&quot;user&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;The </span><span class="si">{</span><span class="n">tool_name</span><span class="si">}</span><span class="s2"> tool returned...&quot;</span><span class="p">))</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="c1"># AFTER (native mode):</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="n">ctx</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">add_message</span><span class="p">(</span><span class="n">Message</span><span class="p">(</span><span class="s2">&quot;assistant&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">tool_calls</span><span class="o">=</span><span class="p">[</span><span class="o">...</span><span class="p">]))</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="n">ctx</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">add_message</span><span class="p">(</span><span class="n">Message</span><span class="p">(</span><span class="s2">&quot;tool&quot;</span><span class="p">,</span> <span class="n">result</span><span class="p">,</span> <span class="n">tool_call_id</span><span class="o">=</span><span class="n">tc_id</span><span class="p">))</span>
+</span></code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Description</th>
+<th>Effort</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Extend <code>Message</code> type</strong></td>
+<td>Add <code>tool_calls</code> and <code>tool_call_id</code> fields to <code>Message</code> dataclass</td>
+<td>1 hour</td>
+</tr>
+<tr>
+<td><strong>Native mode messages</strong></td>
+<td>Use proper <code>assistant</code> (with tool_calls) + <code>tool</code> role messages</td>
+<td>3 hours</td>
+</tr>
+<tr>
+<td><strong>Prompt-based unchanged</strong></td>
+<td>Keep synthetic pairs for prompt-based mode (models don't expect tool messages)</td>
+<td>0</td>
+</tr>
+<tr>
+<td><strong>Provider message conversion</strong></td>
+<td>Ensure all providers handle <code>tool</code> role messages in their <code>_convert_messages()</code></td>
+<td>4 hours</td>
+</tr>
+<tr>
+<td><strong>Session serialization</strong></td>
+<td>Update session save/load to handle new message fields</td>
+<td>2 hours</td>
+</tr>
+<tr>
+<td><strong>Migration</strong></td>
+<td>Existing sessions with old format still load correctly</td>
+<td>2 hours</td>
+</tr>
+<tr>
+<td><strong>Tests</strong></td>
+<td>Message format, session serialization, provider conversion</td>
+<td>4 hours</td>
+</tr>
+</tbody>
+</table>
+<h3 id="goal-3-multi-tool-support-gap-3">Goal 3: Multi-Tool Support (Gap 3)<a class="headerlink" href="#goal-3-multi-tool-support-gap-3" title="Permanent link">&para;</a></h3>
+<p>Process all native tool calls when the profile allows it:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># BEFORE (chat.py:331):</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">tc</span> <span class="o">=</span> <span class="n">native_tool_calls</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># Only first tool call</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="c1"># AFTER:</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="k">if</span> <span class="n">profile</span><span class="o">.</span><span class="n">tool_calling</span><span class="o">.</span><span class="n">parallel_tool_calls</span><span class="p">:</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>    <span class="k">for</span> <span class="n">tc</span> <span class="ow">in</span> <span class="n">native_tool_calls</span><span class="p">:</span>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>        <span class="c1"># Execute each tool, collect results</span>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="k">else</span><span class="p">:</span>
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>    <span class="n">tc</span> <span class="o">=</span> <span class="n">native_tool_calls</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+</span></code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Description</th>
+<th>Effort</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Parallel tool execution</strong></td>
+<td>Process all native tool calls in sequence (not parallel — safety)</td>
+<td>3 hours</td>
+</tr>
+<tr>
+<td><strong>Multi-result messages</strong></td>
+<td>Emit multiple <code>TOOL_CALL</code>/<code>TOOL_RESULT</code> events per iteration</td>
+<td>2 hours</td>
+</tr>
+<tr>
+<td><strong>Session messages</strong></td>
+<td>Add all tool call/result message pairs</td>
+<td>1 hour</td>
+</tr>
+<tr>
+<td><strong>Consent handling</strong></td>
+<td>Each tool call still requires individual consent</td>
+<td>2 hours</td>
+</tr>
+<tr>
+<td><strong>Loop detection</strong></td>
+<td>Update tool loop detection for multi-tool iterations</td>
+<td>1 hour</td>
+</tr>
+<tr>
+<td><strong>Tests</strong></td>
+<td>Multi-tool extraction, execution, message format</td>
+<td>3 hours</td>
+</tr>
+</tbody>
+</table>
+<h3 id="goal-4-config-integration">Goal 4: Config Integration<a class="headerlink" href="#goal-4-config-integration" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Description</th>
+<th>Effort</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Config overrides</strong></td>
+<td><code>tool_calling</code> section in <code>ppxai-config.json</code> per model</td>
+<td>2 hours</td>
+</tr>
+<tr>
+<td><strong>AGENTS.md influence</strong></td>
+<td>Model hints can set <code>tool_calling_mode: prompt_based</code></td>
+<td>2 hours</td>
+</tr>
+<tr>
+<td><strong><code>/model info</code></strong></td>
+<td>New command showing active profile for current model</td>
+<td>2 hours</td>
+</tr>
+<tr>
+<td><strong>Documentation</strong></td>
+<td>Config format, profile precedence, migration guide</td>
+<td>3 hours</td>
+</tr>
+</tbody>
+</table>
+<h3 id="goal-5-file-navigation-from-todo-v1160md">Goal 5: File Navigation (from TODO-v1.16.0.md)<a class="headerlink" href="#goal-5-file-navigation-from-todo-v1160md" title="Permanent link">&para;</a></h3>
+<p>The previously planned v1.16.0 content (file navigation) fits naturally alongside the engine changes:</p>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Description</th>
+<th>Effort</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong><code>/ls</code> command</strong></td>
+<td>List files with sizes, permissions, gitignore</td>
+<td>1 day</td>
+</tr>
+<tr>
+<td><strong><code>/tree</code> command</strong></td>
+<td>Render directory tree structure</td>
+<td>1 day</td>
+</tr>
+<tr>
+<td><strong>CommandResult types</strong></td>
+<td><code>DirectoryListingResult</code>, <code>DirectoryTreeResult</code></td>
+<td>2 hours</td>
+</tr>
+<tr>
+<td><strong>Renderer implementations</strong></td>
+<td>Rich + Textual renderers for new result types</td>
+<td>3 hours</td>
+</tr>
+</tbody>
+</table>
+<h3 id="goal-6-provider-hierarchy-refactoring">Goal 6: Provider Hierarchy Refactoring<a class="headerlink" href="#goal-6-provider-hierarchy-refactoring" title="Permanent link">&para;</a></h3>
+<p><code>OpenAINativeProvider</code> and <code>GeminiProvider</code> are standalone classes that duplicate the entire <code>BaseProvider</code> interface (duck typing via <code>hasattr</code> guards). This works but is fragile and prevents shared behavior.</p>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Description</th>
+<th>Effort</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Shared ABC or Protocol</strong></td>
+<td>Make <code>OpenAINativeProvider</code> and <code>GeminiProvider</code> inherit from <code>BaseProvider</code> (or a shared <code>ProviderProtocol</code>)</td>
+<td>3 hours</td>
+</tr>
+<tr>
+<td><strong>Eliminate duplicate methods</strong></td>
+<td>Move shared methods (<code>needs_tool</code>, <code>get_model_profile</code>, <code>_format_error</code>, <code>_log_error_traceback</code>) to base class</td>
+<td>2 hours</td>
+</tr>
+<tr>
+<td><strong>Remove <code>hasattr</code> guards</strong></td>
+<td>Replace <code>hasattr(provider, 'get_capabilities_for_model')</code> / <code>hasattr(provider, 'get_model_profile')</code> in <code>chat.py</code> with guaranteed interface methods</td>
+<td>1 hour</td>
+</tr>
+<tr>
+<td><strong><code>get_capabilities_for_model</code> → profile</strong></td>
+<td>Replace <code>get_capabilities_for_model()</code> with <code>get_model_profile()</code> as the single source of truth for per-model behavior</td>
+<td>2 hours</td>
+</tr>
+<tr>
+<td><strong>Tests</strong></td>
+<td>Verify all providers pass a shared interface compliance test</td>
+<td>2 hours</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Why v1.16.0:</strong> Changing the provider interface is a breaking change for any custom providers. The v1.15.6 duck-typing approach is a safe intermediate step.</p>
+<h3 id="goal-7-benchmark-v2-real-world-agent-evaluation">Goal 7: Benchmark v2 — Real-World Agent Evaluation<a class="headerlink" href="#goal-7-benchmark-v2-real-world-agent-evaluation" title="Permanent link">&para;</a></h3>
+<p><strong>Motivation:</strong> Live testing on 2026-02-19 revealed a massive gap between benchmark scores and real-world agent behavior. gemini-3-flash-preview scored <strong>57.81%</strong> on the benchmark but was the <strong>best performer</strong> in actual web app usage — reading all 8 project files consecutively and producing a quality improvement plan. Meanwhile, sonar-pro and gpt-5.2 scored higher on the benchmark but failed basic multi-file tasks in practice (sonar fabricated results, gpt-5.2 read only 1 file per turn).</p>
+<p><strong>Root cause:</strong> The current 26-test suite measures single-turn tool correctness (exact tool name, exact arg match, binary pass/fail) but misses the agentic patterns that matter: consecutive tool loops, multi-file navigation, search-then-edit workflows, and iterative refinement.</p>
+<h4 id="phase-1-close-scoring-distortions-priority">Phase 1: Close Scoring Distortions (Priority)<a class="headerlink" href="#phase-1-close-scoring-distortions-priority" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Description</th>
+<th>Gap Addressed</th>
+<th>Effort</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong><code>multi_file_review</code></strong></td>
+<td>"Read all files in this project and summarize" with 5-8 simulated files. Score = files_read / files_available (continuous 0.0-1.0). Must read files via tool calls, not fabricate content.</td>
+<td>Multi-file read loops (gemini-3-flash: 8/8, gpt-5.2: 1/8 per turn, sonar: 0/8)</td>
+<td>4 hours</td>
+</tr>
+<tr>
+<td><strong><code>consecutive_tool_loop</code></strong></td>
+<td>5-step chain: list_dir → read config → read entry point → search for pattern → read matching file. Score = steps completed / total steps. Model must chain results (each step depends on previous).</td>
+<td>Agent loop depth (current max: 3 turns)</td>
+<td>4 hours</td>
+</tr>
+<tr>
+<td><strong><code>claim_without_action</code></strong></td>
+<td>Ask model to read and report file contents. Inject no tool results. Check if model fabricates a report. Inspired by sonar-pro claiming "ALL 8 FILES RE-READ" with zero tool calls.</td>
+<td>Hallucination in agentic context (sonar fabricated entire reviews)</td>
+<td>3 hours</td>
+</tr>
+<tr>
+<td><strong>Partial credit scoring</strong></td>
+<td>Replace binary pass/fail for tool calling tests: correct tool name +50%, correct args +50%. Wrong tool = 0%, right tool wrong arg key = 50%. Reduces cliff effect.</td>
+<td>gemini-3-flash: 0% code editing for using <code>read_file</code> instead of <code>apply_patch</code> despite excellent real behavior</td>
+<td>4 hours</td>
+</tr>
+<tr>
+<td><strong><code>patch_apply_verify</code></strong></td>
+<td>Give file content + edit instruction. Model generates patch. Actually apply the patch (using <code>_replace_hunk</code> from engine). Verify result matches expected output.</td>
+<td>Current tests check patch structure, never apply it</td>
+<td>4 hours</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Expected impact:</strong> These 5 items would have correctly ranked tonight's models: gemini-3-flash &gt; gpt-5.2 &gt; sonar-pro, matching observed real-world behavior.</p>
+<h4 id="phase-2-agentic-patterns">Phase 2: Agentic Patterns<a class="headerlink" href="#phase-2-agentic-patterns" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Description</th>
+<th>Gap Addressed</th>
+<th>Effort</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong><code>search_then_edit</code></strong></td>
+<td>"Fix the bug in the divide function" without giving file path. Model must: search_code → read_file → apply_patch. Simulated tool results guide the chain.</td>
+<td>Real agents navigate, current tests give paths directly</td>
+<td>4 hours</td>
+</tr>
+<tr>
+<td><strong><code>test_fix_verify</code></strong></td>
+<td>Write code → simulated test failure → model fixes → re-run tests → pass. Score = reached final passing state.</td>
+<td>The core TDD loop is completely untested</td>
+<td>5 hours</td>
+</tr>
+<tr>
+<td><strong><code>information_gathering</code></strong></td>
+<td>"How is authentication implemented?" with 3 files containing auth code spread across the project. Model must find and read all 3 to give a complete answer. Score = relevant files read / total relevant files.</td>
+<td>Codebase understanding requires exploration, not given paths</td>
+<td>4 hours</td>
+</tr>
+<tr>
+<td><strong><code>error_recovery_chain</code></strong></td>
+<td>Read file → not found → search for it → read result → edit it → permission denied → report failure clearly. Tests adaptive strategy over 4+ turns.</td>
+<td>Current <code>tool_error_recovery</code> is single-turn</td>
+<td>3 hours</td>
+</tr>
+</tbody>
+</table>
+<h4 id="phase-3-efficiency-hints">Phase 3: Efficiency &amp; Hints<a class="headerlink" href="#phase-3-efficiency-hints" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Description</th>
+<th>Gap Addressed</th>
+<th>Effort</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Token/cost metrics</strong></td>
+<td>Track <code>prompt_tokens</code>, <code>completion_tokens</code>, <code>total_cost</code> per test. Report efficiency ratio: score_per_dollar.</td>
+<td>No efficiency comparison between models</td>
+<td>3 hours</td>
+</tr>
+<tr>
+<td><strong>Time-to-first-tool-call</strong></td>
+<td>Measure latency from prompt to first tool invocation. Penalize models that narrate before acting.</td>
+<td>gpt-5.2 explains before each tool call, gemini-3-flash acts immediately</td>
+<td>2 hours</td>
+</tr>
+<tr>
+<td><strong>With/without AGENTS.md</strong></td>
+<td>Run identical test suite twice per model: once with hints, once without. Report delta.</td>
+<td>Perplexity dropped 75% → 48.4% without hints; currently no systematic measurement</td>
+<td>3 hours</td>
+</tr>
+<tr>
+<td><strong>Tool call efficiency</strong></td>
+<td>Count total tool calls vs minimum required. Penalize unnecessary reads, reward models that batch independent operations.</td>
+<td>sonar makes 5-6 duplicate calls; gemini reads exactly what's needed</td>
+<td>2 hours</td>
+</tr>
+</tbody>
+</table>
+<h4 id="framework-genaiscript-integration">Framework: GenAIScript Integration<a class="headerlink" href="#framework-genaiscript-integration" title="Permanent link">&para;</a></h4>
+<p><strong>What:</strong> <a href="https://microsoft.github.io/genaiscript/">GenAIScript</a> — Microsoft's JS-based LLM orchestration framework with built-in evaluation via <a href="https://promptfoo.dev/">promptfoo</a>. Runs tests across multiple models in a single command.</p>
+<p><strong>Reference docs:</strong> <a href="../external-refs/genaiscript-llms.txt">genaiscript-llms.txt</a> (index) | <a href="../external-refs/genaiscript-getting-started.txt">genaiscript-getting-started.txt</a> | <a href="../external-refs/genaiscript-reference-cli.txt">genaiscript-reference-cli.txt</a> | <a href="../external-refs/genaiscript-llms-full.txt">genaiscript-llms-full.txt</a> (complete, 1.4MB)</p>
+<p><strong>Why:</strong> Complements the existing Python benchmark suite. GenAIScript excels at multi-model comparison, rubric-based grading (LLM-as-judge), and agent loop testing with <code>defTool()</code> for simulated file systems. The Python suite remains the engine regression layer.</p>
+<p><strong>Key capabilities for our use:</strong>
+- <code>--models</code> flag — run the same test against 16 models in one invocation
+- <code>defTool()</code> — define simulated <code>read_file</code>, <code>search_code</code>, <code>apply_patch</code> tools matching our engine's tool schemas
+- Rubric-based scoring via promptfoo — LLM-as-judge replaces binary pass/fail for code editing quality
+- <code>defFileOutput</code> — test code generation without actual file system changes
+- Built-in support for OpenAI, Gemini, Perplexity, local models (25+ providers)</p>
+<p><strong>Integration plan:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Description</th>
+<th>Effort</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>GenAIScript agent loop tests</strong></td>
+<td>Implement Phase 1-2 agent tests (<code>multi_file_review</code>, <code>consecutive_tool_loop</code>, <code>claim_without_action</code>, <code>search_then_edit</code>) as <code>.genai.mts</code> scripts with <code>defTool()</code> simulated tools</td>
+<td>6 hours</td>
+</tr>
+<tr>
+<td><strong>Multi-model comparison runner</strong></td>
+<td>Single <code>npx genaiscript eval</code> invocation testing all 16 configured models, output as JSON for comparison dashboard</td>
+<td>2 hours</td>
+</tr>
+<tr>
+<td><strong>Rubric-based code editing eval</strong></td>
+<td>Replace binary pass/fail for <code>apply_patch</code> tests with LLM-as-judge rubrics (correctness, minimal diff, context preservation)</td>
+<td>4 hours</td>
+</tr>
+<tr>
+<td><strong>CI integration</strong></td>
+<td><code>npm run benchmark:genaiscript</code> script in <code>benchmarks/</code> alongside existing Python runner</td>
+<td>2 hours</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Architecture:</strong> GenAIScript tests live in <code>benchmarks/genaiscript/</code> alongside the existing <code>benchmarks/llm-eval/</code> Python suite. Both can run independently. Results feed into the same comparison dashboard.</p>
+<p><strong>Dependency:</strong> Node.js 20+ (already required for VSCode extension build)</p>
+<h4 id="new-category-agent-loop-proposed-5-tests">New Category: Agent Loop (proposed, 5 tests)<a class="headerlink" href="#new-category-agent-loop-proposed-5-tests" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Test</th>
+<th>Weight</th>
+<th>Tags</th>
+<th>Source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>multi_file_review</code></td>
+<td>2.0</td>
+<td>critical, gate</td>
+<td>Phase 1</td>
+</tr>
+<tr>
+<td><code>consecutive_tool_loop</code></td>
+<td>2.0</td>
+<td>critical</td>
+<td>Phase 1</td>
+</tr>
+<tr>
+<td><code>claim_without_action</code></td>
+<td>2.0</td>
+<td>critical, gate</td>
+<td>Phase 1</td>
+</tr>
+<tr>
+<td><code>search_then_edit</code></td>
+<td>1.5</td>
+<td>—</td>
+<td>Phase 2</td>
+</tr>
+<tr>
+<td><code>test_fix_verify</code></td>
+<td>1.5</td>
+<td>—</td>
+<td>Phase 2</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Total new weight: 9.0</strong> (matches hallucination_resistance, the other critical gate category)</p>
+<h4 id="scoring-changes">Scoring Changes<a class="headerlink" href="#scoring-changes" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Change</th>
+<th>Current</th>
+<th>Proposed</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Tool call tests</strong></td>
+<td>Binary pass/fail</td>
+<td>Partial credit (tool name 50% + args 50%)</td>
+</tr>
+<tr>
+<td><strong>Agent loop tests</strong></td>
+<td>N/A</td>
+<td>Continuous 0.0-1.0 (steps completed / steps required)</td>
+</tr>
+<tr>
+<td><strong>Code editing tests</strong></td>
+<td>Structural check only</td>
+<td>Apply patch + verify output</td>
+</tr>
+<tr>
+<td><strong>New metric: efficiency</strong></td>
+<td>Not tracked</td>
+<td>tokens_per_point, cost_per_point, time_to_first_tool</td>
+</tr>
+<tr>
+<td><strong>New metric: AGENTS.md delta</strong></td>
+<td>Not tracked</td>
+<td>score_with_hints - score_without_hints</td>
+</tr>
+</tbody>
+</table>
+<h4 id="real-world-validation-matrix-2026-02-19-live-testing">Real-World Validation Matrix (2026-02-19 Live Testing)<a class="headerlink" href="#real-world-validation-matrix-2026-02-19-live-testing" title="Permanent link">&para;</a></h4>
+<p>This table documents the gap that Goal 7 aims to close. Models are ranked by <strong>observed real-world utility</strong>, not benchmark score:</p>
+<table>
+<thead>
+<tr>
+<th>Rank</th>
+<th>Model</th>
+<th>Benchmark Score</th>
+<th>Real-World Behavior</th>
+<th>Gap</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>gemini-3-flash-preview</td>
+<td>57.81%</td>
+<td>Read 8/8 files in 18s, produced quality improvement plan</td>
+<td>Benchmark <strong>under-scores</strong> by ~30%: 0% code editing (wrong tool name), 16.7% hallucination (doesn't match behavior)</td>
+</tr>
+<tr>
+<td>2</td>
+<td>gpt-5.2</td>
+<td>70.31%</td>
+<td>Tool calling works but reads 1 file/turn, requires repeated prompting</td>
+<td>Benchmark <strong>over-scores</strong> by ~10%: doesn't test multi-file laziness</td>
+</tr>
+<tr>
+<td>3</td>
+<td>sonar-pro</td>
+<td>68.75%</td>
+<td>Fabricated "ALL 8 FILES RE-READ" with 0-1 tool calls, hallucinated results</td>
+<td>Benchmark <strong>over-scores</strong> by ~30%: doesn't test agentic hallucination</td>
+</tr>
+<tr>
+<td>4</td>
+<td>gpt-5.1-codex</td>
+<td>40.63% → TBD</td>
+<td>Session 2: Zero tool calls (broken). <strong>Session 3: 71+ tool calls, fully functional</strong> with native tool calling fix</td>
+<td>Benchmark <strong>needs re-run</strong>: old score reflects broken prompt-based mode, not current native mode</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Target:</strong> After Goal 7, benchmark ranking should match columns 1-4 (real-world rank).</p>
+<h3 id="debug-session-findings-2026-02-19-2026-02-20-additional-v1160-items">Debug Session Findings (2026-02-19 + 2026-02-20) — Additional v1.16.0 Items<a class="headerlink" href="#debug-session-findings-2026-02-19-2026-02-20-additional-v1160-items" title="Permanent link">&para;</a></h3>
+<p>From <a href="../DEBUG-SESSION-2026-02-19/">DEBUG-SESSION-2026-02-19.md</a> Sections 5.2 + 11:</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Item</th>
+<th>Aligns With</th>
+<th>Priority</th>
+<th>Effort</th>
+<th>Session</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>B1</td>
+<td><strong>Session context reset on model switch</strong> — <code>session.reset_for_model_switch()</code> strips assistant/tool messages, keeps user messages. <strong>Definitively validated:</strong> codex-mini worked in Session 1 (clean), completely broke in Session 2 (codex refusals polluted session)</td>
+<td>New (Goal 4)</td>
+<td>P1</td>
+<td>4h</td>
+<td>1+2</td>
+</tr>
+<tr>
+<td>B10</td>
+<td>~~<strong>Codex native tool calling via Responses API</strong>~~ — <strong>DONE in v1.15.6 (Session 3).</strong> Native function calling works: codex-mini 19 iterations + synthesis, codex 71+ calls. No longer needed for v1.16.0.</td>
+<td>New</td>
+<td>~~P1~~</td>
+<td>~~8h~~</td>
+<td>2→3</td>
+</tr>
+<tr>
+<td>B2</td>
+<td><strong>Per-model iteration limit</strong> — <code>max_tool_iterations</code> field in <code>ModelProfile</code>: gemini-2.5-flash→25 (hit 19 ceiling), gpt-5-nano→8 (prevent empty synthesis), sonar→20</td>
+<td>Goal 3</td>
+<td>P2</td>
+<td>2h</td>
+<td>2</td>
+</tr>
+<tr>
+<td>B3</td>
+<td><strong>Belt-and-suspenders</strong> — inject <code>get_tools_prompt()</code> into system prompt even for native when profile has fallback flags</td>
+<td>Goal 1 / P4</td>
+<td>P2</td>
+<td>3h</td>
+<td>1</td>
+</tr>
+<tr>
+<td>B11</td>
+<td><strong>SSE disconnect detection</strong> — use <code>request.is_disconnected()</code> in <code>sse_event_generator</code> to cancel background generator when client disconnects. Currently Esc closes UI but server task continues.</td>
+<td>New</td>
+<td>P2</td>
+<td>3h</td>
+<td>2</td>
+</tr>
+<tr>
+<td>B7</td>
+<td><strong>Session pollution detection</strong> — compare response similarity against previous assistant messages from different models</td>
+<td>New</td>
+<td>P3</td>
+<td>3h</td>
+<td>1</td>
+</tr>
+</tbody>
+</table>
+<p>Benchmark v2 items (already captured in Goal 7):</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Item</th>
+<th>Goal 7 Phase</th>
+<th>Priority</th>
+<th>Effort</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>B4</td>
+<td><code>multi_file_review</code> test — score = files_read / files_available</td>
+<td>Phase 1</td>
+<td>P2</td>
+<td>4h</td>
+</tr>
+<tr>
+<td>B5</td>
+<td><code>claim_without_action</code> test — catch fabricated reports</td>
+<td>Phase 1</td>
+<td>P2</td>
+<td>3h</td>
+</tr>
+<tr>
+<td>B6</td>
+<td><code>consecutive_tool_loop</code> test — 5-step dependent chain</td>
+<td>Phase 1</td>
+<td>P2</td>
+<td>4h</td>
+</tr>
+<tr>
+<td>B8</td>
+<td><code>time_to_first_tool_call</code> metric</td>
+<td>Phase 3</td>
+<td>P3</td>
+<td>2h</td>
+</tr>
+<tr>
+<td>B9</td>
+<td>Partial credit scoring (tool name 50% + args 50%)</td>
+<td>Phase 1</td>
+<td>P2</td>
+<td>4h</td>
+</tr>
+</tbody>
+</table>
+<h3 id="v1160-testing-strategy">v1.16.0 Testing Strategy<a class="headerlink" href="#v1160-testing-strategy" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Test Type</th>
+<th>What</th>
+<th>Target</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Unit tests</strong></td>
+<td>Profile-driven routing, message format, multi-tool</td>
+<td>40-50 new tests</td>
+</tr>
+<tr>
+<td><strong>Integration tests</strong></td>
+<td>Full tool loop with mock providers in all modes</td>
+<td>10-15 new tests</td>
+</tr>
+<tr>
+<td><strong>TUI manual tests</strong></td>
+<td>Test each provider with tool-using conversations</td>
+<td>All providers</td>
+</tr>
+<tr>
+<td><strong>Benchmark v2 tests</strong></td>
+<td>New agent_loop category (5 tests), partial credit scoring, patch verification</td>
+<td>8-10 new tests</td>
+</tr>
+<tr>
+<td><strong>GenAIScript eval</strong></td>
+<td>Agent loop tests via GenAIScript + rubric-based code editing scoring</td>
+<td>4-6 <code>.genai.mts</code> scripts</td>
+</tr>
+<tr>
+<td><strong>Benchmark re-runs</strong></td>
+<td>Full v2 suite (Python + GenAIScript) for all 16 models to validate ranking matches real-world</td>
+<td>16+ runs</td>
+</tr>
+<tr>
+<td><strong>Session migration</strong></td>
+<td>Load v1.15.x sessions in v1.16.0, verify no data loss</td>
+<td>Manual</td>
+</tr>
+<tr>
+<td><strong>Regression</strong></td>
+<td>Full <code>pytest tests/ -v</code> passes</td>
+<td>~1300+ tests</td>
+</tr>
+</tbody>
+</table>
+<h3 id="v1160-risk-mitigation">v1.16.0 Risk Mitigation<a class="headerlink" href="#v1160-risk-mitigation" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Risk</th>
+<th>Mitigation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Message format breaks local models</strong></td>
+<td>Keep synthetic pairs for prompt-based mode; only native mode uses <code>tool</code> messages</td>
+</tr>
+<tr>
+<td><strong>Multi-tool breaks consent flow</strong></td>
+<td>Execute tools sequentially, not in parallel; each gets individual consent</td>
+</tr>
+<tr>
+<td><strong>Profile mismatch causes regressions</strong></td>
+<td>Default profile = current behavior; explicit opt-in for new features</td>
+</tr>
+<tr>
+<td><strong>Session format incompatible</strong></td>
+<td>Migration layer reads old format, writes new format</td>
+</tr>
+<tr>
+<td><strong>Benchmark scores drop</strong></td>
+<td>Re-benchmark before and after; block release if any model regresses &gt;5%</td>
+</tr>
+<tr>
+<td><strong>New benchmark tests too hard</strong></td>
+<td>Phase 1 tests must have at least 1 model scoring &gt;80%; if all fail, tests are unrealistic</td>
+</tr>
+<tr>
+<td><strong>Partial credit inflates scores</strong></td>
+<td>Compare v1 and v2 overall scores; document mapping so historical results remain comparable</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="what-not-to-change">What NOT to Change<a class="headerlink" href="#what-not-to-change" title="Permanent link">&para;</a></h2>
+<p>Carried forward from analysis Part 7:</p>
+<ol>
+<li><strong>Don't try to fix Tier D models</strong> — o4-mini (native), gemini-2.0-flash-exp are fundamentally broken</li>
+<li><strong>Don't over-engineer profiles</strong> — start with 6 fields, expand only when benchmarks prove the need</li>
+<li><strong>Don't break <code>OpenAICompatibleProvider</code></strong> — it should work unchanged with default profiles</li>
+<li><strong>Don't break <code>GeminiProvider</code></strong> — it should work unchanged with default profiles</li>
+<li><strong>Don't merge Goals 2+3 (v1.16.0) into v1.15.6</strong> — message format changes are breaking</li>
+</ol>
+<hr />
+<h2 id="timeline">Timeline<a class="headerlink" href="#timeline" title="Permanent link">&para;</a></h2>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>v1.15.6 (Foundation, Non-Breaking)
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>├── Week 1: Goal 2 (Immediate wins) + Goal 3 (Profile data structures)
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>├── Week 1-2: Goal 4 (Benchmark improvements) + validation
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>└── Release when benchmarks validate improvements
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>v1.16.0 (Breaking Changes)
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>├── Week 1: Goal 1 (Profile-driven tool loop) + Goal 2 (Message format)
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>├── Week 2: Goal 3 (Multi-tool) + Goal 5 (File navigation)
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>├── Week 2-3: Goal 7 Phase 1 (Benchmark v2 — scoring fixes + agent loop tests)
+</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>├── Week 3: Goal 4 (Config integration) + Goal 6 (Provider hierarchy)
+</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>├── Week 3-4: Goal 7 Phase 2-3 (Agentic patterns + efficiency metrics)
+</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>└── Release after full v2 re-benchmark validates ranking matches real-world
+</span></code></pre></div>
+<hr />
+<h2 id="roadmapmd-updates-required">ROADMAP.md Updates Required<a class="headerlink" href="#roadmapmd-updates-required" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>v1.15.6 section</strong> — Add after v1.15.5 in the v1.15.x series</li>
+<li><strong>v1.16.0 section</strong> — Restructure: File Navigation becomes one goal alongside engine changes</li>
+<li><strong>v1.16.1 → v1.17.0</strong> — Renumber: ppxaide file tree and web app sidebar shift forward</li>
+<li><strong>Model Evaluation table</strong> — Update with latest benchmark results</li>
+<li><strong>Future Considerations</strong> — Add Model Profile System as a completed/in-progress item</li>
+</ol>
+<hr />
+<h2 id="success-criteria">Success Criteria<a class="headerlink" href="#success-criteria" title="Permanent link">&para;</a></h2>
+<h3 id="v1156-all-done">v1.15.6 — All Done<a class="headerlink" href="#v1156-all-done" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[x] o4-mini scores up to 80.8% prompt-based (from 10.9% native)</li>
+<li>[x] gpt-4.1-mini scores up to 100% prompt-based (from 60.9% native)</li>
+<li>[x] Codex native tool calling verified — Session 3: 71+ calls (codex), 19 + synthesis (codex-mini)</li>
+<li>[x] Brace-counting parser handles apply_patch diffs without breaking (P2)</li>
+<li>[x] JSON stripping cleans up tool_json_in_content responses</li>
+<li>[x] <code>ModelProfile</code> dataclasses with 37 built-in profiles</li>
+<li>[x] No regressions for existing providers (Gemini, Perplexity, local)</li>
+<li>[x] 1349 tests passing (87+ new tests)</li>
+<li>[x] Read-claim validator catches "I read each file" with 0 read_file calls (A1)</li>
+<li>[x] Truncation retry uses <code>[SYSTEM: ...]</code> framing (A2)</li>
+<li>[x] Model switch warning → deferred to v1.16.0 (A3 → B1 session reset is proper fix)</li>
+<li>[x] codex profiles corrected to native (A5 — reversed: native works, prompt_based was wrong)</li>
+<li>[x] ppxaide <code>/debug-log on</code> fix — Logger.enable_all() (A14)</li>
+<li>[x] codex-mini tuning — anti-hesitation, fallback_on_empty, restricted_params (A13)</li>
+<li>[x] gpt-5-nano synthesis fix — max_tokens 8192, profile with fallback_on_empty (A11)</li>
+<li>[x] Pre-release cleanup C1-C9 (profile count, prefix matching, tier fixes, doc sync)</li>
+</ul>
+<h3 id="v1160">v1.16.0<a class="headerlink" href="#v1160" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[ ] Profile-driven routing replaces binary decision in chat.py</li>
+<li>[ ] Proper <code>tool</code> role messages for native mode</li>
+<li>[ ] Multi-tool support works for models that return parallel calls</li>
+<li>[ ] Config overrides allow per-model tool_calling settings</li>
+<li>[ ] <code>/model info</code> shows active profile</li>
+<li>[ ] <code>/ls</code> and <code>/tree</code> commands work in all clients</li>
+<li>[ ] No provider regressions (full benchmark suite)</li>
+<li>[ ] Session migration from v1.15.x works seamlessly</li>
+<li>[ ] All existing tests pass + 50+ new tests</li>
+<li>[ ] Session context reset on model switch works correctly (B1)</li>
+<li>[x] ~~Codex native tool calling via Responses API~~ — Done in v1.15.6 Session 3</li>
+<li>[ ] Per-model iteration limit consulted from ModelProfile (B2) — gemini→25, nano→8</li>
+<li>[ ] Belt-and-suspenders prompt injection for fallback-enabled profiles (B3)</li>
+<li>[ ] SSE disconnect detection cancels background tasks on client disconnect (B11)</li>
+<li>[ ] Session pollution detection emits WARNING on response replay (B7)</li>
+<li>[ ] <strong>Benchmark v2:</strong> <code>agent_loop</code> category with 5 tests (multi_file_review, consecutive_tool_loop, claim_without_action, search_then_edit, test_fix_verify)</li>
+<li>[ ] <strong>Benchmark v2:</strong> Partial credit scoring for tool calling tests (tool name 50% + args 50%)</li>
+<li>[ ] <strong>Benchmark v2:</strong> <code>patch_apply_verify</code> test actually applies patches and verifies output</li>
+<li>[ ] <strong>Benchmark v2:</strong> Efficiency metrics tracked (tokens, cost, time-to-first-tool-call)</li>
+<li>[ ] <strong>Benchmark v2:</strong> Ranking matches real-world validation matrix (gemini-2.5-flash &gt; codex-mini &gt; sonar-pro &gt; gpt-5.2 &gt; codex &gt; gemini-3-pro &gt; gpt-4.1)</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/rcconsult/ppxai" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

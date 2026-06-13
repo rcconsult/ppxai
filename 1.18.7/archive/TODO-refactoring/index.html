@@ -1,0 +1,2406 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Multi-LLM Interface for Developers - Terminal & VSCode">
+      
+      
+      
+        <link rel="canonical" href="https://rcconsult.github.io/ppxai/1.18.7/archive/TODO-refactoring/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>TODO: Technical Debt & Refactoring Plan - ppxai Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#todo-technical-debt-refactoring-plan" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="ppxai Documentation" class="md-header__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ppxai Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              TODO: Technical Debt &amp; Refactoring Plan
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="ppxai Documentation" class="md-nav__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ppxai Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../provider-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provider Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agent-mode-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agent Mode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../bootstrap-context-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bootstrap Context
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../context-injection/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Context Injection
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../checkpoint-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Checkpoint & Undo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../file-editing-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    File Editing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../shell-consent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shell Consent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../custom-tool-development-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../custom-command-development-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ollama-limitations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ollama Limitations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../vllm-tool-calling-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    vLLM Tool Calling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../container-tools-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Container Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../autorouter-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autorouter Config
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release Notes
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Release Notes
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../RELEASE-NOTES-v1.16.1.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../RELEASE-NOTES-v1.16.0.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../RELEASE-NOTES-v1.15.6.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.15.6
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#completed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Completed
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Completed">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-split-serverhttppy-2936-lines-18-modules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ~~1. Split server/http.py (2,936 lines → 18 modules)~~
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-consolidate-config__init__py-943-lines-submodules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ~~2. Consolidate config/__init__.py (943 lines → submodules)~~
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-unified-appstate-cross-client-state-management" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Unified AppState — Cross-Client State Management
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Unified AppState — Cross-Client State Management">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#problem" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Problem
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#solution-separated-concerns-app-state-runtime-schemas" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Solution: Separated Concerns — App State + Runtime Schemas
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Solution: Separated Concerns — App State + Runtime Schemas">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#app-state-schema-ppxai-stateschemayaml" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        App State Schema: ppxai-state.schema.yaml
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#runtime-schemas-separate-concern-pluggable" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Runtime Schemas (Separate Concern, Pluggable)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#code-generation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Code Generation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#feature-driven-development" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Feature-Driven Development
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#design-requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Design Requirements
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#event-bus-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Event Bus Integration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#runtime-integration-notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Runtime Integration Notes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-it-flows" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How It Flows
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#impact-on-each-component" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Impact on Each Component
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Impact on Each Component">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#engineclient-item-5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        EngineClient (item 5)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#textual-tui-item-6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Textual TUI (item 6)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rich-tui" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rich TUI
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#http-server" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        HTTP Server
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#web-app-already-has-appstate-align-to-public-interface" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Web App (already has AppState — align to public interface)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#vscode-extension" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        VSCode Extension
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#commandcontext-item-4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CommandContext (item 4)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#migration-per-client-phased-rollout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Migration: Per-Client Phased Rollout
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dependency-chain" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dependency Chain
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#risk" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Risk
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#testing-requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Testing Requirements
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#estimated-effort" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Estimated Effort
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-simplify-commandcontext-adapters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ~~4. Simplify CommandContext Adapters~~
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-decompose-engineclientpy-1588-955-lines" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ~~5. Decompose engine/client.py (1,588 → 955 lines)~~
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-modularize-tuiapppy-2303-1718-lines" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ~~6. Modularize tui/app.py (2,303 → 1,718 lines)~~
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-extract-event-router-pattern" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Extract Event Router Pattern
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="7. Extract Event Router Pattern">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#assessment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Assessment
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#estimated-effort_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Estimated Effort
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#implementation-order" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Implementation Order
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#non-goals" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Non-Goals
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="todo-technical-debt-refactoring-plan">TODO: Technical Debt &amp; Refactoring Plan<a class="headerlink" href="#todo-technical-debt-refactoring-plan" title="Permanent link">&para;</a></h1>
+<p><strong>Status:</strong> In progress
+<strong>Priority:</strong> Medium — address incrementally across v1.17.x releases
+<strong>Created:</strong> 2026-03-15</p>
+<hr />
+<h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
+<p>This document tracks structural refactoring opportunities identified through codebase analysis.
+All items are non-functional improvements — the codebase works correctly but has accumulated
+complexity in several key files that will slow future development if left unaddressed.</p>
+<p><strong>Guiding principles:</strong>
+- Each refactoring is a standalone commit (no feature coupling)
+- All existing tests must pass after each step
+- No public API changes (HTTP endpoints, CLI commands, config schema)
+- DAG-style imports — no circular dependencies, no deferred imports
+- Measure twice, cut once — read the file before splitting it</p>
+<hr />
+<h2 id="completed">Completed<a class="headerlink" href="#completed" title="Permanent link">&para;</a></h2>
+<h3 id="1-split-serverhttppy-2936-lines-18-modules">~~1. Split <code>server/http.py</code> (2,936 lines → 18 modules)~~<a class="headerlink" href="#1-split-serverhttppy-2936-lines-18-modules" title="Permanent link">&para;</a></h3>
+<p><strong>Status:</strong> DONE — 2026-03-15</p>
+<p>Split into <code>server/{models,state,streaming}.py</code> + <code>server/routes/</code> (13 route modules).
+<code>http.py</code> reduced to 372-line facade (app creation, lifespan, CLI entry points).</p>
+<h3 id="2-consolidate-config__init__py-943-lines-submodules">~~2. Consolidate <code>config/__init__.py</code> (943 lines → submodules)~~<a class="headerlink" href="#2-consolidate-config__init__py-943-lines-submodules" title="Permanent link">&para;</a></h3>
+<p><strong>Status:</strong> DONE — 2026-03-15</p>
+<p>Split into <code>config/{providers,tools,features,paths,context,prompts}.py</code>.
+<code>__init__.py</code> reduced to 262-line re-export hub. All circular imports eliminated
+via clean DAG + reload callback pattern in <code>store.py</code>.</p>
+<hr />
+<h2 id="3-unified-appstate-cross-client-state-management">3. Unified AppState — Cross-Client State Management<a class="headerlink" href="#3-unified-appstate-cross-client-state-management" title="Permanent link">&para;</a></h2>
+<p><strong>Priority:</strong> HIGH — foundational change that streamlines all clients.
+<strong>Status:</strong> Hand-crafted implementations DONE (Python, JS, TS). Schema+generator deferred to v1.18.x.</p>
+<blockquote>
+<p><strong>Update (2026-03-26):</strong> Hand-crafted AppState implementations are complete and
+wired in Python (<code>engine/app_state.py</code> + EngineClient + Textual TUI + commands),
+JavaScript (<code>web/shared/app-state.js</code> + E2E tests), and TypeScript
+(<code>vscode-extension/src/appState.ts</code>). Rich TUI still uses EventBus — deferred
+to v1.18.x alongside the YAML schema+generator approach.</p>
+</blockquote>
+<h3 id="problem">Problem<a class="headerlink" href="#problem" title="Permanent link">&para;</a></h3>
+<p>Application state is duplicated and managed differently in every client layer:</p>
+<table>
+<thead>
+<tr>
+<th>Client</th>
+<th>State location</th>
+<th>State fields</th>
+<th>Sync mechanism</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>EngineClient</strong></td>
+<td>60 <code>self.*</code> attrs on 1,588-line class</td>
+<td>provider, model, tools, session, agent, checkpoints, consent, bootstrap, context</td>
+<td>Direct mutation</td>
+</tr>
+<tr>
+<td><strong>Textual TUI</strong></td>
+<td>15+ <code>self._*</code> fields on 2,303-line app</td>
+<td><code>_provider</code>, <code>_model</code>, <code>_is_streaming</code>, <code>_tools_enabled</code>, <code>_cancel_requested</code>, <code>_reasoning_*</code>, <code>_tool_group_*</code></td>
+<td>Manual badge updates, scattered <code>update_badge()</code> calls</td>
+</tr>
+<tr>
+<td><strong>Rich TUI</strong></td>
+<td>Fields on handler class</td>
+<td>provider, model, streaming state</td>
+<td>Manual status bar updates</td>
+</tr>
+<tr>
+<td><strong>HTTP Server</strong></td>
+<td><code>SessionManager</code> + per-session <code>EngineClient</code></td>
+<td>Session isolation via dict lookup</td>
+<td>Stateless endpoints read from engine</td>
+</tr>
+<tr>
+<td><strong>Web App</strong></td>
+<td><code>AppState</code> (observable Proxy)</td>
+<td>20+ fields with <code>state.on()</code> observers</td>
+<td><strong>Already solved</strong> — centralized + reactive</td>
+</tr>
+<tr>
+<td><strong>CommandContext</strong></td>
+<td>Protocol with 12+ properties/methods</td>
+<td>Delegates to engine + client-specific state</td>
+<td>Each adapter (Rich/Textual/Server) re-implements</td>
+</tr>
+</tbody>
+</table>
+<p>Each client maintains its own shadow copy of provider/model/tools state, manually
+syncing with <code>EngineClient</code>. When state changes (e.g., session restore), every client
+must remember to update its local copies + UI badges + subtitle — leading to bugs
+where one piece gets missed.</p>
+<h3 id="solution-separated-concerns-app-state-runtime-schemas">Solution: Separated Concerns — App State + Runtime Schemas<a class="headerlink" href="#solution-separated-concerns-app-state-runtime-schemas" title="Permanent link">&para;</a></h3>
+<p>Two separate schemas with a uniform access pattern:</p>
+<ol>
+<li>
+<p><strong>App State Schema</strong> (<code>ppxai-state.schema.yaml</code>) — what the app knows about itself.
+   Same fields, same names, all clients. This is application logic.</p>
+</li>
+<li>
+<p><strong>Runtime Schema(s)</strong> (<code>ppxai-runtime-*.schema.yaml</code>) — how the app is deployed
+   and what the deployment provides. This is infrastructure configuration that gets
+   plugged into the state store for uniform <code>get()</code>/<code>set()</code> access.</p>
+</li>
+<li>
+<p><strong>Packaging</strong> — how we bundle the app (PyInstaller, Docker, VSIX). Build concern
+   only. Not a state concern. Not in any schema.</p>
+</li>
+</ol>
+<p>The desktop web app and k8s web app are the <strong>same app</strong>. k8s just provides a
+runtime environment that injects configuration (session manager URL, working dir,
+LDAP endpoint). The glue code (session-manager sidecar, nginx BFF, ingress) is
+deployment infrastructure — it doesn't change the app's state model.</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>┌──────────────────────────────────────────────┐
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>│  App State Schema (ppxai-state.schema.yaml)  │  ← application logic
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>│  currentProvider, currentModel, toolsEnabled │     same across ALL clients
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>│  isStreaming, agentMode, checkpointCount, ... │
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>└──────────────────────────────────────────────┘
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>         │ plugs into
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>         ▼
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>┌──────────────────────────────────────────────┐
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>│  AppState Store (generated per platform)     │  ← uniform public interface
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>│  get() / set() / on() / off() / update()     │     Python / JS / TS
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>│  snapshot()                                  │
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>└──────────────────────────────────────────────┘
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>         ▲ plugs into
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>         │
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>┌──────────────────────────────────────────────┐
+</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>│  Runtime Schema (optional, per deployment)   │  ← infrastructure config
+</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>│  k8s: sessionIsolation, maxSessions, ttl     │     injected at startup
+</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>│  vscode: webviewReady                        │
+</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>│  desktop: terminalProtocol                   │
+</span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>└──────────────────────────────────────────────┘
+</span></code></pre></div>
+<h4 id="app-state-schema-ppxai-stateschemayaml">App State Schema: <code>ppxai-state.schema.yaml</code><a class="headerlink" href="#app-state-schema-ppxai-stateschemayaml" title="Permanent link">&para;</a></h4>
+<p>The app state schema is the single source of truth for application-level state.
+Every client gets every field. No per-platform conditionals.</p>
+<p><strong>Naming convention:</strong> Schema uses <code>camelCase</code>. Generator converts to <code>snake_case</code>
+for Python. Names map 1:1 across codebases.</p>
+<p><strong>Access convention:</strong> Zero direct field access. All reads via <code>get()</code> or property
+shorthand. All writes via <code>set()</code> or property shorthand. Both resolve to the same
+internal mechanism that enforces dedup and fires observers.</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a># Python                             # JS / TS
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>state.get(&quot;current_provider&quot;)        state.get(&quot;currentProvider&quot;)
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>state.set(&quot;current_provider&quot;, &quot;x&quot;)   state.set(&quot;currentProvider&quot;, &quot;x&quot;)
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>state.current_provider               state.currentProvider          # shorthand
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>state.on(&quot;current_provider&quot;, fn)     state.on(&quot;currentProvider&quot;, fn)
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>state.off(&quot;current_provider&quot;, fn)    state.off(&quot;currentProvider&quot;, fn)
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>state.snapshot()                     state.snapshot()
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>state.update(current_provider=&quot;x&quot;,   state.update({currentProvider: &quot;x&quot;,
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>             current_model=&quot;y&quot;)                    currentModel: &quot;y&quot;})
+</span></code></pre></div>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># ppxai-state.schema.yaml — generates AppState for Python, JS, TS</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nt">version</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;1.0&quot;</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="nt">fields</span><span class="p">:</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">  </span><span class="c1"># --- Provider / Model ---</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">  </span><span class="nt">currentProvider</span><span class="p">:</span><span class="w">       </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">string</span><span class="p p-Indicator">,</span><span class="nt">  default</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;perplexity&quot;</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">  </span><span class="nt">currentModel</span><span class="p">:</span><span class="w">          </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">string</span><span class="p p-Indicator">,</span><span class="nt">  default</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;sonar-pro&quot;</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">  </span><span class="nt">workingDir</span><span class="p">:</span><span class="w">            </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">string</span><span class="p p-Indicator">,</span><span class="nt">  default</span><span class="p">:</span><span class="w"> </span><span class="nv">null</span><span class="p p-Indicator">,</span><span class="nt"> nullable</span><span class="p">:</span><span class="w"> </span><span class="nv">true</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">  </span><span class="c1"># --- Session ---</span>
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="w">  </span><span class="nt">sessionName</span><span class="p">:</span><span class="w">           </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">string</span><span class="p p-Indicator">,</span><span class="nt">  default</span><span class="p">:</span><span class="w"> </span><span class="nv">null</span><span class="p p-Indicator">,</span><span class="nt"> nullable</span><span class="p">:</span><span class="w"> </span><span class="nv">true</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="w">  </span><span class="nt">messageCount</span><span class="p">:</span><span class="w">          </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">integer</span><span class="p p-Indicator">,</span><span class="nt"> default</span><span class="p">:</span><span class="w"> </span><span class="nv">0</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>
+</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="w">  </span><span class="c1"># --- Tools ---</span>
+</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="w">  </span><span class="nt">toolsEnabled</span><span class="p">:</span><span class="w">          </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">boolean</span><span class="p p-Indicator">,</span><span class="nt"> default</span><span class="p">:</span><span class="w"> </span><span class="nv">false</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a><span class="w">  </span><span class="nt">toolsVerbose</span><span class="p">:</span><span class="w">          </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">boolean</span><span class="p p-Indicator">,</span><span class="nt"> default</span><span class="p">:</span><span class="w"> </span><span class="nv">false</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span><span id="__span-2-17"><a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a><span class="w">  </span><span class="nt">agentMode</span><span class="p">:</span><span class="w">             </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">boolean</span><span class="p p-Indicator">,</span><span class="nt"> default</span><span class="p">:</span><span class="w"> </span><span class="nv">false</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span><span id="__span-2-18"><a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a>
+</span><span id="__span-2-19"><a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a><span class="w">  </span><span class="c1"># --- Streaming ---</span>
+</span><span id="__span-2-20"><a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a><span class="w">  </span><span class="nt">isStreaming</span><span class="p">:</span><span class="w">            </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">boolean</span><span class="p p-Indicator">,</span><span class="nt"> default</span><span class="p">:</span><span class="w"> </span><span class="nv">false</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span><span id="__span-2-21"><a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a><span class="w">  </span><span class="nt">cancelRequested</span><span class="p">:</span><span class="w">       </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">boolean</span><span class="p p-Indicator">,</span><span class="nt"> default</span><span class="p">:</span><span class="w"> </span><span class="nv">false</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span><span id="__span-2-22"><a id="__codelineno-2-22" name="__codelineno-2-22" href="#__codelineno-2-22"></a>
+</span><span id="__span-2-23"><a id="__codelineno-2-23" name="__codelineno-2-23" href="#__codelineno-2-23"></a><span class="w">  </span><span class="c1"># --- Context ---</span>
+</span><span id="__span-2-24"><a id="__codelineno-2-24" name="__codelineno-2-24" href="#__codelineno-2-24"></a><span class="w">  </span><span class="nt">autoInject</span><span class="p">:</span><span class="w">            </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">boolean</span><span class="p p-Indicator">,</span><span class="nt"> default</span><span class="p">:</span><span class="w"> </span><span class="nv">true</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span><span id="__span-2-25"><a id="__codelineno-2-25" name="__codelineno-2-25" href="#__codelineno-2-25"></a><span class="w">  </span><span class="nt">bootstrapLoaded</span><span class="p">:</span><span class="w">       </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">boolean</span><span class="p p-Indicator">,</span><span class="nt"> default</span><span class="p">:</span><span class="w"> </span><span class="nv">false</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span><span id="__span-2-26"><a id="__codelineno-2-26" name="__codelineno-2-26" href="#__codelineno-2-26"></a>
+</span><span id="__span-2-27"><a id="__codelineno-2-27" name="__codelineno-2-27" href="#__codelineno-2-27"></a><span class="w">  </span><span class="c1"># --- Checkpoints ---</span>
+</span><span id="__span-2-28"><a id="__codelineno-2-28" name="__codelineno-2-28" href="#__codelineno-2-28"></a><span class="w">  </span><span class="nt">lastCheckpoint</span><span class="p">:</span><span class="w">        </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">string</span><span class="p p-Indicator">,</span><span class="nt">  default</span><span class="p">:</span><span class="w"> </span><span class="nv">null</span><span class="p p-Indicator">,</span><span class="nt"> nullable</span><span class="p">:</span><span class="w"> </span><span class="nv">true</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span><span id="__span-2-29"><a id="__codelineno-2-29" name="__codelineno-2-29" href="#__codelineno-2-29"></a><span class="w">  </span><span class="nt">checkpointCount</span><span class="p">:</span><span class="w">       </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">integer</span><span class="p p-Indicator">,</span><span class="nt"> default</span><span class="p">:</span><span class="w"> </span><span class="nv">0</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span><span id="__span-2-30"><a id="__codelineno-2-30" name="__codelineno-2-30" href="#__codelineno-2-30"></a>
+</span><span id="__span-2-31"><a id="__codelineno-2-31" name="__codelineno-2-31" href="#__codelineno-2-31"></a><span class="w">  </span><span class="c1"># --- Usage ---</span>
+</span><span id="__span-2-32"><a id="__codelineno-2-32" name="__codelineno-2-32" href="#__codelineno-2-32"></a><span class="w">  </span><span class="nt">usagePromptTokens</span><span class="p">:</span><span class="w">     </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">integer</span><span class="p p-Indicator">,</span><span class="nt"> default</span><span class="p">:</span><span class="w"> </span><span class="nv">0</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span><span id="__span-2-33"><a id="__codelineno-2-33" name="__codelineno-2-33" href="#__codelineno-2-33"></a><span class="w">  </span><span class="nt">usageCompletionTokens</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">integer</span><span class="p p-Indicator">,</span><span class="nt"> default</span><span class="p">:</span><span class="w"> </span><span class="nv">0</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span><span id="__span-2-34"><a id="__codelineno-2-34" name="__codelineno-2-34" href="#__codelineno-2-34"></a><span class="w">  </span><span class="nt">usageCost</span><span class="p">:</span><span class="w">             </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">number</span><span class="p p-Indicator">,</span><span class="nt">  default</span><span class="p">:</span><span class="w"> </span><span class="nv">0.0</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span><span id="__span-2-35"><a id="__codelineno-2-35" name="__codelineno-2-35" href="#__codelineno-2-35"></a>
+</span><span id="__span-2-36"><a id="__codelineno-2-36" name="__codelineno-2-36" href="#__codelineno-2-36"></a><span class="w">  </span><span class="c1"># --- Debug ---</span>
+</span><span id="__span-2-37"><a id="__codelineno-2-37" name="__codelineno-2-37" href="#__codelineno-2-37"></a><span class="w">  </span><span class="nt">debugLogEnabled</span><span class="p">:</span><span class="w">       </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">boolean</span><span class="p p-Indicator">,</span><span class="nt"> default</span><span class="p">:</span><span class="w"> </span><span class="nv">false</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span><span id="__span-2-38"><a id="__codelineno-2-38" name="__codelineno-2-38" href="#__codelineno-2-38"></a>
+</span><span id="__span-2-39"><a id="__codelineno-2-39" name="__codelineno-2-39" href="#__codelineno-2-39"></a><span class="c1"># Feature groups — logical grouping for documentation and selective observation.</span>
+</span><span id="__span-2-40"><a id="__codelineno-2-40" name="__codelineno-2-40" href="#__codelineno-2-40"></a><span class="c1"># All fields are always present in all clients. Groups are for wiring observers</span>
+</span><span id="__span-2-41"><a id="__codelineno-2-41" name="__codelineno-2-41" href="#__codelineno-2-41"></a><span class="c1"># and for GET /status to return a coherent subset.</span>
+</span><span id="__span-2-42"><a id="__codelineno-2-42" name="__codelineno-2-42" href="#__codelineno-2-42"></a><span class="nt">features</span><span class="p">:</span>
+</span><span id="__span-2-43"><a id="__codelineno-2-43" name="__codelineno-2-43" href="#__codelineno-2-43"></a><span class="w">  </span><span class="nt">core</span><span class="p">:</span><span class="w">        </span><span class="p p-Indicator">[</span><span class="nv">currentProvider</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">currentModel</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">workingDir</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">sessionName</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">messageCount</span><span class="p p-Indicator">]</span>
+</span><span id="__span-2-44"><a id="__codelineno-2-44" name="__codelineno-2-44" href="#__codelineno-2-44"></a><span class="w">  </span><span class="nt">tools</span><span class="p">:</span><span class="w">       </span><span class="p p-Indicator">[</span><span class="nv">toolsEnabled</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">toolsVerbose</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">agentMode</span><span class="p p-Indicator">]</span>
+</span><span id="__span-2-45"><a id="__codelineno-2-45" name="__codelineno-2-45" href="#__codelineno-2-45"></a><span class="w">  </span><span class="nt">streaming</span><span class="p">:</span><span class="w">   </span><span class="p p-Indicator">[</span><span class="nv">isStreaming</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">cancelRequested</span><span class="p p-Indicator">]</span>
+</span><span id="__span-2-46"><a id="__codelineno-2-46" name="__codelineno-2-46" href="#__codelineno-2-46"></a><span class="w">  </span><span class="nt">context</span><span class="p">:</span><span class="w">     </span><span class="p p-Indicator">[</span><span class="nv">autoInject</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">bootstrapLoaded</span><span class="p p-Indicator">]</span>
+</span><span id="__span-2-47"><a id="__codelineno-2-47" name="__codelineno-2-47" href="#__codelineno-2-47"></a><span class="w">  </span><span class="nt">checkpoints</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">lastCheckpoint</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">checkpointCount</span><span class="p p-Indicator">]</span>
+</span><span id="__span-2-48"><a id="__codelineno-2-48" name="__codelineno-2-48" href="#__codelineno-2-48"></a><span class="w">  </span><span class="nt">usage</span><span class="p">:</span><span class="w">       </span><span class="p p-Indicator">[</span><span class="nv">usagePromptTokens</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">usageCompletionTokens</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">usageCost</span><span class="p p-Indicator">]</span>
+</span><span id="__span-2-49"><a id="__codelineno-2-49" name="__codelineno-2-49" href="#__codelineno-2-49"></a><span class="w">  </span><span class="nt">debug</span><span class="p">:</span><span class="w">       </span><span class="p p-Indicator">[</span><span class="nv">debugLogEnabled</span><span class="p p-Indicator">]</span>
+</span></code></pre></div>
+<h4 id="runtime-schemas-separate-concern-pluggable">Runtime Schemas (Separate Concern, Pluggable)<a class="headerlink" href="#runtime-schemas-separate-concern-pluggable" title="Permanent link">&para;</a></h4>
+<p>Runtime configuration is NOT app state. It's deployment infrastructure that the app
+reads but doesn't own. Each runtime environment has its own schema that gets plugged
+into the AppState store at startup for uniform <code>get()</code>/<code>set()</code> access.</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># ppxai-runtime-k8s.schema.yaml</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="nt">version</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;1.0&quot;</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Kubernetes</span><span class="nv"> </span><span class="s">multi-user</span><span class="nv"> </span><span class="s">deployment&quot;</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="nt">fields</span><span class="p">:</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">  </span><span class="nt">sessionIsolation</span><span class="p">:</span><span class="w">    </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">boolean</span><span class="p p-Indicator">,</span><span class="nt"> default</span><span class="p">:</span><span class="w"> </span><span class="nv">true</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">  </span><span class="nt">maxSessions</span><span class="p">:</span><span class="w">         </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">integer</span><span class="p p-Indicator">,</span><span class="nt"> default</span><span class="p">:</span><span class="w"> </span><span class="nv">3</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">  </span><span class="nt">ttlMinutes</span><span class="p">:</span><span class="w">          </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">integer</span><span class="p p-Indicator">,</span><span class="nt"> default</span><span class="p">:</span><span class="w"> </span><span class="nv">10</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">  </span><span class="nt">ldapEnabled</span><span class="p">:</span><span class="w">         </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">boolean</span><span class="p p-Indicator">,</span><span class="nt"> default</span><span class="p">:</span><span class="w"> </span><span class="nv">false</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">  </span><span class="nt">registryPath</span><span class="p">:</span><span class="w">        </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">string</span><span class="p p-Indicator">,</span><span class="nt">  default</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;/registry&quot;</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span></code></pre></div>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># ppxai-runtime-vscode.schema.yaml</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="nt">version</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;1.0&quot;</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;VSCode</span><span class="nv"> </span><span class="s">extension&quot;</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="nt">fields</span><span class="p">:</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">  </span><span class="nt">webviewReady</span><span class="p">:</span><span class="w">        </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">boolean</span><span class="p p-Indicator">,</span><span class="nt"> default</span><span class="p">:</span><span class="w"> </span><span class="nv">false</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">  </span><span class="nt">extensionVersion</span><span class="p">:</span><span class="w">    </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">string</span><span class="p p-Indicator">,</span><span class="nt">  default</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&quot;</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span></code></pre></div>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># ppxai-runtime-desktop.schema.yaml</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="nt">version</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;1.0&quot;</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Desktop</span><span class="nv"> </span><span class="s">terminal</span><span class="nv"> </span><span class="s">TUI&quot;</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="nt">fields</span><span class="p">:</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">  </span><span class="nt">terminalProtocol</span><span class="p">:</span><span class="w">    </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">string</span><span class="p p-Indicator">,</span><span class="nt">  default</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;auto&quot;</span><span class="p p-Indicator">,</span><span class="nt"> enum</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">auto</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">sixel</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">iterm2</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">kitty</span><span class="p p-Indicator">]</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</span></code></pre></div>
+<p>At startup, the client loads its runtime schema into the same store:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Desktop TUI startup</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="n">state</span> <span class="o">=</span> <span class="n">AppState</span><span class="p">()</span>                                <span class="c1"># Core app state from schema</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="n">state</span><span class="o">.</span><span class="n">load_runtime</span><span class="p">(</span><span class="s2">&quot;ppxai-runtime-desktop&quot;</span><span class="p">)</span>       <span class="c1"># Adds terminalProtocol</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="c1"># Access uniformly: state.get(&quot;terminal_protocol&quot;)</span>
+</span></code></pre></div>
+<div class="language-javascript highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1">// Web app startup (same app whether standalone or k8s)</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="kd">const</span><span class="w"> </span><span class="nx">state</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nx">AppState</span><span class="p">();</span><span class="w">                     </span><span class="c1">// Core app state from schema</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nx">isK8sDeployment</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">    </span><span class="nx">state</span><span class="p">.</span><span class="nx">loadRuntime</span><span class="p">(</span><span class="s1">&#39;ppxai-runtime-k8s&#39;</span><span class="p">);</span><span class="w">        </span><span class="c1">// Adds sessionIsolation, maxSessions, etc.</span>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="p">}</span>
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="c1">// Access uniformly: state.get(&quot;sessionIsolation&quot;) ?? false</span>
+</span></code></pre></div>
+<p>The app code doesn't care where the runtime config came from. It calls
+<code>state.get("sessionIsolation")</code> and gets <code>true</code> (k8s) or <code>undefined</code> (standalone).
+The runtime schema just makes the field names and types explicit so they're
+consistent across deployments.</p>
+<h4 id="code-generation">Code Generation<a class="headerlink" href="#code-generation" title="Permanent link">&para;</a></h4>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>ppxai-state.schema.yaml              (app state — always generated)
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>ppxai-runtime-*.schema.yaml          (runtime configs — generated per deployment)
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>         │
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>    scripts/generate-state.py
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>         │
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>         ├──→ ppxai/state.py                              (Python: thread-safe, async-friendly)
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>         ├──→ ppxai/web/shared/app-state.js                (JS: Proxy-based, replaces hand-written)
+</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>         └──→ vscode-extension/src/shared/appState.ts      (TS: typed interface + class)
+</span></code></pre></div>
+<p>Each generated file includes:
+- All app state fields with platform-appropriate naming
+- <code>get()</code>, <code>set()</code>, <code>on()</code>, <code>off()</code>, <code>snapshot()</code>, <code>update()</code> public interface
+- <code>loadRuntime(name)</code> method to plug in runtime fields
+- Property accessors as shorthand
+- No-op dedup on identical writes
+- <code>SCHEMA_VERSION</code> constant
+- <strong>Python only:</strong> <code>threading.Lock</code> for writes, async listener dispatch
+- <strong>JS only:</strong> <code>Proxy</code> traps
+- <strong>TS only:</strong> <code>IAppState</code> interface with typed fields</p>
+<h4 id="feature-driven-development">Feature-Driven Development<a class="headerlink" href="#feature-driven-development" title="Permanent link">&para;</a></h4>
+<p>Adding a new app state field:</p>
+<ol>
+<li><strong>Add</strong> to <code>ppxai-state.schema.yaml</code></li>
+<li><strong>Regenerate</strong>: <code>python scripts/generate-state.py</code></li>
+<li><strong>Wire observers</strong> where needed</li>
+</ol>
+<p>Adding a new runtime setting:</p>
+<ol>
+<li><strong>Add</strong> to the relevant <code>ppxai-runtime-*.schema.yaml</code></li>
+<li><strong>Regenerate</strong></li>
+<li><strong>Access</strong> via <code>state.get("new_setting")</code> — works in any client that loads that runtime</li>
+</ol>
+<h4 id="design-requirements">Design Requirements<a class="headerlink" href="#design-requirements" title="Permanent link">&para;</a></h4>
+<p><strong>Thread-safety:</strong> ppxai runs in multiple threading/async contexts simultaneously:
+- <strong>Textual TUI</strong> — Textual's event loop + worker threads for async engine calls
+- <strong>Rich TUI</strong> — Main thread + asyncio event loop
+- <strong>HTTP Server</strong> — uvicorn's async event loop + multiple concurrent requests per session
+- <strong>Session Manager</strong> — Background idle monitor thread + async session cleanup</p>
+<p>State reads and writes can happen from any of these contexts concurrently. The
+implementation must guarantee:
+- <strong>Atomic reads</strong> — No torn reads when one thread writes while another reads
+- <strong>Atomic writes</strong> — No lost updates when concurrent writes race
+- <strong>Thread-safe listener dispatch</strong> — Observers fire without corruption of the
+  listener registry, even when <code>on()</code> is called from a different thread
+- <strong>No deadlocks</strong> — Listener callbacks must not re-enter the lock (callbacks
+  execute outside the write lock, or the lock is reentrant)</p>
+<p><strong>Async-friendly:</strong> State mutations happen inside <code>async def</code> methods (engine chat,
+session restore, tool execution). The implementation must:
+- <strong>Never block the event loop</strong> — No <code>threading.Lock.acquire()</code> in async code paths.
+  Use <code>asyncio.Lock</code> for async contexts, or lock-free atomic patterns.
+- <strong>Support mixed sync/async listeners</strong> — Engine writes state synchronously, but
+  TUI observers may need to schedule Textual <code>call_from_thread()</code> or <code>app.post_message()</code>.
+  Listeners should accept both sync and async callables.
+- <strong>Event loop awareness</strong> — When a listener is an async coroutine, <code>AppState</code> should
+  detect and schedule it on the running loop (<code>asyncio.create_task</code> or
+  <code>loop.call_soon_threadsafe</code>) rather than calling it synchronously.</p>
+<p><strong>Practical approach:</strong> Two implementation strategies to evaluate:</p>
+<ol>
+<li>
+<p><strong>Lock-free with atomic dict reference</strong> (preferred for reads):
+   <div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># Writes: copy-on-write with threading.Lock for mutation only</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="c1"># Reads: direct dict access (atomic in CPython due to GIL, but</span>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="c1">#         explicitly safe via immutable snapshot swap)</span>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="c1"># Listeners: dispatched after lock release to prevent deadlocks</span>
+</span></code></pre></div></p>
+</li>
+<li>
+<p><strong>RLock with sync/async dispatch</strong>:
+   <div class="language-python highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># RLock allows reentrant writes (listener triggers another write)</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="c1"># Async listeners scheduled via loop.call_soon_threadsafe()</span>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="c1"># Simpler but slightly higher contention</span>
+</span></code></pre></div></p>
+</li>
+</ol>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1"># ppxai/state.py — GENERATED from ppxai-state.schema.yaml</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="c1"># Do not edit by hand. Run: python scripts/generate-state.py</span>
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>
+</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
+</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="kn">import</span><span class="w"> </span><span class="nn">threading</span>
+</span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Callable</span>
+</span><span id="__span-11-7"><a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a>
+</span><span id="__span-11-8"><a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="n">SCHEMA_VERSION</span> <span class="o">=</span> <span class="s2">&quot;1.0&quot;</span>
+</span><span id="__span-11-9"><a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a>
+</span><span id="__span-11-10"><a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a><span class="n">Listener</span> <span class="o">=</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Any</span><span class="p">],</span> <span class="n">Any</span><span class="p">]</span>  <span class="c1"># sync or async callable</span>
+</span><span id="__span-11-11"><a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a>
+</span><span id="__span-11-12"><a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a>
+</span><span id="__span-11-13"><a id="__codelineno-11-13" name="__codelineno-11-13" href="#__codelineno-11-13"></a><span class="k">class</span><span class="w"> </span><span class="nc">AppState</span><span class="p">:</span>
+</span><span id="__span-11-14"><a id="__codelineno-11-14" name="__codelineno-11-14" href="#__codelineno-11-14"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Observable application state with change notifications.</span>
+</span><span id="__span-11-15"><a id="__codelineno-11-15" name="__codelineno-11-15" href="#__codelineno-11-15"></a>
+</span><span id="__span-11-16"><a id="__codelineno-11-16" name="__codelineno-11-16" href="#__codelineno-11-16"></a><span class="sd">    Thread-safe and async-friendly. All mutable session state lives here.</span>
+</span><span id="__span-11-17"><a id="__codelineno-11-17" name="__codelineno-11-17" href="#__codelineno-11-17"></a><span class="sd">    Clients subscribe to changes instead of polling or manually syncing.</span>
+</span><span id="__span-11-18"><a id="__codelineno-11-18" name="__codelineno-11-18" href="#__codelineno-11-18"></a>
+</span><span id="__span-11-19"><a id="__codelineno-11-19" name="__codelineno-11-19" href="#__codelineno-11-19"></a><span class="sd">    Public interface (use these, never access _data directly):</span>
+</span><span id="__span-11-20"><a id="__codelineno-11-20" name="__codelineno-11-20" href="#__codelineno-11-20"></a><span class="sd">      state.get(&quot;current_provider&quot;)          → read</span>
+</span><span id="__span-11-21"><a id="__codelineno-11-21" name="__codelineno-11-21" href="#__codelineno-11-21"></a><span class="sd">      state.set(&quot;current_provider&quot;, &quot;x&quot;)     → write (fires observers if changed)</span>
+</span><span id="__span-11-22"><a id="__codelineno-11-22" name="__codelineno-11-22" href="#__codelineno-11-22"></a><span class="sd">      state.current_provider                 → shorthand read (via __getattr__)</span>
+</span><span id="__span-11-23"><a id="__codelineno-11-23" name="__codelineno-11-23" href="#__codelineno-11-23"></a><span class="sd">      state.current_provider = &quot;x&quot;           → shorthand write (via __setattr__)</span>
+</span><span id="__span-11-24"><a id="__codelineno-11-24" name="__codelineno-11-24" href="#__codelineno-11-24"></a><span class="sd">      state.on(&quot;current_provider&quot;, fn)       → subscribe</span>
+</span><span id="__span-11-25"><a id="__codelineno-11-25" name="__codelineno-11-25" href="#__codelineno-11-25"></a><span class="sd">      state.off(&quot;current_provider&quot;, fn)      → unsubscribe</span>
+</span><span id="__span-11-26"><a id="__codelineno-11-26" name="__codelineno-11-26" href="#__codelineno-11-26"></a><span class="sd">      state.update(current_provider=&quot;x&quot;, …)  → batch write</span>
+</span><span id="__span-11-27"><a id="__codelineno-11-27" name="__codelineno-11-27" href="#__codelineno-11-27"></a><span class="sd">      state.snapshot()                       → dict copy</span>
+</span><span id="__span-11-28"><a id="__codelineno-11-28" name="__codelineno-11-28" href="#__codelineno-11-28"></a>
+</span><span id="__span-11-29"><a id="__codelineno-11-29" name="__codelineno-11-29" href="#__codelineno-11-29"></a><span class="sd">    Thread safety:</span>
+</span><span id="__span-11-30"><a id="__codelineno-11-30" name="__codelineno-11-30" href="#__codelineno-11-30"></a><span class="sd">    - Writes serialized via threading.Lock</span>
+</span><span id="__span-11-31"><a id="__codelineno-11-31" name="__codelineno-11-31" href="#__codelineno-11-31"></a><span class="sd">    - Reads are lock-free (atomic dict reference in CPython)</span>
+</span><span id="__span-11-32"><a id="__codelineno-11-32" name="__codelineno-11-32" href="#__codelineno-11-32"></a><span class="sd">    - Listeners dispatched outside the lock (no deadlocks from re-entrant writes)</span>
+</span><span id="__span-11-33"><a id="__codelineno-11-33" name="__codelineno-11-33" href="#__codelineno-11-33"></a><span class="sd">    - Listener registry mutations protected by the same lock</span>
+</span><span id="__span-11-34"><a id="__codelineno-11-34" name="__codelineno-11-34" href="#__codelineno-11-34"></a>
+</span><span id="__span-11-35"><a id="__codelineno-11-35" name="__codelineno-11-35" href="#__codelineno-11-35"></a><span class="sd">    Async safety:</span>
+</span><span id="__span-11-36"><a id="__codelineno-11-36" name="__codelineno-11-36" href="#__codelineno-11-36"></a><span class="sd">    - Sync listeners called directly</span>
+</span><span id="__span-11-37"><a id="__codelineno-11-37" name="__codelineno-11-37" href="#__codelineno-11-37"></a><span class="sd">    - Async listeners scheduled via asyncio.create_task() on running loop</span>
+</span><span id="__span-11-38"><a id="__codelineno-11-38" name="__codelineno-11-38" href="#__codelineno-11-38"></a><span class="sd">    - Safe to call from both sync and async contexts</span>
+</span><span id="__span-11-39"><a id="__codelineno-11-39" name="__codelineno-11-39" href="#__codelineno-11-39"></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="__span-11-40"><a id="__codelineno-11-40" name="__codelineno-11-40" href="#__codelineno-11-40"></a>
+</span><span id="__span-11-41"><a id="__codelineno-11-41" name="__codelineno-11-41" href="#__codelineno-11-41"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">initial</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+</span><span id="__span-11-42"><a id="__codelineno-11-42" name="__codelineno-11-42" href="#__codelineno-11-42"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_data</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">initial</span> <span class="ow">or</span> <span class="p">{})</span>
+</span><span id="__span-11-43"><a id="__codelineno-11-43" name="__codelineno-11-43" href="#__codelineno-11-43"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_listeners</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">Listener</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
+</span><span id="__span-11-44"><a id="__codelineno-11-44" name="__codelineno-11-44" href="#__codelineno-11-44"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Lock</span><span class="p">()</span>
+</span><span id="__span-11-45"><a id="__codelineno-11-45" name="__codelineno-11-45" href="#__codelineno-11-45"></a>
+</span><span id="__span-11-46"><a id="__codelineno-11-46" name="__codelineno-11-46" href="#__codelineno-11-46"></a>    <span class="c1"># === Public Interface ===</span>
+</span><span id="__span-11-47"><a id="__codelineno-11-47" name="__codelineno-11-47" href="#__codelineno-11-47"></a>
+</span><span id="__span-11-48"><a id="__codelineno-11-48" name="__codelineno-11-48" href="#__codelineno-11-48"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">default</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+</span><span id="__span-11-49"><a id="__codelineno-11-49" name="__codelineno-11-49" href="#__codelineno-11-49"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Read a state field by name.&quot;&quot;&quot;</span>
+</span><span id="__span-11-50"><a id="__codelineno-11-50" name="__codelineno-11-50" href="#__codelineno-11-50"></a>        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">default</span><span class="p">)</span>
+</span><span id="__span-11-51"><a id="__codelineno-11-51" name="__codelineno-11-51" href="#__codelineno-11-51"></a>
+</span><span id="__span-11-52"><a id="__codelineno-11-52" name="__codelineno-11-52" href="#__codelineno-11-52"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">set</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-11-53"><a id="__codelineno-11-53" name="__codelineno-11-53" href="#__codelineno-11-53"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Write a state field by name. No-op if value unchanged. Fires observers.&quot;&quot;&quot;</span>
+</span><span id="__span-11-54"><a id="__codelineno-11-54" name="__codelineno-11-54" href="#__codelineno-11-54"></a>        <span class="n">listeners_to_call</span> <span class="o">=</span> <span class="p">[]</span>
+</span><span id="__span-11-55"><a id="__codelineno-11-55" name="__codelineno-11-55" href="#__codelineno-11-55"></a>        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
+</span><span id="__span-11-56"><a id="__codelineno-11-56" name="__codelineno-11-56" href="#__codelineno-11-56"></a>            <span class="n">old</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+</span><span id="__span-11-57"><a id="__codelineno-11-57" name="__codelineno-11-57" href="#__codelineno-11-57"></a>            <span class="k">if</span> <span class="n">old</span> <span class="o">==</span> <span class="n">value</span><span class="p">:</span>
+</span><span id="__span-11-58"><a id="__codelineno-11-58" name="__codelineno-11-58" href="#__codelineno-11-58"></a>                <span class="k">return</span>
+</span><span id="__span-11-59"><a id="__codelineno-11-59" name="__codelineno-11-59" href="#__codelineno-11-59"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+</span><span id="__span-11-60"><a id="__codelineno-11-60" name="__codelineno-11-60" href="#__codelineno-11-60"></a>            <span class="n">listeners_to_call</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_listeners</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="p">[]))</span>
+</span><span id="__span-11-61"><a id="__codelineno-11-61" name="__codelineno-11-61" href="#__codelineno-11-61"></a>
+</span><span id="__span-11-62"><a id="__codelineno-11-62" name="__codelineno-11-62" href="#__codelineno-11-62"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_dispatch</span><span class="p">(</span><span class="n">listeners_to_call</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+</span><span id="__span-11-63"><a id="__codelineno-11-63" name="__codelineno-11-63" href="#__codelineno-11-63"></a>
+</span><span id="__span-11-64"><a id="__codelineno-11-64" name="__codelineno-11-64" href="#__codelineno-11-64"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">on</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">fn</span><span class="p">:</span> <span class="n">Listener</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;AppState&quot;</span><span class="p">:</span>
+</span><span id="__span-11-65"><a id="__codelineno-11-65" name="__codelineno-11-65" href="#__codelineno-11-65"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Subscribe to changes on a state key. Accepts sync or async callables.&quot;&quot;&quot;</span>
+</span><span id="__span-11-66"><a id="__codelineno-11-66" name="__codelineno-11-66" href="#__codelineno-11-66"></a>        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
+</span><span id="__span-11-67"><a id="__codelineno-11-67" name="__codelineno-11-67" href="#__codelineno-11-67"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">_listeners</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="p">[])</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">fn</span><span class="p">)</span>
+</span><span id="__span-11-68"><a id="__codelineno-11-68" name="__codelineno-11-68" href="#__codelineno-11-68"></a>        <span class="k">return</span> <span class="bp">self</span>
+</span><span id="__span-11-69"><a id="__codelineno-11-69" name="__codelineno-11-69" href="#__codelineno-11-69"></a>
+</span><span id="__span-11-70"><a id="__codelineno-11-70" name="__codelineno-11-70" href="#__codelineno-11-70"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">off</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">fn</span><span class="p">:</span> <span class="n">Listener</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;AppState&quot;</span><span class="p">:</span>
+</span><span id="__span-11-71"><a id="__codelineno-11-71" name="__codelineno-11-71" href="#__codelineno-11-71"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Unsubscribe from changes on a state key.&quot;&quot;&quot;</span>
+</span><span id="__span-11-72"><a id="__codelineno-11-72" name="__codelineno-11-72" href="#__codelineno-11-72"></a>        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
+</span><span id="__span-11-73"><a id="__codelineno-11-73" name="__codelineno-11-73" href="#__codelineno-11-73"></a>            <span class="n">fns</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_listeners</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="p">[])</span>
+</span><span id="__span-11-74"><a id="__codelineno-11-74" name="__codelineno-11-74" href="#__codelineno-11-74"></a>            <span class="k">if</span> <span class="n">fn</span> <span class="ow">in</span> <span class="n">fns</span><span class="p">:</span>
+</span><span id="__span-11-75"><a id="__codelineno-11-75" name="__codelineno-11-75" href="#__codelineno-11-75"></a>                <span class="n">fns</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">fn</span><span class="p">)</span>
+</span><span id="__span-11-76"><a id="__codelineno-11-76" name="__codelineno-11-76" href="#__codelineno-11-76"></a>        <span class="k">return</span> <span class="bp">self</span>
+</span><span id="__span-11-77"><a id="__codelineno-11-77" name="__codelineno-11-77" href="#__codelineno-11-77"></a>
+</span><span id="__span-11-78"><a id="__codelineno-11-78" name="__codelineno-11-78" href="#__codelineno-11-78"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-11-79"><a id="__codelineno-11-79" name="__codelineno-11-79" href="#__codelineno-11-79"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Batch-update multiple fields. Observers fire once per changed field.&quot;&quot;&quot;</span>
+</span><span id="__span-11-80"><a id="__codelineno-11-80" name="__codelineno-11-80" href="#__codelineno-11-80"></a>        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+</span><span id="__span-11-81"><a id="__codelineno-11-81" name="__codelineno-11-81" href="#__codelineno-11-81"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+</span><span id="__span-11-82"><a id="__codelineno-11-82" name="__codelineno-11-82" href="#__codelineno-11-82"></a>
+</span><span id="__span-11-83"><a id="__codelineno-11-83" name="__codelineno-11-83" href="#__codelineno-11-83"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">snapshot</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+</span><span id="__span-11-84"><a id="__codelineno-11-84" name="__codelineno-11-84" href="#__codelineno-11-84"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Plain dict copy for debugging/serialization. Lock-free read.&quot;&quot;&quot;</span>
+</span><span id="__span-11-85"><a id="__codelineno-11-85" name="__codelineno-11-85" href="#__codelineno-11-85"></a>        <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">)</span>
+</span><span id="__span-11-86"><a id="__codelineno-11-86" name="__codelineno-11-86" href="#__codelineno-11-86"></a>
+</span><span id="__span-11-87"><a id="__codelineno-11-87" name="__codelineno-11-87" href="#__codelineno-11-87"></a>    <span class="c1"># === Property Shorthand (resolves to get/set) ===</span>
+</span><span id="__span-11-88"><a id="__codelineno-11-88" name="__codelineno-11-88" href="#__codelineno-11-88"></a>
+</span><span id="__span-11-89"><a id="__codelineno-11-89" name="__codelineno-11-89" href="#__codelineno-11-89"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__getattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+</span><span id="__span-11-90"><a id="__codelineno-11-90" name="__codelineno-11-90" href="#__codelineno-11-90"></a>        <span class="k">if</span> <span class="n">key</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;_&#39;</span><span class="p">):</span>
+</span><span id="__span-11-91"><a id="__codelineno-11-91" name="__codelineno-11-91" href="#__codelineno-11-91"></a>            <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__getattribute__</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+</span><span id="__span-11-92"><a id="__codelineno-11-92" name="__codelineno-11-92" href="#__codelineno-11-92"></a>        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+</span><span id="__span-11-93"><a id="__codelineno-11-93" name="__codelineno-11-93" href="#__codelineno-11-93"></a>
+</span><span id="__span-11-94"><a id="__codelineno-11-94" name="__codelineno-11-94" href="#__codelineno-11-94"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-11-95"><a id="__codelineno-11-95" name="__codelineno-11-95" href="#__codelineno-11-95"></a>        <span class="k">if</span> <span class="n">key</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;_&#39;</span><span class="p">):</span>
+</span><span id="__span-11-96"><a id="__codelineno-11-96" name="__codelineno-11-96" href="#__codelineno-11-96"></a>            <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+</span><span id="__span-11-97"><a id="__codelineno-11-97" name="__codelineno-11-97" href="#__codelineno-11-97"></a>            <span class="k">return</span>
+</span><span id="__span-11-98"><a id="__codelineno-11-98" name="__codelineno-11-98" href="#__codelineno-11-98"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+</span><span id="__span-11-99"><a id="__codelineno-11-99" name="__codelineno-11-99" href="#__codelineno-11-99"></a>
+</span><span id="__span-11-100"><a id="__codelineno-11-100" name="__codelineno-11-100" href="#__codelineno-11-100"></a>    <span class="c1"># === Internal ===</span>
+</span><span id="__span-11-101"><a id="__codelineno-11-101" name="__codelineno-11-101" href="#__codelineno-11-101"></a>
+</span><span id="__span-11-102"><a id="__codelineno-11-102" name="__codelineno-11-102" href="#__codelineno-11-102"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">_dispatch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">listeners</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Listener</span><span class="p">],</span> <span class="n">value</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-11-103"><a id="__codelineno-11-103" name="__codelineno-11-103" href="#__codelineno-11-103"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Dispatch listeners outside the lock.&quot;&quot;&quot;</span>
+</span><span id="__span-11-104"><a id="__codelineno-11-104" name="__codelineno-11-104" href="#__codelineno-11-104"></a>        <span class="k">for</span> <span class="n">fn</span> <span class="ow">in</span> <span class="n">listeners</span><span class="p">:</span>
+</span><span id="__span-11-105"><a id="__codelineno-11-105" name="__codelineno-11-105" href="#__codelineno-11-105"></a>            <span class="k">if</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">iscoroutinefunction</span><span class="p">(</span><span class="n">fn</span><span class="p">):</span>
+</span><span id="__span-11-106"><a id="__codelineno-11-106" name="__codelineno-11-106" href="#__codelineno-11-106"></a>                <span class="k">try</span><span class="p">:</span>
+</span><span id="__span-11-107"><a id="__codelineno-11-107" name="__codelineno-11-107" href="#__codelineno-11-107"></a>                    <span class="n">loop</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">get_running_loop</span><span class="p">()</span>
+</span><span id="__span-11-108"><a id="__codelineno-11-108" name="__codelineno-11-108" href="#__codelineno-11-108"></a>                    <span class="n">loop</span><span class="o">.</span><span class="n">create_task</span><span class="p">(</span><span class="n">fn</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
+</span><span id="__span-11-109"><a id="__codelineno-11-109" name="__codelineno-11-109" href="#__codelineno-11-109"></a>                <span class="k">except</span> <span class="ne">RuntimeError</span><span class="p">:</span>
+</span><span id="__span-11-110"><a id="__codelineno-11-110" name="__codelineno-11-110" href="#__codelineno-11-110"></a>                    <span class="k">pass</span>  <span class="c1"># No running loop — skip async listener</span>
+</span><span id="__span-11-111"><a id="__codelineno-11-111" name="__codelineno-11-111" href="#__codelineno-11-111"></a>            <span class="k">else</span><span class="p">:</span>
+</span><span id="__span-11-112"><a id="__codelineno-11-112" name="__codelineno-11-112" href="#__codelineno-11-112"></a>                <span class="n">fn</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+</span></code></pre></div>
+<h4 id="event-bus-integration">Event Bus Integration<a class="headerlink" href="#event-bus-integration" title="Permanent link">&para;</a></h4>
+<p>Each platform already has an event bus:
+- <strong>Python (Textual):</strong> <code>EventBus</code> with blinker signals (<code>ppxai/tui/event_bus.py</code>)
+- <strong>TypeScript (VSCode):</strong> <code>ChatEventBus</code> with typed emit/on (<code>handlers/eventBus.ts</code>)
+- <strong>JavaScript (Web):</strong> Direct callback wiring</p>
+<p>AppState <code>on()</code>/<code>off()</code> handles state-change observation. The event bus handles
+action/intent signals (user clicked, stream started, consent requested). These
+are complementary — not competing:</p>
+<ul>
+<li><strong>Event bus:</strong> "user selected a file" → handler decides what to do</li>
+<li><strong>AppState observer:</strong> "currentModel changed" → badge auto-updates</li>
+</ul>
+<p>Widget-local UI state (autocomplete dropdown, file tree selection, preview mode)
+stays on the widget. Only app-level state flows through AppState.</p>
+<h4 id="runtime-integration-notes">Runtime Integration Notes<a class="headerlink" href="#runtime-integration-notes" title="Permanent link">&para;</a></h4>
+<p><strong>Textual TUI:</strong> AppState observers use <code>app.call_from_thread()</code> for cross-thread
+UI updates. The existing <code>EventBus</code> (blinker-based) handles engine→UI events.</p>
+<p><strong>FastAPI/Uvicorn:</strong> State reads happen in async route handlers on the same event
+loop — naturally safe. Multi-worker deployments (k8s) get per-process AppState
+instances (same model as <code>ConfigStore</code>).</p>
+<p><strong>Web App (standalone + k8s):</strong> Same app. k8s deployment calls
+<code>state.loadRuntime('ppxai-runtime-k8s')</code> at startup to inject session isolation
+settings. The app code calls <code>state.get("sessionIsolation")</code> and gets <code>true</code> (k8s)
+or <code>undefined</code> (standalone). No conditional code paths — just config.</p>
+<p><strong>VSCode Extension:</strong> Uses VS Code's native <code>EventEmitter</code> pattern alongside
+AppState observers.</p>
+<h3 id="how-it-flows">How It Flows<a class="headerlink" href="#how-it-flows" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>                    AppState (single source of truth)
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>                   ╱          │           ╲
+</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>          EngineClient    TUI/Rich App   HTTP endpoints
+</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>          (set/update)    (on/get)        (get/snapshot)
+</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>
+</span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>State change example — session restore:
+</span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a>  1. engine.restore_session() calls state.update(
+</span><span id="__span-12-8"><a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>         current_provider=&quot;openai&quot;, current_model=&quot;gpt-4&quot;,
+</span><span id="__span-12-9"><a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a>         tools_enabled=True, working_dir=&quot;/project&quot;)
+</span><span id="__span-12-10"><a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a>  2. AppState fires observers for each changed field
+</span><span id="__span-12-11"><a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a>  3. TUI: status_bar.update_badge(&quot;provider&quot;, ...) fires automatically
+</span><span id="__span-12-12"><a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a>  4. TUI: self._update_subtitle() fires automatically
+</span><span id="__span-12-13"><a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a>  5. HTTP: next GET /status calls state.snapshot() — fresh values
+</span><span id="__span-12-14"><a id="__codelineno-12-14" name="__codelineno-12-14" href="#__codelineno-12-14"></a>  6. No manual sync code anywhere
+</span></code></pre></div>
+<h3 id="impact-on-each-component">Impact on Each Component<a class="headerlink" href="#impact-on-each-component" title="Permanent link">&para;</a></h3>
+<h4 id="engineclient-item-5">EngineClient (item 5)<a class="headerlink" href="#engineclient-item-5" title="Permanent link">&para;</a></h4>
+<ul>
+<li>Replace 60 scattered <code>self.*</code> fields with <code>self.state = AppState({...})</code></li>
+<li>All reads go through <code>self.state.get("current_provider")</code> or shorthand
+  <code>self.state.current_provider</code></li>
+<li>All writes go through <code>self.state.set("current_provider", "openai")</code> or
+  <code>self.state.update(current_provider="openai", current_model="gpt-4")</code></li>
+<li>Checkpoint/consent/bootstrap helpers receive <code>state</code> reference</li>
+<li><code>restore_session()</code> uses <code>state.update()</code> for atomic multi-field transition</li>
+</ul>
+<h4 id="textual-tui-item-6">Textual TUI (item 6)<a class="headerlink" href="#textual-tui-item-6" title="Permanent link">&para;</a></h4>
+<ul>
+<li>Replace 15+ <code>self._*</code> fields — use <code>engine.state</code> directly</li>
+<li>Register observers at mount time via public <code>on()</code>:
+  <div class="language-python highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="n">engine</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">on</span><span class="p">(</span><span class="s2">&quot;current_provider&quot;</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">v</span><span class="p">:</span> <span class="n">status_bar</span><span class="o">.</span><span class="n">update_badge</span><span class="p">(</span><span class="s2">&quot;provider&quot;</span><span class="p">,</span> <span class="n">v</span><span class="p">))</span>
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="n">engine</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">on</span><span class="p">(</span><span class="s2">&quot;current_model&quot;</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">v</span><span class="p">:</span> <span class="n">status_bar</span><span class="o">.</span><span class="n">update_badge</span><span class="p">(</span><span class="s2">&quot;model&quot;</span><span class="p">,</span> <span class="n">v</span><span class="p">))</span>
+</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="n">engine</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">on</span><span class="p">(</span><span class="s2">&quot;tools_enabled&quot;</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">v</span><span class="p">:</span> <span class="n">status_bar</span><span class="o">.</span><span class="n">update_badge</span><span class="p">(</span><span class="s2">&quot;tools&quot;</span><span class="p">,</span> <span class="s2">&quot;ON&quot;</span> <span class="k">if</span> <span class="n">v</span> <span class="k">else</span> <span class="s2">&quot;OFF&quot;</span><span class="p">))</span>
+</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="n">engine</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">on</span><span class="p">(</span><span class="s2">&quot;current_provider&quot;</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">_</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_update_subtitle</span><span class="p">())</span>
+</span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="n">engine</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">on</span><span class="p">(</span><span class="s2">&quot;current_model&quot;</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">_</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_update_subtitle</span><span class="p">())</span>
+</span></code></pre></div></li>
+<li>Eliminates ~30 manual <code>update_badge()</code> / <code>self.sub_title =</code> calls</li>
+<li>Cleanup: <code>engine.state.off(...)</code> on widget unmount</li>
+</ul>
+<h4 id="rich-tui">Rich TUI<a class="headerlink" href="#rich-tui" title="Permanent link">&para;</a></h4>
+<ul>
+<li>Same pattern — observers update Rich Live display via <code>state.on()</code></li>
+</ul>
+<h4 id="http-server">HTTP Server<a class="headerlink" href="#http-server" title="Permanent link">&para;</a></h4>
+<ul>
+<li><code>GET /status</code> returns <code>engine.state.snapshot()</code> — no per-field assembly</li>
+<li>Session restore response built from <code>state.snapshot()</code> subset</li>
+<li>All reads via <code>state.get("current_provider")</code> — no direct field access</li>
+</ul>
+<h4 id="web-app-already-has-appstate-align-to-public-interface">Web App (already has AppState — align to public interface)<a class="headerlink" href="#web-app-already-has-appstate-align-to-public-interface" title="Permanent link">&para;</a></h4>
+<ul>
+<li>Replace <code>state.currentProvider</code> direct access with <code>state.get("currentProvider")</code>
+  and <code>state.set("currentProvider", ...)</code> where explicit access is needed</li>
+<li>Property shorthand via Proxy still works but resolves to get/set internally</li>
+<li>Regenerate <code>app-state.js</code> from schema to guarantee field parity</li>
+</ul>
+<h4 id="vscode-extension">VSCode Extension<a class="headerlink" href="#vscode-extension" title="Permanent link">&para;</a></h4>
+<ul>
+<li>Replace <code>this.currentProvider</code> on <code>ConfigManager</code> with <code>state.get("currentProvider")</code></li>
+<li>New generated <code>appState.ts</code> with typed <code>get&lt;K&gt;()</code> / <code>set&lt;K&gt;()</code> methods</li>
+<li><code>EventEmitter</code> for observer pattern (VS Code convention)</li>
+</ul>
+<h4 id="commandcontext-item-4">CommandContext (item 4)<a class="headerlink" href="#commandcontext-item-4" title="Permanent link">&para;</a></h4>
+<ul>
+<li>All 3 adapters delegate to <code>state</code> via public interface:
+  <div class="language-python highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">BaseCommandContext</span><span class="p">:</span>
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>    <span class="nd">@property</span>
+</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">provider</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_engine</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;current_provider&quot;</span><span class="p">)</span>
+</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>
+</span><span id="__span-14-6"><a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">set_provider</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">provider</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-14-7"><a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_engine</span><span class="o">.</span><span class="n">set_provider</span><span class="p">(</span><span class="n">provider</span><span class="p">)</span>  <span class="c1"># engine validates then calls state.set()</span>
+</span></code></pre></div></li>
+<li>Zero direct field access — read via <code>state.get()</code>, write via engine methods
+  (engine validates before calling <code>state.set()</code>)</li>
+</ul>
+<h3 id="migration-per-client-phased-rollout">Migration: Per-Client Phased Rollout<a class="headerlink" href="#migration-per-client-phased-rollout" title="Permanent link">&para;</a></h3>
+<p>Each phase has its own detailed TODO with implementation steps, acceptance criteria,
+and a lessons-learned section that carries forward to the next phase. This creates
+a living architecture evidence trail.</p>
+<table>
+<thead>
+<tr>
+<th>Phase</th>
+<th>Client</th>
+<th>Detailed Plan</th>
+<th>Why This Order</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>Schema + Generator</td>
+<td><a href="TODO-appstate-0-schema.md"><code>TODO-appstate-0-schema.md</code></a></td>
+<td>Prerequisite — produces the foundation</td>
+</tr>
+<tr>
+<td>1</td>
+<td>Rich TUI</td>
+<td><a href="TODO-appstate-1-rich-tui.md"><code>TODO-appstate-1-rich-tui.md</code></a></td>
+<td>Simplest client (single thread, no event bus). Proves core works.</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Textual TUI</td>
+<td><a href="TODO-appstate-2-textual-tui.md"><code>TODO-appstate-2-textual-tui.md</code></a></td>
+<td>Adds threading + async. Proves thread-safety + observers.</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Desktop Web App</td>
+<td><a href="TODO-appstate-3-web-app.md"><code>TODO-appstate-3-web-app.md</code></a></td>
+<td>Cross-language (Python→JS). 200 Playwright tests as safety net.</td>
+</tr>
+<tr>
+<td>4</td>
+<td>VSCode Extension</td>
+<td><a href="TODO-appstate-4-vscode.md"><code>TODO-appstate-4-vscode.md</code></a></td>
+<td>Distinct codebase (TS). More unknowns than k8s.</td>
+</tr>
+<tr>
+<td>5</td>
+<td>k8s Web App</td>
+<td><a href="TODO-appstate-5-k8s.md"><code>TODO-appstate-5-k8s.md</code></a></td>
+<td>Same app as Phase 3 + <code>loadRuntime()</code>. Lightest phase.</td>
+</tr>
+</tbody>
+</table>
+<p>Each TODO includes:
+- <strong>Current state</strong> — what exists today, what needs to change
+- <strong>Implementation steps</strong> — ordered, concrete file-level changes
+- <strong>Acceptance criteria</strong> — checkboxes for sign-off
+- <strong>What NOT to do</strong> — scope guard to prevent overreach
+- <strong>Lessons learned</strong> — filled during/after implementation, carried to next phase</p>
+<h3 id="dependency-chain">Dependency Chain<a class="headerlink" href="#dependency-chain" title="Permanent link">&para;</a></h3>
+<p>This item is the <strong>foundation</strong> for all remaining items:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>3. AppState (this item)
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>   ├── 4. CommandContext simplification (trivial once state exists)
+</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>   ├── 5. EngineClient decomposition (helpers share state instead of self)
+</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a>   ├── 6. TUI modularization (delegates subscribe to state)
+</span><span id="__span-15-5"><a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a>   └── 7. Event router pattern (handlers read state instead of passing context)
+</span></code></pre></div>
+<h3 id="risk">Risk<a class="headerlink" href="#risk" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Medium — touches all clients, but migration is incremental (wrappers preserve
+  backward compat during transition)</li>
+<li>AppState is proven — identical pattern already works in the web app</li>
+<li>Thread safety is critical — engine writes from worker threads while TUI reads
+  on the event loop. Must verify no deadlocks under Textual's threading model.</li>
+<li>Async listener dispatch needs careful testing — ensure <code>create_task()</code> doesn't
+  fire on a closed loop during shutdown, and <code>call_from_thread()</code> doesn't race
+  with Textual widget unmounting.</li>
+</ul>
+<h3 id="testing-requirements">Testing Requirements<a class="headerlink" href="#testing-requirements" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Unit tests: concurrent read/write from multiple threads (no torn reads)</li>
+<li>Unit tests: async listener dispatch from sync context (scheduled, not called)</li>
+<li>Unit tests: no-op dedup (identical write doesn't fire listeners)</li>
+<li>Unit tests: <code>off()</code> unsubscribe prevents stale listener calls</li>
+<li>Integration: Textual app with AppState observers (badge updates from worker thread)</li>
+<li>Integration: FastAPI route reading state while engine writes during SSE stream</li>
+</ul>
+<h3 id="estimated-effort">Estimated Effort<a class="headerlink" href="#estimated-effort" title="Permanent link">&para;</a></h3>
+<ul>
+<li>App state schema: ~1 hour</li>
+<li>Runtime schemas (k8s, vscode, desktop): ~1 hour</li>
+<li>Generator (Python/JS/TS templates): ~3 hours</li>
+<li>Python AppState + EngineClient integration + thread-safety tests: ~4 hours</li>
+<li>JS AppState regeneration + Playwright verification: ~2 hours</li>
+<li>TS AppState + VSCode wiring: ~2 hours</li>
+<li>TUI/Rich migration to observers: ~2 hours each</li>
+<li>CI <code>--check</code> mode: ~30 minutes</li>
+<li><strong>Total: ~18 hours</strong> (can be split across 4 sessions)</li>
+</ul>
+<hr />
+<h3 id="4-simplify-commandcontext-adapters">~~4. Simplify CommandContext Adapters~~<a class="headerlink" href="#4-simplify-commandcontext-adapters" title="Permanent link">&para;</a></h3>
+<p><strong>Status:</strong> DONE — v1.17.1</p>
+<p><code>ppxai/commands/context.py</code> — <code>_CommandContextProxy</code> base class with <code>__getattr__</code>
+proxy. <code>RichCommandContext</code> and <code>TextualCommandContext</code> are 2-3 line stubs.
+<code>ServerCommandContext</code> retains intentional custom overrides. 143 lines total.</p>
+<hr />
+<h3 id="5-decompose-engineclientpy-1588-955-lines">~~5. Decompose <code>engine/client.py</code> (1,588 → 955 lines)~~<a class="headerlink" href="#5-decompose-engineclientpy-1588-955-lines" title="Permanent link">&para;</a></h3>
+<p><strong>Status:</strong> DONE — v1.17.1</p>
+<p>Extracted <code>checkpoint_ops.py</code>, <code>consent_ops.py</code>, <code>bootstrap_ops.py</code>.
+<code>client.py</code> reduced to 955 lines. 73 tests added in <code>tests/test_ops_modules.py</code>.</p>
+<hr />
+<h3 id="6-modularize-tuiapppy-2303-1718-lines">~~6. Modularize <code>tui/app.py</code> (2,303 → 1,718 lines)~~<a class="headerlink" href="#6-modularize-tuiapppy-2303-1718-lines" title="Permanent link">&para;</a></h3>
+<p><strong>Status:</strong> DONE — v1.17.1 (mostly complete)</p>
+<p>Three modules extracted:
+- <code>stream_handler.py</code> (425 lines) — engine event processing, tool/reasoning display
+- <code>event_bus.py</code> (225 lines) — blinker-based pub/sub for Textual TUI
+- <code>keys.py</code> (243 lines) — key binding registry (<code>get_app_bindings()</code>)</p>
+<p>Remaining inline: theme management (<code>watch_theme()</code>, <code>action_cycle_theme()</code> — ~20 lines).
+Extraction to <code>theme_manager.py</code> is optional — tightly coupled to Textual's reactive
+<code>watch_theme()</code> pattern, and the code is small.</p>
+<hr />
+<h2 id="7-extract-event-router-pattern">7. Extract Event Router Pattern<a class="headerlink" href="#7-extract-event-router-pattern" title="Permanent link">&para;</a></h2>
+<p><strong>Priority:</strong> LOW — cosmetic improvement, 45 instances across 7 files.
+<strong>Depends on:</strong> None (independent), but benefits from AppState context.</p>
+<h3 id="assessment">Assessment<a class="headerlink" href="#assessment" title="Permanent link">&para;</a></h3>
+<p>Most if/elif chains are context-specific (each branch does different work). A strategy
+dict adds indirection without reducing complexity. The only genuine candidate is
+<code>rich/event_handler.py</code> with two ~15-branch chains.</p>
+<p><strong>Recommendation:</strong> Address opportunistically when touching affected files, not as a
+dedicated refactoring pass.</p>
+<h3 id="estimated-effort_1">Estimated Effort<a class="headerlink" href="#estimated-effort_1" title="Permanent link">&para;</a></h3>
+<p>~45 minutes if scoped to <code>rich/event_handler.py</code> only.</p>
+<hr />
+<h2 id="implementation-order">Implementation Order<a class="headerlink" href="#implementation-order" title="Permanent link">&para;</a></h2>
+<p>Revised sequence — AppState is the foundation that unlocks everything else:</p>
+<table>
+<thead>
+<tr>
+<th>Phase</th>
+<th>Item</th>
+<th>Priority</th>
+<th>Effort</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>~~1~~</td>
+<td>~~Server modularization (#1)~~</td>
+<td>~~High~~</td>
+<td>~~Done~~</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>~~2~~</td>
+<td>~~Config submodules (#2)~~</td>
+<td>~~High~~</td>
+<td>~~Done~~</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>~~3~~</td>
+<td>~~AppState — hand-crafted (Python, JS, TS)~~</td>
+<td>~~High~~</td>
+<td>~~Done~~</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>3+</td>
+<td>AppState schema+generator (YAML → codegen)</td>
+<td>Medium</td>
+<td>~8h</td>
+<td>Deferred v1.18.x</td>
+</tr>
+<tr>
+<td>~~3+~~</td>
+<td>~~Rich TUI — wire AppState~~</td>
+<td>~~Medium~~</td>
+<td>~~Done~~</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>~~4~~</td>
+<td>~~CommandContext simplification (#4)~~</td>
+<td>~~Medium~~</td>
+<td>~~Done~~</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>~~5~~</td>
+<td>~~EngineClient decomposition (#5)~~</td>
+<td>~~Medium~~</td>
+<td>~~Done~~</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>~~6~~</td>
+<td>~~TUI app modularization (#6)~~</td>
+<td>~~Medium~~</td>
+<td>~~Done~~</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>~~7~~</td>
+<td>~~Event router pattern (#7)~~</td>
+<td>~~Low~~</td>
+<td>~~Done~~</td>
+<td>✅</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Remaining effort:</strong> ~8 hours (AppState codegen for v1.18.x).</p>
+<hr />
+<h2 id="non-goals">Non-Goals<a class="headerlink" href="#non-goals" title="Permanent link">&para;</a></h2>
+<p>These are explicitly <strong>not</strong> part of this refactoring plan:</p>
+<ul>
+<li><strong>Feature changes</strong> — This plan is purely structural. No new endpoints, no behavior changes.</li>
+<li><strong>K8s infrastructure</strong> — Session manager, nginx BFF, ingress. Tracked in <code>TODO-v1.17.0.md</code>.
+  Phase 5 only verifies AppState + runtime schema integration, not infrastructure changes.</li>
+<li><strong>Multi-model routing</strong> — Tracked separately in <code>TODO-routing-v1.17.2.md</code>.</li>
+<li><strong>Test refactoring</strong> — Tests work; don't fix what isn't broken.</li>
+<li><strong>Web app restructuring</strong> — <code>app.js</code> was already refactored in v1.16.2. Phase 3 is
+  a drop-in AppState replacement + public interface enforcement, not a rewrite.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/rcconsult/ppxai" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
