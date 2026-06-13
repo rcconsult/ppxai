@@ -5,7 +5,7 @@ All notable changes to ppxai will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.18.7] - unreleased
 
 Branch: `bugfix/v1.18.7`. Theme: **bugfix-class follow-up to v1.18.6** — a **critical multi-tenant auth fix** for the k8s session-manager (cross-user pod takeover), workspace file upload, repository hygiene, test-coverage backfill, one targeted web-client decomposition, model-catalog refresh to the 2026-05-31 generation, paperwork for two v1.20.x upstream asks surfaced by peer ppxai-sre RFCs, AND a structural fix to a long-standing file-tree office-doc preview regression (broken since v1.16.2). The v1 API gateway shape (`POST /v1/oneshot`, bearer auth) is **byte-identical to v1.18.6** — ppxai-sre's outlook-monitor and any other v1-gateway consumer is unaffected.
 
