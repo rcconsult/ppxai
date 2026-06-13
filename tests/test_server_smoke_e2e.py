@@ -385,10 +385,23 @@ class TestServerSmoke:
         assert r.status_code == 200
         assert r.json().get("status") == "healthy"
 
+    # Endpoints that recursively stat the server's working directory
+    # (`get_working_dir()`, which resolves from config/session — NOT the
+    # spawn cwd). `/files/tree` walks to depth 3 and `/files/list` enumerates
+    # the tree; both are *bounded* (they complete, skipping ignore_dirs), but
+    # under the FS-stat load of the full suite a cold walk can exceed the
+    # 10s crash-detection timeout and flake the run (observed ~50% under
+    # full-suite load; <1s in isolation). These are crash tests, not perf
+    # tests, so give the filesystem walkers generous headroom while keeping
+    # the tight 10s budget on every other endpoint as a genuine hang guard.
+    _FS_WALK_TIMEOUT = 30.0
+    _FS_WALK_ENDPOINTS = {"/files/tree", "/files/list"}
+
     @pytest.mark.parametrize("path", GET_ENDPOINTS)
     def test_get_endpoint_does_not_crash(self, server, path):
         base_url, _ = server
-        r = httpx.get(f"{base_url}{path}", timeout=10.0)
+        timeout = self._FS_WALK_TIMEOUT if path in self._FS_WALK_ENDPOINTS else 10.0
+        r = httpx.get(f"{base_url}{path}", timeout=timeout)
         assert r.status_code < 500, (
             f"GET {path} returned {r.status_code}: {r.text[:500]}"
         )
