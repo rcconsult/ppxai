@@ -502,12 +502,21 @@ record:
 
 ## Tests
 
-All existing tests pass. New: 12 cases in `tests/test_files_route.py`,
-~4s additional runtime. Total reported test count: **3707 pass**, 2
-skipped on Unix (9 skipped on Windows due to `os.getpgid` / `os.killpg`
-`patch()` limitations on `TestKillPreviewBackend`). Up +12 from v1.18.6's
-3695 baseline — matches the new HTTP-route suite exactly, no other
-test churn.
+All existing tests pass. Pre-tag full run (Unix, `uv sync --all-extras`):
+**3907 passed, 3 skipped** (3910 collected; exit 0). Up +212 from
+v1.18.6's 3695 baseline across this branch's suites:
+
+- `/files/read` HTTP route tests — `tests/test_files_route.py`
+- `file_tree.ignore_dirs` — `tests/test_file_tree_ignore_config.py` (11)
+- `/files/preview` + `/files/download` — `tests/test_files_preview_download.py` (19)
+- `POST /files/upload` — `tests/test_files_upload.py`
+- k8s session-manager C1/H2 + LDAP auth quick-pass — `tests/test_session_manager_auth.py` (29)
+- post-security-review hardening — `TestWithinTreeConfinement` (5) + `TestSymlinkedDestination` (2)
+
+Skip count is platform- and extras-dependent: on Windows the
+`TestKillPreviewBackend` cases skip (`os.getpgid` / `os.killpg` can't be
+`patch()`-ed), and without the `[data]` / multipart extras the office +
+upload suites skip (a base venv reports 3841 passed / 7 skipped).
 
 The model-catalog refresh (`b873ec2b`) is data-only and exercises the
 same existing test parametrizations under `test_model_vision.py` +
