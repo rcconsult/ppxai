@@ -309,6 +309,153 @@ the vllm-qwen35 provider.
 
 ---
 
+### Item 25 — `/files/read` response type-contract regression (v1.18.7) [cross-client parity]
+
+**Affected files:** `ppxai/server/routes/files.py` (`_classify_extension`,
+`BINARY_PREVIEW_EXTENSIONS`, `read_file`), `ppxai/web/components/views/code-editor-view.js`,
+`ppxai/web/app.js` (`onFileEdit`, `_saveRpfStack`/`_restoreRpfStack`,
+`displayFileFromEvent`), `vscode-extension/src/httpClient.ts` (`readFile`).
+
+**What's wrong:** v1.18.7 made `/files/read` type-unstable on a contract
+several clients share. `.csv` flipped from `type:"text"` (plain text +
+`lines`) to `type:"office_spreadsheet"` (base64); `.xlsx/.xls` flipped
+400→200-base64; `.pptx/.docx` now return **400 with a hint pointing at
+`/files/preview?path=`**. Only the web `OfficeFileView` single-click path
+was updated. Concrete user-facing regressions found in code review:
+- **Web double-click** (`onFileEdit` → `CodeEditorView`, guards only
+  `image`/`pdf`): `.csv`/`.xlsx` render the **base64 string as editor text**
+  (and can be Saved back, corrupting the file); `.docx`/`.pptx` show
+  "Failed to load". CSV was editable text pre-v1.18.7.
+- **RPF stack restore** has no `OfficeFileView` case → a correctly-rendered
+  spreadsheet is rebuilt as `CodeEditorView` (base64 garbage) on page reload.
+- **Deploy-skew:** the office routing branch is gated on
+  `typeof OfficeFileView !== 'undefined'`; a stale hand-synced `~/.ppxai/web/`
+  silently falls back to `CodeEditorView` with no error.
+- **VSCode `readFile`** is typed `{path,content,size,encoding}` and has no
+  `type` branch; currently dead code, but per the VSCode-delegation goal the
+  contract must stay parseable so growing delegation doesn't ship base64 into
+  a buffer.
+
+**Why deferred:** shipped in v1.18.7; the web single-click path (the common
+gesture for the new feature) works, so it wasn't caught pre-release. The
+double-click/reload regressions are real but lower-frequency.
+
+**Planned:** v1.18.8 (this branch). See
+[docs/plan-v1.18.8-files-parity.md](plan-v1.18.8-files-parity.md).
+
+**Branch when ready:** `bugfix/v1.18.8`.
+
+**Trigger to revisit:** active now (v1.18.8 scope).
+
+**Effort:** ~half day. Make every `/files/read` consumer branch on `type`
+(add `office_spreadsheet` handling to `CodeEditorView` + RPF restore, or
+reroute office types away from the editor entirely); restore csv-as-text for
+the editor path or route csv exclusively through `OfficeFileView`. Ideal
+deep fix: a shared response-handler the web client and VSCode both call so
+the `type` switch lives in one place.
+
+---
+
+### Item 26 — `/files/preview` id-based vs path-based fork (non-symmetric, divergent fallback) [cross-client parity]
+
+**Affected files:** `ppxai/server/routes/files.py` (path-based
+`/files/preview?path=`), `ppxai/server/routes/file_serve.py` (id-based
+`/files/preview/{file_id}`), `ppxai/web/components/views/office-file-view.js`,
+`vscode-extension/src/chatPanel.ts` (calls the id-based route).
+
+**What's wrong:** the two preview endpoints are **forked implementations**,
+not a shared handler, despite the path-based route's "mirrors the file_id
+endpoint" docstring. Two concrete divergences:
+- **LibreOffice-missing semantics differ:** id-based raises **HTTP 503**;
+  path-based returns **200 + `{type:"text_fallback", content, libreoffice_available:false}`**.
+  Same document → web degrades to extracted text, VSCode (id-based) dead-ends
+  to a raw-bytes fallback / "Preview failed".
+- **JSON shapes are non-symmetric:** path-based emits `type`/`kind`/
+  `libreoffice_available`; id-based emits none of them. `OfficeFileView`
+  branches on `libreoffice_available`, so the id-based route can never drive
+  the shared view — blocking VSCode delegation to the same rendering.
+- Legacy `.ppt`/`.doc` are advertised in `OFFICE_PREVIEWABLE_EXTENSIONS` and
+  `OfficeFileView.canRender`, but the text-fallback uses python-pptx/docx
+  (OOXML-only) → 500 on legacy binaries when LibreOffice is absent.
+
+**Why deferred:** the 503-vs-fallback split is partly pre-existing (the
+id-based route predates v1.18.7); v1.18.7 added the second, divergent route
+rather than unifying. Not a single-user-install issue.
+
+**Planned:** v1.18.8 (this branch), after Item 25. See
+[docs/plan-v1.18.8-files-parity.md](plan-v1.18.8-files-parity.md).
+
+**Branch when ready:** `bugfix/v1.18.8`.
+
+**Trigger to revisit:** active now; hard prerequisite for any future VSCode
+delegation of office preview to the shared rendering path.
+
+**Effort:** ~half day. Collapse both routes onto one handler that takes
+either a `file_id` or a `path`, returns one JSON shape (always including
+`type`/`kind`/`libreoffice_available`), and returns `text_fallback`
+(never 503) when LibreOffice is missing. Gate `.ppt`/`.doc` on actual
+LibreOffice availability.
+
+---
+
+### Item 27 — `/files/image/` home-confinement still uses `str.startswith` prefix test [security consistency]
+
+**Affected files:** `ppxai/server/routes/files.py` (`serve_image`, ~line 604).
+
+**What's wrong:** the v1.18.7 security fix (`09eae96e`) replaced the
+prefix-confusion check `str(path).startswith(str(home_dir))` with the
+component-wise `_within_tree()` in `read_file` and `write_file` — but
+**missed `serve_image`**, which still uses the old `startswith` test. A
+sibling path like `/home/userEVIL/secret.png` still passes the home-dir
+check against `/home/user` and is served via `/files/image/` (the endpoint
+the web markdown image-rewrite uses). The confinement fix is bypassable
+through the one route it wasn't applied to.
+
+**Why deferred:** flagged in the v1.18.7 post-release code review; not
+caught when `09eae96e` landed because the migration was applied per-handler.
+
+**Planned:** v1.18.8 (this branch) — **quick fix, do first** (one-line swap
+to `_within_tree`, mirrors `read_file`). See
+[docs/plan-v1.18.8-files-parity.md](plan-v1.18.8-files-parity.md).
+
+**Branch when ready:** `bugfix/v1.18.8`.
+
+**Trigger to revisit:** active now.
+
+**Effort:** ~15 min + 1 regression test (sibling-prefix path → 403 via
+`/files/image/`). One-line change.
+
+---
+
+### Item 28 — OfficeFileView attachment blob-URL revoke race [web robustness]
+
+**Affected files:** `ppxai/web/app.js` (`_renderPresentationAttachment`,
+`_renderWordAttachment`), `ppxai/web/components/views/office-file-view.js`
+(`renderSlideNavInto`, `renderDocxPdfInto`).
+
+**What's wrong:** the blob-URL revoke handle is assigned only inside the
+async `.then()` after the `/files/preview` fetch resolves. If the view is
+unmounted before the fetch resolves (user clicks another attachment), the
+late `.then()` creates an object URL into a detached container that is never
+revoked — a per-fast-switch memory leak. Also a `data.content || '(empty)'`
+text-fallback assumption masks a `content`-key contract drift as a benign
+empty render.
+
+**Why deferred:** narrow trigger (fast view-switching), leak only; no
+correctness break. Lowest priority of the v1.18.8 set.
+
+**Planned:** v1.18.8 if time permits, else trigger-deferred.
+
+**Branch when ready:** `bugfix/v1.18.8`.
+
+**Trigger to revisit:** active now (opportunistic with Items 25–26).
+
+**Effort:** ~1 hour. Capture the revoke handle synchronously / guard the
+`.then()` against an already-unmounted view; assert the text_fallback `content`
+key explicitly.
+
+---
+
 ## Recently moved out of debt scope
 
 These items left the debt inventory because they're not bug-fix-class
