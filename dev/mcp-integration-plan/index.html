@@ -1592,6 +1592,24 @@ path; doesn't try to unify with the shell-verb classifier
   tools) — outlook-monitor declares one <code>@mcp.resource(...)</code>. ppxai
   Day-0 supports tools only; resources/prompts as Day-1+ extension
   once we know how clients want to surface them.</li>
+<li><strong>Write-capable MCP tools (Tier 2/3)</strong> — peer ppxai-sre's
+  outlook-monitor write-tool RFC (peer <code>87e421d</code>, 2026-05-31)
+  explicitly rejects write tools on the MCP surface for the
+  outlook case: Surface-A defenses (output framing, sender-trust
+  labels) cannot enforce consumer-LLM behavior, only frame the
+  content, and write blast radius (move/delete/forward) makes the
+  residual injection risk unacceptable. Day-0 MCP scope therefore
+  <strong>stays read-only by default</strong>; the Tier 2/3 plumbing above
+  (consent-once-per-session, always-prompt) is built but every
+  MCP server's Day-0 config should pin <code>tier: 1</code> unless the server
+  author has done a Surface-A red-team corpus proving its writes
+  are safe to expose. The peer's interim path for outlook writes
+  is CLI subcommands gated by per-invocation human approval, not
+  MCP. See <a href="https://github.com/rcconsult/ppxai-sre/blob/master/docs/DESIGN-outlook-write-tools.md">peer
+  RFC</a>
+  for the full reasoning chain; this constraint applies broadly
+  to any MCP server reading attacker-controlled content (email,
+  PRs, web pages, etc.) — not just outlook.</li>
 </ul>
 <h2 id="phasing">Phasing<a class="headerlink" href="#phasing" title="Permanent link">&para;</a></h2>
 <table>
@@ -1771,6 +1789,13 @@ agent-platform Stage 2 work opens).  v1.20.x feels right because:
   — the workaround code that the peer wrote to bridge MCP servers
   without a ppxai public API; this plan removes the need for that
   workaround</li>
+<li>Peer:
+  <code>../ppxai-sre-repo/docs/DESIGN-outlook-write-tools.md</code> (commit
+  <code>87e421d</code>, 2026-05-31) — peer RFC concluding writes do NOT belong
+  on MCP for attacker-content-reading servers. Shapes the Day-0
+  "stay read-only by default" stance documented above; also surfaces
+  the <code>/v1/embeddings</code> upstream ask now on the roadmap as v1.20.x
+  sibling to this plan.</li>
 </ul>
 
 

@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://rcconsult.github.io/ppxai/dev/debt-inventory/">
+        <link rel="canonical" href="https://rcconsult.github.io/ppxai/dev/lessons/">
       
       
       
@@ -23,7 +23,7 @@
     
     
       
-        <title>ppxai Debt Inventory — Open Items - ppxai Documentation</title>
+        <title>Shared lessons - ppxai Documentation</title>
       
     
     
@@ -74,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#ppxai-debt-inventory-open-items" class="md-skip">
+        <a href="#shared-lessons" class="md-skip">
           Skip to content
         </a>
       
@@ -114,7 +114,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              ppxai Debt Inventory — Open Items
+              Shared lessons
             
           </span>
         </div>
@@ -1118,10 +1118,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#how-to-use-this-file" class="md-nav__link">
+  <a href="#what-belongs-here" class="md-nav__link">
     <span class="md-ellipsis">
       
-        How to use this file
+        What belongs here
       
     </span>
   </a>
@@ -1129,82 +1129,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#open" class="md-nav__link">
+  <a href="#what-does-not-belong-here" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Open
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Open">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#item-3-k8s-session-manager-security-tests-originally-critique-8-in-v1182" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Item 3 — k8s session-manager security tests [originally Critique #8 in v1.18.2]
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#item-21-chat_with_tools-decomposition" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Item 21 — chat_with_tools decomposition
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#item-22-ppxaiapp-webappjs-further-decomposition" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Item 22 — PpxaiApp (web/app.js) further decomposition
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#item-23-sessionmanager-growth-drift-flag-only-not-action" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Item 23 — SessionManager growth drift (flag-only, not action)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#item-24-vl-sidecar-auto_caption-fallback-silently-no-ops-on-non-vision-models" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Item 24 — VL sidecar auto_caption fallback silently no-ops on non-vision models
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#recently-moved-out-of-debt-scope" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Recently moved out of debt scope
+        What does NOT belong here
       
     </span>
   </a>
@@ -1212,10 +1140,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#closed-recent" class="md-nav__link">
+  <a href="#format" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Closed (recent)
+        Format
       
     </span>
   </a>
@@ -1223,10 +1151,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#related-documents" class="md-nav__link">
+  <a href="#promotion-workflow-for-ai-agents" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Related documents
+        Promotion workflow (for AI agents)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#index" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Index
       
     </span>
   </a>
@@ -1253,315 +1192,96 @@
   
 
 
-<h1 id="ppxai-debt-inventory-open-items">ppxai Debt Inventory — Open Items<a class="headerlink" href="#ppxai-debt-inventory-open-items" title="Permanent link">&para;</a></h1>
-<p><strong>Status:</strong> Rolling. This file holds the <strong>currently open</strong> deferred items
-across all branches. When an item lands, it moves to "## Closed" with the
-commit hash + date. New deferred work added during a branch lands here at
-that branch's commit.</p>
-<p>This is the canonical location replacing the per-version
-<code>DEBT-INVENTORY-v1.18.2.md</code> / <code>DEBT-INVENTORY-v1.18.3.md</code> pattern (those
-are now archived under <a href="archive/">docs/archive/</a> as historical snapshots).</p>
-<hr />
-<h2 id="how-to-use-this-file">How to use this file<a class="headerlink" href="#how-to-use-this-file" title="Permanent link">&para;</a></h2>
-<ul>
-<li><strong>Update on every release branch.</strong> When an item lands, move it under
-  "## Closed" with commit hash + date. When new debt surfaces, add it
-  to the appropriate section with a <code>**Planned:**</code> tag.</li>
-<li><strong>Tag every open item with where it'll be addressed.</strong> Either a target
-  release (<code>v1.19.x</code>), a target branch (<code>feat/&lt;name&gt;</code>), or a trigger
-  condition (<code>when k8s context</code>). Untagged items become invisible in
-  release planning.</li>
-<li><strong>Don't mix in feature work.</strong> Debt is bug-class follow-up. Roadmap
-  features (Anthropic provider, multi-model routing, etc.) live in
-  <a href="../ROADMAP.md">ROADMAP.md</a>.</li>
-<li><strong>Don't mix in TODOs scoped to a specific in-flight version.</strong> Those
-  describe in-flight planning (<code>TODO-v1.18.x-*.md</code>); debt describes
-  work intentionally <strong>not</strong> in any version's plan yet.</li>
-<li><strong>Keep entries scannable.</strong> Lead with one short paragraph + the
-  <code>**Planned:**</code> and <code>**Trigger to revisit:**</code> lines + an effort
-  estimate. Long context goes in linked docs / archive snapshots.</li>
-</ul>
-<hr />
-<h2 id="open">Open<a class="headerlink" href="#open" title="Permanent link">&para;</a></h2>
-<h3 id="item-3-k8s-session-manager-security-tests-originally-critique-8-in-v1182">Item 3 — k8s session-manager security tests [originally Critique #8 in v1.18.2]<a class="headerlink" href="#item-3-k8s-session-manager-security-tests-originally-critique-8-in-v1182" title="Permanent link">&para;</a></h3>
-<p><strong>Affected files:</strong> <code>deploy/images/session-manager/main.py</code> (~648 LOC),
-<code>deploy/images/session-manager/ldap_auth.py</code> (~130 LOC).</p>
-<p><strong>What's wrong:</strong> untested high-risk functions in the multi-tenant
-deployment service: <code>_list_sessions</code> (risk 0.85), <code>_teardown_session</code>
-(risk 0.7), <code>create_session</code>, <code>delete_session</code>, <code>heartbeat</code>, <code>startup</code>,
-<code>LDAPAuthenticator._hash_password</code>, <code>authenticate</code>. Recommended
-scenarios: auth failure, timing-safe hash comparison, K8s resource
-naming validation (escape via <code>..</code> / <code>/</code> in usernames), teardown
-idempotency, stale heartbeat cleanup, permissions/secrets handling.</p>
-<p><strong>Why deferred:</strong> zero blast radius for single-user macOS / Windows
-ppxai installs (the mainline use case). Only deployers running the
-Helm chart in a multi-tenant K8s cluster touch this code.</p>
-<p><strong>Planned:</strong> trigger-deferred — no version target. Open until at least
-one of the three triggers fires.</p>
-<p><strong>Branch when ready:</strong> <code>feat/k8s-session-manager-tests</code>.</p>
-<p><strong>Trigger to revisit:</strong> when a third-party deploys ppxai multi-tenant,
-OR when a security audit demands LDAP/RBAC test coverage, OR when CVE
-disclosure procedures need this code to have minimum test coverage.</p>
-<p><strong>Effort:</strong>
-- Quick pass (~1 hour): 10 unit tests around <code>_hash_password</code>
-  (timing-safe), <code>authenticate</code> (denial fail-closed), naming validation.
-- Full pass (~half day): 30-50 tests with mocked <code>kubernetes.client</code>,
-  covering all 8 functions.
-- Defensive sweep (+ ~half day): LDAP injection patterns, secret-in-log
-  scrubbing, kubeconfig path validation.</p>
-<p><strong>Original entry (full design rationale):</strong>
-<a href="../archive/DEBT-INVENTORY-v1.18.2/#item-3--k8s-session-manager-security-tests-critique-8">docs/archive/DEBT-INVENTORY-v1.18.2.md</a>.</p>
-<hr />
-<h3 id="item-21-chat_with_tools-decomposition">Item 21 — <code>chat_with_tools</code> decomposition<a class="headerlink" href="#item-21-chat_with_tools-decomposition" title="Permanent link">&para;</a></h3>
-<p><strong>Affected file:</strong> <code>ppxai/engine/chat.py:475-1147</code> (single function,
-673 LoC, fan-out 169 — the largest function in the codebase).</p>
-<p><strong>What's wrong:</strong> the engine's core tool loop is one monolithic
-function with no direct unit-test coverage. The only existing test is
-<code>tests/test_chat_profile_routing.py</code> which exercises it through a
-"Minimal mock provider" — integration paths only, no isolated
-coverage of the inner-loop state transitions (tool call → tool result
-→ continuation, abort handling, budget enforcement, AGENT_BEAT
-emission, retry semantics).</p>
-<p><strong>Why deferred:</strong> the function IS the engine's hot path. Refactoring
-it without a comprehensive unit-test scaffold first risks behavioral
-regressions across every provider + every tool. Decomposition needs
-to be ADR-backed (proposed split: outer-loop / inner-loop / state
-machine), with a per-stage test sweep before any code moves.</p>
-<p><strong>Planned:</strong> v1.19.x or later. Likely shares ADR space with the
-agent-platform Stage 2 work (ADR 0003) since <code>chat_with_tools</code> is
-where the run-namespace, budget enforcement, and sub-agent spawn all
-intersect.</p>
-<p><strong>Branch when ready:</strong> <code>feat/chat-with-tools-decomp</code> (ADR + tests
-first commit; code split as a follow-on).</p>
-<p><strong>Trigger to revisit:</strong> when ADR 0003 Stage 2 implementation opens
-(the run-state machine refactor is the natural companion), OR when
-the function grows beyond 800 LoC.</p>
-<p><strong>Effort:</strong>
-- ADR + behavior-pinning test scaffold (~half day to ~1 day): map
-  every distinct control-flow path, write assertions for each.
-- Split into outer-loop / inner-loop / state machine (~2-3 days).
-- Per-provider regression sweep (~1 day across OpenAI-compat, Gemini,
-  Perplexity, native OpenAI).</p>
-<p><strong>Surfaced by:</strong> CRG <code>find_large_functions</code> + <code>get_hub_nodes</code> on
-bugfix/v1.18.7 (graphify hyperedge "chat_with_tools dispatcher"
-captured the same shape).</p>
-<hr />
-<h3 id="item-22-ppxaiapp-webappjs-further-decomposition">Item 22 — <code>PpxaiApp</code> (web/app.js) further decomposition<a class="headerlink" href="#item-22-ppxaiapp-webappjs-further-decomposition" title="Permanent link">&para;</a></h3>
-<p><strong>Affected file:</strong> <code>ppxai/web/app.js</code> — <code>PpxaiApp</code> class, 3,749 LoC
-(down from 3,679 before the v1.18.7 <code>_previewAttachment</code> extract —
-extract added 71 lines of method boilerplate; the dispatcher itself
-shrank 8x).</p>
-<p><strong>What's wrong:</strong> still the single biggest god class in the codebase
-even after the v1.18.7 split. Other long methods inside it (e.g.
-<code>setupEventListeners</code> at degree 103, <code>cacheElements</code> at degree 64)
-remain candidates. The class also still owns SSE handling, AppState
-sync, slash-command dispatch, the markdown renderer wrappers, and
-the right-panel orchestration — five distinct responsibilities.</p>
-<p><strong>Why deferred:</strong> decomposing a god class in non-bundled JS without
-introducing a build step is painful (<code>AttachmentView</code> was extractable
-because it had no state; most other methods touch <code>this.state</code>,
-<code>this.apiClient</code>, <code>this.eventBus</code>, and DOM elements all at once). The
-right shape is probably a "responsibilities-as-mixins" refactor or
-the introduction of esbuild on the web side (mirror of the
-vscode-extension bundler from v1.18.2). Neither fits a bugfix branch.</p>
-<p><strong>Planned:</strong> trigger-deferred — no version target. Revisit when (a)
-web client gets a build step, OR (b) a specific responsibility (e.g.
-SSE handling) needs to be reused by ppxai-desktop / another consumer.</p>
-<p><strong>Branch when ready:</strong> <code>feat/web-client-decomp</code> (with explicit
-sub-step plan in the branch's first commit).</p>
-<p><strong>Trigger to revisit:</strong> when ppxai-desktop or another client wants to
-share part of <code>PpxaiApp</code>'s logic, OR when adding a build step to the
-web client is on the table for other reasons.</p>
-<p><strong>Effort:</strong> unknown until shape is chosen. Likely 3-5 days for a
-mixin-based split; longer if introducing esbuild.</p>
-<p><strong>Recent progress (v1.18.7):</strong> <code>_previewAttachment</code> (347 LoC) split
-into 6 per-format renderers + dispatcher — file +71 LoC net but each
-branch individually browseable. See commit on bugfix/v1.18.7.</p>
-<hr />
-<h3 id="item-23-sessionmanager-growth-drift-flag-only-not-action">Item 23 — <code>SessionManager</code> growth drift (flag-only, not action)<a class="headerlink" href="#item-23-sessionmanager-growth-drift-flag-only-not-action" title="Permanent link">&para;</a></h3>
-<p><strong>Affected file:</strong> <code>ppxai/engine/session.py</code> — <code>SessionManager</code>
-class, 2,091 LoC (was 1,648 at v1.18.2 baseline — grew +443 LoC, +27%,
-in 3 weeks).</p>
-<p><strong>What's wrong:</strong> noted as a drift signal during bugfix/v1.18.7
-analysis. After verification per the CLAUDE.md "verify before
-flagging" rule, the growth is <strong>fully explained by intentional
-recent feature work</strong> — every commit accounting for the +443 LoC is
-ADR 0006 wiring:
-- <code>02ef33ab</code> Step 5: v1→v2 session migration on first load (+224)
-- <code>21dd226d</code> Step 7c: producer drops in-block keys (+174/-50, +124 net)
-- <code>b20cb1b0</code> fix: trailing-tool strip cascade (+132/-51, +81 net)
-- <code>af63e482</code> Step 4: <code>schema_version: 2</code> + ArtifactRegistry (+81/-11)
-- <code>b07bd0fa</code> Phase 1: AttachmentRef + Message.attachments (+11/-1)
-- <code>70a0457f</code> fix: per-turn delta for context baseline (+11/-2)</p>
-<p>Channel ratio (<code>event_bus.emit/subscribe</code>, <code>state.on/set/get</code>) = 0:
-all coupling is direct. Production-only inbound = 47 textual
-references across 13 files — above the 30-ref threshold but
-proportionate to the type-spine role.</p>
-<p><strong>Why "flag-only":</strong> the growth is not architectural decay. It's
-load-bearing v1.18.6 release work that landed on this file.</p>
-<p><strong>Planned:</strong> no action required. <strong>If</strong> decomposition is ever needed,
-the natural carve-out is the schema-migration block (lines covering
-<code>migrate_v1_to_v2</code>, the <code>.v1.backup/</code> sibling-folder logic, and the
-schema_version dispatch) — that's where the recent growth
-concentrated, and it's a self-contained sub-responsibility.</p>
-<p><strong>Trigger to revisit:</strong> when SessionManager crosses 2,500 LoC, OR when
-schema_version: 3 is proposed (the migration block becomes a natural
-extract at that point).</p>
-<p><strong>Surfaced by:</strong> CRG analysis on bugfix/v1.18.7.</p>
-<hr />
-<h3 id="item-24-vl-sidecar-auto_caption-fallback-silently-no-ops-on-non-vision-models">Item 24 — VL sidecar <code>auto_caption</code> fallback silently no-ops on non-vision models<a class="headerlink" href="#item-24-vl-sidecar-auto_caption-fallback-silently-no-ops-on-non-vision-models" title="Permanent link">&para;</a></h3>
-<p><strong>Affected files:</strong> <code>ppxai/engine/multimodal_ops.py</code> (<code>auto_caption_image</code> and the
-<code>get_vision_model_config()</code> consumers around L575–640), <code>ppxai/engine/file_preprocessing.py</code>
-(L235–290, the <code>supports_vision(model)</code> routing branch), the chat-attachment path that
-delivers the "It was sent as a text placeholder" warning to the web UI.</p>
-<p><strong>What's wrong:</strong> when the active model is text-only AND <code>tools.vision_model.auto_caption: true</code>
-is configured with an enabled, reachable VL sidecar (the documented "Qwen3-VL caption
-gateway" pattern used by the coder cluster — <code>Qwen/Qwen3-VL-8B-Instruct</code> at
-<code>vllm-qwen3-vl-8b-fp8-lmcache-mig.vllm.svc</code>), the image-attach pipeline is
-<strong>expected</strong> to call the sidecar, get a caption back, and inline it into the user
-message so the text-only model receives describable content. Dogfooded on
-coder.trad.int 2026-06-08 with the Qwen/Qwen3.5-27B-FP8 vllm-qwen35 provider: an
-attached <code>.drawio.png</code> network diagram surfaced the <code>vision_unsupported</code> warning
-("sent as a text placeholder") and the model then <strong>hallucinated a fully
-fabricated description of "empty 35mm film reels"</strong> — the worst of both worlds.
-Detection was correct (<code>supports_vision('Qwen/Qwen3.5-27B-FP8') = False</code>,
-conservative default — no Qwen3.5-base profile entry); the auto-caption fallback
-just never fired. Why is unconfirmed — candidates: sidecar unreachable from this
-namespace, 30s timeout silently swallowed, the drag-drop UI path taking a
-branch that bypasses <code>multimodal_ops.auto_caption_image</code>, or <code>enabled: true</code>
-but the actual call erroring with no surfaced message.</p>
-<p><strong>Why deferred:</strong> detection logic is correct and the warning fires; the user
-sees "sent as a text placeholder", so the failure isn't silent at the UI layer.
-The downstream model hallucination is a model-quality issue, not a ppxai bug.
-Workaround: switch to a true VL provider (gemini-2.5-flash, gpt-5.5, dgx-cluster
-once the model swap lands), or check the VL sidecar health from the pod and
-attach again. The class of bug — "fallback that's wired but doesn't run" —
-deserves a sentinel; not a release blocker.</p>
-<p><strong>Planned:</strong> <code>bugfix/v1.18.8</code> or whichever v1.18.x branch follows. Trigger an
-investigation pass that probes the actual auto_caption code path end-to-end on
-the coder cluster (image attach → does the sidecar receive the POST?), surfaces
-the failure mode in the user warning (currently "sent as a text placeholder" is
-indistinguishable from "tried sidecar and it failed"), and adds an integration
-test that mocks a text-only active model + a reachable VL sidecar and asserts
-the caption is inlined into the message rather than the placeholder.</p>
-<p><strong>Branch when ready:</strong> <code>bugfix/v1.18.8</code> (open-items follow-up) or
-<code>fix/vl-sidecar-fallback</code> (focused).</p>
-<p><strong>Trigger to revisit:</strong> any second report of "I attached an image and the
-model made up a description" on the coder cluster, OR before the dgx-cluster
-model swap to confirm we're not stacking another fallback gap, OR if anyone
-adds a new modality (audio/video) — same pattern likely lurks for those too.</p>
-<p><strong>Effort:</strong>
-- Diagnose root cause (~1 hour): tail pod debug log on next image attach;
-  grep for <code>vision_model</code> / <code>caption</code> / <code>Qwen3-VL</code>; in-pod <code>curl</code> to the
-  sidecar to confirm reachability; check <code>multimodal_ops.auto_caption_image</code>
-  for swallowed exceptions.
-- Fix + surface (~half day): if cause is timeout or unreachability, distinguish
-  the warning text ("VL sidecar timed out (30s) — re-attach to retry" vs
-  "sent as text placeholder, active model is not vision-capable"); if cause
-  is a code-path bypass, route the drag-drop path through the same handler
-  as <code>/attach</code>.
-- Integration test (~1 hour): mock active=text-only model + mock vision_model
-  endpoint; assert caption inlined into user message.</p>
-<p><strong>Surfaced by:</strong> coder.trad.int dogfooding 2026-06-08, drawio.png attach to
-the vllm-qwen35 provider.</p>
-<blockquote>
-<p><strong>Update 2026-06-08 (same day):</strong> the user pushed back that they're sure
-they tested these 27B models and they support VL. Cross-repo search found
-two artifacts that prove the user was right and reframe this item:</p>
+<h1 id="shared-lessons">Shared lessons<a class="headerlink" href="#shared-lessons" title="Permanent link">&para;</a></h1>
+<p>Cross-host engineering hazards and verified architectural facts that
+any agent (AI or human) working on this codebase should know <strong>before</strong>
+they start re-deriving them.</p>
+<p>This directory exists because per-host AI memory
+(<code>~/.claude/projects/&lt;repo&gt;/memory/</code> on each developer's machine) does
+NOT sync. A lesson written on macOS isn't visible to a session on
+Windows. Authoritative cross-host knowledge belongs in the repo, where
+<code>git pull</code> is the sync mechanism.</p>
+<h2 id="what-belongs-here">What belongs here<a class="headerlink" href="#what-belongs-here" title="Permanent link">&para;</a></h2>
+<p>A lesson belongs in <code>docs/lessons/</code> when it meets <strong>both</strong> criteria:</p>
 <ol>
-<li><code>/home/itadmin/ai/git/trad-ai-chat/scripts/test-vl-capabilities.sh</code>
-   (commit <code>916772c</code>, 2026-04-23) — 9-test VL probe (Test 0 image accept,
-   Test 1 OCR, Test 2 tables, Test 3 charts). Baseline run against
-   <code>https://codeai.trad.int/qwen35/v1</code> model <code>Qwen/Qwen3.5-27B-FP8</code>
-   scored <strong>8/9 PASS</strong>. The one fail (Test 2b) was arithmetic-over-OCR'd-data
-   reasoning — NOT vision.</li>
-<li><code>/home/itadmin/ai/git/trad-ai-chat/doc/research/qwen35-vs-qwen36-27b-comparison.md</code>
-   (2026-04-30) — confirms Qwen3.6-27B-FP8 has an <strong>explicit vision
-   encoder</strong> added in the architecture ("Text + image + video"); Qwen3.5
-   is labeled "Text-only" on the HF card but empirically handles
-   <code>image_url</code> content through vLLM. Comparison doc recommends the
-   <code>test-vl-capabilities.sh</code> script as Gate A for the Qwen3-VL
-   decommission (CR-v4.0.0 Part 2 Phase 6).</li>
+<li>
+<p><strong>Cross-host relevance.</strong> The lesson is true on any machine running
+   this repo — not specific to one host's path quirks, shell, or
+   installed-tool versions.</p>
+</li>
+<li>
+<p><strong>Verifiable from code.</strong> A reader can <code>grep</code>, open a file, or run
+   a one-line check to confirm it. The lesson is grounded in
+   observable repo state, not in "Claude on Windows once hit X."</p>
+</li>
 </ol>
-<p><strong>Reframed root cause:</strong> ppxai's <code>model_profiles.py</code> has no entry for
-<code>Qwen/Qwen3.5-27B-FP8</code> or <code>Qwen/Qwen3.6-27B-FP8</code> (<code>supports_vision()</code>
-falls through to default <code>False</code>). The HF card "Text-only" label on 3.5
-is wrong for the model's behavior through vLLM, and 3.6's vision encoder
-is real. <strong>The detection is wrong; the model would have shown the diagram
-correctly if ppxai had sent the <code>image_url</code> block.</strong></p>
-<p><strong>Revised fix path (priority bump — Item 24 jumps above 21–23):</strong></p>
+<p>Examples of cross-host + grep-verifiable lessons:</p>
+<ul>
+<li>"ppxai imports <code>mcp</code> nowhere — the <code>[mcp]</code> optional extra is intent,
+  not implementation" (verifiable: <code>Grep "import mcp" ppxai/</code>)</li>
+<li>"<code>tool_manager.py:193</code> hardcodes <code>source: engine</code>, blocking
+  extension by external tool sources" (verifiable: open the file)</li>
+<li>"ADR 0006 producer-side keys MUST stay off the wire — the
+  <code>__debug__</code>-gated <code>assert_wire_blocks_clean</code> validator enforces it"
+  (verifiable: read <code>engine/uploaded_file.py</code>)</li>
+</ul>
+<h2 id="what-does-not-belong-here">What does NOT belong here<a class="headerlink" href="#what-does-not-belong-here" title="Permanent link">&para;</a></h2>
+<p>Stays in per-host memory (<code>~/.claude/projects/&lt;repo&gt;/memory/</code>):</p>
+<ul>
+<li><strong>User-preference notes</strong> — "this user prefers terse responses",
+  "don't expand scope without permission"</li>
+<li><strong>Host-specific paths</strong> — Windows <code>code.cmd</code> shim, macOS <code>hdiutil</code>
+  invocations, rtk hook is bash-only on Windows</li>
+<li><strong>Session scratchpads</strong> — "branch X in flight, commit Y next",
+  "just verified Z this turn"</li>
+<li><strong>Agent self-discipline reminders</strong> — "verify both directions",
+  "read files don't infer"</li>
+</ul>
+<p>These stay private because they're either personal preference or
+ephemeral context. Promoting them here would mix signal (engineering
+hazards) with noise (per-developer prefs) and hurt both.</p>
+<h2 id="format">Format<a class="headerlink" href="#format" title="Permanent link">&para;</a></h2>
+<p>Each lesson is a short markdown file with this shape:</p>
+<div class="language-markdown highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="gh"># &lt;Short title — the lesson, not the symptom&gt;</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="gs">**TL;DR:**</span> One sentence stating the fact.
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="gs">**Verify with:**</span> <span class="sb">`&lt;grep command | file path | one-line check&gt;`</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="gu">## Why this trips people up</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>What looks like evidence-of-X that actually isn&#39;t, or the surprising
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>behavior that doesn&#39;t match the obvious mental model. The trap.
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="gu">## What&#39;s actually true</span>
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>The fact, grounded in repo state. Include file path + line numbers
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>where they help the reader confirm.
+</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>
+</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="gu">## Related</span>
+</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>
+</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>Links to ADRs, ROADMAP entries, or other lessons.
+</span></code></pre></div>
+<p>Keep each lesson under 100 lines. If the topic needs more space,
+it's probably an ADR or design doc, not a lesson.</p>
+<h2 id="promotion-workflow-for-ai-agents">Promotion workflow (for AI agents)<a class="headerlink" href="#promotion-workflow-for-ai-agents" title="Permanent link">&para;</a></h2>
+<p>When you discover a hazard during a session:</p>
 <ol>
-<li>Add <code>model_profiles.py</code> entries with <code>supports_vision=True</code> for both
-   <code>Qwen/Qwen3.5-27B-FP8</code> and <code>Qwen/Qwen3.6-27B-FP8</code> (or a glob
-   <code>Qwen/Qwen3.[56]-27B-FP8</code>). Sentinel test in
-   <code>test_model_profiles.py</code>. <strong>5-minute change.</strong></li>
-<li>Re-run <code>test-vl-capabilities.sh</code> against the coder cluster's actual
-   endpoints to confirm both models still pass 8/9+; capture the run as a
-   memory snapshot. <strong>30 min.</strong></li>
-<li>The original sidecar-fallback diagnose (the "fallback wired but
-   doesn't run" class) is now SECONDARY but still real — it would fire
-   for genuinely text-only providers (e.g. <code>openai/gpt-5-nano</code>). Keep
-   the half-day estimate for that part as a separate concern.</li>
+<li><strong>Triage:</strong> does it meet both criteria above (cross-host +
+   grep-verifiable)?</li>
+<li><strong>If yes:</strong> propose adding a <code>docs/lessons/&lt;topic&gt;.md</code> file in
+   the user-facing summary of your turn. Don't auto-commit;
+   the user decides whether the lesson is worth the repo's
+   permanent attention.</li>
+<li><strong>If no:</strong> save to your per-host memory only.</li>
 </ol>
-<p>See [[reference-qwen-27b-vl-empirical]] (memory) +
-<code>docs/lessons/qwen-27b-vl-empirically-supported.md</code> (in-repo lesson, this
-commit) for the cross-host evidence trail so the next session doesn't
-have to re-derive.</p>
-</blockquote>
-<hr />
-<h2 id="recently-moved-out-of-debt-scope">Recently moved out of debt scope<a class="headerlink" href="#recently-moved-out-of-debt-scope" title="Permanent link">&para;</a></h2>
-<p>These items left the debt inventory because they're not bug-fix-class
-follow-up — they're feature work belonging on the roadmap, or they
-shipped already.</p>
+<p>Same gesture as filing an ADR — deliberate, human-in-the-loop,
+discoverable later.</p>
+<h2 id="index">Index<a class="headerlink" href="#index" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>Item 14 — Anthropic provider</strong> → moved to roadmap 2026-05-05.
-  See <a href="../ROADMAP.md#v119x---anthropic-provider-planned">ROADMAP.md §"v1.19.x - Anthropic Provider (planned)"</a>.
-  Original v1.18.2 entry preserved at
-  <a href="../archive/DEBT-INVENTORY-v1.18.2/#item-14--add-anthropic-provider-with-explicit-tos-aware-auth-fallback">docs/archive/DEBT-INVENTORY-v1.18.2.md</a>
-  for full design rationale (TOS warning text, OAuth fallback caveats).</li>
-</ul>
-<hr />
-<h2 id="closed-recent">Closed (recent)<a class="headerlink" href="#closed-recent" title="Permanent link">&para;</a></h2>
-<p>For full closed-item rationale with commit references, see the per-version
-archived snapshots:</p>
-<ul>
-<li>
-<p><strong>Item 20 — v1.19.x alignment paperwork (closed 2026-05-24):</strong> merged to
-  master as <code>56bc2d38</code> (Stage-2 fold rebased from <code>42ed8f00</code>) + <code>7a2ea268</code>
-  (C5 §13 + <code>AGENT_SERVICE_DOWN</code>) + <code>45e352fe</code> (ROADMAP "Pending alignment
-  paperwork" subsection removal). Folds all consumer caveats C1–C5 and asks
-  A1–A3 into ADR 0003 §6–§13 with Phase 1/5/7 ROADMAP commitments inline.
-  <code>feat/agent-platform-stage-2</code> (Phase 1 implementation branch) is now
-  unblocked.</p>
-</li>
-<li>
-<p><strong>v1.18.3 branch (closed 2026-05-02):</strong> Items 12 (Node.js 20 → v5),
-  13 (release.py step 14 silent-failure), 15 (<code>deploy/shared/AGENTS.md</code>
-  stale copy), 16 (throttle counters in <code>/usage</code>), 17 (qwen3-coder-480b
-  excluded after rerun confirmed contamination), 18 (NIM probe rerun),
-  19 (Qwen3.5 <code>enable_thinking</code> config example), plus Tier 1 #1-3 and
-  Tier 2 #4-5 from the v1.18.3 NIM engine work. See
-  <a href="../archive/DEBT-INVENTORY-v1.18.3/">docs/archive/DEBT-INVENTORY-v1.18.3.md</a>.</p>
-</li>
-<li>
-<p><strong>v1.18.2 branch (closed 2026-04-29):</strong> Items 1 (god-node refactoring
-  narrowed to session_restore_ops), 2 (resolveWebviewView contract
-  refactor), 4 (focused-subtree graphify runs), 5 (esbuild VSIX bundle),
-  6 (Windows <code>code</code> CLI shim), 7-9 (Tier 1 observability), 10
-  (EngineClientProtocol), 11 (agent.py logger AttributeError). See
-  <a href="../archive/DEBT-INVENTORY-v1.18.2/">docs/archive/DEBT-INVENTORY-v1.18.2.md</a>.</p>
-</li>
-</ul>
-<hr />
-<h2 id="related-documents">Related documents<a class="headerlink" href="#related-documents" title="Permanent link">&para;</a></h2>
-<ul>
-<li><a href="../ROADMAP.md">ROADMAP.md</a> — feature work + future direction (multi-model
-  routing, Anthropic provider, prompt analyzer, etc.)</li>
-<li><a href="../CHANGELOG.md">CHANGELOG.md</a> — what shipped per release</li>
-<li><a href="archive/">docs/archive/</a> — frozen historical snapshots, including the
-  per-version debt inventories</li>
-<li><code>docs/TODO-*.md</code> — in-flight planning for the current branch (kept
-  separate from debt — those are not "deferred", they're "planned now")</li>
+<li><a href="mcp-not-yet-integrated/">mcp-not-yet-integrated.md</a> — ppxai
+  has filename-level MCP breadcrumbs but zero integration; v1.20.x
+  plan at <code>docs/MCP-INTEGRATION-PLAN.md</code></li>
 </ul>
 
 
