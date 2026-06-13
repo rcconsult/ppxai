@@ -8,7 +8,7 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 
 **Current version:** see [pyproject.toml](pyproject.toml) (single source of truth) or [the latest release](https://github.com/rcconsult/ppxai/releases/latest).
 
-**Release state:** v1.18.6 **released** 2026-05-23 (https://github.com/rcconsult/ppxai/releases/tag/v1.18.6). v1.18.6 is the surface ppxai-sre's outlook-monitor agent consumes — preserve gateway shape (`POST /v1/oneshot`, bearer auth) byte-identical on `bugfix/v1.18.7`. Active branch: `bugfix/v1.18.7` (version bumped to 1.18.7, **not yet released**), scope: post-release fixes only, no new features. See [docs/release-notes-v1.18.6.md](docs/release-notes-v1.18.6.md) for what shipped and [docs/release-notes-v1.18.7.md](docs/release-notes-v1.18.7.md) for the in-flight bugfix work. Open deferred work lives in the rolling [docs/debt-inventory.md](docs/debt-inventory.md) (per-version snapshots `DEBT-INVENTORY-v1.18.2.md` and `DEBT-INVENTORY-v1.18.3.md` are archived under [docs/archive/](docs/archive/)).
+**Release state:** v1.18.7 **released** 2026-06-13 (https://github.com/rcconsult/ppxai/releases/tag/v1.18.7). v1.18.7 is the surface ppxai-sre's outlook-monitor agent consumes — preserve gateway shape (`POST /v1/oneshot`, bearer auth) byte-identical on `bugfix/v1.18.8`. Active branch: `bugfix/v1.18.8` (**not yet released**), scope: post-v1.18.7 cross-client `/files/*` parity fixes surfaced by a security/parity review — no new features. See [docs/release-notes-v1.18.7.md](docs/release-notes-v1.18.7.md) for what shipped, [docs/release-notes-v1.18.6.md](docs/release-notes-v1.18.6.md) for the prior release, and [docs/plan-v1.18.8-files-parity.md](docs/plan-v1.18.8-files-parity.md) for the in-flight bugfix plan (debt items 25–28). Open deferred work lives in the rolling [docs/debt-inventory.md](docs/debt-inventory.md) (per-version snapshots `DEBT-INVENTORY-v1.18.2.md` and `DEBT-INVENTORY-v1.18.3.md` are archived under [docs/archive/](docs/archive/)).
 
 For per-version release notes, see [CHANGELOG.md](CHANGELOG.md) and `docs/RELEASE-NOTES-v*.md`. For architecture decisions, see `docs/decisions/`.
 
@@ -46,7 +46,7 @@ Each has a dedicated doc — read it before changing code in that area.
 | CSS | 8 | ~4,900 |
 | **Total** | **~393** | **~148,000** |
 
-Tests: 3,707 passing, 2 skipped on Unix (9 skipped on Windows — the 7 `TestKillPreviewBackend` cases skip only on Windows, where `os.getpgid`/`os.killpg` can't be `patch()`-ed; on Unix they run).
+Tests: **3,907 passing, 3 skipped** on Unix with `uv sync --all-extras` (the v1.18.7 canonical pre-tag count; 3,910 collected). The count is environment-dependent: a base venv without the `[data]`/multipart extras skips the office + upload suites (~3,841 passing), and the release script's own run reports whatever its env yields (v1.18.7's README badge shows `3844`). On Windows the 7 `TestKillPreviewBackend` cases also skip (`os.getpgid`/`os.killpg` can't be `patch()`-ed).
 
 ## Installation Locations (CRITICAL)
 

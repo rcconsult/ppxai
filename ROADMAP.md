@@ -721,9 +721,22 @@ ppxai/tui/                     # New module (Textual-based)
 
 ---
 
-## In Progress (v1.18.0)
+## Shipped: v1.18.0 – v1.18.7 (historical detail below)
 
-**Branch:** `feature/v1.18.0` | **Theme:** Agent heartbeat primitives + stabilization pass
+> **Current status (2026-06-13):** **v1.18.0 through v1.18.7 have all shipped.**
+> Latest release: **v1.18.7** (2026-06-13). Active branch: **`bugfix/v1.18.8`**
+> — cross-client `/files/*` parity fixes (post-v1.18.7 review); see
+> [docs/plan-v1.18.8-files-parity.md](docs/plan-v1.18.8-files-parity.md) and
+> debt items 25–28 in [docs/debt-inventory.md](docs/debt-inventory.md). For
+> per-release detail see [CHANGELOG.md](CHANGELOG.md) and
+> `docs/release-notes-v1.18.*.md`. **Not-yet-shipped** items in the tables
+> below (notably multi-model routing — `RoutingRole`/`ModelRouter` are still
+> unimplemented) remain forward-looking plans, not landed work.
+>
+> The tables in this section are retained as the historical record of what
+> each v1.18.x release contained.
+
+**Branch:** `feature/v1.18.0` (shipped) | **Theme:** Agent heartbeat primitives + stabilization pass
 
 ### v1.18.0 - Agent Heartbeat Primitives (P0 — landed on branch)
 
