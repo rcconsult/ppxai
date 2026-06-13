@@ -258,7 +258,7 @@ preserve it byte-identical.
 
 ### Docs
 
-- New [docs/release-notes-v1.18.3.md](docs/release-notes-v1.18.3.md) covers all ten themes.
+- New [docs/archive/release-notes/release-notes-v1.18.3.md](docs/archive/release-notes/release-notes-v1.18.3.md) covers all ten themes.
 - New [docs/DEBT-INVENTORY-v1.18.3.md](docs/archive/DEBT-INVENTORY-v1.18.3.md) (now archived; current debt lives in [docs/debt-inventory.md](docs/debt-inventory.md)).
 - New [docs/api-gateway.md](docs/api-gateway.md) — v1 gateway policy, threat model for auth, deployment-shape table, future-direction sketch for multi-token registry / OIDC.
 - New `docs/patterns/*.md` — five extracted architecture pattern docs (linked from CLAUDE.md): transactional-state, protocol-dependency-inversion, appstate, command-envelope, state-sync-determinism.
@@ -317,7 +317,7 @@ preserve it byte-identical.
 
 ### Docs
 
-- New [docs/release-notes-v1.18.2.md](docs/release-notes-v1.18.2.md).
+- New [docs/archive/release-notes/release-notes-v1.18.2.md](docs/archive/release-notes/release-notes-v1.18.2.md).
 - New [docs/decisions/0002-command-context-three-pattern-split.md](docs/decisions/0002-command-context-three-pattern-split.md) (second ADR).
 - New [docs/model-selection-guide.md](docs/model-selection-guide.md).
 - New [docs/consent-contract.md](docs/consent-contract.md) (security boundary for tool execution).
@@ -361,7 +361,7 @@ preserve it byte-identical.
 
 ### Docs
 
-- New [docs/release-notes-v1.18.1.md](docs/release-notes-v1.18.1.md).
+- New [docs/archive/release-notes/release-notes-v1.18.1.md](docs/archive/release-notes/release-notes-v1.18.1.md).
 - New [docs/decisions/0001-keys-command-cross-client.md](docs/decisions/0001-keys-command-cross-client.md) (first ADR).
 - [CLAUDE.md](CLAUDE.md) gains the §"Critical Architecture Pattern: Command Dispatch via Envelope (v1.18.1)" and §"Critical Architecture Pattern: State-Sync Determinism (v1.18.1)" sections (added during the work, not at release).
 
@@ -387,7 +387,7 @@ preserve it byte-identical.
 
 ### Docs
 
-- New [docs/release-notes-v1.18.0.md](docs/release-notes-v1.18.0.md).
+- New [docs/archive/release-notes/release-notes-v1.18.0.md](docs/archive/release-notes/release-notes-v1.18.0.md).
 - New §"Agent Heartbeat Primitives (v1.18.0)" in [docs/architecture.md](docs/architecture.md) documenting the emission contract, zombie-breaker semantics, and the AppState lifecycle.
 - [ROADMAP.md](ROADMAP.md) v1.18.0 section split into "P0 heartbeat (landed)" and "AppState codegen + routing (planned)" blocks.
 

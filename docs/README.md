@@ -35,7 +35,7 @@
 | [DGX Spark Setup](dgx-spark-setup.md) | vLLM + Ollama on NVIDIA DGX Spark |
 | [vLLM Tool Calling](vllm-tool-calling-guide.md) | Hermes vs Harmony, native vs prompt-based |
 | [Prompt-Based Tool Calling](prompt-based-tool-calling.md) | Developer guide for non-native tool calling |
-| [Release Notes v1.18.0 (draft)](release-notes-v1.18.0.md) | **In progress** — P0 agent heartbeat primitives (`AGENT_BEAT` / `_RUN_START` / `_RUN_COMPLETE` / `_RUN_ERROR` / `_ZOMBIE`), zombie circuit-breaker, cross-client renderers |
+| [Release Notes v1.18.7](release-notes-v1.18.7.md) | **Latest release** (2026-06-13) — C1 cross-user pod-takeover auth fix + H2 hardening, workspace file upload, office-doc preview, model-catalog refresh. Earlier v1.18.x notes are archived under [archive/release-notes/](archive/release-notes/). |
 | [Stabilization v1.18.0](archive/STABILIZATION-v1.18.0.md) | **Landed** — five-phase cleanup pass: `GET /state` reconnect endpoint, AppState `last_message_role`, `format_tokens`/`format_usage_badge` cross-language helpers, `AutosaveFailureGuard`, public-API promotion of 8 helpers, removed `has_vision_model` alias |
 | [Release Notes v1.17.7](archive/release-notes/RELEASE-NOTES-v1.17.7.md) | `ppxai-desktop --version` stale-fallback fix |
 | [Release Notes v1.17.6](archive/release-notes/RELEASE-NOTES-v1.17.6.md) | R5 first-class `uploaded_file` content type, R19 multimodal rendering gap |

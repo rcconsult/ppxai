@@ -746,7 +746,7 @@ ppxai/tui/                     # New module (Textual-based)
 | **`AppState.agent_beat` field** | Schema-driven across Python/JS/TS; pushed via `state_sync` SSE; cleared on run end. | ✅ Landed |
 | **Zombie circuit-breaker** | `tools.agent.zombie_threshold` (default 3, 0 disables) stops the tool loop after N consecutive failed iterations. | ✅ Landed |
 | **Client renderers** | Rich dim line, ppxaide status badge (success/warning/error variants), Web + VSCode header badge. | ✅ Landed |
-| **Architecture doc** | [architecture.md §"Agent Heartbeat Primitives"](docs/architecture.md) + [release-notes-v1.18.0.md](docs/release-notes-v1.18.0.md). | ✅ Landed |
+| **Architecture doc** | [architecture.md §"Agent Heartbeat Primitives"](docs/architecture.md) + [release-notes-v1.18.0.md](docs/archive/release-notes/release-notes-v1.18.0.md). | ✅ Landed |
 
 ### v1.18.0 - Stabilization Pass (Phases 1–5 — landed on branch)
 
