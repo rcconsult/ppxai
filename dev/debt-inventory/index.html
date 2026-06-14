@@ -1195,6 +1195,39 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#item-29-enginecompletion-imports-commandsfactory-and-reads-its-internals-layer-inversion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Item 29 — engine.completion imports commands.factory and reads its internals [layer inversion]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#item-33-command-layer-consoleprint-sweep-agentutilityhandler-envelope-pattern-hygiene" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Item 33 — command-layer console.print sweep (agent/utility/handler) [envelope-pattern hygiene]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#item-34-office-preview-deps-must-be-bundled-in-binaries-buildci-must-use-all-extras-packaging" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Item 34 — office-preview deps must be bundled in binaries; build/CI must use --all-extras [packaging]
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1509,6 +1542,107 @@ commit) for the cross-host evidence trail so the next session doesn't
 have to re-derive.</p>
 </blockquote>
 <hr />
+<h3 id="item-29-enginecompletion-imports-commandsfactory-and-reads-its-internals-layer-inversion">Item 29 — <code>engine.completion</code> imports <code>commands.factory</code> and reads its internals [layer inversion]<a class="headerlink" href="#item-29-enginecompletion-imports-commandsfactory-and-reads-its-internals-layer-inversion" title="Permanent link">&para;</a></h3>
+<p><strong>Affected files:</strong> <code>ppxai/engine/completion.py</code> (import at line 47;
+reads <code>CommandFactory._registry</code> at lines 234/249, <code>._aliases</code> at 248,
+<code>._ensure_loaded()</code> at 229). Shared entrypoint <code>complete()</code> (line 165) is
+called from <code>ppxai/tui/completer.py:25</code>, <code>ppxai/rich/main.py:34</code>, and
+<code>ppxai/server/routes/completion.py:17</code>.</p>
+<p><strong>What's wrong:</strong> <code>engine/completion.py</code> is documented as engine /
+client-agnostic, but it imports <strong>upward</strong> into the <code>commands</code> layer and
+reaches into <code>CommandFactory</code>'s private <code>_registry</code>/<code>_aliases</code> to enumerate
+slash-command names for autocomplete. Engine depending on <code>commands</code> is a
+layer inversion; reading privates makes it brittle to factory refactors.</p>
+<p><strong>Why deferred:</strong> the coupling is <strong>intrinsic and harmless at runtime</strong> —
+command-name completion inherently needs the command registry, and there's
+no correctness bug. Surfaced by the v1.18.7 post-release code review
+(finding 1); the "real" fix is an architecture change, not bug-class.</p>
+<p><strong>Review-gate outcome (2026-06-14):</strong> the gate reframed completion as a
+<em>capability</em> over <code>(command-space × live-context)</code> that belongs to no single
+layer — not engine-owned data. Decision recorded in
+<a href="../decisions/0007-completion-first-class-service/">ADR 0007</a>:
+- <strong>Seed landed in v1.18.8</strong> (<code>bugfix/v1.18.8</code>): added public
+  <code>CommandFactory.iter_completion_specs()</code> + <code>CompletionCommandInfo</code>;
+  <code>engine.completion._complete_commands</code> now consumes that snapshot instead
+  of <code>_registry</code>/<code>_aliases</code>. <strong>The privates-reach is closed</strong>, behaviour
+  byte-identical (61 completion tests + 3 new accessor tests green). The
+  <code>engine → commands</code> <em>import</em> deliberately remains — removing it is the
+  v1.19.x work below.
+- <strong>v1.19.x (ADR 0007):</strong> lift <code>complete()</code> into a first-class
+  <code>ppxai/completion/CompletionService</code> behind <code>CommandRegistryProtocol</code> +
+  <code>CompletionContextProtocol</code> (leaf), injected at each composition root
+  (preloaded at startup); publish the command <strong>roster</strong> through AppState
+  <code>state_sync</code> for palettes/help/menus. This is what removes the import.</p>
+<p><strong>Planned:</strong> seed <strong>done</strong> in v1.18.8; first-class service + AppState roster
+<strong>→ v1.19.x</strong> per ADR 0007.</p>
+<p><strong>Branch when ready:</strong> v1.19.x (new branch — pairs with any "ship engine
+standalone" goal).</p>
+<p><strong>Trigger to revisit:</strong> see ADR 0007 triggers (engine-as-standalone-library
+goal; a second client surface needing the live roster; a second cross-layer
+capability of the same shape).</p>
+<p><strong>Effort (remaining, v1.19.x):</strong> ~1–1.5 d — two Protocols, the service
+package, composition-root wiring at 3 entry points, AppState roster field +
+4-mirror DTO update, cross-client completion tests.</p>
+<hr />
+<h3 id="item-33-command-layer-consoleprint-sweep-agentutilityhandler-envelope-pattern-hygiene">Item 33 — command-layer <code>console.print</code> sweep (agent/utility/handler) [envelope-pattern hygiene]<a class="headerlink" href="#item-33-command-layer-consoleprint-sweep-agentutilityhandler-envelope-pattern-hygiene" title="Permanent link">&para;</a></h3>
+<p><strong>Affected files:</strong> <code>commands/agent.py</code> (~43 <code>console.print</code>),
+<code>commands/utility.py</code> (~39), <code>commands/handler.py</code> (~29).</p>
+<p><strong>What's wrong:</strong> these handlers write user-facing text directly to the Rich
+console instead of returning typed results / side-effects, so anything they
+print is invisible to web/VSCode (server-side stdout). The cross-client
+gap on the coding commands was the acute case — fixed as Item 30 (closed).</p>
+<p><strong>Why deferred (verify-before-fixing):</strong> the bulk of these are genuinely
+<strong>interactive TUI-only flows</strong> (<code>input()</code>-driven rollback / confirm prompts
+in <code>/agent</code>, <code>/undo</code>) that cannot run under <code>ServerCommandContext</code> anyway, so
+they are <em>not</em> a cross-client bug. The remainder must be audited
+case-by-case: only the ones on a cross-client command path (reachable via
+<code>POST /command/{name}</code> and emitting information not already in the returned
+result) need routing through <code>content</code>/<code>message</code>/side-effects. Bulk
+conversion is UI-purity refactor, not bug-class.</p>
+<p><strong>Planned:</strong> v1.19.x — audit each site; fix only the cross-client-reachable
+ones; leave interactive TUI prompts as-is. Pairs naturally with ADR 0002
+(CommandContext) work if the contexts gain a "can prompt interactively" flag.</p>
+<p><strong>Branch when ready:</strong> v1.19.x.</p>
+<p><strong>Trigger to revisit:</strong> a web/VSCode user reports missing output from a
+non-coding command, or the v1.19.x command-context work opens the file set.</p>
+<p><strong>Effort:</strong> ~0.5 d audit + targeted fixes (most sites confirmed TUI-only).</p>
+<hr />
+<h3 id="item-34-office-preview-deps-must-be-bundled-in-binaries-buildci-must-use-all-extras-packaging">Item 34 — office-preview deps must be bundled in binaries; build/CI must use <code>--all-extras</code> [packaging]<a class="headerlink" href="#item-34-office-preview-deps-must-be-bundled-in-binaries-buildci-must-use-all-extras-packaging" title="Permanent link">&para;</a></h3>
+<p><strong>Affected:</strong> <code>.claude/skills/build-install/SKILL.md</code>, the release CI build
+step, <code>pyproject.toml [data]</code> extra (<code>pypdfium2</code>, <code>openpyxl</code>, <code>python-pptx</code>;
+NB <strong>no <code>python-docx</code></strong> → Word <em>text</em> fallback can't extract).</p>
+<p><strong>What's wrong:</strong> the office-preview pipeline needs <code>pypdfium2</code> (PDF→PNG) and
+<code>python-pptx</code>, which live in the <code>[data]</code> optional extra. The <code>/build-install</code>
+skill builds with <code>uv run --no-sync pyinstaller</code>, so if the venv lacks
+<code>[data]</code> the binaries ship <strong>without</strong> office support — LibreOffice is detected
+but <code>render_pptx_slides</code> returns <code>[]</code> ("No slides rendered"). Found live on a
+2026-06-14 local build. Also: <code>python-docx</code> is absent from <code>[data]</code>, and the
+frozen binary can't use a <code>pip install 'ppxai[data]'</code> hint.</p>
+<p><strong>Release CI verified SAFE (2026-06-14) — NOT a release blocker.</strong>
+<code>.github/workflows/build.yml</code> runs <code>uv sync --frozen --all-extras</code> before
+<strong>every</strong> PyInstaller job (ppxai / ppxai-server / ppxaide / ppxai-desktop,
+lines 95/155/209/264); the server-job comment documents exactly this trap
+("Without <code>--all-extras</code>, PyInstaller silently drops … pypdfium2 … python-pptx
+… missing PDF rasterization"). So <strong>released binaries bundle the office deps</strong>.
+The gap is local-only: the <code>/build-install</code> SKILL uses <code>--no-sync</code>. (Local
+v1.18.8 build re-run WITH <code>[data]</code> synced renders previews correctly — verified
+HTTP 200 image/png.)</p>
+<p><strong>Release-script test step fixed (2026-06-14):</strong> <code>scripts/release.py::run_tests</code>
+ran <code>uv run pytest</code> (no <code>--all-extras</code>), which synced to default deps and
+stripped the <code>[data]</code> extras → office/upload suites skipped → ~150-short count
+written into the README <code>tests-NNNN</code> badge (it had regressed to 3844). Now
+<code>uv run --all-extras pytest</code> so the count matches the all-extras suite (3989).</p>
+<p><strong>Build-install skill fixed (2026-06-14):</strong> <code>.claude/skills/build-install/SKILL.md</code>
+Step 1 now runs <code>uv sync --all-extras</code> before PyInstaller (the per-build
+<code>--no-sync</code> reuses that env), with a precondition note and a Step-8
+office-preview acceptance check (curl <code>/files/preview</code> → expect <code>image/png</code>).</p>
+<p><strong>Remaining (v1.19.x, non-blocking):</strong> add <code>python-docx</code> to the <code>[data]</code> extra
+so the Word <em>text</em> fallback can extract without LibreOffice. (Word <em>raster</em>
+preview already works via LibreOffice.)</p>
+<p><strong>Branch when ready:</strong> <code>bugfix/v1.18.8</code> (skill) / v1.19.x (docx dep).</p>
+<p><strong>Trigger to revisit:</strong> active for the skill edit; docx is v1.19.x.</p>
+<p><strong>Effort:</strong> ~1 h (skill <code>uv sync --all-extras</code> + docx dep).</p>
+<hr />
 <h2 id="recently-moved-out-of-debt-scope">Recently moved out of debt scope<a class="headerlink" href="#recently-moved-out-of-debt-scope" title="Permanent link">&para;</a></h2>
 <p>These items left the debt inventory because they're not bug-fix-class
 follow-up — they're feature work belonging on the roadmap, or they
@@ -1525,6 +1659,112 @@ shipped already.</p>
 <p>For full closed-item rationale with commit references, see the per-version
 archived snapshots:</p>
 <ul>
+<li>
+<p><strong>Post-files-parity v1.18.8 review fixes (closed 2026-06-14):</strong> beyond the
+  <code>/files/*</code> items (25–28, 30–32), two parallel reviews + live desktop testing
+  surfaced and closed: <strong>cross-platform LibreOffice discovery</strong> (<code>9d1c7550</code> —
+  macOS <code>soffice</code>/<code>.app</code> was undetected, raster preview dead by default; +
+  formatted install card) and its CI-safe test fix (<code>4b60970f</code>); <strong>three
+  session save/load security findings</strong> (<code>de3b56d7</code> — path traversal in
+  names, stale attachment file_ids on load, corrupt-load file-store
+  corruption); and the <strong>session auto-restore-mode</strong> bug (<code>1fe60ea5</code> — web
+  client ignored <code>auto_restore</code> and used a fragile <code>confirm()</code>, so restore
+  landed on fresh defaults; <code>/status</code> now exposes the mode). All with
+  regression tests. See <a href="../CHANGELOG.md">CHANGELOG.md</a> <code>[1.18.8]</code>.</p>
+</li>
+<li>
+<p><strong>Item 28 — OfficeFileView blob-revoke race + attachment text_fallback (closed 2026-06-14):</strong>
+  <code>ef17f748</code> on <code>bugfix/v1.18.8</code>. The attachment renderers (<code>app.js</code>) gained an
+  <code>unmounted</code> flag so the async <code>.then()</code> no longer creates a leaked blob URL
+  into a detached container; the text-fallback sites now assert a string
+  <code>content</code> (surface <code>missing "content" key</code> instead of <code>'(empty)'</code>). Also
+  followed through on item 26: the attachment path now branches on
+  <code>libreoffice_available</code>/content-type and degrades to extracted text (via a
+  new shared <code>OfficeFileView.renderTextFallbackInto()</code>), so chat-bubble
+  attachments degrade like the file tree instead of rendering JSON as a slide
+  image / PDF. Web-only; <code>node --check</code> clean, DOM = manual-smoke. v1.18.8
+  Phase F (3/3). <strong>Follow-up (<code>84ee33c2</code>, post-review):</strong> (a) closed a residual
+  <code>renderSlideNavInto</code> leak — it created the object URL <em>after</em> <code>await
+  fetchSlideBlob</code>, so an unmount mid-fetch leaked the post-await URL; added a
+  <code>disposed</code> flag (fixes attachment <strong>and</strong> file-tree PPT previews). (b) Fixed
+  the <strong>VSCode</strong> twin of the web JSON-as-binary bug: <code>chatPanel.ts</code> wrote every
+  ok <code>/files/preview</code> response to <code>.png</code>/<code>.pdf</code>, so the item-26 200 JSON
+  text_fallback became a garbage image/PDF — now branches on
+  <code>libreoffice_available</code>/<code>type</code> + content-type and falls back to the raw file.</p>
+</li>
+<li>
+<p><strong>Item 26 — <code>/files/preview</code> route unification (closed 2026-06-14):</strong>
+  <code>579a2fe8</code> on <code>bugfix/v1.18.8</code>. Both preview routes (path-based in
+  <code>files.py</code>, id-based in <code>file_serve.py</code>) now delegate to one shared
+  <code>render_office_preview()</code> helper → ONE JSON shape (<code>type</code>, <code>kind</code>,
+  <code>libreoffice_available</code>, <code>total</code>, <code>name</code> always present) and ONE
+  failure mode (LibreOffice missing → <strong>200 text_fallback</strong>, never the
+  id-route's old 503; legacy <code>.ppt</code>/<code>.doc</code> → typed message, not a 500).
+  id route derives the office ext from <code>meta.name</code>/<code>media_type</code> (content-
+  addressed <code>meta.path</code> may lack one). Guard: <code>TestUnifiedPreviewContract</code>
+  in <code>test_files_preview_download.py</code> (runs without office libs via mocked
+  probe); 70 passed / 5 office-lib-skipped across preview suites. Unblocks
+  future VSCode office-preview delegation. v1.18.8 Phase F (2/3).</p>
+</li>
+<li>
+<p><strong>Item 25 — <code>/files/read</code> type-contract consumers (closed 2026-06-14):</strong>
+  <code>2a22807c</code> on <code>bugfix/v1.18.8</code>. Kept the typed server contract (option b);
+  fixed every consumer to branch on <code>type</code>: <code>CodeEditorView</code> refuses any
+  non-<code>text</code> type (no more base64-as-text / corrupt-on-save), RPF
+  save/restore gained the <code>office</code> viewType (round-trips <code>OfficeFileView</code>),
+  the <code>typeof OfficeFileView !== 'undefined'</code> deploy-skew guard was dropped
+  (errors visibly now), and VSCode <code>httpClient.readFile</code> got the real
+  <code>ReadFileResponse</code> union + branch-on-<code>type</code> warning (contract-only, zero
+  callers). Guard: <code>TestReadOfficeTypeContract</code> in <code>test_files_route.py</code>
+  (csv/xlsx→office_spreadsheet base64; txt→text+lines; pptx/docx→400 hint).
+  Web DOM = manual-smoke (no JS harness); <code>tsc</code>/<code>node --check</code> clean.
+  v1.18.8 Phase F (1/3).</p>
+</li>
+<li>
+<p><strong>Item 30 — coding auto-route notice lost cross-client (closed 2026-06-14):</strong>
+  <code>0f21cee1</code> on <code>bugfix/v1.18.8</code>. <code>_execute_ai_task</code> no longer <code>console.print</code>s
+  the "Auto-routed to <model>" notice (invisible to web/VSCode server-side);
+  it rides in <code>AIResponseResult.content</code> (the field those clients render —
+  they fall back to <code>message</code> only when content is empty). Code-block
+  extraction runs on the raw output first. Other <code>console.print</code> sites in
+  the function are live-TUI UX or already in the result. Guard:
+  <code>tests/test_coding_autoroute.py</code>. The broad agent/utility/handler sweep is
+  tracked separately as <strong>open Item 33</strong> (v1.19.x). v1.18.8 Phase E.</p>
+</li>
+<li>
+<p><strong>Item 31 — direct <code>session.messages</code> mutation bypasses AppState (closed 2026-06-14):</strong>
+  <code>44bb5dea</code> on <code>bugfix/v1.18.8</code>. Added <code>SessionManager.pop_orphan_trailing_users()</code>
+  (replaces the <code>streaming.py</code> orphan-cleanup loop — now fires the
+  <code>on_messages_changed</code> callback; the loop fired none before) and a
+  <code>preserve_trailing_user()</code> context manager (wraps the <code>chat.py</code> preflight
+  detach/restore — transient no-op, the inner <code>validate_and_fix_alternation</code>
+  notifies). chat.py post-tool prompt removal routed through the existing
+  <code>remove_last_message()</code> (also fixes a latent multimodal-cache miss).
+  Behaviour preserved (<code>chat.py:273</code> already netted to a no-op). Guard:
+  <code>TestMessageMutationHelpers</code> in <code>test_session_persistence.py</code>. v1.18.8 Phase C.</p>
+</li>
+<li>
+<p><strong>Item 32 — command envelope can carry non-JSON objects (closed 2026-06-14):</strong>
+  <code>439a0325</code> on <code>bugfix/v1.18.8</code>. <code>ConfirmationResult.to_dict()</code> now runs
+  <code>details</code> through a recursive <code>_jsonsafe()</code> (dataclass→<code>to_dict()</code>/<code>asdict</code>,
+  bytes→marker, unknown→<code>str</code>), so the HTTP envelope is always
+  <code>json.dumps</code>-able. The raw-<code>Message</code> <code>/load</code> key is preserved for the
+  in-process Textual renderer (which never calls <code>to_dict()</code>) — audit
+  correction: it was <strong>not</strong> consumer-free as first flagged. Guards:
+  <code>test_command_envelope_serialization.py</code> + parametrized
+  <code>test_to_dict_is_json_serializable</code> over every <code>CommandResult</code> subclass.
+  v1.18.8 Phase B.</p>
+</li>
+<li>
+<p><strong>Item 27 — <code>/files/image/</code> home-confinement (closed 2026-06-14):</strong>
+  <code>7fb83d8b</code> on <code>bugfix/v1.18.8</code>. <code>serve_image</code> swapped
+  <code>str(path).startswith(str(home_dir))</code> → <code>_within_tree(path, home_dir)</code> —
+  the third confinement site, which the v1.18.7 fix <code>09eae96e</code> had missed
+  (it migrated <code>read_file</code>/<code>write_file</code> only). <code>TestServeImageConfinement</code>
+  added (sibling-prefix path → 403 via <code>/files/image/</code>, verified to fail
+  404 against the old check; in-tree image → 200). v1.18.8 Phase A — see
+  <a href="../plan-v1.18.8-files-parity/">plan-v1.18.8-files-parity.md</a>.</p>
+</li>
 <li>
 <p><strong>Item 20 — v1.19.x alignment paperwork (closed 2026-05-24):</strong> merged to
   master as <code>56bc2d38</code> (Stage-2 fold rebased from <code>42ed8f00</code>) + <code>7a2ea268</code>
