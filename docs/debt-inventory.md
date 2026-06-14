@@ -398,35 +398,6 @@ LibreOffice availability.
 
 ---
 
-### Item 27 — `/files/image/` home-confinement still uses `str.startswith` prefix test [security consistency]
-
-**Affected files:** `ppxai/server/routes/files.py` (`serve_image`, ~line 604).
-
-**What's wrong:** the v1.18.7 security fix (`09eae96e`) replaced the
-prefix-confusion check `str(path).startswith(str(home_dir))` with the
-component-wise `_within_tree()` in `read_file` and `write_file` — but
-**missed `serve_image`**, which still uses the old `startswith` test. A
-sibling path like `/home/userEVIL/secret.png` still passes the home-dir
-check against `/home/user` and is served via `/files/image/` (the endpoint
-the web markdown image-rewrite uses). The confinement fix is bypassable
-through the one route it wasn't applied to.
-
-**Why deferred:** flagged in the v1.18.7 post-release code review; not
-caught when `09eae96e` landed because the migration was applied per-handler.
-
-**Planned:** v1.18.8 (this branch) — **quick fix, do first** (one-line swap
-to `_within_tree`, mirrors `read_file`). See
-[docs/plan-v1.18.8-files-parity.md](plan-v1.18.8-files-parity.md).
-
-**Branch when ready:** `bugfix/v1.18.8`.
-
-**Trigger to revisit:** active now.
-
-**Effort:** ~15 min + 1 regression test (sibling-prefix path → 403 via
-`/files/image/`). One-line change.
-
----
-
 ### Item 28 — OfficeFileView attachment blob-URL revoke race [web robustness]
 
 **Affected files:** `ppxai/web/app.js` (`_renderPresentationAttachment`,
@@ -616,6 +587,15 @@ shipped already.
 
 For full closed-item rationale with commit references, see the per-version
 archived snapshots:
+
+- **Item 27 — `/files/image/` home-confinement (closed 2026-06-14):**
+  `7fb83d8b` on `bugfix/v1.18.8`. `serve_image` swapped
+  `str(path).startswith(str(home_dir))` → `_within_tree(path, home_dir)` —
+  the third confinement site, which the v1.18.7 fix `09eae96e` had missed
+  (it migrated `read_file`/`write_file` only). `TestServeImageConfinement`
+  added (sibling-prefix path → 403 via `/files/image/`, verified to fail
+  404 against the old check; in-tree image → 200). v1.18.8 Phase A — see
+  [plan-v1.18.8-files-parity.md](plan-v1.18.8-files-parity.md).
 
 - **Item 20 — v1.19.x alignment paperwork (closed 2026-05-24):** merged to
   master as `56bc2d38` (Stage-2 fold rebased from `42ed8f00`) + `7a2ea268`
