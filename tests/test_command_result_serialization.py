@@ -233,6 +233,22 @@ def test_vscode_renderer_has_case(cls: type):
     _all_concrete_subclasses(),
     ids=lambda c: c.__name__,
 )
+def test_to_dict_is_json_serializable(cls: type):
+    """Every CommandResult subclass's `to_dict()` output must be
+    `json.dumps`-able — it's the HTTP envelope body (`POST /command/{name}`).
+    A non-JSON value (raw dataclass, bytes, engine object) would 500 the
+    route. Guards the whole class, not just the /load case that prompted it
+    (debt item 32)."""
+    import json
+    instance = _instantiate_with_defaults(cls)
+    json.dumps(instance.to_dict())
+
+
+@pytest.mark.parametrize(
+    "cls",
+    _all_concrete_subclasses(),
+    ids=lambda c: c.__name__,
+)
 def test_to_dict_emits_subclass_type_name(cls: type):
     """The wire `type` field must be the concrete subclass name —
     that's the dispatch key used by web/VSCode renderers. If a

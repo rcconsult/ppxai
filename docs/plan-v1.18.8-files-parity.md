@@ -59,17 +59,20 @@ edits a few `app.js` methods in place; no decomposition required.
 
 ## Extended-scope work detail (Phases B, C, D, E — debt 29–32)
 
-### Phase B — Item 32: envelope can't carry raw objects
-- `commands/session.py:151`: drop the `"messages": <raw Message list>` key
-  from the `/load` `ConfirmationResult.details` (audited: **no consumer
-  reads it**; `message_count` already present; web/VSCode load via the
-  `/sessions/*` REST path, not `/command/load`).
-- Add `tests/test_command_envelope_serialization.py`: walk every
-  `CommandResult` subclass's `to_dict()` output and **recursively assert
-  json-clean** (reject dataclasses / bytes / custom objects). Durable guard
-  for the whole class, not just `/load`.
-- Optional: `ConfirmationResult.to_dict()` runs `details` through
-  `jsonable_encoder` (defensive; only if cheap).
+### Phase B — Item 32: envelope can't carry raw objects ✅ landed
+- **Audit correction:** the `/load` `details["messages"]` key is **not**
+  consumer-free — the in-process Textual renderer
+  (`rendering/textual_renderer.py::render_confirmation`) reads it as live
+  `Message` objects. So it can't be dropped; sanitize at the wire boundary
+  instead.
+- **Done:** `ConfirmationResult.to_dict()` runs `details` through a recursive
+  `_jsonsafe()` (dataclass→`to_dict()`/`asdict`, bytes→marker, unknown→`str`)
+  so the envelope is always `json.dumps`-able; in-process callers still read
+  raw objects from `result.details` (never call `to_dict()`).
+- **Tests:** `tests/test_command_envelope_serialization.py` (the `/load`
+  Message regression + `_jsonsafe` unit coverage) + a parametrized
+  `test_to_dict_is_json_serializable` over **every** `CommandResult` subclass
+  in `tests/test_command_result_serialization.py`.
 
 ### Phase C — Item 31: session-mutation hygiene
 - Add `SessionManager` helpers (callback-firing):

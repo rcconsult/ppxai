@@ -559,22 +559,31 @@ raw dataclass `Message` objects (incl. nested attachment refs / bytes). If
 `/command/load` is called over HTTP, the envelope would carry non-JSON-clean
 objects.
 
-**Why deferred / nuance:** **latent, not active.** No client hits this path —
-VSCode uses `/sessions/load/{name}`, web uses `/sessions/restore`; nothing
-reads `details["messages"]`. So it's defense-in-depth, not a live break.
+**Why deferred / nuance:** **latent on the wire, not active.** No HTTP client
+hits this path — VSCode uses `/sessions/load/{name}`, web uses
+`/sessions/restore`. **Correction (implementation):** the raw `messages` key
+is **not** consumer-free — the *in-process* Textual renderer
+(`rendering/textual_renderer.py::render_confirmation`) reads
+`details["messages"]` as live `Message` objects to repaint the transcript on
+`/load`. So the key cannot simply be dropped; the fix sanitizes at the wire
+boundary instead.
 
-**Planned:** v1.18.8 (this branch) — drop the raw `messages` key from
-`/load` (`message_count` already present); add a recursive
-**envelope-serialization guard test** that walks every `CommandResult`
-subclass's `to_dict()` and rejects dataclasses/bytes/custom objects (catches
-the whole class, not just `/load`). See
+**Resolution (landed):** `ConfirmationResult.to_dict()` now runs `details`
+through a recursive `_jsonsafe()` sanitizer (dataclass→dict via `to_dict()`/
+`asdict`, bytes→marker, unknown→`str`), so the envelope is always
+`json.dumps`-able while in-process callers keep reading the raw objects from
+`result.details` (they never call `to_dict()`). Added
+`tests/test_command_envelope_serialization.py` (the `/load` Message
+regression + `_jsonsafe` unit coverage) plus a parametrized
+`test_to_dict_is_json_serializable` across **every** `CommandResult` subclass
+in `tests/test_command_result_serialization.py`. See
 [docs/plan-v1.18.8-files-parity.md](plan-v1.18.8-files-parity.md) Phase B.
 
 **Branch when ready:** `bugfix/v1.18.8`.
 
-**Trigger to revisit:** active now.
+**Trigger to revisit:** **done** — close at v1.18.8 release.
 
-**Effort:** ~1–2 h (drop key + the recursive guard test). Low risk.
+**Effort:** ~1–2 h (sanitizer + guard tests). Low risk.
 
 ---
 

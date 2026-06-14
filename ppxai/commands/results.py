@@ -13,10 +13,44 @@ Architecture:
 v1.15.0: Type-based renderer dispatch refactoring
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, is_dataclass, asdict
 from typing import Any, Optional, Dict, List
 from enum import Enum
 from abc import ABC
+
+
+def _jsonsafe(value: Any) -> Any:
+    """Recursively coerce a value into JSON-serializable form.
+
+    `ConfirmationResult.details` is a free-form dict that some commands
+    populate with engine objects — notably `/load`, which stores raw
+    `Message` dataclasses for the in-process Textual renderer to repaint
+    the transcript. Those objects are fine in-process but must never reach
+    the HTTP envelope (`POST /command/{name}` → `to_dict()` → JSON) as-is.
+
+    This converts dataclasses / `to_dict()`-ables / containers into plain
+    JSON types so `to_dict()` output is always `json.dumps`-able. In-process
+    callers read `result.details` directly and never hit this path — only
+    the wire does.
+    """
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return value
+    if isinstance(value, dict):
+        return {str(k): _jsonsafe(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_jsonsafe(v) for v in value]
+    if isinstance(value, (bytes, bytearray)):
+        return f"<{len(value)} bytes>"
+    to_dict = getattr(value, "to_dict", None)
+    if callable(to_dict):
+        return _jsonsafe(to_dict())
+    if is_dataclass(value) and not isinstance(value, type):
+        return _jsonsafe(asdict(value))
+    # Last resort: stringify so the wire never carries a non-serializable
+    # object. The envelope-serialization test asserts to_dict() output is
+    # json.dumps-able, catching any new structured type a client needs
+    # *before* it silently degrades to a str() here.
+    return str(value)
 
 
 class ResultStatus(Enum):
@@ -372,7 +406,11 @@ class ConfirmationResult(CommandResult):
 
     def to_dict(self) -> dict:
         d = super().to_dict()
-        d["details"] = self.details
+        # details is free-form and may hold engine objects in-process
+        # (e.g. /load stores raw Message dataclasses for the Textual
+        # renderer). Sanitize to JSON-safe types for the wire — in-process
+        # callers read self.details directly and never hit this.
+        d["details"] = _jsonsafe(self.details)
         return d
 
 
