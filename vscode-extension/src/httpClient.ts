@@ -70,6 +70,26 @@ export interface ToolInfo {
     parameters?: Record<string, { description?: string; required?: boolean }>;
 }
 
+/**
+ * Response shape of POST /files/read (ppxai/server/routes/files.py::read_file).
+ *
+ * `type` is the discriminator. CRITICAL: `content` is UTF-8 text ONLY when
+ * type === 'text'; for 'image' | 'pdf' | 'office_spreadsheet' it is BASE64.
+ * Branch on `type` before treating `content` as editable text — writing
+ * base64 into a text buffer corrupts the file. Office presentations / Word
+ * docs are NOT returned here (server replies 400 + a hint); they go through
+ * GET /files/preview instead.
+ */
+export interface ReadFileResponse {
+    filename: string;
+    path: string;
+    type: 'text' | 'image' | 'pdf' | 'office_spreadsheet';
+    content: string;
+    size: number;
+    mime_type?: string;  // present for binary types
+    lines?: number;      // present only for type === 'text'
+}
+
 export interface EngineStatus {
     provider: string;
     model: string;
@@ -806,12 +826,7 @@ export class HttpClient {
      * has moved on; httpClient surfaces it as a structured error with
      * `.expected`, `.actual`, `.events` for the recovery helper.
      */
-    async readFile(filepath: string, cwdAnchor?: string): Promise<{
-        path: string;
-        content: string;
-        size: number;
-        encoding: string;
-    }> {
+    async readFile(filepath: string, cwdAnchor?: string): Promise<ReadFileResponse> {
         const body: Record<string, unknown> = { path: filepath };
         if (cwdAnchor) body.cwd_anchor = cwdAnchor;
         const response = await fetch(`${this.baseUrl}/files/read`, {
@@ -822,12 +837,12 @@ export class HttpClient {
         if (!response.ok) {
             await this._throwHttpError(response, `Failed to read file`);
         }
-        return response.json() as Promise<{
-            path: string;
-            content: string;
-            size: number;
-            encoding: string;
-        }>;
+        // IMPORTANT: branch on `type` before using `content`. For
+        // type === 'office_spreadsheet' (and 'image'/'pdf') `content` is
+        // BASE64, not UTF-8 text — writing it straight into a text buffer
+        // corrupts the file. Only type === 'text' carries editable text
+        // (and the `lines` field). See ppxai/server/routes/files.py::read_file.
+        return response.json() as Promise<ReadFileResponse>;
     }
 
     /**

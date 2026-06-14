@@ -3239,11 +3239,15 @@ class PpxaiApp {
             view = new PdfFileView(filepath, this.state, opts);
         } else if (mdExts.has(ext)) {
             view = new MarkdownFileView(filepath, this.state, opts);
-        } else if (typeof OfficeFileView !== 'undefined' && OfficeFileView.canRender(filepath)) {
+        } else if (OfficeFileView.canRender(filepath)) {
             // v1.18.7: pptx/ppt/docx/doc/xlsx/xls/csv via OfficeFileView.
             // Closes the file-tree office-preview regression (pre-v1.18.7
             // these extensions fell through to CodeEditorView, which got
             // "Cannot read binary file" 400 from /files/read).
+            // v1.18.8 (item 25): the `typeof OfficeFileView !== 'undefined'`
+            // guard was removed — a missing OfficeFileView script is a deploy
+            // error that should surface loudly, not silently downgrade office
+            // files to CodeEditorView (which renders base64 as text).
             view = new OfficeFileView(filepath, this.state, opts);
         } else if (dataExts.has(ext)) {
             view = new DataFileView(filepath, this.state, opts);
@@ -3337,6 +3341,7 @@ class PpxaiApp {
             else if (view instanceof DataFileView)  viewType = 'data';
             else if (view instanceof ImageFileView) viewType = 'image';
             else if (view instanceof PdfFileView)   viewType = 'pdf';
+            else if (view instanceof OfficeFileView) viewType = 'office';  // item 25: round-trip office views
             entries.push({ path, viewType });
         }
         try {
@@ -3367,6 +3372,7 @@ class PpxaiApp {
                 case 'data':     view = new DataFileView(entry.path, this.state);     break;
                 case 'image':    view = new ImageFileView(entry.path, this.state);    break;
                 case 'pdf':      view = new PdfFileView(entry.path, this.state);      break;
+                case 'office':   view = new OfficeFileView(entry.path, this.state);   break;  // item 25: was restored as CodeEditorView → base64-as-text
                 default:         view = new CodeEditorView(entry.path, this.state, { mode: 'view' }); break;
             }
             this.rightPanelFrame.push(view);

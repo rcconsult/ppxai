@@ -79,8 +79,14 @@ class CodeEditorView extends BaseView {
             if (!this._isNew) {
                 try {
                     const data = await this._appState.apiClient.readFile(this._path, this._cwdAnchor);
-                    if (data.type === 'image' || data.type === 'pdf') {
-                        container.innerHTML = `<div class="rpf-error">Cannot display binary file: ${_cevEsc(this._path)}</div>`;
+                    // /files/read returns type ∈ {text, image, pdf, office_spreadsheet}.
+                    // The code editor only renders text — anything else (incl.
+                    // office_spreadsheet, whose `content` is base64) must NOT be
+                    // loaded as editor text (item 25: prevents base64-as-text /
+                    // corruption-on-save). Office files are routed to OfficeFileView
+                    // by displayFileFromEvent; this is the defense for direct-edit paths.
+                    if (data.type && data.type !== 'text') {
+                        container.innerHTML = `<div class="rpf-error">Cannot edit ${_cevEsc(data.type)} file as text: ${_cevEsc(this._path)}</div>`;
                         return;
                     }
                     this._loadedContent   = data.content ?? '';
@@ -181,7 +187,7 @@ class CodeEditorView extends BaseView {
         if (!this._path || this._isNew) return;
         try {
             const data = await this._appState.apiClient.readFile(this._path, this._cwdAnchor);
-            if (data.type === 'image' || data.type === 'pdf') return;
+            if (data.type && data.type !== 'text') return;  // non-text never reloads into the editor (item 25)
             const newContent = data.content ?? '';
             if (newContent === this._loadedContent) return;  // no change on disk
             this._loadedContent   = newContent;

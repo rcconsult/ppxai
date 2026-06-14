@@ -135,35 +135,31 @@ Phase 0 below = **Phase A**; Phases 1–3 below = **Phase F**.
   return 403 via `/files/image/`.
 - One-line change + one test. Land first; it's the only security item.
 
-### Phase 1 — Item 25: stabilize the `/files/read` contract
-- **Decision point (pick one, document in an ADR-style note):**
-  - **(a) Keep `/files/read` text-stable**: revert csv to `type:"text"`;
-    keep spreadsheets/office out of `/files/read` entirely (they go through
-    `/files/preview`). Simplest; restores pre-v1.18.7 editor behavior.
-  - **(b) Make `/files/read` fully typed**: keep the `office_spreadsheet`
-    type but update **every** consumer to branch on `type` — add an
-    `office_spreadsheet` case to `CodeEditorView` (refuse-to-edit + redirect
-    to `OfficeFileView`) and to the RPF save/restore stack; remove the
-    `typeof OfficeFileView !== 'undefined'` silent-fallthrough.
-  - **Recommendation:** (b) for the web client + a shared response-handler,
-    because the feature (client-side SheetJS render of xlsx/csv) depends on
-    the typed contract. Restoring csv-as-text (a) would regress the new
-    spreadsheet view. So: keep the type, fix the consumers.
-- **Web fixes:**
-  - `onFileEdit`/double-click: route office types to `OfficeFileView`
-    (read-only) instead of `CodeEditorView`; never load base64 into the editor.
-  - RPF `_saveRpfStack`/`_restoreRpfStack`: add an `OfficeFileView` case so
-    reload restores the correct view.
-  - Drop the `typeof OfficeFileView !== 'undefined'` guard (the script is
-    bundled; a missing-script state should error visibly, not silently
-    downgrade to base64).
-- **VSCode-delegation guard:** even if `httpClient.readFile` stays unused,
-  update its TS return type to the real union (`{type, mime_type, content,
-  size, filename}`) and add a `type`-switch comment, so the next delegation
-  feature can't silently write base64 into a buffer.
-- **Tests:** server `/files/read` per-type contract (text / office_spreadsheet
-  / 400-hint) pinned in `test_files_route.py`; web double-click + RPF-restore
-  for `.csv`/`.xlsx` asserted to render a table, not base64.
+### Phase 1 — Item 25: stabilize the `/files/read` contract ✅ landed
+- **Decision: option (b)** — keep the typed server contract (the SheetJS
+  spreadsheet view depends on it); fix every consumer to branch on `type`.
+- **Server:** unchanged (typed contract is the source of truth).
+- **Web (app.js + code-editor-view.js):**
+  - `CodeEditorView` now refuses **any** non-`text` type (was: only
+    `image`/`pdf`) on both initial load and `reload()` — `office_spreadsheet`
+    base64 can no longer render as editor text / corrupt on Save. Office
+    files are routed to `OfficeFileView` by `displayFileFromEvent`; this is
+    the defense for direct-edit (`onFileEdit`) paths.
+  - `_saveRpfStack`/`_restoreRpfStack`: added the `office` viewType so a
+    reopened office file round-trips to `OfficeFileView` (was restored as
+    `CodeEditorView` → base64-as-text).
+  - Dropped the `typeof OfficeFileView !== 'undefined'` guard — a missing
+    script now errors visibly instead of silently downgrading to base64.
+- **VSCode (`httpClient.ts`):** `readFile` return type is now the real
+  `ReadFileResponse` union (`type` discriminator + `content` is base64 for
+  non-text) with a branch-on-`type` warning comment, so a future delegation
+  can't write base64 into a buffer. (Still zero callers — contract-only.)
+- **Tests:** `TestReadOfficeTypeContract` in `test_files_route.py` pins the
+  server contract (csv/xlsx → `office_spreadsheet` base64; txt → text+lines;
+  pptx/docx → 400 + `/files/preview` hint). Web view changes are
+  syntax-checked (`node --check`) + TS-typechecked (`tsc --noEmit`); DOM
+  behaviour is manual-smoke (no web JS harness exists — consistent with the
+  app.js norm).
 
 ### Phase 2 — Item 26: unify `/files/preview`
 - Collapse the id-based (`/files/preview/{file_id}`, `file_serve.py`) and

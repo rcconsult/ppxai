@@ -239,6 +239,68 @@ class TestReadBinaryPreview:
         assert base64.b64decode(body["content"]) == pdf_bytes
 
 
+class TestReadOfficeTypeContract:
+    """Item 25 (v1.18.8): `/files/read` returns a stable, typed contract that
+    every client branches on. Spreadsheets (csv/xlsx/xls) come back as
+    `type: "office_spreadsheet"` base64; office docs (pptx/docx/...) return
+    400 with a `/files/preview` hint. Pinning this keeps the web/VSCode
+    consumers (which now switch on `type`) from silently rendering base64 as
+    editor text.
+    """
+
+    def test_csv_returns_office_spreadsheet_base64(self, http_client, tmp_path):
+        target = tmp_path / "data.csv"
+        csv_bytes = b"a,b,c\n1,2,3\n"
+        target.write_bytes(csv_bytes)
+        headers = _session("csv-type")
+        _anchor_to(http_client, headers, tmp_path)
+
+        resp = http_client.post("/files/read", json={"path": str(target)}, headers=headers)
+        assert resp.status_code == 200, resp.text
+        body = resp.json()
+        assert body["type"] == "office_spreadsheet"
+        assert base64.b64decode(body["content"]) == csv_bytes
+        assert "mime_type" in body
+        assert "lines" not in body  # binary types carry no line count
+
+    def test_xlsx_returns_office_spreadsheet_base64(self, http_client, tmp_path):
+        target = tmp_path / "book.xlsx"
+        raw = b"PK\x03\x04xlsx-bytes\xff\xfe"  # route only reads bytes
+        target.write_bytes(raw)
+        headers = _session("xlsx-type")
+        _anchor_to(http_client, headers, tmp_path)
+
+        resp = http_client.post("/files/read", json={"path": str(target)}, headers=headers)
+        assert resp.status_code == 200, resp.text
+        assert resp.json()["type"] == "office_spreadsheet"
+
+    def test_txt_returns_text(self, http_client, tmp_path):
+        target = tmp_path / "notes.txt"
+        target.write_text("hello\nworld\n", encoding="utf-8")
+        headers = _session("txt-type")
+        _anchor_to(http_client, headers, tmp_path)
+
+        resp = http_client.post("/files/read", json={"path": str(target)}, headers=headers)
+        assert resp.status_code == 200, resp.text
+        body = resp.json()
+        assert body["type"] == "text"
+        assert body["content"] == "hello\nworld\n"
+        assert body["lines"] == 3
+
+    @pytest.mark.parametrize("name", ["deck.pptx", "doc.docx"])
+    def test_office_doc_returns_400_with_preview_hint(self, http_client, tmp_path, name):
+        # Binary office doc (non-UTF-8 bytes) → 400 routing the client to
+        # /files/preview, never base64-as-text.
+        target = tmp_path / name
+        target.write_bytes(b"PK\x03\x04\xff\xfe binary office payload")
+        headers = _session(f"doc-{name}")
+        _anchor_to(http_client, headers, tmp_path)
+
+        resp = http_client.post("/files/read", json={"path": str(target)}, headers=headers)
+        assert resp.status_code == 400, resp.text
+        assert "/files/preview" in resp.json()["detail"]
+
+
 # ---------------------------------------------------------------------------
 # Special-prefix paths: @search-query and ~ tilde
 # ---------------------------------------------------------------------------
