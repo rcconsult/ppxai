@@ -1,9 +1,14 @@
-# v1.18.8 Plan — `/files/*` cross-client parity & contract stability
+# v1.18.8 Plan — `/files/*` parity + post-release code-review fixes
 
 **Branch:** `bugfix/v1.18.8` (off master @ v1.18.7).
 **Class:** bugfix / post-release regression follow-up. No new features.
-**Source:** post-v1.18.7 code review (cross-client parity). Debt items
-[25](debt-inventory.md), 26, 27, 28.
+**Source:** post-v1.18.7 code review. Two waves:
+- **Wave 1 — `/files/*` cross-client parity** (original branch charter):
+  debt items [25](debt-inventory.md), 26, 27, 28.
+- **Wave 2 — broader code-review findings** (scope extension, owner-directed):
+  debt items [29](debt-inventory.md), 30, 31, 32. Architectural-leaning
+  findings scoped to their **bugfix-grade minimum** so the branch stays
+  bugfix-class; the maximal refactors are split out / deferred per item.
 
 ## Why
 
@@ -25,7 +30,83 @@ local), but the bytes/shape/status they receive must be identical and stable.
 ## The v1 gateway is out of scope
 
 `POST /v1/oneshot` + bearer auth stay **byte-identical** (ppxai-sre consumer).
-None of the changes below touch the v1 gateway tier.
+None of the changes below touch the v1 gateway tier. The `/command/*`
+envelope shape also stays stable (ppxai-sre reuses ppxai source).
+
+## Consolidated execution order (full v1.18.8 scope)
+
+Phases are lettered to match the debt items. Detail for the `/files/*`
+phases (A, F) is under "`/files/*` work detail" below; detail for the
+code-review phases (B, C, D, E) is under "Extended-scope work detail".
+
+| Order | Phase | Item | What | Risk |
+|------:|-------|------|------|------|
+| 1 | **A** | 27 | `serve_image` → `_within_tree` (security) | trivial |
+| 2 | **B** | 32 | drop raw `Message` from `/load`; recursive envelope-serialization guard test | low |
+| 3 | **C** | 31 | `SessionManager` mutation helpers; replace direct `messages.pop()/append()` | medium (hot path) |
+| 4 | **E** | 30 | route `coding.py` user-facing output through events/result | low |
+| 5 | **F** | 25/26/28 | `/files/read` typing + `/files/preview` unify + OfficeFileView race | medium (bulk) |
+| 6 | 🔒 gate | — | **in-depth review of Item 29** before choosing its fix | — |
+| 7 | **D** | 29 | decouple `completion` from `CommandFactory` (option a/b decided at gate) | a: low / b: medium |
+
+A and B land first. C, E, F are mutually independent and can land in any
+order after B. **D is last and review-gated — no code until the gate.**
+Item 6 / debt 22 (`PpxaiApp` decomposition) is **not triggered**: Phase F
+edits a few `app.js` methods in place; no decomposition required.
+
+## Extended-scope work detail (Phases B, C, D, E — debt 29–32)
+
+### Phase B — Item 32: envelope can't carry raw objects
+- `commands/session.py:151`: drop the `"messages": <raw Message list>` key
+  from the `/load` `ConfirmationResult.details` (audited: **no consumer
+  reads it**; `message_count` already present; web/VSCode load via the
+  `/sessions/*` REST path, not `/command/load`).
+- Add `tests/test_command_envelope_serialization.py`: walk every
+  `CommandResult` subclass's `to_dict()` output and **recursively assert
+  json-clean** (reject dataclasses / bytes / custom objects). Durable guard
+  for the whole class, not just `/load`.
+- Optional: `ConfirmationResult.to_dict()` runs `details` through
+  `jsonable_encoder` (defensive; only if cheap).
+
+### Phase C — Item 31: session-mutation hygiene
+- Add `SessionManager` helpers (callback-firing):
+  `pop_orphan_trailing_users()` (replaces the `streaming.py:175` loop) and a
+  `preserve_trailing_user()` context manager (wraps the `chat.py` preflight
+  round-trip).
+- Replace direct `session.messages.pop()/append()` at `chat.py:273/276`,
+  `596/599`, `1064`, and `streaming.py:175`.
+- Tests: AppState invalidation callback fires after orphan cleanup; preflight
+  nets identical history. **Note:** `chat.py:273` already nets to a no-op;
+  the real mutation is `streaming.py:175`. Keep behavior identical — lean on
+  existing alternation tests.
+
+### Phase D — Item 29: decouple `completion` from `commands` internals (LAST, review-gated)
+- **Do not start until the review gate.** `engine/completion.py:47` imports
+  `commands.factory` and reads `_registry`/`_aliases` privates
+  (lines 234/248/249); `complete()` is shared by 3 call sites
+  (`tui/completer.py:25`, `rich/main.py:34`, `server/routes/completion.py:17`).
+- At the gate, decide and record (ADR-style note):
+  - **(a) accessor-only:** add `CommandFactory.iter_completion_specs()`
+    returning plain DTOs; completion stops reading privates. ~20 LoC,
+    near-zero risk; import direction unchanged.
+  - **(b) full inversion:** `CommandRegistryProtocol` in a leaf module
+    (v1.17.0 idiom), inject into `complete()`, thread the 3 call sites;
+    removes the `engine → commands` import. Wider ripple.
+- Tests: cross-client completion parity (Rich/Textual/server return identical
+  command lists) regardless of option chosen.
+
+### Phase E — Item 30: coding-command output lost cross-client
+- Route the user-facing notices in `commands/coding.py` (auto-route message
+  L73, initial-message banner L80, +3) through the event/result channel so
+  web/VSCode users see them; keep Rich rendering identical for TUI.
+- **Defer** the broad console-purity sweep (`agent.py` ~43, `utility.py` ~39,
+  `handler.py` ~29 — interactive TUI-only `input()` flows) to v1.19.x.
+- Test: a `coding.py` command run under `ServerCommandContext` surfaces the
+  auto-route notice via the result/events (not only server stdout).
+
+## `/files/*` work detail (Phases A & F — Wave 1)
+
+Phase 0 below = **Phase A**; Phases 1–3 below = **Phase F**.
 
 ## Order of work (security first, then contract, then robustness)
 
