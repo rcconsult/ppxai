@@ -309,53 +309,6 @@ the vllm-qwen35 provider.
 
 ---
 
-### Item 25 — `/files/read` response type-contract regression (v1.18.7) [cross-client parity]
-
-**Affected files:** `ppxai/server/routes/files.py` (`_classify_extension`,
-`BINARY_PREVIEW_EXTENSIONS`, `read_file`), `ppxai/web/components/views/code-editor-view.js`,
-`ppxai/web/app.js` (`onFileEdit`, `_saveRpfStack`/`_restoreRpfStack`,
-`displayFileFromEvent`), `vscode-extension/src/httpClient.ts` (`readFile`).
-
-**What's wrong:** v1.18.7 made `/files/read` type-unstable on a contract
-several clients share. `.csv` flipped from `type:"text"` (plain text +
-`lines`) to `type:"office_spreadsheet"` (base64); `.xlsx/.xls` flipped
-400→200-base64; `.pptx/.docx` now return **400 with a hint pointing at
-`/files/preview?path=`**. Only the web `OfficeFileView` single-click path
-was updated. Concrete user-facing regressions found in code review:
-- **Web double-click** (`onFileEdit` → `CodeEditorView`, guards only
-  `image`/`pdf`): `.csv`/`.xlsx` render the **base64 string as editor text**
-  (and can be Saved back, corrupting the file); `.docx`/`.pptx` show
-  "Failed to load". CSV was editable text pre-v1.18.7.
-- **RPF stack restore** has no `OfficeFileView` case → a correctly-rendered
-  spreadsheet is rebuilt as `CodeEditorView` (base64 garbage) on page reload.
-- **Deploy-skew:** the office routing branch is gated on
-  `typeof OfficeFileView !== 'undefined'`; a stale hand-synced `~/.ppxai/web/`
-  silently falls back to `CodeEditorView` with no error.
-- **VSCode `readFile`** is typed `{path,content,size,encoding}` and has no
-  `type` branch; currently dead code, but per the VSCode-delegation goal the
-  contract must stay parseable so growing delegation doesn't ship base64 into
-  a buffer.
-
-**Why deferred:** shipped in v1.18.7; the web single-click path (the common
-gesture for the new feature) works, so it wasn't caught pre-release. The
-double-click/reload regressions are real but lower-frequency.
-
-**Planned:** v1.18.8 (this branch). See
-[docs/plan-v1.18.8-files-parity.md](plan-v1.18.8-files-parity.md).
-
-**Branch when ready:** `bugfix/v1.18.8`.
-
-**Trigger to revisit:** active now (v1.18.8 scope).
-
-**Effort:** ~half day. Make every `/files/read` consumer branch on `type`
-(add `office_spreadsheet` handling to `CodeEditorView` + RPF restore, or
-reroute office types away from the editor entirely); restore csv-as-text for
-the editor path or route csv exclusively through `OfficeFileView`. Ideal
-deep fix: a shared response-handler the web client and VSCode both call so
-the `type` switch lives in one place.
-
----
-
 ### Item 26 — `/files/preview` id-based vs path-based fork (non-symmetric, divergent fallback) [cross-client parity]
 
 **Affected files:** `ppxai/server/routes/files.py` (path-based
@@ -529,6 +482,19 @@ shipped already.
 
 For full closed-item rationale with commit references, see the per-version
 archived snapshots:
+
+- **Item 25 — `/files/read` type-contract consumers (closed 2026-06-14):**
+  `2a22807c` on `bugfix/v1.18.8`. Kept the typed server contract (option b);
+  fixed every consumer to branch on `type`: `CodeEditorView` refuses any
+  non-`text` type (no more base64-as-text / corrupt-on-save), RPF
+  save/restore gained the `office` viewType (round-trips `OfficeFileView`),
+  the `typeof OfficeFileView !== 'undefined'` deploy-skew guard was dropped
+  (errors visibly now), and VSCode `httpClient.readFile` got the real
+  `ReadFileResponse` union + branch-on-`type` warning (contract-only, zero
+  callers). Guard: `TestReadOfficeTypeContract` in `test_files_route.py`
+  (csv/xlsx→office_spreadsheet base64; txt→text+lines; pptx/docx→400 hint).
+  Web DOM = manual-smoke (no JS harness); `tsc`/`node --check` clean.
+  v1.18.8 Phase F (1/3).
 
 - **Item 30 — coding auto-route notice lost cross-client (closed 2026-06-14):**
   `0f21cee1` on `bugfix/v1.18.8`. `_execute_ai_task` no longer `console.print`s
