@@ -48,6 +48,18 @@ class TestIsWordDocument:
 
 
 class TestConvertDocxToPdf:
+    @pytest.fixture(autouse=True)
+    def _pin_libreoffice(self):
+        # These tests mock subprocess.run to stand in for LibreOffice. Pin the
+        # resolver too, so they exercise the conversion/cache logic on a host
+        # WITHOUT LibreOffice installed (e.g. CI) — otherwise find_libreoffice()
+        # short-circuits to RuntimeError before the mock runs. Cross-platform
+        # detection is covered by tests/test_libreoffice_resolver.py. Cache-hit
+        # tests return before the resolver, so the stub path is never executed.
+        with patch("ppxai.common.docx_to_pdf.find_libreoffice",
+                   return_value="/stub/soffice"):
+            yield
+
     def test_returns_cached_pdf(self, tmp_path):
         from ppxai.common.docx_to_pdf import convert_docx_to_pdf
         cache_dir = tmp_path / "preview"

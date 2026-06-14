@@ -54,6 +54,16 @@ def _make_file_store_with_pptx(tmp_path):
 class TestRenderPptxSlides:
     """Tests for the render_pptx_slides helper function."""
 
+    @pytest.fixture(autouse=True)
+    def _pin_libreoffice(self):
+        # See test_word_preview.py::TestConvertDocxToPdf — pin the resolver so
+        # render tests don't short-circuit (return []) on a LibreOffice-less
+        # host. Tests reaching the render path all mock subprocess, so the stub
+        # path is never executed; cache-hit tests return before the resolver.
+        with patch("ppxai.engine.tools.builtin.pptx_tools.find_libreoffice",
+                   return_value="/stub/soffice"):
+            yield
+
     def test_returns_cached_pngs_if_present(self, tmp_path):
         """If the cache directory already has slide-*.png files, return them."""
         from ppxai.engine.tools.builtin.pptx_tools import render_pptx_slides
