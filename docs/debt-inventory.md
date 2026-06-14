@@ -309,48 +309,6 @@ the vllm-qwen35 provider.
 
 ---
 
-### Item 26 — `/files/preview` id-based vs path-based fork (non-symmetric, divergent fallback) [cross-client parity]
-
-**Affected files:** `ppxai/server/routes/files.py` (path-based
-`/files/preview?path=`), `ppxai/server/routes/file_serve.py` (id-based
-`/files/preview/{file_id}`), `ppxai/web/components/views/office-file-view.js`,
-`vscode-extension/src/chatPanel.ts` (calls the id-based route).
-
-**What's wrong:** the two preview endpoints are **forked implementations**,
-not a shared handler, despite the path-based route's "mirrors the file_id
-endpoint" docstring. Two concrete divergences:
-- **LibreOffice-missing semantics differ:** id-based raises **HTTP 503**;
-  path-based returns **200 + `{type:"text_fallback", content, libreoffice_available:false}`**.
-  Same document → web degrades to extracted text, VSCode (id-based) dead-ends
-  to a raw-bytes fallback / "Preview failed".
-- **JSON shapes are non-symmetric:** path-based emits `type`/`kind`/
-  `libreoffice_available`; id-based emits none of them. `OfficeFileView`
-  branches on `libreoffice_available`, so the id-based route can never drive
-  the shared view — blocking VSCode delegation to the same rendering.
-- Legacy `.ppt`/`.doc` are advertised in `OFFICE_PREVIEWABLE_EXTENSIONS` and
-  `OfficeFileView.canRender`, but the text-fallback uses python-pptx/docx
-  (OOXML-only) → 500 on legacy binaries when LibreOffice is absent.
-
-**Why deferred:** the 503-vs-fallback split is partly pre-existing (the
-id-based route predates v1.18.7); v1.18.7 added the second, divergent route
-rather than unifying. Not a single-user-install issue.
-
-**Planned:** v1.18.8 (this branch), after Item 25. See
-[docs/plan-v1.18.8-files-parity.md](plan-v1.18.8-files-parity.md).
-
-**Branch when ready:** `bugfix/v1.18.8`.
-
-**Trigger to revisit:** active now; hard prerequisite for any future VSCode
-delegation of office preview to the shared rendering path.
-
-**Effort:** ~half day. Collapse both routes onto one handler that takes
-either a `file_id` or a `path`, returns one JSON shape (always including
-`type`/`kind`/`libreoffice_available`), and returns `text_fallback`
-(never 503) when LibreOffice is missing. Gate `.ppt`/`.doc` on actual
-LibreOffice availability.
-
----
-
 ### Item 28 — OfficeFileView attachment blob-URL revoke race [web robustness]
 
 **Affected files:** `ppxai/web/app.js` (`_renderPresentationAttachment`,
@@ -482,6 +440,19 @@ shipped already.
 
 For full closed-item rationale with commit references, see the per-version
 archived snapshots:
+
+- **Item 26 — `/files/preview` route unification (closed 2026-06-14):**
+  `579a2fe8` on `bugfix/v1.18.8`. Both preview routes (path-based in
+  `files.py`, id-based in `file_serve.py`) now delegate to one shared
+  `render_office_preview()` helper → ONE JSON shape (`type`, `kind`,
+  `libreoffice_available`, `total`, `name` always present) and ONE
+  failure mode (LibreOffice missing → **200 text_fallback**, never the
+  id-route's old 503; legacy `.ppt`/`.doc` → typed message, not a 500).
+  id route derives the office ext from `meta.name`/`media_type` (content-
+  addressed `meta.path` may lack one). Guard: `TestUnifiedPreviewContract`
+  in `test_files_preview_download.py` (runs without office libs via mocked
+  probe); 70 passed / 5 office-lib-skipped across preview suites. Unblocks
+  future VSCode office-preview delegation. v1.18.8 Phase F (2/3).
 
 - **Item 25 — `/files/read` type-contract consumers (closed 2026-06-14):**
   `2a22807c` on `bugfix/v1.18.8`. Kept the typed server contract (option b);
