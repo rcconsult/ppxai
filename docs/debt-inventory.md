@@ -512,39 +512,6 @@ v1.19.x debt. See [docs/plan-v1.18.8-files-parity.md](plan-v1.18.8-files-parity.
 
 ---
 
-### Item 31 — direct `session.messages` mutation bypasses AppState invalidation [state-determinism hygiene]
-
-**Affected files:** `ppxai/engine/chat.py` (lines 273/276, 596/599, 1064),
-`ppxai/server/streaming.py` (line 175). Proper callback-firing paths live on
-`SessionManager` (`add_message` at session.py:253,
-`validate_and_fix_alternation` at 605/644).
-
-**What's wrong:** alternation cleanup pops/appends `session.messages`
-directly instead of going through `SessionManager`, so AppState's
-engine-owned invalidation callbacks don't fire on the mutation.
-
-**Why deferred / nuance:** lower severity than first flagged. The
-`chat.py:273` preflight **nets to a no-op** (pops the trailing user, calls
-the proper `validate_and_fix_alternation()`, re-appends the *same* object —
-final history unchanged). The genuine direct mutation is the
-`streaming.py:175` orphan-cleanup loop. Routing both through helpers removes
-the foot-gun regardless.
-
-**Planned:** v1.18.8 (this branch) — add `SessionManager` helpers
-(`pop_orphan_trailing_users()`, a `preserve_trailing_user()` context
-manager); replace the direct `.pop()/.append()` sites; test that AppState
-callbacks fire after cleanup. See
-[docs/plan-v1.18.8-files-parity.md](plan-v1.18.8-files-parity.md) Phase C.
-
-**Branch when ready:** `bugfix/v1.18.8`.
-
-**Trigger to revisit:** active now.
-
-**Effort:** ~2–3 h (hot path — keep behavior identical, lean on existing
-alternation tests + add AppState-callback assertions). Medium risk.
-
----
-
 ## Recently moved out of debt scope
 
 These items left the debt inventory because they're not bug-fix-class
@@ -563,6 +530,17 @@ shipped already.
 
 For full closed-item rationale with commit references, see the per-version
 archived snapshots:
+
+- **Item 31 — direct `session.messages` mutation bypasses AppState (closed 2026-06-14):**
+  `44bb5dea` on `bugfix/v1.18.8`. Added `SessionManager.pop_orphan_trailing_users()`
+  (replaces the `streaming.py` orphan-cleanup loop — now fires the
+  `on_messages_changed` callback; the loop fired none before) and a
+  `preserve_trailing_user()` context manager (wraps the `chat.py` preflight
+  detach/restore — transient no-op, the inner `validate_and_fix_alternation`
+  notifies). chat.py post-tool prompt removal routed through the existing
+  `remove_last_message()` (also fixes a latent multimodal-cache miss).
+  Behaviour preserved (`chat.py:273` already netted to a no-op). Guard:
+  `TestMessageMutationHelpers` in `test_session_persistence.py`. v1.18.8 Phase C.
 
 - **Item 32 — command envelope can carry non-JSON objects (closed 2026-06-14):**
   `439a0325` on `bugfix/v1.18.8`. `ConfirmationResult.to_dict()` now runs
