@@ -310,8 +310,10 @@ handle from day one:
 - **Prompt injection via fetched content is the *defining* risk.** The
   agent curls a page, feeds it to the model; that page can steer the
   model to exfiltrate via the *next* network call. The network tool is
-  the exfil channel — so an **egress allowlist is mandatory for exactly
-  these agents.**
+  the exfil channel — so the egress allowlist is a **ship-gate, not a
+  nice-to-have: the read-only research MVP does not ship if egress
+  control slips**, because prompt-injection exfiltration is the central
+  threat the whole sandbox exists to contain.
 - **Read scope must exclude secrets-at-rest.** A read-only agent that can
   `grep ~/.ppxai/.env` has already lost. Path-jail bounds *what it can
   read*, independent of writes.
@@ -332,6 +334,16 @@ The agent loop stays an in-process `asyncio.Task` (resolves **Question C
 → same-process asyncio.Task**; I/O-bound work needs no GIL escape). What
 gets sandboxed is the **tool call**, not the loop:
 
+> **Non-negotiable invariant:** *every* tool in a run's grant executes
+> through the sandbox-executing adapter; **no allowed tool may keep an
+> in-process fast-path.** This is the load-bearing implementation risk —
+> `read_file`, `grep`/`find`, and `curl`/web all run **in-process today**,
+> so the MVP must route them through the adapter or the sandbox is
+> theater. The capability grant (§3) is enforced *inside* that adapter, so
+> a bypass is simultaneously a sandbox escape and a grant escape. Pin a
+> test that asserts no granted tool resolves to a direct in-process call.
+
+
 - MVP: tools run in a **subprocess** with a restricted environment — no
   secrets in env, cwd-jailed, network via the tier-c allowlist proxy.
 - Hardened/headless: reuse the existing multi-tenant **k8s session-manager
@@ -345,13 +357,26 @@ gets sandboxed is the **tool call**, not the loop:
 A run result = a **primary body** (markdown/html) + a list of
 **`MarshallableArtifact` refs** (`TextAttachmentRef` / `ImageAttachmentRef`
 / `OfficeAttachmentRef` / `PdfAttachmentRef` per
-[ADR 0006](0006-content-block-schema-separation.md)), content-addressed in
-the run workspace via the existing `SessionFileStore`. The main app
+[ADR 0006](0006-content-block-schema-separation.md)). The main app
 resolves each ref through the **same `/files/preview` + artifact-projector
 pipeline** chat attachments use (the v1.18.8 files-parity contract), so
 csv/xlsx/pptx/png/code all render with zero new transport. A genuinely new
 output kind = one new `ArtifactRef` subclass, never a new result channel.
 Mirrors the message content-block model.
+
+> **Artifact addressing — authority is the run, not the session
+> (corrects a draft inconsistency).** Run artifacts are addressed by
+> **`(run_id, artifact_id)`** and **owned by the `AgentRunRegistry`**,
+> stored under the run workspace (`runs/<run_id>/artifacts/`) and resolved
+> *only* via `GET /v1/agent/runs/<id>/artifacts/<artifact_id>`. We **reuse
+> the `SessionFileStore` content-addressing *mechanism*** (blob hashing,
+> dedup) but **not its authority** — the current-session file store must
+> never be the source of truth for a run artifact. This is the direct
+> lesson of the v1.18.8 stale-`file_id` bugs: a session-scoped store
+> cannot own something whose lifetime is a *run* (which may outlive,
+> precede, or belong to a different session than the one that reads it).
+> A run `artifact_id` is meaningless outside its `run_id` namespace.
+
 
 ### 6. Run workspace — API-visible, not FS-visible
 
@@ -385,6 +410,18 @@ minimal form: one token per run.
   handshake matters only once the sub-agent crosses the process/pod
   boundary. The token model is additive now; the handshake lands with
   tier-d isolation.
+- **`run_token` classification — it is a bearer capability, and it stays
+  out of the MVP response.** Decide what it is before returning it: in the
+  MVP the run_token is the **sub-agent's** credential to prove
+  authenticity to the registry, handed to the sub-agent process directly
+  (stdin/env). The **monitoring client never needs it** — web/VSCode
+  authenticate with their existing session/bearer, and the registry
+  checks **ownership** (`session owns run_id`). So `POST /v1/agent/run`
+  returns **`{run_id, status}` only**; the token is internal. It surfaces
+  on the wire *only* once a client orchestrates separate-process
+  sub-agents, and even then the server should hand it to the sub-agent
+  rather than echo it to the UI. **Never log or persist it raw** (treat
+  like the C1 signing key); redact in any event/audit payload.
 - **Monitor-channel authz:** the `/events`, `/result`, and `/artifacts`
   endpoints for a `run_id` are sensitive (transcript, tool output). Only
   the owning session/token may read them — the per-run version of the C1
@@ -475,7 +512,7 @@ All additions are **purely additive** — `POST /v1/oneshot` and the
 existing `AGENT_RUN_*` payloads are untouched (ppxai-sre constraint).
 
 ```http
-POST /v1/agent/run                  → {run_id, run_token, status}
+POST /v1/agent/run                  → {run_id, status}   (run_token is internal — §7, never in this response for the MVP)
      body: {task, persona?, provider?, model?, tools[], read_scope?,
             budget{tokens,time_s,iterations}, network{allow_outbound[]},
             idempotency_key?}
@@ -512,12 +549,16 @@ POST /v1/agent/runs/<id>/cancel      → {ok, status:"cancelling"}
 ### MVP build order (the first slice)
 
 1. `engine/agent_runs.py` — `AgentRunRegistry` + the state machine (§8),
-   filesystem backend, in-memory live index. **Keystone.**
+   filesystem backend, in-memory live index. **Keystone.** Put
+   read/write behind a narrow interface (not raw FS calls inline) so the
+   pluggable-persistence-channel extraction (debt Item 35) is cheap later
+   — shape the seam now, defer the abstraction.
 2. Capability grant + tool-allowlist enforcement at the dispatcher (§3a/b);
    egress allowlist proxy (§3c) with `NETWORK_POLICY_*` events.
-3. Background driver: `POST /v1/agent/run` mints run + token, starts the
-   `asyncio.Task`, returns immediately; `run_id`/`parent_run_id` added to
-   the existing `AGENT_RUN_START` payload.
+3. Background driver: `POST /v1/agent/run` mints run + (internal) token,
+   starts the `asyncio.Task`, returns `{run_id, status}` immediately
+   (token stays server-side — §7); `run_id`/`parent_run_id` added to the
+   existing `AGENT_RUN_START` payload.
 4. Monitor: `GET …/events` (live + replay), `GET …/result`,
    `GET …/artifacts/<id>` (via files-parity); per-run authz (§7).
 5. Two-phase termination + `WAITING`/`respond`/`ack`; TTL reaper + cascade.
