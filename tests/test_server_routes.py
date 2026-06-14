@@ -200,6 +200,33 @@ class TestSessionRoutes:
         mock_session.engine.export_answer.assert_called_once_with("my-notes")
 
 
+class TestSessionSaveRoute:
+    """v1.18.8 (codex finding #2): POST /sessions/save reads `name` from the
+    JSON body. web/VSCode send {"name": ...} there; the route previously bound
+    `name` as a query parameter, so a named save was saved under the auto-name.
+    """
+
+    def test_save_honors_name_in_json_body(self, client, mock_session):
+        mock_session.engine.session.save.return_value = "requested"
+        mock_session.engine.drain_events.return_value = []  # for with_drained_events
+
+        resp = client.post("/sessions/save", json={"name": "requested"})
+
+        assert resp.status_code == 200, resp.text
+        assert resp.json()["name"] == "requested"
+        # The body name reached session.save() (was None as a query param).
+        mock_session.engine.session.save.assert_called_once_with("requested")
+
+    def test_save_without_name_passes_none(self, client, mock_session):
+        mock_session.engine.session.save.return_value = "auto_generated"
+        mock_session.engine.drain_events.return_value = []
+
+        resp = client.post("/sessions/save", json={})
+
+        assert resp.status_code == 200, resp.text
+        mock_session.engine.session.save.assert_called_once_with(None)
+
+
 # ---------------------------------------------------------------------------
 # State route — v1.18.0 Phase 2 (SSE reconnect -> AppState refresh)
 # ---------------------------------------------------------------------------
