@@ -422,7 +422,14 @@ archived snapshots:
   new shared `OfficeFileView.renderTextFallbackInto()`), so chat-bubble
   attachments degrade like the file tree instead of rendering JSON as a slide
   image / PDF. Web-only; `node --check` clean, DOM = manual-smoke. v1.18.8
-  Phase F (3/3).
+  Phase F (3/3). **Follow-up (`84ee33c2`, post-review):** (a) closed a residual
+  `renderSlideNavInto` leak — it created the object URL *after* `await
+  fetchSlideBlob`, so an unmount mid-fetch leaked the post-await URL; added a
+  `disposed` flag (fixes attachment **and** file-tree PPT previews). (b) Fixed
+  the **VSCode** twin of the web JSON-as-binary bug: `chatPanel.ts` wrote every
+  ok `/files/preview` response to `.png`/`.pdf`, so the item-26 200 JSON
+  text_fallback became a garbage image/PDF — now branches on
+  `libreoffice_available`/`type` + content-type and falls back to the raw file.
 
 - **Item 26 — `/files/preview` route unification (closed 2026-06-14):**
   `579a2fe8` on `bugfix/v1.18.8`. Both preview routes (path-based in

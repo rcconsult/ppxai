@@ -205,6 +205,17 @@ Phase 0 below = **Phase A**; Phases 1–3 below = **Phase F**.
   degrade identically to the file-tree path.
 - **Verification:** `node --check` on both files; web-only, so DOM behaviour is
   manual-smoke (no web JS harness — consistent with the app.js norm).
+- **Post-review follow-up (`84ee33c2`):**
+  - `renderSlideNavInto` had a residual leak — it created the object URL
+    *after* `await fetchSlideBlob`, so an unmount mid-fetch leaked the
+    post-await URL (revoke ran over an empty list). Added a `disposed` flag
+    (set by `revoke()`); the post-await path skips URL creation when disposed.
+    Fixes both attachment and **file-tree** PPT previews.
+  - **VSCode** (`chatPanel.ts`) had the same JSON-as-binary bug item 26
+    introduced: it wrote every ok `/files/preview` response to `.png`/`.pdf`,
+    so a 200 text_fallback became a garbage image/PDF. Now branches on
+    `meta.libreoffice_available`/`type` (PPTX) + response content-type (PPTX
+    slides, DOCX) and falls back to the raw file. `tsc --noEmit` clean.
 
 ## Cross-client verification (acceptance)
 
