@@ -13,6 +13,7 @@ from typing import Optional
 from ...common.logger import get_logger
 from ...config import (
     find_config_file,
+    get_auto_restore_mode,
     get_available_providers,
     get_idle_timeout,
     get_paths_config as _get_paths_config,
@@ -144,6 +145,9 @@ async def get_status(s: Session = Depends(get_session)):
         **state,
         "session_id": s.id,
         "auto_inject_context": s.engine.auto_inject_context,
+        # v1.18.8: expose the session auto-restore mode so clients can honor
+        # "always"/"prompt"/"never" instead of always popping a confirm().
+        "auto_restore": get_auto_restore_mode(),
         "bootstrap": s.engine.get_bootstrap_status(),  # v1.14.0
     }
 

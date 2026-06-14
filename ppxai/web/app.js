@@ -1666,6 +1666,8 @@ class PpxaiApp {
             this.state.debugLog = status.debug_log || false;
             this.state.workingDir = status.working_dir || '';
             this.state.contextAttachments = status.context_attachments || [];
+            // v1.18.8: session auto-restore mode ("always" | "prompt" | "never").
+            this._autoRestoreMode = status.auto_restore || 'prompt';
 
             // Select current provider/model
             this.elements.providerSelect.value = this.state.currentProvider;
@@ -1719,6 +1721,12 @@ class PpxaiApp {
      * Check if there's a last session to restore (v1.13.9)
      */
     async checkSessionRestore() {
+        // v1.18.8: honor the server's auto_restore mode instead of always
+        // popping a confirm(). "never" skips; "always" restores silently
+        // (no fragile blocking dialog — fixes restore landing on defaults
+        // when the confirm was dismissed/suppressed); "prompt" still asks.
+        const mode = this._autoRestoreMode || 'prompt';
+        if (mode === 'never') return;
         try {
             const data = await this.apiClient.getLastSession();
 
@@ -1726,7 +1734,12 @@ class PpxaiApp {
                 const session = data.last_session;
                 const msgCount = session.message_count || 0;
 
-                // Prompt user to restore
+                if (mode === 'always') {
+                    await this.restoreLastSession();
+                    return;
+                }
+
+                // mode === 'prompt'
                 const restorePrompt = session.dirty
                     ? `Restore interrupted session "${session.name}" (${msgCount} messages)?`
                     : `Restore last session "${session.name}" (${msgCount} messages)?`;
