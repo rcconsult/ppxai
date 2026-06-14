@@ -245,7 +245,7 @@ class OfficeFileView extends BaseView {
                         <div class="ofv-fallback-note" style="margin-bottom:12px;padding:8px;background:var(--bg-tertiary);border-radius:4px;font-size:12px;color:var(--text-muted);">
                             LibreOffice not installed — showing extracted text. Install LibreOffice for raster slide previews.
                         </div>
-                        <pre style="white-space:pre-wrap;font-family:var(--font-mono);font-size:13px;">${_ofvEsc(data.content || '(empty)')}</pre>
+                        <pre style="white-space:pre-wrap;font-family:var(--font-mono);font-size:13px;">${typeof data.content === 'string' ? _ofvEsc(data.content) : '⚠ preview response missing "content" key'}</pre>
                     </div>
                 `;
             } catch (err) {
@@ -323,7 +323,7 @@ class OfficeFileView extends BaseView {
                         <div class="ofv-fallback-note" style="margin-bottom:12px;padding:8px;background:var(--bg-tertiary);border-radius:4px;font-size:12px;color:var(--text-muted);">
                             LibreOffice not installed — showing extracted text. Install LibreOffice for a rendered PDF preview.
                         </div>
-                        <pre style="white-space:pre-wrap;font-family:var(--font-mono);font-size:13px;">${_ofvEsc(data.content || '(empty)')}</pre>
+                        <pre style="white-space:pre-wrap;font-family:var(--font-mono);font-size:13px;">${typeof data.content === 'string' ? _ofvEsc(data.content) : '⚠ preview response missing "content" key'}</pre>
                     </div>
                 `;
             } catch (err) {
@@ -507,6 +507,62 @@ class OfficeFileView extends BaseView {
                 try { URL.revokeObjectURL(url); } catch (_) { /* ignore */ }
             },
         };
+    }
+
+    /**
+     * Render the LibreOffice-missing **text fallback** for an office doc:
+     * a per-unit nav (hidden when total <= 1) that fetches extracted text.
+     * Used by both the file-tree path and the chat-attachment path (app.js)
+     * so they degrade identically once /files/preview returns text_fallback.
+     *
+     * Creates NO blob URLs, so the returned revoke() is a no-op — but it
+     * keeps the same `{revoke}` contract as renderSlideNavInto/renderDocxPdfInto
+     * so callers wire unmount cleanup uniformly.
+     *
+     * @param {HTMLElement} previewEl
+     * @param {number} total                  Unit count (slides; 1 for Word).
+     * @param {(n:number)=>Promise<string>} fetchUnitText  Resolves to the
+     *        extracted text for unit n. MUST throw if the response is missing
+     *        its `content` key (surfaces contract drift instead of "(empty)").
+     * @returns {{revoke: Function}}
+     */
+    static renderTextFallbackInto(previewEl, total, fetchUnitText) {
+        const unitTotal = total > 0 ? total : 1;
+        previewEl.innerHTML = `
+            <div class="pptx-nav"${unitTotal <= 1 ? ' style="display:none;"' : ''}>
+                <button class="rpf-btn ofv-nav-prev" title="Previous">◀</button>
+                <span class="pptx-slide-counter">Slide <span class="ofv-current">1</span> / ${unitTotal}</span>
+                <button class="rpf-btn ofv-nav-next" title="Next">▶</button>
+            </div>
+            <div class="ofv-fallback-note" style="margin:8px 16px;padding:8px;background:var(--bg-tertiary);border-radius:4px;font-size:12px;color:var(--text-muted);">
+                LibreOffice not installed — showing extracted text. Install LibreOffice for a rendered preview.
+            </div>
+            <div class="pptx-slide-container" style="flex:1; overflow:auto;"></div>`;
+        const counterEl = previewEl.querySelector('.ofv-current');
+        const prevBtn   = previewEl.querySelector('.ofv-nav-prev');
+        const nextBtn   = previewEl.querySelector('.ofv-nav-next');
+        const slideEl   = previewEl.querySelector('.pptx-slide-container');
+
+        let current = 1;
+        const show = async (n) => {
+            current = n;
+            if (counterEl) counterEl.textContent = n;
+            if (prevBtn) prevBtn.disabled = n <= 1;
+            if (nextBtn) nextBtn.disabled = n >= unitTotal;
+            slideEl.innerHTML = '<p style="padding:16px;color:var(--text-muted);">Loading…</p>';
+            try {
+                const text = await fetchUnitText(n);
+                slideEl.innerHTML = `<pre style="white-space:pre-wrap;font-family:var(--font-mono);font-size:13px;padding:16px;">${_ofvEsc(text)}</pre>`;
+            } catch (err) {
+                slideEl.innerHTML = `<p style="padding:16px;color:var(--error-color);">
+                    Failed to load text: ${_ofvEsc(err.message ?? String(err))}</p>`;
+            }
+        };
+        if (prevBtn) prevBtn.addEventListener('click', () => { if (current > 1) show(current - 1); });
+        if (nextBtn) nextBtn.addEventListener('click', () => { if (current < unitTotal) show(current + 1); });
+        show(1);
+
+        return { revoke: () => { /* text fallback creates no blob URLs */ } };
     }
 }
 

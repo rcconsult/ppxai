@@ -1436,6 +1436,7 @@ class PpxaiApp {
         )?.file_id || '';
         const apiClient = this.apiClient;
         let revokeHandle = null;
+        let unmounted = false;  // item 28: guard the async .then against unmount-before-resolve
         const view = new AttachmentView(name, `attachment:${name}`, '\u{1F4CA}', (container) => {
             container.innerHTML = `
                 <div class="rpf-view-toolbar">
@@ -1452,15 +1453,34 @@ class PpxaiApp {
             fetch(`files/preview/${fileId}?total=true`, { headers: apiClient.getHeaders() })
                 .then(r => r.ok ? r.json() : Promise.reject(r.statusText))
                 .then(info => {
-                    infoEl.textContent = `${info.total} slide${info.total !== 1 ? 's' : ''} • ${sizeKB} KB`;
-                    const fetchSlide = async (n) => {
-                        const r = await fetch(`files/preview/${fileId}?slide=${n}`, { headers: apiClient.getHeaders() });
-                        if (!r.ok) throw new Error('Failed');
-                        return r.blob();
-                    };
-                    revokeHandle = OfficeFileView.renderSlideNavInto(previewEl, info.total, fetchSlide);
+                    if (unmounted) return;  // view gone before fetch resolved — don't create blob URLs into a detached container
+                    // item 26: /files/preview now returns text_fallback (200) when
+                    // LibreOffice is missing — degrade to extracted text like the
+                    // file-tree OfficeFileView path, not a broken raster render.
+                    const degraded = info.libreoffice_available === false || info.type === 'text_fallback';
+                    if (degraded) {
+                        infoEl.textContent = `${info.total} slide${info.total !== 1 ? 's' : ''} • text fallback • ${sizeKB} KB`;
+                        const fetchSlideText = async (n) => {
+                            const r = await fetch(`files/preview/${fileId}?slide=${n}`, { headers: apiClient.getHeaders() });
+                            if (!r.ok) throw new Error(`HTTP ${r.status}`);
+                            const d = await r.json();
+                            if (typeof d.content !== 'string') throw new Error('preview response missing "content" key');
+                            return d.content;
+                        };
+                        revokeHandle = OfficeFileView.renderTextFallbackInto(previewEl, info.total, fetchSlideText);
+                    } else {
+                        infoEl.textContent = `${info.total} slide${info.total !== 1 ? 's' : ''} • ${sizeKB} KB`;
+                        const fetchSlide = async (n) => {
+                            const r = await fetch(`files/preview/${fileId}?slide=${n}`, { headers: apiClient.getHeaders() });
+                            if (!r.ok) throw new Error('Failed');
+                            return r.blob();
+                        };
+                        revokeHandle = OfficeFileView.renderSlideNavInto(previewEl, info.total, fetchSlide);
+                    }
+                    if (unmounted && revokeHandle) { revokeHandle.revoke(); revokeHandle = null; }
                 })
                 .catch(err => {
+                    if (unmounted) return;
                     previewEl.innerHTML = `<p style="padding:16px; color:var(--error-color);">
                         Slide rendering unavailable: ${err}</p>
                         <p style="padding:0 16px; font-size:13px; color:var(--text-muted);">
@@ -1470,6 +1490,7 @@ class PpxaiApp {
         });
         const origUnmount = view.unmount.bind(view);
         view.unmount = () => {
+            unmounted = true;
             if (revokeHandle) { revokeHandle.revoke(); revokeHandle = null; }
             origUnmount();
         };
@@ -1482,6 +1503,7 @@ class PpxaiApp {
         )?.file_id || '';
         const apiClient = this.apiClient;
         let revokeHandle = null;
+        let unmounted = false;  // item 28: guard the async .then against unmount-before-resolve
         const view = new AttachmentView(name, `attachment:${name}`, '\u{1F4C4}', (container) => {
             container.innerHTML = `
                 <div class="rpf-view-toolbar">
@@ -1495,13 +1517,36 @@ class PpxaiApp {
                 infoEl.textContent = `Word Document • ${sizeKB} KB`;
                 return;
             }
+            // item 26: when LibreOffice is missing the server now returns a 200
+            // JSON text_fallback (not a PDF blob, not a 503). Branch on the
+            // response content-type so we render text instead of feeding JSON
+            // to the PDF iframe.
             fetch(`files/preview/${fileId}?slide=1`, { headers: apiClient.getHeaders() })
-                .then(r => r.ok ? r.blob() : Promise.reject(r.statusText))
-                .then(blob => {
+                .then(async (r) => {
+                    if (!r.ok) return Promise.reject(r.statusText);
+                    const ct = r.headers.get('content-type') || '';
+                    if (ct.includes('application/json')) {
+                        const d = await r.json();
+                        if (typeof d.content !== 'string') throw new Error('preview response missing "content" key');
+                        return { kind: 'text', content: d.content };
+                    }
+                    return { kind: 'pdf', blob: await r.blob() };
+                })
+                .then(result => {
+                    if (unmounted) return;
                     infoEl.textContent = `Word Document • ${sizeKB} KB`;
-                    revokeHandle = OfficeFileView.renderDocxPdfInto(previewEl, blob);
+                    if (result.kind === 'pdf') {
+                        revokeHandle = OfficeFileView.renderDocxPdfInto(previewEl, result.blob);
+                        if (unmounted && revokeHandle) { revokeHandle.revoke(); revokeHandle = null; }
+                    } else {
+                        // text fallback — reuse the shared renderer (single unit).
+                        revokeHandle = OfficeFileView.renderTextFallbackInto(
+                            previewEl, 1, async () => result.content,
+                        );
+                    }
                 })
                 .catch(err => {
+                    if (unmounted) return;
                     infoEl.textContent = `Word Document • ${sizeKB} KB`;
                     previewEl.innerHTML = `<div style="padding:24px; color:var(--text-secondary);">
                         <h3 style="margin-bottom:12px; color:var(--text-primary);">${name}</h3>
@@ -1515,6 +1560,7 @@ class PpxaiApp {
         });
         const origUnmount = view.unmount.bind(view);
         view.unmount = () => {
+            unmounted = true;
             if (revokeHandle) { revokeHandle.revoke(); revokeHandle = null; }
             origUnmount();
         };

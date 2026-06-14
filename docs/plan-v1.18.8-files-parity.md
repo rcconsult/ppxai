@@ -186,12 +186,25 @@ Phase 0 below = **Phase A**; Phases 1–3 below = **Phase F**.
   LibreOffice probe. Existing path-based PPTX/Word + id-based (image_session_query)
   suites still green (70 passed / 5 office-lib-skipped).
 
-### Phase 3 — Item 28: OfficeFileView blob-URL revoke race (opportunistic)
-- Capture the revoke handle synchronously, or guard the `.then()` against an
-  already-unmounted view; revoke on unmount regardless of fetch timing.
-- Assert the `text_fallback` `content` key explicitly (surface an error on
-  key drift instead of rendering "(empty)").
-- Lowest priority; land only if Phases 0–2 are clean.
+### Phase 3 — Item 28: OfficeFileView blob-URL revoke race ✅ landed
+- **Revoke race:** both `_renderPresentationAttachment` / `_renderWordAttachment`
+  (app.js) gained an `unmounted` flag; the async `.then()` returns early if the
+  view unmounted before the fetch resolved (no blob URL created into a detached
+  container), and any handle created in the same tick is revoked immediately.
+  `unmount()` sets the flag + revokes.
+- **content-key assertion:** the attachment text fetch and the two
+  `OfficeFileView` text-fallback sites now require a string `content` and
+  surface a `missing "content" key` error instead of rendering `'(empty)'`.
+- **Item-26 follow-through (necessary, found here):** item 26 made the id route
+  return a 200 `text_fallback` (was 503) when LibreOffice is missing, but the
+  attachment renderers called `renderSlideNavInto`/`renderDocxPdfInto` blindly —
+  they'd render JSON as a slide image / PDF. Added a `libreoffice_available ===
+  false || type === 'text_fallback'` branch (PPTX) and a content-type branch
+  (Word) that degrade to extracted text via a new shared
+  `OfficeFileView.renderTextFallbackInto()` static — so chat-bubble attachments
+  degrade identically to the file-tree path.
+- **Verification:** `node --check` on both files; web-only, so DOM behaviour is
+  manual-smoke (no web JS harness — consistent with the app.js norm).
 
 ## Cross-client verification (acceptance)
 
