@@ -1,0 +1,2116 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Multi-LLM Interface for Developers - Terminal & VSCode">
+      
+      
+      
+        <link rel="canonical" href="https://rcconsult.github.io/ppxai/1.18.8/release-notes-v1.18.7/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Release Notes — v1.18.7 - ppxai Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#release-notes-v1187" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="ppxai Documentation" class="md-header__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ppxai Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Release Notes — v1.18.7
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="ppxai Documentation" class="md-nav__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ppxai Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../provider-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provider Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agent-mode-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agent Mode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../bootstrap-context-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bootstrap Context
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../context-injection/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Context Injection
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../checkpoint-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Checkpoint & Undo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../file-editing-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    File Editing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../shell-consent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shell Consent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../custom-tool-development-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../custom-command-development-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ollama-limitations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ollama Limitations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vllm-tool-calling-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    vLLM Tool Calling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../container-tools-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Container Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../autorouter-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autorouter Config
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release Notes
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Release Notes
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../RELEASE-NOTES-v1.16.1.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../RELEASE-NOTES-v1.16.0.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../RELEASE-NOTES-v1.15.6.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.15.6
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#branch-commit-ranges" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Branch + commit ranges
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#theme-1-repository-hygiene" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Theme 1 — Repository hygiene
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Theme 1 — Repository hygiene">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#site-removed-from-tracking-added-to-gitignore" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        site/ removed from tracking, added to .gitignore
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#theme-2-test-coverage-backfill" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Theme 2 — Test coverage backfill
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Theme 2 — Test coverage backfill">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#http-route-tests-for-filesread" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        HTTP route tests for /files/read
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#theme-3-ppxaiapp_previewattachment-decomposition" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Theme 3 — PpxaiApp._previewAttachment decomposition
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#theme-4-debt-inventory-updates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Theme 4 — Debt inventory updates
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#theme-5-model-catalog-refresh-2026-05-31" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Theme 5 — Model catalog refresh (2026-05-31)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#theme-6-forward-looking-docs-v120x-paperwork" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Theme 6 — Forward-looking docs (v1.20.x paperwork)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Theme 6 — Forward-looking docs (v1.20.x paperwork)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#docslessons-two-tier-memory-infrastructure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        docs/lessons/ — two-tier memory infrastructure
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v120x-v1embeddings-roadmap-entry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v1.20.x /v1/embeddings ROADMAP entry
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mcp-plan-write-tool-stance-refinement" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MCP plan write-tool stance refinement
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#theme-7-file-tree-office-doc-preview-regression-fix-download-buttons" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Theme 7 — File-tree office-doc preview regression fix + download buttons
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Theme 7 — File-tree office-doc preview regression fix + download buttons">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#three-commits-one-structural-fix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Three commits, one structural fix
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Three commits, one structural fix">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#commit-1-server-side-foundation-60d57037-925-ins-174-chg" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Commit 1 — server-side foundation (60d57037, 925 ins / 174 chg)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#commit-2-client-foundation-330acb60-659-ins-23-chg" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Commit 2 — client foundation (330acb60, 659 ins / 23 chg)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#commit-3-wire-it-in-dedupe-62f485eb-286-ins-272-chg" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Commit 3 — wire it in + dedupe (62f485eb, 286 ins / 272 chg)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#verification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verification
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-does-not-change" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What does NOT change
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#configurable-file-tree-ignore-list-follow-up" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configurable file-tree ignore list (follow-up)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reverted" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reverted
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-did-not-change-in-v1187" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What did NOT change in v1.18.7
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tests
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#acknowledgements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Acknowledgements
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="release-notes-v1187">Release Notes — v1.18.7<a class="headerlink" href="#release-notes-v1187" title="Permanent link">&para;</a></h1>
+<blockquote>
+<p><strong>Scope:</strong> A bugfix-class follow-up to v1.18.6. Repository hygiene,
+test-coverage backfill, one targeted decomposition (the largest
+method in the web client), a model-catalog refresh to the
+2026-05-31 generation, and forward-looking paperwork for two
+v1.20.x asks surfaced by peer ppxai-sre RFCs. The v1 API gateway
+shape (<code>POST /v1/oneshot</code>, bearer-token auth) is preserved
+byte-identical — ppxai-sre's outlook-monitor agent and any other
+v1-gateway consumer is unaffected.</p>
+<p><strong>Five themes ran on this branch</strong>, opened by the post-v1.18.6
+graphify + CRG scan that surfaced concrete, narrow fixes worth
+landing before the next feature wave, then extended by
+cross-repo signal from ppxai-sre's outlook-monitor work week.</p>
+</blockquote>
+<h2 id="branch-commit-ranges">Branch + commit ranges<a class="headerlink" href="#branch-commit-ranges" title="Permanent link">&para;</a></h2>
+<p><code>bugfix/v1.18.7</code> (from master @ <code>fc60cd6f</code>). 13 commits as of
+release prep, all doc/test/refactor/chore/data-table — zero
+runtime-path code changes.</p>
+<table>
+<thead>
+<tr>
+<th>Theme</th>
+<th>Commits</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Repo hygiene</td>
+<td><code>2e842e6f</code> chore(repo): untrack <code>site/</code></td>
+</tr>
+<tr>
+<td>Test coverage</td>
+<td><code>d06c5ee2</code> test(server): add HTTP route tests for <code>/files/read</code></td>
+</tr>
+<tr>
+<td>Decomposition</td>
+<td><code>819b623c</code> refactor(web): split <code>PpxaiApp._previewAttachment</code> into per-format renderers</td>
+</tr>
+<tr>
+<td>Debt tracking</td>
+<td><code>39e740f7</code> docs(debt): file Items 21-23 from CRG analysis</td>
+</tr>
+<tr>
+<td>Release notes draft</td>
+<td><code>2411028c</code> docs(release): draft release notes for v1.18.7</td>
+</tr>
+<tr>
+<td>Version bump</td>
+<td><code>d11fa76c</code> chore(version): bump to v1.18.7 across all SoT files</td>
+</tr>
+<tr>
+<td>Docs refresh</td>
+<td><code>91dfe8ce</code> CLAUDE/CHANGELOG/release-notes refresh; <code>017b347b</code> uv.lock sync</td>
+</tr>
+<tr>
+<td>api-gateway version-compat note</td>
+<td><code>14249929</code> added, <code>01d7d013</code> reverted — net-zero (see "Reverted" below)</td>
+</tr>
+<tr>
+<td>Model catalog refresh</td>
+<td><code>b873ec2b</code> feat(models): refresh provider model catalog to 2026-05-31 generation</td>
+</tr>
+<tr>
+<td>Two-tier memory</td>
+<td><code>4f027b05</code> docs(lessons): repo-tracked engineering hazards (cherry-picked from v1.18.6 <code>771685e9</code>)</td>
+</tr>
+<tr>
+<td>v1.20.x paperwork</td>
+<td><code>1b056c0c</code> docs(roadmap): /v1/embeddings entry + MCP plan write-tool stance</td>
+</tr>
+<tr>
+<td>Office-doc preview regression fix + download buttons</td>
+<td><code>60d57037</code> feat(server): path-based /files/preview + /files/download; <code>330acb60</code> feat(web): OfficeFileView + shared BaseView toolbar + file-tree download; <code>62f485eb</code> fix(web): wire OfficeFileView into file-tree dispatcher + dedupe chat-attachment renderers</td>
+</tr>
+</tbody>
+</table>
+<h2 id="theme-1-repository-hygiene">Theme 1 — Repository hygiene<a class="headerlink" href="#theme-1-repository-hygiene" title="Permanent link">&para;</a></h2>
+<h3 id="site-removed-from-tracking-added-to-gitignore"><code>site/</code> removed from tracking, added to <code>.gitignore</code><a class="headerlink" href="#site-removed-from-tracking-added-to-gitignore" title="Permanent link">&para;</a></h3>
+<p>The <code>site/</code> directory is <code>mkdocs build</code> output. CI already publishes
+it to the <code>gh-pages</code> branch via <code>.github/workflows/docs.yml</code>. Keeping
+it tracked in <code>master</code> added 134 files of pure noise and (after the
+v1.18.6 Step E rename) staleness: <code>site/</code> still pointed at the
+<strong>OLD UPPERCASE</strong> doc paths (<code>AGENT_MODE_GUIDE/</code>, <code>ARCHITECTURE/</code>,
+…) and re-stored the AWS paper at its pre-Step-C location
+(<code>site/2512.15943v1.pdf</code>).</p>
+<p>CRG analysis flagged the vendored <code>site/assets/javascripts/lunr/wordcut.js</code>
+(365 LoC) as the 3rd-largest function in the codebase — entirely a
+build-artifact false positive that self-resolves with this change.</p>
+<p>Also added <code>graphify-out.bak.*/</code> to ignore the timestamped backup
+that <code>graphify</code> keeps during a clean rebuild.</p>
+<h2 id="theme-2-test-coverage-backfill">Theme 2 — Test coverage backfill<a class="headerlink" href="#theme-2-test-coverage-backfill" title="Permanent link">&para;</a></h2>
+<h3 id="http-route-tests-for-filesread">HTTP route tests for <code>/files/read</code><a class="headerlink" href="#http-route-tests-for-filesread" title="Permanent link">&para;</a></h3>
+<p>CRG analysis identified <code>ppxai/server/routes/files.py::read_file</code> as
+a 67-degree centrality hub with no dedicated test. Existing coverage
+turned out to be:</p>
+<ul>
+<li><code>test_files_cwd_anchor.py</code> — Phase D anchor / 409 conflict only</li>
+<li><code>test_utils.py</code> — <code>read_file_content</code> (a different function in
+  <code>ppxai/common/utils.py</code>, not the HTTP route)</li>
+</ul>
+<p>The route's response surface — status codes, MIME branches, special
+path prefixes — sat untested. The new <code>tests/test_files_route.py</code>
+adds 12 cases (all pass, ~4s, no production code changes), organized
+into four classes:</p>
+<table>
+<thead>
+<tr>
+<th>Class</th>
+<th>Cases</th>
+<th>What it pins</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>TestReadTextFile</code></td>
+<td>3</td>
+<td>absolute path 200 + filename + lines; relative path resolves against working_dir; filename falls back to basename when path resolves outside working_dir</td>
+</tr>
+<tr>
+<td><code>TestReadErrors</code></td>
+<td>4</td>
+<td>404 missing file; 400 not-a-file (directory); 403/404 path outside allowed roots (never 200); 400 binary-file <code>UnicodeDecodeError</code> path</td>
+</tr>
+<tr>
+<td><code>TestReadBinaryPreview</code></td>
+<td>2</td>
+<td>1×1 PNG returns base64 + mime_type with round-trip; PDF returns base64 with type=pdf</td>
+</tr>
+<tr>
+<td><code>TestSpecialPathPrefixes</code></td>
+<td>3</td>
+<td><code>@search-query</code> finds first match; no-match → 404; <code>~/path</code> tilde branch doesn't crash</td>
+</tr>
+</tbody>
+</table>
+<p>Uses the same <code>TestClient</code> + <code>X-Session-Id</code> fixture pattern as
+<code>test_files_cwd_anchor.py</code>; complements (does not duplicate) the
+existing cwd_anchor coverage.</p>
+<h2 id="theme-3-ppxaiapp_previewattachment-decomposition">Theme 3 — <code>PpxaiApp._previewAttachment</code> decomposition<a class="headerlink" href="#theme-3-ppxaiapp_previewattachment-decomposition" title="Permanent link">&para;</a></h2>
+<p><code>ppxai/web/app.js::PpxaiApp._previewAttachment</code> was the <strong>largest
+method in the entire web client</strong>: 347 lines, 6 distinct preview
+branches (image / pdf / spreadsheet / presentation / word /
+generic+text), with a nested <code>AttachmentView</code> class re-declared every
+time the method ran. CRG + graphify both surfaced it as the obvious
+extract-method seam inside <code>PpxaiApp</code> (3,679-LoC god class).</p>
+<p>Refactor strategy was <strong>strictly behavior-preserving</strong>:</p>
+<ol>
+<li><strong><code>AttachmentView</code> hoisted to module scope.</strong> The nested class
+   declaration moved from inside the method (depth-6 indented) to
+   file-level, just above <code>class PpxaiApp</code>. Same <code>BaseView</code>-subclass
+   contract — <code>getTitle</code>, <code>getPath</code>, <code>getIcon</code>, <code>mount</code>, <code>unmount</code>,
+   <code>focus</code>, <code>onKeyDown</code> — byte-identical.</li>
+<li><strong>Dispatcher shrunk 8x.</strong> <code>_previewAttachment</code> is now 40 lines: it
+   builds a shared <code>ctx</code> bag (<code>frame</code>, <code>name</code>, <code>mediaType</code>, <code>b64</code>,
+   <code>sizeKB</code>) once, then dispatches to one of 6 renderers. The 7
+   predicate branches are kept in the same order with the same
+   logic.</li>
+<li><strong>Six per-format renderers extracted</strong> as private methods on
+   <code>PpxaiApp</code>, each individually browseable:</li>
+<li><code>_renderImageAttachment</code> (~30 lines) — <code>data:</code> URI + zoom toggle</li>
+<li><code>_renderPdfAttachment</code> (~25) — Blob URL + <code>&lt;iframe&gt;</code> + cleanup</li>
+<li><code>_renderSpreadsheetAttachment</code> (~75) — SheetJS + DataTableViewer</li>
+<li><code>_renderPresentationAttachment</code> (~90) — PPTX slide navigator</li>
+<li><code>_renderWordAttachment</code> (~55) — DOCX → PDF conversion via fetch</li>
+<li><code>_renderGenericAttachment</code> (~40) — other Office info panel +
+     text-file decode fallback</li>
+</ol>
+<p><strong>Net file size change: +71 LoC</strong> (method-declaration boilerplate +
+hoisted class). The dispatcher itself dropped 8x; each format is now
+its own readable unit instead of being buried inside a 347-line
+<code>else if</code> ladder.</p>
+<p><strong>Behavior risks pinned in the commit message:</strong></p>
+<ul>
+<li>PDF and Word renderers preserve their <code>view.unmount = () =&gt; {
+  URL.revokeObjectURL(blobUrl); origUnmount(); }</code> override exactly —
+  the Blob URL cleanup pattern was the single riskiest piece.</li>
+<li>Renderers that use <code>this.state.contextAttachments</code> /
+  <code>this.apiClient.getHeaders()</code> (PPTX, Word) are instance methods,
+  so <code>this</code> resolves the same way as before.</li>
+<li><code>node --check ppxai/web/app.js</code> passes; no e2e test directly
+  covers <code>_previewAttachment</code> so manual browser smoke is the
+  acceptance test.</li>
+</ul>
+<p>This is one targeted slice of the broader <code>PpxaiApp</code> god-class
+debt (now tracked as DEBT Item 22). The remaining decomposition
+likely needs a build step (esbuild, mirror of the v1.18.2 vscode
+work) and is not in v1.18.7's scope.</p>
+<h2 id="theme-4-debt-inventory-updates">Theme 4 — Debt inventory updates<a class="headerlink" href="#theme-4-debt-inventory-updates" title="Permanent link">&para;</a></h2>
+<p>Three new items opened in <code>docs/debt-inventory.md</code> to track work
+that surfaced during the bugfix/v1.18.7 CRG + graphify scan but is
+too large for a bugfix branch:</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Item</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>21</strong></td>
+<td><code>chat_with_tools</code> decomposition (673-LoC engine hot path, no direct unit tests)</td>
+<td>Open — needs ADR + test scaffold first; likely v1.19.x alongside ADR 0003 Stage 2</td>
+</tr>
+<tr>
+<td><strong>22</strong></td>
+<td><code>PpxaiApp</code> further decomposition (3,749 LoC after the v1.18.7 split)</td>
+<td>Open — trigger-deferred; revisit when the web client gets a build step or another client wants to share logic</td>
+</tr>
+<tr>
+<td><strong>23</strong></td>
+<td><code>SessionManager</code> growth drift (1,648 → 2,091 LoC, +27%)</td>
+<td><strong>Flag-only, no action</strong> — verified per CLAUDE.md "verify-before-flagging" rule: every accounting commit is intentional ADR 0006 wiring. Documented so future analysis doesn't re-flag</td>
+</tr>
+</tbody>
+</table>
+<p>Item 3 (k8s session-manager security tests) unchanged. The closed
+sections are unchanged.</p>
+<h2 id="theme-5-model-catalog-refresh-2026-05-31">Theme 5 — Model catalog refresh (2026-05-31)<a class="headerlink" href="#theme-5-model-catalog-refresh-2026-05-31" title="Permanent link">&para;</a></h2>
+<p><code>ppxai/engine/model_profiles.py</code> + <code>ppxai-config.example.json</code>
+updated for the model lineup as of release date. Current-gen entries
+added, deprecated identifiers retired, deprecation table synced.
+Pure data change — no engine code paths touched. Provider profiles
+preserve <code>supports_vision</code>, <code>supports_reasoning</code>, <code>max_tokens</code>,
+<code>tool_calling</code> shapes from their predecessors where the new model
+has the same capability surface (sub-tier moves explicitly called
+out in commit <code>b873ec2b</code>).</p>
+<p>This matters most for the <code>/doctor</code> advisor's deprecated/new/
+recommended model scan — outdated catalogs surface stale
+recommendations and miss new tiers worth surfacing to users.</p>
+<h2 id="theme-6-forward-looking-docs-v120x-paperwork">Theme 6 — Forward-looking docs (v1.20.x paperwork)<a class="headerlink" href="#theme-6-forward-looking-docs-v120x-paperwork" title="Permanent link">&para;</a></h2>
+<p>Two upstream asks surfaced this week by peer ppxai-sre RFCs were
+captured in ppxai docs so they reach the v1.20.x implementation
+branch without re-derivation.</p>
+<h3 id="docslessons-two-tier-memory-infrastructure"><code>docs/lessons/</code> — two-tier memory infrastructure<a class="headerlink" href="#docslessons-two-tier-memory-infrastructure" title="Permanent link">&para;</a></h3>
+<p>Cherry-picked from <code>bugfix/v1.18.6</code> (<code>771685e9</code> → <code>4f027b05</code>).
+Repo-tracked engineering hazards live in <code>docs/lessons/</code>, syncing
+via <code>git pull</code> and visible to humans + AI agents on any clone.
+Per-host AI memory (<code>~/.claude/projects/&lt;repo&gt;/memory/</code>) stays for
+user preferences + session scratchpads. Promotion criteria
+(cross-host + grep-verifiable), workflow, and format spec are in
+<code>docs/lessons/README.md</code>. CLAUDE.md "Shared lessons" section
+instructs agents to propose promotion when they discover qualifying
+hazards.</p>
+<p>Seeded with <code>docs/lessons/mcp-not-yet-integrated.md</code> documenting
+the three filename-level traps that make ppxai look MCP-enabled
+when it isn't:</p>
+<table>
+<thead>
+<tr>
+<th>Trap</th>
+<th>What it is</th>
+<th>Why it misleads</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pyproject.toml [mcp]</code> extras</td>
+<td>Declared <code>mcp&gt;=0.1.0</code> since v1.9.x</td>
+<td>Dep is documented intent, not shipped functionality. Venv install excludes it; <code>import mcp</code> raises <code>ModuleNotFoundError</code></td>
+</tr>
+<tr>
+<td><code>.mcp.json</code> at repo root</td>
+<td>Lists <code>code-review-graph</code></td>
+<td>Placeholder. Zero Python code in <code>ppxai/</code> loads it</td>
+</tr>
+<tr>
+<td><code>tests/test_mcp.py</code></td>
+<td>Exists</td>
+<td>Diagnostic script, not integration test against ppxai MCP wiring (which doesn't exist)</td>
+</tr>
+</tbody>
+</table>
+<p>The full v1.20.x integration plan lives at
+<code>docs/mcp-integration-plan.md</code>.</p>
+<h3 id="v120x-v1embeddings-roadmap-entry">v1.20.x <code>/v1/embeddings</code> ROADMAP entry<a class="headerlink" href="#v120x-v1embeddings-roadmap-entry" title="Permanent link">&para;</a></h3>
+<p>New sibling to MCP Day-0 under v1.20.x in <code>ROADMAP.md</code>. Surfaced
+by peer outlook-monitor's RFC <code>DESIGN-outlook-write-tools.md</code>
+(peer master commit <code>87e421d</code>, 2026-05-31). The peer's <code>Embedder</code>
+Protocol currently uses bundled FastEmbed CPU (bge-small-en-v1.5,
+384-dim), explicitly designed as a swap seam for a future
+<code>PpxaiEmbedder</code> once <code>/v1/embeddings</code> exists upstream. Today's
+local-first decision is correct (offline/air-gapped, mailbox
+content stays local, no dim coupling to ppxai pin); the upstream
+ask makes the swap <strong>opt-in</strong>.</p>
+<p>Design points captured but deferred to <code>feat/v1-embeddings</code>
+implementation branch: provider abstraction (parallel to
+chat-model routing or independent?), pooling semantics
+(mean/cls/last-token, request-level or provider-config?), dim
+negotiation, auth (bearer pattern mirrors <code>/v1/oneshot</code>), billing
+(embeddings tokens are a separate counter in provider pricing —
+<code>/usage</code> needs a new column).</p>
+<h3 id="mcp-plan-write-tool-stance-refinement">MCP plan write-tool stance refinement<a class="headerlink" href="#mcp-plan-write-tool-stance-refinement" title="Permanent link">&para;</a></h3>
+<p>Same peer RFC also surfaced a Day-0 scope refinement for
+<code>docs/mcp-integration-plan.md</code>. The plan's consent-tier mapping
+had Tier 2 ("consent-once-per-session, e.g. write tools") as if
+write-capable MCP tools would ship from Day-0. The RFC §3
+explicitly rejects this for any MCP server reading attacker-
+controlled content (email, PRs, web pages, etc.) — Surface-A
+defenses (output framing, sender-trust labels) cannot enforce
+consumer-LLM behavior, only frame the content; write blast radius
+(move/delete/forward) makes residual injection risk unacceptable.</p>
+<p>Plan now says: Tier 2/3 plumbing still gets built, but <strong>every
+Day-0 MCP server's config should pin <code>tier: 1</code></strong> unless the server
+author has done a Surface-A red-team corpus proving writes are
+safe. The peer's interim path for outlook-monitor writes is CLI
+subcommands gated by per-invocation human approval, not MCP. Both
+ppxai and ppxai-sre's planned write surfaces inherit this
+constraint.</p>
+<h2 id="theme-7-file-tree-office-doc-preview-regression-fix-download-buttons">Theme 7 — File-tree office-doc preview regression fix + download buttons<a class="headerlink" href="#theme-7-file-tree-office-doc-preview-regression-fix-download-buttons" title="Permanent link">&para;</a></h2>
+<p>A structural fix for a long-standing user-visible regression in the
+desktop web app: clicking <code>.pptx</code> / <code>.ppt</code> / <code>.docx</code> / <code>.doc</code> /
+<code>.xlsx</code> / <code>.xls</code> / <code>.csv</code> in the sidebar file tree showed "Failed to
+load: Cannot read binary file" instead of a rendered preview. The
+regression has been present since <strong>v1.16.2</strong> (the commit <code>b4e0bf57</code>
+that introduced <code>displayFileFromEvent</code> never had an office-format
+branch — office clicks fell through to <code>CodeEditorView</code> → <code>/files/read</code>
+→ 400 on <code>UnicodeDecodeError</code> → the error string rendered in the
+preview pane). User reported, root-cause-diagnosed and fixed
+structurally on this branch.</p>
+<p>Bundled alongside: the file-download UX gap (no way to download a
+file from the tree or the preview pane) closed in the same change
+set since both flows touch the file-tree + view-toolbar layers.</p>
+<h3 id="three-commits-one-structural-fix">Three commits, one structural fix<a class="headerlink" href="#three-commits-one-structural-fix" title="Permanent link">&para;</a></h3>
+<p>The work is split into three commits so each step is independently
+reviewable and revertable; no temporary scaffolding or feature flags
+were used. End-state is byte-identical for every pre-existing entry
+point.</p>
+<h4 id="commit-1-server-side-foundation-60d57037-925-ins-174-chg">Commit 1 — server-side foundation (<code>60d57037</code>, 925 ins / 174 chg)<a class="headerlink" href="#commit-1-server-side-foundation-60d57037-925-ins-174-chg" title="Permanent link">&para;</a></h4>
+<p>Two new path-based REST endpoints + their shared security plumbing:</p>
+<ul>
+<li>
+<p><strong><code>POST /files/preview?path=…&amp;slide=N&amp;total=true</code></strong> mirrors the
+  existing <code>/files/preview/{file_id}</code> route but accepts a working-
+  dir-relative or absolute path instead of a SessionFileStore
+  file_id. Same renderer (LibreOffice via <code>render_pptx_slides</code> /
+  <code>convert_docx_to_pdf</code>). Cache lives separately at
+  <code>~/.ppxai/.preview-cache/&lt;sha256(path)&gt;/</code> so browse-only previews
+  don't pollute the attached-file cache.</p>
+</li>
+<li>
+<p><strong>LibreOffice-missing graceful fallback.</strong> When LibreOffice isn't
+  on PATH, the route returns JSON <code>{"type": "text_fallback",
+  "kind": "presentation"|"word", "content": "&lt;markdown&gt;", "name",
+  "total", "libreoffice_available": false}</code> so the web client can
+  render extracted text inline with an install-LibreOffice note.
+  PPTX uses the new public helper <code>extract_pptx_slide_text</code> (pulled
+  out of <code>ReadPptxSlideTextTool.execute()</code> into a pure path-based
+  function); DOCX uses the already-public <code>_extract_docx_text</code>.
+  503 only if both LibreOffice AND python-pptx are absent.</p>
+</li>
+<li>
+<p><strong><code>GET /files/download?path=…</code></strong> streams raw bytes with
+  <code>Content-Disposition: attachment; filename="&lt;basename&gt;"</code> so
+  browsers fire their native download dialog. Reuses the same
+  security model as <code>/files/read</code> + <code>/files/preview</code> (working_dir
+  tree OR home_dir tree).</p>
+</li>
+<li>
+<p><strong>Shared <code>_resolve_safe_path(raw, engine, cwd_anchor)</code> helper.</strong>
+  The path-resolve-and-security-check logic that the pre-v1.18.7
+  <code>/files/read</code> had inline (73 lines) is extracted into a public
+  helper used by all three v1.18.7 endpoints — one path-resolution
+  definition, one security review, no chance of inconsistency. Also
+  handles <code>@search-query</code> and <code>~</code> expansion and emits 409 on
+  <code>cwd_anchor</code> drift, identical to pre-existing behavior.</p>
+</li>
+<li>
+<p><strong><code>/files/read</code> xlsx/xls/csv branch.</strong> Office spreadsheets now
+  return <code>{type: "office_spreadsheet", content (base64), mime_type,
+  size}</code> — same shape as the image/pdf branch — so the web client
+  decodes base64 and feeds it to SheetJS client-side. No server-side
+  LibreOffice needed for spreadsheets. PPTX/DOCX 400 message now
+  points clients at <code>/files/preview?path=</code> for the conversion path.</p>
+</li>
+<li>
+<p><strong><code>MIME_TYPES</code> extended</strong> (<code>ppxai/server/state.py</code>) with Office
+  types so <code>/files/download</code> and <code>/files/read</code> resolve Content-Type
+  without inspecting file bytes.</p>
+</li>
+<li>
+<p><strong>Tests:</strong> 19 new cases in <code>tests/test_files_preview_download.py</code>
+  covering happy paths + error paths for every new endpoint + the
+  extended <code>/files/read</code> branch; PPTX preview branches the same way
+  the route does at runtime (asserts PNG output when LibreOffice is
+  on the test host, asserts <code>text_fallback</code> JSON shape when not).
+  Pre-existing Windows-only CRLF flake in
+  <code>test_absolute_path_returns_content</code> opportunistically fixed
+  (used in-memory string length where the route returns on-disk
+  byte count). 40/40 file-route tests pass.</p>
+</li>
+</ul>
+<h4 id="commit-2-client-foundation-330acb60-659-ins-23-chg">Commit 2 — client foundation (<code>330acb60</code>, 659 ins / 23 chg)<a class="headerlink" href="#commit-2-client-foundation-330acb60-659-ins-23-chg" title="Permanent link">&para;</a></h4>
+<p>The shared building blocks the third commit wires together:</p>
+<ul>
+<li><strong><code>OfficeFileView</code></strong> (<code>ppxai/web/components/views/office-file-view.js</code>)
+  — new BaseView subclass with three rendering branches:</li>
+<li>spreadsheet (xlsx/xls/csv): SheetJS client-side render, sheet
+    tabs + <code>DataTableViewer</code> per sheet (sortable, filterable,
+    paginated).</li>
+<li>presentation (pptx/ppt): server-side PNG slide raster via
+    <code>/files/preview?path=…&amp;slide=N</code>. Slide nav (<code>◀ Slide N / total
+    ▶</code>) + keyboard support (arrows, PageUp/Down, Space). Falls back
+    to per-slide text JSON when LibreOffice is missing.</li>
+<li>
+<p>word (docx/doc): server-side PDF blob embedded in <code>&lt;iframe&gt;</code>.
+    Falls back to extracted-text JSON when LibreOffice is missing.</p>
+</li>
+<li>
+<p><strong><code>BaseView._renderToolbar</code> + <code>_wireDownloadButton</code> helpers.</strong>
+  Pre-v1.18.7 every view subclass wrote <code>&lt;div class="rpf-view-toolbar"&gt;
+  …&lt;/div&gt;</code> literally inline, so adding a shared button needed
+  surgery in every view. The helper centralises the shape;
+  subclasses pass info text + extras, base assembles the toolbar
+  with the download button when <code>getPath()</code> is non-null.</p>
+</li>
+<li>
+<p><strong>5 existing views retrofitted to use the helpers.</strong> ImageFileView,
+  PdfFileView, MarkdownFileView, DataFileView, CodeEditorView all
+  call <code>_renderToolbar</code> instead of writing <code>&lt;div class="rpf-view-toolbar"&gt;</code>
+  inline. Each gets the download button for free (CodeEditorView
+  shows it only in view mode — downloading mid-edit would surprise
+  the user with stale on-disk content).</p>
+</li>
+<li>
+<p><strong>File-tree download icon.</strong> Per-row <code>⬇</code> button visible on
+  hover/focus only (CSS opacity 0 → 0.7 on <code>.ft-node:hover</code>, → 1 on
+  the icon hover). <code>data-action="download"</code> short-circuits the
+  row's preview click so the download fires without also triggering
+  a preview.</p>
+</li>
+<li>
+<p><strong><code>PpxaiApp.onFileDownload(path, cwdAnchor)</code></strong> — one handler, two
+  call sites (file-tree icon + BaseView toolbar button). Uses a
+  hidden <code>&lt;a download&gt;</code> click rather than <code>window.location</code> so the
+  URL's <code>Content-Disposition: attachment</code> fires the dialog without
+  navigating away from the app.</p>
+</li>
+<li>
+<p><strong>4 new ApiClient methods</strong> (<code>ppxai/web/shared/api-client.js</code>):
+  <code>previewFileMetadata</code> / <code>previewFileSlideUrl</code> /
+  <code>previewFileSlideJson</code> / <code>downloadFileUrl</code>. Use <code>?session=&lt;id&gt;</code>
+  query-string auth because <code>&lt;img&gt;</code> / <code>&lt;embed&gt;</code> fetches don't send
+  custom <code>X-Session-Id</code> headers (same convention as the existing
+  <code>/files/image</code> and <code>/files/preview/{file_id}</code> routes).</p>
+</li>
+</ul>
+<h4 id="commit-3-wire-it-in-dedupe-62f485eb-286-ins-272-chg">Commit 3 — wire it in + dedupe (<code>62f485eb</code>, 286 ins / 272 chg)<a class="headerlink" href="#commit-3-wire-it-in-dedupe-62f485eb-286-ins-272-chg" title="Permanent link">&para;</a></h4>
+<p>The actual fix to the regression plus removal of the structural
+duplication between the file-tree preview path and the chat-
+attachment preview path that pre-dated v1.18.7:</p>
+<ul>
+<li>
+<p><strong><code>displayFileFromEvent</code> dispatcher branch</strong> routes office files
+  to <code>OfficeFileView</code>, placed before the <code>dataExts</code> branch so <code>.csv</code>
+  now routes to <code>OfficeFileView</code> (richer SheetJS experience) instead
+  of <code>DataFileView</code>'s plain-text view. <code>dataExts</code> narrowed
+  accordingly. This is the actual fix; the regression is closed
+  from this commit forward.</p>
+</li>
+<li>
+<p><strong><code>OfficeFileView</code> static render helpers.</strong> The rendering
+  primitives are extracted as three static methods —
+  <code>renderSheetJsInto</code>, <code>renderSlideNavInto</code>, <code>renderDocxPdfInto</code> —
+  so the file-tree path and the chat-attachment path share one
+  rendering implementation. The static helpers take pre-fetched data;
+  each caller decides how to fetch (working-dir path vs
+  SessionFileStore file_id).</p>
+</li>
+<li>
+<p><strong><code>PpxaiApp._render{Spreadsheet,Presentation,Word}Attachment</code>
+  delegate</strong> to the new static helpers. Each method previously had
+  ~75 LoC of inline rendering; now ~25 LoC each, retaining only
+  the method-specific concerns (file_id lookup, fetch headers,
+  unmount lifecycle). Net: ~150 LoC of inline rendering removed
+  from <code>app.js</code>. Visual output byte-identical to pre-refactor —
+  same SheetJS config, same slide-nav HTML structure, same iframe.</p>
+</li>
+</ul>
+<h3 id="verification">Verification<a class="headerlink" href="#verification" title="Permanent link">&para;</a></h3>
+<ul>
+<li>40/40 file-route tests pass (Commit 1's new 19 cases + the 21
+  pre-existing).</li>
+<li>39 pptx-related tests still pass (Commit 1's helper extraction is
+  byte-identical-behavior).</li>
+<li><code>node --check</code> on all 10 touched JS files: clean syntax.</li>
+<li>Build-install pass: 4 binaries report 1.18.7;
+  <code>Get-FileHash</code> confirms <code>~/.ppxai/web/</code> matches in-repo files.</li>
+<li>Visual smoke deferred to user since the regression flow is a
+  click-the-tree → see-the-preview pattern the user reported.</li>
+</ul>
+<h3 id="what-does-not-change">What does NOT change<a class="headerlink" href="#what-does-not-change" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>/files/preview/{file_id}</code> on the server is unchanged — the chat-
+  attachment path keeps using it.</li>
+<li>LLM tool surface unchanged (<code>ReadPptxSlideTextTool</code> returns the
+  same markdown shape after the helper extraction; delegation
+  pattern matches the existing <code>_extract_docx_text</code> precedent).</li>
+<li><code>AttachmentView</code> is unchanged (still wraps a mountFn closure).</li>
+<li>TerminalView is unchanged (no <code>getPath</code>, no toolbar wiring
+  needed — it's not file-backed).</li>
+<li>No API breakage. All existing routes return the same shapes for
+  the same inputs.</li>
+</ul>
+<h3 id="configurable-file-tree-ignore-list-follow-up">Configurable file-tree ignore list (follow-up)<a class="headerlink" href="#configurable-file-tree-ignore-list-follow-up" title="Permanent link">&para;</a></h3>
+<p>User raised during smoke-test that the file tree never showed
+<code>venv/</code> directories. Root cause: the <code>IGNORE_DIRS</code> set in
+<code>ppxai/server/routes/files.py:22</code> was hard-coded and not
+user-overridable. Promoted to config as <code>file_tree.ignore_dirs</code> in
+<code>ppxai-config.json</code>:</p>
+<ul>
+<li><strong>Default unchanged</strong> — same 10 entries the legacy constant had,
+  so every existing user gets identical behavior without touching
+  config.</li>
+<li><strong>REPLACE semantics</strong> (not merge) — your list is used verbatim.
+  Predictable "what you write is what you get"; users copy-edit
+  the default list to add/remove entries.</li>
+<li><strong>Empty list disables ignoring entirely</strong> — useful for power
+  users who want to see node_modules etc.</li>
+<li><strong>Read at request time</strong> via <code>get_file_tree_ignore_dirs()</code> in
+  <code>ppxai/config/features.py</code>, so config changes take effect
+  without server restart.</li>
+<li><strong>Set, not list, return type</strong> — call sites do membership checks
+  in tight loops; O(1) lookup matters.</li>
+<li><strong>Defensive fallback</strong> — invalid types (string/int/dict instead
+  of list) log a warning and fall back to defaults rather than
+  crashing.</li>
+</ul>
+<p>The TUI completer at <code>ppxai/commands/utility.py:35</code> keeps its
+own constant (a parallel hard-coded set). Promoting that would
+broaden v1.18.7 scope into TUI command tests; left for a future
+unification pass.</p>
+<p>Wired through three call sites in <code>ppxai/server/routes/files.py</code>:
+<code>/files/search</code> (line 264-275), <code>/files/list</code> (line 343-348), and
+<code>/files/tree</code> (line 421-440 — set resolved once via closure over
+<code>build_tree</code>, not per-directory, so deep trees don't pay per-dir
+config-lookup cost).</p>
+<p>Example override in <code>~/.ppxai/ppxai-config.json</code> to unhide <code>venv/</code>:</p>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="p">{</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">&quot;file_tree&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="nt">&quot;ignore_dirs&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">      </span><span class="s2">&quot;.git&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;node_modules&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;__pycache__&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;.venv&quot;</span><span class="p">,</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">      </span><span class="s2">&quot;.tox&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;dist&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;build&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;.eggs&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;.mypy_cache&quot;</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">    </span><span class="p">]</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">  </span><span class="p">}</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="p">}</span>
+</span></code></pre></div>
+<p>11 new tests in <code>tests/test_file_tree_ignore_config.py</code> covering:
+default behavior, REPLACE semantics, empty-list disabling, invalid-
+type fallback, <code>/files/list</code> end-to-end, <code>/files/tree</code> end-to-end.
+50/50 file-route tests pass (10 in new suite + existing 40).</p>
+<h2 id="reverted">Reverted<a class="headerlink" href="#reverted" title="Permanent link">&para;</a></h2>
+<p>The branch contains one revert pair worth flagging in the release
+record:</p>
+<ul>
+<li><strong><code>docs(api-gateway): add version-compatibility note for downstream consumers</code></strong> (commits <code>14249929</code> added, <code>01d7d013</code> reverted ~2 min apart on 2026-05-31). The note added a "Version compatibility" section to <code>docs/api-gateway.md</code> documenting the v1 gateway's byte-identical compatibility window (v1.18.4 → v1.18.7) and recommending a <code>&gt;=1.18.4</code> consumer pin against released versions. Reverted without explicit rationale in the git history; most plausible reading is that the content was correct at write-time but inherently time-sensitive — lines like "Latest released: v1.18.6" and "1.18.7 is not a release" would silently rot the moment v1.18.7 ships, becoming wrong without a manual update step.</li>
+<li>Net change to the repo: zero.</li>
+<li>Worth re-attempting in a release-evergreen form (e.g. derived from <code>latest</code> tag at render time, or a CI step that updates the version-cells on each release) if downstream pinning guidance is still wanted. Not in v1.18.7 scope.</li>
+</ul>
+<h2 id="what-did-not-change-in-v1187">What did NOT change in v1.18.7<a class="headerlink" href="#what-did-not-change-in-v1187" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Version strings bumped, but not released.</strong> <code>chore(version):
+  bump to v1.18.7</code> moved <code>pyproject.toml</code>, <code>ppxai/version.py</code>,
+  <code>vscode-extension/package.json</code> + lock, <code>README.md</code>, and
+  <code>docs/index.md</code> to <code>1.18.7</code> so the SoT files agree. The release
+  itself (tag, CI assets, <code>gh release</code>) has <strong>not</strong> run — this
+  branch ships only when the user invokes <code>/release</code>.</li>
+<li><strong>No runtime-path code change.</strong> Every commit is doc, test, a
+  behavior-preserving JS refactor, or the version-string chore.</li>
+<li><strong>v1 API gateway shape preserved byte-identical.</strong> <code>POST /v1/oneshot</code>
+  request/response, bearer-token auth, error envelope, and event
+  stream are all unchanged. ppxai-sre's <code>&gt;=1.18.4</code> pin still
+  satisfies; outlook-monitor is unaffected.</li>
+<li><strong>No database migration.</strong> Session schema_version still 2 (per
+  ADR 0006 in v1.18.6). No <code>v2 → v3</code> discussion.</li>
+</ul>
+<h2 id="tests">Tests<a class="headerlink" href="#tests" title="Permanent link">&para;</a></h2>
+<p>All existing tests pass. Pre-tag full run (Unix, <code>uv sync --all-extras</code>):
+<strong>3907 passed, 3 skipped</strong> (3910 collected; exit 0). Up +212 from
+v1.18.6's 3695 baseline across this branch's suites:</p>
+<ul>
+<li><code>/files/read</code> HTTP route tests — <code>tests/test_files_route.py</code></li>
+<li><code>file_tree.ignore_dirs</code> — <code>tests/test_file_tree_ignore_config.py</code> (11)</li>
+<li><code>/files/preview</code> + <code>/files/download</code> — <code>tests/test_files_preview_download.py</code> (19)</li>
+<li><code>POST /files/upload</code> — <code>tests/test_files_upload.py</code></li>
+<li>k8s session-manager C1/H2 + LDAP auth quick-pass — <code>tests/test_session_manager_auth.py</code> (29)</li>
+<li>post-security-review hardening — <code>TestWithinTreeConfinement</code> (5) + <code>TestSymlinkedDestination</code> (2)</li>
+</ul>
+<p>Skip count is platform- and extras-dependent: on Windows the
+<code>TestKillPreviewBackend</code> cases skip (<code>os.getpgid</code> / <code>os.killpg</code> can't be
+<code>patch()</code>-ed), and without the <code>[data]</code> / multipart extras the office +
+upload suites skip (a base venv reports 3841 passed / 7 skipped).</p>
+<p>The model-catalog refresh (<code>b873ec2b</code>) is data-only and exercises the
+same existing test parametrizations under <code>test_model_vision.py</code> +
+<code>test_doctor.py</code>; no new test cases were needed.</p>
+<h2 id="acknowledgements">Acknowledgements<a class="headerlink" href="#acknowledgements" title="Permanent link">&para;</a></h2>
+<p>The CRG + graphify analysis that drove this branch is captured in
+the rebuild summary on master @ <code>fc60cd6f</code>. The decomposition trade-
+offs documented per CLAUDE.md "verify before flagging" rule —
+production-only inbound count + channel-ratio inspection — caught
+Item 23 (SessionManager growth) before it became a needless refactor
+candidate.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/rcconsult/ppxai" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
