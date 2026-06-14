@@ -2223,6 +2223,19 @@ class SessionManager:
             SESSION_STATE_FILE.unlink()
 
     @staticmethod
+    def session_file_exists(name: str, sessions_dir: Optional[Path] = None) -> bool:
+        """True if a saved session `name` exists in EITHER on-disk format.
+
+        Text-only sessions are flat `<name>.json`; multimodal sessions are a
+        directory `<name>/session.json`. Auto-restore pre-checks must accept
+        both — checking only the flat path treats every saved multimodal
+        session as missing and clears the restore pointer (v1.18.8). Shared by
+        the server `/sessions/restore` route and the Textual auto-restore.
+        """
+        d = sessions_dir or (Path.home() / ".ppxai" / "sessions")
+        return (d / f"{name}.json").exists() or (d / name / "session.json").exists()
+
+    @staticmethod
     def find_most_recent_session_on_disk() -> Optional[Dict[str, Any]]:
         """Scan ~/.ppxai/sessions/ for the newest session and return its info.
 

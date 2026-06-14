@@ -4,7 +4,7 @@ Session management endpoints (save, load, clear, restore).
 
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Body, Depends, HTTPException, Request
 from typing import Optional
 
 from ...engine.session import SessionManager as EngineSessionManager
@@ -38,12 +38,15 @@ async def get_sessions(s: Session = Depends(get_session)):
 
 @router.post("/sessions/save")
 async def save_session(
-    name: Optional[str] = None,
+    name: Optional[str] = Body(None, embed=True),
     s: Session = Depends(get_session)
 ):
     """Save current session.
 
     v1.13.10: Supports X-Session-Id header for session isolation.
+    v1.18.8: `name` is read from the JSON body (`{"name": "..."}`) — web and
+    VSCode send it there. It was previously a query parameter, so a named save
+    from those clients was silently ignored (saved under the auto-name).
     """
 
     try:
@@ -139,13 +142,11 @@ async def get_last_session(s: Session = Depends(get_session)):
     # check when the state came from a disk scan — by construction the
     # file must exist, we literally just read it.
     session_name = state.get("name")
-    if session_name and not state.get("recovered_from_disk"):
-        sessions_dir = Path.home() / ".ppxai" / "sessions"
-        flat_exists = (sessions_dir / f"{session_name}.json").exists()
-        dir_exists = (sessions_dir / session_name / "session.json").exists()
-        if not flat_exists and not dir_exists:
-            EngineSessionManager.clear_state_file()
-            return {"last_session": None}
+    if (session_name and not state.get("recovered_from_disk")
+            and not EngineSessionManager.session_file_exists(session_name)):
+        # Stale pointer — neither flat nor directory format exists.
+        EngineSessionManager.clear_state_file()
+        return {"last_session": None}
 
     return {
         "last_session": {

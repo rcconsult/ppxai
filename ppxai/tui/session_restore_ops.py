@@ -76,9 +76,11 @@ async def check_session_restoration(app: "PPXAIDEApp") -> None:
         tools_info = "ON" if last_state.get("tools_enabled") else "OFF"
 
         # Check if session file actually exists before showing any dialog.
-        sessions_dir = Path.home() / ".ppxai" / "sessions"
-        session_file = sessions_dir / f"{session_name}.json"
-        if not session_file.exists():
+        # v1.18.8: accept BOTH formats (flat `<name>.json` AND multimodal
+        # `<name>/session.json`) via the shared helper — the flat-only check
+        # here treated every saved multimodal session as missing and cleared
+        # the restore pointer.
+        if not SessionManager.session_file_exists(session_name):
             app._log.warning(f"Session file missing for '{session_name}', clearing stale state")
             SessionManager.clear_state_file()
             return
