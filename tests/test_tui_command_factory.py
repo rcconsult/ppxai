@@ -185,6 +185,44 @@ def test_command_aliases():
 
 
 # =============================================================================
+# iter_completion_specs() — public completion seam (ADR 0007)
+# =============================================================================
+
+def test_iter_completion_specs_covers_registry_and_aliases():
+    """The public snapshot includes every canonical command plus aliases,
+    and its canonical-command set matches list_all()."""
+    infos = CommandFactory.iter_completion_specs()
+
+    canonicals = {i.name for i in infos if not i.is_alias}
+    assert canonicals == set(CommandFactory.list_all())
+
+    # Every alias entry resolves to a real canonical and carries that
+    # canonical's description/hidden flag.
+    by_name = {i.name: i for i in infos if not i.is_alias}
+    alias_entries = [i for i in infos if i.is_alias]
+    assert alias_entries, "expected at least one alias (e.g. /cat -> /show)"
+    for a in alias_entries:
+        assert a.canonical in by_name
+        assert a.description == by_name[a.canonical].description
+        assert a.hidden == by_name[a.canonical].hidden
+
+
+def test_iter_completion_specs_alias_points_to_canonical():
+    """/cat is an alias entry whose canonical is /show (mirrors the alias map)."""
+    infos = CommandFactory.iter_completion_specs()
+    cat = next((i for i in infos if i.name == "cat" and i.is_alias), None)
+    assert cat is not None, "/cat alias missing from completion snapshot"
+    assert cat.canonical == "show"
+
+
+def test_iter_completion_specs_exposes_no_handler():
+    """The completion view is decoupled from CommandSpec — narrow shape only,
+    no handler / internal storage leaks (the ADR 0007 seam contract)."""
+    info = CommandFactory.iter_completion_specs()[0]
+    assert set(vars(info)) == {"name", "description", "hidden", "is_alias", "canonical"}
+
+
+# =============================================================================
 # System Command Tests (No Engine Required)
 # =============================================================================
 

@@ -444,29 +444,38 @@ layer inversion; reading privates makes it brittle to factory refactors.
 **Why deferred:** the coupling is **intrinsic and harmless at runtime** —
 command-name completion inherently needs the command registry, and there's
 no correctness bug. Surfaced by the v1.18.7 post-release code review
-(finding 1). Held to **last** in the v1.18.8 sequence behind an explicit
-in-depth review gate (owner decision) before any code lands, because the
-"real" fix (direction inversion) is an architecture change, not bug-class.
+(finding 1); the "real" fix is an architecture change, not bug-class.
 
-**Resolution options (decide at the review gate, document in an ADR-style note):**
-- **(a) accessor-only, bugfix-grade:** add a public
-  `CommandFactory.iter_completion_specs()` returning plain DTOs
-  (name, aliases, description, hidden, category); completion stops reading
-  privates. ~20 LoC, near-zero risk. Import direction unchanged.
-- **(b) full inversion:** define a `CommandRegistryProtocol` in a leaf
-  module (per the v1.17.0 protocol-dependency-inversion idiom), inject it
-  into `complete()`, thread through the 3 call sites. Removes the
-  `engine → commands` import entirely; wider ripple.
+**Review-gate outcome (2026-06-14):** the gate reframed completion as a
+*capability* over `(command-space × live-context)` that belongs to no single
+layer — not engine-owned data. Decision recorded in
+[ADR 0007](decisions/0007-completion-first-class-service.md):
+- **Seed landed in v1.18.8** (`bugfix/v1.18.8`): added public
+  `CommandFactory.iter_completion_specs()` + `CompletionCommandInfo`;
+  `engine.completion._complete_commands` now consumes that snapshot instead
+  of `_registry`/`_aliases`. **The privates-reach is closed**, behaviour
+  byte-identical (61 completion tests + 3 new accessor tests green). The
+  `engine → commands` *import* deliberately remains — removing it is the
+  v1.19.x work below.
+- **v1.19.x (ADR 0007):** lift `complete()` into a first-class
+  `ppxai/completion/CompletionService` behind `CommandRegistryProtocol` +
+  `CompletionContextProtocol` (leaf), injected at each composition root
+  (preloaded at startup); publish the command **roster** through AppState
+  `state_sync` for palettes/help/menus. This is what removes the import.
 
-**Planned:** v1.18.8 (this branch) — **last item, review-gated.** See
-[docs/plan-v1.18.8-files-parity.md](plan-v1.18.8-files-parity.md) Phase D.
+**Planned:** seed **done** in v1.18.8; first-class service + AppState roster
+**→ v1.19.x** per ADR 0007.
 
-**Branch when ready:** `bugfix/v1.18.8`.
+**Branch when ready:** v1.19.x (new branch — pairs with any "ship engine
+standalone" goal).
 
-**Trigger to revisit:** active now (after Phases A–F land + review gate).
+**Trigger to revisit:** see ADR 0007 triggers (engine-as-standalone-library
+goal; a second client surface needing the live roster; a second cross-layer
+capability of the same shape).
 
-**Effort:** (a) ~30 min + test; (b) ~2–3 h + cross-client completion tests.
-Scope decision deferred to the review gate.
+**Effort (remaining, v1.19.x):** ~1–1.5 d — two Protocols, the service
+package, composition-root wiring at 3 entry points, AppState roster field +
+4-mirror DTO update, cross-client completion tests.
 
 ---
 

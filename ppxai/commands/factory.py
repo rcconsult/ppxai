@@ -59,6 +59,24 @@ class CommandSpec:
     hidden: bool = False
 
 
+@dataclass
+class CompletionCommandInfo:
+    """Minimal, completion-oriented view of a registered command.
+
+    A deliberately narrow, stable shape decoupled from `CommandSpec` (it
+    carries no handler / no internal storage). This is the public seam the
+    completion logic consumes instead of reaching into the factory's
+    private `_registry` / `_aliases`, and the seed of the
+    `CommandRegistryProtocol` planned in ADR 0007 (first-class
+    `CompletionService`).
+    """
+    name: str            # command or alias name, without the leading slash
+    description: str     # canonical command's description
+    hidden: bool         # canonical command's hidden flag
+    is_alias: bool       # True if `name` is an alias
+    canonical: str       # canonical command name (== name when not an alias)
+
+
 class CommandFactory:
     """Central registry for all commands. Leaf module - no ppxai imports.
 
@@ -226,6 +244,41 @@ class CommandFactory:
         cls._ensure_loaded()
         return [spec for spec in cls._registry.values()
                 if spec.category == category and not spec.hidden]
+
+    @classmethod
+    def iter_completion_specs(cls) -> List[CompletionCommandInfo]:
+        """Public, completion-oriented snapshot of the registry.
+
+        Returns one entry per canonical command followed by one per alias
+        (alias entries carry the canonical command's description + hidden
+        flag). This replaces direct reads of the private `_registry` /
+        `_aliases` from `engine.completion` — see ADR 0007. Order is
+        canonicals-then-aliases; callers that need a stable display order
+        should sort by their own key (the completion provider sorts by
+        candidate text).
+        """
+        cls._ensure_loaded()
+        infos: List[CompletionCommandInfo] = []
+        for name, spec in cls._registry.items():
+            infos.append(CompletionCommandInfo(
+                name=name,
+                description=spec.description,
+                hidden=spec.hidden,
+                is_alias=False,
+                canonical=name,
+            ))
+        for alias, canonical in cls._aliases.items():
+            spec = cls._registry.get(canonical)
+            if spec is None:
+                continue
+            infos.append(CompletionCommandInfo(
+                name=alias,
+                description=spec.description,
+                hidden=spec.hidden,
+                is_alias=True,
+                canonical=canonical,
+            ))
+        return infos
 
     @classmethod
     def get_categories(cls) -> List[str]:

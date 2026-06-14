@@ -46,11 +46,14 @@ code-review phases (B, C, D, E) is under "Extended-scope work detail".
 | 3 | **C** | 31 | `SessionManager` mutation helpers; replace direct `messages.pop()/append()` | medium (hot path) |
 | 4 | **E** | 30 | route `coding.py` user-facing output through events/result | low |
 | 5 | **F** | 25/26/28 | `/files/read` typing + `/files/preview` unify + OfficeFileView race | medium (bulk) |
-| 6 | 🔒 gate | — | **in-depth review of Item 29** before choosing its fix | — |
-| 7 | **D** | 29 | decouple `completion` from `CommandFactory` (option a/b decided at gate) | a: low / b: medium |
+| 6 | 🔒 gate | — | in-depth review of Item 29 — **done 2026-06-14** → ADR 0007 | — |
+| 7 | **D** | 29 | **seed only** (option a): `iter_completion_specs()`, stop reading privates. Full first-class service → v1.19.x | low |
 
 A and B land first. C, E, F are mutually independent and can land in any
-order after B. **D is last and review-gated — no code until the gate.**
+order after B. **D's review gate is done** — outcome in
+[ADR 0007](decisions/0007-completion-first-class-service.md): land the
+accessor seed on this branch, defer the first-class `CompletionService` +
+AppState roster to v1.19.x.
 Item 6 / debt 22 (`PpxaiApp` decomposition) is **not triggered**: Phase F
 edits a few `app.js` methods in place; no decomposition required.
 
@@ -80,20 +83,20 @@ edits a few `app.js` methods in place; no decomposition required.
   the real mutation is `streaming.py:175`. Keep behavior identical — lean on
   existing alternation tests.
 
-### Phase D — Item 29: decouple `completion` from `commands` internals (LAST, review-gated)
-- **Do not start until the review gate.** `engine/completion.py:47` imports
-  `commands.factory` and reads `_registry`/`_aliases` privates
-  (lines 234/248/249); `complete()` is shared by 3 call sites
-  (`tui/completer.py:25`, `rich/main.py:34`, `server/routes/completion.py:17`).
-- At the gate, decide and record (ADR-style note):
-  - **(a) accessor-only:** add `CommandFactory.iter_completion_specs()`
-    returning plain DTOs; completion stops reading privates. ~20 LoC,
-    near-zero risk; import direction unchanged.
-  - **(b) full inversion:** `CommandRegistryProtocol` in a leaf module
-    (v1.17.0 idiom), inject into `complete()`, thread the 3 call sites;
-    removes the `engine → commands` import. Wider ripple.
-- Tests: cross-client completion parity (Rich/Textual/server return identical
-  command lists) regardless of option chosen.
+### Phase D — Item 29: decouple `completion` from `commands` internals (seed; review gate done → ADR 0007)
+- **Gate outcome (2026-06-14):** completion reframed as a capability over
+  `(command-space × live-context)` — see
+  [ADR 0007](decisions/0007-completion-first-class-service.md). Land the
+  **accessor seed (option a)** here; the first-class `CompletionService` +
+  AppState roster are v1.19.x.
+- **Seed (this branch):** added `CommandFactory.iter_completion_specs()` +
+  `CompletionCommandInfo` (public, narrow shape — no handler/internal
+  storage); `engine.completion._complete_commands` consumes that snapshot
+  instead of `_registry`/`_aliases`. The `engine → commands` import stays
+  (its removal is the v1.19.x service work). Behaviour byte-identical.
+- Tests: 61 existing completion tests unchanged + 3 new accessor tests in
+  `test_tui_command_factory.py` (registry/alias coverage, alias→canonical,
+  narrow-shape contract).
 
 ### Phase E — Item 30: coding-command output lost cross-client
 - Route the user-facing notices in `commands/coding.py` (auto-route message

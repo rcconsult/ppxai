@@ -8,8 +8,9 @@ server endpoint (Web, VSCode).
 
 Completion sources:
 
-1. **Slash commands** — reads from `CommandFactory._registry` + aliases.
-   Dynamic, never drifts, sorted alphabetically, hidden commands filtered.
+1. **Slash commands** — via `CommandFactory.iter_completion_specs()` (the
+   public registry snapshot; see ADR 0007). Dynamic, never drifts, sorted
+   alphabetically, hidden commands filtered.
 
 2. **Path arguments** — for commands like `/attach`, `/cd`, `/ls`, `/show`
    etc. Shell-style directory traversal with per-command file/dir filters.
@@ -225,37 +226,36 @@ def complete(
 
 
 def _complete_commands(prefix: str) -> List[Dict[str, Any]]:
-    """Complete slash command names from CommandFactory."""
-    CommandFactory._ensure_loaded()
+    """Complete slash command names from the CommandFactory registry.
+
+    Consumes the public `CommandFactory.iter_completion_specs()` snapshot
+    rather than the factory's private `_registry` / `_aliases` (ADR 0007
+    seam). Behaviour is unchanged: canonicals and aliases, skipping hidden
+    commands, with the alias description annotated.
+    """
     items: List[Dict[str, Any]] = []
     prefix_lower = prefix.lower()
 
-    # Canonical commands (skip hidden)
-    for name, spec in CommandFactory._registry.items():
-        if spec.hidden:
+    for info in CommandFactory.iter_completion_specs():
+        if info.hidden:
             continue
-        candidate = f"/{name}"
-        if candidate.lower().startswith(prefix_lower):
+        candidate = f"/{info.name}"
+        if not candidate.lower().startswith(prefix_lower):
+            continue
+        if info.is_alias:
             items.append({
                 "text": candidate,
                 "display": candidate,
-                "description": spec.description,
-                "kind": "command",
+                "description": f"{info.description} (alias for /{info.canonical})",
+                "kind": "alias",
                 "replace_start": -len(prefix),
             })
-
-    # Aliases
-    for alias, canonical in CommandFactory._aliases.items():
-        spec = CommandFactory._registry.get(canonical)
-        if not spec or spec.hidden:
-            continue
-        candidate = f"/{alias}"
-        if candidate.lower().startswith(prefix_lower):
+        else:
             items.append({
                 "text": candidate,
                 "display": candidate,
-                "description": f"{spec.description} (alias for /{canonical})",
-                "kind": "alias",
+                "description": info.description,
+                "kind": "command",
                 "replace_start": -len(prefix),
             })
 
