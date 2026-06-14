@@ -301,6 +301,51 @@ class TestSpecialPathPrefixes:
             assert resp.json()["content"] == "from-home\n"
 
 
+class TestServeImageConfinement:
+    """Regression for debt Item 27 (v1.18.8): `/files/image/` must use the
+    component-wise home-subtree check (`_within_tree`), not a
+    `str(path).startswith(str(home_dir))` prefix.
+
+    The v1.18.7 fix (`09eae96e`) migrated `read_file`/`write_file` to
+    `_within_tree` but missed `serve_image`, so a sibling directory sharing
+    a name prefix with home (e.g. `<home>EVIL`) still bypassed home
+    confinement through `/files/image/`. These exercise the HTTP route
+    itself (the unit-level check lives in `TestWithinTreeConfinement`).
+    """
+
+    PNG_1X1 = TestReadBinaryPreview.PNG_1X1
+
+    def test_sibling_prefix_path_rejected_403(self, http_client, tmp_path):
+        # Absolute path that is a name-prefix *sibling* of the real home dir:
+        # it would have passed the old startswith(home) test but is not inside
+        # the home subtree. Anchor the session elsewhere so the working_dir
+        # branch can't allow it either. The 403 lands before the existence
+        # check, so the (nonexistent) file is fine.
+        headers = _session("img-evil")
+        _anchor_to(http_client, headers, tmp_path)
+
+        evil = str(Path.home()) + "EVIL/secret.png"  # e.g. /home/userEVIL/secret.png
+        resp = http_client.get(f"/files/image/{evil}", headers=headers)
+        assert resp.status_code == 403, (
+            f"sibling-prefix path must be denied via /files/image/, "
+            f"got {resp.status_code}: {resp.text}"
+        )
+
+    def test_image_in_working_dir_served(self, http_client, tmp_path):
+        # Positive control: a real image inside the anchored working_dir is
+        # served (confirms the tightened check didn't over-reject, and that
+        # the absolute-path route capture works).
+        target = tmp_path / "pixel.png"
+        target.write_bytes(self.PNG_1X1)
+        headers = _session("img-ok")
+        _anchor_to(http_client, headers, tmp_path)
+
+        resp = http_client.get(f"/files/image/{target}", headers=headers)
+        assert resp.status_code == 200, resp.text
+        assert resp.headers["content-type"].startswith("image/")
+        assert resp.content == self.PNG_1X1
+
+
 class TestWithinTreeConfinement:
     """Unit tests for `_within_tree` — the home-dir subtree check used by
     `_resolve_safe_path` and `/files/write`.

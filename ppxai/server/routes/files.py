@@ -598,10 +598,12 @@ async def serve_image(
         path = working_dir / filepath
     path = path.resolve()
 
-    # Security: same checks as /files/read
+    # Security: same checks as /files/read. The home check is a
+    # component-wise subtree test (_within_tree), not a string prefix, so a
+    # sibling like `/home/userEVIL` cannot pass as inside `/home/user`.
     working_dir = Path(s.engine.get_working_dir() or os.getcwd()).resolve()
     home_dir = Path.home().resolve()
-    if not (is_path_allowed(path, working_dir) or str(path).startswith(str(home_dir))):
+    if not (is_path_allowed(path, working_dir) or _within_tree(path, home_dir)):
         raise HTTPException(status_code=403, detail="Access denied")
 
     if not path.exists() or not path.is_file():
