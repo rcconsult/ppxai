@@ -440,6 +440,67 @@ preview already works via LibreOffice.)
 
 ---
 
+### Item 35 — pluggable memory/log/knowledge persistence channel abstraction [architecture]
+
+**Affected (future):** a new `ppxai/persistence/` (or `ppxai/memory/`)
+package; first consumers would be ADR 0003's `AgentRunRegistry`
+(`events.jsonl` / `state.json` / `transcript.md`), `engine/session.py` +
+`session_store.py`, and the checkpoint machinery — each currently rolls
+its own filesystem persistence.
+
+**What's needed:** a ppxai service/component that abstracts **recording
+of memory / logs / session knowledge behind a pluggable *channel*
+interface**, so the backing technology is swappable without touching
+callers. Backends to support over time: append-only **JSONL** (today's
+default), **markdown** (human-readable transcript), **SQLite** (indexed
+queries), **mem0** and **vector stores** (semantic recall / curated
+long-term memory), and others. The same abstraction is the substrate
+for two capabilities ppxai doesn't have yet: (1) **resume context** —
+reconstructing an agent or session's working state from its recorded
+channel, and (2) **knowledge curation** — summarizing / compacting /
+promoting durable facts out of raw event logs (the mem0-style layer).
+
+**Why this generalizes existing seams:** ADR 0003 Question B already asks
+"filesystem vs SQLite for the registry" and answers "put the read/write
+API behind a single class so the migration is mechanical." This item is
+that idea promoted to a **first-class protocol** shared across agent
+runs, sessions, and checkpoints, with the backend chosen by config — not
+a per-subsystem decision. Fits the project's leaf-`Protocol`
+dependency-inversion pattern (define `MemoryChannelProtocol` /
+`PersistenceChannelProtocol` in a leaf module; concrete backends as
+plug-in implementations, mirroring `rendering/base.py::Renderer` and the
+`ArtifactRegistry`/`ArtifactProjector` framework from ADR 0006).
+
+**Why deferred:** this is foundational infra that should crystallize
+**after** the `AgentRunRegistry` exists (so the registry is its first
+concrete consumer and the protocol is shaped by a real second caller),
+not before — abstracting on one consumer is premature. mem0/vector
+backends also add dependency + operational surface (embeddings, store
+lifecycle) that wants its own design pass.
+
+**Planned:** v1.19.x+ — likely its own ADR (e.g. ADR 0008 "pluggable
+persistence/memory channels"); sequence it alongside or just after
+ADR 0003 Stage 2 so agent-runs and sessions become the two consumers
+that validate the protocol shape.
+
+**Branch when ready:** new branch (pairs with ADR 0003 Stage 2 work).
+
+**Trigger to revisit:** a second persistence consumer wants a swappable
+backend (agent-runs **and** sessions both asking), OR resume-context /
+knowledge-curation becomes a feature ask, OR a mem0 / vector-recall
+requirement lands from a consumer (e.g. ppxai-sre long-lived agents
+needing cross-run memory).
+
+**Effort:** ~2–3 d for the protocol + JSONL/markdown/SQLite backends
+behind it (the file backends already exist as code to wrap); mem0 /
+vector backends are separate, larger, dependency-bearing add-ons.
+
+**Surfaced by:** agent-platform MVP design discussion 2026-06-15 (while
+resolving ADR 0003 — the registry's hardcoded filesystem layout made the
+missing abstraction visible).
+
+---
+
 ## Recently moved out of debt scope
 
 These items left the debt inventory because they're not bug-fix-class

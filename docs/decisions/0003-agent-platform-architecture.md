@@ -1,7 +1,11 @@
 # ADR 0003 — Agent platform architecture
 
-**Date:** 2026-05-03
-**Status:** Proposed (decision pending — see "Open decisions" below)
+**Date:** 2026-05-03 (revised 2026-06-15 — MVP design resolved)
+**Status:** Proposed. Question A (outer loop) still pending instrumentation;
+**MVP design resolved 2026-06-15** — see "Resolved MVP design — read-only
+research sub-agents" below. The MVP sidesteps Question A by defining a run as
+a single `chat_with_tools` invocation, so Stage 2 can proceed for the
+read-only research slice without waiting on the week-of-usage data.
 **Related:**
 - [`docs/archive/TODO-v1.18.2-agent-loop-unification.md`](../archive/TODO-v1.18.2-agent-loop-unification.md) — the immediate refactor blocked on this ADR
 - `ppxai/commands/agent.py` — TUI-side outer continuation loop (`handle_agent`)
@@ -128,6 +132,13 @@ The migration filesystem → SQLite is mechanical if we put the
 write/read API behind a single class (`AgentRunRegistry`). Start
 filesystem; migrate later if `list runs` becomes a bottleneck.
 
+> **Forward note (2026-06-15):** this "API behind one class" instinct is
+> the seed of a broader capability — a **pluggable memory/log/knowledge
+> persistence channel** (JSONL / markdown / SQLite / mem0 / vector
+> stores) shared across agent runs, sessions, and checkpoints, with the
+> backend chosen by config. Tracked as **debt-inventory Item 35**; likely
+> its own ADR once `AgentRunRegistry` ships as its first consumer.
+
 ### Question C — sub-agent execution model
 
 | Model | Pros | Cons |
@@ -253,6 +264,271 @@ POST /agent/runs/<id>/cancel → {ok, status: "cancelling"}
 - Cross-machine run distribution (needs worker pool).
 - Run-level RBAC / multi-user (single-user tool today).
 
+## Resolved MVP design — read-only research sub-agents (2026-06-15)
+
+A design conversation on 2026-06-14/15 resolved the MVP scope and the
+cross-cutting concerns (security, consent, results, lifecycle) that the
+original "Decision space" deliberately left open. **This section is the
+design of record for the first slice.** It resolves Question C
+(execution model), the direction of Question D (engine lifecycle), and
+open-decision item 4 (cascade cancel), and adds five dimensions the
+original ADR did not cover (capability sandbox, run secret, results,
+two-phase termination, config inheritance). Question A (outer loop)
+stays open but is **sidestepped** by the run-unit definition below.
+
+Guiding principle, inherited from the v1.18.8 `/files/*` parity charter:
+**every observable thing about a run is an API contract, never a
+filesystem detail** — because a sandboxed tool (subprocess/pod) has no
+shared FS with the main app.
+
+### 1. Scope — one sub-agent, full multi-ID plumbing
+
+- The MVP spawns **at most one** sub-agent. The registry, `run_id`,
+  `parent_run_id`, and every wire shape are built for **N** from day one.
+- Concurrency is a single config knob `tools.agent.max_concurrent_subagents`
+  (default `1`). Raising it to N is the multi-agent system; no wire change.
+- **Rationale:** the ID/registry/lifecycle plumbing is the expensive,
+  hard-to-retrofit part; the cap is one integer. Build the platform, ship
+  it gated.
+
+### 2. Run unit — one `chat_with_tools` invocation (this is what sidesteps Question A)
+
+- An MVP research run = a **single inner-loop (`chat_with_tools`)
+  invocation**. No outer continuation loop, no `TASK_COMPLETE:` polling.
+- This **defers Question A**: a read-only research agent does not need
+  outer-loop continuation semantics. Whether the *general* agent keeps the
+  outer loop remains gated on Stage-1 instrumentation; the MVP does not
+  block on it. When the data lands, the outer loop (if kept) wraps the
+  same run unit additively.
+
+### 3. Capability model — read-only, but fully sandboxed (read-only ≠ injection-safe)
+
+Read-only removes write/corruption blast radius. It does **not** remove
+the two threats that dominate research agents, both of which the MVP must
+handle from day one:
+
+- **Prompt injection via fetched content is the *defining* risk.** The
+  agent curls a page, feeds it to the model; that page can steer the
+  model to exfiltrate via the *next* network call. The network tool is
+  the exfil channel — so an **egress allowlist is mandatory for exactly
+  these agents.**
+- **Read scope must exclude secrets-at-rest.** A read-only agent that can
+  `grep ~/.ppxai/.env` has already lost. Path-jail bounds *what it can
+  read*, independent of writes.
+
+Capability tiers, enforced at the **tool-execution boundary** (not the
+agent loop), carried in `meta.json` as the run's grant:
+
+| Tier | Mechanism | MVP |
+|---|---|---|
+| a. **Tool allowlist** | dispatcher denies any tool not in the run's grant (research = `web_search`, `read_file`, `grep`/`find`, read-only `curl`; no shell-write, no `write_file`) | ✅ required |
+| b. **Read-path jail** | file/grep ops confined to a subtree, `~/.ppxai/` excluded; extends existing `_within_tree` + cwd-grounding | ✅ required |
+| c. **Egress allowlist** | outbound network via an allowlist proxy; emits `NETWORK_POLICY_DENIED`/`_ALLOWED` (open-decision item 8 / Phase 5) | ✅ required |
+| d. **OS isolation** | tool execution in a separate process (seccomp/namespaces) or **k8s pod** | deferred to untrusted/write agents |
+
+### 4. Tool-execution boundary — subprocess/pod, not the agent runtime
+
+The agent loop stays an in-process `asyncio.Task` (resolves **Question C
+→ same-process asyncio.Task**; I/O-bound work needs no GIL escape). What
+gets sandboxed is the **tool call**, not the loop:
+
+- MVP: tools run in a **subprocess** with a restricted environment — no
+  secrets in env, cwd-jailed, network via the tier-c allowlist proxy.
+- Hardened/headless: reuse the existing multi-tenant **k8s session-manager
+  pod** (`deploy/images/session-manager/`) — don't invent new isolation.
+- The subprocess/pod is the *one* legitimate place a separate process
+  earns its keep; it is invisible to the registry and the wire surface,
+  which only ever see the agent run.
+
+### 5. Results — reuse the ADR 0006 artifact contract (don't invent result types)
+
+A run result = a **primary body** (markdown/html) + a list of
+**`MarshallableArtifact` refs** (`TextAttachmentRef` / `ImageAttachmentRef`
+/ `OfficeAttachmentRef` / `PdfAttachmentRef` per
+[ADR 0006](0006-content-block-schema-separation.md)), content-addressed in
+the run workspace via the existing `SessionFileStore`. The main app
+resolves each ref through the **same `/files/preview` + artifact-projector
+pipeline** chat attachments use (the v1.18.8 files-parity contract), so
+csv/xlsx/pptx/png/code all render with zero new transport. A genuinely new
+output kind = one new `ArtifactRef` subclass, never a new result channel.
+Mirrors the message content-block model.
+
+### 6. Run workspace — API-visible, not FS-visible
+
+`~/.ppxai/agent-runs/<run_id>/{meta.json, state.json, events.jsonl,
+transcript.md, artifacts/}` is the *implementation*. The contract is the
+**registry API** (`GET /v1/agent/runs/<id>/...`), because a pod-sandboxed
+run has no shared FS. The main app never reads the directory directly.
+
+### 7. Ownership & the run secret — reuse C1 signed-bearer, don't roll crypto
+
+At spawn the registry mints a **256-bit random run token** = the run's
+ephemeral capability credential, lifetime = run lifetime, **auto-revoked
+at any terminal state**. This is open-decision item 9 (`/v1/tokens`) in
+minimal form: one token per run.
+
+- **Do not invent a bespoke SHA256 handshake.** A SHA256 *hash* is not a
+  key, and rolling channel crypto is a footgun. Extend the existing
+  per-resource auth gate — the **v1.18.7 C1 fix** (signed token +
+  `/authz` gate, fail-closed on missing/short signing key, 403 on
+  ownership mismatch). A run is just another protected resource scoped by
+  `run_id`.
+- **Mutual auth:** the main app proves ownership (it minted the run); the
+  sub-agent proves authenticity (presents the run token). The token is
+  injected into the sub-agent process via **stdin/env at creation, never
+  argv** (argv leaks in `ps`).
+- "Prove possession before revealing data" = an **HMAC challenge–response**
+  over the run token, so the secret itself is never shipped on the wire
+  after the initial handout. "One-time use" applies to the *initial
+  handout*, not the monitor stream (which tails repeatedly within the run).
+- Same-process MVP collapses this to an ownership check; the full
+  handshake matters only once the sub-agent crosses the process/pod
+  boundary. The token model is additive now; the handshake lands with
+  tier-d isolation.
+- **Monitor-channel authz:** the `/events`, `/result`, and `/artifacts`
+  endpoints for a `run_id` are sensitive (transcript, tool output). Only
+  the owning session/token may read them — the per-run version of the C1
+  cross-user fix. Don't let any bearer holder read any run.
+
+### 8. Lifecycle — TTL-gated cascade, two-phase termination, one `WAITING` state machine
+
+**Cascade cleanup is TTL-gated, never instant-on-disconnect** —
+instant-kill-on-disconnect would contradict the entire "semi-autonomous,
+UI non-blocking" premise (it would make a foreground agent). Distinguish
+disconnect from death:
+
+- **Clean close** (UI exits gracefully) → explicit `cancel` → cascade
+  teardown of children + tool sandboxes now.
+- **Crash / vanish** → **heartbeat reaper with a grace TTL**, reusing the
+  v1.18.0 heartbeat primitives + the session-manager TTL teardown (k8s
+  owner-reference GC for the pod case). Within the grace window the run
+  **keeps going** (autonomous, within budget). This resolves
+  open-decision item 4 with a TTL gate.
+
+**Two-phase termination — separate compute teardown from artifact
+retention:**
+
+- At self-declared done, the agent writes results, emits
+  `AGENT_RESULT_READY` with artifact refs, and **the agent process dies**
+  (stops consuming tokens/CPU; tool sandbox torn down). The run enters
+  `COMPLETED_PENDING_ACK` — **record + artifacts persist**.
+- The main app fetches/validates results, then `POST …/ack` → run →
+  `FINALIZED` → GC-eligible. This gives **at-least-once result delivery**:
+  if the UI was disconnected when the agent finished, results are not
+  GC'd before collection. A retention TTL is the backstop (acked OR
+  expired → reaped).
+- The agent **does not block** waiting for ack — fire results, die, the
+  *registry* holds the pending state. Blocking a live process on
+  confirmation re-couples what we decoupled.
+
+**`WAITING` unifies consent, interactive questions, and conclusion-ack.**
+A mid-run decision ("found 3 approaches, which to deep-dive?") is the same
+mechanism as a consent gate and as terminal-ack: the run enters `WAITING`,
+emits a request tagged with `run_id`, parks with a resume token + TTL, and
+resumes on response. Terminal-ack is just the end-of-run special case.
+
+```
+SPAWNING → RUNNING ⇄ WAITING{consent | input | terminal_ack}
+RUNNING  → COMPLETED_PENDING_ACK → FINALIZED   (acked | retention-TTL)
+RUNNING  → FAILED (provider) | ZOMBIE (tool-loop) | BUDGET_EXCEEDED | CANCELLED (explicit | cascade-TTL)
+any terminal → tool sandbox torn down; artifacts retained until FINALIZED/GC
+```
+
+**Consent for unattended runs (resolves the "semi-autonomous" tension):**
+
+- **Pre-authorized scope (default).** At spawn the user grants the
+  capability envelope (§3 tiers); the run executes within it with **no
+  per-tool prompts**, and anything outside the envelope is a **hard deny,
+  not a prompt**. The grant *is* the consent — this is what makes the run
+  non-blocking.
+- **Deferred consent (escape hatch).** An out-of-envelope request →
+  `WAITING{consent}` → surfaced to the parent UI as a pending badge →
+  resumed on async approval. Keeps human-in-loop for sensitive ops
+  without making the whole run interactive.
+- Headless policy (`CONSENT_DECISION` stream, pre-tool hook) stays
+  v1.20.x (open-decision items 11/12).
+
+### 9. Config inheritance — inherit infra, inject intent, default-deny capability
+
+| Inherit (parent defaults) | Inject (explicit per spawn) | Never inherit |
+|---|---|---|
+| provider/model + API keys, timeouts, model-profile registry, shell-wrapper config | task definition, persona/spec, **tool allowlist**, read-path scope, budgets, system prompt, egress allowlist | parent's conversation history (fresh context), parent's **interactive consent grants** (no transitive privilege), debug/UI-only state |
+
+- **Agent-spec is a first-class artifact** (new): persona + default tool
+  grant + budget + system-prompt fragment, in one schema reused by
+  interactive spawn *and* ppxai-sre.
+- **API keys:** same-process child just has them (MVP-fine). When tier-d
+  isolation lands, the spec carries a **token *reference*, not a raw
+  key**, so the swap to per-agent identity (item 9) is non-breaking.
+
+### 10. AppState — one running-agents summary field
+
+Add a `background_agents` summary field to
+`engine/app_state_schema.json` (auto-mirrors to web + VSCode + the
+schema via the existing 4-mirror DTO; bump the sentinel counts in
+`tests/test_app_state.py`). The UI shows a background-agents badge that
+survives reconnects through the existing `state_sync` mechanism.
+
+### 11. Additive wire & event surface (v1 contract stays byte-identical)
+
+All additions are **purely additive** — `POST /v1/oneshot` and the
+existing `AGENT_RUN_*` payloads are untouched (ppxai-sre constraint).
+
+```http
+POST /v1/agent/run                  → {run_id, run_token, status}
+     body: {task, persona?, provider?, model?, tools[], read_scope?,
+            budget{tokens,time_s,iterations}, network{allow_outbound[]},
+            idempotency_key?}
+GET  /v1/agent/runs                  → {runs:[...]}
+GET  /v1/agent/runs/<id>             → {meta, state}   (status snapshot)
+GET  /v1/agent/runs/<id>/events      → SSE (live + ?since=N replay)
+GET  /v1/agent/runs/<id>/result      → {body, artifact_refs:[...]}
+GET  /v1/agent/runs/<id>/artifacts/<artifact_id>  → resolves via /files/preview
+POST /v1/agent/runs/<id>/respond     → {resume_token, response}   (answer a WAITING)
+POST /v1/agent/runs/<id>/ack         → {ok, status:"finalized"}   (two-phase termination)
+POST /v1/agent/runs/<id>/cancel      → {ok, status:"cancelling"}
+```
+
+- **Spawn idempotency:** client-supplied `idempotency_key` → registry
+  dedup, so a retried POST never double-spawns.
+- **Fan-out backpressure:** `max_concurrent_subagents` caps spawn (cf.
+  the Workflow engine's `min(16, cores-2)` cap) — unbounded spawn =
+  resource exhaustion + provider rate-limit storms.
+- **Per-run cost attribution:** surface the existing per-`EngineClient`
+  usage counter keyed by `run_id`; budget enforcement reads the same
+  counter.
+
+**New `EventType` members (additive):**
+
+- `AGENT_RESULT_READY` — `{run_id, status, body_ref, artifact_refs[]}` —
+  emitted on `COMPLETED_PENDING_ACK`.
+- `AGENT_WAITING` — `{run_id, wait_kind: "consent"|"input"|"terminal_ack",
+  prompt, resume_token, ttl_s}`.
+- (`NETWORK_POLICY_DENIED`/`_ALLOWED` already tracked in item 8 /
+  Phase 5; `AGENT_SERVICE_DOWN` in §13.)
+
+**New `SideEffectKind`:** `AGENT_RUN_STARTED` (already proposed above).
+
+### MVP build order (the first slice)
+
+1. `engine/agent_runs.py` — `AgentRunRegistry` + the state machine (§8),
+   filesystem backend, in-memory live index. **Keystone.**
+2. Capability grant + tool-allowlist enforcement at the dispatcher (§3a/b);
+   egress allowlist proxy (§3c) with `NETWORK_POLICY_*` events.
+3. Background driver: `POST /v1/agent/run` mints run + token, starts the
+   `asyncio.Task`, returns immediately; `run_id`/`parent_run_id` added to
+   the existing `AGENT_RUN_START` payload.
+4. Monitor: `GET …/events` (live + replay), `GET …/result`,
+   `GET …/artifacts/<id>` (via files-parity); per-run authz (§7).
+5. Two-phase termination + `WAITING`/`respond`/`ack`; TTL reaper + cascade.
+6. `spawn_subagent` tool (Stage 3) gated to `max_concurrent_subagents`;
+   result returns as artifact refs.
+7. AppState `background_agents` field + 4-mirror sync (§10).
+
+Subprocess tool-execution (§4) is required for step 2's sandbox even at
+N=1 — that is the deliberate "build the sandbox infra now" choice. Pod
+isolation (tier d) and restart-durable persistence stay additive upgrades.
+
 ## Open decisions
 
 These are gaps this ADR cannot close without input or measurement.
@@ -267,17 +543,27 @@ fit-test; folded here as a follow-on. Each carries a recommended position;
 items marked LOAD-BEARING block ppxai-sre's planned features in their current
 shape.
 
+> **Resolved by the MVP design (2026-06-15)** — item numbers below are
+> unchanged; resolutions are annotated inline. Additionally **Question C**
+> (not previously a numbered item) is resolved: same-process
+> `asyncio.Task` for the agent loop (I/O-bound work needs no GIL escape),
+> with isolation moved to the **tool-execution** boundary
+> (subprocess/pod), not the loop — see Resolved MVP design §4.
+
 1. **Question A** — outer-loop value. Needs instrumentation data.
+   **MVP-sidestepped (2026-06-15):** the read-only research run is one
+   `chat_with_tools` invocation (Resolved MVP design §2), so the MVP
+   ships without this data. Still open for the *general* agent.
 2. **Question B** — filesystem vs SQLite for the registry. Recommend
-   filesystem; revisit if listing runs becomes slow.
-3. **Question D** — `EngineClient` construction cost. Needs a
-   benchmark (`time` to spin up an EngineClient with default
-   provider). If under ~50ms, D1 (per-sub-agent instance) is fine.
-4. **Cancellation semantics for sub-agents** — does cancelling a
-   parent cancel all children automatically, or only the parent?
-   Default proposal: cascading cancel (parent cancel → mark all
-   children for cancellation), with `?cascade=false` query param to
-   disable.
+   filesystem; revisit if listing runs becomes slow. (MVP: filesystem.)
+3. **Question D** — `EngineClient` construction cost. Direction set to
+   **D1** (new `EngineClient` per sub-agent run) per Resolved MVP design
+   §9; still needs the benchmark (`time` to spin up an EngineClient with
+   default provider). If under ~50ms, D1 is confirmed.
+4. **Cancellation semantics for sub-agents — RESOLVED (2026-06-15):**
+   cascading cancel, but **TTL-gated, not instant-on-disconnect** (else
+   it defeats semi-autonomy). Clean close → explicit cancel now; crash →
+   heartbeat reaper past a grace TTL. See Resolved MVP design §8.
 5. **Budget enforcement** — token cap and time cap need to interrupt
    mid-tool-call cleanly. Today's `_active_subprocesses` cleanup
    (commit `a746a7c6`) is the foundation; needs extending to a
