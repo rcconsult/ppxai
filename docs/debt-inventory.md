@@ -393,6 +393,33 @@ non-coding command, or the v1.19.x command-context work opens the file set.
 
 ---
 
+### Item 34 — office-preview deps must be bundled in binaries; build/CI must use `--all-extras` [packaging]
+
+**Affected:** `.claude/skills/build-install/SKILL.md`, the release CI build
+step, `pyproject.toml [data]` extra (`pypdfium2`, `openpyxl`, `python-pptx`;
+NB **no `python-docx`** → Word *text* fallback can't extract).
+
+**What's wrong:** the office-preview pipeline needs `pypdfium2` (PDF→PNG) and
+`python-pptx`, which live in the `[data]` optional extra. The `/build-install`
+skill builds with `uv run --no-sync pyinstaller`, so if the venv lacks
+`[data]` the binaries ship **without** office support — LibreOffice is detected
+but `render_pptx_slides` returns `[]` ("No slides rendered"). Found live on a
+2026-06-14 local build. Also: `python-docx` is absent from `[data]`, and the
+frozen binary can't use a `pip install 'ppxai[data]'` hint.
+
+**Planned:** v1.18.8/v1.19.x — (a) make the build-install skill
+`uv sync --all-extras` before PyInstaller; (b) **confirm the release CI builds
+with `--all-extras`** (release-blocker — verify shipped binaries aren't
+affected); (c) add `python-docx` to `[data]`.
+
+**Branch when ready:** `bugfix/v1.18.8` (skill + CI check) / v1.19.x (docx).
+
+**Trigger to revisit:** active now — verify before tagging v1.18.8.
+
+**Effort:** ~1–2 h (skill edit + CI workflow inspection + docx dep).
+
+---
+
 ## Recently moved out of debt scope
 
 These items left the debt inventory because they're not bug-fix-class
@@ -411,6 +438,18 @@ shipped already.
 
 For full closed-item rationale with commit references, see the per-version
 archived snapshots:
+
+- **Post-files-parity v1.18.8 review fixes (closed 2026-06-14):** beyond the
+  `/files/*` items (25–28, 30–32), two parallel reviews + live desktop testing
+  surfaced and closed: **cross-platform LibreOffice discovery** (`9d1c7550` —
+  macOS `soffice`/`.app` was undetected, raster preview dead by default; +
+  formatted install card) and its CI-safe test fix (`4b60970f`); **three
+  session save/load security findings** (`de3b56d7` — path traversal in
+  names, stale attachment file_ids on load, corrupt-load file-store
+  corruption); and the **session auto-restore-mode** bug (`1fe60ea5` — web
+  client ignored `auto_restore` and used a fragile `confirm()`, so restore
+  landed on fresh defaults; `/status` now exposes the mode). All with
+  regression tests. See [CHANGELOG.md](../CHANGELOG.md) `[1.18.8]`.
 
 - **Item 28 — OfficeFileView blob-revoke race + attachment text_fallback (closed 2026-06-14):**
   `ef17f748` on `bugfix/v1.18.8`. The attachment renderers (`app.js`) gained an

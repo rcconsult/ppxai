@@ -5,6 +5,37 @@ All notable changes to ppxai will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.18.8] - 2026-06-14
+
+Branch: `bugfix/v1.18.8`. Theme: **post-v1.18.7 code-review fixes** — cross-client `/files/*` parity (the original charter), plus a wave of correctness/security findings surfaced by parallel reviews and live desktop testing. No new features. The v1 API gateway (`POST /v1/oneshot`, bearer auth) and the `/command/*` envelope shape are **byte-identical to v1.18.7** — ppxai-sre's outlook-monitor and other consumers are unaffected.
+
+### Security
+
+- **Session-file path traversal.** `save()` wrote `sessions_dir/<name>.json` from a user-supplied name with no separator check, so `save("../escaped")` wrote outside the sessions directory; `load()` also trusted the JSON's internal `session_name`, letting a safe in-tree file poison the next autosave. New `_safe_session_name()` rejects separators / `..` / NUL (HTTP 400 on save; load falls back to the validated requested name). `ppxai/engine/session.py`, `tests/test_session_security.py`. Commit `de3b56d7`.
+- **Stale attachment file-IDs after session load.** `load()` only reset the file store for directory sessions (and even then skipped the reset when there was no `uploads/`), so loading a text-only session left the *previous* session's attachment `file_id`s resolvable via `/files/serve/{id}` and `/files/preview/{id}`. The file store now resets on **every** load. `ppxai/engine/session_store.py` (`reset()`). Commit `de3b56d7`.
+- **Corrupt load corrupting the file store.** `load()` rebuilt the file store *before* parsing `session.json`, so a corrupt file wiped the current store while keeping messages. JSON is now parsed first; the store is only touched after a valid parse. Commit `de3b56d7`.
+- **`/files/image/` home confinement** (debt 27). `serve_image` still used `str(path).startswith(str(home_dir))` (the v1.18.7 fix `09eae96e` had migrated only `read_file`/`write_file`), so `/home/userEVIL` bypassed home confinement through the image route. Swapped to the component-wise `_within_tree()`. `tests/test_files_route.py::TestServeImageConfinement`. Commit `7fb83d8b`.
+
+### Fixed
+
+- **`/files/read` type-contract regression** (debt 25). v1.18.7 flipped `.csv`/`.xlsx` to `office_spreadsheet` base64 and `.pptx`/`.docx` to a 400 hint, but only the web single-click path was updated. `CodeEditorView` now refuses any non-`text` type (was image/pdf only) so spreadsheet base64 can't render as editor text / corrupt on save; the RPF stack gains an `office` viewType (round-trips `OfficeFileView`); the `typeof OfficeFileView !== 'undefined'` deploy-skew guard is dropped; VSCode `httpClient.readFile` gets the real `ReadFileResponse` union + branch-on-`type` warning. Commit `2a22807c`.
+- **`/files/preview` forked routes unified** (debt 26). The path-based (`?path=`) and id-based (`/{file_id}`) routes had different JSON shapes and different LibreOffice-missing behavior (200 text_fallback vs hard 503). Collapsed onto one `render_office_preview()` helper: one shape (`type`/`kind`/`libreoffice_available` always present), always 200 + text_fallback (never 503), and legacy `.ppt`/`.doc` without LibreOffice return a typed message instead of a python-pptx/docx 500. Commit `579a2fe8`.
+- **OfficeFileView blob-URL revoke race + attachment text_fallback** (debt 28 + follow-up). The attachment renderers leaked an object URL when the view unmounted before the preview fetch resolved (`disposed` guard added to both the app.js callers and `renderSlideNavInto`); chat-bubble attachments now degrade to extracted text (via a shared `renderTextFallbackInto`) like the file-tree path now that the route returns text_fallback; VSCode `chatPanel.ts` no longer writes a 200 JSON text_fallback into a `.png`/`.pdf`. Commits `ef17f748`, `84ee33c2`.
+- **Cross-platform LibreOffice discovery.** The office-preview pipeline probed only `shutil.which("libreoffice")` and invoked the literal `libreoffice` — but macOS ships `soffice` inside `/Applications/LibreOffice.app` and adds nothing to PATH, so a plain `brew install --cask libreoffice` left office raster preview dead (users had to hand-create a symlink). New leaf `ppxai/common/libreoffice.py` resolves across platforms (PATH `libreoffice`/`soffice`, the macOS `.app` bundle, Windows Program Files, `PPXAI_LIBREOFFICE` override). The LibreOffice-missing web fallback now shows a formatted, platform-aware install card with a Download button. `tests/test_libreoffice_resolver.py`. Commit `9d1c7550`.
+- **Session auto-restore landing on defaults.** The web client ignored the `auto_restore` config and always popped a `window.confirm()`; when that dialog was dismissed/suppressed the restore silently never fired and the session came back on fresh defaults (perplexity/sonar/no-tools) even though the engine restore path was correct. `/status` now exposes `auto_restore`, and the client honors `always`/`prompt`/`never` (`always` restores with no dialog). Commit `1fe60ea5`.
+- **Command auto-route notice lost cross-client** (debt 30). `coding.py` `console.print`'d the "Auto-routed to <model>" notice, invisible to web/VSCode; it now rides in `AIResponseResult.content`. Commit `0f21cee1`.
+- **Session-mutation hygiene** (debt 31). Alternation cleanup popped/appended `session.messages` directly, bypassing the AppState invalidation callback; routed through new `SessionManager` helpers. Commit `44bb5dea`.
+- **Command envelope could carry non-JSON objects** (debt 32). `/load` stored raw `Message` dataclasses in `ConfirmationResult.details`; `to_dict()` now sanitizes via a recursive `_jsonsafe()`, with a guard test over every `CommandResult` subclass. Commit `439a0325`.
+
+### Changed
+
+- **`engine.completion` decoupled from `CommandFactory` internals** (debt 29 seed). Added the public `CommandFactory.iter_completion_specs()` snapshot; completion stops reading `_registry`/`_aliases`. The first-class `CompletionService` + AppState roster are designed in **ADR 0007** for v1.19.x. Commit `6a0a0a72`.
+- **AGENTS.md model-hint corrections.** Fixed wrong tool/param names taught to models (`apply_patch` is `file_path`/`unified_diff` not `path`/`patch`; `read_file` is `filepath`; `edit_file`/`run_command` are not real tools), documented that hints are additive (broad globs stack with specific ones), and reworded Chain-of-Thought hints. Commit `17fabfc8`.
+
+### Added
+
+- **ADR 0007** — completion as a first-class injected service; command roster via AppState (Proposed, v1.19.x).
+
 ## [1.18.7] - 2026-06-13
 
 Branch: `bugfix/v1.18.7`. Theme: **bugfix-class follow-up to v1.18.6** — a **critical multi-tenant auth fix** for the k8s session-manager (cross-user pod takeover), workspace file upload, repository hygiene, test-coverage backfill, one targeted web-client decomposition, model-catalog refresh to the 2026-05-31 generation, paperwork for two v1.20.x upstream asks surfaced by peer ppxai-sre RFCs, AND a structural fix to a long-standing file-tree office-doc preview regression (broken since v1.16.2). The v1 API gateway shape (`POST /v1/oneshot`, bearer auth) is **byte-identical to v1.18.6** — ppxai-sre's outlook-monitor and any other v1-gateway consumer is unaffected.
