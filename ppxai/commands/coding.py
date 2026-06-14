@@ -68,9 +68,10 @@ def _execute_ai_task(context: CommandContext, task_type: str, user_message: str,
     model = context.get_model()
     coding_model = get_coding_model(provider)
 
+    auto_routed = False
     if context.get_auto_route() and model != coding_model:
         model = coding_model
-        console.print(f"[dim]Auto-routed to {coding_model} for coding task (disable with /autoroute off)[/dim]")
+        auto_routed = True
 
     # Prepare system prompt + user message
     system_prompt = CODING_PROMPTS[task_type]
@@ -130,13 +131,25 @@ def _execute_ai_task(context: CommandContext, task_type: str, user_message: str,
             message="No response received from AI"
         )
 
-    # Extract code blocks from markdown content
+    # Extract code blocks from the raw AI content (before prepending any
+    # notice, so the auto-route note can't be mistaken for a code fence).
     code_blocks = []
     code_block_pattern = r'```(\w+)?\n(.*?)```'
     for match in re.finditer(code_block_pattern, content, re.DOTALL):
         language = match.group(1) or "text"
         code = match.group(2).strip()
         code_blocks.append({"language": language, "code": code})
+
+    # Surface the auto-route notice via the result `content` so EVERY client
+    # sees it. (Web/VSCode render `content` and only fall back to `message`
+    # when content is empty, so `message` alone would be invisible there.)
+    # Item 30: command handlers return data; they don't print to a console
+    # only the Rich TUI can see.
+    if auto_routed:
+        content = (
+            f"_Auto-routed to {coding_model} for this coding task "
+            f"(disable with `/autoroute off`)._\n\n{content}"
+        )
 
     return AIResponseResult(
         status=ResultStatus.SUCCESS,

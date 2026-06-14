@@ -104,14 +104,23 @@ edits a few `app.js` methods in place; no decomposition required.
   `test_tui_command_factory.py` (registry/alias coverage, alias→canonical,
   narrow-shape contract).
 
-### Phase E — Item 30: coding-command output lost cross-client
-- Route the user-facing notices in `commands/coding.py` (auto-route message
-  L73, initial-message banner L80, +3) through the event/result channel so
-  web/VSCode users see them; keep Rich rendering identical for TUI.
+### Phase E — Item 30: coding-command output lost cross-client ✅ landed
+- **Finding:** of the 5 `console.print` sites in `_execute_ai_task`, only the
+  **auto-route notice** was lost *information* server-side. The stream chunks,
+  error echo, and trailing newline are live-TUI UX or already in the returned
+  result; the initial-message banner is a pre-stream progress indicator, not
+  result data.
+- **Channel choice:** web/VSCode render `AIResponseResult.content` and only
+  fall back to `message` when content is empty — so the notice rides in
+  **`content`** (prepended as a markdown note), not `message`. Code-block
+  extraction runs on the raw output first, so the notice can't be mistaken
+  for a fence. Removed the `console.print` (renderers own UI now); the notice
+  shows once on every client.
 - **Defer** the broad console-purity sweep (`agent.py` ~43, `utility.py` ~39,
   `handler.py` ~29 — interactive TUI-only `input()` flows) to v1.19.x.
-- Test: a `coding.py` command run under `ServerCommandContext` surfaces the
-  auto-route notice via the result/events (not only server stdout).
+- **Tests:** `tests/test_coding_autoroute.py` — notice rides in `content`
+  when routed; absent when auto-route off or already on the coding model;
+  code blocks stay clean.
 
 ## `/files/*` work detail (Phases A & F — Wave 1)
 
