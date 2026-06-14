@@ -1,0 +1,80 @@
+"""Cross-platform LibreOffice discovery (ppxai/common/libreoffice.py).
+
+Regression for the macOS gap: the old `shutil.which("libreoffice")` probe
+missed macOS's `soffice` inside `/Applications/LibreOffice.app`, so a plain
+`brew install --cask libreoffice` left office raster preview dead. The
+resolver now covers PATH (`libreoffice`/`soffice`), the macOS .app bundle,
+Windows Program Files, and a `PPXAI_LIBREOFFICE` override.
+"""
+
+from __future__ import annotations
+
+from ppxai.common import libreoffice as lo
+
+
+def _make_exe(tmp_path, name="soffice"):
+    p = tmp_path / name
+    p.write_text("#!/bin/sh\n")
+    p.chmod(0o755)
+    return p
+
+
+class TestFindLibreOffice:
+    def test_env_override_wins(self, tmp_path, monkeypatch):
+        exe = _make_exe(tmp_path, "lo-custom")
+        monkeypatch.setenv("PPXAI_LIBREOFFICE", str(exe))
+        # PATH would also resolve, but the override takes precedence.
+        monkeypatch.setattr(lo.shutil, "which", lambda n: "/usr/bin/libreoffice")
+        assert lo.find_libreoffice() == str(exe)
+
+    def test_env_override_nonexistent_falls_through(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("PPXAI_LIBREOFFICE", str(tmp_path / "nope"))
+        monkeypatch.setattr(
+            lo.shutil, "which",
+            lambda n: "/usr/bin/libreoffice" if n == "libreoffice" else None,
+        )
+        assert lo.find_libreoffice() == "/usr/bin/libreoffice"
+
+    def test_path_libreoffice(self, monkeypatch):
+        monkeypatch.delenv("PPXAI_LIBREOFFICE", raising=False)
+        monkeypatch.setattr(
+            lo.shutil, "which",
+            lambda n: "/usr/bin/libreoffice" if n == "libreoffice" else None,
+        )
+        assert lo.find_libreoffice() == "/usr/bin/libreoffice"
+
+    def test_path_soffice_when_no_libreoffice(self, monkeypatch):
+        """macOS/user-symlink case: only `soffice` resolves."""
+        monkeypatch.delenv("PPXAI_LIBREOFFICE", raising=False)
+        monkeypatch.setattr(
+            lo.shutil, "which",
+            lambda n: "/opt/soffice" if n == "soffice" else None,
+        )
+        assert lo.find_libreoffice() == "/opt/soffice"
+
+    def test_well_known_path_when_not_on_path(self, tmp_path, monkeypatch):
+        """The core macOS fix: nothing on PATH, but the .app-style absolute
+        path exists and is returned."""
+        exe = _make_exe(tmp_path)
+        monkeypatch.delenv("PPXAI_LIBREOFFICE", raising=False)
+        monkeypatch.setattr(lo.shutil, "which", lambda n: None)
+        monkeypatch.setattr(lo, "_well_known_paths", lambda: [tmp_path / "missing", exe])
+        assert lo.find_libreoffice() == str(exe)
+        assert lo.libreoffice_available() is True
+
+    def test_none_when_absent(self, monkeypatch):
+        monkeypatch.delenv("PPXAI_LIBREOFFICE", raising=False)
+        monkeypatch.setattr(lo.shutil, "which", lambda n: None)
+        monkeypatch.setattr(lo, "_well_known_paths", lambda: [])
+        assert lo.find_libreoffice() is None
+        assert lo.libreoffice_available() is False
+
+    def test_macos_well_known_includes_app_bundle(self, monkeypatch):
+        monkeypatch.setattr(lo.sys, "platform", "darwin")
+        paths = [str(p) for p in lo._well_known_paths()]
+        assert any("LibreOffice.app/Contents/MacOS/soffice" in p for p in paths)
+
+    # NB: the Windows branch isn't exercised here — monkeypatching os.name
+    # to "nt" globally breaks pathlib (WindowsPath can't instantiate on a
+    # POSIX host). The well-known-path *mechanism* is covered by
+    # test_well_known_path_when_not_on_path and the macOS case above.

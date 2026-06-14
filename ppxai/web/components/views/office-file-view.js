@@ -542,9 +542,7 @@ class OfficeFileView extends BaseView {
                 <span class="pptx-slide-counter">Slide <span class="ofv-current">1</span> / ${unitTotal}</span>
                 <button class="rpf-btn ofv-nav-next" title="Next">▶</button>
             </div>
-            <div class="ofv-fallback-note" style="margin:8px 16px;padding:8px;background:var(--bg-tertiary);border-radius:4px;font-size:12px;color:var(--text-muted);">
-                LibreOffice not installed — showing extracted text. Install LibreOffice for a rendered preview.
-            </div>
+            ${_ofvLibreOfficeInstallCard()}
             <div class="pptx-slide-container" style="flex:1; overflow:auto;"></div>`;
         const counterEl = previewEl.querySelector('.ofv-current');
         const prevBtn   = previewEl.querySelector('.ofv-nav-prev');
@@ -578,6 +576,53 @@ function _ofvEsc(str) {
     return String(str ?? '')
         .replace(/&/g, '&amp;').replace(/</g, '&lt;')
         .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function _ofvDetectOS() {
+    const p = (navigator.userAgentData?.platform
+        || navigator.platform || navigator.userAgent || '').toLowerCase();
+    if (p.includes('mac')) return 'mac';
+    if (p.includes('win')) return 'win';
+    if (p.includes('linux') || p.includes('x11')) return 'linux';
+    return 'other';
+}
+
+// Formatted, platform-aware "install LibreOffice" card shown above the
+// text fallback when the server reports libreoffice_available:false. The
+// rendered preview pipeline shells out to LibreOffice headless; a plain
+// system install is enough (detection covers PATH + the macOS .app bundle).
+function _ofvLibreOfficeInstallCard() {
+    const os = _ofvDetectOS();
+    const CMD = {
+        mac:   { label: 'or via Homebrew', code: 'brew install --cask libreoffice' },
+        linux: { label: 'or via your package manager (Debian/Ubuntu)', code: 'sudo apt install libreoffice' },
+    };
+    const c = CMD[os];
+    const cmdBlock = c ? `
+        <div style="font-size:11px;color:var(--text-muted);margin:10px 0 4px;">${c.label}:</div>
+        <pre style="margin:0;padding:8px 10px;background:var(--bg-primary,rgba(0,0,0,0.25));border-radius:6px;
+            font-family:var(--font-mono);font-size:12px;overflow:auto;"><code>${_ofvEsc(c.code)}</code></pre>` : '';
+    return `
+        <div class="ofv-install-card" style="margin:12px 16px;padding:14px 16px;
+            background:var(--bg-tertiary);border:1px solid var(--border-color,rgba(255,255,255,0.10));border-radius:8px;">
+            <div style="font-weight:600;font-size:13px;color:var(--text-primary);margin-bottom:6px;">
+                📊 Install LibreOffice for rendered previews
+            </div>
+            <div style="font-size:12px;color:var(--text-muted);line-height:1.5;margin-bottom:12px;">
+                Slides and documents are rendered to images by <strong>LibreOffice</strong>
+                (free &amp; open-source, runs headless in the background). A plain system
+                install is all that's needed.
+            </div>
+            <a href="https://www.libreoffice.org/download/" target="_blank" rel="noopener"
+               style="display:inline-block;padding:8px 16px;background:var(--accent-color,#4ea1ff);
+               color:#fff;font-size:13px;font-weight:600;border-radius:6px;text-decoration:none;">
+                ⬇ Download LibreOffice
+            </a>
+            ${cmdBlock}
+            <div style="font-size:11px;color:var(--text-muted);margin-top:12px;opacity:0.85;">
+                Previews appear automatically after install — no restart needed. The extracted text is shown below meanwhile.
+            </div>
+        </div>`;
 }
 
 function _ofvBuildTableHtml(headers, rows) {

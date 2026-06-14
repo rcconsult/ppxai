@@ -31,6 +31,8 @@ import subprocess
 import tempfile
 from pathlib import Path
 
+from .libreoffice import find_libreoffice
+
 
 # LibreOffice headless cold-start is slow (~2-5s) and a large document
 # can take longer than the default 30s; 120s is the empirical ceiling
@@ -93,10 +95,14 @@ def convert_docx_to_pdf(source_path: Path, cache_dir: Path) -> Path:
 
     cache_dir.mkdir(parents=True, exist_ok=True)
 
+    soffice = find_libreoffice()
+    if soffice is None:
+        raise RuntimeError("LibreOffice not found")
+
     with tempfile.TemporaryDirectory() as tmpdir:
         subprocess.run(
             [
-                "libreoffice", "--headless", "--norestore",
+                soffice, "--headless", "--norestore",
                 "--convert-to", "pdf",
                 "--outdir", tmpdir,
                 str(source_path),

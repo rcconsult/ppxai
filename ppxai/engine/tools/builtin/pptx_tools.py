@@ -342,10 +342,18 @@ import subprocess
 import tempfile
 from pathlib import Path
 
+from ....common.libreoffice import find_libreoffice, libreoffice_available
+
 
 def _libreoffice_available() -> bool:
-    """Check if LibreOffice headless is installed."""
-    return shutil.which("libreoffice") is not None
+    """Check if LibreOffice headless is installed.
+
+    Delegates to the shared cross-platform resolver — finds `libreoffice` or
+    `soffice` on PATH, the macOS `.app` bundle, Windows Program Files, and the
+    `PPXAI_LIBREOFFICE` override. (Previously `shutil.which("libreoffice")`
+    only, which missed macOS's `soffice`.)
+    """
+    return libreoffice_available()
 
 
 def render_pptx_slides(pptx_path: Path, cache_dir: Path) -> List[Path]:
@@ -387,6 +395,10 @@ def render_pptx_slides(pptx_path: Path, cache_dir: Path) -> List[Path]:
 
     cache_dir.mkdir(parents=True, exist_ok=True)
 
+    soffice = find_libreoffice()
+    if soffice is None:
+        return []
+
     with tempfile.TemporaryDirectory() as tmpdir:
         # LibreOffice converts .pptx → .pdf headlessly; we then render
         # each PDF page to PNG with pypdfium2 (replaces the old
@@ -396,7 +408,7 @@ def render_pptx_slides(pptx_path: Path, cache_dir: Path) -> List[Path]:
         # some LibreOffice versions, so go via PDF.
         subprocess.run(
             [
-                "libreoffice", "--headless", "--norestore",
+                soffice, "--headless", "--norestore",
                 "--convert-to", "pdf",
                 "--outdir", tmpdir,
                 str(pptx_path),

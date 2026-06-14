@@ -5,6 +5,7 @@ File operations endpoints (search, list, tree, read, write, image).
 import base64
 import hashlib
 import os
+import sys
 import time
 from pathlib import Path
 
@@ -896,11 +897,16 @@ def render_office_preview(
         from pptx import Presentation
         slide_count = len(Presentation(str(file_path)).slides)
     except ImportError:
+        # Neither LibreOffice nor python-pptx. The web client renders a
+        # formatted "install LibreOffice" card from libreoffice_available;
+        # this body is the plain-text equivalent for other clients. The
+        # `pip install 'ppxai[data]'` route only helps source installs — it's
+        # a dead end for the frozen binary, so omit it there.
+        hint = "Install LibreOffice to render this presentation."
+        if not getattr(sys, "frozen", False):
+            hint += " (Or `pip install 'ppxai[data]'` for text extraction.)"
         return _text_fallback(
-            kind="presentation", name=name, total=1,
-            content=("Preview unavailable: install LibreOffice for raster "
-                     "previews or `pip install 'ppxai[data]'` for text "
-                     "extraction."),
+            kind="presentation", name=name, total=1, content=hint,
         )
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Cannot open PPTX: {exc}")
