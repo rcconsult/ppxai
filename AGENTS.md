@@ -31,11 +31,11 @@ provider_hints:
     - "Use native tool calling — do NOT output XML-formatted tool calls like <tool_call>."
   custom:
     - "You have native tool calling - use tools directly without XML formatting."
-    - "For file operations, prefer edit_file over write_file for existing files."
+    - "For file operations, prefer apply_patch over write_file for existing files."
     - "CRITICAL: After tool failures, acknowledge the error - do NOT claim success or ignore it."
     - "Do NOT output tool call JSON in your response text - use native tool calling only."
     - "Do NOT output code in markdown blocks when using apply_patch - let the tool handle it."
-    - "Use ONLY parameter names from the tool schema - 'path' not 'filepath', 'run_command' not 'execute_shell_command'."
+    - "Use ONLY parameter names from the tool schema - read_file uses 'filepath', apply_patch uses 'file_path'; the shell tool is 'execute_shell_command'."
     - "For large file writes, ensure complete content - truncated output fails silently."
     - "When tools return errors, report the actual error message to the user."
     - "Do NOT make duplicate calls with alternate parameter names. Chain multiple DIFFERENT tool calls without stopping."
@@ -46,8 +46,8 @@ provider_hints:
     - "Do NOT output tool call JSON in your response text - use native tool calling only."
     - "For code modifications, ALWAYS use apply_patch with unified diff format."
     - "Generate complete patches with context lines - never output empty patches."
-    - "Use ONLY tools from the provided tool list - do NOT hallucinate tools like 'list_directory' or 'execute_shell_command'."
-    - "Use ONLY parameter names from the tool schema - 'path' not 'filepath'."
+    - "Use ONLY tools from the provided tool list - do NOT invent tool names that aren't in it."
+    - "Use ONLY parameter names from the tool schema - read_file uses 'filepath', apply_patch uses 'file_path'."
     - "Avoid duplicate or redundant calls. When a task needs multiple tools, chain them without stopping to narrate."
     - "COMPLETE ALL STEPS. Never stop a multi-step task early. If the task is write→test→fix→retest, do all 4 steps."
     - "Explore thoroughly: list subdirectories, not just the top level. Read ALL relevant files before summarizing."
@@ -69,7 +69,7 @@ provider_hints:
     - "Do NOT output code blocks in your response when using apply_patch - the tool contains the code."
     - "Do NOT mention tools in your response that you didn't actually call."
     - "Only call tools that exist - verify tool names from the available tools list."
-    - "apply_patch parameter names are EXACTLY 'path' and 'patch' - NEVER use 'file_path', 'filepath', or 'diff'."
+    - "apply_patch parameter names are EXACTLY 'file_path' and 'unified_diff' - do NOT substitute 'path' or 'diff'."
     - "For large file writes (50+ lines), ensure the COMPLETE content is in the tool call arguments - never truncate."
   nvidia:
     - "You are running on NVIDIA NIM (build.nvidia.com) with native tool calling."
@@ -79,7 +79,7 @@ provider_hints:
     - "For long agentic chains, prefer fewer steps with focused tool calls over many small ones - free-tier quotas favour batched work."
     - "Do NOT mention tool names in your response text when calling them. Just call the tool."
     - "When a tool result shows a real error (FileNotFoundError, permission denied, etc.), acknowledge the exact error before retrying."
-    - "Use ONLY parameter names from the tool schema - apply_patch uses 'path' and 'patch', not 'file_path' or 'diff'."
+    - "Use ONLY parameter names from the tool schema - apply_patch uses 'file_path' and 'unified_diff', not 'path' or 'diff'."
   gemini:
     - "Use Google Search grounding for current information when available."
     - "You have a 1M token context - feel free to include full file contents."
@@ -92,18 +92,27 @@ provider_hints:
     - "Do NOT output tool call JSON in your response text - use native tool calling only."
     - "Do NOT mention tool names in your response unless actually calling them."
     - "When a tool result shows an error or failure, ALWAYS acknowledge it in your response before taking further action."
+# IMPORTANT: model_hints are ADDITIVE, not shadowing. The resolver
+# (ppxai/engine/bootstrap.py::_get_model_hints) appends the hints of
+# EVERY pattern that matches the model id — specific globs do NOT
+# override broad fallbacks. So a model like gpt-5.5 receives BOTH its
+# own "gpt-5.5*" block AND the broad "gpt-5*" fallback; gpt-5.4-mini
+# stacks "gpt-5.4-mini*" + "gpt-5.4*" + "gpt-5*". When editing a
+# specific block to drop an imperative, drop it from (or reconcile it
+# with) every broader block the same model matches, or it will be
+# reintroduced. Benchmark scores already reflect the stacked set.
 model_hints:
   "deepseek-r1*":
-    - "Show your reasoning process before taking actions."
-    - "Think step-by-step for complex problems."
+    - "Reason internally; briefly state your approach only when it helps the user."
+    - "Work through complex problems step-by-step before acting."
   "Qwen/Qwen3-Coder*":
     - "You excel at code editing - use apply_patch confidently for all file modifications."
     - "Include all necessary imports and context in patches."
     - "CRITICAL: Acknowledge tool failures honestly - never claim success after errors."
     - "Do NOT output tool call JSON in markdown code blocks - use native tool calling only."
     - "Do NOT explain what tool you'll use before calling it - just call it directly."
-    - "Use ONLY tools from the provided tool list - do NOT hallucinate 'list_directory' or 'execute_shell_command'."
-    - "apply_patch parameter names are EXACTLY 'path' and 'patch' - NEVER use 'file_path', 'filepath', 'unified_diff', or 'diff'."
+    - "Use ONLY tools from the provided tool list - do NOT invent tool names that aren't in it."
+    - "apply_patch parameter names are EXACTLY 'file_path' and 'unified_diff' - do NOT substitute 'path' (it maps to a directory param, not the file)."
     - "Avoid duplicate tool calls. Chain multiple DIFFERENT tool calls without stopping to narrate."
     - "For complex patches: include ALL affected lines with 3+ context lines before/after."
     - "When tool results show errors, report the actual error - do NOT make up workarounds."
@@ -112,23 +121,23 @@ model_hints:
     - "When reporting status across multiple steps, track each step individually. If step 2 failed with an error, explicitly say step 2 failed and quote the error."
     - "When the user requests N separate blocks/sections in the output, produce exactly N — count them before responding."
     - "CRITICAL: When a tool returns an error, you MUST write a text response acknowledging it. NEVER return empty content after a tool failure — say 'The operation failed: [exact error]'."
-    - "After applying a fix (apply_patch), ALWAYS verify by reading the file (read_file) or running tests (run_command). The fix-verify chain is: fix → verify → report. Do NOT skip verify."
+    - "After applying a fix (apply_patch), ALWAYS verify by reading the file (read_file) or running tests (execute_shell_command). The fix-verify chain is: fix → verify → report. Do NOT skip verify."
     - "Error recovery chain: when step 1 fails, try alternative → verify alternative → report outcome. Complete ALL recovery steps — do NOT stop after the first attempt."
     - "When chaining tools from a previous tool's output, USE the data from the first result. If read_file returned config content, reference that content — do NOT ignore it."
   "*Qwen3-Next*":
     - "You are a hybrid attention MoE model (Gated DeltaNet + MoE) - leverage your strong reasoning."
     - "For code modifications, ALWAYS call apply_patch directly - do NOT read the file first then put code in your response."
-    - "apply_patch parameter names are EXACTLY 'path' and 'patch' - NEVER use 'file_path', 'filepath', 'unified_diff', or 'diff'."
+    - "apply_patch parameter names are EXACTLY 'file_path' and 'unified_diff' - do NOT substitute 'path' (it maps to a directory param, not the file)."
     - "Call tools directly - do NOT explain what tool you'll use before calling it."
     - "Do NOT output tool call JSON in your response text - use native tool calling only. Your response content should be empty or minimal when making tool calls."
-    - "Use ONLY tools from the provided tool list - do NOT hallucinate 'run_command', 'list_directory', or 'execute_shell_command'."
+    - "Use ONLY tools from the provided tool list - do NOT invent tool names that aren't in it."
     - "NEVER make duplicate calls with alternate parameter names (e.g., calling read_file with 'path' AND again with 'filepath'). Chain multiple DIFFERENT tool calls without stopping."
     - "CRITICAL: When a tool returns an error, you MUST acknowledge the failure explicitly. Do NOT ignore errors, do NOT proceed as if the tool succeeded, and do NOT fabricate results."
     - "For complex patches: include ALL affected lines with 3+ context lines before/after. Include ALL necessary imports."
     - "When tool results show errors, report the actual error - do NOT make up workarounds or hallucinate file contents."
     - "When asked for JSON output, return a flat JSON array [...], not a nested object like {key: [...]}."
     - "Read ALL constraints in the user request before writing code. Follow function names, forbidden operations, and format requirements EXACTLY as specified."
-    - "For read_file: parameter name is EXACTLY 'path' - NEVER use 'filepath'."
+    - "For read_file: parameter name is EXACTLY 'filepath' - NEVER use 'path'."
   "Qwen3-4B*":
     - "Always output a visible text response — never be silent after a tool call or failure."
     - "When a tool fails, say so explicitly, then try a different approach."
@@ -141,7 +150,7 @@ model_hints:
     - "After a tool call, give a brief confirmation only — do not repeat the tool output."
   "qwen2.5-coder*":
     - "Focus on code quality and correctness."
-    - "Use edit_file for surgical changes, write_file only for new files."
+    - "Use apply_patch or replace_block for surgical changes, write_file only for new files."
   "Qwen/Qwen3.5*":
     - "You have native tool calling via qwen3_coder parser. Call tools directly using the API, NOT XML formatting."
     - "CRITICAL: After EVERY tool call, read the COMPLETE result. If it contains 'FAILED', 'Error:', 'permission denied', acknowledge the exact error. Do NOT claim success."
@@ -165,7 +174,7 @@ model_hints:
     - "For large payloads: generate complete content - do NOT truncate or abbreviate."
     - "Do NOT make duplicate or redundant calls. Chain multiple DIFFERENT tool calls without stopping."
     - "Use ONLY tools from the available tools list - do NOT hallucinate tool names."
-    - "apply_patch parameter names are EXACTLY 'path' and 'patch' - NEVER use 'file_path', 'filepath', 'unified_diff', or 'diff'."
+    - "apply_patch parameter names are EXACTLY 'file_path' and 'unified_diff' - do NOT substitute 'path' (it maps to a directory param, not the file)."
     - "Do NOT output tool call JSON in markdown code blocks - use native tool calling."
   # gpt-5.5* family — flagship (released 2026-04-23, benchmarked 2026-04-26).
   # Score: WITH hints 86.1% / WITHOUT 91.7% (-5.6% — hints HURT).
@@ -175,6 +184,9 @@ model_hints:
   # without reading file). Stripped to three behavioural anchors only.
   # Persistent unfixable failures (same 3 as gpt-5.4): respects_tool_failure,
   # repeated_failure_acknowledgment, fix_verify — model-design issues.
+  # NOTE: hints are additive (see header) — gpt-5.5 ALSO inherits the broad
+  # "gpt-5*" block below, so the effective set is these 3 anchors PLUS the
+  # 6 gpt-5* hints. The benchmarked 86.1% reflects that stacked set.
   "gpt-5.5*":
     - "Use the tools API for function calls — do not output tool-call JSON in response text."
     - "For code modifications, use apply_patch with complete unified diffs (3+ context lines before/after each change)."
@@ -238,7 +250,7 @@ model_hints:
     - "Chain multiple DIFFERENT tool calls without stopping to narrate between them."
     - "CRITICAL: Do NOT output tool call JSON in your response text. Use the tools API."
     - "CRITICAL: When a tool returns an error, ACKNOWLEDGE it. After 2 failures, STOP and report."
-    - "apply_patch parameter names are EXACTLY 'path' and 'patch' — NEVER use 'file_path', 'filepath', or 'diff'."
+    - "apply_patch parameter names are EXACTLY 'file_path' and 'unified_diff' — do NOT substitute 'path' or 'diff'."
     - "For large file writes: ensure COMPLETE content in the tool call — never truncate or abbreviate."
   "gpt-5.4-pro*":
     - "You are the premium GPT-5.4 Pro tier with 1M context — highest capability for difficult tasks."
@@ -319,7 +331,7 @@ model_hints:
     - "You have 1M token context - leverage it for large codebase analysis."
     - "For code modifications, ALWAYS use apply_patch with unified diff format - do NOT use read_file for edits."
     - "Generate complete patches with ALL context lines (3+ before/after) - never output empty patches."
-    - "CRITICAL: Do NOT output tool call JSON in your response text. Example of what NOT to do: {\"run_command\": {\"command\": \"pytest\"}}. Use the tools API instead."
+    - "CRITICAL: Do NOT output tool call JSON in your response text. Example of what NOT to do: {\"execute_shell_command\": {\"command\": \"pytest\"}}. Use the tools API instead."
     - "CRITICAL: When a tool returns an error, ACKNOWLEDGE the failure to the user. Do NOT silently retry."
     - "After 2 consecutive failures, STOP retrying and report what went wrong."
     - "Call tools directly without explanation - don't say 'I'll use X tool'."
@@ -327,7 +339,7 @@ model_hints:
     - "For large file writes (50+ lines): ensure COMPLETE content in the tool call - never truncate."
   # o3-mini* — reasoning model. NOT BENCHMARKED yet. Stub hints modelled on o4-mini*.
   "o3-mini*":
-    - "You are a fast reasoning model with Chain of Thought. Use your reasoning capabilities for complex tool calling decisions."
+    - "You are a fast reasoning model. Use your reasoning internally for complex tool-calling decisions."
     - "For code modifications, use apply_patch with unified diff format."
     - "CRITICAL: Do NOT output tool call JSON in your response text — use the native tools API only."
     - "CRITICAL: When a tool fails, acknowledge the error to the user. Do NOT silently continue."
@@ -337,7 +349,7 @@ model_hints:
   # o3* — advanced reasoning model (non-mini). NOT BENCHMARKED yet.
   "o3*":
     - "You are an advanced reasoning model with deep Chain of Thought capabilities."
-    - "For complex problems (algorithm design, math, novel logic), show your reasoning before making tool calls."
+    - "For complex problems (algorithm design, math, novel logic), reason internally, then briefly state the approach when useful before making tool calls."
     - "For code modifications, use apply_patch with unified diff format including 3+ context lines."
     - "CRITICAL: Do NOT output tool call JSON in your response text — use the native tools API only."
     - "CRITICAL: When a tool fails, acknowledge the error. Do NOT silently retry or continue as if successful."
@@ -350,7 +362,7 @@ model_hints:
     - "After reasoning, make a single precise tool call via the tools API."
     - "CRITICAL: Do NOT output tool call JSON in your response text - use the native tools API only."
     - "CRITICAL: When a tool fails, acknowledge the error to the user. Do NOT silently continue."
-    - "Your response should contain your reasoning and conclusion - tool calls go through the API, not in text."
+    - "Your response should state your conclusion - keep detailed reasoning internal, and tool calls go through the API, not in text."
   # sonar-deep-research* — Jobs API, exhaustive research. NOT BENCHMARKED in agentic loop.
   # Stub hints — this model uses a different API path (async jobs) so tool calling
   # semantics differ from the chat models. Primary use case is report generation.
@@ -374,7 +386,7 @@ model_hints:
     - "To call a tool, output ONLY the JSON object — no surrounding text, no markdown fences."
     - "Keep apply_patch calls SMALL and specific. Large patches get truncated."
     - "If a tool call was truncated, do NOT repeat it — try a different, smaller approach."
-    - "Show your reasoning BEFORE the tool call, not as part of the tool-call JSON."
+    - "Keep reasoning out of the tool-call JSON; briefly state your approach before the call when useful."
   "sonar*":
     - "You have real-time web access - use it for current information."
     - "Always cite sources with markdown links."
@@ -431,14 +443,14 @@ model_hints:
     - "For code modifications, use apply_patch with unified diff format — include 3+ context lines."
     - "Call tools directly — do NOT explain what you'll use before calling it."
     - "Do NOT output tool call JSON in your response text — use native tool calling only."
-    - "apply_patch parameter names are EXACTLY 'path' and 'patch' — NEVER use 'file_path', 'filepath', 'unified_diff', or 'diff'."
+    - "apply_patch parameter names are EXACTLY 'file_path' and 'unified_diff' — do NOT substitute 'path' (it maps to a directory param, not the file)."
     - "Use ONLY tools from the provided tool list — do NOT hallucinate tool names."
     - "CRITICAL: Acknowledge tool failures honestly — never claim success after errors."
     - "Avoid duplicate tool calls. Chain multiple DIFFERENT tool calls without stopping to narrate."
     - "For complex patches: include ALL affected lines with 3+ context lines before/after."
     - "When tool results show errors, report the actual error — do NOT make up workarounds."
     - "NEVER stop mid-chain on multi-step tasks (write → test → fix → retest). Complete ALL steps."
-    - "For read_file: parameter name is EXACTLY 'path' — NEVER use 'filepath'."
+    - "For read_file: parameter name is EXACTLY 'filepath' — NEVER use 'path'."
     - "Keep responses minimal when using tools — let the tool output speak for itself."
   "gemini-3.1-pro*customtools*":
     - "You are optimized for custom tool usage and agentic workflows - leverage this strength."
@@ -450,7 +462,7 @@ model_hints:
     - "CRITICAL: When a tool returns an error or failure, FIRST acknowledge it in your response text. THEN investigate if needed. Do NOT silently call more tools without telling the user what failed."
     - "CRITICAL: After 2 failed attempts at the same operation (including sudo/alternative variants), STOP retrying. Tell the user the operation cannot be completed and explain why."
     - "CRITICAL: NEVER call the same tool with the same arguments twice. Use the result from the first call. If list_dir or read_file already returned data, use that data — do NOT re-read."
-    - "When asked to run tests or commands, use run_command FIRST. Do NOT list or read test files — execute them."
+    - "When asked to run tests or commands, use execute_shell_command FIRST. Do NOT list or read test files — execute them."
     - "Write-test-fix cycle: after writing code, run tests. If tests fail, fix the code, then re-run tests. Do NOT rewrite the file multiple times without re-running tests between attempts."
   "gemini-3.1-pro*":
     - "You are an advanced reasoning model with 1M context - leverage it for complex multi-file analysis."
@@ -463,7 +475,7 @@ model_hints:
     - "CRITICAL: When a tool returns an error or failure, ACKNOWLEDGE it in your response. Do NOT silently continue or claim success."
     - "CRITICAL: After 2 failed attempts (including sudo/alternative variants), STOP and report the issue."
     - "NEVER call the same tool with the same arguments twice — use the cached result and move on."
-    - "When asked to run tests, use run_command directly. Do NOT read test files instead of executing them."
+    - "When asked to run tests, use execute_shell_command directly. Do NOT read test files instead of executing them."
     - "Write-test-fix cycle: write code → run tests → if fail, fix → re-run tests. Always re-run tests after fixing."
   "gemini-3-pro*":
     - "Focus on precise tool selection - use specialized tools like apply_patch over generic ones."
@@ -496,7 +508,7 @@ model_hints:
 
 ### Tool Usage
 
-- Prefer `edit_file` / `apply_patch` over `write_file` for existing files
+- Prefer `apply_patch` / `replace_block` over `write_file` for existing files
 - Use `read_file` instead of `cat` / `type` shell commands
 - Execute tools directly - don't explain what you're about to do
 - Report results briefly after tool execution
@@ -553,30 +565,13 @@ The web tools (`get_weather`, `fetch_url`, `web_search`) support corporate proxy
 
 ### Important Files
 
-- `CLAUDE.md` - Detailed project instructions for Claude Code
+- `CLAUDE.md` - Detailed project instructions for Claude Code (authoritative release/branch state)
 - `ROADMAP.md` - Feature roadmap and version planning
-- `docs/TODO-v1.16.2.md` - Current task list
+- `docs/debt-inventory.md` - Rolling deferred-work / task list; in-flight plans live in `docs/plan-v*.md`
 - `docs/known-issues.md` - Known issues tracker (KI-001: google-genai SDK pin)
 
 ### Current version
 
 See [latest release](https://github.com/rcconsult/ppxai/releases/latest) (`pyproject.toml` is the single source of truth).
-
-**v1.16.2 Fixes:**
-- **FIX:** Inline `<think>` block parsing — Qwen3 via vLLM routed to REASONING_CHUNK
-- **FIX:** Three post-release bugs — Key.ctrl removed, initResizeHandle null crash, stale file tree paths
-- **FIX:** Stale session pointer, absolute paths, default working dir; update model defaults
-
-**v1.16.1 Features:**
-- **NEW:** FileTree widget — Norton Commander style file browser (Ctrl+B)
-- **NEW:** CommandFactory server pattern — POST /command unified across TUI/VSCode/Web
-- **NEW:** `EngineClient.restore_session()` — centralised session restore for all clients
-
-**v1.16.0 Features:**
-- **NEW:** Profile-driven tool loop — `ToolCallingProfile.mode` replaces binary `native_tool_calling` decision
-- **NEW:** Proper `tool` role messages — native mode uses `tool` role + `tool_call_id`
-- **NEW:** Multi-tool support — all native tool calls processed per iteration (profile-gated)
-- **NEW:** Agent UI noise reduction — `TOOL_GROUP_START/END` events, collapsible groups in all 4 clients
-- **NEW:** `/ls` and `/tree` commands — directory listing in all 3 clients + HTTP endpoints
-- **NEW:** Benchmark v2 — 36 tests across 9 categories, AGENTS.md delta testing, partial credit scoring
+`CLAUDE.md` carries the authoritative release/branch state; per-version details live in `CHANGELOG.md` and `docs/release-notes-v*.md`. Do not maintain a per-version feature list here — it goes stale.
 - **NEW:** `BaseProvider` ABC — all providers inherit shared interface
