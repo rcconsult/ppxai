@@ -545,48 +545,6 @@ alternation tests + add AppState-callback assertions). Medium risk.
 
 ---
 
-### Item 32 — command envelope can carry non-JSON objects in `ConfirmationResult.details` [cross-client serialization risk]
-
-**Affected files:** `ppxai/commands/session.py` (line 151 — `/load` puts the
-raw `list[Message]` into `details["messages"]`), `ppxai/commands/results.py`
-(line 373 — `ConfirmationResult.to_dict()` passes `details` through
-unchanged). Envelope is exposed at `ppxai/server/routes/commands.py:49`
-(`POST /command/{name}`); `Message` is a `@dataclass`
-(`ppxai/engine/types.py:198`).
-
-**What's wrong:** `to_dict()` is the wire contract, but `details` can hold
-raw dataclass `Message` objects (incl. nested attachment refs / bytes). If
-`/command/load` is called over HTTP, the envelope would carry non-JSON-clean
-objects.
-
-**Why deferred / nuance:** **latent on the wire, not active.** No HTTP client
-hits this path — VSCode uses `/sessions/load/{name}`, web uses
-`/sessions/restore`. **Correction (implementation):** the raw `messages` key
-is **not** consumer-free — the *in-process* Textual renderer
-(`rendering/textual_renderer.py::render_confirmation`) reads
-`details["messages"]` as live `Message` objects to repaint the transcript on
-`/load`. So the key cannot simply be dropped; the fix sanitizes at the wire
-boundary instead.
-
-**Resolution (landed):** `ConfirmationResult.to_dict()` now runs `details`
-through a recursive `_jsonsafe()` sanitizer (dataclass→dict via `to_dict()`/
-`asdict`, bytes→marker, unknown→`str`), so the envelope is always
-`json.dumps`-able while in-process callers keep reading the raw objects from
-`result.details` (they never call `to_dict()`). Added
-`tests/test_command_envelope_serialization.py` (the `/load` Message
-regression + `_jsonsafe` unit coverage) plus a parametrized
-`test_to_dict_is_json_serializable` across **every** `CommandResult` subclass
-in `tests/test_command_result_serialization.py`. See
-[docs/plan-v1.18.8-files-parity.md](plan-v1.18.8-files-parity.md) Phase B.
-
-**Branch when ready:** `bugfix/v1.18.8`.
-
-**Trigger to revisit:** **done** — close at v1.18.8 release.
-
-**Effort:** ~1–2 h (sanitizer + guard tests). Low risk.
-
----
-
 ## Recently moved out of debt scope
 
 These items left the debt inventory because they're not bug-fix-class
@@ -605,6 +563,17 @@ shipped already.
 
 For full closed-item rationale with commit references, see the per-version
 archived snapshots:
+
+- **Item 32 — command envelope can carry non-JSON objects (closed 2026-06-14):**
+  `439a0325` on `bugfix/v1.18.8`. `ConfirmationResult.to_dict()` now runs
+  `details` through a recursive `_jsonsafe()` (dataclass→`to_dict()`/`asdict`,
+  bytes→marker, unknown→`str`), so the HTTP envelope is always
+  `json.dumps`-able. The raw-`Message` `/load` key is preserved for the
+  in-process Textual renderer (which never calls `to_dict()`) — audit
+  correction: it was **not** consumer-free as first flagged. Guards:
+  `test_command_envelope_serialization.py` + parametrized
+  `test_to_dict_is_json_serializable` over every `CommandResult` subclass.
+  v1.18.8 Phase B.
 
 - **Item 27 — `/files/image/` home-confinement (closed 2026-06-14):**
   `7fb83d8b` on `bugfix/v1.18.8`. `serve_image` swapped
