@@ -17,6 +17,14 @@ uploads it.
 - Working tree at the version you want to ship — version files already
   bumped (see `tests/test_version_consistency.py` for the SoT list).
 - `uv` resolvable per CLAUDE.md "uv Resolution" (system or `.uv/uv`).
+- **Build venv MUST have the `[data]` extras.** The office-preview pipeline
+  needs `pypdfium2` (PDF→PNG) + `python-pptx`/`openpyxl`, which live in the
+  `[data]` optional extra. Step 1 runs `uv sync --all-extras` to guarantee it.
+  Without it the binaries build fine but ship **WITHOUT office support** —
+  LibreOffice is detected yet `render_pptx_slides` returns `[]` → "No slides
+  rendered" (caught live 2026-06-14). Matches the CI build
+  (`.github/workflows/build.yml`) and the release-script test step, both of
+  which use `--all-extras`.
 - `node` + `npm` for the VSCode extension build.
 - A POSIX-ish shell. Bash works on all four platforms (macOS native,
   Linux native, Windows via Git Bash). PowerShell alternatives are
@@ -67,17 +75,25 @@ notes are inline where they meaningfully differ.
 
 ```bash
 cd /path/to/ppxai
+# Sync the build venv with ALL extras FIRST so the office-preview deps
+# (pypdfium2 / python-pptx / openpyxl) are present. The per-build
+# `--no-sync` below then reuses this env; without this sync it would build
+# against whatever happens to be installed and silently drop office support.
+uv sync --all-extras
 rm -rf build dist
 uv run --no-sync pyinstaller ppxai.spec --noconfirm
 ```
 
 The first build is run alone because PyInstaller initialises `build/`
 state on the first invocation; subsequent builds share enough that
-running them in parallel is safe.
+running them in parallel is safe. The `uv sync --all-extras` runs once
+up front; every `pyinstaller` invocation uses `--no-sync` to reuse that
+synced env (re-syncing per build is wasted work and can race).
 
 **Windows PowerShell:**
 ```powershell
 Set-Location C:\git\utils\ppxai
+uv sync --all-extras   # bundle the [data] office-preview deps (see Bash note above)
 Remove-Item -Recurse -Force build, dist -ErrorAction SilentlyContinue
 uv run --no-sync pyinstaller ppxai.spec --noconfirm
 ```
@@ -453,6 +469,30 @@ If `diff` reports a difference (or PowerShell hashes differ), step
 5b didn't run or didn't take — re-run it before claiming the install
 is complete. A 0-output diff / matching hash proves the on-disk copy
 matches what the binaries expect.
+
+#### Office-preview acceptance (catches a missing-`[data]` build)
+
+A binary built without the `[data]` extras builds and runs fine but
+returns "No slides rendered" for PPTX preview — the silent failure the
+Step-1 `uv sync --all-extras` exists to prevent. Confirm the *installed
+server* can actually rasterize a slide (needs LibreOffice on the host —
+on macOS the v1.18.8 resolver finds `/Applications/LibreOffice.app`
+without a symlink):
+
+```bash
+# macOS / Linux
+( ~/.local/bin/ppxai-server >/tmp/srv.log 2>&1 & )
+for i in $(seq 1 25); do curl -s -m2 -o /dev/null http://127.0.0.1:54320/status && break; sleep 0.5; done
+PPTX="/path/to/any.pptx"   # any .pptx in a workdir
+curl -s -m120 -o /tmp/s.png -w "%{http_code} %{content_type}\n" \
+    "http://127.0.0.1:54320/files/preview?path=$PPTX&slide=1"
+file /tmp/s.png   # expect: PNG image data
+```
+
+Expect `200 image/png` and a real PNG. If you instead get a JSON
+`text_fallback` saying "install LibreOffice … or `pip install
+'ppxai[data]'`", the build is missing `[data]` (rebuild after
+`uv sync --all-extras`) OR LibreOffice isn't installed/discoverable.
 
 ## Don't
 

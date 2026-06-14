@@ -423,10 +423,14 @@ stripped the `[data]` extras → office/upload suites skipped → ~150-short cou
 written into the README `tests-NNNN` badge (it had regressed to 3844). Now
 `uv run --all-extras pytest` so the count matches the all-extras suite (3989).
 
-**Planned (downgraded — DX + dep, not a blocker):**
-(a) make the build-install skill `uv sync --all-extras` (or precondition-check
-`[data]`) before PyInstaller; (b) add `python-docx` to `[data]` so the Word
-*text* fallback works without LibreOffice.
+**Build-install skill fixed (2026-06-14):** `.claude/skills/build-install/SKILL.md`
+Step 1 now runs `uv sync --all-extras` before PyInstaller (the per-build
+`--no-sync` reuses that env), with a precondition note and a Step-8
+office-preview acceptance check (curl `/files/preview` → expect `image/png`).
+
+**Remaining (v1.19.x, non-blocking):** add `python-docx` to the `[data]` extra
+so the Word *text* fallback can extract without LibreOffice. (Word *raster*
+preview already works via LibreOffice.)
 
 **Branch when ready:** `bugfix/v1.18.8` (skill) / v1.19.x (docx dep).
 
