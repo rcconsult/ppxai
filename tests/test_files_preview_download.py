@@ -27,6 +27,7 @@ asserted so the test runs green either way.
 from __future__ import annotations
 
 import base64
+import json
 from pathlib import Path
 
 import pytest
@@ -369,3 +370,63 @@ class TestPreviewByPathPptx:
             assert body["libreoffice_available"] is False
             # extract_pptx_slide_text returns "# <name> — Slide 1 of N" header
             assert "Slide 1 of 1" in body["content"]
+
+
+class TestUnifiedPreviewContract:
+    """Item 26 (v1.18.8): both /files/preview routes delegate to the shared
+    `render_office_preview` helper, which has ONE shape and NEVER 503/500s for
+    missing LibreOffice — legacy `.ppt`/`.doc` included (they used to hit a
+    python-pptx/docx 500 or a hard 503). These exercise the helper directly so
+    they run without office libs or a file_store.
+    """
+
+    def _no_libreoffice(self, monkeypatch):
+        # The helper does `from ...pptx_tools import _libreoffice_available`
+        # at call time, so patching the module attribute is picked up.
+        monkeypatch.setattr(
+            "ppxai.engine.tools.builtin.pptx_tools._libreoffice_available",
+            lambda: False,
+        )
+
+    def test_legacy_ppt_without_libreoffice_is_text_fallback_not_503(self, monkeypatch, tmp_path):
+        from ppxai.server.routes.files import render_office_preview
+        self._no_libreoffice(monkeypatch)
+        resp = render_office_preview(tmp_path / "deck.ppt", "deck.ppt", ".ppt", tmp_path, total=True)
+        assert resp.status_code == 200
+        body = json.loads(resp.body)
+        assert body == {
+            "type": "text_fallback",
+            "kind": "presentation",
+            "content": body["content"],  # message text, asserted below
+            "name": "deck.ppt",
+            "total": 1,
+            "libreoffice_available": False,
+        }
+        assert "LibreOffice" in body["content"]
+
+    def test_legacy_doc_without_libreoffice_is_text_fallback_word(self, monkeypatch, tmp_path):
+        from ppxai.server.routes.files import render_office_preview
+        self._no_libreoffice(monkeypatch)
+        resp = render_office_preview(tmp_path / "memo.doc", "memo.doc", ".doc", tmp_path, total=True)
+        assert resp.status_code == 200
+        body = json.loads(resp.body)
+        assert body["type"] == "text_fallback"
+        assert body["kind"] == "word"
+        assert body["libreoffice_available"] is False
+
+    def test_total_response_always_has_unified_keys(self, monkeypatch, tmp_path):
+        # Every total/metadata response carries the full key set regardless of
+        # branch — the contract the clients now rely on.
+        from ppxai.server.routes.files import render_office_preview
+        self._no_libreoffice(monkeypatch)
+        resp = render_office_preview(tmp_path / "x.ppt", "x.ppt", ".ppt", tmp_path, total=True)
+        body = json.loads(resp.body)
+        for key in ("type", "kind", "name", "total", "libreoffice_available"):
+            assert key in body, f"unified preview shape missing {key!r}"
+
+    def test_unsupported_extension_rejected_400(self, tmp_path):
+        from ppxai.server.routes.files import render_office_preview
+        from fastapi import HTTPException
+        with pytest.raises(HTTPException) as exc:
+            render_office_preview(tmp_path / "x.txt", "x.txt", ".txt", tmp_path)
+        assert exc.value.status_code == 400

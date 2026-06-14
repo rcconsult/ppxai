@@ -19,10 +19,10 @@ render images, PDFs, and other media inline. Used by:
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import Response
 
-from ...common.docx_to_pdf import convert_docx_to_pdf
 from ..state import Session, get_session_or_query
+from .files import OFFICE_PREVIEWABLE_EXTENSIONS, render_office_preview
 
 router = APIRouter()
 
@@ -102,16 +102,17 @@ async def preview_file(
     total: bool = Query(False, description="Return only the total slide count"),
     s: Session = Depends(get_session_or_query),
 ):
-    """Render a PPTX slide as PNG or a Word document as PDF via LibreOffice.
+    """Office preview — file_id-based variant. Resolves the file_id to a
+    stored file, then delegates to the shared `render_office_preview` helper
+    so this route and the path-based `/files/preview` (files.py) return one
+    identical contract — including graceful 200 text_fallback when LibreOffice
+    is missing (was a hard 503 here before item 26).
 
-    Used by the web app split panel slide/document viewer.
-
-    PPTX: slides rendered once and cached as PNGs.
-    Word (.docx/.doc): converted to PDF once and cached.
-
-    - GET /files/preview/{file_id}?total=true → {"total": N, "name": "...", "type": "..."}
-    - GET /files/preview/{file_id}?slide=3 → PNG bytes for slide 3 (PPTX)
+    - GET /files/preview/{file_id}?total=true
+        → {"total": N, "name": "...", "type": "...", "kind": "...", "libreoffice_available": bool}
+    - GET /files/preview/{file_id}?slide=3 → PNG bytes for slide N (PPTX)
     - GET /files/preview/{file_id}?slide=1 → PDF bytes (Word)
+    - LibreOffice missing → 200 {"type": "text_fallback", ...}
     """
     file_store = getattr(s.engine, "file_store", None)
     if file_store is None:
@@ -123,50 +124,15 @@ async def preview_file(
     if not meta.path.exists():
         raise HTTPException(status_code=404, detail="File bytes missing")
 
-    from ...engine.tools.builtin.pptx_tools import _libreoffice_available
+    # meta.path is content-addressed and may lack an extension, so derive the
+    # authoritative office extension from meta.name / media_type (the same
+    # signals is_word_document uses) before handing off to the shared helper.
+    from pathlib import PurePosixPath
+    ext = PurePosixPath(meta.name or "").suffix.lower()
+    if ext not in OFFICE_PREVIEWABLE_EXTENSIONS:
+        ext = ".docx" if is_word_document(meta) else ".pptx"
 
-    if not _libreoffice_available():
-        raise HTTPException(status_code=503, detail="LibreOffice not installed")
-
-    # ── Word document → PDF ──────────────────────────────────────────
-    if is_word_document(meta):
-        cache_dir = meta.path.parent / "preview"
-        try:
-            pdf_path = convert_docx_to_pdf(meta.path, cache_dir)
-        except Exception as exc:
-            raise HTTPException(status_code=500, detail=f"Conversion failed: {exc}")
-
-        if total:
-            return JSONResponse({"total": 1, "name": meta.name, "type": "pdf"})
-
-        pdf_bytes = pdf_path.read_bytes()
-        return Response(
-            content=pdf_bytes,
-            media_type="application/pdf",
-            headers={"Cache-Control": "private, max-age=3600"},
-        )
-
-    # ── PPTX → slide PNGs ────────────────────────────────────────────
-    from ...engine.tools.builtin.pptx_tools import render_pptx_slides
-
-    cache_dir = meta.path.parent / "slides"
-    try:
-        pngs = render_pptx_slides(meta.path, cache_dir)
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Render failed: {exc}")
-
-    if not pngs:
-        raise HTTPException(status_code=500, detail="No slides rendered")
-
-    if total:
-        return JSONResponse({"total": len(pngs), "name": meta.name})
-
-    if slide < 1 or slide > len(pngs):
-        raise HTTPException(status_code=404, detail=f"Slide {slide} out of range (1-{len(pngs)})")
-
-    png_bytes = pngs[slide - 1].read_bytes()
-    return Response(
-        content=png_bytes,
-        media_type="image/png",
-        headers={"Cache-Control": "private, max-age=3600"},
+    return render_office_preview(
+        meta.path, meta.name, ext, meta.path.parent / "preview",
+        slide=slide, total=total,
     )

@@ -161,20 +161,30 @@ Phase 0 below = **Phase A**; Phases 1–3 below = **Phase F**.
   behaviour is manual-smoke (no web JS harness exists — consistent with the
   app.js norm).
 
-### Phase 2 — Item 26: unify `/files/preview`
-- Collapse the id-based (`/files/preview/{file_id}`, `file_serve.py`) and
-  path-based (`/files/preview?path=`, `files.py`) routes onto **one handler**
-  accepting either `file_id` or `path`.
-- **One JSON shape** for both: always include `type`, `kind`,
-  `libreoffice_available`, `total`, `name`.
-- **One LibreOffice-missing semantics**: always `200 + text_fallback`
-  (never 503), so VSCode and web degrade identically.
-- Gate `.ppt`/`.doc` (legacy binary) on actual LibreOffice availability —
-  return a clear "legacy format needs LibreOffice" message instead of a 500
-  from python-pptx/docx on the OOXML-only fallback path.
-- **Tests:** both entry points return identical shapes for the same document;
-  LibreOffice-missing returns `text_fallback` (mock the missing binary);
-  legacy `.ppt`/`.doc` without LibreOffice returns the typed message, not 500.
+### Phase 2 — Item 26: unify `/files/preview` ✅ landed
+- Extracted `files.py::render_office_preview(file_path, name, ext, cache_dir, *,
+  slide, total)` — the single renderer both routes delegate to. The two route
+  wrappers just resolve their *source* (`_resolve_safe_path` for the path
+  route; `file_store.get_metadata` for the id route) then call it. `file_serve.py`
+  imports the helper from `.files` (one-directional, no cycle).
+- **One JSON shape** for both: `total`/metadata responses always include
+  `type`, `kind`, `libreoffice_available`, `total`, `name` (the id route used
+  to return bare `{total, name}` / `{total, name, type}`; `libreoffice_available`
+  was previously present only in fallback branches).
+- **One LibreOffice-missing semantics**: always `200 + text_fallback` — the id
+  route's hard `503 "LibreOffice not installed"` is gone, so the chat-bubble
+  attachment path degrades to text like the file-tree path.
+- **Legacy `.ppt`/`.doc`** without LibreOffice return a typed text_fallback
+  "needs LibreOffice" message instead of a python-pptx/docx 500.
+- **Source-extension reliability:** `meta.path` is content-addressed and may
+  lack an extension, so the id route derives `ext` from `meta.name` /
+  `is_word_document(meta)` before handing off (the helper keys office type off
+  `ext`, reads bytes from `file_path`).
+- **Tests:** `TestUnifiedPreviewContract` in `test_files_preview_download.py`
+  (legacy `.ppt`/`.doc` → 200 text_fallback not 503/500; unified key set always
+  present; unsupported ext → 400) — runs without office libs by mocking the
+  LibreOffice probe. Existing path-based PPTX/Word + id-based (image_session_query)
+  suites still green (70 passed / 5 office-lib-skipped).
 
 ### Phase 3 — Item 28: OfficeFileView blob-URL revoke race (opportunistic)
 - Capture the revoke handle synchronously, or guard the `.then()` against an

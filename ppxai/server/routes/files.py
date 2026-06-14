@@ -750,36 +750,58 @@ async def read_file(
 # text inline with a "install LibreOffice for raster preview" note.
 
 
-@router.get("/files/preview")
-async def preview_file_by_path(
-    path: str = Query(..., description="Working-dir-relative or absolute path"),
-    slide: int = Query(1, ge=1, description="Slide number (1-based)"),
-    total: bool = Query(False, description="Return only metadata (slide count, type)"),
-    cwd_anchor: Optional[str] = Query(None, description="Client cwd at click time"),
-    s: Session = Depends(get_session_or_query),
+# Legacy binary office formats python-pptx / python-docx cannot open —
+# they need LibreOffice. Without it we return a typed text_fallback message
+# instead of letting the OOXML-only libraries 500.
+_LEGACY_OFFICE_EXTENSIONS = {'.ppt', '.doc'}
+
+
+def _text_fallback(*, kind: str, name: str, total: int, content: str,
+                   slide: Optional[int] = None) -> JSONResponse:
+    """The single text_fallback JSON shape (LibreOffice-missing degrade)."""
+    body = {
+        "type": "text_fallback",
+        "kind": kind,
+        "content": content,
+        "name": name,
+        "total": total,
+        "libreoffice_available": False,
+    }
+    if slide is not None:
+        body["slide"] = slide
+    return JSONResponse(body)
+
+
+def render_office_preview(
+    file_path: Path,
+    name: str,
+    ext: str,
+    cache_dir: Path,
+    *,
+    slide: int = 1,
+    total: bool = False,
 ):
-    """Render a PPTX slide as PNG or Word doc as PDF — path-based variant.
+    """Unified office-doc preview renderer shared by BOTH `/files/preview`
+    routes (path-based in this module, file_id-based in `file_serve.py`).
 
-    v1.18.7. Mirrors the file_id-based /files/preview/{file_id} in
-    file_serve.py but accepts a path. Reuses the same LibreOffice
-    helpers; falls back to extracted-text JSON when LibreOffice is
-    unavailable so the client can render SOMETHING.
+    ONE response contract regardless of caller (item 26):
+      - total=True → JSONResponse
+            {total, name, type, kind, libreoffice_available}  (all keys always present)
+      - slide=N    → FileResponse: image/png (PPTX) | application/pdf (Word)
+      - LibreOffice missing → **200** JSONResponse
+            {type:"text_fallback", kind, content, name, total, libreoffice_available:false}
 
-    URL forms:
-    - GET /files/preview?path=...&total=true
-        → {"total": N, "name": "...", "type": "pdf"|"pptx"|"text_fallback", "kind": "presentation"|"word"}
-    - GET /files/preview?path=...&slide=3 (PPTX)
-        → PNG bytes for slide 3 (Content-Type: image/png)
-    - GET /files/preview?path=...&slide=1 (Word)
-        → PDF bytes (Content-Type: application/pdf)
-    - GET /files/preview?path=...&slide=N when LibreOffice missing
-        → JSON {"type": "text_fallback", "content": "<markdown>", "name": "...", "total": N}
-          (200 OK — caller renders text inline)
+    Never 503 for missing LibreOffice; legacy `.ppt`/`.doc` without LibreOffice
+    return a typed text_fallback message instead of a python-pptx/docx 500.
+
+    Args:
+        file_path: Real file to render (path-resolved or file_store meta.path).
+        name: Display name (also the source of the office `type`/`kind`).
+        ext: Authoritative office extension (callers derive it reliably —
+             `meta.path` is content-addressed and may lack an extension).
+        cache_dir: Where rendered PNG/PDF artifacts are cached.
     """
-    logger.info(f"HTTP GET /files/preview - path: {path} slide: {slide} total: {total}")
-
-    resolved = _resolve_safe_path(path, s.engine, cwd_anchor)
-    ext = resolved.suffix.lower()
+    ext = ext.lower()
     if ext not in OFFICE_PREVIEWABLE_EXTENSIONS:
         raise HTTPException(
             status_code=400,
@@ -791,12 +813,11 @@ async def preview_file_by_path(
             ),
         )
 
-    cache_dir = _path_cache_dir(resolved)
     is_word = ext in {'.docx', '.doc'}
+    is_legacy = ext in _LEGACY_OFFICE_EXTENSIONS
+    kind = "word" if is_word else "presentation"
 
-    # Import LibreOffice probe lazily — only this route needs it.
     from ...engine.tools.builtin.pptx_tools import _libreoffice_available
-
     libreoffice_ok = _libreoffice_available()
 
     # ── Word document path ───────────────────────────────────────────
@@ -804,103 +825,116 @@ async def preview_file_by_path(
         if libreoffice_ok:
             from ...common.docx_to_pdf import convert_docx_to_pdf
             try:
-                pdf_path = convert_docx_to_pdf(resolved, cache_dir)
+                pdf_path = convert_docx_to_pdf(file_path, cache_dir)
             except Exception as exc:
                 raise HTTPException(status_code=500, detail=f"Conversion failed: {exc}")
             if total:
                 return JSONResponse({
-                    "total": 1, "name": resolved.name, "type": "pdf", "kind": "word",
+                    "total": 1, "name": name, "type": "pdf", "kind": "word",
+                    "libreoffice_available": True,
                 })
-            # v1.18.7: FileResponse sends Last-Modified + ETag from the
-            # cached PDF and handles If-Modified-Since → 304 for free.
-            # Cache-Control: no-cache forces browsers to revalidate on
-            # every click; combined with the cached-PDF source-mtime
-            # check inside convert_docx_to_pdf, edits propagate instantly
-            # to the preview pane while the network round-trip stays
-            # cheap (304, no body).
+            # FileResponse sends Last-Modified/ETag from the cached PDF and
+            # handles If-Modified-Since → 304; no-cache forces revalidation
+            # each click so edits propagate instantly while the round-trip
+            # stays cheap (304, no body).
             return FileResponse(
                 pdf_path,
                 media_type="application/pdf",
                 headers={"Cache-Control": "private, no-cache"},
             )
-        # LibreOffice missing — return extracted text as fallback.
+        # LibreOffice missing — degrade to text (never 503 / 500).
+        if is_legacy:
+            return _text_fallback(
+                kind="word", name=name, total=1,
+                content=(f"Legacy binary `{ext}` preview needs LibreOffice "
+                         f"(install it for a rendered preview). The model can "
+                         f"still read the document via tools."),
+            )
         from ...engine.tools.builtin.docx_tools import _extract_docx_text
         try:
-            text = _extract_docx_text(resolved)
+            text = _extract_docx_text(file_path)
         except Exception as exc:
-            raise HTTPException(status_code=500, detail=f"Text extraction failed: {exc}")
-        return JSONResponse({
-            "type": "text_fallback",
-            "kind": "word",
-            "content": text,
-            "name": resolved.name,
-            "total": 1,
-            "libreoffice_available": False,
-        })
+            text = (f"(Could not extract text: {exc}. Install LibreOffice for "
+                    f"a rendered preview.)")
+        return _text_fallback(kind="word", name=name, total=1, content=text)
 
     # ── PPTX path ────────────────────────────────────────────────────
     if libreoffice_ok:
         from ...engine.tools.builtin.pptx_tools import render_pptx_slides
         try:
-            pngs = render_pptx_slides(resolved, cache_dir)
+            pngs = render_pptx_slides(file_path, cache_dir)
         except Exception as exc:
             raise HTTPException(status_code=500, detail=f"Render failed: {exc}")
         if not pngs:
             raise HTTPException(status_code=500, detail="No slides rendered")
         if total:
             return JSONResponse({
-                "total": len(pngs), "name": resolved.name, "type": "pptx", "kind": "presentation",
+                "total": len(pngs), "name": name, "type": "pptx",
+                "kind": "presentation", "libreoffice_available": True,
             })
         if slide < 1 or slide > len(pngs):
             raise HTTPException(
                 status_code=404,
                 detail=f"Slide {slide} out of range (1-{len(pngs)})",
             )
-        # v1.18.7: see Word path above. FileResponse handles 304
-        # revalidation; no-cache forces revalidation each click so the
-        # browser doesn't sit on a pre-edit PNG for an hour.
         return FileResponse(
             pngs[slide - 1],
             media_type="image/png",
             headers={"Cache-Control": "private, no-cache"},
         )
 
-    # PPTX text-extraction fallback — extract requested slide as markdown.
+    # PPTX, LibreOffice missing — degrade to extracted text (never 503 / 500).
+    if is_legacy:
+        return _text_fallback(
+            kind="presentation", name=name, total=1,
+            content=(f"Legacy binary `{ext}` preview needs LibreOffice "
+                     f"(install it for raster slide previews). The model can "
+                     f"still use list_pptx_slides / read_pptx_slide_text."),
+        )
     from ...engine.tools.builtin.pptx_tools import extract_pptx_slide_text
     try:
         from pptx import Presentation
-        slide_count = len(Presentation(str(resolved)).slides)
+        slide_count = len(Presentation(str(file_path)).slides)
     except ImportError:
-        raise HTTPException(
-            status_code=503,
-            detail=(
-                "Preview unavailable: neither LibreOffice nor python-pptx "
-                "is installed. Install LibreOffice for raster previews or "
-                "`pip install 'ppxai[data]'` for text-extraction fallback."
-            ),
+        return _text_fallback(
+            kind="presentation", name=name, total=1,
+            content=("Preview unavailable: install LibreOffice for raster "
+                     "previews or `pip install 'ppxai[data]'` for text "
+                     "extraction."),
         )
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Cannot open PPTX: {exc}")
 
     if total:
         return JSONResponse({
-            "total": slide_count,
-            "name": resolved.name,
-            "type": "pptx",
-            "kind": "presentation",
-            "libreoffice_available": False,
+            "total": slide_count, "name": name, "type": "pptx",
+            "kind": "presentation", "libreoffice_available": False,
         })
+    text = extract_pptx_slide_text(file_path, slide)
+    return _text_fallback(
+        kind="presentation", name=name, total=slide_count,
+        content=text, slide=slide,
+    )
 
-    text = extract_pptx_slide_text(resolved, slide)
-    return JSONResponse({
-        "type": "text_fallback",
-        "kind": "presentation",
-        "content": text,
-        "name": resolved.name,
-        "total": slide_count,
-        "slide": slide,
-        "libreoffice_available": False,
-    })
+
+@router.get("/files/preview")
+async def preview_file_by_path(
+    path: str = Query(..., description="Working-dir-relative or absolute path"),
+    slide: int = Query(1, ge=1, description="Slide number (1-based)"),
+    total: bool = Query(False, description="Return only metadata (slide count, type)"),
+    cwd_anchor: Optional[str] = Query(None, description="Client cwd at click time"),
+    s: Session = Depends(get_session_or_query),
+):
+    """Office preview — path-based variant. Delegates to the shared
+    `render_office_preview` helper so this route and the file_id-based
+    `/files/preview/{file_id}` (file_serve.py) return one identical contract.
+    """
+    logger.info(f"HTTP GET /files/preview - path: {path} slide: {slide} total: {total}")
+    resolved = _resolve_safe_path(path, s.engine, cwd_anchor)
+    return render_office_preview(
+        resolved, resolved.name, resolved.suffix, _path_cache_dir(resolved),
+        slide=slide, total=total,
+    )
 
 
 # ---------------------------------------------------------------------------
