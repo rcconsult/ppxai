@@ -417,6 +417,12 @@ The gap is local-only: the `/build-install` SKILL uses `--no-sync`. (Local
 v1.18.8 build re-run WITH `[data]` synced renders previews correctly — verified
 HTTP 200 image/png.)
 
+**Release-script test step fixed (2026-06-14):** `scripts/release.py::run_tests`
+ran `uv run pytest` (no `--all-extras`), which synced to default deps and
+stripped the `[data]` extras → office/upload suites skipped → ~150-short count
+written into the README `tests-NNNN` badge (it had regressed to 3844). Now
+`uv run --all-extras pytest` so the count matches the all-extras suite (3989).
+
 **Planned (downgraded — DX + dep, not a blocker):**
 (a) make the build-install skill `uv sync --all-extras` (or precondition-check
 `[data]`) before PyInstaller; (b) add `python-docx` to `[data]` so the Word

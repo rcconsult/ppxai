@@ -424,10 +424,15 @@ def run_tests() -> tuple[bool, int]:
     # Detect uv command
     uv_cmd = get_uv_command()
 
-    # Build command list based on available tools
+    # Build command list based on available tools.
+    # --all-extras matches the CI build (.github/workflows/build.yml) and the
+    # shipped binaries: without it `uv run` syncs to DEFAULT deps only and
+    # strips the [data] extras (pypdfium2/python-pptx/openpyxl), so the office
+    # + upload suites importorskip and the reported count is ~150 short. That
+    # under-count then gets written into the README tests-NNNN badge.
     commands = []
     if uv_cmd:
-        commands.append(f"{uv_cmd} run pytest tests/ -v --tb=short")
+        commands.append(f"{uv_cmd} run --all-extras pytest tests/ -v --tb=short")
     commands.append("python3 -m pytest tests/ -v --tb=short")
     commands.append("python -m pytest tests/ -v --tb=short")
 
