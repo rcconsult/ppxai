@@ -331,10 +331,11 @@ class TestV1LegacyLoad:
         fallback is still exercised internally as the load step that
         feeds into migration; the post-load observable state is the
         migrated v2 shape.)"""
-        # Persist bytes for the file_id so the deserialize path can
-        # round-trip the data URI without warning about missing files.
-        meta = session_with_store.file_store.save("legacy.png", _PNG_BYTES, media_type="image/png")
-
+        # Real v1 sessions stored images INLINE as data: URIs (file_id
+        # references + uploads/ are a v2 concept). Using an inline image here
+        # keeps the test independent of the file store — which load() now
+        # resets on every load (session-security finding #2), so a flat
+        # session can no longer borrow a previously-staged file_id.
         flat_path = temp_sessions_dir / "v1-legacy.json"
         v1_data = {
             # NB: NO schema_version field — pure v1 shape.
@@ -348,11 +349,8 @@ class TestV1LegacyLoad:
                         {
                             "type": "image_url",
                             "image_url": {
-                                "url": f"file://uploads/{meta.file_id}/{meta.name}"
+                                "url": f"data:image/png;base64,{_PNG_BYTES.hex()}"
                             },
-                            # in-block keys (legacy bookkeeping)
-                            "name": meta.name,
-                            "file_id": meta.file_id,
                         },
                     ],
                     # NB: no "attachments" key
@@ -384,7 +382,7 @@ class TestV1LegacyLoad:
         assert first.content[0]["text"] == "look"
         assert first.content[1]["type"] == "text"
         assert "v1 migration" in first.content[1]["text"]
-        assert meta.name in first.content[1]["text"]
+        assert "dropped" in first.content[1]["text"]
         # Backup file preserved (flat-format because we wrote a flat session).
         assert (temp_sessions_dir / "v1-legacy.v1.backup.json").is_file()
 
@@ -440,7 +438,8 @@ class TestSchemaVersionConstant:
         to a session JSON with no schema_version field — both route through
         the Step 5 v1 → v2 migration when multimodal content is present."""
         flat_path = temp_sessions_dir / "v1-explicit.json"
-        meta = session_with_store.file_store.save("a.png", _PNG_BYTES, media_type="image/png")
+        # Inline data: URI — real v1 shape, independent of the file store
+        # (load() now resets it on every load; see finding #2).
         v1_data = {
             "schema_version": 1,
             "session_name": "v1-explicit",
@@ -452,9 +451,7 @@ class TestSchemaVersionConstant:
                         {"type": "text", "text": "x"},
                         {
                             "type": "image_url",
-                            "image_url": {"url": f"file://uploads/{meta.file_id}/{meta.name}"},
-                            "name": meta.name,
-                            "file_id": meta.file_id,
+                            "image_url": {"url": f"data:image/png;base64,{_PNG_BYTES.hex()}"},
                         },
                     ],
                 },

@@ -148,6 +148,36 @@ def _message_has_multimodal(msg: Any) -> bool:
     return False
 
 
+def _safe_session_name(name: str, *, fallback: Optional[str] = None) -> str:
+    """Reject path-traversal / separators in a session name.
+
+    A session name becomes ``<sessions_dir>/<name>.json`` (or a subdir), so a
+    name containing path separators or ``..`` can read/write **outside** the
+    sessions directory. Returns the name unchanged when safe.
+
+    On an unsafe name: raise ``ValueError`` (the default, used on save — the
+    caller supplied a bad name), or return ``fallback`` when provided (used on
+    load, where a poisoned in-file ``session_name`` must not crash the load or
+    poison the next autosave — we fall back to the already-validated requested
+    name instead).
+    """
+    raw = (name or "").strip()
+    unsafe = (
+        not raw
+        or raw in (".", "..")
+        or raw != os.path.basename(raw)   # had a path separator / dir component
+        or "/" in raw
+        or "\\" in raw
+        or "\x00" in raw
+    )
+    if unsafe:
+        if fallback is not None:
+            logger.warning(f"Unsafe session name {name!r}; falling back to {fallback!r}")
+            return fallback
+        raise ValueError(f"Unsafe session name: {name!r}")
+    return raw
+
+
 class SessionManager:
     """Manages conversation sessions, history, and persistence."""
 
@@ -1401,6 +1431,7 @@ class SessionManager:
                  with uploads/ for multimodal). Handled by _write_session_json.
         """
         if name:
+            name = _safe_session_name(name)  # reject traversal (finding #1)
             self.session_name = name
             if self.on_name_changed:
                 self.on_name_changed(name)
@@ -1524,21 +1555,31 @@ class SessionManager:
             return False
         filepath, session_dir = resolved
 
+        # Parse the session JSON FIRST. A corrupt/unreadable file must not
+        # touch the file store — otherwise a failed load wipes the current
+        # store while leaving messages intact (finding #3). Only after a
+        # valid parse do we mutate any state.
         try:
-            # Restore the file store from the session's uploads/ directory
-            # BEFORE deserializing messages. Deserialization needs the store
-            # populated so it can expand `file_id` references back into
-            # data URIs; without it, any attachments load as missing-file
-            # placeholders.
-            if session_dir is not None and self.file_store is not None:
-                restored = self.file_store.restore_from_session(session_dir)
-                if restored > 0:
-                    logger.debug(
-                        f"Restored {restored} attachment(s) from {session_dir}/uploads/"
-                    )
-
             with open(filepath, 'r', encoding='utf-8') as f:
                 data = json.load(f)
+        except (json.JSONDecodeError, OSError, ValueError) as e:
+            logger.warning(f"Failed to read session '{name}': {e}")
+            return False
+
+        try:
+            # Reset the file store on EVERY load (finding #2). A flat /
+            # text-only session never had an uploads/ dir, so without this
+            # the PREVIOUS session's attachment file_ids would still resolve
+            # via /files/serve/{id} and /files/preview/{id}. Directory
+            # sessions then repopulate from their own uploads/.
+            if self.file_store is not None:
+                self.file_store.reset()
+                if session_dir is not None:
+                    restored = self.file_store.restore_from_session(session_dir)
+                    if restored > 0:
+                        logger.debug(
+                            f"Restored {restored} attachment(s) from {session_dir}/uploads/"
+                        )
 
             # ADR 0006 Step 4 (v1.18.6): branch deserialization on
             # explicit schema_version. Absence ≡ v1 (sessions saved by
@@ -1546,7 +1587,12 @@ class SessionManager:
             # decide between explicit attachments-array and
             # legacy in-block-keys derivation.
             schema_version = int(data.get("schema_version", 1))
-            self.session_name = data.get("session_name", name)
+            # Sanitize the in-file name — a poisoned `session_name` would
+            # otherwise escape sessions_dir on the next autosave (finding #1).
+            # Fall back to the already-validated requested name.
+            self.session_name = _safe_session_name(
+                data.get("session_name", name), fallback=name
+            )
             self.metadata = data.get("metadata", {})
             self.messages = [
                 self._deserialize_message(m, schema_version=schema_version)

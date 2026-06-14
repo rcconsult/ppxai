@@ -301,6 +301,14 @@ class SessionFileStore:
             self.cleanup(file_id)
         return count
 
+    def reset(self) -> None:
+        """Drop all in-memory file metadata so previously-tracked file_ids
+        stop resolving — WITHOUT deleting on-disk bytes (use cleanup_all for
+        that). Called by `SessionManager.load()` so loading a text-only / flat
+        session doesn't leave the prior session's attachments accessible via
+        `/files/serve/{id}` and `/files/preview/{id}` (security: finding #2)."""
+        self._metadata.clear()
+
     # ------------------------------------------------------------------
     # Session binding — move staged files into / out of a session dir
     # ------------------------------------------------------------------
@@ -392,11 +400,13 @@ class SessionFileStore:
         """
         session_dir = Path(session_dir)
         uploads_root = session_dir / "uploads"
+
+        # Loading a session replaces the store wholesale — clear FIRST so a
+        # directory session with no uploads/ still resets the prior session's
+        # metadata (finding #2), not just after the early return below.
+        self._metadata.clear()
         if not uploads_root.is_dir():
             return 0
-
-        # Loading a session replaces the store wholesale — fresh state.
-        self._metadata.clear()
 
         count = 0
         for file_id_dir in sorted(uploads_root.iterdir()):

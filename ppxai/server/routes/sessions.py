@@ -46,7 +46,11 @@ async def save_session(
     v1.13.10: Supports X-Session-Id header for session isolation.
     """
 
-    saved_name = s.engine.session.save(name)
+    try:
+        saved_name = s.engine.session.save(name)
+    except ValueError as e:
+        # Unsafe session name (path traversal) — reject cleanly (finding #1).
+        raise HTTPException(status_code=400, detail=str(e))
     return with_drained_events({"name": saved_name}, s.engine)
 
 
