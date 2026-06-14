@@ -309,35 +309,6 @@ the vllm-qwen35 provider.
 
 ---
 
-### Item 28 — OfficeFileView attachment blob-URL revoke race [web robustness]
-
-**Affected files:** `ppxai/web/app.js` (`_renderPresentationAttachment`,
-`_renderWordAttachment`), `ppxai/web/components/views/office-file-view.js`
-(`renderSlideNavInto`, `renderDocxPdfInto`).
-
-**What's wrong:** the blob-URL revoke handle is assigned only inside the
-async `.then()` after the `/files/preview` fetch resolves. If the view is
-unmounted before the fetch resolves (user clicks another attachment), the
-late `.then()` creates an object URL into a detached container that is never
-revoked — a per-fast-switch memory leak. Also a `data.content || '(empty)'`
-text-fallback assumption masks a `content`-key contract drift as a benign
-empty render.
-
-**Why deferred:** narrow trigger (fast view-switching), leak only; no
-correctness break. Lowest priority of the v1.18.8 set.
-
-**Planned:** v1.18.8 if time permits, else trigger-deferred.
-
-**Branch when ready:** `bugfix/v1.18.8`.
-
-**Trigger to revisit:** active now (opportunistic with Items 25–26).
-
-**Effort:** ~1 hour. Capture the revoke handle synchronously / guard the
-`.then()` against an already-unmounted view; assert the text_fallback `content`
-key explicitly.
-
----
-
 ### Item 29 — `engine.completion` imports `commands.factory` and reads its internals [layer inversion]
 
 **Affected files:** `ppxai/engine/completion.py` (import at line 47;
@@ -440,6 +411,18 @@ shipped already.
 
 For full closed-item rationale with commit references, see the per-version
 archived snapshots:
+
+- **Item 28 — OfficeFileView blob-revoke race + attachment text_fallback (closed 2026-06-14):**
+  `ef17f748` on `bugfix/v1.18.8`. The attachment renderers (`app.js`) gained an
+  `unmounted` flag so the async `.then()` no longer creates a leaked blob URL
+  into a detached container; the text-fallback sites now assert a string
+  `content` (surface `missing "content" key` instead of `'(empty)'`). Also
+  followed through on item 26: the attachment path now branches on
+  `libreoffice_available`/content-type and degrades to extracted text (via a
+  new shared `OfficeFileView.renderTextFallbackInto()`), so chat-bubble
+  attachments degrade like the file tree instead of rendering JSON as a slide
+  image / PDF. Web-only; `node --check` clean, DOM = manual-smoke. v1.18.8
+  Phase F (3/3).
 
 - **Item 26 — `/files/preview` route unification (closed 2026-06-14):**
   `579a2fe8` on `bugfix/v1.18.8`. Both preview routes (path-based in
