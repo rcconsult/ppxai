@@ -172,12 +172,13 @@ async def sse_event_generator(prompt, engine: EngineClient, session_id: str = "d
         # has consecutive user messages. Clean up by removing the last user message.
         if "alternation" in error_str.lower() or "alternate" in error_str.lower():
             try:
-                messages = engine.session.messages
-                # Find and remove orphan user messages (consecutive user messages at the end)
-                while len(messages) > 1 and messages[-1].role == "user" and messages[-2].role == "user":
-                    removed = messages.pop()
-                    logger.info(f"Session cleanup: removed orphan user message (len={len(removed.text_content())})")
-                logger.info(f"Session cleaned up, now has {len(messages)} messages")
+                # Routes through SessionManager so the AppState change callback
+                # fires (the old raw messages.pop() loop bypassed it).
+                removed = engine.session.pop_orphan_trailing_users()
+                logger.info(
+                    f"Session cleanup: removed {removed} orphan user message(s), "
+                    f"now has {len(engine.session.messages)} messages"
+                )
             except Exception as cleanup_error:
                 logger.error(f"Session cleanup failed: {cleanup_error}")
 

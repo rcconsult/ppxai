@@ -74,17 +74,20 @@ edits a few `app.js` methods in place; no decomposition required.
   `test_to_dict_is_json_serializable` over **every** `CommandResult` subclass
   in `tests/test_command_result_serialization.py`.
 
-### Phase C — Item 31: session-mutation hygiene
-- Add `SessionManager` helpers (callback-firing):
-  `pop_orphan_trailing_users()` (replaces the `streaming.py:175` loop) and a
-  `preserve_trailing_user()` context manager (wraps the `chat.py` preflight
-  round-trip).
-- Replace direct `session.messages.pop()/append()` at `chat.py:273/276`,
-  `596/599`, `1064`, and `streaming.py:175`.
-- Tests: AppState invalidation callback fires after orphan cleanup; preflight
-  nets identical history. **Note:** `chat.py:273` already nets to a no-op;
-  the real mutation is `streaming.py:175`. Keep behavior identical — lean on
-  existing alternation tests.
+### Phase C — Item 31: session-mutation hygiene ✅ landed
+- Added `SessionManager.pop_orphan_trailing_users()` (replaces the
+  `streaming.py` orphan-cleanup loop — now fires the AppState callback,
+  previously fired none) and a `preserve_trailing_user()` context manager
+  (wraps the `chat.py` preflight detach/restore).
+- Replaced direct `session.messages.pop()/append()`: chat.py preflights (×2)
+  → `preserve_trailing_user()`; chat.py post-tool prompt removal →
+  `remove_last_message()` (existing helper — also fixes a latent multimodal
+  cache miss); streaming.py → `pop_orphan_trailing_users()`.
+- **Tests:** `TestMessageMutationHelpers` in `test_session_persistence.py`
+  (callback fires on orphan cleanup; preflight nets identical history +
+  no spurious notify + restores on exception). Behaviour preserved — the
+  real fix was `streaming.py` (no notify before); `chat.py:273` already
+  netted to a no-op.
 
 ### Phase D — Item 29: decouple `completion` from `commands` internals (seed; review gate done → ADR 0007)
 - **Gate outcome (2026-06-14):** completion reframed as a capability over

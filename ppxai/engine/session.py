@@ -11,6 +11,7 @@ import base64
 import json
 import os
 import shutil
+from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 from typing import Callable, List, Dict, Any, Optional
@@ -613,6 +614,48 @@ class SessionManager:
             self._notify_messages_changed()
             return True
         return False
+
+    def pop_orphan_trailing_users(self) -> int:
+        """Remove consecutive *trailing* user messages (alternation cleanup).
+
+        When a provider rejects a request for consecutive-user-role
+        violations, the orphan trailing user message(s) must be dropped.
+        Keeps at least one message. Goes through `remove_last_message()` per
+        removal so the message-count, multimodal cache, and the AppState
+        `on_messages_changed` callback all stay consistent — unlike the raw
+        `messages.pop()` loop this replaces (which fired no notification).
+
+        Returns:
+            Number of messages removed.
+        """
+        removed = 0
+        while (len(self.messages) > 1
+               and self.messages[-1].role == "user"
+               and self.messages[-2].role == "user"):
+            self.remove_last_message()
+            removed += 1
+        return removed
+
+    @contextmanager
+    def preserve_trailing_user(self):
+        """Detach a trailing user message for the duration of the block, then
+        restore it.
+
+        Lets an alternation fix run over the history without stripping the
+        just-typed user turn. The detach/restore is a transient no-op on the
+        final history, so it deliberately does NOT fire `on_messages_changed`
+        — the operation performed inside the block (e.g.
+        `validate_and_fix_alternation`) fires its own notification. Replaces
+        the open-coded `pop()` / `append()` round-trip in the chat preflight.
+        """
+        trailing_user = None
+        if self.messages and self.messages[-1].role == "user":
+            trailing_user = self.messages.pop()
+        try:
+            yield
+        finally:
+            if trailing_user is not None:
+                self.messages.append(trailing_user)
 
     def validate_and_fix_alternation(self) -> int:
         """Validate and fix message alternation issues.

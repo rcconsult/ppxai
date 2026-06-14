@@ -13,6 +13,7 @@ from pathlib import Path
 from unittest.mock import patch, MagicMock
 
 from ppxai.engine.session import SessionManager, SESSION_STATE_FILE
+from ppxai.engine.types import Message
 from ppxai.config import get_session_config, get_auto_restore_mode, get_auto_save_interval
 from ppxai.config.store import ConfigStore
 
@@ -2132,3 +2133,84 @@ class TestSessionNamePathTraversal:
             assert sm.sessions_dir in json_path.parents, (
                 f"Resolved path {json_path} escapes sessions_dir {sm.sessions_dir}"
             )
+
+
+class TestMessageMutationHelpers:
+    """Debt item 31: alternation cleanup must route through SessionManager so
+    the AppState `on_messages_changed` callback fires — not raw
+    `session.messages.pop()/append()`.
+    """
+
+    def _sm(self, tmp_path):
+        sm = SessionManager(sessions_dir=tmp_path / "sessions")
+        sm.sessions_dir.mkdir(parents=True, exist_ok=True)
+        return sm
+
+    def test_pop_orphan_trailing_users_removes_consecutive_and_fires_callback(self, tmp_path):
+        sm = self._sm(tmp_path)
+        sm.messages = [
+            Message("user", "a"), Message("assistant", "b"),
+            Message("user", "c"), Message("user", "d"), Message("user", "e"),
+        ]
+        fired = []
+        sm.on_messages_changed = lambda: fired.append(1)
+
+        removed = sm.pop_orphan_trailing_users()
+
+        assert removed == 2  # leaves exactly one trailing user
+        assert [m.role for m in sm.messages] == ["user", "assistant", "user"]
+        assert sm.metadata["message_count"] == 3
+        assert len(fired) >= 1, "AppState callback must fire (the bug item 31 fixes)"
+
+    def test_pop_orphan_trailing_users_noop_when_alternating(self, tmp_path):
+        sm = self._sm(tmp_path)
+        sm.messages = [Message("user", "a"), Message("assistant", "b"), Message("user", "c")]
+        fired = []
+        sm.on_messages_changed = lambda: fired.append(1)
+
+        removed = sm.pop_orphan_trailing_users()
+
+        assert removed == 0
+        assert len(sm.messages) == 3
+        assert fired == [], "no mutation → no notification"
+
+    def test_pop_orphan_trailing_users_keeps_at_least_one(self, tmp_path):
+        sm = self._sm(tmp_path)
+        sm.messages = [Message("user", "a"), Message("user", "b")]
+
+        removed = sm.pop_orphan_trailing_users()
+
+        assert removed == 1
+        assert len(sm.messages) == 1
+
+    def test_preserve_trailing_user_detaches_then_restores(self, tmp_path):
+        sm = self._sm(tmp_path)
+        original = [Message("user", "a"), Message("assistant", "b"), Message("user", "c")]
+        sm.messages = list(original)
+        fired = []
+        sm.on_messages_changed = lambda: fired.append(1)
+
+        with sm.preserve_trailing_user():
+            # Trailing user detached for the duration of the block.
+            assert [m.role for m in sm.messages] == ["user", "assistant"]
+
+        # Restored, byte-identical, and the transient round-trip itself does
+        # NOT notify (the operation inside the block is responsible for that).
+        assert sm.messages == original
+        assert fired == []
+
+    def test_preserve_trailing_user_no_trailing_user_is_noop(self, tmp_path):
+        sm = self._sm(tmp_path)
+        sm.messages = [Message("user", "a"), Message("assistant", "b")]
+        with sm.preserve_trailing_user():
+            assert [m.role for m in sm.messages] == ["user", "assistant"]
+        assert [m.role for m in sm.messages] == ["user", "assistant"]
+
+    def test_preserve_trailing_user_restores_on_exception(self, tmp_path):
+        sm = self._sm(tmp_path)
+        original = [Message("user", "a"), Message("assistant", "b"), Message("user", "c")]
+        sm.messages = list(original)
+        with pytest.raises(ValueError):
+            with sm.preserve_trailing_user():
+                raise ValueError("boom")
+        assert sm.messages == original, "trailing user restored even on error"
