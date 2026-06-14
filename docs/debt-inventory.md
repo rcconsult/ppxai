@@ -479,36 +479,35 @@ package, composition-root wiring at 3 entry points, AppState roster field +
 
 ---
 
-### Item 30 — command-layer handlers emit Rich UI directly (`console.print`) [envelope-pattern leak]
+### Item 33 — command-layer `console.print` sweep (agent/utility/handler) [envelope-pattern hygiene]
 
-**Affected files (bugfix scope):** `ppxai/commands/coding.py` (imports
-`from ..rich.ui import console` at line 20; `console.print` at lines 73, 80,
-+3 more). **Out of bugfix scope (defer):** `commands/agent.py` (~43 calls),
-`commands/utility.py` (~39), `commands/handler.py` (~29) — interactive
-TUI-only flows (`input()`-driven rollback/confirm prompts).
+**Affected files:** `commands/agent.py` (~43 `console.print`),
+`commands/utility.py` (~39), `commands/handler.py` (~29).
 
-**What's wrong:** under the command-envelope pattern, handlers should return
-typed results / side-effects and let renderers own UI. `coding.py` is on a
-**cross-client** command path (`/generate`, `/test`, … reachable via
-`POST /command/{name}`), so its `console.print` notices (e.g. "Auto-routed
-to <model>", the initial-message banner) write to the **server's stdout**
-under `ServerCommandContext` and are **silently lost** for web/VSCode users.
+**What's wrong:** these handlers write user-facing text directly to the Rich
+console instead of returning typed results / side-effects, so anything they
+print is invisible to web/VSCode (server-side stdout). The cross-client
+gap on the coding commands was the acute case — fixed as Item 30 (closed).
 
-**Why deferred (scope split):** only the `coding.py` notices are a real
-cross-client gap. The bulk (agent/utility/handler, ~111 calls) are
-genuinely interactive TUI-only flows that can't run server-side anyway;
-converting them is UI-purity refactor, not bug-class — defer to v1.19.x.
+**Why deferred (verify-before-fixing):** the bulk of these are genuinely
+**interactive TUI-only flows** (`input()`-driven rollback / confirm prompts
+in `/agent`, `/undo`) that cannot run under `ServerCommandContext` anyway, so
+they are *not* a cross-client bug. The remainder must be audited
+case-by-case: only the ones on a cross-client command path (reachable via
+`POST /command/{name}` and emitting information not already in the returned
+result) need routing through `content`/`message`/side-effects. Bulk
+conversion is UI-purity refactor, not bug-class.
 
-**Planned:** v1.18.8 (this branch), `coding.py` only — route the
-user-facing notices through the event/result channel so all clients see
-them; keep Rich rendering identical for TUI. Broad console-purity sweep →
-v1.19.x debt. See [docs/plan-v1.18.8-files-parity.md](plan-v1.18.8-files-parity.md) Phase E.
+**Planned:** v1.19.x — audit each site; fix only the cross-client-reachable
+ones; leave interactive TUI prompts as-is. Pairs naturally with ADR 0002
+(CommandContext) work if the contexts gain a "can prompt interactively" flag.
 
-**Branch when ready:** `bugfix/v1.18.8` (coding.py); v1.19.x for the rest.
+**Branch when ready:** v1.19.x.
 
-**Trigger to revisit:** active now (coding.py); the sweep is trigger-deferred.
+**Trigger to revisit:** a web/VSCode user reports missing output from a
+non-coding command, or the v1.19.x command-context work opens the file set.
 
-**Effort:** ~1–2 h for `coding.py` + an "info reaches non-TUI clients" test.
+**Effort:** ~0.5 d audit + targeted fixes (most sites confirmed TUI-only).
 
 ---
 
@@ -530,6 +529,16 @@ shipped already.
 
 For full closed-item rationale with commit references, see the per-version
 archived snapshots:
+
+- **Item 30 — coding auto-route notice lost cross-client (closed 2026-06-14):**
+  `0f21cee1` on `bugfix/v1.18.8`. `_execute_ai_task` no longer `console.print`s
+  the "Auto-routed to <model>" notice (invisible to web/VSCode server-side);
+  it rides in `AIResponseResult.content` (the field those clients render —
+  they fall back to `message` only when content is empty). Code-block
+  extraction runs on the raw output first. Other `console.print` sites in
+  the function are live-TUI UX or already in the result. Guard:
+  `tests/test_coding_autoroute.py`. The broad agent/utility/handler sweep is
+  tracked separately as **open Item 33** (v1.19.x). v1.18.8 Phase E.
 
 - **Item 31 — direct `session.messages` mutation bypasses AppState (closed 2026-06-14):**
   `44bb5dea` on `bugfix/v1.18.8`. Added `SessionManager.pop_orphan_trailing_users()`
