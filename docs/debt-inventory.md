@@ -407,16 +407,26 @@ but `render_pptx_slides` returns `[]` ("No slides rendered"). Found live on a
 2026-06-14 local build. Also: `python-docx` is absent from `[data]`, and the
 frozen binary can't use a `pip install 'ppxai[data]'` hint.
 
-**Planned:** v1.18.8/v1.19.x — (a) make the build-install skill
-`uv sync --all-extras` before PyInstaller; (b) **confirm the release CI builds
-with `--all-extras`** (release-blocker — verify shipped binaries aren't
-affected); (c) add `python-docx` to `[data]`.
+**Release CI verified SAFE (2026-06-14) — NOT a release blocker.**
+`.github/workflows/build.yml` runs `uv sync --frozen --all-extras` before
+**every** PyInstaller job (ppxai / ppxai-server / ppxaide / ppxai-desktop,
+lines 95/155/209/264); the server-job comment documents exactly this trap
+("Without `--all-extras`, PyInstaller silently drops … pypdfium2 … python-pptx
+… missing PDF rasterization"). So **released binaries bundle the office deps**.
+The gap is local-only: the `/build-install` SKILL uses `--no-sync`. (Local
+v1.18.8 build re-run WITH `[data]` synced renders previews correctly — verified
+HTTP 200 image/png.)
 
-**Branch when ready:** `bugfix/v1.18.8` (skill + CI check) / v1.19.x (docx).
+**Planned (downgraded — DX + dep, not a blocker):**
+(a) make the build-install skill `uv sync --all-extras` (or precondition-check
+`[data]`) before PyInstaller; (b) add `python-docx` to `[data]` so the Word
+*text* fallback works without LibreOffice.
 
-**Trigger to revisit:** active now — verify before tagging v1.18.8.
+**Branch when ready:** `bugfix/v1.18.8` (skill) / v1.19.x (docx dep).
 
-**Effort:** ~1–2 h (skill edit + CI workflow inspection + docx dep).
+**Trigger to revisit:** active for the skill edit; docx is v1.19.x.
+
+**Effort:** ~1 h (skill `uv sync --all-extras` + docx dep).
 
 ---
 
