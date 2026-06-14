@@ -457,6 +457,7 @@ class OfficeFileView extends BaseView {
         const nextBtn = nav.querySelector('.ofv-nav-next');
 
         let current = 1;
+        let disposed = false;  // set by revoke(); guards the await→createObjectURL race
         const showSlide = async (n) => {
             current = n;
             counterEl.textContent = n;
@@ -465,6 +466,10 @@ class OfficeFileView extends BaseView {
             imgContainer.innerHTML = '<p style="padding:16px;color:var(--text-muted);">Rendering…</p>';
             try {
                 const blob = await fetchSlideBlob(n);
+                // If the view was revoked/unmounted while this fetch was in
+                // flight, do NOT create an object URL — revoke() already ran
+                // over an empty blobUrls list, so a URL made now would leak.
+                if (disposed) return;
                 const url = URL.createObjectURL(blob);
                 blobUrls.push(url);
                 const img = new Image();
@@ -475,6 +480,7 @@ class OfficeFileView extends BaseView {
                 imgContainer.innerHTML = '';
                 imgContainer.appendChild(img);
             } catch (err) {
+                if (disposed) return;
                 imgContainer.innerHTML = `<p style="padding:16px;color:var(--error-color);">
                     Failed to load slide ${n}: ${_ofvEsc(err.message ?? String(err))}</p>`;
             }
@@ -485,9 +491,11 @@ class OfficeFileView extends BaseView {
 
         return {
             revoke: () => {
+                disposed = true;
                 for (const u of blobUrls) {
                     try { URL.revokeObjectURL(u); } catch (_) { /* ignore */ }
                 }
+                blobUrls.length = 0;
             },
         };
     }

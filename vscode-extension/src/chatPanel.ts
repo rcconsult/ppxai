@@ -1781,13 +1781,30 @@ Review your previous actions and continue. If the task is complete, respond with
                     // LibreOffice not available — fall back to raw file
                     return this._openRawFile(base, fileId, name, tmpDir, fs, path);
                 }
-                const meta = await metaResp.json() as { total: number; name: string };
+                const meta = await metaResp.json() as {
+                    total: number; name: string;
+                    type?: string; kind?: string; libreoffice_available?: boolean;
+                };
+                // item 26/28: the unified /files/preview now returns 200 JSON
+                // text_fallback (not a 503) when LibreOffice is missing. Slide
+                // fetches would then return JSON, not PNG — writing that to a
+                // .png yields garbage. Detect the fallback and open the raw
+                // file instead so the user still gets the document.
+                if (meta.libreoffice_available === false || meta.type === 'text_fallback') {
+                    return this._openRawFile(base, fileId, name, tmpDir, fs, path);
+                }
                 const total = meta.total || 1;
 
                 // Open first slide, then the rest in background tabs
                 for (let i = 1; i <= total; i++) {
                     const slideResp = await fetch(`${base}/files/preview/${fileId}?slide=${i}`);
                     if (!slideResp.ok) { continue; }
+                    // Guard against a JSON text_fallback slipping through (e.g.
+                    // LibreOffice removed mid-session): only write real PNG bytes.
+                    const slideCt = slideResp.headers.get('content-type') || '';
+                    if (slideCt.includes('application/json')) {
+                        return this._openRawFile(base, fileId, name, tmpDir, fs, path);
+                    }
                     const buf = Buffer.from(await slideResp.arrayBuffer());
                     const slideName = `${path.basename(name, ext)}_slide${i}.png`;
                     const tmpFile = path.join(tmpDir, slideName);
@@ -1803,7 +1820,11 @@ Review your previous actions and continue. If the task is complete, respond with
             // DOCX/DOC → convert to PDF via LibreOffice, open PDF
             if (ext === '.docx' || ext === '.doc') {
                 const pdfResp = await fetch(`${base}/files/preview/${fileId}?slide=1`);
-                if (pdfResp.ok) {
+                // item 26/28: a 200 JSON text_fallback (LibreOffice missing)
+                // must NOT be written to a .pdf. Only treat real PDF bytes as a
+                // conversion; otherwise fall through to the raw file.
+                const pdfCt = pdfResp.headers.get('content-type') || '';
+                if (pdfResp.ok && !pdfCt.includes('application/json')) {
                     const buf = Buffer.from(await pdfResp.arrayBuffer());
                     const pdfName = `${path.basename(name, ext)}.pdf`;
                     const tmpFile = path.join(tmpDir, pdfName);
