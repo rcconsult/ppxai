@@ -532,30 +532,35 @@ between commits.
 
 #### Deliverables checklist
 
-- [ ] Step 6: `assert_wire_blocks_clean` helper in
+> **Completed — all steps shipped in v1.18.6** (11-commit arc ending
+> `21dd226d`, merged to master). Boxes ticked 2026-06-15 to reflect
+> shipped reality (the plan was executed but the checklist was never
+> updated in place). Status of this ADR is unchanged (Accepted).
+
+- [x] Step 6: `assert_wire_blocks_clean` helper in
   `engine/uploaded_file.py` + 6-8 sentinel cases
-- [ ] Step 6: `BaseProvider._convert_messages` calls the validator
+- [x] Step 6: `BaseProvider._convert_messages` calls the validator
   under `__debug__`
-- [ ] Steps 1-3: `_preprocess_image` returns tuple,
+- [x] Steps 1-3: `_preprocess_image` returns tuple,
   `build_multimodal_content` returns tuple, `EngineClient.chat`
   takes optional `attachment_refs` kwarg
-- [ ] Steps 1-3: 3 TUI/server call sites updated atomically
-- [ ] Steps 1-3: sentinel test pinning that producer-emitted blocks
+- [x] Steps 1-3: 3 TUI/server call sites updated atomically
+- [x] Steps 1-3: sentinel test pinning that producer-emitted blocks
   are spec-clean even before the wire validator runs
-- [ ] Step 4: `schema_version: 2` field in session JSON top level
-- [ ] Step 4: `_serialize_message` persists `attachments` separately
-- [ ] Step 4: `_deserialize_message` reads `attachments` directly
+- [x] Step 4: `schema_version: 2` field in session JSON top level
+- [x] Step 4: `_serialize_message` persists `attachments` separately
+- [x] Step 4: `_deserialize_message` reads `attachments` directly
   on v2 sessions
-- [ ] Step 5: legacy v1 loader migration path with `extract_attachment_refs`
+- [x] Step 5: legacy v1 loader migration path with `extract_attachment_refs`
   + in-block-key strip + transient "needs re-save" flag
-- [ ] Step 5: permanent regression fixture from a real v1.18.x
+- [x] Step 5: permanent regression fixture from a real v1.18.x
   session (use `~/.ppxai/sessions.backup.20260514-161938-before-content-block-refactor/`
   as the source — checked-in fixture in `tests/fixtures/sessions/v1/`)
-- [ ] Step 5: round-trip test: load v1 fixture → assert in-memory
+- [x] Step 5: round-trip test: load v1 fixture → assert in-memory
   shape correct → save → assert on-disk JSON now in v2 shape
-- [ ] Step 7: producer drops in-block keys
-- [ ] Step 7: serialize stops writing in-block keys back
-- [ ] Step 7: full ppxai test suite green (the moment the wire
+- [x] Step 7: producer drops in-block keys
+- [x] Step 7: serialize stops writing in-block keys back
+- [x] Step 7: full ppxai test suite green (the moment the wire
   validator's __debug__ assertions and the round-trip tests both
   pass, the refactor is complete)
 
@@ -588,7 +593,7 @@ roadmap, not just a bug fix.
 ADR 0003 §"Proposed architecture" specifies the per-agent-run namespace:
 
 ```
-~/.ppxai/agent-runs/<run_id>/
+~/.ppxai/runs/<run_id>/agent-<n>/   (ADR 0003 / ADR 0005 canonical path)
     ├── meta.json     (task, parent, status, ...)
     ├── events.jsonl  (append-only)
     ├── state.json    (iteration, budget, tools)
@@ -598,7 +603,7 @@ ADR 0003 §"Proposed architecture" specifies the per-agent-run namespace:
 **Each run carries its own message history.** Sub-agents and autonomous
 agents both produce conversations — same `Message` shape, same content
 blocks, same potential for image attachments. Whatever schema we use
-for `~/.ppxai/sessions/` will be inherited by `agent-runs/<run_id>/`.
+for `~/.ppxai/sessions/` will be inherited by `runs/<run_id>/agent-<n>/`.
 The schema we ship in v1.18.6 IS the schema v1.19.x agents inherit.
 
 ### Four agent-platform pressures that strengthen the v2 case
@@ -745,10 +750,11 @@ Same 5 hours of focused work; vastly different long-term return.
   use `dataclasses.asdict`. Test coverage must include
   `dataclasses.asdict(msg)` round-trip and pickle (used by
   conversation-export tests).
-- **Session JSON schema bump.** Add a `schema_version: 2` field at
-  the top of session JSON files written by v1.19.x. Loader checks
-  the version and routes to the legacy-migration path if absent or
-  `1`.
+- **Session JSON schema bump.** A `schema_version: 2` field at
+  the top of session JSON files, **shipped in v1.18.6**. The loader
+  checks the version and routes to the legacy-migration path if absent
+  or `1`. (This section was written when the work targeted v1.19.x;
+  it landed in v1.18.6 — see the checklist note above.)
 - **Sentinel test discipline.** Two new permanent sentinels:
   - `test_image_url_blocks_are_spec_clean` (Phase 3)
   - `test_legacy_session_loads_correctly` (Phase 4)
@@ -768,9 +774,12 @@ Same 5 hours of focused work; vastly different long-term return.
 - **Not a wire-protocol change.** Real OpenAI keeps accepting the same
   payload it always has (it ignored the extra keys anyway). The change
   is internal cleanup.
-- **Not a session-format break.** v1.19.x readers handle v1.18.x
-  files; v1.18.x readers WILL fail on v1.19.x files (forward compat
-  is one-way only). Document in `RELEASE-NOTES-v1.19.0.md`.
+- **Not a session-format break.** The v1→v2 session boundary is
+  **v1.18.5 → v1.18.6**: v1.18.6+ readers handle old v1 (≤v1.18.5)
+  files via the migration path; pre-v1.18.6 readers WILL fail on v2
+  files (forward compat is one-way only). Documented in
+  `docs/release-notes-v1.18.6.md` (this bullet originally said
+  v1.19.x, before the work was pulled forward into v1.18.6).
 - **Not an architectural pattern other than "boundary types matter."**
   The Triplet (ADR 0005), the AppState schema (ADR 0001-style work),
   and now this content-block split are all the same instinct: when
