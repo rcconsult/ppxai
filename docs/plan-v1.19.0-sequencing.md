@@ -93,10 +93,16 @@ status transitions RUNNING → COMPLETED visible via GET.
 `GET …/runs/<id>` → watch it flip to `completed`.
 
 ### Inc 3 — events + monitor channel
-**Capability:** see what the run did, live.
-**Build:** append-only `events.jsonl`; `GET …/runs/<id>/events?since=N`
-(replay) then `?live=1` (SSE, mirror existing streaming).
-**Trial:** `curl -N …/runs/<id>/events?live=1` while a run executes.
+**Capability:** see what the run did, live, with verbosity/severity filtering.
+**Build:** append-only `events.jsonl` with the **level + category** record
+schema (ADR 0003 §11a — both axes from the first persisted event);
+`AgentRunStore.append_event`/`read_events` (additive Protocol growth);
+`GET …/runs/<id>/events?since=N` (replay) then `?live=1` (SSE, mirror
+existing streaming); `?min_level=` + `?category=` filters applied on both
+replay and live tail. **Always persist all events; filter on read.**
+**Trial:** `curl -N …/runs/<id>/events?live=1` while a run executes;
+`?min_level=warning` to confirm filtering. Web client upgrades from
+polling to the SSE tail (verbosity slider + category toggles).
 
 ### Inc 4 — capability grant + tool allowlist (sandbox seam, AC-1)
 **Capability:** a run can only call tools in its grant; others hard-deny.

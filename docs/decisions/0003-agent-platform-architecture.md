@@ -560,7 +560,8 @@ POST /v1/agent/run                  → {run_id, status}   (run_token is interna
             idempotency_key?}
 GET  /v1/agent/runs                  → {runs:[...]}
 GET  /v1/agent/runs/<id>             → {meta, state}   (status snapshot)
-GET  /v1/agent/runs/<id>/events      → SSE (live + ?since=N replay)
+GET  /v1/agent/runs/<id>/events      → SSE (live + ?since=N replay);
+                                       filters ?min_level= & ?category= (see §11a)
 GET  /v1/agent/runs/<id>/result      → {body, artifact_refs:[...]}
 GET  /v1/agent/runs/<id>/artifacts/<artifact_id>  → resolves via /files/preview
 POST /v1/agent/runs/<id>/respond     → {resume_token, response}   (answer a WAITING)
@@ -592,6 +593,39 @@ POST /v1/agent/runs/<id>/cancel      → {ok, status:"cancelling"}
   MVP requires them earlier, not later.) `AGENT_SERVICE_DOWN` in §13.)
 
 **New `SideEffectKind`:** `AGENT_RUN_STARTED` (already proposed above).
+
+### 11a. Event-record schema (`events.jsonl`) — level + category (resolved 2026-06-15)
+
+Each `events.jsonl` line is one JSON object. **Always persist every
+event; filter on read** — the file is the durable inspection/audit record
+(ADR 0005), so verbosity is a render/query concern, never a capture one.
+Two orthogonal filter axes, both in the schema from the first persisted
+event (additive-after-persist is painful, so they ship in Inc 3):
+
+```jsonc
+{
+  "seq":      42,              // monotonic per-run sequence (the ?since= cursor)
+  "ts":       1781551062.81,   // epoch seconds
+  "type":     "tool_call",     // existing EventType value
+  "level":    "debug",         // debug | info | warning | error  (severity axis)
+  "category": "tool",          // lifecycle | tool | network | consent | result  (kind axis)
+  "data":     { ... }          // type-specific payload
+}
+```
+
+- **Filtering:** `GET …/events?min_level=info` drops `debug`;
+  `?category=lifecycle,result` keeps only those kinds. Both axes
+  independent → "show errors but hide tool noise" is expressible. Applied
+  server-side on replay AND honored on the live SSE tail.
+- **UI:** a verbosity slider (min_level) + per-category toggles. Clients
+  that want everything pass no filter; the file always has it all.
+- **Defaults:** lifecycle/result events are `info`; per-tool-iteration
+  detail is `debug`; policy denials are `warning`; failures are `error`.
+  `category` maps to the subsystem (lifecycle = run start/complete/status,
+  tool = tool_call/result, network = NETWORK_POLICY_*, consent = WAITING/
+  consent, result = AGENT_RESULT_READY). Mapping lives in one place so a
+  new EventType gets classified once, not in every client (fixes the
+  "derive from type name" drift the pre-platform event system had).
 
 ### MVP build order (the first slice)
 
