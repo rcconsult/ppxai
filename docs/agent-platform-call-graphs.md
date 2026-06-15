@@ -133,7 +133,11 @@ endpoints unchanged (they already read from the store; now they observe
 ```
 create_agent_run(req)                                  [routes/agent_v1.py]
 ├─ get_agent_run_registry()
-├─ provider/model resolution → 400 if missing          [config/providers.py]
+├─ provider/model resolution (PER-RUN INTENT, ADR 0003 §9):
+│   req.provider/model  →  tools.agent.default_subagent (config)  →  400
+│   (the interactive session's chat provider is NOT consulted — a
+│    sub-agent's model is chosen for its task. Per-session sub-agent
+│    config is a middle layer, debt Item 36.)   [config/tools.py]
 ├─ _build_provider(provider_name)                      [routes/oneshot.py]
 │   └─ → 400 (no run created) if unknown / not OpenAICompatibleProvider
 │       ↑ carve-out now runs BEFORE minting (Inc 1 minted-then-failed)
@@ -161,6 +165,32 @@ Unchanged from Inc 1 (registry → store → disk). They now return
 `status:"running"` for an in-flight run and the terminal status once
 `_drive` has called `finish_run`. `started_at` is populated once
 background execution begins.
+
+### Web client surface (consumer of the above — no new endpoints)
+
+Added alongside Inc 2 so the live `running → completed` status is
+trialable in-app, not just via curl.
+
+```
+chat input "/agentrun <task>"            [web/app.js sendMessage]
+└─ handleSlashCommand → commandDispatcher.dispatch()  [command-dispatcher.js]
+   └─ cmd === "/agentrun" → _dispatchAgentRun(task)
+      ├─ apiClient.post("/v1/agent/run", {task, tools:[]})   → {run_id, status:"running"}
+      ├─ showSystemMessage("🤖 <run_id> — running…")
+      └─ poll loop (600ms, ≤2min):
+           apiClient.get("/v1/agent/runs/<id>")
+             completed → showSystemMessage("✅ …") + addMessage("assistant", result)
+             failed    → showSystemMessage("❌ … <error>")
+             (else keep polling; run continues server-side regardless)
+
+chat input "/agentruns"
+└─ _dispatchAgentRunsList()
+   └─ apiClient.get("/v1/agent/runs") → render newest-20 as a system line
+```
+
+Served from `~/.ppxai/web/` (NOT the repo) — see static.py `WEB_UI_DIR`.
+Trialing edits requires copying the changed web files there (build-install
+step 5b, or a targeted copy of command-dispatcher.js + app.js).
 
 ---
 

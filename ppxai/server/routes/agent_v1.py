@@ -34,7 +34,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from ...common.logger import get_logger
-from ...config.providers import get_default_model, get_default_provider
+from ...config.tools import get_agent_config
 from ...engine.agent_runs import RunMeta
 from ...engine.providers.openai_compat import OpenAICompatibleProvider
 from ..state import get_agent_run_registry
@@ -133,17 +133,32 @@ async def create_agent_run(req: AgentRunRequest) -> AgentRunResponse:
     """
     registry = get_agent_run_registry()
 
-    provider_name = req.provider or get_default_provider()
+    # Provider/model is PER-RUN INJECTED INTENT (ADR 0003 §9), not inherited
+    # from the interactive chat session. Resolution: explicit request value
+    # -> tools.agent.default_subagent config -> 400. The session's active
+    # chat provider is deliberately NOT consulted (a sub-agent's model is
+    # chosen for its task, not for whatever the UI happens to be on).
+    # NOTE: per-session sub-agent config + a /subagent slash command, both
+    # persisted in the session checkpoint, are a later increment (debt-filed);
+    # they will slot in as a layer between request and global config here.
+    sub_defaults = get_agent_config().get("default_subagent", {}) or {}
+    provider_name = req.provider or sub_defaults.get("provider")
+    model = req.model or sub_defaults.get("model")
     if not provider_name:
         raise HTTPException(
             status_code=400,
-            detail="No provider specified and no default_provider configured.",
+            detail=(
+                "No provider for the agent run. Pass `provider` in the request, "
+                "or set tools.agent.default_subagent.provider in ppxai-config.json."
+            ),
         )
-    model = req.model or get_default_model(provider_name)
     if not model:
         raise HTTPException(
             status_code=400,
-            detail=f"No model specified and no default_model for provider {provider_name!r}.",
+            detail=(
+                f"No model for provider {provider_name!r}. Pass `model` in the "
+                f"request, or set tools.agent.default_subagent.model in config."
+            ),
         )
 
     # Build the provider + apply the v1 carve-out BEFORE minting/backgrounding,

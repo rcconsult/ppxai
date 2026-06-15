@@ -158,6 +158,14 @@ def get_agent_config() -> Dict[str, Any]:
         # Override via `"tools": {"agent": {"zombie_threshold": N}}` in
         # ppxai-config.json; 0 disables zombie detection entirely.
         "zombie_threshold": agent_config.get("zombie_threshold", DEFAULT_AGENT_ZOMBIE_THRESHOLD),
+        # v1.19.0 agent platform — default provider/model (+ later budget)
+        # for spawned sub-agent runs when the spawn request doesn't specify.
+        # Resolution at the /v1/agent/run route: request value -> this ->
+        # 400. Deliberately NOT the interactive session's chat provider — a
+        # sub-agent's model is per-task intent, not inherited from the UI.
+        # Override via `"tools": {"agent": {"default_subagent":
+        # {"provider": "...", "model": "..."}}}`.
+        "default_subagent": agent_config.get("default_subagent", {}),
     }
 
 

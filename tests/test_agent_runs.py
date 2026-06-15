@@ -197,14 +197,18 @@ class TestAgentRunRoutes:
         assert one["status"] == "completed"
         assert one["result"] == "hi"
 
-    def test_no_provider_400_and_no_run_created(self, client, monkeypatch):
-        # No provider given and no default configured -> 400, no run created.
-        c, reg = client
-        from ppxai.server.routes import agent_v1
-        monkeypatch.setattr(agent_v1, "get_default_provider", lambda: "")
-        resp = c.post("/v1/agent/run", json={"task": "t"})
-        assert resp.status_code == 400
-        assert reg.list_runs() == []
+    @staticmethod
+    def _fake_provider():
+        from ppxai.engine.providers.openai_compat import OpenAICompatibleProvider
+
+        class _FakeProvider(OpenAICompatibleProvider):
+            def __init__(self):  # bypass real provider construction
+                pass
+
+            def oneshot(self, *, prompt, model, system=None, **kw):
+                return {"content": f"echo: {prompt}", "finish_reason": "stop"}
+
+        return _FakeProvider()
 
     @staticmethod
     def _poll_terminal(c, run_id, timeout_s=5.0):
@@ -219,46 +223,62 @@ class TestAgentRunRoutes:
             _t.sleep(0.02)
         raise AssertionError(f"run {run_id} did not finish: last={one}")
 
-    def test_happy_path_background_run_completes(self, client, monkeypatch):
-        # Inc 2: POST returns immediately with status='running'; the run then
-        # completes in the background. Poll to terminal, assert result+grant.
+    def test_no_provider_no_default_400(self, client, monkeypatch):
+        # No provider in request AND no tools.agent.default_subagent -> 400,
+        # no run created. (Resolution: request -> config -> 400. Session chat
+        # provider is intentionally NOT consulted.)
         c, reg = client
         from ppxai.server.routes import agent_v1
-        from ppxai.engine.providers.openai_compat import OpenAICompatibleProvider
+        monkeypatch.setattr(agent_v1, "get_agent_config", lambda: {"default_subagent": {}})
+        resp = c.post("/v1/agent/run", json={"task": "t"})
+        assert resp.status_code == 400
+        assert "provider" in resp.json()["detail"].lower()
+        assert reg.list_runs() == []
 
-        monkeypatch.setattr(agent_v1, "get_default_provider", lambda: "fakeprov")
-        monkeypatch.setattr(agent_v1, "get_default_model", lambda p: "fakemodel")
+    def test_explicit_provider_model_in_request(self, client, monkeypatch):
+        # The contract path: provider/model passed explicitly per run (what
+        # spawn_subagent always does). Completes with result + records them.
+        c, reg = client
+        from ppxai.server.routes import agent_v1
 
-        class _FakeProvider(OpenAICompatibleProvider):
-            def __init__(self):  # bypass real provider construction
-                pass
+        monkeypatch.setattr(agent_v1, "_build_provider", lambda name: self._fake_provider())
 
-            def oneshot(self, *, prompt, model, system=None, **kw):
-                return {"content": f"echo: {prompt}", "finish_reason": "stop"}
-
-        monkeypatch.setattr(agent_v1, "_build_provider", lambda name: _FakeProvider())
-
-        resp = c.post("/v1/agent/run", json={"task": "ping", "tools": ["read_file"]})
+        resp = c.post("/v1/agent/run", json={
+            "task": "ping", "tools": ["read_file"],
+            "provider": "fakeprov", "model": "fakemodel",
+        })
         assert resp.status_code == 200
-        body = resp.json()
-        assert body["status"] == "running"  # Inc 2: instant, not yet done
-        run_id = body["run_id"]
-
-        one = self._poll_terminal(c, run_id)
+        assert resp.json()["status"] == "running"
+        one = self._poll_terminal(c, resp.json()["run_id"])
         assert one["status"] == "completed"
         assert one["result"] == "echo: ping"
         assert one["tools"] == ["read_file"]
         assert one["provider"] == "fakeprov" and one["model"] == "fakemodel"
-        assert one["started_at"] is not None  # set when background exec began
+        assert one["started_at"] is not None
+
+    def test_falls_back_to_default_subagent_config(self, client, monkeypatch):
+        # No provider/model in request -> resolves from
+        # tools.agent.default_subagent (NOT the session chat provider).
+        c, reg = client
+        from ppxai.server.routes import agent_v1
+
+        monkeypatch.setattr(
+            agent_v1, "get_agent_config",
+            lambda: {"default_subagent": {"provider": "cfgprov", "model": "cfgmodel"}},
+        )
+        monkeypatch.setattr(agent_v1, "_build_provider", lambda name: self._fake_provider())
+
+        resp = c.post("/v1/agent/run", json={"task": "ping"})
+        assert resp.status_code == 200
+        one = self._poll_terminal(c, resp.json()["run_id"])
+        assert one["status"] == "completed"
+        assert one["provider"] == "cfgprov" and one["model"] == "cfgmodel"
 
     def test_provider_failure_marks_run_failed(self, client, monkeypatch):
         # If the background LLM call raises, the run ends 'failed' (not lost).
         c, reg = client
         from ppxai.server.routes import agent_v1
         from ppxai.engine.providers.openai_compat import OpenAICompatibleProvider
-
-        monkeypatch.setattr(agent_v1, "get_default_provider", lambda: "fakeprov")
-        monkeypatch.setattr(agent_v1, "get_default_model", lambda p: "fakemodel")
 
         class _BoomProvider(OpenAICompatibleProvider):
             def __init__(self):
@@ -269,7 +289,9 @@ class TestAgentRunRoutes:
 
         monkeypatch.setattr(agent_v1, "_build_provider", lambda name: _BoomProvider())
 
-        resp = c.post("/v1/agent/run", json={"task": "ping"})
+        resp = c.post("/v1/agent/run", json={
+            "task": "ping", "provider": "fakeprov", "model": "fakemodel",
+        })
         assert resp.status_code == 200
         assert resp.json()["status"] == "running"
         one = self._poll_terminal(c, resp.json()["run_id"])
@@ -277,16 +299,14 @@ class TestAgentRunRoutes:
         assert "upstream 503" in one["error"]
 
     def test_unsupported_provider_400_no_run_created(self, client, monkeypatch):
-        # Inc 2: the carve-out now runs BEFORE minting, so an unsupported
-        # provider -> 400 and NO run is created (cleaner than Inc 1's
-        # create-then-fail; nothing is backgrounded).
+        # Carve-out runs BEFORE minting -> unsupported provider 400, no run.
         c, reg = client
         from ppxai.server.routes import agent_v1
 
-        monkeypatch.setattr(agent_v1, "get_default_provider", lambda: "fakeprov")
-        monkeypatch.setattr(agent_v1, "get_default_model", lambda p: "fakemodel")
         monkeypatch.setattr(agent_v1, "_build_provider", lambda name: object())
 
-        resp = c.post("/v1/agent/run", json={"task": "ping"})
+        resp = c.post("/v1/agent/run", json={
+            "task": "ping", "provider": "fakeprov", "model": "fakemodel",
+        })
         assert resp.status_code == 400
         assert reg.list_runs() == []  # no orphan run

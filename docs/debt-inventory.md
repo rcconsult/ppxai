@@ -532,6 +532,42 @@ shipped already.
 
 ---
 
+### Item 36 — per-session sub-agent config + `/subagent` command, persisted in checkpoint [agent platform]
+
+**Context:** v1.19.0 Inc 2 fixed sub-agent provider/model resolution to
+be **per-run injected intent** (ADR 0003 §9), NOT inherited from the
+interactive chat session. Resolution today: request value →
+`tools.agent.default_subagent` (global JSON config) → 400. The
+interactive session's *active chat provider* is deliberately not consulted
+(that was the bug: `/agentrun` resolved a stale global default and ignored
+the run's intended model).
+
+**What's missing (the middle layer):** a **per-session sub-agent default**
+between the request and the global JSON config. User decision 2026-06-15:
+
+- A `/subagent` slash command to configure, per session, the default
+  provider/model (and later budget/tool-grant) for sub-agents spawned
+  from that session — e.g. "in this session, sub-agents default to a
+  cheap fast model."
+- **Persist it in the session checkpoint/status file** so a session
+  restart revives the per-session sub-agent config (and it can be
+  re-adjusted live).
+
+**Target resolution chain once this lands:**
+`request value → per-session sub-agent config → tools.agent.default_subagent (global) → 400`.
+
+**Why deferred (not Inc 2):** touches the session checkpoint format + a new
+slash command surface across clients — too big for the Inc 2 provider-fix.
+Natural fit alongside the session/spawn machinery (≈ Inc 6-7, when
+checkpoint state and `spawn_subagent` land). The Inc 2 fix already
+established the correct *contract* (per-run intent, never chat-session
+inheritance); this adds the convenience layer.
+
+**Branch when ready:** part of `feat/agent-platform-stage-2` (Inc 6/7) or
+its own `feat/subagent-session-config`.
+
+---
+
 ## Closed (recent)
 
 For full closed-item rationale with commit references, see the per-version
