@@ -889,6 +889,13 @@ when there's evidence of wrapper-side failures in real use.
 
 ### v1.19.x - Anthropic Provider (planned)
 
+> **SEQUENCING (2026-06-15): DEFERRED — do AFTER agent-platform Stage 2.**
+> Not being worked this iteration. The `feature/v1.19.0` iteration focuses
+> on the Agent platform Stage 2 track below (the ppxai-sre-blocking work);
+> the Anthropic provider is sequenced after that lands. Branch
+> `feat/anthropic-provider` stays reserved/untouched. See
+> [docs/plan-v1.19.0-sequencing.md](docs/plan-v1.19.0-sequencing.md).
+
 Moved from the debt inventory on 2026-05-05 — feature work, not a fix, so
 it belongs on the roadmap rather than the debt list. The original Item 14
 design rationale (TOS warning text, OAuth fallback caveats) is preserved
@@ -1008,6 +1015,11 @@ needed; the full bundle is what makes v1.19.x "ready for ppxai-sre."
 ---
 
 ### v1.19.x - Prompt Analyzer + Adaptive Routing (Future)
+
+> **SEQUENCING (2026-06-15): DEFERRED — do AFTER agent-platform Stage 2.**
+> Already marked "(Future)"; this iteration (`feature/v1.19.0`) does not
+> touch it. Sequenced after Stage 2. See
+> [docs/plan-v1.19.0-sequencing.md](docs/plan-v1.19.0-sequencing.md).
 
 | Feature | Description | Plan |
 |---------|-------------|------|

@@ -653,6 +653,17 @@ shape.
    mid-tool-call cleanly. Today's `_active_subprocesses` cleanup
    (commit `a746a7c6`) is the foundation; needs extending to a
    per-run budget tracker.
+   **RESOLVED (2026-06-15): clean interruption = checkpoint-then-resume.**
+   A mid-tool-call interruption (budget cap hit, cancel, or engine
+   restart) must first write the agent's progress to the run's
+   `state.json` checkpoint (iteration, budget consumed, last tool, any
+   partial result) so the run can **resume** from that point rather than
+   restart from scratch. This couples open-decision #5 (budget) with
+   ROADMAP Phase 3 (run persistence + recovery) and the `INTERRUPTED`
+   state (§8): the budget tracker fires the interrupt, the checkpoint
+   captures progress, and resume (additive upgrade per §8) replays from
+   the checkpoint. The cap-enforcement boundary still needs building, but
+   the *semantics* are now pinned: never lose mid-run work to an interrupt.
 6. **C4 — Tools first-class on `POST /v1/agent/run`** [LOAD-BEARING].
    Without a `tools` field on the run-spawn request, ppxai-sre's
    manager-executor pattern would have to reimplement the runtime

@@ -54,11 +54,21 @@ Helm chart in a multi-tenant K8s cluster touch this code.
 **Planned:** trigger-deferred — no version target. Open until at least
 one of the three triggers fires.
 
-**Branch when ready:** `feat/k8s-session-manager-tests`.
+**Branch when ready:** `feat/k8s-session-manager-tests` (quick-pass
+already landed there + merged; 29 tests in `tests/test_session_manager_auth.py`).
+
+**Status (2026-06-15):** quick-pass DONE. **Full suite POSTPONED — do
+after agent-platform Stage 2 is in place.** Rationale: the full suite's
+real value is validating the sub-agent-in-a-pod k8s security boundary
+end-to-end, which doesn't exist to test against until Stage 2 ships the
+sub-agent + pod-sandbox tool-execution path. Writing 30-50 mocked tests
+now would test the session-manager in isolation, not the thing we
+actually need confidence in. Revisit once Stage 2 Phase 1-4 lands.
 
 **Trigger to revisit:** when a third-party deploys ppxai multi-tenant,
 OR when a security audit demands LDAP/RBAC test coverage, OR when CVE
-disclosure procedures need this code to have minimum test coverage.
+disclosure procedures need this code to have minimum test coverage,
+OR when agent-platform Stage 2 sub-agent pod sandbox lands (validate together).
 
 **Effort:**
 - Quick pass (~1 hour): 10 unit tests around `_hash_password`
@@ -96,6 +106,13 @@ machine), with a per-stage test sweep before any code moves.
 agent-platform Stage 2 work (ADR 0003) since `chat_with_tools` is
 where the run-namespace, budget enforcement, and sub-agent spawn all
 intersect.
+
+**Status (2026-06-15): POSTPONED for the `feature/v1.19.0` iteration.**
+Not in this iteration's active set. The decomposition is best done
+*alongside or after* Stage 2 lands its run-state machine — Stage 2 will
+add run-namespace / budget / sub-agent code into this exact function, so
+decomposing first would just be re-touched. Let Stage 2 settle the shape,
+then split. See [docs/plan-v1.19.0-sequencing.md](plan-v1.19.0-sequencing.md).
 
 **Branch when ready:** `feat/chat-with-tools-decomp` (ADR + tests
 first commit; code split as a follow-on).
