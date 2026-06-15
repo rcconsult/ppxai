@@ -274,8 +274,11 @@ design of record for the first slice.** It resolves Question C
 (execution model), the direction of Question D (engine lifecycle), and
 open-decision item 4 (cascade cancel), and adds five dimensions the
 original ADR did not cover (capability sandbox, run secret, results,
-two-phase termination, config inheritance). Question A (outer loop)
-stays open but is **sidestepped** by the run-unit definition below.
+two-phase termination, config inheritance). Question A (outer loop) was
+**sidestepped** by the run-unit definition below at MVP-design time, and
+has since been **resolved outright as A1 — eliminate the outer loop**
+(see open-decision #1, 2026-06-15); the run-unit definition is now the
+answer for the general agent too, not just the MVP.
 
 Guiding principle, inherited from the v1.18.8 `/files/*` parity charter:
 **for any reader that may be remote or pod-sandboxed, the registry API is
@@ -506,7 +509,7 @@ resume path, which two-phase termination exists to avoid. One model each.
 SPAWNING → RUNNING ⇄ WAITING{consent | input}              (mid-run, resumed via /respond)
 RUNNING  → COMPLETED_PENDING_ACK → FINALIZED               (end-of-run, /ack | retention-TTL)
 RUNNING  → FAILED (provider) | ZOMBIE (tool-loop) | BUDGET_EXCEEDED | CANCELLED (explicit | cascade-TTL)
-RUNNING  → INTERRUPTED (engine restart killed the live asyncio.Task; records persist, live work does NOT auto-resume until the resume upgrade)
+RUNNING  → INTERRUPTED (engine restart / cancel / budget cap killed the live asyncio.Task; records + checkpoint persist; resume is CONDITIONAL — see open-decision #5: only if the checkpoint is conclusive and artifacts don't already capture the work, else stays INTERRUPTED for an explicit decision)
 any terminal → tool sandbox torn down; artifacts retained until FINALIZED/GC
 ```
 
@@ -635,16 +638,28 @@ shape.
 > with isolation moved to the **tool-execution** boundary
 > (subprocess/pod), not the loop — see Resolved MVP design §4.
 
-1. **Question A** — outer-loop value. Needs instrumentation data.
-   **MVP-sidestepped (2026-06-15):** the read-only research run is one
-   `chat_with_tools` invocation (Resolved MVP design §2), so the MVP
-   ships without this data. Still open for the *general* agent.
+1. **Question A** — outer-loop value.
+   **RESOLVED (2026-06-15): A1 — eliminate the outer continuation loop.**
+   A run is one `chat_with_tools` invocation; the model finishes in a
+   single inner tool-loop or it doesn't. We accept the small risk that
+   some older/weaker model occasionally stops mid-task, in exchange for
+   the simplicity of one loop instead of two (and deleting the ~150 LoC
+   VSCode replica + the `TASK_COMPLETE:` marker convention). The MVP
+   already runs this way (one invocation per run); A1 makes that the
+   answer for the *general* agent too, not just the read-only MVP. If a
+   regression surfaces on a specific model, revisit A2 (server-side
+   re-prompt) for that case — but do not build it speculatively.
 2. **Question B** — filesystem vs SQLite for the registry. Recommend
    filesystem; revisit if listing runs becomes slow. (MVP: filesystem.)
-3. **Question D** — `EngineClient` construction cost. Direction set to
-   **D1** (new `EngineClient` per sub-agent run) per Resolved MVP design
-   §9; still needs the benchmark (`time` to spin up an EngineClient with
-   default provider). If under ~50ms, D1 is confirmed.
+3. **Question D** — `EngineClient` lifecycle per sub-agent.
+   **RESOLVED (2026-06-15): D1 — a new `EngineClient` per sub-agent run.**
+   Isolation wins (independent history / provider / tool budget; clean
+   per-run attribution; a child crash can't corrupt the parent). We
+   commit to D1 now and **optimize later if needed** — construction cost
+   is not a gate. If profiling later shows `EngineClient()` construction
+   is a measurable bottleneck under fan-out, optimize then (lazy init,
+   pooling, or selective D2-style scoping for cheap children) — but ship
+   D1 first; correctness and isolation before micro-optimization.
 4. **Cancellation semantics for sub-agents — RESOLVED (2026-06-15):**
    cascading cancel, but **TTL-gated, not instant-on-disconnect** (else
    it defeats semi-autonomy). Clean close → explicit cancel now; crash →
@@ -653,17 +668,36 @@ shape.
    mid-tool-call cleanly. Today's `_active_subprocesses` cleanup
    (commit `a746a7c6`) is the foundation; needs extending to a
    per-run budget tracker.
-   **RESOLVED (2026-06-15): clean interruption = checkpoint-then-resume.**
-   A mid-tool-call interruption (budget cap hit, cancel, or engine
-   restart) must first write the agent's progress to the run's
-   `state.json` checkpoint (iteration, budget consumed, last tool, any
-   partial result) so the run can **resume** from that point rather than
-   restart from scratch. This couples open-decision #5 (budget) with
-   ROADMAP Phase 3 (run persistence + recovery) and the `INTERRUPTED`
-   state (§8): the budget tracker fires the interrupt, the checkpoint
-   captures progress, and resume (additive upgrade per §8) replays from
-   the checkpoint. The cap-enforcement boundary still needs building, but
-   the *semantics* are now pinned: never lose mid-run work to an interrupt.
+   **RESOLVED (2026-06-15): clean interruption = checkpoint, then
+   *conditional* resume.** A mid-tool-call interruption (budget cap hit,
+   cancel, or engine restart) must first write the agent's progress to the
+   run's `state.json` checkpoint (iteration, budget consumed, last tool,
+   any partial result, plus refs to artifacts produced so far). The
+   checkpoint is unconditional — never lose the record of mid-run work.
+   **Resume is conditional, not automatic** — on recovery the registry
+   evaluates whether resuming is worthwhile:
+
+   - **Checkpoint inconclusive** (interrupted mid-tool-call with no
+     coherent resumable state, or a partial/corrupt `state.json`) →
+     **do not auto-resume.** Resuming from guesswork risks duplicated or
+     wrong work; leave the run `INTERRUPTED` and surface it for an
+     explicit operator/parent decision.
+   - **Artifacts already represent sufficient work** → if the run produced
+     artifacts that adequately capture the deliverable, **prefer
+     finalizing with what exists** over re-running. A sub-agent whose
+     output is already on disk does not need its compute resumed.
+   - **Conclusive checkpoint AND work not already captured** → resume from
+     the checkpoint.
+
+   This couples open-decision #5 (budget) with ROADMAP Phase 3 (run
+   persistence + recovery) and the `INTERRUPTED` state (§8): the budget
+   tracker fires the interrupt, the checkpoint captures progress, and the
+   *resume-decision* (additive upgrade per §8) gates whether to replay. A
+   resumability/conclusiveness flag in `state.json` (set when the agent
+   reaches a clean checkpoint boundary, cleared on entry to a tool call)
+   is the mechanism; artifact-sufficiency is judged against the run's
+   declared result contract. Semantics pinned: **never lose mid-run work,
+   never blindly resume into garbage or redundant compute.**
 6. **C4 — Tools first-class on `POST /v1/agent/run`** [LOAD-BEARING].
    Without a `tools` field on the run-spawn request, ppxai-sre's
    manager-executor pattern would have to reimplement the runtime

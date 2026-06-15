@@ -26,9 +26,11 @@ Per ROADMAP "Agent platform Stage 2 + v1 gateway extensions" and ADR
 2. **Phase 2 — sub-agent primitive** (`spawn_subagent`, consent-gated).
    ~3-4 d.
 3. **Phase 3 — run persistence + recovery** (`state.json` checkpoint;
-   resume in-flight on restart). Pairs with ADR 0003 open-decision #5
-   (RESOLVED 2026-06-15: clean interrupt = checkpoint-then-resume).
-   ~2-3 d.
+   *conditional* resume on restart). Pairs with ADR 0003 open-decision #5
+   (RESOLVED 2026-06-15: checkpoint unconditionally, resume conditionally
+   — only if the checkpoint is conclusive AND artifacts don't already
+   capture the work; else stays `INTERRUPTED`). Needs a
+   resumability/conclusiveness flag in `state.json`. ~2-3 d.
 4. **Phase 4 — resource budgets** (`meta.json` token/time/iter caps
    enforced at `chat_with_tools`). ~2 d.
 5. **Phase 5 — network policy enforcement** (per-run egress allowlist,
@@ -37,16 +39,20 @@ Per ROADMAP "Agent platform Stage 2 + v1 gateway extensions" and ADR
 6. **Phase 7 — `/v1/tokens` registry** (should-have; pluggable resolver
    from day one). ~4-6 d. (`feat/v1-tokens-registry`)
 
-### Open questions to settle DURING the active work
+### Design decisions (all RESOLVED 2026-06-15 — no open blockers)
 
-- **Q-A (ADR #1, outer loop):** MVP-sidestepped (run = one
-  `chat_with_tools`). Still open for the *general* agent — needs a week
-  of instrumentation (counter: outer-loop-fired->1 vs one-inner-loop).
-  Not a Stage-2 blocker.
-- **Q-D (ADR #3, EngineClient cost):** direction D1 (new EngineClient per
-  sub-agent). Confirm with a construction-cost benchmark before Phase 2;
-  <~50ms confirms D1.
-- **ADR #5 (budget interrupt): RESOLVED** — checkpoint-then-resume.
+- **Q-A (ADR #1, outer loop): A1 — eliminate it.** A run is one
+  `chat_with_tools` invocation; no outer continuation loop, no
+  `TASK_COMPLETE:` marker. Accepted the small risk (a weak model stopping
+  mid-task) for one-loop simplicity. Deletes the ~150 LoC VSCode replica.
+  Revisit A2 (server-side re-prompt) only if a specific model regresses —
+  not speculatively.
+- **Q-D (ADR #3, EngineClient lifecycle): D1 — new EngineClient per
+  sub-agent.** Isolation first; optimize later only if profiling shows
+  construction is a real bottleneck under fan-out. No benchmark gate.
+- **ADR #5 (budget interrupt): conditional resume.** Checkpoint
+  unconditionally; resume only if conclusive + work not already in
+  artifacts (see Phase 3).
 
 ## Deferred — AFTER Stage 2 lands (NOT this iteration's active set)
 
