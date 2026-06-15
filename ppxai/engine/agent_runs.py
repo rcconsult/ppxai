@@ -409,7 +409,12 @@ class AgentRunRegistry:
             try:
                 q.put_nowait(event)
             except asyncio.QueueFull:
-                pass  # slow consumer; it can replay from disk via ?since=
+                # Slow consumer: never block the emitter, never silently lose
+                # the event (it's already on disk — events.jsonl is the source
+                # of truth). Flag the queue overflowed; the SSE generator
+                # self-heals by replaying missed events from disk via
+                # read_events(since=last_seq), then resumes the live tail.
+                q._ppxai_overflowed = True  # type: ignore[attr-defined]
         return event
 
     def read_events(
@@ -432,8 +437,14 @@ class AgentRunRegistry:
         return out
 
     def subscribe(self, run_id: str) -> asyncio.Queue:
-        """Register a live subscriber queue for a run's SSE tail."""
+        """Register a live subscriber queue for a run's SSE tail.
+
+        The queue carries a `_ppxai_overflowed` flag (set by emit_event on
+        QueueFull) so the consumer can detect it fell behind and self-heal
+        from disk rather than silently miss events.
+        """
         q: asyncio.Queue = asyncio.Queue(maxsize=1000)
+        q._ppxai_overflowed = False  # type: ignore[attr-defined]
         self._subscribers.setdefault(run_id, set()).add(q)
         return q
 

@@ -255,23 +255,39 @@ async def get_agent_run_events(
         # be in neither and be lost forever.
         q = registry.subscribe(run_id)
         last_seq = since
-        try:
-            backlog = registry.read_events(
-                run_id, since=since, min_level=min_level, categories=cats
+
+        def _drain_from_disk(after_seq: int):
+            """Yield-able list of filtered events on disk after `after_seq`.
+            Used for the initial backlog AND for overflow self-heal."""
+            return registry.read_events(
+                run_id, since=after_seq, min_level=min_level, categories=cats
             )
-            for ev in backlog:
+
+        try:
+            # Initial backlog.
+            for ev in _drain_from_disk(last_seq):
                 last_seq = max(last_seq, ev.seq)
                 yield f"data: {json.dumps(ev.to_dict())}\n\n"
             while True:
                 if await request.is_disconnected():
                     break
+                # Self-heal: if the queue overflowed (slow consumer), the
+                # dropped events are still on disk — replay everything after
+                # last_seq, then clear the flag and resume the live tail. No
+                # silent gap; the durable log is the source of truth.
+                if getattr(q, "_ppxai_overflowed", False):
+                    q._ppxai_overflowed = False  # type: ignore[attr-defined]
+                    for ev in _drain_from_disk(last_seq):
+                        last_seq = max(last_seq, ev.seq)
+                        yield f"data: {json.dumps(ev.to_dict())}\n\n"
+                    continue
                 try:
                     ev = await asyncio.wait_for(q.get(), timeout=15.0)
                 except asyncio.TimeoutError:
                     yield ": keepalive\n\n"
                     continue
                 if ev.seq <= last_seq:
-                    continue  # already sent via backlog
+                    continue  # already sent (backlog or resync dedup)
                 if not ev.passes(min_level=min_level, categories=cats):
                     continue
                 last_seq = ev.seq

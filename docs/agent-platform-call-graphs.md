@@ -212,7 +212,10 @@ registry.emit_event(run_id, type, level=, category=, data=)  [agent_runs.py]
 ├─ store.append_event(run_id, event)        [FilesystemAgentRunStore]
 │   └─ append one JSON line to runs/<id>/agent-0/events.jsonl
 └─ fan out: for q in self._subscribers[run_id]: q.put_nowait(event)
-            (best-effort live delivery; disk is source of truth)
+            on QueueFull (slow consumer): set q._ppxai_overflowed = True
+            — NEVER block the emitter, NEVER silently drop. The event is
+            on disk; the SSE generator self-heals (see below). Disk is the
+            source of truth; the queue is a fast-path notifier.
 
 emitters (Inc 3): run_in_background._drive →
   agent_run_start (info/lifecycle), agent_run_complete (info/result),
@@ -234,6 +237,12 @@ get_agent_run_events(run_id, since, live, min_level, category)  [routes/agent_v1
        backlog = registry.read_events(...)  ← THEN snapshot, so an event in
                                               the window lands in q, not lost
        yield each backlog event as "data: {json}\n\n"  (sets last_seq)
+       loop:
+         if q._ppxai_overflowed:  ← slow-consumer self-heal
+           replay read_events(since=last_seq) from disk; clear flag
+           (no silent gap — durable log fills what the queue dropped)
+         else await q.get() (15s → keepalive); dedup by last_seq; filter; yield
+       finally: unsubscribe (runs on disconnect)
        loop:
          request.is_disconnected() → stop
          ev = await q.get() (15s timeout → ": keepalive")

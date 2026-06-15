@@ -9,6 +9,7 @@ directly through the registry.
 
 from __future__ import annotations
 
+import json
 import tempfile
 from pathlib import Path
 
@@ -233,6 +234,23 @@ class TestRunEvents:
         assert sent.count("e2") == 1
         assert sent.count("e1") == 1
 
+    @pytest.mark.asyncio
+    async def test_overflow_sets_flag_not_silent_drop(self, registry):
+        # Slow-consumer overflow (codex MEDIUM): when a subscriber's queue
+        # fills, emit_event must NOT silently drop — it flags the queue
+        # _ppxai_overflowed so the SSE generator can self-heal from disk.
+        m = registry.start_run("t")
+        q = registry.subscribe(m.run_id)
+        # fill the queue past maxsize so the next emit overflows it
+        for i in range(q.maxsize + 5):
+            registry.emit_event(m.run_id, f"e{i}")
+        assert getattr(q, "_ppxai_overflowed", False) is True
+        # ALL events are still on disk — nothing lost; the generator would
+        # replay from disk via read_events(since=last_seq).
+        on_disk = registry.read_events(m.run_id)
+        assert len(on_disk) == q.maxsize + 5
+        registry.unsubscribe(m.run_id, q)
+
     def test_torn_last_line_skipped(self, registry, tmp_path):
         m = registry.start_run("t")
         registry.emit_event(m.run_id, "good")
@@ -421,3 +439,73 @@ class TestAgentRunRoutes:
     def test_events_unknown_run_404(self, client):
         c, _ = client
         assert c.get("/v1/agent/runs/run_nope/events").status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_events_live_sse_path(self, client):
+        # Inc 3 LOW (codex): exercise the actual ?live=1 SSE generator
+        # end-to-end — backlog replay, live event via the queue,
+        # overflow self-heal from disk, keepalive, and disconnect cleanup.
+        #
+        # We drive the route's StreamingResponse body iterator directly
+        # rather than via TestClient: the SSE generator is intentionally
+        # infinite (keepalive loop), which makes TestClient's stream
+        # teardown block. Driving the iterator lets us assert the real
+        # logic AND control disconnect deterministically.
+        import asyncio
+        from ppxai.server.routes import agent_v1
+
+        c, reg = client
+        m = reg.start_run("t", provider="p", model="m")
+        reg.emit_event(m.run_id, "backlog1", level="info", category="lifecycle")
+
+        # Controllable disconnect: request.is_disconnected() flips when we say.
+        disconnected = {"v": False}
+
+        class _Req:
+            async def is_disconnected(self):
+                return disconnected["v"]
+
+        resp = await agent_v1.get_agent_run_events(
+            run_id=m.run_id, request=_Req(), since=0, live=True,
+            min_level="debug", category=None,
+        )
+        body = resp.body_iterator
+        frames = []
+
+        async def _next_data(timeout=2.0):
+            # pull frames until the next data: line (skip keepalives)
+            while True:
+                chunk = await asyncio.wait_for(body.__anext__(), timeout)
+                if chunk.startswith("data: "):
+                    return json.loads(chunk[6:])
+
+        # 1. backlog replays as an SSE data frame
+        frames.append(await _next_data())
+        # 2. a live event arrives via the queue
+        reg.emit_event(m.run_id, "live1", level="warning", category="network")
+        frames.append(await _next_data())
+        # 3. overflow self-heal: fill the queue so emit flags it, then the
+        #    generator should replay the missed events from disk.
+        q = next(iter(reg._subscribers[m.run_id]))
+        for i in range(q.maxsize + 3):
+            reg.emit_event(m.run_id, f"flood{i}", level="info", category="tool")
+        healed = await _next_data(timeout=3.0)
+        frames.append(healed)
+
+        types = [f["type"] for f in frames]
+        assert types[0] == "backlog1"          # backlog replayed
+        assert types[1] == "live1"             # live via queue
+        assert types[2].startswith("flood")    # self-healed from disk after overflow
+        seqs = [f["seq"] for f in frames]
+        assert seqs == sorted(seqs) and len(set(seqs)) == len(seqs)  # ordered, no dup
+
+        # 4. keepalive: with nothing emitted and not disconnected, the gen
+        #    yields a comment frame on timeout (we don't wait the full 15s;
+        #    just assert disconnect cleanly ends the generator).
+        disconnected["v"] = True
+        with pytest.raises(StopAsyncIteration):
+            # drain any buffered frames, then the loop sees disconnect → ends
+            for _ in range(q.maxsize + 10):
+                await asyncio.wait_for(body.__anext__(), 2.0)
+        # generator exhausted → its finally ran → subscriber removed
+        assert m.run_id not in reg._subscribers or q not in reg._subscribers.get(m.run_id, set())
