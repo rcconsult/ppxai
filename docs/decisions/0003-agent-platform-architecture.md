@@ -125,7 +125,7 @@ across a week of real usage. Without that data, picking is opinion.
 | Location | Pros | Cons |
 |---|---|---|
 | **In-memory dict** on `EngineClient` | Trivial; today's status quo | Dies on restart; no observability across sessions |
-| **Filesystem** under `~/.ppxai/agent-runs/<run_id>/` | Plays well with existing convention (`sessions/`, `checkpoints/`, `usage/`); inspectable with `ls`/`cat`; append-only `events.jsonl` is robust | List/filter operations need a directory scan |
+| **Filesystem** under `~/.ppxai/runs/<run_id>/agent-<n>/` (the ADR 0005 Inspection Triplet path — canonical) | Plays well with existing convention (`sessions/`, `checkpoints/`, `usage/`); inspectable with `ls`/`cat`; append-only `events.jsonl` is robust | List/filter operations need a directory scan |
 | **SQLite** under `~/.ppxai/agent-runs.db` | Indexed queries (by status, by parent, by date); atomicity; concurrent writers | New dependency surface; schema migrations |
 
 The migration filesystem → SQLite is mechanical if we put the
@@ -170,11 +170,12 @@ D1 wins on isolation; pre-condition is verifying construction cost.
 
 ```
                 ┌──── AgentRunRegistry ────────────────────────────┐
-                │  ~/.ppxai/agent-runs/<run_id>/                   │
+                │  ~/.ppxai/runs/<run_id>/agent-<n>/  (ADR 0005)  │
                 │     ├── meta.json   (task, parent, status, ...)  │
                 │     ├── events.jsonl (append-only)               │
                 │     ├── state.json  (iteration, budget, tools)   │
-                │     └── transcript.md                            │
+                │     ├── transcript.md                            │
+                │     └── artifacts/  (run-owned, §5)              │
                 │                                                  │
                 │  start_run(task, parent_run_id?, budget) → run_id│
                 │  list_runs(filter?) → [meta]                     │
@@ -277,9 +278,22 @@ two-phase termination, config inheritance). Question A (outer loop)
 stays open but is **sidestepped** by the run-unit definition below.
 
 Guiding principle, inherited from the v1.18.8 `/files/*` parity charter:
-**every observable thing about a run is an API contract, never a
-filesystem detail** — because a sandboxed tool (subprocess/pod) has no
-shared FS with the main app.
+**for any reader that may be remote or pod-sandboxed, the registry API is
+the contract** — because such a reader has no shared FS with the main app,
+so nothing observable about a run may be reachable *only* by reading the
+filesystem.
+
+This does **not** demote ADR 0005. Co-located / PVC-shared readers (Rich
+TUI, `kubectl exec cat`, sibling ppxai-sre agents on a shared volume)
+**may read the Inspection Triplet files directly** — `events.jsonl` /
+`state.json` remain a first-class inspection contract per
+[ADR 0005](0005-inspection-triplet.md). The rule is one of *supersetting*,
+not replacement: **the registry API never exposes less than the Triplet
+files do.** The API is the contract for readers that *can't* touch the FS;
+the Triplet is the contract for readers that can. Same bytes, two
+access paths, neither second-class — exactly ADR 0005's "the bus reads
+from the filesystem, not the other way around," extended to the HTTP
+adapter.
 
 ### 1. Scope — one sub-agent, full multi-ID plumbing
 
@@ -340,8 +354,16 @@ gets sandboxed is the **tool call**, not the loop:
 > `read_file`, `grep`/`find`, and `curl`/web all run **in-process today**,
 > so the MVP must route them through the adapter or the sandbox is
 > theater. The capability grant (§3) is enforced *inside* that adapter, so
-> a bypass is simultaneously a sandbox escape and a grant escape. Pin a
-> test that asserts no granted tool resolves to a direct in-process call.
+> a bypass is simultaneously a sandbox escape and a grant escape.
+>
+> **Acceptance criterion AC-1 (named ship-gate):** an automated test
+> asserts that for every tool in a run's grant, resolution goes through
+> the sandbox-executing adapter and **no granted tool resolves to a
+> direct in-process call**. The MVP does not ship while AC-1 fails — it
+> is the test that proves the sandbox is real rather than theater. Pair
+> with **AC-2:** egress for a granted network tool is denied-by-default
+> and every allow/deny emits a typed `NETWORK_POLICY_*` event (§3 tier-c
+> / open-decision 8).
 
 
 - MVP: tools run in a **subprocess** with a restricted environment — no
@@ -367,7 +389,8 @@ Mirrors the message content-block model.
 > **Artifact addressing — authority is the run, not the session
 > (corrects a draft inconsistency).** Run artifacts are addressed by
 > **`(run_id, artifact_id)`** and **owned by the `AgentRunRegistry`**,
-> stored under the run workspace (`runs/<run_id>/artifacts/`) and resolved
+> stored under the run workspace (`~/.ppxai/runs/<run_id>/agent-<n>/artifacts/`,
+> the ADR 0005 Triplet path) and resolved
 > *only* via `GET /v1/agent/runs/<id>/artifacts/<artifact_id>`. We **reuse
 > the `SessionFileStore` content-addressing *mechanism*** (blob hashing,
 > dedup) but **not its authority** — the current-session file store must
@@ -378,12 +401,20 @@ Mirrors the message content-block model.
 > A run `artifact_id` is meaningless outside its `run_id` namespace.
 
 
-### 6. Run workspace — API-visible, not FS-visible
+### 6. Run workspace — Triplet files for co-located readers, registry API for remote
 
-`~/.ppxai/agent-runs/<run_id>/{meta.json, state.json, events.jsonl,
-transcript.md, artifacts/}` is the *implementation*. The contract is the
-**registry API** (`GET /v1/agent/runs/<id>/...`), because a pod-sandboxed
-run has no shared FS. The main app never reads the directory directly.
+`~/.ppxai/runs/<run_id>/agent-<n>/{meta.json, state.json, events.jsonl,
+transcript.md, artifacts/}` — the **ADR 0005 Inspection Triplet path**
+(canonical; `agent-<n>` scopes the per-agent slot, `<n>=0` for a top-level
+run, incrementing for sub-agents) — is **both** the storage layout **and**
+a first-class inspection contract for co-located / PVC-shared readers (per
+ADR 0005). The **registry API** (`GET /v1/agent/runs/<id>/...`) is the
+contract for readers that have **no shared FS** — a pod-sandboxed tool, a
+remote client. The API is a superset adapter over the same Triplet bytes
+(§"Guiding principle" above): it never exposes less than the files do, and
+it is the *only* path a no-shared-FS reader can use. So the main app reads
+the registry API (uniform across local and pod runs); local inspection
+tools may read the directory directly.
 
 ### 7. Ownership & the run secret — reuse C1 signed-bearer, don't roll crypto
 
@@ -458,15 +489,22 @@ retention:**
   *registry* holds the pending state. Blocking a live process on
   confirmation re-couples what we decoupled.
 
-**`WAITING` unifies consent, interactive questions, and conclusion-ack.**
-A mid-run decision ("found 3 approaches, which to deep-dive?") is the same
-mechanism as a consent gate and as terminal-ack: the run enters `WAITING`,
-emits a request tagged with `run_id`, parks with a resume token + TTL, and
-resumes on response. Terminal-ack is just the end-of-run special case.
+**`WAITING` is for mid-run gates only — terminal-ack is NOT a `WAITING`
+variant.** A mid-run decision ("found 3 approaches, which to deep-dive?")
+and a consent gate share one mechanism: the run enters `WAITING`, emits a
+request tagged with `run_id`, parks with a resume token + TTL, and resumes
+via `POST …/respond`. **End-of-run acknowledgement is a distinct,
+canonical model** — `COMPLETED_PENDING_ACK → FINALIZED` via `POST …/ack`
+(two-phase termination below). These are deliberately separate: `WAITING`
+is a *live process parked mid-run* awaiting input to continue; ack is a
+*dead process* whose registry record persists until the result is
+collected. Conflating them (an earlier draft modeled terminal-ack as
+`WAITING{terminal_ack}`) would couple result-retention to the live-process
+resume path, which two-phase termination exists to avoid. One model each.
 
 ```
-SPAWNING → RUNNING ⇄ WAITING{consent | input | terminal_ack}
-RUNNING  → COMPLETED_PENDING_ACK → FINALIZED   (acked | retention-TTL)
+SPAWNING → RUNNING ⇄ WAITING{consent | input}              (mid-run, resumed via /respond)
+RUNNING  → COMPLETED_PENDING_ACK → FINALIZED               (end-of-run, /ack | retention-TTL)
 RUNNING  → FAILED (provider) | ZOMBIE (tool-loop) | BUDGET_EXCEEDED | CANCELLED (explicit | cascade-TTL)
 any terminal → tool sandbox torn down; artifacts retained until FINALIZED/GC
 ```
@@ -539,10 +577,15 @@ POST /v1/agent/runs/<id>/cancel      → {ok, status:"cancelling"}
 
 - `AGENT_RESULT_READY` — `{run_id, status, body_ref, artifact_refs[]}` —
   emitted on `COMPLETED_PENDING_ACK`.
-- `AGENT_WAITING` — `{run_id, wait_kind: "consent"|"input"|"terminal_ack",
-  prompt, resume_token, ttl_s}`.
-- (`NETWORK_POLICY_DENIED`/`_ALLOWED` already tracked in item 8 /
-  Phase 5; `AGENT_SERVICE_DOWN` in §13.)
+- `AGENT_WAITING` — `{run_id, wait_kind: "consent"|"input", prompt,
+  resume_token, ttl_s}`. Mid-run gates only — end-of-run uses
+  `AGENT_RESULT_READY` + `/ack`, never a `WAITING` variant (§8).
+- `NETWORK_POLICY_DENIED` / `NETWORK_POLICY_ALLOWED` — **MVP ship-gate,
+  not Phase 5.** The read-only research MVP's egress allowlist (§3 tier-c,
+  build-order step 2) is the central prompt-injection-exfiltration
+  defense, so these typed events ship with the first slice. (Item 8 /
+  Phase 5 is the *ppxai-sre-consumer* commitment for the same events; the
+  MVP requires them earlier, not later.) `AGENT_SERVICE_DOWN` in §13.)
 
 **New `SideEffectKind`:** `AGENT_RUN_STARTED` (already proposed above).
 
@@ -626,14 +669,19 @@ shape.
    in v1.19.x Phase 1; polling `GET /v1/agent/runs/<id>` stays as
    the status-snapshot path. ROADMAP Phase 1 row to be amended.
 8. **C1 — Typed `EventType.NETWORK_POLICY_DENIED` /
-   `NETWORK_POLICY_ALLOWED`** [LOAD-BEARING for ppxai-sre audit].
-   Phase 5's network-policy primitive must emit stable typed events
-   (analogous to `EventType.PROVIDER_THROTTLED`) so ppxai-sre's
-   `AuditLogger` consumes them as data, not by tapping internal
-   code paths. Payload shape:
+   `NETWORK_POLICY_ALLOWED`** [LOAD-BEARING — MVP ship-gate AND ppxai-sre audit].
+   **RESOLVED (2026-06-15): these ship with the read-only research MVP,
+   not Phase 5.** The egress allowlist is the MVP's central
+   prompt-injection-exfiltration defense (Resolved MVP design §3 tier-c,
+   build-order step 2), so the typed events that audit it are part of the
+   first ship gate — the registry/background-agent slice does not ship
+   without them. The events emit stable payloads (analogous to
+   `EventType.PROVIDER_THROTTLED`) so ppxai-sre's `AuditLogger` consumes
+   them as data, not by tapping internal code paths. Payload shape:
    `{tool, target_host, target_path, reason, allowlist_rule_id, run_id}`.
-   **Recommended position:** add to v1.19.x Phase 5 scope. ROADMAP
-   Phase 5 row to be amended.
+   The "Phase 5" framing was the ppxai-sre-consumer commitment; the MVP
+   pulls it forward. ROADMAP Phase 1 (MVP) and Phase 5 rows to be amended
+   so the requirement appears in the first slice.
 9. **C2 — `/v1/tokens` pluggable resolver from day one**
    [LOAD-BEARING for v1.20.x migration cost]. ROADMAP today says
    "`~/.ppxai/tokens.json` (single-machine) OR k8s secret (cluster)" —
@@ -721,7 +769,7 @@ shape.
 
       ```yaml
       network:
-        allow_outbound: [...]   # C1, Phase 5
+        allow_outbound: [...]   # egress allowlist — MVP ship-gate (§3 tier-c / open-decision 8)
         allow_inbound:          # C5
           services/dashboard: {sources: [token-role:oncall], paths: [/]}
           services/api: {sources: [token-role:slackbot], paths: [/v1/]}
@@ -776,7 +824,7 @@ If accepted (post-Stage-1 instrumentation):
 - VSCode loses ~150 LoC of duplicated client-side iteration code.
 - Web's `_dispatchAgent` stays as-is (already aligned).
 - New persistent state on disk requires a migration policy:
-  `~/.ppxai/agent-runs/` directory created on first use; old runs
+  `~/.ppxai/runs/` directory created on first use; old runs
   garbage-collected after N days (config knob, default 30d).
 
 If rejected: the agent-loop-unification TODO can still proceed via
