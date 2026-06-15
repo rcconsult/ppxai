@@ -79,7 +79,7 @@ The two roadmap use cases share the same architectural primitives:
 |---|---|---|
 | **Run identity** (`run_id`) | Parent observes children by ID | Address the run after the user's session ends |
 | **Run lifecycle state** | Know when child completed | Know whether yesterday's run finished, failed, or zombied |
-| **Run persistence** | In-flight children survive engine restart | Survive any restart; the whole point |
+| **Run persistence** | Child records (meta/state/events/artifacts) survive; live work resumes only with the additive resume upgrade | **Records** survive any restart and survive **client disconnect** while live (§8 TTL reaper); resuming an in-flight run across an **engine** restart is the additive upgrade — see MVP build order |
 | **Run registry / index** | "list my children" | "list my runs," "list runs since X" |
 | **Parent/child link** | Native | Optional but useful |
 | **Resource budget** | Stop runaway children | Stop runaway autonomous runs |
@@ -506,6 +506,7 @@ resume path, which two-phase termination exists to avoid. One model each.
 SPAWNING → RUNNING ⇄ WAITING{consent | input}              (mid-run, resumed via /respond)
 RUNNING  → COMPLETED_PENDING_ACK → FINALIZED               (end-of-run, /ack | retention-TTL)
 RUNNING  → FAILED (provider) | ZOMBIE (tool-loop) | BUDGET_EXCEEDED | CANCELLED (explicit | cascade-TTL)
+RUNNING  → INTERRUPTED (engine restart killed the live asyncio.Task; records persist, live work does NOT auto-resume until the resume upgrade)
 any terminal → tool sandbox torn down; artifacts retained until FINALIZED/GC
 ```
 
@@ -818,9 +819,13 @@ If accepted (post-Stage-1 instrumentation):
   is closed by Stage 2 — it's no longer a standalone refactor.
 - Sub-agent tool (currently a roadmap wishlist item) becomes a
   concrete v1.19.x deliverable.
-- Autonomous agent runs (long-running, client-disconnect-survivable)
-  become possible in Stage 2 already; only scheduling integration
-  is left for later.
+- Autonomous agent runs become **client-disconnect-survivable** in
+  Stage 2 already (the run keeps going past UI disconnect within budget,
+  per §8's TTL reaper). Two things are explicitly **not** in Stage 2 and
+  remain additive upgrades: (a) **engine-restart resume** — a host-process
+  restart kills the in-flight `asyncio.Task`; the records persist and the
+  run is marked `INTERRUPTED`, but live work does not auto-resume until the
+  resume upgrade lands; (b) scheduling integration (cron-driven runs).
 - VSCode loses ~150 LoC of duplicated client-side iteration code.
 - Web's `_dispatchAgent` stays as-is (already aligned).
 - New persistent state on disk requires a migration policy:
