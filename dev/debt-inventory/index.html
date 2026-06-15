@@ -1228,6 +1228,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#item-35-pluggable-memorylogknowledge-persistence-channel-abstraction-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Item 35 — pluggable memory/log/knowledge persistence channel abstraction [architecture]
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1642,6 +1653,56 @@ preview already works via LibreOffice.)</p>
 <p><strong>Branch when ready:</strong> <code>bugfix/v1.18.8</code> (skill) / v1.19.x (docx dep).</p>
 <p><strong>Trigger to revisit:</strong> active for the skill edit; docx is v1.19.x.</p>
 <p><strong>Effort:</strong> ~1 h (skill <code>uv sync --all-extras</code> + docx dep).</p>
+<hr />
+<h3 id="item-35-pluggable-memorylogknowledge-persistence-channel-abstraction-architecture">Item 35 — pluggable memory/log/knowledge persistence channel abstraction [architecture]<a class="headerlink" href="#item-35-pluggable-memorylogknowledge-persistence-channel-abstraction-architecture" title="Permanent link">&para;</a></h3>
+<p><strong>Affected (future):</strong> a new <code>ppxai/persistence/</code> (or <code>ppxai/memory/</code>)
+package; first consumers would be ADR 0003's <code>AgentRunRegistry</code>
+(<code>events.jsonl</code> / <code>state.json</code> / <code>transcript.md</code>), <code>engine/session.py</code> +
+<code>session_store.py</code>, and the checkpoint machinery — each currently rolls
+its own filesystem persistence.</p>
+<p><strong>What's needed:</strong> a ppxai service/component that abstracts <strong>recording
+of memory / logs / session knowledge behind a pluggable <em>channel</em>
+interface</strong>, so the backing technology is swappable without touching
+callers. Backends to support over time: append-only <strong>JSONL</strong> (today's
+default), <strong>markdown</strong> (human-readable transcript), <strong>SQLite</strong> (indexed
+queries), <strong>mem0</strong> and <strong>vector stores</strong> (semantic recall / curated
+long-term memory), and others. The same abstraction is the substrate
+for two capabilities ppxai doesn't have yet: (1) <strong>resume context</strong> —
+reconstructing an agent or session's working state from its recorded
+channel, and (2) <strong>knowledge curation</strong> — summarizing / compacting /
+promoting durable facts out of raw event logs (the mem0-style layer).</p>
+<p><strong>Why this generalizes existing seams:</strong> ADR 0003 Question B already asks
+"filesystem vs SQLite for the registry" and answers "put the read/write
+API behind a single class so the migration is mechanical." This item is
+that idea promoted to a <strong>first-class protocol</strong> shared across agent
+runs, sessions, and checkpoints, with the backend chosen by config — not
+a per-subsystem decision. Fits the project's leaf-<code>Protocol</code>
+dependency-inversion pattern (define <code>MemoryChannelProtocol</code> /
+<code>PersistenceChannelProtocol</code> in a leaf module; concrete backends as
+plug-in implementations, mirroring <code>rendering/base.py::Renderer</code> and the
+<code>ArtifactRegistry</code>/<code>ArtifactProjector</code> framework from ADR 0006).</p>
+<p><strong>Why deferred:</strong> this is foundational infra that should crystallize
+<strong>after</strong> the <code>AgentRunRegistry</code> exists (so the registry is its first
+concrete consumer and the protocol is shaped by a real second caller),
+not before — abstracting on one consumer is premature. mem0/vector
+backends also add dependency + operational surface (embeddings, store
+lifecycle) that wants its own design pass.</p>
+<p><strong>Planned:</strong> v1.19.x+ — likely its own ADR (e.g. ADR 0008 "pluggable
+persistence/memory channels"); sequence it alongside or just after
+ADR 0003 Stage 2 so agent-runs and sessions become the two consumers
+that validate the protocol shape.</p>
+<p><strong>Branch when ready:</strong> new branch (pairs with ADR 0003 Stage 2 work).</p>
+<p><strong>Trigger to revisit:</strong> a second persistence consumer wants a swappable
+backend (agent-runs <strong>and</strong> sessions both asking), OR resume-context /
+knowledge-curation becomes a feature ask, OR a mem0 / vector-recall
+requirement lands from a consumer (e.g. ppxai-sre long-lived agents
+needing cross-run memory).</p>
+<p><strong>Effort:</strong> ~2–3 d for the protocol + JSONL/markdown/SQLite backends
+behind it (the file backends already exist as code to wrap); mem0 /
+vector backends are separate, larger, dependency-bearing add-ons.</p>
+<p><strong>Surfaced by:</strong> agent-platform MVP design discussion 2026-06-15 (while
+resolving ADR 0003 — the registry's hardcoded filesystem layout made the
+missing abstraction visible).</p>
 <hr />
 <h2 id="recently-moved-out-of-debt-scope">Recently moved out of debt scope<a class="headerlink" href="#recently-moved-out-of-debt-scope" title="Permanent link">&para;</a></h2>
 <p>These items left the debt inventory because they're not bug-fix-class

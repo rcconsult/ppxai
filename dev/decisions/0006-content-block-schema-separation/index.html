@@ -1775,9 +1775,10 @@ metadata into the spec block.</p>
 <p><code>build_multimodal_content</code> already knows the final block ordering, so
 it's the natural place to assign <code>block_index</code>.</p>
 <h3 id="layer-2-wire-spec-clean-by-construction">Layer 2 — Wire: spec-clean by construction<a class="headerlink" href="#layer-2-wire-spec-clean-by-construction" title="Permanent link">&para;</a></h3>
-<p>The producer emits spec-clean blocks. <strong>No sanitizer needed.</strong> Drop the
-v1.18.6 stopgap (<code>sanitize_content_blocks_for_wire</code>) once the producer
-is fixed.</p>
+<p>The producer emits spec-clean blocks. <strong>No sanitizer needed</strong> — and none
+shipped. (An earlier draft considered a <code>sanitize_content_blocks_for_wire</code>
+stopgap; it was <em>not</em> taken — the producer-side fix went in directly, so
+there is nothing to drop. See Status.)</p>
 <p><code>flatten_uploaded_file_blocks</code> (R5) keeps doing its job for the
 <code>uploaded_file</code> engine-internal block type.</p>
 <p><code>base.BaseProvider._convert_messages</code> becomes a one-liner: flatten
@@ -1806,8 +1807,8 @@ side-by-side. The serialize/deserialize path:</p>
   with both fields populated.</li>
 <li><strong>Deserialize</strong>: read <code>attachments</code>, look up bytes by <code>file_id</code>,
   rewrite <code>content[i]["image_url"]["url"]</code> back to a data URI.</li>
-<li><strong>Backward compat</strong>: when loading a pre-v1.19.x session, detect the
-  legacy "name/file_id inside image_url block" shape, extract them
+<li><strong>Backward compat</strong>: when loading a pre-v1.18.6 (v1) session, detect
+  the legacy "name/file_id inside image_url block" shape, extract them
   into a synthesized <code>attachments</code> list, and strip them from the
   block. One-shot migration on read; no on-disk format flag needed.</li>
 </ul>
@@ -1856,7 +1857,8 @@ they get the same values they got before. Sentinel test enforces:
 - <code>session.py::_rewrite_content_for_serialize</code> → walk <code>attachments</code> for known image refs
 - <code>session.py::_rewrite_content_for_deserialize</code> → write into <code>attachments</code>, not block</p>
 <p>Sentinel tests for each: same input shape, same output. Fixtures from
-the v1.18.6 stopgap test suite serve as regression baselines.</p>
+the wire-validator sentinels (Step 6, <code>assert_wire_blocks_clean</code>) serve
+as regression baselines.</p>
 <h3 id="phase-3-remove-non-spec-keys-from-producers">Phase 3 — Remove non-spec keys from producers<a class="headerlink" href="#phase-3-remove-non-spec-keys-from-producers" title="Permanent link">&para;</a></h3>
 <ul>
 <li>Drop <code>name</code> and <code>file_id</code> from <code>file_preprocessing.py:264-272</code></li>
@@ -1878,13 +1880,13 @@ the v1.18.6 stopgap test suite serve as regression baselines.</p>
 </span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>    <span class="k">assert</span> <span class="nb">set</span><span class="p">(</span><span class="n">block</span><span class="p">[</span><span class="s2">&quot;image_url&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span><span class="o">.</span><span class="n">issubset</span><span class="p">({</span><span class="s2">&quot;url&quot;</span><span class="p">,</span> <span class="s2">&quot;detail&quot;</span><span class="p">})</span>
 </span></code></pre></div>
 <h3 id="phase-4-backward-compat-session-loader">Phase 4 — Backward-compat session loader<a class="headerlink" href="#phase-4-backward-compat-session-loader" title="Permanent link">&para;</a></h3>
-<p>When loading a session file written by v1.18.x or earlier, the
+<p>When loading a session file written by pre-v1.18.6 (v1), the
 deserialize path detects the legacy shape (<code>block["name"]</code> /
 <code>block["file_id"]</code> populated, <code>message["attachments"]</code> absent) and
 reconstructs an <code>attachments</code> list from those keys. One-shot migration
 on first load; subsequent saves use the new shape.</p>
-<p>Test fixture: a v1.18.4 session JSON checked into <code>tests/fixtures/</code>
-that deserializes correctly under v1.19.x, with <code>attachments</code>
+<p>Test fixture: a v1.18.4 (v1) session JSON checked into <code>tests/fixtures/</code>
+that deserializes correctly under v1.18.6+, with <code>attachments</code>
 populated and content blocks stripped of non-spec keys.</p>
 <h2 id="migration-plan-revision-2026-05-15">Migration plan revision (2026-05-15)<a class="headerlink" href="#migration-plan-revision-2026-05-15" title="Permanent link">&para;</a></h2>
 <p><strong>Context for the revision:</strong> Phases 1 + 2 landed as planned (commits
@@ -2091,31 +2093,37 @@ before moving to the next.</p>
 multiple sessions if Phase 4-style risk on Step 4-5 warrants pausing
 between commits.</p>
 <h4 id="deliverables-checklist">Deliverables checklist<a class="headerlink" href="#deliverables-checklist" title="Permanent link">&para;</a></h4>
+<blockquote>
+<p><strong>Completed — all steps shipped in v1.18.6</strong> (11-commit arc ending
+<code>21dd226d</code>, merged to master). Boxes ticked 2026-06-15 to reflect
+shipped reality (the plan was executed but the checklist was never
+updated in place). Status of this ADR is unchanged (Accepted).</p>
+</blockquote>
 <ul>
-<li>[ ] Step 6: <code>assert_wire_blocks_clean</code> helper in
+<li>[x] Step 6: <code>assert_wire_blocks_clean</code> helper in
   <code>engine/uploaded_file.py</code> + 6-8 sentinel cases</li>
-<li>[ ] Step 6: <code>BaseProvider._convert_messages</code> calls the validator
+<li>[x] Step 6: <code>BaseProvider._convert_messages</code> calls the validator
   under <code>__debug__</code></li>
-<li>[ ] Steps 1-3: <code>_preprocess_image</code> returns tuple,
+<li>[x] Steps 1-3: <code>_preprocess_image</code> returns tuple,
   <code>build_multimodal_content</code> returns tuple, <code>EngineClient.chat</code>
   takes optional <code>attachment_refs</code> kwarg</li>
-<li>[ ] Steps 1-3: 3 TUI/server call sites updated atomically</li>
-<li>[ ] Steps 1-3: sentinel test pinning that producer-emitted blocks
+<li>[x] Steps 1-3: 3 TUI/server call sites updated atomically</li>
+<li>[x] Steps 1-3: sentinel test pinning that producer-emitted blocks
   are spec-clean even before the wire validator runs</li>
-<li>[ ] Step 4: <code>schema_version: 2</code> field in session JSON top level</li>
-<li>[ ] Step 4: <code>_serialize_message</code> persists <code>attachments</code> separately</li>
-<li>[ ] Step 4: <code>_deserialize_message</code> reads <code>attachments</code> directly
+<li>[x] Step 4: <code>schema_version: 2</code> field in session JSON top level</li>
+<li>[x] Step 4: <code>_serialize_message</code> persists <code>attachments</code> separately</li>
+<li>[x] Step 4: <code>_deserialize_message</code> reads <code>attachments</code> directly
   on v2 sessions</li>
-<li>[ ] Step 5: legacy v1 loader migration path with <code>extract_attachment_refs</code></li>
+<li>[x] Step 5: legacy v1 loader migration path with <code>extract_attachment_refs</code></li>
 <li>in-block-key strip + transient "needs re-save" flag</li>
-<li>[ ] Step 5: permanent regression fixture from a real v1.18.x
+<li>[x] Step 5: permanent regression fixture from a real v1.18.x
   session (use <code>~/.ppxai/sessions.backup.20260514-161938-before-content-block-refactor/</code>
   as the source — checked-in fixture in <code>tests/fixtures/sessions/v1/</code>)</li>
-<li>[ ] Step 5: round-trip test: load v1 fixture → assert in-memory
+<li>[x] Step 5: round-trip test: load v1 fixture → assert in-memory
   shape correct → save → assert on-disk JSON now in v2 shape</li>
-<li>[ ] Step 7: producer drops in-block keys</li>
-<li>[ ] Step 7: serialize stops writing in-block keys back</li>
-<li>[ ] Step 7: full ppxai test suite green (the moment the wire
+<li>[x] Step 7: producer drops in-block keys</li>
+<li>[x] Step 7: serialize stops writing in-block keys back</li>
+<li>[x] Step 7: full ppxai test suite green (the moment the wire
   validator's <strong>debug</strong> assertions and the round-trip tests both
   pass, the refactor is complete)</li>
 </ul>
@@ -2143,7 +2151,7 @@ shows v2 is load-bearing for the upcoming sub-agent + autonomous-agent
 roadmap, not just a bug fix.</p>
 <h3 id="what-the-agent-platform-actually-persists-per-run">What the agent platform actually persists per run<a class="headerlink" href="#what-the-agent-platform-actually-persists-per-run" title="Permanent link">&para;</a></h3>
 <p>ADR 0003 §"Proposed architecture" specifies the per-agent-run namespace:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>~/.ppxai/agent-runs/&lt;run_id&gt;/
+<div class="language-text highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>~/.ppxai/runs/&lt;run_id&gt;/agent-&lt;n&gt;/   (ADR 0003 / ADR 0005 canonical path)
 </span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>    ├── meta.json     (task, parent, status, ...)
 </span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>    ├── events.jsonl  (append-only)
 </span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>    ├── state.json    (iteration, budget, tools)
@@ -2152,7 +2160,7 @@ roadmap, not just a bug fix.</p>
 <p><strong>Each run carries its own message history.</strong> Sub-agents and autonomous
 agents both produce conversations — same <code>Message</code> shape, same content
 blocks, same potential for image attachments. Whatever schema we use
-for <code>~/.ppxai/sessions/</code> will be inherited by <code>agent-runs/&lt;run_id&gt;/</code>.
+for <code>~/.ppxai/sessions/</code> will be inherited by <code>runs/&lt;run_id&gt;/agent-&lt;n&gt;/</code>.
 The schema we ship in v1.18.6 IS the schema v1.19.x agents inherit.</p>
 <h3 id="four-agent-platform-pressures-that-strengthen-the-v2-case">Four agent-platform pressures that strengthen the v2 case<a class="headerlink" href="#four-agent-platform-pressures-that-strengthen-the-v2-case" title="Permanent link">&para;</a></h3>
 <ol>
@@ -2322,10 +2330,11 @@ Same 5 hours of focused work; vastly different long-term return.</p>
   use <code>dataclasses.asdict</code>. Test coverage must include
   <code>dataclasses.asdict(msg)</code> round-trip and pickle (used by
   conversation-export tests).</li>
-<li><strong>Session JSON schema bump.</strong> Add a <code>schema_version: 2</code> field at
-  the top of session JSON files written by v1.19.x. Loader checks
-  the version and routes to the legacy-migration path if absent or
-  <code>1</code>.</li>
+<li><strong>Session JSON schema bump.</strong> A <code>schema_version: 2</code> field at
+  the top of session JSON files, <strong>shipped in v1.18.6</strong>. The loader
+  checks the version and routes to the legacy-migration path if absent
+  or <code>1</code>. (This section was written when the work targeted v1.19.x;
+  it landed in v1.18.6 — see the checklist note above.)</li>
 <li><strong>Sentinel test discipline.</strong> Two new permanent sentinels:</li>
 <li><code>test_image_url_blocks_are_spec_clean</code> (Phase 3)</li>
 <li><code>test_legacy_session_loads_correctly</code> (Phase 4)</li>
@@ -2366,9 +2375,12 @@ Same 5 hours of focused work; vastly different long-term return.</p>
 <li><strong>Not a wire-protocol change.</strong> Real OpenAI keeps accepting the same
   payload it always has (it ignored the extra keys anyway). The change
   is internal cleanup.</li>
-<li><strong>Not a session-format break.</strong> v1.19.x readers handle v1.18.x
-  files; v1.18.x readers WILL fail on v1.19.x files (forward compat
-  is one-way only). Document in <code>RELEASE-NOTES-v1.19.0.md</code>.</li>
+<li><strong>Not a session-format break.</strong> The v1→v2 session boundary is
+  <strong>v1.18.5 → v1.18.6</strong>: v1.18.6+ readers handle old v1 (≤v1.18.5)
+  files via the migration path; pre-v1.18.6 readers WILL fail on v2
+  files (forward compat is one-way only). Documented in
+  <code>docs/release-notes-v1.18.6.md</code> (this bullet originally said
+  v1.19.x, before the work was pulled forward into v1.18.6).</li>
 <li><strong>Not an architectural pattern other than "boundary types matter."</strong>
   The Triplet (ADR 0005), the AppState schema (ADR 0001-style work),
   and now this content-block split are all the same instinct: when
@@ -2391,10 +2403,10 @@ Same 5 hours of focused work; vastly different long-term return.</p>
    pattern works.</strong> This ADR codifies the same boundary-translation
    discipline for image_url blocks, completing the pattern.</li>
 </ol>
-<p>Capturing the decision now means v1.19.x can implement mechanically
-against a clear plan rather than relitigating shape choices each
-phase. The v1.18.6 stopgap unblocks today's user without taking the
-shortcut as the permanent answer.</p>
+<p>Capturing the decision now means later agent-platform work can implement
+mechanically against a clear plan rather than relitigating shape choices
+each phase. The v1.18.6 producer-side fix ships the clean shape directly —
+no stopgap, no shortcut taken as the permanent answer (see Status).</p>
 <h2 id="scope-guards">Scope guards<a class="headerlink" href="#scope-guards" title="Permanent link">&para;</a></h2>
 <ul>
 <li>Not a <code>Message</code> rewrite. Adding one field (<code>attachments</code>), keeping the others.</li>

@@ -3040,9 +3040,9 @@ Error messages should explain what failed, why, and what was attempted.</p>
 <p>This pattern should be applied to:
 - ✅ StatusBar badge management (implemented)
 - ✅ Session state management — <code>EngineClient.restore_session()</code> (v1.16.1)
-- ⏳ Context injection (<code>@file</code>, <code>@git</code>, etc.) (planned)
-- ⏳ File operations with undo (planned)
-- ⏳ Multi-step tool execution (planned)</p>
+- ✅ Context injection (<code>@file</code>, <code>@git</code>, <code>@tree</code>, <code>@clipboard</code>, <code>@url</code>) — <code>ContextInjector</code> in <a href="../ppxai/engine/context.py">ppxai/engine/context.py</a>
+- ✅ File operations with undo — checkpoint registration before editor writes (<code>_register_checkpoint_file</code> in <a href="../ppxai/engine/tools/builtin/editor.py">ppxai/engine/tools/builtin/editor.py</a>)
+- ✅ Multi-step tool execution — the <code>chat_with_tools</code> iteration loop + <code>AGENT_BEAT</code> emission in <a href="../ppxai/engine/chat.py">ppxai/engine/chat.py</a></p>
 <p><strong>Rule:</strong> Any operation that modifies multiple related pieces of state should use this pattern.</p>
 <hr />
 <h2 id="web-app-architecture-v116x">Web App Architecture (v1.16.x)<a class="headerlink" href="#web-app-architecture-v116x" title="Permanent link">&para;</a></h2>
@@ -3050,31 +3050,35 @@ Error messages should explain what failed, why, and what was attempted.</p>
 <h3 id="file-structure">File Structure<a class="headerlink" href="#file-structure" title="Permanent link">&para;</a></h3>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>ppxai/web/
 </span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a>├── index.html                          # Single-page app shell
-</span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a>├── app.js                              # PpxaiApp root class (~2,100 lines after v1.16.2 refactor)
-</span><span id="__span-21-4"><a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a>├── shared/                             # Framework-level modules
+</span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a>├── app.js                              # PpxaiApp root class (~3,850 lines as of v1.18.8)
+</span><span id="__span-21-4"><a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a>├── shared/                             # Framework-level modules (flat, not per-group folders)
 </span><span id="__span-21-5"><a id="__codelineno-21-5" name="__codelineno-21-5" href="#__codelineno-21-5"></a>│   ├── api-client.js                   # ApiClient — all fetch() calls, timeout, error shape
 </span><span id="__span-21-6"><a id="__codelineno-21-6" name="__codelineno-21-6" href="#__codelineno-21-6"></a>│   ├── app-state.js                    # AppState — centralised state with listener notifications
 </span><span id="__span-21-7"><a id="__codelineno-21-7" name="__codelineno-21-7" href="#__codelineno-21-7"></a>│   ├── stream-handler.js               # StreamHandler — SSE buffer, RAF rendering, typed events
-</span><span id="__span-21-8"><a id="__codelineno-21-8" name="__codelineno-21-8" href="#__codelineno-21-8"></a>│   └── command-dispatcher.js           # CommandDispatcher — slash command routing
-</span><span id="__span-21-9"><a id="__codelineno-21-9" name="__codelineno-21-9" href="#__codelineno-21-9"></a>│       commands/                       # Per-group command handlers
-</span><span id="__span-21-10"><a id="__codelineno-21-10" name="__codelineno-21-10" href="#__codelineno-21-10"></a>│       ├── file-commands.js            # /show, /edit, /ls, /tree, /cd, /pwd, /preview
-</span><span id="__span-21-11"><a id="__codelineno-21-11" name="__codelineno-21-11" href="#__codelineno-21-11"></a>│       ├── session-commands.js         # /save, /load, /sessions, /clear, /export
-</span><span id="__span-21-12"><a id="__codelineno-21-12" name="__codelineno-21-12" href="#__codelineno-21-12"></a>│       ├── model-commands.js           # /provider, /model, /tools, /agent
-</span><span id="__span-21-13"><a id="__codelineno-21-13" name="__codelineno-21-13" href="#__codelineno-21-13"></a>│       └── …
+</span><span id="__span-21-8"><a id="__codelineno-21-8" name="__codelineno-21-8" href="#__codelineno-21-8"></a>│   ├── command-dispatcher.js           # CommandDispatcher — slash command routing
+</span><span id="__span-21-9"><a id="__codelineno-21-9" name="__codelineno-21-9" href="#__codelineno-21-9"></a>│   ├── commands.js                     # Slash command handlers (flattened — no per-group commands/ folder)
+</span><span id="__span-21-10"><a id="__codelineno-21-10" name="__codelineno-21-10" href="#__codelineno-21-10"></a>│   ├── formatters.js                   # Shared output/value formatters
+</span><span id="__span-21-11"><a id="__codelineno-21-11" name="__codelineno-21-11" href="#__codelineno-21-11"></a>│   ├── result-renderer.js              # CommandResult → DOM rendering (incl. CompositeResult)
+</span><span id="__span-21-12"><a id="__codelineno-21-12" name="__codelineno-21-12" href="#__codelineno-21-12"></a>│   ├── side-effects.js                 # SideEffectKind handlers (prompt_text, etc.)
+</span><span id="__span-21-13"><a id="__codelineno-21-13" name="__codelineno-21-13" href="#__codelineno-21-13"></a>│   └── index.js                        # Barrel re-exports
 </span><span id="__span-21-14"><a id="__codelineno-21-14" name="__codelineno-21-14" href="#__codelineno-21-14"></a>├── components/
 </span><span id="__span-21-15"><a id="__codelineno-21-15" name="__codelineno-21-15" href="#__codelineno-21-15"></a>│   ├── file-tree.js                    # FileTreeComponent — collapsible sidebar (v1.16.2)
 </span><span id="__span-21-16"><a id="__codelineno-21-16" name="__codelineno-21-16" href="#__codelineno-21-16"></a>│   ├── right-panel-frame.js            # RightPanelFrame — LRU view stack navigator (v1.16.2)
-</span><span id="__span-21-17"><a id="__codelineno-21-17" name="__codelineno-21-17" href="#__codelineno-21-17"></a>│   └── views/
-</span><span id="__span-21-18"><a id="__codelineno-21-18" name="__codelineno-21-18" href="#__codelineno-21-18"></a>│       ├── base-view.js                # BaseView ABC — mount/unmount/getState/setState protocol
-</span><span id="__span-21-19"><a id="__codelineno-21-19" name="__codelineno-21-19" href="#__codelineno-21-19"></a>│       ├── code-editor-view.js         # CodeEditorView — CodeMirror 6, unified view/edit
-</span><span id="__span-21-20"><a id="__codelineno-21-20" name="__codelineno-21-20" href="#__codelineno-21-20"></a>│       ├── markdown-file-view.js       # MarkdownFileView — rendered / source / edit modes
-</span><span id="__span-21-21"><a id="__codelineno-21-21" name="__codelineno-21-21" href="#__codelineno-21-21"></a>│       ├── data-file-view.js           # DataFileView — table/tree for CSV/JSON/YAML/TOML/HCL
-</span><span id="__span-21-22"><a id="__codelineno-21-22" name="__codelineno-21-22" href="#__codelineno-21-22"></a>│       ├── image-file-view.js          # ImageFileView — &lt;img&gt; + click-to-zoom
-</span><span id="__span-21-23"><a id="__codelineno-21-23" name="__codelineno-21-23" href="#__codelineno-21-23"></a>│       └── pdf-file-view.js            # PdfFileView — &lt;embed&gt; iframe
-</span><span id="__span-21-24"><a id="__codelineno-21-24" name="__codelineno-21-24" href="#__codelineno-21-24"></a>└── styles/
-</span><span id="__span-21-25"><a id="__codelineno-21-25" name="__codelineno-21-25" href="#__codelineno-21-25"></a>    ├── main.css                        # Global styles
-</span><span id="__span-21-26"><a id="__codelineno-21-26" name="__codelineno-21-26" href="#__codelineno-21-26"></a>    ├── file-tree.css                   # Sidebar styles
-</span><span id="__span-21-27"><a id="__codelineno-21-27" name="__codelineno-21-27" href="#__codelineno-21-27"></a>    └── right-panel-frame.css           # Frame chrome + view styles
+</span><span id="__span-21-17"><a id="__codelineno-21-17" name="__codelineno-21-17" href="#__codelineno-21-17"></a>│   ├── table-viewer.js                 # TableViewer — sortable/filterable data grid
+</span><span id="__span-21-18"><a id="__codelineno-21-18" name="__codelineno-21-18" href="#__codelineno-21-18"></a>│   ├── tree-viewer.js                  # TreeViewer — collapsible structured-data tree
+</span><span id="__span-21-19"><a id="__codelineno-21-19" name="__codelineno-21-19" href="#__codelineno-21-19"></a>│   └── views/
+</span><span id="__span-21-20"><a id="__codelineno-21-20" name="__codelineno-21-20" href="#__codelineno-21-20"></a>│       ├── base-view.js                # BaseView ABC — mount/unmount/getState/setState + toolbar helpers
+</span><span id="__span-21-21"><a id="__codelineno-21-21" name="__codelineno-21-21" href="#__codelineno-21-21"></a>│       ├── code-editor-view.js         # CodeEditorView — CodeMirror 6, unified view/edit
+</span><span id="__span-21-22"><a id="__codelineno-21-22" name="__codelineno-21-22" href="#__codelineno-21-22"></a>│       ├── markdown-file-view.js       # MarkdownFileView — rendered / source / edit modes
+</span><span id="__span-21-23"><a id="__codelineno-21-23" name="__codelineno-21-23" href="#__codelineno-21-23"></a>│       ├── data-file-view.js           # DataFileView — table/tree for JSON/YAML/TOML/HCL
+</span><span id="__span-21-24"><a id="__codelineno-21-24" name="__codelineno-21-24" href="#__codelineno-21-24"></a>│       ├── office-file-view.js         # OfficeFileView — xlsx/pptx/docx/csv (v1.18.7)
+</span><span id="__span-21-25"><a id="__codelineno-21-25" name="__codelineno-21-25" href="#__codelineno-21-25"></a>│       ├── image-file-view.js          # ImageFileView — &lt;img&gt; + click-to-zoom
+</span><span id="__span-21-26"><a id="__codelineno-21-26" name="__codelineno-21-26" href="#__codelineno-21-26"></a>│       ├── pdf-file-view.js            # PdfFileView — &lt;embed&gt; iframe
+</span><span id="__span-21-27"><a id="__codelineno-21-27" name="__codelineno-21-27" href="#__codelineno-21-27"></a>│       └── terminal-view.js            # TerminalView — shell/preview output
+</span><span id="__span-21-28"><a id="__codelineno-21-28" name="__codelineno-21-28" href="#__codelineno-21-28"></a>└── styles/
+</span><span id="__span-21-29"><a id="__codelineno-21-29" name="__codelineno-21-29" href="#__codelineno-21-29"></a>    ├── data-viewers.css                # Table/tree viewer styles
+</span><span id="__span-21-30"><a id="__codelineno-21-30" name="__codelineno-21-30" href="#__codelineno-21-30"></a>    ├── file-tree.css                   # Sidebar styles
+</span><span id="__span-21-31"><a id="__codelineno-21-31" name="__codelineno-21-31" href="#__codelineno-21-31"></a>    └── right-panel-frame.css           # Frame chrome + view styles
 </span></code></pre></div>
 <h3 id="module-dependency-graph-web">Module Dependency Graph (Web)<a class="headerlink" href="#module-dependency-graph-web" title="Permanent link">&para;</a></h3>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a>app-state.js          (no deps — leaf)
