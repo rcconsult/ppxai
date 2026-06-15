@@ -130,22 +130,16 @@ class CommandDispatcher {
     }
 
     /**
-     * /agentrun <task> — start a background agent run (v1.19.0 Inc 2) and
-     * live-poll it to terminal, updating one system line as it progresses.
-     * Distinct from /agent (engine-side autonomous loop). Inc 1-2 surface:
-     * POST /v1/agent/run -> {run_id, status:"running"}, then poll
-     * GET /v1/agent/runs/<id> until completed/failed.
+     * /agentrun <task> — start a background agent run (v1.19.0 /v1/agent/*,
+     * distinct from /agent's engine-side loop) and tail it to terminal.
      */
     async _dispatchAgentRun(task) {
         if (!task) {
             this.app.showSystemMessage('Usage: /agentrun <task>');
             return;
         }
-        // Pass the UI's CURRENT provider/model explicitly — for the human
-        // /agentrun command, the active selection is the user's explicit
-        // choice at spawn time (a legitimate per-run intent), not implicit
-        // session inheritance. The server falls back to
-        // tools.agent.default_subagent only if these are absent.
+        // Pass the UI's current provider/model as the run's explicit per-run
+        // intent (server falls back to tools.agent.default_subagent if absent).
         const body = { task, tools: [] };
         if (this.app.state.currentProvider) body.provider = this.app.state.currentProvider;
         if (this.app.state.currentModel) body.model = this.app.state.currentModel;
@@ -158,58 +152,53 @@ class CommandDispatcher {
         }
         const runId = started.run_id;
         this.app.showSystemMessage(`🤖 ${runId} — running…`);
-
-        // Inc 3: live event stream (SSE) instead of polling. Tail
-        // GET .../events?live=1; render lifecycle events; stop on terminal.
-        // Falls back to one status fetch if the stream can't be opened.
-        const api = this.app.apiClient;
+        // Inc 3: tail the live SSE stream; stop on a terminal event. On any
+        // terminal event (or stream end) read the run's meta once for the
+        // final status + result body (not carried in the event payload).
         try {
-            const resp = await fetch(
-                `${api.serverUrl}/v1/agent/runs/${runId}/events?live=1`,
-                { headers: api.getHeaders() }
+            for await (const ev of this._tailRunEvents(runId)) {
+                if (ev.type === 'agent_run_complete' || ev.type === 'agent_run_error') break;
+            }
+        } catch (e) {
+            this.app.showSystemMessage(
+                `⚠️ ${runId} — live stream unavailable (${e.message}); reading status…`
             );
-            if (!resp.ok || !resp.body) throw new Error(`stream ${resp.status}`);
-            const reader = resp.body.getReader();
-            const decoder = new TextDecoder();
-            let buffer = '';
+        }
+        const run = await this.app.apiClient.get(`/v1/agent/runs/${runId}`);
+        const icon = { completed: '✅', failed: '❌' }[run.status] || 'ℹ️';
+        this.app.showSystemMessage(`${icon} ${runId} — ${run.status}`);
+        if (run.status === 'completed') {
+            this.app.addMessage('assistant', run.result || '(empty result)');
+        } else if (run.status === 'failed' && run.error) {
+            this.app.showSystemMessage(`   ${run.error}`);
+        }
+    }
+
+    /** Async-iterate the parsed `data:` events of a run's live SSE stream. */
+    async *_tailRunEvents(runId) {
+        const api = this.app.apiClient;
+        const resp = await fetch(
+            `${api.serverUrl}/v1/agent/runs/${runId}/events?live=1`,
+            { headers: api.getHeaders() }
+        );
+        if (!resp.ok || !resp.body) throw new Error(`stream ${resp.status}`);
+        const reader = resp.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        try {
             while (true) {
                 const { done, value } = await reader.read();
-                if (done) break;
+                if (done) return;
                 buffer += decoder.decode(value, { stream: true });
                 const lines = buffer.split('\n');
                 buffer = lines.pop() || '';
                 for (const line of lines) {
                     if (!line.startsWith('data: ')) continue;
-                    let ev;
-                    try { ev = JSON.parse(line.slice(6)); } catch (e) { continue; }
-                    if (ev.type === 'agent_run_complete') {
-                        // Result body isn't in the event payload — fetch the
-                        // finished run's meta for the full result.
-                        const run = await api.get(`/v1/agent/runs/${runId}`);
-                        this.app.showSystemMessage(`✅ ${runId} — completed`);
-                        this.app.addMessage('assistant', run.result || '(empty result)');
-                        reader.cancel();
-                        return;
-                    }
-                    if (ev.type === 'agent_run_error') {
-                        this.app.showSystemMessage(
-                            `❌ ${runId} — failed: ${(ev.data && ev.data.error) || 'unknown error'}`
-                        );
-                        reader.cancel();
-                        return;
-                    }
+                    try { yield JSON.parse(line.slice(6)); } catch (e) { /* skip */ }
                 }
             }
-            // Stream ended without a terminal event — fall back to a status read.
-            const run = await api.get(`/v1/agent/runs/${runId}`);
-            this.app.showSystemMessage(`ℹ️ ${runId} — ${run.status}`);
-            if (run.status === 'completed') {
-                this.app.addMessage('assistant', run.result || '(empty result)');
-            }
-        } catch (e) {
-            this.app.showSystemMessage(
-                `⚠️ ${runId} — live stream unavailable (${e.message}); check /agentruns`
-            );
+        } finally {
+            reader.cancel();
         }
     }
 
@@ -276,24 +265,16 @@ class CommandDispatcher {
     }
 
     /**
-     * Feed the envelope's events[] through the same handler the
-     * live SSE stream uses. State-sync Phase B: REST mutations
-     * deliver state_sync / working_dir_changed / etc. immediately
-     * via piggyback, not after the next chat.
-     *
-     * Each event has the shape {type, data, metadata?}, identical
-     * to live SSE event objects.
+     * Feed the envelope's events[] through the same handler the live SSE
+     * stream uses (state-sync Phase B: REST mutations piggyback state_sync /
+     * working_dir_changed immediately). Each event is {type, data, metadata?}.
      */
     _drainEvents(events) {
         if (!Array.isArray(events) || events.length === 0) return;
         for (const ev of events) {
             if (!ev || typeof ev !== 'object') continue;
-            // state_sync routes through handleStateSync (which
-            // updates AppState + fires DOM side-effects). Other
-            // event types (working_dir_changed, etc.) get a
-            // best-effort dispatch through processSseEvent if
-            // app exposes it; otherwise the state_sync covers
-            // everything that matters for the AppState mirror.
+            // state_sync → handleStateSync (AppState + DOM side-effects);
+            // other types → best-effort processSseEvent if app exposes it.
             if (ev.type === 'state_sync' && ev.data) {
                 if (typeof this.app.handleStateSync === 'function') {
                     this.app.handleStateSync(ev.data);
