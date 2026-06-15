@@ -1,4 +1,4 @@
-"""v1 gateway: agent runs (ADR 0003 Stage 2 — Increments 1–5).
+"""v1 gateway: agent runs (ADR 0003 Stage 2 — Increments 1–7).
 
 An *agent run* is a durable, addressable execution of an agent task. This
 module is the HTTP surface over `engine.agent_runs.AgentRunRegistry`:
@@ -9,12 +9,14 @@ module is the HTTP surface over `engine.agent_runs.AgentRunRegistry`:
     GET  /v1/agent/runs/<id>      → fetch one run's meta
     GET  /v1/agent/runs/<id>/events → replay + ?live=1 SSE (Inc 3),
                                     ?since= / ?min_level= / ?category= filters
+    POST /v1/agent/runs/<id>/cancel → cooperative cancel (Inc 6)
 
 Execution model: runs execute in the **background** (Inc 2). A POST
 validates + builds the provider synchronously (a bad provider 400s up
 front), mints the run, fires it into a background `asyncio.Task`, and
 returns immediately with `status:"running"`. Poll the meta or tail the
-event stream to watch it reach `completed`/`failed`.
+event stream to watch it reach a terminal status (completed / failed /
+cancelled / interrupted).
 
 Two tiers:
 - `/run` is tool-FREE (oneshot, safe). Its `tools` field is recorded for
@@ -27,9 +29,16 @@ Two tiers:
   front (shell escapes the egress allowlist; needs the deferred OS-
   isolation tier).
 
+Per-run controls on `/task` (Inc 6): an optional `budget`
+{iterations, time_s, tokens} stops the run at a clean tool-loop checkpoint
+(status `interrupted`, resumable); `POST .../cancel` stops it cooperatively
+(status `cancelled`, resumable). Inc 7: a granted `spawn_subagent` tool lets
+a top-level run spawn ONE child run (child grant ⊆ parent, child egress ⊆
+parent, depth=1, consent-gated) — both runners share `build_task_runner`.
+
 NOT yet (later increments, additively):
-budgets/cancel (Inc 6), sub-agents (Inc 7), per-run authz (Inc 8),
-AppState mirror (Inc 9).
+per-run authz (Inc 8 — /v1/tokens + owner-scoped /events/result/artifacts),
+AppState background_agents mirror (Inc 9).
 
 The `/v1/` prefix is the stable gateway boundary (see docs/api-gateway.md):
 adding optional request fields is non-breaking; removing/repurposing
@@ -460,9 +469,16 @@ def build_task_runner(
             # which is a plain string (sometimes a dict with "content").
             if event.type == EventType.TOOL_CALL:
                 if control is not None:
-                    # Check BEFORE counting this iteration: a budget of N lets
-                    # N iterations run, then stops when the (N+1)th begins. So
-                    # check() sees the count of already-completed iterations.
+                    # Refresh the run's cumulative token total from the engine
+                    # before checking, so the token budget is actually enforced
+                    # (not just iterations/time). This EngineClient is run-local
+                    # (D1: one per run), so session.usage.total_tokens IS this
+                    # run's total. Then check() — BEFORE counting this iteration:
+                    # a budget of N lets N iterations run, stops at the (N+1)th.
+                    try:
+                        control.tokens_used = engine.session.usage.total_tokens
+                    except AttributeError:
+                        pass  # usage not available — leave token axis unenforced
                     control.check(now=time.monotonic())
                     control.iterations += 1
                 d = event.data or {}

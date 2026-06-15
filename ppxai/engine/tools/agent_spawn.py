@@ -66,10 +66,24 @@ class SpawnSubagentTool(BaseTool):
             },
             "allow_outbound": {
                 "type": "array",
-                "items": {"type": "string"},
+                "items": {
+                    "oneOf": [
+                        {"type": "string"},
+                        {
+                            "type": "object",
+                            "properties": {
+                                "host": {"type": "string"},
+                                "paths": {"type": "array", "items": {"type": "string"}},
+                            },
+                            "required": ["host"],
+                        },
+                    ]
+                },
                 "description": (
-                    "Egress hosts for the child — each MUST be permitted by "
-                    "your own allowlist. Omit for no child network access."
+                    "Egress rules for the child — each a host string (exact or "
+                    "`*.suffix`) or {host, paths:[prefix,...]}. Each MUST be "
+                    "permitted by your own allowlist (host AND path scope). Omit "
+                    "for no child network access."
                 ),
             },
         },
@@ -112,22 +126,43 @@ class SpawnSubagentTool(BaseTool):
         return None
 
     def _check_egress_subset(self, child_allow: list) -> Optional[str]:
-        """Return an error string if any child host isn't permitted by the
-        parent allowlist. Each child rule's host must resolve to ALLOW under
-        the parent's own policy (so the child can't widen egress)."""
+        """Return an error string if any child egress rule isn't permitted by
+        the parent allowlist — checking BOTH host and path scope, so a child
+        can't widen egress on either axis.
+
+        A child rule is `host` (string) or `{host, paths}`. We probe each
+        (host, path) the child could reach against the PARENT's policy and
+        require ALLOW. Critically we probe the child's *paths* (not just root):
+        a parent scoped to /repos/ must accept a child asking for /repos/ but
+        reject a child asking for / or /other/. With no child paths, the child
+        wants any path on the host, so we probe root `/` — which the parent
+        permits only if its own rule for that host is unrestricted."""
+        from .network_policy import Allow
+
         for entry in child_allow or []:
-            host = entry if isinstance(entry, str) else (entry or {}).get("host", "")
-            host = (host or "").lstrip("*.")  # check the concrete suffix host
-            if not host:
+            if isinstance(entry, str):
+                host, paths = entry, []
+            elif isinstance(entry, dict):
+                host = entry.get("host", "")
+                paths = [p for p in (entry.get("paths") or []) if isinstance(p, str)]
+            else:
                 return f"malformed child egress rule: {entry!r}"
-            probe = f"https://{host}/"
-            decision = self._parent_policy.check(probe)
-            from .network_policy import Allow
-            if not isinstance(decision, Allow):
-                return (
-                    f"child egress host {host!r} is not permitted by the "
-                    f"parent allowlist — child egress must be a subset"
-                )
+            # Concrete host to probe: a "*.suffix" glob -> a representative
+            # subdomain so the parent's own glob (if any) can match it.
+            if not host:
+                return f"malformed child egress rule (no host): {entry!r}"
+            probe_host = ("sub" + host[1:]) if host.startswith("*.") else host
+            # The set of paths the child could hit: each declared prefix, or
+            # root if it declared none (= any path).
+            probe_paths = paths or ["/"]
+            for p in probe_paths:
+                probe = f"https://{probe_host}{p if p.startswith('/') else '/' + p}"
+                if not isinstance(self._parent_policy.check(probe), Allow):
+                    scope = f"{host}{(' path ' + p) if paths else ''}"
+                    return (
+                        f"child egress {scope!r} is not permitted by the parent "
+                        f"allowlist — child egress must be a subset (host + path)"
+                    )
         return None
 
     # --- execution ------------------------------------------------------

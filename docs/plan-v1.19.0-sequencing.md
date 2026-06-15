@@ -67,7 +67,6 @@ runnable steps. Each is one PR-sized increment on
 > - [~] Inc 6 — budgets + cancel + conditional-resume checkpoint — built (RunControl + budget caps + POST …/cancel + interrupted/cancelled statuses + resumable flag); awaiting trial
 > - [~] Inc 7 — spawn_subagent (the N=1 sub-agent) — built (SpawnSubagentTool: child grant ⊆ parent, child egress ⊆ parent, depth=1 structural, consent-gated, parent awaits child); awaiting trial (bundled 5+6+7)
 > - [ ] Inc 8 — /v1/tokens + per-run authz (next after the 5+6+7 trial)
-> - [ ] Inc 8 — /v1/tokens + per-run authz
 > - [ ] Inc 9 — AppState background_agents mirror
 
 ### Inc 1 — minimal run lifecycle (synchronous, filesystem)
@@ -205,7 +204,11 @@ non-failure terminal state that a future resume could pick up.
 - `BudgetSpec` on `AgentTaskRequest` — `{iterations?, time_s?, tokens?}`,
   any subset; absent axis = uncapped. Persisted to `RunMeta.budget`.
   **Cooperative, not `task.cancel()`** — a stop lands at a clean checkpoint,
-  never mid-tool-call (which could leave a half-written artifact).
+  never mid-tool-call (which could leave a half-written artifact). All three
+  axes are LIVE-enforced: `iterations` counted at each tool-loop boundary,
+  `time_s` from a monotonic clock, `tokens` refreshed from the run's
+  `engine.session.usage.total_tokens` (the EngineClient is run-local per D1,
+  so its cumulative total IS this run's) before each `check()`.
 - `POST /v1/agent/runs/<id>/cancel` → flips the control flag, moves the run
   to `cancelling`; the runner observes it next boundary and stops. 404
   unknown / 409 already-terminal.

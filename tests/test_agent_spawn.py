@@ -93,6 +93,42 @@ class TestEgressSubset:
         err = t._check_egress_subset(["api.github.com"])
         assert err is not None
 
+    # --- path-scoped delegation (codex MEDIUM fix) ----------------------
+
+    def test_child_same_scoped_path_ok(self, registry):
+        # parent scoped to /repos/; child asks for the SAME scoped path -> ok
+        t = _tool(registry, parent_tools=[],
+                  parent_allow=[{"host": "api.github.com", "paths": ["/repos/"]}])
+        assert t._check_egress_subset(
+            [{"host": "api.github.com", "paths": ["/repos/"]}]) is None
+
+    def test_child_any_path_denied_when_parent_scoped(self, registry):
+        # parent scoped to /repos/; child asks for the host with NO path scope
+        # (= any path) -> denied (would widen beyond /repos/)
+        t = _tool(registry, parent_tools=[],
+                  parent_allow=[{"host": "api.github.com", "paths": ["/repos/"]}])
+        err = t._check_egress_subset(["api.github.com"])
+        assert err is not None
+
+    def test_child_other_path_denied_when_parent_scoped(self, registry):
+        t = _tool(registry, parent_tools=[],
+                  parent_allow=[{"host": "api.github.com", "paths": ["/repos/"]}])
+        err = t._check_egress_subset(
+            [{"host": "api.github.com", "paths": ["/users/"]}])
+        assert err and "/users/" in err
+
+    def test_child_can_narrow_unrestricted_parent(self, registry):
+        # parent allows the whole host; child narrowing to a path is a subset
+        t = _tool(registry, parent_tools=[], parent_allow=["api.github.com"])
+        assert t._check_egress_subset(
+            [{"host": "api.github.com", "paths": ["/repos/"]}]) is None
+
+    def test_glob_parent_accepts_member_via_path_probe(self, registry):
+        # parent *.wikipedia.org; child en.wikipedia.org scoped to /wiki/ -> ok
+        t = _tool(registry, parent_tools=[], parent_allow=["*.wikipedia.org"])
+        assert t._check_egress_subset(
+            [{"host": "en.wikipedia.org", "paths": ["/wiki/"]}]) is None
+
 
 # ---------------------------------------------------------------------------
 # execute(): refusal paths (no run minted)

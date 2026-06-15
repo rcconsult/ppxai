@@ -821,6 +821,61 @@ class TestAgentRunRoutes:
         assert one["status"] == "completed"
         assert one["resumable"] is False
 
+    def test_task_token_budget_interrupts(self, client, monkeypatch):
+        # Inc 6 (codex MEDIUM fix): the token budget must be ENFORCED from the
+        # run's real usage, not just exposed. This stub grows
+        # session.usage.total_tokens by 40 per tool call; with a 100-token
+        # budget the run must interrupt once the cumulative total hits the cap
+        # (after iter 3: 0,40,80 ok -> 120 >= 100 stops).
+        c, _reg = client
+        from ppxai.server.routes import agent_v1
+        from ppxai.engine.types import Event, EventType
+        from ppxai.engine.providers.openai_compat import OpenAICompatibleProvider
+
+        class _P(OpenAICompatibleProvider):
+            def __init__(self): pass
+        monkeypatch.setattr(agent_v1, "_build_provider", lambda name: _P())
+
+        class _Usage:
+            def __init__(self): self.total_tokens = 0
+        class _Session:
+            def __init__(self): self.usage = _Usage()
+        class _BaseTM:
+            max_iterations = 99
+            async def execute_tool(self, name, **kw): return "ran"
+
+        class _TokenStub:
+            def __init__(self):
+                self.tool_manager = _BaseTM()
+                self.session = _Session()
+            def set_provider(self, p): pass
+            def set_model(self, m): pass
+            def enable_tools(self): pass
+            async def chat(self, task, stream=False):
+                for _ in range(10):
+                    # tokens accrue BEFORE the boundary check reads them
+                    self.session.usage.total_tokens += 40
+                    yield Event(type=EventType.TOOL_CALL, data={"tool": "read_file"})
+                yield Event(type=EventType.STREAM_END, data="done")
+
+        stub = _TokenStub()
+        import ppxai.engine.client as client_mod
+        monkeypatch.setattr(client_mod, "EngineClient", lambda: stub)
+
+        resp = c.post("/v1/agent/task", json={
+            "task": "burn tokens", "tools": ["read_file"],
+            "provider": "p", "model": "m",
+            "budget": {"tokens": 100},
+        })
+        rid = resp.json()["run_id"]
+        one = self._poll_terminal(c, rid)
+        assert one["status"] == "interrupted"   # token cap actually stopped it
+        assert one["resumable"] is True
+        assert one["budget"] == {"tokens": 100}
+        # stopped well before the stub's 10 iterations
+        tool_evs = c.get(f"/v1/agent/runs/{rid}/events?category=tool").json()["events"]
+        assert 0 < len([e for e in tool_evs if e["type"] == "tool_call"]) < 10
+
     def test_cancel_unknown_run_404(self, client):
         c, _ = client
         assert c.post("/v1/agent/runs/run_nope/cancel").status_code == 404
