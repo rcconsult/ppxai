@@ -158,6 +158,92 @@ class TestRunInBackground:
 
 
 # ---------------------------------------------------------------------------
+# Run events (Inc 3) — emit, persist, filter
+# ---------------------------------------------------------------------------
+
+
+class TestRunEvents:
+    def test_emit_persists_and_assigns_seq(self, registry):
+        m = registry.start_run("t")
+        e1 = registry.emit_event(m.run_id, "a", level="info", category="lifecycle")
+        e2 = registry.emit_event(m.run_id, "b", level="debug", category="tool")
+        assert (e1.seq, e2.seq) == (1, 2)
+        evs = registry.read_events(m.run_id)
+        assert [e.type for e in evs] == ["a", "b"]
+
+    def test_since_cursor(self, registry):
+        m = registry.start_run("t")
+        for i in range(3):
+            registry.emit_event(m.run_id, f"e{i}")
+        assert [e.seq for e in registry.read_events(m.run_id, since=1)] == [2, 3]
+
+    def test_min_level_filter(self, registry):
+        m = registry.start_run("t")
+        registry.emit_event(m.run_id, "dbg", level="debug")
+        registry.emit_event(m.run_id, "err", level="error")
+        got = registry.read_events(m.run_id, min_level="warning")
+        assert [e.type for e in got] == ["err"]
+
+    def test_category_filter(self, registry):
+        m = registry.start_run("t")
+        registry.emit_event(m.run_id, "t1", category="tool")
+        registry.emit_event(m.run_id, "l1", category="lifecycle")
+        got = registry.read_events(m.run_id, categories={"tool"})
+        assert [e.type for e in got] == ["t1"]
+
+    def test_seq_seeds_from_disk_on_fresh_registry(self, registry, tmp_path):
+        # A fresh registry over the same store must not restart seq at 1.
+        m = registry.start_run("t")
+        registry.emit_event(m.run_id, "a")
+        registry.emit_event(m.run_id, "b")
+        fresh = AgentRunRegistry(FilesystemAgentRunStore(tmp_path / "runs"))
+        e = fresh.emit_event(m.run_id, "c")
+        assert e.seq == 3  # continues, doesn't collide
+
+    @pytest.mark.asyncio
+    async def test_subscribe_then_snapshot_no_lost_event(self, registry):
+        # Lost-event race guard (codex HIGH): if a client subscribes, then
+        # an event is emitted, then the backlog is snapshotted, the event
+        # must be delivered exactly once — via the queue, deduped against
+        # the backlog by seq. Models the SSE handler's ordering.
+        m = registry.start_run("t")
+        registry.emit_event(m.run_id, "e1")  # pre-existing backlog
+
+        q = registry.subscribe(m.run_id)          # 1. subscribe FIRST
+        registry.emit_event(m.run_id, "e2")       # 2. emit in the race window
+        backlog = registry.read_events(m.run_id)  # 3. snapshot AFTER subscribe
+
+        # backlog may or may not include e2 depending on timing; the queue
+        # definitely has it. Simulate the handler: send backlog, then drain
+        # queue with seq-dedup.
+        sent = []
+        last_seq = 0
+        for ev in backlog:
+            last_seq = max(last_seq, ev.seq)
+            sent.append(ev.type)
+        # drain whatever the queue holds without blocking
+        while not q.empty():
+            ev = q.get_nowait()
+            if ev.seq <= last_seq:
+                continue
+            last_seq = ev.seq
+            sent.append(ev.type)
+        registry.unsubscribe(m.run_id, q)
+        # e2 delivered exactly once, e1 once — neither lost nor duplicated
+        assert sent.count("e2") == 1
+        assert sent.count("e1") == 1
+
+    def test_torn_last_line_skipped(self, registry, tmp_path):
+        m = registry.start_run("t")
+        registry.emit_event(m.run_id, "good")
+        path = tmp_path / "runs" / m.run_id / "agent-0" / "events.jsonl"
+        with path.open("a", encoding="utf-8") as f:
+            f.write('{"seq": 2, "ts": 1, "typ')  # torn write (crash mid-append)
+        evs = registry.read_events(m.run_id)
+        assert [e.type for e in evs] == ["good"]  # torn line skipped, not fatal
+
+
+# ---------------------------------------------------------------------------
 # /v1/agent/* routes (provider call bypassed)
 # ---------------------------------------------------------------------------
 
@@ -310,3 +396,28 @@ class TestAgentRunRoutes:
         })
         assert resp.status_code == 400
         assert reg.list_runs() == []  # no orphan run
+
+    def test_events_endpoint_replay_and_filters(self, client):
+        # Inc 3: GET .../events (non-live JSON) replays persisted events,
+        # honoring ?since= / ?min_level= / ?category=.
+        c, reg = client
+        m = reg.start_run("t", provider="p", model="m")
+        reg.emit_event(m.run_id, "dbg", level="debug", category="tool")
+        reg.emit_event(m.run_id, "err", level="error", category="lifecycle")
+
+        rid = m.run_id
+        allev = c.get(f"/v1/agent/runs/{rid}/events").json()["events"]
+        assert [e["type"] for e in allev] == ["dbg", "err"]
+        # filters
+        warn = c.get(f"/v1/agent/runs/{rid}/events?min_level=warning").json()["events"]
+        assert [e["type"] for e in warn] == ["err"]
+        tool = c.get(f"/v1/agent/runs/{rid}/events?category=tool").json()["events"]
+        assert [e["type"] for e in tool] == ["dbg"]
+        since = c.get(f"/v1/agent/runs/{rid}/events?since=1").json()["events"]
+        assert [e["seq"] for e in since] == [2]
+        # each record carries the two filter axes
+        assert allev[0]["level"] == "debug" and allev[0]["category"] == "tool"
+
+    def test_events_unknown_run_404(self, client):
+        c, _ = client
+        assert c.get("/v1/agent/runs/run_nope/events").status_code == 404

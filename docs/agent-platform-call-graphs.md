@@ -194,7 +194,68 @@ step 5b, or a targeted copy of command-dispatcher.js + app.js).
 
 ---
 
-<!-- Inc 3+ sections appended here as they land. Template:
+## Increment 3 — events + monitor channel
+
+Added: `RunEvent` dataclass + `LEVELS`/`CATEGORIES` + `emit_event` /
+`read_events` / `subscribe` / `unsubscribe` on the registry;
+`append_event` / `read_events` on the store Protocol + Filesystem impl;
+`GET /v1/agent/runs/<id>/events` route. Background driver now emits
+lifecycle/result events. Store Protocol grew (additive).
+
+### emit path (during a run)
+
+```
+registry.emit_event(run_id, type, level=, category=, data=)  [agent_runs.py]
+├─ seed self._seq[run_id] from persisted max on first emit (restart-safe)
+├─ seq = ++self._seq[run_id]
+├─ RunEvent(seq, ts, type, level, category, data)
+├─ store.append_event(run_id, event)        [FilesystemAgentRunStore]
+│   └─ append one JSON line to runs/<id>/agent-0/events.jsonl
+└─ fan out: for q in self._subscribers[run_id]: q.put_nowait(event)
+            (best-effort live delivery; disk is source of truth)
+
+emitters (Inc 3): run_in_background._drive →
+  agent_run_start (info/lifecycle), agent_run_complete (info/result),
+  agent_run_error (error/lifecycle)
+```
+
+### `GET /v1/agent/runs/{run_id}/events` — replay + live tail
+
+```
+get_agent_run_events(run_id, since, live, min_level, category)  [routes/agent_v1.py]
+├─ registry.get_run(run_id)  → 404 if unknown
+├─ cats = parse ?category=    (comma-separated set)
+├─ backlog = registry.read_events(run_id, since, min_level, cats)  [agent_runs.py]
+│   └─ store.read_events() → filter each via RunEvent.passes(min_level, cats)
+├─ if not live:  return {"events": [...]}        ← JSON replay
+└─ if live:  StreamingResponse(_sse(), text/event-stream)
+     _sse():
+       q = registry.subscribe(run_id)      ← SUBSCRIBE FIRST (lost-event fix)
+       backlog = registry.read_events(...)  ← THEN snapshot, so an event in
+                                              the window lands in q, not lost
+       yield each backlog event as "data: {json}\n\n"  (sets last_seq)
+       loop:
+         request.is_disconnected() → stop
+         ev = await q.get() (15s timeout → ": keepalive")
+         skip if ev.seq <= last_sent or not ev.passes(filters)
+         yield "data: {json}\n\n"
+       finally: registry.unsubscribe(run_id, q)
+```
+
+Filters (`min_level` + `category`, ADR 0003 §11a) apply on BOTH the
+replay backlog and the live tail. Always-persist / filter-on-read: the
+file has everything; the endpoint subsets it.
+
+### Web client (Inc 3 upgrade)
+
+`/agentrun` switches from poll-loop to the SSE tail: after POST, open
+`GET …/events?live=1` and render frames as they arrive; close on the
+terminal `agent_run_complete`/`agent_run_error` event. (Verbosity slider +
+category toggles are a follow-up UI refinement.)
+
+---
+
+<!-- Inc 4+ sections appended here as they land. Template:
 ## Increment N — <title>
 Added/changed: <files>. Execution model change: <if any>.
 ### <METHOD /path> — <what>

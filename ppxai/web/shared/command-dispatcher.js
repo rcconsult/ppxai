@@ -159,31 +159,58 @@ class CommandDispatcher {
         const runId = started.run_id;
         this.app.showSystemMessage(`🤖 ${runId} — running…`);
 
-        // Poll to terminal. Bounded so a stuck run doesn't poll forever; the
-        // run keeps going server-side regardless (use /agentruns to recheck).
-        const deadline = Date.now() + 120000;
-        while (Date.now() < deadline) {
-            await new Promise((r) => setTimeout(r, 600));
-            let run;
-            try {
-                run = await this.app.apiClient.get(`/v1/agent/runs/${runId}`);
-            } catch (e) {
-                this.app.showSystemMessage(`❌ Poll failed for ${runId}: ${e.message}`);
-                return;
+        // Inc 3: live event stream (SSE) instead of polling. Tail
+        // GET .../events?live=1; render lifecycle events; stop on terminal.
+        // Falls back to one status fetch if the stream can't be opened.
+        const api = this.app.apiClient;
+        try {
+            const resp = await fetch(
+                `${api.serverUrl}/v1/agent/runs/${runId}/events?live=1`,
+                { headers: api.getHeaders() }
+            );
+            if (!resp.ok || !resp.body) throw new Error(`stream ${resp.status}`);
+            const reader = resp.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop() || '';
+                for (const line of lines) {
+                    if (!line.startsWith('data: ')) continue;
+                    let ev;
+                    try { ev = JSON.parse(line.slice(6)); } catch (e) { continue; }
+                    if (ev.type === 'agent_run_complete') {
+                        // Result body isn't in the event payload — fetch the
+                        // finished run's meta for the full result.
+                        const run = await api.get(`/v1/agent/runs/${runId}`);
+                        this.app.showSystemMessage(`✅ ${runId} — completed`);
+                        this.app.addMessage('assistant', run.result || '(empty result)');
+                        reader.cancel();
+                        return;
+                    }
+                    if (ev.type === 'agent_run_error') {
+                        this.app.showSystemMessage(
+                            `❌ ${runId} — failed: ${(ev.data && ev.data.error) || 'unknown error'}`
+                        );
+                        reader.cancel();
+                        return;
+                    }
+                }
             }
+            // Stream ended without a terminal event — fall back to a status read.
+            const run = await api.get(`/v1/agent/runs/${runId}`);
+            this.app.showSystemMessage(`ℹ️ ${runId} — ${run.status}`);
             if (run.status === 'completed') {
-                this.app.showSystemMessage(`✅ ${runId} — completed`);
                 this.app.addMessage('assistant', run.result || '(empty result)');
-                return;
             }
-            if (run.status === 'failed') {
-                this.app.showSystemMessage(`❌ ${runId} — failed: ${run.error || 'unknown error'}`);
-                return;
-            }
+        } catch (e) {
+            this.app.showSystemMessage(
+                `⚠️ ${runId} — live stream unavailable (${e.message}); check /agentruns`
+            );
         }
-        this.app.showSystemMessage(
-            `⏳ ${runId} still running after 2 min — check later with /agentruns`
-        );
     }
 
     /**

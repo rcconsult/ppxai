@@ -84,13 +84,24 @@ list_runs writing `~/.ppxai/runs/<run_id>/agent-0/{meta.json}`);
 (Synchronous means the POST blocks till done — fine for trial; Inc 2
 makes it async.)
 
-### Inc 2 — background execution + live status
+### Inc 2 — background execution + live status — DONE
 **Capability:** POST returns immediately; run executes in the background;
-status transitions RUNNING → COMPLETED visible via GET.
-**Build:** `asyncio.create_task` driver; `state.json` (status, iteration);
-`AGENT_RUN_STARTED` side-effect; status state machine (subset).
+status transitions running → completed/failed visible via GET.
+**Built (as shipped):** `AgentRunRegistry.run_in_background` =
+`asyncio.create_task` driver with strong-ref tracking; `started_at`
+persisted on `RunMeta` (in `meta.json`) — a **separate `state.json` was
+NOT introduced** (deferred to Inc 3/6 when there's iteration/checkpoint
+state to hold). Status subset: pending→running→completed/failed. The
+immediate reply returns `{run_id, status:"running"}`.
+**Note (corrected 2026-06-15):** an earlier draft of this entry said
+"`state.json` + `AGENT_RUN_STARTED` side-effect." Neither shipped in Inc 2
+as written: started_at lives on `RunMeta`, and the whole-run engine event
+is the existing native `AGENT_RUN_START` (no -ED; `AGENT_RUN_STARTED` is a
+*SideEffectKind* in ADR 0003 §11, a separate concept reserved for the
+immediate POST reply, not yet emitted). Inc 3 added the real `events.jsonl`
+emission (`agent_run_start`/`_complete`/`_error` run-event types).
 **Trial:** POST returns instantly with `status:"running"`; poll
-`GET …/runs/<id>` → watch it flip to `completed`.
+`GET …/runs/<id>` → watch it flip to `completed`. ✅ verified in-browser.
 
 ### Inc 3 — events + monitor channel
 **Capability:** see what the run did, live, with verbosity/severity filtering.

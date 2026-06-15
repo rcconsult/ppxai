@@ -28,9 +28,11 @@ needs a `/v2`.
 from __future__ import annotations
 
 import asyncio
+import json
 from typing import Any, Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from ...common.logger import get_logger
@@ -207,3 +209,74 @@ async def get_agent_run(run_id: str) -> RunMetaResponse:
     if meta is None:
         raise HTTPException(status_code=404, detail=f"Unknown run_id: {run_id!r}")
     return RunMetaResponse.from_meta(meta)
+
+
+def _parse_categories(category: Optional[str]) -> Optional[set[str]]:
+    if not category:
+        return None
+    cats = {c.strip() for c in category.split(",") if c.strip()}
+    return cats or None
+
+
+@router.get("/runs/{run_id}/events")
+async def get_agent_run_events(
+    run_id: str,
+    request: Request,
+    since: int = Query(0, ge=0, description="Return events with seq > since (replay cursor)."),
+    live: bool = Query(False, description="Keep the connection open and stream new events (SSE)."),
+    min_level: str = Query("debug", description="debug|info|warning|error — drop lower severities."),
+    category: Optional[str] = Query(None, description="Comma-separated: lifecycle,tool,network,consent,result."),
+):
+    """Run events (ADR 0003 §11a). Replay (?since=) + optional live tail
+    (?live=1), filtered by ?min_level= and ?category=.
+
+    Always persisted; this endpoint just reads/streams. Non-live returns
+    the filtered backlog as JSON; live returns an SSE stream that first
+    replays the filtered backlog, then tails new events.
+    """
+    registry = get_agent_run_registry()
+    if registry.get_run(run_id) is None:
+        raise HTTPException(status_code=404, detail=f"Unknown run_id: {run_id!r}")
+
+    cats = _parse_categories(category)
+
+    if not live:
+        backlog = registry.read_events(
+            run_id, since=since, min_level=min_level, categories=cats
+        )
+        return {"events": [e.to_dict() for e in backlog]}
+
+    async def _sse():
+        # ORDER MATTERS (lost-event race): subscribe to the live queue
+        # FIRST, THEN snapshot the backlog. Any event emitted during/after
+        # the backlog read lands in the queue and is delivered after the
+        # backlog; the last_seq dedup drops the overlap. If we read the
+        # backlog before subscribing, an event emitted in that window would
+        # be in neither and be lost forever.
+        q = registry.subscribe(run_id)
+        last_seq = since
+        try:
+            backlog = registry.read_events(
+                run_id, since=since, min_level=min_level, categories=cats
+            )
+            for ev in backlog:
+                last_seq = max(last_seq, ev.seq)
+                yield f"data: {json.dumps(ev.to_dict())}\n\n"
+            while True:
+                if await request.is_disconnected():
+                    break
+                try:
+                    ev = await asyncio.wait_for(q.get(), timeout=15.0)
+                except asyncio.TimeoutError:
+                    yield ": keepalive\n\n"
+                    continue
+                if ev.seq <= last_seq:
+                    continue  # already sent via backlog
+                if not ev.passes(min_level=min_level, categories=cats):
+                    continue
+                last_seq = ev.seq
+                yield f"data: {json.dumps(ev.to_dict())}\n\n"
+        finally:
+            registry.unsubscribe(run_id, q)
+
+    return StreamingResponse(_sse(), media_type="text/event-stream")

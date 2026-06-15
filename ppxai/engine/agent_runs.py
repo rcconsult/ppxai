@@ -86,15 +86,63 @@ class RunMeta:
 
 
 # ---------------------------------------------------------------------------
+# Run events (Inc 3) — the events.jsonl record, ADR 0003 §11a
+# ---------------------------------------------------------------------------
+
+# Severity axis. Ordered so min_level filtering is a simple index compare.
+LEVELS = ("debug", "info", "warning", "error")
+_LEVEL_RANK = {lvl: i for i, lvl in enumerate(LEVELS)}
+
+# Kind axis. lifecycle = run start/complete/status; tool = tool calls;
+# network = egress policy (Inc 5); consent = WAITING/consent (Inc 6+);
+# result = AGENT_RESULT_READY (Inc 6).
+CATEGORIES = ("lifecycle", "tool", "network", "consent", "result")
+
+
+@dataclass
+class RunEvent:
+    """One line of a run's `events.jsonl`. ADR 0003 §11a.
+
+    Always persisted; `level`/`category` are the two orthogonal filter axes
+    a consumer uses to render more/less. `seq` is the monotonic per-run
+    cursor used by `?since=`.
+    """
+
+    seq: int
+    ts: float
+    type: str
+    level: str = "info"
+    category: str = "lifecycle"
+    data: dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> "RunEvent":
+        known = {f for f in cls.__dataclass_fields__}  # type: ignore[attr-defined]
+        return cls(**{k: v for k, v in d.items() if k in known})
+
+    def passes(self, min_level: str = "debug", categories: Optional[set[str]] = None) -> bool:
+        """True if this event survives the given filters (used on read)."""
+        if _LEVEL_RANK.get(self.level, 1) < _LEVEL_RANK.get(min_level, 0):
+            return False
+        if categories and self.category not in categories:
+            return False
+        return True
+
+
+# ---------------------------------------------------------------------------
 # Persistence contract (the seam — Item 35 plugs new backends in here)
 # ---------------------------------------------------------------------------
 
 
 class AgentRunStore(Protocol):
-    """Storage contract for agent runs. Inc 1 surface only.
+    """Storage contract for agent runs. Grows additively per increment.
 
-    Later increments add methods to THIS protocol (append_event,
-    load_state, save_state, …) — additive growth, never a reshape.
+    Inc 1: persist_meta / load_meta / list_meta.
+    Inc 3: append_event / read_events.
+    Later: load_state / save_state, etc.
     """
 
     def persist_meta(self, meta: RunMeta) -> None:
@@ -108,6 +156,18 @@ class AgentRunStore(Protocol):
 
     def list_meta(self) -> list[RunMeta]:
         """All known runs' meta, newest-first by created_at."""
+        ...
+
+    def append_event(self, run_id: str, event: RunEvent, agent_n: int = 0) -> None:
+        """Append one event to the run slot's events.jsonl (Inc 3)."""
+        ...
+
+    def read_events(self, run_id: str, agent_n: int = 0) -> list[RunEvent]:
+        """Read all events for a run slot, in seq order (Inc 3).
+
+        Filtering by level/category is applied by the caller via
+        `RunEvent.passes` so the store stays a dumb sink.
+        """
         ...
 
 
@@ -166,6 +226,30 @@ class FilesystemAgentRunStore:
         metas.sort(key=lambda m: m.created_at, reverse=True)
         return metas
 
+    def append_event(self, run_id: str, event: RunEvent, agent_n: int = 0) -> None:
+        slot = self._slot_dir(run_id, agent_n)
+        slot.mkdir(parents=True, exist_ok=True)
+        # Append-only: one JSON object per line. Open in append mode so
+        # concurrent appends within a process serialize cleanly.
+        with (slot / "events.jsonl").open("a", encoding="utf-8") as f:
+            f.write(json.dumps(event.to_dict()) + "\n")
+
+    def read_events(self, run_id: str, agent_n: int = 0) -> list[RunEvent]:
+        path = self._slot_dir(run_id, agent_n) / "events.jsonl"
+        if not path.exists():
+            return []
+        events: list[RunEvent] = []
+        for line in path.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                events.append(RunEvent.from_dict(json.loads(line)))
+            except (json.JSONDecodeError, TypeError):
+                # A torn last line (crash mid-append) is skipped, not fatal.
+                continue
+        return events
+
 
 # ---------------------------------------------------------------------------
 # Registry service (the behavior over the store)
@@ -187,6 +271,11 @@ class AgentRunRegistry:
         # doesn't GC a running task mid-flight (asyncio only keeps weak refs).
         # Inc 2: fire-and-track. Cancel-by-id + shutdown drain land in Inc 6.
         self._tasks: set[asyncio.Task] = set()
+        # Inc 3: per-run monotonic event seq + live subscribers (asyncio
+        # Queues) for the SSE tail. Persisted events are the source of truth;
+        # subscribers are a fan-out for live delivery only.
+        self._seq: dict[str, int] = {}
+        self._subscribers: dict[str, set[asyncio.Queue]] = {}
 
     @staticmethod
     def _new_run_id() -> str:
@@ -263,18 +352,97 @@ class AgentRunRegistry:
         meta.status = "running"
         meta.started_at = time.time()
         self._store.persist_meta(meta)
+        self.emit_event(
+            meta.run_id, "agent_run_start", level="info", category="lifecycle",
+            data={"task": meta.task, "provider": meta.provider, "model": meta.model},
+        )
 
         async def _drive() -> None:
             try:
                 body = await runner(meta)
                 self.finish_run(meta, status="completed", result=body)
+                self.emit_event(
+                    meta.run_id, "agent_run_complete", level="info",
+                    category="result", data={"chars": len(body or "")},
+                )
             except Exception as exc:  # noqa: BLE001 — record any failure
                 logger.warning(f"Agent run {meta.run_id} failed: {exc}")
                 self.finish_run(meta, status="failed", error=str(exc))
+                self.emit_event(
+                    meta.run_id, "agent_run_error", level="error",
+                    category="lifecycle", data={"error": str(exc)},
+                )
 
         task = asyncio.create_task(_drive())
         self._tasks.add(task)
         task.add_done_callback(self._tasks.discard)
+
+    # --- events (Inc 3) -------------------------------------------------
+
+    def emit_event(
+        self,
+        run_id: str,
+        type_: str,
+        *,
+        level: str = "info",
+        category: str = "lifecycle",
+        data: Optional[dict] = None,
+        agent_n: int = 0,
+    ) -> RunEvent:
+        """Assign a per-run seq, persist to events.jsonl, fan out to live
+        SSE subscribers. Persisted record is the source of truth; the
+        fan-out is best-effort live delivery."""
+        # Seed seq from persisted max on first emit for this run (so a fresh
+        # registry process doesn't restart seq at 1 and collide with existing
+        # events — matters once runs outlive a restart, Inc 6).
+        if run_id not in self._seq:
+            existing = self._store.read_events(run_id, agent_n=agent_n)
+            self._seq[run_id] = max((e.seq for e in existing), default=0)
+        seq = self._seq[run_id] + 1
+        self._seq[run_id] = seq
+        event = RunEvent(
+            seq=seq, ts=time.time(), type=type_,
+            level=level, category=category, data=data or {},
+        )
+        self._store.append_event(run_id, event, agent_n=agent_n)
+        for q in list(self._subscribers.get(run_id, ())):
+            try:
+                q.put_nowait(event)
+            except asyncio.QueueFull:
+                pass  # slow consumer; it can replay from disk via ?since=
+        return event
+
+    def read_events(
+        self,
+        run_id: str,
+        *,
+        since: int = 0,
+        min_level: str = "debug",
+        categories: Optional[set[str]] = None,
+        agent_n: int = 0,
+    ) -> list[RunEvent]:
+        """Replay persisted events after `since`, applying level/category
+        filters (ADR 0003 §11a)."""
+        out = []
+        for ev in self._store.read_events(run_id, agent_n=agent_n):
+            if ev.seq <= since:
+                continue
+            if ev.passes(min_level=min_level, categories=categories):
+                out.append(ev)
+        return out
+
+    def subscribe(self, run_id: str) -> asyncio.Queue:
+        """Register a live subscriber queue for a run's SSE tail."""
+        q: asyncio.Queue = asyncio.Queue(maxsize=1000)
+        self._subscribers.setdefault(run_id, set()).add(q)
+        return q
+
+    def unsubscribe(self, run_id: str, q: asyncio.Queue) -> None:
+        subs = self._subscribers.get(run_id)
+        if subs:
+            subs.discard(q)
+            if not subs:
+                self._subscribers.pop(run_id, None)
 
     def get_run(self, run_id: str) -> Optional[RunMeta]:
         return self._store.load_meta(run_id)
