@@ -207,6 +207,26 @@ async def create_agent_run(req: AgentRunRequest) -> AgentRunResponse:
     return AgentRunResponse(run_id=meta.run_id, status=meta.status)
 
 
+class NetworkSpec(BaseModel):
+    """Egress allowlist spec — ADR 0003 §11 `network{allow_outbound[]}`.
+
+    `allow_outbound` entries are either a bare host string (exact host, any
+    path) or an object `{host, paths?}` where `host` may be `*.suffix` for a
+    single-label suffix-anchored glob and `paths` is a list of path prefixes.
+
+    Defined BEFORE AgentTaskRequest so the latter can reference it directly
+    (not as a string forward-ref) — that avoids needing
+    `model_rebuild()`/`update_forward_refs()`, which differ between Pydantic
+    v1 and v2 and would otherwise couple this module to a specific Pydantic
+    major at import time.
+    """
+
+    allow_outbound: list = Field(
+        default_factory=list,
+        description="Allowed outbound rules; empty = no outbound (fail-closed).",
+    )
+
+
 class AgentTaskRequest(BaseModel):
     """Tool-capable run request (POST /v1/agent/task — the sandboxed tier).
 
@@ -223,7 +243,7 @@ class AgentTaskRequest(BaseModel):
     provider: Optional[str] = Field(None, description="Provider (per-run intent).")
     model: Optional[str] = Field(None, description="Model (per-run intent).")
     system: Optional[str] = Field(None, description="Optional system message.")
-    network: Optional["NetworkSpec"] = Field(
+    network: Optional[NetworkSpec] = Field(
         None,
         description=(
             "Per-run egress allowlist (ADR 0003 §3c / AC-2). Outbound network "
@@ -234,23 +254,6 @@ class AgentTaskRequest(BaseModel):
             "{host, paths:[prefix,...]}."
         ),
     )
-
-
-class NetworkSpec(BaseModel):
-    """Egress allowlist spec — ADR 0003 §11 `network{allow_outbound[]}`.
-
-    `allow_outbound` entries are either a bare host string (exact host, any
-    path) or an object `{host, paths?}` where `host` may be `*.suffix` for a
-    single-label suffix-anchored glob and `paths` is a list of path prefixes.
-    """
-
-    allow_outbound: list = Field(
-        default_factory=list,
-        description="Allowed outbound rules; empty = no outbound (fail-closed).",
-    )
-
-
-AgentTaskRequest.model_rebuild()
 
 
 @router.post("/task", response_model=AgentRunResponse)

@@ -806,8 +806,10 @@ shape.
    event), so it cannot satisfy AC-2 — only tier-d OS isolation can, which is
    deferred. The `/v1/agent/task` route rejects a grant containing a shell
    tool with a 400, and `ScopedToolManager` refuses to execute one whenever an
-   egress policy is active (defense-in-depth). Consistent with §3a's research
-   grant ("no shell-write"). Tests: `test_task_rejects_shell_grant` +
+   egress policy is active (defense-in-depth). This matches §3a's corrected
+   research grant — **no shell tool at all** (not merely "no shell-write"):
+   read-only shell / `curl` is also excluded, because any shell escapes the
+   egress allowlist. Tests: `test_task_rejects_shell_grant` +
    `test_shell_denied_under_egress_policy_backstop`.
 9. **C2 — `/v1/tokens` pluggable resolver from day one**
    [LOAD-BEARING for v1.20.x migration cost]. ROADMAP today says
