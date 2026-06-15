@@ -1,0 +1,232 @@
+"""spawn_subagent — a run spawns one child run (ADR 0003 §9, Inc 7).
+
+A tool-capable agent run can delegate a sub-task to a child run. The child
+is a full agent run in its own right (own run_id, own EngineClient, own
+events/artifacts), linked to the parent via `parent_run_id`. The parent's
+tool call blocks until the child finishes, then returns the child's result.
+
+Security — the whole point of this increment (keeps AC-1/AC-2 transitive):
+
+  * **Child grant ⊆ parent grant.** The child may be given only tools the
+    parent itself holds. A child can never gain a capability the parent
+    lacks (no privilege escalation). Off-parent tool → spawn refused.
+  * **Child egress ⊆ parent allowlist.** Every child `allow_outbound` host
+    must be permitted by the parent's own allowlist, so a child can't reach
+    a host the parent couldn't. Off-parent host → spawn refused.
+  * **Depth = 1.** The child is built with `allow_spawn=False`, so it never
+    receives this tool — a grandchild is structurally impossible, not
+    blocked by a runtime flag the model could probe.
+  * **N = 1 concurrent.** The parent awaits the child to completion before
+    its tool call returns, so one parent drives at most one child at a time.
+  * **Consent-gated.** Spawning requires interactive approval (same gate as
+    shell), so an autonomous run can't fan out without a human in the loop.
+
+The child shares the parent's egress-host SUBSET rules via the same
+`NetworkPolicy` superset check (Inc 5) — this module only validates that the
+requested child allowlist is itself within the parent's, then hands the
+subset to the shared run runner.
+"""
+
+from __future__ import annotations
+
+import asyncio
+from typing import Awaitable, Callable, List, Optional
+
+from .base import BaseTool
+from .network_policy import NetworkPolicy, grant_has_shell
+from ...common.logger import get_logger
+
+logger = get_logger("tui")
+
+
+class SpawnSubagentTool(BaseTool):
+    """Spawn one child agent run, scoped to a subset of this run's caps."""
+
+    name = "spawn_subagent"
+    description = (
+        "Delegate a sub-task to a child agent run. The child runs with a "
+        "SUBSET of your own tools and network allowlist (you cannot grant it "
+        "anything you don't have). Blocks until the child finishes, then "
+        "returns its result. Use to parallelize or isolate a focused sub-task."
+    )
+    parameters = {
+        "type": "object",
+        "properties": {
+            "task": {
+                "type": "string",
+                "description": "The sub-task / prompt for the child agent.",
+            },
+            "tools": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": (
+                    "Tools to grant the child — MUST be a subset of your own "
+                    "grant. Omit for an empty (tool-free) child."
+                ),
+            },
+            "allow_outbound": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": (
+                    "Egress hosts for the child — each MUST be permitted by "
+                    "your own allowlist. Omit for no child network access."
+                ),
+            },
+        },
+        "required": ["task"],
+    }
+
+    def __init__(
+        self,
+        *,
+        registry,
+        parent_run_id: str,
+        parent_tools: List[str],
+        parent_allow_outbound: list,
+        parent_provider: str,
+        parent_model: str,
+        request_consent: Optional[Callable[[str, str], Awaitable[bool]]] = None,
+    ) -> None:
+        self._registry = registry
+        self._parent_run_id = parent_run_id
+        self._parent_tools = set(parent_tools or [])
+        self._parent_allow_outbound = list(parent_allow_outbound or [])
+        self._parent_policy = NetworkPolicy(self._parent_allow_outbound)
+        self._provider = parent_provider
+        self._model = parent_model
+        self._request_consent = request_consent
+
+    # --- subset enforcement (AC-1 / AC-2 transitive) --------------------
+
+    def _check_grant_subset(self, child_tools: List[str]) -> Optional[str]:
+        """Return an error string if child_tools isn't ⊆ parent grant."""
+        # A child must never carry shell either (same AC-2 rule as /task).
+        if grant_has_shell(child_tools):
+            return "child may not be granted a shell tool (escapes egress; AC-2)"
+        extra = set(child_tools) - self._parent_tools
+        if extra:
+            return (
+                f"child tools {sorted(extra)} are not in the parent's grant "
+                f"{sorted(self._parent_tools)} — no privilege escalation"
+            )
+        return None
+
+    def _check_egress_subset(self, child_allow: list) -> Optional[str]:
+        """Return an error string if any child host isn't permitted by the
+        parent allowlist. Each child rule's host must resolve to ALLOW under
+        the parent's own policy (so the child can't widen egress)."""
+        for entry in child_allow or []:
+            host = entry if isinstance(entry, str) else (entry or {}).get("host", "")
+            host = (host or "").lstrip("*.")  # check the concrete suffix host
+            if not host:
+                return f"malformed child egress rule: {entry!r}"
+            probe = f"https://{host}/"
+            decision = self._parent_policy.check(probe)
+            from .network_policy import Allow
+            if not isinstance(decision, Allow):
+                return (
+                    f"child egress host {host!r} is not permitted by the "
+                    f"parent allowlist — child egress must be a subset"
+                )
+        return None
+
+    # --- execution ------------------------------------------------------
+
+    async def execute(
+        self,
+        task: str,
+        tools: Optional[List[str]] = None,
+        allow_outbound: Optional[list] = None,
+        **kwargs,
+    ) -> str:
+        from ...server.routes.agent_v1 import build_task_runner
+
+        child_tools = list(tools or [])
+        child_allow = list(allow_outbound or [])
+
+        # 1. Subset enforcement — refuse BEFORE minting anything.
+        err = self._check_grant_subset(child_tools)
+        if err:
+            logger.warning(f"spawn_subagent denied: {err}")
+            return f"Error: cannot spawn sub-agent — {err}."
+        err = self._check_egress_subset(child_allow)
+        if err:
+            logger.warning(f"spawn_subagent denied: {err}")
+            return f"Error: cannot spawn sub-agent — {err}."
+
+        # 2. Consent gate — a human must approve the spawn.
+        if self._request_consent is not None:
+            summary = f"spawn_subagent: {task[:80]!r} tools={child_tools}"
+            approved = await self._request_consent(summary, ".")
+            if not approved:
+                return "Error: user denied permission to spawn a sub-agent."
+
+        # 3. Mint the child run, linked to the parent via parent_run_id. The
+        #    child is a FIRST-CLASS run with its own run_id (addressable by
+        #    get_run / the /v1/agent/runs API) and its own agent-0 slot — it is
+        #    NOT nested under the parent's directory. (The ADR 0005 agent-<n>
+        #    nesting under one run_id is a later refinement; for the N=1 MVP a
+        #    child as its own run keyed by parent_run_id is correct + simpler,
+        #    and avoids an agent_n/get_run slot mismatch that would make the
+        #    child unfindable by the default-agent_n lookup.)
+        child = self._registry.start_run(
+            task=task,
+            tools=child_tools,
+            provider=self._provider,
+            model=self._model,
+            network=child_allow,
+            parent_run_id=self._parent_run_id,
+        )
+        self._registry.emit_event(
+            self._parent_run_id, "subagent_spawned", level="info",
+            category="lifecycle",
+            data={"child_run_id": child.run_id, "task": task[:120],
+                  "tools": child_tools},
+        )
+
+        # 4. Run the child through the SAME sandbox machinery, with
+        #    allow_spawn=False so it can never itself spawn (depth=1).
+        runner = build_task_runner(
+            self._registry,
+            provider_name=self._provider,
+            model=self._model,
+            task=task,
+            tools=child_tools,
+            allow_outbound=child_allow,
+            allow_spawn=False,
+        )
+
+        # 5. Run to completion and collect the result. We drive the child
+        #    inline (awaited) rather than fire-and-forget so the parent's tool
+        #    call returns the child's answer — N=1, parent blocks on child.
+        try:
+            self._registry.run_in_background(child, runner)
+        except Exception as exc:  # noqa: BLE001
+            return f"Error: failed to start sub-agent: {exc}"
+
+        result = await self._await_child(child.run_id)
+        self._registry.emit_event(
+            self._parent_run_id, "subagent_finished", level="info",
+            category="result",
+            data={"child_run_id": child.run_id, "status": result[0]},
+        )
+        status, body, error = result
+        if status == "completed":
+            return f"[sub-agent {child.run_id} completed]\n{body or '(empty)'}"
+        return (
+            f"[sub-agent {child.run_id} ended: {status}]"
+            + (f" {error}" if error else "")
+        )
+
+    async def _await_child(self, child_run_id: str, timeout_s: float = 300.0):
+        """Poll the child run to a terminal status. Returns (status, result,
+        error). Cooperative — the child has its own budget/cancel control."""
+        terminal = ("completed", "failed", "cancelled", "interrupted")
+        loop = asyncio.get_event_loop()
+        deadline = loop.time() + timeout_s
+        while loop.time() < deadline:
+            meta = self._registry.get_run(child_run_id)
+            if meta is not None and meta.status in terminal:
+                return meta.status, meta.result, meta.error
+            await asyncio.sleep(0.05)
+        return "interrupted", None, "sub-agent wait timed out"

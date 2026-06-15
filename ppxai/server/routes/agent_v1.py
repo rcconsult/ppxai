@@ -40,6 +40,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import time
 from typing import Any, Optional
 
 from fastapi import APIRouter, HTTPException, Query, Request
@@ -98,6 +99,8 @@ class RunMetaResponse(BaseModel):
     model: Optional[str] = None
     tools: list[str] = Field(default_factory=list)
     network: list = Field(default_factory=list)
+    budget: dict = Field(default_factory=dict)
+    resumable: bool = False
     created_at: float = 0.0
     started_at: Optional[float] = None
     finished_at: Optional[float] = None
@@ -115,6 +118,8 @@ class RunMetaResponse(BaseModel):
             model=m.model,
             tools=list(m.tools),
             network=list(getattr(m, "network", []) or []),
+            budget=dict(getattr(m, "budget", {}) or {}),
+            resumable=bool(getattr(m, "resumable", False)),
             created_at=m.created_at,
             started_at=m.started_at,
             finished_at=m.finished_at,
@@ -227,6 +232,34 @@ class NetworkSpec(BaseModel):
     )
 
 
+class BudgetSpec(BaseModel):
+    """Per-run resource caps (Inc 6). Defined before AgentTaskRequest so it's
+    referenced directly (no forward-ref / model_rebuild — Pydantic v1/v2 safe).
+
+    Each field is optional; an absent cap means unbounded on that axis. Caps
+    are enforced cooperatively at tool-loop boundaries, so a stop lands at a
+    clean checkpoint (status='interrupted', resumable)."""
+
+    iterations: Optional[int] = Field(None, ge=1, description="Max tool-loop iterations.")
+    time_s: Optional[float] = Field(None, gt=0, description="Max wall-clock seconds.")
+    tokens: Optional[int] = Field(None, ge=1, description="Max tokens consumed.")
+
+
+def _budget_dict(spec: "Optional[BudgetSpec]") -> dict:
+    """Budget spec -> plain {axis: cap} dict, omitting unset axes. Built field
+    by field so it works on Pydantic v1 and v2 (no model_dump/.dict coupling)."""
+    if spec is None:
+        return {}
+    out: dict = {}
+    if spec.iterations is not None:
+        out["iterations"] = spec.iterations
+    if spec.time_s is not None:
+        out["time_s"] = spec.time_s
+    if spec.tokens is not None:
+        out["tokens"] = spec.tokens
+    return out
+
+
 class AgentTaskRequest(BaseModel):
     """Tool-capable run request (POST /v1/agent/task — the sandboxed tier).
 
@@ -243,6 +276,16 @@ class AgentTaskRequest(BaseModel):
     provider: Optional[str] = Field(None, description="Provider (per-run intent).")
     model: Optional[str] = Field(None, description="Model (per-run intent).")
     system: Optional[str] = Field(None, description="Optional system message.")
+    budget: Optional[BudgetSpec] = Field(
+        None,
+        description=(
+            "Per-run resource caps (Inc 6). Any subset of "
+            "{iterations, time_s, tokens}; an absent key = no cap on that axis. "
+            "Checked cooperatively at each tool-loop boundary — a run that hits "
+            "a cap stops at a clean checkpoint with status='interrupted' "
+            "(resumable), not 'failed'."
+        ),
+    )
     network: Optional[NetworkSpec] = Field(
         None,
         description=(
@@ -310,16 +353,50 @@ async def create_agent_task(req: AgentTaskRequest) -> AgentRunResponse:
     meta = registry.start_run(
         task=req.task, tools=req.tools, provider=provider_name, model=model,
         network=(req.network.allow_outbound if req.network else []),
+        budget=_budget_dict(req.budget),
     )
 
+    runner = build_task_runner(
+        registry,
+        provider_name=provider_name,
+        model=model,
+        task=req.task,
+        tools=list(req.tools),
+        allow_outbound=(req.network.allow_outbound if req.network else []),
+        allow_spawn=True,  # top-level run may spawn ONE child (depth=1; Inc 7)
+    )
+    registry.run_in_background(meta, runner)
+    return AgentRunResponse(run_id=meta.run_id, status=meta.status)
+
+
+def build_task_runner(
+    registry,
+    *,
+    provider_name: str,
+    model: str,
+    task: str,
+    tools: list[str],
+    allow_outbound: list,
+    allow_spawn: bool = False,
+):
+    """Build the async runner that drives a tool-capable run (Inc 4–7).
+
+    Shared by `/v1/agent/task` (top-level) and the `spawn_subagent` tool
+    (child run) so both go through the IDENTICAL sandbox: ScopedToolManager
+    (AC-1 grant), NetworkPolicy (AC-2 egress), and Inc 6 budget/cancel
+    control. The runner is a function of explicit params, not the request, so
+    a child run can be built with its own (subset) grant + allowlist.
+
+    allow_spawn gates depth: a top-level run gets the `spawn_subagent` tool
+    registered IF it's in the grant; a child run is always built with
+    allow_spawn=False, so it can never spawn — enforcing the N=1 / depth=1
+    rule structurally (a grandchild is impossible).
+    """
     async def _runner(m) -> str:
-        # Build a dedicated EngineClient for this run (ADR 0003 §9 D1 — new
-        # client per run, full isolation), enable tools, then SCOPE its tool
-        # manager to the grant. The model sees only granted tools; the
-        # ScopedToolManager.execute_tool chokepoint denies anything else.
         from ...engine.client import EngineClient
         from ...engine.agent_scoped_tools import ScopedToolManager
         from ...engine.tools.network_policy import NetworkPolicy
+        from ...engine.tools.agent_spawn import SpawnSubagentTool
         from ...engine.types import EventType
 
         engine = EngineClient()
@@ -327,16 +404,31 @@ async def create_agent_task(req: AgentTaskRequest) -> AgentRunResponse:
         engine.set_model(model)
         engine.enable_tools()  # registers builtins + sets tool-loop limits
 
+        # Inc 7: register spawn_subagent ONLY for a top-level run whose grant
+        # includes it. A child run (allow_spawn=False) never gets the tool, so
+        # depth is capped at 1 structurally — not by a runtime check the model
+        # could probe. The tool carries this run as the parent context and
+        # enforces child grant ⊆ this grant, child egress ⊆ this allowlist.
+        if allow_spawn and "spawn_subagent" in tools:
+            engine.tool_manager.register_tool(SpawnSubagentTool(
+                registry=registry,
+                parent_run_id=m.run_id,
+                parent_tools=list(tools),
+                parent_allow_outbound=list(allow_outbound),
+                parent_provider=provider_name,
+                parent_model=model,
+                request_consent=engine.request_shell_consent,
+            ))
+
         def _on_deny(name: str) -> None:
             registry.emit_event(
                 m.run_id, "tool_denied", level="warning", category="tool",
-                data={"tool": name, "grant": list(req.tools)},
+                data={"tool": name, "grant": list(tools)},
             )
 
         # AC-2: per-run egress allowlist. Always installed for a tool-capable
         # run — even with no `network` spec, so a granted network tool is
         # deny-by-default (fail-closed). on_network emits the typed audit event.
-        allow_outbound = req.network.allow_outbound if req.network else []
         net_policy = NetworkPolicy(allow_outbound)
 
         def _on_network(allowed: bool, payload: dict) -> None:
@@ -350,17 +442,29 @@ async def create_agent_task(req: AgentTaskRequest) -> AgentRunResponse:
             )
 
         engine.tool_manager = ScopedToolManager(
-            engine.tool_manager, list(req.tools), on_deny=_on_deny,
+            engine.tool_manager, list(tools), on_deny=_on_deny,
             network_policy=net_policy, on_network=_on_network,
         )
 
+        # Inc 6: cooperative budget/cancel control. Polled at each tool-loop
+        # boundary (on TOOL_CALL) so a cap or cancel stops the run at a clean
+        # checkpoint — never mid-tool-call. control.check() raises RunCancelled
+        # / RunBudgetExceeded, which run_in_background maps to the right status.
+        control = registry.get_control(m.run_id)
+
         final_text: list[str] = []
-        async for event in engine.chat(req.task, stream=False):
+        async for event in engine.chat(task, stream=False):
             # Surface tool activity on the run's event stream. The engine's
             # TOOL_CALL carries the name in event.data["tool"] (a dict), not
             # in metadata; STREAM_END carries the final text as event.data,
             # which is a plain string (sometimes a dict with "content").
             if event.type == EventType.TOOL_CALL:
+                if control is not None:
+                    # Check BEFORE counting this iteration: a budget of N lets
+                    # N iterations run, then stops when the (N+1)th begins. So
+                    # check() sees the count of already-completed iterations.
+                    control.check(now=time.monotonic())
+                    control.iterations += 1
                 d = event.data or {}
                 name = d.get("tool", "") if isinstance(d, dict) else ""
                 registry.emit_event(
@@ -386,8 +490,7 @@ async def create_agent_task(req: AgentTaskRequest) -> AgentRunResponse:
                     final_text.append(text)
         return "\n".join(final_text)
 
-    registry.run_in_background(meta, _runner)
-    return AgentRunResponse(run_id=meta.run_id, status=meta.status)
+    return _runner
 
 
 @router.get("/runs", response_model=RunListResponse)
@@ -407,6 +510,27 @@ async def get_agent_run(run_id: str) -> RunMetaResponse:
     if meta is None:
         raise HTTPException(status_code=404, detail=f"Unknown run_id: {run_id!r}")
     return RunMetaResponse.from_meta(meta)
+
+
+@router.post("/runs/{run_id}/cancel")
+async def cancel_agent_run(run_id: str) -> dict:
+    """Request cooperative cancellation of an in-flight run (Inc 6).
+
+    Flips the run's control flag and moves it to `cancelling`; the runner
+    observes it at its next tool-loop boundary and stops at a clean
+    checkpoint (status → `cancelled`, resumable). Returns 404 if the run is
+    unknown, 409 if it's already terminal (nothing to cancel)."""
+    registry = get_agent_run_registry()
+    meta = registry.get_run(run_id)
+    if meta is None:
+        raise HTTPException(status_code=404, detail=f"Unknown run_id: {run_id!r}")
+    if registry.cancel_run(run_id):
+        return {"ok": True, "run_id": run_id, "status": "cancelling"}
+    # Not in flight — already terminal (or never started).
+    raise HTTPException(
+        status_code=409,
+        detail=f"Run {run_id!r} is not cancellable (status={meta.status!r}).",
+    )
 
 
 def _parse_categories(category: Optional[str]) -> Optional[set[str]]:

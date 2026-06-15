@@ -52,6 +52,73 @@ class TestRunMeta:
         assert m.status == "pending"
         assert m.agent_n == 0
         assert m.tools == []
+        assert m.budget == {}        # Inc 6
+        assert m.resumable is False  # Inc 6
+
+    def test_inc6_fields_roundtrip(self):
+        m = RunMeta(run_id="r", task="t", budget={"iterations": 3}, resumable=True)
+        assert RunMeta.from_dict(m.to_dict()) == m
+
+
+# ---------------------------------------------------------------------------
+# RunControl — cooperative budget/cancel (Inc 6)
+# ---------------------------------------------------------------------------
+
+
+class TestRunControl:
+    def _ctl(self, **kw):
+        from ppxai.engine.agent_runs import RunControl
+        return RunControl(run_id="r", **kw)
+
+    def test_no_budget_never_stops(self):
+        c = self._ctl(budget={})
+        c.iterations = 1000
+        c.check(now=1e9)  # no raise
+
+    def test_iteration_budget_raises_interrupted(self):
+        from ppxai.engine.agent_runs import RunBudgetExceeded
+        c = self._ctl(budget={"iterations": 2})
+        c.iterations = 1
+        c.check(now=0.0)            # under cap: ok
+        c.iterations = 2
+        with pytest.raises(RunBudgetExceeded):
+            c.check(now=0.0)        # at cap: stop
+        # the exception carries the resumable/interrupted semantics
+        assert RunBudgetExceeded("x").status == "interrupted"
+        assert RunBudgetExceeded("x").resumable is True
+
+    def test_time_budget_raises(self):
+        from ppxai.engine.agent_runs import RunBudgetExceeded
+        c = self._ctl(budget={"time_s": 10.0}, started_at=100.0)
+        c.check(now=105.0)          # 5s elapsed: ok
+        with pytest.raises(RunBudgetExceeded):
+            c.check(now=111.0)      # 11s elapsed: stop
+
+    def test_token_budget_raises(self):
+        from ppxai.engine.agent_runs import RunBudgetExceeded
+        c = self._ctl(budget={"tokens": 100})
+        c.tokens_used = 50
+        c.check(now=0.0)
+        c.tokens_used = 100
+        with pytest.raises(RunBudgetExceeded):
+            c.check(now=0.0)
+
+    def test_cancel_raises_cancelled(self):
+        from ppxai.engine.agent_runs import RunCancelled
+        c = self._ctl(budget={})
+        c.cancel_requested = True
+        with pytest.raises(RunCancelled):
+            c.check(now=0.0)
+        assert RunCancelled("x").status == "cancelled"
+        assert RunCancelled("x").resumable is True
+
+    def test_cancel_takes_precedence_over_budget(self):
+        from ppxai.engine.agent_runs import RunCancelled
+        c = self._ctl(budget={"iterations": 1})
+        c.iterations = 99
+        c.cancel_requested = True
+        with pytest.raises(RunCancelled):  # cancel checked first
+            c.check(now=0.0)
 
 
 # ---------------------------------------------------------------------------
@@ -156,6 +223,41 @@ class TestRunInBackground:
             await asyncio.sleep(0.01)
         got = registry.get_run(m.run_id)
         assert got.status == "failed" and "kaboom" in got.error
+
+    @pytest.mark.asyncio
+    async def test_cooperative_cancel_marks_cancelled(self, registry):
+        # Inc 6: a runner that polls control.check() between steps stops
+        # cooperatively when cancel_run flips the flag — status=cancelled,
+        # resumable=True, and the stop lands at the checkpoint (not mid-step).
+        import asyncio
+
+        m = registry.start_run("t")
+        steps_done = []
+
+        async def runner(meta):
+            ctl = registry.get_control(meta.run_id)
+            for i in range(100):
+                ctl.check(now=0.0)        # checkpoint — raises RunCancelled
+                steps_done.append(i)
+                await asyncio.sleep(0.01)
+            return "never reached"
+
+        registry.run_in_background(m, runner)
+        await asyncio.sleep(0.03)          # let a couple steps run
+        assert registry.cancel_run(m.run_id) is True
+        for _ in range(100):
+            if registry.get_run(m.run_id).status in ("cancelled", "failed"):
+                break
+            await asyncio.sleep(0.01)
+        got = registry.get_run(m.run_id)
+        assert got.status == "cancelled"   # not failed
+        assert got.resumable is True
+        assert len(steps_done) < 100       # stopped early, at a checkpoint
+        # control is cleaned up after the run finishes
+        assert registry.get_control(m.run_id) is None
+
+    def test_cancel_unknown_run_returns_false(self, registry):
+        assert registry.cancel_run("run_does_not_exist") is False
 
 
 # ---------------------------------------------------------------------------
@@ -314,15 +416,18 @@ class TestAgentRunRoutes:
 
         return _FakeProvider()
 
-    @staticmethod
-    def _poll_terminal(c, run_id, timeout_s=5.0):
-        """Poll GET until the run reaches a terminal status (Inc 2 is async)."""
+    _TERMINAL = ("completed", "failed", "cancelled", "interrupted")
+
+    @classmethod
+    def _poll_terminal(cls, c, run_id, timeout_s=5.0):
+        """Poll GET until the run reaches a terminal status (Inc 2 is async).
+        Terminal set grew in Inc 6 to include cancelled/interrupted."""
         import time as _t
 
         deadline = _t.monotonic() + timeout_s
         while _t.monotonic() < deadline:
             one = c.get(f"/v1/agent/runs/{run_id}").json()
-            if one["status"] in ("completed", "failed"):
+            if one["status"] in cls._TERMINAL:
                 return one
             _t.sleep(0.02)
         raise AssertionError(f"run {run_id} did not finish: last={one}")
@@ -641,6 +746,93 @@ class TestAgentRunRoutes:
         # and the failure is on the event stream as an error-level event
         evs = c.get(f"/v1/agent/runs/{rid}/events").json()["events"]
         assert any(e["type"] == "agent_run_error" for e in evs)
+
+    def _budget_stub_engine(self, n_tool_calls):
+        """An engine stub whose chat() emits n TOOL_CALL events then ends."""
+        from ppxai.engine.types import Event, EventType
+
+        class _BaseTM:
+            max_iterations = 99
+            async def execute_tool(self, name, **kw): return "ran"
+
+        class _StubEngine:
+            def __init__(self): self.tool_manager = _BaseTM()
+            def set_provider(self, p): pass
+            def set_model(self, m): pass
+            def enable_tools(self): pass
+            async def chat(self, task, stream=False):
+                for _ in range(n_tool_calls):
+                    yield Event(type=EventType.TOOL_CALL, data={"tool": "read_file"})
+                yield Event(type=EventType.STREAM_END, data="done")
+
+        return _StubEngine()
+
+    def test_task_iteration_budget_interrupts(self, client, monkeypatch):
+        # Inc 6: a run that exceeds its iteration budget stops at a clean
+        # checkpoint with status=interrupted + resumable=True (NOT failed).
+        c, _reg = client
+        from ppxai.server.routes import agent_v1
+        from ppxai.engine.providers.openai_compat import OpenAICompatibleProvider
+
+        class _P(OpenAICompatibleProvider):
+            def __init__(self): pass
+        monkeypatch.setattr(agent_v1, "_build_provider", lambda name: _P())
+
+        stub = self._budget_stub_engine(n_tool_calls=5)  # would do 5 iterations
+        import ppxai.engine.client as client_mod
+        monkeypatch.setattr(client_mod, "EngineClient", lambda: stub)
+
+        resp = c.post("/v1/agent/task", json={
+            "task": "loop", "tools": ["read_file"],
+            "provider": "p", "model": "m",
+            "budget": {"iterations": 2},  # cap below the 5 the stub would do
+        })
+        assert resp.status_code == 200
+        rid = resp.json()["run_id"]
+        one = self._poll_terminal(c, rid)
+        assert one["status"] == "interrupted"   # not failed, not completed
+        assert one["resumable"] is True
+        assert one["budget"] == {"iterations": 2}  # persisted
+        # only the budgeted number of tool_calls were surfaced before the stop
+        tool_evs = c.get(f"/v1/agent/runs/{rid}/events?category=tool").json()["events"]
+        assert len([e for e in tool_evs if e["type"] == "tool_call"]) == 2
+        # the interrupt is on the lifecycle stream
+        life = c.get(f"/v1/agent/runs/{rid}/events?category=lifecycle").json()["events"]
+        assert any(e["type"] == "agent_run_interrupted" for e in life)
+
+    def test_no_budget_runs_to_completion(self, client, monkeypatch):
+        # control: same stub, no budget -> all iterations run, completes.
+        c, _reg = client
+        from ppxai.server.routes import agent_v1
+        from ppxai.engine.providers.openai_compat import OpenAICompatibleProvider
+
+        class _P(OpenAICompatibleProvider):
+            def __init__(self): pass
+        monkeypatch.setattr(agent_v1, "_build_provider", lambda name: _P())
+        stub = self._budget_stub_engine(n_tool_calls=3)
+        import ppxai.engine.client as client_mod
+        monkeypatch.setattr(client_mod, "EngineClient", lambda: stub)
+
+        resp = c.post("/v1/agent/task", json={
+            "task": "loop", "tools": ["read_file"], "provider": "p", "model": "m",
+        })
+        rid = resp.json()["run_id"]
+        one = self._poll_terminal(c, rid)
+        assert one["status"] == "completed"
+        assert one["resumable"] is False
+
+    def test_cancel_unknown_run_404(self, client):
+        c, _ = client
+        assert c.post("/v1/agent/runs/run_nope/cancel").status_code == 404
+
+    def test_cancel_terminal_run_409(self, client):
+        # a finished run can't be cancelled
+        c, reg = client
+        m = reg.start_run(task="t", tools=["read_file"], provider="p", model="m")
+        reg.finish_run(m, status="completed", result="x")
+        r = c.post(f"/v1/agent/runs/{m.run_id}/cancel")
+        assert r.status_code == 409
+        assert "not cancellable" in r.json()["detail"]
 
     @pytest.mark.asyncio
     async def test_events_live_sse_path(self, client):

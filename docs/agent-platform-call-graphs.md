@@ -396,7 +396,106 @@ for get_weather's https→http fallback (the http branch is denied under the
 MVP https-only rule, so wttr.in alone can't authorize get_weather).
 ```
 
-<!-- Inc 6+ sections appended here as they land. Template:
+## Increment 6 — budgets + cancel + conditional-resume checkpoint
+
+Added/changed: `engine/agent_runs.py` (RunControl + RunStopped hierarchy +
+cancel_run/get_control + status mapping), `routes/agent_v1.py` (BudgetSpec,
+budget wiring, POST …/cancel). Execution model: cooperative stop — the run
+is NOT task.cancel()'d; it stops at the next tool-loop checkpoint.
+
+### control lifecycle (registry)  [engine/agent_runs.py]
+
+```
+run_in_background(meta, runner):
+  meta.status = running
+  control = RunControl(run_id, budget=meta.budget, started_at=monotonic())
+  self._controls[run_id] = control      ← findable by cancel_run
+  self._run_tasks[run_id] = task
+  _drive():
+    try: body = await runner(meta) → finish_run(completed)
+    except RunStopped as s:               ← RunCancelled | RunBudgetExceeded
+        finish_run(status=s.status, error=s.reason, resumable=s.resumable)
+        emit agent_run_<status> (lifecycle, warning)
+    except Exception: finish_run(failed)
+    finally: pop control + task
+
+cancel_run(run_id):
+  control = self._controls.get(run_id)    ← None if not in flight → False
+  control.cancel_requested = True
+  meta.status = cancelling; emit agent_run_cancelling
+```
+
+### POST /v1/agent/task — budget/cancel polling (delta over Inc 5)
+
+```
+start_run(..., budget=_budget_dict(req.budget))  → RunMeta.budget persisted
+_runner(m):
+  control = registry.get_control(m.run_id)
+  async for ev in engine.chat(task):
+    ev == TOOL_CALL:
+       control.check(now=monotonic())   ← raises RunCancelled/RunBudgetExceeded
+          cancel_requested              → RunCancelled  (status cancelled)
+          iterations >= budget.iterations → RunBudgetExceeded (interrupted)
+          elapsed   >= budget.time_s    → RunBudgetExceeded
+          tokens    >= budget.tokens    → RunBudgetExceeded
+       control.iterations += 1          ← count AFTER check (allow N, stop N+1)
+```
+
+### POST /v1/agent/runs/<id>/cancel
+
+```
+cancel_agent_run(run_id):
+  meta = get_run(run_id)               none → 404
+  registry.cancel_run(run_id)          in-flight → flip flag, 200 cancelling
+                                       terminal  → 409 not cancellable
+```
+
+## Increment 7 — spawn_subagent (N=1 sub-agent)
+
+Added: `engine/tools/agent_spawn.py`. Changed: `routes/agent_v1.py`
+(extracted `build_task_runner`, shared by /task + child runs; registers the
+spawn tool for top-level granted runs). Execution model: a parent run's tool
+call mints + runs ONE child run (own run_id, linked by parent_run_id) and
+blocks on it.
+
+### tool registration (depth gate)  [routes/agent_v1.py build_task_runner]
+
+```
+build_task_runner(registry, ..., tools, allow_outbound, allow_spawn):
+  _runner(m):
+    engine.enable_tools()
+    if allow_spawn AND "spawn_subagent" in tools:      ← only top-level + granted
+        engine.tool_manager.register_tool(SpawnSubagentTool(
+            registry, parent_run_id=m.run_id,
+            parent_tools=tools, parent_allow_outbound=allow_outbound,
+            parent_provider, parent_model, request_consent))
+    engine.tool_manager = ScopedToolManager(...)        ← AC-1/AC-2 wrap as usual
+  # child runs are built allow_spawn=False -> tool NEVER registered -> depth=1
+```
+
+### SpawnSubagentTool.execute  [engine/tools/agent_spawn.py]
+
+```
+execute(task, tools=[], allow_outbound=[]):
+  1. _check_grant_subset(child_tools):
+       shell in child            → refuse (AC-2)
+       child_tools ⊄ parent_tools→ refuse (no escalation)
+  2. _check_egress_subset(child_allow):
+       for host in child_allow: parent_policy.check(https://host/) != Allow → refuse
+  3. request_consent(summary) is False → refuse          ← human in the loop
+  4. child = registry.start_run(task, tools=child_tools,
+              network=child_allow, parent_run_id=parent_run_id)   ← own run_id
+     emit subagent_spawned (parent stream, lifecycle)
+  5. runner = build_task_runner(..., allow_spawn=False)   ← child can't spawn
+     registry.run_in_background(child, runner)
+  6. status,body,err = await _await_child(child.run_id)   ← N=1: parent blocks
+     emit subagent_finished (parent stream, result)
+     return "[sub-agent <id> completed]\n<body>"  (or ended:<status>)
+
+All refusals return a model-readable Error string and mint NO child run.
+```
+
+<!-- Inc 8+ sections appended here as they land. Template:
 ## Increment N — <title>
 Added/changed: <files>. Execution model change: <if any>.
 ### <METHOD /path> — <what>

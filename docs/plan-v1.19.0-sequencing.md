@@ -63,9 +63,10 @@ runnable steps. Each is one PR-sized increment on
 > - [x] Inc 2 — background execution + live status — trialed + committed
 > - [x] Inc 3 — events.jsonl + GET …/events (replay + SSE) — trialed + committed
 > - [x] Inc 4 — capability grant + tool allowlist (AC-1 sandbox seam) — trialed + committed (`acee4821`)
-> - [~] Inc 5 — egress allowlist + NETWORK_POLICY_* (AC-2 ship-gate) — built (NetworkPolicy + ScopedToolManager egress chokepoint + /v1/agent/task `network`), awaiting trial
-> - [ ] Inc 6 — budgets + cancel + conditional-resume checkpoint
-> - [ ] Inc 7 — spawn_subagent (the N=1 sub-agent)
+> - [x] Inc 5 — egress allowlist + NETWORK_POLICY_* (AC-2 ship-gate) — committed (`3519e919`); awaiting hands-on trial (bundled with Inc 6+7)
+> - [~] Inc 6 — budgets + cancel + conditional-resume checkpoint — built (RunControl + budget caps + POST …/cancel + interrupted/cancelled statuses + resumable flag); awaiting trial
+> - [~] Inc 7 — spawn_subagent (the N=1 sub-agent) — built (SpawnSubagentTool: child grant ⊆ parent, child egress ⊆ parent, depth=1 structural, consent-gated, parent awaits child); awaiting trial (bundled 5+6+7)
+> - [ ] Inc 8 — /v1/tokens + per-run authz (next after the 5+6+7 trial)
 > - [ ] Inc 8 — /v1/tokens + per-run authz
 > - [ ] Inc 9 — AppState background_agents mirror
 
@@ -195,18 +196,68 @@ fires; a fetch of api.github.com → `network_policy_allowed`. Empty
 `allow_outbound` denies even the granted tool.
 
 ### Inc 6 — budgets + cancel + conditional-resume checkpoint
-**Capability:** runs stop at caps / on cancel; interrupted runs checkpoint.
-**Build:** `meta.json` budgets enforced at `chat_with_tools`;
-`POST …/cancel`; `INTERRUPTED` + the resumability flag in `state.json`
-(conditional-resume per ADR #5 — resume logic itself can be the additive
-follow-up, but the checkpoint + flag land here).
-**Trial:** set a 1-iteration budget → run halts; cancel a running run.
+**Capability:** runs stop at caps / on cancel; the stop is recorded as a
+non-failure terminal state that a future resume could pick up.
+**Build (as implemented 2026-06-16):**
+- `RunControl` (engine/agent_runs.py): per-run cooperative control the
+  registry owns while a run is in flight. The runner calls `check(now=…)`
+  at each tool-loop boundary; it raises `RunCancelled` / `RunBudgetExceeded`.
+- `BudgetSpec` on `AgentTaskRequest` — `{iterations?, time_s?, tokens?}`,
+  any subset; absent axis = uncapped. Persisted to `RunMeta.budget`.
+  **Cooperative, not `task.cancel()`** — a stop lands at a clean checkpoint,
+  never mid-tool-call (which could leave a half-written artifact).
+- `POST /v1/agent/runs/<id>/cancel` → flips the control flag, moves the run
+  to `cancelling`; the runner observes it next boundary and stops. 404
+  unknown / 409 already-terminal.
+- New terminal statuses: `cancelled` (owner cancel, resumable) and
+  `interrupted` (budget hit, resumable), distinct from `failed`. `RunMeta.
+  resumable` flag set accordingly (the conditional-resume seam per ADR #5;
+  resume *logic* is the additive follow-up — the flag + checkpoint land here).
+- Budget check is "allow N, stop at N+1": `check()` runs BEFORE counting the
+  iteration, so a budget of N permits exactly N iterations.
+- Run-lifecycle events: `agent_run_cancelling` / `agent_run_cancelled` /
+  `agent_run_interrupted` on the `lifecycle` channel (free-form RunEvent
+  strings — not engine `EventType` enum, so no stream-handler change).
+**Trial:** (a) `budget:{iterations:2}` on a task that would loop more → run
+ends `interrupted`, `resumable:true`, exactly 2 `tool_call` events; (b) start
+a longer run, `POST …/cancel` → run ends `cancelled`, `resumable:true`;
+(c) cancel a finished run → 409.
 
 ### Inc 7 — spawn_subagent (N=1)
 **Capability:** a run spawns one child run; parent collects its result.
-**Build:** `spawn_subagent` tool (consent-gated), `parent_run_id`,
-`max_concurrent_subagents=1`; child writes artifacts; parent reads result.
-**Trial:** a task that spawns one research sub-agent; inspect both runs.
+**Build (as implemented 2026-06-16):**
+- `engine/tools/agent_spawn.py::SpawnSubagentTool` (a `BaseTool`), registered
+  on a run's EngineClient ONLY when (a) `spawn_subagent` is in the grant AND
+  (b) the run is top-level (`allow_spawn=True`). Bound to the parent's
+  run_id + grant + allowlist + provider/model.
+- The `/task` runner was extracted to a shared `build_task_runner(...)` used
+  by both top-level runs and child runs, so a child goes through the
+  IDENTICAL sandbox (ScopedToolManager AC-1 + NetworkPolicy AC-2 + Inc 6
+  budget/cancel).
+- **Security (keeps AC-1/AC-2 transitive):**
+  - *child grant ⊆ parent grant* — off-parent tool → spawn refused (no
+    escalation); a child may never carry a shell tool either.
+  - *child egress ⊆ parent allowlist* — each child host must resolve ALLOW
+    under the parent's own `NetworkPolicy`; off-parent host → refused.
+  - *depth = 1, structural* — the child runner is built `allow_spawn=False`,
+    so it never receives the tool; a grandchild is impossible (not a runtime
+    flag the model can probe).
+  - *N = 1 concurrent* — the parent's tool call awaits the child to terminal
+    before returning, so one parent drives at most one child.
+  - *consent-gated* — spawning requires interactive approval (same gate as
+    shell), so an autonomous run can't fan out without a human.
+- Child is a **first-class run** with its own run_id + `parent_run_id`
+  linkage (NOT nested under the parent's dir via agent_n — that ADR 0005
+  refinement is later; nesting here caused a get_run slot mismatch, fixed).
+- Parent stream gets `subagent_spawned` (lifecycle) + `subagent_finished`
+  (result) events.
+**Trial (thorough, after 6+7):** grant a parent `["read_file","spawn_subagent"]`;
+its task spawns a child with `tools:["read_file"]` → both runs appear in
+`/v1/agent/runs` (child has `parent_run_id`), parent result embeds child
+result, parent stream shows `subagent_spawned`/`subagent_finished`. Negatives:
+child requesting `["write_file"]` (off-parent) → spawn refused, no child run;
+child requesting an off-parent egress host → refused; denying consent → no
+child; confirm a child can't itself spawn (no `spawn_subagent` offered to it).
 
 ### Inc 8 — /v1/tokens + per-run authz
 **Capability:** only the owning session/token may read a run's monitor

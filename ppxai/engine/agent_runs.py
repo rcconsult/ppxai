@@ -62,13 +62,17 @@ class RunMeta:
 
     run_id: str
     task: str
-    status: str = "pending"  # pending | running | completed | failed (grows in Inc 2/6)
+    # pending | running | cancelling | completed | failed | cancelled |
+    # interrupted (Inc 6 adds cancelling/cancelled/interrupted)
+    status: str = "pending"
     agent_n: int = 0  # slot index; 0 = top-level run, >0 = sub-agents (Inc 7)
     parent_run_id: Optional[str] = None  # set for sub-agents (Inc 7)
     provider: Optional[str] = None
     model: Optional[str] = None
     tools: list[str] = field(default_factory=list)  # the grant (enforced in Inc 4)
     network: list = field(default_factory=list)  # egress allow_outbound (enforced in Inc 5); provenance/audit on disk
+    budget: dict = field(default_factory=dict)  # Inc 6: {tokens?, time_s?, iterations?} caps; absent key = no cap on that axis
+    resumable: bool = False  # Inc 6: True when a non-terminal stop (cancel/interrupt) left state a future resume could pick up
     created_at: float = 0.0
     started_at: Optional[float] = None  # set when execution begins (Inc 2 background)
     finished_at: Optional[float] = None
@@ -253,6 +257,76 @@ class FilesystemAgentRunStore:
 
 
 # ---------------------------------------------------------------------------
+# Run control — cooperative cancel + budget caps (Inc 6)
+# ---------------------------------------------------------------------------
+
+
+class RunStopped(Exception):
+    """Base for a non-error, non-completion stop of a run (Inc 6).
+
+    Unlike a failure, these are *expected* terminal/non-terminal stops the
+    runner raises (or `check_control` raises into it) so `run_in_background`
+    records the right status instead of `failed`. `resumable` marks whether a
+    future resume could meaningfully pick up (conditional-resume, ADR #5).
+    """
+
+    status = "failed"      # subclasses override
+    resumable = False
+
+    def __init__(self, reason: str) -> None:
+        super().__init__(reason)
+        self.reason = reason
+
+
+class RunCancelled(RunStopped):
+    """The owner asked to cancel via POST .../cancel. Terminal, resumable —
+    the run stopped cooperatively at a checkpoint, not mid-tool-call."""
+
+    status = "cancelled"
+    resumable = True
+
+
+class RunBudgetExceeded(RunStopped):
+    """A budget cap (iterations/time/tokens) was hit. Terminal, resumable —
+    the work so far is intact; a resume with a larger budget could continue."""
+
+    status = "interrupted"
+    resumable = True
+
+
+@dataclass
+class RunControl:
+    """Per-run cooperative control the runner polls between iterations.
+
+    The registry owns one of these per in-flight run. `cancel_run` flips
+    `cancel_requested`; the runner calls `check()` at each loop boundary,
+    which raises `RunCancelled` / `RunBudgetExceeded` when it should stop.
+    Cooperative (not task.cancel()) so a stop lands at a clean checkpoint —
+    never mid-tool-call, which could leave a half-written artifact."""
+
+    run_id: str
+    budget: dict = field(default_factory=dict)
+    started_at: float = 0.0
+    cancel_requested: bool = False
+    iterations: int = 0
+    tokens_used: int = 0
+
+    def check(self, *, now: float) -> None:
+        """Raise if the run should stop. Called at each iteration boundary."""
+        if self.cancel_requested:
+            raise RunCancelled("cancelled by owner")
+        max_iter = self.budget.get("iterations")
+        if max_iter is not None and self.iterations >= max_iter:
+            raise RunBudgetExceeded(f"iteration budget {max_iter} reached")
+        max_time = self.budget.get("time_s")
+        if max_time is not None and self.started_at and (now - self.started_at) >= max_time:
+            raise RunBudgetExceeded(f"time budget {max_time}s reached")
+        max_tok = self.budget.get("tokens")
+        if max_tok is not None and self.tokens_used >= max_tok:
+            raise RunBudgetExceeded(f"token budget {max_tok} reached")
+
+
+# ---------------------------------------------------------------------------
 # Registry service (the behavior over the store)
 # ---------------------------------------------------------------------------
 
@@ -272,6 +346,11 @@ class AgentRunRegistry:
         # doesn't GC a running task mid-flight (asyncio only keeps weak refs).
         # Inc 2: fire-and-track. Cancel-by-id + shutdown drain land in Inc 6.
         self._tasks: set[asyncio.Task] = set()
+        # Inc 6: per-run task + cooperative control, keyed by run_id, so
+        # cancel-by-id can find the in-flight run and flip its control flag.
+        # Entries are removed when the run finishes.
+        self._run_tasks: dict[str, asyncio.Task] = {}
+        self._controls: dict[str, RunControl] = {}
         # Inc 3: per-run monotonic event seq + live subscribers (asyncio
         # Queues) for the SSE tail. Persisted events are the source of truth;
         # subscribers are a fan-out for live delivery only.
@@ -293,6 +372,7 @@ class AgentRunRegistry:
         model: Optional[str] = None,
         parent_run_id: Optional[str] = None,
         network: Optional[list] = None,
+        budget: Optional[dict] = None,
     ) -> RunMeta:
         """Mint a run, persist it in `pending` state, return its meta.
 
@@ -308,6 +388,7 @@ class AgentRunRegistry:
             status="pending",
             tools=list(tools or []),
             network=list(network or []),
+            budget=dict(budget or {}),
             provider=provider,
             model=model,
             parent_run_id=parent_run_id,
@@ -324,15 +405,43 @@ class AgentRunRegistry:
         status: str,
         result: Optional[str] = None,
         error: Optional[str] = None,
+        resumable: bool = False,
     ) -> RunMeta:
-        """Mark a run terminal (completed/failed) and persist."""
+        """Mark a run terminal (completed/failed/cancelled/interrupted) and persist."""
         meta.status = status
         meta.result = result
         meta.error = error
+        meta.resumable = resumable
         meta.finished_at = time.time()
         self._store.persist_meta(meta)
         logger.info(f"Agent run {meta.run_id} -> {status}")
         return meta
+
+    def get_control(self, run_id: str) -> "Optional[RunControl]":
+        """The in-flight run's cooperative control, or None if not running.
+        The runner uses this to poll budget/cancel at each iteration boundary."""
+        return self._controls.get(run_id)
+
+    def cancel_run(self, run_id: str) -> bool:
+        """Request cooperative cancellation of an in-flight run (Inc 6).
+
+        Flips the run's control flag and moves it to `cancelling`; the runner
+        observes it at the next `check()` and raises `RunCancelled`, so the
+        stop lands at a clean checkpoint (never mid-tool-call). Returns False
+        if the run isn't in flight (already terminal / unknown)."""
+        control = self._controls.get(run_id)
+        if control is None:
+            return False
+        control.cancel_requested = True
+        meta = self._store.load_meta(run_id)
+        if meta is not None and meta.status == "running":
+            meta.status = "cancelling"
+            self._store.persist_meta(meta)
+            self.emit_event(
+                run_id, "agent_run_cancelling", level="warning",
+                category="lifecycle", data={"reason": "cancel requested by owner"},
+            )
+        return True
 
     def run_in_background(
         self,
@@ -347,14 +456,26 @@ class AgentRunRegistry:
         the result body. On success the run is finished `completed` with
         that body; on any exception it's finished `failed` with the error.
 
-        Fire-and-track: the task is held in `self._tasks` so it isn't GC'd,
-        and removed on completion. The caller (route) returns immediately
-        after this returns — it does NOT await the task. Cancel-by-id and
-        graceful-shutdown drain are Inc 6.
+        Fire-and-track: the task is held in `self._tasks` (and, keyed by id,
+        in `self._run_tasks`) so it isn't GC'd, and removed on completion. The
+        caller returns immediately — it does NOT await the task. Inc 6: a
+        cooperative `RunControl` is registered so cancel-by-id / budget caps
+        can stop the run at a clean checkpoint; `RunStopped` subclasses map to
+        cancelled/interrupted statuses instead of `failed`.
         """
         meta.status = "running"
         meta.started_at = time.time()
         self._store.persist_meta(meta)
+        # Inc 6: register the cooperative control so cancel/budget can reach
+        # this run. The runner polls registry.get_control(run_id).check(...).
+        # started_at here is MONOTONIC (for the time_s budget) — distinct from
+        # meta.started_at (wall-clock, for display); check() is passed
+        # time.monotonic() to match.
+        control = RunControl(
+            run_id=meta.run_id, budget=dict(meta.budget or {}),
+            started_at=time.monotonic(),
+        )
+        self._controls[meta.run_id] = control
         self.emit_event(
             meta.run_id, "agent_run_start", level="info", category="lifecycle",
             data={"task": meta.task, "provider": meta.provider, "model": meta.model},
@@ -368,6 +489,19 @@ class AgentRunRegistry:
                     meta.run_id, "agent_run_complete", level="info",
                     category="result", data={"chars": len(body or "")},
                 )
+            except RunStopped as stop:
+                # Expected non-failure stop (cancel / budget). Record the
+                # subclass's status + resumable flag, not `failed`.
+                logger.info(f"Agent run {meta.run_id} stopped: {stop.status} ({stop.reason})")
+                self.finish_run(
+                    meta, status=stop.status, error=stop.reason,
+                    resumable=stop.resumable,
+                )
+                self.emit_event(
+                    meta.run_id, f"agent_run_{stop.status}", level="warning",
+                    category="lifecycle",
+                    data={"reason": stop.reason, "resumable": stop.resumable},
+                )
             except Exception as exc:  # noqa: BLE001 — record any failure
                 logger.warning(f"Agent run {meta.run_id} failed: {exc}")
                 self.finish_run(meta, status="failed", error=str(exc))
@@ -375,9 +509,13 @@ class AgentRunRegistry:
                     meta.run_id, "agent_run_error", level="error",
                     category="lifecycle", data={"error": str(exc)},
                 )
+            finally:
+                self._controls.pop(meta.run_id, None)
+                self._run_tasks.pop(meta.run_id, None)
 
         task = asyncio.create_task(_drive())
         self._tasks.add(task)
+        self._run_tasks[meta.run_id] = task
         task.add_done_callback(self._tasks.discard)
 
     # --- events (Inc 3) -------------------------------------------------
