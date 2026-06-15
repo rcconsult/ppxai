@@ -193,9 +193,10 @@ it's the natural place to assign `block_index`.
 
 ### Layer 2 — Wire: spec-clean by construction
 
-The producer emits spec-clean blocks. **No sanitizer needed.** Drop the
-v1.18.6 stopgap (`sanitize_content_blocks_for_wire`) once the producer
-is fixed.
+The producer emits spec-clean blocks. **No sanitizer needed** — and none
+shipped. (An earlier draft considered a `sanitize_content_blocks_for_wire`
+stopgap; it was *not* taken — the producer-side fix went in directly, so
+there is nothing to drop. See Status.)
 
 `flatten_uploaded_file_blocks` (R5) keeps doing its job for the
 `uploaded_file` engine-internal block type.
@@ -231,8 +232,8 @@ side-by-side. The serialize/deserialize path:
   with both fields populated.
 - **Deserialize**: read `attachments`, look up bytes by `file_id`,
   rewrite `content[i]["image_url"]["url"]` back to a data URI.
-- **Backward compat**: when loading a pre-v1.19.x session, detect the
-  legacy "name/file_id inside image_url block" shape, extract them
+- **Backward compat**: when loading a pre-v1.18.6 (v1) session, detect
+  the legacy "name/file_id inside image_url block" shape, extract them
   into a synthesized `attachments` list, and strip them from the
   block. One-shot migration on read; no on-disk format flag needed.
 
@@ -292,7 +293,8 @@ Convert all 5 read sites:
 - `session.py::_rewrite_content_for_deserialize` → write into `attachments`, not block
 
 Sentinel tests for each: same input shape, same output. Fixtures from
-the v1.18.6 stopgap test suite serve as regression baselines.
+the wire-validator sentinels (Step 6, `assert_wire_blocks_clean`) serve
+as regression baselines.
 
 ### Phase 3 — Remove non-spec keys from producers
 
@@ -319,14 +321,14 @@ def test_image_url_blocks_are_spec_clean():
 
 ### Phase 4 — Backward-compat session loader
 
-When loading a session file written by v1.18.x or earlier, the
+When loading a session file written by pre-v1.18.6 (v1), the
 deserialize path detects the legacy shape (`block["name"]` /
 `block["file_id"]` populated, `message["attachments"]` absent) and
 reconstructs an `attachments` list from those keys. One-shot migration
 on first load; subsequent saves use the new shape.
 
-Test fixture: a v1.18.4 session JSON checked into `tests/fixtures/`
-that deserializes correctly under v1.19.x, with `attachments`
+Test fixture: a v1.18.4 (v1) session JSON checked into `tests/fixtures/`
+that deserializes correctly under v1.18.6+, with `attachments`
 populated and content blocks stripped of non-spec keys.
 
 ## Migration plan revision (2026-05-15)
@@ -803,10 +805,10 @@ Three forcing functions overlap on 2026-05-14:
    pattern works.** This ADR codifies the same boundary-translation
    discipline for image_url blocks, completing the pattern.
 
-Capturing the decision now means v1.19.x can implement mechanically
-against a clear plan rather than relitigating shape choices each
-phase. The v1.18.6 stopgap unblocks today's user without taking the
-shortcut as the permanent answer.
+Capturing the decision now means later agent-platform work can implement
+mechanically against a clear plan rather than relitigating shape choices
+each phase. The v1.18.6 producer-side fix ships the clean shape directly —
+no stopgap, no shortcut taken as the permanent answer (see Status).
 
 ## Scope guards
 
