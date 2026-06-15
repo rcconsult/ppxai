@@ -59,8 +59,8 @@ runnable steps. Each is one PR-sized increment on
 `feat/agent-platform-stage-2`, gated per rule 2.
 
 > **INCREMENT STATUS** (update as we go):
-> - [ ] Inc 1 — minimal run lifecycle (start/list/get, synchronous, filesystem)
-> - [ ] Inc 2 — background execution + live status
+> - [x] Inc 1 — minimal run lifecycle (start/list/get, synchronous, filesystem) — merged `0f54f55d`
+> - [~] Inc 2 — background execution + live status — built, awaiting trial
 > - [ ] Inc 3 — events.jsonl + GET …/events (replay, then SSE)
 > - [ ] Inc 4 — capability grant + tool allowlist (AC-1 sandbox seam)
 > - [ ] Inc 5 — egress allowlist + NETWORK_POLICY_* (AC-2 ship-gate)

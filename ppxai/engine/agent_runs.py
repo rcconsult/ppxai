@@ -31,13 +31,14 @@ exposes only the three methods Inc 1 uses; later increments ADD methods
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 import secrets
 import time
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Optional, Protocol
+from typing import Any, Awaitable, Callable, Optional, Protocol
 
 from ..common.logger import get_logger
 
@@ -68,6 +69,7 @@ class RunMeta:
     model: Optional[str] = None
     tools: list[str] = field(default_factory=list)  # the grant (enforced in Inc 4)
     created_at: float = 0.0
+    started_at: Optional[float] = None  # set when execution begins (Inc 2 background)
     finished_at: Optional[float] = None
     result: Optional[str] = None  # synchronous result body (Inc 1); refs in Inc 5
     error: Optional[str] = None
@@ -181,6 +183,10 @@ class AgentRunRegistry:
 
     def __init__(self, store: AgentRunStore) -> None:
         self._store = store
+        # In-flight background tasks. We hold strong refs so the event loop
+        # doesn't GC a running task mid-flight (asyncio only keeps weak refs).
+        # Inc 2: fire-and-track. Cancel-by-id + shutdown drain land in Inc 6.
+        self._tasks: set[asyncio.Task] = set()
 
     @staticmethod
     def _new_run_id() -> str:
@@ -235,6 +241,40 @@ class AgentRunRegistry:
         self._store.persist_meta(meta)
         logger.info(f"Agent run {meta.run_id} -> {status}")
         return meta
+
+    def run_in_background(
+        self,
+        meta: RunMeta,
+        runner: "Callable[[RunMeta], Awaitable[str]]",
+    ) -> None:
+        """Drive a run to completion in a background asyncio task (Inc 2).
+
+        Flips the run to `running` and persists it, then schedules
+        `runner(meta)` — an async callable that performs the actual work
+        (the route supplies one that calls `provider.oneshot`) and returns
+        the result body. On success the run is finished `completed` with
+        that body; on any exception it's finished `failed` with the error.
+
+        Fire-and-track: the task is held in `self._tasks` so it isn't GC'd,
+        and removed on completion. The caller (route) returns immediately
+        after this returns — it does NOT await the task. Cancel-by-id and
+        graceful-shutdown drain are Inc 6.
+        """
+        meta.status = "running"
+        meta.started_at = time.time()
+        self._store.persist_meta(meta)
+
+        async def _drive() -> None:
+            try:
+                body = await runner(meta)
+                self.finish_run(meta, status="completed", result=body)
+            except Exception as exc:  # noqa: BLE001 — record any failure
+                logger.warning(f"Agent run {meta.run_id} failed: {exc}")
+                self.finish_run(meta, status="failed", error=str(exc))
+
+        task = asyncio.create_task(_drive())
+        self._tasks.add(task)
+        task.add_done_callback(self._tasks.discard)
 
     def get_run(self, run_id: str) -> Optional[RunMeta]:
         return self._store.load_meta(run_id)

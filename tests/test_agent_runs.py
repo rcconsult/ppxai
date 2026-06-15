@@ -114,6 +114,50 @@ class TestAgentRunRegistry:
 
 
 # ---------------------------------------------------------------------------
+# Background execution (Inc 2)
+# ---------------------------------------------------------------------------
+
+
+class TestRunInBackground:
+    @pytest.mark.asyncio
+    async def test_runs_to_completion(self, registry):
+        import asyncio
+
+        m = registry.start_run("t")
+
+        async def runner(meta):
+            return "the result"
+
+        registry.run_in_background(m, runner)
+        # status flips to running immediately, started_at set
+        assert m.status == "running" and m.started_at is not None
+        # let the background task finish
+        for _ in range(50):
+            if registry.get_run(m.run_id).status == "completed":
+                break
+            await asyncio.sleep(0.01)
+        got = registry.get_run(m.run_id)
+        assert got.status == "completed" and got.result == "the result"
+
+    @pytest.mark.asyncio
+    async def test_runner_exception_marks_failed(self, registry):
+        import asyncio
+
+        m = registry.start_run("t")
+
+        async def runner(meta):
+            raise RuntimeError("kaboom")
+
+        registry.run_in_background(m, runner)
+        for _ in range(50):
+            if registry.get_run(m.run_id).status == "failed":
+                break
+            await asyncio.sleep(0.01)
+        got = registry.get_run(m.run_id)
+        assert got.status == "failed" and "kaboom" in got.error
+
+
+# ---------------------------------------------------------------------------
 # /v1/agent/* routes (provider call bypassed)
 # ---------------------------------------------------------------------------
 
@@ -162,10 +206,22 @@ class TestAgentRunRoutes:
         assert resp.status_code == 400
         assert reg.list_runs() == []
 
-    def test_happy_path_creates_and_completes_run(self, client, monkeypatch):
-        # Full POST flow with the LLM call stubbed: a fake OpenAI-compatible
-        # provider returns a canned oneshot result. Asserts the run is created,
-        # executed, marked completed with the result, and persisted.
+    @staticmethod
+    def _poll_terminal(c, run_id, timeout_s=5.0):
+        """Poll GET until the run reaches a terminal status (Inc 2 is async)."""
+        import time as _t
+
+        deadline = _t.monotonic() + timeout_s
+        while _t.monotonic() < deadline:
+            one = c.get(f"/v1/agent/runs/{run_id}").json()
+            if one["status"] in ("completed", "failed"):
+                return one
+            _t.sleep(0.02)
+        raise AssertionError(f"run {run_id} did not finish: last={one}")
+
+    def test_happy_path_background_run_completes(self, client, monkeypatch):
+        # Inc 2: POST returns immediately with status='running'; the run then
+        # completes in the background. Poll to terminal, assert result+grant.
         c, reg = client
         from ppxai.server.routes import agent_v1
         from ppxai.engine.providers.openai_compat import OpenAICompatibleProvider
@@ -185,19 +241,18 @@ class TestAgentRunRoutes:
         resp = c.post("/v1/agent/run", json={"task": "ping", "tools": ["read_file"]})
         assert resp.status_code == 200
         body = resp.json()
-        assert body["status"] == "completed"
+        assert body["status"] == "running"  # Inc 2: instant, not yet done
         run_id = body["run_id"]
 
-        # persisted + fetchable with the result + recorded grant
-        one = c.get(f"/v1/agent/runs/{run_id}").json()
+        one = self._poll_terminal(c, run_id)
         assert one["status"] == "completed"
         assert one["result"] == "echo: ping"
         assert one["tools"] == ["read_file"]
         assert one["provider"] == "fakeprov" and one["model"] == "fakemodel"
+        assert one["started_at"] is not None  # set when background exec began
 
     def test_provider_failure_marks_run_failed(self, client, monkeypatch):
-        # If the LLM call raises, the run is recorded as failed (not lost) and
-        # the POST still returns 200 with status=failed (the run exists).
+        # If the background LLM call raises, the run ends 'failed' (not lost).
         c, reg = client
         from ppxai.server.routes import agent_v1
         from ppxai.engine.providers.openai_compat import OpenAICompatibleProvider
@@ -216,24 +271,22 @@ class TestAgentRunRoutes:
 
         resp = c.post("/v1/agent/run", json={"task": "ping"})
         assert resp.status_code == 200
-        run_id = resp.json()["run_id"]
-        one = c.get(f"/v1/agent/runs/{run_id}").json()
+        assert resp.json()["status"] == "running"
+        one = self._poll_terminal(c, resp.json()["run_id"])
         assert one["status"] == "failed"
         assert "upstream 503" in one["error"]
 
-    def test_unsupported_provider_400_marks_failed(self, client, monkeypatch):
-        # A non-OpenAI-compatible provider -> 400, and the run is recorded
-        # failed (honest record), not left dangling as pending.
+    def test_unsupported_provider_400_no_run_created(self, client, monkeypatch):
+        # Inc 2: the carve-out now runs BEFORE minting, so an unsupported
+        # provider -> 400 and NO run is created (cleaner than Inc 1's
+        # create-then-fail; nothing is backgrounded).
         c, reg = client
         from ppxai.server.routes import agent_v1
 
         monkeypatch.setattr(agent_v1, "get_default_provider", lambda: "fakeprov")
         monkeypatch.setattr(agent_v1, "get_default_model", lambda p: "fakemodel")
-        # _build_provider returns something that's NOT an OpenAICompatibleProvider
         monkeypatch.setattr(agent_v1, "_build_provider", lambda name: object())
 
         resp = c.post("/v1/agent/run", json={"task": "ping"})
         assert resp.status_code == 400
-        # the run was created then marked failed
-        runs = reg.list_runs()
-        assert len(runs) == 1 and runs[0].status == "failed"
+        assert reg.list_runs() == []  # no orphan run

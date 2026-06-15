@@ -120,7 +120,51 @@ Later increments ADD to this Protocol (no reshape):
 
 ---
 
-<!-- Inc 2+ sections appended here as they land. Template:
+## Increment 2 — background execution + live status
+
+Changed: `engine/agent_runs.py` (added `run_in_background` + `_tasks` set +
+`RunMeta.started_at`), `server/routes/agent_v1.py` (POST no longer awaits
+the LLM call). **Execution model change: synchronous → background.** GET
+endpoints unchanged (they already read from the store; now they observe
+`running` mid-flight). Store Protocol unchanged this increment.
+
+### `POST /v1/agent/run` — create + execute in background
+
+```
+create_agent_run(req)                                  [routes/agent_v1.py]
+├─ get_agent_run_registry()
+├─ provider/model resolution → 400 if missing          [config/providers.py]
+├─ _build_provider(provider_name)                      [routes/oneshot.py]
+│   └─ → 400 (no run created) if unknown / not OpenAICompatibleProvider
+│       ↑ carve-out now runs BEFORE minting (Inc 1 minted-then-failed)
+├─ registry.start_run(...)                  → RunMeta(status="pending"), persist
+├─ registry.run_in_background(meta, _runner)           [engine/agent_runs.py]
+│   ├─ meta.status="running"; meta.started_at=now; store.persist_meta
+│   ├─ task = asyncio.create_task(_drive())   ; self._tasks.add(task)
+│   │   └─ _drive(): await _runner(meta)
+│   │        ├─ ok  → finish_run("completed", result=body) → persist
+│   │        └─ exc → finish_run("failed", error=str) → persist
+│   └─ task.add_done_callback(self._tasks.discard)
+│       (_runner = asyncio.to_thread(provider.oneshot, ...) — blocking
+│        call runs off the event loop so GET polls aren't starved)
+└─ return AgentRunResponse(run_id, status="running")   ← INSTANT, no await
+```
+
+The POST returns while `_drive` runs concurrently. The run's terminal
+state is observed by polling `GET /v1/agent/runs/<id>` (below, unchanged).
+`self._tasks` holds a strong ref so the loop doesn't GC the in-flight
+task; the done-callback removes it. Cancel-by-id + shutdown drain = Inc 6.
+
+### `GET /v1/agent/runs` / `GET /v1/agent/runs/{run_id}`
+
+Unchanged from Inc 1 (registry → store → disk). They now return
+`status:"running"` for an in-flight run and the terminal status once
+`_drive` has called `finish_run`. `started_at` is populated once
+background execution begins.
+
+---
+
+<!-- Inc 3+ sections appended here as they land. Template:
 ## Increment N — <title>
 Added/changed: <files>. Execution model change: <if any>.
 ### <METHOD /path> — <what>

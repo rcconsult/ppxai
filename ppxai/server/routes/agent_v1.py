@@ -7,14 +7,15 @@ module is the HTTP surface over `engine.agent_runs.AgentRunRegistry`:
     GET  /v1/agent/runs       → list all runs
     GET  /v1/agent/runs/<id>  → fetch one run's meta
 
-**Increment 1 (intentionally minimal):** the run executes
-**synchronously** — `POST /v1/agent/run` blocks until the task completes,
-then returns the terminal status. This keeps Inc 1 free of background-task
-machinery while still being a real, curl-able capability. Inc 2 moves
-execution to a background `asyncio.Task` so the POST returns immediately
-with `status:"running"`.
+**Increment 2:** the run executes in the **background**. `POST
+/v1/agent/run` validates + builds the provider synchronously (so a bad
+provider still 400s up front), mints the run, fires execution into a
+background `asyncio.Task`, and returns immediately with
+`status:"running"`. Poll `GET /v1/agent/runs/<id>` to watch the status
+flip to `completed`/`failed`. The blocking `provider.oneshot` call runs
+off the event loop via `asyncio.to_thread`.
 
-NOT yet (later increments, additively): background exec (Inc 2),
+NOT yet (later increments, additively):
 events.jsonl + SSE (Inc 3), capability/tool enforcement (Inc 4 — the
 `tools` grant is recorded but not enforced), egress policy (Inc 5),
 budgets/cancel (Inc 6), sub-agents (Inc 7), per-run authz (Inc 8).
@@ -26,6 +27,7 @@ needs a `/v2`.
 
 from __future__ import annotations
 
+import asyncio
 from typing import Any, Optional
 
 from fastapi import APIRouter, HTTPException
@@ -81,6 +83,7 @@ class RunMetaResponse(BaseModel):
     model: Optional[str] = None
     tools: list[str] = Field(default_factory=list)
     created_at: float = 0.0
+    started_at: Optional[float] = None
     finished_at: Optional[float] = None
     result: Optional[str] = None
     error: Optional[str] = None
@@ -96,6 +99,7 @@ class RunMetaResponse(BaseModel):
             model=m.model,
             tools=list(m.tools),
             created_at=m.created_at,
+            started_at=m.started_at,
             finished_at=m.finished_at,
             result=m.result,
             error=m.error,
@@ -120,7 +124,13 @@ class RunListResponse(BaseModel):
 
 @router.post("/run", response_model=AgentRunResponse)
 async def create_agent_run(req: AgentRunRequest) -> AgentRunResponse:
-    """Create a run and execute it synchronously (Inc 1). See module docstring."""
+    """Create a run and execute it in the background (Inc 2).
+
+    Validation + provider build happen synchronously (so a bad provider
+    still gets a 400 up front), then the run is fired into a background
+    task and the POST returns immediately with status='running'. Poll
+    GET /v1/agent/runs/<id> to watch it flip to completed/failed.
+    """
     registry = get_agent_run_registry()
 
     provider_name = req.provider or get_default_provider()
@@ -136,19 +146,11 @@ async def create_agent_run(req: AgentRunRequest) -> AgentRunResponse:
             detail=f"No model specified and no default_model for provider {provider_name!r}.",
         )
 
-    meta = registry.start_run(
-        task=req.task, tools=req.tools, provider=provider_name, model=model
-    )
-
-    # --- synchronous execution (Inc 1) ---------------------------------
+    # Build the provider + apply the v1 carve-out BEFORE minting/backgrounding,
+    # so an unsupported provider fails fast with 400 and creates no run.
+    # (_build_provider raises HTTPException 400 on unknown provider / no key.)
     provider = _build_provider(provider_name)
     if not isinstance(provider, OpenAICompatibleProvider):
-        # Mirror oneshot's v1 carve-out. Mark the run failed so the record
-        # is honest, then surface the same 400.
-        registry.finish_run(
-            meta, status="failed",
-            error=f"Provider {provider_name!r} not supported by v1 agent runs yet.",
-        )
         raise HTTPException(
             status_code=400,
             detail=(
@@ -157,15 +159,19 @@ async def create_agent_run(req: AgentRunRequest) -> AgentRunResponse:
             ),
         )
 
-    try:
-        result = provider.oneshot(prompt=req.task, model=model, system=req.system)
-        meta = registry.finish_run(
-            meta, status="completed", result=result.get("content", "")
-        )
-    except Exception as e:  # noqa: BLE001 — record any failure on the run
-        logger.warning(f"Agent run {meta.run_id} failed: {e}")
-        meta = registry.finish_run(meta, status="failed", error=str(e))
+    meta = registry.start_run(
+        task=req.task, tools=req.tools, provider=provider_name, model=model
+    )
 
+    async def _runner(m) -> str:
+        # provider.oneshot is blocking I/O — run it off the event loop so
+        # other requests (e.g. GET status polls) aren't starved.
+        result = await asyncio.to_thread(
+            provider.oneshot, prompt=req.task, model=model, system=req.system
+        )
+        return result.get("content", "")
+
+    registry.run_in_background(meta, _runner)
     return AgentRunResponse(run_id=meta.run_id, status=meta.status)
 
 
