@@ -8,6 +8,7 @@ from fastapi import APIRouter
 
 from . import (
     agent,
+    agent_v1,
     chat,
     checkpoints,
     commands,
@@ -48,5 +49,6 @@ all_routers: list[APIRouter] = [
     schema.router,      # v1.17.4: GET /schema/app-state — canonical DTO
     state.router,       # v1.18.0: GET /state — snapshot for SSE reconnect sync
     oneshot.router,     # v1.18.3: POST /v1/oneshot — stateless gateway primitive
+    agent_v1.router,    # v1.19.0: /v1/agent/* — agent run registry (ADR 0003 Stage 2, Inc 1)
     static.router,
 ]

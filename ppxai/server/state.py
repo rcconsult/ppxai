@@ -175,6 +175,25 @@ def get_server_start_time() -> float:
     return _server_start_time
 
 
+# Agent run registry singleton (v1.19.0, ADR 0003 Stage 2 — Inc 1).
+# Lazy: built on first access, backed by ~/.ppxai/runs/. Routes reach it
+# via get_agent_run_registry() (same accessor pattern as the session
+# manager). Mirrors the FilesystemAgentRunStore behind the AgentRunStore
+# Protocol so a future Item 35 backend swaps in here, not at call sites.
+_agent_run_registry = None
+
+
+def get_agent_run_registry():
+    """Get (lazily construct) the agent run registry singleton."""
+    global _agent_run_registry
+    if _agent_run_registry is None:
+        from ..config.loader import PPXAI_HOME
+        from ..engine.agent_runs import AgentRunRegistry, FilesystemAgentRunStore
+        store = FilesystemAgentRunStore(PPXAI_HOME / "runs")
+        _agent_run_registry = AgentRunRegistry(store)
+    return _agent_run_registry
+
+
 def is_path_allowed(target: Path, base: Path) -> bool:
     """Check if target is within base's tree (parent or child)."""
     try:

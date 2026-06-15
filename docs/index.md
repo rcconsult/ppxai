@@ -150,3 +150,4 @@ Python 3.11+, pytest for testing.
 - [Releases](https://github.com/rcconsult/ppxai/releases)
 - [Issue Tracker](https://github.com/rcconsult/ppxai/issues)
 - [Changelog](https://github.com/rcconsult/ppxai/blob/master/CHANGELOG.md)
+- [Documentation Index](README.md) — full technical-reference list (architecture, [agent-platform call graphs](agent-platform-call-graphs.md), patterns, release notes)

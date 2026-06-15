@@ -30,10 +30,27 @@ built and merged:
    → disk), not horizontal layers integrated at the end. ADR 0003's
    build order is layered; the increments below re-slice it vertically so
    increment 1 is already curl-able.
+4. **Shape the seams early, grow interfaces additively.** A vertical
+   slice may need a structural piece earlier than its "own" increment
+   (e.g. the `AgentRunStore` Protocol seam in Inc 1, though SQLite/Item 35
+   is deferred) — bring it, so the MVP is correctly shaped and we never
+   retrofit a contract under existing callers. But keep each interface
+   **minimal**: ship only the methods the current increment uses; later
+   increments **add** methods to the same Protocol/contract. Additive
+   growth is fine and expected; a breaking reshape is the thing to avoid.
+   (User-confirmed 2026-06-15: "if the interfaces can be additive over
+   the course of implementation I see no issue with it.")
 
 **Trial surface:** HTTP API. Canonical loop for every increment:
 `uv run ppxai-server` → `curl` the new/changed `/v1/agent/*` endpoint →
 observe response + on-disk `~/.ppxai/runs/<run_id>/`.
+
+**Per-increment deliverables (every increment ships all of these):**
+1. Code + tests.
+2. "How to trial" recipe (in the hand-off).
+3. **Call-graph update** — add/amend the increment's section in
+   [agent-platform-call-graphs.md](agent-platform-call-graphs.md) in the
+   same commit. Reference map for future debugging/refactoring.
 
 ## Active this iteration — vertical-slice increments (in order)
 

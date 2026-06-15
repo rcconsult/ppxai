@@ -32,6 +32,7 @@
 | Document | Description |
 |----------|-------------|
 | [Architecture](architecture.md) | Module hierarchy, import patterns, transactional state |
+| [Agent Platform Call Graphs](agent-platform-call-graphs.md) | Per-increment endpoint call graphs for `/v1/agent/*` (ADR 0003 Stage 2) — debugging/refactoring reference |
 | [DGX Spark Setup](dgx-spark-setup.md) | vLLM + Ollama on NVIDIA DGX Spark |
 | [vLLM Tool Calling](vllm-tool-calling-guide.md) | Hermes vs Harmony, native vs prompt-based |
 | [Prompt-Based Tool Calling](prompt-based-tool-calling.md) | Developer guide for non-native tool calling |
