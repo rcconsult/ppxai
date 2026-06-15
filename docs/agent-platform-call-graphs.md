@@ -291,8 +291,11 @@ create_agent_task(req)                                 [routes/agent_v1.py]
 Two layers, both required:
 
 1. OFFERED set filtered to the grant (model never SEES off-grant tools):
-   get_tools_openai_format / get_available_tools / list_tools / get_tool
-   → only names in grant.
+   get_tools_openai_format / get_available_tools / list_tools / get_tool /
+   get_tools_prompt → only names in grant. (get_tools_prompt is the
+   prompt-based / native-fallback path — it re-renders the base prompt BOUND
+   to the scoped manager so it enumerates only granted tools, and strips the
+   shell-wrapper context unless a shell tool is granted. Part of AC-1.)
 
 2. execute_tool CHOKEPOINT (the AC-1 invariant — backstop):
    execute_tool(name):

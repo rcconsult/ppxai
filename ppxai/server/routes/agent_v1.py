@@ -286,6 +286,18 @@ async def create_agent_task(req: AgentTaskRequest) -> AgentRunResponse:
                     m.run_id, "tool_call", level="debug", category="tool",
                     data={"tool": name},
                 )
+            elif event.type in (EventType.ERROR, EventType.PROVIDER_THROTTLED):
+                # The engine reports provider/config failures as EVENTS, not
+                # exceptions — chat() yields ERROR ("No provider", auth, network)
+                # or PROVIDER_THROTTLED (429/403) and returns normally. If we
+                # only watched STREAM_END, run_in_background would see a clean
+                # return and mark the run COMPLETED with an empty result. Raise
+                # so the run finishes FAILED with the provider's message.
+                d = event.data
+                msg = d.get("message") if isinstance(d, dict) else str(d)
+                raise RuntimeError(
+                    f"{event.type.value}: {msg or 'provider call failed'}"
+                )
             elif event.type == EventType.STREAM_END and event.data is not None:
                 d = event.data
                 text = d.get("content", "") if isinstance(d, dict) else str(d)

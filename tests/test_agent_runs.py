@@ -517,6 +517,54 @@ class TestAgentRunRoutes:
         call = next((e for e in evs if e["type"] == "tool_call"), None)
         assert call is not None and call["data"]["tool"] == "read_file"  # name not empty
 
+    def test_task_provider_error_fails_run(self, client, monkeypatch):
+        # codex MEDIUM: the engine reports provider/config failures as
+        # EVENTS (EventType.ERROR / PROVIDER_THROTTLED), not exceptions —
+        # chat() yields one and returns normally. The runner must turn that
+        # into a FAILED run, not a clean completed-empty run (which would
+        # silently mask provider outages as successful empty answers).
+        c, _reg = client
+        from ppxai.server.routes import agent_v1
+        from ppxai.engine.types import Event, EventType
+        from ppxai.engine.providers.openai_compat import OpenAICompatibleProvider
+
+        class _P(OpenAICompatibleProvider):
+            def __init__(self): pass
+        monkeypatch.setattr(agent_v1, "_build_provider", lambda name: _P())
+
+        class _BaseTM:
+            max_iterations = 3
+            async def execute_tool(self, name, **kw): return "ran"
+
+        class _StubEngine:
+            def __init__(self): self.tool_manager = _BaseTM()
+            def set_provider(self, p): pass
+            def set_model(self, m): pass
+            def enable_tools(self): pass
+            async def chat(self, task, stream=False):
+                # provider blew up mid-call — engine surfaces it as an event
+                yield Event(
+                    type=EventType.ERROR,
+                    data={"message": "upstream 500 from provider"},
+                )
+
+        stub = _StubEngine()
+        import ppxai.engine.client as client_mod
+        monkeypatch.setattr(client_mod, "EngineClient", lambda: stub)
+
+        resp = c.post("/v1/agent/task", json={
+            "task": "do it", "tools": ["read_file"],
+            "provider": "p", "model": "m",
+        })
+        assert resp.status_code == 200
+        rid = resp.json()["run_id"]
+        one = self._poll_terminal(c, rid)
+        assert one["status"] == "failed"  # NOT completed
+        assert "upstream 500 from provider" in (one["error"] or "")
+        # and the failure is on the event stream as an error-level event
+        evs = c.get(f"/v1/agent/runs/{rid}/events").json()["events"]
+        assert any(e["type"] == "agent_run_error" for e in evs)
+
     @pytest.mark.asyncio
     async def test_events_live_sse_path(self, client):
         # Inc 3 LOW (codex): exercise the actual ?live=1 SSE generator
