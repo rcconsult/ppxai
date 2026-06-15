@@ -1,7 +1,8 @@
 # Agent Mode User Guide
 
-**Version**: v1.14.2+
+**Applies to**: v1.14.2+ (agent mode introduced v1.13.0; this guide tracks the v1.14.2+ shape)
 **Status**: Production Ready
+**Last verified against**: v1.18.8
 
 This guide explains how to use autonomous agent mode for multi-step task execution. Agent mode works with both **ppxai** (Rich TUI) and **ppxaide** (Textual TUI).
 
@@ -605,5 +606,5 @@ See [Shell Consent Guide](shell-consent-guide.md) for complete documentation.
 
 ---
 
-**Last Updated:** 2026-01-03
-**Version:** v1.13.0
+**Agent mode introduced:** v1.13.0
+**Last verified against:** v1.18.8 (2026-06-15)

@@ -57,9 +57,12 @@ early-startup bug is:
 3. Reproduce the bug on next launch.
 4. `~/.ppxai/logs/tui-debug.log` contains the full decision path.
 
-See [`memory/feedback_session_recovery_ordering.md`](../memory/feedback_session_recovery_ordering.md)
-in the project's auto-memory for the regression pattern this is
-designed to catch.
+The regression pattern this catches: debug-log state is restored inside
+`config.initialize()`, so logging is active **before** any client code
+runs — critical for diagnosing early-startup regressions like silent
+session-recovery failures (where recovery must run before
+provider/model selection). See the "Debug Logging" section of
+[CLAUDE.md](../CLAUDE.md) for the ordering invariant.
 
 ## Disabling it cleanly
 

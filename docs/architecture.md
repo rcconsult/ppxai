@@ -662,9 +662,9 @@ def test_exception_safety():
 This pattern should be applied to:
 - ✅ StatusBar badge management (implemented)
 - ✅ Session state management — `EngineClient.restore_session()` (v1.16.1)
-- ⏳ Context injection (`@file`, `@git`, etc.) (planned)
-- ⏳ File operations with undo (planned)
-- ⏳ Multi-step tool execution (planned)
+- ✅ Context injection (`@file`, `@git`, `@tree`, `@clipboard`, `@url`) — `ContextInjector` in [ppxai/engine/context.py](../ppxai/engine/context.py)
+- ✅ File operations with undo — checkpoint registration before editor writes (`_register_checkpoint_file` in [ppxai/engine/tools/builtin/editor.py](../ppxai/engine/tools/builtin/editor.py))
+- ✅ Multi-step tool execution — the `chat_with_tools` iteration loop + `AGENT_BEAT` emission in [ppxai/engine/chat.py](../ppxai/engine/chat.py)
 
 **Rule:** Any operation that modifies multiple related pieces of state should use this pattern.
 
@@ -679,29 +679,33 @@ The web app (`ppxai/web/`) serves as the UI for `ppxai-desktop` and the browser-
 ```
 ppxai/web/
 ├── index.html                          # Single-page app shell
-├── app.js                              # PpxaiApp root class (~2,100 lines after v1.16.2 refactor)
-├── shared/                             # Framework-level modules
+├── app.js                              # PpxaiApp root class (~3,850 lines as of v1.18.8)
+├── shared/                             # Framework-level modules (flat, not per-group folders)
 │   ├── api-client.js                   # ApiClient — all fetch() calls, timeout, error shape
 │   ├── app-state.js                    # AppState — centralised state with listener notifications
 │   ├── stream-handler.js               # StreamHandler — SSE buffer, RAF rendering, typed events
-│   └── command-dispatcher.js           # CommandDispatcher — slash command routing
-│       commands/                       # Per-group command handlers
-│       ├── file-commands.js            # /show, /edit, /ls, /tree, /cd, /pwd, /preview
-│       ├── session-commands.js         # /save, /load, /sessions, /clear, /export
-│       ├── model-commands.js           # /provider, /model, /tools, /agent
-│       └── …
+│   ├── command-dispatcher.js           # CommandDispatcher — slash command routing
+│   ├── commands.js                     # Slash command handlers (flattened — no per-group commands/ folder)
+│   ├── formatters.js                   # Shared output/value formatters
+│   ├── result-renderer.js              # CommandResult → DOM rendering (incl. CompositeResult)
+│   ├── side-effects.js                 # SideEffectKind handlers (prompt_text, etc.)
+│   └── index.js                        # Barrel re-exports
 ├── components/
 │   ├── file-tree.js                    # FileTreeComponent — collapsible sidebar (v1.16.2)
 │   ├── right-panel-frame.js            # RightPanelFrame — LRU view stack navigator (v1.16.2)
+│   ├── table-viewer.js                 # TableViewer — sortable/filterable data grid
+│   ├── tree-viewer.js                  # TreeViewer — collapsible structured-data tree
 │   └── views/
-│       ├── base-view.js                # BaseView ABC — mount/unmount/getState/setState protocol
+│       ├── base-view.js                # BaseView ABC — mount/unmount/getState/setState + toolbar helpers
 │       ├── code-editor-view.js         # CodeEditorView — CodeMirror 6, unified view/edit
 │       ├── markdown-file-view.js       # MarkdownFileView — rendered / source / edit modes
-│       ├── data-file-view.js           # DataFileView — table/tree for CSV/JSON/YAML/TOML/HCL
+│       ├── data-file-view.js           # DataFileView — table/tree for JSON/YAML/TOML/HCL
+│       ├── office-file-view.js         # OfficeFileView — xlsx/pptx/docx/csv (v1.18.7)
 │       ├── image-file-view.js          # ImageFileView — <img> + click-to-zoom
-│       └── pdf-file-view.js            # PdfFileView — <embed> iframe
+│       ├── pdf-file-view.js            # PdfFileView — <embed> iframe
+│       └── terminal-view.js            # TerminalView — shell/preview output
 └── styles/
-    ├── main.css                        # Global styles
+    ├── data-viewers.css                # Table/tree viewer styles
     ├── file-tree.css                   # Sidebar styles
     └── right-panel-frame.css           # Frame chrome + view styles
 ```

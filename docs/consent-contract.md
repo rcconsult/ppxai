@@ -225,9 +225,11 @@ separate review/hardening:
 
 2. **Plugin/MCP tools** — third-party MCP servers register tools
    with arbitrary semantics. The consent layer doesn't classify
-   them. Plugin authors are responsible for their own prompts. See
-   [`docs/MCP-TRUST-MODEL.md`](MCP-TRUST-MODEL.md) (TODO — not yet
-   written).
+   them. Plugin authors are responsible for their own prompts.
+   (A dedicated `docs/mcp-trust-model.md` is planned but **not yet
+   written** — kept as plain text rather than a link so it doesn't
+   render as a dead reference. Tracks with the MCP Day-0 work in
+   `docs/mcp-integration-plan.md`.)
 
 3. **Engine reload of config** — `engine.reload_config()` re-reads
    `ppxai-config.json` on every chat. A user-edited config takes
