@@ -12,10 +12,121 @@ explicitly defers.
 Land **agent-platform Stage 2** (ADR 0003) — the ppxai-sre-blocking
 substrate. Everything else v1.19.x-tagged is sequenced *after* it.
 
-## Active this iteration (in order)
+## Operating rules (the build contract)
 
-Per ROADMAP "Agent platform Stage 2 + v1 gateway extensions" and ADR
-0003's MVP build order. Keystone first.
+Set by the user 2026-06-15. These govern HOW every increment below is
+built and merged:
+
+1. **Small, testable, always-runnable increments.** Every increment
+   leaves the code runnable and **hands-on trialable right now** via the
+   HTTP API (start `ppxai-server`, `curl` the endpoint) — even when the
+   feature is incomplete. No increment that only "works once the next
+   piece lands." Each carries tests + an explicit "How to trial" recipe.
+2. **Gated progression.** Do NOT start increment N+1 until the user has
+   manually trialed N **and explicitly approved**. Stop and hand off
+   after each increment.
+3. **Sequenced as a vertical-slice MVP.** Order is chosen so each
+   increment adds *visible working capability* end-to-end (wire → engine
+   → disk), not horizontal layers integrated at the end. ADR 0003's
+   build order is layered; the increments below re-slice it vertically so
+   increment 1 is already curl-able.
+
+**Trial surface:** HTTP API. Canonical loop for every increment:
+`uv run ppxai-server` → `curl` the new/changed `/v1/agent/*` endpoint →
+observe response + on-disk `~/.ppxai/runs/<run_id>/`.
+
+## Active this iteration — vertical-slice increments (in order)
+
+Re-slices ROADMAP "Agent platform Stage 2" / ADR 0003 build order into
+runnable steps. Each is one PR-sized increment on
+`feat/agent-platform-stage-2`, gated per rule 2.
+
+> **INCREMENT STATUS** (update as we go):
+> - [ ] Inc 1 — minimal run lifecycle (start/list/get, synchronous, filesystem)
+> - [ ] Inc 2 — background execution + live status
+> - [ ] Inc 3 — events.jsonl + GET …/events (replay, then SSE)
+> - [ ] Inc 4 — capability grant + tool allowlist (AC-1 sandbox seam)
+> - [ ] Inc 5 — egress allowlist + NETWORK_POLICY_* (AC-2 ship-gate)
+> - [ ] Inc 6 — budgets + cancel + conditional-resume checkpoint
+> - [ ] Inc 7 — spawn_subagent (the N=1 sub-agent)
+> - [ ] Inc 8 — /v1/tokens + per-run authz
+> - [ ] Inc 9 — AppState background_agents mirror
+
+### Inc 1 — minimal run lifecycle (synchronous, filesystem)
+**Capability:** create a run, see it on disk, list it, fetch it.
+**Build:** `engine/agent_runs.py::AgentRunRegistry` (start_run / get_run /
+list_runs writing `~/.ppxai/runs/<run_id>/agent-0/{meta.json}`);
+`server/routes/agent_v1.py` with `POST /v1/agent/run` (runs the task
+**synchronously** for now, writes meta, returns `{run_id, status}`),
+`GET /v1/agent/runs`, `GET /v1/agent/runs/<id>`. Mirror `oneshot.py`.
+**Trial:** `curl -XPOST …/v1/agent/run -d '{"task":"say hi","tools":[]}'`
+→ `{run_id}`; `curl …/v1/agent/runs` lists it; `cat
+~/.ppxai/runs/<id>/agent-0/meta.json`.
+**Tests:** registry round-trip; route 200 + run appears in list.
+**Deliberately NOT yet:** background exec, events, sandbox, budgets.
+(Synchronous means the POST blocks till done — fine for trial; Inc 2
+makes it async.)
+
+### Inc 2 — background execution + live status
+**Capability:** POST returns immediately; run executes in the background;
+status transitions RUNNING → COMPLETED visible via GET.
+**Build:** `asyncio.create_task` driver; `state.json` (status, iteration);
+`AGENT_RUN_STARTED` side-effect; status state machine (subset).
+**Trial:** POST returns instantly with `status:"running"`; poll
+`GET …/runs/<id>` → watch it flip to `completed`.
+
+### Inc 3 — events + monitor channel
+**Capability:** see what the run did, live.
+**Build:** append-only `events.jsonl`; `GET …/runs/<id>/events?since=N`
+(replay) then `?live=1` (SSE, mirror existing streaming).
+**Trial:** `curl -N …/runs/<id>/events?live=1` while a run executes.
+
+### Inc 4 — capability grant + tool allowlist (sandbox seam, AC-1)
+**Capability:** a run can only call tools in its grant; others hard-deny.
+**Build:** grant in `meta.json`; enforcement at the tool dispatcher; the
+named **AC-1** test (no granted tool resolves to a direct in-process
+call — route through the adapter seam). Subprocess execution may start as
+a thin shim here.
+**Trial:** POST a run granting only `read_file`; confirm a `write_file`
+attempt is denied in events.
+
+### Inc 5 — egress allowlist + NETWORK_POLICY_* (ship-gate, AC-2)
+**Capability:** outbound network is deny-by-default; allow/deny audited.
+**Build:** `engine/tools/network_policy.py`; `NETWORK_POLICY_DENIED/_ALLOWED`
+events; `network.allow_outbound` in the run spec.
+**Trial:** run with an empty allowlist + a network tool → see DENIED event.
+
+### Inc 6 — budgets + cancel + conditional-resume checkpoint
+**Capability:** runs stop at caps / on cancel; interrupted runs checkpoint.
+**Build:** `meta.json` budgets enforced at `chat_with_tools`;
+`POST …/cancel`; `INTERRUPTED` + the resumability flag in `state.json`
+(conditional-resume per ADR #5 — resume logic itself can be the additive
+follow-up, but the checkpoint + flag land here).
+**Trial:** set a 1-iteration budget → run halts; cancel a running run.
+
+### Inc 7 — spawn_subagent (N=1)
+**Capability:** a run spawns one child run; parent collects its result.
+**Build:** `spawn_subagent` tool (consent-gated), `parent_run_id`,
+`max_concurrent_subagents=1`; child writes artifacts; parent reads result.
+**Trial:** a task that spawns one research sub-agent; inspect both runs.
+
+### Inc 8 — /v1/tokens + per-run authz
+**Capability:** only the owning session/token may read a run's monitor
+channels.
+**Build:** `/v1/tokens` CRUD (pluggable resolver), per-run authz on
+`/events` `/result` `/artifacts` (the C1 cross-user fix, per-run scoped).
+**Trial:** a foreign token gets 403 on someone else's run.
+
+### Inc 9 — AppState background_agents mirror
+**Capability:** UIs show a background-agents badge that survives reconnect.
+**Build:** `background_agents` field in `app_state_schema.json` + 4-mirror
+sync + sentinel test bumps.
+**Trial:** start a run, see the badge in web/VSCode; reconnect, still there.
+
+---
+
+Original layered phase list (ADR 0003 build order) kept below for
+traceability; the increments above are the runnable re-slicing of it.
 
 1. **Phase 1 — ADR 0003 Stage 2 primitives** (`feat/agent-platform-stage-2`)
    `engine/agent_runs.py` `AgentRunRegistry` (keystone) + the
