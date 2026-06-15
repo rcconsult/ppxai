@@ -1,24 +1,35 @@
-"""v1 gateway: agent runs (ADR 0003 Stage 2 — Increment 1).
+"""v1 gateway: agent runs (ADR 0003 Stage 2 — Increments 1–5).
 
 An *agent run* is a durable, addressable execution of an agent task. This
 module is the HTTP surface over `engine.agent_runs.AgentRunRegistry`:
 
-    POST /v1/agent/run        → create + run a task, returns {run_id, status}
-    GET  /v1/agent/runs       → list all runs
-    GET  /v1/agent/runs/<id>  → fetch one run's meta
+    POST /v1/agent/run            → tool-FREE run (oneshot); {run_id, status}
+    POST /v1/agent/task           → tool-CAPABLE, sandboxed run (Inc 4)
+    GET  /v1/agent/runs           → list all runs
+    GET  /v1/agent/runs/<id>      → fetch one run's meta
+    GET  /v1/agent/runs/<id>/events → replay + ?live=1 SSE (Inc 3),
+                                    ?since= / ?min_level= / ?category= filters
 
-**Increment 2:** the run executes in the **background**. `POST
-/v1/agent/run` validates + builds the provider synchronously (so a bad
-provider still 400s up front), mints the run, fires execution into a
-background `asyncio.Task`, and returns immediately with
-`status:"running"`. Poll `GET /v1/agent/runs/<id>` to watch the status
-flip to `completed`/`failed`. The blocking `provider.oneshot` call runs
-off the event loop via `asyncio.to_thread`.
+Execution model: runs execute in the **background** (Inc 2). A POST
+validates + builds the provider synchronously (a bad provider 400s up
+front), mints the run, fires it into a background `asyncio.Task`, and
+returns immediately with `status:"running"`. Poll the meta or tail the
+event stream to watch it reach `completed`/`failed`.
+
+Two tiers:
+- `/run` is tool-FREE (oneshot, safe). Its `tools` field is recorded for
+  provenance but never executed.
+- `/task` is tool-CAPABLE: the grant is ENFORCED by a `ScopedToolManager`
+  (Inc 4 / AC-1 — model sees only granted tools; off-grant `execute_tool`
+  hard-denied) and outbound network is governed by a per-run egress
+  allowlist (Inc 5 / AC-2 — deny-by-default, typed `NETWORK_POLICY_*`
+  events). A shell-execution tool is rejected from a `/task` grant up
+  front (shell escapes the egress allowlist; needs the deferred OS-
+  isolation tier).
 
 NOT yet (later increments, additively):
-events.jsonl + SSE (Inc 3), capability/tool enforcement (Inc 4 — the
-`tools` grant is recorded but not enforced), egress policy (Inc 5),
-budgets/cancel (Inc 6), sub-agents (Inc 7), per-run authz (Inc 8).
+budgets/cancel (Inc 6), sub-agents (Inc 7), per-run authz (Inc 8),
+AppState mirror (Inc 9).
 
 The `/v1/` prefix is the stable gateway boundary (see docs/api-gateway.md):
 adding optional request fields is non-breaking; removing/repurposing
@@ -39,6 +50,7 @@ from ...common.logger import get_logger
 from ...config.tools import get_agent_config
 from ...engine.agent_runs import RunMeta
 from ...engine.providers.openai_compat import OpenAICompatibleProvider
+from ...engine.tools.network_policy import grant_has_shell
 from ..state import get_agent_run_registry
 # Reuse oneshot's provider construction so Inc 1 has zero provider-wiring
 # duplication; the synchronous run IS a oneshot call under the hood.
@@ -85,6 +97,7 @@ class RunMetaResponse(BaseModel):
     provider: Optional[str] = None
     model: Optional[str] = None
     tools: list[str] = Field(default_factory=list)
+    network: list = Field(default_factory=list)
     created_at: float = 0.0
     started_at: Optional[float] = None
     finished_at: Optional[float] = None
@@ -101,6 +114,7 @@ class RunMetaResponse(BaseModel):
             provider=m.provider,
             model=m.model,
             tools=list(m.tools),
+            network=list(getattr(m, "network", []) or []),
             created_at=m.created_at,
             started_at=m.started_at,
             finished_at=m.finished_at,
@@ -209,6 +223,34 @@ class AgentTaskRequest(BaseModel):
     provider: Optional[str] = Field(None, description="Provider (per-run intent).")
     model: Optional[str] = Field(None, description="Model (per-run intent).")
     system: Optional[str] = Field(None, description="Optional system message.")
+    network: Optional["NetworkSpec"] = Field(
+        None,
+        description=(
+            "Per-run egress allowlist (ADR 0003 §3c / AC-2). Outbound network "
+            "from network-capable tools is DENY-BY-DEFAULT: absent or empty "
+            "`allow_outbound` means a granted network tool (web_search, "
+            "fetch_url, get_weather) reaches nothing. Each entry is a host "
+            "string (exact, or `*.suffix` single-label glob) or "
+            "{host, paths:[prefix,...]}."
+        ),
+    )
+
+
+class NetworkSpec(BaseModel):
+    """Egress allowlist spec — ADR 0003 §11 `network{allow_outbound[]}`.
+
+    `allow_outbound` entries are either a bare host string (exact host, any
+    path) or an object `{host, paths?}` where `host` may be `*.suffix` for a
+    single-label suffix-anchored glob and `paths` is a list of path prefixes.
+    """
+
+    allow_outbound: list = Field(
+        default_factory=list,
+        description="Allowed outbound rules; empty = no outbound (fail-closed).",
+    )
+
+
+AgentTaskRequest.model_rebuild()
 
 
 @router.post("/task", response_model=AgentRunResponse)
@@ -222,6 +264,23 @@ async def create_agent_task(req: AgentTaskRequest) -> AgentRunResponse:
     run registry / events / monitor infra with /run.
     """
     registry = get_agent_run_registry()
+
+    # AC-2: a shell-execution tool runs arbitrary commands whose network egress
+    # the allowlist cannot inspect (curl/pip/Invoke-WebRequest/…), so it would
+    # bypass the egress chokepoint entirely. The only tier that can contain it
+    # is OS isolation (ADR 0003 §3 tier-d), deferred past the MVP. Reject the
+    # grant up front with a clear error rather than silently never running it.
+    if grant_has_shell(req.tools):
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "execute_shell_command is not permitted in a tool-capable "
+                "agent run: arbitrary shell escapes the egress allowlist "
+                "(AC-2). It requires the OS-isolation tier (ADR 0003 §3 "
+                "tier-d), which is deferred past the MVP. Use read-only tools "
+                "(read_file, grep, web_search, fetch_url) instead."
+            ),
+        )
 
     sub_defaults = get_agent_config().get("default_subagent", {}) or {}
     provider_name = req.provider or sub_defaults.get("provider")
@@ -246,7 +305,8 @@ async def create_agent_task(req: AgentTaskRequest) -> AgentRunResponse:
         )
 
     meta = registry.start_run(
-        task=req.task, tools=req.tools, provider=provider_name, model=model
+        task=req.task, tools=req.tools, provider=provider_name, model=model,
+        network=(req.network.allow_outbound if req.network else []),
     )
 
     async def _runner(m) -> str:
@@ -256,6 +316,7 @@ async def create_agent_task(req: AgentTaskRequest) -> AgentRunResponse:
         # ScopedToolManager.execute_tool chokepoint denies anything else.
         from ...engine.client import EngineClient
         from ...engine.agent_scoped_tools import ScopedToolManager
+        from ...engine.tools.network_policy import NetworkPolicy
         from ...engine.types import EventType
 
         engine = EngineClient()
@@ -269,8 +330,25 @@ async def create_agent_task(req: AgentTaskRequest) -> AgentRunResponse:
                 data={"tool": name, "grant": list(req.tools)},
             )
 
+        # AC-2: per-run egress allowlist. Always installed for a tool-capable
+        # run — even with no `network` spec, so a granted network tool is
+        # deny-by-default (fail-closed). on_network emits the typed audit event.
+        allow_outbound = req.network.allow_outbound if req.network else []
+        net_policy = NetworkPolicy(allow_outbound)
+
+        def _on_network(allowed: bool, payload: dict) -> None:
+            payload = {**payload, "run_id": m.run_id}
+            registry.emit_event(
+                m.run_id,
+                "network_policy_allowed" if allowed else "network_policy_denied",
+                level="info" if allowed else "warning",
+                category="network",
+                data=payload,
+            )
+
         engine.tool_manager = ScopedToolManager(
-            engine.tool_manager, list(req.tools), on_deny=_on_deny
+            engine.tool_manager, list(req.tools), on_deny=_on_deny,
+            network_policy=net_policy, on_network=_on_network,
         )
 
         final_text: list[str] = []

@@ -340,10 +340,18 @@ agent loop), carried in `meta.json` as the run's grant:
 
 | Tier | Mechanism | MVP |
 |---|---|---|
-| a. **Tool allowlist** | dispatcher denies any tool not in the run's grant (research = `web_search`, `read_file`, `grep`/`find`, read-only `curl`; no shell-write, no `write_file`) | ✅ required |
+| a. **Tool allowlist** | dispatcher denies any tool not in the run's grant (research = `web_search`, `read_file`, `grep`/`find`, `fetch_url`; **no shell tool at all** — see note below — no `write_file`) | ✅ required |
 | b. **Read-path jail** | file/grep ops confined to a subtree, `~/.ppxai/` excluded; extends existing `_within_tree` + cwd-grounding | ✅ required |
 | c. **Egress allowlist** | outbound network via an allowlist proxy; emits `NETWORK_POLICY_DENIED`/`_ALLOWED` (open-decision item 8 / Phase 5) | ✅ required |
 | d. **OS isolation** | tool execution in a separate process (seccomp/namespaces) or **k8s pod** | deferred to untrusted/write agents |
+
+> **Note (resolved 2026-06-16):** the research grant carries **no shell tool**.
+> Network access is via the dedicated `fetch_url` / `web_search` tools, which
+> are governed by the tier-c egress allowlist; an arbitrary shell (`curl`,
+> `pip`, …) cannot be egress-confined without tier-d (deferred), so
+> `/v1/agent/task` rejects a shell grant up front. See open-decision 8's
+> "No shell in /task" landed note. The earlier "read-only `curl`" phrasing is
+> superseded — `curl` is shell and is out of scope for the MVP grant.
 
 ### 4. Tool-execution boundary — subprocess/pod, not the agent runtime
 
@@ -774,6 +782,33 @@ shape.
    The "Phase 5" framing was the ppxai-sre-consumer commitment; the MVP
    pulls it forward. ROADMAP Phase 1 (MVP) and Phase 5 rows to be amended
    so the requirement appears in the first slice.
+   **LANDED (Inc 5):** `engine/tools/network_policy.py` (`NetworkPolicy`,
+   fail-closed, host exact/`*.suffix`-glob + path-prefix, https-only);
+   enforced at the `ScopedToolManager.execute_tool` egress chokepoint for
+   network-capable tools; `network.allow_outbound` in the `/v1/agent/task`
+   request, persisted to `RunMeta.network`. Events fire on the `network`
+   category with the payload above (`allowlist_rule_id` = matched rule index
+   or `null`). Tests: `tests/test_network_policy.py` +
+   `test_task_enforces_egress_end_to_end`.
+   **Superset rule (security review fix, 2026-06-16):** a tool's real egress
+   host can be chosen at call time and is not predictable pre-call
+   (`web_search` → Perplexity/Gemini/DDG fallback; `get_weather` → https/http
+   fallback). `authorize(name, kwargs)` therefore enumerates the tool's FULL
+   set of possible targets (`tool_targets`) and allows only if **every** one
+   passes `check()`. A run allowlisting just DuckDuckGo cannot run
+   `web_search` (it could reach `api.perplexity.ai`); `get_weather` is
+   un-allowlistable under the MVP (http fallback). This was load-bearing:
+   without it, the audit event named the wrong host and a confused-deputy
+   exfil path stayed open.
+   **No shell in /task (security review fix, 2026-06-16):** `execute_shell_
+   command` runs arbitrary commands whose egress the allowlist cannot inspect
+   (a `curl`/`pip` would bypass the chokepoint with no `network_policy_denied`
+   event), so it cannot satisfy AC-2 — only tier-d OS isolation can, which is
+   deferred. The `/v1/agent/task` route rejects a grant containing a shell
+   tool with a 400, and `ScopedToolManager` refuses to execute one whenever an
+   egress policy is active (defense-in-depth). Consistent with §3a's research
+   grant ("no shell-write"). Tests: `test_task_rejects_shell_grant` +
+   `test_shell_denied_under_egress_policy_backstop`.
 9. **C2 — `/v1/tokens` pluggable resolver from day one**
    [LOAD-BEARING for v1.20.x migration cost]. ROADMAP today says
    "`~/.ppxai/tokens.json` (single-machine) OR k8s secret (cluster)" —

@@ -121,6 +121,12 @@ NOOP_EVENTS = {
     EventType.AGENT_RUN_COMPLETE,
     EventType.AGENT_RUN_ERROR,
     EventType.AGENT_ZOMBIE,
+    # NETWORK_POLICY_* (v1.19.0) are agent-RUN audit events: emitted onto a
+    # run's events.jsonl / SSE monitor channel (category=network), consumed by
+    # /v1/agent/runs/<id>/events and ppxai-sre's AuditLogger — NOT the Textual
+    # chat bus. NOOP here like the other AGENT_RUN_* run-scoped events above.
+    EventType.NETWORK_POLICY_ALLOWED,
+    EventType.NETWORK_POLICY_DENIED,
     # STATUS is generic notification plumbing; ppxaide surfaces these
     # through ENGINE_INFO (checkpoint commands etc. use INFO).
     EventType.STATUS,

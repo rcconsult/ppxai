@@ -60,10 +60,10 @@ runnable steps. Each is one PR-sized increment on
 
 > **INCREMENT STATUS** (update as we go):
 > - [x] Inc 1 — minimal run lifecycle (start/list/get, synchronous, filesystem) — merged `0f54f55d`
-> - [~] Inc 2 — background execution + live status — built, awaiting trial
-> - [ ] Inc 3 — events.jsonl + GET …/events (replay, then SSE)
-> - [~] Inc 4 — capability grant + tool allowlist (AC-1 sandbox seam) — built (/v1/agent/task + ScopedToolManager), awaiting trial
-> - [ ] Inc 5 — egress allowlist + NETWORK_POLICY_* (AC-2 ship-gate)
+> - [x] Inc 2 — background execution + live status — trialed + committed
+> - [x] Inc 3 — events.jsonl + GET …/events (replay + SSE) — trialed + committed
+> - [x] Inc 4 — capability grant + tool allowlist (AC-1 sandbox seam) — trialed + committed (`acee4821`)
+> - [~] Inc 5 — egress allowlist + NETWORK_POLICY_* (AC-2 ship-gate) — built (NetworkPolicy + ScopedToolManager egress chokepoint + /v1/agent/task `network`), awaiting trial
 > - [ ] Inc 6 — budgets + cancel + conditional-resume checkpoint
 > - [ ] Inc 7 — spawn_subagent (the N=1 sub-agent)
 > - [ ] Inc 8 — /v1/tokens + per-run authz
@@ -147,9 +147,52 @@ the run's `/events` stream.
 
 ### Inc 5 — egress allowlist + NETWORK_POLICY_* (ship-gate, AC-2)
 **Capability:** outbound network is deny-by-default; allow/deny audited.
-**Build:** `engine/tools/network_policy.py`; `NETWORK_POLICY_DENIED/_ALLOWED`
-events; `network.allow_outbound` in the run spec.
-**Trial:** run with an empty allowlist + a network tool → see DENIED event.
+**Build:** `engine/tools/network_policy.py` (`NetworkPolicy.check(url)`
+per-URL primitive + `authorize(name, kwargs)` whole-call decision, both
+fail-closed); `NETWORK_POLICY_ALLOWED/_DENIED` events on the `network`
+category; `network.allow_outbound` in the `/v1/agent/task` spec, persisted on
+`RunMeta.network`. Enforced at the **same `ScopedToolManager.execute_tool`
+chokepoint as AC-1** — grant check first, then (for a network-capable tool:
+`fetch_url`/`web_search`/`get_weather`) `authorize` before the request fires.
+
+**Policy spec (resolved 2026-06-15):**
+- `allow_outbound` entries: a bare host string (exact, any path) OR
+  `{host, paths?}`. Host may be `*.suffix` (single-label, suffix-anchored
+  glob — `*.wikipedia.org` matches `en.wikipedia.org`, NOT
+  `wikipedia.org.evil.com` and NOT `a.b.wikipedia.org`). `paths` is a list
+  of prefixes; absent = any path.
+- **Fail-closed:** empty/absent allowlist denies all outbound; an
+  unresolvable target denies; https-only (http denied) for the MVP.
+- **No shell tool (resolved 2026-06-16, security review High):** a shell tool
+  (`execute_shell_command`) runs arbitrary commands (`curl`, `pip`,
+  `Invoke-WebRequest`, …) whose egress the host/path allowlist cannot inspect,
+  so it would bypass the chokepoint entirely. Only the deferred OS-isolation
+  tier (ADR 0003 §3 tier-d) can contain it. A `/v1/agent/task` grant
+  containing a shell tool is therefore **rejected with a 400** up front, and
+  `ScopedToolManager` refuses to run it whenever an egress policy is active
+  (defense-in-depth). This matches ADR §3a (research grant = "no shell").
+- **Superset rule (resolved 2026-06-16, fixes a security review High/Medium):**
+  a tool's real egress host is often chosen at CALL time and unpredictable
+  before the call. `web_search` dispatches to a premium backend with a
+  Perplexity→Gemini→DuckDuckGo fallback, so its egress set is
+  `{duckduckgo.com, html.duckduckgo.com, api.perplexity.ai,
+  generativelanguage.googleapis.com}`; `get_weather` falls back https→http.
+  `authorize` therefore allows a tool only if **EVERY** URL it could reach
+  passes `check()`. Consequence: allowlisting only DuckDuckGo does NOT permit
+  `web_search` (it could reach Perplexity) — it's denied before the call; and
+  `get_weather` is un-allowlistable under the MVP (its http-fallback branch
+  fails https-only) until that fallback is removed. This closes the
+  confused-deputy gap where a run could exfiltrate through an unallowlisted
+  backend and the audit event would name the wrong host.
+- Event payload (stable for ppxai-sre AuditLogger):
+  `{tool, target_host, target_path, reason, allowlist_rule_id, run_id}`;
+  `allowlist_rule_id` = matched rule index (allow) or `null` (deny).
+
+**Trial:** `POST /v1/agent/task` with `tools:["fetch_url"]` and
+`network.allow_outbound:["api.github.com"]`, task = fetch an off-allowlist
+URL → `network_policy_denied` on `…/events?category=network`, the fetch never
+fires; a fetch of api.github.com → `network_policy_allowed`. Empty
+`allow_outbound` denies even the granted tool.
 
 ### Inc 6 — budgets + cancel + conditional-resume checkpoint
 **Capability:** runs stop at caps / on cancel; interrupted runs checkpoint.

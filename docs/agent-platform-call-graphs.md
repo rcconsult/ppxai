@@ -297,16 +297,37 @@ Two layers, both required:
    to the scoped manager so it enumerates only granted tools, and strips the
    shell-wrapper context unless a shell tool is granted. Part of AC-1.)
 
-2. execute_tool CHOKEPOINT (the AC-1 invariant — backstop):
-   execute_tool(name):
+2. execute_tool CHOKEPOINT (the AC-1 + AC-2 invariants — backstop):
+   execute_tool(name, **kw):
      name not in grant → on_deny(name)  [emit tool_denied warning/tool]
                         → return model-readable "not permitted" (NO raise,
                           loop continues; tool did NOT run)
-     name in grant     → base.execute_tool(name)   ← only path to real tool
+     name in SHELL_TOOL_NAMES AND network_policy set:   ← AC-2 shell backstop
+        → on_network(False, …) [emit network_policy_denied]
+        → return "not permitted" (shell escapes egress; route 400s it up front,
+          this is defense-in-depth; NEVER runs)
+     name in grant AND is_network_tool(name) AND network_policy set:   ← AC-2
+        network_policy.authorize(name, kw):   ← SUPERSET rule over ALL targets
+            targets = tool_targets(name, kw)  [fetch_url→[url kwarg];
+              web_search→[ddg, html.ddg, api.perplexity.ai,
+                          generativelanguage.googleapis.com] (call-time
+                          backend + fallback chain — ALL possible);
+              get_weather→[https://wttr.in, http://wttr.in] (https+fallback)]
+            allowed IFF every target passes check()  (else first failing
+              target is the deny reason — e.g. web_search with only ddg
+              allowlisted → DENY on api.perplexity.ai)
+          deny → on_network(False, payload) [emit network_policy_denied]
+               → return model-readable "network access denied" (request
+                 NEVER fired; fail-closed)
+          allow→ on_network(True, payload)  [emit network_policy_allowed]
+     name in grant (passed both) → base.execute_tool(name)  ← only path to real tool
 
    AC-1 test: an off-grant call never reaches base.execute_tool
    (test_ac1_off_grant_tool_never_reaches_base +
     test_task_enforces_grant_end_to_end).
+   AC-2 test: an off-allowlist network target never reaches base.execute_tool
+   (test_ac2_denied_target_never_runs_and_emits_denied +
+    test_task_enforces_egress_end_to_end).
 
 All other attributes delegate to the base manager (__getattr__) so
 chat_with_tools treats it as a normal manager with a smaller toolset.
@@ -318,7 +339,64 @@ only *enforced and executed* via `/task`.
 
 ---
 
-<!-- Inc 5+ sections appended here as they land. Template:
+## Increment 5 — egress allowlist + NETWORK_POLICY_* (AC-2 ship-gate)
+
+Added: `engine/tools/network_policy.py`. Changed: `agent_scoped_tools.py`
+(egress chokepoint), `routes/agent_v1.py` (`network` field + on_network),
+`agent_runs.py` (`RunMeta.network`), `types.py` (two EventTypes).
+
+Execution model: no new endpoint. A tool-capable run ALWAYS gets a
+`NetworkPolicy` installed (even with no `network` spec → empty → fail-closed),
+so a granted network tool is deny-by-default.
+
+### POST /v1/agent/task — egress wiring (delta over Inc 4)
+
+```
+create_agent_task(req: AgentTaskRequest{..., network?{allow_outbound[]}})
+  grant_has_shell(req.tools)?  → 400  (shell escapes egress; tier-d only — AC-2)
+  registry.start_run(..., network=req.network.allow_outbound)  → RunMeta.network persisted
+  _runner(m):
+    net_policy = NetworkPolicy(req.network.allow_outbound or [])   ← empty = fail-closed
+    on_network(allowed, payload):
+        emit network_policy_allowed|denied  (category=network,
+            info|warning, data={...payload, run_id})
+    engine.tool_manager = ScopedToolManager(base, grant,
+        on_deny=…, network_policy=net_policy, on_network=on_network)
+    async for ev in engine.chat(task):   ← egress enforced inside execute_tool
+```
+
+### NetworkPolicy  [engine/tools/network_policy.py]
+
+```
+NetworkPolicy(allow_outbound[]) → normalized [_Rule(host, paths, rule_id)]
+
+check(url) -> Allow(rule_id) | Deny(reason):   ← per-URL primitive
+   no url                        → Deny  (unresolvable target; fail-closed)
+   scheme not https/""           → Deny  (https-only MVP)
+   for rule in rules:
+     rule.matches_host(host):           exact, or "*.suffix" single-label,
+                                        suffix-anchored (blocks lookalikes)
+        rule.matches_path(path):        no paths = any; else prefix match
+           → Allow(rule_id)
+        else → Deny(path not in prefixes)
+   no rule matched               → Deny(host not in allowlist)
+empty rules                      → Deny everything (fail-closed)
+
+authorize(name, kwargs) -> ToolDecision:      ← the chokepoint decision
+   targets = tool_targets(name, kwargs)        every URL the call COULD reach
+   no targets                    → Deny  (unresolvable; fail-closed)
+   ALL targets pass check()      → Allow (superset rule — see below)
+   any target fails check()      → Deny  (reports the first failing target)
+
+Superset rule (AC-2): web_search's backend is chosen at call time with a
+Perplexity→Gemini→DDG fallback, so its egress set is the UNION of all of
+them; the run must allowlist EVERY one or web_search is denied — it can't
+reach an unallowlisted backend by taking a branch we didn't predict. Same
+for get_weather's https→http fallback (the http branch is denied under the
+MVP https-only rule, so wttr.in alone can't authorize get_weather).
+```
+
+<!-- Inc 6+ sections appended here as they land. Template:
 ## Increment N — <title>
 Added/changed: <files>. Execution model change: <if any>.
 ### <METHOD /path> — <what>

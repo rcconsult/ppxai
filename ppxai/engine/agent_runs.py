@@ -68,6 +68,7 @@ class RunMeta:
     provider: Optional[str] = None
     model: Optional[str] = None
     tools: list[str] = field(default_factory=list)  # the grant (enforced in Inc 4)
+    network: list = field(default_factory=list)  # egress allow_outbound (enforced in Inc 5); provenance/audit on disk
     created_at: float = 0.0
     started_at: Optional[float] = None  # set when execution begins (Inc 2 background)
     finished_at: Optional[float] = None
@@ -291,6 +292,7 @@ class AgentRunRegistry:
         provider: Optional[str] = None,
         model: Optional[str] = None,
         parent_run_id: Optional[str] = None,
+        network: Optional[list] = None,
     ) -> RunMeta:
         """Mint a run, persist it in `pending` state, return its meta.
 
@@ -305,6 +307,7 @@ class AgentRunRegistry:
             task=task,
             status="pending",
             tools=list(tools or []),
+            network=list(network or []),
             provider=provider,
             model=model,
             parent_run_id=parent_run_id,

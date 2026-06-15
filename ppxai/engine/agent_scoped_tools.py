@@ -23,14 +23,20 @@ from __future__ import annotations
 
 from typing import Any, Callable, Dict, List, Optional
 
+from .tools.network_policy import (
+    NetworkPolicy,
+    SHELL_TOOL_NAMES,
+    is_network_tool,
+)
 from ..common.logger import get_logger
 
 logger = get_logger("tui")
 
-# Tools that grant shell execution. If none of these is in a run's grant,
-# the shell-wrapper prompt context (rtk etc.) is off-grant guidance and is
-# stripped from the scoped prompt.
-_SHELL_TOOL_NAMES = {"execute_shell_command"}
+# Single source of truth lives in network_policy (the egress module); aliased
+# here for the existing prompt-stripping references. If none of these is in a
+# run's grant, the shell-wrapper prompt context (rtk etc.) is off-grant
+# guidance and is stripped from the scoped prompt.
+_SHELL_TOOL_NAMES = SHELL_TOOL_NAMES
 
 
 def _strip_section(prompt: str, header: str) -> str:
@@ -65,6 +71,13 @@ class ScopedToolManager:
         on_deny: optional callback(name) invoked when an off-grant tool is
                  attempted — the route wires this to emit a `tool_denied`
                  run event.
+        network_policy: per-run egress allowlist (AC-2, Inc 5). When set,
+                 every network-capable tool call is checked against it at
+                 the execute chokepoint BEFORE the request fires. When None,
+                 no egress enforcement applies (a tool-free or trusted run).
+        on_network: optional callback(allowed, payload) invoked on every
+                 network-capable tool call — the route wires this to emit
+                 `network_policy_allowed` / `network_policy_denied` events.
     """
 
     def __init__(
@@ -72,10 +85,14 @@ class ScopedToolManager:
         base: Any,
         grant: List[str],
         on_deny: Optional[Callable[[str], None]] = None,
+        network_policy: Optional[NetworkPolicy] = None,
+        on_network: Optional[Callable[[bool, dict], None]] = None,
     ) -> None:
         self._base = base
         self._grant = set(grant or [])
         self._on_deny = on_deny
+        self._network_policy = network_policy
+        self._on_network = on_network
 
     # --- the allowlist (the whole point) --------------------------------
 
@@ -101,7 +118,65 @@ class ScopedToolManager:
                 f"Error: tool {name!r} is not permitted for this run. "
                 f"Permitted tools: {', '.join(sorted(self._grant)) or '(none)'}."
             )
+        # AC-2 backstop: a shell-execution tool runs arbitrary commands whose
+        # egress the allowlist cannot inspect, so it bypasses the chokepoint
+        # below. The /v1/agent/task route rejects shell grants up front; this
+        # is defense-in-depth for any other construction path — whenever an
+        # egress policy is active, shell never executes.
+        if self._network_policy is not None and name in SHELL_TOOL_NAMES:
+            logger.warning(
+                f"Tool denied (shell under egress policy): {name!r} cannot be "
+                f"contained by the egress allowlist (AC-2)"
+            )
+            if self._on_network is not None:
+                self._on_network(False, {
+                    "tool": name, "target_host": "", "target_path": "",
+                    "reason": "shell execution cannot be egress-confined (AC-2)",
+                    "allowlist_rule_id": None,
+                })
+            return (
+                f"Error: {name!r} is not permitted in a tool-capable agent run "
+                f"(shell escapes the egress allowlist; requires OS isolation)."
+            )
+        # AC-2 egress chokepoint: a granted but network-capable tool must
+        # also pass the run's egress allowlist before its request fires.
+        # Fail-closed — no policy on a tool-capable run = no outbound.
+        if self._network_policy is not None and is_network_tool(name):
+            denial = self._check_network(name, kwargs)
+            if denial is not None:
+                return denial  # request never fired; model-readable
         return await self._base.execute_tool(name, **kwargs)
+
+    def _check_network(self, name: str, kwargs: dict) -> Optional[str]:
+        """Run the egress check for a network tool. Returns a model-readable
+        denial string if blocked (and the request must NOT fire), or None if
+        allowed. Emits the typed NETWORK_POLICY_* event either way.
+
+        Uses `authorize` (not a single-URL check): a tool is allowed only if
+        EVERY URL it could reach is in the allowlist — so a tool whose backend
+        is chosen at call time (web_search) can't slip past by taking a branch
+        we didn't predict (AC-2 superset rule)."""
+        d = self._network_policy.authorize(name, kwargs)
+        payload = {
+            "tool": name,
+            "target_host": d.target_host,
+            "target_path": d.target_path,
+            "reason": d.reason,
+            "allowlist_rule_id": d.rule_id,
+        }
+        if d.allowed:
+            if self._on_network is not None:
+                self._on_network(True, payload)
+            return None
+        logger.warning(
+            f"Egress denied: tool {name!r} target {d.target_host!r} — {d.reason}"
+        )
+        if self._on_network is not None:
+            self._on_network(False, payload)
+        return (
+            f"Error: network access denied for {name!r}: {d.reason}. "
+            f"This run's egress allowlist did not permit that target."
+        )
 
     # --- filtered OFFERED set (model never sees off-grant tools) ---------
 

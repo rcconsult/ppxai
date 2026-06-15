@@ -192,6 +192,8 @@ class EventType(Enum):
     WARNING = "warning"  # Validation warning (v1.15.2 - hallucination detection)
     ERROR = "error"
     PROVIDER_THROTTLED = "provider_throttled"  # v1.18.3: provider-side rate-limit / quota block (HTTP 429 / 403). Distinct from ERROR so callers can skip-not-fail (benchmarks) or render differently (UI toast vs banner). Payload: {"status_code": int, "provider": str, "model": str, "message": str, "retry_after": Optional[float]}
+    NETWORK_POLICY_ALLOWED = "network_policy_allowed"  # v1.19.0 (ADR 0003 §3c, AC-2): a network-capable tool's outbound target matched the run's egress allowlist. Payload: {tool, target_host, target_path, reason, allowlist_rule_id, run_id}. Stable for ppxai-sre AuditLogger.
+    NETWORK_POLICY_DENIED = "network_policy_denied"  # v1.19.0 (ADR 0003 §3c, AC-2): outbound target NOT in the allowlist (or unresolvable) — request never fired (fail-closed). Same payload shape; allowlist_rule_id is None.
     INFO = "info"
 
 
