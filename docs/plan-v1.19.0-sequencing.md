@@ -62,7 +62,7 @@ runnable steps. Each is one PR-sized increment on
 > - [x] Inc 1 — minimal run lifecycle (start/list/get, synchronous, filesystem) — merged `0f54f55d`
 > - [~] Inc 2 — background execution + live status — built, awaiting trial
 > - [ ] Inc 3 — events.jsonl + GET …/events (replay, then SSE)
-> - [ ] Inc 4 — capability grant + tool allowlist (AC-1 sandbox seam)
+> - [~] Inc 4 — capability grant + tool allowlist (AC-1 sandbox seam) — built (/v1/agent/task + ScopedToolManager), awaiting trial
 > - [ ] Inc 5 — egress allowlist + NETWORK_POLICY_* (AC-2 ship-gate)
 > - [ ] Inc 6 — budgets + cancel + conditional-resume checkpoint
 > - [ ] Inc 7 — spawn_subagent (the N=1 sub-agent)
@@ -116,13 +116,34 @@ replay and live tail. **Always persist all events; filter on read.**
 polling to the SSE tail (verbosity slider + category toggles).
 
 ### Inc 4 — capability grant + tool allowlist (sandbox seam, AC-1)
-**Capability:** a run can only call tools in its grant; others hard-deny.
-**Build:** grant in `meta.json`; enforcement at the tool dispatcher; the
-named **AC-1** test (no granted tool resolves to a direct in-process
-call — route through the adapter seam). Subprocess execution may start as
-a thin shim here.
-**Trial:** POST a run granting only `read_file`; confirm a `write_file`
-attempt is denied in events.
+**Capability:** a tool-capable run can only call tools in its grant;
+others hard-deny.
+
+**Tier separation (design 2026-06-15):** tool-calling is a *categorically
+different* safety tier from the tool-free `/v1/oneshot`/`/v1/agent/run`
+path (which is safe *because* it has no tools — no sandbox needed). So
+Inc 4 adds a **separate endpoint** rather than bolting tools onto the safe
+path:
+- `POST /v1/agent/run` — UNCHANGED. Tool-free tier (oneshot), no sandbox.
+- `POST /v1/agent/task` — NEW. Tool-capable, sandboxed tier: requires a
+  capability grant, executes via `chat_with_tools`, enforces the
+  allowlist. Locks the two tiers at the URL level so they can't be
+  conflated. Shares the same run registry / events / monitor infra
+  (`/agentruns`, `/events`, status all work identically).
+
+**Build:** `ScopedToolManager(base, grant)` — a per-run filtered view:
+the model is offered ONLY granted tools (filtered `get_tools_openai_format`
+/ `get_tools_prompt`), and `execute_tool` hard-denies any off-grant name
+(+ emits a `tool_denied` warning/tool event) as the backstop — the model
+can't call what it can't see, and the chokepoint catches the rest. `task`
+route runs `chat_with_tools` with the scoped manager. The named **AC-1**
+test: a granted tool resolves only via the scoped view, never a direct
+ToolManager fast-path. (OS-level subprocess isolation is tier-d, a later
+increment; Inc 4 is the in-process allowlist seam.)
+
+**Trial:** `POST /v1/agent/task` granting only `read_file`; confirm a
+`write_file` attempt is denied and surfaces as a `tool_denied` event on
+the run's `/events` stream.
 
 ### Inc 5 — egress allowlist + NETWORK_POLICY_* (ship-gate, AC-2)
 **Capability:** outbound network is deny-by-default; allow/deny audited.

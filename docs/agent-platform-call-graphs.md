@@ -228,27 +228,23 @@ emitters (Inc 3): run_in_background._drive →
 get_agent_run_events(run_id, since, live, min_level, category)  [routes/agent_v1.py]
 ├─ registry.get_run(run_id)  → 404 if unknown
 ├─ cats = parse ?category=    (comma-separated set)
-├─ backlog = registry.read_events(run_id, since, min_level, cats)  [agent_runs.py]
-│   └─ store.read_events() → filter each via RunEvent.passes(min_level, cats)
-├─ if not live:  return {"events": [...]}        ← JSON replay
+├─ if not live:  read_events(since, min_level, cats) → {"events": [...]}  ← JSON replay
+│   (non-live reads the backlog directly — no queue, no race)
 └─ if live:  StreamingResponse(_sse(), text/event-stream)
      _sse():
-       q = registry.subscribe(run_id)      ← SUBSCRIBE FIRST (lost-event fix)
-       backlog = registry.read_events(...)  ← THEN snapshot, so an event in
-                                              the window lands in q, not lost
-       yield each backlog event as "data: {json}\n\n"  (sets last_seq)
+       q = registry.subscribe(run_id)       ← SUBSCRIBE FIRST (lost-event fix):
+       backlog = read_events(since, ...)     ← THEN snapshot, so an event in the
+                                               window lands in q, not lost
+       yield each backlog event as "data: {json}\n\n"  (advances last_seq)
        loop:
-         if q._ppxai_overflowed:  ← slow-consumer self-heal
-           replay read_events(since=last_seq) from disk; clear flag
+         if request.is_disconnected(): break
+         if q._ppxai_overflowed:             ← slow-consumer self-heal
+           clear flag; replay read_events(since=last_seq) from disk; continue
            (no silent gap — durable log fills what the queue dropped)
-         else await q.get() (15s → keepalive); dedup by last_seq; filter; yield
-       finally: unsubscribe (runs on disconnect)
-       loop:
-         request.is_disconnected() → stop
          ev = await q.get() (15s timeout → ": keepalive")
-         skip if ev.seq <= last_sent or not ev.passes(filters)
-         yield "data: {json}\n\n"
-       finally: registry.unsubscribe(run_id, q)
+         skip if ev.seq <= last_seq or not ev.passes(min_level, cats)
+         advance last_seq; yield "data: {json}\n\n"
+       finally: registry.unsubscribe(run_id, q)   (runs on disconnect)
 ```
 
 Filters (`min_level` + `category`, ADR 0003 §11a) apply on BOTH the
@@ -264,7 +260,62 @@ category toggles are a follow-up UI refinement.)
 
 ---
 
-<!-- Inc 4+ sections appended here as they land. Template:
+## Increment 4 — capability grant + tool allowlist (sandbox seam, AC-1)
+
+Added: `engine/agent_scoped_tools.py` (`ScopedToolManager`); new
+`POST /v1/agent/task` route (tool-capable tier). `/v1/agent/run` unchanged
+(tool-free tier). **Tier separation at the URL** — tool-calling is a
+distinct safety tier from the safe tool-free path; the two never mix.
+
+### `POST /v1/agent/task` — tool-capable, allowlist-enforced run
+
+```
+create_agent_task(req)                                 [routes/agent_v1.py]
+├─ grant required + non-empty (pydantic min_length=1 → 422 otherwise)
+├─ provider/model: request → tools.agent.default_subagent → 400
+├─ _build_provider + OpenAI-compat carve-out (400 if not)
+├─ registry.start_run(task, tools=grant, ...)          → RunMeta(running)
+└─ registry.run_in_background(meta, _runner):
+     _runner(m):
+       engine = EngineClient(); set_provider/model; enable_tools()  [ADR §9 D1]
+       engine.tool_manager = ScopedToolManager(engine.tool_manager,
+                                grant, on_deny=emit tool_denied)
+       async for ev in engine.chat(task):    ← chat_with_tools loop
+         TOOL_CALL  → registry.emit_event(tool_call, debug/tool)
+         STREAM_END → capture final text → run result
+```
+
+### AC-1 enforcement (ScopedToolManager)  [engine/agent_scoped_tools.py]
+
+```
+Two layers, both required:
+
+1. OFFERED set filtered to the grant (model never SEES off-grant tools):
+   get_tools_openai_format / get_available_tools / list_tools / get_tool
+   → only names in grant.
+
+2. execute_tool CHOKEPOINT (the AC-1 invariant — backstop):
+   execute_tool(name):
+     name not in grant → on_deny(name)  [emit tool_denied warning/tool]
+                        → return model-readable "not permitted" (NO raise,
+                          loop continues; tool did NOT run)
+     name in grant     → base.execute_tool(name)   ← only path to real tool
+
+   AC-1 test: an off-grant call never reaches base.execute_tool
+   (test_ac1_off_grant_tool_never_reaches_base +
+    test_task_enforces_grant_end_to_end).
+
+All other attributes delegate to the base manager (__getattr__) so
+chat_with_tools treats it as a normal manager with a smaller toolset.
+```
+
+`/v1/agent/run` stays the tool-free tier: its `tools` field is recorded
+for provenance but never executed (oneshot has no tool loop). Tools are
+only *enforced and executed* via `/task`.
+
+---
+
+<!-- Inc 5+ sections appended here as they land. Template:
 ## Increment N — <title>
 Added/changed: <files>. Execution model change: <if any>.
 ### <METHOD /path> — <what>

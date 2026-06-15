@@ -377,6 +377,18 @@ gets sandboxed is the **tool call**, not the loop:
   earns its keep; it is invisible to the registry and the wire surface,
   which only ever see the agent run.
 
+> **Tier separation at the endpoint (implementation note, 2026-06-15).**
+> Tool-calling is a categorically different safety tier from the tool-free
+> gateway. `/v1/oneshot` and `POST /v1/agent/run` are safe *because* they
+> have no tools — no sandbox required. The tool-capable tier is therefore a
+> **separate endpoint, `POST /v1/agent/task`**, not a flag on the safe
+> path: a `task` *requires* a capability grant and routes every tool call
+> through the per-run allowlist (a `ScopedToolManager` that filters the
+> offered set AND enforces at `execute_tool` — AC-1). Locking the tiers to
+> distinct URLs prevents accidentally granting tools to the safe path.
+> In-process allowlist lands first (Inc 4); subprocess/pod OS-isolation
+> (tier-d) is a later additive upgrade behind the same endpoint.
+
 ### 5. Results — reuse the ADR 0006 artifact contract (don't invent result types)
 
 A run result = a **primary body** (markdown/html) + a list of

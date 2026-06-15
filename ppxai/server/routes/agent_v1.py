@@ -61,8 +61,9 @@ class AgentRunRequest(BaseModel):
     tools: list[str] = Field(
         default_factory=list,
         description=(
-            "Tool grant for the run. Inc 1 records it but does not enforce; "
-            "enforcement lands in Inc 4."
+            "Recorded on the run for provenance. /v1/agent/run is the "
+            "TOOL-FREE tier (oneshot) — tools here are NOT executed. For a "
+            "tool-capable, allowlist-enforced run, use POST /v1/agent/task."
         ),
     )
     provider: Optional[str] = Field(
@@ -187,6 +188,110 @@ async def create_agent_run(req: AgentRunRequest) -> AgentRunResponse:
             provider.oneshot, prompt=req.task, model=model, system=req.system
         )
         return result.get("content", "")
+
+    registry.run_in_background(meta, _runner)
+    return AgentRunResponse(run_id=meta.run_id, status=meta.status)
+
+
+class AgentTaskRequest(BaseModel):
+    """Tool-capable run request (POST /v1/agent/task — the sandboxed tier).
+
+    Unlike /v1/agent/run (tool-free, safe), a task REQUIRES a non-empty
+    `tools` grant: it's the opt-in to the tool-calling sandbox tier, and
+    the run may call ONLY those tools (ADR 0003 §4 / AC-1).
+    """
+
+    task: str = Field(..., min_length=1, description="The agent task / prompt.")
+    tools: list[str] = Field(
+        ..., min_length=1,
+        description="Capability grant — the ONLY tools this run may call (required, non-empty).",
+    )
+    provider: Optional[str] = Field(None, description="Provider (per-run intent).")
+    model: Optional[str] = Field(None, description="Model (per-run intent).")
+    system: Optional[str] = Field(None, description="Optional system message.")
+
+
+@router.post("/task", response_model=AgentRunResponse)
+async def create_agent_task(req: AgentTaskRequest) -> AgentRunResponse:
+    """Tool-capable, sandboxed agent run (ADR 0003 §4 / AC-1).
+
+    The tool-calling tier, separate from the safe tool-free /v1/agent/run.
+    The run executes via `chat_with_tools` through a `ScopedToolManager`
+    that exposes ONLY the granted tools to the model and hard-denies any
+    off-grant `execute_tool` (emitting a `tool_denied` event). Shares the
+    run registry / events / monitor infra with /run.
+    """
+    registry = get_agent_run_registry()
+
+    sub_defaults = get_agent_config().get("default_subagent", {}) or {}
+    provider_name = req.provider or sub_defaults.get("provider")
+    model = req.model or sub_defaults.get("model")
+    if not provider_name or not model:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Agent task needs provider+model (request or "
+                "tools.agent.default_subagent config)."
+            ),
+        )
+
+    provider = _build_provider(provider_name)
+    if not isinstance(provider, OpenAICompatibleProvider):
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Provider {provider_name!r} doesn't support v1 agent tasks yet "
+                f"(v1 supports OpenAI-compatible providers)."
+            ),
+        )
+
+    meta = registry.start_run(
+        task=req.task, tools=req.tools, provider=provider_name, model=model
+    )
+
+    async def _runner(m) -> str:
+        # Build a dedicated EngineClient for this run (ADR 0003 §9 D1 — new
+        # client per run, full isolation), enable tools, then SCOPE its tool
+        # manager to the grant. The model sees only granted tools; the
+        # ScopedToolManager.execute_tool chokepoint denies anything else.
+        from ...engine.client import EngineClient
+        from ...engine.agent_scoped_tools import ScopedToolManager
+        from ...engine.types import EventType
+
+        engine = EngineClient()
+        engine.set_provider(provider_name)
+        engine.set_model(model)
+        engine.enable_tools()  # registers builtins + sets tool-loop limits
+
+        def _on_deny(name: str) -> None:
+            registry.emit_event(
+                m.run_id, "tool_denied", level="warning", category="tool",
+                data={"tool": name, "grant": list(req.tools)},
+            )
+
+        engine.tool_manager = ScopedToolManager(
+            engine.tool_manager, list(req.tools), on_deny=_on_deny
+        )
+
+        final_text: list[str] = []
+        async for event in engine.chat(req.task, stream=False):
+            # Surface tool activity on the run's event stream. The engine's
+            # TOOL_CALL carries the name in event.data["tool"] (a dict), not
+            # in metadata; STREAM_END carries the final text as event.data,
+            # which is a plain string (sometimes a dict with "content").
+            if event.type == EventType.TOOL_CALL:
+                d = event.data or {}
+                name = d.get("tool", "") if isinstance(d, dict) else ""
+                registry.emit_event(
+                    m.run_id, "tool_call", level="debug", category="tool",
+                    data={"tool": name},
+                )
+            elif event.type == EventType.STREAM_END and event.data is not None:
+                d = event.data
+                text = d.get("content", "") if isinstance(d, dict) else str(d)
+                if text:
+                    final_text.append(text)
+        return "\n".join(final_text)
 
     registry.run_in_background(meta, _runner)
     return AgentRunResponse(run_id=meta.run_id, status=meta.status)

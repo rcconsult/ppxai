@@ -440,6 +440,83 @@ class TestAgentRunRoutes:
         c, _ = client
         assert c.get("/v1/agent/runs/run_nope/events").status_code == 404
 
+    def test_task_requires_nonempty_grant(self, client):
+        # /v1/agent/task is the tool-capable tier: the grant is required +
+        # non-empty (pydantic min_length=1 -> 422), so it can never run
+        # tool-free by accident.
+        c, _ = client
+        assert c.post("/v1/agent/task", json={
+            "task": "t", "tools": [], "provider": "p", "model": "m",
+        }).status_code == 422
+        assert c.post("/v1/agent/task", json={
+            "task": "t", "provider": "p", "model": "m",
+        }).status_code == 422
+
+    def test_task_enforces_grant_end_to_end(self, client, monkeypatch):
+        # Full /task path with EngineClient stubbed: the stubbed chat() calls
+        # the (route-installed) ScopedToolManager.execute_tool on an off-grant
+        # tool. AC-1: it's denied, base never runs it, a tool_denied event
+        # lands on the run stream, and the run still completes.
+        c, reg = client
+        from ppxai.server.routes import agent_v1
+        from ppxai.engine.types import Event, EventType
+
+        # Bypass provider build (it's OpenAI-compat-checked before backgrounding).
+        from ppxai.engine.providers.openai_compat import OpenAICompatibleProvider
+
+        class _P(OpenAICompatibleProvider):
+            def __init__(self): pass
+        monkeypatch.setattr(agent_v1, "_build_provider", lambda name: _P())
+
+        # Stub EngineClient: enable_tools no-op; chat() drives one off-grant
+        # execute_tool through whatever tool_manager the route installed, then
+        # ends. tool_manager is set to a real base so Scoped wraps something.
+        from ppxai.engine.agent_scoped_tools import ScopedToolManager
+
+        class _BaseTM:
+            def __init__(self): self.ran = []
+            async def execute_tool(self, name, **kw): self.ran.append(name); return "ran"
+            max_iterations = 3
+
+        class _StubEngine:
+            def __init__(self): self.tool_manager = _BaseTM()
+            def set_provider(self, p): pass
+            def set_model(self, m): pass
+            def enable_tools(self): pass
+            async def chat(self, task, stream=False):
+                # the route wrapped self.tool_manager in ScopedToolManager;
+                # call a granted tool (emits tool_call with the real
+                # data={"tool": ...} shape), attempt an off-grant tool
+                # (denied), then finish with STREAM_END as a plain string.
+                yield Event(type=EventType.TOOL_CALL, data={"tool": "read_file"})
+                await self.tool_manager.execute_tool("write_file", path="x")
+                yield Event(type=EventType.STREAM_END, data="done")
+
+        stub = _StubEngine()
+        monkeypatch.setattr(agent_v1, "EngineClient", lambda: stub, raising=False)
+        # the route imports EngineClient inside _runner; patch the source module
+        import ppxai.engine.client as client_mod
+        monkeypatch.setattr(client_mod, "EngineClient", lambda: stub)
+
+        resp = c.post("/v1/agent/task", json={
+            "task": "do it", "tools": ["read_file"],  # write_file NOT granted
+            "provider": "p", "model": "m",
+        })
+        assert resp.status_code == 200
+        rid = resp.json()["run_id"]
+        one = self._poll_terminal(c, rid)
+        assert one["status"] == "completed"
+        assert one["result"] == "done"
+        # AC-1: the off-grant tool was denied — base never ran it
+        assert isinstance(stub.tool_manager, ScopedToolManager)
+        assert stub.tool_manager._base.ran == []  # write_file never executed
+        # tool events on the stream: a labeled tool_call (name captured from
+        # event.data["tool"], not empty) AND the tool_denied.
+        evs = c.get(f"/v1/agent/runs/{rid}/events?category=tool").json()["events"]
+        assert any(e["type"] == "tool_denied" for e in evs)
+        call = next((e for e in evs if e["type"] == "tool_call"), None)
+        assert call is not None and call["data"]["tool"] == "read_file"  # name not empty
+
     @pytest.mark.asyncio
     async def test_events_live_sse_path(self, client):
         # Inc 3 LOW (codex): exercise the actual ?live=1 SSE generator
