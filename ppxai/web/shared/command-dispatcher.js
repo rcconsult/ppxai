@@ -80,6 +80,18 @@ class CommandDispatcher {
                 return;
             }
 
+            // Agent platform (v1.19.0 /v1/agent/* run registry — distinct from
+            // the engine-side /agent above). /agentrun starts a background run
+            // and live-polls it; /agentruns lists recent runs.
+            if (cmd === '/agentrun') {
+                await this._dispatchAgentRun(args);
+                return;
+            }
+            if (cmd === '/agentruns') {
+                await this._dispatchAgentRunsList();
+                return;
+            }
+
             // Default: factory dispatch via POST /command/<name>.
             // Strip the leading slash; executeCommand adds nothing.
             await this._dispatchToFactory(cmd.slice(1), args);
@@ -115,6 +127,89 @@ class CommandDispatcher {
         }
         // No args — show status via factory
         await this._dispatchToFactory('agent', '');
+    }
+
+    /**
+     * /agentrun <task> — start a background agent run (v1.19.0 Inc 2) and
+     * live-poll it to terminal, updating one system line as it progresses.
+     * Distinct from /agent (engine-side autonomous loop). Inc 1-2 surface:
+     * POST /v1/agent/run -> {run_id, status:"running"}, then poll
+     * GET /v1/agent/runs/<id> until completed/failed.
+     */
+    async _dispatchAgentRun(task) {
+        if (!task) {
+            this.app.showSystemMessage('Usage: /agentrun <task>');
+            return;
+        }
+        // Pass the UI's CURRENT provider/model explicitly — for the human
+        // /agentrun command, the active selection is the user's explicit
+        // choice at spawn time (a legitimate per-run intent), not implicit
+        // session inheritance. The server falls back to
+        // tools.agent.default_subagent only if these are absent.
+        const body = { task, tools: [] };
+        if (this.app.state.currentProvider) body.provider = this.app.state.currentProvider;
+        if (this.app.state.currentModel) body.model = this.app.state.currentModel;
+        let started;
+        try {
+            started = await this.app.apiClient.post('/v1/agent/run', body);
+        } catch (e) {
+            this.app.showSystemMessage(`❌ Agent run rejected: ${e.message}`);
+            return;
+        }
+        const runId = started.run_id;
+        this.app.showSystemMessage(`🤖 ${runId} — running…`);
+
+        // Poll to terminal. Bounded so a stuck run doesn't poll forever; the
+        // run keeps going server-side regardless (use /agentruns to recheck).
+        const deadline = Date.now() + 120000;
+        while (Date.now() < deadline) {
+            await new Promise((r) => setTimeout(r, 600));
+            let run;
+            try {
+                run = await this.app.apiClient.get(`/v1/agent/runs/${runId}`);
+            } catch (e) {
+                this.app.showSystemMessage(`❌ Poll failed for ${runId}: ${e.message}`);
+                return;
+            }
+            if (run.status === 'completed') {
+                this.app.showSystemMessage(`✅ ${runId} — completed`);
+                this.app.addMessage('assistant', run.result || '(empty result)');
+                return;
+            }
+            if (run.status === 'failed') {
+                this.app.showSystemMessage(`❌ ${runId} — failed: ${run.error || 'unknown error'}`);
+                return;
+            }
+        }
+        this.app.showSystemMessage(
+            `⏳ ${runId} still running after 2 min — check later with /agentruns`
+        );
+    }
+
+    /**
+     * /agentruns — list recent agent runs (newest first).
+     */
+    async _dispatchAgentRunsList() {
+        let data;
+        try {
+            data = await this.app.apiClient.get('/v1/agent/runs');
+        } catch (e) {
+            this.app.showSystemMessage(`❌ Could not list runs: ${e.message}`);
+            return;
+        }
+        const runs = (data && data.runs) || [];
+        if (runs.length === 0) {
+            this.app.showSystemMessage('No agent runs yet. Start one with /agentrun <task>.');
+            return;
+        }
+        const lines = runs
+            .slice(0, 20)
+            .map((r) => {
+                const task = (r.task || '').slice(0, 50);
+                return `  ${r.run_id}  ${r.status.padEnd(9)}  ${task}`;
+            })
+            .join('\n');
+        this.app.showSystemMessage(`Agent runs (newest first):\n${lines}`);
     }
 
     /**
