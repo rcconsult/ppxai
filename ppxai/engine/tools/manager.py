@@ -456,8 +456,14 @@ class ToolManager:
         instruction_num += 1
         prompt += f"{instruction_num}. **If the user asks you to 'display' or 'show' a file, you MUST call the display_file tool**. Do NOT just describe the file contents.\n"
         instruction_num += 1
-        prompt += f"{instruction_num}. **If the user gives a shell command (like 'ls', 'dir', 'cat'), you MUST use execute_shell_command**. Do NOT fabricate the output.\n"
-        instruction_num += 1
+        # Gate the shell instruction on the shell tool actually being
+        # available — same pattern as the execute_shell_command block above
+        # (~L436). Without this, a tool set that excludes shell (e.g. a
+        # capability-scoped agent run granting only read_file) still tells the
+        # model to "use execute_shell_command", naming an off-grant tool.
+        if "execute_shell_command" in available_tool_names:
+            prompt += f"{instruction_num}. **If the user gives a shell command (like 'ls', 'dir', 'cat'), you MUST use execute_shell_command**. Do NOT fabricate the output.\n"
+            instruction_num += 1
         prompt += f"{instruction_num}. **Call tools directly - do NOT output tool JSON in your response text**. When you want to use a tool, make the tool call immediately.\n"
 
         return prompt
