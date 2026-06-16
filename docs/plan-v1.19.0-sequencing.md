@@ -247,20 +247,33 @@ a longer run, `POST …/cancel` → run ends `cancelled`, `resumable:true`;
     flag the model can probe).
   - *N = 1 concurrent* — the parent's tool call awaits the child to terminal
     before returning, so one parent drives at most one child.
-  - *consent-gated* — spawning requires interactive approval (same gate as
-    shell), so an autonomous run can't fan out without a human.
+  - *consent-gated* — spawning is gated by `tools.agent.spawn_consent`:
+    **"deny" (default, safe)** refuses a spawn that needs consent (over
+    /v1/agent/task there is NO interactive channel, so deny = no spawn);
+    **"auto"** lets API-driven spawns proceed with the subset rules as the
+    boundary. (Trial-found 2026-06-16: a per-run EngineClient has no consent
+    callback, so the old unconditional gate auto-denied every server spawn
+    SILENTLY and the model fell back — now refusals emit a `spawn_denied`
+    event and "auto" makes spawn usable. Proper AGENT_WAITING/respond flow,
+    ADR §8, supersedes this later.)
+- Every refusal (grant/egress/consent) emits a **`spawn_denied`** event —
+  no silent refusal (the observability gap that made the trial bug hard to
+  see).
 - Child is a **first-class run** with its own run_id + `parent_run_id`
   linkage (NOT nested under the parent's dir via agent_n — that ADR 0005
   refinement is later; nesting here caused a get_run slot mismatch, fixed).
 - Parent stream gets `subagent_spawned` (lifecycle) + `subagent_finished`
   (result) events.
-**Trial (thorough, after 6+7):** grant a parent `["read_file","spawn_subagent"]`;
+**Trial (thorough, after 6+7):** FIRST set `tools.agent.spawn_consent="auto"`
+in ppxai-config.json (else server spawns are denied — by design). Grant a
+parent `["spawn_subagent"]` (omit read_file so the model MUST delegate);
 its task spawns a child with `tools:["read_file"]` → both runs appear in
 `/v1/agent/runs` (child has `parent_run_id`), parent result embeds child
-result, parent stream shows `subagent_spawned`/`subagent_finished`. Negatives:
-child requesting `["write_file"]` (off-parent) → spawn refused, no child run;
-child requesting an off-parent egress host → refused; denying consent → no
-child; confirm a child can't itself spawn (no `spawn_subagent` offered to it).
+result, parent stream shows `subagent_spawned`/`subagent_finished`. Negatives
+(each emits `spawn_denied`, mints no child): child requesting `["write_file"]`
+(off-parent) → refused; off-parent egress host → refused; with
+spawn_consent="deny" → refused. Confirm a child can't itself spawn (no
+`spawn_subagent` offered to it).
 
 ### Inc 8 — /v1/tokens + per-run authz
 **Capability:** only the owning session/token may read a run's monitor

@@ -478,11 +478,14 @@ build_task_runner(registry, ..., tools, allow_outbound, allow_spawn):
 ```
 execute(task, tools=[], allow_outbound=[]):
   1. _check_grant_subset(child_tools):
-       shell in child            → refuse (AC-2)
-       child_tools ⊄ parent_tools→ refuse (no escalation)
+       shell in child            → _deny(grant)   (AC-2)
+       child_tools ⊄ parent_tools→ _deny(grant)   (no escalation)
   2. _check_egress_subset(child_allow):
-       for host in child_allow: parent_policy.check(https://host/) != Allow → refuse
-  3. request_consent(summary) is False → refuse          ← human in the loop
+       any child (host,path) not Allow under parent_policy → _deny(egress)
+  3. consent gate (policy = tools.agent.spawn_consent):
+       "auto"            → skip prompt (subset rules ARE the boundary)
+       "deny" + no chan  → _deny(consent)   ← server context, no human to ask
+       "deny" + channel  → request_consent(summary) False → _deny(consent)
   4. child = registry.start_run(task, tools=child_tools,
               network=child_allow, parent_run_id=parent_run_id)   ← own run_id
      emit subagent_spawned (parent stream, lifecycle)
@@ -495,7 +498,13 @@ execute(task, tools=[], allow_outbound=[]):
      emit subagent_finished (parent stream, result)
      return "[sub-agent <id> completed]\n<body>"  (or ended:<status>)
 
-All refusals return a model-readable Error string and mint NO child run.
+_deny(reason, kind): emits spawn_denied event (consent kind → category
+  consent, else lifecycle) AND returns the model-readable Error. NO refusal
+  is silent — every refusal both mints NO child AND leaves a stream trace.
+Consent policy default "deny": over /v1/agent/task there is no interactive
+  consent channel, so spawn is refused unless tools.agent.spawn_consent="auto"
+  (subset rules still gate). Proper AGENT_WAITING/respond flow (ADR §8)
+  supersedes this later.
 ```
 
 <!-- Inc 8+ sections appended here as they land. Template:

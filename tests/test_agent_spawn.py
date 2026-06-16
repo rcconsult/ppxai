@@ -19,7 +19,9 @@ def registry(tmp_path: Path) -> AgentRunRegistry:
     return AgentRunRegistry(FilesystemAgentRunStore(tmp_path / "runs"))
 
 
-def _tool(registry, *, parent_tools, parent_allow, consent=None):
+def _tool(registry, *, parent_tools, parent_allow, consent=None, consent_policy="auto"):
+    # Default consent_policy="auto" in tests so happy-path spawns proceed
+    # without an interactive channel; the consent-gate tests override it.
     return SpawnSubagentTool(
         registry=registry,
         parent_run_id="run_parent",
@@ -28,6 +30,7 @@ def _tool(registry, *, parent_tools, parent_allow, consent=None):
         parent_provider="p",
         parent_model="m",
         request_consent=consent,
+        consent_policy=consent_policy,
     )
 
 
@@ -152,11 +155,55 @@ class TestExecuteRefusals:
 
     @pytest.mark.asyncio
     async def test_consent_denied_no_run_minted(self, registry):
+        # consent_policy="deny" -> the interactive consent gate is consulted;
+        # a denying callback refuses the spawn (no child) AND emits spawn_denied.
         async def deny(_summary): return False
-        t = _tool(registry, parent_tools=["read_file"], parent_allow=[], consent=deny)
+        t = _tool(registry, parent_tools=["read_file"], parent_allow=[],
+                  consent=deny, consent_policy="deny")
         out = await t.execute(task="x", tools=["read_file"])
-        assert "denied permission" in out
+        assert "cannot spawn sub-agent" in out
         assert registry.list_runs() == []
+        evs = [e.type for e in registry.read_events("run_parent")]
+        assert "spawn_denied" in evs
+
+    @pytest.mark.asyncio
+    async def test_deny_policy_no_channel_refuses_with_event(self, registry):
+        # The bug found in trial: consent_policy="deny" + no interactive channel
+        # (request_consent=None, the server context) -> spawn REFUSED, but now
+        # with a VISIBLE spawn_denied event (was silent, model fell back).
+        t = _tool(registry, parent_tools=["read_file"], parent_allow=[],
+                  consent=None, consent_policy="deny")
+        out = await t.execute(task="x", tools=["read_file"])
+        assert "cannot spawn sub-agent" in out
+        assert "spawn_consent" in out  # actionable: points at the config
+        assert registry.list_runs() == []
+        evs = [e.type for e in registry.read_events("run_parent")]
+        assert "spawn_denied" in evs
+
+    @pytest.mark.asyncio
+    async def test_auto_policy_spawns_without_consent_channel(self, registry, monkeypatch):
+        # consent_policy="auto" -> server-context spawn proceeds with NO
+        # interactive channel; subset rules remain the boundary.
+        async def fake_runner(meta): return "child ok"
+        monkeypatch.setattr(
+            "ppxai.server.routes.agent_v1.build_task_runner",
+            lambda reg, **kw: fake_runner,
+        )
+        t = _tool(registry, parent_tools=["read_file"], parent_allow=[],
+                  consent=None, consent_policy="auto")
+        out = await t.execute(task="summarize", tools=["read_file"])
+        assert "completed" in out and "child ok" in out
+        assert len(registry.list_runs()) == 1  # child WAS minted
+
+    @pytest.mark.asyncio
+    async def test_subset_denial_emits_event(self, registry):
+        # even with auto consent, a subset violation refuses + emits the event.
+        t = _tool(registry, parent_tools=["read_file"], parent_allow=[],
+                  consent_policy="auto")
+        out = await t.execute(task="x", tools=["write_file"])  # off-parent
+        assert "cannot spawn sub-agent" in out
+        evs = [e.type for e in registry.read_events("run_parent")]
+        assert "spawn_denied" in evs
 
 
 # ---------------------------------------------------------------------------

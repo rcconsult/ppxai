@@ -455,6 +455,11 @@ def build_task_runner(
             async def _spawn_consent(summary: str) -> bool:
                 return await engine.request_shell_consent(summary)
 
+            # Server-context spawn consent policy (tools.agent.spawn_consent):
+            # "deny" (default, safe) | "auto" (allow API-driven spawns; subset
+            # rules remain the boundary). There's no interactive consent
+            # channel over /v1/agent/task, so without "auto" a spawn is refused.
+            spawn_consent = (get_agent_config().get("spawn_consent") or "deny")
             engine.tool_manager.register_tool(SpawnSubagentTool(
                 registry=registry,
                 parent_run_id=m.run_id,
@@ -463,6 +468,7 @@ def build_task_runner(
                 parent_provider=provider_name,
                 parent_model=model,
                 request_consent=_spawn_consent,
+                consent_policy=spawn_consent,
             ))
 
         def _on_deny(name: str) -> None:

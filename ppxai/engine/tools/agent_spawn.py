@@ -106,6 +106,7 @@ class SpawnSubagentTool(BaseTool):
         parent_provider: str,
         parent_model: str,
         request_consent: Optional[Callable[[str], Awaitable[bool]]] = None,
+        consent_policy: str = "deny",
     ) -> None:
         self._registry = registry
         self._parent_run_id = parent_run_id
@@ -115,6 +116,16 @@ class SpawnSubagentTool(BaseTool):
         self._provider = parent_provider
         self._model = parent_model
         self._request_consent = request_consent
+        # Server-context consent policy (tools.agent.spawn_consent):
+        #   "deny" (default, safe) — no interactive channel over HTTP, so a
+        #     spawn that would need consent is refused (with a visible event).
+        #   "auto" — proceed without an interactive prompt; the capability
+        #     SUBSET rules (child grant ⊆ parent, child egress ⊆ parent,
+        #     no-shell, depth=1) remain the enforced boundary. Use when the
+        #     allowlist/grant is trusted to be the gate, not a human click.
+        # The proper interactive flow (AGENT_WAITING + /respond, ADR 0003 §8)
+        # supersedes this when it lands.
+        self._consent_policy = consent_policy
 
     # --- subset enforcement (AC-1 / AC-2 transitive) --------------------
 
@@ -173,6 +184,19 @@ class SpawnSubagentTool(BaseTool):
 
     # --- execution ------------------------------------------------------
 
+    def _deny(self, reason: str, kind: str) -> str:
+        """Emit a visible spawn_denied event on the parent stream AND return a
+        model-readable error. No refusal is silent — an operator watching the
+        run sees WHY a spawn didn't happen (the prior gap: a refused spawn only
+        sent a string back to the model, leaving no trace on the event log)."""
+        logger.warning(f"spawn_subagent denied ({kind}): {reason}")
+        self._registry.emit_event(
+            self._parent_run_id, "spawn_denied", level="warning",
+            category="consent" if kind == "consent" else "lifecycle",
+            data={"kind": kind, "reason": reason},
+        )
+        return f"Error: cannot spawn sub-agent — {reason}."
+
     async def execute(
         self,
         task: str,
@@ -188,21 +212,28 @@ class SpawnSubagentTool(BaseTool):
         # 1. Subset enforcement — refuse BEFORE minting anything.
         err = self._check_grant_subset(child_tools)
         if err:
-            logger.warning(f"spawn_subagent denied: {err}")
-            return f"Error: cannot spawn sub-agent — {err}."
+            return self._deny(err, "grant")
         err = self._check_egress_subset(child_allow)
         if err:
-            logger.warning(f"spawn_subagent denied: {err}")
-            return f"Error: cannot spawn sub-agent — {err}."
+            return self._deny(err, "egress")
 
-        # 2. Consent gate — a human must approve the spawn. The callback takes
-        #    a single human-readable summary (NOT a shell cwd); the registration
-        #    site adapts the engine's shell-consent to this shape.
-        if self._request_consent is not None:
+        # 2. Consent gate. Policy:
+        #    - "auto": skip the interactive prompt; the subset rules above are
+        #      the boundary. (Server context has no human to ask.)
+        #    - "deny" (default): if an interactive consent channel exists, ask
+        #      it; otherwise refuse with a visible event — never silently.
+        if self._consent_policy != "auto":
             summary = f"spawn_subagent: {task[:80]!r} tools={child_tools}"
+            if self._request_consent is None:
+                return self._deny(
+                    "spawn consent required but no interactive consent channel "
+                    "in this context; set tools.agent.spawn_consent='auto' to "
+                    "allow API-driven spawns (subset rules still apply)",
+                    "consent",
+                )
             approved = await self._request_consent(summary)
             if not approved:
-                return "Error: user denied permission to spawn a sub-agent."
+                return self._deny("user denied permission to spawn", "consent")
 
         # 3. Mint the child run, linked to the parent via parent_run_id. The
         #    child is a FIRST-CLASS run with its own run_id (addressable by
