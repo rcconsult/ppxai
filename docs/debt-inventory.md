@@ -603,11 +603,63 @@ signal "resync from disk." Works, but it's a brittle convention (relies on an
 ad-hoc attribute). Acceptable for MVP; consider a typed wrapper if the event
 fan-out grows.
 
-**Why deferred:** all correctness-neutral today. Promote (a)/(b) with the N>1
-sub-agent work; (c) is worth a covering test sooner if web_search backends
-change; (d) only matters if the SSE layer is reworked.
+**e. Cancel latency: cooperative polling vs blocking calls (secondary review
+2026-06-16).** `RunControl.check()` is evaluated only at `chat_with_tools`
+tool-loop boundaries, so a `POST /runs/<id>/cancel` issued while the engine is
+inside a long blocking call does NOT halt the run until that call returns. Two
+such calls: `provider.oneshot` / the LLM HTTP request (bounded by the provider
+timeout), and `SpawnSubagentTool._await_child` (up to the child `time_s` budget
+else `_DEFAULT_CHILD_WAIT_S=300`). **Verified:** cancel is *safe* (stops at a
+clean checkpoint, never mid-tool-call → no truncated `events.jsonl`/artifacts)
+but *not immediate*. `cancelling → cancelled` can lag by the in-flight call's
+duration. Acceptable for MVP; a future increment could race `check()` against
+the blocking await (e.g. `asyncio.wait` with a cancel event) for snappier
+cancellation. Document the latency in the API guide; no code change for MVP.
 
-**Branch when ready:** post-MVP, or fold (c)'s test into the next agent-platform PR.
+**f. Egress is application-layer; no DNS-rebinding / private-IP defense
+(secondary review 2026-06-16).** `NetworkPolicy.check()`
+(`engine/tools/network_policy.py:222`) matches `urlparse(url).hostname` against
+the allowlist *strings* — an application-layer check performed before
+`urllib`/`httpx` opens the TCP connection. **Gaps verified in code:** (1) an
+allowlisted host whose DNS an attacker controls can rebind to `127.0.0.1`/a
+link-local address between the check and the connect → SSRF against localhost
+services (classic TOCTOU/DNS-rebinding); (2) no rejection of allowlist entries
+that *themselves* resolve to private/loopback/link-local IPs; (3) `scheme ""`
+is accepted (line 228) alongside `https`. For the MVP — read-only tools, no
+shell, trusted operator-authored allowlists — string-matching is standard and
+sufficient. **For an untrusted-code production tier**, egress needs
+network-layer enforcement (egress proxy, `iptables`/NetworkPolicy, or a custom
+resolver that rejects private/loopback IPs and pins the resolved address
+through to connect). This aligns with — and should land alongside — the
+deferred **tier-d OS-isolation** work (ADR 0003 §3), which the shell-tool
+rejection already defers to. Until then, treat `allow_outbound` as "trusted
+operator input," not "safe against a hostile agent."
+
+**g. `_strip_section` couples the AC-1 prompt filter to markdown formatting
+(secondary review 2026-06-16).** `agent_scoped_tools.py:42` strips off-grant
+shell guidance by locating the section end via `prompt.find("\n## ", ...)` and
+matching the literal header `"## Shell wrapper context"` (line 220). **Verified
+brittleness:** if the base prompt renderer later changes that section's
+heading level (`### `), wraps it in XML/`<details>`, or renames it, the strip
+silently no-ops and shell instructions leak into the prompt of a run with NO
+shell grant. **Severity: token-waste, not a security breach** — the
+`ScopedToolManager.execute_tool` chokepoint still hard-denies the shell call
+(AC-1 holds); the LLM just wastes tokens attempting it. **Better design:** the
+prompt generator should build the shell block conditionally from a
+`has_shell_grant` flag passed down, rather than always-concatenating and
+parsing it back out by substring slicing. Worth a covering test now (assert no
+shell guidance survives `_strip_section` for a no-shell grant) even before the
+modular-prompt refactor.
+
+**Why deferred:** all correctness-neutral today. Promote (a)/(b) with the N>1
+sub-agent work; (c) and (g) are each worth a covering test sooner (backend-list
+coverage; post-strip no-leak assertion); (d) only matters if the SSE layer is
+reworked; (e)/(f) are MVP-acceptable limitations that graduate with the tier-d
+OS-isolation work — (f) especially must NOT ship to an untrusted-code tier
+without network-layer egress enforcement.
+
+**Branch when ready:** post-MVP, or fold (c)/(g)'s tests into the next
+agent-platform PR. (f) lands with tier-d OS-isolation.
 
 ---
 
