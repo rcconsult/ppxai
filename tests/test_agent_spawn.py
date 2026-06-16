@@ -339,3 +339,48 @@ class TestExecuteSpawns:
         assert "completed" not in out
         # the child's control was cleaned up (run finished, not orphaned)
         assert registry.get_control(child.run_id) is None
+
+    @pytest.mark.asyncio
+    async def test_parent_cancel_propagates_to_child_promptly(self, registry, monkeypatch):
+        # Item 37e: when the PARENT is cancelled while awaiting a child, the
+        # child must be cancelled promptly (within a tick), NOT after the full
+        # wait cap. We register a parent control, flip cancel_requested shortly
+        # after the spawn, and assert the child lands cancelled well before the
+        # (large) wait cap would have fired.
+        import asyncio
+        import ppxai.engine.tools.agent_spawn as spawn_mod
+        from ppxai.engine.agent_runs import RunControl
+        # Large cap so a pass can ONLY come from the parent-cancel path, not a timeout.
+        monkeypatch.setattr(spawn_mod, "_DEFAULT_CHILD_WAIT_S", 30.0)
+
+        # Register the parent's cooperative control (keyed by parent_run_id).
+        parent_ctl = RunControl(run_id="run_parent", budget={}, started_at=0.0)
+        registry._controls["run_parent"] = parent_ctl
+
+        async def forever_runner(meta):
+            ctl = registry.get_control(meta.run_id)
+            for _ in range(10000):
+                ctl.check(now=0.0)  # cooperative: raises when cancelled
+                await asyncio.sleep(0.01)
+            return "never"
+
+        monkeypatch.setattr(
+            "ppxai.server.routes.agent_v1.build_task_runner",
+            lambda reg, **kw: forever_runner,
+        )
+
+        async def approve(_s):
+            return True
+
+        async def flip_parent_cancel():
+            await asyncio.sleep(0.2)  # let the child start + parent enter _await_child
+            parent_ctl.cancel_requested = True
+
+        t = _tool(registry, parent_tools=["read_file"], parent_allow=[], consent=approve)
+        flipper = asyncio.create_task(flip_parent_cancel())
+        out = await asyncio.wait_for(t.execute(task="hang", tools=["read_file"]), timeout=10.0)
+        await flipper
+
+        child = registry.list_runs()[0]
+        assert child.status in ("cancelled", "interrupted", "failed")
+        assert "completed" not in out

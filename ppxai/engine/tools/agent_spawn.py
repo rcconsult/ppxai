@@ -320,9 +320,37 @@ class SpawnSubagentTool(BaseTool):
         wait_cap = (child_time + 10.0) if child_time else _DEFAULT_CHILD_WAIT_S
 
         if task is not None:
-            try:
-                await asyncio.wait_for(asyncio.shield(task), timeout=wait_cap)
-            except asyncio.TimeoutError:
+            # Wait for the child, but also react PROMPTLY if the PARENT run is
+            # cancelled while we're blocked here (Item 37e). Without this, a
+            # cancel on the parent wouldn't take effect until this await hit
+            # wait_cap (up to _DEFAULT_CHILD_WAIT_S = 300s). We poll the
+            # parent's cooperative cancel flag on a short tick and propagate
+            # the cancel down to the child, so parent-cancel latency is ~tick,
+            # not ~wait_cap.
+            parent_control = self._registry.get_control(self._parent_run_id)
+            deadline = wait_cap
+            tick = 0.1
+            waited = 0.0
+            shielded = asyncio.shield(task)
+            timed_out = False
+            while True:
+                if parent_control is not None and parent_control.cancel_requested:
+                    logger.info(
+                        f"parent {self._parent_run_id} cancelled while awaiting "
+                        f"sub-agent {child_run_id} — cancelling child"
+                    )
+                    self._registry.cancel_run(child_run_id)
+                    await asyncio.sleep(0.1)  # let the cooperative stop settle
+                    break
+                try:
+                    await asyncio.wait_for(asyncio.shield(shielded), timeout=tick)
+                    break  # child finished
+                except asyncio.TimeoutError:
+                    waited += tick
+                    if waited >= deadline:
+                        timed_out = True
+                        break
+            if timed_out:
                 # Don't orphan the child — cancel it cooperatively, then read
                 # whatever terminal state it lands in.
                 logger.warning(

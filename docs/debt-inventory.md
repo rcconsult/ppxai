@@ -651,15 +651,31 @@ parsing it back out by substring slicing. Worth a covering test now (assert no
 shell guidance survives `_strip_section` for a no-shell grant) even before the
 modular-prompt refactor.
 
-**Why deferred:** all correctness-neutral today. Promote (a)/(b) with the N>1
-sub-agent work; (c) and (g) are each worth a covering test sooner (backend-list
-coverage; post-strip no-leak assertion); (d) only matters if the SSE layer is
-reworked; (e)/(f) are MVP-acceptable limitations that graduate with the tier-d
-OS-isolation work — (f) especially must NOT ship to an untrusted-code tier
-without network-layer egress enforcement.
+**Status (updated 2026-06-16, commits `a8e7247d` g/c/f + the e follow-up):**
 
-**Branch when ready:** post-MVP, or fold (c)/(g)'s tests into the next
-agent-platform PR. (f) lands with tier-d OS-isolation.
+- **(c) DONE** — `tests/test_network_policy.py::TestBackendCoverage` asserts
+  every https host literal in `web_premium.py` is covered by `_NETWORK_TOOLS`,
+  plus a pin on the five known backends. Drift now fails CI.
+- **(g) DONE** — the shell-wrapper block is gated at the source via
+  `ToolManager.get_tools_prompt(include_wrapper_context=)`;
+  `_strip_section` deleted. No more markdown-format coupling.
+- **(f) PARTIAL** — `NetworkPolicy.check` now denies an allowlisted host that
+  resolves to a loopback/private/link-local/reserved IP, and rejects
+  bare/empty scheme. **Still deferred:** DNS-rebinding (TOCTOU between check
+  and connect) needs network-layer enforcement (pinned-IP connect / egress
+  proxy) and lands with **tier-d OS-isolation**. Must NOT ship to an
+  untrusted-code tier on the app-layer check alone.
+- **(e) PARTIAL** — parent-cancel now propagates to an awaited child within a
+  ~100ms tick (was: up to the 300s wait cap), via the cancel-flag poll in
+  `_await_child`. **Still deferred:** a cancel issued *during the provider
+  HTTP call* (`engine.chat` → `provider.oneshot`) still waits for that call to
+  return — racing `control` against the provider await is a deep change to the
+  core chat path with real regression risk, out of MVP scope.
+- **(a)/(b)** unchanged — promote with the N>1 sub-agent work.
+- **(d)** unchanged — only matters if the SSE layer is reworked.
+
+**Branch when ready:** (f)-rebinding + (e)-provider-call land with tier-d
+OS-isolation; (a)/(b) with N>1 sub-agents; (d) with an SSE rework.
 
 ---
 
