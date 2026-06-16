@@ -1,0 +1,54 @@
+[
+  {
+    "provider": "perplexity",
+    "model": "sonar-pro",
+    "task_id": "read_readme",
+    "status": "completed",
+    "used_granted_tool": true,
+    "tool_calls": [
+      "read_file"
+    ],
+    "correctness": true,
+    "error": null,
+    "latency_s": 6.4
+  },
+  {
+    "provider": "gemini",
+    "model": "gemini-3.1-pro-preview",
+    "task_id": "read_readme",
+    "status": "completed",
+    "used_granted_tool": true,
+    "tool_calls": [
+      "read_file"
+    ],
+    "correctness": true,
+    "error": null,
+    "latency_s": 12.1
+  },
+  {
+    "provider": "openai",
+    "model": "gpt-5.4-mini",
+    "task_id": "read_readme",
+    "status": "completed",
+    "used_granted_tool": true,
+    "tool_calls": [
+      "read_file"
+    ],
+    "correctness": true,
+    "error": null,
+    "latency_s": 6.3
+  },
+  {
+    "provider": "nvidia",
+    "model": "qwen/qwen3.5-122b-a10b",
+    "task_id": "read_readme",
+    "status": "completed",
+    "used_granted_tool": true,
+    "tool_calls": [
+      "read_file"
+    ],
+    "correctness": true,
+    "error": null,
+    "latency_s": 162.4
+  }
+]

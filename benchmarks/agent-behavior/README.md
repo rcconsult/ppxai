@@ -54,3 +54,27 @@ consumer (ppxai-sre).
   means "the tool result reached the answer"; it does not grade prose.
 - **Not a quality ranking** — this measures *tool-adherence behavior under
   agent framing*, not which model is "best."
+
+## First run — 2026-06-16 (read_readme, repeat=1, order perplexity→nvidia)
+
+The empirical answer to Item 37i. With the bounded-agent framing active,
+ALL four providers used the granted `read_file` tool and produced the
+correct answer — no native-knowledge substitution, including Perplexity
+Sonar (the suspected case):
+
+| provider / model | adherence | correct | latency |
+|---|---|---|---|
+| perplexity / sonar-pro | ✅ | ✅ | 6.4s |
+| gemini / gemini-3.1-pro-preview | ✅ | ✅ | 12.1s |
+| openai / gpt-5.4-mini | ✅ | ✅ | 6.3s |
+| nvidia / qwen3.5-122b-a10b | ✅ | ✅ | 162.4s* |
+
+\* nvidia **free tier** is documented-slow on agentic tool loops (CLAUDE.md
+Known Issues); adherence/correctness are unaffected, only latency. The
+`fetch_zen` (network) task is heavier and timed out >180s on the free tier
+— rerun it with a faster nvidia tier or `--poll-timeout 360`.
+
+**Conclusion:** the framing fix (Item 37i) works across all supported
+providers — the Perplexity native-search substitution does not occur on a
+bounded-agent `/v1/agent/task` run. (repeat=1; rerun with `--repeat 3` to
+average non-determinism before treating as a firm SLA.)

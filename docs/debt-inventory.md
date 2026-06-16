@@ -700,12 +700,33 @@ modular-prompt refactor.
   override is active. Ownership boundary preserved: the SOUL.md/AGENT.md
   persona artifact stays in the CONSUMER (ppxai-sre); ppxai provides the
   seam (`system` field, already on the request model) + a sane default.
-  Tests: `test_agent_system_prompt.py`. **Still optional (not done):** a
-  `weak_tool_calling` warning event when a `/task` targets
-  `native_tool_calling:false` — now lower value since the framing fix
-  addresses the actual behavior; keep as a nice-to-have for SRE audit
-  visibility. Needs live trial on Perplexity Sonar to confirm the framing
-  actually stops the substitution (mechanism is in; behavior unverified).
+  Tests: `test_agent_system_prompt.py`. **VERIFIED LIVE (2026-06-16):** the
+  `benchmarks/agent-behavior/` cross-provider run confirms all four
+  providers (perplexity/sonar-pro, gemini-3.1-pro-preview, gpt-5.4-mini,
+  nvidia/qwen3.5) use the granted tool with correct results under the
+  framing — Perplexity included, no native-search substitution. So 37i is
+  **DONE**. **Still optional (low value now):** a `weak_tool_calling`
+  warning event when a `/task` targets `native_tool_calling:false` — the
+  framing fix addresses the actual behavior, so this is just SRE audit
+  nicety; leave unbuilt unless asked.
+
+- **(j) DONE — non-streaming provider call blocked the event loop
+  (surfaced by the agent-behavior benchmark, 2026-06-16).** Every
+  provider's `chat` non-streaming branch (+ openai responses API) called
+  the SYNCHRONOUS SDK inside `async def` with no offload; `/v1/agent/task`
+  uses `stream=False`, so one agent run starved the whole asyncio loop
+  (server unresponsive to all other requests until the LLM call returned).
+  This is the concurrency half of the branch-start "threading/subprocess
+  for sub-agents" question. **Fixed:** wrapped the non-streaming calls in
+  `asyncio.to_thread` (openai_compat / openai_native completions+responses
+  / gemini / perplexity); LLM calls are I/O-bound so the GIL is released
+  during the socket wait → real interleaving. PROVEN: independent request
+  returns in 0.46s while an agent run is in flight (was: timeout).
+  **Deferred (separate axis):** the streaming `/chat` path still starves
+  the loop in small bursts (sync chunk iterator); offloading a generator
+  is bigger — track if interactive concurrency becomes a problem.
+  Subprocess/OS-isolation (tier-d) remains the CPU/security-isolation
+  answer, NOT needed for I/O concurrency.
 - **(a)/(b)** unchanged — promote with the N>1 sub-agent work.
 - **(d)** unchanged — only matters if the SSE layer is reworked.
 

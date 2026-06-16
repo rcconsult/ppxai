@@ -136,7 +136,7 @@ def _mint_token(base: str) -> str:
 # One run
 # --------------------------------------------------------------------------
 def run_task(base: str, token: str, provider: str, model: str, t: Task,
-             poll_timeout_s: float = 180.0) -> Result:
+             poll_timeout_s: float = 300.0) -> Result:
     res = Result(provider=provider, model=model, task_id=t.id)
     started = time.monotonic()
     body = {
@@ -195,12 +195,21 @@ def main() -> int:
     ap.add_argument("--providers", default="all",
                     help="'all' or comma list (perplexity,nvidia,gemini,openai)")
     ap.add_argument("--repeat", type=int, default=1, help="runs per (provider,task)")
+    ap.add_argument("--tasks", default="all",
+                    help="'all' or comma list of task ids (fetch_zen,read_readme)")
+    ap.add_argument("--poll-timeout", type=float, default=300.0,
+                    help="seconds to poll a run to terminal before giving up")
     ap.add_argument("--out", default="benchmarks/agent-behavior/results/latest.json")
     args = ap.parse_args()
 
     base = args.base_url.rstrip("/")
+    # Provider order is the --providers order (so you can run the suspected
+    # case first); 'all' uses the matrix order.
     provs = (list(PROVIDER_MATRIX) if args.providers == "all"
              else [p.strip() for p in args.providers.split(",") if p.strip()])
+    tasks = (TASKS if args.tasks == "all"
+             else [t for t in TASKS if t.id in
+                   {x.strip() for x in args.tasks.split(",")}])
 
     try:
         token = _mint_token(base)
@@ -214,11 +223,12 @@ def main() -> int:
         if not model:
             print(f"skip {prov}: no model in matrix")
             continue
-        for t in TASKS:
+        for t in tasks:
             for i in range(args.repeat):
                 print(f"-> {prov}/{model} :: {t.id} (run {i+1}/{args.repeat}) ...",
                       flush=True)
-                r = run_task(base, token, prov, model, t)
+                r = run_task(base, token, prov, model, t,
+                             poll_timeout_s=args.poll_timeout)
                 tag = ("OK " if (r.used_granted_tool and r.correctness)
                        else "SUBST" if r.status == "completed" and not r.used_granted_tool
                        else "FAIL")
