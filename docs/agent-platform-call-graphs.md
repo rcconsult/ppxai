@@ -548,14 +548,22 @@ consumers blind to which.
 
 ```
 auth_middleware (http.py)
-  -> auth.check_request(request)
-       -> is_auth_enabled()                      # any provider enforce a token?
-            -> state.get_secret_provider()       # singleton ProviderChain
-       -> chain.resolve(bearer)                  # first provider to match wins
-            -> EnvSecretProvider.resolve()       #   PPXAI_API_TOKEN compare (read-only)
-            -> FileSecretProvider.resolve()      #   salted-SHA256 verify vs tokens.json
-       -> request.state.principal = TokenRecord  # owner stashed for Inc 8b
-       (None => proceed | 401 JSONResponse)
+  -> auth.check_request(request)                  # exemptions checked IN ORDER:
+       1. not is_auth_enabled()      -> proceed   # no provider enforces a token
+            -> is_auth_enabled(): a MINT-capable (file) provider enforces by
+               mere presence (empty store => still 401, not open); env enforces
+               only when its var is set. [post-Inc-9 §H]
+       2. method == OPTIONS          -> proceed   # CORS preflight (no auth hdr)
+       3. loopback POST /v1/tokens into EMPTY store -> proceed  # bootstrap mint
+       4. loopback UI/static/chat    -> proceed   # local browser carries no
+            bearer; EXEMPT iff path NOT under (/v1/agent, /v1/tokens) — the
+            sensitive API stays protected even from loopback. Remote NEVER
+            exempt. [post-Inc-9 §H]
+       5. chain.resolve(bearer)                   # first provider to match wins
+            -> EnvSecretProvider.resolve()        #   PPXAI_API_TOKEN compare (read-only)
+            -> FileSecretProvider.resolve()       #   salted-SHA256 verify vs tokens.json
+          None  -> 401 JSONResponse
+          match -> request.state.principal = TokenRecord  # owner stashed (8b) -> proceed
 ```
 
 ### `GET /v1/tokens` — list token metadata (never material)
@@ -737,6 +745,20 @@ takes `parent_owner` and passes `owner=parent_owner` to `start_run`, so a
 child run inherits the parent's owner (not `owner=None` = world-readable).
 This also fixed a latent crash: `build_task_runner` was already passing
 `parent_owner=` to a constructor that didn't accept it. (commit 71022ad5)
+
+**§H — loopback UI auth exemption (surfaced live, web app 401'd).** With a
+file token store configured, auth is enforced — but the browser web/desktop
+client carries NO bearer, so opening `127.0.0.1:54320` returned 401 and the
+UI couldn't even load. `check_request` now exempts loopback requests to the
+UI/static/chat surface (allowlist-by-exclusion: loopback AND path NOT under
+`/v1/agent` or `/v1/tokens`). Same trust basis as the loopback mint
+exemption — a local browser is physically on the host. The sensitive v1
+surface (agent run monitor channels — owner-scoped; token mgmt) stays
+protected EVEN from loopback; remote requests are never exempt. Also
+clarifies the empty-store policy: a mint-capable provider enforces auth by
+its mere presence (an empty store is 401, not open). Verified on the
+installed binary: `/` + `/state` → 200, `/v1/agent/runs` + `/v1/tokens`
+GET → 401, remote UI → 401. (commit aa989cef)
 
 <!-- Inc 10+ sections appended here as they land. Template:
 ## Increment N — <title>
