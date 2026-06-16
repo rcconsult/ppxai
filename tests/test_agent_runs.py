@@ -569,6 +569,35 @@ class TestAgentRunRoutes:
         assert r.status_code == 400
         assert "execute_shell_command" in r.json()["detail"]
 
+    def test_task_rejects_non_openai_compatible_provider(self, client, monkeypatch):
+        # The v1 agent tier only accepts OpenAICompatibleProvider-class
+        # providers. A native provider (openai/gemini/perplexity classes)
+        # gets a 400 whose message lists the actually-eligible providers, so
+        # the caller isn't left guessing (trial-feedback fix).
+        c, _ = client
+        from ppxai.server.routes import agent_v1
+        from ppxai.engine.providers.openai_compat import OpenAICompatibleProvider
+
+        class _Native:  # deliberately NOT an OpenAICompatibleProvider instance
+            pass
+        class _Compat(OpenAICompatibleProvider):
+            def __init__(self): pass
+
+        # native for the requested provider; a compatible one exists to suggest
+        monkeypatch.setattr(agent_v1, "_build_provider",
+                            lambda name: _Compat() if name == "ollama" else _Native())
+        monkeypatch.setattr(
+            "ppxai.config.get_available_providers",
+            lambda: ["openai", "ollama"], raising=False,
+        )
+        r = c.post("/v1/agent/task", json={
+            "task": "t", "tools": ["read_file"], "provider": "openai", "model": "m",
+        })
+        assert r.status_code == 400
+        detail = r.json()["detail"]
+        assert "not supported on v1" in detail
+        assert "ollama" in detail        # suggests the eligible one
+
     def test_task_enforces_grant_end_to_end(self, client, monkeypatch):
         # Full /task path with EngineClient stubbed: the stubbed chat() calls
         # the (route-installed) ScopedToolManager.execute_tool on an off-grant

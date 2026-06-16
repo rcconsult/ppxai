@@ -68,6 +68,44 @@ from .oneshot import _build_provider
 
 logger = get_logger("server")
 
+
+def _v1_provider_or_400(provider_name: str):
+    """Build the provider and enforce the v1 OpenAI-compatible constraint.
+
+    The v1 agent tier only drives providers whose class IS
+    `OpenAICompatibleProvider`. The NATIVE provider classes
+    (`openai`/`gemini`/`perplexity` → OpenAINativeProvider / GeminiProvider /
+    PerplexityProvider) extend BaseProvider directly and are NOT accepted —
+    even though OpenAI itself is the reference OpenAI-compatible API. On
+    rejection the 400 lists the providers actually eligible on THIS install,
+    so the caller doesn't have to guess. (Widening the guard to wrap the
+    native classes is its own task — see docs/api-gateway.md.)"""
+    provider = _build_provider(provider_name)  # raises 400 on unknown / no key
+    if isinstance(provider, OpenAICompatibleProvider):
+        return provider
+    # Probe configured providers to report which ones WOULD work.
+    from ...config import get_available_providers
+    eligible = []
+    for name in get_available_providers():
+        try:
+            if isinstance(_build_provider(name), OpenAICompatibleProvider):
+                eligible.append(name)
+        except Exception:
+            pass  # unbuildable (no key etc.) — don't suggest it
+    hint = (", ".join(sorted(eligible))
+            if eligible else "(none configured — add an OpenAI-compatible "
+                              "provider in ppxai-config.json)")
+    raise HTTPException(
+        status_code=400,
+        detail=(
+            f"Provider {provider_name!r} is not supported on v1 agent tasks: "
+            f"only OpenAI-compatible providers are routed through the v1 agent "
+            f"tier. Native openai/gemini/perplexity use their own provider "
+            f"classes and aren't accepted here yet. Eligible on this install: "
+            f"{hint}."
+        ),
+    )
+
 router = APIRouter(prefix="/v1/agent")
 
 
@@ -194,16 +232,9 @@ async def create_agent_run(req: AgentRunRequest) -> AgentRunResponse:
 
     # Build the provider + apply the v1 carve-out BEFORE minting/backgrounding,
     # so an unsupported provider fails fast with 400 and creates no run.
-    # (_build_provider raises HTTPException 400 on unknown provider / no key.)
-    provider = _build_provider(provider_name)
-    if not isinstance(provider, OpenAICompatibleProvider):
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                f"Provider {provider_name!r} doesn't support v1 agent runs yet "
-                f"(v1 supports OpenAI-compatible providers)."
-            ),
-        )
+    # (_v1_provider_or_400 raises HTTPException 400 on unknown provider / no
+    # key / non-OpenAI-compatible class, with an actionable eligible list.)
+    provider = _v1_provider_or_400(provider_name)
 
     meta = registry.start_run(
         task=req.task, tools=req.tools, provider=provider_name, model=model
@@ -356,15 +387,7 @@ async def create_agent_task(req: AgentTaskRequest) -> AgentRunResponse:
             ),
         )
 
-    provider = _build_provider(provider_name)
-    if not isinstance(provider, OpenAICompatibleProvider):
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                f"Provider {provider_name!r} doesn't support v1 agent tasks yet "
-                f"(v1 supports OpenAI-compatible providers)."
-            ),
-        )
+    _v1_provider_or_400(provider_name)
 
     meta = registry.start_run(
         task=req.task, tools=req.tools, provider=provider_name, model=model,
