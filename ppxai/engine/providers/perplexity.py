@@ -231,3 +231,58 @@ class PerplexityProvider(BaseProvider):
         response = self.client.chat.completions.create(**request_kwargs)
 
         return response.choices[0].message.content or ""
+
+    def oneshot(
+        self,
+        prompt: str,
+        model: str,
+        system: Optional[str] = None,
+        response_format: Optional[Dict[str, Any]] = None,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+    ) -> Dict[str, Any]:
+        """Stateless single-turn completion (BaseProvider contract).
+
+        Same return shape as OpenAICompatibleProvider.oneshot. Perplexity
+        uses the OpenAI SDK, so this composes the existing message
+        conversion + generation params.
+        """
+        messages: List[Message] = []
+        if system:
+            messages.append(Message(role="system", content=system))
+        messages.append(Message(role="user", content=prompt))
+
+        request_kwargs: Dict[str, Any] = {
+            "model": model,
+            "messages": self._convert_messages(messages),
+            "stream": False,
+        }
+        generation_params = self._get_generation_params(model)
+        if generation_params:
+            request_kwargs.update(generation_params)
+        if temperature is not None:
+            request_kwargs["temperature"] = temperature
+        if max_tokens is not None:
+            request_kwargs["max_tokens"] = max_tokens
+        if response_format is not None:
+            request_kwargs["response_format"] = response_format
+        extra_body = self._get_extra_body(model)
+        if extra_body:
+            request_kwargs["extra_body"] = extra_body
+
+        response = self.client.chat.completions.create(**request_kwargs)
+        msg = response.choices[0].message
+        usage_obj = getattr(response, "usage", None)
+        usage_dict = None
+        if usage_obj is not None:
+            usage_dict = {
+                "prompt_tokens": getattr(usage_obj, "prompt_tokens", 0) or 0,
+                "completion_tokens": getattr(usage_obj, "completion_tokens", 0) or 0,
+                "total_tokens": getattr(usage_obj, "total_tokens", 0) or 0,
+            }
+        return {
+            "content": msg.content or "",
+            "finish_reason": response.choices[0].finish_reason,
+            "model": getattr(response, "model", None) or model,
+            "usage": usage_dict,
+        }

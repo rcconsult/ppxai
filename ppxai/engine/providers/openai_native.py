@@ -225,6 +225,65 @@ class OpenAINativeProvider(BaseProvider):
         response = self.client.chat.completions.create(**request_kwargs)
         return response.choices[0].message.content or ""
 
+    def oneshot(
+        self,
+        prompt: str,
+        model: str,
+        system: Optional[str] = None,
+        response_format: Optional[Dict[str, Any]] = None,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+    ) -> Dict[str, Any]:
+        """Stateless single-turn completion (BaseProvider contract).
+
+        Same return shape as OpenAICompatibleProvider.oneshot
+        ({content, finish_reason, model, usage}). Native OpenAI uses the
+        same Chat Completions SDK path as the compat provider, so this
+        composes the existing message conversion + token-param handling.
+        """
+        messages: List[Message] = []
+        if system:
+            messages.append(Message(role="system", content=system))
+        messages.append(Message(role="user", content=prompt))
+
+        request_kwargs: Dict[str, Any] = {
+            "model": model,
+            "messages": self._convert_messages(messages),
+            "stream": False,
+        }
+
+        use_completion_tokens = self._needs_max_completion_tokens(model)
+        token_key = "max_completion_tokens" if use_completion_tokens else "max_tokens"
+        if max_tokens is not None:
+            request_kwargs[token_key] = max_tokens
+        else:
+            configured_max = self._get_max_tokens(model)
+            if configured_max:
+                request_kwargs[token_key] = configured_max
+
+        if temperature is not None and not use_completion_tokens:
+            # o-series / GPT-5.x reject temperature; only set when supported.
+            request_kwargs["temperature"] = temperature
+        if response_format is not None:
+            request_kwargs["response_format"] = response_format
+
+        response = self.client.chat.completions.create(**request_kwargs)
+        msg = response.choices[0].message
+        usage_obj = getattr(response, "usage", None)
+        usage_dict = None
+        if usage_obj is not None:
+            usage_dict = {
+                "prompt_tokens": getattr(usage_obj, "prompt_tokens", 0) or 0,
+                "completion_tokens": getattr(usage_obj, "completion_tokens", 0) or 0,
+                "total_tokens": getattr(usage_obj, "total_tokens", 0) or 0,
+            }
+        return {
+            "content": msg.content or "",
+            "finish_reason": response.choices[0].finish_reason,
+            "model": getattr(response, "model", None) or model,
+            "usage": usage_dict,
+        }
+
     def get_capabilities_for_model(self, model: str) -> ProviderCapabilities:
         """Get model-aware capabilities.
 

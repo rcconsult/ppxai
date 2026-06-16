@@ -199,20 +199,10 @@ async def oneshot(req: OneshotRequest) -> OneshotResponse:
 
     provider = _build_provider(provider_name)
 
-    # v1 supports OpenAI-compatible providers (covers local/custom/openai-
-    # compat NIM/vLLM/Ollama). Other providers grow oneshot() in subsequent
-    # versions; until then, surface a clear 400.
-    if not isinstance(provider, OpenAICompatibleProvider):
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                f"Provider {provider_name!r} doesn't support /v1/oneshot yet. "
-                f"v1 supports OpenAI-compatible providers (local, custom, and "
-                f"any provider routed through OpenAICompatibleProvider). "
-                f"Use POST /chat with X-Session-Id for now."
-            ),
-        )
-
+    # v1.19.x: oneshot() is now part of the BaseProvider contract (implemented
+    # on every provider), so /v1/oneshot is provider-agnostic — no
+    # isinstance-by-class guard. _build_provider already 400s on unknown
+    # provider / missing key.
     try:
         result = provider.oneshot(
             prompt=req.prompt,

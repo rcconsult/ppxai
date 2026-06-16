@@ -456,6 +456,72 @@ class GeminiProvider(BaseProvider):
 
         return content
 
+    def oneshot(
+        self,
+        prompt: str,
+        model: str,
+        system: Optional[str] = None,
+        response_format: Optional[Dict[str, Any]] = None,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+    ) -> Dict[str, Any]:
+        """Stateless single-turn completion (BaseProvider contract).
+
+        Same return shape as OpenAICompatibleProvider.oneshot
+        ({content, finish_reason, model, usage}). Gemini uses
+        generate_content (not the OpenAI SDK), so usage is parsed from
+        `usage_metadata` via the existing `_parse_usage`. `system` maps to
+        Gemini's system_instruction; response_format is not forwarded
+        (Gemini structured output uses a different config knob — out of
+        scope for this stateless path).
+        """
+        messages: List[Message] = []
+        if system:
+            messages.append(Message(role="system", content=system))
+        messages.append(Message(role="user", content=prompt))
+
+        contents, system_instruction = self._convert_messages(messages)
+        generation_params = dict(self._get_generation_params(model) or {})
+        if temperature is not None:
+            generation_params["temperature"] = temperature
+        if max_tokens is not None:
+            # Gemini SDK uses max_output_tokens.
+            generation_params["max_output_tokens"] = max_tokens
+        config = self._build_config(
+            use_grounding=self.enable_grounding,
+            system_instruction=system_instruction,
+            generation_params=generation_params,
+        )
+
+        response = self.client.models.generate_content(
+            model=model, contents=contents, config=config
+        )
+
+        content = ""
+        finish_reason = None
+        if response.candidates and response.candidates[0].content and response.candidates[0].content.parts:
+            for part in response.candidates[0].content.parts:
+                if hasattr(part, "text") and part.text:
+                    content += part.text
+            finish_reason = getattr(response.candidates[0], "finish_reason", None)
+            if finish_reason is not None:
+                finish_reason = str(finish_reason)
+
+        usage_dict = None
+        usage_stats = self._parse_usage(getattr(response, "usage_metadata", None))
+        if usage_stats is not None:
+            usage_dict = {
+                "prompt_tokens": usage_stats.prompt_tokens,
+                "completion_tokens": usage_stats.completion_tokens,
+                "total_tokens": usage_stats.total_tokens,
+            }
+        return {
+            "content": content,
+            "finish_reason": finish_reason,
+            "model": model,
+            "usage": usage_dict,
+        }
+
     def _convert_messages(self, messages: List[Message]) -> tuple:
         """Convert Message objects to Gemini format.
 

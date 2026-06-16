@@ -202,6 +202,13 @@ class TestBaseProviderConvertMessages:
         class TestProvider(BaseProvider):
             async def chat(self, messages, model, stream=False, tools=None):
                 pass
+
+            def oneshot(self, prompt, model, system=None, response_format=None,
+                        max_tokens=None, temperature=None):
+                # v1.19.x: oneshot is part of the BaseProvider contract; this
+                # double only exercises _convert_messages, so a stub suffices.
+                return {"content": "", "finish_reason": None, "model": model,
+                        "usage": None}
         return TestProvider(api_key="test", base_url="http://localhost")
 
     def test_basic_messages(self):

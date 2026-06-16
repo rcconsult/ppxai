@@ -569,12 +569,18 @@ class TestAgentRunRoutes:
         assert one["status"] == "failed"
         assert "upstream 503" in one["error"]
 
-    def test_unsupported_provider_400_no_run_created(self, client, monkeypatch):
-        # Carve-out runs BEFORE minting -> unsupported provider 400, no run.
+    def test_unbuildable_provider_400_no_run_created(self, client, monkeypatch):
+        # v1.19.x: the v1 tier is provider-AGNOSTIC (gates by capability, not
+        # class). The only up-front 400 is an UNBUILDABLE provider — unknown
+        # name / missing key — which _build_provider raises BEFORE minting, so
+        # no orphan run is created.
         c, reg = client
+        from fastapi import HTTPException
         from ppxai.server.routes import agent_v1
 
-        monkeypatch.setattr(agent_v1, "_build_provider", lambda name: object())
+        def _raise(name):
+            raise HTTPException(status_code=400, detail=f"unknown provider {name!r}")
+        monkeypatch.setattr(agent_v1, "_build_provider", _raise)
 
         resp = c.post("/v1/agent/run", json={
             "task": "ping", "provider": "fakeprov", "model": "fakemodel",
@@ -631,34 +637,33 @@ class TestAgentRunRoutes:
         assert r.status_code == 400
         assert "execute_shell_command" in r.json()["detail"]
 
-    def test_task_rejects_non_openai_compatible_provider(self, client, monkeypatch):
-        # The v1 agent tier only accepts OpenAICompatibleProvider-class
-        # providers. A native provider (openai/gemini/perplexity classes)
-        # gets a 400 whose message lists the actually-eligible providers, so
-        # the caller isn't left guessing (trial-feedback fix).
-        c, _ = client
+    def test_task_accepts_any_buildable_provider(self, client, monkeypatch):
+        # v1.19.x: /task drives engine.chat() (abstract on BaseProvider — every
+        # provider has it), so the tier no longer rejects native
+        # openai/gemini/perplexity by class. A buildable provider is accepted;
+        # the run is minted and backgrounded (it then fails only because the
+        # stub engine isn't real — but the POST must NOT 400 on provider class).
+        c, reg = client
         from ppxai.server.routes import agent_v1
-        from ppxai.engine.providers.openai_compat import OpenAICompatibleProvider
 
-        class _Native:  # deliberately NOT an OpenAICompatibleProvider instance
+        class _AnyProvider:  # NOT an OpenAICompatibleProvider — must still pass
             pass
-        class _Compat(OpenAICompatibleProvider):
-            def __init__(self): pass
+        monkeypatch.setattr(agent_v1, "_build_provider", lambda name: _AnyProvider())
 
-        # native for the requested provider; a compatible one exists to suggest
-        monkeypatch.setattr(agent_v1, "_build_provider",
-                            lambda name: _Compat() if name == "ollama" else _Native())
+        # Make the background runner a no-op so we isolate the route's accept
+        # decision (no real EngineClient needed).
+        async def _ok_runner(m):
+            return "ok"
         monkeypatch.setattr(
-            "ppxai.config.get_available_providers",
-            lambda: ["openai", "ollama"], raising=False,
+            agent_v1, "build_task_runner", lambda reg_, **kw: _ok_runner,
         )
+
         r = c.post("/v1/agent/task", json={
             "task": "t", "tools": ["read_file"], "provider": "openai", "model": "m",
         })
-        assert r.status_code == 400
-        detail = r.json()["detail"]
-        assert "not supported on v1" in detail
-        assert "ollama" in detail        # suggests the eligible one
+        assert r.status_code == 200          # accepted, not 400-by-class
+        assert r.json()["status"] in ("running", "completed")
+        assert len(reg.list_runs()) == 1     # run was minted
 
     def test_task_enforces_grant_end_to_end(self, client, monkeypatch):
         # Full /task path with EngineClient stubbed: the stubbed chat() calls

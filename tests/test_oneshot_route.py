@@ -221,21 +221,40 @@ class TestProviderErrors:
 
 
 class TestProviderCapabilityCheck:
-    """v1 only supports OpenAI-compatible providers; others get a clear 400."""
+    """v1.19.x: /v1/oneshot is provider-AGNOSTIC — oneshot() is part of the
+    BaseProvider contract, so any buildable provider works (no
+    isinstance-by-class 400). Only an unbuildable provider 400s."""
 
-    def test_non_openai_compat_provider_400(self, http_client):
-        # Build a provider that's NOT an OpenAICompatibleProvider instance.
-        non_compat = MagicMock()
-        # Don't set __class__ to OpenAICompatibleProvider — leave as MagicMock.
+    def test_any_provider_with_oneshot_succeeds(self, http_client):
+        # A non-OpenAICompatibleProvider whose oneshot() returns the contract
+        # dict must now be accepted (was rejected by class pre-1.19.x).
+        prov = MagicMock()
+        prov.oneshot.return_value = {
+            "content": "hi", "finish_reason": "stop",
+            "model": "some_model", "usage": None,
+        }
         with patch(
-            "ppxai.server.routes.oneshot._build_provider", return_value=non_compat
+            "ppxai.server.routes.oneshot._build_provider", return_value=prov
         ), patch(
             "ppxai.server.routes.oneshot.get_default_provider", return_value="some_provider"
         ), patch(
             "ppxai.server.routes.oneshot.get_default_model", return_value="some_model"
         ):
             r = http_client.post("/v1/oneshot", json={"prompt": "Hello"})
+        assert r.status_code == 200
+        assert r.json()["content"] == "hi"
+
+    def test_unbuildable_provider_400(self, http_client):
+        from fastapi import HTTPException
+
+        def _raise(name):
+            raise HTTPException(status_code=400, detail=f"unknown provider {name!r}")
+        with patch(
+            "ppxai.server.routes.oneshot._build_provider", side_effect=_raise
+        ), patch(
+            "ppxai.server.routes.oneshot.get_default_provider", return_value="nope"
+        ), patch(
+            "ppxai.server.routes.oneshot.get_default_model", return_value="m"
+        ):
+            r = http_client.post("/v1/oneshot", json={"prompt": "Hello"})
         assert r.status_code == 400
-        detail = r.json()["detail"]
-        assert "doesn't support /v1/oneshot" in detail
-        assert "POST /chat" in detail  # workaround hint

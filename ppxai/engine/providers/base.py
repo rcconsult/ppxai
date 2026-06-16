@@ -118,6 +118,31 @@ class BaseProvider(ABC):
         """
         pass
 
+    @abstractmethod
+    def oneshot(
+        self,
+        prompt: str,
+        model: str,
+        system: Optional[str] = None,
+        response_format: Optional[Dict[str, Any]] = None,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+    ) -> Dict[str, Any]:
+        """Stateless single-turn completion (the v1 gateway contract).
+
+        Backs `POST /v1/oneshot` and the tool-FREE `POST /v1/agent/run`
+        tier. No history, no tools, no streaming. Every provider must
+        implement this so those tiers are provider-agnostic (v1.19.x: was
+        only on OpenAICompatibleProvider, which forced an
+        isinstance-by-class guard on the v1 routes).
+
+        Returns:
+            ``{"content": str, "finish_reason": str | None,
+              "model": str, "usage": {prompt_tokens, completion_tokens,
+              total_tokens} | None}``
+        """
+        ...
+
     def chat_sync(
         self,
         messages: List[Message],

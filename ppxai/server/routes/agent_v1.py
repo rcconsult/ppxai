@@ -71,7 +71,6 @@ from pydantic import BaseModel, Field
 from ...common.logger import get_logger
 from ...config.tools import get_agent_config
 from ...engine.agent_runs import RunMeta
-from ...engine.providers.openai_compat import OpenAICompatibleProvider
 from ...engine.tools.network_policy import grant_has_shell
 from ..state import get_agent_run_registry
 # Reuse oneshot's provider construction so Inc 1 has zero provider-wiring
@@ -132,41 +131,19 @@ def _authorize_run_access(request: Request, meta: RunMeta) -> None:
 
 
 def _v1_provider_or_400(provider_name: str):
-    """Build the provider and enforce the v1 OpenAI-compatible constraint.
+    """Build the provider for a v1 agent run.
 
-    The v1 agent tier only drives providers whose class IS
-    `OpenAICompatibleProvider`. The NATIVE provider classes
-    (`openai`/`gemini`/`perplexity` → OpenAINativeProvider / GeminiProvider /
-    PerplexityProvider) extend BaseProvider directly and are NOT accepted —
-    even though OpenAI itself is the reference OpenAI-compatible API. On
-    rejection the 400 lists the providers actually eligible on THIS install,
-    so the caller doesn't have to guess. (Widening the guard to wrap the
-    native classes is its own task — see docs/api-gateway.md.)"""
-    provider = _build_provider(provider_name)  # raises 400 on unknown / no key
-    if isinstance(provider, OpenAICompatibleProvider):
-        return provider
-    # Probe configured providers to report which ones WOULD work.
-    from ...config import get_available_providers
-    eligible = []
-    for name in get_available_providers():
-        try:
-            if isinstance(_build_provider(name), OpenAICompatibleProvider):
-                eligible.append(name)
-        except Exception:
-            pass  # unbuildable (no key etc.) — don't suggest it
-    hint = (", ".join(sorted(eligible))
-            if eligible else "(none configured — add an OpenAI-compatible "
-                              "provider in ppxai-config.json)")
-    raise HTTPException(
-        status_code=400,
-        detail=(
-            f"Provider {provider_name!r} is not supported on v1 agent tasks: "
-            f"only OpenAI-compatible providers are routed through the v1 agent "
-            f"tier. Native openai/gemini/perplexity use their own provider "
-            f"classes and aren't accepted here yet. Eligible on this install: "
-            f"{hint}."
-        ),
-    )
+    v1.19.x: gates by CAPABILITY, not provider class. Both v1 agent tiers
+    need only methods every `BaseProvider` implements — `/v1/agent/task`
+    drives `engine.chat()` (abstract on BaseProvider; all providers have it)
+    and `/v1/agent/run` drives `provider.oneshot()` (now abstract on
+    BaseProvider too — implemented on every provider). So any buildable
+    provider is accepted; the old `isinstance(OpenAICompatibleProvider)`
+    check was rejecting native openai/gemini/perplexity for a method
+    (`oneshot`) the tier either doesn't call (`/task`) or that they now
+    have (`/run`). `_build_provider` still raises 400 on unknown provider /
+    missing key."""
+    return _build_provider(provider_name)
 
 router = APIRouter(prefix="/v1/agent")
 
@@ -294,10 +271,10 @@ async def create_agent_run(req: AgentRunRequest, request: Request) -> AgentRunRe
             ),
         )
 
-    # Build the provider + apply the v1 carve-out BEFORE minting/backgrounding,
-    # so an unsupported provider fails fast with 400 and creates no run.
-    # (_v1_provider_or_400 raises HTTPException 400 on unknown provider / no
-    # key / non-OpenAI-compatible class, with an actionable eligible list.)
+    # Build the provider BEFORE minting/backgrounding so an UNBUILDABLE
+    # provider (unknown name / missing key) fails fast with 400 and creates no
+    # run. v1.19.x: any buildable provider is accepted (gates by capability,
+    # not class — see _v1_provider_or_400).
     provider = _v1_provider_or_400(provider_name)
 
     meta = registry.start_run(

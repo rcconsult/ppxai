@@ -248,11 +248,12 @@ Content-Type: application/json
 
 - **Stateless.** No session is created or mutated. Safe for high-frequency
   short-lived calls (rate-limited by the upstream provider, not by ppxai).
-- **Provider support.** v1 supports OpenAI-compatible providers, which
-  covers `local`, `custom`, and any deployment routed through
-  `OpenAICompatibleProvider` (NIM, vLLM, Ollama, OpenRouter, ...). Native
-  OpenAI / Perplexity / Gemini providers grow oneshot support in
-  subsequent releases; until then they return 400 with a clear message.
+- **Provider support.** v1.19.x: **all configured providers** are
+  supported. `oneshot()` is part of the `BaseProvider` contract, so
+  `local`/`custom`/NIM/vLLM/Ollama/OpenRouter **and** native
+  OpenAI/Perplexity/Gemini all work. The only 400 is an *unbuildable*
+  provider (unknown name / missing API key). (Pre-1.19.x this endpoint
+  rejected native providers by class — that restriction is removed.)
 - **`response_format`.** Forwarded to the provider as-is. NVIDIA NIM,
   vLLM, and modern OpenAI-compat endpoints accept the OpenAI shape.
   Older endpoints may return 400 — that surfaces to the client as 502
