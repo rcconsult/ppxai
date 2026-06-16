@@ -37,8 +37,14 @@ class _FakeBase:
             for n in ("read_file", "write_file", "shell")
         ]
 
-    def get_tools_prompt(self, working_dir=None):
-        return "read_file: ...\nwrite_file: ...\nshell: ..."
+    def get_tools_prompt(self, working_dir=None, include_wrapper_context=True):
+        # include_wrapper_context mirrors the real ToolManager signature
+        # (v1.19.0 Item 37g). When False, omit the shell-wrapper line so the
+        # scoped no-shell-grant path renders no off-grant shell guidance.
+        base = "read_file: ...\nwrite_file: ...\nshell: ..."
+        if include_wrapper_context:
+            base += "\n## Shell wrapper context\nrtk ..."
+        return base
 
     def get_tool(self, name):
         return _FakeTool(name)
@@ -138,6 +144,33 @@ class TestOfferedSetFiltered:
         # grant WITH shell -> guidance is relevant, must be present
         p = ScopedToolManager(real, ["read_file", "execute_shell_command"]).get_tools_prompt()
         assert "### execute_shell_command" in p
+
+    def test_renderer_gates_wrapper_block_at_source(self, monkeypatch):
+        # v1.19.0 Item 37g: the wrapper-context block is gated at the SOURCE
+        # via include_wrapper_context — never emitted-then-stripped. Force a
+        # non-empty wrapper block and assert the flag controls it directly, so
+        # the AC-1 filter no longer depends on the section's markdown format.
+        from ppxai.engine.tools.manager import ToolManager
+        from ppxai.engine.tools.base import FunctionTool
+        import ppxai.engine.tools.manager as mgr_mod
+
+        class _FakeReg:
+            def compose_prompt_blocks(self):
+                return "rtk: token-optimized shell wrapper"
+
+        monkeypatch.setattr(mgr_mod, "get_wrapper_registry", lambda: _FakeReg())
+
+        real = ToolManager()
+        real.register_tool(FunctionTool(
+            name="read_file", description="d",
+            parameters={"type": "object", "properties": {}, "required": []},
+            handler=lambda **k: "x",
+        ))
+        with_ctx = real.get_tools_prompt(include_wrapper_context=True)
+        without_ctx = real.get_tools_prompt(include_wrapper_context=False)
+        assert "Shell wrapper context" in with_ctx
+        assert "Shell wrapper context" not in without_ctx
+        assert "rtk: token-optimized" not in without_ctx
 
     def test_empty_grant_yields_empty_prompt(self, base):
         from ppxai.engine.tools.manager import ToolManager

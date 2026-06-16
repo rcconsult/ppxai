@@ -23,6 +23,21 @@ from ppxai.engine.tools.network_policy import (
 from ppxai.engine.agent_scoped_tools import ScopedToolManager
 
 
+@pytest.fixture(autouse=True)
+def _no_dns(monkeypatch):
+    """Make NetworkPolicy.check hermetic by default (v1.19.0 Item 37f).
+
+    check() now resolves an allowlisted host and denies it if it maps to a
+    loopback/private IP (SSRF guard). That would make every host-matching
+    unit test depend on live DNS. Default the resolver to "not blocked" so
+    matching tests are deterministic + offline; the dedicated SSRF tests
+    (TestSsrfGuard) patch it explicitly to exercise the block.
+    """
+    import ppxai.engine.tools.network_policy as np
+
+    monkeypatch.setattr(np, "_host_resolves_to_blocked_ip", lambda host: False)
+
+
 # ---------------------------------------------------------------------------
 # NetworkPolicy.check — host matching
 # ---------------------------------------------------------------------------
@@ -303,3 +318,133 @@ class TestEgressChokepoint:
         assert base.ran == []                      # shell NEVER ran
         assert events and events[0][0] is False    # emitted a denied event
         assert "shell" in events[0][1]["reason"].lower()
+
+
+# ---------------------------------------------------------------------------
+# Backend-coverage guard (Item 37c): _NETWORK_TOOLS must enumerate every
+# host the premium web tools can actually reach. If a new web_search /
+# get_weather backend is added in web_premium.py but NOT mirrored into
+# _NETWORK_TOOLS, the superset rule can't see it and a run could reach an
+# un-allowlisted host with NO network_policy_denied event — a silent AC-2
+# regression. This test makes that drift fail in CI.
+# ---------------------------------------------------------------------------
+class TestBackendCoverage:
+    def _allowlisted_hosts(self) -> set:
+        from urllib.parse import urlparse
+
+        from ppxai.engine.tools.network_policy import _NETWORK_TOOLS
+
+        hosts = set()
+        for kind, spec in _NETWORK_TOOLS.values():
+            if kind == "fixed":
+                for url in spec:
+                    h = (urlparse(url).hostname or "").lower()
+                    if h:
+                        hosts.add(h)
+        return hosts
+
+    def test_web_premium_hosts_are_all_allowlisted(self):
+        """Every https?:// host literal in web_premium.py must be covered by
+        _NETWORK_TOOLS (the AC-2 superset source). Adding a backend without
+        updating the allowlist fails here."""
+        import re
+        from pathlib import Path
+
+        src = (
+            Path(__file__).resolve().parent.parent
+            / "ppxai" / "engine" / "tools" / "builtin" / "web_premium.py"
+        ).read_text(encoding="utf-8")
+
+        # Pull host out of every literal http(s) URL in the source.
+        found = set()
+        for m in re.finditer(r"https?://([A-Za-z0-9.\-]+)", src):
+            found.add(m.group(1).lower())
+
+        # DuckDuckGo is reached via the `ddgs` package (no URL literal in our
+        # source), so it won't appear in `found`; that's expected. We assert
+        # the inverse direction: every URL-literal host our code names must be
+        # allowlisted. (ddgs hosts are covered explicitly in _NETWORK_TOOLS.)
+        allow = self._allowlisted_hosts()
+
+        # Hosts that are NOT egress targets of a network tool (e.g. doc-comment
+        # example URLs). Keep this list tight + explained so a real new backend
+        # can't hide behind it.
+        IGNORE = {
+            "example.com",  # docstring example in the fetch_url description
+        }
+        uncovered = {h for h in found if h not in allow and h not in IGNORE}
+        assert not uncovered, (
+            f"web_premium.py names egress host(s) not in _NETWORK_TOOLS: "
+            f"{sorted(uncovered)}. Add them to the relevant tool's target list "
+            f"in network_policy.py (AC-2 superset rule) or to this test's "
+            f"IGNORE set if they are genuinely not egress targets."
+        )
+
+    def test_known_backends_present(self):
+        """Pin the four backends the superset rule depends on today, so an
+        accidental deletion from _NETWORK_TOOLS is caught explicitly."""
+        allow = self._allowlisted_hosts()
+        for host in (
+            "duckduckgo.com",
+            "html.duckduckgo.com",
+            "api.perplexity.ai",
+            "generativelanguage.googleapis.com",
+            "wttr.in",
+        ):
+            assert host in allow, f"{host} missing from _NETWORK_TOOLS"
+
+
+# ---------------------------------------------------------------------------
+# SSRF / private-IP guard (Item 37f). An allowlisted name that resolves to a
+# loopback/private/link-local address is denied; bare-scheme + http are
+# rejected. NOTE: does NOT cover DNS rebinding (TOCTOU) — that needs the
+# network layer (tier-d). These cover the easy misconfig / local-target hole.
+# ---------------------------------------------------------------------------
+class TestSsrfGuard:
+    def test_allowlisted_host_resolving_to_loopback_denied(self, monkeypatch):
+        import ppxai.engine.tools.network_policy as np
+
+        monkeypatch.setattr(np, "_host_resolves_to_blocked_ip", lambda h: True)
+        p = NetworkPolicy(["internal.example.com"])
+        d = p.check("https://internal.example.com/")
+        assert isinstance(d, Deny) and "SSRF" in d.reason
+
+    def test_public_host_still_allowed(self, monkeypatch):
+        import ppxai.engine.tools.network_policy as np
+
+        monkeypatch.setattr(np, "_host_resolves_to_blocked_ip", lambda h: False)
+        p = NetworkPolicy(["api.github.com"])
+        assert isinstance(p.check("https://api.github.com/x"), Allow)
+
+    def test_literal_loopback_ip_blocked(self):
+        # _is_blocked_ip works on literals without DNS.
+        from ppxai.engine.tools.network_policy import _is_blocked_ip
+        assert _is_blocked_ip("127.0.0.1")
+        assert _is_blocked_ip("169.254.169.254")  # cloud metadata endpoint
+        assert _is_blocked_ip("10.0.0.5")
+        assert _is_blocked_ip("::1")
+        assert not _is_blocked_ip("8.8.8.8")
+        assert not _is_blocked_ip("not-an-ip")
+
+    def test_http_scheme_denied(self):
+        p = NetworkPolicy(["wttr.in"])
+        d = p.check("http://wttr.in/")
+        assert isinstance(d, Deny) and "https only" in d.reason
+
+    def test_empty_scheme_denied(self):
+        # v1.19.0 Item 37f: a bare/scheme-relative target is no longer accepted.
+        p = NetworkPolicy(["api.github.com"])
+        d = p.check("//api.github.com/x")
+        assert isinstance(d, Deny) and "https only" in d.reason
+
+    def test_resolution_failure_does_not_block(self, monkeypatch):
+        # A transient DNS failure must NOT deny a legitimately allowlisted host
+        # (the connect will fail anyway). _host_resolves_to_blocked_ip returns
+        # False on resolution error.
+        import ppxai.engine.tools.network_policy as np
+
+        def boom(host, *a, **k):
+            raise OSError("dns down")
+
+        monkeypatch.setattr(np.socket, "getaddrinfo", boom)
+        assert np._host_resolves_to_blocked_ip("api.github.com") is False

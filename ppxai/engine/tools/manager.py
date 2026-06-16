@@ -340,11 +340,21 @@ class ToolManager:
 
         return await tool.execute(**kwargs)
 
-    def get_tools_prompt(self, working_dir: Optional[str] = None) -> str:
+    def get_tools_prompt(
+        self,
+        working_dir: Optional[str] = None,
+        include_wrapper_context: bool = True,
+    ) -> str:
         """Generate system prompt describing available tools.
 
         Args:
             working_dir: Current working directory to include in prompt (v1.15.2)
+            include_wrapper_context: When False, omit the global "## Shell
+                wrapper context" block entirely. A scoped run with NO shell
+                tool in its grant passes False so off-grant shell guidance is
+                never *emitted* — vs. emitting then parsing it back out by
+                substring slicing, which couples the AC-1 filter to the
+                section's markdown formatting (v1.19.0 Item 37g).
 
         Returns:
             System prompt text for tool usage
@@ -383,13 +393,14 @@ class ToolManager:
         # blocks from all active wrappers (those with their binary on PATH,
         # not opted out) under a single header. Wrappers without prompt
         # blocks contribute nothing. Failures fall back silently.
-        try:
-            wrapper_blocks = get_wrapper_registry().compose_prompt_blocks()
-            if wrapper_blocks:
-                prompt += "## Shell wrapper context\n\n"
-                prompt += wrapper_blocks + "\n\n"
-        except Exception as e:
-            logger.debug("Wrapper prompt-block composition skipped: %s", e)
+        if include_wrapper_context:
+            try:
+                wrapper_blocks = get_wrapper_registry().compose_prompt_blocks()
+                if wrapper_blocks:
+                    prompt += "## Shell wrapper context\n\n"
+                    prompt += wrapper_blocks + "\n\n"
+            except Exception as e:
+                logger.debug("Wrapper prompt-block composition skipped: %s", e)
 
         prompt += "## How to Call a Tool\n\n"
         prompt += "To use a tool, respond ONLY with a JSON code block in this exact format:\n\n"

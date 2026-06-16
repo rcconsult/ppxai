@@ -39,22 +39,6 @@ logger = get_logger("tui")
 _SHELL_TOOL_NAMES = SHELL_TOOL_NAMES
 
 
-def _strip_section(prompt: str, header: str) -> str:
-    """Remove a markdown section starting at `header` up to the next
-    same-or-higher-level (`## `) header or end of string. Used to drop the
-    base renderer's global shell-wrapper block from a scoped prompt that
-    didn't grant a shell tool. No-op if the header isn't present.
-    """
-    start = prompt.find(header)
-    if start == -1:
-        return prompt
-    # Find the next "## " header after this section's content.
-    rest = prompt.find("\n## ", start + len(header))
-    if rest == -1:
-        return prompt[:start].rstrip() + "\n"
-    return (prompt[:start].rstrip() + "\n\n" + prompt[rest + 1:]).strip() + "\n"
-
-
 class ToolDenied(Exception):
     """Raised when a run attempts a tool outside its capability grant."""
 
@@ -207,17 +191,21 @@ class ScopedToolManager:
         # enumerates only granted tools — the offered set is truly filtered,
         # not just annotated. The allowlist note stays as a belt-and-suspenders
         # reinforcement.
-        base_prompt = type(self._base).get_tools_prompt(self, working_dir=working_dir)
+        # The base renderer appends a global "## Shell wrapper context" block
+        # (rtk etc.) whenever a shell wrapper is on PATH — gated on the wrapper,
+        # NOT on the grant. That block names execute_shell_command and describes
+        # shell execution, so it would leak off-grant shell guidance to a run
+        # without a shell tool. We gate it at the SOURCE via
+        # include_wrapper_context (v1.19.0 Item 37g) — emitting only when the
+        # grant actually contains a shell tool — rather than emitting then
+        # parsing the section back out by markdown-substring slicing (which
+        # silently breaks if the renderer changes the heading level/format).
+        has_shell_grant = bool(self._grant & _SHELL_TOOL_NAMES)
+        base_prompt = type(self._base).get_tools_prompt(
+            self, working_dir=working_dir, include_wrapper_context=has_shell_grant
+        )
         if not base_prompt:
             return ""
-        # The base renderer appends a global "## Shell wrapper context"
-        # section (rtk etc.) whenever a shell wrapper is on PATH — gated on
-        # the wrapper, NOT on the grant. That block names execute_shell_command
-        # and describes shell execution, so it leaks off-grant shell guidance
-        # to a run that wasn't granted a shell tool. Strip it unless a shell-
-        # execution tool is actually in the grant.
-        if not (self._grant & _SHELL_TOOL_NAMES):
-            base_prompt = _strip_section(base_prompt, "## Shell wrapper context")
         allowed = ", ".join(sorted(self._grant)) or "(none)"
         return f"{base_prompt}\n\n[Run capability grant — you may ONLY call: {allowed}]"
 

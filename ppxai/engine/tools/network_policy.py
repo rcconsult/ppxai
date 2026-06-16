@@ -48,6 +48,8 @@ unpredictable backend safe.
 
 from __future__ import annotations
 
+import ipaddress
+import socket
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple, Union
 from urllib.parse import urlparse
@@ -55,6 +57,55 @@ from urllib.parse import urlparse
 from ...common.logger import get_logger
 
 logger = get_logger("tui")
+
+
+def _is_blocked_ip(ip_str: str) -> bool:
+    """True if an IP literal is loopback / private / link-local / reserved.
+
+    Application-layer SSRF mitigation (v1.19.0 Item 37f): even an allowlisted
+    *name* must not resolve to a local/internal address. NOTE: this does NOT
+    defend against DNS rebinding (the TOCTOU between this check and the
+    socket connect) — that needs network-layer enforcement and lands with
+    the tier-d OS-isolation work. It DOES close the easy misconfig / direct
+    private-IP / name-points-at-localhost surface.
+    """
+    try:
+        ip = ipaddress.ip_address(ip_str)
+    except ValueError:
+        return False
+    return (
+        ip.is_loopback
+        or ip.is_private
+        or ip.is_link_local
+        or ip.is_reserved
+        or ip.is_unspecified
+        or ip.is_multicast
+    )
+
+
+def _host_resolves_to_blocked_ip(host: str) -> bool:
+    """True if `host` is, or DNS-resolves to, a blocked (local/internal) IP.
+
+    Best-effort: a resolution failure is treated as NOT blocked here (the
+    subsequent connect will fail anyway, and we must not deny a transient DNS
+    hiccup against a legitimately allowlisted host). The allowlist match has
+    already happened by the time this is consulted — this only *subtracts*
+    local/internal targets, never adds reach.
+    """
+    if not host:
+        return False
+    # Direct IP literal in the URL.
+    if _is_blocked_ip(host):
+        return True
+    try:
+        infos = socket.getaddrinfo(host, None)
+    except (socket.gaierror, OSError, UnicodeError):
+        return False
+    for info in infos:
+        sockaddr = info[4]
+        if sockaddr and _is_blocked_ip(str(sockaddr[0])):
+            return True
+    return False
 
 
 # Network-capable builtins and the SET of URLs each could reach. The value
@@ -224,8 +275,11 @@ class NetworkPolicy:
         if not url:
             return Deny("no resolvable target host")
         parsed = urlparse(url)
-        # MVP: https-only (the read-only research profile needs only https GETs).
-        if parsed.scheme not in ("https", ""):
+        # MVP: https-only. A target must carry an explicit https scheme — a
+        # bare/empty scheme is rejected (v1.19.0 Item 37f tightening; the old
+        # behavior also allowed "" which let scheme-relative inputs slip the
+        # http-block). The read-only research profile only needs https GETs.
+        if parsed.scheme != "https":
             return Deny(f"scheme {parsed.scheme!r} not allowed (https only)")
         host = (parsed.hostname or "").lower()
         if not host:
@@ -233,12 +287,21 @@ class NetworkPolicy:
         path = parsed.path or "/"
         for rule in self._rules:
             if rule.matches_host(host):
-                if rule.matches_path(path):
-                    return Allow(rule.rule_id)
-                return Deny(
-                    f"path {path!r} not in allowed prefixes "
-                    f"{list(rule.paths)} for host {host!r}"
-                )
+                if not rule.matches_path(path):
+                    return Deny(
+                        f"path {path!r} not in allowed prefixes "
+                        f"{list(rule.paths)} for host {host!r}"
+                    )
+                # AC-2 SSRF mitigation (Item 37f): an allowlisted name must
+                # not resolve to a loopback/private/link-local address. Checked
+                # only AFTER the host+path match so the (network) DNS lookup
+                # runs solely for an otherwise-permitted target.
+                if _host_resolves_to_blocked_ip(host):
+                    return Deny(
+                        f"host {host!r} resolves to a private/loopback address "
+                        f"(blocked: SSRF guard)"
+                    )
+                return Allow(rule.rule_id)
         return Deny(f"host {host!r} not in egress allowlist")
 
     def authorize(self, name: str, kwargs: dict) -> "ToolDecision":
