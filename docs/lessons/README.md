@@ -98,3 +98,7 @@ discoverable later.
 - [mcp-not-yet-integrated.md](mcp-not-yet-integrated.md) — ppxai
   has filename-level MCP breadcrumbs but zero integration; v1.20.x
   plan at `docs/MCP-INTEGRATION-PLAN.md`
+- [config-source-resolution.md](config-source-resolution.md) —
+  `PPXAI_CONFIG_FILE` (often set via repo-root `.env`) overrides
+  `./ppxai-config.json`; editing the obvious project config can
+  silently have no effect on the server
