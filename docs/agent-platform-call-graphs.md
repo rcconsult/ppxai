@@ -273,15 +273,24 @@ distinct safety tier from the safe tool-free path; the two never mix.
 create_agent_task(req)                                 [routes/agent_v1.py]
 ├─ grant required + non-empty (pydantic min_length=1 → 422 otherwise)
 ├─ provider/model: request → tools.agent.default_subagent → 400
-├─ _build_provider + OpenAI-compat carve-out (400 if not)
-├─ registry.start_run(task, tools=grant, ...)          → RunMeta(running)
+├─ _v1_provider_or_400 = _build_provider only (400 on unknown/no-key).
+│    v1.19.x: provider-AGNOSTIC — no OpenAI-compat class guard; any
+│    BaseProvider works (engine.chat is abstract on all). [post-Inc-9 §A]
+├─ registry.start_run(task, tools=grant, owner=caller, ...) → RunMeta(running)
 └─ registry.run_in_background(meta, _runner):
      _runner(m):
        engine = EngineClient(); set_provider/model; enable_tools()  [ADR §9 D1]
+       engine.system_prompt_override = compose_agent_system_prompt(req.system)
+                                ← v1.19.x bounded-agent framing + caller's
+                                  AGENT.md; replaces provider chat prompt
+                                  so the model uses GRANTED tools, not native
+                                  fallback. [post-Inc-9 §B]
        engine.tool_manager = ScopedToolManager(engine.tool_manager,
                                 grant, on_deny=emit tool_denied)
        async for ev in engine.chat(task):    ← chat_with_tools loop
-         TOOL_CALL  → registry.emit_event(tool_call, debug/tool)
+         (provider's non-streaming SDK call runs via asyncio.to_thread so
+          this run never starves the event loop — [post-Inc-9 §C])
+         TOOL_CALL  → control.check() [budget/cancel] → emit_event(tool_call)
          STREAM_END → capture final text → run result
 ```
 
@@ -294,8 +303,11 @@ Two layers, both required:
    get_tools_openai_format / get_available_tools / list_tools / get_tool /
    get_tools_prompt → only names in grant. (get_tools_prompt is the
    prompt-based / native-fallback path — it re-renders the base prompt BOUND
-   to the scoped manager so it enumerates only granted tools, and strips the
-   shell-wrapper context unless a shell tool is granted. Part of AC-1.)
+   to the scoped manager so it enumerates only granted tools. v1.19.x: the
+   shell-wrapper context is gated AT THE SOURCE via
+   get_tools_prompt(include_wrapper_context=has_shell_grant) — never emitted
+   for a no-shell grant — instead of emitted-then-substring-stripped. Part
+   of AC-1. [post-Inc-9 §D])
 
 2. execute_tool CHOKEPOINT (the AC-1 + AC-2 invariants — backstop):
    execute_tool(name, **kw):
@@ -372,13 +384,18 @@ NetworkPolicy(allow_outbound[]) → normalized [_Rule(host, paths, rule_id)]
 
 check(url) -> Allow(rule_id) | Deny(reason):   ← per-URL primitive
    no url                        → Deny  (unresolvable target; fail-closed)
-   scheme not https/""           → Deny  (https-only MVP)
+   scheme != "https"             → Deny  (https-only; bare/empty scheme also
+                                          rejected — v1.19.x [post-Inc-9 §F])
    for rule in rules:
      rule.matches_host(host):           exact, or "*.suffix" single-label,
                                         suffix-anchored (blocks lookalikes)
-        rule.matches_path(path):        no paths = any; else prefix match
-           → Allow(rule_id)
-        else → Deny(path not in prefixes)
+        rule.matches_path(path) is False → Deny(path not in prefixes)
+        _host_resolves_to_blocked_ip(host) → Deny  ← SSRF guard: an allowlisted
+           name that resolves to loopback/private/link-local/reserved is
+           blocked (incl. 169.254.169.254). DNS lookup runs ONLY after the
+           host+path match; resolution failure does NOT block. Does NOT cover
+           DNS-rebinding TOCTOU (→ tier-d). [post-Inc-9 §F]
+        else → Allow(rule_id)
    no rule matched               → Deny(host not in allowlist)
 empty rules                      → Deny everything (fail-closed)
 
@@ -387,6 +404,9 @@ authorize(name, kwargs) -> ToolDecision:      ← the chokepoint decision
    no targets                    → Deny  (unresolvable; fail-closed)
    ALL targets pass check()      → Allow (superset rule — see below)
    any target fails check()      → Deny  (reports the first failing target)
+   ToolDecision.approved_targets = ALL allowlisted hosts (the full superset,
+     not just targets[0]) → surfaced in the network_policy_allowed audit
+     event so a multi-backend tool's log shows every approved host. [§G]
 
 Superset rule (AC-2): web_search's backend is chosen at call time with a
 Perplexity→Gemini→DDG fallback, so its egress set is the UNION of all of
@@ -419,10 +439,13 @@ run_in_background(meta, runner):
     except Exception: finish_run(failed)
     finally: pop control + task
 
-cancel_run(run_id):
+cancel_run(run_id):  → _cancel_run_cascade(run_id, seen=set())
   control = self._controls.get(run_id)    ← None if not in flight → False
   control.cancel_requested = True
-  meta.status = cancelling; emit agent_run_cancelling
+  meta.status = cancelling; emit agent_run_cancelling; _notify_change()
+  CASCADE: for each in-flight run with parent_run_id == run_id →
+     _cancel_run_cascade(child)   ← cancelling a parent never orphans a
+     sub-agent (recursion-safe via `seen`, cycle-guarded). [post-Inc-9 §E]
 ```
 
 ### POST /v1/agent/task — budget/cancel polling (delta over Inc 5)
@@ -467,8 +490,9 @@ build_task_runner(registry, ..., tools, allow_outbound, allow_spawn):
     if allow_spawn AND "spawn_subagent" in tools:      ← only top-level + granted
         engine.tool_manager.register_tool(SpawnSubagentTool(
             registry, parent_run_id=m.run_id,
+            parent_owner=m.owner,                       ← child inherits owner (8b)
             parent_tools=tools, parent_allow_outbound=allow_outbound,
-            parent_provider, parent_model, request_consent))
+            parent_provider, parent_model, request_consent, consent_policy))
     engine.tool_manager = ScopedToolManager(...)        ← AC-1/AC-2 wrap as usual
   # child runs are built allow_spawn=False -> tool NEVER registered -> depth=1
 ```
@@ -487,12 +511,16 @@ execute(task, tools=[], allow_outbound=[]):
        "deny" + no chan  → _deny(consent)   ← server context, no human to ask
        "deny" + channel  → request_consent(summary) False → _deny(consent)
   4. child = registry.start_run(task, tools=child_tools,
-              network=child_allow, parent_run_id=parent_run_id)   ← own run_id
+              network=child_allow, parent_run_id=parent_run_id,
+              owner=parent_owner)              ← own run_id; inherits owner (8b)
      emit subagent_spawned (parent stream, lifecycle)
   5. runner = build_task_runner(..., allow_spawn=False)   ← child can't spawn
      registry.run_in_background(child, runner)
   6. status,body,err = await _await_child(child.run_id, child.budget)
         awaits registry.get_run_task(child) directly (no disk-poll);  ← N=1
+        ALSO polls parent_control.cancel_requested on a ~100ms tick → if the
+        PARENT is cancelled while awaiting, cancels the child promptly
+        (not after wait_cap). [post-Inc-9 §E]
         wait cap = child time_s + margin, else 300s; on timeout CANCELS
         the child (never orphaned)
      emit subagent_finished (parent stream, result)
@@ -636,6 +664,79 @@ Tests: test_background_agents_mirror.py (active_summary filtering/projection/
 ordering, on_change fire + bad-listener isolation, schema+SSE membership).
 Sentinels bumped: AppState fields 21→22, schema fields 21→22, SSE_SYNC
 12→13.
+
+## Post-Inc-9 hardening (review + benchmark fixes, 2026-06-16)
+
+Fixes that landed AFTER Inc 9, from review rounds + the agent-behavior
+benchmark. The inline `[post-Inc-9 §X]` tags above point here. These change
+call flow without adding endpoints; debt Item 37 a–j tracks the residue.
+
+**§A — v1 tier is provider-agnostic.** `_v1_provider_or_400` is now just
+`_build_provider` (400 only on unknown/no-key). The old
+`isinstance(provider, OpenAICompatibleProvider)` guard on `/run` + `/task` +
+`/v1/oneshot` is gone. `oneshot()` is now `@abstractmethod` on `BaseProvider`,
+implemented on all 4 providers (native ones compose their existing
+`chat_sync_simple` + per-vendor usage parser). `/task` uses `engine.chat`
+(abstract on all); `/run` + `/v1/oneshot` use `oneshot`. Any configured
+provider works. (commits 18373e31←removed, cbb8c536)
+
+**§B — agent system-prompt framing.** `EngineClient.system_prompt_override`
+(per-engine, D1-isolated) is read by chat.py's prompt-based AND native
+assembly paths, REPLACING the provider's chat `system_prompt` when set.
+`/task` sets it to `compose_agent_system_prompt(req.system)` =
+`DEFAULT_AGENT_SYSTEM_PROMPT` ("use ONLY granted tools; no native fallback")
++ caller's `system` (e.g. ppxai-sre's rendered AGENT.md). Also: the
+"you have native web search, you do NOT need a tool" block in
+`_build_prompt_based_messages` is SUPPRESSED when the override is active (it
+caused the Perplexity substitution). Persona/AGENT.md ownership stays with
+the consumer; ppxai provides the seam + default. Live-verified across all 4
+providers (benchmarks/agent-behavior). (commit b7ddd424)
+
+**§C — non-streaming provider call off-loaded.** Every provider's `chat`
+non-streaming branch (+ openai responses API) wrapped its SYNCHRONOUS SDK
+call in `await asyncio.to_thread(...)`. `/task` uses `stream=False`, so
+before this one agent run starved the asyncio event loop (server
+unresponsive to ALL requests until the LLM call returned). LLM calls are
+I/O-bound → to_thread releases the GIL during the socket wait → concurrent
+runs interleave. Proven: independent request returns 0.46s mid-run (was:
+timeout). Streaming `/chat` path NOT changed (small-burst starvation,
+deferred). `oneshot` is already offloaded at its `/run` call site.
+(commit baacfef0)
+
+**§D — shell-wrapper prompt gated at source.** `ToolManager.get_tools_prompt`
+takes `include_wrapper_context`; `ScopedToolManager` passes `has_shell_grant`,
+so the "## Shell wrapper context" block is never EMITTED for a no-shell
+grant — replacing the old `_strip_section` substring-parse (which coupled the
+AC-1 filter to markdown formatting). `_strip_section` deleted. (commit a8e7247d)
+
+**§E — cancel cascades + prompt parent-cancel.** `cancel_run` →
+`_cancel_run_cascade`: cancelling a run also cancels any in-flight run with
+`parent_run_id == it` (recursion-safe, cycle-guarded) — a parent cancel
+never orphans a sub-agent. Plus `_await_child` polls the parent's
+`cancel_requested` on a ~100ms tick so a parent cancel propagates to the
+awaited child promptly (not after the 300s wait cap). Deferred: cancel
+DURING a provider HTTP call still waits for it to return (→ tier-d).
+(commits 4b1459bb, e0f725c2)
+
+**§F — egress SSRF guard + scheme tightening.** `check()` rejects bare/empty
+scheme (https-only) and denies an allowlisted host that resolves to a
+loopback/private/link-local/reserved IP (`_host_resolves_to_blocked_ip`,
+incl. the 169.254.169.254 metadata endpoint). DNS lookup runs only after the
+host+path match; resolution failure does not block. Does NOT cover
+DNS-rebinding TOCTOU — that needs network-layer enforcement (tier-d).
+(commit a8e7247d)
+
+**§G — full egress audit targets.** `ToolDecision.approved_targets` carries
+ALL allowlisted hosts (the superset), surfaced in `network_policy_allowed`,
+so a multi-backend tool's audit shows every approved host, not just the
+first. `target_host`/`target_path` keep the first for back-compat (additive
+key). (commit e0f725c2)
+
+**Sub-agent owner inheritance (Inc 8b completion).** `SpawnSubagentTool`
+takes `parent_owner` and passes `owner=parent_owner` to `start_run`, so a
+child run inherits the parent's owner (not `owner=None` = world-readable).
+This also fixed a latent crash: `build_task_runner` was already passing
+`parent_owner=` to a constructor that didn't accept it. (commit 71022ad5)
 
 <!-- Inc 10+ sections appended here as they land. Template:
 ## Increment N — <title>
