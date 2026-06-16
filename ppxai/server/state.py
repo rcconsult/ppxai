@@ -184,13 +184,25 @@ _agent_run_registry = None
 
 
 def get_agent_run_registry():
-    """Get (lazily construct) the agent run registry singleton."""
+    """Get (lazily construct) the agent run registry singleton.
+
+    Inc 9: registers an on_change hook that mirrors the active-run summary
+    into every session's AppState (`background_agents`) so connected clients
+    get a state_sync push and reconnecting clients get it from GET /state.
+    """
     global _agent_run_registry
     if _agent_run_registry is None:
         from ..config.loader import PPXAI_HOME
         from ..engine.agent_runs import AgentRunRegistry, FilesystemAgentRunStore
         store = FilesystemAgentRunStore(PPXAI_HOME / "runs")
         _agent_run_registry = AgentRunRegistry(store)
+
+        def _mirror_to_app_state(reg=_agent_run_registry):
+            mgr = get_session_manager()
+            if mgr is not None:
+                mgr.broadcast_background_agents(reg.active_summary())
+
+        _agent_run_registry.on_change(_mirror_to_app_state)
     return _agent_run_registry
 
 

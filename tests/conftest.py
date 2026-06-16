@@ -38,6 +38,43 @@ def reset_config_after_test():
     initialize()
 
 
+@pytest.fixture(autouse=True)
+def _auth_off_by_default(monkeypatch):
+    """Pin server auth OFF (env-only, unset) for the whole suite by default.
+
+    v1.19.0 (Inc 8a) enforces auth whenever a mutable `file` token store is
+    configured. On a DEV HOST whose ~/.ppxai/ppxai-config.json configures one
+    (e.g. after trialing /v1/tokens), every TestClient call against the real
+    `app` would otherwise get 401 — a host-dependent failure unrelated to the
+    test under inspection. Resetting the secret-provider singleton to a single
+    env-var provider (with the var unset) makes the suite host-independent:
+    auth is off unless a test opts in.
+
+    Tests that exercise auth/authz (test_auth_middleware, test_tokens_v1_route,
+    test_agent_run_authz, …) install their OWN provider chain via
+    monkeypatch.setattr(state, "_secret_provider", …) inside the test/fixture,
+    which overrides this default for that test. After the test, the singleton
+    is dropped so the next get_secret_provider() rebuilds from config.
+    """
+    monkeypatch.delenv("PPXAI_API_TOKEN", raising=False)
+    try:
+        import ppxai.server.state as _state
+        from ppxai.server.secrets import EnvSecretProvider, ProviderChain
+
+        monkeypatch.setattr(
+            _state, "_secret_provider", ProviderChain([EnvSecretProvider()])
+        )
+    except Exception:
+        # Server extras not importable in this env — nothing to pin.
+        pass
+    yield
+    try:
+        import ppxai.server.state as _state
+        _state._secret_provider = None
+    except Exception:
+        pass
+
+
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_makereport(item, call):
     outcome = yield

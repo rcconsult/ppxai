@@ -48,4 +48,11 @@ async def get_app_state(s: Session = Depends(get_session)) -> dict:
     """
     logger.info(f"HTTP GET /state from session={s.id}")
     snapshot = s.engine.state.snapshot()
-    return {field: snapshot.get(field) for field in SSE_SYNC_FIELDS}
+    payload = {field: snapshot.get(field) for field in SSE_SYNC_FIELDS}
+    # Inc 9: recompute background_agents live from the server-global registry
+    # so a reconnecting client gets the authoritative active-run set even if a
+    # state_sync push was missed during the disconnect.
+    from ..state import get_agent_run_registry
+
+    payload["background_agents"] = get_agent_run_registry().active_summary()
+    return payload

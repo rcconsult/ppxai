@@ -23,6 +23,23 @@ from ppxai.engine.app_state import SCHEMA as CANONICAL_SCHEMA
 from ppxai.server.http import app
 
 
+@pytest.fixture(autouse=True)
+def _env_only_secret_provider(monkeypatch):
+    """Pin auth to env-only (unset) so these tests don't 401 on a dev host
+    whose ppxai-config.json configures a `file` token store (v1.19.0 Inc 8a
+    enforces auth when a mutable store is present). The schema endpoint is
+    not auth-specific; this keeps the suite host-independent."""
+    import ppxai.server.state as state
+    from ppxai.server.secrets import EnvSecretProvider, ProviderChain
+
+    monkeypatch.delenv("PPXAI_API_TOKEN", raising=False)
+    monkeypatch.setattr(
+        state, "_secret_provider", ProviderChain([EnvSecretProvider()])
+    )
+    yield
+    state._secret_provider = None
+
+
 @pytest.fixture
 def client() -> TestClient:
     return TestClient(app)

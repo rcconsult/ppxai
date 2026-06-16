@@ -313,6 +313,29 @@ class SessionManager:
 
         return len(expired_ids)
 
+    def broadcast_background_agents(self, summary: list) -> None:
+        """Push the active-agent-run summary into every engine's AppState
+        (Inc 9). Called from the agent-run registry's on_change hook; the
+        per-engine `state_sync` machinery then fans `background_agents` out to
+        connected clients, and GET /state serves the same field on reconnect.
+
+        Deliberately lock-free + best-effort: it runs on the event-loop thread
+        from a registry callback, AppState.set is thread-safe, and a badge is
+        not worth blocking run execution on the sessions lock. A session that
+        appears/disappears mid-broadcast just gets the next update."""
+        engines = []
+        if self._default_engine is not None:
+            engines.append(self._default_engine)
+        for session in list(self._sessions.values()):
+            engines.append(session.engine)
+        for engine in engines:
+            try:
+                engine.state.set("background_agents", list(summary))
+            except Exception:
+                logger.warning(
+                    "failed to push background_agents to an engine", exc_info=True
+                )
+
     async def list_sessions(self) -> list[dict]:
         """List all active sessions with their metadata."""
         await self.cleanup_expired_sessions()

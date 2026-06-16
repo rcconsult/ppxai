@@ -357,6 +357,47 @@ class AgentRunRegistry:
         # subscribers are a fan-out for live delivery only.
         self._seq: dict[str, int] = {}
         self._subscribers: dict[str, set[asyncio.Queue]] = {}
+        # Inc 9: lightweight on-change hooks. The server registers one to push
+        # an updated `background_agents` summary into AppState (state_sync) when
+        # a run starts or reaches a terminal state. Kept generic (not coupled to
+        # AppState) so the registry stays UI-agnostic.
+        self._change_listeners: list = []
+
+    # -- Inc 9: active-run summary + change notification ------------------
+    _TERMINAL_STATUSES = frozenset(
+        {"completed", "failed", "cancelled", "interrupted"}
+    )
+
+    def on_change(self, callback) -> None:
+        """Register a no-arg callback fired when the active-run set may have
+        changed (run start / terminal transition). Exceptions are swallowed so
+        one bad listener can't wedge run execution."""
+        self._change_listeners.append(callback)
+
+    def _notify_change(self) -> None:
+        for cb in list(self._change_listeners):
+            try:
+                cb()
+            except Exception:
+                logger.error("agent-run change listener raised", exc_info=True)
+
+    def active_summary(self) -> list[dict[str, Any]]:
+        """Compact summary of NON-terminal runs, newest first, for the
+        AppState `background_agents` mirror. Only fields a badge needs —
+        never the result body or events."""
+        out: list[dict[str, Any]] = []
+        for m in self.list_runs():  # list_runs is already newest-first
+            if m.status in self._TERMINAL_STATUSES:
+                continue
+            out.append(
+                {
+                    "run_id": m.run_id,
+                    "status": m.status,
+                    "task": m.task,
+                    "owner": m.owner,
+                }
+            )
+        return out
 
     @staticmethod
     def _new_run_id() -> str:
@@ -418,6 +459,7 @@ class AgentRunRegistry:
         meta.finished_at = time.time()
         self._store.persist_meta(meta)
         logger.info(f"Agent run {meta.run_id} -> {status}")
+        self._notify_change()  # Inc 9: run left the active set
         return meta
 
     def get_control(self, run_id: str) -> "Optional[RunControl]":
@@ -450,6 +492,7 @@ class AgentRunRegistry:
                 run_id, "agent_run_cancelling", level="warning",
                 category="lifecycle", data={"reason": "cancel requested by owner"},
             )
+            self._notify_change()  # Inc 9: status changed (running -> cancelling)
         return True
 
     def run_in_background(
@@ -489,6 +532,7 @@ class AgentRunRegistry:
             meta.run_id, "agent_run_start", level="info", category="lifecycle",
             data={"task": meta.task, "provider": meta.provider, "model": meta.model},
         )
+        self._notify_change()  # Inc 9: run entered the active set
 
         async def _drive() -> None:
             try:

@@ -248,7 +248,9 @@ class TestAppStateFieldCoverage:
         # v1.18.6:     +`model_supports_vision` drives attach-button
         #              badge + per-file warning when image attached to
         #              non-vision model → 21.
-        assert len(AppState.FIELDS) == 21
+        # v1.19.0 Inc9: +`background_agents` active-run mirror for the
+        #              UI badge that survives reconnect → 22.
+        assert len(AppState.FIELDS) == 22
 
     def test_mutable_defaults_not_shared_between_instances(self):
         """Each AppState instance must get its own copy of list/dict
@@ -312,7 +314,8 @@ class TestSchemaDTO:
         assert isinstance(self.schema["fields"], dict)
         # Bump when adding fields — keep in sync with test_field_count above.
         # v1.18.6: +`model_supports_vision` → 21.
-        assert len(self.schema["fields"]) == 21
+        # v1.19.0 Inc9: +`background_agents` → 22.
+        assert len(self.schema["fields"]) == 22
 
     def test_schema_fields_match_app_state_fields(self):
         """Every schema field must appear in AppState.FIELDS with the
@@ -542,8 +545,9 @@ class TestSseSyncFieldsContract:
                 agent_mode, auto_route, working_dir, session_name,
                 debug_log, context_attachments, agent_beat (P0).
             v1.18.6: +model_supports_vision → 12.
+            v1.19.0 Inc9: +background_agents → 13.
         """
-        assert len(self.sse_sync_fields) == 12
+        assert len(self.sse_sync_fields) == 13
 
     def test_sync_fields_have_client_names_in_schema(self):
         """Every sync field must declare a `client` name in the

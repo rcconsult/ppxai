@@ -600,7 +600,44 @@ Tests: `test_agent_run_authz.py` (owner stamping, 403 on foreign token for
 meta/events/cancel, 401 missing, 404 unknown, unowned-readable, list
 scoping, auth-disabled no-scoping).
 
-<!-- Inc 9+ sections appended here as they land. Template:
+## Increment 9 — AppState `background_agents` mirror
+
+Added: schema field `background_agents` (array), `SSE_SYNC_FIELDS` entry,
+`AgentRunRegistry.active_summary()` / `on_change()` / `_notify_change()`,
+`SessionManager.broadcast_background_agents()`. Changed: registry fires the
+hook on run start / terminal / cancelling; `state.get_agent_run_registry()`
+registers the AppState-mirror hook; `GET /state` recomputes the field live.
+No execution-model change. The server-global registry is per-session
+AppState's source for the badge.
+
+```
+# push on change (run start / finish / cancelling)
+registry._notify_change()
+  -> mirror hook (registered in get_agent_run_registry)
+       -> SessionManager.broadcast_background_agents(registry.active_summary())
+            -> for each engine (default + sessions):
+                 engine.state.set("background_agents", summary)   # AppState
+                   -> existing state_sync SSE -> connected clients
+
+# reconnect (authoritative, survives a missed push)
+GET /state
+  -> snapshot of SSE_SYNC_FIELDS
+  -> payload["background_agents"] = registry.active_summary()  # live recompute
+
+active_summary(): list_runs() (newest-first) minus terminal statuses,
+projected to {run_id, status, task, owner} — never result/error/events.
+```
+
+Clients are schema-driven (web via window.APP_STATE_SCHEMA, VSCode via the
+bundled copy synced by scripts/sync-schema.js), so they pick up the field
+with no hand-edits; a badge widget is a thin client-side follow-up.
+
+Tests: test_background_agents_mirror.py (active_summary filtering/projection/
+ordering, on_change fire + bad-listener isolation, schema+SSE membership).
+Sentinels bumped: AppState fields 21→22, schema fields 21→22, SSE_SYNC
+12→13.
+
+<!-- Inc 10+ sections appended here as they land. Template:
 ## Increment N — <title>
 Added/changed: <files>. Execution model change: <if any>.
 ### <METHOD /path> — <what>
