@@ -2663,6 +2663,7 @@ Review your previous actions and continue. If the task is complete, respond with
             <button class="undo-badge" id="undoBadge" title="No checkpoint to undo">↶ Undo</button>
             <button class="streaming-badge" id="streamingBadge" style="display: none;" title="Press Esc to stop">⏹ Streaming...</button>
             <span class="agent-beat-badge" id="agentBeatBadge" style="display: none;" title="Agent heartbeat (iteration · tool · elapsed)"><span id="agentBeatText">⚙ idle</span></span>
+            <span class="background-agents-badge" id="backgroundAgentsBadge" style="display: none;" title="Active background agents"><span id="backgroundAgentsText">🤖 0 agents</span></span>
             <span class="usage-badge" id="usageBadge" title="Session token usage and cost">0↓/0↑</span>
             <button class="context-badge" id="contextBadge" title="Context window usage - Click to clear injected files">
                 <span id="contextUsage">Ctx: 0%</span>

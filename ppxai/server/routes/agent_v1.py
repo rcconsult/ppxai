@@ -46,8 +46,11 @@ endpoints (`GET /runs/<id>`, `/events`, `POST .../cancel`) return 403 to a
 caller who is not the run's owner; `GET /runs` is filtered to the caller's
 own (+ unowned) runs. No-op when auth is disabled (loopback UX preserved).
 
-NOT yet (later increments, additively):
-AppState background_agents mirror (Inc 9).
+Inc 9 (landed): active (non-terminal) runs are mirrored into AppState
+`background_agents` (via the registry's on_change hook → SessionManager
+broadcast); `GET /state` recomputes it live so a reconnecting client sees
+the authoritative active set. This module just creates/finishes runs that
+drive that mirror — see `engine/agent_runs.AgentRunRegistry.active_summary`.
 
 The `/v1/` prefix is the stable gateway boundary (see docs/api-gateway.md):
 adding optional request fields is non-breaking; removing/repurposing
@@ -526,6 +529,7 @@ def build_task_runner(
             engine.tool_manager.register_tool(SpawnSubagentTool(
                 registry=registry,
                 parent_run_id=m.run_id,
+                parent_owner=getattr(m, "owner", None),
                 parent_tools=list(tools),
                 parent_allow_outbound=list(allow_outbound),
                 parent_provider=provider_name,

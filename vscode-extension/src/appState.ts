@@ -87,6 +87,24 @@ export interface AppStateFields {
     // Latest AgentBeatState.as_event_data() dict from the engine.
     // `{}` when idle; engine clears on AGENT_RUN_COMPLETE / _ERROR.
     agentBeat: AgentBeatSnapshot | Record<string, never>;
+
+    // --- Background agents (v1.19.0 Inc 9) ---
+    // Active (non-terminal) /v1/agent/* runs mirrored from the
+    // server-global registry. `[]` when none active.
+    backgroundAgents: BackgroundAgentSummary[];
+}
+
+/**
+ * One active agent-run summary mirrored into AppState.background_agents
+ * (v1.19.0 Inc 9). Matches the server's
+ * `AgentRunRegistry.active_summary()` projection — badge fields only,
+ * never result/error/events.
+ */
+export interface BackgroundAgentSummary {
+    run_id: string;
+    status: string;
+    task: string;
+    owner: string | null;
 }
 
 /**

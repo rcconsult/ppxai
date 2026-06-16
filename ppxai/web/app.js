@@ -1068,6 +1068,11 @@ class PpxaiApp {
                 // AGENT_RUN_ERROR so the badge auto-hides, but a
                 // separate toast below surfaces the error cause.
                 this.updateAgentBeatBadge();
+            } else if (pyKey === 'background_agents') {
+                // v1.19.0 (Inc 9): background-agents badge. The server
+                // mirrors the active /v1/agent/* run set into AppState;
+                // an empty list hides the badge.
+                this.updateBackgroundAgentsBadge();
             }
         }
     }
@@ -1121,6 +1126,37 @@ class PpxaiApp {
         badge.classList.remove('warn', 'error');
         if (failures >= 2) badge.classList.add('warn');
         else if (!ok) badge.classList.add('error');
+        badge.classList.remove('hidden');
+    }
+
+    /**
+     * Update the background-agents badge in the header (v1.19.0 Inc 9).
+     *
+     * Subscribes to `AppState.background_agents` — the server mirrors the
+     * active (non-terminal) /v1/agent/* run set
+     * (`[{run_id, status, task, owner}, ...]`). Empty list hides the badge;
+     * otherwise it shows the active count, and the single task as a tooltip
+     * when there's exactly one run.
+     */
+    updateBackgroundAgentsBadge() {
+        const runs = this.state.backgroundAgents || [];
+        const badge = document.getElementById('backgroundAgentsBadge');
+        const text = document.getElementById('backgroundAgentsText');
+        if (!badge || !text) return;
+
+        const count = Array.isArray(runs) ? runs.length : 0;
+        if (count === 0) {
+            badge.classList.add('hidden');
+            badge.removeAttribute('title');
+            return;
+        }
+
+        text.textContent = count === 1 ? '1 agent' : `${count} agents`;
+        // Tooltip: list the active tasks (truncated) so hover reveals what's running.
+        const tasks = runs
+            .map((r) => (r && r.task ? String(r.task) : '(task)'))
+            .map((t) => (t.length > 60 ? t.slice(0, 60) + '…' : t));
+        badge.setAttribute('title', 'Background agents:\n' + tasks.join('\n'));
         badge.classList.remove('hidden');
     }
 

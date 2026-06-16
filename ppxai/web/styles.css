@@ -276,6 +276,15 @@ body {
     color: #fff;
 }
 
+/* v1.19.0 (Inc 9): background-agents badge — active /v1/agent/* runs. */
+.background-agents-badge {
+    background: var(--info-color, var(--accent-color));
+    color: var(--bg-primary);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    cursor: default;
+}
+
 @keyframes pulse {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.6; }

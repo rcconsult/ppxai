@@ -250,6 +250,13 @@ class PPXAIDEApp(App):
                 "agent_beat",
                 self._on_agent_beat_changed,
             )
+            # v1.19.0 (Inc 9): background-agents badge. The server mirrors
+            # the active /v1/agent/* run set into AppState.background_agents;
+            # show a count badge while any background run is active.
+            self._engine_client.state.on(
+                "background_agents",
+                self._on_background_agents_changed,
+            )
 
         # Add optional status bar badges based on config (Phase 1.2)
         tui_config = get_tui_config()
@@ -642,6 +649,30 @@ class PPXAIDEApp(App):
             variant = "success"
 
         self._status_bar.add_badge("agent_beat", "\u2699", value, variant=variant)
+
+    def _on_background_agents_changed(self, runs) -> None:
+        """Callback from AppState \u2014 background-agents badge (Inc 9 v1.19.0).
+
+        `runs` is the active-run summary list pushed by the server
+        (`[{run_id, status, task, owner}, ...]`) or an empty list when no
+        background run is active. Empty list hides the badge; otherwise show
+        the active count (and the single task when there's exactly one).
+        """
+        if not self._status_bar:
+            return
+        if not runs or not isinstance(runs, list):
+            self._status_bar.remove_badge("background_agents")
+            return
+
+        count = len(runs)
+        if count == 1:
+            task = (runs[0].get("task") or "").strip()
+            label = task[:24] + ("\u2026" if len(task) > 24 else "") if task else "1 run"
+        else:
+            label = f"{count} runs"
+        self._status_bar.add_badge(
+            "background_agents", "\U0001F916", label, variant="information"
+        )
 
     def _format_cwd_display(self, path: str) -> str:
         """Format working directory path for status bar display.

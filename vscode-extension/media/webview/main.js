@@ -806,6 +806,31 @@ function updateAgentBeatBadge(beat) {
     badge.style.display = '';
 }
 
+// Background-agents badge renderer (v1.19.0 Inc 9).
+// `runs` is AppState.background_agents — the active /v1/agent/* run summary
+// list (`[{run_id, status, task, owner}, ...]`) or `[]` when none active.
+// Empty list hides the badge; otherwise show the active count, with the
+// task list as a tooltip.
+function updateBackgroundAgentsBadge(runs) {
+    const badge = document.getElementById('backgroundAgentsBadge');
+    const text = document.getElementById('backgroundAgentsText');
+    if (!badge || !text) return;
+
+    const list = Array.isArray(runs) ? runs : [];
+    if (list.length === 0) {
+        badge.style.display = 'none';
+        badge.removeAttribute('title');
+        return;
+    }
+
+    text.textContent = '🤖 ' + (list.length === 1 ? '1 agent' : list.length + ' agents');
+    const tasks = list
+        .map((r) => (r && r.task ? String(r.task) : '(task)'))
+        .map((t) => (t.length > 60 ? t.slice(0, 60) + '…' : t));
+    badge.setAttribute('title', 'Background agents:\n' + tasks.join('\n'));
+    badge.style.display = '';
+}
+
 // Function to update server status (v1.13.1)
 function updateServerStatus(connected, connecting = false) {
     serverBadge.classList.remove('connected', 'disconnected', 'connecting');
@@ -1146,6 +1171,12 @@ window.addEventListener('message', (event) => {
                 // reflecting any failure streak.
                 if (c.agentBeat !== undefined) {
                     updateAgentBeatBadge(c.agentBeat || {});
+                }
+                // v1.19.0 (Inc 9): background-agents badge. Server mirrors
+                // the active /v1/agent/* run set into AppState; empty list
+                // hides the badge.
+                if (c.backgroundAgents !== undefined) {
+                    updateBackgroundAgentsBadge(c.backgroundAgents || []);
                 }
                 // v1.18.6: drives the attach-button badge + the per-file
                 // warning in stageFile(). Single source of truth is the

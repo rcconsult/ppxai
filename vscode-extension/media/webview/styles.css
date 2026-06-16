@@ -358,6 +358,19 @@ body {
     color: var(--vscode-editor-background);
 }
 
+/* v1.19.0 (Inc 9): background-agents badge — active /v1/agent/* runs. */
+.background-agents-badge {
+    background: var(--vscode-badge-background, #0078d4);
+    color: var(--vscode-badge-foreground, #ffffff);
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 10px;
+    border: none;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    cursor: default;
+}
+
 .header-buttons {
     display: flex;
     gap: 4px;
