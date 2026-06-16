@@ -21,6 +21,27 @@ pytest.importorskip("httpx")
 from fastapi.testclient import TestClient
 
 
+@pytest.fixture(autouse=True)
+def _env_only_secret_provider(monkeypatch):
+    """Pin the secret-provider chain to env-only for these tests.
+
+    These tests assert the documented PPXAI_API_TOKEN env-var behavior
+    ("unset => auth off"). The v1.19.0 chain otherwise resolves the
+    host's ppxai-config.json, which on a dev box may configure a `file`
+    provider — that would (correctly) enforce auth and break the
+    env-only assumptions here. Reset to a single EnvSecretProvider so the
+    suite is host-independent.
+    """
+    import ppxai.server.state as state
+    from ppxai.server.secrets import EnvSecretProvider, ProviderChain
+
+    monkeypatch.setattr(
+        state, "_secret_provider", ProviderChain([EnvSecretProvider()])
+    )
+    yield
+    state._secret_provider = None
+
+
 @pytest.fixture
 def http_client():
     """Fresh TestClient per test."""

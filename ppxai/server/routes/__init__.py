@@ -26,6 +26,7 @@ from . import (
     state,
     static,
     terminal,
+    tokens_v1,
     usage,
 )
 
@@ -50,5 +51,6 @@ all_routers: list[APIRouter] = [
     state.router,       # v1.18.0: GET /state — snapshot for SSE reconnect sync
     oneshot.router,     # v1.18.3: POST /v1/oneshot — stateless gateway primitive
     agent_v1.router,    # v1.19.0: /v1/agent/* — agent run registry (ADR 0003 Stage 2, Inc 1)
+    tokens_v1.router,   # v1.19.0: /v1/tokens — pluggable secret-source CRUD (Inc 8a)
     static.router,
 ]

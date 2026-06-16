@@ -36,9 +36,14 @@ Per-run controls on `/task` (Inc 6): an optional `budget`
 a top-level run spawn ONE child run (child grant ⊆ parent, child egress ⊆
 parent, depth=1, consent-gated) — both runners share `build_task_runner`.
 
+Inc 8a (landed): `/v1/tokens` CRUD over a pluggable secret-source chain
+(`server/secrets/`); `server/auth.py` now validates against it. This is
+the credential layer only — see `routes/tokens_v1.py`.
+
 NOT yet (later increments, additively):
-per-run authz (Inc 8 — /v1/tokens + owner-scoped /events/result/artifacts),
-AppState background_agents mirror (Inc 9).
+per-run authz (Inc 8b — owner-scoped /events/result/artifacts, stamping
+`request.state.principal` onto the run at start_run), AppState
+background_agents mirror (Inc 9).
 
 The `/v1/` prefix is the stable gateway boundary (see docs/api-gateway.md):
 adding optional request fields is non-breaking; removing/repurposing

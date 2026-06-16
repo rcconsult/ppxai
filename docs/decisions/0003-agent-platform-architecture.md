@@ -821,6 +821,74 @@ shape.
    in v1.19.x Phase 7 even though the credential broker proper is
    v1.20.x. Same code path supports `~/.ppxai/.env` / k8s secret /
    Vault. ROADMAP Phase 7 row to be amended.
+
+   **C2 amendment (v1.19.0, resolved) — the `SecretProvider` seam.**
+   The "pluggable resolver" above is concretized as a single Protocol
+   that both `/v1/tokens` and the per-run authz gate consume, blind to
+   the backend. Decoupling the *validator* from the *source* is the
+   same decoupling C5.2 already made (`auth: "bearer"` does not mandate
+   the `/v1/tokens` source) — this generalizes it.
+
+   ```python
+   # ppxai/server/secrets/base.py
+   class SecretRef:        # opaque pointer to material, NOT the material
+       ...
+   class TokenRecord:      # metadata only — safe to list/log
+       token_id: str; secret_ref: SecretRef; owner: str
+       roles: tuple[str, ...]; expires_at: float | None; revoked: bool
+   class SecretProvider(Protocol):
+       name: str
+       def resolve(self, presented: str) -> TokenRecord | None: ...   # validate inbound bearer
+       def list(self) -> list[TokenRecord]: ...                       # metadata only
+       def mint(self, owner, roles, ttl_s=None) -> tuple[str, TokenRecord]: ...  # material once
+       def revoke(self, token_id) -> bool: ...
+       def capabilities(self) -> set[str]: ...   # {"mint","revoke","rotate","list"}
+   ```
+
+   Load-bearing properties:
+   - **`resolve()` is the validator.** Today's `server/auth.py`
+     single-shared-token check becomes `EnvSecretProvider.resolve()`
+     with one record — zero behavior change when no `secrets` config
+     is present (full backward compat; unauth-if-unset preserved).
+   - **`capabilities()` lets read-only backends coexist with mutable
+     ones.** `env` / `k8s` Secret are read-only (operator rotates
+     out-of-band) → `/v1/tokens` `mint`/`revoke` return **405** for
+     them; `file` is fully mutable. This is what lets the *same*
+     `/v1/tokens` wire serve file-today and k8s-later with no re-shape
+     — the migration-cost property C2 was filed to protect.
+   - **`SecretRef`, never raw material, crosses the seam** except at
+     `mint()` (returns material once, GitHub-PAT style) and `resolve()`.
+     This is the lifecycle hook — rotation/expiry/audit live behind the
+     ref. Consistent with §7's "token *reference*, not raw token" at
+     the process boundary.
+   - **`ProviderChain` composite** tries providers in order, so a
+     deployment runs file-tokens *plus* legacy `PPXAI_API_TOKEN`
+     simultaneously → non-breaking migration. C5.2's
+     `header:X-Custom-Token` is just another provider in the chain.
+
+   First providers (single-machine first): `EnvSecretProvider`
+   (`resolve` only, wraps today's auth), `FileSecretProvider`
+   (`~/.ppxai/tokens.json`, stores **hashes**, perms `0600` /
+   owner-only ACL on Windows, all capabilities). `K8sSecretProvider`
+   /`VaultSecretProvider` are interface stubs deferred to v1.20.x.
+
+   Config (omit `secrets` → today's behavior):
+   ```jsonc
+   "server": { "secrets": { "providers": [
+     { "type": "file", "path": "~/.ppxai/tokens.json" },
+     { "type": "env",  "var": "PPXAI_API_TOKEN" }
+   ] } }
+   ```
+
+   **Increment split (build-contract gated):**
+   - **Inc 8a** — `SecretProvider` seam + `Env`/`File` providers +
+     `/v1/tokens` CRUD. No authz change. Trial: mint→list→revoke via
+     file provider; legacy env token still authenticates.
+   - **Inc 8b** — per-run authz. `start_run` stamps
+     `RunMeta.owner = resolve(bearer).owner`; `/events|/result|`
+     `/artifacts|/cancel` return **403** on ownership mismatch. The
+     authz code calls `resolve()` and is blind to the backend. Trial:
+     token A's run, token B → 403.
 10. **A3 — `run_id` and `parent_run_id` on `EventType.AGENT_RUN_START`**.
     Phase 1 introduces a `run_id` per run; ppxai-sre's audit JSONL
     keys by `run_id`. The native v1.18.0 `AGENT_RUN_START` payload

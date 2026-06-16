@@ -357,6 +357,23 @@ def run_server():
     print("Session isolation: Use X-Session-Id header for isolated sessions")
     print()
 
+    # Surface which config file is authoritative + the secret-provider
+    # chain. The config source is easy to get wrong: PPXAI_CONFIG_FILE
+    # (often set via ./.env) overrides ./ppxai-config.json, so editing
+    # the obvious project file can silently have no effect. Print it.
+    try:
+        from ..config.loader import find_config_file
+        from .state import get_secret_provider
+
+        _cfg_src = find_config_file()
+        print(f"Config: {_cfg_src or '(builtin defaults — no config file found)'}")
+        _names = [p.name for p in get_secret_provider().providers]
+        print(f"Auth providers: {', '.join(_names) if _names else '(none)'}")
+        print()
+    except Exception as _exc:  # never let banner introspection break startup
+        print(f"Config: (could not resolve: {_exc})")
+        print()
+
     # Check if running as frozen executable (PyInstaller)
     if getattr(sys, 'frozen', False):
         # Running as bundled executable - use app object directly

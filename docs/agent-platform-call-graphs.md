@@ -507,7 +507,64 @@ Consent policy default "deny": over /v1/agent/task there is no interactive
   supersedes this later.
 ```
 
-<!-- Inc 8+ sections appended here as they land. Template:
+## Increment 8a — pluggable secret-source framework (`/v1/tokens`)
+
+Added: `server/secrets/{base,env,file,chain,__init__}.py`,
+`routes/tokens_v1.py`, `state.get_secret_provider()`. Changed:
+`server/auth.py` now resolves via the provider chain (was a single
+env-var compare). No execution-model change to agent runs; this is the
+credential layer that Inc 8b's per-run authz will consume.
+
+The seam (ADR 0003 §C2): one `SecretProvider` Protocol, many backends,
+consumers blind to which.
+
+```
+auth_middleware (http.py)
+  -> auth.check_request(request)
+       -> is_auth_enabled()                      # any provider enforce a token?
+            -> state.get_secret_provider()       # singleton ProviderChain
+       -> chain.resolve(bearer)                  # first provider to match wins
+            -> EnvSecretProvider.resolve()       #   PPXAI_API_TOKEN compare (read-only)
+            -> FileSecretProvider.resolve()      #   salted-SHA256 verify vs tokens.json
+       -> request.state.principal = TokenRecord  # owner stashed for Inc 8b
+       (None => proceed | 401 JSONResponse)
+```
+
+### `GET /v1/tokens` — list token metadata (never material)
+
+```
+list_tokens()
+  -> get_secret_provider().list()               # concatenate list-capable providers
+       (CapabilityError => 405)                  # read-only-only chain (env/k8s)
+  -> [TokenMeta(...)]                            # token_id/owner/roles/expires_at/revoked/source
+```
+
+### `POST /v1/tokens` — mint (material returned ONCE)
+
+```
+mint_token(MintTokenRequest{owner, roles, ttl_s})
+  -> get_secret_provider().mint(owner, roles, ttl_s)
+       -> _first_with(CAP_MINT)                  # routes to file; env/k8s lack it
+            -> FileSecretProvider.mint()         # 256-bit material; store salted hash
+       (CapabilityError => 405 | ValueError => 422)
+  -> MintTokenResponse{token=material, meta}     # material echoed once, never logged/persisted raw
+```
+
+### `DELETE /v1/tokens/{token_id}` — revoke
+
+```
+revoke_token(token_id)
+  -> get_secret_provider().revoke(token_id)      # every revoke-capable provider
+       (CapabilityError => 405)
+       (False => 404)
+  -> {ok, token_id, revoked}
+```
+
+Config: `server.secrets.providers` (omit => single env provider =
+legacy behavior). Backward-compat: `test_auth_middleware.py` unchanged
+and green; no `server.secrets` block behaves exactly as v1.18.3.
+
+<!-- Inc 8b+ sections appended here as they land. Template:
 ## Increment N — <title>
 Added/changed: <files>. Execution model change: <if any>.
 ### <METHOD /path> — <what>

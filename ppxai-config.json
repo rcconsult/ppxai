@@ -6,7 +6,13 @@
   "system_prompt_mode": "prepend",
   "server": {
     "idle_timeout": 600,
-    "port": 54320
+    "port": 54320,
+    "secrets": {
+      "providers": [
+        { "type": "file", "path": "~/.ppxai/tokens.json" },
+        { "type": "env", "var": "PPXAI_API_TOKEN" }
+      ]
+    }
   },
   "session": {
     "auto_restore": "prompt",

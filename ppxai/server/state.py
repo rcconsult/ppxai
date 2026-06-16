@@ -194,6 +194,40 @@ def get_agent_run_registry():
     return _agent_run_registry
 
 
+_secret_provider = None
+
+
+def get_secret_provider():
+    """Get (lazily construct) the secret-provider chain singleton (Inc 8a).
+
+    One shared :class:`ProviderChain` is consumed by both the auth
+    middleware (``server/auth.py``) and the ``/v1/tokens`` route, so a
+    token minted via ``/v1/tokens`` authenticates immediately. Built from
+    ``server.secrets.providers`` config; defaults to the legacy
+    ``PPXAI_API_TOKEN`` env provider when unconfigured (no behavior change).
+    """
+    global _secret_provider
+    if _secret_provider is None:
+        from ..config.loader import load_config
+        from .secrets import build_chain_from_config
+        try:
+            cfg = load_config()
+        except Exception:
+            cfg = {}
+        _secret_provider = build_chain_from_config(cfg.get("server", {}))
+    return _secret_provider
+
+
+def reset_secret_provider() -> None:
+    """Drop the cached chain so the next call rebuilds from config.
+
+    Used by tests and after a config reload that changes
+    ``server.secrets``.
+    """
+    global _secret_provider
+    _secret_provider = None
+
+
 def is_path_allowed(target: Path, base: Path) -> bool:
     """Check if target is within base's tree (parent or child)."""
     try:

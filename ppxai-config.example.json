@@ -14,7 +14,23 @@
     "port": 54320,
     "__comment_port": "Default HTTP server port",
     "working_dir": null,
-    "__comment_working_dir": "Default working directory for sessions. null = user home directory. Set to e.g. '/workspace' for container deployments."
+    "__comment_working_dir": "Default working directory for sessions. null = user home directory. Set to e.g. '/workspace' for container deployments.",
+    "secrets": {
+      "__comment": "Pluggable bearer-token sources for /v1/tokens + auth (v1.19.0, ADR 0003 §C2). OMIT this whole block for the legacy behavior: a single shared token via the PPXAI_API_TOKEN env var (unauthenticated when unset). Providers are tried in order; the first to resolve a presented token wins. /v1/tokens mint/list/revoke route to the first provider that supports them — read-only providers (env, k8s) return HTTP 405.",
+      "providers": [
+        {
+          "type": "file",
+          "path": "~/.ppxai/tokens.json",
+          "__comment": "Mutable, single-machine MVP. Stores salted SHA-256 hashes (never raw material); mint returns the token once. File is created owner-only (0600 / owner ACL on Windows). Supports mint/list/revoke via /v1/tokens."
+        },
+        {
+          "type": "env",
+          "var": "PPXAI_API_TOKEN",
+          "__comment": "Read-only legacy single-shared-token. Kept alongside 'file' so existing deployments keep working during migration. Operator rotates by updating the env var. Does NOT support mint/list/revoke (405)."
+        }
+      ],
+      "__comment_future": "v1.20.x will add read-only 'k8s' (namespace/secret/key) and full 'vault' providers behind the same interface; an unknown 'type' is skipped with a warning so a newer config degrades on an older server instead of crashing."
+    }
   },
   "session": {
     "__comment": "Session persistence and auto-recovery (v1.13.9+)",
