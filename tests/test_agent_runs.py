@@ -259,6 +259,47 @@ class TestRunInBackground:
     def test_cancel_unknown_run_returns_false(self, registry):
         assert registry.cancel_run("run_does_not_exist") is False
 
+    @pytest.mark.asyncio
+    async def test_cancel_cascades_to_child(self, registry):
+        # Item 37e / secondary review: cancelling a parent must cascade to its
+        # in-flight children so a sub-agent isn't orphaned (kept consuming
+        # budget/LLM calls) when its parent is cancelled. The cascade is a
+        # registry invariant, independent of whether anyone is polling in
+        # _await_child.
+        import asyncio
+
+        parent = registry.start_run("parent")
+
+        async def runner(meta):
+            ctl = registry.get_control(meta.run_id)
+            for _ in range(200):
+                ctl.check(now=0.0)
+                await asyncio.sleep(0.01)
+            return "never"
+
+        registry.run_in_background(parent, runner)
+        # Child linked to the parent, also in-flight.
+        child = registry.start_run("child", parent_run_id=parent.run_id)
+        registry.run_in_background(child, runner)
+        await asyncio.sleep(0.03)
+
+        # Cancel ONLY the parent — the child must be cancelled too.
+        assert registry.cancel_run(parent.run_id) is True
+        for _ in range(200):
+            cs = registry.get_run(child.run_id).status
+            ps = registry.get_run(parent.run_id).status
+            if cs in ("cancelled", "failed") and ps in ("cancelled", "failed"):
+                break
+            await asyncio.sleep(0.01)
+        assert registry.get_run(parent.run_id).status == "cancelled"
+        assert registry.get_run(child.run_id).status == "cancelled"  # cascaded
+
+    def test_cancel_not_in_flight_returns_false(self, registry):
+        # Cascade over a run with no registered control (never backgrounded)
+        # returns False and the child-scan doesn't raise.
+        m = registry.start_run("solo")
+        assert registry.cancel_run(m.run_id) is False
+
 
 # ---------------------------------------------------------------------------
 # Run events (Inc 3) — emit, persist, filter

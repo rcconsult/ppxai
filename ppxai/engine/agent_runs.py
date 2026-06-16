@@ -479,21 +479,50 @@ class AgentRunRegistry:
         Flips the run's control flag and moves it to `cancelling`; the runner
         observes it at the next `check()` and raises `RunCancelled`, so the
         stop lands at a clean checkpoint (never mid-tool-call). Returns False
-        if the run isn't in flight (already terminal / unknown)."""
+        if the run isn't in flight (already terminal / unknown).
+
+        CASCADE (Item 37e/secondary review): also cancels any in-flight runs
+        whose `parent_run_id == run_id`, so cancelling a parent never orphans
+        a sub-agent that keeps consuming budget/LLM calls. This is the
+        *correctness* guarantee — independent of whether the parent happens to
+        be polling in `SpawnSubagentTool._await_child` (that poll is the
+        latency optimization). The cascade walks the active-control set, so it
+        is recursion-safe for future N>1 / deeper trees, and a cycle can't
+        loop forever (a run already in `cancelling`/terminal is skipped)."""
+        return self._cancel_run_cascade(run_id, _seen=set())
+
+    def _cancel_run_cascade(self, run_id: str, *, _seen: set) -> bool:
+        if run_id in _seen:
+            return False  # cycle guard (shouldn't happen with parent_run_id DAG)
+        _seen.add(run_id)
+
         control = self._controls.get(run_id)
-        if control is None:
-            return False
-        control.cancel_requested = True
-        meta = self._store.load_meta(run_id)
-        if meta is not None and meta.status == "running":
-            meta.status = "cancelling"
-            self._store.persist_meta(meta)
-            self.emit_event(
-                run_id, "agent_run_cancelling", level="warning",
-                category="lifecycle", data={"reason": "cancel requested by owner"},
-            )
-            self._notify_change()  # Inc 9: status changed (running -> cancelling)
-        return True
+        cancelled_self = False
+        if control is not None:
+            control.cancel_requested = True
+            meta = self._store.load_meta(run_id)
+            if meta is not None and meta.status == "running":
+                meta.status = "cancelling"
+                self._store.persist_meta(meta)
+                self.emit_event(
+                    run_id, "agent_run_cancelling", level="warning",
+                    category="lifecycle",
+                    data={"reason": "cancel requested by owner"},
+                )
+                self._notify_change()  # Inc 9: status changed (running->cancelling)
+            cancelled_self = True
+
+        # Cascade to in-flight children. A child is in-flight iff it has a live
+        # control; reading parent_run_id from each active run's meta avoids a
+        # full-store scan and only touches runs that can still be stopped.
+        for child_id in list(self._controls.keys()):
+            if child_id == run_id:
+                continue
+            child_meta = self._store.load_meta(child_id)
+            if child_meta is not None and child_meta.parent_run_id == run_id:
+                self._cancel_run_cascade(child_id, _seen=_seen)
+
+        return cancelled_self
 
     def run_in_background(
         self,

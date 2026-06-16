@@ -184,6 +184,13 @@ class ToolDecision:
     target_path: str
     rule_id: Optional[str]  # allowlist_rule_id for audit (None on deny)
     reason: str
+    # All hosts the tool could reach that PASSED the allowlist (the full
+    # superset, not just targets[0]). For a multi-backend tool (web_search →
+    # DDG/Perplexity/Gemini) the handler picks one at call time, so the audit
+    # event must record every approved candidate — logging only the first
+    # masks which backend was actually hit (secondary review 2026-06-16,
+    # Item 37h). Empty on deny. Defaulted so existing call sites stay valid.
+    approved_targets: Tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -335,8 +342,16 @@ class NetworkPolicy:
                 )
             if first_allow_rule is None:
                 first_allow_rule = decision.rule_id
-        # Every target passed. Report the (first) resolvable target for audit.
+        # Every target passed. target_host/path keep the FIRST target for
+        # back-compat, but approved_targets carries ALL approved hosts so the
+        # audit event records the full superset — not just whichever backend
+        # we happened to enumerate first (Item 37h).
         parsed = urlparse(targets[0])
+        approved_hosts = tuple(
+            dict.fromkeys(  # de-dup, preserve order
+                (urlparse(u).hostname or "") for u in targets
+            )
+        )
         return ToolDecision(
             allowed=True,
             target_host=parsed.hostname or "",
@@ -347,4 +362,5 @@ class NetworkPolicy:
                 if len(targets) == 1
                 else f"all {len(targets)} possible targets in allowlist"
             ),
+            approved_targets=approved_hosts,
         )

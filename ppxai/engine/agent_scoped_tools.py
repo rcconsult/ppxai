@@ -145,6 +145,10 @@ class ScopedToolManager:
             "tool": name,
             "target_host": d.target_host,
             "target_path": d.target_path,
+            # Full superset of approved hosts (Item 37h): a multi-backend tool
+            # picks one at call time, so the audit event records every approved
+            # candidate, not just target_host (the first). Empty on deny.
+            "approved_targets": list(d.approved_targets),
             "reason": d.reason,
             "allowlist_rule_id": d.rule_id,
         }

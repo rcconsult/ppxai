@@ -665,12 +665,25 @@ modular-prompt refactor.
   and connect) needs network-layer enforcement (pinned-IP connect / egress
   proxy) and lands with **tier-d OS-isolation**. Must NOT ship to an
   untrusted-code tier on the app-layer check alone.
-- **(e) PARTIAL** — parent-cancel now propagates to an awaited child within a
-  ~100ms tick (was: up to the 300s wait cap), via the cancel-flag poll in
-  `_await_child`. **Still deferred:** a cancel issued *during the provider
-  HTTP call* (`engine.chat` → `provider.oneshot`) still waits for that call to
-  return — racing `control` against the provider await is a deep change to the
-  core chat path with real regression risk, out of MVP scope.
+- **(e) PARTIAL** — two layers now stop an awaited child when its parent is
+  cancelled: (1) `AgentRunRegistry.cancel_run` CASCADES — it cancels any
+  in-flight run whose `parent_run_id == run_id` (recursion-safe, cycle-guarded)
+  so a parent cancel never orphans a sub-agent regardless of who's polling;
+  (2) `_await_child` polls the parent's cancel flag on a ~100ms tick for prompt
+  latency (was: up to the 300s wait cap). **Still deferred:** a cancel issued
+  *during the provider HTTP call* (`engine.chat` → `provider.oneshot`) still
+  waits for that call to return — racing `control` against the provider await
+  is a deep change to the core chat path with real regression risk, out of
+  MVP scope.
+- **(h) DONE — audit fidelity for multi-backend tools (secondary review
+  2026-06-16).** `NetworkPolicy.authorize` previously reported only
+  `targets[0]` in the `network_policy_allowed` event, so a `web_search` that
+  actually hit Perplexity would log DuckDuckGo. `ToolDecision` now carries
+  `approved_targets` (the full superset of allowlisted hosts), surfaced in the
+  audit payload (`approved_targets`). `target_host`/`target_path` keep the
+  first target for back-compat; the new key is additive. Tests:
+  `test_approved_targets_lists_all_backends_not_just_first` /
+  `_empty_on_deny`.
 - **(a)/(b)** unchanged — promote with the N>1 sub-agent work.
 - **(d)** unchanged — only matters if the SSE layer is reworked.
 

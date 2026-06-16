@@ -185,6 +185,30 @@ class TestAuthorizeSupersetRule:
         d = p.authorize("web_search", {"query": "q"})
         assert d.allowed is True
 
+    def test_approved_targets_lists_all_backends_not_just_first(self):
+        # Item 37h: the audit must record EVERY approved backend, not only
+        # target_host (the first), so a log doesn't claim DuckDuckGo when the
+        # handler actually hit Perplexity.
+        p = NetworkPolicy([
+            "duckduckgo.com", "html.duckduckgo.com",
+            "api.perplexity.ai", "generativelanguage.googleapis.com",
+        ])
+        d = p.authorize("web_search", {"query": "q"})
+        assert d.allowed is True
+        assert set(d.approved_targets) == {
+            "duckduckgo.com", "html.duckduckgo.com",
+            "api.perplexity.ai", "generativelanguage.googleapis.com",
+        }
+        # single-target tool: approved_targets is just that one host
+        d1 = NetworkPolicy(["api.github.com"]).authorize(
+            "fetch_url", {"url": "https://api.github.com/x"})
+        assert d1.approved_targets == ("api.github.com",)
+
+    def test_approved_targets_empty_on_deny(self):
+        d = NetworkPolicy(["duckduckgo.com"]).authorize("web_search", {"query": "q"})
+        assert d.allowed is False
+        assert d.approved_targets == ()
+
     def test_get_weather_denied_by_http_fallback_branch(self):
         # THE Medium-finding outcome: even allowlisting wttr.in, get_weather is
         # denied because its http fallback target fails the https-only rule.
