@@ -29,6 +29,19 @@ Two tiers:
   front (shell escapes the egress allowlist; needs the deferred OS-
   isolation tier).
 
+Provider choice on `/task` (v1.19.x): ANY configured provider is accepted
+(the tier gates by capability, not class — see `_v1_provider_or_400`). But
+acceptance is a *plumbing + security* guarantee, NOT a tool-calling-quality
+one: the AC-1/AC-2 sandbox enforces identically across providers and across
+native-vs-prompt-based tool calling, yet how RELIABLY a given model emits
+valid tool calls is per-model. Models without native function calling
+(e.g. Perplexity Sonar — `native_tool_calling:false`) fall back to
+prompt-based routing and may substitute shell/native-search for granted
+tools (see CLAUDE.md "Known Issues" — accepted behavior). For dependable
+agentic runs prefer a native-tool-calling model (nvidia/qwen, gemini-3.x,
+gpt-5.x, ...). The platform won't stop you pointing `/task` at a weak
+tool-caller; it just can't make that model call tools well. (Debt Item 37i.)
+
 Per-run controls on `/task` (Inc 6): an optional `budget`
 {iterations, time_s, tokens} stops the run at a clean tool-loop checkpoint
 (status `interrupted`, resumable); `POST .../cancel` stops it cooperatively
