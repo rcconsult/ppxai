@@ -422,6 +422,12 @@ class AgentRunRegistry:
         The runner uses this to poll budget/cancel at each iteration boundary."""
         return self._controls.get(run_id)
 
+    def get_run_task(self, run_id: str) -> "Optional[asyncio.Task]":
+        """The in-flight run's background asyncio.Task, or None if not running.
+        Lets a waiter (e.g. spawn_subagent's parent) await the child's
+        completion directly instead of polling get_run() off disk."""
+        return self._run_tasks.get(run_id)
+
     def cancel_run(self, run_id: str) -> bool:
         """Request cooperative cancellation of an in-flight run (Inc 6).
 

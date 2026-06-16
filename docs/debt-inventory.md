@@ -568,6 +568,33 @@ its own `feat/subagent-session-config`.
 
 ---
 
+### Item 37 — sub-agent wait: disk-poll fallback + N=1-only concurrency [agent platform]
+
+**Context:** v1.19.0 Inc 7 `SpawnSubagentTool._await_child` was upgraded
+(codex review 2026-06-16) to await the child's background `asyncio.Task`
+directly via `registry.get_run_task(run_id)` — no more 20×/sec `meta.json`
+disk-polling on the happy path, and on wait-cap timeout it now CANCELS the
+child rather than orphaning it (wait cap derives from the child's `time_s`
+budget, else `_DEFAULT_CHILD_WAIT_S=300`).
+
+**What remains (small):**
+- A **disk-poll fallback** still exists for the no-task-handle case (child
+  already finished, or a test seam that bypasses `run_in_background`). It's a
+  bounded short poll, not a hot loop, but it's a second code path. Could be
+  unified once every spawn path guarantees a task handle.
+- **N=1 only.** The parent awaits one child to terminal before its tool call
+  returns (ADR 0003 `max_concurrent_subagents=1`). N>1 concurrent fan-out
+  (and the associated backpressure cap) is deliberately out of MVP scope —
+  revisit if/when a research task needs parallel children.
+
+**Why deferred:** both are correctness-neutral for the N=1 MVP; the await
+upgrade already removed the wasteful disk churn on the live path. Promote
+when sub-agent fan-out (N>1) is scheduled.
+
+**Branch when ready:** with the N>1 sub-agent work (post-MVP).
+
+---
+
 ## Closed (recent)
 
 For full closed-item rationale with commit references, see the per-version

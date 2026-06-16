@@ -152,7 +152,7 @@ class TestExecuteRefusals:
 
     @pytest.mark.asyncio
     async def test_consent_denied_no_run_minted(self, registry):
-        async def deny(_summary, _wd): return False
+        async def deny(_summary): return False
         t = _tool(registry, parent_tools=["read_file"], parent_allow=[], consent=deny)
         out = await t.execute(task="x", tools=["read_file"])
         assert "denied permission" in out
@@ -180,7 +180,7 @@ class TestExecuteSpawns:
             "ppxai.server.routes.agent_v1.build_task_runner", fake_build
         )
 
-        async def approve(_s, _w): return True
+        async def approve(_s): return True
         t = _tool(registry, parent_tools=["read_file"], parent_allow=[], consent=approve)
         out = await t.execute(task="summarize", tools=["read_file"])
 
@@ -196,3 +196,36 @@ class TestExecuteSpawns:
         types = [e.type for e in evs]
         assert "subagent_spawned" in types
         assert "subagent_finished" in types
+
+    @pytest.mark.asyncio
+    async def test_wait_timeout_cancels_child_not_orphan(self, registry, monkeypatch):
+        # codex MINOR: on wait timeout the parent must CANCEL the child, not
+        # leave it running. Use a runner that polls its control (so cancel can
+        # stop it) and never finishes on its own; shrink the wait cap so the
+        # timeout path fires fast.
+        import asyncio
+        import ppxai.engine.tools.agent_spawn as spawn_mod
+        monkeypatch.setattr(spawn_mod, "_DEFAULT_CHILD_WAIT_S", 0.2)
+
+        async def forever_runner(meta):
+            ctl = registry.get_control(meta.run_id)
+            for _ in range(10000):
+                ctl.check(now=0.0)        # cooperative: raises RunCancelled
+                await asyncio.sleep(0.01)
+            return "never"
+
+        monkeypatch.setattr(
+            "ppxai.server.routes.agent_v1.build_task_runner",
+            lambda reg, **kw: forever_runner,
+        )
+        async def approve(_s): return True
+        t = _tool(registry, parent_tools=["read_file"], parent_allow=[], consent=approve)
+        out = await t.execute(task="hang", tools=["read_file"])
+
+        # parent reports a non-completed end, and the child is terminal
+        # (cancelled) — NOT still running/orphaned.
+        child = registry.list_runs()[0]
+        assert child.status in ("cancelled", "interrupted", "failed")
+        assert "completed" not in out
+        # the child's control was cleaned up (run finished, not orphaned)
+        assert registry.get_control(child.run_id) is None

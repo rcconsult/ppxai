@@ -251,7 +251,14 @@ class BudgetSpec(BaseModel):
 
     iterations: Optional[int] = Field(None, ge=1, description="Max tool-loop iterations.")
     time_s: Optional[float] = Field(None, gt=0, description="Max wall-clock seconds.")
-    tokens: Optional[int] = Field(None, ge=1, description="Max tokens consumed.")
+    tokens: Optional[int] = Field(
+        None, ge=1,
+        description=(
+            "Max tokens consumed. Best-effort: checked at tool-loop boundaries, "
+            "so a non-tool-calling run (one large completion) may finish before "
+            "the cap is observed. Use time_s/iterations for hard stops."
+        ),
+    )
 
 
 def _budget_dict(spec: "Optional[BudgetSpec]") -> dict:
@@ -419,6 +426,12 @@ def build_task_runner(
         # could probe. The tool carries this run as the parent context and
         # enforces child grant ⊆ this grant, child egress ⊆ this allowlist.
         if allow_spawn and "spawn_subagent" in tools:
+            # Adapt the engine's shell-consent (summary, cwd) to the spawn
+            # tool's single-arg (summary) contract — a spawn has no cwd, so we
+            # don't pass a meaningless "." that a consent UI might display.
+            async def _spawn_consent(summary: str) -> bool:
+                return await engine.request_shell_consent(summary)
+
             engine.tool_manager.register_tool(SpawnSubagentTool(
                 registry=registry,
                 parent_run_id=m.run_id,
@@ -426,7 +439,7 @@ def build_task_runner(
                 parent_allow_outbound=list(allow_outbound),
                 parent_provider=provider_name,
                 parent_model=model,
-                request_consent=engine.request_shell_consent,
+                request_consent=_spawn_consent,
             ))
 
         def _on_deny(name: str) -> None:

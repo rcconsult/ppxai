@@ -488,7 +488,10 @@ execute(task, tools=[], allow_outbound=[]):
      emit subagent_spawned (parent stream, lifecycle)
   5. runner = build_task_runner(..., allow_spawn=False)   ← child can't spawn
      registry.run_in_background(child, runner)
-  6. status,body,err = await _await_child(child.run_id)   ← N=1: parent blocks
+  6. status,body,err = await _await_child(child.run_id, child.budget)
+        awaits registry.get_run_task(child) directly (no disk-poll);  ← N=1
+        wait cap = child time_s + margin, else 300s; on timeout CANCELS
+        the child (never orphaned)
      emit subagent_finished (parent stream, result)
      return "[sub-agent <id> completed]\n<body>"  (or ended:<status>)
 

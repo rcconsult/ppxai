@@ -38,6 +38,12 @@ from ...common.logger import get_logger
 
 logger = get_logger("tui")
 
+# Outer guard for how long a parent waits on a child before cancelling it.
+# Only used when the child set no time_s budget of its own (the child's
+# cooperative time budget, when present, fires first). Not a magic deadline
+# the child silently survives — on hit, the parent CANCELS the child.
+_DEFAULT_CHILD_WAIT_S = 300.0
+
 
 class SpawnSubagentTool(BaseTool):
     """Spawn one child agent run, scoped to a subset of this run's caps."""
@@ -99,7 +105,7 @@ class SpawnSubagentTool(BaseTool):
         parent_allow_outbound: list,
         parent_provider: str,
         parent_model: str,
-        request_consent: Optional[Callable[[str, str], Awaitable[bool]]] = None,
+        request_consent: Optional[Callable[[str], Awaitable[bool]]] = None,
     ) -> None:
         self._registry = registry
         self._parent_run_id = parent_run_id
@@ -189,10 +195,12 @@ class SpawnSubagentTool(BaseTool):
             logger.warning(f"spawn_subagent denied: {err}")
             return f"Error: cannot spawn sub-agent — {err}."
 
-        # 2. Consent gate — a human must approve the spawn.
+        # 2. Consent gate — a human must approve the spawn. The callback takes
+        #    a single human-readable summary (NOT a shell cwd); the registration
+        #    site adapts the engine's shell-consent to this shape.
         if self._request_consent is not None:
             summary = f"spawn_subagent: {task[:80]!r} tools={child_tools}"
-            approved = await self._request_consent(summary, ".")
+            approved = await self._request_consent(summary)
             if not approved:
                 return "Error: user denied permission to spawn a sub-agent."
 
@@ -239,7 +247,7 @@ class SpawnSubagentTool(BaseTool):
         except Exception as exc:  # noqa: BLE001
             return f"Error: failed to start sub-agent: {exc}"
 
-        result = await self._await_child(child.run_id)
+        result = await self._await_child(child.run_id, child.budget)
         self._registry.emit_event(
             self._parent_run_id, "subagent_finished", level="info",
             category="result",
@@ -253,15 +261,46 @@ class SpawnSubagentTool(BaseTool):
             + (f" {error}" if error else "")
         )
 
-    async def _await_child(self, child_run_id: str, timeout_s: float = 300.0):
-        """Poll the child run to a terminal status. Returns (status, result,
-        error). Cooperative — the child has its own budget/cancel control."""
+    async def _await_child(self, child_run_id: str, child_budget: dict):
+        """Wait for the child run to finish; return (status, result, error).
+
+        Awaits the child's background task DIRECTLY (no disk-polling): the
+        registry holds it in _run_tasks. The wait cap is derived from the
+        child's own time_s budget (+ a small margin so the child's cooperative
+        time-budget stop fires first) and falls back to a default only when the
+        child set no time budget. On timeout we CANCEL the child rather than
+        orphan it — otherwise the parent would report 'timed out' while the
+        child kept running, emitting events and consuming budget."""
         terminal = ("completed", "failed", "cancelled", "interrupted")
-        loop = asyncio.get_event_loop()
-        deadline = loop.time() + timeout_s
-        while loop.time() < deadline:
-            meta = self._registry.get_run(child_run_id)
-            if meta is not None and meta.status in terminal:
-                return meta.status, meta.result, meta.error
-            await asyncio.sleep(0.05)
+        task = self._registry.get_run_task(child_run_id)
+
+        # Wait cap: child's time_s + margin, else the default backstop. The
+        # child enforces its OWN time budget cooperatively; this is just an
+        # outer guard so a wedged child can't block the parent forever.
+        child_time = (child_budget or {}).get("time_s")
+        wait_cap = (child_time + 10.0) if child_time else _DEFAULT_CHILD_WAIT_S
+
+        if task is not None:
+            try:
+                await asyncio.wait_for(asyncio.shield(task), timeout=wait_cap)
+            except asyncio.TimeoutError:
+                # Don't orphan the child — cancel it cooperatively, then read
+                # whatever terminal state it lands in.
+                logger.warning(
+                    f"sub-agent {child_run_id} exceeded wait cap {wait_cap}s — cancelling"
+                )
+                self._registry.cancel_run(child_run_id)
+                await asyncio.sleep(0.1)  # let the cooperative stop settle
+        else:
+            # No task handle (e.g. already finished or test seam) — fall back
+            # to a short bounded poll on the persisted meta.
+            for _ in range(int(_DEFAULT_CHILD_WAIT_S / 0.05)):
+                meta = self._registry.get_run(child_run_id)
+                if meta is not None and meta.status in terminal:
+                    break
+                await asyncio.sleep(0.05)
+
+        meta = self._registry.get_run(child_run_id)
+        if meta is not None and meta.status in terminal:
+            return meta.status, meta.result, meta.error
         return "interrupted", None, "sub-agent wait timed out"
