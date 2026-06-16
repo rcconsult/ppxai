@@ -106,6 +106,15 @@ class EngineClient:
         self.session = SessionManager()
         self.tools_enabled: bool = False
 
+        # Per-engine system-prompt override (v1.19.x). When set, chat() uses
+        # THIS instead of the provider's config system_prompt. The v1 agent
+        # tier (/v1/agent/task) sets it to the bounded-agent framing + any
+        # caller-supplied `system` (rendered AGENT.md), so an agent run isn't
+        # steered by the interactive-chat system prompt (which, e.g. for
+        # Perplexity, encourages native web search over granted tools). None =
+        # fall back to config (unchanged behavior for normal chat clients).
+        self.system_prompt_override: Optional[str] = None
+
         # Binary file store for multimodal attachments (v1.17.4 Phase 2.1a).
         # Owned by the engine and shared with the session manager, which
         # uses it during serialize/deserialize to rewrite inline base64

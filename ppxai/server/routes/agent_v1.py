@@ -94,6 +94,46 @@ logger = get_logger("server")
 
 
 # ---------------------------------------------------------------------------
+# Agent-tier system prompt (v1.19.x) — bounded-agent framing
+# ---------------------------------------------------------------------------
+# /v1/agent/task drives a sandboxed, capability-granted run. Left to the
+# provider's CHAT system prompt, some models behave wrong for an agent task —
+# notably Perplexity Sonar, whose config prompt steers it toward NATIVE web
+# search instead of the granted tools (CLAUDE.md Known Issues). This default
+# framing replaces that with bounded-agent instructions so a tool-capable run
+# uses the GRANTED tools and doesn't substitute native capabilities.
+#
+# It's a DEFAULT, not a lock-in: a caller's `system` (e.g. ppxai-sre's
+# rendered AGENT.md — Identity/Role/Boundaries) is composed ON TOP via
+# `compose_agent_system_prompt`, and the tool-calling mechanics block is still
+# appended by the engine. Ownership stays with the consumer (the AGENT.md /
+# persona artifact lives in ppxai-sre); ppxai provides the seam + a sane base.
+DEFAULT_AGENT_SYSTEM_PROMPT = (
+    "You are an autonomous agent executing a single bounded task. "
+    "Use ONLY the tools you have been granted to accomplish it — do not ask "
+    "the user for input, and do not fall back to any native capability "
+    "(e.g. built-in web search) when a granted tool covers the need. "
+    "When you need an action, emit a tool call in the required format rather "
+    "than describing what you would do. Work within your capability grant and "
+    "egress allowlist; if the task cannot be done with the granted tools, say "
+    "so plainly and stop. Be concise; report results, not intentions."
+)
+
+
+def compose_agent_system_prompt(caller_system: Optional[str]) -> str:
+    """Build the /task engine system prompt: the bounded-agent default, plus
+    the caller-supplied `system` (rendered AGENT.md / persona) when present.
+
+    The caller's instructions come SECOND so they refine/extend the base
+    framing (identity, role, boundaries) without losing the
+    use-only-granted-tools guarantee. Returns the default alone when the
+    caller passes nothing."""
+    base = DEFAULT_AGENT_SYSTEM_PROMPT
+    extra = (caller_system or "").strip()
+    return f"{base}\n\n{extra}" if extra else base
+
+
+# ---------------------------------------------------------------------------
 # Per-run authorization (Inc 8b)
 # ---------------------------------------------------------------------------
 # The auth MIDDLEWARE (server/auth.py) already authenticated the caller and
@@ -459,6 +499,7 @@ async def create_agent_task(req: AgentTaskRequest, request: Request) -> AgentRun
         tools=list(req.tools),
         allow_outbound=(req.network.allow_outbound if req.network else []),
         allow_spawn=True,  # top-level run may spawn ONE child (depth=1; Inc 7)
+        system=req.system,  # v1.19.x: caller's agent framing (rendered AGENT.md)
     )
     registry.run_in_background(meta, runner)
     return AgentRunResponse(run_id=meta.run_id, status=meta.status)
@@ -473,6 +514,7 @@ def build_task_runner(
     tools: list[str],
     allow_outbound: list,
     allow_spawn: bool = False,
+    system: Optional[str] = None,
 ):
     """Build the async runner that drives a tool-capable run (Inc 4–7).
 
@@ -498,6 +540,11 @@ def build_task_runner(
         engine.set_provider(provider_name)
         engine.set_model(model)
         engine.enable_tools()  # registers builtins + sets tool-loop limits
+        # v1.19.x: bounded-agent framing (+ caller's rendered AGENT.md via
+        # `system`) REPLACES the provider's chat system_prompt for this run, so
+        # the model uses granted tools instead of native fallbacks. Set on this
+        # per-run engine only (D1 isolation) — never touches other sessions.
+        engine.system_prompt_override = compose_agent_system_prompt(system)
 
         # Inc 7: register spawn_subagent ONLY for a top-level run whose grant
         # includes it. A child run (allow_spawn=False) never gets the tool, so

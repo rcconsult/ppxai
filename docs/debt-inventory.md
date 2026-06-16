@@ -684,23 +684,28 @@ modular-prompt refactor.
   first target for back-compat; the new key is additive. Tests:
   `test_approved_targets_lists_all_backends_not_just_first` /
   `_empty_on_deny`.
-- **(i) OPEN — per-provider agent-tier suitability hint (secondary review
-  2026-06-16).** v1.19.x made `/v1/agent/task` accept ANY provider (the
-  capability-gate fix — `oneshot`/`chat` on `BaseProvider`). That's a
-  plumbing + security guarantee, NOT a tool-calling-quality one: the
-  AC-1/AC-2 sandbox enforces identically across providers and native-vs-
-  prompt-based tool calling, but tool-call RELIABILITY is per-model. Models
-  without native function calling (Perplexity Sonar `native_tool_calling:
-  false`; some Gemini paths) fall back to prompt-based routing and may
-  substitute shell/native-search for granted tools (CLAUDE.md "Known
-  Issues" — accepted for chat). **Gap:** an operator can point a
-  tool-capable run at a weak tool-caller and get poor execution while
-  assuming "all providers work." Documented for now (agent_v1 docstring +
-  the model recommendation). **Future fix:** surface a per-provider/model
-  "recommended for agent tier" capability hint — e.g. `/v1/agent/task`
-  emits a `weak_tool_calling` warning event (not a block) when the target
-  model has `native_tool_calling:false`, so the SRE audit shows it.
-  Correctness-neutral; UX/observability only.
+- **(i) MOSTLY DONE — agent-tier system-prompt framing (root-cause fix for
+  the Perplexity substitution; review 2026-06-16).** Original framing was
+  "weak tool-caller → just warn the operator." Re-examination found the real
+  cause: `/v1/agent/task` sent the provider's CHAT `system_prompt` (which for
+  Perplexity actively encourages native web search) with NO agent framing,
+  AND `chat.py` appended a "you have native search, you do NOT need a tool"
+  block. So the substitution was a PROMPT problem, not a model ceiling.
+  **Fixed:** (1) per-engine `system_prompt_override` (honored by both
+  prompt-based + native assembly paths in `chat.py`); (2) `/v1/agent/task`
+  sets it to `compose_agent_system_prompt(req.system)` =
+  `DEFAULT_AGENT_SYSTEM_PROMPT` ("use ONLY granted tools, no native
+  fallback") + the caller's `system` (e.g. ppxai-sre's rendered AGENT.md);
+  (3) the native-search-encouragement block is SUPPRESSED when an agent
+  override is active. Ownership boundary preserved: the SOUL.md/AGENT.md
+  persona artifact stays in the CONSUMER (ppxai-sre); ppxai provides the
+  seam (`system` field, already on the request model) + a sane default.
+  Tests: `test_agent_system_prompt.py`. **Still optional (not done):** a
+  `weak_tool_calling` warning event when a `/task` targets
+  `native_tool_calling:false` — now lower value since the framing fix
+  addresses the actual behavior; keep as a nice-to-have for SRE audit
+  visibility. Needs live trial on Perplexity Sonar to confirm the framing
+  actually stops the substitution (mechanism is in; behavior unverified).
 - **(a)/(b)** unchanged — promote with the N>1 sub-agent work.
 - **(d)** unchanged — only matters if the SSE layer is reworked.
 

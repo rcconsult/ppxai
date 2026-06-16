@@ -68,6 +68,13 @@ class ChatContext(Protocol):
         """Whether the current operation is interrupted."""
         ...
 
+    @property
+    def system_prompt_override(self) -> Optional[str]:
+        """Per-engine system-prompt override (v1.19.x). When non-None, it
+        REPLACES the config system prompt for this run (the v1 agent tier
+        uses it for bounded-agent framing). None = use config."""
+        ...
+
     def get_consent_events(self) -> List[Event]:
         """Get and clear queued consent events."""
         ...
@@ -371,7 +378,13 @@ def _build_prompt_based_messages(ctx: ChatContext) -> List[Message]:
     )
     has_search_tool = ctx.tool_manager.get_tool("web_search") is not None
 
-    if has_native_search and not has_search_tool:
+    # v1.19.x: when a bounded-agent override is active (/v1/agent/task), do NOT
+    # encourage native search — that block directly contradicts the agent
+    # framing ("use ONLY granted tools, no native fallback") and is the exact
+    # cause of the Perplexity native-search substitution on tool-capable runs.
+    agent_override_active = bool(getattr(ctx, "system_prompt_override", None))
+
+    if has_native_search and not has_search_tool and not agent_override_active:
         tool_prompt += (
             "\n\n## Native Web Search Capability\n"
             "You have NATIVE web search capability built-in. For weather, current events, "
@@ -385,9 +398,16 @@ def _build_prompt_based_messages(ctx: ChatContext) -> List[Message]:
             "like [Source Name](https://example.com) so they are clickable."
         )
 
-    # Apply custom system prompt
-    system_prompt = get_system_prompt(ctx.provider_name)
-    prompt_mode = get_system_prompt_mode(ctx.provider_name)
+    # Apply custom system prompt. A per-engine override (v1.19.x agent tier)
+    # REPLACES the config system prompt + forces "prepend" so the tool block
+    # still follows the agent framing.
+    override = getattr(ctx, "system_prompt_override", None)
+    if override:
+        system_prompt = override
+        prompt_mode = "prepend"
+    else:
+        system_prompt = get_system_prompt(ctx.provider_name)
+        prompt_mode = get_system_prompt_mode(ctx.provider_name)
 
     # Get bootstrap prompt (v1.14.0)
     bootstrap_prompt = ctx.get_bootstrap_prompt()
@@ -652,7 +672,9 @@ async def chat_with_tools(
             # Native tool calling — inject bootstrap prompt (AGENTS.md hints)
             # and belt-and-suspenders tool descriptions for fallback-capable models (B3)
             bootstrap_prompt = ctx.get_bootstrap_prompt()
-            system_prompt = get_system_prompt(ctx.provider_name)
+            # v1.19.x: a per-engine override (agent tier) replaces config.
+            _override = getattr(ctx, "system_prompt_override", None)
+            system_prompt = _override or get_system_prompt(ctx.provider_name)
 
             # Belt-and-suspenders: inject tool descriptions into system prompt
             # for models with fallback flags, so prompt-based parsing can work
