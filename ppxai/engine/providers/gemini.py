@@ -18,6 +18,7 @@ See: https://ai.google.dev/gemini-api/docs/live-tools
 Requires: pip install ppxai[gemini]
 """
 
+import asyncio
 import json
 import logging
 import os
@@ -340,11 +341,15 @@ class GeminiProvider(BaseProvider):
                 yield Event(EventType.STREAM_END, final_content, metadata if metadata else None)
 
             else:
-                # Non-streaming response
-                response = self.client.models.generate_content(
-                    model=model,
-                    contents=contents,
-                    config=config
+                # Non-streaming response. Off-load the blocking SDK call so a
+                # non-streaming agent-tier run doesn't starve the event loop
+                # (v1.19.x — see openai_compat.chat).
+                response = await asyncio.to_thread(
+                    lambda: self.client.models.generate_content(
+                        model=model,
+                        contents=contents,
+                        config=config,
+                    )
                 )
 
                 content = ""

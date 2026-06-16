@@ -4,6 +4,7 @@ Perplexity AI provider.
 Perplexity has native web search and citation capabilities.
 """
 
+import asyncio
 import re
 from typing import List, AsyncIterator, Optional, Dict, Any
 from ..types import Message, Event, EventType, ProviderCapabilities
@@ -158,7 +159,12 @@ class PerplexityProvider(BaseProvider):
                     request_kwargs.update(generation_params)
                 if extra_body:
                     request_kwargs["extra_body"] = extra_body
-                response = self.client.chat.completions.create(**request_kwargs)
+                # Off-load the blocking SDK call so a non-streaming agent-tier
+                # run doesn't starve the event loop (v1.19.x — see
+                # openai_compat.chat).
+                response = await asyncio.to_thread(
+                    lambda: self.client.chat.completions.create(**request_kwargs)
+                )
 
                 content = response.choices[0].message.content or ""
                 usage = self._parse_usage(response.usage)

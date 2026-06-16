@@ -5,6 +5,7 @@ This provider works with any API that follows the OpenAI API format,
 including OpenAI, OpenRouter, Gemini (via compatibility layer), local models, etc.
 """
 
+import asyncio
 import json
 import re
 from typing import List, AsyncIterator, Optional, Dict, Any
@@ -400,10 +401,18 @@ class OpenAICompatibleProvider(BaseProvider):
                 yield Event(EventType.STREAM_END, final_content, metadata)
 
             else:
-                # Non-streaming response
-                response = self.client.chat.completions.create(
-                    **request_kwargs,
-                    stream=False
+                # Non-streaming response. The OpenAI SDK call is SYNCHRONOUS
+                # and blocks for the entire round-trip; run it off the event
+                # loop so a long agent-tier call (/v1/agent/task uses
+                # stream=False) doesn't starve every other request on the
+                # server. LLM calls are I/O-bound, so to_thread releases the
+                # GIL during the socket wait → concurrent runs genuinely
+                # interleave (v1.19.x; surfaced by the agent-behavior bench).
+                response = await asyncio.to_thread(
+                    lambda: self.client.chat.completions.create(
+                        **request_kwargs,
+                        stream=False,
+                    )
                 )
 
                 message = response.choices[0].message

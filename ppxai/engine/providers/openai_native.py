@@ -16,6 +16,7 @@ Unlike OpenAICompatibleProvider, this provider:
 - Handles restricted generation params natively
 """
 
+import asyncio
 import json
 import os
 import re
@@ -488,9 +489,13 @@ class OpenAINativeProvider(BaseProvider):
         request_kwargs: Dict[str, Any],
     ) -> AsyncIterator[Event]:
         """Handle non-streaming Chat Completions response."""
-        response = self.client.chat.completions.create(
-            **request_kwargs,
-            stream=False,
+        # Off-load the blocking SDK call so a non-streaming agent-tier run
+        # doesn't starve the event loop (v1.19.x — see openai_compat.chat).
+        response = await asyncio.to_thread(
+            lambda: self.client.chat.completions.create(
+                **request_kwargs,
+                stream=False,
+            )
         )
 
         message = response.choices[0].message
@@ -710,9 +715,11 @@ class OpenAINativeProvider(BaseProvider):
         request_kwargs: Dict[str, Any],
     ) -> AsyncIterator[Event]:
         """Handle non-streaming Responses API response."""
-        response = self.client.responses.create(
-            **request_kwargs,
-            stream=False,
+        response = await asyncio.to_thread(
+            lambda: self.client.responses.create(
+                **request_kwargs,
+                stream=False,
+            )
         )
 
         content = ""
