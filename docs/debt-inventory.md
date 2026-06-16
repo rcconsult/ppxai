@@ -568,30 +568,46 @@ its own `feat/subagent-session-config`.
 
 ---
 
-### Item 37 — sub-agent wait: disk-poll fallback + N=1-only concurrency [agent platform]
+### Item 37 — agent-platform (v1.19.0) watchlist [agent platform]
 
-**Context:** v1.19.0 Inc 7 `SpawnSubagentTool._await_child` was upgraded
-(codex review 2026-06-16) to await the child's background `asyncio.Task`
-directly via `registry.get_run_task(run_id)` — no more 20×/sec `meta.json`
-disk-polling on the happy path, and on wait-cap timeout it now CANCELS the
-child rather than orphaning it (wait cap derives from the child's `time_s`
-budget, else `_DEFAULT_CHILD_WAIT_S=300`).
+Low-severity, correctness-neutral items from the Inc 5–7 codex/copilot
+reviews. None block the MVP; grouped here so they're discoverable when the
+relevant follow-on work is scheduled.
 
-**What remains (small):**
-- A **disk-poll fallback** still exists for the no-task-handle case (child
-  already finished, or a test seam that bypasses `run_in_background`). It's a
-  bounded short poll, not a hot loop, but it's a second code path. Could be
-  unified once every spawn path guarantees a task handle.
-- **N=1 only.** The parent awaits one child to terminal before its tool call
-  returns (ADR 0003 `max_concurrent_subagents=1`). N>1 concurrent fan-out
-  (and the associated backpressure cap) is deliberately out of MVP scope —
-  revisit if/when a research task needs parallel children.
+**a. sub-agent wait: disk-poll fallback.** `SpawnSubagentTool._await_child`
+awaits the child's background `asyncio.Task` directly via
+`registry.get_run_task(run_id)` (no 20×/sec `meta.json` polling on the happy
+path; on wait-cap timeout it CANCELS the child, not orphan; cap = child
+`time_s` budget else `_DEFAULT_CHILD_WAIT_S=300`). A **bounded disk-poll
+fallback** remains for the no-task-handle case (child already finished, or a
+test seam bypassing `run_in_background`). Unify once every spawn path
+guarantees a task handle.
 
-**Why deferred:** both are correctness-neutral for the N=1 MVP; the await
-upgrade already removed the wasteful disk churn on the live path. Promote
-when sub-agent fan-out (N>1) is scheduled.
+**b. N=1 concurrency only.** Parent awaits one child to terminal before its
+tool call returns (ADR 0003 `max_concurrent_subagents=1`). N>1 fan-out + the
+backpressure cap is deliberately out of MVP scope.
 
-**Branch when ready:** with the N>1 sub-agent work (post-MVP).
+**c. `tool_targets()` fixed backend list (copilot 2026-06-16).** The egress
+target enumeration for `web_search`/`get_weather` in
+`engine/tools/network_policy.py::_NETWORK_TOOLS` is a hard-coded list of every
+backend host a tool could reach (the AC-2 superset-rule fix). **Maintenance
+hazard:** if a new `web_search` backend is added to `web_premium.py` and
+`_NETWORK_TOOLS` is NOT updated, a run could reach an un-allowlisted host with
+no `network_policy_denied` event — a silent AC-2 regression. Mitigation idea:
+derive the backend set from the provider config / a single source, or add a
+test that asserts `_NETWORK_TOOLS` covers every premium backend.
+
+**d. `_ppxai_overflowed` private queue flag (copilot 2026-06-16).** The Inc 3
+SSE slow-consumer self-heal sets a private attribute on the asyncio.Queue to
+signal "resync from disk." Works, but it's a brittle convention (relies on an
+ad-hoc attribute). Acceptable for MVP; consider a typed wrapper if the event
+fan-out grows.
+
+**Why deferred:** all correctness-neutral today. Promote (a)/(b) with the N>1
+sub-agent work; (c) is worth a covering test sooner if web_search backends
+change; (d) only matters if the SSE layer is reworked.
+
+**Branch when ready:** post-MVP, or fold (c)'s test into the next agent-platform PR.
 
 ---
 

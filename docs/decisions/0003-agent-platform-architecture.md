@@ -12,7 +12,7 @@ read-only research slice without waiting on the week-of-usage data.
 - `ppxai/engine/chat.py` — `chat_with_tools` inner tool loop, AGENT_BEAT emission (lines 559, 875, 1066, 1138)
 - `ppxai/engine/types.py` — `EventType.AGENT_BEAT` / `AGENT_RUN_START` / `AGENT_RUN_COMPLETE` / `AGENT_RUN_ERROR` / `AGENT_ZOMBIE` (v1.18.0); planned v1.19.x additions: `AGENT_SERVICE_DOWN` (per §13 / caveat C5)
 - `vscode-extension/src/chatPanel.ts::handleAgentCommand` — VSCode-side replica of the outer loop (~150 LoC)
-- [`../../../ppxai-sre-repo/docs/PPXAI-INTEGRATION-V1.19.md`](../../../ppxai-sre-repo/docs/PPXAI-INTEGRATION-V1.19.md) — consumer-side integration plan with caveats (C1-C5) and asks (A1-A3) folded into "Open decisions" §6-§13 below
+- [`../../../ppxai-sre/docs/PPXAI-INTEGRATION-V1.19.md`](../../../ppxai-sre/docs/PPXAI-INTEGRATION-V1.19.md) — consumer-side integration plan with caveats (C1-C5) and asks (A1-A3) folded into "Open decisions" §6-§13 below
 - [`../research/2026-05-10-ppxai-sre-requirements.md`](../research/2026-05-10-ppxai-sre-requirements.md) — gap analysis driving Stage 2 scope
 
 ## Context
@@ -675,7 +675,7 @@ isolation (tier d) and restart-durable persistence stay additive upgrades.
 
 These are gaps this ADR cannot close without input or measurement.
 Items 1-5 are ppxai-internal; items 6-13 are consumer-driven, surfaced
-2026-05-10 in [`../../../ppxai-sre-repo/docs/PPXAI-INTEGRATION-V1.19.md`](../../../ppxai-sre-repo/docs/PPXAI-INTEGRATION-V1.19.md)
+2026-05-10 in [`../../../ppxai-sre/docs/PPXAI-INTEGRATION-V1.19.md`](../../../ppxai-sre/docs/PPXAI-INTEGRATION-V1.19.md)
 (caveats C1-C5 and asks A1-A3) and need answers before Stage 2 implementation
 lands. Items 6-12 (C1-C4, A1-A3) were folded in commit `42ed8f00` (2026-05-10).
 Item 13 (C5 — agent-served services routing) was filed by the consumer in

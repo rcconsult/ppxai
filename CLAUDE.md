@@ -8,7 +8,9 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 
 **Current version:** see [pyproject.toml](pyproject.toml) (single source of truth) or [the latest release](https://github.com/rcconsult/ppxai/releases/latest).
 
-**Release state:** v1.18.7 **released** 2026-06-13 (https://github.com/rcconsult/ppxai/releases/tag/v1.18.7). v1.18.7 is the surface ppxai-sre's outlook-monitor agent consumes — preserve gateway shape (`POST /v1/oneshot`, bearer auth) byte-identical on `bugfix/v1.18.8`. Active branch: `bugfix/v1.18.8` (**not yet released**), scope: post-v1.18.7 cross-client `/files/*` parity fixes surfaced by a security/parity review — no new features. See [docs/release-notes-v1.18.7.md](docs/release-notes-v1.18.7.md) for what shipped, [docs/archive/release-notes/release-notes-v1.18.6.md](docs/archive/release-notes/release-notes-v1.18.6.md) for the prior release, and [docs/plan-v1.18.8-files-parity.md](docs/plan-v1.18.8-files-parity.md) for the in-flight bugfix plan (debt items 25–28). Open deferred work lives in the rolling [docs/debt-inventory.md](docs/debt-inventory.md) (per-version snapshots `DEBT-INVENTORY-v1.18.2.md` and `DEBT-INVENTORY-v1.18.3.md` are archived under [docs/archive/](docs/archive/)).
+**Release state:** v1.18.8 and v1.18.7 are both **released** (2026-06-14 / 2026-06-13). v1.18.7 is the surface ppxai-sre's outlook-monitor agent consumes — the `POST /v1/oneshot` gateway shape (bearer auth) stays byte-identical. See [docs/release-notes-v1.18.7.md](docs/release-notes-v1.18.7.md) and [docs/archive/release-notes/release-notes-v1.18.6.md](docs/archive/release-notes/release-notes-v1.18.6.md).
+
+**Active branch:** `feature/v1.19.0` (**not yet released**) — building the **agent platform** (ADR 0003 Stage 2): a durable, addressable `/v1/agent/*` run registry with a tool-capable sandboxed tier. Increments 1–7 are committed + **live-trial-verified** (run lifecycle, background exec, events/SSE monitor channel, AC-1 tool allowlist, AC-2 egress allowlist, budgets/cancel, `spawn_subagent` N=1). Next: Inc 8 (`/v1/tokens` + per-run authz), Inc 9 (AppState mirror). See [docs/plan-v1.19.0-sequencing.md](docs/plan-v1.19.0-sequencing.md) for the increment plan + build contract, [docs/agent-platform-call-graphs.md](docs/agent-platform-call-graphs.md) for per-increment route→event call graphs, and [docs/decisions/0003-agent-platform-architecture.md](docs/decisions/0003-agent-platform-architecture.md) for the architecture. Open deferred work lives in the rolling [docs/debt-inventory.md](docs/debt-inventory.md) (per-version snapshots archived under [docs/archive/](docs/archive/)).
 
 For per-version release notes, see [CHANGELOG.md](CHANGELOG.md) and `docs/RELEASE-NOTES-v*.md`. For architecture decisions, see `docs/decisions/`.
 
@@ -240,7 +242,7 @@ Generic JSON-driven framework for transparent CLI wrappers (rtk, time, nice, per
 
 Default: **off** for fresh installs. Toggle with `/debug-log on|off` (Rich + Textual) or `POST /config/debug-log` (web/VSCode). Persisted to `ppxai-config.json → tui.debug_log` and restored inside `config.initialize()`, so logging is active **before** any client code runs — critical for diagnosing early-startup regressions like silent session-recovery failures.
 
-See [docs/debug-logging.md](docs/debug-logging.md) and [memory/feedback_session_recovery_ordering.md](memory/feedback_session_recovery_ordering.md).
+See [docs/debug-logging.md](docs/debug-logging.md). (Per-host session-recovery-ordering notes live in agent memory, not the repo.)
 
 ## Verify, Don't Assume
 

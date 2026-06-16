@@ -63,11 +63,13 @@ runnable steps. Each is one PR-sized increment on
 > - [x] Inc 2 — background execution + live status — trialed + committed
 > - [x] Inc 3 — events.jsonl + GET …/events (replay + SSE) — trialed + committed
 > - [x] Inc 4 — capability grant + tool allowlist (AC-1 sandbox seam) — trialed + committed (`acee4821`)
-> - [x] Inc 5 — egress allowlist + NETWORK_POLICY_* (AC-2 ship-gate) — committed (`3519e919`); awaiting hands-on trial (bundled with Inc 6+7)
-> - [~] Inc 6 — budgets + cancel + conditional-resume checkpoint — built (RunControl + budget caps + POST …/cancel + interrupted/cancelled statuses + resumable flag); awaiting trial
-> - [~] Inc 7 — spawn_subagent (the N=1 sub-agent) — built (SpawnSubagentTool: child grant ⊆ parent, child egress ⊆ parent, depth=1 structural, consent-gated, parent awaits child); awaiting trial (bundled 5+6+7)
-> - [ ] Inc 8 — /v1/tokens + per-run authz (next after the 5+6+7 trial)
+> - [x] Inc 5 — egress allowlist + NETWORK_POLICY_* (AC-2 ship-gate) — **trial-verified** (`3519e919`): live deny/allow/fail-closed + shell-reject on nvidia Nemotron
+> - [x] Inc 6 — budgets + cancel + conditional-resume checkpoint — **trial-verified** (`cc0d75a1`): iteration→interrupted, cancel→cancelled, 409 on terminal (token-budget by test only)
+> - [x] Inc 7 — spawn_subagent (the N=1 sub-agent) — **trial-verified** (`cc0d75a1`+fixes): live spawn, parent/child link via `parent_run_id`, result collection, subset rules. Requires `tools.agent.spawn_consent="auto"` for API-driven spawns.
+> - [ ] Inc 8 — /v1/tokens + per-run authz (NEXT — gate cleared by the 5+6+7 trial)
 > - [ ] Inc 9 — AppState background_agents mirror
+>
+> **Trial-found fixes (2026-06-16), all committed:** `18373e31` v1 tier 400 lists eligible OpenAI-compatible providers (native openai/gemini/perplexity rejected); `227ea6f8` spawn consent policy + visible `spawn_denied` events (was silent auto-deny); `b4923bd3` surface `spawn_consent` through `get_agent_config` whitelist; `0a336645` ship `spawn_consent:"deny"` default. Plus Inc 5 ×4 + Inc 6/7 ×3 codex/copilot review rounds, all resolved.
 
 ### Inc 1 — minimal run lifecycle (synchronous, filesystem)
 **Capability:** create a run, see it on disk, list it, fetch it.
