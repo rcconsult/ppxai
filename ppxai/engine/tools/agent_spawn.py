@@ -105,11 +105,18 @@ class SpawnSubagentTool(BaseTool):
         parent_allow_outbound: list,
         parent_provider: str,
         parent_model: str,
+        parent_owner: Optional[str] = None,
         request_consent: Optional[Callable[[str], Awaitable[bool]]] = None,
         consent_policy: str = "deny",
     ) -> None:
         self._registry = registry
         self._parent_run_id = parent_run_id
+        # Inc 8b: the child run inherits the parent's owner so per-run authz
+        # scopes it to the SAME principal. Without this the child is minted
+        # owner=None (world-readable to any authenticated caller) — a
+        # privilege leak, since the child's transcript/result derive from the
+        # parent's authorized work.
+        self._parent_owner = parent_owner
         self._parent_tools = set(parent_tools or [])
         self._parent_allow_outbound = list(parent_allow_outbound or [])
         self._parent_policy = NetworkPolicy(self._parent_allow_outbound)
@@ -250,6 +257,7 @@ class SpawnSubagentTool(BaseTool):
             model=self._model,
             network=child_allow,
             parent_run_id=self._parent_run_id,
+            owner=self._parent_owner,  # Inc 8b: child inherits parent's owner
         )
         self._registry.emit_event(
             self._parent_run_id, "subagent_spawned", level="info",

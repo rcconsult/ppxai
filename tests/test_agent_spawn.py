@@ -19,7 +19,8 @@ def registry(tmp_path: Path) -> AgentRunRegistry:
     return AgentRunRegistry(FilesystemAgentRunStore(tmp_path / "runs"))
 
 
-def _tool(registry, *, parent_tools, parent_allow, consent=None, consent_policy="auto"):
+def _tool(registry, *, parent_tools, parent_allow, consent=None, consent_policy="auto",
+          parent_owner=None):
     # Default consent_policy="auto" in tests so happy-path spawns proceed
     # without an interactive channel; the consent-gate tests override it.
     return SpawnSubagentTool(
@@ -29,9 +30,46 @@ def _tool(registry, *, parent_tools, parent_allow, consent=None, consent_policy=
         parent_allow_outbound=parent_allow,
         parent_provider="p",
         parent_model="m",
+        parent_owner=parent_owner,
         request_consent=consent,
         consent_policy=consent_policy,
     )
+
+
+class TestConstructorContract:
+    """Guard against call-site/constructor drift.
+
+    The production construction lives inside `build_task_runner`'s async
+    `_runner` body (server/routes/agent_v1.py), which only executes when a
+    spawn-enabled run actually runs behind a real EngineClient — so a kwarg
+    mismatch there is invisible to unit tests and only surfaces at runtime.
+    That is exactly how the Inc 8b `parent_owner=` kwarg shipped against a
+    constructor that didn't accept it (TypeError on every spawn). These
+    tests pin the constructor's accepted kwargs so the drift can't recur.
+    """
+
+    def test_accepts_all_build_task_runner_kwargs(self, registry):
+        # The exact kwarg set build_task_runner passes (agent_v1.py).
+        SpawnSubagentTool(
+            registry=registry,
+            parent_run_id="r",
+            parent_owner="alice",
+            parent_tools=["read_file"],
+            parent_allow_outbound=[],
+            parent_provider="p",
+            parent_model="m",
+            request_consent=None,
+            consent_policy="deny",
+        )
+
+    def test_parent_owner_is_optional(self, registry):
+        # Defaulting keeps the unowned (auth-off) path working.
+        t = SpawnSubagentTool(
+            registry=registry, parent_run_id="r",
+            parent_tools=[], parent_allow_outbound=[],
+            parent_provider="p", parent_model="m",
+        )
+        assert t._parent_owner is None
 
 
 # ---------------------------------------------------------------------------
@@ -243,6 +281,31 @@ class TestExecuteSpawns:
         types = [e.type for e in evs]
         assert "subagent_spawned" in types
         assert "subagent_finished" in types
+
+    @pytest.mark.asyncio
+    async def test_child_inherits_parent_owner(self, registry, monkeypatch):
+        # Inc 8b authz: the child run must inherit the parent's owner so it is
+        # scoped to the SAME principal — NOT minted owner=None (which per-run
+        # authz treats as readable by any authenticated caller = privilege leak).
+        async def fake_runner(meta):
+            return "ok"
+
+        monkeypatch.setattr(
+            "ppxai.server.routes.agent_v1.build_task_runner",
+            lambda reg, **kw: fake_runner,
+        )
+
+        async def approve(_s):
+            return True
+
+        t = _tool(
+            registry, parent_tools=["read_file"], parent_allow=[],
+            consent=approve, parent_owner="alice",
+        )
+        await t.execute(task="summarize", tools=["read_file"])
+
+        child = registry.list_runs()[0]
+        assert child.owner == "alice"
 
     @pytest.mark.asyncio
     async def test_wait_timeout_cancels_child_not_orphan(self, registry, monkeypatch):
