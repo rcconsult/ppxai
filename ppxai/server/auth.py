@@ -150,6 +150,34 @@ def _is_bootstrap_mint(request: Request) -> bool:
     return False
 
 
+# Prefixes that REMAIN auth-protected even from loopback. These are the
+# sensitive v1 surfaces: agent-run monitor channels (transcripts, tool
+# output, owner-scoped per Inc 8b) and token management. A local browser
+# being trusted to load the UI does NOT mean any local process may read
+# another owner's run or mint/list/revoke tokens — those keep per-run
+# authz + bearer.
+_LOOPBACK_PROTECTED_PREFIXES = ("/v1/agent", "/v1/tokens")
+
+
+def _is_loopback_ui_request(request: Request) -> bool:
+    """True for a loopback request to the interactive UI / static / chat
+    surface — exempt from auth so the local desktop/web client (which
+    carries no bearer) isn't locked out when a file token store turns auth
+    on. EXCLUDES the v1 agent/token API, which stays protected even locally.
+
+    Trust basis is identical to the loopback /v1/tokens mint: a request from
+    127.0.0.1/::1 is physically on the host. Remote requests are NEVER
+    exempted — they always need a valid token, including for the UI.
+    """
+    if not _is_loopback(request):
+        return False
+    path = request.url.path
+    if any(path == p or path.startswith(p + "/") or path.startswith(p)
+           for p in _LOOPBACK_PROTECTED_PREFIXES):
+        return False
+    return True
+
+
 def check_request(request: Request) -> Optional[JSONResponse]:
     """Validate auth for a request.
 
@@ -165,7 +193,10 @@ def check_request(request: Request) -> Optional[JSONResponse]:
     resolved :class:`TokenRecord` is stashed on ``request.state.principal``
     so downstream code (Inc 8b per-run authz) can read the owner without
     re-resolving. A loopback ``POST /v1/tokens`` is exempted while the
-    mutable token store is empty, to bootstrap the first token.
+    mutable token store is empty, to bootstrap the first token. Loopback
+    requests to the interactive UI/static/chat surface are also exempted
+    (the local browser carries no bearer) — but the ``/v1/agent`` and
+    ``/v1/tokens`` API stays protected even from loopback.
     """
     if not is_auth_enabled():
         return None
@@ -177,6 +208,12 @@ def check_request(request: Request) -> Optional[JSONResponse]:
 
     # First-token bootstrap: loopback mint into an empty mutable store.
     if _is_bootstrap_mint(request):
+        return None
+
+    # Loopback UI/static/chat surface: a local browser carries no bearer, so
+    # exempt it so the desktop/web client isn't locked out when a file token
+    # store turns auth on. The v1 agent/token API stays protected even here.
+    if _is_loopback_ui_request(request):
         return None
 
     authorization = request.headers.get("authorization", "")

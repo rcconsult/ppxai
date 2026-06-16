@@ -255,3 +255,71 @@ class TestEmptyStorePolicy:
         )
         assert is_auth_enabled() is False
         assert check_request(self._request(path="/v1/agent/runs")) is None
+
+
+class TestLoopbackUIExemption:
+    """When auth is enforced (file store), a LOCAL browser carries no bearer,
+    so the loopback UI/static/chat surface is exempt — but the v1 agent/token
+    API stays protected even from loopback, and remote is never exempt."""
+
+    def _request(self, method="GET", path="/", client_host="127.0.0.1", header=None):
+        scope = {
+            "type": "http",
+            "method": method,
+            "headers": ([(b"authorization", header.encode())] if header else []),
+            "path": path,
+            "raw_path": path.encode(),
+            "query_string": b"",
+            "client": (client_host, 12345),
+            "scheme": "http",
+            "server": ("127.0.0.1", 54320),
+        }
+        return Request(scope)
+
+    def _enforced_file_chain(self, monkeypatch, tmp_path):
+        fp = FileSecretProvider(path=str(tmp_path / "t.json"))
+        fp.mint(owner="alice")                 # active token → auth enforced
+        monkeypatch.delenv("PPXAI_API_TOKEN", raising=False)
+        monkeypatch.setattr(state, "_secret_provider", ProviderChain([fp]))
+
+    def test_loopback_index_exempt(self, monkeypatch, tmp_path):
+        self._enforced_file_chain(monkeypatch, tmp_path)
+        assert check_request(self._request(path="/")) is None
+
+    def test_loopback_chat_exempt(self, monkeypatch, tmp_path):
+        self._enforced_file_chain(monkeypatch, tmp_path)
+        assert check_request(self._request(method="POST", path="/chat")) is None
+
+    def test_loopback_static_and_state_exempt(self, monkeypatch, tmp_path):
+        self._enforced_file_chain(monkeypatch, tmp_path)
+        assert check_request(self._request(path="/app.js")) is None
+        assert check_request(self._request(path="/state")) is None
+
+    def test_loopback_v1_agent_STILL_protected(self, monkeypatch, tmp_path):
+        # The sensitive surface is NOT exempt even from loopback.
+        self._enforced_file_chain(monkeypatch, tmp_path)
+        r = check_request(self._request(path="/v1/agent/runs"))
+        assert r is not None and r.status_code == 401
+
+    def test_loopback_v1_tokens_GET_still_protected(self, monkeypatch, tmp_path):
+        # GET/DELETE /v1/tokens stay protected on loopback (only POST mint
+        # is the separate bootstrap exemption).
+        self._enforced_file_chain(monkeypatch, tmp_path)
+        r = check_request(self._request(method="GET", path="/v1/tokens"))
+        assert r is not None and r.status_code == 401
+
+    def test_remote_ui_NOT_exempt(self, monkeypatch, tmp_path):
+        # A non-loopback client must still authenticate, even for the UI.
+        self._enforced_file_chain(monkeypatch, tmp_path)
+        r = check_request(self._request(path="/", client_host="10.0.0.9"))
+        assert r is not None and r.status_code == 401
+
+    def test_loopback_v1_agent_with_valid_token_ok(self, monkeypatch, tmp_path):
+        # Sanity: the protected v1 path still works WITH a valid token locally.
+        fp = FileSecretProvider(path=str(tmp_path / "t.json"))
+        material, _ = fp.mint(owner="alice")
+        monkeypatch.delenv("PPXAI_API_TOKEN", raising=False)
+        monkeypatch.setattr(state, "_secret_provider", ProviderChain([fp]))
+        assert check_request(
+            self._request(path="/v1/agent/runs", header=f"Bearer {material}")
+        ) is None
