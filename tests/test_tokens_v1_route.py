@@ -206,14 +206,26 @@ class TestEmptyStorePolicy:
         resp = check_request(self._request(f"Bearer {material}", path="/v1/agent/runs"))
         assert resp is not None and resp.status_code == 401
 
-    def test_loopback_bootstrap_mint_allowed_when_empty(self, monkeypatch, tmp_path):
+    def test_loopback_mint_allowed_when_empty(self, monkeypatch, tmp_path):
         self._empty_file_chain(monkeypatch, tmp_path)
         req = self._request(
             method="POST", path="/v1/tokens", client_host="127.0.0.1"
         )
-        assert check_request(req) is None  # bootstrap exemption
+        assert check_request(req) is None  # loopback mint exemption
 
-    def test_remote_bootstrap_mint_denied(self, monkeypatch, tmp_path):
+    def test_loopback_mint_allowed_even_with_existing_tokens(self, monkeypatch, tmp_path):
+        # Loopback mint is ALWAYS allowed (not gated on empty store) so a
+        # local operator can mint more tokens without an admin bearer.
+        fp = FileSecretProvider(path=str(tmp_path / "t.json"))
+        fp.mint(owner="alice")  # store non-empty
+        monkeypatch.delenv("PPXAI_API_TOKEN", raising=False)
+        monkeypatch.setattr(state, "_secret_provider", ProviderChain([fp]))
+        req = self._request(
+            method="POST", path="/v1/tokens", client_host="127.0.0.1"
+        )
+        assert check_request(req) is None
+
+    def test_remote_mint_denied(self, monkeypatch, tmp_path):
         self._empty_file_chain(monkeypatch, tmp_path)
         req = self._request(
             method="POST", path="/v1/tokens", client_host="10.0.0.5"
@@ -221,14 +233,14 @@ class TestEmptyStorePolicy:
         resp = check_request(req)
         assert resp is not None and resp.status_code == 401
 
-    def test_bootstrap_closes_once_token_exists(self, monkeypatch, tmp_path):
+    def test_loopback_list_still_requires_auth(self, monkeypatch, tmp_path):
+        # Only mint is loopback-exempt; list/revoke still need a bearer.
         fp = FileSecretProvider(path=str(tmp_path / "t.json"))
-        fp.mint(owner="alice")  # store no longer empty
+        fp.mint(owner="alice")
         monkeypatch.delenv("PPXAI_API_TOKEN", raising=False)
         monkeypatch.setattr(state, "_secret_provider", ProviderChain([fp]))
-        # Even from loopback, mint now requires auth (not a standing hole).
         req = self._request(
-            method="POST", path="/v1/tokens", client_host="127.0.0.1"
+            method="GET", path="/v1/tokens", client_host="127.0.0.1"
         )
         resp = check_request(req)
         assert resp is not None and resp.status_code == 401

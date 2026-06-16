@@ -564,7 +564,43 @@ Config: `server.secrets.providers` (omit => single env provider =
 legacy behavior). Backward-compat: `test_auth_middleware.py` unchanged
 and green; no `server.secrets` block behaves exactly as v1.18.3.
 
-<!-- Inc 8b+ sections appended here as they land. Template:
+## Increment 8b — per-run authorization (owner-scoped)
+
+Added: `RunMeta.owner` (additive field), `start_run(owner=)`,
+`agent_v1._caller_owner()` / `_authorize_run_access()`. Changed: the four
+per-run routes enforce ownership. No execution-model change.
+
+Rule: auth disabled => no scoping (runs unowned, all reads allowed,
+loopback UX). Auth enabled => run stamped with creator's owner; a read is
+allowed iff `caller.owner == run.owner`; an unowned run (pre-8b /
+sub-agent) is readable by any authenticated caller.
+
+```
+# create — stamp owner from the middleware-set principal
+POST /v1/agent/run  | /v1/agent/task
+  -> _caller_owner(request)               # request.state.principal.owner (or None)
+  -> registry.start_run(..., owner=<owner>)   # RunMeta.owner persisted
+
+# read/cancel — enforce owner
+GET  /v1/agent/runs/<id>                   \
+GET  /v1/agent/runs/<id>/events             >  -> registry.get_run(id) (404 if none)
+POST /v1/agent/runs/<id>/cancel            /      -> _authorize_run_access(request, meta)
+                                                       caller=None            -> allow (auth off)
+                                                       meta.owner=None        -> allow (unowned)
+                                                       meta.owner==caller     -> allow
+                                                       else                   -> 403
+
+# list — filter to caller
+GET  /v1/agent/runs
+  -> registry.list_runs()
+  -> if caller: keep m where m.owner in (None, caller)   # no cross-owner enumeration
+```
+
+Tests: `test_agent_run_authz.py` (owner stamping, 403 on foreign token for
+meta/events/cancel, 401 missing, 404 unknown, unowned-readable, list
+scoping, auth-disabled no-scoping).
+
+<!-- Inc 9+ sections appended here as they land. Template:
 ## Increment N — <title>
 Added/changed: <files>. Execution model change: <if any>.
 ### <METHOD /path> — <what>

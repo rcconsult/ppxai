@@ -37,13 +37,17 @@ a top-level run spawn ONE child run (child grant ⊆ parent, child egress ⊆
 parent, depth=1, consent-gated) — both runners share `build_task_runner`.
 
 Inc 8a (landed): `/v1/tokens` CRUD over a pluggable secret-source chain
-(`server/secrets/`); `server/auth.py` now validates against it. This is
-the credential layer only — see `routes/tokens_v1.py`.
+(`server/secrets/`); `server/auth.py` validates against it (credential
+layer — see `routes/tokens_v1.py`).
+
+Inc 8b (landed): per-run authz. `start_run` stamps `RunMeta.owner` from
+`request.state.principal` (set by the auth middleware). The per-run
+endpoints (`GET /runs/<id>`, `/events`, `POST .../cancel`) return 403 to a
+caller who is not the run's owner; `GET /runs` is filtered to the caller's
+own (+ unowned) runs. No-op when auth is disabled (loopback UX preserved).
 
 NOT yet (later increments, additively):
-per-run authz (Inc 8b — owner-scoped /events/result/artifacts, stamping
-`request.state.principal` onto the run at start_run), AppState
-background_agents mirror (Inc 9).
+AppState background_agents mirror (Inc 9).
 
 The `/v1/` prefix is the stable gateway boundary (see docs/api-gateway.md):
 adding optional request fields is non-breaking; removing/repurposing
@@ -72,6 +76,56 @@ from ..state import get_agent_run_registry
 from .oneshot import _build_provider
 
 logger = get_logger("server")
+
+
+# ---------------------------------------------------------------------------
+# Per-run authorization (Inc 8b)
+# ---------------------------------------------------------------------------
+# The auth MIDDLEWARE (server/auth.py) already authenticated the caller and
+# stashed the resolved TokenRecord on request.state.principal. This layer
+# adds AUTHORIZATION: only the run's owner may read/cancel a given run.
+#
+# Rules:
+# - Auth disabled (no principal on the request) => no per-run scoping. Runs
+#   are created unowned (owner=None) and every read is allowed. Preserves the
+#   loopback/desktop UX exactly (matches the empty-store/env-unset model).
+# - Auth enabled => the run is stamped with the creator's owner. A read is
+#   allowed iff caller.owner == run.owner. A run with owner=None (created
+#   before auth was on, or a sub-agent) is readable by any AUTHENTICATED
+#   caller — it is never broadened to unauthenticated access.
+
+
+def _caller_owner(request: Request) -> Optional[str]:
+    """Owner string of the authenticated principal, or None when auth is off.
+
+    Tolerates a request without a ``state`` (e.g. hand-built test doubles or
+    a path that bypassed the auth middleware) — that simply means no
+    authenticated principal."""
+    state = getattr(request, "state", None)
+    principal = getattr(state, "principal", None) if state is not None else None
+    return getattr(principal, "owner", None) if principal is not None else None
+
+
+def _authorize_run_access(request: Request, meta: RunMeta) -> None:
+    """Raise 403 unless the caller may access this run.
+
+    No-op when auth is disabled (caller owner is None AND the run is
+    unowned). When the run has an owner, the caller must match it.
+    """
+    caller = _caller_owner(request)
+    if caller is None:
+        # Auth disabled for this request. (If auth WERE enabled the
+        # middleware would have rejected an unauthenticated caller before
+        # reaching here, so a None caller means the server is open.)
+        return
+    if meta.owner is None:
+        # Unowned run (pre-8b or sub-agent): any authenticated caller may read.
+        return
+    if meta.owner != caller:
+        raise HTTPException(
+            status_code=403,
+            detail=f"Run {meta.run_id!r} is not owned by the authenticated caller.",
+        )
 
 
 def _v1_provider_or_400(provider_name: str):
@@ -147,6 +201,7 @@ class RunMetaResponse(BaseModel):
     task: str
     status: str
     parent_run_id: Optional[str] = None
+    owner: Optional[str] = None  # Inc 8b: principal that owns the run
     provider: Optional[str] = None
     model: Optional[str] = None
     tools: list[str] = Field(default_factory=list)
@@ -166,6 +221,7 @@ class RunMetaResponse(BaseModel):
             task=m.task,
             status=m.status,
             parent_run_id=m.parent_run_id,
+            owner=getattr(m, "owner", None),
             provider=m.provider,
             model=m.model,
             tools=list(m.tools),
@@ -197,7 +253,7 @@ class RunListResponse(BaseModel):
 
 
 @router.post("/run", response_model=AgentRunResponse)
-async def create_agent_run(req: AgentRunRequest) -> AgentRunResponse:
+async def create_agent_run(req: AgentRunRequest, request: Request) -> AgentRunResponse:
     """Create a run and execute it in the background (Inc 2).
 
     Validation + provider build happen synchronously (so a bad provider
@@ -242,7 +298,8 @@ async def create_agent_run(req: AgentRunRequest) -> AgentRunResponse:
     provider = _v1_provider_or_400(provider_name)
 
     meta = registry.start_run(
-        task=req.task, tools=req.tools, provider=provider_name, model=model
+        task=req.task, tools=req.tools, provider=provider_name, model=model,
+        owner=_caller_owner(request),
     )
 
     async def _runner(m) -> str:
@@ -352,7 +409,7 @@ class AgentTaskRequest(BaseModel):
 
 
 @router.post("/task", response_model=AgentRunResponse)
-async def create_agent_task(req: AgentTaskRequest) -> AgentRunResponse:
+async def create_agent_task(req: AgentTaskRequest, request: Request) -> AgentRunResponse:
     """Tool-capable, sandboxed agent run (ADR 0003 §4 / AC-1).
 
     The tool-calling tier, separate from the safe tool-free /v1/agent/run.
@@ -398,6 +455,7 @@ async def create_agent_task(req: AgentTaskRequest) -> AgentRunResponse:
         task=req.task, tools=req.tools, provider=provider_name, model=model,
         network=(req.network.allow_outbound if req.network else []),
         budget=_budget_dict(req.budget),
+        owner=_caller_owner(request),
     )
 
     runner = build_task_runner(
@@ -557,36 +615,49 @@ def build_task_runner(
 
 
 @router.get("/runs", response_model=RunListResponse)
-async def list_agent_runs() -> RunListResponse:
-    """List all agent runs, newest first."""
+async def list_agent_runs(request: Request) -> RunListResponse:
+    """List agent runs, newest first.
+
+    Owner-scoped (Inc 8b): when auth is enabled, only the caller's own runs
+    (plus unowned runs) are returned — a bearer holder must not enumerate
+    another owner's runs. When auth is disabled the full list is returned
+    (loopback UX)."""
     registry = get_agent_run_registry()
+    caller = _caller_owner(request)
+    runs = registry.list_runs()
+    if caller is not None:
+        runs = [m for m in runs if m.owner is None or m.owner == caller]
     return RunListResponse(
-        runs=[RunMetaResponse.from_meta(m) for m in registry.list_runs()]
+        runs=[RunMetaResponse.from_meta(m) for m in runs]
     )
 
 
 @router.get("/runs/{run_id}", response_model=RunMetaResponse)
-async def get_agent_run(run_id: str) -> RunMetaResponse:
-    """Fetch one run's meta, or 404."""
+async def get_agent_run(run_id: str, request: Request) -> RunMetaResponse:
+    """Fetch one run's meta, or 404. Owner-scoped (Inc 8b): 403 if the
+    authenticated caller doesn't own the run."""
     registry = get_agent_run_registry()
     meta = registry.get_run(run_id)
     if meta is None:
         raise HTTPException(status_code=404, detail=f"Unknown run_id: {run_id!r}")
+    _authorize_run_access(request, meta)
     return RunMetaResponse.from_meta(meta)
 
 
 @router.post("/runs/{run_id}/cancel")
-async def cancel_agent_run(run_id: str) -> dict:
+async def cancel_agent_run(run_id: str, request: Request) -> dict:
     """Request cooperative cancellation of an in-flight run (Inc 6).
 
     Flips the run's control flag and moves it to `cancelling`; the runner
     observes it at its next tool-loop boundary and stops at a clean
     checkpoint (status → `cancelled`, resumable). Returns 404 if the run is
-    unknown, 409 if it's already terminal (nothing to cancel)."""
+    unknown, 403 if the caller doesn't own it (Inc 8b), 409 if it's already
+    terminal (nothing to cancel)."""
     registry = get_agent_run_registry()
     meta = registry.get_run(run_id)
     if meta is None:
         raise HTTPException(status_code=404, detail=f"Unknown run_id: {run_id!r}")
+    _authorize_run_access(request, meta)
     if registry.cancel_run(run_id):
         return {"ok": True, "run_id": run_id, "status": "cancelling"}
     # Not in flight — already terminal (or never started).
@@ -620,8 +691,10 @@ async def get_agent_run_events(
     replays the filtered backlog, then tails new events.
     """
     registry = get_agent_run_registry()
-    if registry.get_run(run_id) is None:
+    _meta = registry.get_run(run_id)
+    if _meta is None:
         raise HTTPException(status_code=404, detail=f"Unknown run_id: {run_id!r}")
+    _authorize_run_access(request, _meta)  # Inc 8b: owner-scoped (403)
 
     cats = _parse_categories(category)
 

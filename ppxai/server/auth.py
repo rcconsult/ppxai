@@ -120,40 +120,33 @@ def _is_loopback(request: Request) -> bool:
     return host in _LOOPBACK_HOSTS
 
 
-def _mutable_store_is_empty() -> bool:
-    """True when a mutable (mint-capable) provider exists but holds no
-    active tokens — the bootstrap window for the first token."""
+def _has_mutable_store() -> bool:
+    """True when a mint-capable provider is configured."""
     try:
-        import time as _t
-
-        from .secrets import CAP_LIST, CAP_MINT
+        from .secrets import CAP_MINT
         from .state import get_secret_provider
 
-        now = _t.time()
-        saw_mutable = False
-        for provider in get_secret_provider().providers:
-            caps = provider.capabilities()
-            if CAP_MINT not in caps:
-                continue
-            saw_mutable = True
-            if CAP_LIST in caps and any(r.is_active(now) for r in provider.list()):
-                return False  # has at least one active token => not empty
-        return saw_mutable
+        return any(
+            CAP_MINT in p.capabilities()
+            for p in get_secret_provider().providers
+        )
     except Exception:
-        return False  # can't prove it's empty => no bootstrap exemption
+        return False
 
 
 def _is_bootstrap_mint(request: Request) -> bool:
-    """Allow ONE narrow unauthenticated case: minting the FIRST token.
+    """Allow unauthenticated ``POST /v1/tokens`` from loopback.
 
-    ``POST /v1/tokens`` from loopback while the mutable store is empty.
-    This lets the local operator bootstrap when the empty-store policy
-    has otherwise closed the server; it is NOT a standing hole — once any
-    active token exists, this returns False and auth is required again.
+    A loopback caller is physically on the host and can already read the
+    token store / config files directly, so gating local mint behind a
+    bearer buys little while creating real friction (you'd need an
+    existing token just to mint the next one). Remote callers are NOT
+    exempted — they still need a valid token. Requires a mint-capable
+    (mutable) store to be configured; otherwise mint would 405 anyway.
     """
     path = request.url.path.rstrip("/")
     if request.method == "POST" and path == "/v1/tokens":
-        return _is_loopback(request) and _mutable_store_is_empty()
+        return _is_loopback(request) and _has_mutable_store()
     return False
 
 

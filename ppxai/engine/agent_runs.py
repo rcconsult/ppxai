@@ -67,6 +67,7 @@ class RunMeta:
     status: str = "pending"
     agent_n: int = 0  # slot index; 0 = top-level run, >0 = sub-agents (Inc 7)
     parent_run_id: Optional[str] = None  # set for sub-agents (Inc 7)
+    owner: Optional[str] = None  # Inc 8b: principal that created the run; per-run authz scopes reads to it. None = unowned (created while auth disabled, or a sub-agent) — readable by any authenticated caller.
     provider: Optional[str] = None
     model: Optional[str] = None
     tools: list[str] = field(default_factory=list)  # the grant (enforced in Inc 4)
@@ -373,6 +374,7 @@ class AgentRunRegistry:
         parent_run_id: Optional[str] = None,
         network: Optional[list] = None,
         budget: Optional[dict] = None,
+        owner: Optional[str] = None,
     ) -> RunMeta:
         """Mint a run, persist it in `pending` state, return its meta.
 
@@ -392,6 +394,7 @@ class AgentRunRegistry:
             provider=provider,
             model=model,
             parent_run_id=parent_run_id,
+            owner=owner,
             created_at=time.time(),
         )
         self._store.persist_meta(meta)
