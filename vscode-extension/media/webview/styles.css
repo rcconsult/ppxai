@@ -280,6 +280,7 @@ body {
 /* v1.12.0: Tool messages with collapsible details */
 .tool-title {
     font-size: 13px;
+    -webkit-user-select: none;
     user-select: none;
 }
 .tool-title.clickable {
@@ -580,6 +581,7 @@ body {
     cursor: pointer;
     font-size: 11px;
     color: var(--vscode-descriptionForeground);
+    -webkit-user-select: none;
     user-select: none;
 }
 
@@ -655,8 +657,8 @@ body {
     gap: 8px;
     padding: 6px 10px;
     cursor: pointer;
-    user-select: none;
     -webkit-user-select: none;
+    user-select: none;
     color: var(--vscode-descriptionForeground);
     font-size: 12px;
 }

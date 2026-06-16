@@ -368,8 +368,8 @@ body {
     gap: 8px;
     padding: 8px 12px;
     cursor: pointer;
-    user-select: none;
     -webkit-user-select: none;
+    user-select: none;
     color: var(--text-secondary);
     font-size: 0.9em;
 }
