@@ -381,6 +381,27 @@ def client(tmp_path, monkeypatch):
     return TestClient(app), reg
 
 
+class TestAgentConfig:
+    """get_agent_config must SURFACE spawn_consent (Inc 7).
+
+    Regression guard: get_agent_config() whitelists keys, so a new agent
+    config key that isn't added to the whitelist silently reads as None even
+    when present in ppxai-config.json — which is exactly how spawn_consent
+    was dead-on-arrival until the whitelist was updated."""
+
+    def test_spawn_consent_defaults_deny(self, monkeypatch):
+        from ppxai.config import tools as tools_cfg
+        monkeypatch.setattr(tools_cfg, "get_tool_config", lambda name: {})
+        assert tools_cfg.get_agent_config()["spawn_consent"] == "deny"
+
+    def test_spawn_consent_reads_auto_from_config(self, monkeypatch):
+        from ppxai.config import tools as tools_cfg
+        monkeypatch.setattr(
+            tools_cfg, "get_tool_config", lambda name: {"spawn_consent": "auto"}
+        )
+        assert tools_cfg.get_agent_config()["spawn_consent"] == "auto"
+
+
 class TestAgentRunRoutes:
     def test_list_empty(self, client):
         c, _ = client

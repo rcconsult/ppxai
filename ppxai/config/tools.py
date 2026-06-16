@@ -166,6 +166,13 @@ def get_agent_config() -> Dict[str, Any]:
         # Override via `"tools": {"agent": {"default_subagent":
         # {"provider": "...", "model": "..."}}}`.
         "default_subagent": agent_config.get("default_subagent", {}),
+        # v1.19.0 Inc 7 — server-context spawn_subagent consent policy:
+        # "deny" (default, safe) refuses a spawn that needs consent (there is
+        # no interactive consent channel over /v1/agent/task); "auto" lets
+        # API-driven spawns proceed with the capability SUBSET rules (child
+        # grant ⊆ parent, egress ⊆ parent, no-shell, depth=1) as the boundary.
+        # Override via `"tools": {"agent": {"spawn_consent": "auto"}}`.
+        "spawn_consent": agent_config.get("spawn_consent", "deny"),
     }
 
 
