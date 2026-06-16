@@ -134,3 +134,6 @@ ppxai/_build_info.py
 
 # Corporate CA certs baked into coder-server image (operator-side state)
 deploy/images/server/extra-certs/*.crt
+
+# Codex (parallel-session) scratch/tooling — not part of the repo
+.codex/
