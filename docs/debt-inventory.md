@@ -796,6 +796,20 @@ modular-prompt refactor.
   test_background_agents_mirror (no-disk / cancelling). Call-graph §L. **Lesson:**
   the theoretically-correct async-DNS fix was empirically slower in this env —
   verified-then-replaced rather than shipped on plausibility.
+- **(o) DONE — second review round (2026-06-17).** Two more, both verified
+  against the committed tree first. **Cancel-cascade disk reads:**
+  `_cancel_run_cascade` did `store.load_meta(child_id)` per in-flight control to
+  read `parent_run_id` (O(C·D) disk on the loop during cancel); now carried in
+  the in-memory `_active` index and read from memory (zero disk).
+  `active_summary()` still projects badge fields only. **Fixed-name temp files
+  (defense-in-depth, NOT a live bug):** `persist_meta` + token-store `_save`
+  wrote to hardcoded `*.tmp` names; harmless in our single-process async model
+  (per-run slot dirs make meta tmps distinct; no await between write+replace),
+  but a multi-worker `uvicorn --workers N` deployment WOULD race — switched both
+  to `tempfile.mkstemp` + temp-cleanup-on-failure. Tests: +1 cascade-no-disk,
+  +2 persist tmp. Call-graph §L. **Severity honesty:** the temp-file race was
+  filed/fixed as future-proofing with the model caveat stated, not dressed up as
+  a current corruption bug.
 - **(a)/(b)** unchanged — promote with the N>1 sub-agent work.
 - **(d)** unchanged — only matters if the SSE layer is reworked.
 

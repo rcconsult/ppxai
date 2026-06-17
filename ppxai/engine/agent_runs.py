@@ -35,6 +35,7 @@ import asyncio
 import json
 import os
 import secrets
+import tempfile
 import time
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
@@ -201,11 +202,24 @@ class FilesystemAgentRunStore:
         slot = self._slot_dir(meta.run_id, meta.agent_n)
         slot.mkdir(parents=True, exist_ok=True)
         path = slot / "meta.json"
-        # Atomic-ish write: tmp + replace, so a crash mid-write can't leave
-        # a half-written meta.json that breaks list_meta().
-        tmp = path.with_suffix(".json.tmp")
-        tmp.write_text(json.dumps(meta.to_dict(), indent=2), encoding="utf-8")
-        os.replace(tmp, path)
+        # Atomic write: unique tmp (mkstemp) + replace, so a crash mid-write
+        # can't leave a half-written meta.json that breaks list_meta(). A UNIQUE
+        # tmp name (not a fixed ".json.tmp") avoids two concurrent writers
+        # racing on the same temp path — harmless today (one event loop, no
+        # await between write and replace, per-run slot dir) but correct under a
+        # future multi-worker deployment (Gemini review #4, defense-in-depth).
+        fd, tmp_path = tempfile.mkstemp(dir=slot, prefix="meta-", suffix=".json.tmp")
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                json.dump(meta.to_dict(), f, indent=2)
+            os.replace(tmp_path, path)
+        except BaseException:
+            # Don't leak the temp file if the write/replace fails.
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
+            raise
 
     def load_meta(self, run_id: str, agent_n: int = 0) -> Optional[RunMeta]:
         path = self._slot_dir(run_id, agent_n) / "meta.json"
@@ -399,11 +413,15 @@ class AgentRunRegistry:
             self._active.pop(meta.run_id, None)
             return
         # Update in place if already present (status change), else append.
+        # parent_run_id is carried so the cancel cascade can find in-flight
+        # children from memory (no per-child disk read — Gemini review #3); it
+        # is NOT exposed by active_summary() (badge fields only).
         self._active[meta.run_id] = {
             "run_id": meta.run_id,
             "status": meta.status,
             "task": meta.task,
             "owner": meta.owner,
+            "parent_run_id": meta.parent_run_id,
         }
 
     def active_summary(self) -> list[dict[str, Any]]:
@@ -414,8 +432,15 @@ class AgentRunRegistry:
         O(active), no disk I/O: reads the in-memory `_active` index maintained
         at each state transition (was an O(N) `list_runs()` disk scan per
         lifecycle event — Gemini review #2). `_active` is keyed newest-last by
-        insertion; reverse for newest-first to match the prior contract."""
-        return list(reversed(list(self._active.values())))
+        insertion; reverse for newest-first to match the prior contract.
+
+        Projects to the badge fields only — `parent_run_id` is kept in the index
+        (for the cancel cascade) but NOT surfaced here."""
+        return [
+            {"run_id": e["run_id"], "status": e["status"],
+             "task": e["task"], "owner": e["owner"]}
+            for e in reversed(list(self._active.values()))
+        ]
 
     @staticmethod
     def _new_run_id() -> str:
@@ -534,13 +559,14 @@ class AgentRunRegistry:
             cancelled_self = True
 
         # Cascade to in-flight children. A child is in-flight iff it has a live
-        # control; reading parent_run_id from each active run's meta avoids a
-        # full-store scan and only touches runs that can still be stopped.
+        # control; its parent_run_id is read from the in-memory _active index
+        # (Gemini review #3) — no per-child meta.json disk read, so a cascade
+        # over C in-flight runs at depth D costs zero I/O instead of O(C*D).
         for child_id in list(self._controls.keys()):
             if child_id == run_id:
                 continue
-            child_meta = self._store.load_meta(child_id)
-            if child_meta is not None and child_meta.parent_run_id == run_id:
+            child = self._active.get(child_id)
+            if child is not None and child.get("parent_run_id") == run_id:
                 self._cancel_run_cascade(child_id, _seen=_seen)
 
         return cancelled_self

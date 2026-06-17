@@ -139,6 +139,31 @@ class TestAgentRunRegistry:
         ids = {registry.start_run("t").run_id for _ in range(20)}
         assert len(ids) == 20
 
+    def test_persist_meta_leaves_no_tmp_and_is_valid(self, registry, tmp_path):
+        # Gemini review #4: persist_meta writes via a unique mkstemp temp then
+        # os.replace. After a successful write, only meta.json remains (no
+        # leftover .tmp), and it round-trips.
+        m = registry.start_run("persist me", provider="p", model="m")
+        slot = tmp_path / "runs" / m.run_id / "agent-0"
+        leftover = list(slot.glob("*.tmp")) + list(slot.glob("meta-*"))
+        assert leftover == [], f"temp file(s) leaked: {leftover}"
+        assert (slot / "meta.json").exists()
+        assert registry.get_run(m.run_id).task == "persist me"
+
+    def test_persist_meta_cleans_tmp_on_failure(self, registry, tmp_path, monkeypatch):
+        # If os.replace fails mid-write, the temp file must not be left behind.
+        import ppxai.engine.agent_runs as ar
+
+        m = registry.start_run("t")
+        slot = tmp_path / "runs" / m.run_id / "agent-0"
+        # Wipe any pre-existing state, then force replace to fail.
+        for p in slot.glob("*"):
+            p.unlink()
+        monkeypatch.setattr(ar.os, "replace", lambda *a, **k: (_ for _ in ()).throw(OSError("boom")))
+        with pytest.raises(OSError):
+            registry._store.persist_meta(m)
+        assert list(slot.glob("*.tmp")) == [] and list(slot.glob("meta-*")) == []
+
     def test_get_run_returns_persisted(self, registry):
         m = registry.start_run("t")
         got = registry.get_run(m.run_id)
@@ -293,6 +318,49 @@ class TestRunInBackground:
             await asyncio.sleep(0.01)
         assert registry.get_run(parent.run_id).status == "cancelled"
         assert registry.get_run(child.run_id).status == "cancelled"  # cascaded
+
+    @pytest.mark.asyncio
+    async def test_cancel_cascade_does_no_disk_read_for_children(self, registry):
+        # Gemini review #3: the cascade reads each in-flight child's
+        # parent_run_id from the in-memory _active index, NOT from disk. Guard:
+        # if it calls store.load_meta during the child scan, fail.
+        import asyncio
+
+        parent = registry.start_run("parent")
+
+        async def runner(meta):
+            ctl = registry.get_control(meta.run_id)
+            for _ in range(200):
+                ctl.check(now=0.0)
+                await asyncio.sleep(0.01)
+            return "never"
+
+        registry.run_in_background(parent, runner)
+        child = registry.start_run("child", parent_run_id=parent.run_id)
+        registry.run_in_background(child, runner)
+        await asyncio.sleep(0.03)
+
+        calls = {"n": 0}
+        real_load = registry._store.load_meta
+
+        def counting_load(run_id, *a, **k):
+            calls["n"] += 1
+            return real_load(run_id, *a, **k)
+
+        registry._store.load_meta = counting_load
+        try:
+            registry.cancel_run(parent.run_id)
+        finally:
+            registry._store.load_meta = real_load
+        # cancel_run loads the run's OWN meta to flip status (1 per cancelled
+        # node: parent + child = 2), but must NOT scan children via disk. The
+        # key assertion: no EXTRA load per non-child control. With only parent
+        # + child in flight, loads == 2 (one each), not 2 + child-scan reads.
+        assert calls["n"] <= 2, (
+            f"cascade did {calls['n']} disk reads; child lookup should come "
+            f"from the in-memory _active index, not load_meta"
+        )
+        await asyncio.sleep(0.05)
 
     def test_cancel_not_in_flight_returns_false(self, registry):
         # Cascade over a run with no registered control (never backgrounded)

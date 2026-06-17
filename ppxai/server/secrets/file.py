@@ -35,6 +35,7 @@ import json
 import os
 import secrets as _secrets
 import sys
+import tempfile
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -124,16 +125,27 @@ class FileSecretProvider:
 
     def _save(self, data: Dict[str, Any]) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        # Write to a temp file then replace, so a crash can't truncate the
-        # store. Tighten perms on the temp file BEFORE it holds secrets'
-        # hashes and before the rename exposes it under the real name.
-        tmp = self.path.with_suffix(self.path.suffix + ".tmp")
-        tmp.write_text(
-            json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8"
+        # Write to a UNIQUE temp file (mkstemp) then replace, so a crash can't
+        # truncate the store AND two concurrent writers never race on the same
+        # temp path (harmless today — loopback mint/revoke serialize on one
+        # event loop — but correct under a future multi-worker deployment;
+        # Gemini review #4, defense-in-depth). Tighten perms on the temp file
+        # BEFORE it holds secrets' hashes and before the rename exposes it.
+        fd, tmp_path = tempfile.mkstemp(
+            dir=self.path.parent, prefix="tokens-", suffix=".tmp"
         )
-        _tighten_perms(tmp)
-        os.replace(tmp, self.path)
-        _tighten_perms(self.path)
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+            _tighten_perms(Path(tmp_path))
+            os.replace(tmp_path, self.path)
+            _tighten_perms(self.path)
+        except BaseException:
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
+            raise
 
     @staticmethod
     def _record_from_row(row: Dict[str, Any]) -> TokenRecord:

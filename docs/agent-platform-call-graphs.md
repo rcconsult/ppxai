@@ -877,6 +877,24 @@ replaced):
   `time.monotonic()` measures actual elapsed. (covered by existing
   `test_wait_timeout_cancels_child_not_orphan`.)
 
+Second review round (2026-06-17, two more):
+
+- **cancel cascade did a per-child disk read.** `_cancel_run_cascade` called
+  `store.load_meta(child_id)` for every in-flight control to read its
+  `parent_run_id` — O(C·D) disk reads on the event loop during a cancel. Now
+  `parent_run_id` is carried in the in-memory `_active` index (added for #2) and
+  the cascade reads it from there — zero disk. `active_summary()` still projects
+  to badge fields only (parent_run_id not surfaced). Test:
+  `test_cancel_cascade_does_no_disk_read_for_children`.
+- **fixed-name temp file on persist (defense-in-depth).** `persist_meta`
+  (`meta.json.tmp`) and the token store `_save` (`tokens.json.tmp`) wrote to a
+  HARDCODED temp name. Not a live bug in our single-process async model (per-run
+  slot dirs make meta tmps distinct; no `await` between write and replace), but
+  two writers WOULD race under `uvicorn --workers N`. Switched both to
+  `tempfile.mkstemp` (unique name) + `os.replace`, with temp-cleanup on failure.
+  Tests: `test_persist_meta_leaves_no_tmp_and_is_valid`,
+  `test_persist_meta_cleans_tmp_on_failure`.
+
 <!-- Inc 10+ sections appended here as they land. Template:
 ## Increment N — <title>
 Added/changed: <files>. Execution model change: <if any>.
