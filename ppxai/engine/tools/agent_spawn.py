@@ -30,6 +30,7 @@ subset to the shared run runner.
 from __future__ import annotations
 
 import asyncio
+import time
 from typing import Awaitable, Callable, List, Optional
 
 from .base import BaseTool
@@ -330,7 +331,13 @@ class SpawnSubagentTool(BaseTool):
             parent_control = self._registry.get_control(self._parent_run_id)
             deadline = wait_cap
             tick = 0.1
-            waited = 0.0
+            # Track elapsed via a monotonic clock, NOT `waited += tick`: under
+            # event-loop load each `wait_for(timeout=tick)` can take well over
+            # `tick` to raise TimeoutError, so summing ticks under-counts real
+            # time and the parent could wait far past `wait_cap` before
+            # cancelling a wedged child (Gemini review #3). monotonic() measures
+            # actual elapsed regardless of scheduling drift.
+            start = time.monotonic()
             shielded = asyncio.shield(task)
             timed_out = False
             while True:
@@ -346,8 +353,7 @@ class SpawnSubagentTool(BaseTool):
                     await asyncio.wait_for(asyncio.shield(shielded), timeout=tick)
                     break  # child finished
                 except asyncio.TimeoutError:
-                    waited += tick
-                    if waited >= deadline:
+                    if time.monotonic() - start >= deadline:
                         timed_out = True
                         break
             if timed_out:

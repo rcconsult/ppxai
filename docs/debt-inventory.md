@@ -779,6 +779,23 @@ modular-prompt refactor.
   the full interactive sub-agent UX (tool-capable `/task` launch surface,
   monitor/cancel controls, reattach) across web + VSCode — `/agentrun` only
   covers the tool-free tier today.
+- **(n) DONE — Gemini review fixes (2026-06-17).** Four issues, each verified
+  against the code before fixing (one proposed fix was empirically worse and
+  replaced). **#4 (regression from §J):** the loopback auth exemptions returned
+  early without resolving a PRESENT bearer, stamping authenticated local runs
+  `owner=None` — fixed by gating the exemptions on `has_bearer` (present-but-
+  invalid → 401, never silently exempted). **#1:** the SSRF-guard sync DNS ran
+  inline on the event loop per network tool call; the obvious offload was
+  measured ~4× slower (2.4s vs ms) and broke the egress test, so replaced with a
+  30s TTL memo (`_resolve_cache`) — repeated checks do zero DNS. **#2:**
+  `active_summary()` scanned `list_runs()` (disk) on every lifecycle event;
+  replaced with an in-memory `_active` index maintained at each transition
+  (O(active), no disk). **#3:** `_await_child` summed `waited += tick` (drifts
+  under load); switched to `time.monotonic()`. Tests: +3 in test_tokens_v1_route
+  (`TestLoopbackHonorsProvidedBearer`), +4 in test_network_policy (cache), +2 in
+  test_background_agents_mirror (no-disk / cancelling). Call-graph §L. **Lesson:**
+  the theoretically-correct async-DNS fix was empirically slower in this env —
+  verified-then-replaced rather than shipped on plausibility.
 - **(a)/(b)** unchanged — promote with the N>1 sub-agent work.
 - **(d)** unchanged — only matters if the SSE layer is reworked.
 

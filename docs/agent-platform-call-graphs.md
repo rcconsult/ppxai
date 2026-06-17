@@ -844,6 +844,39 @@ no inline `for await`; watcher started un-awaited) + size fence 300→340 with
 documented reason. Verified live: prompt usable mid-run (`ls`/`/pwd` ran while
 a run was active; `✅ completed` posted out-of-band).
 
+**§L — Gemini review fixes (2026-06-17).** Four issues from an external review,
+all verified against the code first (one proposed fix was empirically worse and
+replaced):
+
+- **#4 loopback exemption ignored a provided bearer (regression from §J).**
+  `check_request` returned early on a loopback exemption WITHOUT resolving an
+  Authorization header if present — so a local script that authenticated had its
+  token dropped and its run stamped `owner=None` (lost isolation/traceability).
+  Fix: compute `has_bearer` up front; apply the bootstrap-mint + loopback-UI
+  exemptions ONLY when no bearer was presented. A present-but-invalid bearer
+  falls through to 401 (never silently exempted). Tests:
+  `TestLoopbackHonorsProvidedBearer`.
+- **#1 sync DNS on the event loop (SSRF guard).** `_host_resolves_to_blocked_ip`
+  calls `socket.getaddrinfo`; it ran inline in `ScopedToolManager._check_network`
+  on every network tool call. The obvious fix (offload via `asyncio.to_thread` /
+  `loop.getaddrinfo`) was MEASURED to be ~4× slower here (2.4s vs ~ms) and wedged
+  the egress test past its poll timeout — so instead the lookup is MEMOIZED with
+  a 30s TTL (`_resolve_cache` in network_policy): repeated checks for the same
+  host do zero DNS, amortizing the loop-block concern to near-nothing while
+  staying fast. Failures aren't cached (retry next call). Tests:
+  `TestSsrfGuard::test_resolution_memoized_within_ttl` + failure/literal cases.
+- **#2 `active_summary()` O(N) disk scan per lifecycle event.** It called
+  `list_runs()` (read+parse meta.json for EVERY historical run) on every run
+  start/finish/cancel — growing unboundedly. Fix: an in-memory `_active` index
+  `{run_id: summary}` maintained at each state transition (pending/running/
+  cancelling → upsert; terminal → remove); `active_summary()` reads it,
+  O(active), zero disk. Tests: `test_no_disk_read`, `test_cancelling_stays_active`.
+- **#3 `_await_child` time drift.** The timeout loop summed `waited += tick`,
+  which under-counts real elapsed when the loop is busy (each `wait_for(tick)`
+  can take >tick), so a wedged child could be cancelled far past `wait_cap`. Fix:
+  `time.monotonic()` measures actual elapsed. (covered by existing
+  `test_wait_timeout_cancels_child_not_orphan`.)
+
 <!-- Inc 10+ sections appended here as they land. Template:
 ## Increment N — <title>
 Added/changed: <files>. Execution model change: <if any>.

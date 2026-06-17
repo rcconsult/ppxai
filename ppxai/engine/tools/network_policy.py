@@ -50,6 +50,7 @@ from __future__ import annotations
 
 import ipaddress
 import socket
+import time
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple, Union
 from urllib.parse import urlparse
@@ -57,6 +58,16 @@ from urllib.parse import urlparse
 from ...common.logger import get_logger
 
 logger = get_logger("tui")
+
+# SSRF-guard DNS memoization (Gemini review #1). The guard re-resolves the same
+# allowlisted host on EVERY network tool call; a fresh sync getaddrinfo each
+# time accumulates into event-loop blocking across a run's calls. Cache the
+# {host: is_blocked} verdict for a short window so repeated checks do zero DNS.
+# Short TTL so a host that later starts resolving to a private IP (re-binding /
+# infra change) is re-evaluated promptly — the cache is an optimization, not a
+# security boundary (the DNS-rebinding TOCTOU is already out of scope, tier-d).
+_RESOLVE_TTL_S = 30.0
+_resolve_cache: Dict[str, Tuple[float, bool]] = {}
 
 
 def _is_blocked_ip(ip_str: str) -> bool:
@@ -94,18 +105,25 @@ def _host_resolves_to_blocked_ip(host: str) -> bool:
     """
     if not host:
         return False
-    # Direct IP literal in the URL.
+    # Direct IP literal in the URL — decided without DNS (and not cached).
     if _is_blocked_ip(host):
         return True
+    # Memoized verdict within the TTL window (Gemini review #1).
+    now = time.monotonic()
+    hit = _resolve_cache.get(host)
+    if hit is not None and (now - hit[0]) < _RESOLVE_TTL_S:
+        return hit[1]
     try:
         infos = socket.getaddrinfo(host, None)
     except (socket.gaierror, OSError, UnicodeError):
+        # Best-effort: a transient failure is NOT blocked (the connect fails
+        # anyway). Don't cache a failure — retry the lookup next call.
         return False
-    for info in infos:
-        sockaddr = info[4]
-        if sockaddr and _is_blocked_ip(str(sockaddr[0])):
-            return True
-    return False
+    blocked = any(
+        info[4] and _is_blocked_ip(str(info[4][0])) for info in infos
+    )
+    _resolve_cache[host] = (now, blocked)
+    return blocked
 
 
 # Network-capable builtins and the SET of URLs each could reach. The value
@@ -302,7 +320,10 @@ class NetworkPolicy:
                 # AC-2 SSRF mitigation (Item 37f): an allowlisted name must
                 # not resolve to a loopback/private/link-local address. Checked
                 # only AFTER the host+path match so the (network) DNS lookup
-                # runs solely for an otherwise-permitted target.
+                # runs solely for an otherwise-permitted target. Memoized with a
+                # short TTL (Gemini review #1) so repeated checks for the same
+                # host do no DNS — keeping the one-time sync lookup from
+                # accumulating into event-loop blocking across a run's calls.
                 if _host_resolves_to_blocked_ip(host):
                     return Deny(
                         f"host {host!r} resolves to a private/loopback address "

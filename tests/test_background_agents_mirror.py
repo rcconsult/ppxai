@@ -48,8 +48,34 @@ class TestActiveSummary:
         a = reg.start_run(task="first")
         b = reg.start_run(task="second")
         ids = [e["run_id"] for e in reg.active_summary()]
-        # list_runs (and thus active_summary) is newest-first.
+        # active_summary is newest-first.
         assert ids.index(b.run_id) < ids.index(a.run_id)
+
+    def test_no_disk_read(self, reg, monkeypatch):
+        """active_summary() reads the in-memory active index, NOT the store —
+        so it stays O(active) and never scans every historical meta.json on the
+        event loop (Gemini #2). Guard: if it touches list_runs/the store, fail.
+        """
+        reg.start_run(task="live", owner="alice")
+
+        def _boom(*a, **k):  # pragma: no cover - must not be called
+            raise AssertionError("active_summary must not hit the store/list_runs")
+
+        monkeypatch.setattr(reg, "list_runs", _boom)
+        monkeypatch.setattr(reg._store, "list_meta", _boom)
+        summary = reg.active_summary()
+        assert len(summary) == 1 and summary[0]["task"] == "live"
+
+    def test_cancelling_stays_active_in_summary(self, reg):
+        # running -> cancelling is still non-terminal, so it stays in the index
+        # with the updated status (in-place, keeps ordering).
+        m = reg.start_run(task="x")
+        m.status = "running"
+        reg._index_active(m)
+        m.status = "cancelling"
+        reg._index_active(m)
+        entry = reg.active_summary()[0]
+        assert entry["run_id"] == m.run_id and entry["status"] == "cancelling"
 
 
 class TestOnChange:

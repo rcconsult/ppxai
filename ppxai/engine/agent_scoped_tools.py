@@ -139,7 +139,14 @@ class ScopedToolManager:
         Uses `authorize` (not a single-URL check): a tool is allowed only if
         EVERY URL it could reach is in the allowlist — so a tool whose backend
         is chosen at call time (web_search) can't slip past by taking a branch
-        we didn't predict (AC-2 superset rule)."""
+        we didn't predict (AC-2 superset rule).
+
+        The SSRF guard's DNS lookup (Item 37f) is memoized with a short TTL in
+        `network_policy` (Gemini review #1): a host resolves at most once per
+        window, so repeated tool calls in a run do ZERO DNS and the one-time
+        sync lookup can't accumulate into event-loop blocking. The event-emit
+        callback stays on the loop thread (asyncio queues are not
+        thread-safe)."""
         d = self._network_policy.authorize(name, kwargs)
         payload = {
             "tool": name,

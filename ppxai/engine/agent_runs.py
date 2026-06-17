@@ -362,6 +362,14 @@ class AgentRunRegistry:
         # a run starts or reaches a terminal state. Kept generic (not coupled to
         # AppState) so the registry stays UI-agnostic.
         self._change_listeners: list = []
+        # In-memory index of NON-terminal runs → their badge summary, keyed by
+        # run_id and ordered newest-first by insertion. Maintained at each state
+        # transition (pending / running / cancelling / terminal) so
+        # active_summary() is O(active) with ZERO disk reads. Previously it
+        # scanned list_runs() (read+parse meta.json for EVERY historical run)
+        # on every lifecycle event — an O(N) disk bottleneck on the event loop
+        # that grew with total run count (Gemini review #2, 2026-06-17).
+        self._active: dict[str, dict[str, Any]] = {}
 
     # -- Inc 9: active-run summary + change notification ------------------
     _TERMINAL_STATUSES = frozenset(
@@ -381,23 +389,33 @@ class AgentRunRegistry:
             except Exception:
                 logger.error("agent-run change listener raised", exc_info=True)
 
+    def _index_active(self, meta: "RunMeta") -> None:
+        """Upsert a run into the in-memory active index (or remove it once
+        terminal). Called at every state transition so `active_summary()` never
+        touches disk. Newest-first order: a re-inserted run keeps its original
+        position (dict preserves insertion order; we pop-then-set only on the
+        very first insert)."""
+        if meta.status in self._TERMINAL_STATUSES:
+            self._active.pop(meta.run_id, None)
+            return
+        # Update in place if already present (status change), else append.
+        self._active[meta.run_id] = {
+            "run_id": meta.run_id,
+            "status": meta.status,
+            "task": meta.task,
+            "owner": meta.owner,
+        }
+
     def active_summary(self) -> list[dict[str, Any]]:
         """Compact summary of NON-terminal runs, newest first, for the
         AppState `background_agents` mirror. Only fields a badge needs —
-        never the result body or events."""
-        out: list[dict[str, Any]] = []
-        for m in self.list_runs():  # list_runs is already newest-first
-            if m.status in self._TERMINAL_STATUSES:
-                continue
-            out.append(
-                {
-                    "run_id": m.run_id,
-                    "status": m.status,
-                    "task": m.task,
-                    "owner": m.owner,
-                }
-            )
-        return out
+        never the result body or events.
+
+        O(active), no disk I/O: reads the in-memory `_active` index maintained
+        at each state transition (was an O(N) `list_runs()` disk scan per
+        lifecycle event — Gemini review #2). `_active` is keyed newest-last by
+        insertion; reverse for newest-first to match the prior contract."""
+        return list(reversed(list(self._active.values())))
 
     @staticmethod
     def _new_run_id() -> str:
@@ -439,6 +457,7 @@ class AgentRunRegistry:
             created_at=time.time(),
         )
         self._store.persist_meta(meta)
+        self._index_active(meta)  # pending → enters the active index
         logger.info(f"Agent run created: {meta.run_id} (task={task[:40]!r})")
         return meta
 
@@ -458,6 +477,7 @@ class AgentRunRegistry:
         meta.resumable = resumable
         meta.finished_at = time.time()
         self._store.persist_meta(meta)
+        self._index_active(meta)  # terminal → removed from the active index
         logger.info(f"Agent run {meta.run_id} -> {status}")
         self._notify_change()  # Inc 9: run left the active set
         return meta
@@ -504,6 +524,7 @@ class AgentRunRegistry:
             if meta is not None and meta.status == "running":
                 meta.status = "cancelling"
                 self._store.persist_meta(meta)
+                self._index_active(meta)  # running → cancelling (still active)
                 self.emit_event(
                     run_id, "agent_run_cancelling", level="warning",
                     category="lifecycle",
@@ -547,6 +568,7 @@ class AgentRunRegistry:
         meta.status = "running"
         meta.started_at = time.time()
         self._store.persist_meta(meta)
+        self._index_active(meta)  # pending → running (in-place status update)
         # Inc 6: register the cooperative control so cancel/budget can reach
         # this run. The runner polls registry.get_control(run_id).check(...).
         # started_at here is MONOTONIC (for the time_s budget) — distinct from

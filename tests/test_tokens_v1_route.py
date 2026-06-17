@@ -457,3 +457,55 @@ class TestLoopbackUIExemption:
             self._request(path="/v1/agent/runs/run_abc", client_host="10.0.0.9")
         )
         assert r is not None and r.status_code == 401
+
+
+class TestLoopbackHonorsProvidedBearer:
+    """A loopback caller that DOES present a bearer must have it validated, not
+    silently bypassed by the loopback exemption — else the run is stamped
+    owner=None instead of the token's owner, losing isolation (Gemini #4)."""
+
+    def _request(self, method="POST", path="/v1/agent/run",
+                 client_host="127.0.0.1", header=None):
+        scope = {
+            "type": "http",
+            "method": method,
+            "headers": ([(b"authorization", header.encode())] if header else []),
+            "path": path,
+            "raw_path": path.encode(),
+            "query_string": b"",
+            "client": (client_host, 12345),
+            "scheme": "http",
+            "server": ("127.0.0.1", 54320),
+        }
+        return Request(scope)
+
+    def _file_chain(self, monkeypatch, tmp_path):
+        fp = FileSecretProvider(path=str(tmp_path / "t.json"))
+        material, _ = fp.mint(owner="alice")
+        monkeypatch.delenv("PPXAI_API_TOKEN", raising=False)
+        monkeypatch.setattr(state, "_secret_provider", ProviderChain([fp]))
+        return material
+
+    def test_valid_bearer_on_exempt_path_sets_principal(self, monkeypatch, tmp_path):
+        # /v1/agent/run is loopback-exempt, but a presented valid token must
+        # still be resolved so the principal (owner) is stamped on the run.
+        material = self._file_chain(monkeypatch, tmp_path)
+        req = self._request(header=f"Bearer {material}")
+        assert check_request(req) is None
+        assert getattr(req.state, "principal", None) is not None
+        assert req.state.principal.owner == "alice"
+
+    def test_no_bearer_on_exempt_path_still_exempt(self, monkeypatch, tmp_path):
+        # The whole point of the carve-out: no token → still allowed (no
+        # principal). Owner is None (token-less local client).
+        self._file_chain(monkeypatch, tmp_path)
+        req = self._request(header=None)
+        assert check_request(req) is None
+        assert getattr(req.state, "principal", None) is None
+
+    def test_invalid_bearer_on_exempt_path_rejected(self, monkeypatch, tmp_path):
+        # A present-but-invalid token must NOT be silently exempted — it falls
+        # through to 401, never accepted via the loopback bypass.
+        self._file_chain(monkeypatch, tmp_path)
+        r = check_request(self._request(header="Bearer not-a-real-token"))
+        assert r is not None and r.status_code == 401

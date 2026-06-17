@@ -22,6 +22,13 @@ from ppxai.engine.tools.network_policy import (
 )
 from ppxai.engine.agent_scoped_tools import ScopedToolManager
 
+# The autouse `_no_dns` fixture patches `_host_resolves_to_blocked_ip` to a
+# no-op for hermetic host-matching tests. The cache tests below exercise the
+# REAL implementation, so they restore it from this import-time reference
+# (captured before any fixture runs).
+import ppxai.engine.tools.network_policy as _np_mod
+_REAL_HOST_RESOLVES = _np_mod._host_resolves_to_blocked_ip
+
 
 @pytest.fixture(autouse=True)
 def _no_dns(monkeypatch):
@@ -467,8 +474,55 @@ class TestSsrfGuard:
         # False on resolution error.
         import ppxai.engine.tools.network_policy as np
 
+        np._resolve_cache.clear()
+
         def boom(host, *a, **k):
             raise OSError("dns down")
 
         monkeypatch.setattr(np.socket, "getaddrinfo", boom)
         assert np._host_resolves_to_blocked_ip("api.github.com") is False
+
+    def test_resolution_memoized_within_ttl(self, monkeypatch):
+        # Gemini #1: repeated checks for the same host do at most ONE DNS lookup
+        # within the TTL window — so the sync lookup can't accumulate into
+        # event-loop blocking across a run's many tool calls.
+        import ppxai.engine.tools.network_policy as np
+
+        monkeypatch.setattr(np, "_host_resolves_to_blocked_ip", _REAL_HOST_RESOLVES)
+        np._resolve_cache.clear()
+        calls = {"n": 0}
+
+        def counting(host, *a, **k):
+            calls["n"] += 1
+            return [(None, None, None, None, ("8.8.8.8", 0))]
+
+        monkeypatch.setattr(np.socket, "getaddrinfo", counting)
+        for _ in range(5):
+            assert _REAL_HOST_RESOLVES("repeat.example.com") is False
+        assert calls["n"] == 1  # resolved once, then served from cache
+
+    def test_failure_is_not_cached(self, monkeypatch):
+        # A resolution failure must NOT be cached (retry next call) — only a
+        # successful verdict is memoized.
+        import ppxai.engine.tools.network_policy as np
+
+        np._resolve_cache.clear()
+        calls = {"n": 0}
+
+        def boom(host, *a, **k):
+            calls["n"] += 1
+            raise OSError("dns down")
+
+        monkeypatch.setattr(np.socket, "getaddrinfo", boom)
+        _REAL_HOST_RESOLVES("flaky.example.com")
+        _REAL_HOST_RESOLVES("flaky.example.com")
+        assert calls["n"] == 2  # each call retried; nothing cached
+
+    def test_literal_ip_not_cached(self):
+        # A direct IP literal is decided without DNS and must not populate the
+        # cache (it's a name→ip cache).
+        import ppxai.engine.tools.network_policy as np
+
+        np._resolve_cache.clear()
+        assert _REAL_HOST_RESOLVES("127.0.0.1") is True
+        assert "127.0.0.1" not in np._resolve_cache

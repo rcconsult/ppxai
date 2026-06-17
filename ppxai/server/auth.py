@@ -267,20 +267,29 @@ def check_request(request: Request) -> Optional[JSONResponse]:
     if request.method == "OPTIONS":
         return None
 
-    # First-token bootstrap: loopback mint into an empty mutable store.
-    if _is_bootstrap_mint(request):
-        return None
-
-    # Loopback UI/static/chat surface: a local browser carries no bearer, so
-    # exempt it so the desktop/web client isn't locked out when a file token
-    # store turns auth on. The v1 agent/token API stays protected even here.
-    if _is_loopback_ui_request(request):
-        return None
-
     authorization = request.headers.get("authorization", "")
     parts = authorization.split(None, 1)
+    has_bearer = len(parts) == 2 and parts[0].lower() == "bearer"
 
-    if len(parts) != 2 or parts[0].lower() != "bearer":
+    # Loopback exemptions apply ONLY when the caller omitted a bearer (the
+    # local browser case). If a caller DID present a bearer, fall through and
+    # validate it — otherwise a local script that authenticates would have its
+    # token silently ignored, the run stamped owner=None instead of the token's
+    # owner, losing per-run isolation + traceability (Gemini review #4). An
+    # invalid/malformed bearer also falls through (→ 401), never silently
+    # accepted via the exemption.
+    if not has_bearer:
+        # First-token bootstrap: loopback mint into an empty mutable store.
+        if _is_bootstrap_mint(request):
+            return None
+        # Loopback UI/static/chat surface: a local browser carries no bearer,
+        # so exempt it so the desktop/web client isn't locked out when a file
+        # token store turns auth on. The v1 agent/token API stays protected
+        # even here (except the scoped carve-outs in _is_loopback_ui_request).
+        if _is_loopback_ui_request(request):
+            return None
+
+    if not has_bearer:
         return JSONResponse(
             status_code=401,
             content={
