@@ -55,6 +55,7 @@ from ...config import (
     get_default_model,
     get_default_provider,
     get_provider_config,
+    get_tool_config,
 )
 from ...engine.providers import create_provider
 from ...engine.providers.openai_compat import OpenAICompatibleProvider
@@ -125,12 +126,68 @@ class OneshotResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+def _oneshot_grounding_enabled() -> bool:
+    """True when the operator has opted oneshot into native web search.
+
+    Option A (docs/plan-oneshot-grounding.md): the tool-FREE oneshot tiers
+    (`/v1/oneshot`, `/v1/agent/run`) may augment a single-turn completion with
+    the PROVIDER'S OWN web search (Perplexity Sonar, Gemini grounding) — NOT by
+    handing the model a `web_search`/`fetch_url` tool (that's Option B, with the
+    tool-loop exfiltration surface). Retrieval happens inside the provider's API
+    call, so the egress perimeter is unchanged: the same provider host the call
+    already reaches, and no model-named URL fetch.
+
+    Default OFF — when off, oneshot behaves exactly as before (ppxai-sre's
+    `/v1/oneshot` consumers see no change). Read from
+    `tools.web_search.oneshot_grounding`.
+    """
+    try:
+        return bool(get_tool_config("web_search").get("oneshot_grounding", False))
+    except Exception:
+        return False
+
+
+def _apply_oneshot_grounding(provider, provider_name: str) -> None:
+    """Turn on a provider's NATIVE web search for a oneshot call, in place.
+
+    Capability-gated: only providers that advertise `capabilities.web_search`
+    are touched, so the flag can never be mistaken for tool exposure on a
+    non-search provider (OpenAI/NVIDIA → no-op). The mechanism is per-provider:
+
+    - Gemini: set `enable_grounding=True`; `oneshot()` then builds the config
+      with `GoogleSearch()` (no ppxai tools are passed on the oneshot path, so
+      grounding is not suppressed by function-calling).
+    - Perplexity: search is intrinsic to sonar* models and already on for the
+      configured default — no per-call switch to flip here. (A future tightening
+      could substitute a sonar model when a non-search model is requested; out
+      of scope for this increment, and we must not silently downgrade a
+      deliberately chosen reasoning model.)
+    - Others with web_search capability but no oneshot grounding hook: no-op.
+
+    Best-effort and fail-open-to-current-behavior: any error leaves the
+    provider as built (oneshot still works, just ungrounded)."""
+    try:
+        cfg = get_provider_config(provider_name)
+        if not cfg.get("capabilities", {}).get("web_search", False):
+            return  # non-search provider — never reach for search
+        if hasattr(provider, "enable_grounding"):
+            provider.enable_grounding = True
+    except Exception:
+        return
+
+
 def _build_provider(provider_name: str):
     """Construct a provider instance directly from config.
 
     Mirrors `engine/provider_ops.py::set_provider` minus the
     `EngineClient` mutation. Returns the provider or raises HTTPException
     with a friendly message that the caller can surface to clients.
+
+    When `tools.web_search.oneshot_grounding` is enabled, search-capable
+    providers are switched into native-grounding mode before return (Option A —
+    see `_apply_oneshot_grounding`). This is the single construction site shared
+    by `/v1/oneshot` and the agent-run tier (`agent_v1._v1_provider_or_400`
+    delegates here), so both oneshot tiers pick up grounding from one place.
     """
     # get_provider_config falls back to "perplexity" for unknown providers,
     # which would silently swap providers under the caller. Check membership
@@ -171,6 +228,13 @@ def _build_provider(provider_name: str):
             capabilities=capabilities,
             provider_id=provider_name,
         )
+
+    # Option A: opt-in native web search for the tool-free oneshot tiers.
+    # No-op unless tools.web_search.oneshot_grounding is on AND the provider is
+    # search-capable. Does NOT expose any web tool to the model.
+    if _oneshot_grounding_enabled():
+        _apply_oneshot_grounding(provider, provider_name)
+
     return provider
 
 

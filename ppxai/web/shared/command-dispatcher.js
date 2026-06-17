@@ -151,10 +151,19 @@ class CommandDispatcher {
             return;
         }
         const runId = started.run_id;
-        this.app.showSystemMessage(`🤖 ${runId} — running…`);
-        // Inc 3: tail the live SSE stream; stop on a terminal event. On any
-        // terminal event (or stream end) read the run's meta once for the
-        // final status + result body (not carried in the event payload).
+        this.app.showSystemMessage(`🤖 ${runId} — running… (chat stays usable; result posts when ready)`);
+        // Fire-and-forget: the run is in the server's background registry, so we
+        // do NOT await its completion here — returning now frees the prompt. The
+        // result posts out-of-band, addressed by run_id, when the run finishes.
+        this._watchAgentRunDetached(runId);
+    }
+
+    /**
+     * Detached tail of a background run: follow the live SSE stream to a
+     * terminal event, then read meta once and post the result out-of-band.
+     * NOT awaited by the caller — all errors surface as system messages.
+     */
+    async _watchAgentRunDetached(runId) {
         try {
             for await (const ev of this._tailRunEvents(runId)) {
                 if (ev.type === 'agent_run_complete' || ev.type === 'agent_run_error') break;
@@ -164,7 +173,13 @@ class CommandDispatcher {
                 `⚠️ ${runId} — live stream unavailable (${e.message}); reading status…`
             );
         }
-        const run = await this.app.apiClient.get(`/v1/agent/runs/${runId}`);
+        let run;
+        try {
+            run = await this.app.apiClient.get(`/v1/agent/runs/${runId}`);
+        } catch (e) {
+            this.app.showSystemMessage(`⚠️ ${runId} — could not read final status: ${e.message}`);
+            return;
+        }
         const icon = { completed: '✅', failed: '❌' }[run.status] || 'ℹ️';
         this.app.showSystemMessage(`${icon} ${runId} — ${run.status}`);
         if (run.status === 'completed') {

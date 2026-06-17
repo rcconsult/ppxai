@@ -760,6 +760,90 @@ its mere presence (an empty store is 401, not open). Verified on the
 installed binary: `/` + `/state` → 200, `/v1/agent/runs` + `/v1/tokens`
 GET → 401, remote UI → 401. (commit aa989cef)
 
+**§I — oneshot native web search (Option A, opt-in).** `_build_provider`
+(the shared construction site for `/v1/oneshot` AND `/v1/agent/run`) now reads
+`tools.web_search.oneshot_grounding` (default OFF) and, when on, switches a
+SEARCH-CAPABLE provider into the PROVIDER'S OWN web search before return
+(`_apply_oneshot_grounding`). Option A, not B: retrieval stays INSIDE the
+provider API call — no `web_search`/`fetch_url` tool is exposed to the model,
+so the egress perimeter is unchanged and `NetworkPolicy` (the `/task`-only
+firewall) is NOT involved. Capability-gated: no-op for OpenAI/NVIDIA
+(`web_search:false`). Both tool-free tiers pick it up from one site
+(`agent_v1._v1_provider_or_400` delegates to `_build_provider`).
+
+```
+POST /v1/oneshot | POST /v1/agent/run
+  -> _build_provider(name)                         [routes/oneshot.py]
+       -> create_provider(...)                     # unchanged
+       -> if _oneshot_grounding_enabled():         # tools.web_search.oneshot_grounding
+            _apply_oneshot_grounding(provider, name)
+              -> get_provider_config(name).capabilities.web_search ? continue : return  # gate
+              -> if hasattr(provider,"enable_grounding"): provider.enable_grounding=True # Gemini
+                 # Perplexity: sonar* searches intrinsically — nothing to flip
+  -> provider.oneshot(...)                          # grounded call, citations in content
+```
+
+Tests: `test_oneshot_grounding.py` (flag plumbing, capability gate, build
+wiring, + an AST perimeter-lock test that fails if a web-tool symbol is ever
+referenced in oneshot CODE — drift fence against Option B). Docs:
+`docs/api-gateway.md` Notes, `docs/plan-oneshot-grounding.md`.
+
+**§J — `/v1/agent/run` loopback carve-out (refines §H).** §H protected the
+WHOLE `/v1/agent` prefix on loopback, which broke the web `/agentrun` command
+(its only agent verb POSTs `/v1/agent/run` — the tool-free oneshot tier — and
+the browser carries no bearer). Fix: two scoped, fail-closed loopback
+exemptions UNDER the protected prefix, so the safe tier works while the
+dangerous/observability surface stays bearer-gated even locally:
+
+```
+check_request (auth enforced, loopback)
+  -> _is_loopback_ui_request:
+       path == "/v1/agent/run"                          -> EXEMPT  (tool-free oneshot tier)
+       GET /v1/agent/runs/<id>[/events] AND run UNOWNED -> EXEMPT  (_is_loopback_unowned_run_read)
+                                                                    # owner==None ⇒ a run the
+                                                                    # token-less browser created
+       else under /v1/agent or /v1/tokens               -> PROTECTED (401 without bearer)
+```
+
+Why scoped reads: the web `/agentrun` tails `…/events` and reads `…/<id>`.
+Those are exempt ONLY for an UNOWNED run (the kind a token-less local client
+creates via the exempt POST). An OWNED run — every `/task` run, every run
+created WITH a bearer — stays protected, so a local process can never read
+another owner's (or a tool-capable) run's transcript+tool-output. `/task`,
+list, cancel, and unknown-run reads all still 401. Remote never exempt.
+Verified live (rebuilt server): web launch→tail→read all succeed token-less;
+`/task`+`/runs`+`/cancel`+ghost-read all 401. Tests: 14 new in
+`test_tokens_v1_route.py::TestLoopbackUIExemption`.
+
+**§K — web `/agentrun` fire-and-forget (web client only).** `/agentrun`
+previously AWAITED its own SSE tail inline, blocking the chat prompt until the
+run completed — defeating the background run registry. `_dispatchAgentRun` now
+launches, prints `🤖 run_xxx — running… (chat stays usable…)`, and RETURNS
+immediately; the tail+result-post runs detached in `_watchAgentRunDetached`
+(not awaited). Result appends out-of-band when the run finishes; the
+background_agents badge (§Inc 9) shows it running meanwhile.
+
+```
+chat input "/agentrun <task>"               [web/shared/command-dispatcher.js]
+  -> _dispatchAgentRun(task)
+       -> apiClient.post("/v1/agent/run",{task,tools:[]})  -> {run_id}
+       -> showSystemMessage("🤖 … running…")
+       -> this._watchAgentRunDetached(runId)   # FIRE-AND-FORGET (no await) → prompt freed
+  (detached) _watchAgentRunDetached(runId)
+       -> for await ev of _tailRunEvents(runId): break on agent_run_(complete|error)
+       -> get /v1/agent/runs/<id> → append result as assistant message
+```
+
+NO server change (server already backgrounds runs). DEPLOYMENT NOTE: web JS is
+bundled into the `ppxai-desktop` binary (`ppxai-desktop.spec` datas
+`('ppxai/web','ppxai/web')`) and the launcher RESTORES it to `~/.ppxai/web/` on
+every start — so a web-asset change requires rebuilding `ppxai-desktop`, not
+just copying into `~/.ppxai/web/` (that gets reverted on next launch). Tests:
+`test_web_command_dispatcher_v18_1.py::TestAgentRunFireAndForget` (drift fences:
+no inline `for await`; watcher started un-awaited) + size fence 300→340 with
+documented reason. Verified live: prompt usable mid-run (`ls`/`/pwd` ran while
+a run was active; `✅ completed` posted out-of-band).
+
 <!-- Inc 10+ sections appended here as they land. Template:
 ## Increment N — <title>
 Added/changed: <files>. Execution model change: <if any>.

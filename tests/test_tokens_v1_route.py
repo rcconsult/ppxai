@@ -323,3 +323,137 @@ class TestLoopbackUIExemption:
         assert check_request(
             self._request(path="/v1/agent/runs", header=f"Bearer {material}")
         ) is None
+
+    # ---- /v1/agent/run carve-out (tool-free oneshot tier) -----------------
+    # POST /v1/agent/run is behaviorally identical to /v1/oneshot (no tools,
+    # no egress) and is the web client's /agentrun target, so it is exempt on
+    # loopback — but ONLY that exact path. Everything else under /v1/agent
+    # (launch-with-tools, run records, monitor channels) stays protected.
+
+    def test_loopback_v1_agent_RUN_exempt(self, monkeypatch, tmp_path):
+        self._enforced_file_chain(monkeypatch, tmp_path)
+        assert check_request(
+            self._request(method="POST", path="/v1/agent/run")
+        ) is None
+
+    def test_loopback_v1_agent_run_trailing_slash_exempt(self, monkeypatch, tmp_path):
+        # rstrip-normalized so /v1/agent/run/ matches the carve-out too.
+        self._enforced_file_chain(monkeypatch, tmp_path)
+        assert check_request(
+            self._request(method="POST", path="/v1/agent/run/")
+        ) is None
+
+    def test_loopback_v1_agent_TASK_still_protected(self, monkeypatch, tmp_path):
+        # The tool-capable tier is NEVER exempt — even on loopback.
+        self._enforced_file_chain(monkeypatch, tmp_path)
+        r = check_request(self._request(method="POST", path="/v1/agent/task"))
+        assert r is not None and r.status_code == 401
+
+    def test_loopback_v1_agent_runs_still_protected(self, monkeypatch, tmp_path):
+        # The carve-out is EXACT-path: /v1/agent/runs must NOT be exempted by a
+        # loose prefix match against /v1/agent/run.
+        self._enforced_file_chain(monkeypatch, tmp_path)
+        r = check_request(self._request(path="/v1/agent/runs"))
+        assert r is not None and r.status_code == 401
+
+    def test_loopback_v1_agent_run_events_still_protected(self, monkeypatch, tmp_path):
+        # Monitor channel (transcript + tool output) stays protected — this is
+        # the endpoint a "protect only /task" rule would have wrongly leaked.
+        self._enforced_file_chain(monkeypatch, tmp_path)
+        r = check_request(
+            self._request(path="/v1/agent/runs/abc123/events")
+        )
+        assert r is not None and r.status_code == 401
+
+    def test_loopback_v1_agent_cancel_still_protected(self, monkeypatch, tmp_path):
+        self._enforced_file_chain(monkeypatch, tmp_path)
+        r = check_request(
+            self._request(method="POST", path="/v1/agent/runs/abc123/cancel")
+        )
+        assert r is not None and r.status_code == 401
+
+    def test_remote_v1_agent_run_NOT_exempt(self, monkeypatch, tmp_path):
+        # The carve-out is loopback-only. A remote caller still needs a token
+        # even for the tool-free run tier.
+        self._enforced_file_chain(monkeypatch, tmp_path)
+        r = check_request(
+            self._request(method="POST", path="/v1/agent/run",
+                          client_host="10.0.0.9")
+        )
+        assert r is not None and r.status_code == 401
+
+    # ---- scoped read exemption: UNOWNED run meta + events on loopback -----
+    # The web /agentrun command tails GET /runs/{id}/events and reads
+    # GET /runs/{id}. Those are exempt on loopback ONLY for an UNOWNED run
+    # (owner=None) — the kind a token-less local browser creates. Owned runs
+    # (every /task run) and unknown runs stay protected.
+
+    def _registry_with_run(self, monkeypatch, run_id, owner):
+        class _FakeMeta:
+            def __init__(self, owner):
+                self.owner = owner
+
+        class _FakeRegistry:
+            def __init__(self, runs):
+                self._runs = runs
+
+            def get_run(self, rid):
+                return self._runs.get(rid)
+
+        reg = _FakeRegistry({run_id: _FakeMeta(owner)} if run_id else {})
+        monkeypatch.setattr(state, "_agent_run_registry", reg)
+
+    def test_loopback_unowned_run_meta_exempt(self, monkeypatch, tmp_path):
+        self._enforced_file_chain(monkeypatch, tmp_path)
+        self._registry_with_run(monkeypatch, "run_abc", owner=None)
+        assert check_request(
+            self._request(path="/v1/agent/runs/run_abc")
+        ) is None
+
+    def test_loopback_unowned_run_events_exempt(self, monkeypatch, tmp_path):
+        self._enforced_file_chain(monkeypatch, tmp_path)
+        self._registry_with_run(monkeypatch, "run_abc", owner=None)
+        assert check_request(
+            self._request(path="/v1/agent/runs/run_abc/events")
+        ) is None
+
+    def test_loopback_OWNED_run_meta_still_protected(self, monkeypatch, tmp_path):
+        # A run created WITH a token (owned) is NOT exempt — its transcript
+        # stays bearer-gated even from loopback. This is the /task case.
+        self._enforced_file_chain(monkeypatch, tmp_path)
+        self._registry_with_run(monkeypatch, "run_owned", owner="alice")
+        r = check_request(self._request(path="/v1/agent/runs/run_owned"))
+        assert r is not None and r.status_code == 401
+
+    def test_loopback_OWNED_run_events_still_protected(self, monkeypatch, tmp_path):
+        self._enforced_file_chain(monkeypatch, tmp_path)
+        self._registry_with_run(monkeypatch, "run_owned", owner="alice")
+        r = check_request(
+            self._request(path="/v1/agent/runs/run_owned/events")
+        )
+        assert r is not None and r.status_code == 401
+
+    def test_loopback_unknown_run_read_protected(self, monkeypatch, tmp_path):
+        # Nonexistent run → fail-closed (401), not exempt.
+        self._enforced_file_chain(monkeypatch, tmp_path)
+        self._registry_with_run(monkeypatch, None, owner=None)
+        r = check_request(self._request(path="/v1/agent/runs/ghost"))
+        assert r is not None and r.status_code == 401
+
+    def test_loopback_unowned_run_cancel_still_protected(self, monkeypatch, tmp_path):
+        # cancel is a POST and a mutation — never exempt, even for unowned.
+        self._enforced_file_chain(monkeypatch, tmp_path)
+        self._registry_with_run(monkeypatch, "run_abc", owner=None)
+        r = check_request(
+            self._request(method="POST", path="/v1/agent/runs/run_abc/cancel")
+        )
+        assert r is not None and r.status_code == 401
+
+    def test_remote_unowned_run_read_NOT_exempt(self, monkeypatch, tmp_path):
+        # Read exemption is loopback-only.
+        self._enforced_file_chain(monkeypatch, tmp_path)
+        self._registry_with_run(monkeypatch, "run_abc", owner=None)
+        r = check_request(
+            self._request(path="/v1/agent/runs/run_abc", client_host="10.0.0.9")
+        )
+        assert r is not None and r.status_code == 401

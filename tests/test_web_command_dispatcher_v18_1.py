@@ -133,15 +133,72 @@ class TestNoBespokeBranches:
                 f"the factory handles it now"
             )
 
-    def test_renderer_dispatcher_size_under_300_lines(self):
+    def test_renderer_dispatcher_size_under_340_lines(self):
         """The pre-rewrite dispatcher was 967 lines. The thin shell
-        should stay well under 300; significant growth means a
-        bespoke handler is creeping back."""
+        should stay well under this fence; significant growth means a
+        bespoke handler is creeping back.
+
+        Threshold history:
+          - <300 at v1.18.1 (rewrite landed at ~120 lines of dispatch).
+          - <340 at v1.19.0: the /agentrun fire-and-forget refactor split
+            the agent-run handler into launch + a detached `_watchAgentRunDetached`
+            tail so the chat prompt isn't blocked on run completion. That's
+            an async-lifecycle split of ONE existing handler, NOT the
+            bespoke-per-command switch this fence guards against — so the
+            limit moves with it rather than forcing the code to contort.
+        """
         line_count = len(_read().splitlines())
-        assert line_count < 300, (
+        assert line_count < 340, (
             f"command-dispatcher.js has grown to {line_count} lines. "
             f"That's a smell — a bespoke handler is probably creeping "
             f"back. Compare to the factory + side-effects pattern."
+        )
+
+
+# ---------------------------------------------------------------------------
+# /agentrun fire-and-forget (v1.19.0)
+# ---------------------------------------------------------------------------
+
+class TestAgentRunFireAndForget:
+    """/agentrun must NOT block the chat prompt on run completion. The run
+    lives in the server's background registry; the client launches it, frees
+    the prompt, and posts the result out-of-band when it lands.
+
+    These are drift fences: if someone re-inlines the tail into the awaited
+    handler (the pre-v1.19.0 blocking shape), these fail.
+    """
+
+    def test_has_detached_watcher(self):
+        src = _read()
+        assert "_watchAgentRunDetached" in src, (
+            "the detached run watcher is gone — /agentrun is probably "
+            "blocking the prompt on completion again"
+        )
+
+    def test_dispatch_handler_does_not_await_the_tail(self):
+        """`_dispatchAgentRun` must delegate to the detached watcher and
+        NOT `await` the SSE tail / final-read inline (that's what blocked
+        the prompt). We check the handler body calls the watcher WITHOUT
+        awaiting it, and contains no `for await` of its own."""
+        src = _read()
+        m = re.search(
+            r"async _dispatchAgentRun\(task\)\s*\{(.*?)\n    \}",
+            src, re.DOTALL,
+        )
+        assert m, "could not locate _dispatchAgentRun body"
+        body = m.group(1)
+        # The tail loop must have moved OUT of the awaited handler.
+        assert "for await" not in body, (
+            "_dispatchAgentRun still contains a `for await` tail loop — it "
+            "is blocking the prompt. Move the tail to the detached watcher."
+        )
+        # It must kick off the watcher fire-and-forget (not awaited).
+        assert re.search(r"this\._watchAgentRunDetached\(runId\)", body), (
+            "_dispatchAgentRun does not start the detached watcher"
+        )
+        assert "await this._watchAgentRunDetached" not in body, (
+            "_dispatchAgentRun AWAITS the detached watcher — that re-blocks "
+            "the prompt. It must be fire-and-forget."
         )
 
 

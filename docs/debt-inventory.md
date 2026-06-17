@@ -727,6 +727,58 @@ modular-prompt refactor.
   is bigger — track if interactive concurrency becomes a problem.
   Subprocess/OS-isolation (tier-d) remains the CPU/security-isolation
   answer, NOT needed for I/O concurrency.
+- **(k) DONE — opt-in native web search for the tool-free oneshot tiers
+  (Option A, 2026-06-17).** `/v1/oneshot` + `/v1/agent/run` answer from model
+  weights only, which made search-native providers (Perplexity, Gemini) near
+  useless on those tiers. Resolution: a single config flag
+  `tools.web_search.oneshot_grounding` (default **off**) that, when on, switches
+  *search-capable* providers into the PROVIDER'S OWN web search at construction
+  (Gemini `enable_grounding=True`; Perplexity sonar* searches intrinsically).
+  **Option A, not B:** retrieval stays inside the provider API call — no
+  `web_search`/`fetch_url` tool is exposed to the model, so the egress perimeter
+  is unchanged and `NetworkPolicy` (the `/task`-only egress firewall) is NOT
+  involved. Capability-gated: no-op for OpenAI/NVIDIA (`web_search:false`), so
+  the flag can never reach for a tool a provider lacks. Wired once in
+  `routes/oneshot.py::_build_provider` (the shared construction site —
+  `agent_v1._v1_provider_or_400` delegates here, so both oneshot tiers pick it
+  up). Tests: `test_oneshot_grounding.py` (flag plumbing, capability gate,
+  build-wiring, + a **perimeter-lock AST test** that fails if a web-tool symbol
+  is ever referenced in oneshot CODE — guards against drift to Option B). Docs:
+  `docs/api-gateway.md` Notes, `docs/plan-oneshot-grounding.md`. **Deferred
+  (out of scope, low value):** Perplexity model-substitution when a non-sonar
+  model is requested under the flag — risks downgrading a deliberately chosen
+  reasoning model, so left to the caller to pass a sonar model.
+- **(l) DONE — `/v1/agent/run` loopback carve-out (refines §H, 2026-06-17).**
+  §H (commit aa989cef) protected the WHOLE `/v1/agent` prefix on loopback,
+  which broke the web `/agentrun` command: its only agent verb POSTs the
+  tool-free `/v1/agent/run` and the browser carries no bearer → 401 under a
+  file token store. Fix: two scoped, fail-closed loopback exemptions UNDER the
+  protected prefix — (1) exact path `/v1/agent/run` (tool-free oneshot tier,
+  same class as the already-exempt `/v1/oneshot`); (2) `GET /v1/agent/runs/<id>`
+  + `/events` ONLY when the run is UNOWNED (`owner=None` — the kind a token-less
+  local client creates), via `_is_loopback_unowned_run_read`. OWNED runs (every
+  `/task` run, every bearer-created run), list, cancel, and unknown-run reads
+  stay 401 even on loopback; remote never exempt. Closes the confidentiality
+  gap a naive "exempt all of /v1/agent on loopback" would open (other owners'
+  transcripts + tool output). Tests: 14 in `test_tokens_v1_route.py`. Verified
+  live on the rebuilt server (web launch→tail→read token-less OK; protected
+  surface 401).
+- **(m) DONE — web `/agentrun` fire-and-forget (2026-06-17).** `/agentrun`
+  AWAITED its own SSE tail inline, blocking the chat prompt until the run
+  finished — defeating the background run registry the whole platform is built
+  on. `_dispatchAgentRun` now launches, frees the prompt, and tails+posts the
+  result detached (`_watchAgentRunDetached`, not awaited); the result appends
+  out-of-band and the Inc-9 background_agents badge shows it running meanwhile.
+  Web-client-only. **Deployment lesson (cost a debugging round):** web JS is
+  bundled into the `ppxai-desktop` binary and the launcher RESTORES it to
+  `~/.ppxai/web/` on every start, so a web-asset change needs a `ppxai-desktop`
+  REBUILD — copying into `~/.ppxai/web/` is reverted on next launch. Tests:
+  `test_web_command_dispatcher_v18_1.py::TestAgentRunFireAndForget` + size fence
+  300→340 (documented). Verified live: `ls`/`/pwd` ran while a run was active;
+  `✅ completed` posted out-of-band. **Deferred (design iteration, not started):**
+  the full interactive sub-agent UX (tool-capable `/task` launch surface,
+  monitor/cancel controls, reattach) across web + VSCode — `/agentrun` only
+  covers the tool-free tier today.
 - **(a)/(b)** unchanged — promote with the N>1 sub-agent work.
 - **(d)** unchanged — only matters if the SSE layer is reworked.
 

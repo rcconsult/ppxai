@@ -27,6 +27,7 @@ this bearer read THIS run?) lands in Inc 8b.
 from __future__ import annotations
 
 import os
+import re
 from typing import Optional
 
 from fastapi import Request
@@ -158,12 +159,62 @@ def _is_bootstrap_mint(request: Request) -> bool:
 # authz + bearer.
 _LOOPBACK_PROTECTED_PREFIXES = ("/v1/agent", "/v1/tokens")
 
+# Exact paths UNDER a protected prefix that are nonetheless loopback-exempt.
+# `POST /v1/agent/run` is the TOOL-FREE oneshot tier — behaviorally identical
+# to `/v1/oneshot` (which is already exempt): no tools, no egress, no file
+# access, just an LLM completion. The local desktop/web client's `/agentrun`
+# command targets it, so exempting it restores that command under a file token
+# store WITHOUT widening exposure: the dangerous endpoints (`/task`,
+# `/runs/{id}/cancel`) stay protected, and the READ endpoints are exempted only
+# for UNOWNED runs (see `_is_loopback_unowned_run_read`). Matched by EXACT path
+# only — a prefix match here would re-expose `/runs*`.
+_LOOPBACK_EXEMPT_AGENT_PATHS = frozenset({"/v1/agent/run"})
+
+# GET endpoints that read a single run's record / monitor channel. A loopback
+# read of one of these is exempt ONLY when the target run is UNOWNED
+# (owner=None) — i.e. a run the token-less local browser itself created via the
+# exempt `POST /v1/agent/run`. A run created WITH a token (e.g. any `/task`
+# run, owned) is NOT exempt: its transcript + tool output stay bearer-gated.
+# This lets the web `/agentrun` command tail + read its OWN result without
+# opening other owners' (or tool-capable) runs to any local process.
+_RUN_READ_PATH_RE = re.compile(
+    r"^/v1/agent/runs/(?P<run_id>[^/]+)(?:/events)?$"
+)
+
+
+def _is_loopback_unowned_run_read(request: Request) -> bool:
+    """True for a loopback GET of an UNOWNED run's meta or event stream.
+
+    Scopes the read exemption to exactly the runs a token-less local client
+    could have created (owner=None): `GET /v1/agent/runs/{id}` and
+    `GET /v1/agent/runs/{id}/events`. Owned runs (created with a bearer, incl.
+    every `/task` run) fall through to protected. A nonexistent run, a
+    non-GET method, or any registry error → not exempt (fail-closed).
+    """
+    if request.method != "GET":
+        return False
+    path = request.url.path.rstrip("/")
+    m = _RUN_READ_PATH_RE.match(path)
+    if not m:
+        return False
+    try:
+        from .state import get_agent_run_registry
+
+        meta = get_agent_run_registry().get_run(m.group("run_id"))
+    except Exception:
+        return False
+    # Exempt only an existing, UNOWNED run. Unknown run → fail-closed (let the
+    # protected path 401 rather than leak existence via a different status).
+    return meta is not None and getattr(meta, "owner", None) is None
+
 
 def _is_loopback_ui_request(request: Request) -> bool:
     """True for a loopback request to the interactive UI / static / chat
     surface — exempt from auth so the local desktop/web client (which
     carries no bearer) isn't locked out when a file token store turns auth
-    on. EXCLUDES the v1 agent/token API, which stays protected even locally.
+    on. EXCLUDES the v1 agent/token API, which stays protected even locally,
+    with one exception: the tool-free `/v1/agent/run` oneshot tier (see
+    ``_LOOPBACK_EXEMPT_AGENT_PATHS``).
 
     Trust basis is identical to the loopback /v1/tokens mint: a request from
     127.0.0.1/::1 is physically on the host. Remote requests are NEVER
@@ -171,7 +222,17 @@ def _is_loopback_ui_request(request: Request) -> bool:
     """
     if not _is_loopback(request):
         return False
-    path = request.url.path
+    path = request.url.path.rstrip("/")
+    # Explicit exact-path carve-outs win over the protected-prefix rule. This
+    # is what makes the tool-free oneshot run reachable from the local browser
+    # while everything else under /v1/agent stays bearer-protected.
+    if path in _LOOPBACK_EXEMPT_AGENT_PATHS:
+        return True
+    # Reading an UNOWNED run's meta / event stream is exempt on loopback so the
+    # web /agentrun command can tail + show its own (token-less) run's result.
+    # Owned runs (incl. all /task runs) stay protected.
+    if _is_loopback_unowned_run_read(request):
+        return True
     if any(path == p or path.startswith(p + "/") or path.startswith(p)
            for p in _LOOPBACK_PROTECTED_PREFIXES):
         return False

@@ -262,6 +262,27 @@ Content-Type: application/json
   This means vendor knobs (NIM `chat_template_kwargs.enable_thinking`,
   Qwen3 `enable_thinking`, etc.) carry through without the caller
   having to know about them.
+- **Native web search (opt-in, provider-side).** Set
+  `tools.web_search.oneshot_grounding: true` in `ppxai-config.json` to let
+  oneshot augment a completion with the **provider's own** web search —
+  Gemini Google-Search grounding, Perplexity Sonar. This is **Option A**:
+  retrieval happens *inside the provider's API call*, so the egress
+  perimeter is unchanged (same provider host the call already reaches) and
+  **no `web_search`/`fetch_url` tool is ever exposed to the model** — there
+  is no prompt-injection exfiltration vector and no `NetworkPolicy`
+  involvement (that stays the `/v1/agent/task`-only egress firewall).
+  - **Default off.** When off, behavior is byte-identical to pre-1.19.x —
+    existing consumers see no change.
+  - **Capability-gated.** Only providers with `capabilities.web_search:
+    true` are affected (Gemini, Perplexity). For OpenAI / NVIDIA it's a
+    no-op — the flag can never reach for a tool a provider doesn't have.
+  - Gemini already grounds when `provider.gemini.options.enable_grounding`
+    is set; Perplexity sonar* models search intrinsically. This flag is the
+    single, explicit, deterministic switch so a gateway consumer can opt in
+    without depending on per-provider config.
+  - For tool-*using* agent work (granted `web_search`/`fetch_url` with an
+    egress allowlist), use `POST /v1/agent/task`, not oneshot — that's the
+    sandboxed tier where `NetworkPolicy` applies.
 
 #### Example: classification with structured output
 
