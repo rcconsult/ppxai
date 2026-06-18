@@ -137,3 +137,6 @@ deploy/images/server/extra-certs/*.crt
 
 # Codex (parallel-session) scratch/tooling — not part of the repo
 .codex/
+
+# .local is only for the local files not to be shared in git
+**/.local

@@ -22,7 +22,7 @@ For deferred multi-model routing automation, see [TODO-routing.md](TODO-routing.
 | **Hardest cross-cutting decisions** | `gpt-5.5-pro` | $30 / $180 | Premium ceiling for once-a-quarter ADRs |
 | **Implementation / coding** | **`gpt-5.4-mini`** | $0.75 / $4.50 | Champion at 97.5% with hints, 6.7× cheaper than gpt-5.5 |
 | Cheap quick tasks | `gpt-5.4-nano` (untested) | $0.20 / $1.25 | Worth benchmarking before promoting |
-| Air-gapped / in-cluster | `Qwen3-Coder-Next-NVFP4` | local ($0) | 90% no-hints on DGX Spark |
+| Air-gapped / in-cluster | **`Qwen3.6-27B-FP8-agent`** | local ($0) | **93.6% no-hints (33/36)** — best self-hosted on the suite, agent-tuned native tool calling, 128K ctx. Prev pick `Qwen3-Coder-Next-NVFP4` (90% on DGX Spark) |
 | **Avoid** | `gpt-5.3-codex` | $1.75 / $14 | Dominated by both gpt-5.4-mini and gpt-5.5; structurally cautious about tool use |
 
 ## The split

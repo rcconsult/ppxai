@@ -1491,6 +1491,14 @@
         "overall_score": 76.23762376237624,
         "agents_md_mode": "without"
       }
+    ],
+    "codeai-qwen36/Qwen/Qwen3.6-27B-FP8-agent": [
+      {
+        "filename": "codeai-qwen36_Qwen_Qwen3.6-27B-FP8-agent_2026-06-18_68f9abdb.json",
+        "timestamp": "2026-06-18T17:20:21.673664",
+        "overall_score": 93.56435643564357,
+        "agents_md_mode": "without"
+      }
     ]
   },
   "runs": [
@@ -3116,6 +3124,13 @@
       "filename": "dgx-cluster_Qwen_Qwen3.5-122B-A10B-NVFP4_2026-05-12_04cc9664.json",
       "timestamp": "2026-05-12T17:27:07.166053",
       "overall_score": 76.23762376237624,
+      "agents_md_mode": "without"
+    },
+    {
+      "pair": "codeai-qwen36/Qwen/Qwen3.6-27B-FP8-agent",
+      "filename": "codeai-qwen36_Qwen_Qwen3.6-27B-FP8-agent_2026-06-18_68f9abdb.json",
+      "timestamp": "2026-06-18T17:20:21.673664",
+      "overall_score": 93.56435643564357,
       "agents_md_mode": "without"
     }
   ]
