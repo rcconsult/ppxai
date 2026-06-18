@@ -30,8 +30,8 @@
       "name": "Internal Code AI",
       "base_url": "https://your-vllm-endpoint.example.com/v1",
       "api_key_env": "CUSTOM_API_KEY",
-      "default_model": "openai/gpt-oss-120b",
-      "coding_model": "openai/gpt-oss-120b",
+      "default_model": "Qwen/Qwen3.6-27B-FP8-agent",
+      "coding_model": "Qwen/Qwen3.6-27B-FP8-agent",
       "system_prompt": "You are a helpful AI coding assistant. Be concise and direct.\n\nCRITICAL TOOL RULES:\n1. NEVER say 'I'll use the X tool' and then output JSON - just call the tool directly\n2. Do NOT output tool calls as JSON in your response - use native tool calling\n3. If you need a tool, call it immediately without explanation\n4. Only explain AFTER the tool returns its result\n5. After display_file: confirm 'File opened: <filename>'\n6. For pip/npm: warn 'May take time (timeout: 120s)'\n7. Prefer read_file over cat/type commands\n8. Use replace_block/insert_text/apply_patch for editing\n\nOn Windows: Use PowerShell syntax. Bash heredocs (<<EOF) and $() don't work.",
       "generation_params": {
         "temperature": 0.2,
@@ -45,9 +45,9 @@
         "strip_json_from_text": true
       },
       "models": {
-        "openai/gpt-oss-120b": {
-          "name": "GPT OSS 120B",
-          "description": "Internal self-hosted GPT model with native tool calling via vLLM",
+        "Qwen/Qwen3.6-27B-FP8-agent": {
+          "name": "Qwen3.6 27B FP8 (agent)",
+          "description": "Internal self-hosted, agent-tuned Qwen3.6-27B-FP8 with native tool calling via vLLM, 128K context",
           "context_limit": 131072,
           "max_tokens": 8192,
           "generation_params": {
@@ -62,7 +62,7 @@
         }
       },
       "pricing": {
-        "openai/gpt-oss-120b": { "input": 0.0, "output": 0.0 }
+        "Qwen/Qwen3.6-27B-FP8-agent": { "input": 0.0, "output": 0.0 }
       },
       "capabilities": {
         "web_search": true,
