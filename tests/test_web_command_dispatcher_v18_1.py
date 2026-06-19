@@ -133,7 +133,7 @@ class TestNoBespokeBranches:
                 f"the factory handles it now"
             )
 
-    def test_renderer_dispatcher_size_under_340_lines(self):
+    def test_renderer_dispatcher_size_under_380_lines(self):
         """The pre-rewrite dispatcher was 967 lines. The thin shell
         should stay well under this fence; significant growth means a
         bespoke handler is creeping back.
@@ -146,9 +146,15 @@ class TestNoBespokeBranches:
             an async-lifecycle split of ONE existing handler, NOT the
             bespoke-per-command switch this fence guards against — so the
             limit moves with it rather than forcing the code to contort.
+          - <380 at v1.19.0 (Increment A): /agentrun now renders into a
+            right-panel AgentRunView (one pane per run_id) instead of the
+            main chat — added `_openAgentRunPane` + threaded the view through
+            `_watchAgentRunDetached` (pane render with chat fallback) + the
+            web-only /help append. Still the same handful of agent verbs, not
+            a per-command switch, so the fence moves with the feature.
         """
         line_count = len(_read().splitlines())
-        assert line_count < 340, (
+        assert line_count < 380, (
             f"command-dispatcher.js has grown to {line_count} lines. "
             f"That's a smell — a bespoke handler is probably creeping "
             f"back. Compare to the factory + side-effects pattern."
@@ -193,7 +199,9 @@ class TestAgentRunFireAndForget:
             "is blocking the prompt. Move the tail to the detached watcher."
         )
         # It must kick off the watcher fire-and-forget (not awaited).
-        assert re.search(r"this\._watchAgentRunDetached\(runId\)", body), (
+        # v1.19.0 Increment A: the watcher now also takes the run's pane view
+        # (`runId, view`) so the result renders into the right panel.
+        assert re.search(r"this\._watchAgentRunDetached\(runId,\s*view\)", body), (
             "_dispatchAgentRun does not start the detached watcher"
         )
         assert "await this._watchAgentRunDetached" not in body, (

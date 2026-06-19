@@ -160,19 +160,39 @@ class CommandDispatcher {
             return;
         }
         const runId = started.run_id;
-        this.app.showSystemMessage(`🤖 ${runId} — running… (chat stays usable; result posts when ready)`);
+        // Open a right-panel view for this run (one per run_id) and keep a
+        // one-line breadcrumb in chat so history records it; the live result
+        // renders into the pane, leaving the main chat free.
+        const view = this._openAgentRunPane(runId, task);
+        this.app.showSystemMessage(`🤖 ${runId} — running… (in panel; chat stays usable)`);
         // Fire-and-forget: the run is in the server's background registry, so we
         // do NOT await its completion here — returning now frees the prompt. The
-        // result posts out-of-band, addressed by run_id, when the run finishes.
-        this._watchAgentRunDetached(runId);
+        // result renders out-of-band, addressed by run_id, when the run finishes.
+        this._watchAgentRunDetached(runId, view);
+    }
+
+    /**
+     * Open (push) the right-panel view for a run. Returns the view, or null if
+     * the frame/component is unavailable (then the watcher falls back to chat).
+     */
+    _openAgentRunPane(runId, task) {
+        const frame = this.app.rightPanelFrame;
+        if (!frame || typeof AgentRunView === 'undefined') return null;
+        const view = new AgentRunView(runId, task, this.app.state);
+        frame.push(view);
+        return view;
     }
 
     /**
      * Detached tail of a background run: follow the live SSE stream to a
-     * terminal event, then read meta once and post the result out-of-band.
-     * NOT awaited by the caller — all errors surface as system messages.
+     * terminal event, then read meta once and render the result into the run's
+     * pane (falling back to chat if the pane was evicted). NOT awaited by the
+     * caller — all errors surface as system messages.
+     *
+     * @param {string} runId
+     * @param {AgentRunView|null} view  - the run's pane, or null (chat fallback)
      */
-    async _watchAgentRunDetached(runId) {
+    async _watchAgentRunDetached(runId, view) {
         try {
             for await (const ev of this._tailRunEvents(runId)) {
                 if (ev.type === 'agent_run_complete' || ev.type === 'agent_run_error') break;
@@ -190,11 +210,15 @@ class CommandDispatcher {
             return;
         }
         const icon = { completed: '✅', failed: '❌' }[run.status] || 'ℹ️';
+        if (view) view.setStatus(run.status);
         this.app.showSystemMessage(`${icon} ${runId} — ${run.status}`);
         if (run.status === 'completed') {
-            this.app.addMessage('assistant', run.result || '(empty result)');
-        } else if (run.status === 'failed' && run.error) {
-            this.app.showSystemMessage(`   ${run.error}`);
+            // Render into the pane; if it was evicted/unmounted, fall back to chat.
+            const rendered = view && view.setResult(run.result || '');
+            if (!rendered) this.app.addMessage('assistant', run.result || '(empty result)');
+        } else if (run.status === 'failed') {
+            if (view) view.setError(run.error || 'Run failed');
+            if (run.error) this.app.showSystemMessage(`   ${run.error}`);
         }
     }
 
