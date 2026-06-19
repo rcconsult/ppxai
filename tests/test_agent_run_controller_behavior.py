@@ -188,6 +188,8 @@ function assert(cond, msg) {{ if (!cond) throw new Error("FAIL: " + msg); }}
     c._watchDetached = async () => {{}};   // not under test here
     await c.focus("run_6", "t");
     assert(stale.result === "R6", "focus() did not re-hydrate the existing stale pane (got " + stale.result + ")");
+    // Reopening a finished run must NOT re-announce it to chat (no dup breadcrumb).
+    assert(!app._msgs.some((m) => /completed/.test(m)), "focus() re-announced a completed run to chat (duplicate breadcrumb)");
   }}
 
   // --- Scenario 7: focus() restarts the watcher for a running run; dedup holds ---

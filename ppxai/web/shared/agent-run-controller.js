@@ -126,8 +126,10 @@ class AgentRunController {
 
         if (run && AgentRunController._TERMINAL.has(run.status)) {
             // Resolve live (the pane may have been closed during the GET) and
-            // render — falling back to chat if it's gone.
-            this._renderTerminal(runId, run);
+            // render — falling back to chat if it's gone. announce=false: the
+            // run was already announced when it finished; reopening must not
+            // re-emit the "✅ completed" chat breadcrumb.
+            this._renderTerminal(runId, run, false);
             return;
         }
         // Non-terminal or unknown: keep the pane pinned + show status, and ensure
@@ -228,20 +230,24 @@ class AgentRunController {
             return;
         }
 
-        this._renderTerminal(runId, run);
+        this._renderTerminal(runId, run, true);
     }
 
     /**
      * Render a terminal run into its CURRENT pane (resolved by run_id, NOT a
      * captured instance — covers close-then-reopen). If no pane exists for the
      * run (closed/evicted, incl. closed mid-GET), mirror the result into chat so
-     * it isn't lost. Shared by the watcher and focus().
+     * it isn't lost.
+     *
+     * `announce` controls the one-time chat breadcrumb (`✅ <run> — completed`):
+     * the watcher passes true (the run just finished); focus() passes false so
+     * reopening a finished run refreshes the pane WITHOUT re-spamming chat.
      */
-    _renderTerminal(runId, run) {
+    _renderTerminal(runId, run, announce) {
         const icon = { completed: '✅', failed: '❌', cancelled: '⏹️', interrupted: '⏸️' }[run.status] || 'ℹ️';
         const view = this._liveView(runId);
         if (view) { view.unpin(); view.setStatus(run.status); }
-        this.app.showSystemMessage(`${icon} ${runId} — ${run.status}`);
+        if (announce) this.app.showSystemMessage(`${icon} ${runId} — ${run.status}`);
 
         if (run.status === 'completed') {
             if (view) view.setResult(run.result || '');
@@ -251,7 +257,7 @@ class AgentRunController {
             const msg = run.error || `Run ${run.status}`;
             if (view) view.setError(msg);
             else this.app.addMessage('assistant', `${runId} — ${run.status}: ${msg}`);
-            if (view && run.error) this.app.showSystemMessage(`   ${run.error}`);
+            if (announce && view && run.error) this.app.showSystemMessage(`   ${run.error}`);
         }
     }
 
