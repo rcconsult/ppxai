@@ -219,8 +219,10 @@ class TestAgentRunFireAndForget:
             "start() still contains a `for await` tail loop — it is blocking "
             "the prompt. Move the tail to the detached watcher."
         )
-        # It must kick off the watcher fire-and-forget (not awaited).
-        assert re.search(r"this\._watchDetached\(runId,\s*view\)", body), (
+        # It must kick off the watcher fire-and-forget (not awaited). The watcher
+        # takes only runId now (it resolves the run's pane by run_id at render
+        # time, not a captured instance) — see scenario 5 in the behavioral test.
+        assert re.search(r"this\._watchDetached\(runId\)", body), (
             "start() does not start the detached watcher"
         )
         assert "await this._watchDetached" not in body, (

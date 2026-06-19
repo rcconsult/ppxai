@@ -48,12 +48,13 @@ class AgentRunController {
         const runId = started.run_id;
         // Open a right-panel view for this run and drop a clickable breadcrumb in
         // chat so history records it; the live result renders into the pane.
-        const view = this._openPane(runId, task);
+        this._openPane(runId, task);
         this._breadcrumb(runId, task, `🤖 ${runId} — running… (in panel; chat stays usable)`);
         // Fire-and-forget: the run lives in the server's background registry, so
-        // we do NOT await it here — returning frees the prompt. The result
-        // renders out-of-band, addressed by run_id, when the run finishes.
-        this._watchDetached(runId, view);
+        // we do NOT await it here — returning frees the prompt. The watcher
+        // resolves the run's CURRENT pane by run_id when it finishes (so a
+        // reopened pane still receives the result).
+        this._watchDetached(runId);
     }
 
     /** /agentruns — list recent runs as clickable rows that focus their panes. */
@@ -104,7 +105,10 @@ class AgentRunController {
             const run = await this.app.apiClient.get(`/v1/agent/runs/${runId}`);
             view.setStatus(run.status);
             if (run.status === 'completed') view.setResult(run.result || '');
-            else if (run.status === 'failed') view.setError(run.error || 'Run failed');
+            else if (AgentRunController._TERMINAL.has(run.status)) view.setError(run.error || `Run ${run.status}`);
+            // Still running: pin so this reopened pane isn't LRU-evicted before
+            // the (already-running) watcher resolves it by run_id and renders.
+            else view.pin();
         } catch (e) {
             view.setError(`Could not load run: ${e.message}`);
         }
@@ -139,12 +143,22 @@ class AgentRunController {
         content.appendChild(btn);
     }
 
+    /** The run's CURRENT pane (resolved by run_id), or null if none is on the stack. */
+    _liveView(runId) {
+        const frame = this.app.rightPanelFrame;
+        return (frame && typeof frame.getViewByPath === 'function')
+            ? (frame.getViewByPath(`agent://run/${runId}`) || null)
+            : null;
+    }
+
     /**
      * Detached tail of a background run: follow the live SSE stream to a terminal
-     * event, then read meta once and render the result into the run's pane
-     * (chat fallback if the pane was evicted). NOT awaited by start().
+     * event (or poll if it drops), then render the result into the run's CURRENT
+     * pane — resolved by run_id, so a closed-then-reopened run renders into the
+     * NEW visible pane, not the instance captured at launch. Mirrors to chat only
+     * when no pane exists for the run. NOT awaited by start().
      */
-    async _watchDetached(runId, view) {
+    async _watchDetached(runId) {
         try {
             for await (const ev of this._tailEvents(runId)) {
                 // The live-events SSE stays open until the client disconnects —
@@ -162,13 +176,14 @@ class AgentRunController {
         // The stream can end/fail BEFORE the run is terminal (transient outage,
         // server-side SSE drop). A single status read would then leave a still-
         // running run permanently detached, so poll until it actually finishes.
-        const run = await this._pollUntilTerminal(runId, view);
+        const run = await this._pollUntilTerminal(runId);
         if (!run) {
             this.app.showSystemMessage(`⚠️ ${runId} — could not read final status.`);
             return;
         }
         if (!AgentRunController._TERMINAL.has(run.status)) {
             // Hit the poll ceiling while still running — don't claim a result.
+            // No data is lost: reopening via /agentruns rehydrates from the server.
             this.app.showSystemMessage(
                 `⌛ ${runId} — still ${run.status}; reopen via /agentruns when it finishes.`
             );
@@ -176,35 +191,43 @@ class AgentRunController {
         }
 
         const icon = { completed: '✅', failed: '❌', cancelled: '⏹️', interrupted: '⏸️' }[run.status] || 'ℹ️';
-        // Whether the user can still reach this run's pane: a view that is on the
-        // stack will show the result now (if active) or on re-mount. If it was
-        // closed/evicted (not on the stack), mirror the result into chat so it
-        // isn't lost — `setResult` storing on a detached instance isn't visible.
-        const onStack = !!(view && this.app.rightPanelFrame
-            && this.app.rightPanelFrame.getViewByPath(`agent://run/${runId}`) === view);
+        // Resolve the run's CURRENT pane by run_id (NOT the instance captured at
+        // launch): if the user closed and reopened the run, focus() created a
+        // fresh AgentRunView, and the result must land in that visible pane. If
+        // no pane exists for the run, mirror the result into chat so it isn't lost.
+        const view = this._liveView(runId);
         if (view) { view.unpin(); view.setStatus(run.status); }
         this.app.showSystemMessage(`${icon} ${runId} — ${run.status}`);
 
         if (run.status === 'completed') {
             if (view) view.setResult(run.result || '');
-            if (!onStack) this.app.addMessage('assistant', run.result || '(empty result)');
+            else this.app.addMessage('assistant', run.result || '(empty result)');
         } else {
             // failed / cancelled / interrupted
             const msg = run.error || `Run ${run.status}`;
             if (view) view.setError(msg);
-            if (!onStack) this.app.addMessage('assistant', `${runId} — ${run.status}: ${msg}`);
-            else if (run.error) this.app.showSystemMessage(`   ${run.error}`);
+            else this.app.addMessage('assistant', `${runId} — ${run.status}: ${msg}`);
+            if (view && run.error) this.app.showSystemMessage(`   ${run.error}`);
         }
     }
 
     /**
      * Poll GET /v1/agent/runs/<id> until the run is terminal or the ceiling is
      * hit. Returns the final RunMeta (terminal), the last-known non-terminal
-     * meta at the ceiling, or null if no read ever succeeded. Keeps the pane's
-     * status chip live while polling. Skips the wait when already terminal so
-     * the common (stream delivered the terminal event) path costs one GET.
+     * meta at the ceiling, or null if no read ever succeeded. Keeps the run's
+     * current pane's status chip live while polling. Skips the wait when already
+     * terminal so the common (stream delivered the terminal event) path costs
+     * one GET.
+     *
+     * This poll is the DEGRADED-path backstop: it runs only after the live SSE
+     * tail ends/fails. The healthy SSE path (in _watchDetached) has NO ceiling —
+     * it follows the stream to the terminal event however long the run takes. So
+     * _pollMaxMs only bounds the case where the stream is broken AND the run runs
+     * long; hitting it doesn't lose the result (reopen via /agentruns rehydrates
+     * from the server). Revisit (make configurable) when the long-running
+     * tool-capable /task tier lands.
      */
-    async _pollUntilTerminal(runId, view) {
+    async _pollUntilTerminal(runId) {
         const deadline = Date.now() + this._pollMaxMs;
         let run = null;
         for (;;) {
@@ -214,6 +237,7 @@ class AgentRunController {
                 run = run || null;  // keep last-known on a transient GET failure
             }
             if (run && AgentRunController._TERMINAL.has(run.status)) return run;
+            const view = this._liveView(runId);
             if (run && view) view.setStatus(run.status);
             if (Date.now() >= deadline) return run;
             await new Promise((r) => setTimeout(r, this._pollIntervalMs));
