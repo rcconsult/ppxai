@@ -529,3 +529,38 @@
 .agent-run-result {
     color: var(--text-primary);
 }
+
+/* ── Agent-run chat controls (v1.19.0 Increment B) ───────────────────────────
+   Clickable breadcrumb "open" + /agentruns list rows that focus run panes. */
+.agent-run-open {
+    margin-left: 8px;
+    padding: 1px 8px;
+    font-size: 0.8em;
+    cursor: pointer;
+    background: var(--bg-tertiary);
+    color: var(--accent-color, #f59e0b);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+}
+.agent-run-open:hover { background: var(--bg-hover); }
+.agent-runs-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 6px;
+}
+.agent-run-row {
+    text-align: left;
+    font-family: monospace;
+    font-size: 0.82em;
+    padding: 4px 8px;
+    cursor: pointer;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.agent-run-row:hover { background: var(--bg-hover); }

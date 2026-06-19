@@ -42,6 +42,11 @@ class CommandDispatcher {
         this.app = app;
         this.renderer = new ResultRenderer(app);
         this.sideEffects = new SideEffectsHandler(app);
+        // v1.19.0: agent-platform run commands (/agentrun, /agentruns) live in
+        // their own controller so this dispatcher stays a thin router.
+        this.agentRuns = (typeof AgentRunController !== 'undefined')
+            ? new AgentRunController(app)
+            : null;
     }
 
     /**
@@ -81,14 +86,15 @@ class CommandDispatcher {
             }
 
             // Agent platform (v1.19.0 /v1/agent/* run registry — distinct from
-            // the engine-side /agent above). /agentrun starts a background run
-            // and live-polls it; /agentruns lists recent runs.
+            // the engine-side /agent above). Delegated to AgentRunController:
+            // /agentrun starts a background run (rendered in a right-panel pane);
+            // /agentruns lists recent runs as clickable rows that focus panes.
             if (cmd === '/agentrun') {
-                await this._dispatchAgentRun(args);
+                await this.agentRuns?.start(args);
                 return;
             }
             if (cmd === '/agentruns') {
-                await this._dispatchAgentRunsList();
+                await this.agentRuns?.list();
                 return;
             }
 
@@ -139,118 +145,6 @@ class CommandDispatcher {
     }
 
     /**
-     * /agentrun <task> — start a background agent run (v1.19.0 /v1/agent/*,
-     * distinct from /agent's engine-side loop) and tail it to terminal.
-     */
-    async _dispatchAgentRun(task) {
-        if (!task) {
-            this.app.showSystemMessage('Usage: /agentrun <task>');
-            return;
-        }
-        // Pass the UI's current provider/model as the run's explicit per-run
-        // intent (server falls back to tools.agent.default_subagent if absent).
-        const body = { task, tools: [] };
-        if (this.app.state.currentProvider) body.provider = this.app.state.currentProvider;
-        if (this.app.state.currentModel) body.model = this.app.state.currentModel;
-        let started;
-        try {
-            started = await this.app.apiClient.post('/v1/agent/run', body);
-        } catch (e) {
-            this.app.showSystemMessage(`❌ Agent run rejected: ${e.message}`);
-            return;
-        }
-        const runId = started.run_id;
-        // Open a right-panel view for this run (one per run_id) and keep a
-        // one-line breadcrumb in chat so history records it; the live result
-        // renders into the pane, leaving the main chat free.
-        const view = this._openAgentRunPane(runId, task);
-        this.app.showSystemMessage(`🤖 ${runId} — running… (in panel; chat stays usable)`);
-        // Fire-and-forget: the run is in the server's background registry, so we
-        // do NOT await its completion here — returning now frees the prompt. The
-        // result renders out-of-band, addressed by run_id, when the run finishes.
-        this._watchAgentRunDetached(runId, view);
-    }
-
-    /**
-     * Open (push) the right-panel view for a run. Returns the view, or null if
-     * the frame/component is unavailable (then the watcher falls back to chat).
-     */
-    _openAgentRunPane(runId, task) {
-        const frame = this.app.rightPanelFrame;
-        if (!frame || typeof AgentRunView === 'undefined') return null;
-        const view = new AgentRunView(runId, task, this.app.state);
-        frame.push(view);
-        return view;
-    }
-
-    /**
-     * Detached tail of a background run: follow the live SSE stream to a
-     * terminal event, then read meta once and render the result into the run's
-     * pane (falling back to chat if the pane was evicted). NOT awaited by the
-     * caller — all errors surface as system messages.
-     *
-     * @param {string} runId
-     * @param {AgentRunView|null} view  - the run's pane, or null (chat fallback)
-     */
-    async _watchAgentRunDetached(runId, view) {
-        try {
-            for await (const ev of this._tailRunEvents(runId)) {
-                if (ev.type === 'agent_run_complete' || ev.type === 'agent_run_error') break;
-            }
-        } catch (e) {
-            this.app.showSystemMessage(
-                `⚠️ ${runId} — live stream unavailable (${e.message}); reading status…`
-            );
-        }
-        let run;
-        try {
-            run = await this.app.apiClient.get(`/v1/agent/runs/${runId}`);
-        } catch (e) {
-            this.app.showSystemMessage(`⚠️ ${runId} — could not read final status: ${e.message}`);
-            return;
-        }
-        const icon = { completed: '✅', failed: '❌' }[run.status] || 'ℹ️';
-        if (view) view.setStatus(run.status);
-        this.app.showSystemMessage(`${icon} ${runId} — ${run.status}`);
-        if (run.status === 'completed') {
-            // Render into the pane; if it was evicted/unmounted, fall back to chat.
-            const rendered = view && view.setResult(run.result || '');
-            if (!rendered) this.app.addMessage('assistant', run.result || '(empty result)');
-        } else if (run.status === 'failed') {
-            if (view) view.setError(run.error || 'Run failed');
-            if (run.error) this.app.showSystemMessage(`   ${run.error}`);
-        }
-    }
-
-    /** Async-iterate the parsed `data:` events of a run's live SSE stream. */
-    async *_tailRunEvents(runId) {
-        const api = this.app.apiClient;
-        const resp = await fetch(
-            `${api.serverUrl}/v1/agent/runs/${runId}/events?live=1`,
-            { headers: api.getHeaders() }
-        );
-        if (!resp.ok || !resp.body) throw new Error(`stream ${resp.status}`);
-        const reader = resp.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = '';
-        try {
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) return;
-                buffer += decoder.decode(value, { stream: true });
-                const lines = buffer.split('\n');
-                buffer = lines.pop() || '';
-                for (const line of lines) {
-                    if (!line.startsWith('data: ')) continue;
-                    try { yield JSON.parse(line.slice(6)); } catch (e) { /* skip */ }
-                }
-            }
-        } finally {
-            reader.cancel();
-        }
-    }
-
-    /**
      * Append the web-only experimental agent-platform commands to /help.
      * The server's CommandFactory help (the canonical catalog) doesn't know
      * about these client-side shims, so list them from the shared catalog.
@@ -265,32 +159,6 @@ class CommandDispatcher {
                 `Experimental (web-only) agent-platform commands:\n${lines.join('\n')}`
             );
         }
-    }
-
-    /**
-     * /agentruns — list recent agent runs (newest first).
-     */
-    async _dispatchAgentRunsList() {
-        let data;
-        try {
-            data = await this.app.apiClient.get('/v1/agent/runs');
-        } catch (e) {
-            this.app.showSystemMessage(`❌ Could not list runs: ${e.message}`);
-            return;
-        }
-        const runs = (data && data.runs) || [];
-        if (runs.length === 0) {
-            this.app.showSystemMessage('No agent runs yet. Start one with /agentrun <task>.');
-            return;
-        }
-        const lines = runs
-            .slice(0, 20)
-            .map((r) => {
-                const task = (r.task || '').slice(0, 50);
-                return `  ${r.run_id}  ${r.status.padEnd(9)}  ${task}`;
-            })
-            .join('\n');
-        this.app.showSystemMessage(`Agent runs (newest first):\n${lines}`);
     }
 
     /**

@@ -268,6 +268,17 @@ class RightPanelFrame {
         return null;
     }
 
+    /**
+     * Public lookup: the mounted view currently on the stack with this path,
+     * or null. Used by callers (e.g. AgentRunController) to decide between
+     * focusing an existing pane and recreating an evicted one.
+     * @param {string} path
+     * @returns {BaseView|null}
+     */
+    getViewByPath(path) {
+        return this._findByPath(path);
+    }
+
     /** Move an existing view to the top of the stack. */
     _promote(view) {
         const idx = this._stack.indexOf(view);
