@@ -21,8 +21,14 @@ class AgentRunController {
         // Status-poll cadence for the detached watcher's fallback (overridable
         // in tests). Used only when the SSE stream ends/fails before the run
         // reaches a terminal state — see _pollUntilTerminal.
+        // Degraded-path poll (used only after the live SSE tail drops). It polls
+        // until the run is terminal — NO wall-clock ceiling, so a long run isn't
+        // abandoned — backing off from _pollIntervalMs to _pollMaxIntervalMs, and
+        // gives up ONLY after _pollMaxFailures consecutive GET failures (server
+        // unreachable), a meaningful stop rather than an arbitrary duration.
         this._pollIntervalMs = 1500;
-        this._pollMaxMs = 600000;  // degraded-path poll ceiling (safeguard, see _pollUntilTerminal)
+        this._pollMaxIntervalMs = 30000;
+        this._pollMaxFailures = 20;
         // run_ids with an in-flight detached watcher — so focus() can restart a
         // watcher for a run the degraded path gave up on without double-watching.
         this._watching = new Set();
@@ -208,19 +214,16 @@ class AgentRunController {
         // server-side SSE drop). A single status read would then leave a still-
         // running run permanently detached, so poll until it actually finishes.
         const run = await this._pollUntilTerminal(runId);
-        if (!run) {
-            this.app.showSystemMessage(`⚠️ ${runId} — could not read final status.`);
-            return;
-        }
-        if (!AgentRunController._TERMINAL.has(run.status)) {
-            // Hit the degraded-path poll ceiling while still running. Don't claim
-            // a result, and UNPIN the pane so it isn't stuck pinned forever. No
-            // data is lost: reopening (breadcrumb / /agentruns) calls focus(),
-            // which re-hydrates the pane AND restarts this watcher.
+        if (!run || !AgentRunController._TERMINAL.has(run.status)) {
+            // The poll gave up only after sustained GET failures (server
+            // unreachable) — NOT a run-duration cutoff. Don't claim a result;
+            // UNPIN so the pane isn't stuck pinned. No data is lost: reopening
+            // (breadcrumb / /agentruns) calls focus(), which refreshes the pane
+            // AND restarts this watcher.
             const stale = this._liveView(runId);
             if (stale) stale.unpin();
             this.app.showSystemMessage(
-                `⌛ ${runId} — still ${run.status}; reopen via /agentruns to refresh.`
+                `⚠️ ${runId} — lost contact with the server; reopen via /agentruns to retry.`
             );
             return;
         }
@@ -253,35 +256,37 @@ class AgentRunController {
     }
 
     /**
-     * Poll GET /v1/agent/runs/<id> until the run is terminal or the ceiling is
-     * hit. Returns the final RunMeta (terminal), the last-known non-terminal
-     * meta at the ceiling, or null if no read ever succeeded. Keeps the run's
-     * current pane's status chip live while polling. Skips the wait when already
-     * terminal so the common (stream delivered the terminal event) path costs
-     * one GET.
+     * Degraded-path poll (runs only after the live SSE tail drops): GET the run's
+     * status until it is terminal, then return it. Backs off from _pollIntervalMs
+     * to _pollMaxIntervalMs and keeps the run's current pane's status chip live.
      *
-     * This poll is the DEGRADED-path backstop: it runs only after the live SSE
-     * tail ends/fails. The healthy SSE path (in _watchDetached) has NO ceiling —
-     * it follows the stream to the terminal event however long the run takes. So
-     * _pollMaxMs only bounds the case where the stream is broken AND the run runs
-     * long; hitting it doesn't lose the result (reopen via /agentruns rehydrates
-     * from the server). Revisit (make configurable) when the long-running
-     * tool-capable /task tier lands.
+     * There is NO run-duration ceiling — a long run is followed to completion, so
+     * a still-running run is never abandoned at an arbitrary time (the recurring
+     * "watcher dies → unwatched" gap). It returns null ONLY after
+     * _pollMaxFailures CONSECUTIVE GET failures (server unreachable) — a
+     * meaningful give-up condition; a successful "still running" read resets the
+     * counter. On give-up nothing is lost: reopening restarts the watcher.
      */
     async _pollUntilTerminal(runId) {
-        const deadline = Date.now() + this._pollMaxMs;
-        let run = null;
+        let delay = this._pollIntervalMs;
+        let failures = 0;
         for (;;) {
+            let run = null;
             try {
                 run = await this.app.apiClient.get(`/v1/agent/runs/${runId}`);
             } catch (e) {
-                run = run || null;  // keep last-known on a transient GET failure
+                run = null;
             }
-            if (run && AgentRunController._TERMINAL.has(run.status)) return run;
-            const view = this._liveView(runId);
-            if (run && view) view.setStatus(run.status);
-            if (Date.now() >= deadline) return run;
-            await new Promise((r) => setTimeout(r, this._pollIntervalMs));
+            if (run) {
+                failures = 0;
+                if (AgentRunController._TERMINAL.has(run.status)) return run;
+                const view = this._liveView(runId);
+                if (view) view.setStatus(run.status);
+            } else if (++failures >= this._pollMaxFailures) {
+                return null;  // server unreachable across many polls — give up
+            }
+            await new Promise((r) => setTimeout(r, delay));
+            delay = Math.min(delay * 2, this._pollMaxIntervalMs);
         }
     }
 

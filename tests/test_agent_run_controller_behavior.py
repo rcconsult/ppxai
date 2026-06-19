@@ -252,6 +252,44 @@ function assert(cond, msg) {{ if (!cond) throw new Error("FAIL: " + msg); }}
     assert(mirrored, "terminal result not mirrored to chat when pane was gone during refresh");
   }}
 
+  // --- Scenario 10: long run polled MANY times then completes (no ceiling) ---
+  // Successful "still running" reads must never trigger give-up — the watcher
+  // follows the run to completion however long it takes (resolves finding #1:
+  // no arbitrary wall-clock death that strands the pane).
+  {{
+    const view = makeView();
+    const app = makeApp(
+      [ {{status: "running"}}, {{status: "running"}}, {{status: "running"}},
+        {{status: "running"}}, {{status: "running"}}, {{status: "completed", result: "R10"}} ],
+      () => view,
+    );
+    const c = new AgentRunController(app);
+    c._pollIntervalMs = 1; c._pollMaxIntervalMs = 1;
+    c._tailEvents = async function* () {{ throw new Error("stream down"); }};
+    await c._watchDetached("run_10");
+    assert(view.result === "R10", "long-running poll did not resolve to completion (got " + view.result + ")");
+    assert(app._getCalls >= 6, "poll gave up early instead of following the run (getCalls=" + app._getCalls + ")");
+  }}
+
+  // --- Scenario 11: sustained GET failure -> graceful give-up (no hang) ---
+  {{
+    const view = makeView();
+    const app = {{
+      _added: [], _msgs: [], _getCalls: 0, state: {{}},
+      showSystemMessage(m) {{ app._msgs.push(m); }},
+      addMessage() {{}},
+      apiClient: {{ get: async () => {{ app._getCalls++; throw new Error("offline"); }} }},
+      rightPanelFrame: {{ getViewByPath: () => view, push: () => {{}} }},
+    }};
+    const c = new AgentRunController(app);
+    c._pollIntervalMs = 1; c._pollMaxIntervalMs = 1; c._pollMaxFailures = 3;
+    c._tailEvents = async function* () {{ throw new Error("stream down"); }};
+    await c._watchDetached("run_11");   // must resolve (not hang)
+    assert(app._getCalls >= 3, "did not retry before giving up (getCalls=" + app._getCalls + ")");
+    assert(view.pinned === false, "pane left pinned after give-up");
+    assert(app._msgs.some((m) => /lost contact/.test(m)), "no 'lost contact' message after sustained failure");
+  }}
+
   console.log("ALL OK");
 }})().catch((e) => {{ console.error(e.message || e); process.exit(1); }});
 """
