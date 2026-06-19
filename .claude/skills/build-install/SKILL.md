@@ -278,15 +278,36 @@ install target. Don't install there.
 
 ### 5b. Refresh `~/.ppxai/web/` — server reads from disk, not bundle
 
-`ppxai-server` reads the web UI from `~/.ppxai/web/` at request time
-(see `ppxai/server/routes/static.py::WEB_UI_DIR`). `ppxai-desktop`
-auto-installs that directory **only when it doesn't exist** —
-subsequent launches don't refresh it. So a freshly-rebuilt server
-binary still serves stale JS/CSS unless `~/.ppxai/web/` is also
-synced. Caught on 2026-05-02 v1.18.3 build-install: Item 16's
-`CompositeResult` handler in `web/shared/result-renderer.js` was
-present in the binary AND the .app bundle, but the server still
-served the old file because nobody refreshed the on-disk copy.
+**Every** client (`ppxai-server`, `ppxai-desktop`, and `uv run` alike)
+serves the web UI from `~/.ppxai/web/` at request time — NOT from the
+PyInstaller bundle and NOT from the source tree (see
+`ppxai/server/routes/static.py::_resolve_web_ui_dir`). So a freshly-rebuilt
+binary still serves stale JS/CSS unless `~/.ppxai/web/` is also synced.
+Caught on 2026-05-02 v1.18.3 build-install: Item 16's `CompositeResult`
+handler in `web/shared/result-renderer.js` was present in the binary AND
+the .app bundle, but the server still served the old file because nobody
+refreshed the on-disk copy.
+
+> **Web-dev shortcut (v1.19.0):** set `PPXAI_WEB_DIR` to serve a checkout
+> directly and skip this sync entirely while iterating —
+> `PPXAI_WEB_DIR=$PWD/ppxai/web ~/.local/bin/ppxai-server` (or with
+> `uv run ppxai-server`). The override takes precedence over `~/.ppxai/web`.
+> Do the real sync below for the actual install.
+
+> **Correction (was wrong before 2026-06-19):** an earlier version of this
+> step claimed `ppxai-desktop` "auto-installs `~/.ppxai/web/` only when it
+> doesn't exist — subsequent launches don't refresh it." There is **no such
+> installer in the code** — nothing in `ppxai/` (nor the ppxai-desktop `.app`,
+> which has no launcher wrapper) copies `Contents/Resources/web` into
+> `~/.ppxai/web/`. The `.app` ships a build-time copy at
+> `Contents/Resources/web` that is **not consulted at runtime** (`WEB_UI_DIR`
+> is hardcoded to `~/.ppxai/web`). During a v1.19.0 web trial, `~/.ppxai/web/`
+> was *observed* reverting to the `.app`'s build-time snapshot after launching
+> the `.app` (the served `index.html` mtime matched the bundle and a
+> newer file vanished), but the mechanism was **not located in code** — treat
+> it as unconfirmed. Practical rule: **don't trial web changes against the
+> `.app`**; use `PPXAI_WEB_DIR` or sync `~/.ppxai/web/` and run
+> `ppxai-server`/`ppxai-desktop` instead. Re-sync after the `.app` runs.
 
 Universal across all platforms:
 

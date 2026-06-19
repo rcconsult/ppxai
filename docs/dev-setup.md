@@ -56,6 +56,22 @@ cp .env.example .env
 python ppxai.py
 ```
 
+## Web UI development (`PPXAI_WEB_DIR`)
+
+The web clients (`ppxai-server`, `ppxai-desktop`) serve the web UI from
+`~/.ppxai/web` by default — **not** the source tree — so editing
+`ppxai/web/...` has no effect until that dir is synced. While iterating, set
+`PPXAI_WEB_DIR` to serve a checkout directly and skip the sync:
+
+```bash
+PPXAI_WEB_DIR=$PWD/ppxai/web $UV run ppxai-server   # serves live source; hard-refresh the browser
+```
+
+The override (`ppxai/server/routes/static.py::_resolve_web_ui_dir`) takes
+precedence over `~/.ppxai/web`. See
+[lessons/web-assets-served-from-ppxai-home.md](lessons/web-assets-served-from-ppxai-home.md)
+for the full hazard (incl. the `.app` wrinkle).
+
 ## Windows Store Python + uv/venv recovery (CRITICAL)
 
 **Problem:** Windows Store Python prevents uv from creating temporary virtualenvs (Error 1920: "The file cannot be accessed by the system").

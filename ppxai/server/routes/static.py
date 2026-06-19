@@ -5,6 +5,7 @@ Must be registered after all API routes to avoid path conflicts.
 """
 
 import json
+import os
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
@@ -12,8 +13,28 @@ from fastapi.responses import FileResponse, HTMLResponse
 
 from ...engine.app_state import SCHEMA as _APP_STATE_SCHEMA
 
-# Web UI directory (installed by ppxai-desktop or manually)
-WEB_UI_DIR = Path.home() / '.ppxai' / 'web'
+
+def _resolve_web_ui_dir() -> Path:
+    """Resolve the directory the web UI is served from.
+
+    Resolution order:
+      1. ``PPXAI_WEB_DIR`` env var — a dev override so you can serve the web UI
+         straight from a checkout (``PPXAI_WEB_DIR=$PWD/ppxai/web``) without
+         copying it into ``~/.ppxai/web`` after every edit. ``~`` is expanded.
+      2. ``~/.ppxai/web`` — the installed location every client serves by
+         default (server, desktop, and ``uv run`` alike all read from here, NOT
+         the source tree, so without the override a web edit must be synced to
+         this dir before any launcher shows it).
+    """
+    override = os.environ.get("PPXAI_WEB_DIR")
+    if override:
+        return Path(override).expanduser()
+    return Path.home() / '.ppxai' / 'web'
+
+
+# Web UI directory. See _resolve_web_ui_dir for the resolution order; the
+# PPXAI_WEB_DIR override is the friction-free path for web development.
+WEB_UI_DIR = _resolve_web_ui_dir()
 
 # Canonical AppState schema serialized once at module import. The
 # serve_index handler injects this into every `index.html` response
