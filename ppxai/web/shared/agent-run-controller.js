@@ -91,11 +91,14 @@ class AgentRunController {
 
     /**
      * Focus a run's pane and refresh it from the server. Promotes the existing
-     * pane (or recreates one if it was evicted), then ALWAYS re-hydrates from the
-     * registry — so a stale pane the degraded poll gave up on shows the latest
-     * status/result on reopen. If the run is still running and nothing is
-     * watching it, (re)starts the detached watcher so the eventual result lands
-     * without another manual reopen.
+     * pane (or recreates one if it was evicted), refetches the registry, and:
+     *   - terminal run  → renders the result (or mirrors to chat if the pane was
+     *                     closed mid-GET) via _renderTerminal.
+     *   - otherwise     → marks the pane live and (re)starts the detached watcher
+     *                     UNLESS the run is KNOWN terminal. A failed refresh GET
+     *                     (status unknown) therefore still resumes the watcher —
+     *                     whose poll-with-retry resolves the run — instead of
+     *                     stranding the pane in a hard error (review fix).
      */
     async focus(runId, task) {
         const frame = this.app.rightPanelFrame;
@@ -107,29 +110,25 @@ class AgentRunController {
             view = new AgentRunView(runId, task || '', this.app.state);
             frame.push(view);
         }
-        const run = await this._hydrate(view, runId);
-        if (run && !AgentRunController._TERMINAL.has(run.status) && !this._watching.has(runId)) {
-            this._watchDetached(runId);   // fire-and-forget retry for a stranded run
-        }
-    }
 
-    /**
-     * Fetch a run's current meta and render it into `view`. Pins the pane while
-     * the run is non-terminal (so it survives LRU until a watcher resolves it),
-     * unpins once terminal. Returns the run meta, or null on error.
-     */
-    async _hydrate(view, runId) {
+        let run = null;
         try {
-            const run = await this.app.apiClient.get(`/v1/agent/runs/${runId}`);
-            view.setStatus(run.status);
-            if (run.status === 'completed') { view.setResult(run.result || ''); view.unpin(); }
-            else if (AgentRunController._TERMINAL.has(run.status)) { view.setError(run.error || `Run ${run.status}`); view.unpin(); }
-            else view.pin();
-            return run;
+            run = await this.app.apiClient.get(`/v1/agent/runs/${runId}`);
         } catch (e) {
-            view.setError(`Could not load run: ${e.message}`);
-            return null;
+            run = null;  // transient read failure → unknown status, NOT terminal
         }
+
+        if (run && AgentRunController._TERMINAL.has(run.status)) {
+            // Resolve live (the pane may have been closed during the GET) and
+            // render — falling back to chat if it's gone.
+            this._renderTerminal(runId, run);
+            return;
+        }
+        // Non-terminal or unknown: keep the pane pinned + show status, and ensure
+        // a watcher is running so the eventual result lands without another reopen.
+        const live = this._liveView(runId);
+        if (live) { live.setStatus(run ? run.status : 'reconnecting'); live.pin(); }
+        if (!this._watching.has(runId)) this._watchDetached(runId);
     }
 
     // ── Internals ─────────────────────────────────────────────────────────────
@@ -226,11 +225,17 @@ class AgentRunController {
             return;
         }
 
+        this._renderTerminal(runId, run);
+    }
+
+    /**
+     * Render a terminal run into its CURRENT pane (resolved by run_id, NOT a
+     * captured instance — covers close-then-reopen). If no pane exists for the
+     * run (closed/evicted, incl. closed mid-GET), mirror the result into chat so
+     * it isn't lost. Shared by the watcher and focus().
+     */
+    _renderTerminal(runId, run) {
         const icon = { completed: '✅', failed: '❌', cancelled: '⏹️', interrupted: '⏸️' }[run.status] || 'ℹ️';
-        // Resolve the run's CURRENT pane by run_id (NOT the instance captured at
-        // launch): if the user closed and reopened the run, focus() created a
-        // fresh AgentRunView, and the result must land in that visible pane. If
-        // no pane exists for the run, mirror the result into chat so it isn't lost.
         const view = this._liveView(runId);
         if (view) { view.unpin(); view.setStatus(run.status); }
         this.app.showSystemMessage(`${icon} ${runId} — ${run.status}`);

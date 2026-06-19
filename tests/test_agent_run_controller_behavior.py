@@ -193,6 +193,7 @@ function assert(cond, msg) {{ if (!cond) throw new Error("FAIL: " + msg); }}
   // --- Scenario 7: focus() restarts the watcher for a running run; dedup holds ---
   {{
     const view = makeView();
+    view.pinned = false;   // prove focus() pins it
     const app = {{
       _added: [], _msgs: [], state: {{}},
       showSystemMessage(m) {{}}, addMessage() {{}},
@@ -210,6 +211,45 @@ function assert(cond, msg) {{ if (!cond) throw new Error("FAIL: " + msg); }}
     c._watching.add("run_7b");
     await c.focus("run_7b", "t");
     assert(watched.length === 0, "focus() restarted a watcher despite one already active (dedup broken)");
+  }}
+
+  // --- Scenario 8: refresh GET fails (transient) -> still resume the watcher ---
+  // The exact recovery case: a run that outlived the poll ceiling, reopened while
+  // the metadata GET transiently fails. Must NOT strand in a hard error; must
+  // resume the watcher (whose poll-with-retry resolves it) and keep the pane.
+  {{
+    const view = makeView();
+    view.pinned = false;
+    const app = {{
+      _added: [], _msgs: [], state: {{}},
+      showSystemMessage(m) {{}}, addMessage() {{}},
+      apiClient: {{ get: async () => {{ throw new Error("net down"); }} }},
+      rightPanelFrame: {{ getViewByPath: () => view, push: () => {{}} }},
+    }};
+    const c = new AgentRunController(app);
+    const watched = [];
+    c._watchDetached = async (rid) => {{ watched.push(rid); }};
+    await c.focus("run_8", "t");
+    assert(watched.length === 1 && watched[0] === "run_8", "focus() did not resume the watcher after a failed refresh GET");
+    assert(view.pinned === true, "pane not pinned after failed refresh");
+    assert(view.error === null, "focus() wrote a hard error instead of resuming the watcher (got " + view.error + ")");
+    assert(view.status === "reconnecting", "pane did not show a soft reconnecting status (got " + view.status + ")");
+  }}
+
+  // --- Scenario 9: pane closed during the refresh GET, run terminal -> chat ---
+  {{
+    const app = {{
+      _added: [], _msgs: [], state: {{}},
+      showSystemMessage(m) {{ app._msgs.push(m); }},
+      addMessage(r, c) {{ app._added.push([r, c]); }},
+      apiClient: {{ get: async () => ({{status: "completed", result: "R9"}}) }},
+      rightPanelFrame: {{ getViewByPath: () => null, push: () => {{}} }},  // no live pane
+    }};
+    const c = new AgentRunController(app);
+    c._watchDetached = async () => {{}};
+    await c.focus("run_9", "t");
+    const mirrored = app._added.some(([r, c2]) => r === "assistant" && c2 === "R9");
+    assert(mirrored, "terminal result not mirrored to chat when pane was gone during refresh");
   }}
 
   console.log("ALL OK");
