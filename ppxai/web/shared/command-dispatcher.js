@@ -92,6 +92,15 @@ class CommandDispatcher {
                 return;
             }
 
+            // /help: render the server catalog, then append the web-only
+            // experimental agent-platform commands the CommandFactory can't
+            // see (they're client-side shims, not factory commands).
+            if (cmd === '/help' && !args) {
+                await this._dispatchToFactory('help', '');
+                this._appendExperimentalHelp();
+                return;
+            }
+
             // Default: factory dispatch via POST /command/<name>.
             // Strip the leading slash; executeCommand adds nothing.
             await this._dispatchToFactory(cmd.slice(1), args);
@@ -214,6 +223,23 @@ class CommandDispatcher {
             }
         } finally {
             reader.cancel();
+        }
+    }
+
+    /**
+     * Append the web-only experimental agent-platform commands to /help.
+     * The server's CommandFactory help (the canonical catalog) doesn't know
+     * about these client-side shims, so list them from the shared catalog.
+     */
+    _appendExperimentalHelp() {
+        const cat = this.app.slashCommands || {};
+        const lines = ['/agentrun', '/agentruns']
+            .filter((c) => cat[c])
+            .map((c) => `  ${c} — ${cat[c].description}  (usage: ${cat[c].usage})`);
+        if (lines.length) {
+            this.app.showSystemMessage(
+                `Experimental (web-only) agent-platform commands:\n${lines.join('\n')}`
+            );
         }
     }
 

@@ -70,6 +70,15 @@ _IGNORE_DIRS = frozenset({
 _BUILTIN_SPECIAL_COMMANDS: List[Dict[str, Any]] = [
     {"text": "/quit", "description": "Exit the application", "kind": "command"},
     {"text": "/exit", "description": "Exit the application", "kind": "command"},
+    # v1.19.0 agent platform — web-client-only commands (handled in
+    # command-dispatcher.js, not the CommandFactory). Listed here so the
+    # server-driven autocomplete surfaces them; harmless in other clients.
+    {"text": "/agentrun", "display": "/agentrun",
+     "description": "Start a background agent run (v1 platform, experimental)",
+     "kind": "command"},
+    {"text": "/agentruns", "display": "/agentruns",
+     "description": "List recent agent runs (experimental)",
+     "kind": "command"},
 ]
 
 # Context-provider shortcuts — handled by ContextInjector, not the

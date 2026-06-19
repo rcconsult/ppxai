@@ -86,6 +86,18 @@ const SLASH_COMMANDS = {
         category: CommandCategory.TOOLS,
         subcommands: ['on', 'off']
     },
+    // v1.19.0 agent platform (web-client-only, experimental). Distinct from
+    // /agent above: these drive the /v1/agent/* background run registry.
+    '/agentrun': {
+        description: 'Start a background agent run (v1 platform, experimental)',
+        usage: '/agentrun <task>',
+        category: CommandCategory.TOOLS
+    },
+    '/agentruns': {
+        description: 'List recent agent runs (experimental)',
+        usage: '/agentruns',
+        category: CommandCategory.TOOLS
+    },
 
     // === Checkpoint ===
     '/checkpoint': {
