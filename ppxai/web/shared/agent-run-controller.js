@@ -18,6 +18,11 @@ class AgentRunController {
     /** @param {PpxaiApp} app */
     constructor(app) {
         this.app = app;
+        // Status-poll cadence for the detached watcher's fallback (overridable
+        // in tests). Used only when the SSE stream ends/fails before the run
+        // reaches a terminal state — see _pollUntilTerminal.
+        this._pollIntervalMs = 1500;
+        this._pollMaxMs = 600000;  // 10 min ceiling
     }
 
     // ── Commands ──────────────────────────────────────────────────────────────
@@ -142,30 +147,76 @@ class AgentRunController {
     async _watchDetached(runId, view) {
         try {
             for await (const ev of this._tailEvents(runId)) {
-                if (ev.type === 'agent_run_complete' || ev.type === 'agent_run_error') break;
+                // The live-events SSE stays open until the client disconnects —
+                // it does NOT close when the run ends. Break on ANY terminal
+                // run-event (complete/error AND cancelled/interrupted, emitted as
+                // `agent_run_<status>`), otherwise a cancelled/interrupted run
+                // parks the tail on an open stream forever.
+                if (AgentRunController._TERMINAL_EVENTS.has(ev.type)) break;
             }
         } catch (e) {
             this.app.showSystemMessage(
-                `⚠️ ${runId} — live stream unavailable (${e.message}); reading status…`
+                `⚠️ ${runId} — live stream unavailable (${e.message}); polling status…`
             );
         }
-        let run;
-        try {
-            run = await this.app.apiClient.get(`/v1/agent/runs/${runId}`);
-        } catch (e) {
-            this.app.showSystemMessage(`⚠️ ${runId} — could not read final status: ${e.message}`);
+        // The stream can end/fail BEFORE the run is terminal (transient outage,
+        // server-side SSE drop). A single status read would then leave a still-
+        // running run permanently detached, so poll until it actually finishes.
+        const run = await this._pollUntilTerminal(runId, view);
+        if (!run) {
+            this.app.showSystemMessage(`⚠️ ${runId} — could not read final status.`);
             return;
         }
-        const icon = { completed: '✅', failed: '❌' }[run.status] || 'ℹ️';
-        // Terminal → unpin so the pane is eligible for LRU eviction again.
+        if (!AgentRunController._TERMINAL.has(run.status)) {
+            // Hit the poll ceiling while still running — don't claim a result.
+            this.app.showSystemMessage(
+                `⌛ ${runId} — still ${run.status}; reopen via /agentruns when it finishes.`
+            );
+            return;
+        }
+
+        const icon = { completed: '✅', failed: '❌', cancelled: '⏹️', interrupted: '⏸️' }[run.status] || 'ℹ️';
+        // Whether the user can still reach this run's pane: a view that is on the
+        // stack will show the result now (if active) or on re-mount. If it was
+        // closed/evicted (not on the stack), mirror the result into chat so it
+        // isn't lost — `setResult` storing on a detached instance isn't visible.
+        const onStack = !!(view && this.app.rightPanelFrame
+            && this.app.rightPanelFrame.getViewByPath(`agent://run/${runId}`) === view);
         if (view) { view.unpin(); view.setStatus(run.status); }
         this.app.showSystemMessage(`${icon} ${runId} — ${run.status}`);
+
         if (run.status === 'completed') {
-            const rendered = view && view.setResult(run.result || '');
-            if (!rendered) this.app.addMessage('assistant', run.result || '(empty result)');
-        } else if (run.status === 'failed') {
-            if (view) view.setError(run.error || 'Run failed');
-            if (run.error) this.app.showSystemMessage(`   ${run.error}`);
+            if (view) view.setResult(run.result || '');
+            if (!onStack) this.app.addMessage('assistant', run.result || '(empty result)');
+        } else {
+            // failed / cancelled / interrupted
+            const msg = run.error || `Run ${run.status}`;
+            if (view) view.setError(msg);
+            if (!onStack) this.app.addMessage('assistant', `${runId} — ${run.status}: ${msg}`);
+            else if (run.error) this.app.showSystemMessage(`   ${run.error}`);
+        }
+    }
+
+    /**
+     * Poll GET /v1/agent/runs/<id> until the run is terminal or the ceiling is
+     * hit. Returns the final RunMeta (terminal), the last-known non-terminal
+     * meta at the ceiling, or null if no read ever succeeded. Keeps the pane's
+     * status chip live while polling. Skips the wait when already terminal so
+     * the common (stream delivered the terminal event) path costs one GET.
+     */
+    async _pollUntilTerminal(runId, view) {
+        const deadline = Date.now() + this._pollMaxMs;
+        let run = null;
+        for (;;) {
+            try {
+                run = await this.app.apiClient.get(`/v1/agent/runs/${runId}`);
+            } catch (e) {
+                run = run || null;  // keep last-known on a transient GET failure
+            }
+            if (run && AgentRunController._TERMINAL.has(run.status)) return run;
+            if (run && view) view.setStatus(run.status);
+            if (Date.now() >= deadline) return run;
+            await new Promise((r) => setTimeout(r, this._pollIntervalMs));
         }
     }
 
@@ -197,6 +248,19 @@ class AgentRunController {
         }
     }
 }
+
+// Terminal run statuses (ADR 0003: cancelled/interrupted are resumable
+// terminal states distinct from failed). Polling stops on any of these.
+AgentRunController._TERMINAL = new Set(['completed', 'failed', 'cancelled', 'interrupted']);
+
+// Terminal SSE run-event types — the registry emits `agent_run_<status>`
+// (engine/agent_runs.py: complete/error explicitly, cancelled/interrupted via
+// `f"agent_run_{stop.status}"`). The live stream stays open after these, so the
+// tail loop must break on them. `agent_run_cancelling` is a transition, NOT
+// terminal (the real `agent_run_cancelled` follows).
+AgentRunController._TERMINAL_EVENTS = new Set([
+    'agent_run_complete', 'agent_run_error', 'agent_run_cancelled', 'agent_run_interrupted',
+]);
 
 
 // CommonJS export for tests; window-global for browser.

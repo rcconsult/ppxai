@@ -94,7 +94,12 @@ class AgentRunView extends BaseView {
         return true;
     }
 
-    /** Render the final result markdown. Stored so re-mount restores it. */
+    /**
+     * Render the final result markdown. Always stored (so a re-mount restores
+     * it); returns whether it rendered to a LIVE DOM right now — false when the
+     * view is unmounted, so a caller can decide on a fallback. Note: a stored
+     * result still appears on the next mount as long as the view is on the stack.
+     */
     setResult(markdown) {
         const text = markdown || '(empty result)';
         let html;
@@ -110,16 +115,19 @@ class AgentRunView extends BaseView {
             html = (typeof escapeHtml === 'function') ? escapeHtml(text) : text;
         }
         this._bodyHtml = `<div class="agent-run-result message-content">${html}</div>`;
-        if (this._bodyEl) this._bodyEl.innerHTML = this._bodyHtml;
-        return true;
+        if (this._bodyEl) { this._bodyEl.innerHTML = this._bodyHtml; return true; }
+        return false;
     }
 
-    /** Render an error. Stored so re-mount restores it. */
+    /**
+     * Render an error. Stored so re-mount restores it; returns whether it
+     * rendered to a live DOM right now (false when unmounted).
+     */
     setError(message) {
         const esc = (typeof escapeHtml === 'function') ? escapeHtml : (s) => s;
         this._bodyHtml = `<div class="rpf-error">${esc(message || 'Run failed')}</div>`;
-        if (this._bodyEl) this._bodyEl.innerHTML = this._bodyHtml;
-        return true;
+        if (this._bodyEl) { this._bodyEl.innerHTML = this._bodyHtml; return true; }
+        return false;
     }
 }
 
