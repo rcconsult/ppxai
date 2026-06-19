@@ -22,7 +22,10 @@ class AgentRunController {
         // in tests). Used only when the SSE stream ends/fails before the run
         // reaches a terminal state — see _pollUntilTerminal.
         this._pollIntervalMs = 1500;
-        this._pollMaxMs = 600000;  // 10 min ceiling
+        this._pollMaxMs = 600000;  // degraded-path poll ceiling (safeguard, see _pollUntilTerminal)
+        // run_ids with an in-flight detached watcher — so focus() can restart a
+        // watcher for a run the degraded path gave up on without double-watching.
+        this._watching = new Set();
     }
 
     // ── Commands ──────────────────────────────────────────────────────────────
@@ -87,30 +90,45 @@ class AgentRunController {
     }
 
     /**
-     * Focus a run's pane: if it's still on the stack, dedup-push promotes it;
-     * otherwise recreate the view and hydrate it from the server (the run
-     * survives in the registry even after its pane is evicted).
+     * Focus a run's pane and refresh it from the server. Promotes the existing
+     * pane (or recreates one if it was evicted), then ALWAYS re-hydrates from the
+     * registry — so a stale pane the degraded poll gave up on shows the latest
+     * status/result on reopen. If the run is still running and nothing is
+     * watching it, (re)starts the detached watcher so the eventual result lands
+     * without another manual reopen.
      */
     async focus(runId, task) {
         const frame = this.app.rightPanelFrame;
         if (!frame || typeof AgentRunView === 'undefined') return;
-        const existing = frame.getViewByPath(`agent://run/${runId}`);
-        if (existing) {
-            frame.push(existing);   // dedup → promote + show
-            return;
+        let view = frame.getViewByPath(`agent://run/${runId}`);
+        if (view) {
+            frame.push(view);   // dedup → promote + show
+        } else {
+            view = new AgentRunView(runId, task || '', this.app.state);
+            frame.push(view);
         }
-        const view = new AgentRunView(runId, task || '', this.app.state);
-        frame.push(view);
+        const run = await this._hydrate(view, runId);
+        if (run && !AgentRunController._TERMINAL.has(run.status) && !this._watching.has(runId)) {
+            this._watchDetached(runId);   // fire-and-forget retry for a stranded run
+        }
+    }
+
+    /**
+     * Fetch a run's current meta and render it into `view`. Pins the pane while
+     * the run is non-terminal (so it survives LRU until a watcher resolves it),
+     * unpins once terminal. Returns the run meta, or null on error.
+     */
+    async _hydrate(view, runId) {
         try {
             const run = await this.app.apiClient.get(`/v1/agent/runs/${runId}`);
             view.setStatus(run.status);
-            if (run.status === 'completed') view.setResult(run.result || '');
-            else if (AgentRunController._TERMINAL.has(run.status)) view.setError(run.error || `Run ${run.status}`);
-            // Still running: pin so this reopened pane isn't LRU-evicted before
-            // the (already-running) watcher resolves it by run_id and renders.
+            if (run.status === 'completed') { view.setResult(run.result || ''); view.unpin(); }
+            else if (AgentRunController._TERMINAL.has(run.status)) { view.setError(run.error || `Run ${run.status}`); view.unpin(); }
             else view.pin();
+            return run;
         } catch (e) {
             view.setError(`Could not load run: ${e.message}`);
+            return null;
         }
     }
 
@@ -157,8 +175,22 @@ class AgentRunController {
      * pane — resolved by run_id, so a closed-then-reopened run renders into the
      * NEW visible pane, not the instance captured at launch. Mirrors to chat only
      * when no pane exists for the run. NOT awaited by start().
+     *
+     * Deduped via _watching so focus() can safely (re)start a watcher for a run
+     * the degraded path gave up on without ever double-watching.
      */
     async _watchDetached(runId) {
+        if (this._watching.has(runId)) return;
+        this._watching.add(runId);
+        try {
+            await this._runWatch(runId);
+        } finally {
+            this._watching.delete(runId);
+        }
+    }
+
+    /** The tail → poll → render cycle. Wrapped by _watchDetached for dedup. */
+    async _runWatch(runId) {
         try {
             for await (const ev of this._tailEvents(runId)) {
                 // The live-events SSE stays open until the client disconnects —
@@ -182,10 +214,14 @@ class AgentRunController {
             return;
         }
         if (!AgentRunController._TERMINAL.has(run.status)) {
-            // Hit the poll ceiling while still running — don't claim a result.
-            // No data is lost: reopening via /agentruns rehydrates from the server.
+            // Hit the degraded-path poll ceiling while still running. Don't claim
+            // a result, and UNPIN the pane so it isn't stuck pinned forever. No
+            // data is lost: reopening (breadcrumb / /agentruns) calls focus(),
+            // which re-hydrates the pane AND restarts this watcher.
+            const stale = this._liveView(runId);
+            if (stale) stale.unpin();
             this.app.showSystemMessage(
-                `⌛ ${runId} — still ${run.status}; reopen via /agentruns when it finishes.`
+                `⌛ ${runId} — still ${run.status}; reopen via /agentruns to refresh.`
             );
             return;
         }

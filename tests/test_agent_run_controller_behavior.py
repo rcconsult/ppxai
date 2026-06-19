@@ -71,6 +71,10 @@ function makeApp(gets, getViewByPath) {{
 function assert(cond, msg) {{ if (!cond) throw new Error("FAIL: " + msg); }}
 
 (async () => {{
+  // focus()/._openPane guard on `typeof AgentRunView` — define a stub global so
+  // the focus() scenarios below run under Node (the real view is browser-only).
+  global.AgentRunView = function () {{}};
+
   // --- Scenario 1: stream fails, run still running, then completes (poll) ---
   {{
     const view = makeView();
@@ -166,6 +170,46 @@ function assert(cond, msg) {{ if (!cond) throw new Error("FAIL: " + msg); }}
     assert(viewA.result === null, "stale original instance was written (should be untouched)");
     const dup = app._added.some(([role, c2]) => role === "assistant" && c2 === "R5");
     assert(!dup, "spurious chat mirror even though a live (reopened) pane exists");
+  }}
+
+  // --- Scenario 6: focus() re-hydrates an EXISTING (stale) pane ---
+  // The degraded path can leave a pane stale; reopening must refresh it from the
+  // server, not early-return on the existing instance.
+  {{
+    const stale = makeView();   // pane exists but never got a result
+    const app = {{
+      _added: [], _msgs: [], state: {{}},
+      showSystemMessage(m) {{ app._msgs.push(m); }},
+      addMessage(r, c) {{ app._added.push([r, c]); }},
+      apiClient: {{ get: async () => ({{status: "completed", result: "R6"}}) }},
+      rightPanelFrame: {{ getViewByPath: () => stale, push: () => {{}} }},
+    }};
+    const c = new AgentRunController(app);
+    c._watchDetached = async () => {{}};   // not under test here
+    await c.focus("run_6", "t");
+    assert(stale.result === "R6", "focus() did not re-hydrate the existing stale pane (got " + stale.result + ")");
+  }}
+
+  // --- Scenario 7: focus() restarts the watcher for a running run; dedup holds ---
+  {{
+    const view = makeView();
+    const app = {{
+      _added: [], _msgs: [], state: {{}},
+      showSystemMessage(m) {{}}, addMessage() {{}},
+      apiClient: {{ get: async () => ({{status: "running"}}) }},
+      rightPanelFrame: {{ getViewByPath: () => view, push: () => {{}} }},
+    }};
+    const c = new AgentRunController(app);
+    const watched = [];
+    c._watchDetached = async (rid) => {{ watched.push(rid); }};
+    await c.focus("run_7", "t");
+    assert(watched.length === 1 && watched[0] === "run_7", "focus() did not restart the watcher for a running run");
+    assert(view.pinned === true, "running pane was not pinned on refresh");
+    // dedup: a watcher already active for this run -> focus() must NOT start another
+    watched.length = 0;
+    c._watching.add("run_7b");
+    await c.focus("run_7b", "t");
+    assert(watched.length === 0, "focus() restarted a watcher despite one already active (dedup broken)");
   }}
 
   console.log("ALL OK");
