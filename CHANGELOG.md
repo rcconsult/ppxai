@@ -5,6 +5,40 @@ All notable changes to ppxai will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.19.0] - 2026-06-19
+
+Branch: `feature/v1.19.0`. Theme: **agent platform Stage 2 (ADR 0003)** — a durable, addressable `/v1/agent/*` background-run registry with a tool-capable sandboxed tier, plus a web-client UX for the tool-free oneshot tier.
+
+> ⚠️ **PREVIEW / EXPERIMENTAL.** The agent platform ships as a preview. The tool-capable tier (`POST /v1/agent/task`) is sandboxed **in-process only** — OS-level isolation (ADR 0003 tier-d) and DNS-rebinding/TOCTOU egress defense are **deferred**. Treat `network.allow_outbound` allowlists as *trusted operator input*, **not** a safety boundary against hostile/untrusted agent input. The web `/agentrun` UX is experimental; the `/task` UI and other clients (TUI/VSCode) are not built yet. See the per-item caveats in `docs/release-notes-v1.19.0.md`.
+
+The v1 API gateway shape (`POST /v1/oneshot`, bearer auth) is **preserved** for ppxai-sre and other consumers — all gateway changes are additive and default-off.
+
+### Added
+
+- **Agent platform Stage 2** (`engine/agent_runs.py` `AgentRunRegistry`, `server/routes/agent_v1.py`). Increments 1–9: run lifecycle (`POST /v1/agent/run`, `GET /v1/agent/runs[/<id>]`), background execution, `events.jsonl` + monitor SSE (`?live=1`, level/category filters), capability-grant tool allowlist (AC-1, `ScopedToolManager`), egress allowlist (AC-2, `engine/tools/network_policy.py`), budgets + cooperative cancel + conditional-resume checkpoint, `spawn_subagent` (N=1, depth=1, consent-gated), `/v1/tokens` + pluggable secret sources + per-run owner authz, and an AppState `background_agents` mirror. Two tiers locked at the URL level: `POST /v1/agent/run` (tool-free oneshot) vs `POST /v1/agent/task` (tool-capable, sandboxed).
+- **Web `/agentrun` UX.** `/agentrun` renders a background run into a right-panel `AgentRunView` (one pane per `run_id`) instead of the main chat, which stays interactive; `/agentruns` lists runs. Clickable breadcrumbs + run-list rows focus/reopen panes by `run_id` (recreating from the server if a pane was evicted); running panes are pinned. Logic lives in `web/shared/agent-run-controller.js`.
+- **Opt-in oneshot grounding** (`tools.web_search.oneshot_grounding`, default off) — switches a *search-capable* provider into its own web search for `/v1/oneshot` + `/v1/agent/run` (Option A: retrieval stays inside the provider call, no tool exposed, egress perimeter unchanged).
+- **`PPXAI_WEB_DIR`** env override (`server/routes/static.py`) — serve the web UI from a checkout during development without syncing `~/.ppxai/web`.
+- New config provider: vLLM `Qwen3.6-27B-FP8-agent` (tops the self-hosted llm-eval tier at 93.6%).
+
+### Changed
+
+- `oneshot()` is now part of the `BaseProvider` contract (all four providers implement it); the v1 tier is provider-agnostic (dropped the `OpenAICompatibleProvider` isinstance guard). Non-streaming provider calls are offloaded via `asyncio.to_thread` so one agent run no longer starves the event loop.
+- Agent-tier system-prompt framing (`compose_agent_system_prompt`) so a `/task` run uses only granted tools (fixes Perplexity native-search substitution).
+- `command-dispatcher.js` stays a thin router; the agent-run feature was extracted to `agent-run-controller.js`.
+
+### Fixed
+
+- Egress SSRF guard: `NetworkPolicy.check()` denies an allowlisted host that resolves to loopback/private/link-local/reserved IPs and rejects bare/empty schemes (https-only). DNS-rebinding TOCTOU remains deferred to tier-d.
+- Cancel cascades to in-flight sub-agents; parent-cancel propagates to an awaited child within ~100ms.
+- Loopback UI auth exemption + `/v1/agent/run` carve-out so the token-less local browser can use the safe tier while the owner-scoped monitor channels + `/v1/tokens` stay bearer-gated even on loopback.
+- `AgentRunView` holds its render state and rebuilds on mount, so RightPanelFrame re-mounts (open/back-forward/focus) restore the result instead of wiping it.
+
+### Security
+
+- `/v1/agent/task` grants containing a shell tool are rejected (400) — a shell tool's egress can't be inspected by the host/path allowlist; only the deferred OS-isolation tier can contain it.
+- Per-run owner-scoped authorization on monitor channels (`/events`, `/result`, `/artifacts`); sub-agents inherit the parent owner. **Known limitation:** see the in-process-sandbox preview caveat above.
+
 ## [1.18.8] - 2026-06-14
 
 Branch: `bugfix/v1.18.8`. Theme: **post-v1.18.7 code-review fixes** — cross-client `/files/*` parity (the original charter), plus a wave of correctness/security findings surfaced by parallel reviews and live desktop testing. No new features. The v1 API gateway (`POST /v1/oneshot`, bearer auth) and the `/command/*` envelope shape are **byte-identical to v1.18.7** — ppxai-sre's outlook-monitor and other consumers are unaffected.
