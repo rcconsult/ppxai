@@ -490,6 +490,46 @@ def client(tmp_path, monkeypatch):
     return TestClient(app), reg
 
 
+@pytest.fixture(autouse=True)
+def _enable_task_tier(monkeypatch):
+    """The tool-capable /v1/agent/task tier ships DEFAULT-OFF (v1.19.0). These
+    tests exercise the tier itself, so enable it — preserving all other real
+    config keys. A test that fully replaces get_agent_config in its own body
+    (e.g. the gate tests below) overrides this."""
+    from ppxai.server.routes import agent_v1
+    real = agent_v1.get_agent_config
+    monkeypatch.setattr(
+        agent_v1, "get_agent_config",
+        lambda: {**real(), "task_tier_enabled": True},
+    )
+
+
+class TestTaskTierGate:
+    """/v1/agent/task is default-OFF; only an explicit opt-in
+    (tools.agent.task_tier_enabled) makes the tool-capable tier reachable
+    (threat model A — trusted operators). The tool-free /run tier is unaffected."""
+
+    def test_task_disabled_returns_403(self, client, monkeypatch):
+        c, _ = client
+        from ppxai.server.routes import agent_v1
+        monkeypatch.setattr(agent_v1, "get_agent_config", lambda: {"task_tier_enabled": False})
+        r = c.post("/v1/agent/task", json={"task": "do a thing", "tools": ["read_file"]})
+        assert r.status_code == 403
+        assert "task_tier_enabled" in r.json()["detail"]
+
+    def test_run_tier_not_gated_by_task_flag(self, client, monkeypatch):
+        c, _ = client
+        from ppxai.server.routes import agent_v1
+        monkeypatch.setattr(
+            agent_v1, "get_agent_config",
+            lambda: {"task_tier_enabled": False, "default_subagent": {}},
+        )
+        # /run with no provider → 400 (reached provider resolution), NOT 403:
+        # the tool-free tier is never gated by the task flag.
+        r = c.post("/v1/agent/run", json={"task": "ping"})
+        assert r.status_code != 403
+
+
 class TestAgentConfig:
     """get_agent_config must SURFACE spawn_consent (Inc 7).
 

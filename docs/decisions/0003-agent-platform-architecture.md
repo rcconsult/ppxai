@@ -353,6 +353,25 @@ agent loop), carried in `meta.json` as the run's grant:
 > "No shell in /task" landed note. The earlier "read-only `curl`" phrasing is
 > superseded — `curl` is shell and is out of scope for the MVP grant.
 
+> **v1.19.0 preview posture — threat model (A), default-off, unsealed
+> (2026-06-20).** The tool-capable `/v1/agent/task` tier ships as a PREVIEW
+> under an explicit precondition: **(A) trusted operators only** — the task text
+> and the capability grant are authored by the operator running ppxai (or by a
+> consumer like ppxai-sre rendering its own `AGENT.md`). Untrusted *content* may
+> be fetched, but untrusted *input* never reaches the task/grant. Consequence:
+> the sandbox's job in this release is to **bound the blast radius of prompt
+> injection** within an operator-launched run (tiers a–c above), **not** to
+> contain a hostile operator — which is why the **in-process** tool-execution
+> boundary (tiers a–c) is adequate for the preview and **tier-d OS isolation +
+> DNS-rebinding/TOCTOU egress hardening remain deferred**. To make (A)
+> *code-enforced* rather than an assumption about auth config, `/v1/agent/task`
+> ships **default-off** behind `tools.agent.task_tier_enabled` (the tool-free
+> `/v1/agent/run` tier is always on). The whole agents API is **in development
+> and unsealed** — see [docs/api-gateway.md](../api-gateway.md) — and only
+> becomes a stability-committed consumer contract once designed, tested,
+> validated, and explicitly sealed. Exposing `/task` to untrusted input, or
+> sealing the API, requires tier-d first.
+
 ### 4. Tool-execution boundary — subprocess/pod, not the agent runtime
 
 The agent loop stays an in-process `asyncio.Task` (resolves **Question C

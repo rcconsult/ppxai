@@ -41,6 +41,26 @@ What we explicitly do *not* guarantee:
 - **Error message text** — the structured fields (`detail`) are stable
   in shape; the prose inside may change for clarity.
 
+### `/v1/agent/*` — in development, NOT yet sealed (v1.19.0)
+
+> ⚠️ **Exception to the guarantees above.** The agent platform endpoints —
+> `POST /v1/agent/run`, `POST /v1/agent/task`, `GET /v1/agent/runs[/<id>]`,
+> `/v1/agent/runs/<id>/{events,cancel,result}`, the run-event / monitor-SSE
+> event schema, and `POST /v1/tokens` — are **in development and NOT covered
+> by the v1 stability contract**, despite living under `/v1/`. Their request,
+> response, and event shapes WILL change.
+>
+> They become the agent consumer contract only once the agents API is
+> **designed, tested, validated, and explicitly sealed** — at which point this
+> exemption is removed and the guarantees above apply. Until then, do not build
+> against them as stable. (The blanket "every `/v1/` endpoint is stable" rule
+> above does **not** apply to this set while this notice stands.)
+>
+> The tool-capable `POST /v1/agent/task` tier additionally ships **default-off**
+> (`tools.agent.task_tier_enabled`) and is sandboxed in-process only — safe for
+> **trusted operators** (the task/grant is operator-authored), not for untrusted
+> input. See [decisions/0003-agent-platform-architecture.md](decisions/0003-agent-platform-architecture.md).
+
 ### What's not in the gateway tier
 
 These endpoints are **internal** and may change at any time:

@@ -451,6 +451,23 @@ async def create_agent_task(req: AgentTaskRequest, request: Request) -> AgentRun
     off-grant `execute_tool` (emitting a `tool_denied` event). Shares the
     run registry / events / monitor infra with /run.
     """
+    # The tool-capable tier ships DEFAULT-OFF (v1.19.0). It is sandboxed
+    # in-process only (no OS isolation; ADR 0003 tier-d deferred) and is safe
+    # ONLY for trusted operators (threat model A). An operator must opt in
+    # explicitly — that toggle IS the "trusted operator" gate. The tool-free
+    # tiers (/v1/agent/run, /v1/oneshot) are always available.
+    if not get_agent_config().get("task_tier_enabled", False):
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                "The tool-capable agent tier (/v1/agent/task) is disabled. It is "
+                "sandboxed in-process only and intended for trusted operators; "
+                "enable it deliberately via tools.agent.task_tier_enabled=true in "
+                "ppxai-config.json. The tool-free tier (/v1/agent/run) is always "
+                "available."
+            ),
+        )
+
     registry = get_agent_run_registry()
 
     # AC-2: a shell-execution tool runs arbitrary commands whose network egress

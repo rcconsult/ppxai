@@ -173,6 +173,14 @@ def get_agent_config() -> Dict[str, Any]:
         # grant ⊆ parent, egress ⊆ parent, no-shell, depth=1) as the boundary.
         # Override via `"tools": {"agent": {"spawn_consent": "auto"}}`.
         "spawn_consent": agent_config.get("spawn_consent", "deny"),
+        # v1.19.0 — the tool-capable `/v1/agent/task` tier ships DEFAULT-OFF.
+        # The tier is sandboxed in-process only (no OS isolation; ADR 0003
+        # tier-d deferred) and is safe ONLY for trusted operators (threat model
+        # A). Requiring an explicit opt-in makes "trusted operator" a deliberate,
+        # code-enforced toggle rather than an assumption about auth config. The
+        # tool-FREE tiers (`/v1/agent/run`, `/v1/oneshot`) are unaffected.
+        # Override via `"tools": {"agent": {"task_tier_enabled": true}}`.
+        "task_tier_enabled": agent_config.get("task_tier_enabled", False),
     }
 
 
