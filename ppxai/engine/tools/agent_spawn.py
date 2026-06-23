@@ -67,8 +67,9 @@ class SpawnSubagentTool(BaseTool):
                 "type": "array",
                 "items": {"type": "string"},
                 "description": (
-                    "Tools to grant the child — MUST be a subset of your own "
-                    "grant. Omit for an empty (tool-free) child."
+                    "Tools to grant the child — a non-empty SUBSET of your own "
+                    "grant (a tool-free child can do no work, so at least one "
+                    "tool is required, matching the /v1/agent/task contract)."
                 ),
             },
             "allow_outbound": {
@@ -216,6 +217,17 @@ class SpawnSubagentTool(BaseTool):
 
         child_tools = list(tools or [])
         child_allow = list(allow_outbound or [])
+
+        # 0. Non-empty grant — same rule as /v1/agent/task (tools required,
+        #    non-empty). A tool-free child can't act, so reject up front rather
+        #    than minting a run that does nothing. (Keeps the human HTTP tier
+        #    and the autonomous-spawn tier symmetric.)
+        if not child_tools:
+            return self._deny(
+                "a sub-agent needs a non-empty tool grant (subset of yours); "
+                "a tool-free child can do no work",
+                "grant",
+            )
 
         # 1. Subset enforcement — refuse BEFORE minting anything.
         err = self._check_grant_subset(child_tools)

@@ -788,6 +788,9 @@ class TestAgentRunRoutes:
         class _P(OpenAICompatibleProvider):
             def __init__(self): pass
         monkeypatch.setattr(agent_v1, "_build_provider", lambda name: _P())
+        # /task fail-fast-validates the provider (no build) before minting the
+        # run; the fake provider name here isn't configured, so stub it out too.
+        monkeypatch.setattr(agent_v1, "_validate_provider_or_400", lambda name: None)
 
         # Stub EngineClient: enable_tools no-op; chat() drives one off-grant
         # execute_tool through whatever tool_manager the route installed, then
@@ -854,6 +857,9 @@ class TestAgentRunRoutes:
         class _P(OpenAICompatibleProvider):
             def __init__(self): pass
         monkeypatch.setattr(agent_v1, "_build_provider", lambda name: _P())
+        # /task fail-fast-validates the provider (no build) before minting the
+        # run; the fake provider name here isn't configured, so stub it out too.
+        monkeypatch.setattr(agent_v1, "_validate_provider_or_400", lambda name: None)
 
         class _BaseTM:
             max_iterations = 3
@@ -917,6 +923,9 @@ class TestAgentRunRoutes:
         class _P(OpenAICompatibleProvider):
             def __init__(self): pass
         monkeypatch.setattr(agent_v1, "_build_provider", lambda name: _P())
+        # /task fail-fast-validates the provider (no build) before minting the
+        # run; the fake provider name here isn't configured, so stub it out too.
+        monkeypatch.setattr(agent_v1, "_validate_provider_or_400", lambda name: None)
 
         class _BaseTM:
             max_iterations = 3
@@ -981,6 +990,9 @@ class TestAgentRunRoutes:
         class _P(OpenAICompatibleProvider):
             def __init__(self): pass
         monkeypatch.setattr(agent_v1, "_build_provider", lambda name: _P())
+        # /task fail-fast-validates the provider (no build) before minting the
+        # run; the fake provider name here isn't configured, so stub it out too.
+        monkeypatch.setattr(agent_v1, "_validate_provider_or_400", lambda name: None)
 
         stub = self._budget_stub_engine(n_tool_calls=5)  # would do 5 iterations
         import ppxai.engine.client as client_mod
@@ -1013,6 +1025,9 @@ class TestAgentRunRoutes:
         class _P(OpenAICompatibleProvider):
             def __init__(self): pass
         monkeypatch.setattr(agent_v1, "_build_provider", lambda name: _P())
+        # /task fail-fast-validates the provider (no build) before minting the
+        # run; the fake provider name here isn't configured, so stub it out too.
+        monkeypatch.setattr(agent_v1, "_validate_provider_or_400", lambda name: None)
         stub = self._budget_stub_engine(n_tool_calls=3)
         import ppxai.engine.client as client_mod
         monkeypatch.setattr(client_mod, "EngineClient", lambda: stub)
@@ -1039,6 +1054,9 @@ class TestAgentRunRoutes:
         class _P(OpenAICompatibleProvider):
             def __init__(self): pass
         monkeypatch.setattr(agent_v1, "_build_provider", lambda name: _P())
+        # /task fail-fast-validates the provider (no build) before minting the
+        # run; the fake provider name here isn't configured, so stub it out too.
+        monkeypatch.setattr(agent_v1, "_validate_provider_or_400", lambda name: None)
 
         class _Usage:
             def __init__(self): self.total_tokens = 0

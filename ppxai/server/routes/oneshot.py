@@ -176,6 +176,29 @@ def _apply_oneshot_grounding(provider, provider_name: str) -> None:
         return
 
 
+def _validate_provider_or_400(provider_name: str) -> None:
+    """Cheap fail-fast: raise HTTPException(400) if `provider_name` is unknown
+    or has no API key, WITHOUT constructing the provider.
+
+    Same two checks `_build_provider` does up front, factored out so a caller
+    that only needs to validate (e.g. the `/v1/agent/task` tier, which builds
+    its own provider later inside the run) doesn't instantiate and immediately
+    throw away an SDK client. Keep this in sync with `_build_provider`'s guards.
+    """
+    if provider_name not in get_available_providers():
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unknown provider: {provider_name!r}. "
+            f"Configure it in ppxai-config.json.",
+        )
+    if not get_api_key(provider_name):
+        raise HTTPException(
+            status_code=400,
+            detail=f"No API key for provider {provider_name!r}. "
+            f"Set it in ~/.ppxai/.env.",
+        )
+
+
 def _build_provider(provider_name: str):
     """Construct a provider instance directly from config.
 

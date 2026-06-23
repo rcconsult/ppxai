@@ -88,7 +88,7 @@ from ...engine.tools.network_policy import grant_has_shell
 from ..state import get_agent_run_registry
 # Reuse oneshot's provider construction so Inc 1 has zero provider-wiring
 # duplication; the synchronous run IS a oneshot call under the hood.
-from .oneshot import _build_provider
+from .oneshot import _build_provider, _validate_provider_or_400
 
 logger = get_logger("server")
 
@@ -482,8 +482,10 @@ async def create_agent_task(req: AgentTaskRequest, request: Request) -> AgentRun
                 "execute_shell_command is not permitted in a tool-capable "
                 "agent run: arbitrary shell escapes the egress allowlist "
                 "(AC-2). It requires the OS-isolation tier (ADR 0003 §3 "
-                "tier-d), which is deferred past the MVP. Use read-only tools "
-                "(read_file, grep, web_search, fetch_url) instead."
+                "tier-d), which is deferred past the MVP. Grant any other "
+                "tool instead — every non-shell builtin (read_file, grep, "
+                "web_search, fetch_url, write_file, apply_patch, …) is "
+                "permitted; only the shell tool is held back."
             ),
         )
 
@@ -499,7 +501,10 @@ async def create_agent_task(req: AgentTaskRequest, request: Request) -> AgentRun
             ),
         )
 
-    _v1_provider_or_400(provider_name)
+    # Fail fast on an unknown provider / missing key BEFORE minting a run
+    # record. Validation only — the actual provider is built inside the run by
+    # build_task_runner, so we don't construct one here just to discard it.
+    _validate_provider_or_400(provider_name)
 
     meta = registry.start_run(
         task=req.task, tools=req.tools, provider=provider_name, model=model,
@@ -569,11 +574,15 @@ def build_task_runner(
         # could probe. The tool carries this run as the parent context and
         # enforces child grant ⊆ this grant, child egress ⊆ this allowlist.
         if allow_spawn and "spawn_subagent" in tools:
-            # Adapt the engine's shell-consent (summary, cwd) to the spawn
-            # tool's single-arg (summary) contract — a spawn has no cwd, so we
-            # don't pass a meaningless "." that a consent UI might display.
+            # Adapt the engine's shell-consent (command, working_dir) to the
+            # spawn tool's single-arg (summary) contract. A spawn has no cwd, so
+            # pass "" explicitly rather than letting request_shell_consent's
+            # working_dir="." default stand in — a consent UI would otherwise
+            # display a meaningless ".". (Over /v1/agent/task there is no
+            # interactive consent channel today, so this only fires once one
+            # lands; keeping it accurate now avoids a misleading prompt then.)
             async def _spawn_consent(summary: str) -> bool:
-                return await engine.request_shell_consent(summary)
+                return await engine.request_shell_consent(summary, working_dir="")
 
             # Server-context spawn consent policy (tools.agent.spawn_consent):
             # "deny" (default, safe) | "auto" (allow API-driven spawns; subset

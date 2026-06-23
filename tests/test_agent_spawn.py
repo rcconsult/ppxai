@@ -178,6 +178,16 @@ class TestEgressSubset:
 
 class TestExecuteRefusals:
     @pytest.mark.asyncio
+    async def test_empty_grant_refused_no_run_minted(self, registry):
+        # Symmetry with /v1/agent/task (tools required, non-empty): a tool-free
+        # child can do no work, so spawn refuses up front and mints nothing.
+        t = _tool(registry, parent_tools=["read_file"], parent_allow=[])
+        out = await t.execute(task="x", tools=[])
+        assert out.startswith("Error: cannot spawn sub-agent")
+        assert "non-empty" in out
+        assert registry.list_runs() == []
+
+    @pytest.mark.asyncio
     async def test_escalation_refused_no_run_minted(self, registry):
         t = _tool(registry, parent_tools=["read_file"], parent_allow=[])
         out = await t.execute(task="x", tools=["write_file"])
