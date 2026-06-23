@@ -113,6 +113,15 @@ def _build_chat_payload(
         if hasattr(engine, "has_vision_sidecar") and engine.has_vision_sidecar()
         else None
     )
+    # v1.19.0 (debt Item 24): the shell-CLI route lets a text-only model
+    # still inspect an image via a system utility reading the file from
+    # disk. When neither native vision, the sidecar, nor this is available,
+    # `preprocess_file` returns ok=False and the send is blocked below.
+    shell_image_route = (
+        engine.can_shell_process_images()
+        if hasattr(engine, "can_shell_process_images")
+        else False
+    )
 
     # v1.18.6: precompute vision capability so we can detect the
     # image-on-non-vision-model case and emit a structured warning the
@@ -140,40 +149,85 @@ def _build_chat_payload(
             media_type=attachment.media_type,
             file_store=file_store,
             vl_captioner=vl_captioner,
+            shell_image_route=shell_image_route,
         )
         if not result.ok:
             text_chunks.append(
                 f"[Attachment error: {attachment.name} — {result.error}]"
             )
+            # v1.19.0 (debt Item 24): a non-vision image with no consumable
+            # path now fails loud (ok=False) instead of becoming a silent
+            # placeholder. Surface the actionable reason as a structured
+            # warning the client renders distinctly, then block the send.
+            is_image = (attachment.media_type or "").startswith("image/")
+            if is_image:
+                attachment_warnings.append({
+                    "type": "vision_unsupported",
+                    "severity": "error",
+                    "message": (
+                        f"{attachment.name} could not be attached: "
+                        f"{result.error}"
+                    ),
+                    "suggested_action": (
+                        "Switch to a vision-capable model "
+                        "(e.g. gpt-5.5, gemini-3-flash), restart with a "
+                        "reachable VL sidecar, or enable the shell tool "
+                        "with an image utility installed."
+                    ),
+                    "details": f"attachment: {attachment.name}, model: {model}",
+                })
             continue
 
-        # v1.18.6: surface the silent image-dropped-to-placeholder case
-        # as a structured WARNING event. The placeholder text remains in
-        # the message content (so the model still sees "this image was
-        # attempted") but the user now ALSO sees a system-level warning
-        # in chat — not just inferred from the model's confused response.
+        # v1.19.0 (debt Item 24): a non-vision image that still succeeded
+        # went through one of two indirect routes — the VL sidecar caption
+        # or the shell-CLI path. They behave differently, so the user
+        # notice must match the route ACTUALLY taken; a single "shell tool"
+        # message would mislead when the sidecar captioned it. The shell
+        # route tags its PreprocessResult.warnings with a distinctive
+        # marker; the sidecar path does not. The hard-fail case (no
+        # consumable path) was already handled above (ok=False). Payload
+        # shape mirrors the validator-warning renderer
+        # (`web/app.js::showValidationWarning`).
         is_image = (attachment.media_type or "").startswith("image/")
         if is_image and not model_has_vision:
-            # Payload shape mirrors the existing validator-warning renderer
-            # (`web/app.js::showValidationWarning`): {type, severity,
-            # message, details?, suggested_action?}. The web client lights
-            # this up as a warning chip in the chat transcript with no new
-            # render code. The TUI/Rich/Textual renderers treat it as a
-            # generic system warning. v1.18.6.
-            attachment_warnings.append({
-                "type": "vision_unsupported",
-                "severity": "warning",
-                "message": (
-                    f"{attachment.name} attached but the active model "
-                    f"({model or 'unknown'}) does not accept images. "
-                    f"It was sent as a text placeholder."
-                ),
-                "suggested_action": (
-                    "Switch to a vision-capable model "
-                    "(e.g. gpt-5.5, gemini-3-flash) before attaching images."
-                ),
-                "details": f"attachment: {attachment.name}, model: {model}",
-            })
+            took_shell_route = any(
+                "routed to shell-CLI inspection" in w
+                for w in (result.warnings or [])
+            )
+            if took_shell_route:
+                attachment_warnings.append({
+                    "type": "vision_via_tool",
+                    "severity": "info",
+                    "message": (
+                        f"{attachment.name}: the active model "
+                        f"({model or 'unknown'}) can't view images directly — "
+                        f"it will inspect the file via the shell tool (e.g. OCR) "
+                        f"instead of seeing it."
+                    ),
+                    "suggested_action": (
+                        "For direct visual understanding, switch to a "
+                        "vision-capable model (e.g. gpt-5.5, gemini-3-flash)."
+                    ),
+                    "details": f"attachment: {attachment.name}, model: {model}",
+                })
+            else:
+                # Sidecar caption path: the model gets a text description
+                # produced by the VL sidecar, not the image itself.
+                attachment_warnings.append({
+                    "type": "vision_via_caption",
+                    "severity": "info",
+                    "message": (
+                        f"{attachment.name}: the active model "
+                        f"({model or 'unknown'}) can't view images directly — "
+                        f"a vision sidecar captioned it and the model sees that "
+                        f"text description instead of the image."
+                    ),
+                    "suggested_action": (
+                        "For direct visual understanding, switch to a "
+                        "vision-capable model (e.g. gpt-5.5, gemini-3-flash)."
+                    ),
+                    "details": f"attachment: {attachment.name}, model: {model}",
+                })
 
         produced_non_text = False
         for part in result.parts:

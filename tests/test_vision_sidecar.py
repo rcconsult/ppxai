@@ -168,6 +168,67 @@ class TestHasVisionModel:
 
 
 # -----------------------------------------------------------------------------
+# can_shell_process_images (Item 24 — the third image-consumption path)
+# -----------------------------------------------------------------------------
+
+
+class TestCanShellProcessImages:
+    """`EngineClient.can_shell_process_images()` gates the shell-CLI image
+    route: it is True only when tools are enabled AND the shell tool is in
+    the active allowlist. A text-only model with the shell tool can then
+    OCR/convert a persisted image via a system CLI instead of failing."""
+
+    def _engine_with_tools(self, *, tools_enabled, tool_names):
+        from ppxai.engine import multimodal_ops
+        return SimpleNamespace(
+            tools_enabled=tools_enabled,
+            tool_manager=SimpleNamespace(
+                list_tools=lambda: [{"name": n} for n in tool_names]
+            ),
+        ), multimodal_ops
+
+    def test_true_when_shell_tool_enabled(self):
+        eng, mod = self._engine_with_tools(
+            tools_enabled=True,
+            tool_names=["execute_shell_command", "read_file"],
+        )
+        assert mod.session_can_shell_process_images(eng) is True
+
+    def test_false_when_tools_disabled(self):
+        eng, mod = self._engine_with_tools(
+            tools_enabled=False,
+            tool_names=["execute_shell_command"],
+        )
+        assert mod.session_can_shell_process_images(eng) is False
+
+    def test_false_when_shell_tool_absent(self):
+        eng, mod = self._engine_with_tools(
+            tools_enabled=True,
+            tool_names=["read_file", "write_file"],
+        )
+        assert mod.session_can_shell_process_images(eng) is False
+
+    def test_false_when_probe_raises(self):
+        from ppxai.engine import multimodal_ops
+
+        def _boom():
+            raise RuntimeError("tool manager unavailable")
+
+        eng = SimpleNamespace(
+            tools_enabled=True,
+            tool_manager=SimpleNamespace(list_tools=_boom),
+        )
+        # Defensive: any failure probing tools must be treated as "no
+        # shell route" rather than crashing the send.
+        assert multimodal_ops.session_can_shell_process_images(eng) is False
+
+    def test_engine_client_method_delegates(self, engine):
+        # The EngineClient wrapper exists and returns a bool. The default
+        # engine has no tools enabled, so it must be False.
+        assert engine.can_shell_process_images() is False
+
+
+# -----------------------------------------------------------------------------
 # caption_image
 # -----------------------------------------------------------------------------
 
@@ -390,8 +451,11 @@ class TestPreprocessingWithSidecar:
         finally:
             _restore_config(original)
 
-    def test_placeholder_when_sidecar_unavailable(self, engine):
-        """Without a sidecar, text-only models get the placeholder path."""
+    def test_fail_loud_when_sidecar_unavailable(self, engine):
+        """Item 24: without a sidecar AND without a shell route, a text-only
+        model can't consume the image — so instead of a silent placeholder
+        (which fed model hallucination) the attachment fails loud and the
+        error is surfaced inline as a `[Attachment error: …]` annotation."""
         from ppxai.commands.attach import PendingFile, build_multimodal_content
         import base64
 
@@ -417,8 +481,52 @@ class TestPreprocessingWithSidecar:
             file_store=engine.file_store,
             vl_captioner=None,  # no sidecar
         )
-        # Placeholder text should surface the "vision not supported" reason.
+        # The send is NOT silently degraded: no image_url part is emitted,
+        # and the failure surfaces as an inline attachment-error annotation.
+        assert not any(p.get("type") == "image_url" for p in parts)
         merged = "\n".join(
             p["text"] for p in parts if p.get("type") == "text"
         )
-        assert "does not support images" in merged
+        assert "[Attachment error: chart.png" in merged
+        assert "cannot read images" in merged
+        assert "vision-capable model" in merged
+
+    def test_shell_route_when_sidecar_unavailable(self, engine):
+        """Item 24: with no sidecar but `shell_image_route=True` (the session
+        has the shell tool enabled), a text-only model CAN consume the image
+        — the persisted on-disk path is surfaced so the model can OCR/inspect
+        it with an installed CLI instead of failing."""
+        from ppxai.commands.attach import PendingFile, build_multimodal_content
+        import base64
+
+        red_png = base64.b64decode(
+            b"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP"
+            b"4z8DwHwAFAQH/c4X0gAAAAABJRU5ErkJggg=="
+        )
+        pf = PendingFile(
+            name="chart.png",
+            path="/tmp/chart.png",
+            media_type="image/png",
+            size=len(red_png),
+            kind="image",
+            data=red_png,
+        )
+
+        parts, _refs = build_multimodal_content(
+            "describe",
+            [pf],
+            model="openai/gpt-oss-120b",
+            provider="local",
+            file_store=engine.file_store,
+            vl_captioner=None,  # no sidecar
+            shell_image_route=True,  # but the shell tool is available
+        )
+        # No image_url part (model can't view), no attachment-error: the
+        # shell-route hint surfaces the on-disk path for CLI inspection.
+        assert not any(p.get("type") == "image_url" for p in parts)
+        merged = "\n".join(
+            p["text"] for p in parts if p.get("type") == "text"
+        )
+        assert "[Attachment error" not in merged
+        assert "shell tool" in merged
+        assert "chart.png" in merged

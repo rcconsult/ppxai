@@ -100,8 +100,10 @@ export function processStreamEvent(event: StreamEvent, eventBus: ChatEventBus): 
 
         case 'warning':
             // v1.18.6: surface engine WARNING events (e.g. attached image
-            // dropped to text placeholder on non-vision model). Payload
-            // shape: {type, severity, message, details?, suggested_action?}
+            // on a non-vision model — v1.19.0 Item 24: now either routed
+            // via VL sidecar / shell tool, or the send is blocked, never a
+            // silent placeholder). Payload shape:
+            // {type, severity, message, details?, suggested_action?}
             // — same as the validator-warning shape the web client renders.
             try {
                 const data = JSON.parse(event.content);

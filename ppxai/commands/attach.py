@@ -790,6 +790,7 @@ def build_multimodal_content(
     provider: str = "",
     file_store: Any = None,
     vl_captioner: Any = None,
+    shell_image_route: bool = False,
 ) -> tuple:
     """Assemble OpenAI-format multimodal content from text + staged files.
 
@@ -846,6 +847,7 @@ def build_multimodal_content(
             media_type=pf.media_type,
             file_store=file_store,
             vl_captioner=vl_captioner,
+            shell_image_route=shell_image_route,
         )
         if not result.ok:
             # Surface the validation failure as a text annotation rather

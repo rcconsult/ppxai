@@ -169,8 +169,13 @@ class TestImageVisionModel:
 # -----------------------------------------------------------------------------
 
 
-class TestImageTextOnlyPlaceholder:
-    def test_text_only_model_emits_placeholder(self, store):
+class TestImageTextOnlyFailLoud:
+    """When no consumption path exists (no native vision, no VL sidecar,
+    no shell-CLI route), the image must FAIL LOUD — ``ok=False`` with an
+    actionable error — instead of silently degrading to a text placeholder
+    that invites the model to hallucinate the image contents. (Item 24.)"""
+
+    def test_text_only_model_fails_loud(self, store):
         result = preprocess_file(
             "chart.png",
             _make_png(),
@@ -178,37 +183,77 @@ class TestImageTextOnlyPlaceholder:
             provider="perplexity",
             file_store=store,
         )
-        assert result.ok is True  # valid file, just routed differently
-        assert len(result.parts) == 1
-        block = result.parts[0]
-        assert block["type"] == "text"
-        assert "[Image: chart.png" in block["text"]
-        assert "sonar-reasoning-pro" in block["text"]
-        assert "does not support images" in block["text"]
+        assert result.ok is False
+        assert not result.parts
+        assert result.error
+        # Names the offending model and the concrete remedies.
+        assert "sonar-reasoning-pro" in result.error
+        assert "vision-capable model" in result.error
+        assert "VL sidecar" in result.error
 
-    def test_no_model_provided_emits_placeholder(self, store):
-        # Empty model = no routing decision → placeholder path.
+    def test_no_model_provided_fails_loud(self, store):
+        # Empty model = no routing decision → still can't consume the image.
         result = preprocess_file(
             "x.png",
             _make_png(),
             file_store=store,
         )
-        assert result.ok is True
-        assert result.parts[0]["type"] == "text"
-        assert "no model provided" in result.parts[0]["text"]
+        assert result.ok is False
+        assert result.error
+        assert "no model is selected" in result.error
 
-    def test_placeholder_still_records_file_id(self, store):
+    def test_fail_loud_still_records_file_id(self, store):
         # Even when we can't send the image, the bytes should still be
-        # persisted in the store so tools (if any) can reach them.
+        # persisted in the store so a later session (with a sidecar or a
+        # shell utility) can reach them by file_id.
         result = preprocess_file(
             "x.png",
             _make_png(),
             model="o3-mini",  # text-only reasoning
             file_store=store,
         )
-        assert result.ok is True
+        assert result.ok is False
         assert result.file_id
         assert store.get(result.file_id) is not None
+
+
+class TestImageShellRoute:
+    """With ``shell_image_route=True`` (the active model has the shell tool
+    enabled), a text-only model can still consume the image: the persisted
+    on-disk path is surfaced so the model can OCR/inspect it with an
+    installed CLI (ImageMagick/tesseract) rather than failing. (Item 24.)"""
+
+    def test_shell_route_surfaces_on_disk_path(self, store):
+        result = preprocess_file(
+            "chart.png",
+            _make_png(),
+            model="sonar-reasoning-pro",  # text-only
+            file_store=store,
+            shell_image_route=True,
+        )
+        assert result.ok is True
+        assert len(result.parts) == 1
+        block = result.parts[0]
+        assert block["type"] == "text"
+        assert "chart.png" in block["text"]
+        # Surfaces the real on-disk path and a concrete shell suggestion.
+        meta = store.get_metadata(result.file_id)
+        assert str(meta.path) in block["text"]
+        assert "shell tool" in block["text"]
+        assert "Do NOT" in block["text"]  # explicit "do not guess" guard
+
+    def test_shell_route_requires_persisted_file(self, store):
+        # No file_store → nothing on disk → shell route can't apply, so we
+        # fall through to fail-loud rather than emitting a path-less hint.
+        result = preprocess_file(
+            "x.png",
+            _make_png(),
+            model="o3-mini",
+            file_store=None,
+            shell_image_route=True,
+        )
+        assert result.ok is False
+        assert result.error
 
 
 # -----------------------------------------------------------------------------
@@ -255,7 +300,7 @@ class TestImageVLCaptioner:
         assert captured["media_type"] == "image/png"
         assert captured["data_len"] == len(_make_png(50, 50))
 
-    def test_empty_caption_falls_through_to_placeholder(self, store):
+    def test_empty_caption_falls_through_to_fail_loud(self, store):
         def empty_captioner(name, media_type, data):
             return ""  # simulates captioner refusing / failing soft
 
@@ -266,9 +311,27 @@ class TestImageVLCaptioner:
             file_store=store,
             vl_captioner=empty_captioner,
         )
+        # An empty caption is not a usable result; with no shell route the
+        # image now fails loud rather than degrading to a placeholder.
+        assert result.ok is False
+        assert result.error
+        assert "VL sidecar" in result.error
+
+    def test_empty_caption_falls_through_to_shell_route(self, store):
+        def empty_captioner(name, media_type, data):
+            return ""
+
+        result = preprocess_file(
+            "x.png",
+            _make_png(),
+            model="openai/gpt-oss-20b",
+            file_store=store,
+            vl_captioner=empty_captioner,
+            shell_image_route=True,
+        )
+        # Captioner soft-failed, but the shell route can still consume it.
         assert result.ok is True
-        # Falls through to placeholder text.
-        assert "does not support images" in result.parts[0]["text"]
+        assert "shell tool" in result.parts[0]["text"]
 
     def test_captioner_not_called_for_vision_model(self, store):
         calls = []

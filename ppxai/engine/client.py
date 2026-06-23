@@ -463,6 +463,17 @@ class EngineClient:
         """
         return multimodal_ops.has_vision_sidecar()
 
+    def can_shell_process_images(self) -> bool:
+        """Return True if a text-only model could still process an attached
+        image via the shell tool + a system CLI reading the file from disk.
+
+        Delegates to `multimodal_ops.session_can_shell_process_images`. Used
+        by attachment flows to compute `preprocess_file(shell_image_route=)`
+        — the third image-consumption path (after native vision and the VL
+        sidecar) before the fail-loud rejection. v1.19.0 (debt Item 24).
+        """
+        return multimodal_ops.session_can_shell_process_images(self)
+
     def caption_image(
         self,
         name: str,

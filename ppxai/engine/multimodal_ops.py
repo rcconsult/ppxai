@@ -595,6 +595,34 @@ def has_vision_sidecar() -> bool:
     )
 
 
+_SHELL_TOOL_NAME = "execute_shell_command"
+
+
+def session_can_shell_process_images(engine) -> bool:
+    """Return True if a text-only model could still process an attached image
+    via the shell tool reading the persisted file from disk.
+
+    The shell-CLI route (v1.19.0, debt Item 24) lets a non-vision model
+    inspect an image with a system utility (ImageMagick `magick`/`convert`,
+    `tesseract` OCR, …). It is available when tools are enabled for the
+    session AND the shell tool is registered. We deliberately do NOT probe
+    for a specific binary here — if none is installed the model's shell call
+    fails with a real, reportable error rather than this gate silently
+    blocking a capable session.
+
+    Returns False on any attribute error so the caller falls through to the
+    fail-loud path (never a false positive).
+    """
+    try:
+        if not getattr(engine, "tools_enabled", False):
+            return False
+        tools = engine.tool_manager.list_tools()
+    except Exception as exc:  # pragma: no cover — defensive
+        logger.debug(f"session_can_shell_process_images: probe failed: {exc}")
+        return False
+    return any(t.get("name") == _SHELL_TOOL_NAME for t in tools)
+
+
 def caption_image(
     engine,
     name: str,
@@ -703,5 +731,6 @@ __all__ = [
     "get_context_attachments",
     "remove_context_attachment",
     "has_vision_sidecar",
+    "session_can_shell_process_images",
     "caption_image",
 ]

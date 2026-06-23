@@ -1271,13 +1271,20 @@ class PpxaiApp {
             const isImage = mediaType.startsWith('image/');
             if (isImage && this.state.modelSupportsVision === false) {
                 const activeModel = this.state.currentModel || 'unknown';
+                // v1.19.0 (Item 24): the model can't view images. We no
+                // longer promise a "text placeholder" — at send time the
+                // server either routes the image through a VL sidecar / the
+                // shell tool (if available) or BLOCKS the send entirely.
+                // Keep this attach-time notice honest about both outcomes.
                 this.showValidationWarning({
                     type: 'vision_unsupported',
                     severity: 'warning',
                     message: (
                         `${file.name} is an image, but the active model ` +
-                        `(${activeModel}) does not accept images. It will be ` +
-                        `sent as a text placeholder.`
+                        `(${activeModel}) can't view images. Unless a vision ` +
+                        `sidecar or the shell tool is available to inspect it, ` +
+                        `the send will be blocked — the image is never ` +
+                        `silently dropped or described from a placeholder.`
                     ),
                     suggested_action: (
                         'Switch to a vision-capable model ' +

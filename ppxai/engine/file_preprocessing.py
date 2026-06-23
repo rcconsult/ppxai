@@ -101,8 +101,11 @@ class PreprocessResult:
             For PDFs / Office: one `text` block containing the
             `<uploaded_file>` reference with metadata.
         file_id: SessionFileStore identifier when persisted bytes
-            exist (image, pdf, office). Empty for text-only files
-            and on failure.
+            exist (image, pdf, office). Empty for text-only files.
+            On failure it is usually empty, EXCEPT the image
+            fail-loud path (Item 24), which still surfaces the
+            file_id since the bytes were persisted before routing
+            failed — a later retry can reach the same asset.
         name: Canonical display name (basename only, sanitized).
         media_type: Canonical MIME type (may differ from what the
             caller declared — magic-byte sniffing wins).
@@ -224,6 +227,7 @@ def _preprocess_image(
     provider: Optional[str],
     file_store: Optional[SessionFileStore],
     vl_captioner: Optional[VLCaptioner],
+    shell_image_route: bool = False,
 ) -> PreprocessResult:
     """Validate + route an image attachment.
 
@@ -232,11 +236,19 @@ def _preprocess_image(
     2. If invalid → PreprocessResult(ok=False, error=<reason>).
     3. Persist bytes to SessionFileStore (if available) to get a
        stable file_id.
-    4. Route based on `supports_vision(model)`:
-        - True → emit image_url data URI content part.
-        - False + VL captioner configured → call it, emit text caption.
-        - False + no VL → emit "[Image: name — vision not supported]"
-          placeholder so the user sees what happened.
+    4. Route by image-consumption capability (v1.19.0 — fail-loud):
+        - model supports vision → emit image_url data URI content part.
+        - else VL captioner returns a caption → emit text caption.
+        - else `shell_image_route` (session has the shell tool + the
+          image is persisted on disk) → emit a text block telling the
+          model the on-disk path so it can OCR/convert via a system CLI
+          (ImageMagick, tesseract, …).
+        - else → ok=False. There is NO path that can consume the image,
+          so we do NOT emit a silent placeholder (which fed model
+          hallucination — debt Item 24). The caller surfaces the error
+          and blocks the send; the user must switch to a vision-capable
+          model, restart with a reachable VL sidecar, or enable the
+          shell tool with an image utility installed.
     """
     validation = validate_image(
         data,
@@ -257,12 +269,14 @@ def _preprocess_image(
 
     # Persist to the store (if wired) so the caller gets a stable file_id.
     file_id = ""
+    on_disk_path = ""  # absolute path for the shell-CLI route (v1.19.0)
     warnings: List[str] = []
     if file_store is not None:
         try:
             meta = file_store.save(name, data, media_type=canonical_mt)
             file_id = meta.file_id
             name = meta.name  # canonicalized basename
+            on_disk_path = str(meta.path)
         except OSError as exc:
             warnings.append(
                 f"file_store.save failed ({exc}); continuing without persistence"
@@ -330,25 +344,70 @@ def _preprocess_image(
                 warnings=warnings,
             )
 
-    # No vision support, no captioner — emit a placeholder. The user
-    # still sees the attachment was attempted and why it didn't go
-    # through, rather than a silent drop.
+    # Shell-CLI route (v1.19.0): the active model can't see the image and
+    # the sidecar didn't caption it, but the session has the shell tool AND
+    # the image is persisted on disk — so a system image utility
+    # (ImageMagick `magick`/`convert`, `tesseract`, `pdftoppm`, …) can read
+    # it from the path. Hand the model the on-disk path instead of a dead
+    # placeholder. We deliberately do NOT probe for a specific utility: if
+    # none is installed the model's shell call fails with a real, reportable
+    # error — honest, no silent drop, no upfront probe cost. Requires a real
+    # path; with no file_store there is nothing on disk to point at.
+    if shell_image_route and on_disk_path:
+        text_block = {
+            "type": "text",
+            "text": (
+                f"[Image attachment: {name} ({canonical_mt}). The active "
+                f"model cannot view images directly and no vision sidecar "
+                f"captioned it. The file is on disk at: {on_disk_path}\n"
+                f"Use the shell tool with an installed image utility "
+                f"(e.g. `tesseract {on_disk_path} -` for OCR, or "
+                f"`magick identify {on_disk_path}`) to inspect it. Do NOT "
+                f"guess the image's contents.]"
+            ),
+        }
+        return PreprocessResult(
+            ok=True,
+            parts=[text_block],
+            file_id=file_id,
+            name=name,
+            media_type=canonical_mt,
+            kind=KIND_IMAGE,
+            warnings=warnings + [
+                f"{name}: routed to shell-CLI inspection (model is not "
+                f"vision-capable; path surfaced for OCR/convert tools)"
+            ],
+        )
+
+    # No path can consume this image — fail loud (debt Item 24, v1.19.0).
+    # Previously this emitted an ok=True text placeholder, which the model
+    # then hallucinated a description for. We now reject so the caller
+    # blocks the send and the user gets an actionable instruction instead
+    # of a confidently-wrong answer about an image nobody could read.
     if model:
-        reason = f"{model} does not support images and no VL sidecar is configured"
+        reason = (
+            f"{model} cannot read images and no VL sidecar is reachable. "
+            f"Switch to a vision-capable model (e.g. gpt-5.5, gemini-3-flash), "
+            f"restart the session with a reachable VL sidecar, or enable the "
+            f"shell tool with an image utility (ImageMagick/tesseract) installed."
+        )
     else:
-        reason = "no model provided and no VL sidecar is configured"
-    placeholder = {
-        "type": "text",
-        "text": f"[Image: {name} — {reason}]",
-    }
+        reason = (
+            "no model is selected and no VL sidecar is reachable, so this "
+            "image cannot be processed. Select a vision-capable model or "
+            "configure a reachable VL sidecar, then re-attach."
+        )
     return PreprocessResult(
-        ok=True,  # The file was valid; we just couldn't send it as an image.
-        parts=[placeholder],
+        ok=False,
+        # The bytes WERE persisted above — surface the file_id even on the
+        # failure so a later retry (vision model / sidecar / shell utility)
+        # can reach the same on-disk asset without re-uploading. Item 24.
         file_id=file_id,
         name=name,
         media_type=canonical_mt,
         kind=KIND_IMAGE,
-        warnings=warnings + [reason],
+        warnings=warnings,
+        error=reason,
     )
 
 
@@ -747,6 +806,7 @@ def preprocess_file(
     media_type: Optional[str] = None,
     file_store: Optional[SessionFileStore] = None,
     vl_captioner: Optional[VLCaptioner] = None,
+    shell_image_route: bool = False,
 ) -> PreprocessResult:
     """Preprocess a file into OpenAI-format content parts.
 
@@ -782,8 +842,15 @@ def preprocess_file(
         vl_captioner: Optional callable `(name, media_type, data) -> str`
                       used to caption images for text-only models.
                       Phase 2.7 wires `engine.caption_image` here.
-                      When None and the model is text-only, image
-                      attachments become text placeholders.
+                      When None and the model is text-only, the image
+                      routes to the shell-CLI path (if `shell_image_route`)
+                      or fails loud (ok=False) — no silent placeholder.
+        shell_image_route: True when the session has the shell tool
+                      enabled, so a text-only model can still process an
+                      image via a system CLI (ImageMagick / tesseract)
+                      reading the persisted file from disk. Callers
+                      compute this from `engine.tools_enabled` + whether
+                      the shell tool is registered. v1.19.0 (debt Item 24).
 
     Returns:
         PreprocessResult with ok=True + populated parts on success,
@@ -811,6 +878,7 @@ def preprocess_file(
             provider=provider,
             file_store=file_store,
             vl_captioner=vl_captioner,
+            shell_image_route=shell_image_route,
         )
 
     if kind == KIND_TEXT:

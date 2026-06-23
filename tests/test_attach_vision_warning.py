@@ -218,13 +218,15 @@ class TestBuildChatPayloadVisionWarning:
         # Schema mirrors web's existing validator-warning shape so the
         # same renderer handles both. See web/app.js::showValidationWarning.
         assert w["type"] == "vision_unsupported"
-        assert w["severity"] == "warning"
+        # Item 24: this is now a hard error that BLOCKS the send (no silent
+        # placeholder degradation), so severity escalated warning → error.
+        assert w["severity"] == "error"
         assert "shot.png" in w["message"]
         assert "text-only-model" in w["message"]
         assert "vision-capable" in w["suggested_action"]
         assert w["details"]  # non-empty for debugging
-        # refs is empty here because text-only-model uses the placeholder
-        # path which doesn't produce an attachment_ref.
+        # refs is empty because the image failed loud — no part, no
+        # attachment_ref, the whole send is blocked upstream.
         assert refs == []
 
     def test_image_on_vision_model_no_warning(self):

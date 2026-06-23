@@ -522,15 +522,23 @@ def main():
                     #
                     # Phase 2.7: when a VL sidecar is configured and the
                     # current model is text-only, `preprocess_file` calls
-                    # `engine.caption_image` to generate a text caption
-                    # instead of dropping the image to a placeholder.
+                    # `engine.caption_image` to generate a text caption.
                     # `has_vision_sidecar()` returns False when the sidecar
-                    # is disabled or unconfigured, so we pass None in
-                    # that case and the placeholder fallback kicks in.
+                    # is disabled or unconfigured, so we pass None then.
                     vl_captioner = (
                         handler.engine_client.caption_image
                         if handler.engine_client.has_vision_sidecar()
                         else None
+                    )
+                    # v1.19.0 (debt Item 24): third image-consumption path —
+                    # if the shell tool is enabled, a text-only model can
+                    # still inspect an attached image via a system CLI
+                    # reading it from disk. When none of native vision /
+                    # sidecar / shell applies, `preprocess_file` returns
+                    # ok=False and the image is rejected (no silent
+                    # placeholder that the model would hallucinate over).
+                    shell_image_route = (
+                        handler.engine_client.can_shell_process_images()
                     )
                     # ADR 0006 Step 2/3: build_multimodal_content now
                     # returns (parts, attachment_refs); refs threaded
@@ -544,6 +552,7 @@ def main():
                         provider=handler.provider,
                         file_store=handler.engine_client.file_store,
                         vl_captioner=vl_captioner,
+                        shell_image_route=shell_image_route,
                     )
                     logger.info(
                         f"Sending multimodal message: {len(pending_files)} attachment(s), "

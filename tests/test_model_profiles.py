@@ -303,7 +303,17 @@ class TestBuiltinProfiles:
         with chat_template_kwargs={'enable_thinking': False}, max_tokens=1500)
         — both endpoints returned the exact string '8472'. Cross-host evidence
         in docs/lessons/qwen-27b-vl-empirically-supported.md."""
-        for model in ["Qwen/Qwen3.5-27B-FP8", "Qwen/Qwen3.6-27B-FP8"]:
+        # Include the `-agent` suffix variant: the codeai cluster serves the
+        # 3.6 model as `Qwen/Qwen3.6-27B-FP8-agent` (latency-tuned vLLM build;
+        # see config example commit df954033). The glob's trailing `*` matches
+        # it today — pin it so a future pattern tightening can't silently
+        # regress the actively-served model to supports_vision=False (the exact
+        # failure class Item 24 exists to prevent).
+        for model in [
+            "Qwen/Qwen3.5-27B-FP8",
+            "Qwen/Qwen3.6-27B-FP8",
+            "Qwen/Qwen3.6-27B-FP8-agent",
+        ]:
             profile = get_profile(model)
             assert profile.supports_vision is True, \
                 f"{model}: empirically VL-capable but supports_vision={profile.supports_vision}"

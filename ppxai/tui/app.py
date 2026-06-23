@@ -919,6 +919,9 @@ class PPXAIDEApp(App):
                         if self._engine_client.has_vision_sidecar()
                         else None
                     ),
+                    shell_image_route=(
+                        self._engine_client.can_shell_process_images()
+                    ),
                 )
                 self.pending_files.clear()
                 self._log.info(

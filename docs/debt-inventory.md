@@ -216,7 +216,66 @@ extract at that point).
 
 ---
 
-### Item 24 — VL sidecar `auto_caption` fallback silently no-ops on non-vision models
+### Item 24 — Non-vision image attach silently degraded to a hallucination-feeding placeholder  ✅ RESOLVED (v1.19.0)
+
+> **Resolution (2026-06-23, `feature/v1.19.0`):** both halves landed.
+>
+> **(1) Detection — already fixed earlier this cycle.**
+> `model_profiles.py` now carries `supports_vision=True` globs for
+> `Qwen/Qwen3.[56]-27B-FP8*` (and `Qwen3.6-35B-A3B-FP8*`); this session
+> also pinned the `-agent` suffix variant the codeai cluster serves
+> (`Qwen/Qwen3.6-27B-FP8-agent`) in `test_model_profiles.py`. The
+> originally-reported diagram now routes as a real `image_url` block.
+>
+> **(2) Fail-loud + tool route — this session.** The secondary "fallback
+> wired but doesn't run" class is closed by removing the silent
+> placeholder entirely. `_preprocess_image` (`file_preprocessing.py`) now
+> routes an image by a 4-way gate:
+>   1. native vision (`supports_vision`) → `image_url` block;
+>   2. VL sidecar caption (`vl_captioner`) → text caption;
+>   3. **NEW** shell-CLI route — when the session has the shell tool
+>      enabled (`EngineClient.can_shell_process_images()` →
+>      `multimodal_ops.session_can_shell_process_images`), surface the
+>      persisted on-disk path so the model can OCR/convert via a system
+>      utility (ImageMagick/tesseract). No upfront utility probe — if none
+>      is installed the model's shell call fails with a real, reportable
+>      error (user decision: "permit + surface the path");
+>   4. **else → `ok=False` fail-loud** with an actionable error (switch to
+>      a vision model / restart with a reachable sidecar / enable the shell
+>      tool). The bytes are still persisted and the `file_id` is surfaced on
+>      the failure result so a retry can reach the same asset.
+>
+> Consumers: the server chat route (`server/routes/chat.py`) blocks the
+> send on `ok=False` and emits a structured `vision_unsupported`
+> (severity **error**) warning; on indirect success it emits
+> `vision_via_tool` (shell route) or `vision_via_caption` (sidecar),
+> distinguished by the route marker in `PreprocessResult.warnings` so the
+> user notice matches the route actually taken. `commands/attach.py`
+> (Rich/Textual `/attach`) surfaces the failure inline as
+> `[Attachment error: …]` and never emits an `image_url`. Stale
+> "sent as a text placeholder" copy removed from `web/app.js` (attach-time
+> notice) and the VSCode `stream.ts` comment. All four call sites
+> (`chat.py`, `attach.py`, `tui/app.py`, `rich/main.py`) compute and thread
+> `shell_image_route`.
+>
+> **Tests:** `test_file_preprocessing.py` (`TestImageTextOnlyFailLoud`,
+> `TestImageShellRoute`, captioner-empty → fail-loud / shell-route),
+> `test_vision_sidecar.py` (`TestCanShellProcessImages`,
+> fail-loud + shell-route when sidecar unavailable),
+> `test_attach_vision_warning.py` (severity escalated warning→error).
+> 319 passing across the vision/attach/multimodal suites; VSCode `tsc`
+> clean.
+>
+> **Not addressed (intentional):** the dead `tools.vision_model.auto_caption`
+> config flag (read but never consulted) — superseded by the explicit
+> `vl_captioner`-wired-when-`has_vision_sidecar()` path; filed separately if
+> it ever needs removal. The original root-cause diagnosis (why the sidecar
+> didn't fire on coder.trad.int) is moot now that there is no silent
+> placeholder to fall into.
+
+---
+
+### Item 24 (historical) — VL sidecar `auto_caption` fallback silently no-ops on non-vision models
 
 **Affected files:** `ppxai/engine/multimodal_ops.py` (`auto_caption_image` and the
 `get_vision_model_config()` consumers around L575–640), `ppxai/engine/file_preprocessing.py`
@@ -823,6 +882,18 @@ a per-model capability-hint pass (cheap, anytime).
 
 For full closed-item rationale with commit references, see the per-version
 archived snapshots:
+
+- **Item 24 — non-vision image attach fail-loud + shell-CLI route (closed 2026-06-23, `feature/v1.19.0`):**
+  removed the silent "text placeholder" that fed model hallucination on
+  text-only models. Detection fixed earlier this cycle (`Qwen3.[56]-27B-FP8*`
+  vision globs + `-agent` variant pinned); this session added the shell-CLI
+  consumption route (`can_shell_process_images()` → on-disk path surfaced for
+  OCR/convert) and made the no-path case fail loud (`ok=False`, send blocked,
+  actionable error). Structured warnings disambiguate route taken
+  (`vision_via_tool` / `vision_via_caption` / `vision_unsupported`@error).
+  319 vision/attach/multimodal tests green; VSCode `tsc` clean. Full
+  resolution detail still inline under the RESOLVED Item 24 entry above
+  (kept with its evidence trail until the next archive sweep).
 
 - **Post-files-parity v1.18.8 review fixes (closed 2026-06-14):** beyond the
   `/files/*` items (25–28, 30–32), two parallel reviews + live desktop testing
