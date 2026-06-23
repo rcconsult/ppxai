@@ -643,12 +643,17 @@ def build_task_runner(
                 if control is not None:
                     # Refresh the run's cumulative token total from the engine
                     # before checking, so the token budget is actually enforced
-                    # (not just iterations/time). This EngineClient is run-local
-                    # (D1: one per run), so session.usage.total_tokens IS this
-                    # run's total. Then check() — BEFORE counting this iteration:
-                    # a budget of N lets N iterations run, stops at the (N+1)th.
+                    # (not just iterations/time). Read session.live_run_tokens —
+                    # the LIVE in-flight total chat_with_tools bumps per tool
+                    # iteration. (session.usage.total_tokens is only committed at
+                    # terminal STREAM_END, so it's stale/0 mid-run — reading it
+                    # left the token axis silently unenforced; v1.19.0 fix.) This
+                    # EngineClient is run-local (D1: one per run), so the live
+                    # total IS this run's total. check() runs BEFORE counting this
+                    # iteration: a budget of N lets N iterations run, stops at the
+                    # (N+1)th.
                     try:
-                        control.tokens_used = engine.session.usage.total_tokens
+                        control.tokens_used = engine.session.live_run_tokens
                     except AttributeError:
                         pass  # usage not available — leave token axis unenforced
                     control.check(now=time.monotonic())

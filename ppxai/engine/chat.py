@@ -260,6 +260,23 @@ def _get_bootstrap_tool_calling(ctx: ChatContext, model: str) -> dict:
         return {}
 
 
+def _bump_live_run_tokens(ctx: ChatContext, delta: int) -> None:
+    """Add `delta` tokens to the session's live in-flight run total (v1.19.0).
+
+    Kept in lockstep with `accumulated_usage.total_tokens` so the agent-platform
+    token budget can read a truthful running total at each tool-loop boundary —
+    `ctx.session.usage` is only committed at terminal STREAM_END. Best-effort:
+    a session shim without the attribute is silently skipped (never breaks a
+    normal chat). See `Session.live_run_tokens`."""
+    session = getattr(ctx, "session", None)
+    if session is None:
+        return
+    try:
+        session.live_run_tokens = getattr(session, "live_run_tokens", 0) + (delta or 0)
+    except AttributeError:
+        pass
+
+
 async def chat_simple(
     ctx: ChatContext,
     stream: bool
@@ -578,6 +595,17 @@ async def chat_with_tools(
     # Track accumulated usage
     accumulated_usage = UsageStats()
 
+    # v1.19.0: reset the live in-flight token mirror for this run. We bump it in
+    # lockstep with accumulated_usage.total_tokens below so the agent-platform
+    # token budget can read a truthful running total at each tool-loop boundary
+    # (ctx.session.usage is only committed at terminal STREAM_END). Live-only;
+    # never persisted. Guarded so a session shim without the attr won't crash.
+    if hasattr(ctx, "session") and ctx.session is not None:
+        try:
+            ctx.session.live_run_tokens = 0
+        except AttributeError:
+            pass
+
     # Profile-driven tool calling mode resolution (v1.16.0 Step 2)
     # Replaces the binary native/prompt decision with profile-aware routing.
     provider_caps = ctx.provider.get_capabilities_for_model(ctx.model) if ctx.provider else None
@@ -728,6 +756,7 @@ async def chat_with_tools(
                     accumulated_usage.prompt_tokens += usage.prompt_tokens
                     accumulated_usage.completion_tokens += usage.completion_tokens
                     accumulated_usage.total_tokens += usage.total_tokens
+                    _bump_live_run_tokens(ctx, usage.total_tokens)
 
         # Check interrupt after provider returns (stream=False blocks until complete)
         if ctx.is_interrupted:
@@ -756,6 +785,7 @@ async def chat_with_tools(
                             accumulated_usage.prompt_tokens += usage.prompt_tokens
                             accumulated_usage.completion_tokens += usage.completion_tokens
                             accumulated_usage.total_tokens += usage.total_tokens
+                            _bump_live_run_tokens(ctx, usage.total_tokens)
 
         # Build list of parsed tool calls
         tool_calls_list = []
@@ -1074,6 +1104,7 @@ async def chat_with_tools(
                             accumulated_usage.prompt_tokens += usage.prompt_tokens
                             accumulated_usage.completion_tokens += usage.completion_tokens
                             accumulated_usage.total_tokens += usage.total_tokens
+                            _bump_live_run_tokens(ctx, usage.total_tokens)
 
                 full_response = full_response.strip() or "[Tool execution completed but no summary generated]"
 

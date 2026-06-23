@@ -353,7 +353,7 @@ class EngineClient:
             prompt_tokens=usage.prompt_tokens,
             completion_tokens=usage.completion_tokens,
             total_tokens=usage.total_tokens,
-            total_cost=usage.estimated_cost,
+            estimated_cost=usage.estimated_cost,
             context_percentage=context_pct,
         )
 

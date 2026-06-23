@@ -1180,7 +1180,10 @@ export class HttpClient {
             case 'stream_chunk':
                 return { type: 'chunk', content: event.data || '' };
             case 'stream_end':
-                return { type: 'done', content: event.data || '' };
+                // v1.19.0: preserve metadata (carries {usage}) so the client
+                // reads the run's tokens/cost from STREAM_END instead of a
+                // redundant GET /usage round-trip.
+                return { type: 'done', content: event.data || '', metadata: event.metadata };
             case 'tool_call':
                 return { type: 'tool_call', content: JSON.stringify(event.data) };
             case 'tool_result':

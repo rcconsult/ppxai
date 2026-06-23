@@ -212,6 +212,15 @@ class SessionManager:
         }
         self.usage = UsageStats()
 
+        # Live, in-flight token total for the CURRENT chat_with_tools run
+        # (v1.19.0). `self.usage` is only committed at terminal STREAM_END, so
+        # it's stale at every tool-loop boundary mid-run. The agent-platform
+        # token budget (server/routes/agent_v1.py) needs a truthful running
+        # total to enforce a cap at a tool-call checkpoint, so chat_with_tools
+        # bumps this in lockstep with its local accumulated_usage. Reset at the
+        # start of each tool-loop run; NOT persisted (live-only mirror).
+        self.live_run_tokens: int = 0
+
         # Per-model usage tracking
         # Keys are "provider/model" strings, e.g., "perplexity/sonar-pro"
         self.usage_by_model: Dict[str, UsageStats] = {}

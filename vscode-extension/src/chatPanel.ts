@@ -434,6 +434,27 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             }
         });
 
+        // v1.19.0: usage now arrives on the STREAM_END event metadata, so we
+        // populate AppState's usage fields here (previously dead — never set,
+        // since usage is excluded from state_sync) and push the badge directly,
+        // instead of a redundant GET /usage round-trip in updateStatus().
+        this._eventBus.on('stream:usage', (usage) => {
+            const promptTokens = usage.prompt_tokens || 0;
+            const completionTokens = usage.completion_tokens || 0;
+            const totalTokens = usage.total_tokens || (promptTokens + completionTokens);
+            const estimatedCost = usage.estimated_cost || 0;
+            this._appState.update({
+                promptTokens,
+                completionTokens,
+                totalTokens,
+                estimatedCost,
+            });
+            postMessage({
+                type: 'usage',
+                usage: { promptTokens, completionTokens, totalTokens, estimatedCost },
+            });
+        });
+
         this._eventBus.on('stream:error', (content) => {
             postMessage({ type: 'error', content });
         });
@@ -747,6 +768,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             }
 
             await this.updateStatus();
+            await this.seedUsageFromBackend();  // v1.19.0: one-time usage seed for restored sessions
             await this.refreshHistory();
             await this.updateDebugLogStatus();
             await this.updateAgentStatus();  // v1.11.8
@@ -2520,13 +2542,37 @@ Review your previous actions and continue. If the task is complete, respond with
         await this.updateStatus();  // v1.12.0: Update usage badge after response
     }
 
+    /**
+     * v1.19.0: one-time usage seed at connect. Per-response usage is push-driven
+     * via 'stream:usage' (STREAM_END metadata), but a freshly-opened panel on a
+     * RESTORED session has no stream event yet — fetch the persisted totals once
+     * so the badge isn't blank until the first reply. Best-effort: a backend
+     * that isn't ready is silently skipped (the badge defaults to zero).
+     */
+    public async seedUsageFromBackend() {
+        if (!this._view) { return; }
+        try {
+            const usage = await this._backend.getUsage();
+            const promptTokens = usage.prompt_tokens || 0;
+            const completionTokens = usage.completion_tokens || 0;
+            const totalTokens = usage.total_tokens || (promptTokens + completionTokens);
+            const estimatedCost = usage.estimated_cost || 0;
+            this._appState.update({ promptTokens, completionTokens, totalTokens, estimatedCost });
+            this._view.webview.postMessage({
+                type: 'usage',
+                usage: { promptTokens, completionTokens, totalTokens, estimatedCost },
+            });
+        } catch {
+            // Backend not ready — leave usage at its zero default.
+        }
+    }
+
     public async updateStatus() {
         if (!this._view) { return; }
 
         try {
             const status = await this._backend.getStatus();
             const toolsStatus = await this._backend.getToolsStatus();
-            const usage = await this._backend.getUsage();
 
             // Sync full state to AppState
             this._appState.update({
@@ -2550,11 +2596,17 @@ Review your previous actions and continue. If the task is complete, respond with
                 agentMode: status.agent_mode || false,
                 debugLog: status.debug_log || false,
                 toolCount: toolsStatus.tool_count,
+                // v1.19.0: usage is NO LONGER fetched here. Per-response totals
+                // are pushed live via the 'stream:usage' event (from STREAM_END
+                // metadata) — see the eventBus subscription above. updateStatus
+                // is called from ~15 sites (incl. every response); a GET /usage
+                // each time was a redundant round-trip. Re-send the AppState
+                // copy so a status refresh doesn't blank a populated badge.
                 usage: {
-                    promptTokens: usage.prompt_tokens || 0,
-                    completionTokens: usage.completion_tokens || 0,
-                    totalTokens: usage.total_tokens || 0,
-                    estimatedCost: usage.estimated_cost || 0
+                    promptTokens: this._appState.get('promptTokens') || 0,
+                    completionTokens: this._appState.get('completionTokens') || 0,
+                    totalTokens: this._appState.get('totalTokens') || 0,
+                    estimatedCost: this._appState.get('estimatedCost') || 0
                 }
             });
         } catch (error) {

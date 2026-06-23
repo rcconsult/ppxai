@@ -1043,9 +1043,13 @@ class TestAgentRunRoutes:
     def test_task_token_budget_interrupts(self, client, monkeypatch):
         # Inc 6 (codex MEDIUM fix): the token budget must be ENFORCED from the
         # run's real usage, not just exposed. This stub grows
-        # session.usage.total_tokens by 40 per tool call; with a 100-token
-        # budget the run must interrupt once the cumulative total hits the cap
-        # (after iter 3: 0,40,80 ok -> 120 >= 100 stops).
+        # session.live_run_tokens by 40 per tool call — mirroring what the real
+        # chat_with_tools does (it bumps live_run_tokens in lockstep with its
+        # accumulated_usage at each provider STREAM_END; session.usage itself is
+        # only committed at the terminal STREAM_END, so it's stale mid-run, which
+        # is exactly why the budget check reads live_run_tokens, v1.19.0). With a
+        # 100-token budget the run must interrupt once the cumulative total hits
+        # the cap (after iter 3: 0,40,80 ok -> 120 >= 100 stops).
         c, _reg = client
         from ppxai.server.routes import agent_v1
         from ppxai.engine.types import Event, EventType
@@ -1061,7 +1065,12 @@ class TestAgentRunRoutes:
         class _Usage:
             def __init__(self): self.total_tokens = 0
         class _Session:
-            def __init__(self): self.usage = _Usage()
+            def __init__(self):
+                self.usage = _Usage()
+                # The live in-flight mirror the budget check actually reads;
+                # real chat_with_tools resets this at run start + bumps it
+                # per provider STREAM_END.
+                self.live_run_tokens = 0
         class _BaseTM:
             max_iterations = 99
             async def execute_tool(self, name, **kw): return "ran"
@@ -1075,8 +1084,9 @@ class TestAgentRunRoutes:
             def enable_tools(self): pass
             async def chat(self, task, stream=False):
                 for _ in range(10):
-                    # tokens accrue BEFORE the boundary check reads them
-                    self.session.usage.total_tokens += 40
+                    # tokens accrue BEFORE the boundary check reads them —
+                    # exactly as the real engine bumps live_run_tokens.
+                    self.session.live_run_tokens += 40
                     yield Event(type=EventType.TOOL_CALL, data={"tool": "read_file"})
                 yield Event(type=EventType.STREAM_END, data="done")
 

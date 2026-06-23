@@ -13,6 +13,25 @@ function formatTokens(count) {
     return String(count);
 }
 
+// Render the usage badge from a {promptTokens, completionTokens, totalTokens,
+// estimatedCost} payload. Shared by the 'status' message (initial/refresh) and
+// the 'usage' message (v1.19.0: pushed from STREAM_END metadata, no GET /usage).
+// Keeps the inline `has-cost` CSS-class fork the shared formatter doesn't handle.
+function renderUsageBadge(usage) {
+    if (!usage || !usageBadge) { return; }
+    const promptStr = formatTokens(usage.promptTokens || 0);
+    const completionStr = formatTokens(usage.completionTokens || 0);
+    const cost = usage.estimatedCost || 0;
+    if (cost > 0) {
+        usageBadge.textContent = promptStr + '↓/' + completionStr + '↑ $' + cost.toFixed(4);
+        usageBadge.classList.add('has-cost');
+    } else {
+        usageBadge.textContent = promptStr + '↓/' + completionStr + '↑';
+        usageBadge.classList.remove('has-cost');
+    }
+    usageBadge.title = 'Session: ' + (usage.totalTokens || 0).toLocaleString() + ' tokens, $' + cost.toFixed(4);
+}
+
 const messagesContainer = document.getElementById('messages');
 let typingIndicator = document.getElementById('typingIndicator');
 const messageInput = document.getElementById('messageInput');
@@ -1091,26 +1110,10 @@ window.addEventListener('message', (event) => {
                 toolsBadge.classList.remove('enabled');
                 toolsBadge.title = 'Click to enable tools';
             }
-            // Update usage badge (v1.12.0). Uses the shared
-            // token-formatter (v1.18.0 Phase 4). As of Phase 5d the
-            // zero-cost suppression behaviour is the canonical one
-            // across Rich/web/VSCode — formatUsageBadge in
-            // ppxai/common/format.py omits "$0.0000" when cost == 0.
-            // We keep the inline fork here for the `has-cost` CSS
-            // class toggle, which the shared helper doesn't handle.
-            if (message.usage && usageBadge) {
-                const promptStr = formatTokens(message.usage.promptTokens);
-                const completionStr = formatTokens(message.usage.completionTokens);
-                const cost = message.usage.estimatedCost;
-                if (cost > 0) {
-                    usageBadge.textContent = promptStr + '↓/' + completionStr + '↑ $' + cost.toFixed(4);
-                    usageBadge.classList.add('has-cost');
-                } else {
-                    usageBadge.textContent = promptStr + '↓/' + completionStr + '↑';
-                    usageBadge.classList.remove('has-cost');
-                }
-                usageBadge.title = 'Session: ' + message.usage.totalTokens.toLocaleString() + ' tokens, $' + cost.toFixed(4);
-            }
+            // Update usage badge (v1.12.0). Zero-cost suppression is the
+            // canonical behaviour across Rich/web/VSCode (Phase 5d). Rendering
+            // is shared with the 'usage' message via renderUsageBadge().
+            renderUsageBadge(message.usage);
             // Sync verbose/debug indicators from full status
             if (message.toolsVerbose !== undefined) {
                 verboseToolsIndicator.classList.toggle('active', message.toolsVerbose);
@@ -1118,6 +1121,11 @@ window.addEventListener('message', (event) => {
             if (message.debugLog !== undefined) {
                 debugLogIndicator.classList.toggle('active', message.debugLog);
             }
+            break;
+
+        case 'usage':
+            // v1.19.0: usage pushed straight from STREAM_END metadata.
+            renderUsageBadge(message.usage);
             break;
 
         case 'verboseToolsStatus':

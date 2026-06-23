@@ -539,5 +539,73 @@ class TestSessionAlternationFix:
         assert session.messages[0].role == "user"
 
 
+class TestLiveRunTokens:
+    """v1.19.0: chat_with_tools must keep session.live_run_tokens in lockstep
+    with its in-flight usage, so the agent-platform token budget can read a
+    truthful running total mid-loop (session.usage is only committed at terminal
+    STREAM_END). This is the integration guard for the budget-enforcement bug:
+    a stub-only test masked it because the real engine never updated the source
+    the budget check read."""
+
+    @pytest.mark.asyncio
+    async def test_live_run_tokens_tracks_provider_usage(self):
+        from ppxai.engine.types import UsageStats
+
+        with patch.dict(os.environ, {"PERPLEXITY_API_KEY": "test-key"}):
+            client = EngineClient()
+            client.set_provider("perplexity")
+            client.set_model("sonar")
+        client.tools_enabled = True
+        client.session.messages = []
+
+        with patch.object(client.provider, "chat") as mock_chat:
+            # One turn, no tool calls: provider reports 123 tokens at STREAM_END.
+            mock_chat.return_value = async_event_generator([
+                Event(EventType.STREAM_START, {"model": "sonar"}),
+                Event(
+                    EventType.STREAM_END, "done",
+                    {"usage": UsageStats(prompt_tokens=100, completion_tokens=23,
+                                         total_tokens=123)},
+                ),
+            ])
+            async for _ in client.chat("hi", stream=True):
+                pass
+
+        # live_run_tokens reflects the run's tokens (NOT 0 — the pre-fix bug).
+        assert client.session.live_run_tokens == 123
+
+    @pytest.mark.asyncio
+    async def test_live_run_tokens_reset_between_turns(self):
+        from ppxai.engine.types import UsageStats
+
+        with patch.dict(os.environ, {"PERPLEXITY_API_KEY": "test-key"}):
+            client = EngineClient()
+            client.set_provider("perplexity")
+            client.set_model("sonar")
+        client.tools_enabled = True
+        client.session.messages = []
+
+        def _turn(n):
+            return async_event_generator([
+                Event(EventType.STREAM_START, {"model": "sonar"}),
+                Event(EventType.STREAM_END, f"r{n}",
+                      {"usage": UsageStats(prompt_tokens=n, completion_tokens=n,
+                                           total_tokens=2 * n)}),
+            ])
+
+        with patch.object(client.provider, "chat") as mock_chat:
+            mock_chat.return_value = _turn(50)
+            async for _ in client.chat("first", stream=True):
+                pass
+            assert client.session.live_run_tokens == 100
+
+            # Second turn RESETS the live counter — it's per-run, not cumulative
+            # (session.usage carries the cumulative total instead).
+            mock_chat.return_value = _turn(10)
+            async for _ in client.chat("second", stream=True):
+                pass
+            assert client.session.live_run_tokens == 20
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

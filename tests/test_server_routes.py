@@ -282,7 +282,7 @@ class TestStateRoute:
         # SSE_SYNC_FIELDS don't accidentally leak frequently-mutating
         # state into the reconnect snapshot.
         for excluded in ("total_tokens", "prompt_tokens",
-                         "completion_tokens", "total_cost",
+                         "completion_tokens", "estimated_cost",
                          "is_streaming", "cancel_requested"):
             assert excluded not in body
 

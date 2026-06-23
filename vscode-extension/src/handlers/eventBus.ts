@@ -45,6 +45,17 @@ export interface ContextData {
     truncated?: boolean;
 }
 
+/** Usage totals carried on the STREAM_END event's metadata (v1.19.0).
+ *  The engine bundles `metadata = {"usage": asdict(accumulated_usage)}` onto
+ *  STREAM_END, so the client gets the run's tokens/cost WITHOUT a follow-up
+ *  GET /usage round-trip. Field names are the wire (snake_case) shape. */
+export interface UsageData {
+    prompt_tokens?: number;
+    completion_tokens?: number;
+    total_tokens?: number;
+    estimated_cost?: number;
+}
+
 /** Tool group start data (v1.16.0) */
 export interface ToolGroupStartData {
     iteration?: number;
@@ -85,6 +96,7 @@ export interface StreamEvents {
     'stream:tool_group_end': (data: ToolGroupEndData) => void;
     'stream:status': (content: string) => void;
     'stream:done': (content: string) => void;
+    'stream:usage': (data: UsageData) => void;
     'stream:error': (content: string) => void;
     'stream:warning': (data: WarningEventData) => void;
 }

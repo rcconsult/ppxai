@@ -8,7 +8,7 @@
  */
 
 import { StreamEvent } from '../httpClient';
-import { ChatEventBus, ToolCallData, ToolResultData, ContextData } from './eventBus';
+import { ChatEventBus, ToolCallData, ToolResultData, ContextData, UsageData } from './eventBus';
 
 /**
  * Process a stream event and emit typed events via EventBus.
@@ -114,6 +114,13 @@ export function processStreamEvent(event: StreamEvent, eventBus: ChatEventBus): 
             break;
 
         case 'done':
+            // v1.19.0: STREAM_END carries {usage} in metadata. Surface it as a
+            // typed event so chatPanel populates AppState + the usage badge
+            // WITHOUT a redundant GET /usage round-trip.
+            const usage = event.metadata?.usage as UsageData | undefined;
+            if (usage && typeof usage === 'object') {
+                eventBus.emit('stream:usage', usage);
+            }
             eventBus.emit('stream:done', event.content);
             break;
     }

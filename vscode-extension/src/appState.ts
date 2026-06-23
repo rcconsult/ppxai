@@ -72,7 +72,7 @@ export interface AppStateFields {
     totalTokens: number;
     promptTokens: number;
     completionTokens: number;
-    totalCost: number;
+    estimatedCost: number;
     contextPercentage: number;
 
     // --- Debug ---

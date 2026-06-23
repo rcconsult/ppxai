@@ -17,7 +17,7 @@ class TestAppStateBasics:
         assert state.get("tools_enabled") is False
         assert state.get("is_streaming") is False
         assert state.get("total_tokens") == 0
-        assert state.get("total_cost") == 0.0
+        assert state.get("estimated_cost") == 0.0
 
     def test_initial_values(self):
         state = AppState(initial={"provider": "openai", "model": "gpt-4.1-mini"})
@@ -56,8 +56,8 @@ class TestAppStateBasics:
         state.set("total_tokens", 1500)
         assert state.get("total_tokens") == 1500
 
-        state.set("total_cost", 0.0042)
-        assert state.get("total_cost") == 0.0042
+        state.set("estimated_cost", 0.0042)
+        assert state.get("estimated_cost") == 0.0042
 
         state.set("working_dir", "/home/user/project")
         assert state.get("working_dir") == "/home/user/project"
