@@ -26,7 +26,7 @@ from __future__ import annotations
 
 from typing import List, Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from ...common.logger import get_logger
@@ -36,6 +36,36 @@ from ..state import get_secret_provider
 logger = get_logger(__name__)
 
 router = APIRouter()
+
+
+def _caller_owner(request: Request) -> Optional[str]:
+    """Owner of the authenticated caller, or None when the caller is an
+    unscoped operator.
+
+    The auth middleware stashes the resolved TokenRecord on
+    ``request.state.principal`` ONLY when a bearer was validated. Its ABSENCE
+    means auth is off, or the request came through a loopback exemption — the
+    local operator bootstrapping a store — who administers ALL tokens.
+
+    Returns the sentinel-free owner string when a principal is present, else
+    None to signal "unscoped" (see :func:`_is_unscoped`).
+    """
+    principal = getattr(getattr(request, "state", None), "principal", None)
+    if principal is None:
+        return None
+    return getattr(principal, "owner", None)
+
+
+def _is_unscoped(request: Request) -> bool:
+    """True when the caller may administer tokens for ANY owner.
+
+    An authenticated remote caller is scoped to its OWN owner (can only
+    list/mint/revoke its own tokens). Only the loopback/auth-disabled operator
+    — no principal on the request — is unscoped. This is deliberately NOT a
+    token *role*: gating on a role a caller could mint for itself would let any
+    bearer escalate to full token administration. Proper RBAC is Inc 8b.
+    """
+    return getattr(getattr(request, "state", None), "principal", None) is None
 
 
 class MintTokenRequest(BaseModel):
@@ -76,7 +106,7 @@ def _meta(record) -> TokenMeta:
 
 
 @router.get("/v1/tokens", response_model=List[TokenMeta])
-async def list_tokens() -> List[TokenMeta]:
+async def list_tokens(request: Request) -> List[TokenMeta]:
     chain = get_secret_provider()
     try:
         records = chain.list()
@@ -89,14 +119,30 @@ async def list_tokens() -> List[TokenMeta]:
                 "provider under server.secrets to manage tokens."
             ),
         )
+    # Owner-scope: a remote caller may only enumerate its OWN tokens, never
+    # another owner's token ids / metadata. The unscoped operator (loopback /
+    # auth-disabled) sees everything.
+    if not _is_unscoped(request):
+        owner = _caller_owner(request)
+        records = [r for r in records if r.owner == owner]
     return [_meta(r) for r in records]
 
 
 @router.post("/v1/tokens", response_model=MintTokenResponse, status_code=201)
-async def mint_token(req: MintTokenRequest) -> MintTokenResponse:
+async def mint_token(req: MintTokenRequest, request: Request) -> MintTokenResponse:
     chain = get_secret_provider()
     if not req.owner.strip():
         raise HTTPException(status_code=422, detail="owner must be non-empty")
+    # Owner-scope: a remote caller may only mint tokens under its OWN owner.
+    # Without this, any bearer could mint a token labelled with another owner,
+    # then re-authenticate as it to list/revoke that owner's tokens — defeating
+    # the owner-scoping on GET/DELETE. The unscoped operator (loopback /
+    # auth-disabled) may mint for any owner (bootstrap / provisioning).
+    if not _is_unscoped(request) and req.owner != _caller_owner(request):
+        raise HTTPException(
+            status_code=403,
+            detail="You may only mint tokens for your own owner.",
+        )
     try:
         material, record = chain.mint(
             owner=req.owner,
@@ -120,8 +166,26 @@ async def mint_token(req: MintTokenRequest) -> MintTokenResponse:
 
 
 @router.delete("/v1/tokens/{token_id}")
-async def revoke_token(token_id: str) -> dict:
+async def revoke_token(token_id: str, request: Request) -> dict:
     chain = get_secret_provider()
+    # Owner-scope: a remote caller may revoke only a token it OWNS. Authorize
+    # BEFORE revoking, and hide a foreign/unknown token behind the SAME 404 so
+    # ownership can't be probed via status code. The unscoped operator
+    # (loopback / auth-disabled) may revoke any token.
+    if not _is_unscoped(request):
+        owner = _caller_owner(request)
+        try:
+            records = chain.list()
+        except CapabilityError:
+            records = None
+        if records is not None:
+            target = next(
+                (r for r in records if r.token_id == token_id), None
+            )
+            if target is None or target.owner != owner:
+                raise HTTPException(
+                    status_code=404, detail=f"no token with id {token_id!r}"
+                )
     try:
         revoked = chain.revoke(token_id)
     except CapabilityError:

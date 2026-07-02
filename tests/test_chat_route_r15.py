@@ -86,6 +86,9 @@ def _make_session(engine_chat_mock):
     })
     engine.file_store = None
     engine.has_vision_sidecar = lambda: False
+    # No shell-CLI image route either — so an image on the non-vision model has
+    # no consumable path and must fail loud (Item 24).
+    engine.can_shell_process_images = lambda: False
     engine.chat = engine_chat_mock
     return Session(id="test-r15", engine=engine, lock=asyncio.Lock())
 
@@ -171,3 +174,51 @@ class TestChatEndpointR15Guard:
         resp = tc.post("/chat", json={"message": msg})
         assert resp.status_code == 200
         chat_mock.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# Item 24 (v1.19.0 review fix): a hard attachment failure BLOCKS the send.
+# An image on a text-only model with no VL sidecar / shell route escalates to
+# a severity="error" warning; the route must emit that warning + an error and
+# NEVER call the provider — not stream a completion over an "[Attachment
+# error: ...]" placeholder as if the model had read the file.
+# ---------------------------------------------------------------------------
+
+_RED_PIXEL_PNG_B64 = (
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4z8DwHwAFAQH/c4"
+    "X0gAAAAABJRU5ErkJggg=="
+)
+
+
+def _non_vision_client(chat_mock):
+    """A /chat client whose engine is on a genuinely non-vision model
+    ("text-only-model" — supports_vision=False), with no VL sidecar and no
+    shell-CLI image route, so an image attachment has no consumable path."""
+    session = _make_session(chat_mock)
+    session.engine.model = "text-only-model"
+    session.engine.provider_name = "custom"
+    app = FastAPI()
+    app.include_router(chat_router)
+    app.dependency_overrides[get_session] = lambda: session
+    return TestClient(app)
+
+
+class TestItem24BlocksUnreadableAttachment:
+    def test_image_on_non_vision_model_blocks_send(self, chat_mock):
+        tc = _non_vision_client(chat_mock)
+        resp = tc.post("/chat", json={
+            "message": "what is in this image?",
+            "files": [{
+                "name": "shot.png",
+                "media_type": "image/png",
+                "data": _RED_PIXEL_PNG_B64,
+            }],
+        })
+        assert resp.status_code == 200  # SSE: 200 + error event
+        body = _sse_body(resp)
+        # The structured vision warning is surfaced...
+        assert '"type": "warning"' in body
+        assert "vision_unsupported" in body
+        # ...and the send is terminated with an error, never reaching the model.
+        assert '"type": "error"' in body
+        chat_mock.assert_not_called()

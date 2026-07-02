@@ -2081,8 +2081,6 @@ class PpxaiApp {
         let fullContent = '';
         // Track inline image markdown appended during streaming so stream_end doesn't lose it
         this._streamInlineImages = '';
-        // v1.19.0: usage captured from STREAM_END metadata (set in handleStreamEvent)
-        this._streamCapturedUsage = null;
 
         // Track this as the current assistant message for correct tool call ordering
         this.state.currentAssistantMessage = msgEl;
@@ -2111,11 +2109,11 @@ class PpxaiApp {
             this.elements.streamingBadge.classList.add('hidden');
             this.state.currentAbortController = null;
             this.state.currentAssistantMessage = null;
-            // v1.19.0: prefer usage captured from STREAM_END metadata (no
-            // round-trip); fall back to GET /usage only if the stream carried
-            // none (e.g. an aborted/empty turn).
-            await this.updateUsage(this._streamCapturedUsage);
-            this._streamCapturedUsage = null;
+            // The usage badge shows the CUMULATIVE session total, so fetch it
+            // via GET /usage (authoritative running total). STREAM_END metadata
+            // carries only the PER-TURN usage — rendering that made the
+            // "Session" badge shrink/fluctuate each turn instead of accumulating.
+            await this.updateUsage();
             await this.updateContextInfo();
             this.scrollToBottom();
         }
@@ -2153,14 +2151,6 @@ class PpxaiApp {
                 break;
 
             case 'stream_end':
-                // v1.19.0: capture the run's usage from STREAM_END metadata so
-                // the finally-block badge update reads it directly instead of a
-                // redundant GET /usage round-trip. Server bundles
-                // metadata = {usage: {prompt_tokens, completion_tokens,
-                // total_tokens, estimated_cost}} onto this event.
-                if (event.metadata && event.metadata.usage) {
-                    this._streamCapturedUsage = event.metadata.usage;
-                }
                 // v1.13.2: Clear thinking indicator on stream end
                 this.clearThinkingIndicator(contentEl);
                 // Full response (especially when tools are used).
@@ -3723,10 +3713,11 @@ class PpxaiApp {
     /**
      * Update the usage badge + AppState usage fields.
      *
-     * v1.19.0: pass `usageData` (the STREAM_END `metadata.usage` payload) to
-     * render directly with NO round-trip — the server already bundled the run's
-     * tokens/cost onto the stream-end event. Call with no argument (connect /
-     * provider switch) to fetch via GET /usage as before.
+     * The badge is a CUMULATIVE session total, so it reads from GET /usage
+     * (the authoritative running total the server accumulates across turns).
+     * `usageData` may be passed to render a pre-fetched snapshot without the
+     * round-trip, but it MUST be cumulative — passing a per-turn delta makes
+     * the "Session" badge shrink/fluctuate.
      */
     async updateUsage(usageData = null) {
         try {

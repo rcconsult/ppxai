@@ -102,3 +102,7 @@ discoverable later.
   `PPXAI_CONFIG_FILE` (often set via repo-root `.env`) overrides
   `./ppxai-config.json`; editing the obvious project config can
   silently have no effect on the server
+- [loopback-ui-auth-exemption.md](loopback-ui-auth-exemption.md) —
+  with auth on, loopback `/chat` + `/files/read` are bearer-EXEMPT by
+  source-IP alone (any local process, not just the operator's browser);
+  deliberate desktop-UX choice, not a bug — don't drive-by "fix" it

@@ -33,6 +33,9 @@ from typing import Optional
 from fastapi import Request
 from fastapi.responses import JSONResponse
 
+from .secrets import CAP_MINT, EnvSecretProvider
+from .state import get_agent_run_registry, get_secret_provider
+
 
 ENV_TOKEN_VAR = "PPXAI_API_TOKEN"
 
@@ -81,9 +84,6 @@ def _provider_enforces_auth() -> bool:
     out the local operator.
     """
     try:
-        from .secrets import CAP_MINT, EnvSecretProvider
-        from .state import get_secret_provider
-
         chain = get_secret_provider()
         for provider in getattr(chain, "providers", []):
             if isinstance(provider, EnvSecretProvider):
@@ -124,9 +124,6 @@ def _is_loopback(request: Request) -> bool:
 def _has_mutable_store() -> bool:
     """True when a mint-capable provider is configured."""
     try:
-        from .secrets import CAP_MINT
-        from .state import get_secret_provider
-
         return any(
             CAP_MINT in p.capabilities()
             for p in get_secret_provider().providers
@@ -198,8 +195,6 @@ def _is_loopback_unowned_run_read(request: Request) -> bool:
     if not m:
         return False
     try:
-        from .state import get_agent_run_registry
-
         meta = get_agent_run_registry().get_run(m.group("run_id"))
     except Exception:
         return False
@@ -300,8 +295,6 @@ def check_request(request: Request) -> Optional[JSONResponse]:
             },
             headers={"WWW-Authenticate": _WWW_AUTHENTICATE},
         )
-
-    from .state import get_secret_provider
 
     record = get_secret_provider().resolve(parts[1])
     if record is None:

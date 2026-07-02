@@ -98,6 +98,16 @@ class TestPathScoping:
         d = p.check("https://api.github.com/user/keys")
         assert isinstance(d, Deny) and "not in allowed prefixes" in d.reason
 
+    def test_sibling_path_not_over_matched(self):
+        # A prefix without a trailing slash must NOT leak to a sibling that
+        # merely shares the string prefix: "/repos/octocat" allows
+        # "/repos/octocat" + "/repos/octocat/..." but NOT "/repos/octocat-x".
+        p = NetworkPolicy([{"host": "api.github.com", "paths": ["/repos/octocat"]}])
+        assert isinstance(p.check("https://api.github.com/repos/octocat"), Allow)
+        assert isinstance(p.check("https://api.github.com/repos/octocat/contents"), Allow)
+        leak = p.check("https://api.github.com/repos/octocat-private/secret")
+        assert isinstance(leak, Deny) and "not in allowed prefixes" in leak.reason
+
     def test_rule_id_is_index(self):
         p = NetworkPolicy(["a.com", "b.com"])
         a = p.check("https://b.com/")

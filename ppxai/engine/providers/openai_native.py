@@ -207,6 +207,13 @@ class OpenAINativeProvider(BaseProvider):
         Returns:
             Assistant's response content
         """
+        # Codex / Pro models 404 on Chat Completions — route them through the
+        # Responses API just like chat() / oneshot() do.
+        if self._is_responses_api_model(model):
+            return self._oneshot_responses(messages, model, self._get_max_tokens(model)).get(
+                "content", ""
+            )
+
         api_messages = self._convert_messages(messages)
 
         request_kwargs = {
@@ -241,11 +248,21 @@ class OpenAINativeProvider(BaseProvider):
         ({content, finish_reason, model, usage}). Native OpenAI uses the
         same Chat Completions SDK path as the compat provider, so this
         composes the existing message conversion + token-param handling.
+
+        Codex / Pro models (RESPONSES_API_PREFIXES) 404 on Chat Completions,
+        so they route through the Responses API here exactly as `chat()` does
+        — otherwise `/v1/oneshot` and `/v1/agent/run` would raise for a whole
+        model class that works fine over `/chat`. (response_format is not
+        forwarded on the Responses path — structured output there uses a
+        different knob; out of scope for this stateless call.)
         """
         messages: List[Message] = []
         if system:
             messages.append(Message(role="system", content=system))
         messages.append(Message(role="user", content=prompt))
+
+        if self._is_responses_api_model(model):
+            return self._oneshot_responses(messages, model, max_tokens)
 
         request_kwargs: Dict[str, Any] = {
             "model": model,
@@ -281,6 +298,66 @@ class OpenAINativeProvider(BaseProvider):
         return {
             "content": msg.content or "",
             "finish_reason": response.choices[0].finish_reason,
+            "model": getattr(response, "model", None) or model,
+            "usage": usage_dict,
+        }
+
+    def _oneshot_responses(
+        self,
+        messages: List[Message],
+        model: str,
+        max_tokens: Optional[int],
+    ) -> Dict[str, Any]:
+        """Stateless single-turn completion via the Responses API.
+
+        Codex / Pro models return 404 on Chat Completions, so oneshot for
+        those routes here. Non-streaming, sync (the caller offloads to a
+        thread). Returns the same {content, finish_reason, model, usage}
+        shape as the Chat Completions oneshot path.
+        """
+        instructions, input_items = self._convert_messages_for_responses(messages)
+
+        request_kwargs: Dict[str, Any] = {"model": model, "input": input_items}
+        if instructions:
+            request_kwargs["instructions"] = instructions
+
+        token_budget = max_tokens if max_tokens is not None else self._get_max_tokens(model)
+        if token_budget:
+            request_kwargs["max_output_tokens"] = token_budget
+
+        extra_body = self._get_extra_body(model)
+        if extra_body:
+            request_kwargs["extra_body"] = extra_body
+
+        response = self.client.responses.create(**request_kwargs, stream=False)
+
+        # Extract content from output items (same walk as _non_stream_responses).
+        content = ""
+        if hasattr(response, "output"):
+            for item in response.output:
+                if getattr(item, "type", None) != "message":
+                    continue
+                item_content = getattr(item, "content", None)
+                if isinstance(item_content, list):
+                    for part in item_content:
+                        if getattr(part, "type", None) == "output_text":
+                            content += getattr(part, "text", "")
+                elif isinstance(item_content, str):
+                    content += item_content
+        if not content and hasattr(response, "output_text"):
+            content = response.output_text or ""
+
+        usage_stats = self._parse_responses_usage(getattr(response, "usage", None))
+        usage_dict = None
+        if usage_stats is not None:
+            usage_dict = {
+                "prompt_tokens": usage_stats.prompt_tokens,
+                "completion_tokens": usage_stats.completion_tokens,
+                "total_tokens": usage_stats.total_tokens,
+            }
+        return {
+            "content": content,
+            "finish_reason": "stop",
             "model": getattr(response, "model", None) or model,
             "usage": usage_dict,
         }

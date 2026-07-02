@@ -144,6 +144,18 @@ class TestBuildProviderWiring:
         oneshot_mod._build_provider("gemini")
         assert provider.enable_grounding is False
 
+    def test_flag_off_forces_off_even_when_provider_defaults_on(self, monkeypatch):
+        # Regression: a Gemini provider is constructed with enable_grounding=True
+        # (the config/__init__ default). With the oneshot flag OFF, the oneshot
+        # perimeter must FORCE grounding off — otherwise every oneshot silently
+        # performs live Google Search, breaking the default-OFF guarantee.
+        provider = MagicMock()
+        provider.enable_grounding = True
+        _patch_construction(monkeypatch, provider)
+        monkeypatch.setattr(oneshot_mod, "get_tool_config", lambda name: {})
+        oneshot_mod._build_provider("gemini")
+        assert provider.enable_grounding is False
+
     def test_flag_on_grounds_search_provider(self, monkeypatch):
         provider = MagicMock()
         provider.enable_grounding = False

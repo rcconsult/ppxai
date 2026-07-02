@@ -234,7 +234,15 @@ class _Rule:
     def matches_path(self, path: str) -> bool:
         if not self.paths:
             return True
-        return any(path.startswith(p) for p in self.paths)
+        # Segment-anchored prefix: an allowlist entry "/repos/octocat" permits
+        # "/repos/octocat" and "/repos/octocat/..." but NOT the sibling
+        # "/repos/octocat-private". A bare str.startswith would over-match the
+        # sibling and leak egress to an unintended path on an allowlisted host.
+        for p in self.paths:
+            boundary = p if p.endswith("/") else p + "/"
+            if path == p or path.startswith(boundary):
+                return True
+        return False
 
 
 def is_network_tool(name: str) -> bool:

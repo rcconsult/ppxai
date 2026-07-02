@@ -8,8 +8,11 @@ the v1.18.3 single-shared-token model).
 
 from __future__ import annotations
 
+import asyncio
+from types import SimpleNamespace
+
 import pytest
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.testclient import TestClient
 
 import ppxai.server.state as state
@@ -509,3 +512,79 @@ class TestLoopbackHonorsProvidedBearer:
         self._file_chain(monkeypatch, tmp_path)
         r = check_request(self._request(header="Bearer not-a-real-token"))
         assert r is not None and r.status_code == 401
+
+
+class TestOwnerScoping:
+    """v1.19.0: token management is owner-scoped. A remote authenticated caller
+    may list/mint/revoke only tokens under its OWN owner; the unscoped operator
+    (loopback / auth-off — no principal on the request) administers all owners.
+
+    Drives the route handlers directly with a fabricated principal (the same
+    object the auth middleware stashes on request.state.principal).
+    """
+
+    @staticmethod
+    def _req(principal):
+        return SimpleNamespace(state=SimpleNamespace(principal=principal))
+
+    @staticmethod
+    def _mint(chain, owner):
+        _material, record = chain.mint(owner=owner)
+        return record
+
+    def test_list_scoped_to_caller_owner(self, file_chain):
+        alice = self._mint(file_chain, "alice")
+        self._mint(file_chain, "bob")
+        out = asyncio.run(tokens_v1.list_tokens(self._req(alice)))
+        assert {m.owner for m in out} == {"alice"}
+
+    def test_list_unscoped_operator_sees_all(self, file_chain):
+        self._mint(file_chain, "alice")
+        self._mint(file_chain, "bob")
+        out = asyncio.run(tokens_v1.list_tokens(self._req(None)))
+        assert {m.owner for m in out} == {"alice", "bob"}
+
+    def test_revoke_foreign_token_hidden_as_404(self, file_chain):
+        alice = self._mint(file_chain, "alice")
+        bob = self._mint(file_chain, "bob")
+        with pytest.raises(HTTPException) as ei:
+            asyncio.run(tokens_v1.revoke_token(bob.token_id, self._req(alice)))
+        assert ei.value.status_code == 404
+        # bob's token is untouched — a foreign caller could not revoke it.
+        assert any(
+            r.token_id == bob.token_id and not r.revoked
+            for r in file_chain.list()
+        )
+
+    def test_revoke_own_token_ok(self, file_chain):
+        alice = self._mint(file_chain, "alice")
+        out = asyncio.run(tokens_v1.revoke_token(alice.token_id, self._req(alice)))
+        assert out["revoked"] is True
+
+    def test_mint_for_foreign_owner_forbidden(self, file_chain):
+        alice = self._mint(file_chain, "alice")
+        with pytest.raises(HTTPException) as ei:
+            asyncio.run(
+                tokens_v1.mint_token(
+                    tokens_v1.MintTokenRequest(owner="bob"), self._req(alice)
+                )
+            )
+        assert ei.value.status_code == 403
+
+    def test_mint_for_own_owner_ok(self, file_chain):
+        alice = self._mint(file_chain, "alice")
+        resp = asyncio.run(
+            tokens_v1.mint_token(
+                tokens_v1.MintTokenRequest(owner="alice"), self._req(alice)
+            )
+        )
+        assert resp.meta.owner == "alice"
+
+    def test_unscoped_operator_may_mint_any_owner(self, file_chain):
+        # Loopback / auth-off bootstrap: no principal → may mint for any owner.
+        resp = asyncio.run(
+            tokens_v1.mint_token(
+                tokens_v1.MintTokenRequest(owner="carol"), self._req(None)
+            )
+        )
+        assert resp.meta.owner == "carol"

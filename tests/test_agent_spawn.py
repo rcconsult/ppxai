@@ -20,9 +20,18 @@ def registry(tmp_path: Path) -> AgentRunRegistry:
 
 
 def _tool(registry, *, parent_tools, parent_allow, consent=None, consent_policy="auto",
-          parent_owner=None):
+          parent_owner=None, runner_builder=None):
     # Default consent_policy="auto" in tests so happy-path spawns proceed
     # without an interactive channel; the consent-gate tests override it.
+    #
+    # runner_builder is INJECTED (v1.19.0) rather than imported inside the tool
+    # (that was an engine→server layering inversion + import cycle). Read
+    # `build_task_runner` off the module object at CALL time so tests that
+    # `monkeypatch.setattr("...agent_v1.build_task_runner", fake)` before
+    # calling _tool still see the patched builder.
+    if runner_builder is None:
+        from ppxai.server.routes import agent_v1
+        runner_builder = agent_v1.build_task_runner
     return SpawnSubagentTool(
         registry=registry,
         parent_run_id="run_parent",
@@ -33,6 +42,7 @@ def _tool(registry, *, parent_tools, parent_allow, consent=None, consent_policy=
         parent_owner=parent_owner,
         request_consent=consent,
         consent_policy=consent_policy,
+        runner_builder=runner_builder,
     )
 
 
@@ -60,6 +70,7 @@ class TestConstructorContract:
             parent_model="m",
             request_consent=None,
             consent_policy="deny",
+            runner_builder=lambda reg, **kw: None,
         )
 
     def test_parent_owner_is_optional(self, registry):

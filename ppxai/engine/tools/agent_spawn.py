@@ -34,7 +34,7 @@ import time
 from typing import Awaitable, Callable, List, Optional
 
 from .base import BaseTool
-from .network_policy import NetworkPolicy, grant_has_shell
+from .network_policy import Allow, NetworkPolicy, grant_has_shell
 from ...common.logger import get_logger
 
 logger = get_logger("tui")
@@ -110,9 +110,15 @@ class SpawnSubagentTool(BaseTool):
         parent_owner: Optional[str] = None,
         request_consent: Optional[Callable[[str], Awaitable[bool]]] = None,
         consent_policy: str = "deny",
+        runner_builder: Callable = None,
     ) -> None:
         self._registry = registry
         self._parent_run_id = parent_run_id
+        # Injected `build_task_runner` (server/routes/agent_v1). Passed in at
+        # construction rather than imported here so the engine layer never
+        # reaches up into the server layer — that import was an engine→server
+        # layering inversion + a circular dependency (agent_v1 ↔ agent_spawn).
+        self._runner_builder = runner_builder
         # Inc 8b: the child run inherits the parent's owner so per-run authz
         # scopes it to the SAME principal. Without this the child is minted
         # owner=None (world-readable to any authenticated caller) — a
@@ -163,8 +169,6 @@ class SpawnSubagentTool(BaseTool):
         reject a child asking for / or /other/. With no child paths, the child
         wants any path on the host, so we probe root `/` — which the parent
         permits only if its own rule for that host is unrestricted."""
-        from .network_policy import Allow
-
         for entry in child_allow or []:
             if isinstance(entry, str):
                 host, paths = entry, []
@@ -213,8 +217,6 @@ class SpawnSubagentTool(BaseTool):
         allow_outbound: Optional[list] = None,
         **kwargs,
     ) -> str:
-        from ...server.routes.agent_v1 import build_task_runner
-
         child_tools = list(tools or [])
         child_allow = list(allow_outbound or [])
 
@@ -281,7 +283,7 @@ class SpawnSubagentTool(BaseTool):
 
         # 4. Run the child through the SAME sandbox machinery, with
         #    allow_spawn=False so it can never itself spawn (depth=1).
-        runner = build_task_runner(
+        runner = self._runner_builder(
             self._registry,
             provider_name=self._provider,
             model=self._model,

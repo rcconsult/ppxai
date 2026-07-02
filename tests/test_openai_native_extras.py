@@ -304,3 +304,80 @@ class TestResponsesApiThrottle:
                 events.append(ev)
 
         assert EventType.PROVIDER_THROTTLED in [e.type for e in events]
+
+
+# ---------------------------------------------------------------------------
+# oneshot() routing (v1.19.0 review fix): Codex/Pro models 404 on Chat
+# Completions, so oneshot must route them through the Responses API — exactly
+# like chat() does. Regression for /v1/oneshot + /v1/agent/run failing for a
+# whole model class that works over /chat.
+# ---------------------------------------------------------------------------
+
+
+class TestOneshotResponsesRouting:
+    def _responses_reply(self, model: str, text: str):
+        resp = MagicMock()
+        resp.output = []            # no message items → falls back to output_text
+        resp.output_text = text
+        resp.usage = None
+        resp.model = model
+        return resp
+
+    def _chat_reply(self, model: str, text: str):
+        msg = MagicMock()
+        msg.content = text
+        choice = MagicMock()
+        choice.message = msg
+        choice.finish_reason = "stop"
+        resp = MagicMock()
+        resp.choices = [choice]
+        resp.usage = None
+        resp.model = model
+        return resp
+
+    def test_pro_model_routes_to_responses_api(self):
+        provider = _make_provider()
+        provider.client = MagicMock()
+        provider.client.responses.create.return_value = self._responses_reply(
+            "gpt-5-pro", "from-responses"
+        )
+        result = provider.oneshot(prompt="hi", model="gpt-5-pro")
+        assert provider.client.responses.create.called
+        assert not provider.client.chat.completions.create.called
+        assert result["content"] == "from-responses"
+        assert result["model"] == "gpt-5-pro"
+
+    def test_codex_model_routes_to_responses_api(self):
+        provider = _make_provider()
+        provider.client = MagicMock()
+        provider.client.responses.create.return_value = self._responses_reply(
+            "gpt-5.1-codex", "codex-out"
+        )
+        result = provider.oneshot(prompt="hi", model="gpt-5.1-codex")
+        assert provider.client.responses.create.called
+        assert not provider.client.chat.completions.create.called
+        assert result["content"] == "codex-out"
+
+    def test_regular_model_still_uses_chat_completions(self):
+        provider = _make_provider()
+        provider.client = MagicMock()
+        provider.client.chat.completions.create.return_value = self._chat_reply(
+            "gpt-5.4-mini", "from-chat"
+        )
+        result = provider.oneshot(prompt="hi", model="gpt-5.4-mini")
+        assert provider.client.chat.completions.create.called
+        assert not provider.client.responses.create.called
+        assert result["content"] == "from-chat"
+
+    def test_chat_sync_simple_routes_pro_to_responses(self):
+        provider = _make_provider()
+        provider.client = MagicMock()
+        provider.client.responses.create.return_value = self._responses_reply(
+            "gpt-5-pro", "sync-out"
+        )
+        out = provider.chat_sync_simple(
+            messages=[Message(role="user", content="hi")], model="gpt-5-pro"
+        )
+        assert provider.client.responses.create.called
+        assert not provider.client.chat.completions.create.called
+        assert out == "sync-out"

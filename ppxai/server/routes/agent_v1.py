@@ -84,7 +84,11 @@ from pydantic import BaseModel, Field
 from ...common.logger import get_logger
 from ...config.tools import get_agent_config
 from ...engine.agent_runs import RunMeta
-from ...engine.tools.network_policy import grant_has_shell
+from ...engine.agent_scoped_tools import ScopedToolManager
+from ...engine.client import EngineClient
+from ...engine.tools.agent_spawn import SpawnSubagentTool
+from ...engine.tools.network_policy import NetworkPolicy, grant_has_shell
+from ...engine.types import EventType
 from ..state import get_agent_run_registry
 # Reuse oneshot's provider construction so Inc 1 has zero provider-wiring
 # duplication; the synchronous run IS a oneshot call under the hood.
@@ -552,12 +556,6 @@ def build_task_runner(
     rule structurally (a grandchild is impossible).
     """
     async def _runner(m) -> str:
-        from ...engine.client import EngineClient
-        from ...engine.agent_scoped_tools import ScopedToolManager
-        from ...engine.tools.network_policy import NetworkPolicy
-        from ...engine.tools.agent_spawn import SpawnSubagentTool
-        from ...engine.types import EventType
-
         engine = EngineClient()
         engine.set_provider(provider_name)
         engine.set_model(model)
@@ -599,6 +597,7 @@ def build_task_runner(
                 parent_model=model,
                 request_consent=_spawn_consent,
                 consent_policy=spawn_consent,
+                runner_builder=build_task_runner,
             ))
 
         def _on_deny(name: str) -> None:

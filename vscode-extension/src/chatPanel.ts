@@ -434,25 +434,31 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             }
         });
 
-        // v1.19.0: usage now arrives on the STREAM_END event metadata, so we
-        // populate AppState's usage fields here (previously dead — never set,
-        // since usage is excluded from state_sync) and push the badge directly,
-        // instead of a redundant GET /usage round-trip in updateStatus().
-        this._eventBus.on('stream:usage', (usage) => {
-            const promptTokens = usage.prompt_tokens || 0;
-            const completionTokens = usage.completion_tokens || 0;
-            const totalTokens = usage.total_tokens || (promptTokens + completionTokens);
-            const estimatedCost = usage.estimated_cost || 0;
-            this._appState.update({
-                promptTokens,
-                completionTokens,
-                totalTokens,
-                estimatedCost,
-            });
-            postMessage({
-                type: 'usage',
-                usage: { promptTokens, completionTokens, totalTokens, estimatedCost },
-            });
+        // The usage badge shows the CUMULATIVE session total. STREAM_END
+        // metadata carries only the PER-TURN usage, so writing it directly made
+        // the "Session" badge shrink/fluctuate each turn. On stream end, fetch
+        // the authoritative running total once (GET /usage). updateStatus's
+        // other ~14 callers stay round-trip-free, re-sending this AppState copy.
+        this._eventBus.on('stream:usage', async () => {
+            try {
+                const usage = await this._backend.getUsage();
+                const promptTokens = usage.prompt_tokens || 0;
+                const completionTokens = usage.completion_tokens || 0;
+                const totalTokens = usage.total_tokens || (promptTokens + completionTokens);
+                const estimatedCost = usage.estimated_cost || 0;
+                this._appState.update({
+                    promptTokens,
+                    completionTokens,
+                    totalTokens,
+                    estimatedCost,
+                });
+                postMessage({
+                    type: 'usage',
+                    usage: { promptTokens, completionTokens, totalTokens, estimatedCost },
+                });
+            } catch {
+                // Backend not ready — leave the badge at its current value.
+            }
         });
 
         this._eventBus.on('stream:error', (content) => {

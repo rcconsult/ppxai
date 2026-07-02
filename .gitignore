@@ -138,5 +138,8 @@ deploy/images/server/extra-certs/*.crt
 # Codex (parallel-session) scratch/tooling — not part of the repo
 .codex/
 
+# Agent tooling rules (host-local, e.g. antigravity/rtk) — not part of the repo
+.agents/
+
 # .local is only for the local files not to be shared in git
 **/.local

@@ -821,6 +821,11 @@ class TestAgentRunRoutes:
         # the route imports EngineClient inside _runner; patch the source module
         import ppxai.engine.client as client_mod
         monkeypatch.setattr(client_mod, "EngineClient", lambda: stub)
+        # v1.19.0: agent_v1 imports EngineClient at module top now (no lazy
+        # import inside _runner), so patch the binding the runner actually
+        # uses — the source-module patch above no longer reaches it.
+        import ppxai.server.routes.agent_v1 as _agent_v1_mod
+        monkeypatch.setattr(_agent_v1_mod, "EngineClient", lambda: stub, raising=False)
 
         resp = c.post("/v1/agent/task", json={
             "task": "do it", "tools": ["read_file"],  # write_file NOT granted
@@ -883,6 +888,11 @@ class TestAgentRunRoutes:
         stub = _StubEngine()
         import ppxai.engine.client as client_mod
         monkeypatch.setattr(client_mod, "EngineClient", lambda: stub)
+        # v1.19.0: agent_v1 imports EngineClient at module top now (no lazy
+        # import inside _runner), so patch the binding the runner actually
+        # uses — the source-module patch above no longer reaches it.
+        import ppxai.server.routes.agent_v1 as _agent_v1_mod
+        monkeypatch.setattr(_agent_v1_mod, "EngineClient", lambda: stub, raising=False)
 
         resp = c.post("/v1/agent/task", json={
             "task": "research", "tools": ["fetch_url"],
@@ -946,6 +956,11 @@ class TestAgentRunRoutes:
         stub = _StubEngine()
         import ppxai.engine.client as client_mod
         monkeypatch.setattr(client_mod, "EngineClient", lambda: stub)
+        # v1.19.0: agent_v1 imports EngineClient at module top now (no lazy
+        # import inside _runner), so patch the binding the runner actually
+        # uses — the source-module patch above no longer reaches it.
+        import ppxai.server.routes.agent_v1 as _agent_v1_mod
+        monkeypatch.setattr(_agent_v1_mod, "EngineClient", lambda: stub, raising=False)
 
         resp = c.post("/v1/agent/task", json={
             "task": "do it", "tools": ["read_file"],
@@ -997,6 +1012,11 @@ class TestAgentRunRoutes:
         stub = self._budget_stub_engine(n_tool_calls=5)  # would do 5 iterations
         import ppxai.engine.client as client_mod
         monkeypatch.setattr(client_mod, "EngineClient", lambda: stub)
+        # v1.19.0: agent_v1 imports EngineClient at module top now (no lazy
+        # import inside _runner), so patch the binding the runner actually
+        # uses — the source-module patch above no longer reaches it.
+        import ppxai.server.routes.agent_v1 as _agent_v1_mod
+        monkeypatch.setattr(_agent_v1_mod, "EngineClient", lambda: stub, raising=False)
 
         resp = c.post("/v1/agent/task", json={
             "task": "loop", "tools": ["read_file"],
@@ -1031,6 +1051,11 @@ class TestAgentRunRoutes:
         stub = self._budget_stub_engine(n_tool_calls=3)
         import ppxai.engine.client as client_mod
         monkeypatch.setattr(client_mod, "EngineClient", lambda: stub)
+        # v1.19.0: agent_v1 imports EngineClient at module top now (no lazy
+        # import inside _runner), so patch the binding the runner actually
+        # uses — the source-module patch above no longer reaches it.
+        import ppxai.server.routes.agent_v1 as _agent_v1_mod
+        monkeypatch.setattr(_agent_v1_mod, "EngineClient", lambda: stub, raising=False)
 
         resp = c.post("/v1/agent/task", json={
             "task": "loop", "tools": ["read_file"], "provider": "p", "model": "m",
@@ -1093,6 +1118,11 @@ class TestAgentRunRoutes:
         stub = _TokenStub()
         import ppxai.engine.client as client_mod
         monkeypatch.setattr(client_mod, "EngineClient", lambda: stub)
+        # v1.19.0: agent_v1 imports EngineClient at module top now (no lazy
+        # import inside _runner), so patch the binding the runner actually
+        # uses — the source-module patch above no longer reaches it.
+        import ppxai.server.routes.agent_v1 as _agent_v1_mod
+        monkeypatch.setattr(_agent_v1_mod, "EngineClient", lambda: stub, raising=False)
 
         resp = c.post("/v1/agent/task", json={
             "task": "burn tokens", "tools": ["read_file"],

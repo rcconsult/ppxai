@@ -42,6 +42,7 @@ Implementation notes:
   `chat_template_kwargs.enable_thinking` carries through).
 """
 
+import asyncio
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, HTTPException
@@ -257,6 +258,13 @@ def _build_provider(provider_name: str):
     # search-capable. Does NOT expose any web tool to the model.
     if _oneshot_grounding_enabled():
         _apply_oneshot_grounding(provider, provider_name)
+    elif hasattr(provider, "enable_grounding"):
+        # Default OFF: the oneshot perimeter is unchanged regardless of a
+        # provider's configured chat-grounding. A Gemini provider is built with
+        # enable_grounding=True (config default), so WITHOUT this it would run
+        # live Google Search on every oneshot even though the operator never
+        # opted oneshot into web search — breaking the default-OFF guarantee.
+        provider.enable_grounding = False
 
     return provider
 
@@ -291,13 +299,19 @@ async def oneshot(req: OneshotRequest) -> OneshotResponse:
     # isinstance-by-class guard. _build_provider already 400s on unknown
     # provider / missing key.
     try:
-        result = provider.oneshot(
-            prompt=req.prompt,
-            model=model,
-            system=req.system,
-            response_format=req.response_format,
-            max_tokens=req.max_tokens,
-            temperature=req.temperature,
+        # provider.oneshot is blocking I/O (SDK round-trip). Offload it so a
+        # slow provider (e.g. Gemini preview, multi-second reasoning) doesn't
+        # starve the single event loop and stall every other request. The
+        # agent-run tier (agent_v1._runner) already offloads the same call.
+        result = await asyncio.to_thread(
+            lambda: provider.oneshot(
+                prompt=req.prompt,
+                model=model,
+                system=req.system,
+                response_format=req.response_format,
+                max_tokens=req.max_tokens,
+                temperature=req.temperature,
+            )
         )
     except HTTPException:
         raise

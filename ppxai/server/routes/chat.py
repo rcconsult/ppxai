@@ -398,6 +398,42 @@ async def chat(
         chat_payload, attachment_warnings, attachment_refs = _build_chat_payload(
             request.message, request.files, s.engine
         )
+
+        # v1.19.0 (debt Item 24): a hard attachment failure — e.g. an image on a
+        # text-only model with no VL sidecar and no shell-CLI route — escalates
+        # to a severity="error" warning. Such a send must be BLOCKED: the model
+        # must not answer over an "[Attachment error: ...]" placeholder as if it
+        # had seen the file. Emit the warning(s) + a terminal error and never
+        # reach the provider (fail-loud, not silent-degrade).
+        fatal_attachments = [
+            w for w in attachment_warnings if w.get("severity") == "error"
+        ]
+        if fatal_attachments:
+            logger.warning(
+                f"Chat blocked for session {s.id}: "
+                f"{len(fatal_attachments)} unreadable attachment(s)"
+            )
+
+            async def _blocked_attachment_stream():
+                for w in attachment_warnings:
+                    yield f"data: {json.dumps({'type': 'warning', 'data': w})}\n\n"
+                message = fatal_attachments[0].get(
+                    "message", "Attachment could not be processed."
+                )
+                yield f"data: {json.dumps({'type': 'error', 'data': message})}\n\n"
+                yield f"data: {json.dumps({'type': 'stream_end', 'data': ''})}\n\n"
+
+            return StreamingResponse(
+                _blocked_attachment_stream(),
+                media_type="text/event-stream",
+                headers={
+                    "Cache-Control": "no-cache",
+                    "Connection": "keep-alive",
+                    "X-Accel-Buffering": "no",
+                    "X-Session-Id": s.id,
+                },
+            )
+
         for w in attachment_warnings:
             s.engine.enqueue_event(Event(
                 type=EventType.WARNING,
