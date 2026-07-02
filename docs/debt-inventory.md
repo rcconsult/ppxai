@@ -869,12 +869,67 @@ modular-prompt refactor.
   +2 persist tmp. Call-graph §L. **Severity honesty:** the temp-file race was
   filed/fixed as future-proofing with the model caveat stated, not dressed up as
   a current corruption bug.
+- **(p) — external review round (Gemini/antigravity + Codex, 2026-07-02/03).**
+  Two independent reviews of the branch (during the `/task` T1–T2 work).
+  **Fixed + tested:** (1) loopback `X-Forwarded-For` spoofing — `_is_loopback`
+  now rejects any request carrying a forwarding header, AND uvicorn defaults
+  `forwarded_allow_ips=""` (trust no proxy) via `_forwarded_allow_ips()`,
+  overridable with `PPXAI_FORWARDED_ALLOW_IPS`; (2) filesystem-seal deny globs
+  now match a bare name anywhere (`.env`/`secrets`, not only `**/.env`);
+  (3) **HIGH — filesystem-seal bypass via arg aliases** — `ScopedToolManager`
+  now normalizes aliases (`file`→`filepath`, `path`→`directory`) BEFORE the
+  egress/filesystem checks, so `read_file(file=…)`/`search_files(path=…)` can't
+  slip the jail via the base manager's *post*-check normalization; (4) **HIGH —
+  spawn wildcard egress subset** — `_check_egress_subset` probes TWO unguessable
+  labels, so a child `*.suffix` glob is approved only if the parent holds a
+  covering glob, not one exact subdomain. Commits `ccf9c1fc` (1,2), `5b987fd0`
+  (3,4). **Still open (deferred):**
+    - **Sync DNS in the SSRF guard blocks the loop on a COLD lookup** (Gemini).
+      Distinct from (f)'s rebinding gap: `_host_resolves_to_blocked_ip` calls
+      `socket.getaddrinfo` synchronously — TTL-cached (one block per host per
+      window) and only on the opt-in tool-capable tier, but a slow/timing-out
+      DNS stalls the loop. The async fix needs the whole `execute_tool`
+      chokepoint to go async (event-emit callback must stay on the loop thread).
+      **Planned:** with tier-d / an egress-proxy rework.
+    - **O(N) token verification** (Gemini). `secrets/file.py` hashes every stored
+      token per auth (no public id prefix). SHA-256 is µs-fast and the file
+      store holds small operator token sets → low DoS risk, but poor scaling.
+      **Planned:** `token_id.material` bearer format → O(1) lookup + one compare.
+      Land with Inc 8b RBAC.
+    - **No role-subset check on mint** (Gemini). `tokens_v1.mint_token` lets a
+      scoped caller request arbitrary `roles`. Inert today — roles are NOT authz
+      gates (owner is; the F6 owner-scoping was chosen precisely to avoid a
+      mint-your-own-role escalation) — but a seam once RBAC lands. **Planned:**
+      require `roles ⊆ caller.roles` with Inc 8b RBAC.
+    - **`get_weather` http fallback un-allowlistable** (Codex). Its plain-http
+      target is always denied under the https-only policy — already documented
+      at `network_policy.py:143-144`; drop the http target (or the tool) when
+      convenient. Relates to (c).
+    - **Filesystem-jail alias completeness (residual, low).** The alias fix
+      catches every alias the tool actually CONSUMES (they're in `_normalize_params`
+      groups → normalized → checked). A cross-group name the tool does NOT accept
+      (e.g. `read_file(path=…)` — `path` is the directory group, read_file needs
+      `filepath`) is NOT a data leak: the tool errors on the missing required arg
+      (verified). But such a call still REACHES the base past the jail rather than
+      being denied there. **Optional hardening:** fail-closed in
+      `FilesystemPolicy.authorize` — for a REQUIRED-path tool whose canonical
+      kwarg is absent after normalization, Deny (don't default to "."). Tools that
+      legitimately default to the workdir (`list_directory`/`search_files`) keep
+      the "." default. Not urgent (no leak); tightens the seal.
+  **Confirmed duplicates (still-known, not re-filed):** Gemini's "50ms disk-poll
+  fallback" = (a); "100ms cancel poll" ≈ (e). **Meta:** the alias-normalization
+  ordering bug is a general class — any kwarg-inspecting policy must run AFTER
+  normalization; the fix hoists it before all checks. Lesson
+  `docs/lessons/loopback-ui-auth-exemption.md` corrected (the earlier "gate
+  ignores forwarded headers" note was imprecise — uvicorn DOES rewrite
+  `client.host`).
 - **(a)/(b)** unchanged — promote with the N>1 sub-agent work.
 - **(d)** unchanged — only matters if the SSE layer is reworked.
 
-**Branch when ready:** (f)-rebinding + (e)-provider-call land with tier-d
-OS-isolation; (a)/(b) with N>1 sub-agents; (d) with an SSE rework; (i) with
-a per-model capability-hint pass (cheap, anytime).
+**Branch when ready:** (f)-rebinding + (e)-provider-call + (p)-sync-DNS land with
+tier-d OS-isolation; (p)-token-O(N)/role-mint with Inc 8b RBAC; (a)/(b) with
+N>1 sub-agents; (d) with an SSE rework; (i) with a per-model capability-hint
+pass (cheap, anytime).
 
 ---
 
