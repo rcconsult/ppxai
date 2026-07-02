@@ -273,11 +273,23 @@ class AgentRunController {
         if (!run || !AgentRunController._TERMINAL.has(run.status)) {
             // The poll gave up only after sustained GET failures (server
             // unreachable) — NOT a run-duration cutoff. Don't claim a result;
-            // UNPIN so the pane isn't stuck pinned. No data is lost: reopening
-            // (breadcrumb / /agentruns) calls focus(), which refreshes the pane
-            // AND restarts this watcher.
+            // UNPIN so the pane isn't stuck pinned, and move it to a terminal
+            // 'unreachable' state so the pane itself stops lying about being
+            // "reconnecting" (the chat message alone left the pane visually
+            // stuck — Gemini review). No data is lost: reopening (breadcrumb /
+            // /agentruns / /task ls) calls focus(), which refreshes the pane AND
+            // restarts this watcher.
             const stale = this._liveView(runId);
-            if (stale) stale.unpin();
+            if (stale) {
+                stale.unpin();
+                stale.setStatus('unreachable');
+                if (typeof stale.setError === 'function') {
+                    stale.setError(
+                        'Monitoring stopped — server unreachable. Reopen via '
+                        + '/agentruns (or /task ls) to retry.'
+                    );
+                }
+            }
             this.app.showSystemMessage(
                 `⚠️ ${runId} — lost contact with the server; reopen via /agentruns to retry.`
             );

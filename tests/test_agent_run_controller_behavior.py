@@ -290,6 +290,10 @@ function assert(cond, msg) {{ if (!cond) throw new Error("FAIL: " + msg); }}
     assert(app._getCalls >= 3, "did not retry before giving up (getCalls=" + app._getCalls + ")");
     assert(view.pinned === false, "pane left pinned after give-up");
     assert(app._msgs.some((m) => /lost contact/.test(m)), "no 'lost contact' message after sustained failure");
+    // The pane itself must move to a terminal state, not stay stuck on the
+    // "reconnecting" status set in focus() (Gemini review — silent-pane fix).
+    assert(view.status === "unreachable", "pane not moved to terminal 'unreachable' on give-up (got " + view.status + ")");
+    assert(view.error && /unreachable|Monitoring stopped/.test(view.error), "pane shows no error body on give-up (got " + view.error + ")");
   }}
 
   console.log("ALL OK");
