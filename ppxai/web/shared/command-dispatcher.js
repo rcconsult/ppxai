@@ -47,6 +47,10 @@ class CommandDispatcher {
         this.agentRuns = (typeof AgentRunController !== 'undefined')
             ? new AgentRunController(app)
             : null;
+        // v1.19.x (T1): the tool-capable /task tier + sub-commands.
+        this.tasks = (typeof TaskController !== 'undefined')
+            ? new TaskController(app)
+            : null;
     }
 
     /**
@@ -95,6 +99,14 @@ class CommandDispatcher {
             }
             if (cmd === '/agentruns') {
                 await this.agentRuns?.list();
+                return;
+            }
+
+            // Tool-capable tier (T1): `/task <verb> …` — run/ls/show/watch/cancel.
+            // The whole arg string (verb + rest, incl. quoted desc + flags) is
+            // handed to the controller, which parses it.
+            if (cmd === '/task') {
+                await this.tasks?.handle(args);
                 return;
             }
 
@@ -151,7 +163,7 @@ class CommandDispatcher {
      */
     _appendExperimentalHelp() {
         const cat = this.app.slashCommands || {};
-        const lines = ['/agentrun', '/agentruns']
+        const lines = ['/agentrun', '/agentruns', '/task']
             .filter((c) => cat[c])
             .map((c) => `  ${c} — ${cat[c].description}  (usage: ${cat[c].usage})`);
         if (lines.length) {

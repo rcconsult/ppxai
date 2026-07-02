@@ -98,6 +98,11 @@ const SLASH_COMMANDS = {
         usage: '/agentruns',
         category: CommandCategory.TOOLS
     },
+    '/task': {
+        description: 'Tool-capable background runs: run|ls|show|watch|cancel (experimental, default-off tier)',
+        usage: '/task run "<desc>" --tools a,b,c [--allow host] [--budget iters=,time=,tokens=]',
+        category: CommandCategory.TOOLS
+    },
 
     // === Checkpoint ===
     '/checkpoint': {

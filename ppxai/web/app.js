@@ -201,6 +201,7 @@ class PpxaiApp {
                 '/agent': { description: 'Run autonomous agent task', usage: '/agent [on|off|<task description>]' },
                 '/agentrun': { description: 'Start a background agent run (v1 platform)', usage: '/agentrun <task>' },
                 '/agentruns': { description: 'List recent agent runs', usage: '/agentruns' },
+                '/task': { description: 'Tool-capable background runs (run|ls|show|watch|cancel)', usage: '/task run "<desc>" --tools a,b,c' },
                 '/checkpoint': { description: 'Manage checkpoints', usage: '/checkpoint [status|list|undo|backend|clear|info]' },
                 '/usage': { description: 'Show token usage stats', usage: '/usage [24h|week|month|all|show|reset]' },
                 '/status': { description: 'Show current status', usage: '/status' },

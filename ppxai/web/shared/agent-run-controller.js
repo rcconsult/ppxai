@@ -32,6 +32,25 @@ class AgentRunController {
         // run_ids with an in-flight detached watcher — so focus() can restart a
         // watcher for a run the degraded path gave up on without double-watching.
         this._watching = new Set();
+        // The pane class this controller renders into. Parameterized (was the
+        // hardcoded AgentRunView) so the tool-capable /task tier can subclass
+        // this controller and swap in a denser TaskRunView while reusing the
+        // shared observe/watch/poll machinery. Null in Node (no window).
+        this._viewClass = (typeof AgentRunView !== 'undefined') ? AgentRunView : null;
+        // Empty-list hint — overridden by the /task subclass to point at its
+        // own launch verb.
+        this._emptyHint = 'No agent runs yet. Start one with /agentrun <task>.';
+    }
+
+    /**
+     * Wire optional per-view affordances a subclass' view may expose (duck-typed
+     * so the oneshot AgentRunView, which has neither, is unaffected):
+     *   - setOnCancel(fn) — a Cancel button that POSTs /runs/{id}/cancel.
+     */
+    _wireView(view, runId) {
+        if (view && typeof view.setOnCancel === 'function') {
+            view.setOnCancel(() => this.cancel(runId));
+        }
     }
 
     // ── Commands ──────────────────────────────────────────────────────────────
@@ -77,7 +96,7 @@ class AgentRunController {
         }
         const runs = (data && data.runs) || [];
         if (runs.length === 0) {
-            this.app.showSystemMessage('No agent runs yet. Start one with /agentrun <task>.');
+            this.app.showSystemMessage(this._emptyHint);
             return;
         }
         const content = this._messageBody('Agent runs (newest first):');
@@ -108,12 +127,13 @@ class AgentRunController {
      */
     async focus(runId, task) {
         const frame = this.app.rightPanelFrame;
-        if (!frame || typeof AgentRunView === 'undefined') return;
+        if (!frame || !this._viewClass) return;
         let view = frame.getViewByPath(`agent://run/${runId}`);
         if (view) {
             frame.push(view);   // dedup → promote + show
         } else {
-            view = new AgentRunView(runId, task || '', this.app.state);
+            view = new this._viewClass(runId, task || '', this.app.state);
+            this._wireView(view, runId);
             frame.push(view);
         }
 
@@ -122,6 +142,14 @@ class AgentRunController {
             run = await this.app.apiClient.get(`/v1/agent/runs/${runId}`);
         } catch (e) {
             run = null;  // transient read failure → unknown status, NOT terminal
+        }
+
+        // Hydrate the pane's grant/egress/budget from the registry record (a
+        // reopened pane was constructed without them). Duck-typed: no-op on the
+        // oneshot AgentRunView, which has no meta bar.
+        if (run) {
+            const v = this._liveView(runId);
+            if (v && typeof v.setMeta === 'function') v.setMeta(run);
         }
 
         if (run && AgentRunController._TERMINAL.has(run.status)) {
@@ -142,13 +170,33 @@ class AgentRunController {
     // ── Internals ─────────────────────────────────────────────────────────────
 
     /** Push a new pane for a run; pin it so a running pane survives LRU eviction. */
-    _openPane(runId, task) {
+    _openPane(runId, task, meta) {
         const frame = this.app.rightPanelFrame;
-        if (!frame || typeof AgentRunView === 'undefined') return null;
-        const view = new AgentRunView(runId, task, this.app.state);
+        if (!frame || !this._viewClass) return null;
+        const view = new this._viewClass(runId, task, this.app.state, meta);
+        this._wireView(view, runId);
+        if (meta && typeof view.setMeta === 'function') view.setMeta(meta);
         view.pin();
         frame.push(view);
         return view;
+    }
+
+    /**
+     * Cancel a run (POST /runs/{id}/cancel) and reflect it in the pane. Shared by
+     * every tier; the oneshot UI simply never surfaces a Cancel control, while
+     * the /task pane wires its Cancel button here via _wireView.
+     */
+    async cancel(runId) {
+        if (!runId) { this.app.showSystemMessage('Usage: /task cancel <id>'); return; }
+        try {
+            await this.app.apiClient.post(`/v1/agent/runs/${runId}/cancel`, {});
+        } catch (e) {
+            this.app.showSystemMessage(`❌ Could not cancel ${runId}: ${e.message}`);
+            return;
+        }
+        this.app.showSystemMessage(`⏹️ ${runId} — cancel requested`);
+        const view = this._liveView(runId);
+        if (view) view.setStatus('cancelling');
     }
 
     /** Append a chat message; return its `.message-content` element (or null). */
@@ -200,6 +248,12 @@ class AgentRunController {
     async _runWatch(runId) {
         try {
             for await (const ev of this._tailEvents(runId)) {
+                // Forward every event to the run's CURRENT pane if it renders a
+                // live log (duck-typed: no-op on the oneshot AgentRunView). Lets
+                // the /task pane show tool_call / tool_denied / network_* / spawn_*
+                // as they stream, reusing this one tail loop.
+                const live = this._liveView(runId);
+                if (live && typeof live.appendEvent === 'function') live.appendEvent(ev);
                 // The live-events SSE stays open until the client disconnects —
                 // it does NOT close when the run ends. Break on ANY terminal
                 // run-event (complete/error AND cancelled/interrupted, emitted as
