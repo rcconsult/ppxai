@@ -104,6 +104,10 @@ class TaskRunView extends AgentRunView {
     /** Append one streamed run event to the live log. */
     appendEvent(ev) {
         if (!ev || !ev.type) return;
+        // The log is a transcript of what the agent DID (tools, egress, spawns).
+        // Heartbeats (agent_beat) would spam a long run, and run lifecycle is
+        // already conveyed by the status badge — so drop both here.
+        if (ev.type === 'agent_beat' || ev.type.startsWith('agent_run_')) return;
         this._events.push(ev);
         if (this._events.length > 200) this._events.shift();  // bound the DOM
         if (this._eventsEl) this._appendEventLine(ev);
