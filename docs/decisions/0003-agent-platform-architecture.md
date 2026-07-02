@@ -502,6 +502,11 @@ minimal form: one token per run.
 
 ### 8. Lifecycle — TTL-gated cascade, two-phase termination, one `WAITING` state machine
 
+> **Visual references:** [agent-task-lifecycle.html](../agent-task-lifecycle.html)
+> renders this state machine (built vs designed states, the `/respond` and
+> `/ack` mechanisms); [agent-task-command-design.html](../agent-task-command-design.html)
+> proposes the `/task` command family that drives these transitions.
+
 **Cascade cleanup is TTL-gated, never instant-on-disconnect** —
 instant-kill-on-disconnect would contradict the entire "semi-autonomous,
 UI non-blocking" premise (it would make a foreground agent). Distinguish

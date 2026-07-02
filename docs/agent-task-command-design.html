@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>/task command family — design</title>
+<style>
+  :root{
+    --bg:#EDF0F5; --panel:#FBFCFE; --ink:#1A2431; --ink-2:#4E5A6B;
+    --line:#D3DAE4;
+    --indigo:#3B4FBF; --indigo-ink:#26317E; --indigo-fill:#E7EAFB;
+    --amber:#B4770F; --amber-ink:#7A5210; --amber-fill:#FAEFD3;
+    --green:#2E9A57; --green-ink:#1C5C37; --green-fill:#E1F2E7;
+    --rust:#BC463B; --rust-ink:#7C2A22; --rust-fill:#F7E3E1;
+    --neutral-fill:#E9EDF3; --neutral-border:#A7B2C1;
+    --term-bg:#151C28; --term-ink:#C9D2DE; --term-dim:#6E7B8E; --term-prompt:#8A97F2;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{background:var(--bg); color:var(--ink); font-family:var(--sans);
+    line-height:1.55; margin:0; padding:32px 20px 72px; -webkit-font-smoothing:antialiased}
+  .wrap{max-width:1040px; margin:0 auto}
+
+  header{margin-bottom:22px}
+  .eyebrow{font-family:var(--mono); font-size:12px; letter-spacing:.14em;
+    text-transform:uppercase; color:var(--indigo); margin:0 0 8px}
+  h1{font-size:clamp(26px,4vw,38px); line-height:1.08; margin:0 0 12px;
+    letter-spacing:-.01em; text-wrap:balance; font-weight:680}
+  h1 code{font-family:var(--mono); font-size:.72em; background:var(--indigo-fill);
+    color:var(--indigo-ink); padding:.08em .3em; border-radius:6px; font-weight:600}
+  .lede{max-width:68ch; color:var(--ink-2); font-size:16px; margin:0}
+  .lede b{color:var(--ink); font-weight:600}
+  .lede code{font-family:var(--mono); font-size:.9em; color:var(--indigo-ink)}
+
+  h2{font-size:20px; margin:38px 0 4px; letter-spacing:-.01em; display:flex; align-items:baseline; gap:12px}
+  h2 .n{font-family:var(--mono); font-size:13px; color:var(--indigo); font-weight:600}
+  .sub{color:var(--ink-2); font-size:14px; margin:0 0 16px; max-width:70ch}
+
+  /* Terminal hero */
+  .term{background:var(--term-bg); border-radius:14px; padding:20px 22px; margin:22px 0 4px;
+    font-family:var(--mono); font-size:13.5px; line-height:1.85; color:var(--term-ink);
+    overflow-x:auto; box-shadow:0 18px 40px -20px rgba(20,28,45,.55)}
+  .term .bar{display:flex; gap:7px; margin:-4px 0 12px}
+  .term .bar i{width:11px;height:11px;border-radius:50%;display:block;opacity:.85}
+  .term .bar i:nth-child(1){background:#E06C63}.term .bar i:nth-child(2){background:#E0B04A}.term .bar i:nth-child(3){background:#57B97C}
+  .term pre{margin:0; white-space:pre; font:inherit}
+  .term .p{color:var(--term-prompt)}
+  .term .dim{color:var(--term-dim)}
+  .term .flag{color:#8FD0FF}
+  .term .g-run{color:#7E92FF}.term .g-wait{color:#E5AE4B}.term .g-ok{color:#5EC98A}.term .g-cancel{color:#E58A80}
+  .term .rid{color:#B7C0CE}
+
+  /* Tables */
+  .scroll{overflow-x:auto}
+  table{width:100%; border-collapse:collapse; font-size:13.5px; background:var(--panel);
+    border:1px solid var(--line); border-radius:12px; overflow:hidden}
+  th,td{text-align:left; padding:10px 13px; border-bottom:1px solid var(--line); vertical-align:top}
+  tbody tr:last-child td{border-bottom:none}
+  thead th{font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-2); font-weight:600; background:#F3F5F9}
+  td code,th code{font-family:var(--mono); font-weight:600; white-space:nowrap}
+  td .desc{color:var(--ink-2); font-family:var(--sans); font-weight:400; white-space:normal}
+  .trans{font-family:var(--mono); font-size:12px; color:var(--ink)}
+  .trans .to{color:var(--indigo-ink)}
+  .pill{display:inline-block; font-family:var(--mono); font-size:10.5px; font-weight:600;
+    padding:2px 8px; border-radius:20px; white-space:nowrap}
+  .pill.built{background:var(--indigo-fill); color:var(--indigo-ink)}
+  .pill.plan{background:#EEF1F6; color:var(--ink-2); border:1px dashed var(--neutral-border)}
+  .pill.read{background:var(--neutral-fill); color:var(--ink-2)}
+
+  /* Triad cards */
+  .triads{display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:16px 0 4px}
+  @media(max-width:720px){.triads{grid-template-columns:1fr}}
+  .triad{background:var(--panel); border:1px solid var(--line); border-radius:13px; padding:16px 18px}
+  .triad .st{font-family:var(--mono); font-size:12px; font-weight:700; margin:0 0 12px; letter-spacing:.02em}
+  .triad.wait .st{color:var(--amber-ink)} .triad.ok .st{color:var(--green-ink)}
+  .triad.fail .st{color:var(--rust-ink)} .triad.act .st{color:var(--indigo-ink)}
+  .row{display:flex; align-items:center; gap:10px; font-size:13px; margin:6px 0}
+  .row .lbl{font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-2); width:62px; flex:none}
+  .row .val{font-family:var(--mono); font-size:12.5px}
+  .row .btn{font-family:var(--sans); font-size:12px; font-weight:600; padding:3px 11px; border-radius:7px; border:1px solid; display:inline-block}
+  .btn.approve{color:var(--green-ink); border-color:var(--green); background:var(--green-fill)}
+  .btn.deny{color:var(--rust-ink); border-color:var(--rust); background:var(--rust-fill)}
+  .btn.neutral{color:var(--indigo-ink); border-color:var(--indigo); background:var(--indigo-fill)}
+  .arrow{color:var(--ink-2); font-family:var(--mono)}
+
+  /* Flags + guardrails */
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:22px; margin-top:14px}
+  @media(max-width:720px){.grid2{grid-template-columns:1fr}}
+  ul.clean{list-style:none; margin:0; padding:0}
+  ul.clean li{padding:9px 0; border-bottom:1px solid var(--line); font-size:13.5px; color:var(--ink-2)}
+  ul.clean li:last-child{border-bottom:none}
+  ul.clean b{color:var(--ink)} ul.clean code{font-family:var(--mono); color:var(--indigo-ink); font-weight:600}
+  .guard li::before{content:"▹ "; color:var(--rust); font-weight:700}
+
+  /* Build delta */
+  .delta{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:14px}
+  @media(max-width:720px){.delta{grid-template-columns:1fr}}
+  .col{background:var(--panel); border:1px solid var(--line); border-radius:13px; padding:18px 20px}
+  .col h4{margin:0 0 12px; font-size:13px; letter-spacing:.05em; text-transform:uppercase; display:flex; align-items:center; gap:8px}
+  .col.have h4{color:var(--green-ink)} .col.todo h4{color:var(--indigo-ink)}
+  .col h4 .chip{font-size:10px; padding:2px 7px; border-radius:12px}
+  .col.have .chip{background:var(--green-fill); color:var(--green-ink)}
+  .col.todo .chip{background:var(--indigo-fill); color:var(--indigo-ink)}
+  .col ul{margin:0; padding-left:18px; font-size:13.5px; color:var(--ink-2)}
+  .col li{margin:7px 0} .col code{font-family:var(--mono); color:var(--ink); font-weight:600}
+
+  footer{margin-top:36px; padding-top:16px; border-top:1px solid var(--line); font-size:12.5px; color:var(--ink-2)}
+  footer code{font-family:var(--mono)}
+  .note{background:var(--amber-fill); border:1px solid #E7C983; color:var(--amber-ink);
+    border-radius:10px; padding:11px 15px; font-size:13px; margin:18px 0 0}
+  .note b{color:#5E3F08}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="eyebrow">ppxai agent platform · design proposal</p>
+    <h1>A <code>/task</code> command family that mirrors the run lifecycle</h1>
+    <p class="lede">One verb per state transition. Every change to a run is reachable <b>three ways that hit the same endpoint</b> — a <code>/task</code> sub-command, a control in the run pane, and (for automation) the raw <code>POST</code>. Tool-free work stays on <code>/agentrun</code>; <code>/task</code> is the tool-capable, sandboxed tier.</p>
+  </header>
+
+  <div class="term" role="img" aria-label="Terminal session showing /task run, ls, respond, and ack commands">
+    <div class="bar" aria-hidden="true"><i></i><i></i><i></i></div>
+<pre><span class="p">&gt;</span> /task run <span>"triage the failing CI job"</span> <span class="flag">--tools</span> read_file,grep,fetch_url <span class="flag">--allow</span> api.github.com <span class="flag">--budget</span> iters=20,time=300
+  <span class="g-run">⟳</span> <span class="rid">r_7fq2</span>  <span class="dim">pending → running</span>   <span class="dim">gpt-5.4-mini · read_file grep fetch_url · ↗ api.github.com</span>
+
+<span class="p">&gt;</span> /task ls
+  <span class="g-run">●</span> <span class="rid">r_7fq2</span>  running            <span class="dim">triage the failing CI job</span>        <span class="dim">0:41</span>
+  <span class="g-wait">⏸</span> <span class="rid">r_5kd8</span>  waiting · consent  <span class="dim">migrate the config loader</span>        <span class="g-wait">needs approval</span>
+  <span class="g-ok">✓</span> <span class="rid">r_2ab1</span>  pending-ack        <span class="dim">summarize the release notes</span>      <span class="g-ok">collect ↵</span>
+
+<span class="p">&gt;</span> /task respond <span class="rid">r_5kd8</span> approve
+  <span class="g-run">▸</span> <span class="rid">r_5kd8</span>  <span class="dim">waiting → running</span>   <span class="dim">approved: write_file ./config.py</span>
+
+<span class="p">&gt;</span> /task ack <span class="rid">r_2ab1</span>
+  <span class="g-ok">✓</span> <span class="rid">r_2ab1</span>  <span class="dim">completed_pending_ack → finalized</span>   <span class="dim">result collected</span></pre>
+  </div>
+  <div class="note"><b>Status today:</b> no <code>/task</code> command exists in any client — <code>/agentrun</code> (tool-free) is the only agent slash command shipped. This is the proposed surface. The launch, list, show, watch and cancel endpoints already exist; <code>respond</code>, <code>ack</code> and <code>resume</code> are designed (ADR&nbsp;0003 §8) and need building.</div>
+
+  <h2><span class="n">01</span> Sub-commands</h2>
+  <p class="sub">Verb-first, git-shaped. Read verbs observe; lifecycle verbs drive a transition. <code style="font-family:var(--mono)">{id}</code> accepts a run-id prefix.</p>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Verb</th><th>Syntax</th><th>Endpoint</th><th>Transition</th><th>Endpoint&nbsp;status</th></tr></thead>
+      <tbody>
+        <tr><td><code>run</code></td><td><code>/task run "&lt;desc&gt;"</code> <span class="desc">+ flags →</span></td><td><code>POST /v1/agent/task</code></td><td class="trans">— <span class="to">→ pending → running</span></td><td><span class="pill built">built</span></td></tr>
+        <tr><td><code>ls</code></td><td><code>/task ls</code> <span class="desc">(alias <code>list</code>)</span></td><td><code>GET /v1/agent/runs</code></td><td class="trans">read</td><td><span class="pill built">built</span></td></tr>
+        <tr><td><code>show</code></td><td><code>/task show &lt;id&gt;</code> <span class="desc">(alias <code>open</code>)</span></td><td><code>GET …/runs/{id}</code></td><td class="trans">read · opens pane</td><td><span class="pill built">built</span></td></tr>
+        <tr><td><code>watch</code></td><td><code>/task watch &lt;id&gt;</code></td><td><code>GET …/runs/{id}/events</code></td><td class="trans">read · live SSE tail</td><td><span class="pill built">built</span></td></tr>
+        <tr><td><code>cancel</code></td><td><code>/task cancel &lt;id&gt;</code></td><td><code>POST …/runs/{id}/cancel</code></td><td class="trans">running|waiting <span class="to">→ cancelled</span></td><td><span class="pill built">built</span></td></tr>
+        <tr><td><code>respond</code></td><td><code>/task respond &lt;id&gt; approve|deny|"&lt;text&gt;"</code></td><td><code>POST …/runs/{id}/respond</code></td><td class="trans">waiting <span class="to">→ running</span></td><td><span class="pill plan">planned</span></td></tr>
+        <tr><td><code>ack</code></td><td><code>/task ack &lt;id&gt;</code></td><td><code>POST …/runs/{id}/ack</code></td><td class="trans">completed_pending_ack <span class="to">→ finalized</span></td><td><span class="pill plan">planned</span></td></tr>
+        <tr><td><code>resume</code></td><td><code>/task resume &lt;id&gt;</code></td><td><code>POST …/runs/{id}/resume</code></td><td class="trans">interrupted <span class="to">→ running</span> <span class="desc">(conditional)</span></td><td><span class="pill plan">planned</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2><span class="n">02</span> Three ways, one endpoint</h2>
+  <p class="sub">Each transition is a triad: a slash sub-command for keyboard/headless drivers, a control in the run pane for point-and-click, both POSTing to one endpoint. The pane surfaces the control only in the state where it's valid.</p>
+  <div class="triads">
+    <div class="triad wait">
+      <p class="st">◗ waiting · consent</p>
+      <div class="row"><span class="lbl">command</span><span class="val">/task respond r_5kd8 approve</span></div>
+      <div class="row"><span class="lbl">pane</span><span class="btn approve">Approve</span><span class="btn deny">Deny</span></div>
+      <div class="row"><span class="lbl">endpoint</span><span class="arrow">→</span><span class="val">POST …/respond</span></div>
+    </div>
+    <div class="triad wait">
+      <p class="st">◗ waiting · input</p>
+      <div class="row"><span class="lbl">command</span><span class="val">/task respond r_9xz "approach 2"</span></div>
+      <div class="row"><span class="lbl">pane</span><span class="btn neutral">reply ▸</span><span class="desc" style="font-size:11px;color:var(--ink-2)">inline text field</span></div>
+      <div class="row"><span class="lbl">endpoint</span><span class="arrow">→</span><span class="val">POST …/respond</span></div>
+    </div>
+    <div class="triad ok">
+      <p class="st">✓ completed_pending_ack</p>
+      <div class="row"><span class="lbl">command</span><span class="val">/task ack r_2ab1</span></div>
+      <div class="row"><span class="lbl">pane</span><span class="btn neutral">Collect result</span><span class="desc" style="font-size:11px;color:var(--ink-2)">or auto-ack on view</span></div>
+      <div class="row"><span class="lbl">endpoint</span><span class="arrow">→</span><span class="val">POST …/ack</span></div>
+    </div>
+    <div class="triad fail">
+      <p class="st">⤾ interrupted</p>
+      <div class="row"><span class="lbl">command</span><span class="val">/task resume r_4kk0</span></div>
+      <div class="row"><span class="lbl">pane</span><span class="btn neutral">Resume</span><span class="desc" style="font-size:11px;color:var(--ink-2)">shown only if resumable</span></div>
+      <div class="row"><span class="lbl">endpoint</span><span class="arrow">→</span><span class="val">POST …/resume</span></div>
+    </div>
+    <div class="triad act">
+      <p class="st">● running</p>
+      <div class="row"><span class="lbl">command</span><span class="val">/task cancel r_7fq2</span></div>
+      <div class="row"><span class="lbl">pane</span><span class="btn deny">Cancel</span><span class="desc" style="font-size:11px;color:var(--ink-2)">cascades to children</span></div>
+      <div class="row"><span class="lbl">endpoint</span><span class="arrow">→</span><span class="val">POST …/cancel</span></div>
+    </div>
+    <div class="triad act">
+      <p class="st">↳ launch</p>
+      <div class="row"><span class="lbl">command</span><span class="val">/task run "…" --tools …</span></div>
+      <div class="row"><span class="lbl">pane</span><span class="btn neutral">New task…</span><span class="desc" style="font-size:11px;color:var(--ink-2)">grant + budget form</span></div>
+      <div class="row"><span class="lbl">endpoint</span><span class="arrow">→</span><span class="val">POST /v1/agent/task</span></div>
+    </div>
+  </div>
+
+  <h2><span class="n">03</span> Launch flags &amp; guardrails</h2>
+  <div class="grid2">
+    <div>
+      <p class="sub" style="margin-bottom:8px">Flags on <code style="font-family:var(--mono)">/task run</code> map 1:1 to the request body.</p>
+      <ul class="clean">
+        <li><code>--tools a,b,c</code> — <b>capability grant</b> (required; a tool-free run belongs on <code>/agentrun</code>). Include <code>spawn_subagent</code> to permit one child.</li>
+        <li><code>--allow host[/path],…</code> → <code>network.allow_outbound</code>. Empty = no egress (fail-closed).</li>
+        <li><code>--provider</code> / <code>--model</code> — per-run intent; default from <code>tools.agent.default_subagent</code>.</li>
+        <li><code>--budget iters=,time=,tokens=</code> → <code>BudgetSpec</code> (cooperative caps at loop boundaries).</li>
+        <li><code>--persona &lt;name&gt;</code> / <code>--system "…"</code> — agent-spec / system framing layered on the bounded-agent default.</li>
+      </ul>
+    </div>
+    <div>
+      <p class="sub" style="margin-bottom:8px">The tier's existing guardrails stay authoritative — the command just surfaces them.</p>
+      <ul class="clean guard">
+        <li><b>Default-off.</b> <code>task_tier_enabled=false</code> → <code>run</code> returns <b>403</b> with the enable hint; the tool-free tier stays available.</li>
+        <li><b>No shell grant.</b> <code>--tools …,execute_shell_command</code> → <b>400</b> (escapes the egress allowlist; needs tier-d).</li>
+        <li><b>Auth required — even on loopback.</b> Unlike <code>/agentrun</code>, <code>/task</code> is not loopback-exempt; the local client needs a token.</li>
+        <li><b>Owner-scoped.</b> a run is readable/cancellable only by its owner; <code>ls</code>/<code>show</code> scope to you.</li>
+        <li><b>Depth = 1, N = 1.</b> a child can't spawn; a parent drives one child at a time.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2><span class="n">04</span> What to build</h2>
+  <p class="sub">The launch/observe/cancel spine already exists server-side. The delta is the interactive-transition endpoints and the client command family + pane.</p>
+  <div class="delta">
+    <div class="col have">
+      <h4><span class="chip">have</span> already shipped</h4>
+      <ul>
+        <li><code>POST /v1/agent/task</code> — sandboxed run (ScopedToolManager · NetworkPolicy · budgets · spawn N=1)</li>
+        <li><code>GET /runs</code>, <code>GET /runs/{id}</code>, <code>GET /runs/{id}/events</code>, <code>POST /runs/{id}/cancel</code></li>
+        <li>Owner-scoped authz; default-off gate; no-shell rejection</li>
+        <li>Web right-panel + <code>AgentRunView</code> pane (from the <code>/agentrun</code> tier — reusable)</li>
+      </ul>
+    </div>
+    <div class="col todo">
+      <h4><span class="chip">build</span> the delta</h4>
+      <ul>
+        <li><b>Endpoints:</b> <code>POST …/respond</code>, <code>…/ack</code>, <code>…/resume</code> + the <code>waiting</code> / <code>completed_pending_ack</code> / <code>finalized</code> statuses and <code>AGENT_WAITING</code> / <code>AGENT_RESULT_READY</code> events</li>
+        <li><b>Client:</b> <code>TaskController</code> (mirror of <code>agent-run-controller.js</code>) + <code>TaskRunView</code> — the denser pane with per-state controls</li>
+        <li><b>Dispatch:</b> register <code>/task</code> + sub-verbs in <code>command-dispatcher.js</code>; flag parser for the launch line</li>
+        <li><b>Persona:</b> the agent-spec artifact behind <code>--persona</code> (shared with ppxai-sre)</li>
+        <li><b>Then:</b> port the family to TUI + VSCode (web first)</li>
+      </ul>
+    </div>
+  </div>
+
+  <footer>
+    Companion to the <b>run-lifecycle state diagram</b>. Grounded in <code>ppxai/server/routes/agent_v1.py</code> (request shapes, existing routes) and <code>docs/decisions/0003-agent-platform-architecture.md §8</code> (the <code>respond</code> / <code>ack</code> / <code>resume</code> transitions). Proposal — not yet implemented.
+  </footer>
+</div>
+</body>
+</html>
