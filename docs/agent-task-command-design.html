@@ -110,6 +110,19 @@
   .note{background:var(--amber-fill); border:1px solid #E7C983; color:var(--amber-ink);
     border-radius:10px; padding:11px 15px; font-size:13px; margin:18px 0 0}
   .note b{color:#5E3F08}
+
+  .codeblock{background:#F4F6FB; border:1px solid var(--line); border-radius:12px;
+    padding:16px 18px; overflow-x:auto; margin:14px 0 6px}
+  .codeblock pre{margin:0; font-family:var(--mono); font-size:12.5px; line-height:1.72;
+    color:var(--ink); white-space:pre}
+  .codeblock .c{color:#8390A2}
+  .codeblock .k{color:var(--indigo-ink)}
+  .codeblock .s{color:var(--green-ink)}
+  .codeblock .b{color:var(--rust-ink); font-weight:600}
+  .col.soft h4{color:var(--amber-ink)} .col.soft .chip{background:var(--amber-fill); color:var(--amber-ink)}
+  .col.hard h4{color:var(--indigo-ink)} .col.hard .chip{background:var(--indigo-fill); color:var(--indigo-ink)}
+  .tree{color:var(--ink)}
+  .tree .path{color:var(--indigo-ink); font-weight:600}
 </style>
 </head>
 <body>
@@ -245,8 +258,85 @@
     </div>
   </div>
 
+  <h2><span class="n">05</span> Spec &amp; skill files</h2>
+  <p class="sub">A file carries two separable things: <b>instructions</b> (prose → the run's <code style="font-family:var(--mono)">system</code>) and <b>configuration</b> (grant · provider · budget · egress · read-scope → the request fields). One task-spec concept, several serializations. A spec can only <b>request</b> capability — the operator's policy is the ceiling (§9, "inject intent, default-deny capability").</p>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>File</th><th>Carries</th><th>Loaded via</th></tr></thead>
+      <tbody>
+        <tr><td><code>.md</code> + YAML front-matter <span class="desc">(recommended)</span></td><td class="desc">front-matter = config (<code style="font-family:var(--mono)">tools, budget, provider, allow_outbound, read_paths</code>); body = instructions → <code style="font-family:var(--mono)">system</code></td><td class="desc">reuses <code>bootstrap.py::_parse_yaml_front_matter</code> — same shape as a <code>SKILL.md</code></td></tr>
+        <tr><td><code>.json</code> / <code>.yaml</code></td><td class="desc">the same fields as an object; <code style="font-family:var(--mono)">system</code> inline or <code style="font-family:var(--mono)">instructions_file</code></td><td class="desc">machine-authored — ppxai-sre's rendered agent-spec</td></tr>
+        <tr><td><code>.jsonl</code></td><td class="desc"><b>batch</b> — one spec per line → fan out <i>N</i> runs <span class="desc">(secondary: seed messages / few-shot)</span></td><td class="desc"><code>--batch specs.jsonl</code></td></tr>
+        <tr><td>skill <b>directory</b></td><td class="desc"><code>SKILL.md</code> <i>is</i> a spec; <code style="font-family:var(--mono)">references/</code> → read-scope; <code style="font-family:var(--mono)">scripts/</code> inert</td><td class="desc"><code>--skill &lt;name&gt;</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="codeblock"><pre class="tree"><span class="path">skills/ci-triage/</span>
+  SKILL.md         <span class="c"># front-matter: requests read_file,grep,fetch_url + budget</span>
+                   <span class="c"># body:        the triage instructions → system</span>
+  references/*.md  <span class="c"># → mounted into the run READ-SCOPE (read_file/grep reach these only)</span>
+  scripts/*.sh     <span class="c"># INERT — no shell grant; scripts need the container tier</span></pre></div>
+  <p class="sub" style="margin-top:12px"><b>Precedence</b> (highest wins): CLI flags → <code style="font-family:var(--mono)">--spec</code> file → <code style="font-family:var(--mono)">--skill</code> front-matter(s) → server <code style="font-family:var(--mono)">default_subagent</code> — then clamped by the operator ceiling (allowed grant · no-shell · <code style="font-family:var(--mono)">task_tier_enabled</code>). <b>Delivery:</b> local operators pass a path (server reads it); remote/web clients read + <b>inline</b> the spec and upload skill references.</p>
+
+  <h2><span class="n">06</span> Filesystem sandbox config <span class="n">tools.agent.sandbox</span></h2>
+  <p class="sub">A new config block <b>seals</b> where a task may read and write. The scoping fields are tier-agnostic; <code style="font-family:var(--mono)">enforcement</code> selects how they're realized — a soft in-process path-jail today, real container mounts under the container tier. The same config graduates from soft to hard by flipping one field.</p>
+  <div class="codeblock"><pre><span class="k">"tools"</span>: { <span class="k">"agent"</span>: {
+  <span class="k">"task_tier_enabled"</span>: <span class="b">false</span>,
+  <span class="k">"sandbox"</span>: {
+    <span class="k">"enforcement"</span>: <span class="s">"in_process"</span>,          <span class="c">// "in_process" | "container"</span>
+
+    <span class="k">"workdir"</span>: {                       <span class="c">// the ONLY writable location — a per-task chroot</span>
+      <span class="k">"root"</span>: <span class="s">"~/.ppxai/runs"</span>,          <span class="c">// each run gets root/{run_id}/work</span>
+      <span class="k">"writable"</span>: <span class="b">true</span>,               <span class="c">// write_file/apply_patch confined here</span>
+      <span class="k">"cleanup"</span>: <span class="s">"on_finalize"</span>          <span class="c">// "on_finalize" | "keep" | "ttl:24h"</span>
+    },
+    <span class="k">"read_paths"</span>: {                    <span class="c">// read_file/grep/list_directory reach ONLY these</span>
+      <span class="k">"allow"</span>: [<span class="s">"~/.ppxai/skills"</span>, <span class="s">"~/.ppxai/specs"</span>],
+      <span class="k">"deny"</span>:  [<span class="s">"**/.env"</span>, <span class="s">"**/.ssh/**"</span>, <span class="s">"**/secrets/**"</span>],  <span class="c">// deny wins</span>
+      <span class="k">"follow_symlinks"</span>: <span class="b">false</span>        <span class="c">// resolve target, re-check inside allow</span>
+    },
+    <span class="k">"skills_dir"</span>: <span class="s">"~/.ppxai/skills"</span>,   <span class="c">// --skill &lt;name&gt; resolves HERE (name, not a path)</span>
+    <span class="k">"specs_dir"</span>:  <span class="s">"~/.ppxai/specs"</span>,
+    <span class="k">"allow_skill_scripts"</span>: <span class="b">false</span>,     <span class="c">// inert until enforcement="container"</span>
+
+    <span class="k">"container"</span>: {                     <span class="c">// used when enforcement="container" (tier-d)</span>
+      <span class="k">"image"</span>: <span class="s">"ppxai/agent-runner:1.19"</span>,
+      <span class="k">"read_only_root_fs"</span>: <span class="b">true</span>,
+      <span class="k">"workdir_mount"</span>: <span class="s">"/work"</span>,          <span class="c">// pod emptyDir == the writable workdir</span>
+      <span class="k">"config_maps"</span>: [                 <span class="c">// operator-managed, mounted READ-ONLY</span>
+        { <span class="k">"name"</span>: <span class="s">"ppxai-skills"</span>, <span class="k">"mountPath"</span>: <span class="s">"/skills"</span>, <span class="k">"readOnly"</span>: <span class="b">true</span> },
+        { <span class="k">"name"</span>: <span class="s">"ppxai-specs"</span>,  <span class="k">"mountPath"</span>: <span class="s">"/specs"</span>,  <span class="k">"readOnly"</span>: <span class="b">true</span> }
+      ],
+      <span class="k">"network_policy"</span>: <span class="s">"ppxai-agent-egress"</span>,  <span class="c">// k8s NetworkPolicy realizes AC-2</span>
+      <span class="k">"resources"</span>: { <span class="k">"cpu"</span>: <span class="s">"500m"</span>, <span class="k">"memory"</span>: <span class="s">"512Mi"</span> }
+    }
+  }
+} }</pre></div>
+
+  <div class="delta">
+    <div class="col soft">
+      <h4><span class="chip">now</span> enforcement: in_process</h4>
+      <ul>
+        <li>Python <b>path-jail</b> in <code>ScopedToolManager</code>: every <code>read_file</code>/<code>grep</code>/<code>write_file</code> path is resolved and checked against <code>read_paths</code> / <code>workdir</code> before the real tool runs.</li>
+        <li>Per-run <b>workdir</b> is the only writable root — a logical chroot (<code>../</code> and absolute escapes denied).</li>
+        <li><code>--skill</code>/<code>--spec</code> resolve by <b>name</b> under the configured roots — a caller can't point at an arbitrary path.</li>
+        <li><b>Best-effort</b>, matching the trusted-operator preview (threat model A) — operator hygiene, not a boundary against hostile task text.</li>
+      </ul>
+    </div>
+    <div class="col hard">
+      <h4><span class="chip">tier-d</span> enforcement: container</h4>
+      <ul>
+        <li>The <i>same</i> fields become <b>real OS boundaries</b>: read-only root fs; <code>workdir</code> = the pod's writable <code>emptyDir</code> mount.</li>
+        <li><b>Skills &amp; specs = ConfigMaps</b> injected into the pod and mounted read-only — the operator seals what a task sees without rebuilding the image.</li>
+        <li>Egress becomes a k8s <b>NetworkPolicy</b> (realizes the same AC-2 allowlist as the in-process <code>NetworkPolicy</code>).</li>
+        <li>The hard boundary that lets a task take <b>untrusted input</b> and permits <code>allow_skill_scripts</code>.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="note"><b>Ship the keys with the enforcer, never before.</b> Parsed-but-unenforced scoping is worse than none — an operator sets <code>read_paths</code> and assumes confinement that isn't there. So <code>tools.agent.sandbox</code> lands together with the in-process path-jail; the <code>container</code> block lands with tier-d. Until then this is a design contract, not live config.</div>
+
   <footer>
-    Companion to the <b>run-lifecycle state diagram</b>. Grounded in <code>ppxai/server/routes/agent_v1.py</code> (request shapes, existing routes) and <code>docs/decisions/0003-agent-platform-architecture.md §8</code> (the <code>respond</code> / <code>ack</code> / <code>resume</code> transitions). Proposal — not yet implemented.
+    Companion to the <b>run-lifecycle state diagram</b>. Grounded in <code>ppxai/server/routes/agent_v1.py</code> (request shapes, existing routes), <code>ppxai/engine/agent_scoped_tools.py</code> (grant-only scoping today — read-path scoping is the new primitive), and <code>docs/decisions/0003-agent-platform-architecture.md §8–§9</code> (transitions · config inheritance). Proposal — not yet implemented.
   </footer>
 </div>
 </body>

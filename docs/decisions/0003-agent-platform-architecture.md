@@ -584,6 +584,32 @@ any terminal → tool sandbox torn down; artifacts retained until FINALIZED/GC
   isolation lands, the spec carries a **token *reference*, not a raw
   key**, so the swap to per-agent identity (item 9) is non-breaking.
 
+**Filesystem sealing — `tools.agent.sandbox` (proposed).** The *read-path
+scope* and *workdir* injected fields above are governed by a new
+`tools.agent.sandbox` config block that **seals** where a task may read and
+write. The scoping fields (`workdir`, `read_paths`, `skills_dir`, `specs_dir`)
+are tier-agnostic; an `enforcement` selector picks how they are realized —
+**one schema, two enforcers**:
+
+- `enforcement: "in_process"` (preview) — a Python path-jail in
+  `ScopedToolManager`: every `read_file`/`grep`/`write_file` path is resolved
+  and checked against `read_paths` / the per-run `workdir` before the real
+  tool runs. `--skill`/`--spec` resolve by **name** under the configured roots
+  (not an arbitrary path). Best-effort under threat model A — operator hygiene,
+  not a boundary against hostile task text. **Note:** `ScopedToolManager`
+  today scopes tool *names* only; read-path enforcement is the new primitive
+  this block requires.
+- `enforcement: "container"` (tier-d) — the *same* fields become real OS
+  boundaries: read-only root fs; `workdir` = the pod's writable `emptyDir`
+  mount; **skills & specs = ConfigMaps injected into the pod and mounted
+  read-only** (operator seals what a task sees without rebuilding the image);
+  egress = a k8s NetworkPolicy realizing the same AC-2 allowlist. This is the
+  hard boundary that lets a task take untrusted input.
+
+Ship the config keys **with** the enforcer, never before — parsed-but-unenforced
+scoping is a false sense of security. Full field schema + the `/task` command
+surface: [agent-task-command-design.html](../agent-task-command-design.html) §5–§6.
+
 ### 10. AppState — one running-agents summary field
 
 Add a `background_agents` summary field to
