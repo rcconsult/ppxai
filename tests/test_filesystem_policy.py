@@ -250,3 +250,59 @@ class TestScopedManagerPathChokepoint:
         mgr = ScopedToolManager(base, ["read_file"])  # no filesystem_policy
         out = await mgr.execute_tool("read_file", filepath="/etc/hosts")
         assert out == "ran" and base.calls
+
+
+class _AliasBase:
+    """Base manager that reuses the REAL ToolManager alias normalization, to
+    prove the jail resolves an aliased path arg (Codex sandbox-escape fix)."""
+    from ppxai.engine.tools.manager import ToolManager as _TM
+    PARAM_ALIAS_GROUPS = _TM.PARAM_ALIAS_GROUPS
+    _normalize_params = _TM._normalize_params
+
+    def __init__(self):
+        self.calls = []
+
+    def get_tool(self, name):
+        from types import SimpleNamespace
+        schema = {
+            "read_file": {"filepath": {}, "offset": {}},
+            "search_files": {"pattern": {}, "directory": {}},
+        }.get(name, {})
+        return SimpleNamespace(parameters={"properties": schema})
+
+    async def execute_tool(self, name, **kwargs):
+        self.calls.append((name, kwargs))
+        return "ran"
+
+
+class TestAliasBypassClosed:
+    """The seal must resolve a path passed under an ARGUMENT ALIAS. read_file's
+    canonical kwarg is 'filepath'; a model calling read_file(file=…) or
+    search_files(path=…) must NOT slip past the jail (which used to check only
+    the canonical kwarg, default to '.', and allow — before the base manager
+    normalized the alias to the real target)."""
+
+    @pytest.mark.asyncio
+    async def test_read_file_alias_to_offscope_is_denied(self, dirs):
+        base = _AliasBase()
+        mgr = ScopedToolManager(base, ["read_file"], filesystem_policy=_pol(dirs))
+        out = await mgr.execute_tool("read_file", file="/etc/passwd")  # 'file' alias
+        assert "denied" in out.lower()
+        assert base.calls == []            # tool never ran
+
+    @pytest.mark.asyncio
+    async def test_search_files_path_alias_to_offscope_is_denied(self, dirs):
+        base = _AliasBase()
+        mgr = ScopedToolManager(base, ["search_files"], filesystem_policy=_pol(dirs))
+        out = await mgr.execute_tool("search_files", path="/etc")  # 'path'→'directory'
+        assert "denied" in out.lower()
+        assert base.calls == []
+
+    @pytest.mark.asyncio
+    async def test_in_scope_alias_read_passes(self, dirs):
+        base = _AliasBase()
+        mgr = ScopedToolManager(base, ["read_file"], filesystem_policy=_pol(dirs))
+        out = await mgr.execute_tool("read_file", file=str(dirs["allowed"] / "x"))
+        assert out == "ran"
+        # normalized to the canonical kwarg before reaching the tool
+        assert base.calls and base.calls[0][1].get("filepath") == str(dirs["allowed"] / "x")

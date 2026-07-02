@@ -145,6 +145,19 @@ class TestEgressSubset:
         err = t._check_egress_subset(["api.github.com"])
         assert err is not None
 
+    def test_child_wildcard_not_covered_by_parent_exact_host(self, registry):
+        # Codex fix: parent allows ONE exact subdomain; a child "*.example.com"
+        # glob is NOT a subset (it could reach other subdomains) and must be
+        # rejected — the old single "sub.example.com" probe wrongly passed it.
+        t = _tool(registry, parent_tools=[], parent_allow=["sub.example.com"])
+        err = t._check_egress_subset(["*.example.com"])
+        assert err and "*.example.com" in err and "subset" in err
+
+    def test_child_wildcard_ok_when_parent_has_covering_glob(self, registry):
+        # parent allows the *.example.com glob -> child *.example.com IS a subset
+        t = _tool(registry, parent_tools=[], parent_allow=["*.example.com"])
+        assert t._check_egress_subset(["*.example.com"]) is None
+
     # --- path-scoped delegation (codex MEDIUM fix) ----------------------
 
     def test_child_same_scoped_path_ok(self, registry):

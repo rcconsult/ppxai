@@ -45,6 +45,13 @@ logger = get_logger("tui")
 # the child silently survives — on hit, the parent CANCELS the child.
 _DEFAULT_CHILD_WAIT_S = 300.0
 
+# Two unguessable labels for verifying a child "*.suffix" egress GLOB is a
+# subset of the parent allowlist. The parent permits BOTH probes ONLY if it
+# holds a covering "*.suffix" glob rule — it cannot have exact rules for random
+# labels — so a child glob can't be approved merely because the parent allows
+# one exact subdomain (Codex review: AC-2 transitive subset must be exhaustive).
+_WILDCARD_SUBSET_PROBES = ("z9x8c7v6b5a4-subset-probe", "q1w2e3r4t5y6-subset-probe")
+
 
 class SpawnSubagentTool(BaseTool):
     """Spawn one child agent run, scoped to a subset of this run's caps."""
@@ -177,22 +184,31 @@ class SpawnSubagentTool(BaseTool):
                 paths = [p for p in (entry.get("paths") or []) if isinstance(p, str)]
             else:
                 return f"malformed child egress rule: {entry!r}"
-            # Concrete host to probe: a "*.suffix" glob -> a representative
-            # subdomain so the parent's own glob (if any) can match it.
             if not host:
                 return f"malformed child egress rule (no host): {entry!r}"
-            probe_host = ("sub" + host[1:]) if host.startswith("*.") else host
+            # Hosts to probe against the parent policy. An EXACT child host is
+            # probed as-is. A "*.suffix" GLOB is probed with TWO unguessable
+            # labels: a single fixed representative (the old "sub.suffix") wrongly
+            # passed when the parent allowed just that ONE exact subdomain, but
+            # the child glob could then reach OTHER subdomains the parent never
+            # allowed. Requiring BOTH random labels to be permitted means the
+            # parent must hold a covering "*.suffix" glob — a true subset.
+            if host.startswith("*."):
+                probe_hosts = [lbl + host[1:] for lbl in _WILDCARD_SUBSET_PROBES]
+            else:
+                probe_hosts = [host]
             # The set of paths the child could hit: each declared prefix, or
             # root if it declared none (= any path).
             probe_paths = paths or ["/"]
-            for p in probe_paths:
-                probe = f"https://{probe_host}{p if p.startswith('/') else '/' + p}"
-                if not isinstance(self._parent_policy.check(probe), Allow):
-                    scope = f"{host}{(' path ' + p) if paths else ''}"
-                    return (
-                        f"child egress {scope!r} is not permitted by the parent "
-                        f"allowlist — child egress must be a subset (host + path)"
-                    )
+            for probe_host in probe_hosts:
+                for p in probe_paths:
+                    probe = f"https://{probe_host}{p if p.startswith('/') else '/' + p}"
+                    if not isinstance(self._parent_policy.check(probe), Allow):
+                        scope = f"{host}{(' path ' + p) if paths else ''}"
+                        return (
+                            f"child egress {scope!r} is not permitted by the parent "
+                            f"allowlist — child egress must be a subset (host + path)"
+                        )
         return None
 
     # --- execution ------------------------------------------------------

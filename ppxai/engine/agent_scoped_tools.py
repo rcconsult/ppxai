@@ -111,6 +111,19 @@ class ScopedToolManager:
                 f"Error: tool {name!r} is not permitted for this run. "
                 f"Permitted tools: {', '.join(sorted(self._grant)) or '(none)'}."
             )
+        # Normalize argument ALIASES to the tool's canonical kwarg names BEFORE
+        # the egress/filesystem checks below. The base ToolManager normalizes in
+        # its OWN execute_tool, which runs AFTER this wrapper — so without this a
+        # path/url passed under an alias is invisible to a policy that inspects
+        # only the canonical kwarg, a sandbox bypass (Codex review): e.g.
+        # read_file(file="/etc/passwd") slipped the filesystem jail because
+        # authorize() looked for 'filepath', found none, allowed the workdir
+        # default ".", and normalization then mapped file->filepath to the real
+        # target. Normalizing first makes every check see the true argument.
+        if hasattr(self._base, "_normalize_params"):
+            tool = self._base.get_tool(name)
+            if tool is not None:
+                kwargs = self._base._normalize_params(tool, dict(kwargs))
         # AC-2 backstop: a shell-execution tool runs arbitrary commands whose
         # egress the allowlist cannot inspect, so it bypasses the chokepoint
         # below. The /v1/agent/task route rejects shell grants up front; this
