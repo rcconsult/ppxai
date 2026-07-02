@@ -74,6 +74,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import time
 from typing import Any, Optional
 
@@ -87,6 +88,7 @@ from ...engine.agent_runs import RunMeta
 from ...engine.agent_scoped_tools import ScopedToolManager
 from ...engine.client import EngineClient
 from ...engine.tools.agent_spawn import SpawnSubagentTool
+from ...engine.tools.filesystem_policy import build_filesystem_policy
 from ...engine.tools.network_policy import NetworkPolicy, grant_has_shell
 from ...engine.types import EventType
 from ..state import get_agent_run_registry
@@ -621,9 +623,34 @@ def build_task_runner(
                 data=payload,
             )
 
+        # T2: filesystem SEAL (tools.agent.sandbox, enforcement="in_process").
+        # Off by default — engaged only when the operator opts in. When on, the
+        # run gets a per-run workdir (its ONLY writable root), relative paths
+        # resolve there, and reads/writes are confined by FilesystemPolicy.
+        fs_policy = None
+        _on_path = None
+        sandbox = get_agent_config().get("sandbox", {}) or {}
+        if sandbox.get("enforcement") == "in_process":
+            workdir = os.path.join(
+                os.path.expanduser(sandbox["workdir"]["root"]), m.run_id, "work"
+            )
+            os.makedirs(workdir, exist_ok=True)
+            engine.set_working_dir(workdir)  # relative tool paths resolve here
+            fs_policy = build_filesystem_policy(sandbox, workdir)
+
+            def _on_path(allowed: bool, payload: dict) -> None:  # noqa: F811
+                # Allowed reads are silent (they'd fire on every read); only the
+                # denial is a security-relevant event.
+                if not allowed:
+                    registry.emit_event(
+                        m.run_id, "path_denied", level="warning",
+                        category="filesystem", data={**payload, "run_id": m.run_id},
+                    )
+
         engine.tool_manager = ScopedToolManager(
             engine.tool_manager, list(tools), on_deny=_on_deny,
             network_policy=net_policy, on_network=_on_network,
+            filesystem_policy=fs_policy, on_path=_on_path,
         )
 
         # Inc 6: cooperative budget/cancel control. Polled at each tool-loop

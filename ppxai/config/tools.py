@@ -181,6 +181,46 @@ def get_agent_config() -> Dict[str, Any]:
         # tool-FREE tiers (`/v1/agent/run`, `/v1/oneshot`) are unaffected.
         # Override via `"tools": {"agent": {"task_tier_enabled": true}}`.
         "task_tier_enabled": agent_config.get("task_tier_enabled", False),
+        # v1.19.x build plan T2 — the filesystem SEAL. Confines where a
+        # tool-capable run may read/write. The scoping fields are tier-agnostic;
+        # `enforcement` selects HOW they're realized — "in_process" (a Python
+        # path-jail in ScopedToolManager) now, "container" (read-only rootfs,
+        # workdir emptyDir, skills/specs as ConfigMap mounts) under tier-d.
+        # Default OFF: the jail engages ONLY when the operator sets
+        # enforcement="in_process" — otherwise a tool-capable run reads/writes
+        # as before (non-breaking). See docs/agent-task-command-design.html §6.
+        "sandbox": _normalize_sandbox(agent_config.get("sandbox", {})),
+    }
+
+
+def _normalize_sandbox(sb: Dict[str, Any]) -> Dict[str, Any]:
+    """Normalize the `tools.agent.sandbox` block with defaults.
+
+    `enforcement` defaults to "off" — a run is NOT confined unless the operator
+    opts in. Keys ship WITH the enforcer (never before): parsing them does
+    nothing until `enforcement == "in_process"` wires the jail in
+    build_task_runner; the `container` sub-block is defined but inert until
+    tier-d.
+    """
+    sb = sb or {}
+    wd = sb.get("workdir", {}) or {}
+    rp = sb.get("read_paths", {}) or {}
+    return {
+        "enforcement": sb.get("enforcement", "off"),  # "off" | "in_process" | "container"
+        "workdir": {
+            "root": wd.get("root", "~/.ppxai/runs"),
+            "writable": bool(wd.get("writable", True)),
+            "cleanup": wd.get("cleanup", "keep"),      # "keep" | "on_finalize"
+        },
+        "read_paths": {
+            "allow": list(rp.get("allow", []) or []),
+            "deny": list(rp.get("deny", []) or []),
+            "follow_symlinks": bool(rp.get("follow_symlinks", False)),
+        },
+        "skills_dir": sb.get("skills_dir"),
+        "specs_dir": sb.get("specs_dir"),
+        "allow_skill_scripts": bool(sb.get("allow_skill_scripts", False)),
+        "container": sb.get("container", {}) or {},    # inert until tier-d
     }
 
 

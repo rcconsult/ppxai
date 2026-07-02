@@ -1,0 +1,225 @@
+"""Tests for the T2 filesystem seal — FilesystemPolicy + the ScopedToolManager
+path chokepoint (tools.agent.sandbox, enforcement="in_process").
+
+The jail is a path-prefix confinement: read-class tools may reach only the
+configured read roots; write-class tools only the per-run workdir. Deny-wins,
+fail-closed, boundary-anchored (no sibling over-match), and symlink-escape safe.
+"""
+
+from __future__ import annotations
+
+import os
+
+import pytest
+
+from ppxai.config.tools import _normalize_sandbox
+from ppxai.engine.agent_scoped_tools import ScopedToolManager
+from ppxai.engine.tools.filesystem_policy import (
+    Allow,
+    Deny,
+    FilesystemPolicy,
+    build_filesystem_policy,
+    is_path_tool,
+)
+
+
+@pytest.fixture
+def dirs(tmp_path):
+    allowed = tmp_path / "allowed"
+    workdir = tmp_path / "run" / "work"
+    outside = tmp_path / "outside"
+    for d in (allowed, workdir, outside):
+        d.mkdir(parents=True)
+    return {"allowed": allowed, "workdir": workdir, "outside": outside, "root": tmp_path}
+
+
+def _pol(dirs, **kw):
+    return FilesystemPolicy(
+        read_roots=[str(dirs["allowed"])],
+        workdir=str(dirs["workdir"]),
+        base=str(dirs["workdir"]),
+        **kw,
+    )
+
+
+# ── read scope ────────────────────────────────────────────────────────────────
+
+class TestReadScope:
+    def test_read_within_allow(self, dirs):
+        assert isinstance(_pol(dirs).check("read", str(dirs["allowed"] / "x.txt")), Allow)
+
+    def test_read_exact_root(self, dirs):
+        assert isinstance(_pol(dirs).check("read", str(dirs["allowed"])), Allow)
+
+    def test_read_outside_denied(self, dirs):
+        assert isinstance(_pol(dirs).check("read", "/etc/hosts"), Deny)
+
+    def test_sibling_prefix_not_over_matched(self, dirs):
+        # "<root>/allowedX" shares the string prefix of "<root>/allowed" but is
+        # NOT within it — must be denied (the boundary bug the jail must avoid).
+        sibling = str(dirs["allowed"]) + "X"
+        assert isinstance(_pol(dirs).check("read", sibling), Deny)
+
+    def test_workdir_is_readable(self, dirs):
+        # a run can read what it writes
+        assert isinstance(_pol(dirs).check("read", str(dirs["workdir"] / "o.txt")), Allow)
+
+    def test_dotdot_escape_denied(self, dirs):
+        # <allowed>/../outside/secret resolves OUTSIDE the allowed root
+        escape = str(dirs["allowed"] / ".." / "outside" / "secret")
+        assert isinstance(_pol(dirs).check("read", escape), Deny)
+
+
+# ── write scope ───────────────────────────────────────────────────────────────
+
+class TestWriteScope:
+    def test_write_in_workdir(self, dirs):
+        assert isinstance(_pol(dirs).check("write", str(dirs["workdir"] / "out.py")), Allow)
+
+    def test_write_outside_workdir_denied(self, dirs):
+        # even inside the READ-allowed dir, writing is refused
+        assert isinstance(_pol(dirs).check("write", str(dirs["allowed"] / "x")), Deny)
+
+    def test_write_with_no_workdir_denied(self, dirs):
+        pol = FilesystemPolicy(read_roots=[str(dirs["allowed"])], workdir=None)
+        assert isinstance(pol.check("write", str(dirs["allowed"] / "x")), Deny)
+
+
+# ── deny-wins + symlinks ──────────────────────────────────────────────────────
+
+class TestDenyAndSymlinks:
+    def test_deny_glob_overrides_allow(self, dirs):
+        pol = _pol(dirs, deny=("**/.env",))
+        env = dirs["allowed"] / ".env"
+        env.write_text("SECRET=1")
+        assert isinstance(pol.check("read", str(env)), Deny)
+
+    def test_deny_dir_glob(self, dirs):
+        pol = _pol(dirs, deny=("**/secrets",))
+        secret = dirs["allowed"] / "secrets" / "key"
+        secret.parent.mkdir()
+        secret.write_text("k")
+        assert isinstance(pol.check("read", str(secret)), Deny)
+
+    def test_symlink_inside_root_pointing_out_is_denied(self, dirs):
+        # default follow_symlinks=False → the REAL target is checked, so a link
+        # inside the allowed root that points outside is refused.
+        target = dirs["outside"] / "secret.txt"
+        target.write_text("s")
+        link = dirs["allowed"] / "link"
+        os.symlink(str(target), str(link))
+        assert isinstance(_pol(dirs).check("read", str(link)), Deny)
+
+    def test_follow_symlinks_true_allows_logical_path(self, dirs):
+        # documents the less-safe mode: the logical path within allow is accepted
+        target = dirs["outside"] / "secret.txt"
+        target.write_text("s")
+        link = dirs["allowed"] / "link2"
+        os.symlink(str(target), str(link))
+        pol = _pol(dirs, follow_symlinks=True)
+        assert isinstance(pol.check("read", str(link)), Allow)
+
+
+# ── relative resolution + authorize() ─────────────────────────────────────────
+
+class TestAuthorize:
+    def test_relative_read_resolves_against_workdir_base(self, dirs):
+        # a bare "file.txt" resolves under the workdir (base) → readable
+        d = _pol(dirs).authorize("read_file", {"filepath": "file.txt"})
+        assert d.allowed and d.target == str(dirs["workdir"] / "file.txt")
+
+    def test_read_file_absolute_outside_denied(self, dirs):
+        d = _pol(dirs).authorize("read_file", {"filepath": "/etc/passwd"})
+        assert not d.allowed and d.mode == "read"
+
+    def test_write_file_outside_workdir_denied(self, dirs):
+        d = _pol(dirs).authorize("write_file", {"file_path": str(dirs["allowed"] / "x")})
+        assert not d.allowed and d.mode == "write"
+
+    def test_list_directory_default_dot_is_workdir(self, dirs):
+        # omitted path → "." → the workdir → allowed
+        d = _pol(dirs).authorize("list_directory", {})
+        assert d.allowed
+
+    def test_non_path_tool_passes(self, dirs):
+        d = _pol(dirs).authorize("web_search", {"query": "x"})
+        assert d.allowed and d.mode == ""
+
+    def test_is_path_tool(self):
+        assert is_path_tool("read_file") and is_path_tool("apply_patch")
+        assert not is_path_tool("web_search")
+
+
+# ── build_filesystem_policy + config ──────────────────────────────────────────
+
+class TestBuildAndConfig:
+    def test_build_includes_skills_and_specs_dirs(self, dirs):
+        sandbox = _normalize_sandbox({
+            "enforcement": "in_process",
+            "read_paths": {"allow": [str(dirs["allowed"])]},
+            "skills_dir": str(dirs["root"] / "skills"),
+            "specs_dir": str(dirs["root"] / "specs"),
+        })
+        pol = build_filesystem_policy(sandbox, str(dirs["workdir"]))
+        (dirs["root"] / "skills").mkdir()
+        assert isinstance(pol.check("read", str(dirs["root"] / "skills" / "s.md")), Allow)
+        assert isinstance(pol.check("read", str(dirs["root"] / "specs")), Allow)
+
+    def test_normalize_defaults(self):
+        sb = _normalize_sandbox({})
+        assert sb["enforcement"] == "off"          # non-breaking default
+        assert sb["workdir"]["root"] == "~/.ppxai/runs"
+        assert sb["read_paths"]["allow"] == []
+        assert sb["read_paths"]["follow_symlinks"] is False
+        assert sb["allow_skill_scripts"] is False
+        assert sb["container"] == {}
+
+
+# ── ScopedToolManager integration ─────────────────────────────────────────────
+
+class _FakeBase:
+    def __init__(self):
+        self.calls = []
+
+    async def execute_tool(self, name, **kwargs):
+        self.calls.append((name, kwargs))
+        return "ran"
+
+
+class TestScopedManagerPathChokepoint:
+    @pytest.mark.asyncio
+    async def test_offscope_read_blocked_and_event_emitted(self, dirs):
+        base = _FakeBase()
+        events = []
+        mgr = ScopedToolManager(
+            base, ["read_file"],
+            filesystem_policy=_pol(dirs),
+            on_path=lambda ok, p: events.append((ok, p)),
+        )
+        out = await mgr.execute_tool("read_file", filepath="/etc/hosts")
+        assert "denied" in out.lower()
+        assert base.calls == []                     # the tool NEVER ran
+        assert events and events[0][0] is False
+        assert events[0][1]["tool"] == "read_file" and events[0][1]["mode"] == "read"
+
+    @pytest.mark.asyncio
+    async def test_inscope_read_passes_through(self, dirs):
+        base = _FakeBase()
+        events = []
+        mgr = ScopedToolManager(
+            base, ["read_file"],
+            filesystem_policy=_pol(dirs),
+            on_path=lambda ok, p: events.append((ok, p)),
+        )
+        out = await mgr.execute_tool("read_file", filepath=str(dirs["allowed"] / "x"))
+        assert out == "ran"
+        assert base.calls == [("read_file", {"filepath": str(dirs["allowed"] / "x")})]
+        assert events == []                         # allowed reads are silent
+
+    @pytest.mark.asyncio
+    async def test_no_policy_means_no_confinement(self, dirs):
+        # default (unconfigured) — a path tool runs unconfined
+        base = _FakeBase()
+        mgr = ScopedToolManager(base, ["read_file"])  # no filesystem_policy
+        out = await mgr.execute_tool("read_file", filepath="/etc/hosts")
+        assert out == "ran" and base.calls

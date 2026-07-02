@@ -23,6 +23,7 @@ from __future__ import annotations
 
 from typing import Any, Callable, Dict, List, Optional
 
+from .tools.filesystem_policy import FilesystemPolicy, is_path_tool
 from .tools.network_policy import (
     NetworkPolicy,
     SHELL_TOOL_NAMES,
@@ -71,12 +72,20 @@ class ScopedToolManager:
         on_deny: Optional[Callable[[str], None]] = None,
         network_policy: Optional[NetworkPolicy] = None,
         on_network: Optional[Callable[[bool, dict], None]] = None,
+        filesystem_policy: Optional[FilesystemPolicy] = None,
+        on_path: Optional[Callable[[bool, dict], None]] = None,
     ) -> None:
         self._base = base
         self._grant = set(grant or [])
         self._on_deny = on_deny
         self._network_policy = network_policy
         self._on_network = on_network
+        # T2: per-run read/write path confinement (tools.agent.sandbox,
+        # enforcement="in_process"). None = no filesystem jail (default /
+        # unconfigured), so an off-scope path is only denied when the operator
+        # opted into the seal.
+        self._filesystem_policy = filesystem_policy
+        self._on_path = on_path
 
     # --- the allowlist (the whole point) --------------------------------
 
@@ -129,7 +138,38 @@ class ScopedToolManager:
             denial = self._check_network(name, kwargs)
             if denial is not None:
                 return denial  # request never fired; model-readable
+        # T2 filesystem chokepoint: a granted, path-bearing tool must resolve
+        # inside the run's read scope (reads) or workdir (writes) before it
+        # touches disk. Fail-closed — off-scope path never reaches the tool.
+        if self._filesystem_policy is not None and is_path_tool(name):
+            denial = self._check_path(name, kwargs)
+            if denial is not None:
+                return denial  # tool never ran; model-readable
         return await self._base.execute_tool(name, **kwargs)
+
+    def _check_path(self, name: str, kwargs: dict) -> Optional[str]:
+        """Run the filesystem confinement check for a path tool. Returns a
+        model-readable denial string if the path is off-scope (and the tool must
+        NOT run), or None if allowed. Emits a `path_denied` event on denial
+        (allowed reads are silent — they'd fire on every read)."""
+        d = self._filesystem_policy.authorize(name, kwargs)
+        if d.allowed:
+            return None
+        logger.warning(
+            f"Path denied: tool {name!r} target {d.target!r} — {d.reason}"
+        )
+        if self._on_path is not None:
+            self._on_path(False, {
+                "tool": name,
+                "mode": d.mode,
+                "target_path": d.target,
+                "reason": d.reason,
+            })
+        return (
+            f"Error: filesystem access denied for {name!r}: {d.reason} "
+            f"(path {d.target!r}). This run is confined to its sandbox — "
+            f"read within the allowed roots, write only inside the run workdir."
+        )
 
     def _check_network(self, name: str, kwargs: dict) -> Optional[str]:
         """Run the egress check for a network tool. Returns a model-readable
