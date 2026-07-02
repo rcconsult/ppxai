@@ -188,9 +188,10 @@ chat input "/agentruns"
    └─ apiClient.get("/v1/agent/runs") → render newest-20 as a system line
 ```
 
-Served from `~/.ppxai/web/` (NOT the repo) — see static.py `WEB_UI_DIR`.
-Trialing edits requires copying the changed web files there (build-install
-step 5b, or a targeted copy of command-dispatcher.js + app.js).
+Served from `~/.ppxai/web/` (NOT the repo) by default — see static.py
+`WEB_UI_DIR`. **Since v1.19.0** you no longer have to copy files there to trial
+edits: set `PPXAI_WEB_DIR=$PWD/ppxai/web` and any launcher (`uv run
+ppxai-server`, desktop) serves the checkout live (`_resolve_web_ui_dir`).
 
 ---
 
@@ -894,6 +895,64 @@ Second review round (2026-06-17, two more):
   `tempfile.mkstemp` (unique name) + `os.replace`, with temp-cleanup on failure.
   Tests: `test_persist_meta_leaves_no_tmp_and_is_valid`,
   `test_persist_meta_cleans_tmp_on_failure`.
+
+## Build plan T1 — `/task` command family (web client surface)
+
+Added: `web/shared/task-controller.js` (`TaskController extends AgentRunController`),
+`web/components/views/task-run-view.js` (`TaskRunView extends AgentRunView`).
+Changed: `command-dispatcher.js` (route `/task`), `commands.js` + `app.js` (catalog),
+`index.html` (script includes), `styles/right-panel-frame.css`. **No new endpoints** —
+the tool-capable tier's client, entirely over the Inc-4→9 `/v1/agent/*` routes.
+(build plan: `plan-task-command-sequencing.md`.)
+
+```
+chat input "/task <verb> …"                     [command-dispatcher.js dispatch]
+└─ cmd === "/task" → tasks.handle(args)          [TaskController]
+   ├─ run "<desc>" --tools … --allow … --budget … --provider … --model … --system …
+   │   └─ run(argline)
+   │      ├─ parseTaskArgs(argline) → {task, tools[], provider, model, system,
+   │      │                            network.allow_outbound[], budget{}, errors[]}
+   │      ├─ guards: errors → abort; no task → usage; no tools → "needs a grant"
+   │      ├─ provider/model fall back to app.state.current{Provider,Model}
+   │      ├─ apiClient.post("/v1/agent/task", body)          → {run_id, status}
+   │      │     403 tier-off / 400 shell|no-provider → showSystemMessage(e.message)  [verbatim]
+   │      ├─ _openPane(run_id, task, {tools,network,budget,provider,model,status})
+   │      │     → new TaskRunView(...)   [chips: model · grant · ↗egress · ⏲budget]
+   │      ├─ _breadcrumb(run_id, …)      [clickable "open ▸" in chat]
+   │      └─ _watchDetached(run_id) ── inherited ───────────────────────┐
+   ├─ ls | list          → list()   → GET /v1/agent/runs → clickable rows → focus()
+   ├─ show | open | watch <id> → show(id) → focus(id)  [GET /runs/{id}, setMeta, re-tail]
+   ├─ cancel <id>        → cancel(id) → POST /v1/agent/runs/<id>/cancel → pane.setStatus("cancelling")
+   └─ "" | help          → help()
+                                                                        │
+   inherited watcher (AgentRunController, reused unchanged): ◄──────────┘
+   _watchDetached → _runWatch:
+     for await ev of _tailEvents(<id>?live=1):               [SSE `data:` lines]
+        live = getViewByPath("agent://run/<id>")
+        live.appendEvent(ev)   ── TaskRunView live log: tool_call / tool_denied /
+                                  network_policy_allowed|denied / spawn_denied /
+                                  subagent_spawned|finished  (else raw type string)
+        break on agent_run_{complete,error,cancelled,interrupted}
+     _pollUntilTerminal(<id>)  [degraded fallback if the SSE drops; no run-duration ceiling]
+     _renderTerminal → pane.setResult(result) | setError(error)   [mirror to chat if no pane]
+```
+
+**Reuse seam** (why `TaskController` is ~200 lines, not ~400): the base controller
+was made view-class-agnostic (`_viewClass`) and grew duck-typed hooks the oneshot
+pane ignores — `setMeta` (hydrate chips from `GET /runs/{id}`), `appendEvent` (live
+log), `setOnCancel` (Cancel button) — plus a shared `cancel()`. `/agentrun` behavior
+is unchanged (its Node behavioral test still passes). Emitted event types the log
+maps come from `build_task_runner` (`tool_call`, `tool_denied`,
+`network_policy_*`) and `agent_spawn` (`spawn_denied`, `subagent_*`).
+
+**Trialing from source (`uv run`):** the web UI is served from `~/.ppxai/web` by
+default, so a plain `uv run ppxai-server` shows the INSTALLED bundle, not your
+edits. Prefix `PPXAI_WEB_DIR=$PWD/ppxai/web` to serve the checkout live; enable the
+tier (`tools.agent.task_tier_enabled=true`); and avoid CWD config/`.env` shadowing
+(`PPXAI_CONFIG_FILE=~/.ppxai/ppxai-config.json`, `set -a; . ~/.ppxai/.env; set +a`).
+Live-verified: launch → tool loop → `completed`; `cancel` → `cancelling`.
+
+---
 
 <!-- Inc 10+ sections appended here as they land. Template:
 ## Increment N — <title>
