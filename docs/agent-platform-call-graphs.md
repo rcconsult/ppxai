@@ -954,6 +954,51 @@ Live-verified: launch → tool loop → `completed`; `cancel` → `cancelling`.
 
 ---
 
+## Build plan T2 — filesystem seal (`tools.agent.sandbox`, in-process jail)
+
+Added: `engine/tools/filesystem_policy.py` (`FilesystemPolicy`, mirror of
+`NetworkPolicy`). Changed: `config/tools.py` (parse `sandbox`),
+`agent_scoped_tools.py` (path chokepoint), `agent_v1.build_task_runner`
+(per-run workdir + policy wiring), `task-run-view.js` (`path_denied` in the log).
+**Off by default** — the jail engages only on `enforcement:"in_process"`, so an
+unconfigured tool-capable run reads/writes as before (non-breaking).
+
+```
+build_task_runner._runner(m):                         [routes/agent_v1.py]
+  sandbox = get_agent_config()["sandbox"]
+  if sandbox.enforcement == "in_process":
+     workdir = <sandbox.workdir.root>/<run_id>/work    (mkdir)
+     engine.set_working_dir(workdir)                   ← relative tool paths resolve here
+     fs_policy = build_filesystem_policy(sandbox, workdir)
+                   read_roots = read_paths.allow + skills_dir + specs_dir + workdir
+                   workdir     = the ONLY write root
+     _on_path(allowed, payload): if not allowed → emit_event("path_denied", category="filesystem")
+  engine.tool_manager = ScopedToolManager(..., filesystem_policy=fs_policy, on_path=_on_path)
+
+ScopedToolManager.execute_tool(name, **kwargs):        [engine/agent_scoped_tools.py]
+  grant check → shell check → network check →
+  if filesystem_policy and is_path_tool(name):         [filesystem_policy._PATH_TOOLS]
+     d = filesystem_policy.authorize(name, kwargs)
+         mode, kwarg = _PATH_TOOLS[name]   # read_file→filepath(read), write_file→file_path(write), …
+         target = resolve(raw)             # expanduser; relative→workdir; realpath unless follow_symlinks
+         check(mode, target):
+            deny-glob match → Deny (deny wins)
+            write → within(workdir) ? Allow : Deny
+            read  → any within(read_root) ? Allow : Deny   [boundary-anchored via commonpath]
+     if not d.allowed:
+        _on_path(False, {tool, mode, target_path, reason})   → path_denied event
+        return "Error: filesystem access denied …"           # tool NEVER runs
+  → base.execute_tool(name, **kwargs)
+```
+
+Best-effort under threat model A (a path-prefix jail, not an OS boundary).
+`enforcement:"container"` (tier-d, T9) realizes the SAME `sandbox` fields as
+real mounts: read-only rootfs, workdir `emptyDir`, skills/specs read-only
+ConfigMap mounts, egress a k8s NetworkPolicy. Trial: set
+`read_paths.allow`, then a `/task` read outside it returns the sandbox denial.
+
+---
+
 <!-- Inc 10+ sections appended here as they land. Template:
 ## Increment N — <title>
 Added/changed: <files>. Execution model change: <if any>.
