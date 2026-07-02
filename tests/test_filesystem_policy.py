@@ -172,6 +172,20 @@ class TestAuthorize:
         d = _pol(dirs).authorize("web_search", {"query": "x"})
         assert d.allowed and d.mode == ""
 
+    def test_required_path_tool_missing_canonical_is_denied(self, dirs):
+        # Fail-closed hardening: a required-path tool whose canonical kwarg is
+        # absent (omitted, or a path passed under an unrecognized alias like
+        # read_file(path=…)) is denied at the jail, not defaulted to ".".
+        pol = _pol(dirs)
+        assert not pol.authorize("read_file", {}).allowed
+        assert not pol.authorize("read_file", {"path": "/etc/passwd"}).allowed
+        assert not pol.authorize("write_file", {}).allowed
+
+    def test_optional_path_tool_missing_defaults_to_workdir(self, dirs):
+        # list_directory / search_files legitimately default to the workdir.
+        assert _pol(dirs).authorize("list_directory", {}).allowed
+        assert _pol(dirs).authorize("search_files", {"pattern": "*.py"}).allowed
+
     def test_is_path_tool(self):
         assert is_path_tool("read_file") and is_path_tool("apply_patch")
         assert not is_path_tool("web_search")
@@ -306,3 +320,14 @@ class TestAliasBypassClosed:
         assert out == "ran"
         # normalized to the canonical kwarg before reaching the tool
         assert base.calls and base.calls[0][1].get("filepath") == str(dirs["allowed"] / "x")
+
+    @pytest.mark.asyncio
+    async def test_unrecognized_alias_denied_at_jail_not_base(self, dirs):
+        # read_file(path=…): 'path' isn't a read_file arg, so it's NOT a leak
+        # (the tool would error on the missing 'filepath') — but the jail must
+        # DENY it rather than let it reach the base (fail-closed hardening).
+        base = _AliasBase()
+        mgr = ScopedToolManager(base, ["read_file"], filesystem_policy=_pol(dirs))
+        out = await mgr.execute_tool("read_file", path="/etc/passwd")
+        assert "denied" in out.lower()
+        assert base.calls == []

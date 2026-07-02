@@ -29,16 +29,22 @@ from typing import List, Optional, Tuple, Union
 # tool name -> (mode, path-kwarg). mode "read" checks the read scope; "write"
 # checks the per-run workdir. Keys are the exact builtin tool names + their
 # path parameter (verified against builtin/filesystem.py + builtin/editor.py).
+# tool name -> (mode, path-kwarg, path_required). `path_required` is False only
+# for the tools whose path legitimately DEFAULTS to the working dir (".") when
+# omitted; for every other tool an absent canonical path kwarg means the call is
+# malformed (or the path was passed under an alias the tool doesn't accept), and
+# the jail fails CLOSED rather than checking the "." default (which would let the
+# call slip through to the base — Codex/coder review, alias completeness).
 _PATH_TOOLS: dict = {
-    "read_file":             ("read",  "filepath"),
-    "list_directory":        ("read",  "path"),
-    "search_files":          ("read",  "directory"),
-    "set_working_directory": ("read",  "path"),
-    "write_file":            ("write", "file_path"),
-    "apply_patch":           ("write", "file_path"),
-    "replace_block":         ("write", "file_path"),
-    "insert_text":           ("write", "file_path"),
-    "delete_lines":          ("write", "file_path"),
+    "read_file":             ("read",  "filepath",  True),
+    "list_directory":        ("read",  "path",      False),
+    "search_files":          ("read",  "directory", False),
+    "set_working_directory": ("read",  "path",      True),
+    "write_file":            ("write", "file_path", True),
+    "apply_patch":           ("write", "file_path", True),
+    "replace_block":         ("write", "file_path", True),
+    "insert_text":           ("write", "file_path", True),
+    "delete_lines":          ("write", "file_path", True),
 }
 
 # Default path when a read tool's path kwarg is omitted — the tools default to
@@ -172,14 +178,18 @@ class FilesystemPolicy:
         spec = _PATH_TOOLS.get(name)
         if spec is None:
             return PathDecision(True, "", "", "")
-        mode, kw = spec
+        mode, kw, required = spec
         raw = kwargs.get(kw)
         if not isinstance(raw, str) or not raw.strip():
-            if mode == "read":
-                raw = _DEFAULT_READ_PATH   # tools default to "."
+            if mode == "read" and not required:
+                raw = _DEFAULT_READ_PATH   # list_directory/search_files default to "."
             else:
-                # A write with no path can't be confined — fail closed.
-                return PathDecision(False, mode, "", "no path argument to confine")
+                # A required-path tool (or any write) with no confinable path:
+                # the canonical kwarg is absent — either omitted, or the path was
+                # passed under an alias the tool doesn't consume. Fail CLOSED
+                # (deny at the jail) rather than checking the "." default and
+                # letting the call reach the base.
+                return PathDecision(False, mode, "", "no confinable path argument")
         target = self._resolve(raw)
         decision = self.check(mode, raw)
         if isinstance(decision, Allow):
