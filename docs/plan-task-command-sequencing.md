@@ -31,7 +31,12 @@ seal needs it (T2).
 
 ---
 
-## T1 — launch + observe: `run · ls · show · watch · cancel`
+## T1 — launch + observe: `run · ls · show · watch · cancel` — ✅ DONE
+
+**Shipped:** `0ff4370b` (+ `42543961` log-noise fix, `22d7757f` call graph),
+live-trial-verified in-browser (run/ls/cancel; pane with chips + live log +
+result). `TaskController extends AgentRunController`, `TaskRunView extends
+AgentRunView`; `/agentrun` unchanged.
 
 **Capability:** `/task run "<desc>" --tools …` mints a tool-capable run and
 renders it in a right-panel pane; `/task ls` lists runs; `show`/`watch` focus +
@@ -63,7 +68,13 @@ behavioral test mirroring `test_agent_run_controller_behavior.py`.
 
 ---
 
-## T2 — the seal: `read_paths` enforcement + `tools.agent.sandbox` (in_process)
+## T2 — the seal: `read_paths` enforcement + `tools.agent.sandbox` (in_process) — ✅ DONE
+
+**Shipped:** `89b18ac0` (+ `9bd8c790` call graph). `engine/tools/filesystem_policy.py`
+(`FilesystemPolicy`), `config/tools.py` sandbox parsing (default `enforcement:"off"`
+→ non-breaking), the `ScopedToolManager` path chokepoint (`path_denied`), and the
+per-run workdir in `build_task_runner`. Live-trialed: allowed read → ok, `/etc/hosts`
+→ denied; 24 unit tests. `container` sub-block schema defined but inert (T9).
 
 **Capability:** a run can read/write **only** inside configured locations; an
 attempt to read outside the allowlist is denied with a `path_denied` event.
