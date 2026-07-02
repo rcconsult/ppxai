@@ -132,8 +132,22 @@ class FilesystemPolicy:
         return os.path.realpath(str(p))
 
     def _denied_by_glob(self, target: str) -> Optional[str]:
+        # A deny pattern is matched three ways so the intuitive forms work:
+        #   1. Against the full absolute path — for anchored globs
+        #      (`/abs/path`, `**/.env`, `**/secrets/**`).
+        #   2. Against `<pattern>/*` — so a dir pattern also denies its contents.
+        #   3. For a SEPARATOR-FREE pattern (a bare name like `.env`, `.git`,
+        #      `secrets`, `node_modules`) — against EVERY path COMPONENT, so it
+        #      denies that file anywhere AND anything under a dir of that name.
+        # Without (3), a bare `.env` silently matched nothing (fnmatch compares
+        # the whole path), so only `**/.env` worked — an easy config footgun.
+        # Over-denying is the fail-safe direction (deny wins), so component
+        # matching a bare name broadly is the correct bias.
+        parts = [p for p in target.split(os.sep) if p]
         for d in self._deny:
             if fnmatch.fnmatch(target, d) or fnmatch.fnmatch(target, d.rstrip("/") + "/*"):
+                return d
+            if "/" not in d and os.sep not in d and any(fnmatch.fnmatch(p, d) for p in parts):
                 return d
         return None
 

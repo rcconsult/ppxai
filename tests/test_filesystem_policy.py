@@ -101,6 +101,33 @@ class TestDenyAndSymlinks:
         secret.write_text("k")
         assert isinstance(pol.check("read", str(secret)), Deny)
 
+    def test_bare_name_deny_matches_anywhere(self, dirs):
+        # Review fix: a SEPARATOR-FREE pattern like ".env" must deny that file
+        # anywhere — not only when written as "**/.env". Previously bare ".env"
+        # silently matched nothing (fnmatch compared the whole absolute path).
+        pol = _pol(dirs, deny=(".env",))
+        top = dirs["allowed"] / ".env"
+        nested = dirs["allowed"] / "sub" / ".env"
+        nested.parent.mkdir()
+        for f in (top, nested):
+            f.write_text("SECRET=1")
+        assert isinstance(pol.check("read", str(top)), Deny)
+        assert isinstance(pol.check("read", str(nested)), Deny)
+        # a file that merely CONTAINS the name isn't denied
+        ok = dirs["allowed"] / "environment.txt"
+        ok.write_text("x")
+        assert isinstance(pol.check("read", str(ok)), Allow)
+
+    def test_bare_name_deny_matches_dir_subtree(self, dirs):
+        # ".git" / "secrets" as a bare name blocks anything under a dir of that
+        # name (component match), not just the dir entry itself.
+        pol = _pol(dirs, deny=("secrets",))
+        f = dirs["allowed"] / "secrets" / "key"
+        f.parent.mkdir()
+        f.write_text("k")
+        assert isinstance(pol.check("read", str(f)), Deny)              # under the dir
+        assert isinstance(pol.check("read", str(dirs["allowed"] / "secrets")), Deny)  # the dir
+
     def test_symlink_inside_root_pointing_out_is_denied(self, dirs):
         # default follow_symlinks=False → the REAL target is checked, so a link
         # inside the allowed root that points outside is refused.

@@ -52,13 +52,34 @@ scoped. Reopen it only with an explicit decision to change the threat model
 (e.g. bind the UI surface to a per-session loopback token, or drop the
 exemption behind a config flag) — not as a drive-by "bug fix."
 
-## If you DO decide to harden it
+## Spoofing hardening — LANDED (v1.19.x)
 
-The IP-only trust is the weak point. Options, roughly in order of effort:
+An earlier version of this lesson claimed "the gate ignores forwarded headers,
+which is safer." **That was imprecise** — uvicorn runs with `proxy_headers=True`,
+so behind a local reverse proxy it can rewrite `request.client.host` from a
+client-supplied `X-Forwarded-For`, making the IP alone spoofable to loopback
+(caught in a Gemini/antigravity review). Two independent defenses now close it:
+
+1. **`_is_loopback` rejects forwarded requests** — it requires a loopback peer
+   IP AND the **absence** of any forwarding header (`X-Forwarded-For`/`-Host`,
+   `X-Real-IP`, `Forwarded`). A genuine local browser connects directly and
+   sends none; a proxied request always carries one. (`server/auth.py`)
+2. **uvicorn trusts no proxy client-IP by default** — `forwarded_allow_ips=""`
+   (from `_forwarded_allow_ips()` in `server/http.py`), so `client.host` is the
+   real TCP peer. Operators behind a TRUSTED proxy opt in via
+   `PPXAI_FORWARDED_ALLOW_IPS` and own their proxy's XFF sanitization.
+
+Verify: `grep -n "_FORWARDING_HEADERS\|forwarded" ppxai/server/auth.py`;
+`grep -n "_forwarded_allow_ips" ppxai/server/http.py`. Tests:
+`tests/test_auth_middleware.py::TestLoopbackHardening`.
+
+## Still open — the "any local process" trust
+
+The spoofing is closed, but the deliberate design choice below remains: on a
+shared host, ANY local process (not just the operator's browser) still gets the
+exemption, since it keys on the peer being loopback, not on process/user
+identity. Options if you decide to close THAT too:
 - Mint a per-session loopback UI token at startup and have the local clients
   send it (removes the "any local process" hole while keeping desktop UX).
 - Gate the exemption behind an explicit `server.auth.trust_loopback_ui` flag,
   default on for desktop builds, off for server/cluster builds.
-- Consult `X-Forwarded-*` only from a trusted proxy allowlist (note: today the
-  gate ignores forwarded headers, which is *safer* against a local reverse
-  proxy spoofing loopback — don't naively "fix" that).

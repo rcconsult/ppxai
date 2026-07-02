@@ -12,6 +12,7 @@ Usage:
 
 import argparse
 import asyncio
+import os
 import signal
 import sys
 import threading
@@ -263,6 +264,22 @@ for router in all_routers:
 
 # === CLI Entry Point ===
 
+def _forwarded_allow_ips() -> str:
+    """Which proxy IPs uvicorn trusts for ``X-Forwarded-*`` (client-IP rewrite).
+
+    Default ``""`` — trust NO proxy — so ``request.client.host`` is always the
+    real TCP peer. This closes a loopback-auth bypass: with uvicorn's default
+    ``proxy_headers=True`` + ``forwarded_allow_ips=127.0.0.1``, a server behind a
+    LOCAL reverse proxy would let a client-supplied ``X-Forwarded-For: 127.0.0.1``
+    rewrite ``client.host`` to loopback, spoofing the bootstrap/desktop
+    exemptions (see server/auth.py::_is_loopback). Operators genuinely behind a
+    TRUSTED proxy who want real-client-IP propagation set
+    ``PPXAI_FORWARDED_ALLOW_IPS`` (the proxy's IP, or ``*``) — and are then
+    responsible for their proxy sanitizing inbound ``X-Forwarded-For``.
+    """
+    return os.environ.get("PPXAI_FORWARDED_ALLOW_IPS", "")
+
+
 async def _run_server_with_graceful_shutdown(app_ref, host: str, port: int, log_level: str = "info"):
     """Run uvicorn server with graceful shutdown support (v1.13.10).
 
@@ -280,6 +297,8 @@ async def _run_server_with_graceful_shutdown(app_ref, host: str, port: int, log_
         host=host,
         port=port,
         log_level=log_level,
+        # Don't trust proxy client-IP headers by default — see _forwarded_allow_ips.
+        forwarded_allow_ips=_forwarded_allow_ips(),
     )
     server = uvicorn.Server(config)
 
@@ -392,6 +411,7 @@ def run_server():
                 port=args.port,
                 reload=True,
                 log_level="info",
+                forwarded_allow_ips=_forwarded_allow_ips(),
             )
         else:
             asyncio.run(_run_server_with_graceful_shutdown(

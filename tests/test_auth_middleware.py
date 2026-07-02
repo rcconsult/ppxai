@@ -240,3 +240,45 @@ class TestAuthHelpers:
         from ppxai.server.auth import is_auth_enabled
         monkeypatch.setenv("PPXAI_API_TOKEN", "abc")
         assert is_auth_enabled() is True
+
+
+class TestLoopbackHardening:
+    """v1.19.x: the loopback exemption (bootstrap mint + desktop UI) must not be
+    spoofable via X-Forwarded-For behind a local reverse proxy. `_is_loopback`
+    requires BOTH a loopback peer IP AND the absence of any forwarding header —
+    a genuine local browser connects directly and sends none.
+    """
+
+    @staticmethod
+    def _req(host, headers=None):
+        from types import SimpleNamespace
+        return SimpleNamespace(
+            client=SimpleNamespace(host=host), headers=headers or {}
+        )
+
+    def test_direct_loopback_no_headers_is_loopback(self):
+        from ppxai.server.auth import _is_loopback
+        assert _is_loopback(self._req("127.0.0.1")) is True
+        assert _is_loopback(self._req("::1")) is True
+
+    def test_remote_peer_is_not_loopback(self):
+        from ppxai.server.auth import _is_loopback
+        assert _is_loopback(self._req("10.0.0.5")) is False
+
+    def test_forwarded_header_disqualifies_even_if_ip_is_loopback(self):
+        # the spoof: a proxy (or uvicorn XFF rewrite) presents client.host as
+        # 127.0.0.1, but the forwarding header betrays that it was proxied.
+        from ppxai.server.auth import _is_loopback
+        for hdr in ("x-forwarded-for", "x-forwarded-host", "x-real-ip", "forwarded"):
+            assert _is_loopback(self._req("127.0.0.1", {hdr: "127.0.0.1"})) is False, hdr
+
+    def test_forwarded_allow_ips_defaults_to_trust_no_proxy(self):
+        from ppxai.server.http import _forwarded_allow_ips
+        import os
+        os.environ.pop("PPXAI_FORWARDED_ALLOW_IPS", None)
+        assert _forwarded_allow_ips() == ""   # uvicorn trusts no proxy client-IP
+
+    def test_forwarded_allow_ips_env_override(self, monkeypatch):
+        from ppxai.server.http import _forwarded_allow_ips
+        monkeypatch.setenv("PPXAI_FORWARDED_ALLOW_IPS", "10.0.0.1")
+        assert _forwarded_allow_ips() == "10.0.0.1"

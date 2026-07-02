@@ -113,12 +113,36 @@ def is_auth_enabled() -> bool:
 
 _LOOPBACK_HOSTS = frozenset({"127.0.0.1", "::1", "localhost"})
 
+# Headers a request only carries when it passed THROUGH a proxy/gateway. The
+# loopback exemptions below are for a desktop browser talking DIRECTLY to
+# 127.0.0.1 — a forwarded request is never that.
+_FORWARDING_HEADERS = ("x-forwarded-for", "x-forwarded-host", "x-real-ip", "forwarded")
+
 
 def _is_loopback(request: Request) -> bool:
-    """True when the request originates from the local machine."""
+    """True when the request originates DIRECTLY from the local machine.
+
+    Security-critical: this gates the unauthenticated bootstrap-mint and the
+    desktop-UI auth exemptions, so it must not be spoofable. Two conditions,
+    both required:
+
+      1. the peer IP is loopback, AND
+      2. no proxy-forwarding header is present.
+
+    (2) is the hardening (v1.19.x): uvicorn runs with ``proxy_headers=True``, so
+    behind a reverse proxy it may rewrite ``request.client.host`` from a
+    client-supplied ``X-Forwarded-For`` — making the IP alone spoofable to
+    127.0.0.1. A genuine local browser connects directly and sends NO forwarding
+    header, so requiring their absence rejects any proxied request regardless of
+    what the IP was rewritten to. See docs/lessons/loopback-ui-auth-exemption.md.
+    """
     client = request.client
     host = client.host if client else None
-    return host in _LOOPBACK_HOSTS
+    if host not in _LOOPBACK_HOSTS:
+        return False
+    if any(h in request.headers for h in _FORWARDING_HEADERS):
+        return False
+    return True
 
 
 def _has_mutable_store() -> bool:
