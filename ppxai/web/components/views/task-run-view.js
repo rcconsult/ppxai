@@ -109,8 +109,17 @@ class TaskRunView extends AgentRunView {
         // already conveyed by the status badge — so drop both here.
         if (ev.type === 'agent_beat' || ev.type.startsWith('agent_run_')) return;
         this._events.push(ev);
-        if (this._events.length > 200) this._events.shift();  // bound the DOM
         if (this._eventsEl) this._appendEventLine(ev);
+        // Bound BOTH the backing array AND the DOM: a long run streaming
+        // thousands of events would otherwise grow _eventsEl's node count
+        // indefinitely and slow the browser (the shift() alone only capped the
+        // array — Gemini review). Prune the oldest DOM line in lock-step.
+        if (this._events.length > TaskRunView._MAX_LOG_EVENTS) {
+            this._events.shift();
+            if (this._eventsEl && this._eventsEl.firstChild) {
+                this._eventsEl.removeChild(this._eventsEl.firstChild);
+            }
+        }
     }
 
     setStatus(status) {
@@ -200,6 +209,8 @@ class TaskRunView extends AgentRunView {
 }
 
 TaskRunView._TERMINAL = new Set(['completed', 'failed', 'cancelled', 'interrupted']);
+// Max live-log lines kept in the array AND the DOM (bounded in lock-step).
+TaskRunView._MAX_LOG_EVENTS = 200;
 
 // Browser global export
 if (typeof window !== 'undefined') {

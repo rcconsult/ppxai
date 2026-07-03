@@ -69,3 +69,42 @@ def test_task_run_view_event_text_reads_emitted_fields():
     proc = subprocess.run([NODE, "-e", script], capture_output=True, text=True, timeout=30)
     assert proc.returncode == 0, f"node harness failed:\nSTDOUT: {proc.stdout}\nSTDERR: {proc.stderr}"
     assert "ALL OK" in proc.stdout, proc.stdout
+
+
+_DOM_HARNESS = r"""
+const fs = require('fs');
+global.BaseView = class {{}};
+global.AgentRunView = class extends global.BaseView {{ _statusLabel(s) {{ return s; }} }};
+global.escapeHtml = (s) => s;
+global.window = {{}};
+global.document = {{ createElement: () => ({{}}) }};   // each line = a fresh node
+eval(fs.readFileSync({view}, 'utf8'));
+const TRV = global.window.TaskRunView;
+function assert(c, m) {{ if (!c) throw new Error("FAIL: " + m); }}
+
+// a fake events container tracking its child nodes
+const el = {{
+  nodes: [], scrollTop: 0, scrollHeight: 0,
+  appendChild(n) {{ this.nodes.push(n); }},
+  removeChild(n) {{ const i = this.nodes.indexOf(n); if (i >= 0) this.nodes.splice(i, 1); }},
+  get firstChild() {{ return this.nodes[0] || null; }},
+}};
+
+const view = new TRV('r', 't', {{}});
+view._eventsEl = el;
+const CAP = TRV._MAX_LOG_EVENTS;
+for (let i = 0; i < CAP + 50; i++) view.appendEvent({{ type: 'tool_call', data: {{ tool: 'read_file' }} }});
+
+assert(view._events.length === CAP, "backing array not capped: " + view._events.length);
+assert(el.nodes.length === CAP, "DOM node count not bounded (leak): " + el.nodes.length);
+console.log("ALL OK");
+"""
+
+
+def test_task_run_view_live_log_bounds_dom_not_just_array():
+    """appendEvent must prune the DOM in lock-step with the capped array — a long
+    live run otherwise grows _eventsEl's node count without bound (Gemini review)."""
+    script = _DOM_HARNESS.format(view=json.dumps(str(VIEW)))
+    proc = subprocess.run([NODE, "-e", script], capture_output=True, text=True, timeout=30)
+    assert proc.returncode == 0, f"node harness failed:\nSTDOUT: {proc.stdout}\nSTDERR: {proc.stderr}"
+    assert "ALL OK" in proc.stdout, proc.stdout
