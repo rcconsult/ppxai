@@ -124,6 +124,7 @@ class TaskController extends _AgentRunControllerBase {
         super(app);
         if (typeof TaskRunView !== 'undefined') this._viewClass = TaskRunView;
         this._emptyHint = 'No task runs yet — start one with /task run "<desc>" --tools <a,b,c>';
+        this._reopenHint = '/task ls';
     }
 
     /** Route `/task <verb> <rest>` to a handler. */

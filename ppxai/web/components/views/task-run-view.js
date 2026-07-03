@@ -188,8 +188,8 @@ class TaskRunView extends AgentRunView {
             case 'tool_call':    return `→ ${d.tool || d.name || 'tool'}`;
             case 'tool_result':  return `✓ ${d.tool || 'tool'}  ${TaskRunView._short(d.result)}`;
             case 'tool_denied':  return `⛔ tool denied: ${d.tool || ''} (off-grant)`;
-            case 'network_policy_allowed': return `↗ allow ${TaskRunView._short(d.url || d.host, 80)}`;
-            case 'network_policy_denied':  return `⛔ egress denied ${TaskRunView._short(d.url || d.host, 80)}`;
+            case 'network_policy_allowed': return `↗ allow ${TaskRunView._short((d.target_host || '') + (d.target_path || ''), 80)}`;
+            case 'network_policy_denied':  return `⛔ egress denied ${TaskRunView._short((d.target_host || '') + (d.target_path || ''), 80)}`;
             case 'path_denied':            return `⛔ fs denied (${d.mode || ''}) ${TaskRunView._short(d.target_path, 70)}`;
             case 'spawn_denied':      return `⛔ spawn denied: ${TaskRunView._short(d.reason, 80)}`;
             case 'subagent_spawned':  return `⑂ sub-agent ${d.child_run_id || ''}`;

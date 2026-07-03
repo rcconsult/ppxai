@@ -40,6 +40,10 @@ class AgentRunController {
         // Empty-list hint — overridden by the /task subclass to point at its
         // own launch verb.
         this._emptyHint = 'No agent runs yet. Start one with /agentrun <task>.';
+        // The command that reopens a run's pane (used in recovery hints) — the
+        // /task subclass overrides it, so a task run's "how to retry" message
+        // names the right verb.
+        this._reopenHint = '/agentruns';
     }
 
     /**
@@ -285,13 +289,12 @@ class AgentRunController {
                 stale.setStatus('unreachable');
                 if (typeof stale.setError === 'function') {
                     stale.setError(
-                        'Monitoring stopped — server unreachable. Reopen via '
-                        + '/agentruns (or /task ls) to retry.'
+                        `Monitoring stopped — server unreachable. Reopen via ${this._reopenHint} to retry.`
                     );
                 }
             }
             this.app.showSystemMessage(
-                `⚠️ ${runId} — lost contact with the server; reopen via /agentruns to retry.`
+                `⚠️ ${runId} — lost contact with the server; reopen via ${this._reopenHint} to retry.`
             );
             return;
         }

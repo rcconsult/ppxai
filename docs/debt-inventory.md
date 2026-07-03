@@ -905,17 +905,16 @@ modular-prompt refactor.
       target is always denied under the https-only policy — already documented
       at `network_policy.py:143-144`; drop the http target (or the tool) when
       convenient. Relates to (c).
-    - **Filesystem-jail alias completeness (residual, low).** The alias fix
-      catches every alias the tool actually CONSUMES (they're in `_normalize_params`
-      groups → normalized → checked). A cross-group name the tool does NOT accept
-      (e.g. `read_file(path=…)` — `path` is the directory group, read_file needs
-      `filepath`) is NOT a data leak: the tool errors on the missing required arg
-      (verified). But such a call still REACHES the base past the jail rather than
-      being denied there. **Optional hardening:** fail-closed in
-      `FilesystemPolicy.authorize` — for a REQUIRED-path tool whose canonical
-      kwarg is absent after normalization, Deny (don't default to "."). Tools that
-      legitimately default to the workdir (`list_directory`/`search_files`) keep
-      the "." default. Not urgent (no leak); tightens the seal.
+    - **Filesystem-jail alias completeness — ✅ DONE** (commit `15534784`). The
+      alias fix already caught every alias the tool CONSUMES; this closes the
+      remaining completeness gap where a cross-group name the tool does NOT accept
+      (e.g. `read_file(path=…)`) reached the base past the jail before erroring
+      (not a leak — the tool failed on the missing required arg — but a gap).
+      `_PATH_TOOLS` now carries `path_required`; `FilesystemPolicy.authorize`
+      fails CLOSED for a required-path tool (and any write) whose canonical kwarg
+      is absent after normalization. `list_directory`/`search_files` keep the
+      workdir "." default. Tests: `test_filesystem_policy.py` (required-missing
+      denied, optional-missing allowed, unrecognized-alias denied at jail).
   **Confirmed duplicates (still-known, not re-filed):** Gemini's "50ms disk-poll
   fallback" = (a); "100ms cancel poll" ≈ (e). **Meta:** the alias-normalization
   ordering bug is a general class — any kwarg-inspecting policy must run AFTER
