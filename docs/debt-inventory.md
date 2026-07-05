@@ -925,10 +925,180 @@ modular-prompt refactor.
 - **(a)/(b)** unchanged — promote with the N>1 sub-agent work.
 - **(d)** unchanged — only matters if the SSE layer is reworked.
 
+**ppxai-sre integration gaps (filed 2026-06-24 from the code-verified
+reconciliation — see [docs/research/2026-06-24-ppxai-sre-integration-reconciliation.md](research/2026-06-24-ppxai-sre-integration-reconciliation.md)
+and [docs/research/2026-06-24-ppxai-sdk-mutation-tools-for-sre-agents.md](research/2026-06-24-ppxai-sdk-mutation-tools-for-sre-agents.md);
+contract of record is `ppxai-sre/docs/PPXAI-INTEGRATION-V1.19.md`). The written
+contract C1–C4 + A3 is effectively MET on `feature/v1.19.0`; these are the
+genuine open set. (Lettered q–t; upstream owns p = external review round.)**
+
+- **(q) OPEN — C5 agent-served services routing (entirely unbuilt).** No
+  `services` field on `POST /v1/agent/run`, no reverse-proxy route
+  `…/services/<name>/...` → bound port, no `EventType.AGENT_SERVICE_DOWN`, no
+  inbound network policy (`allow_inbound`), no restart_policy/drain/terminate
+  API, no `X-Forwarded-Prefix` semantics (C5.0–C5.5 all absent — verified). **Not
+  a regression:** C5 post-dates the `42ed8f00` written agreement and was never
+  folded upstream; outlook-monitor ships the documented workaround (FastAPI
+  binds ports directly). **Entangled with (b)/(a) and the `agent_n` decision:**
+  C5's bound-service inspection path is `runs/<run_id>/agent-<n>/services/<name>/`,
+  which needs a REAL multi-slot `agent_n` (today always 0 — sub-agents are
+  sibling top-level runs linked by `parent_run_id`, never `agent-1/`). The proper
+  `/task` design IS the C5 + `agent_n`-nesting design — they cannot be decided
+  separately. **Planned:** v1.19.x `/task` design iteration (debt 37m follow-on)
+  or v1.20.x. **Trigger to revisit:** when `/task` proper design opens, or when a
+  long-lived ppxai-sre service agent (incident-responder / cost-optimizer /
+  cert-monitor / log-analyst) needs bound-port routing.
+
+- **(r) OPEN — `state.json` not persisted (Inspection Triplet incomplete).** The
+  run slot writes `meta.json` + `events.jsonl` but NOT `state.json` (`agent_runs.py`
+  comments say "Inc 2-3"). The integration doc's Phase 3 promises run-persistence
+  state checkpoints; a consumer expecting the full ADR-0005 Triplet (e.g.
+  ppxai-sre `heartbeat.py` reconstructing `AgentBeatState` from a checkpoint)
+  finds no file. **Severity: divergence from the written plan, not a live bug**
+  (nothing reads it yet). Low effort to close. **Planned:** v1.19.x or v1.20.x.
+  **Trigger to revisit:** when ppxai-sre heartbeat/audit machinery moves from
+  in-memory reconstruction to on-disk checkpoint reads.
+
+- **(s) OPEN — A3 `run_id`/`parent_run_id` form-vs-substance.** The info A3 needs
+  is fully available — `run_id` is the event partition key + `GET /v1/agent/runs/<id>`,
+  `parent_run_id` is on `RunMetaResponse` — but NOT literally inside the
+  `AGENT_RUN_START.data` dict as the doc's "additive fields on the event" wording
+  implies. **Resolution is a coin-flip:** either fold the two fields into the
+  event payload for literal compliance, or amend the integration doc to state the
+  structural form. **Severity: cosmetic/contract-wording**; no consumer is blocked
+  (read from the meta projection). **Planned:** resolve during the
+  `MIGRATION-V1.19.md` rewrite. **Trigger to revisit:** migration-doc pass.
+
+- **(t) OPEN — embeddable sandboxed-run SDK API (`build_task_runner` welded to the
+  HTTP route).** For the SDK model (ppxai-sre embeds ppxai; its long-running
+  agents spawn ppxai sub-agent runs as the safe execution unit for AGENT.md-steered
+  MUTATION tools), the run-assembly — `ScopedToolManager` + `NetworkPolicy` +
+  budget/cancel + spawn + AGENT.md framing onto an `EngineClient` — currently lives
+  at `server/routes/agent_v1.py::build_task_runner`, importing route/FastAPI state.
+  A library consumer must import a server-route module or re-implement the security
+  wiring. **Ask:** lift it into the engine as a FastAPI-free `build_sandboxed_run(...)`
+  API; the HTTP route becomes a thin caller. **Structural precondition** for
+  ppxai-sre mutation tools. Pairs with promoting integration asks **A2**
+  (deterministic pre-mutation policy hook — the real write-tool unblocker) and
+  **A1** (policy-decision audit events) from v1.20.x. See
+  [docs/research/2026-06-24-ppxai-sdk-mutation-tools-for-sre-agents.md](research/2026-06-24-ppxai-sdk-mutation-tools-for-sre-agents.md).
+  **NOTE — partially overtaken by upstream `/task` T1–T2 (2026-07-02/03):** the
+  filesystem-seal (`tools.agent.sandbox`, `filesystem_policy.py`) + alias-normalization
+  hardening landed after this was filed; re-verify (t) against the current tree
+  before acting — the sandbox surface has moved. **Planned:** v1.19.x `/task`
+  design iteration or v1.20.x.
+
+- **(u) OPEN — CORS wildcard + no Host-header validation on the HTTP server
+  [SECURITY, actionable now].** Full analysis:
+  [docs/research/2026-07-05-http-server-attack-surface-and-transport-options.md](research/2026-07-05-http-server-attack-surface-and-transport-options.md)
+  §"Point 1". **The bug (verified `6add04f6`):** `server/http.py:194-201` sets
+  `CORSMiddleware(allow_origins=["*"], allow_credentials=True, allow_methods=["*"],
+  allow_headers=["*"])`. Starlette's CORS, given `*` + credentials, **reflects the
+  request Origin** back with `Allow-Credentials:true` (it can't legally send literal
+  `*` with credentials) — so it behaves as "trust EVERY specific origin, with
+  credentials." Combined with **default-OFF auth** (`auth.py:4-8`,
+  `PPXAI_API_TOKEN` unset ⇒ unauthenticated) this means **any website the user
+  visits can script credentialed requests to `127.0.0.1:54320`** — spend the user's
+  provider $, read `/sessions`, drive `/v1/agent/task` if the tier is on, hit
+  `/v1/tokens`. Zero user interaction. Also **no `Host`-header validation**, so
+  **DNS-rebinding** (rebind `evil.com`→`127.0.0.1`) bypasses CORS entirely (browser
+  sees same-origin; TCP lands on ppxai).
+
+  **The fix (two parts, ~15 LoC, no architecture change):**
+  1. Replace wildcard CORS with an explicit loopback-origin allowlist. Because the
+     port may become random (see A.2 in the research doc) prefer
+     `allow_origin_regex=r"^http://(127\.0\.0\.1|localhost):\d+$"` so any loopback
+     port passes, no external host does. **Also add the VSCode webview origin** if
+     the extension's browser context (not the extension host) makes the call —
+     verify which; extension-host `httpx`/`fetch` is not subject to CORS.
+  2. Add `TrustedHostMiddleware(allowed_hosts=[loopback names])` as the OUTERMOST
+     middleware (add it LAST — Starlette runs last-added first) so a rebinding
+     request with `Host: evil.com` is 400'd before any route. Order target:
+     `TrustedHost → CORS → auth → activity → routes`.
+
+  **⚠️ DO NOT ship a hardcoded loopback-only `allowed_hosts` — it breaks the k8s
+  coder/gateway deployment.** VERIFIED: `deploy/images/session-manager/main.py:428`
+  spawns per-user server pods with `python -m ppxai.server.http --host 0.0.0.0
+  --port 54320` (bound WIDE, not loopback), fronted by ingress-nginx with a signed
+  **cookie** session (`coder_session`, LDAP `auth_request` — NOT the
+  `PPXAI_API_TOKEN` bearer; `COOKIE_NAME`/`AUTH_MODE` in the same file). A
+  loopback-only Host check would 400 every ingress-forwarded request (Host =
+  `ppxai.local`). **So Host-validation + CORS-origin allowlist MUST be conditional
+  on bind address / an explicit `PPXAI_TRUSTED_HOSTS` + `PPXAI_ALLOWED_ORIGINS`
+  env override**: loopback-only when bound to `127.0.0.1` (desktop default);
+  operator-supplied host(s) when bound `0.0.0.0` (gateway/coder). This is the exact
+  "local transport locked to loopback; gateway transport is the explicit
+  authenticated exception" thesis of the research doc — the fix ENCODES it.
+
+  **Trap for the resume:** CORS/Host changes break clients SILENTLY. Before
+  shipping, exercise EACH client against the patched server — (a) web app loads +
+  SSE streams, (b) `X-Session-Id` round-trips, (c) VSCode extension works, (d) a
+  cross-origin `fetch` from a foreign origin is now BLOCKED (positive test), (e)
+  a `helm`-deployed coder pod behind ingress still serves (Host=ingress host
+  passes). TUIs are `httpx`/`urllib`, NOT browsers — unaffected by CORS, but still
+  hit by TrustedHost, so include them in the loopback allowlist. **Planned:**
+  actionable now, independent of the transport-model decision (Options A–D in the
+  research doc). **Trigger:** do the CORS+Host fix immediately; the random-port /
+  loopback-token / UDS follow-ons (A.2–A.4) can wait.
+
+- **(v) OPEN — cross-tenant pod reachability: per-user coder pods are
+  `0.0.0.0`-bound + app-layer-unauthenticated, with NO ingress NetworkPolicy
+  [SECURITY, multi-tenant isolation; HIGHER severity than (u); distinct layer].**
+  **(u) does NOT resolve this** — (u) is browser-layer (CORS/Host) defense-in-depth;
+  this is network/app-layer tenant isolation. Filed separately on purpose.
+
+  **VERIFIED (`6add04f6`):**
+  - Per-user server pods bind `--host 0.0.0.0 --port 54320`
+    (`deploy/images/session-manager/main.py:428`).
+  - App-layer auth is OFF on those pods; the ONLY gate is the north-south ingress
+    path (ingress-nginx `auth_request` → LDAP → signed `coder_session` cookie).
+  - `deploy/helm/ppxai/templates/networkpolicy.yaml` declares `policyTypes:
+    [Egress]` ONLY (H2 egress hardening — stops a COMPROMISED pod calling out) and
+    is **`networkPolicy.enabled: false` by default** (`values.yaml:92`) + needs a
+    policy-enforcing CNI (Calico/Cilium). **There is NO ingress NetworkPolicy
+    anywhere in the chart.**
+
+  **The gap:** nothing at the network layer restricts WHO may open a TCP connection
+  to `:54320` on a per-user pod. So any pod in the namespace (a neighbor user's
+  pod, a benchmark job, a compromised sidecar) — or anyone with `kubectl
+  port-forward` — can hit `http://<other-user-pod-ip>:54320` directly and drive
+  that user's engine, **bypassing the ingress, LDAP, and the cookie entirely.**
+  Cross-tenant, unauthenticated, east-west. The ingress-cookie model protects
+  north-south only.
+
+  **Why (u) doesn't cover it:** CORS is browser-enforced — a non-browser client
+  (`curl`/`httpx`) ignores it. Host validation only helps if the attacker doesn't
+  spoof `Host`, which is trivial on a raw request. So a deliberate in-cluster
+  attacker sending `Host: <ingress-host>` + the right path still reaches an
+  unauthenticated engine after (u) lands.
+
+  **Fix (any of, best = both):**
+  1. **Ingress NetworkPolicy (the missing half of H2).** Add `policyTypes:
+     [Ingress]` on the per-user pods: `ingress.from` = only the ingress-nginx
+     pod/namespace (+ probe source). Correct layer for tenant isolation; pods
+     physically can't reach each other. Same CNI dependency + default-off caveat as
+     the egress sibling.
+  2. **App-layer bearer between ingress and pod.** Session-manager mints a
+     per-user/per-session `PPXAI_API_TOKEN`, ingress-nginx injects it; a direct
+     pod-to-pod call then 401s. CNI-independent; closes the gap even with no
+     NetworkPolicy. Cost: token mint + inject plumbing in the session-manager.
+  3. **Both** — proper multi-tenant posture (network isolation + defense-in-depth).
+
+  **Ties to Item 3** (k8s session-manager security tests, still open) — same
+  subsystem; "cross-tenant pod reachability" belongs in that hardening scope + its
+  test suite. **Planned:** with Item 3 / a coder-deployment hardening pass.
+  **Trigger:** before any real multi-tenant coder deployment; higher priority than
+  (u) if coder is shipping to more than one user.
+
 **Branch when ready:** (f)-rebinding + (e)-provider-call + (p)-sync-DNS land with
-tier-d OS-isolation; (p)-token-O(N)/role-mint with Inc 8b RBAC; (a)/(b) with
-N>1 sub-agents; (d) with an SSE rework; (i) with a per-model capability-hint
-pass (cheap, anytime).
+tier-d OS-isolation; (p)-token-O(N)/role-mint with Inc 8b RBAC; (a)/(b)/(q) with
+N>1 sub-agents + the `agent_n`-nesting / `/task` design; (r)/(s) with the
+v1.19.x→migration-doc rewrite; (t) with the `/task` SDK-embedding design (re-verify
+vs T1–T2 first); **(u) the CORS+Host fix is do-now, gated on the bind-conditional
+env override so it doesn't break the k8s coder/gateway deploy**; **(v) ingress
+NetworkPolicy + optional app-layer bearer for cross-tenant coder isolation, with
+Item 3**; (d) with an SSE rework; (i) with a per-model capability-hint pass (cheap,
+anytime).
 
 ---
 
