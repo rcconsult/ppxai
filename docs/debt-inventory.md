@@ -950,19 +950,19 @@ genuine open set. (Lettered q–t; upstream owns p = external review round.)**
   cert-monitor / log-analyst) needs bound-port routing.
 
 - **(r) ABSORBED INTO T5–T7 (2026-07-06) — `state.json` not persisted (Inspection
-  Triplet incomplete).** The run slot writes `meta.json` + `events.jsonl` but NOT
-  `state.json` (`agent_runs.py` comments say "Inc 2-3"); a consumer expecting the
-  full ADR-0005 Triplet (e.g. ppxai-sre `heartbeat.py` reconstructing
-  `AgentBeatState`) finds no file. **No longer a standalone item** — folded into the
-  `/task` lifecycle plan ([plan-task-command-sequencing.md](plan-task-command-sequencing.md)):
-  the **`persist_state()` write lands in T5** (a `waiting` park is a checkpoint that
-  must survive a restart) and **T6** (the `completed_pending_ack` hold), and **T7
-  consumes it** (resume = reload the checkpoint). Building it inside those increments
-  matches the vertical-slice contract — each piece lands with the increment that uses
-  it — and closes the Triplet exactly when a consumer first needs the third file.
+  Triplet incomplete). T5 PART LANDED (2026-07-06):** `AgentRunStore.persist_state/
+  load_state` + the `FilesystemAgentRunStore` implementation exist and the first
+  write ships with the T5 `waiting` park (checkpoint written on park, updated with
+  `last_response` on resume). Remaining under this item: the **T6**
+  `completed_pending_ack` hold write, and **T7** as the consumer (resume = reload
+  the checkpoint). Original context: the run slot wrote `meta.json` + `events.jsonl`
+  but NOT `state.json` (`agent_runs.py` comments said "Inc 2-3"); a consumer
+  expecting the full ADR-0005 Triplet (e.g. ppxai-sre `heartbeat.py` reconstructing
+  `AgentBeatState`) found no file. **No longer a standalone item** — folded into the
+  `/task` lifecycle plan ([plan-task-command-sequencing.md](plan-task-command-sequencing.md));
+  each piece lands with the increment that uses it (vertical-slice contract).
   Stays flat `agent-0/`; the multi-slot/service-state Triplet is still (q)/`agent_n`
-  nesting. **Severity: divergence from the written plan, not a live bug** (nothing
-  reads it yet). **Do NOT build standalone** — build with T5.
+  nesting.
 
 - **(s) OPEN — A3 `run_id`/`parent_run_id` form-vs-substance.** The info A3 needs
   is fully available — `run_id` is the event partition key + `GET /v1/agent/runs/<id>`,

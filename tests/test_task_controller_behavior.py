@@ -197,6 +197,42 @@ function makeApp(opts) {{
     assert(calls[5][0] === "help", "empty -> help");
   }}
 
+  // --- Scenario 9 (T5): respondCmd — token fetch + answer mapping ---
+  {{
+    const app = makeApp({{ getReturn: {{ run_id: "run_9", status: "waiting",
+      waiting: {{ kind: "consent", prompt: "spawn?", token: "tok123" }} }} }});
+    const c = new TaskController(app);
+    await c.respondCmd('run_9 approve');
+    const responds = () => app._posts.filter(([u]) => u === "/v1/agent/runs/run_9/respond");
+    assert(responds().length === 1, "respond did not POST the respond endpoint");
+    assert(responds()[0][1].token === "tok123",
+      "token from meta.waiting: " + JSON.stringify(responds()[0][1]));
+    assert(responds()[0][1].approved === true, "approve maps to approved:true");
+
+    await c.respondCmd('run_9 deny');
+    assert(responds()[1][1].approved === false, "deny maps to approved:false");
+
+    await c.respondCmd('run_9 "use the staging env"');
+    const free = responds()[2][1];
+    assert(free.text === "use the staging env" && free.approved === undefined,
+      "free text maps to text: " + JSON.stringify(free));
+  }}
+
+  // --- Scenario 9b (T5): respondCmd — not-waiting guard, usage, verb routing ---
+  {{
+    const app = makeApp({{ getReturn: {{ run_id: "run_9", status: "running", waiting: null }} }});
+    const c = new TaskController(app);
+    await c.respondCmd('run_9 approve');
+    assert(app._posts.length === 0, "must NOT POST when the run is not waiting");
+    assert(app._msgs.some((m) => /not waiting/.test(m)), "not-waiting hint shown");
+    await c.respondCmd('run_9');
+    assert(app._msgs.some((m) => /Usage: \/task respond/.test(m)), "usage shown");
+    const calls = [];
+    c.respondCmd = async (rest) => calls.push(rest);
+    await c.handle('respond run_1 approve');
+    assert(calls[0] === "run_1 approve", "respond route: " + calls[0]);
+  }}
+
   console.log("ALL OK");
 }})().catch((e) => {{ console.error(e.message || e); process.exit(1); }});
 """

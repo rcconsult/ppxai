@@ -190,39 +190,79 @@ siblings denied, None is no-op); `test_task_controller_behavior.py` (scenarios
 
 ---
 
-## T5 — interactive consent: `waiting` + `POST /respond`
+## T5 — interactive consent: `waiting` + `POST /respond` — ✅ DONE
 
 **Capability:** a run that needs a human **parks** instead of hard-denying; the
 pane shows a consent card; `/task respond <id> approve|deny|"<text>"` (or the
 button) resumes it.
 
-**Build (server):** `waiting` status + `AGENT_WAITING` event (tagged run_id) +
-a resume token + TTL park/resume in the registry; `POST /runs/{id}/respond`
-(`waiting → running`, token-checked, owner-scoped). Redirect the **existing**
-spawn-consent seam (`agent_spawn.py::request_consent`, today auto-denied over
-HTTP) to park in `waiting{consent}` and await `/respond`. **Client:** consent
-card (Approve/Deny) + input field in `TaskRunView`; `/task respond`.
+**Build (landed, server):** `waiting` status (non-terminal — stays in the
+AppState badge mirror) + `agent_waiting`/`agent_resumed` events
+(category=`consent`, token rides the event data); `AgentRunRegistry.park_run`
+(resume token + TTL; timeout → denial, fail-closed; a cancel resolves the
+waiter promptly instead of idling out the TTL) + `respond_run` (token-checked);
+`POST /runs/{id}/respond` (`waiting → running`, owner-scoped 403, 409 on
+not-parked / token mismatch / already answered / parked-before-restart);
+`RunMeta.waiting` + the meta projection carry {kind, prompt, token, since,
+expires_at, ttl_s}. The **existing** spawn-consent seam (previously auto-denied
+over HTTP) now parks in `waiting{consent}` under `spawn_consent:"deny"`;
+`"auto"` still skips the park. TTL: `tools.agent.consent_ttl_s` (default 300 s).
+**Client (landed):** consent card (prompt + Approve/Deny + optional note field,
+built with safe DOM methods — the prompt embeds model-derived text) in
+`TaskRunView`, raised by the SSE `agent_waiting` / meta `waiting`, cleared on
+resume; `/task respond` verb (approve/deny words → `approved`, else free text);
+✋ waiting status in pane + `ls` rows.
 
-**Persistence (absorbs debt (r) — `state.json`, Inspection Triplet 3rd file).**
-A parked run IS a checkpoint that must survive a restart, so this increment
-lands the first `state.json` write: add `AgentRunStore.persist_state(run_id,
-state)` (the slot dir + `_slot_dir()` already exist; `meta.json`/`events.jsonl`
-are the other two Triplet files) and write it when a run enters `waiting`. Flat
-`agent-0/` slot only — the multi-slot/service-state Triplet stays deferred to
-(q)/`agent_n` nesting; this is the run's own lifecycle state, nothing more. This
-retires debt (r) as a standalone item and fulfils the `FilesystemAgentRunStore`
-docstring's "state.json arrives in Inc 2-3" — correct that comment when you land it.
+**Persistence (landed — debt (r), `state.json`, Inspection Triplet 3rd file):**
+`AgentRunStore.persist_state/load_state` + the `FilesystemAgentRunStore`
+implementation (atomic write, shared with `meta.json`); written when a run
+enters `waiting` and updated on resume (`last_response`). Flat `agent-0/` slot
+only. The park's *future* is in-memory — a parked run does not survive a
+restart in flight; its checkpoint does (T7 `/resume` is the consumer). This
+retires debt (r) as a standalone item.
 
-**Trial:** with `spawn_consent` requiring approval, `/task run "spawn a child to
-summarize docs/README.md" --tools read_file,spawn_subagent`; the run parks
-(pane shows Approve/Deny); `/task respond <id> approve` → the child spawns and
-the parent continues; `deny` → visible `spawn_denied`.
+**Trial (concrete recipe):**
 
-**Tests:** park/resume unit (token match/mismatch/expiry; owner scope); event
-`AGENT_WAITING` emitted; `/respond` transition + 404 on unknown/foreign run;
-consent-card behavioral test.
+1. Config (`~/.ppxai/ppxai-config.json` → `tools.agent`): `task_tier_enabled:
+   true`, a working `default_subagent` {provider, model}, and `spawn_consent`
+   left at its default `"deny"` (that IS the park mode now). Optionally
+   `consent_ttl_s` (default 300) — set it low (e.g. 30) to trial the timeout.
+2. Serve the checkout (an installed `~/.ppxai/web` bundle won't have the
+   consent card): `PPXAI_WEB_DIR=$PWD/ppxai/web uv run ppxai-server`, then
+   open the web UI. (Config/env shadowing gotchas: see the T1 "trialing from
+   source" note in [agent-platform-call-graphs.md](agent-platform-call-graphs.md).)
+3. **Park:** `/task run "spawn a child to summarize docs/README.md" --tools
+   read_file,spawn_subagent` → pane status flips to ✋ waiting and the consent
+   card appears (prompt = the spawn summary); `/task ls` shows ✋.
+4. **Approve:** click Approve (or `/task respond <id> approve`) →
+   `agent_resumed` in the live log, the child spawns (`subagent_spawned`),
+   the parent completes with the child's result embedded.
+5. **Deny:** rerun step 3, click Deny (or `/task respond <id> deny`) →
+   visible `spawn_denied` in the log; the run completes with the refusal
+   text; no child appears in `/task ls`.
+6. **Timeout:** rerun step 3 with a low `consent_ttl_s`, answer nothing →
+   after the TTL the run resumes on its own with a denial
+   (`agent_resumed {via:"timeout", approved:false}`).
+7. **API-level checks (curl/PowerShell):** `GET /v1/agent/runs/<id>` while
+   parked shows the `waiting` block incl. `token`; `POST .../respond` with a
+   wrong token → 409; with `{token, approved:true}` → 200 `{status:running}`;
+   `~/.ppxai/runs/<id>/agent-0/state.json` holds the waiting checkpoint and,
+   after resume, the `last_response`.
 
-**Deliberately NOT yet:** two-phase termination (T6).
+**Tests (landed):** `test_agent_runs.py::TestStateJson` (5 — roundtrip/replace,
+missing/corrupt/non-dict → None, atomic no-tmp); `TestParkRespond` (7 —
+approve roundtrip incl. state.json + consent-category events, token
+mismatch survives park, TTL denial + late respond, never-parked, cancel
+unblocks park, park refused when cancel already pending);
+`TestRespondRoute` (4 — 404, 409 not-waiting, 422 answer-less, meta carries
+waiting); `TestConsentParkE2E` (3 — park→approve→child spawns,
+park→deny→`spawn_denied` + no child, unanswered park times out to denial;
+context-managed TestClient so the parked task survives across requests);
+`TestAgentConfig` (2 — `consent_ttl_s` whitelist); `test_task_controller_behavior.py`
+scenarios 9/9b (respond mapping, token fetch, not-waiting guard, routing).
+
+**Deliberately NOT yet:** two-phase termination (T6); ask-user
+`waiting{input}` parks (the wire + registry already carry `text`/`kind`).
 
 ---
 

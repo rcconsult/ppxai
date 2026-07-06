@@ -172,7 +172,16 @@ def get_agent_config() -> Dict[str, Any]:
         # API-driven spawns proceed with the capability SUBSET rules (child
         # grant ⊆ parent, egress ⊆ parent, no-shell, depth=1) as the boundary.
         # Override via `"tools": {"agent": {"spawn_consent": "auto"}}`.
+        # T5 UPDATE: under "deny" a /v1/agent/task spawn now PARKS the run in
+        # `waiting{consent}` (AGENT_WAITING + POST .../respond) instead of
+        # refusing outright; an unanswered park still DENIES when the TTL
+        # below expires (fail-closed), so "deny" remains the safe default.
         "spawn_consent": agent_config.get("spawn_consent", "deny"),
+        # v1.19.x build plan T5 — how long a `waiting{consent}` park stays
+        # answerable before it resolves to a denial (seconds). Applies to the
+        # interactive consent seam (spawn_subagent today; ask-user later).
+        # Override via `"tools": {"agent": {"consent_ttl_s": 900}}`.
+        "consent_ttl_s": float(agent_config.get("consent_ttl_s", 300.0)),
         # v1.19.0 — the tool-capable `/v1/agent/task` tier ships DEFAULT-OFF.
         # The tier is sandboxed in-process only (no OS isolation; ADR 0003
         # tier-d deferred) and is safe ONLY for trusted operators (threat model

@@ -999,6 +999,56 @@ ConfigMap mounts, egress a k8s NetworkPolicy. Trial: set
 
 ---
 
+## Build plan T5 — interactive consent: `waiting` park + `POST /respond`
+
+Added: `POST /v1/agent/runs/<id>/respond` (route), `AgentRunRegistry.park_run` /
+`respond_run`, `AgentRunStore.persist_state`/`load_state` → **`state.json`**
+(the Inspection Triplet's third file — debt (r) first write), consent card in
+`TaskRunView`, `/task respond` verb. Changed: `build_task_runner`'s spawn-consent
+adapter (was: engine shell-consent, auto-denied over HTTP → now: registry park),
+`config/tools.py` (`consent_ttl_s`, default 300 s). New run status: **`waiting`**
+(non-terminal — stays in the AppState `background_agents` mirror).
+
+```
+spawn_subagent.execute (consent_policy="deny")        [engine/tools/agent_spawn.py]
+└─ await request_consent(summary) ──► _spawn_consent(summary)   [build_task_runner]
+   └─ await registry.park_run(m, kind="consent", prompt=summary,
+                              ttl_s=config.consent_ttl_s)       [agent_runs.py]
+      ├─ (cancel already pending? → return {approved:False, via:"cancelled"}, no park)
+      ├─ token = secrets.token_hex(8)
+      ├─ meta.status="waiting"; meta.waiting={kind,prompt,token,since,expires_at,ttl_s}
+      │    persist_meta · _index_active · _notify_change    [badge shows ✋ waiting]
+      ├─ persist_state(run_id, {schema:1, status:"waiting", waiting{…}})   ← state.json
+      ├─ emit_event("agent_waiting", category="consent", data={…,token})   ← SSE tail
+      ├─ await wait_for(future, ttl_s)
+      │    ├─ respond_run resolves        → {approved, text, via:"respond"}
+      │    ├─ TTL expires                 → {approved:False, via:"timeout"}   [fail-closed]
+      │    └─ cancel_run resolves waiter  → {approved:False, via:"cancelled"} [no TTL idle]
+      └─ meta.status="running"; waiting=None; persist_meta + persist_state(last_response)
+           emit_event("agent_resumed", category="consent", {kind,approved,via})
+
+POST /v1/agent/runs/{id}/respond {token, approved?|text?}   [routes/agent_v1.py]
+├─ 404 unknown · 403 not owner (Inc 8b) · 422 answer-less body
+├─ registry.respond_run(id, token, approved, text)
+│    not parked/restarted → (False,…) → 409 · token mismatch → 409 · done → 409
+│    ok → future.set_result({approved, text, via:"respond"})
+└─ {ok:true, run_id, status:"running"}
+
+client (web):
+  agent_waiting on the SSE tail → TaskRunView consent card (prompt + note field
+    + Approve/Deny; token from event data) → setOnRespond → controller.respond()
+  /task respond <id> approve|deny|"<text>" → GET /runs/{id} → waiting.token →
+    POST …/respond   (text-only answer to a consent park = deny-with-note)
+  agent_resumed | setStatus(≠waiting) → card cleared
+```
+
+Restart semantics (deliberate, T5 scope): the park's future is in-memory — a
+parked run does NOT survive a restart *in flight*; its `state.json` checkpoint
+does (respond after restart → 409 "server restarted"; T7 `/resume` is the
+consumer). `spawn_consent:"auto"` still skips the park entirely.
+
+---
+
 <!-- Inc 10+ sections appended here as they land. Template:
 ## Increment N — <title>
 Added/changed: <files>. Execution model change: <if any>.

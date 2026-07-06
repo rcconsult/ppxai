@@ -49,11 +49,16 @@ class AgentRunController {
     /**
      * Wire optional per-view affordances a subclass' view may expose (duck-typed
      * so the oneshot AgentRunView, which has neither, is unaffected):
-     *   - setOnCancel(fn) — a Cancel button that POSTs /runs/{id}/cancel.
+     *   - setOnCancel(fn)  — a Cancel button that POSTs /runs/{id}/cancel.
+     *   - setOnRespond(fn) — a consent card (T5) that POSTs /runs/{id}/respond
+     *     with {token, approved, text}.
      */
     _wireView(view, runId) {
         if (view && typeof view.setOnCancel === 'function') {
             view.setOnCancel(() => this.cancel(runId));
+        }
+        if (view && typeof view.setOnRespond === 'function') {
+            view.setOnRespond((payload) => this.respond(runId, payload));
         }
     }
 
@@ -110,7 +115,7 @@ class AgentRunController {
         runs.slice(0, 20).forEach((r) => {
             const row = document.createElement('button');
             row.className = 'agent-run-row';
-            const icon = { completed: '✅', failed: '❌', running: '🤖' }[r.status] || 'ℹ️';
+            const icon = { completed: '✅', failed: '❌', running: '🤖', waiting: '✋' }[r.status] || 'ℹ️';
             row.textContent = `${icon} ${r.run_id}  ${r.status}  ${(r.task || '').slice(0, 50)}`;
             row.addEventListener('click', () => this.focus(r.run_id, r.task));
             list.appendChild(row);
@@ -201,6 +206,31 @@ class AgentRunController {
         this.app.showSystemMessage(`⏹️ ${runId} — cancel requested`);
         const view = this._liveView(runId);
         if (view) view.setStatus('cancelling');
+    }
+
+    /**
+     * Answer a `waiting` park (T5): POST /runs/{id}/respond with
+     * {token, approved?, text?}. Shared by the consent card (via _wireView)
+     * and the `/task respond` verb. The 409 detail (token mismatch / not
+     * parked / restarted) is surfaced verbatim — it says exactly why the
+     * answer didn't land.
+     */
+    async respond(runId, payload) {
+        try {
+            await this.app.apiClient.post(`/v1/agent/runs/${runId}/respond`, payload);
+        } catch (e) {
+            this.app.showSystemMessage(`❌ Could not respond to ${runId}: ${e.message}`);
+            return false;
+        }
+        const label = payload.approved === true ? 'approved'
+            : (payload.approved === false ? 'denied' : 'answered');
+        this.app.showSystemMessage(`✋ ${runId} — ${label}; run resumes`);
+        const view = this._liveView(runId);
+        if (view) {
+            view.setStatus('running');
+            if (typeof view.clearWaiting === 'function') view.clearWaiting();
+        }
+        return true;
     }
 
     /** Append a chat message; return its `.message-content` element (or null). */

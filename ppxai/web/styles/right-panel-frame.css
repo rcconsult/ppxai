@@ -577,6 +577,7 @@
 .task-run-view .agent-run-status[data-status="cancelling"]  { color: #f59e0b; }
 .task-run-view .agent-run-status[data-status="cancelled"]   { color: #f59e0b; }
 .task-run-view .agent-run-status[data-status="interrupted"] { color: #f59e0b; }
+.task-run-view .agent-run-status[data-status="waiting"]     { color: #f59e0b; }
 .task-cancel-btn {
     font-size: 0.78em;
     padding: 2px 10px;
@@ -610,6 +611,57 @@
 .task-chip-tool   { color: #6366f1; border-color: #6366f166; }
 .task-chip-egress { color: #0ea5e9; border-color: #0ea5e966; }
 .task-chip-budget { color: #f59e0b; border-color: #f59e0b66; }
+/* T5 consent card — shown while the run is parked in `waiting`. */
+.task-run-consent:empty { display: none; }
+.task-run-consent {
+    margin: 6px 0;
+    padding: 8px 10px;
+    border: 1px solid #f59e0b66;
+    border-radius: 6px;
+    background: var(--bg-secondary);
+}
+.task-consent-title {
+    font-weight: 600;
+    font-size: 0.82em;
+    color: #f59e0b;
+    margin-bottom: 4px;
+}
+.task-consent-prompt {
+    font-family: monospace;
+    font-size: 0.76em;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: var(--text-primary);
+    margin-bottom: 6px;
+}
+.task-consent-actions {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+.task-consent-note {
+    flex: 1;
+    min-width: 0;
+    font-size: 0.78em;
+    padding: 3px 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+.task-consent-approve, .task-consent-deny {
+    font-size: 0.78em;
+    padding: 2px 12px;
+    cursor: pointer;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: var(--bg-tertiary);
+    white-space: nowrap;
+}
+.task-consent-approve { color: #22c55e; }
+.task-consent-deny    { color: #ef4444; }
+.task-consent-approve:hover, .task-consent-deny:hover { background: var(--bg-hover); }
+
 .task-run-events {
     max-height: 40%;
     min-height: 0;

@@ -11,6 +11,10 @@
  *                      tools.agent.sandbox.skills_dir: SKILL.md is a spec and the
  *                      skill's references/ join the run read-scope. Repeatable /
  *                      comma-separated; grants union, still ⊆ the operator ceiling.
+ *   /task respond <id> approve|deny|"<text>"  (T5) answer a run parked in
+ *                      `waiting{consent}` — the pane's consent card is the
+ *                      clickable equivalent. Free text rides along as a note
+ *                      (a text-only answer to a consent park is a deny).
  *   /task ls | show <id> | watch <id> | cancel <id> | help
  *
  * Extends AgentRunController: the run registry endpoints (list, show, live SSE
@@ -161,6 +165,7 @@ class TaskController extends _AgentRunControllerBase {
             case 'open':   return this.show(rest);
             case 'watch':  return this.show(rest);
             case 'cancel': return this.cancel(rest.trim());
+            case 'respond': return this.respondCmd(rest);
             default:
                 this.app.showSystemMessage(`Unknown /task subcommand: ${verb}. Try /task help.`);
                 return undefined;
@@ -248,6 +253,50 @@ class TaskController extends _AgentRunControllerBase {
         this._watchDetached(runId);
     }
 
+    /**
+     * /task respond <id> approve|deny|"<text>" — answer a parked run (T5).
+     *
+     * Fetches the run's meta for the resume token (waiting.token), maps the
+     * answer word to the wire shape, and POSTs /runs/{id}/respond via the
+     * shared base helper. approve/yes → {approved:true}; deny/no →
+     * {approved:false}; anything else is free text (which a consent park
+     * treats as a deny-with-note — fail-closed).
+     */
+    async respondCmd(rest) {
+        const trimmed = (rest || '').trim();
+        const sp = trimmed.search(/\s/);
+        const runId = sp === -1 ? trimmed : trimmed.slice(0, sp);
+        let answer = sp === -1 ? '' : trimmed.slice(sp + 1).trim();
+        if (!runId || !answer) {
+            this.app.showSystemMessage('Usage: /task respond <id> approve|deny|"<text>"');
+            return;
+        }
+        // Strip one layer of quotes off a quoted free-text answer.
+        const q = answer[0];
+        if ((q === '"' || q === "'") && answer.endsWith(q) && answer.length > 1) {
+            answer = answer.slice(1, -1);
+        }
+        let meta;
+        try {
+            meta = await this.app.apiClient.get(`/v1/agent/runs/${runId}`);
+        } catch (e) {
+            this.app.showSystemMessage(`❌ Could not fetch ${runId}: ${e.message}`);
+            return;
+        }
+        if (!meta.waiting || !meta.waiting.token) {
+            this.app.showSystemMessage(
+                `❌ ${runId} is not waiting for a response (status: ${meta.status}).`
+            );
+            return;
+        }
+        const word = answer.toLowerCase();
+        const payload = { token: meta.waiting.token };
+        if (word === 'approve' || word === 'yes' || word === 'y') payload.approved = true;
+        else if (word === 'deny' || word === 'no' || word === 'n') payload.approved = false;
+        else payload.text = answer;
+        return this.respond(runId, payload);
+    }
+
     /** /task show|open|watch <id> — focus (and live-tail) a run's pane. */
     show(runId) {
         const id = (runId || '').trim();
@@ -264,6 +313,7 @@ class TaskController extends _AgentRunControllerBase {
             '  /task ls                list runs',
             '  /task show <id>         open a run pane',
             '  /task watch <id>        open + live-tail a run',
+            '  /task respond <id> approve|deny|"<text>"  answer a run parked in waiting (consent card)',
             '  /task cancel <id>       cancel a run',
         ].join('\n'));
     }

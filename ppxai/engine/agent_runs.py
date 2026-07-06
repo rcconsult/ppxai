@@ -63,8 +63,9 @@ class RunMeta:
 
     run_id: str
     task: str
-    # pending | running | cancelling | completed | failed | cancelled |
-    # interrupted (Inc 6 adds cancelling/cancelled/interrupted)
+    # pending | running | waiting | cancelling | completed | failed |
+    # cancelled | interrupted (Inc 6 adds cancelling/cancelled/interrupted;
+    # T5 adds waiting — parked alive on a resume token, see park_run)
     status: str = "pending"
     agent_n: int = 0  # slot index; 0 = top-level run, >0 = sub-agents (Inc 7)
     parent_run_id: Optional[str] = None  # set for sub-agents (Inc 7)
@@ -75,6 +76,12 @@ class RunMeta:
     network: list = field(default_factory=list)  # egress allow_outbound (enforced in Inc 5); provenance/audit on disk
     budget: dict = field(default_factory=dict)  # Inc 6: {tokens?, time_s?, iterations?} caps; absent key = no cap on that axis
     resumable: bool = False  # Inc 6: True when a non-terminal stop (cancel/interrupt) left state a future resume could pick up
+    # T5: consent-park context while status == "waiting", else None.
+    # {kind, prompt, token, since, expires_at, ttl_s} — the token is the
+    # resume credential POST .../respond must present (owner-scoped reads
+    # only, so exposing it on the meta is deliberate: the owner IS the
+    # principal allowed to answer).
+    waiting: Optional[dict] = None
     created_at: float = 0.0
     started_at: Optional[float] = None  # set when execution begins (Inc 2 background)
     finished_at: Optional[float] = None
@@ -149,7 +156,7 @@ class AgentRunStore(Protocol):
 
     Inc 1: persist_meta / load_meta / list_meta.
     Inc 3: append_event / read_events.
-    Later: load_state / save_state, etc.
+    T5 (debt r): persist_state / load_state — the Triplet's third file.
     """
 
     def persist_meta(self, meta: RunMeta) -> None:
@@ -177,6 +184,17 @@ class AgentRunStore(Protocol):
         """
         ...
 
+    def persist_state(self, run_id: str, state: dict, agent_n: int = 0) -> None:
+        """Write (create or overwrite) the run slot's `state.json` (T5 —
+        debt r). The run's own lifecycle checkpoint: what a restart or a
+        later /resume (T7) needs to pick the run back up. Whole-document
+        replace, atomic like persist_meta."""
+        ...
+
+    def load_state(self, run_id: str, agent_n: int = 0) -> Optional[dict]:
+        """Load the run slot's `state.json`, or None if absent/corrupt (T5)."""
+        ...
+
 
 # ---------------------------------------------------------------------------
 # Filesystem implementation (Inc 1 concrete store)
@@ -186,10 +204,12 @@ class AgentRunStore(Protocol):
 class FilesystemAgentRunStore:
     """`AgentRunStore` backed by `~/.ppxai/runs/<run_id>/agent-<n>/`.
 
-    The directory IS the ADR 0005 Inspection Triplet path; `meta.json` is
-    the first of the Triplet files (state.json / events.jsonl arrive in
-    Inc 2-3). Co-located readers may `cat` these directly; the registry
-    API is the contract for remote/pod readers (ADR 0003 §6).
+    The directory IS the ADR 0005 Inspection Triplet path, and all three
+    Triplet files now live here: `meta.json` (Inc 1), `events.jsonl`
+    (Inc 3), and `state.json` (T5 — the run's lifecycle checkpoint, written
+    when a run parks in `waiting`). Co-located readers may `cat` these
+    directly; the registry API is the contract for remote/pod readers
+    (ADR 0003 §6).
     """
 
     def __init__(self, runs_dir: Path) -> None:
@@ -198,21 +218,21 @@ class FilesystemAgentRunStore:
     def _slot_dir(self, run_id: str, agent_n: int = 0) -> Path:
         return self._runs_dir / run_id / f"agent-{agent_n}"
 
-    def persist_meta(self, meta: RunMeta) -> None:
-        slot = self._slot_dir(meta.run_id, meta.agent_n)
+    def _atomic_write_json(self, slot: Path, filename: str, payload: dict) -> None:
+        """Atomic whole-document JSON write: unique tmp (mkstemp) + replace, so
+        a crash mid-write can't leave a half-written file that breaks readers.
+        A UNIQUE tmp name (not a fixed ".json.tmp") avoids two concurrent
+        writers racing on the same temp path — harmless today (one event loop,
+        no await between write and replace, per-run slot dir) but correct under
+        a future multi-worker deployment (Gemini review #4, defense-in-depth)."""
         slot.mkdir(parents=True, exist_ok=True)
-        path = slot / "meta.json"
-        # Atomic write: unique tmp (mkstemp) + replace, so a crash mid-write
-        # can't leave a half-written meta.json that breaks list_meta(). A UNIQUE
-        # tmp name (not a fixed ".json.tmp") avoids two concurrent writers
-        # racing on the same temp path — harmless today (one event loop, no
-        # await between write and replace, per-run slot dir) but correct under a
-        # future multi-worker deployment (Gemini review #4, defense-in-depth).
-        fd, tmp_path = tempfile.mkstemp(dir=slot, prefix="meta-", suffix=".json.tmp")
+        fd, tmp_path = tempfile.mkstemp(
+            dir=slot, prefix=f"{Path(filename).stem}-", suffix=".json.tmp"
+        )
         try:
             with os.fdopen(fd, "w", encoding="utf-8") as f:
-                json.dump(meta.to_dict(), f, indent=2)
-            os.replace(tmp_path, path)
+                json.dump(payload, f, indent=2)
+            os.replace(tmp_path, slot / filename)
         except BaseException:
             # Don't leak the temp file if the write/replace fails.
             try:
@@ -220,6 +240,10 @@ class FilesystemAgentRunStore:
             except OSError:
                 pass
             raise
+
+    def persist_meta(self, meta: RunMeta) -> None:
+        slot = self._slot_dir(meta.run_id, meta.agent_n)
+        self._atomic_write_json(slot, "meta.json", meta.to_dict())
 
     def load_meta(self, run_id: str, agent_n: int = 0) -> Optional[RunMeta]:
         path = self._slot_dir(run_id, agent_n) / "meta.json"
@@ -269,6 +293,21 @@ class FilesystemAgentRunStore:
                 # A torn last line (crash mid-append) is skipped, not fatal.
                 continue
         return events
+
+    def persist_state(self, run_id: str, state: dict, agent_n: int = 0) -> None:
+        slot = self._slot_dir(run_id, agent_n)
+        self._atomic_write_json(slot, "state.json", state)
+
+    def load_state(self, run_id: str, agent_n: int = 0) -> Optional[dict]:
+        path = self._slot_dir(run_id, agent_n) / "state.json"
+        if not path.exists():
+            return None
+        try:
+            loaded = json.loads(path.read_text(encoding="utf-8"))
+            return loaded if isinstance(loaded, dict) else None
+        except (json.JSONDecodeError, OSError) as exc:
+            logger.warning(f"Corrupt run state for {run_id}: {exc}")
+            return None
 
 
 # ---------------------------------------------------------------------------
@@ -366,6 +405,13 @@ class AgentRunRegistry:
         # Entries are removed when the run finishes.
         self._run_tasks: dict[str, asyncio.Task] = {}
         self._controls: dict[str, RunControl] = {}
+        # T5: per-run pending consent park, keyed by run_id. Each entry is
+        # {"future": asyncio.Future, "token": str, "expires_at": float}. The
+        # runner awaits the future inside park_run; respond_run (POST
+        # .../respond) resolves it. In-memory only — a parked run does NOT
+        # survive a restart in flight (its state.json checkpoint does; T7
+        # resume is the consumer).
+        self._waiters: dict[str, dict[str, Any]] = {}
         # Inc 3: per-run monotonic event seq + live subscribers (asyncio
         # Queues) for the SSE tail. Persisted events are the source of truth;
         # subscribers are a fan-out for live delivery only.
@@ -545,6 +591,15 @@ class AgentRunRegistry:
         cancelled_self = False
         if control is not None:
             control.cancel_requested = True
+            # T5: a PARKED run is blocked awaiting its consent future, not
+            # polling check() — resolve the waiter with a denial so the runner
+            # unblocks promptly (and then observes cancel_requested at its next
+            # checkpoint) instead of idling out the full consent TTL.
+            waiter = self._waiters.get(run_id)
+            if waiter is not None and not waiter["future"].done():
+                waiter["future"].set_result(
+                    {"approved": False, "text": None, "via": "cancelled"}
+                )
             meta = self._store.load_meta(run_id)
             if meta is not None and meta.status == "running":
                 meta.status = "cancelling"
@@ -570,6 +625,150 @@ class AgentRunRegistry:
                 self._cancel_run_cascade(child_id, _seen=_seen)
 
         return cancelled_self
+
+    # --- interactive consent park/resume (T5) -----------------------------
+
+    async def park_run(
+        self,
+        meta: RunMeta,
+        *,
+        kind: str,
+        prompt: str,
+        ttl_s: float,
+        data: Optional[dict] = None,
+    ) -> dict:
+        """Park an in-flight run in `waiting{kind}` until POST .../respond
+        answers it (or the TTL expires) — ADR 0003 §8 / build plan T5.
+
+        Called from INSIDE the run's own coroutine (e.g. the spawn-consent
+        adapter in build_task_runner), so "the run parks" literally means this
+        await blocks the runner at a clean checkpoint. What happens:
+
+          1. status -> "waiting"; `meta.waiting` carries {kind, prompt, token,
+             since, expires_at, ttl_s} (the pane's consent card reads it).
+          2. state.json checkpoint is written (debt r — a parked run must
+             survive a restart INSPECTABLY; the in-flight future does not).
+          3. `agent_waiting` event (category=consent) fans out to the run's
+             live SSE tail — the token rides along so a watching client can
+             respond without an extra meta fetch.
+          4. Awaits the respond future, bounded by ttl_s. Timeout resolves to
+             a DENIAL (fail-closed), never an approval.
+          5. status -> "running"; waiting cleared; `agent_resumed` event with
+             the outcome; state.json updated.
+
+        Returns the response dict {"approved": bool|None, "text": str|None,
+        "via": "respond"|"timeout"|"cancelled"}. `kind` is the waiting flavor
+        ("consent" now; "input" when an ask-user tool lands).
+        """
+        run_id = meta.run_id
+        if run_id in self._waiters:
+            raise RuntimeError(f"run {run_id} is already parked")
+        control = self._controls.get(run_id)
+        if control is not None and control.cancel_requested:
+            # A cancel is already pending — don't park at all (the waiter
+            # would never be resolved by that earlier cancel).
+            return {"approved": False, "text": None, "via": "cancelled"}
+
+        token = secrets.token_hex(8)
+        now = time.time()
+        waiting = {
+            "kind": kind,
+            "prompt": prompt,
+            "token": token,
+            "since": now,
+            "expires_at": now + ttl_s,
+            "ttl_s": ttl_s,
+        }
+        meta.status = "waiting"
+        meta.waiting = waiting
+        self._store.persist_meta(meta)
+        self._index_active(meta)  # running -> waiting (still active)
+        self._store.persist_state(run_id, {
+            "schema": 1,
+            "run_id": run_id,
+            "status": "waiting",
+            "waiting": dict(waiting),
+            "updated_at": now,
+        }, agent_n=meta.agent_n)
+        self.emit_event(
+            run_id, "agent_waiting", level="info", category="consent",
+            data={**(data or {}), **waiting},
+        )
+        self._notify_change()  # status changed (running -> waiting)
+
+        future: asyncio.Future = asyncio.get_running_loop().create_future()
+        self._waiters[run_id] = {
+            "future": future, "token": token, "expires_at": waiting["expires_at"],
+        }
+        try:
+            response = await asyncio.wait_for(future, timeout=ttl_s)
+        except asyncio.TimeoutError:
+            # Fail-closed: an unanswered park is a denial, not an approval.
+            response = {"approved": False, "text": None, "via": "timeout"}
+        finally:
+            self._waiters.pop(run_id, None)
+
+        resolved_at = time.time()
+        meta.status = "running"
+        meta.waiting = None
+        self._store.persist_meta(meta)
+        self._index_active(meta)  # waiting -> running
+        self._store.persist_state(run_id, {
+            "schema": 1,
+            "run_id": run_id,
+            "status": "running",
+            "waiting": None,
+            "last_response": {
+                "kind": kind,
+                "approved": response.get("approved"),
+                "via": response.get("via"),
+                "at": resolved_at,
+            },
+            "updated_at": resolved_at,
+        }, agent_n=meta.agent_n)
+        self.emit_event(
+            run_id, "agent_resumed", level="info", category="consent",
+            data={
+                "kind": kind,
+                "approved": bool(response.get("approved")),
+                "via": response.get("via"),
+            },
+        )
+        self._notify_change()  # status changed (waiting -> running)
+        return response
+
+    def respond_run(
+        self,
+        run_id: str,
+        *,
+        token: str,
+        approved: Optional[bool] = None,
+        text: Optional[str] = None,
+    ) -> tuple[bool, str]:
+        """Deliver a human response to a parked run (T5). Returns
+        (ok, reason): ok=True resolved the park; otherwise `reason` says why
+        not — the route maps it onto a 409.
+
+        Token-checked: the caller must present the resume token minted at
+        park time (from the run meta's `waiting.token` or the `agent_waiting`
+        event), so a respond can never land on the WRONG park — a stale
+        client answering after a timeout-deny + re-park would otherwise
+        approve a question it never saw."""
+        waiter = self._waiters.get(run_id)
+        if waiter is None:
+            return (
+                False,
+                "run is not awaiting a response (not parked, already "
+                "answered, or the server restarted since it parked)",
+            )
+        if token != waiter["token"]:
+            return (False, "resume token mismatch")
+        if waiter["future"].done():
+            return (False, "already answered")
+        waiter["future"].set_result(
+            {"approved": approved, "text": text, "via": "respond"}
+        )
+        return (True, "")
 
     def run_in_background(
         self,

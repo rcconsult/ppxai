@@ -5,7 +5,10 @@
  * oneshot pane's status chip + result body it adds
  *   - a meta bar (provider/model, tool-grant chips, egress chips, budget),
  *   - a live events log (tool_call / tool_denied / network_* / spawn_*),
- *   - a Cancel button while the run is non-terminal.
+ *   - a Cancel button while the run is non-terminal,
+ *   - a consent card while the run is parked in `waiting` (T5): prompt +
+ *     Approve/Deny + an optional note field, wired to POST .../respond via
+ *     the controller (setOnRespond).
  *
  * Render state (status, body, meta, events) is held on the instance and
  * rebuilt in mount(), so the pane survives RightPanelFrame re-mounts — the
@@ -25,8 +28,11 @@ class TaskRunView extends AgentRunView {
         this._meta = null;
         this._events = [];
         this._onCancel = null;
+        this._onRespond = null;
+        this._waiting = null;   // {kind, prompt, token, …} while parked (T5)
         this._metaEl = null;
         this._eventsEl = null;
+        this._consentEl = null;
         this._cancelBtn = null;
         if (meta) this._absorbMeta(meta);
         if (meta && meta.status) this._status = meta.status;
@@ -44,7 +50,8 @@ class TaskRunView extends AgentRunView {
 
     _statusLabel(status) {
         return {
-            pending: 'pending', running: 'running…', cancelling: 'cancelling…',
+            pending: 'pending', running: 'running…', waiting: '✋ waiting',
+            cancelling: 'cancelling…',
             completed: '✅ completed', failed: '❌ failed',
             cancelled: '⏹️ cancelled', interrupted: '⏸️ interrupted',
         }[status] || status;
@@ -65,18 +72,21 @@ class TaskRunView extends AgentRunView {
             + `</div>`
             + (this._task ? `<div class="agent-run-task">${esc(this._task)}</div>` : '')
             + `<div class="task-run-meta"></div>`
+            + `<div class="task-run-consent"></div>`
             + `<div class="task-run-events" aria-label="Live events"></div>`
             + `<div class="agent-run-body">${this._bodyHtml}</div>`
             + `</div>`;
         this._statusEl = container.querySelector('.agent-run-status');
         this._bodyEl = container.querySelector('.agent-run-body');
         this._metaEl = container.querySelector('.task-run-meta');
+        this._consentEl = container.querySelector('.task-run-consent');
         this._eventsEl = container.querySelector('.task-run-events');
         this._cancelBtn = container.querySelector('.task-cancel-btn');
         if (this._cancelBtn) {
             this._cancelBtn.addEventListener('click', () => { if (this._onCancel) this._onCancel(); });
         }
         this._renderMeta();
+        this._renderConsent();
         this._renderEvents();
         this._syncCancelBtn();
     }
@@ -85,6 +95,7 @@ class TaskRunView extends AgentRunView {
         super.unmount();  // clears the DOM, keeps render state
         this._metaEl = null;
         this._eventsEl = null;
+        this._consentEl = null;
         this._cancelBtn = null;
     }
 
@@ -93,10 +104,26 @@ class TaskRunView extends AgentRunView {
     /** Wire the Cancel button to the controller (idempotent). */
     setOnCancel(fn) { this._onCancel = fn; }
 
-    /** Merge grant/egress/budget/provider/model (+ status) and re-render. */
+    /** Wire the consent card's Approve/Deny to the controller (T5). */
+    setOnRespond(fn) { this._onRespond = fn; }
+
+    /** Drop the consent card (park answered elsewhere / run resumed). */
+    clearWaiting() {
+        this._waiting = null;
+        this._renderConsent();
+    }
+
+    /** Merge grant/egress/budget/provider/model (+ status + waiting) and re-render. */
     setMeta(meta) {
         if (!meta) return;
         this._absorbMeta(meta);
+        // T5: a registry meta always carries `waiting` (null unless parked);
+        // only touch card state when the key is present so an optimistic
+        // client-side paneInfo (no waiting key) can't wipe a live card.
+        if (Object.prototype.hasOwnProperty.call(meta, 'waiting')) {
+            this._waiting = meta.waiting || null;
+            this._renderConsent();
+        }
         if (meta.status) this.setStatus(meta.status);
         this._renderMeta();
     }
@@ -104,6 +131,16 @@ class TaskRunView extends AgentRunView {
     /** Append one streamed run event to the live log. */
     appendEvent(ev) {
         if (!ev || !ev.type) return;
+        // T5: the consent lifecycle drives the card as it streams by — a park
+        // raises it (token rides in the event data), a resume drops it. Both
+        // also fall through into the log as transcript lines.
+        if (ev.type === 'agent_waiting') {
+            this._waiting = ev.data || null;
+            this._renderConsent();
+        } else if (ev.type === 'agent_resumed') {
+            this._waiting = null;
+            this._renderConsent();
+        }
         // The log is a transcript of what the agent DID (tools, egress, spawns).
         // Heartbeats (agent_beat) would spam a long run, and run lifecycle is
         // already conveyed by the status badge — so drop both here.
@@ -124,6 +161,12 @@ class TaskRunView extends AgentRunView {
 
     setStatus(status) {
         const ok = super.setStatus(status);
+        // Any move off `waiting` means the park is over — drop a stale card
+        // (covers a poll/refresh observing the resume without the SSE event).
+        if (status && status !== 'waiting' && this._waiting) {
+            this._waiting = null;
+            this._renderConsent();
+        }
         this._syncCancelBtn();
         return ok;
     }
@@ -171,6 +214,50 @@ class TaskRunView extends AgentRunView {
         this._metaEl.innerHTML = chips.join('');
     }
 
+    /** Render (or clear) the T5 consent card from `this._waiting`.
+     * Built with DOM methods + textContent (never innerHTML): the prompt is
+     * model-derived text (the spawn summary embeds the child task), so it is
+     * UNTRUSTED and must not be interpreted as markup. */
+    _renderConsent() {
+        if (!this._consentEl) return;
+        this._consentEl.textContent = '';
+        if (!this._waiting) return;
+        const w = this._waiting;
+        const title = document.createElement('div');
+        title.className = 'task-consent-title';
+        title.textContent = `✋ ${w.kind || 'consent'} needed`;
+        const prompt = document.createElement('div');
+        prompt.className = 'task-consent-prompt';
+        prompt.textContent = w.prompt || '';
+        const actions = document.createElement('div');
+        actions.className = 'task-consent-actions';
+        const note = document.createElement('input');
+        note.className = 'task-consent-note';
+        note.type = 'text';
+        note.placeholder = 'optional note…';
+        const send = (approved) => {
+            if (!this._onRespond) return;
+            const payload = { token: w.token, approved };
+            const txt = (note.value || '').trim();
+            if (txt) payload.text = txt;
+            this._onRespond(payload);
+        };
+        const mkBtn = (cls, label, approved) => {
+            const b = document.createElement('button');
+            b.className = cls;
+            b.type = 'button';
+            b.textContent = label;
+            b.addEventListener('click', () => send(approved));
+            return b;
+        };
+        actions.appendChild(note);
+        actions.appendChild(mkBtn('task-consent-approve', 'Approve', true));
+        actions.appendChild(mkBtn('task-consent-deny', 'Deny', false));
+        this._consentEl.appendChild(title);
+        this._consentEl.appendChild(prompt);
+        this._consentEl.appendChild(actions);
+    }
+
     _renderEvents() {
         if (!this._eventsEl) return;
         this._eventsEl.innerHTML = '';
@@ -201,6 +288,8 @@ class TaskRunView extends AgentRunView {
             case 'network_policy_denied':  return `⛔ egress denied ${TaskRunView._short((d.target_host || '') + (d.target_path || ''), 80)}`;
             case 'path_denied':            return `⛔ fs denied (${d.mode || ''}) ${TaskRunView._short(d.target_path, 70)}`;
             case 'spawn_denied':      return `⛔ spawn denied: ${TaskRunView._short(d.reason, 80)}`;
+            case 'agent_waiting':     return `✋ waiting (${d.kind || 'consent'}): ${TaskRunView._short(d.prompt, 80)}`;
+            case 'agent_resumed':     return `▶ resumed — ${d.approved ? 'approved' : 'denied'}${d.via === 'timeout' ? ' (timed out)' : ''}`;
             case 'subagent_spawned':  return `⑂ sub-agent ${d.child_run_id || ''}`;
             case 'subagent_finished': return `⑂ sub-agent ${d.status || 'done'}`;
             default: return String(ev.type);

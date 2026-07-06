@@ -550,6 +550,20 @@ class TestAgentConfig:
         )
         assert tools_cfg.get_agent_config()["spawn_consent"] == "auto"
 
+    def test_consent_ttl_defaults_300(self, monkeypatch):
+        # T5: same whitelist trap — consent_ttl_s must be surfaced or the
+        # park TTL silently ignores the operator's config.
+        from ppxai.config import tools as tools_cfg
+        monkeypatch.setattr(tools_cfg, "get_tool_config", lambda name: {})
+        assert tools_cfg.get_agent_config()["consent_ttl_s"] == 300.0
+
+    def test_consent_ttl_reads_from_config(self, monkeypatch):
+        from ppxai.config import tools as tools_cfg
+        monkeypatch.setattr(
+            tools_cfg, "get_tool_config", lambda name: {"consent_ttl_s": 42}
+        )
+        assert tools_cfg.get_agent_config()["consent_ttl_s"] == 42.0
+
 
 class TestAgentRunRoutes:
     def test_list_empty(self, client):
@@ -1521,3 +1535,383 @@ class TestTaskSkills:
         one = self._mint(c, monkeypatch, {
             "task": "t", "tools": ["read_file"], "skills": ["a"]})
         assert one["tools"] == ["read_file", "grep"]
+
+
+# ---------------------------------------------------------------------------
+# T5 — interactive consent: waiting park + POST /respond (+ state.json, debt r)
+# ---------------------------------------------------------------------------
+
+
+class TestStateJson:
+    """persist_state/load_state — the Inspection Triplet's third file (debt r).
+    Written when a run parks in `waiting`; T7 /resume is the consumer."""
+
+    def test_roundtrip_and_whole_document_replace(self, tmp_path):
+        store = FilesystemAgentRunStore(tmp_path / "runs")
+        store.persist_state("run_x", {"schema": 1, "status": "waiting"})
+        assert store.load_state("run_x") == {"schema": 1, "status": "waiting"}
+        store.persist_state("run_x", {"schema": 1, "status": "running"})
+        loaded = store.load_state("run_x")
+        assert loaded["status"] == "running"
+
+    def test_missing_returns_none(self, tmp_path):
+        store = FilesystemAgentRunStore(tmp_path / "runs")
+        assert store.load_state("run_nope") is None
+
+    def test_corrupt_returns_none(self, tmp_path):
+        store = FilesystemAgentRunStore(tmp_path / "runs")
+        slot = tmp_path / "runs" / "run_x" / "agent-0"
+        slot.mkdir(parents=True)
+        (slot / "state.json").write_text("{not json", encoding="utf-8")
+        assert store.load_state("run_x") is None
+
+    def test_non_dict_json_returns_none(self, tmp_path):
+        # A state document is always an object; anything else is corrupt.
+        store = FilesystemAgentRunStore(tmp_path / "runs")
+        slot = tmp_path / "runs" / "run_x" / "agent-0"
+        slot.mkdir(parents=True)
+        (slot / "state.json").write_text("[1, 2]", encoding="utf-8")
+        assert store.load_state("run_x") is None
+
+    def test_atomic_write_leaves_no_tmp(self, tmp_path):
+        store = FilesystemAgentRunStore(tmp_path / "runs")
+        store.persist_state("run_x", {"a": 1})
+        slot = tmp_path / "runs" / "run_x" / "agent-0"
+        assert list(slot.glob("*.tmp")) == []
+        assert (slot / "state.json").exists()
+
+
+class TestParkRespond:
+    """Registry-level park/resume (T5): token check, TTL denial, cancel
+    unblocking, and the state.json checkpoint through the park lifecycle."""
+
+    async def _park_in_task(self, registry, meta, *, ttl_s=5.0):
+        """Start park_run as a task and wait until the run is actually parked
+        (status waiting + waiter registered). Returns the asyncio.Task."""
+        import asyncio
+
+        task = asyncio.create_task(
+            registry.park_run(meta, kind="consent", prompt="spawn?", ttl_s=ttl_s)
+        )
+        for _ in range(500):
+            if meta.run_id in registry._waiters:
+                return task
+            await asyncio.sleep(0.005)
+        raise AssertionError("run never parked")
+
+    @pytest.mark.asyncio
+    async def test_park_respond_approve_roundtrip(self, registry):
+        meta = registry.start_run(task="t", tools=["read_file"], provider="p", model="m")
+        park = await self._park_in_task(registry, meta)
+
+        # While parked: status, waiting context, and the state.json checkpoint.
+        parked = registry.get_run(meta.run_id)
+        assert parked.status == "waiting"
+        assert parked.waiting["kind"] == "consent"
+        assert parked.waiting["prompt"] == "spawn?"
+        token = parked.waiting["token"]
+        assert token and parked.waiting["expires_at"] > parked.waiting["since"]
+        state = registry._store.load_state(meta.run_id)
+        assert state["status"] == "waiting" and state["waiting"]["token"] == token
+
+        ok, why = registry.respond_run(meta.run_id, token=token, approved=True)
+        assert ok, why
+        resp = await park
+        assert resp == {"approved": True, "text": None, "via": "respond"}
+
+        after = registry.get_run(meta.run_id)
+        assert after.status == "running" and after.waiting is None
+        state = registry._store.load_state(meta.run_id)
+        assert state["status"] == "running"
+        assert state["last_response"]["approved"] is True
+        types = [e.type for e in registry.read_events(meta.run_id)]
+        assert "agent_waiting" in types and "agent_resumed" in types
+        # the consent lifecycle rides the 'consent' category (filterable)
+        consent = registry.read_events(meta.run_id, categories={"consent"})
+        assert [e.type for e in consent] == ["agent_waiting", "agent_resumed"]
+
+    @pytest.mark.asyncio
+    async def test_token_mismatch_rejected_park_survives(self, registry):
+        meta = registry.start_run(task="t", tools=["read_file"], provider="p", model="m")
+        park = await self._park_in_task(registry, meta)
+        token = registry.get_run(meta.run_id).waiting["token"]
+
+        ok, why = registry.respond_run(meta.run_id, token="wrong", approved=True)
+        assert not ok and "token" in why
+        assert registry.get_run(meta.run_id).status == "waiting"  # still parked
+
+        ok, _ = registry.respond_run(meta.run_id, token=token, approved=False)
+        assert ok
+        resp = await park
+        assert resp["approved"] is False and resp["via"] == "respond"
+
+    @pytest.mark.asyncio
+    async def test_ttl_timeout_resolves_to_denial(self, registry):
+        meta = registry.start_run(task="t", tools=["read_file"], provider="p", model="m")
+        resp = await registry.park_run(
+            meta, kind="consent", prompt="spawn?", ttl_s=0.05
+        )
+        assert resp == {"approved": False, "text": None, "via": "timeout"}
+        assert registry.get_run(meta.run_id).status == "running"
+        # A late answer finds nothing to answer.
+        ok, why = registry.respond_run(meta.run_id, token="x", approved=True)
+        assert not ok and "not awaiting" in why
+
+    def test_respond_when_never_parked(self, registry):
+        meta = registry.start_run(task="t", tools=["read_file"], provider="p", model="m")
+        ok, why = registry.respond_run(meta.run_id, token="x", approved=True)
+        assert not ok and "not awaiting" in why
+
+    @pytest.mark.asyncio
+    async def test_cancel_unblocks_a_parked_run(self, registry):
+        # A cancel must not idle out the consent TTL: it resolves the waiter
+        # with a denial so the runner unblocks promptly and then observes
+        # cancel_requested at its next checkpoint.
+        import asyncio
+        from ppxai.engine.agent_runs import RunControl
+
+        meta = registry.start_run(task="t", tools=["read_file"], provider="p", model="m")
+        registry._controls[meta.run_id] = RunControl(run_id=meta.run_id)
+        park = await self._park_in_task(registry, meta, ttl_s=30.0)  # long TTL
+        assert registry.cancel_run(meta.run_id) is True
+        resp = await asyncio.wait_for(park, timeout=2.0)  # NOT the 30s TTL
+        assert resp["approved"] is False and resp["via"] == "cancelled"
+
+    @pytest.mark.asyncio
+    async def test_park_refused_when_cancel_already_pending(self, registry):
+        # Cancel arrived BEFORE the park: don't park at all (that earlier
+        # cancel can never resolve a waiter that doesn't exist yet).
+        from ppxai.engine.agent_runs import RunControl
+
+        meta = registry.start_run(task="t", tools=["read_file"], provider="p", model="m")
+        ctl = RunControl(run_id=meta.run_id)
+        ctl.cancel_requested = True
+        registry._controls[meta.run_id] = ctl
+        resp = await registry.park_run(meta, kind="consent", prompt="x", ttl_s=5.0)
+        assert resp["via"] == "cancelled"
+        assert registry.get_run(meta.run_id).status == "pending"  # never flipped
+
+
+class TestRespondRoute:
+    """POST /v1/agent/runs/{id}/respond — the T5 wire surface."""
+
+    def test_unknown_run_404(self, client):
+        c, _ = client
+        r = c.post("/v1/agent/runs/run_nope/respond",
+                   json={"token": "t", "approved": True})
+        assert r.status_code == 404
+
+    def test_not_waiting_409(self, client):
+        c, reg = client
+        m = reg.start_run(task="t", tools=["read_file"], provider="p", model="m")
+        reg.finish_run(m, status="completed", result="x")
+        r = c.post(f"/v1/agent/runs/{m.run_id}/respond",
+                   json={"token": "x", "approved": True})
+        assert r.status_code == 409
+        assert "not awaiting" in r.json()["detail"]
+
+    def test_answerless_body_422(self, client):
+        # token alone is not an answer — approved and/or text is required.
+        c, reg = client
+        m = reg.start_run(task="t", tools=["read_file"], provider="p", model="m")
+        r = c.post(f"/v1/agent/runs/{m.run_id}/respond", json={"token": "x"})
+        assert r.status_code == 422
+
+    def test_meta_projection_carries_waiting(self, client):
+        # GET /runs/{id} surfaces the waiting block (consent card + /task
+        # respond read the token from here).
+        c, reg = client
+        m = reg.start_run(task="t", tools=["read_file"], provider="p", model="m")
+        m.status = "waiting"
+        m.waiting = {"kind": "consent", "prompt": "p?", "token": "tok",
+                     "since": 1.0, "expires_at": 2.0, "ttl_s": 1.0}
+        reg._store.persist_meta(m)
+        one = c.get(f"/v1/agent/runs/{m.run_id}").json()
+        assert one["status"] == "waiting"
+        assert one["waiting"]["token"] == "tok"
+
+
+@pytest.fixture
+def ctx_client(tmp_path, monkeypatch):
+    """Context-managed TestClient: ONE persistent portal/event loop across
+    requests. The default (non-context) TestClient spins a fresh loop per
+    request, which orphans a background task that is still alive when the
+    request returns — fine for runs that finish within their POST, fatal for
+    a T5 park that must stay awaitable across the respond request."""
+    import ppxai.server.state as state
+    from ppxai.server.routes import agent_v1
+
+    reg = AgentRunRegistry(FilesystemAgentRunStore(tmp_path / "runs"))
+    monkeypatch.setattr(state, "_agent_run_registry", reg)
+
+    app = FastAPI()
+    app.include_router(agent_v1.router)
+    with TestClient(app) as c:
+        yield c, reg
+
+
+class TestConsentParkE2E:
+    """Full /task consent flow (T5): a spawn under spawn_consent='deny' PARKS
+    the run in waiting{consent}; POST /respond approves (child spawns) or
+    denies (visible spawn_denied); an unanswered park times out to a denial.
+    EngineClient is stubbed; the registry, park, spawn tool, and child runner
+    are all real."""
+
+    @staticmethod
+    def _install_engine_stub(monkeypatch):
+        """Stub provider build + EngineClient. The FIRST engine minted (the
+        parent) drives one spawn_subagent call through the route-installed
+        ScopedToolManager; every later engine (the child) just completes."""
+        from ppxai.server.routes import agent_v1
+        from ppxai.engine.types import Event, EventType
+        from ppxai.engine.providers.openai_compat import OpenAICompatibleProvider
+
+        class _P(OpenAICompatibleProvider):
+            def __init__(self):
+                pass
+        monkeypatch.setattr(agent_v1, "_build_provider", lambda name: _P())
+        monkeypatch.setattr(agent_v1, "_validate_provider_or_400", lambda name: None)
+
+        class _BaseTM:
+            max_iterations = 3
+
+            def __init__(self):
+                self._tools = {}
+
+            def register_tool(self, tool):
+                self._tools[tool.name] = tool
+
+            def get_tool(self, name):
+                return self._tools.get(name)
+
+            async def execute_tool(self, name, **kw):
+                tool = self._tools.get(name)
+                if tool is None:
+                    return f"Error: no such tool {name!r}"
+                return await tool.execute(**kw)
+
+        made = []
+
+        class _StubEngine:
+            def __init__(self, is_parent):
+                self._is_parent = is_parent
+                self.tool_manager = _BaseTM()
+
+            def set_provider(self, p):
+                pass
+
+            def set_model(self, m):
+                pass
+
+            def enable_tools(self):
+                pass
+
+            def set_working_dir(self, d):
+                pass
+
+            async def chat(self, task, stream=False):
+                if self._is_parent:
+                    out = await self.tool_manager.execute_tool(
+                        "spawn_subagent", task="child job", tools=["read_file"]
+                    )
+                    yield Event(type=EventType.STREAM_END, data=out)
+                else:
+                    yield Event(type=EventType.STREAM_END, data="child done")
+
+        def factory():
+            eng = _StubEngine(is_parent=(len(made) == 0))
+            made.append(eng)
+            return eng
+
+        monkeypatch.setattr(agent_v1, "EngineClient", factory, raising=False)
+        return made
+
+    @staticmethod
+    def _poll_status(c, run_id, want, timeout_s=5.0):
+        import time as _t
+
+        deadline = _t.monotonic() + timeout_s
+        one = None
+        while _t.monotonic() < deadline:
+            one = c.get(f"/v1/agent/runs/{run_id}").json()
+            if one["status"] in want:
+                return one
+            _t.sleep(0.02)
+        raise AssertionError(f"run {run_id} never reached {want}: last={one}")
+
+    def _launch(self, c, monkeypatch):
+        self._install_engine_stub(monkeypatch)
+        r = c.post("/v1/agent/task", json={
+            "task": "do it", "tools": ["read_file", "spawn_subagent"],
+            "provider": "p", "model": "m",
+        })
+        assert r.status_code == 200, r.text
+        return r.json()["run_id"]
+
+    def test_spawn_parks_then_approve_spawns_child(self, ctx_client, monkeypatch):
+        c, reg = ctx_client
+        rid = self._launch(c, monkeypatch)
+
+        # The run PARKS (not hard-denied) — waiting{consent} with the token.
+        one = self._poll_status(c, rid, ("waiting",))
+        w = one["waiting"]
+        assert w["kind"] == "consent" and w["token"]
+        assert "child job" in w["prompt"]
+
+        # Wrong token → 409, run stays parked.
+        bad = c.post(f"/v1/agent/runs/{rid}/respond",
+                     json={"token": "nope", "approved": True})
+        assert bad.status_code == 409 and "token" in bad.json()["detail"]
+        assert c.get(f"/v1/agent/runs/{rid}").json()["status"] == "waiting"
+
+        # Approve → the parent resumes, the child spawns and completes.
+        okr = c.post(f"/v1/agent/runs/{rid}/respond",
+                     json={"token": w["token"], "approved": True})
+        assert okr.status_code == 200 and okr.json()["ok"] is True
+        done = self._poll_status(c, rid, ("completed", "failed"))
+        assert done["status"] == "completed", done
+        assert "completed" in done["result"] and "child done" in done["result"]
+        children = [m for m in reg.list_runs() if m.parent_run_id == rid]
+        assert len(children) == 1 and children[0].status == "completed"
+
+        evs = c.get(f"/v1/agent/runs/{rid}/events?category=consent").json()["events"]
+        types = [e["type"] for e in evs]
+        assert "agent_waiting" in types and "agent_resumed" in types
+
+    def test_spawn_park_denied_no_child(self, ctx_client, monkeypatch):
+        c, reg = ctx_client
+        rid = self._launch(c, monkeypatch)
+        one = self._poll_status(c, rid, ("waiting",))
+
+        okr = c.post(f"/v1/agent/runs/{rid}/respond",
+                     json={"token": one["waiting"]["token"], "approved": False})
+        assert okr.status_code == 200
+        done = self._poll_status(c, rid, ("completed", "failed"))
+        # The RUN completes (the denial is the tool's answer, not a run error);
+        # the spawn itself was refused and no child was minted.
+        assert done["status"] == "completed"
+        assert "cannot spawn sub-agent" in done["result"]
+        assert [m for m in reg.list_runs() if m.parent_run_id == rid] == []
+        evs = c.get(f"/v1/agent/runs/{rid}/events?category=consent").json()["events"]
+        assert "spawn_denied" in [e["type"] for e in evs]
+
+    def test_unanswered_park_times_out_to_denial(self, ctx_client, monkeypatch):
+        c, reg = ctx_client
+        # Shrink the consent TTL. The autouse fixture's get_agent_config is
+        # captured FIRST so this override composes on top of it.
+        from ppxai.server.routes import agent_v1
+        real = agent_v1.get_agent_config
+        monkeypatch.setattr(
+            agent_v1, "get_agent_config",
+            lambda: {**real(), "consent_ttl_s": 0.2},
+        )
+        rid = self._launch(c, monkeypatch)
+        self._poll_status(c, rid, ("waiting",))
+        done = self._poll_status(c, rid, ("completed", "failed"))
+        assert done["status"] == "completed"
+        assert "cannot spawn sub-agent" in done["result"]
+        assert [m for m in reg.list_runs() if m.parent_run_id == rid] == []
+        evs = c.get(f"/v1/agent/runs/{rid}/events?category=consent").json()["events"]
+        resumed = next(e for e in evs if e["type"] == "agent_resumed")
+        assert resumed["data"]["via"] == "timeout"
+        assert resumed["data"]["approved"] is False

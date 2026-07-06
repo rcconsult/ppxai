@@ -139,14 +139,15 @@ class SpawnSubagentTool(BaseTool):
         self._model = parent_model
         self._request_consent = request_consent
         # Server-context consent policy (tools.agent.spawn_consent):
-        #   "deny" (default, safe) — no interactive channel over HTTP, so a
-        #     spawn that would need consent is refused (with a visible event).
+        #   "deny" (default, safe) — a spawn requires a human decision. Over
+        #     /v1/agent/task the injected consent channel now PARKS the run
+        #     (T5: waiting{consent} + AGENT_WAITING + POST .../respond) and an
+        #     unanswered park denies when the TTL expires (fail-closed). With
+        #     no channel at all, the spawn is refused with a visible event.
         #   "auto" — proceed without an interactive prompt; the capability
         #     SUBSET rules (child grant ⊆ parent, child egress ⊆ parent,
         #     no-shell, depth=1) remain the enforced boundary. Use when the
         #     allowlist/grant is trusted to be the gate, not a human click.
-        # The proper interactive flow (AGENT_WAITING + /respond, ADR 0003 §8)
-        # supersedes this when it lands.
         self._consent_policy = consent_policy
 
     # --- subset enforcement (AC-1 / AC-2 transitive) --------------------
@@ -271,7 +272,13 @@ class SpawnSubagentTool(BaseTool):
                 )
             approved = await self._request_consent(summary)
             if not approved:
-                return self._deny("user denied permission to spawn", "consent")
+                # Covers an explicit deny AND an unanswered park that timed
+                # out (T5 TTL) — the channel returns False for both.
+                return self._deny(
+                    "spawn not approved (denied, or the consent request "
+                    "expired unanswered)",
+                    "consent",
+                )
 
         # 3. Mint the child run, linked to the parent via parent_run_id. The
         #    child is a FIRST-CLASS run with its own run_id (addressable by

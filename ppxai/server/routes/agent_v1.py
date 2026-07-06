@@ -10,6 +10,8 @@ module is the HTTP surface over `engine.agent_runs.AgentRunRegistry`:
     GET  /v1/agent/runs/<id>/events → replay + ?live=1 SSE (Inc 3),
                                     ?since= / ?min_level= / ?category= filters
     POST /v1/agent/runs/<id>/cancel → cooperative cancel (Inc 6)
+    POST /v1/agent/runs/<id>/respond → answer a `waiting` park (T5),
+                                    token-checked + owner-scoped
 
 Execution model: runs execute in the **background** (Inc 2). A POST
 validates + builds the provider synchronously (a bad provider 400s up
@@ -250,6 +252,12 @@ class RunMetaResponse(BaseModel):
     network: list = Field(default_factory=list)
     budget: dict = Field(default_factory=dict)
     resumable: bool = False
+    # T5: consent-park context while status == "waiting" — {kind, prompt,
+    # token, since, expires_at, ttl_s}. Owner-scoped reads only, and the
+    # owner IS the principal entitled to answer, so surfacing the resume
+    # token here is deliberate (it's what the consent card / `/task respond`
+    # presents back to POST .../respond).
+    waiting: Optional[dict] = None
     created_at: float = 0.0
     started_at: Optional[float] = None
     finished_at: Optional[float] = None
@@ -270,6 +278,7 @@ class RunMetaResponse(BaseModel):
             network=list(getattr(m, "network", []) or []),
             budget=dict(getattr(m, "budget", {}) or {}),
             resumable=bool(getattr(m, "resumable", False)),
+            waiting=getattr(m, "waiting", None),
             created_at=m.created_at,
             started_at=m.started_at,
             finished_at=m.finished_at,
@@ -831,20 +840,24 @@ def build_task_runner(
         # could probe. The tool carries this run as the parent context and
         # enforces child grant ⊆ this grant, child egress ⊆ this allowlist.
         if allow_spawn and "spawn_subagent" in tools:
-            # Adapt the engine's shell-consent (command, working_dir) to the
-            # spawn tool's single-arg (summary) contract. A spawn has no cwd, so
-            # pass "" explicitly rather than letting request_shell_consent's
-            # working_dir="." default stand in — a consent UI would otherwise
-            # display a meaningless ".". (Over /v1/agent/task there is no
-            # interactive consent channel today, so this only fires once one
-            # lands; keeping it accurate now avoids a misleading prompt then.)
+            # T5: the interactive consent channel over /v1/agent/task. A spawn
+            # that needs consent PARKS the run (`waiting{consent}` + an
+            # AGENT_WAITING event carrying the resume token) and blocks right
+            # here until POST /v1/agent/runs/{id}/respond answers it — or the
+            # consent TTL expires, which resolves to a denial (fail-closed).
+            # This replaces the pre-T5 adapter that routed to the engine's
+            # shell-consent (which had no UI over HTTP and auto-denied).
             async def _spawn_consent(summary: str) -> bool:
-                return await engine.request_shell_consent(summary, working_dir="")
+                ttl = float(get_agent_config().get("consent_ttl_s", 300.0))
+                response = await registry.park_run(
+                    m, kind="consent", prompt=summary, ttl_s=ttl,
+                )
+                return response.get("approved") is True
 
             # Server-context spawn consent policy (tools.agent.spawn_consent):
-            # "deny" (default, safe) | "auto" (allow API-driven spawns; subset
-            # rules remain the boundary). There's no interactive consent
-            # channel over /v1/agent/task, so without "auto" a spawn is refused.
+            # "deny" (default, safe) — a spawn parks for interactive consent as
+            # above, denying on TTL timeout; "auto" — skip the park entirely
+            # (subset rules remain the boundary).
             spawn_consent = (get_agent_config().get("spawn_consent") or "deny")
             engine.tool_manager.register_tool(SpawnSubagentTool(
                 registry=registry,
@@ -1022,6 +1035,59 @@ async def cancel_agent_run(run_id: str, request: Request) -> dict:
         status_code=409,
         detail=f"Run {run_id!r} is not cancellable (status={meta.status!r}).",
     )
+
+
+class RespondRequest(BaseModel):
+    """Answer a `waiting` park (T5). At least one of `approved`/`text` must be
+    present. For a consent park (`waiting.kind == "consent"`), only
+    `approved: true` approves — a text-only answer is treated as a denial with
+    a message (fail-closed); `text` becomes first-class when an ask-user
+    `waiting{input}` park lands."""
+
+    token: str = Field(
+        ..., min_length=1,
+        description="Resume token from the run's waiting.token / agent_waiting event.",
+    )
+    approved: Optional[bool] = Field(
+        None, description="Consent decision (true approves, false denies)."
+    )
+    text: Optional[str] = Field(
+        None, description="Free-text answer (waiting{input} parks; optional otherwise)."
+    )
+
+    @model_validator(mode="after")
+    def _answer_required(self) -> "RespondRequest":
+        if self.approved is None and self.text is None:
+            raise ValueError("provide `approved` and/or `text`")
+        return self
+
+
+@router.post("/runs/{run_id}/respond")
+async def respond_agent_run(
+    run_id: str, req: RespondRequest, request: Request
+) -> dict:
+    """Deliver a human answer to a run parked in `waiting` (T5).
+
+    The parked runner resumes at its park point (`waiting → running`), and the
+    run continues — this is the interactive-consent seam ADR 0003 §8 promised
+    (today: the spawn_subagent gate; later: ask-user input parks). 404 unknown
+    run, 403 not the owner (Inc 8b), 409 when the run isn't answerable (not
+    parked, token mismatch, already answered, or parked before a restart —
+    that last one is T7's /resume job)."""
+    registry = get_agent_run_registry()
+    meta = registry.get_run(run_id)
+    if meta is None:
+        raise HTTPException(status_code=404, detail=f"Unknown run_id: {run_id!r}")
+    _authorize_run_access(request, meta)
+    ok, why = registry.respond_run(
+        run_id, token=req.token, approved=req.approved, text=req.text
+    )
+    if not ok:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Run {run_id!r} cannot accept a response: {why}.",
+        )
+    return {"ok": True, "run_id": run_id, "status": "running"}
 
 
 def _parse_categories(category: Optional[str]) -> Optional[set[str]]:
