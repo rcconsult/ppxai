@@ -169,6 +169,16 @@ spawn-consent seam (`agent_spawn.py::request_consent`, today auto-denied over
 HTTP) to park in `waiting{consent}` and await `/respond`. **Client:** consent
 card (Approve/Deny) + input field in `TaskRunView`; `/task respond`.
 
+**Persistence (absorbs debt (r) — `state.json`, Inspection Triplet 3rd file).**
+A parked run IS a checkpoint that must survive a restart, so this increment
+lands the first `state.json` write: add `AgentRunStore.persist_state(run_id,
+state)` (the slot dir + `_slot_dir()` already exist; `meta.json`/`events.jsonl`
+are the other two Triplet files) and write it when a run enters `waiting`. Flat
+`agent-0/` slot only — the multi-slot/service-state Triplet stays deferred to
+(q)/`agent_n` nesting; this is the run's own lifecycle state, nothing more. This
+retires debt (r) as a standalone item and fulfils the `FilesystemAgentRunStore`
+docstring's "state.json arrives in Inc 2-3" — correct that comment when you land it.
+
 **Trial:** with `spawn_consent` requiring approval, `/task run "spawn a child to
 summarize docs/README.md" --tools read_file,spawn_subagent`; the run parks
 (pane shows Approve/Deny); `/task respond <id> approve` → the child spawns and
@@ -193,6 +203,12 @@ artifacts persist; `POST /runs/{id}/ack` (`→ finalized`, GC-eligible) with a
 **retention TTL** backstop. **Client:** result view + "Collect result"
 affordance / auto-ack on pane view; `/task ack`.
 
+**Persistence (debt (r), cont.).** The "record + artifacts persist after the run
+exits" promise is the same `state.json` write introduced in T5 — reuse
+`persist_state()` to snapshot the held result/terminal state so a
+`completed_pending_ack` run survives a restart and reopens intact (the trial
+below closes the pane and reopens via `/task ls`). Still flat `agent-0/`.
+
 **Trial:** `/task run "summarize docs/README.md" --tools read_file`; on finish
 the pane shows the held result; **close the pane, reopen via `/task ls`** — the
 result is still there; `/task ack <id>` → finalized; confirm a later `ls` shows
@@ -211,10 +227,15 @@ idempotency; retention-TTL reaper; disconnect-then-collect behavioral test.
 **conditionally** resumed; `/task resume <id>` (or the button) continues it, or
 refuses with a reason if the checkpoint is inconclusive (open-decision #5).
 
-**Build (server):** `POST /runs/{id}/resume` — reload the run's checkpoint,
-rebuild the scoped runner, continue; refuse (stay `interrupted`) when the
-checkpoint isn't conclusive or artifacts already capture the work. **Client:**
-Resume button shown only when `resumable`; `/task resume`.
+**Depends on the `state.json` write from T5/T6 (debt (r)).** T7 is the *consumer*
+of the checkpoint — "reload the run's checkpoint" IS reading the `state.json`
+`persist_state()` wrote. T7 cannot land before that write exists, which is why
+(r) is injected into T5/T6 (the producers) rather than filed standalone.
+
+**Build (server):** `POST /runs/{id}/resume` — reload the run's checkpoint
+(`state.json`), rebuild the scoped runner, continue; refuse (stay `interrupted`)
+when the checkpoint isn't conclusive or artifacts already capture the work.
+**Client:** Resume button shown only when `resumable`; `/task resume`.
 
 **Trial:** start a long run, kill/restart the server to land it `interrupted`;
 `/task resume <id>` → continues; force an inconclusive case → refused with the
