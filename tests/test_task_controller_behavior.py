@@ -89,6 +89,18 @@ function makeApp(opts) {{
     assert(c.errors.some((e) => /bad --budget/.test(e)), "bad budget value not flagged");
   }}
 
+  // --- Scenario 3b: parseTaskArgs — --spec (T3) ---
+  {{
+    const p = parseTaskArgs('"the ci job is red" --spec triage --model reqmodel');
+    assert(p.task === "the ci job is red", "spec desc: " + p.task);
+    assert(p.spec === "triage", "spec name: " + p.spec);
+    assert(p.model === "reqmodel", "flag overrides spec model client-side");
+    assert(eq(p.tools, []), "no --tools is OK when --spec present: " + JSON.stringify(p.tools));
+    assert(p.errors.length === 0, "no errors with --spec: " + p.errors);
+    const q = parseTaskArgs('x --spec');
+    assert(q.errors.some((e) => /needs a value/.test(e)), "--spec missing value not flagged");
+  }}
+
   // --- Scenario 4: run() builds the POST body + provider/model fallback + watches ---
   {{
     const app = makeApp({{ state: {{ currentProvider: "nvidia", currentModel: "qwen" }} }});

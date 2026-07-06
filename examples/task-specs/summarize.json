@@ -1,0 +1,7 @@
+{
+  "tools": ["read_file"],
+  "provider": "nvidia",
+  "model": "qwen",
+  "budget": { "iterations": 4 },
+  "system": "You summarize a single document in <=200 words. Read only the file you are asked about; do not browse. Return plain prose, no preamble."
+}

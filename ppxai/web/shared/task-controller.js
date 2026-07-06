@@ -3,7 +3,10 @@
  *
  * The `/task` command family (v1.19.x, build plan T1):
  *   /task run "<desc>" --tools a,b,c [--allow host] [--provider p] [--model m]
- *                      [--budget iters=,time=,tokens=] [--system "…"]
+ *                      [--budget iters=,time=,tokens=] [--system "…"] [--spec <name>]
+ *   /task run "<desc>" --spec <name>   (T3) configure from a spec file under
+ *                      tools.agent.sandbox.specs_dir; explicit flags override
+ *                      the file. The server resolves the name + clamps the grant.
  *   /task ls | show <id> | watch <id> | cancel <id> | help
  *
  * Extends AgentRunController: the run registry endpoints (list, show, live SSE
@@ -78,7 +81,7 @@ function parseTaskArgs(argline) {
     const toks = _tokenize((argline || '').trim());
     const out = {
         task: '', tools: [], provider: null, model: null, system: null,
-        network: { allow_outbound: [] }, budget: {}, errors: [],
+        network: { allow_outbound: [] }, budget: {}, spec: null, errors: [],
     };
     let i = 0;
     const desc = [];
@@ -110,6 +113,7 @@ function parseTaskArgs(argline) {
             case '--model':    v = value('--model');    if (v) out.model = v;    break;
             case '--system':   v = value('--system');   if (v) out.system = v;   break;
             case '--budget':   v = value('--budget');   if (v) _parseBudget(v, out); break;
+            case '--spec':     v = value('--spec');     if (v) out.spec = v;     break;
             default:
                 out.errors.push(`unknown flag: ${t}`);
         }
@@ -158,20 +162,28 @@ class TaskController extends _AgentRunControllerBase {
         }
         if (!spec.task) {
             this.app.showSystemMessage(
-                'Usage: /task run "<desc>" --tools <a,b,c> [--allow host] [--budget iters=,time=,tokens=] [--system "…"]'
+                'Usage: /task run "<desc>" --tools <a,b,c> [--spec <name>] [--allow host] [--budget iters=,time=,tokens=] [--system "…"]'
             );
             return;
         }
-        if (!spec.tools.length) {
+        if (!spec.tools.length && !spec.spec) {
+            // A grant is required — but a --spec may supply it (T3). The server
+            // clamps the merged grant (no-shell, ceiling); we only guard the
+            // "neither tools nor spec" case here to fail fast.
             this.app.showSystemMessage(
-                '❌ /task run needs a tool grant (--tools a,b,c). A tool-free run belongs on /agentrun.'
+                '❌ /task run needs a tool grant (--tools a,b,c) or a --spec that supplies one. A tool-free run belongs on /agentrun.'
             );
             return;
         }
 
-        const provider = spec.provider || this.app.state.currentProvider;
-        const model = spec.model || this.app.state.currentModel;
+        // With a --spec, provider/model may come from the file; don't force the
+        // session's current provider/model onto the request (that would override
+        // the spec). Without a spec, keep the T1 behavior of defaulting to the
+        // session's provider/model.
+        const provider = spec.provider || (spec.spec ? null : this.app.state.currentProvider);
+        const model = spec.model || (spec.spec ? null : this.app.state.currentModel);
         const body = { task: spec.task, tools: spec.tools };
+        if (spec.spec) body.spec = spec.spec;
         if (provider) body.provider = provider;
         if (model) body.model = model;
         if (spec.system) body.system = spec.system;
@@ -183,19 +195,38 @@ class TaskController extends _AgentRunControllerBase {
             started = await this.app.apiClient.post('/v1/agent/task', body);
         } catch (e) {
             // Surface the tier's own guardrail messages verbatim (403 tier
-            // disabled + enable hint, 400 shell grant, 400 missing provider).
+            // disabled + enable hint, 400 shell grant, 400 missing provider,
+            // 400 unknown/invalid spec).
             this.app.showSystemMessage(`❌ Task rejected: ${e.message}`);
             return;
         }
 
         const runId = started.run_id;
-        this._openPane(runId, spec.task, {
+        // Optimistic pane info from what the client parsed.
+        let paneInfo = {
             tools: spec.tools,
             network: spec.network.allow_outbound,
             budget: spec.budget,
             provider, model,
             status: started.status || 'running',
-        });
+        };
+        // A spec resolved server-side — the client didn't know the file's
+        // grant/budget/provider. Reflect the authoritative merged meta in the
+        // pane so it shows what actually runs (T3 trial expectation).
+        if (spec.spec) {
+            try {
+                const meta = await this.app.apiClient.get(`/v1/agent/runs/${runId}`);
+                paneInfo = {
+                    tools: meta.tools || spec.tools,
+                    network: meta.network || spec.network.allow_outbound,
+                    budget: meta.budget || spec.budget,
+                    provider: meta.provider || provider,
+                    model: meta.model || model,
+                    status: meta.status || started.status || 'running',
+                };
+            } catch (_e) { /* keep optimistic values if the meta fetch fails */ }
+        }
+        this._openPane(runId, spec.task, paneInfo);
         this._breadcrumb(runId, spec.task, `🛠️ ${runId} — task running… (in panel; chat stays usable)`);
         this._watchDetached(runId);
     }
@@ -211,6 +242,7 @@ class TaskController extends _AgentRunControllerBase {
         this.app.showSystemMessage([
             '/task — tool-capable background runs (sandboxed tier; default-off):',
             '  /task run "<desc>" --tools a,b,c [--allow host] [--provider p] [--model m] [--budget iters=,time=,tokens=] [--system "…"]',
+            '  /task run "<desc>" --spec <name>   configure from a spec file (specs_dir); flags override the file',
             '  /task ls                list runs',
             '  /task show <id>         open a run pane',
             '  /task watch <id>        open + live-tail a run',

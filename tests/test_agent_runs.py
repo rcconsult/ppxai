@@ -1220,3 +1220,148 @@ class TestAgentRunRoutes:
                 await asyncio.wait_for(body.__anext__(), 2.0)
         # generator exhausted → its finally ran → subscriber removed
         assert m.run_id not in reg._subscribers or q not in reg._subscribers.get(m.run_id, set())
+
+
+class TestTaskSpecFiles:
+    """T3: `/task` spec-file resolution, precedence, and the ceiling clamp.
+
+    Security-critical paths (path-escape, shell-in-spec, empty grant) reject
+    BEFORE provider construction, so they need no provider mock. The two
+    happy-path tests stub the provider to prove precedence end-to-end.
+    """
+
+    @staticmethod
+    def _fake_provider():
+        from ppxai.engine.providers.openai_compat import OpenAICompatibleProvider
+
+        class _FakeProvider(OpenAICompatibleProvider):
+            def __init__(self):
+                pass
+
+            def oneshot(self, *, prompt, model, system=None, **kw):
+                return {"content": f"echo: {prompt}", "finish_reason": "stop"}
+
+        return _FakeProvider()
+
+    _TERMINAL = ("completed", "failed", "cancelled", "interrupted")
+
+    @classmethod
+    def _poll_terminal(cls, c, run_id, timeout_s=5.0):
+        import time as _t
+
+        deadline = _t.monotonic() + timeout_s
+        one = None
+        while _t.monotonic() < deadline:
+            one = c.get(f"/v1/agent/runs/{run_id}").json()
+            if one["status"] in cls._TERMINAL:
+                return one
+            _t.sleep(0.02)
+        raise AssertionError(f"run {run_id} did not finish: last={one}")
+
+    def _cfg(self, tmp_path, **extra):
+        specs = tmp_path / "specs"
+        specs.mkdir(exist_ok=True)
+        cfg = {
+            "task_tier_enabled": True,
+            "sandbox": {"specs_dir": str(specs)},
+            "default_subagent": {},
+        }
+        cfg.update(extra)
+        return cfg, specs
+
+    def _patch_cfg(self, monkeypatch, cfg):
+        from ppxai.server.routes import agent_v1
+        monkeypatch.setattr(agent_v1, "get_agent_config", lambda: cfg)
+
+    # --- rejection paths (no provider needed) --------------------------------
+
+    def test_spec_given_but_specs_dir_not_configured_400(self, client, monkeypatch):
+        c, _ = client
+        self._patch_cfg(monkeypatch, {
+            "task_tier_enabled": True, "sandbox": {}, "default_subagent": {},
+        })
+        r = c.post("/v1/agent/task", json={"task": "t", "spec": "triage"})
+        assert r.status_code == 400 and "specs_dir" in r.json()["detail"]
+
+    def test_spec_name_path_escape_rejected(self, client, monkeypatch, tmp_path):
+        c, _ = client
+        cfg, _ = self._cfg(tmp_path)
+        self._patch_cfg(monkeypatch, cfg)
+        for bad in ("../secret", "a/b", "/etc/passwd", "..\\x", ".."):
+            r = c.post("/v1/agent/task", json={"task": "t", "spec": bad})
+            assert r.status_code == 400, f"{bad!r} not rejected"
+
+    def test_spec_not_found_400(self, client, monkeypatch, tmp_path):
+        c, _ = client
+        cfg, _ = self._cfg(tmp_path)
+        self._patch_cfg(monkeypatch, cfg)
+        r = c.post("/v1/agent/task", json={"task": "t", "spec": "nope"})
+        assert r.status_code == 400 and "not found" in r.json()["detail"]
+
+    def test_shell_in_spec_rejected_ceiling_clamp(self, client, monkeypatch, tmp_path):
+        # The clamp: a spec-supplied shell grant is rejected the same as a
+        # request-supplied one — the guards run on the MERGED grant.
+        c, _ = client
+        cfg, specs = self._cfg(tmp_path)
+        (specs / "danger.md").write_text(
+            "---\ntools: [execute_shell_command]\n---\nx\n", encoding="utf-8")
+        self._patch_cfg(monkeypatch, cfg)
+        r = c.post("/v1/agent/task", json={
+            "task": "t", "spec": "danger", "provider": "p", "model": "m"})
+        assert r.status_code == 400 and "shell" in r.json()["detail"].lower()
+
+    def test_spec_yields_empty_grant_400_not_422(self, client, monkeypatch, tmp_path):
+        c, _ = client
+        cfg, specs = self._cfg(tmp_path)
+        (specs / "notools.md").write_text("---\nprovider: p\n---\nx\n", encoding="utf-8")
+        self._patch_cfg(monkeypatch, cfg)
+        r = c.post("/v1/agent/task", json={"task": "t", "spec": "notools"})
+        assert r.status_code == 400 and "grant" in r.json()["detail"].lower()
+
+    def test_no_spec_no_tools_still_422(self, client):
+        # Preserved invariant: without a spec, empty/missing grant is 422.
+        c, _ = client
+        assert c.post("/v1/agent/task", json={"task": "t"}).status_code == 422
+        assert c.post("/v1/agent/task", json={"task": "t", "tools": []}).status_code == 422
+
+    # --- merge/precedence: assert on the MINTED run meta ---------------------
+    # T3 governs what the run is MINTED with (the merge), not whether the chat
+    # loop executes. tools/provider/model are recorded at start_run, so read the
+    # meta right after the 200 — no need to drive the (provider-dependent) run to
+    # completion. `_validate_provider_or_400` is stubbed so the mint proceeds;
+    # the background run may fail harmlessly (fake provider can't drive chat).
+
+    def _mint(self, c, monkeypatch, body):
+        from ppxai.server.routes import agent_v1
+        monkeypatch.setattr(agent_v1, "_validate_provider_or_400", lambda name: None)
+        r = c.post("/v1/agent/task", json=body)
+        assert r.status_code == 200, r.text
+        return c.get(f"/v1/agent/runs/{r.json()['run_id']}").json()
+
+    def test_spec_supplies_grant_provider_model(self, client, monkeypatch, tmp_path):
+        c, _ = client
+        cfg, specs = self._cfg(tmp_path)
+        (specs / "triage.md").write_text(
+            "---\ntools: [read_file, grep]\nprovider: specprov\nmodel: specmodel\n"
+            "budget: {iterations: 3}\nnetwork: [ci.example.com]\n---\nbe terse\n",
+            encoding="utf-8")
+        self._patch_cfg(monkeypatch, cfg)
+        one = self._mint(c, monkeypatch, {"task": "the CI job is red", "spec": "triage"})
+        assert one["tools"] == ["read_file", "grep"]
+        assert one["provider"] == "specprov" and one["model"] == "specmodel"
+        assert one["budget"] == {"iterations": 3}
+        assert one["network"] == ["ci.example.com"]
+
+    def test_request_field_overrides_spec(self, client, monkeypatch, tmp_path):
+        c, _ = client
+        cfg, specs = self._cfg(tmp_path)
+        (specs / "triage.md").write_text(
+            "---\ntools: [read_file]\nprovider: specprov\nmodel: specmodel\n---\nx\n",
+            encoding="utf-8")
+        self._patch_cfg(monkeypatch, cfg)
+        one = self._mint(c, monkeypatch, {
+            "task": "t", "spec": "triage",
+            "model": "reqmodel", "tools": ["write_file"]})
+        assert one["model"] == "reqmodel"        # request wins
+        assert one["tools"] == ["write_file"]    # request grant wins wholesale
+        assert one["provider"] == "specprov"     # spec fills the gap

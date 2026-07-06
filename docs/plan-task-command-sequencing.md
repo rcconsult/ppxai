@@ -106,7 +106,25 @@ vs relative/workdir write); config-parse defaults; a run-level test asserting
 
 ---
 
-## T3 — spec files: `--spec` · `--system-file` · `--batch`
+## T3 — spec files: `--spec` · `--system-file` · `--batch` — ✅ DONE (`--spec`); `--system-file`/`--batch` deferred to T3.b
+
+**Shipped:** `engine/agent_spec.py` (loader: md front-matter / json / yaml /
+jsonl-batch → `AgentSpec`, size-bounded, clear errors); `/v1/agent/task` gains a
+`spec` NAME field resolved under `sandbox.specs_dir` (name-only, path-escape +
+containment guarded, 400 on any problem) with **precedence request > spec >
+default_subagent** and the ceiling clamp run on the MERGED grant (shell-in-spec
+→ 400; empty merged grant → 400; no-spec-no-tools still → 422 via a
+`model_validator`, preserving the invariant). Web client `--spec <name>`
+(task-controller flag + pane reflects the server-merged meta). Tests:
+`test_agent_spec.py` (22 loader), `test_agent_runs.py::TestTaskSpecFiles` (9
+route), `test_task_controller_behavior.py` scenario 3b.
+
+**Deferred to T3.b (client-only conveniences, browser File-API reads):**
+`--system-file` (prose file → `system`) and `--batch <file.jsonl>` (one run per
+line). The loader already parses jsonl (`load_batch_lines`) and prose-as-system
+(a `.md` with no front-matter), so T3.b is client glue: read the local file in
+the browser and either inline `system` or fan out N `/task` POSTs. Not
+headless-testable, hence split from the load-bearing server slice.
 
 **Capability:** configure a run from a file — `.md` (YAML front-matter +
 body), `.json`/`.yaml`, or `.jsonl` (batch fan-out).

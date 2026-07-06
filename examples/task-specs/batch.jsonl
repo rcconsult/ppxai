@@ -1,0 +1,3 @@
+{"task": "count the markdown files under docs", "tools": ["list_directory", "grep"], "provider": "nvidia", "model": "qwen"}
+{"task": "read README.md and list its top-level sections", "tools": ["read_file"], "provider": "nvidia", "model": "qwen"}
+{"task": "find every TODO comment under ppxai/server", "tools": ["grep"], "provider": "nvidia", "model": "qwen", "budget": {"iterations": 3}}

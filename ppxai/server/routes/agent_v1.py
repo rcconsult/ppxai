@@ -76,15 +76,17 @@ import asyncio
 import json
 import os
 import time
+from pathlib import Path
 from typing import Any, Optional
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from ...common.logger import get_logger
 from ...config.tools import get_agent_config
 from ...engine.agent_runs import RunMeta
+from ...engine.agent_spec import AgentSpec, AgentSpecError, load_spec_file
 from ...engine.agent_scoped_tools import ScopedToolManager
 from ...engine.client import EngineClient
 from ...engine.tools.agent_spawn import SpawnSubagentTool
@@ -418,8 +420,23 @@ class AgentTaskRequest(BaseModel):
 
     task: str = Field(..., min_length=1, description="The agent task / prompt.")
     tools: list[str] = Field(
-        ..., min_length=1,
-        description="Capability grant — the ONLY tools this run may call (required, non-empty).",
+        default_factory=list,
+        description=(
+            "Capability grant — the ONLY tools this run may call. Required + "
+            "non-empty UNLESS a `spec` supplies it (T3): a request with neither "
+            "tools nor spec is rejected 422; a spec that yields an empty grant "
+            "is rejected 400 post-merge."
+        ),
+    )
+    spec: Optional[str] = Field(
+        None,
+        description=(
+            "T3: name of a spec file under tools.agent.sandbox.specs_dir "
+            "(NAME only — no path, no traversal). Its fields fill any request "
+            "field left unset; explicit request fields always win. The merged "
+            "grant is clamped by the same ceiling as a direct request "
+            "(no-shell, task_tier_enabled)."
+        ),
     )
     provider: Optional[str] = Field(None, description="Provider (per-run intent).")
     model: Optional[str] = Field(None, description="Model (per-run intent).")
@@ -445,6 +462,94 @@ class AgentTaskRequest(BaseModel):
             "{host, paths:[prefix,...]}."
         ),
     )
+
+    @model_validator(mode="after")
+    def _grant_required_without_spec(self) -> "AgentTaskRequest":
+        # Preserve the /task invariant "a tool-capable run can never go tool-free
+        # by accident" (422) — but let a spec supply the grant. With a spec, the
+        # non-empty check happens post-merge in the route (400). Without one, an
+        # empty/absent grant is a request-shape error here.
+        if not self.spec and not self.tools:
+            raise ValueError(
+                "tools is required and must be non-empty (or provide a `spec` "
+                "that supplies it)"
+            )
+        return self
+
+
+# --- T3: spec resolution + precedence merge -------------------------------
+
+def _resolve_named_spec(name: str) -> AgentSpec:
+    """Load a spec by NAME from `tools.agent.sandbox.specs_dir` (T3).
+
+    Security: name-only, no path. Reject any name with a path separator, a
+    parent ref, or an absolute form; then confirm the resolved real path is
+    still INSIDE specs_dir (defends against symlink escape) — the same
+    name-only discipline the T4 skills resolver uses. 400 on any problem: a
+    bad/unknown spec is a request error, not a server fault.
+    """
+    specs_dir = (get_agent_config().get("sandbox") or {}).get("specs_dir")
+    if not specs_dir:
+        raise HTTPException(
+            status_code=400,
+            detail="Spec files are not enabled: set tools.agent.sandbox.specs_dir.",
+        )
+    if not name or "/" in name or "\\" in name or ".." in name or Path(name).is_absolute():
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid spec name {name!r}: a bare name is required (no path).",
+        )
+    root = Path(specs_dir).expanduser().resolve()
+    # Accept an explicit extension, else try the known ones in a stable order.
+    candidates = (
+        [root / name]
+        if Path(name).suffix
+        else [root / f"{name}{ext}" for ext in (".md", ".json", ".yaml", ".yml")]
+    )
+    for cand in candidates:
+        try:
+            real = cand.resolve()
+        except OSError:
+            continue
+        # Containment check: the resolved file must live under specs_dir.
+        if root not in real.parents and real != root:
+            continue
+        if real.is_file():
+            try:
+                return load_spec_file(real)
+            except AgentSpecError as exc:
+                raise HTTPException(status_code=400, detail=f"Spec {name!r}: {exc}")
+    raise HTTPException(
+        status_code=400,
+        detail=f"Spec {name!r} not found under specs_dir ({root}).",
+    )
+
+
+def _merge_task_fields(req: AgentTaskRequest) -> dict:
+    """Effective run fields with precedence: request > spec > server default.
+
+    Returns {task, tools, provider, model, system, budget(dict), network(list)}.
+    The caller runs the SAME ceiling guards (shell-reject, non-empty grant,
+    provider/model present) on these merged values — so a spec can't smuggle a
+    grant past the checks a direct request faces.
+    """
+    spec = _resolve_named_spec(req.spec) if req.spec else AgentSpec()
+    sub_defaults = get_agent_config().get("default_subagent", {}) or {}
+
+    task = req.task or spec.task  # req.task is required (min_length=1); spec.task is a fallback only if ever relaxed
+    tools = list(req.tools) if req.tools else list(spec.tools or [])
+    provider = req.provider or spec.provider or sub_defaults.get("provider")
+    model = req.model or spec.model or sub_defaults.get("model")
+    system = req.system if req.system is not None else spec.system
+    budget = _budget_dict(req.budget) or dict(spec.budget or {})
+    network = (
+        list(req.network.allow_outbound) if req.network is not None
+        else list(spec.network or [])
+    )
+    return {
+        "task": task, "tools": tools, "provider": provider, "model": model,
+        "system": system, "budget": budget, "network": network,
+    }
 
 
 @router.post("/task", response_model=AgentRunResponse)
@@ -476,12 +581,31 @@ async def create_agent_task(req: AgentTaskRequest, request: Request) -> AgentRun
 
     registry = get_agent_run_registry()
 
+    # T3: resolve the spec (if any) + merge request > spec > default AFTER the
+    # tier gate — never touch the filesystem for a disabled tier. Every ceiling
+    # guard below runs on the EFFECTIVE (merged) values, so a spec can't smuggle
+    # a grant past checks a direct request faces.
+    eff = _merge_task_fields(req)
+    tools = eff["tools"]
+
+    # Post-merge non-empty grant (400, not 422): the model_validator lets a
+    # spec-carrying request through with no request-level tools; if neither the
+    # request nor the spec yields a grant, reject here.
+    if not tools:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Empty tool grant: neither the request nor the resolved spec "
+                "provided any tools. A tool-capable run needs a non-empty grant."
+            ),
+        )
+
     # AC-2: a shell-execution tool runs arbitrary commands whose network egress
     # the allowlist cannot inspect (curl/pip/Invoke-WebRequest/…), so it would
     # bypass the egress chokepoint entirely. The only tier that can contain it
     # is OS isolation (ADR 0003 §3 tier-d), deferred past the MVP. Reject the
-    # grant up front with a clear error rather than silently never running it.
-    if grant_has_shell(req.tools):
+    # (merged) grant up front — a spec-supplied shell tool is rejected too.
+    if grant_has_shell(tools):
         raise HTTPException(
             status_code=400,
             detail=(
@@ -495,14 +619,13 @@ async def create_agent_task(req: AgentTaskRequest, request: Request) -> AgentRun
             ),
         )
 
-    sub_defaults = get_agent_config().get("default_subagent", {}) or {}
-    provider_name = req.provider or sub_defaults.get("provider")
-    model = req.model or sub_defaults.get("model")
+    provider_name = eff["provider"]
+    model = eff["model"]
     if not provider_name or not model:
         raise HTTPException(
             status_code=400,
             detail=(
-                "Agent task needs provider+model (request or "
+                "Agent task needs provider+model (request, spec, or "
                 "tools.agent.default_subagent config)."
             ),
         )
@@ -513,9 +636,9 @@ async def create_agent_task(req: AgentTaskRequest, request: Request) -> AgentRun
     _validate_provider_or_400(provider_name)
 
     meta = registry.start_run(
-        task=req.task, tools=req.tools, provider=provider_name, model=model,
-        network=(req.network.allow_outbound if req.network else []),
-        budget=_budget_dict(req.budget),
+        task=eff["task"], tools=tools, provider=provider_name, model=model,
+        network=eff["network"],
+        budget=eff["budget"],
         owner=_caller_owner(request),
     )
 
@@ -523,11 +646,11 @@ async def create_agent_task(req: AgentTaskRequest, request: Request) -> AgentRun
         registry,
         provider_name=provider_name,
         model=model,
-        task=req.task,
-        tools=list(req.tools),
-        allow_outbound=(req.network.allow_outbound if req.network else []),
+        task=eff["task"],
+        tools=list(tools),
+        allow_outbound=eff["network"],
         allow_spawn=True,  # top-level run may spawn ONE child (depth=1; Inc 7)
-        system=req.system,  # v1.19.x: caller's agent framing (rendered AGENT.md)
+        system=eff["system"],  # request or spec: caller's agent framing (AGENT.md)
     )
     registry.run_in_background(meta, runner)
     return AgentRunResponse(run_id=meta.run_id, status=meta.status)
