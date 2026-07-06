@@ -106,3 +106,7 @@ discoverable later.
   with auth on, loopback `/chat` + `/files/read` are bearer-EXEMPT by
   source-IP alone (any local process, not just the operator's browser);
   deliberate desktop-UX choice, not a bug — don't drive-by "fix" it
+- [testclient-per-request-event-loop.md](testclient-per-request-event-loop.md) —
+  non-context `TestClient(app)` gives every request its own event loop;
+  a background task that must live ACROSS requests (T5 consent park)
+  silently dies — use `with TestClient(app) as c:` (`ctx_client` fixture)
