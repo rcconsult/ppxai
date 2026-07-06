@@ -1,5 +1,6 @@
 {{- /*
-H2: egress-deny-by-default NetworkPolicy for the per-user server pods.
+H2: egress-deny-by-default NetworkPolicy for the per-user server pods, plus an
+OPT-IN ingress-isolation block (debt (v)) for multi-tenant deployments.
 Requires a CNI that enforces NetworkPolicy (e.g. Calico, Cilium). Disabled by
 default — enable + populate networkPolicy.egress for your site.
 
@@ -9,8 +10,23 @@ NOTE: NetworkPolicy is IP/namespace-based, NOT DNS-aware. Two common pitfalls:
   * Service ports: a Service mapping :80 -> a different targetPort means the CNI
     sees the backing-pod port, not 80. Allow the namespace without pinning ports
     for in-cluster inference services, or list the real container ports.
+
+INGRESS ISOLATION (networkPolicy.ingressIsolation, opt-in): without an Ingress
+policy the per-user pods bind 0.0.0.0:<port> with only north-south (ingress +
+app) auth, so ANY pod in the namespace can reach a neighbour's engine east-west,
+bypassing the ingress/auth entirely. Enabling this restricts inbound to exactly
+(a) the ingress-controller namespace and (b) the node/probe source CIDRs.
+  * CRITICAL: kubelet liveness/readiness probes come from the NODE IP, not a pod,
+    so they need `probeSourceCIDRs` (an ipBlock) — NOT a selector. If you enable
+    isolation with an EMPTY probeSourceCIDRs, readiness is dropped → the Service
+    gets no endpoints → traffic 503s and liveness CrashLoops the pod. Always set
+    the node subnet.
 */ -}}
 {{- if .Values.networkPolicy.enabled }}
+{{- $iso := .Values.networkPolicy.ingressIsolation | default dict }}
+{{- if and $iso.enabled (not $iso.probeSourceCIDRs) }}
+{{- fail "networkPolicy.ingressIsolation.enabled=true requires probeSourceCIDRs (the node/kubelet-probe source CIDR); an empty list silently breaks readiness/liveness probes." }}
+{{- end }}
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -26,6 +42,30 @@ spec:
       app: {{ include "ppxai.fullname" . }}-server
   policyTypes:
     - Egress
+    {{- if $iso.enabled }}
+    - Ingress
+    {{- end }}
+  {{- if $iso.enabled }}
+  ingress:
+    # 1. The ingress controller — the only legitimate north-south proxy path.
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ $iso.ingressNamespace }}
+      ports:
+        - protocol: TCP
+          port: {{ $iso.port | default 54320 }}
+    # 2. kubelet probes — sourced from the NODE IP (not a pod) → ipBlock, not a
+    #    selector. Omitting this breaks readiness → no endpoints → 503. REQUIRED.
+    {{- range $iso.probeSourceCIDRs }}
+    - from:
+        - ipBlock:
+            cidr: {{ . }}
+      ports:
+        - protocol: TCP
+          port: {{ $iso.port | default 54320 }}
+    {{- end }}
+  {{- end }}
   egress:
     # DNS — select the kube-system namespace (CoreDNS), not the Service IP.
     - to:

@@ -107,6 +107,24 @@ networkPolicy:
   #          - protocol: TCP
   #            port: 443
   egress: []
+  # -- Ingress isolation (debt (v) — multi-tenant east-west protection). OFF by
+  #    default = today's behavior (inbound unrestricted). When enabled, inbound
+  #    to the per-user pods is restricted to the ingress controller + the
+  #    node/probe source CIDRs. REQUIRED for any real multi-tenant deployment:
+  #    without it a neighbour pod can reach another user's engine directly,
+  #    bypassing the ingress and its auth.
+  ingressIsolation:
+    enabled: false
+    # -- Namespace of the ingress controller (matched by namespaceSelector).
+    ingressNamespace: ingress
+    # -- Node/kubelet-probe source CIDR(s) as an ipBlock list. REQUIRED when
+    #    enabled — kubelet liveness/readiness probes come from the NODE IP, not a
+    #    pod, so a selector can't match them. An EMPTY list while enabled fails
+    #    the template render (an empty list silently breaks probes → no endpoints
+    #    → 503). Set your node subnet, e.g. ["10.0.0.0/24"].
+    probeSourceCIDRs: []
+    # -- Pod port the ingress + probes target.
+    port: 54320
 
 # ============================================================
 # Storage

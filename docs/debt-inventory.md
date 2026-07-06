@@ -1041,11 +1041,29 @@ genuine open set. (Lettered q–t; upstream owns p = external review round.)**
   research doc). **Trigger:** do the CORS+Host fix immediately; the random-port /
   loopback-token / UDS follow-ons (A.2–A.4) can wait.
 
-- **(v) OPEN — cross-tenant pod reachability: per-user coder pods are
-  `0.0.0.0`-bound + app-layer-unauthenticated, with NO ingress NetworkPolicy
-  [SECURITY, multi-tenant isolation; HIGHER severity than (u); distinct layer].**
-  **(u) does NOT resolve this** — (u) is browser-layer (CORS/Host) defense-in-depth;
-  this is network/app-layer tenant isolation. Filed separately on purpose.
+- **(v) NETWORK-LAYER FIXED (2026-07-06) — cross-tenant pod reachability: per-user
+  coder pods are `0.0.0.0`-bound + app-layer-unauthenticated, with NO ingress
+  NetworkPolicy [SECURITY, multi-tenant isolation; HIGHER severity than (u);
+  distinct layer].** **(u) does NOT resolve this** — (u) is browser-layer
+  (CORS/Host) defense-in-depth; this is network/app-layer tenant isolation. Filed
+  separately on purpose.
+
+  **STATUS 2026-07-06:** the **network-layer fix (ingress NetworkPolicy) is shipped
+  + live-verified.** The per-user egress policy gained `policyTypes:[Ingress]` with
+  inbound restricted to exactly (1) the ingress-controller namespace
+  (`namespaceSelector`) and (2) the node/kubelet-probe source CIDR (`ipBlock` — the
+  probe comes from the NODE, not a pod; omitting it silently breaks readiness).
+  Live-verified END TO END: the cross-tenant exploit that returned HTTP 200 on
+  `/status,/sessions,/state,/v1/agent/runs` now **times out** from a neighbour pod;
+  a real pod still reaches `Ready` (probe path intact, 0 restarts); ingress-nginx →
+  pod still HTTP 200 (north-south intact). Live site config
+  `deploy/microk8s/networkpolicy.yaml` + a generic opt-in
+  `networkPolicy.ingressIsolation` in the Helm chart (`ingressNamespace` +
+  `probeSourceCIDRs`; `fail`s if enabled with empty CIDRs). **STILL DEFERRED
+  (defense-in-depth):** the app-layer per-session `PPXAI_API_TOKEN` between ingress
+  and pod (fix option 2) — the NetworkPolicy is the correct primary layer and
+  closes the exploit; the bearer is belt-and-suspenders for a CNI-less deployment
+  or a same-namespace-but-authorized caller. Track with Item 3.
 
   **VERIFIED (`6add04f6`):**
   - Per-user server pods bind `--host 0.0.0.0 --port 54320`
