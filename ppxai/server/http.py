@@ -190,14 +190,97 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# Local-transport security (debt (u), v1.19.x) ------------------------------
+# By default the server is a LOOPBACK transport for the local clients (Rich /
+# Textual TUI, web, VSCode). Two controls stop a malicious website — or a
+# DNS-rebinding attacker — from driving the local engine over 127.0.0.1:
+#   * CORS is restricted to the app's own loopback origins, NOT "*". The old
+#     `allow_origins=["*"] + allow_credentials=True` made Starlette REFLECT any
+#     Origin (it can't legally send `*` with credentials), i.e. it trusted every
+#     website the user visited — combined with default-off auth, any page could
+#     script credentialed calls to the engine.
+#   * Host-header validation rejects a request whose Host isn't a loopback name
+#     (anti-rebinding), UNLESS the operator bound the server wide (gateway/k8s)
+#     and declared its real host(s).
+# Both are overridable by env for the gateway/coder deployment (which binds
+# 0.0.0.0 and fronts the server with its own ingress auth — see docs and
+# deploy/). Desktop needs no env: the secure loopback default applies. The
+# wiring is intentionally non-breaking: a WIDE bind with no PPXAI_TRUSTED_HOSTS
+# stays permissive (pre-(u) behavior) + warns, so upgrading the server image
+# alone never 400s an existing gateway before its env is set.
+
+_LOOPBACK_HOSTS = frozenset({"127.0.0.1", "localhost", "::1"})
+_HEALTH_PATHS = frozenset({"/health", "/healthz"})
+
+# Effective bind host, set by run_server()/run_desktop() before serving so the
+# Host-validation middleware can relax for a deliberately-wide bind. Defaults to
+# the loopback bind (secure) for any path that never sets it (tests, embedding).
+_BIND_HOST = DEFAULT_HOST
+_warned_wide_bind = False
+
+
+def _set_bind_host(host: str) -> None:
+    global _BIND_HOST
+    _BIND_HOST = (host or DEFAULT_HOST).strip()
+
+
+def _env_list(name: str) -> list:
+    return [x.strip() for x in os.environ.get(name, "").split(",") if x.strip()]
+
+
+def _cors_kwargs() -> dict:
+    """CORS origins: explicit PPXAI_ALLOWED_ORIGINS, else loopback-any-port.
+
+    The desktop web UI is same-origin with the server, so CORS never blocks it,
+    while a third-party website is refused (no wildcard reflection). A gateway
+    with a genuinely cross-origin browser client sets PPXAI_ALLOWED_ORIGINS to
+    its UI origin(s).
+    """
+    origins = _env_list("PPXAI_ALLOWED_ORIGINS")
+    if origins:
+        return {"allow_origins": origins}
+    return {"allow_origin_regex": r"^https?://(127\.0\.0\.1|localhost)(:\d+)?$"}
+
+
+def _host_allowlist() -> "set | None":
+    """Allowed HTTP Host names, or None to accept any (permissive).
+
+    - Always includes loopback (+ "testserver" under pytest so the Starlette
+      TestClient default Host passes).
+    - PPXAI_TRUSTED_HOSTS extends it; "*" disables validation (returns None).
+    - Loopback bind      -> loopback (+ extras): strict — the desktop default.
+    - Wide bind + extras -> loopback + extras: the hardened gateway/coder case.
+    - Wide bind, no extras -> None (permissive) + one-time warn: preserves
+      pre-(u) behavior so a server-image-only upgrade never breaks a gateway.
+    """
+    extras = _env_list("PPXAI_TRUSTED_HOSTS")
+    if "*" in extras:
+        return None
+    base = set(_LOOPBACK_HOSTS)
+    if "pytest" in sys.modules:
+        base.add("testserver")
+    if _BIND_HOST in _LOOPBACK_HOSTS or extras:
+        return base | set(extras)
+    global _warned_wide_bind
+    if not _warned_wide_bind:
+        _warned_wide_bind = True
+        logger.warning(
+            f"Server bound to non-loopback host {_BIND_HOST!r} without "
+            "PPXAI_TRUSTED_HOSTS - Host-header validation DISABLED (permissive). "
+            "Set PPXAI_TRUSTED_HOSTS to your external host(s) to enable "
+            "anti-rebinding protection."
+        )
+    return None
+
+
 # Add CORS middleware for webview/browser access
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins for local development
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=["X-Session-Id"],  # Allow clients to see session ID
+    **_cors_kwargs(),
 )
 
 
@@ -255,6 +338,44 @@ async def activity_tracking_middleware(request: Request, call_next):
             )
 
     return response
+
+
+@app.middleware("http")
+async def host_validation_middleware(request: Request, call_next):
+    """Anti-DNS-rebinding Host check (debt (u)).
+
+    Defined LAST so it is the OUTERMOST http middleware — a bad Host is rejected
+    before auth / activity do any work. Exemptions:
+      * CORS preflight (OPTIONS) — let CORSMiddleware decide the origin; blocking
+        preflight here would mask the real (origin) reason.
+      * kubelet liveness/readiness probes hit `/health` with Host=<pod IP>, which
+        isn't in the allowlist — same footgun class as the (v) NetworkPolicy
+        probe rule. Exempt the health paths so a hardened gateway pod stays Ready.
+    Permissive (`_host_allowlist()` -> None) short-circuits to no check.
+    """
+    if request.method != "OPTIONS" and request.url.path not in _HEALTH_PATHS:
+        allowed = _host_allowlist()
+        if allowed is not None:
+            raw = (request.headers.get("host") or "").strip()
+            # Strip port; handle IPv6 literal "[::1]:port" -> "::1".
+            host = raw.rsplit(":", 1)[0] if raw.count(":") <= 1 else raw
+            if host.startswith("[") and "]" in host:
+                host = host[1:host.index("]")]
+            host = host.strip().lower()
+            if host and host not in allowed:
+                from fastapi.responses import JSONResponse
+                return JSONResponse(
+                    status_code=400,
+                    content={
+                        "error": "invalid_host",
+                        "detail": (
+                            f"Host {host!r} is not allowed. This server accepts "
+                            "loopback Hosts by default; set PPXAI_TRUSTED_HOSTS for "
+                            "a non-loopback (gateway) deployment."
+                        ),
+                    },
+                )
+    return await call_next(request)
 
 
 # Register all route modules
@@ -352,6 +473,10 @@ def run_server():
 
     args = parser.parse_args()
 
+    # Tell the Host-validation middleware the real bind host (debt (u)): a
+    # loopback bind stays strict; a wide bind relaxes per PPXAI_TRUSTED_HOSTS.
+    _set_bind_host(args.host)
+
     # Initialize configuration system (v1.13.10: explicit initialization)
     initialize()
 
@@ -431,6 +556,9 @@ def run_desktop():
     parser.add_argument("--no-browser", action="store_true", help="Don't open browser")
 
     args = parser.parse_args()
+
+    # Host-validation bind context (debt (u)) — desktop binds loopback by default.
+    _set_bind_host(args.host)
 
     url = f"http://{args.host}:{args.port}"
 

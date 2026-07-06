@@ -443,6 +443,21 @@ def _create_server_pod(username: str, workspace_pvc: str, temp_pvc: str) -> str:
                         # rather than carry a parallel env var.
                         k8s.V1EnvVar(name="HOME", value="/workspace"),
                         k8s.V1EnvVar(name="PPXAI_USERNAME", value=username),
+                        # debt (u): per-user pods bind 0.0.0.0 (ingress-nginx must
+                        # reach them cross-pod), so ppxai's Host-validation would
+                        # otherwise fall back to permissive. Declare the ingress
+                        # host so the pod ENFORCES it (anti-rebinding /
+                        # defense-in-depth atop the (v) ingress NetworkPolicy).
+                        # Requests arrive with Host=<INGRESS_HOST>; kubelet /health
+                        # probes are exempt by path, TCP readiness is unaffected.
+                        k8s.V1EnvVar(name="PPXAI_TRUSTED_HOSTS", value=INGRESS_HOST),
+                        # Same-origin UI makes CORS inert for the normal flow; set
+                        # the explicit origin anyway so any cross-origin call is
+                        # controlled rather than wildcard-reflected.
+                        k8s.V1EnvVar(
+                            name="PPXAI_ALLOWED_ORIGINS",
+                            value=f"https://{INGRESS_HOST}",
+                        ),
                     ],
                     env_from=[
                         k8s.V1EnvFromSource(

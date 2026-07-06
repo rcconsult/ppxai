@@ -135,6 +135,42 @@ Content-Type: application/json
   needs to see the new value — env-var reload depends on your
   deployment mechanism).
 
+### Transport perimeter: CORS + Host validation (v1.19.x)
+
+Independent of bearer auth, the server hardens its **local transport** against
+a malicious website (or a DNS-rebinding attacker) driving the engine over
+loopback. Two controls, both **bind-conditional** and secure-by-default for the
+desktop, overridable for a gateway/coder deployment:
+
+- **CORS** defaults to the app's own **loopback origins** (regex
+  `^https?://(127\.0\.0\.1|localhost)(:\d+)?$`), not `*`. The old
+  `allow_origins=["*"] + allow_credentials=True` made Starlette *reflect* any
+  Origin (it can't legally send `*` with credentials), i.e. trust every website
+  the user visited. The desktop web UI is same-origin with the server, so CORS
+  never blocks it; a third-party site is refused. A gateway with a genuinely
+  cross-origin browser client sets **`PPXAI_ALLOWED_ORIGINS`** (comma-separated).
+- **Host-header validation** rejects a request whose `Host` isn't a loopback
+  name with `400 {"error":"invalid_host"}` — anti-DNS-rebinding. Exempts
+  `/health`+`/healthz` (kubelet probes send `Host=<pod IP>`) and CORS preflight
+  (`OPTIONS`).
+
+**Bind-conditional behavior** (the server knows its bind host):
+
+| Bind | `PPXAI_TRUSTED_HOSTS` | Host validation |
+|---|---|---|
+| loopback (`127.0.0.1`, desktop default) | unset | strict — loopback only |
+| wide (`0.0.0.0`, gateway/coder) | set to your host(s) | loopback + those hosts |
+| wide (`0.0.0.0`) | unset | **permissive + one-time warn** (non-breaking fallback) |
+| any | `*` | disabled |
+
+The wide-bind-permissive fallback means upgrading the server image alone never
+starts 400ing an existing gateway before its env is set — but you **should** set
+`PPXAI_TRUSTED_HOSTS` to your ingress host to actually enable the protection.
+The k8s coder deployment does this automatically: the session-manager threads
+`PPXAI_TRUSTED_HOSTS` + `PPXAI_ALLOWED_ORIGINS` from `INGRESS_HOST` into every
+per-user pod (see `deploy/`). This is defense-in-depth atop the ingress
+NetworkPolicy — not a replacement for it.
+
 ### What auth doesn't replace
 
 - **NetworkPolicy / mTLS / firewall rules** are still your floor.

@@ -988,8 +988,26 @@ genuine open set. (Lettered q–t; upstream owns p = external review round.)**
   before acting — the sandbox surface has moved. **Planned:** v1.19.x `/task`
   design iteration or v1.20.x.
 
-- **(u) OPEN — CORS wildcard + no Host-header validation on the HTTP server
-  [SECURITY, actionable now].** Full analysis:
+- **(u) FIXED (2026-07-06) — CORS wildcard + no Host-header validation on the HTTP
+  server [SECURITY].** **STATUS:** shipped + tested (16 tests in
+  `tests/test_host_cors_security.py`; auth/tokens suites still green). Implemented
+  in `server/http.py`: (1) CORS default is now a **loopback-origin regex**
+  (`^https?://(127\.0\.0\.1|localhost)(:\d+)?$`) instead of `["*"]`, overridable via
+  `PPXAI_ALLOWED_ORIGINS`; (2) a **Host-validation middleware** (outermost) rejects a
+  non-loopback `Host` with 400 `invalid_host`, exempting `/health`+`/healthz` (kubelet
+  probes send Host=<pod IP>) and OPTIONS (let CORS decide). **Bind-conditional +
+  non-breaking:** `_BIND_HOST` set by `run_server`/`run_desktop`; loopback bind →
+  strict loopback allowlist (desktop default, no env); wide bind + `PPXAI_TRUSTED_HOSTS`
+  → loopback + those hosts (gateway/coder); wide bind + no env → permissive + one-time
+  warn (so a server-image-only upgrade never 400s an existing gateway). k8s wiring:
+  `deploy/images/session-manager/main.py` threads `PPXAI_TRUSTED_HOSTS`/
+  `PPXAI_ALLOWED_ORIGINS` from `INGRESS_HOST` into each per-user pod;
+  `deploy/examples/microk8s/session-manager-deployment.yaml` documents it. **Verified
+  via TestClient (full ASGI stack)**; live-socket subprocess suite (`test_server_smoke_e2e`)
+  is environmentally skipped on this Windows host (pre-existing, CI-Linux/macOS only) —
+  NOT run here. **Original analysis retained below.**
+
+  Full analysis:
   [docs/research/2026-07-05-http-server-attack-surface-and-transport-options.md](research/2026-07-05-http-server-attack-surface-and-transport-options.md)
   §"Point 1". **The bug (verified `6add04f6`):** `server/http.py:194-201` sets
   `CORSMiddleware(allow_origins=["*"], allow_credentials=True, allow_methods=["*"],

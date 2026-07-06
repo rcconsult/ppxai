@@ -172,11 +172,14 @@ Options A+C already close. Recorded only to close it explicitly.
 
 **Do A now; make C real next; treat B as the long-horizon desktop endgame; reject D.**
 
-1. **Immediately (days, do regardless):** the CORS + Host/Origin-validation fix
-   (Option A.1). `allow_origins=["*"] + allow_credentials=True` on a
-   default-unauthenticated loopback service is the sharpest edge and is cheap to
-   blunt. Add anti-rebinding Host checks. This is a security fix independent of any
-   architecture decision — file it, don't wait for the big call.
+1. **✅ DONE (2026-07-06):** the CORS + Host/Origin-validation fix (Option A.1) —
+   debt **(u)**. `allow_origins=["*"] + allow_credentials=True` replaced with a
+   loopback-origin regex (overridable via `PPXAI_ALLOWED_ORIGINS`); anti-rebinding
+   Host-header validation added (bind-conditional, `PPXAI_TRUSTED_HOSTS` for
+   gateway/coder); k8s session-manager threads both from `INGRESS_HOST` into
+   per-user pods. 16 tests in `tests/test_host_cors_security.py`; documented in
+   [api-gateway.md](../api-gateway.md) §"Transport perimeter". The sharpest edge is
+   now blunted.
 2. **Near term (A.2–A.4):** random port + `0600` port file + per-launch loopback
    token, so the desktop default becomes auth-*on* and un-discoverable. Consider
    UDS/named-pipe to remove the TCP surface on macOS/Linux.
