@@ -196,6 +196,12 @@ def get_agent_run_registry():
         from ..engine.agent_runs import AgentRunRegistry, FilesystemAgentRunStore
         store = FilesystemAgentRunStore(PPXAI_HOME / "runs")
         _agent_run_registry = AgentRunRegistry(store)
+        # T7: a fresh registry means a fresh process — any run still marked
+        # pending/running/waiting/cancelling on disk was orphaned by the last
+        # shutdown (its task/control/consent future died with the process).
+        # Land them `interrupted` (resumable when the checkpoint is conclusive)
+        # so `ls` tells the truth and POST .../resume can pick them up.
+        _agent_run_registry.sweep_orphans()
 
         def _mirror_to_app_state(reg=_agent_run_registry):
             mgr = get_session_manager()

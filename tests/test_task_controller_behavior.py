@@ -249,6 +249,31 @@ function makeApp(opts) {{
     assert(calls[0] === "run_8", "ack route: " + calls[0]);
   }}
 
+  // --- Scenario 11 (T7): resume — POST, watcher restart, routing, refusal ---
+  {{
+    const app = makeApp({{}});
+    const c = new TaskController(app);
+    let watched = null;
+    c._watchDetached = async (rid) => {{ watched = rid; }};
+    await c.resume("run_5");
+    assert(app._posts.some(([u]) => u === "/v1/agent/runs/run_5/resume"),
+      "resume did not POST the resume endpoint");
+    assert(app._msgs.some((m) => /resumed/.test(m)), "resume confirmation shown");
+    assert(watched === "run_5", "resume must restart the detached watcher");
+    const calls = [];
+    c.resume = async (id) => calls.push(id);
+    await c.handle('resume run_6');
+    assert(calls[0] === "run_6", "resume route: " + calls[0]);
+  }}
+  {{
+    const app = makeApp({{ postThrows: "409: cannot be resumed: work already captured" }});
+    const c = new TaskController(app);
+    c._watchDetached = async () => {{ throw new Error("must not watch a refused resume"); }};
+    await c.resume("run_5");
+    assert(app._msgs.some((m) => /work already captured/.test(m)),
+      "server refusal reason not surfaced verbatim");
+  }}
+
   console.log("ALL OK");
 }})().catch((e) => {{ console.error(e.message || e); process.exit(1); }});
 """

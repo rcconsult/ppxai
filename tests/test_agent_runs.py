@@ -2160,3 +2160,222 @@ class TestDisconnectThenCollectE2E:
         after = c.get(f"/v1/agent/runs/{rid}").json()
         assert after["status"] == "finalized"
         assert after["result"] == "the held answer"
+
+
+# ---------------------------------------------------------------------------
+# T7 — interrupted resume: decision matrix, restart sweep, POST /resume
+# ---------------------------------------------------------------------------
+
+
+class TestResumeRefusal:
+    """The conditional-resume decision matrix (pure meta rules, ADR #5)."""
+
+    def _meta(self, **kw):
+        base = dict(run_id="run_r", task="t", status="interrupted",
+                    resumable=True, hold_result=True,
+                    tools=["read_file"], provider="p", model="m")
+        base.update(kw)
+        return RunMeta(**base)
+
+    def _refusal(self, meta, in_flight=False):
+        from ppxai.engine.agent_runs import resume_refusal
+        return resume_refusal(meta, in_flight=in_flight)
+
+    def test_resumable_interrupted_task_run_ok(self):
+        assert self._refusal(self._meta()) is None
+
+    def test_resumable_cancelled_ok(self):
+        assert self._refusal(self._meta(status="cancelled")) is None
+
+    def test_in_flight_refused(self):
+        why = self._refusal(self._meta(), in_flight=True)
+        assert why and "in flight" in why
+
+    def test_non_candidate_statuses_refused(self):
+        for status in ("pending", "running", "waiting", "cancelling",
+                       "completed", "completed_pending_ack", "finalized", "failed"):
+            why = self._refusal(self._meta(status=status))
+            assert why and "not resumable" in why, status
+
+    def test_not_marked_resumable_refused(self):
+        why = self._refusal(self._meta(resumable=False))
+        assert why and "clean checkpoint" in why
+
+    def test_non_task_run_refused(self):
+        # tool-free /run tier and spawn children (hold_result unset) can't resume
+        why = self._refusal(self._meta(hold_result=False))
+        assert why and "top-level" in why
+
+    def test_result_present_refused(self):
+        why = self._refusal(self._meta(result="already got it"))
+        assert why and "already captured" in why
+
+    def test_missing_grant_refused(self):
+        why = self._refusal(self._meta(tools=[]))
+        assert why and "inconclusive" in why
+
+    def test_missing_provider_refused(self):
+        why = self._refusal(self._meta(provider=None))
+        assert why and "provider" in why
+
+
+class TestSweepOrphans:
+    """Restart-orphan sweep: stranded non-terminal runs land `interrupted`
+    (resumable iff the checkpoint is conclusive); terminal runs untouched."""
+
+    def _strand(self, registry, status, **start_kw):
+        kw = dict(task="t", tools=["read_file"], provider="p", model="m")
+        kw.update(start_kw)
+        meta = registry.start_run(**kw)
+        meta.status = status
+        if status == "waiting":
+            meta.waiting = {"kind": "consent", "prompt": "x", "token": "tok",
+                            "since": 1.0, "expires_at": 2.0, "ttl_s": 1.0}
+        registry._store.persist_meta(meta)
+        return meta
+
+    def test_sweeps_all_orphanable_statuses(self, registry):
+        stranded = [
+            self._strand(registry, s, hold_result=True)
+            for s in ("pending", "running", "waiting", "cancelling")
+        ]
+        done = registry.start_run(task="t", tools=[], provider="p", model="m")
+        registry.finish_run(done, status="completed", result="x")
+
+        assert registry.sweep_orphans() == 4
+        for m in stranded:
+            after = registry.get_run(m.run_id)
+            assert after.status == "interrupted"
+            assert "restarted" in after.error
+            assert after.waiting is None        # a park can't outlive its future
+            assert after.finished_at is not None
+            assert after.resumable is True      # conclusive /task checkpoints
+            state = registry._store.load_state(m.run_id)
+            assert state["via"] == "restart_sweep"
+            types = [e.type for e in registry.read_events(m.run_id)]
+            assert "agent_run_interrupted" in types
+        assert registry.get_run(done.run_id).status == "completed"  # untouched
+
+    def test_resumable_judgement(self, registry):
+        task_run = self._strand(registry, "running", hold_result=True)
+        run_tier = self._strand(registry, "running")               # no hold
+        no_model = self._strand(registry, "running", hold_result=True, model=None)
+        registry.sweep_orphans()
+        assert registry.get_run(task_run.run_id).resumable is True
+        assert registry.get_run(run_tier.run_id).resumable is False
+        assert registry.get_run(no_model.run_id).resumable is False
+
+    def test_in_flight_run_not_swept(self, registry):
+        # Same-process safety: a run with a live task entry is NOT an orphan.
+        m = self._strand(registry, "running", hold_result=True)
+        registry._run_tasks[m.run_id] = object()  # sentinel "in flight"
+        try:
+            assert registry.sweep_orphans() == 0
+            assert registry.get_run(m.run_id).status == "running"
+        finally:
+            registry._run_tasks.pop(m.run_id, None)
+
+    def test_sweep_idempotent(self, registry):
+        self._strand(registry, "running", hold_result=True)
+        assert registry.sweep_orphans() == 1
+        assert registry.sweep_orphans() == 0  # already interrupted
+
+
+class TestResumeRoute:
+    """POST /v1/agent/runs/{id}/resume — gate, refusal, and the rebuild."""
+
+    def _seed_interrupted(self, reg, **kw):
+        start = dict(task="t", tools=["read_file"], provider="p", model="m",
+                     hold_result=True, system="be terse",
+                     read_roots=["/skills/ci"])
+        start.update(kw)
+        m = reg.start_run(**start)
+        reg.finish_run(m, status="interrupted", error="budget", resumable=True)
+        return m
+
+    def test_tier_gate_403(self, client, monkeypatch):
+        c, reg = client
+        m = self._seed_interrupted(reg)
+        from ppxai.server.routes import agent_v1
+        monkeypatch.setattr(
+            agent_v1, "get_agent_config",
+            lambda: {"task_tier_enabled": False, "default_subagent": {}},
+        )
+        r = c.post(f"/v1/agent/runs/{m.run_id}/resume")
+        assert r.status_code == 403
+        assert "task_tier_enabled" in r.json()["detail"]
+
+    def test_unknown_run_404(self, client):
+        c, _ = client
+        assert c.post("/v1/agent/runs/run_nope/resume").status_code == 404
+
+    def test_refusal_409_run_unchanged(self, client):
+        c, reg = client
+        m = reg.start_run(task="t", tools=["read_file"], provider="p", model="m",
+                          hold_result=True)
+        reg.finish_run(m, status="completed_pending_ack", result="held")
+        r = c.post(f"/v1/agent/runs/{m.run_id}/resume")
+        assert r.status_code == 409
+        assert "not resumable" in r.json()["detail"]
+        assert reg.get_run(m.run_id).status == "completed_pending_ack"
+
+    def test_run_tier_run_refused(self, client):
+        # A cancelled /run-tier run is resumable-flagged (Inc 6) but NOT a
+        # /task run — resume must refuse rather than rebuild a TASK runner
+        # around a tool-free run.
+        c, reg = client
+        m = reg.start_run(task="t", tools=["read_file"], provider="p", model="m")
+        reg.finish_run(m, status="cancelled", error="cancelled", resumable=True)
+        r = c.post(f"/v1/agent/runs/{m.run_id}/resume")
+        assert r.status_code == 409
+        assert "top-level" in r.json()["detail"]
+
+    def test_resume_rebuilds_runner_from_persisted_inputs(self, ctx_client, monkeypatch):
+        import time as _t
+
+        c, reg = ctx_client
+        from ppxai.server.routes import agent_v1
+        monkeypatch.setattr(agent_v1, "_validate_provider_or_400", lambda name: None)
+
+        captured = {}
+
+        def fake_build(registry_, **kw):
+            captured.update(kw)
+
+            async def _runner(m):
+                return "resumed answer"
+            return _runner
+
+        monkeypatch.setattr(agent_v1, "build_task_runner", fake_build)
+
+        m = self._seed_interrupted(reg)
+        r = c.post(f"/v1/agent/runs/{m.run_id}/resume")
+        assert r.status_code == 200
+        assert r.json() == {"ok": True, "run_id": m.run_id, "status": "running"}
+
+        # The runner was rebuilt from the PERSISTED inputs (T7's whole point).
+        assert captured["task"] == "t"
+        assert captured["tools"] == ["read_file"]
+        assert captured["provider_name"] == "p" and captured["model"] == "m"
+        assert captured["system"] == "be terse"
+        assert captured["extra_read_paths"] == ["/skills/ci"]
+        assert captured["allow_spawn"] is True
+
+        # …and the run continues to its normal held completion (hold_result
+        # persisted on the meta, so T6 semantics apply to the resumed leg too).
+        deadline = _t.monotonic() + 5.0
+        one = None
+        while _t.monotonic() < deadline:
+            one = c.get(f"/v1/agent/runs/{m.run_id}").json()
+            if one["status"] not in ("running", "pending"):
+                break
+            _t.sleep(0.02)
+        assert one["status"] == "completed_pending_ack", one
+        assert one["result"] == "resumed answer"
+        assert one["error"] is None                # stale stop fields cleared
+        evs = c.get(f"/v1/agent/runs/{m.run_id}/events").json()["events"]
+        types = [e["type"] for e in evs]
+        assert "agent_run_resume" in types
+        # the resumed leg reuses the SAME event log (seq continues)
+        seqs = [e["seq"] for e in evs]
+        assert seqs == sorted(seqs) and len(set(seqs)) == len(seqs)

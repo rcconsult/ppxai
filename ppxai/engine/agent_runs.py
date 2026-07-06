@@ -92,6 +92,13 @@ class RunMeta:
     # tool-free /run tier never hold (the parent / the caller collects inline).
     hold_result: bool = False
     acked_at: Optional[float] = None  # T6: when /ack or the retention reaper finalized the run
+    # T7: the remaining runner inputs, persisted so POST /runs/{id}/resume can
+    # REBUILD the scoped runner faithfully. task/tools/network/budget/provider/
+    # model were already on the meta; `system` is the caller's agent framing
+    # (rendered AGENT.md) and `read_roots` the mounted --skill dirs (T4).
+    # Recorded by the /task route only (the tool-free tier isn't resumable).
+    system: Optional[str] = None
+    read_roots: list = field(default_factory=list)
     created_at: float = 0.0
     started_at: Optional[float] = None  # set when execution begins (Inc 2 background)
     finished_at: Optional[float] = None
@@ -391,6 +398,52 @@ class RunControl:
 
 
 # ---------------------------------------------------------------------------
+# Conditional resume — the T7 decision matrix (ADR 0003 open-decision #5)
+# ---------------------------------------------------------------------------
+
+# Statuses a restart can strand on disk: the process died while the run was
+# in one of these, and no in-flight task exists to move it forward.
+ORPHANABLE_STATUSES = frozenset({"pending", "running", "waiting", "cancelling"})
+
+
+def resume_refusal(meta: RunMeta, *, in_flight: bool) -> Optional[str]:
+    """Why this run may NOT be resumed — or None if a resume is allowed.
+
+    Pure meta-based rules (the route layers authz + the tier gate on top):
+
+      * only `interrupted` / `cancelled` runs are candidates — everything
+        else is either still alive, held/finalized (T6), or `failed`
+        (an error mid-work is NOT a clean checkpoint);
+      * `resumable` must be set (the stop landed at a clean checkpoint —
+        cooperative cancel/budget, or the restart sweep judged it so);
+      * only a TOP-LEVEL /task run (`hold_result`) — the tool-free tier has
+        nothing to rebuild and a sub-agent child's collector (the parent)
+        is long gone;
+      * a run whose `result` is already recorded captured its work —
+        re-running would duplicate it, not continue it;
+      * the rebuild inputs (task/tools/provider/model) must be present.
+    """
+    if in_flight:
+        return "already in flight"
+    if meta.status not in ("interrupted", "cancelled"):
+        return f"status {meta.status!r} is not resumable"
+    if not meta.resumable:
+        return "not marked resumable (the stop did not land at a clean checkpoint)"
+    if not getattr(meta, "hold_result", False):
+        return (
+            "only a top-level /task run can be resumed (tool-free runs and "
+            "sub-agent children are collected by their caller)"
+        )
+    if meta.result:
+        return "work already captured (a result is recorded on the run)"
+    if not meta.task or not meta.tools:
+        return "checkpoint inconclusive: no task/tool grant recorded"
+    if not meta.provider or not meta.model:
+        return "checkpoint inconclusive: no provider/model recorded"
+    return None
+
+
+# ---------------------------------------------------------------------------
 # Registry service (the behavior over the store)
 # ---------------------------------------------------------------------------
 
@@ -520,6 +573,8 @@ class AgentRunRegistry:
         budget: Optional[dict] = None,
         owner: Optional[str] = None,
         hold_result: bool = False,
+        system: Optional[str] = None,
+        read_roots: Optional[list] = None,
     ) -> RunMeta:
         """Mint a run, persist it in `pending` state, return its meta.
 
@@ -541,6 +596,8 @@ class AgentRunRegistry:
             parent_run_id=parent_run_id,
             owner=owner,
             hold_result=hold_result,
+            system=system,
+            read_roots=list(read_roots or []),
             created_at=time.time(),
         )
         self._store.persist_meta(meta)
@@ -833,6 +890,86 @@ class AgentRunRegistry:
         self._finalize(meta, via="ack")
         return (True, "")
 
+    # --- interrupted resume + restart-orphan sweep (T7) --------------------
+
+    def sweep_orphans(self) -> int:
+        """Land restart-orphaned runs in `interrupted` (T7).
+
+        A server kill/restart strands any in-flight run's meta at
+        pending/running/waiting/cancelling with nothing to move it forward
+        (tasks, controls, and consent futures are all in-memory). Called once
+        at registry construction: every stranded run becomes `interrupted`
+        ("server restarted…"), resumable IFF it is a top-level /task run
+        (`hold_result`) whose rebuild inputs survive — the same conditions
+        `resume_refusal` checks. Returns the number swept."""
+        swept = 0
+        for meta in self._store.list_meta():
+            if meta.status not in ORPHANABLE_STATUSES:
+                continue
+            if meta.run_id in self._run_tasks:
+                continue  # actually in flight (same-process sweep) — leave it
+            meta.status = "interrupted"
+            meta.error = "server restarted while the run was in flight"
+            meta.waiting = None  # a park cannot outlive its in-memory future
+            meta.finished_at = time.time()
+            meta.resumable = bool(
+                getattr(meta, "hold_result", False)
+                and meta.task and meta.tools and meta.provider and meta.model
+                and not meta.result
+            )
+            self._store.persist_meta(meta)
+            self._store.persist_state(meta.run_id, {
+                "schema": 1,
+                "run_id": meta.run_id,
+                "status": "interrupted",
+                "reason": meta.error,
+                "resumable": meta.resumable,
+                "via": "restart_sweep",
+                "updated_at": meta.finished_at,
+            }, agent_n=meta.agent_n)
+            self.emit_event(
+                meta.run_id, "agent_run_interrupted", level="warning",
+                category="lifecycle",
+                data={"reason": meta.error, "resumable": meta.resumable,
+                      "via": "restart_sweep"},
+            )
+            swept += 1
+        if swept:
+            logger.info(f"Restart sweep: {swept} orphaned run(s) -> interrupted")
+            self._notify_change()
+        return swept
+
+    def resume_run(
+        self,
+        meta: RunMeta,
+        runner: "Callable[[RunMeta], Awaitable[str]]",
+    ) -> None:
+        """Continue an interrupted/cancelled run (T7): clear the stale stop
+        fields, record the resume on the event log + state.json, and drive
+        the rebuilt runner exactly like a fresh run (run_in_background flips
+        it to `running` and re-registers the cooperative control — a fresh
+        budget window on each attempt). The caller has already passed
+        `resume_refusal` and rebuilt the runner from the persisted inputs."""
+        prior_status = meta.status
+        meta.error = None
+        meta.finished_at = None
+        meta.resumable = False
+        meta.waiting = None
+        now = time.time()
+        self._store.persist_state(meta.run_id, {
+            "schema": 1,
+            "run_id": meta.run_id,
+            "status": "running",
+            "resumed_from": prior_status,
+            "resumed_at": now,
+            "updated_at": now,
+        }, agent_n=meta.agent_n)
+        self.emit_event(
+            meta.run_id, "agent_run_resume", level="info", category="lifecycle",
+            data={"from": prior_status},
+        )
+        self.run_in_background(meta, runner)
+
     def maybe_reap_hold(
         self, meta: RunMeta, retention_s: Optional[float]
     ) -> RunMeta:
@@ -932,6 +1069,19 @@ class AgentRunRegistry:
                     meta, status=stop.status, error=stop.reason,
                     resumable=stop.resumable,
                 )
+                # T7: a resumable stop IS a checkpoint — snapshot it so
+                # POST .../resume (and a post-restart reader) can see WHY the
+                # run stopped and that a resume could pick it up.
+                now = time.time()
+                self._store.persist_state(meta.run_id, {
+                    "schema": 1,
+                    "run_id": meta.run_id,
+                    "status": stop.status,
+                    "reason": stop.reason,
+                    "resumable": stop.resumable,
+                    "stopped_at": now,
+                    "updated_at": now,
+                }, agent_n=meta.agent_n)
                 self.emit_event(
                     meta.run_id, f"agent_run_{stop.status}", level="warning",
                     category="lifecycle",

@@ -30,12 +30,15 @@ class TaskRunView extends AgentRunView {
         this._onCancel = null;
         this._onRespond = null;
         this._onAck = null;
+        this._onResume = null;
         this._waiting = null;   // {kind, prompt, token, …} while parked (T5)
+        this._resumable = false; // T7: server-judged clean checkpoint
         this._metaEl = null;
         this._eventsEl = null;
         this._consentEl = null;
         this._cancelBtn = null;
         this._ackBtn = null;
+        this._resumeBtn = null;
         if (meta) this._absorbMeta(meta);
         if (meta && meta.status) this._status = meta.status;
     }
@@ -73,6 +76,7 @@ class TaskRunView extends AgentRunView {
             +   `<span class="agent-run-status" data-status="${esc(this._status)}">`
             +     `${esc(this._statusLabel(this._status))}</span>`
             +   `<button class="task-ack-btn" type="button" title="Collect the held result (finalize this run)">Collect</button>`
+            +   `<button class="task-resume-btn" type="button" title="Continue this run from its checkpoint">Resume</button>`
             +   `<button class="task-cancel-btn" type="button" title="Cancel this run">Cancel</button>`
             + `</div>`
             + (this._task ? `<div class="agent-run-task">${esc(this._task)}</div>` : '')
@@ -94,11 +98,16 @@ class TaskRunView extends AgentRunView {
         if (this._ackBtn) {
             this._ackBtn.addEventListener('click', () => { if (this._onAck) this._onAck(); });
         }
+        this._resumeBtn = container.querySelector('.task-resume-btn');
+        if (this._resumeBtn) {
+            this._resumeBtn.addEventListener('click', () => { if (this._onResume) this._onResume(); });
+        }
         this._renderMeta();
         this._renderConsent();
         this._renderEvents();
         this._syncCancelBtn();
         this._syncAckBtn();
+        this._syncResumeBtn();
     }
 
     unmount() {
@@ -108,6 +117,7 @@ class TaskRunView extends AgentRunView {
         this._consentEl = null;
         this._cancelBtn = null;
         this._ackBtn = null;
+        this._resumeBtn = null;
     }
 
     // ── Controller hooks ──────────────────────────────────────────────────────
@@ -121,16 +131,25 @@ class TaskRunView extends AgentRunView {
     /** Wire the Collect button (T6: ack a held result) to the controller. */
     setOnAck(fn) { this._onAck = fn; }
 
+    /** Wire the Resume button (T7: continue from checkpoint) to the controller. */
+    setOnResume(fn) { this._onResume = fn; }
+
     /** Drop the consent card (park answered elsewhere / run resumed). */
     clearWaiting() {
         this._waiting = null;
         this._renderConsent();
     }
 
-    /** Merge grant/egress/budget/provider/model (+ status + waiting) and re-render. */
+    /** Merge grant/egress/budget/provider/model (+ status + waiting + resumable)
+     *  and re-render. */
     setMeta(meta) {
         if (!meta) return;
         this._absorbMeta(meta);
+        // T7: the server-judged resumable flag gates the Resume button.
+        if (Object.prototype.hasOwnProperty.call(meta, 'resumable')) {
+            this._resumable = Boolean(meta.resumable);
+            this._syncResumeBtn();
+        }
         // T5: a registry meta always carries `waiting` (null unless parked);
         // only touch card state when the key is present so an optimistic
         // client-side paneInfo (no waiting key) can't wipe a live card.
@@ -157,8 +176,11 @@ class TaskRunView extends AgentRunView {
         }
         // The log is a transcript of what the agent DID (tools, egress, spawns).
         // Heartbeats (agent_beat) would spam a long run, and run lifecycle is
-        // already conveyed by the status badge — so drop both here.
-        if (ev.type === 'agent_beat' || ev.type.startsWith('agent_run_')) return;
+        // already conveyed by the status badge — so drop both here. Exceptions:
+        // finalized (T6) and resume (T7) are one-shot USER actions worth a
+        // transcript line, not chatter.
+        const keep = ev.type === 'agent_run_finalized' || ev.type === 'agent_run_resume';
+        if (!keep && (ev.type === 'agent_beat' || ev.type.startsWith('agent_run_'))) return;
         this._events.push(ev);
         if (this._eventsEl) this._appendEventLine(ev);
         // Bound BOTH the backing array AND the DOM: a long run streaming
@@ -183,6 +205,7 @@ class TaskRunView extends AgentRunView {
         }
         this._syncCancelBtn();
         this._syncAckBtn();
+        this._syncResumeBtn();
         return ok;
     }
 
@@ -210,6 +233,14 @@ class TaskRunView extends AgentRunView {
         if (!this._ackBtn) return;
         this._ackBtn.style.display =
             this._status === 'completed_pending_ack' ? '' : 'none';
+    }
+
+    /** Resume is visible ONLY for a resumable interrupted/cancelled run (T7). */
+    _syncResumeBtn() {
+        if (!this._resumeBtn) return;
+        const eligible = this._resumable
+            && (this._status === 'interrupted' || this._status === 'cancelled');
+        this._resumeBtn.style.display = eligible ? '' : 'none';
     }
 
     _egressLabel(n) {
@@ -314,6 +345,7 @@ class TaskRunView extends AgentRunView {
             case 'agent_resumed':     return `▶ resumed — ${d.approved ? 'approved' : 'denied'}${d.via === 'timeout' ? ' (timed out)' : ''}`;
             case 'agent_result_ready':   return `📬 result ready (${d.chars || 0} chars) — collect via the button or /task ack`;
             case 'agent_run_finalized':  return `✅ collected${d.via === 'retention' ? ' (retention expired)' : ''}`;
+            case 'agent_run_resume':     return `▶️ resumed (was ${d.from || 'interrupted'})`;
             case 'subagent_spawned':  return `⑂ sub-agent ${d.child_run_id || ''}`;
             case 'subagent_finished': return `⑂ sub-agent ${d.status || 'done'}`;
             default: return String(ev.type);

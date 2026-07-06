@@ -54,6 +54,8 @@ class AgentRunController {
      *     with {token, approved, text}.
      *   - setOnAck(fn)     — a Collect button (T6) that POSTs /runs/{id}/ack
      *     to collect a held result (completed_pending_ack → finalized).
+     *   - setOnResume(fn)  — a Resume button (T7) that POSTs /runs/{id}/resume
+     *     to continue an interrupted/cancelled run.
      */
     _wireView(view, runId) {
         if (view && typeof view.setOnCancel === 'function') {
@@ -64,6 +66,9 @@ class AgentRunController {
         }
         if (view && typeof view.setOnAck === 'function') {
             view.setOnAck(() => this.ack(runId));
+        }
+        if (view && typeof view.setOnResume === 'function') {
+            view.setOnResume(() => this.resume(runId));
         }
     }
 
@@ -258,6 +263,31 @@ class AgentRunController {
         this.app.showSystemMessage(`📬 ${runId} — result collected (finalized)`);
         const view = this._liveView(runId);
         if (view) view.setStatus('finalized');
+        return true;
+    }
+
+    /**
+     * Continue an interrupted/cancelled run (T7): POST /runs/{id}/resume.
+     * The server refuses with a stated reason when the checkpoint is
+     * inconclusive — surfaced verbatim. On success the run is `running`
+     * again under the same run_id, so re-pin the pane and restart the
+     * detached watcher (the old one broke at the interrupt).
+     */
+    async resume(runId) {
+        if (!runId) { this.app.showSystemMessage('Usage: /task resume <id>'); return false; }
+        try {
+            await this.app.apiClient.post(`/v1/agent/runs/${runId}/resume`, {});
+        } catch (e) {
+            this.app.showSystemMessage(`❌ Could not resume ${runId}: ${e.message}`);
+            return false;
+        }
+        this.app.showSystemMessage(`▶️ ${runId} — resumed (running)`);
+        const view = this._liveView(runId);
+        if (view) {
+            view.setStatus('running');
+            view.pin();
+        }
+        if (!this._watching.has(runId)) this._watchDetached(runId);
         return true;
     }
 

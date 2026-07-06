@@ -592,6 +592,18 @@
     white-space: nowrap;
 }
 .task-ack-btn:hover { background: var(--bg-hover); }
+/* T7 Resume — visible only for a resumable interrupted/cancelled run. */
+.task-resume-btn {
+    font-size: 0.78em;
+    padding: 2px 10px;
+    cursor: pointer;
+    background: var(--bg-tertiary);
+    color: #22c55e;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    white-space: nowrap;
+}
+.task-resume-btn:hover { background: var(--bg-hover); }
 .task-cancel-btn {
     font-size: 0.78em;
     padding: 2px 10px;

@@ -19,6 +19,10 @@
  *                      run parks its result in `completed_pending_ack` (📬)
  *                      until acked (the pane's Collect button is equivalent);
  *                      the retention TTL is the GC backstop.
+ *   /task resume <id>  (T7) conditionally continue an interrupted/cancelled
+ *                      run from its checkpoint (the pane's Resume button is
+ *                      equivalent); the server refuses with a reason when the
+ *                      checkpoint is inconclusive.
  *   /task ls | show <id> | watch <id> | cancel <id> | help
  *
  * Extends AgentRunController: the run registry endpoints (list, show, live SSE
@@ -171,6 +175,7 @@ class TaskController extends _AgentRunControllerBase {
             case 'cancel': return this.cancel(rest.trim());
             case 'respond': return this.respondCmd(rest);
             case 'ack': return this.ack(rest.trim());
+            case 'resume': return this.resume(rest.trim());
             default:
                 this.app.showSystemMessage(`Unknown /task subcommand: ${verb}. Try /task help.`);
                 return undefined;
@@ -320,6 +325,7 @@ class TaskController extends _AgentRunControllerBase {
             '  /task watch <id>        open + live-tail a run',
             '  /task respond <id> approve|deny|"<text>"  answer a run parked in waiting (consent card)',
             '  /task ack <id>          collect a held result (📬 completed_pending_ack → finalized)',
+            '  /task resume <id>       continue an interrupted/cancelled run from its checkpoint',
             '  /task cancel <id>       cancel a run',
         ].join('\n'));
     }

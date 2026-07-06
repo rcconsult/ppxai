@@ -949,15 +949,15 @@ genuine open set. (Lettered q–t; upstream owns p = external review round.)**
   long-lived ppxai-sre service agent (incident-responder / cost-optimizer /
   cert-monitor / log-analyst) needs bound-port routing.
 
-- **(r) ABSORBED INTO T5–T7 (2026-07-06) — `state.json` not persisted (Inspection
-  Triplet incomplete). T5 PART LANDED (2026-07-06):** `AgentRunStore.persist_state/
-  load_state` + the `FilesystemAgentRunStore` implementation exist and the first
-  write ships with the T5 `waiting` park (checkpoint written on park, updated with
-  `last_response` on resume). **T6 PART LANDED (2026-07-07):** the
-  `completed_pending_ack` hold and `finalized` transitions also snapshot to
-  `state.json` (`result_ready_at`/`result_chars`, then `via`/`acked_at`).
-  Remaining under this item: **T7** as the consumer (resume = reload
-  the checkpoint). Original context: the run slot wrote `meta.json` + `events.jsonl`
+- **(r) RETIRED (2026-07-07, landed across T5–T7) — `state.json` now persisted
+  (Inspection Triplet complete on the flat `agent-0/` slot).**
+  `AgentRunStore.persist_state/load_state` + the `FilesystemAgentRunStore`
+  implementation landed with T5; producers: T5 `waiting` park (+ resume
+  `last_response`), T6 `completed_pending_ack` hold + `finalized`
+  (`result_ready_at`/`result_chars`, `via`/`acked_at`), T7 resumable-stop
+  checkpoint, restart-sweep (`via:"restart_sweep"`), and resume
+  (`resumed_from`). Consumer: T7 `POST /runs/{id}/resume` + the
+  `resume_refusal` decision matrix. Original context: the run slot wrote `meta.json` + `events.jsonl`
   but NOT `state.json` (`agent_runs.py` comments said "Inc 2-3"); a consumer
   expecting the full ADR-0005 Triplet (e.g. ppxai-sre `heartbeat.py` reconstructing
   `AgentBeatState`) found no file. **No longer a standalone item** — folded into the
@@ -1135,8 +1135,8 @@ genuine open set. (Lettered q–t; upstream owns p = external review round.)**
 
 **Branch when ready:** (f)-rebinding + (e)-provider-call + (p)-sync-DNS land with
 tier-d OS-isolation; (p)-token-O(N)/role-mint with Inc 8b RBAC; (a)/(b)/(q) with
-N>1 sub-agents + the `agent_n`-nesting / `/task` design; **(r) absorbed into
-`/task` T5–T7 (build with T5, not standalone)**; (s) with the
+N>1 sub-agents + the `agent_n`-nesting / `/task` design; **(r) RETIRED
+(landed across `/task` T5–T7, 2026-07-07)**; (s) with the
 v1.19.x→migration-doc rewrite; (t) with the `/task` SDK-embedding design (re-verify
 vs T1–T2 first); **(u) DONE** (CORS+Host fix, bind-conditional, shipped `b1e5b3a4`); **(v) ingress
 NetworkPolicy + optional app-layer bearer for cross-tenant coder isolation, with

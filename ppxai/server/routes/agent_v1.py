@@ -14,6 +14,8 @@ module is the HTTP surface over `engine.agent_runs.AgentRunRegistry`:
                                     token-checked + owner-scoped
     POST /v1/agent/runs/<id>/ack  → collect a held result (T6):
                                     completed_pending_ack → finalized
+    POST /v1/agent/runs/<id>/resume → conditionally continue an
+                                    interrupted/cancelled run (T7)
 
 Execution model: runs execute in the **background** (Inc 2). A POST
 validates + builds the provider synchronously (a bad provider 400s up
@@ -94,7 +96,7 @@ from pydantic import BaseModel, Field, model_validator
 
 from ...common.logger import get_logger
 from ...config.tools import get_agent_config
-from ...engine.agent_runs import RunMeta
+from ...engine.agent_runs import RunMeta, resume_refusal
 from ...engine.agent_skill import AgentSkillError, LoadedSkill, load_skill
 from ...engine.agent_spec import AgentSpec, AgentSpecError, load_spec_file
 from ...engine.agent_scoped_tools import ScopedToolManager
@@ -792,6 +794,10 @@ async def create_agent_task(req: AgentTaskRequest, request: Request) -> AgentRun
         # disconnected UI never loses it. Sub-agent children don't hold —
         # the awaiting parent is their collector.
         hold_result=True,
+        # T7: persist the remaining runner inputs so POST .../resume can
+        # rebuild the scoped runner faithfully after an interrupt/restart.
+        system=eff["system"],
+        read_roots=eff["read_roots"],
     )
 
     runner = build_task_runner(
@@ -1133,6 +1139,60 @@ async def ack_agent_run(run_id: str, request: Request) -> dict:
             detail=f"Run {run_id!r} cannot be acked: {why}.",
         )
     return {"ok": True, "run_id": run_id, "status": "finalized"}
+
+
+@router.post("/runs/{run_id}/resume")
+async def resume_agent_run(run_id: str, request: Request) -> dict:
+    """Conditionally continue an `interrupted`/`cancelled` run (T7).
+
+    Resume REBUILDS the scoped runner from the run's persisted inputs (task,
+    grant, egress, budget, system, skill read-roots — all on the meta) and
+    drives it exactly like a fresh run under the SAME run_id: identical AC-1/
+    AC-2 sandbox, a fresh budget window, events appended to the same log.
+    Refused (409, run unchanged) when `resume_refusal` says the checkpoint is
+    inconclusive — see its decision matrix. 404 unknown, 403 not the owner
+    (Inc 8b) or tier disabled (resume re-executes tools, so it faces the same
+    task_tier_enabled gate as POST /task)."""
+    # Same trusted-operator gate as creating a /task run — a resume re-enters
+    # the tool-calling tier.
+    if not get_agent_config().get("task_tier_enabled", False):
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                "The tool-capable agent tier (/v1/agent/task) is disabled, so "
+                "an interrupted task run cannot be resumed. Enable it via "
+                "tools.agent.task_tier_enabled=true in ppxai-config.json."
+            ),
+        )
+    registry = get_agent_run_registry()
+    meta = registry.get_run(run_id)
+    if meta is None:
+        raise HTTPException(status_code=404, detail=f"Unknown run_id: {run_id!r}")
+    _authorize_run_access(request, meta)
+    refusal = resume_refusal(
+        meta, in_flight=registry.get_run_task(run_id) is not None
+    )
+    if refusal is not None:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Run {run_id!r} cannot be resumed: {refusal}.",
+        )
+    # Fail fast on an unbuildable provider BEFORE mutating the run record.
+    _validate_provider_or_400(meta.provider)
+
+    runner = build_task_runner(
+        registry,
+        provider_name=meta.provider,
+        model=meta.model,
+        task=meta.task,
+        tools=list(meta.tools),
+        allow_outbound=list(getattr(meta, "network", []) or []),
+        allow_spawn=True,  # same shape as a fresh top-level /task run
+        system=getattr(meta, "system", None),
+        extra_read_paths=list(getattr(meta, "read_roots", []) or []),
+    )
+    registry.resume_run(meta, runner)
+    return {"ok": True, "run_id": run_id, "status": "running"}
 
 
 def _parse_categories(category: Optional[str]) -> Optional[set[str]]:

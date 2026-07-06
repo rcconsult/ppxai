@@ -339,30 +339,77 @@ receipt in the user's hands — revisit if the friction annoys).
 
 ---
 
-## T7 — interrupted resume: `POST /resume`
+## T7 — interrupted resume: `POST /resume` — ✅ DONE
 
 **Capability:** an `interrupted` run (engine restart / kill / budget cap) can be
 **conditionally** resumed; `/task resume <id>` (or the button) continues it, or
 refuses with a reason if the checkpoint is inconclusive (open-decision #5).
 
-**Depends on the `state.json` write from T5/T6 (debt (r)).** T7 is the *consumer*
-of the checkpoint — "reload the run's checkpoint" IS reading the `state.json`
-`persist_state()` wrote. T7 cannot land before that write exists, which is why
-(r) is injected into T5/T6 (the producers) rather than filed standalone.
+**Build (landed, server):** `POST /runs/{id}/resume` (owner-scoped 403; same
+`task_tier_enabled` 403 gate as POST /task — resume re-enters the tool tier;
+404/409). The decision matrix is `resume_refusal()` (pure meta rules): only
+`interrupted`/`cancelled` + `resumable` + **top-level /task** (`hold_result`)
+runs with no recorded `result` and complete rebuild inputs; everything else is
+refused with the stated reason and the run is unchanged. Resume REBUILDS the
+scoped runner via `build_task_runner` from the **persisted inputs** — task/
+grant/egress/budget were already on the meta; T7 adds `system` + `read_roots`
+(the T4 skill mounts) to `RunMeta` so the rebuild is faithful — and
+`resume_run()` clears the stale stop fields, snapshots `state.json`
+(`resumed_from`), emits `agent_run_resume`, and drives it like a fresh run
+under the SAME run_id (identical AC-1/AC-2 sandbox, fresh budget window,
+events append to the same log — seq continues; a T6 hold applies to the
+resumed leg too). **Restart-orphan sweep:** `sweep_orphans()` runs once at
+registry construction — any run stranded `pending/running/waiting/cancelling`
+on disk (its task/control/consent future died with the process) lands
+`interrupted` ("server restarted…", `resumable` iff the checkpoint is
+conclusive), with a `state.json` `via:"restart_sweep"` snapshot + event. A
+resumable stop (cancel/budget) now also writes its own `state.json` checkpoint
+at stop time. **Client (landed):** Resume button in `TaskRunView` (visible only
+when `resumable` AND `interrupted`/`cancelled`); `/task resume <id>` verb;
+resume restarts the detached watcher; the 409 refusal reason is surfaced
+verbatim; `agent_run_resume` gets a transcript line.
 
-**Build (server):** `POST /runs/{id}/resume` — reload the run's checkpoint
-(`state.json`), rebuild the scoped runner, continue; refuse (stay `interrupted`)
-when the checkpoint isn't conclusive or artifacts already capture the work.
-**Client:** Resume button shown only when `resumable`; `/task resume`.
+**Persistence (debt (r) — RETIRED):** T5 wrote the park checkpoint, T6 the
+hold/finalize snapshots, T7 adds the stop + restart-sweep + resume snapshots
+AND is the consumer. The Inspection Triplet is complete on the flat `agent-0/`
+slot (the multi-slot/service Triplet remains (q)/`agent_n` nesting).
 
-**Trial:** start a long run, kill/restart the server to land it `interrupted`;
-`/task resume <id>` → continues; force an inconclusive case → refused with the
-stated reason.
+**Trial (concrete recipe):** config as in T5/T6 (tier on, `default_subagent`).
 
-**Tests:** conditional-resume decision matrix; runner rebuild from checkpoint;
-`/resume` transition + refusal path.
+1. **Restart-interrupt:** start a run that stays busy (e.g. `/task run
+   "spawn a child to summarize docs/README.md" --tools
+   read_file,spawn_subagent` and leave the consent card unanswered, or any
+   long run), then kill the server mid-flight. Restart it → `/task ls` shows
+   the run **⏸️ interrupted** ("server restarted…"), with a Resume button on
+   its pane (the sweep judged it resumable).
+2. **Resume:** `/task resume <id>` (or the button) → `▶️ resumed (running)`;
+   the run re-executes with the same grant/egress/budget/system and lands
+   📬 result ready (T6 hold) — same run_id, same event log (`agent_run_resume`
+   visible in it).
+3. **Budget-interrupt path:** `/task run "…" --tools read_file --budget
+   iters=1` → lands ⏸️ interrupted (resumable); `/task resume <id>` gives it a
+   fresh budget window and it completes.
+4. **Refusals:** `/task resume` a completed/held run → 409 "not resumable";
+   resume an `/agentrun`-tier cancelled run → 409 "only a top-level /task
+   run…"; after a successful resume completes and you re-resume → 409 "work
+   already captured".
+5. API-level: `state.json` shows the stop checkpoint, then
+   `{status: running, resumed_from: interrupted}` after resume.
 
-**Deliberately NOT yet:** cross-client port (T8).
+**Tests (landed):** `test_agent_runs.py::TestResumeRefusal` (9 — the full
+decision matrix incl. every non-candidate status, in-flight, non-task,
+result-present, missing inputs); `TestSweepOrphans` (4 — all orphanable
+statuses swept with state.json/event + terminal untouched, resumable
+judgement, in-flight-not-swept, idempotent); `TestResumeRoute` (5 — tier-gate
+403, 404, 409 leaves run unchanged, /run-tier refused, e2e rebuild-from-
+persisted-inputs → resumed leg holds + same-log seq monotonic; ctx_client);
+`test_task_controller_behavior.py` scenario 11 (resume POST + watcher restart
++ routing + verbatim refusal).
+
+**Deliberately NOT yet:** cross-client port (T8); transcript-level
+continuation (a resume re-executes the bounded task from its start — the
+conversation state of the dead leg is not replayed; the run record, not the
+chat transcript, is the durable unit).
 
 ---
 

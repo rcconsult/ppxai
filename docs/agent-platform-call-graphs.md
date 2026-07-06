@@ -1099,6 +1099,58 @@ parent IS their collector, so `spawn_subagent._await_child` still sees a
 
 ---
 
+## Build plan T7 — interrupted resume: `POST /resume` + restart-orphan sweep
+
+Added: `POST /v1/agent/runs/<id>/resume` (route), `resume_refusal()` (the
+conditional-resume decision matrix, ADR #5), `AgentRunRegistry.sweep_orphans` /
+`resume_run`, `RunMeta.system`/`read_roots` (the remaining runner inputs,
+persisted by the /task route so the rebuild is faithful), Resume button +
+`/task resume` (client). Changed: `server/state.py` (sweep at registry
+construction), `_drive`'s RunStopped path (writes a `state.json` stop
+checkpoint). Debt (r) is **retired**: the Triplet's `state.json` now has
+producers (T5 park, T6 hold/finalize, T7 stop/sweep/resume) AND its consumer.
+
+```
+server start → get_agent_run_registry() → registry.sweep_orphans()   [state.py]
+  for meta in list_meta() where status ∈ {pending,running,waiting,cancelling}
+                            and run_id not in _run_tasks:
+     status="interrupted"; error="server restarted…"; waiting=None
+     resumable = hold_result AND task/tools/provider/model AND no result
+     persist_meta · persist_state({via:"restart_sweep"}) · emit agent_run_interrupted
+
+POST /v1/agent/runs/{id}/resume                       [routes/agent_v1.py]
+├─ 403 tier off (resume re-enters the tool tier) · 404 unknown · 403 not owner
+├─ resume_refusal(meta, in_flight=get_run_task(id) is not None) → 409 {reason}:
+│    in flight · status ∉ {interrupted,cancelled} · not resumable ·
+│    not hold_result (tool-free /run tier + spawn children refused) ·
+│    result already recorded · missing task/tools/provider/model
+├─ _validate_provider_or_400(meta.provider)      [fail fast, run unchanged]
+├─ runner = build_task_runner(provider/model/task/tools/network from meta,
+│             system=meta.system, extra_read_paths=meta.read_roots,
+│             allow_spawn=True)                  [IDENTICAL AC-1/AC-2 sandbox]
+└─ registry.resume_run(meta, runner)
+     clear error/finished_at/resumable/waiting
+     persist_state({status:"running", resumed_from}) · emit "agent_run_resume"
+     run_in_background(meta, runner)   → fresh budget window, SAME run_id,
+                                         events APPEND to the same log (seq
+                                         continues); a T6 hold applies to the
+                                         resumed leg (hold_result persisted)
+
+client (web):
+  Resume button visible only when meta.resumable AND status interrupted|cancelled
+  /task resume <id> | button → POST …/resume
+     409 → refusal reason verbatim; 200 → chip running, pane re-pinned,
+     detached watcher restarted (the old one broke at the interrupt)
+```
+
+Resume semantics (deliberate): a resume **re-executes the bounded task from its
+start** under the same run identity — the dead leg's conversation state is not
+replayed (the run record, not the chat transcript, is the durable unit). The
+stop checkpoint (`state.json`) is what makes the decision and the audit trail
+inspectable, not a mid-conversation snapshot.
+
+---
+
 <!-- Inc 10+ sections appended here as they land. Template:
 ## Increment N — <title>
 Added/changed: <files>. Execution model change: <if any>.
