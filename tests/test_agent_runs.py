@@ -1365,3 +1365,159 @@ class TestTaskSpecFiles:
         assert one["model"] == "reqmodel"        # request wins
         assert one["tools"] == ["write_file"]    # request grant wins wholesale
         assert one["provider"] == "specprov"     # spec fills the gap
+
+
+class TestTaskSkills:
+    """T4: `/task --skill` resolution, grant union, scripts refusal, mount.
+
+    Mirrors TestTaskSpecFiles: rejection paths need no provider (they 400
+    before construction); the mint paths stub `_validate_provider_or_400` and
+    read the authoritative meta right after the 200.
+    """
+
+    def _cfg(self, tmp_path, *, allow_scripts=False, **extra):
+        skills = tmp_path / "skills"
+        skills.mkdir(exist_ok=True)
+        cfg = {
+            "task_tier_enabled": True,
+            "sandbox": {"skills_dir": str(skills), "allow_skill_scripts": allow_scripts},
+            "default_subagent": {},
+        }
+        cfg.update(extra)
+        return cfg, skills
+
+    def _patch_cfg(self, monkeypatch, cfg):
+        from ppxai.server.routes import agent_v1
+        monkeypatch.setattr(agent_v1, "get_agent_config", lambda: cfg)
+
+    def _skill(self, skills, name, manifest, *, references=None, scripts=None):
+        root = skills / name
+        root.mkdir(parents=True, exist_ok=True)
+        (root / "SKILL.md").write_text(manifest, encoding="utf-8")
+        if references:
+            rdir = root / "references"
+            rdir.mkdir()
+            for fn in references:
+                (rdir / fn).write_text("ref\n", encoding="utf-8")
+        if scripts:
+            sdir = root / "scripts"
+            sdir.mkdir()
+            for fn in scripts:
+                (sdir / fn).write_text("echo hi\n", encoding="utf-8")
+        return root
+
+    def _mint(self, c, monkeypatch, body):
+        from ppxai.server.routes import agent_v1
+        monkeypatch.setattr(agent_v1, "_validate_provider_or_400", lambda name: None)
+        r = c.post("/v1/agent/task", json=body)
+        assert r.status_code == 200, r.text
+        return c.get(f"/v1/agent/runs/{r.json()['run_id']}").json()
+
+    # --- rejection paths (no provider needed) --------------------------------
+
+    def test_skill_given_but_skills_dir_not_configured_400(self, client, monkeypatch):
+        c, _ = client
+        self._patch_cfg(monkeypatch, {
+            "task_tier_enabled": True, "sandbox": {}, "default_subagent": {},
+        })
+        r = c.post("/v1/agent/task", json={"task": "t", "skills": ["ci"]})
+        assert r.status_code == 400 and "skills_dir" in r.json()["detail"]
+
+    def test_skill_name_path_escape_rejected(self, client, monkeypatch, tmp_path):
+        c, _ = client
+        cfg, _ = self._cfg(tmp_path)
+        self._patch_cfg(monkeypatch, cfg)
+        for bad in ("../secret", "a/b", "/etc", "..\\x", ".."):
+            r = c.post("/v1/agent/task", json={"task": "t", "skills": [bad]})
+            assert r.status_code == 400, f"{bad!r} not rejected"
+
+    def test_skill_not_found_400(self, client, monkeypatch, tmp_path):
+        c, _ = client
+        cfg, _ = self._cfg(tmp_path)
+        self._patch_cfg(monkeypatch, cfg)
+        r = c.post("/v1/agent/task", json={"task": "t", "skills": ["nope"]})
+        assert r.status_code == 400 and "not found" in r.json()["detail"]
+
+    def test_skill_without_manifest_400(self, client, monkeypatch, tmp_path):
+        c, _ = client
+        cfg, skills = self._cfg(tmp_path)
+        (skills / "bare").mkdir()  # a dir with no SKILL.md
+        self._patch_cfg(monkeypatch, cfg)
+        r = c.post("/v1/agent/task", json={"task": "t", "skills": ["bare"]})
+        assert r.status_code == 400 and "SKILL.md" in r.json()["detail"]
+
+    def test_scripts_refused_when_disabled(self, client, monkeypatch, tmp_path):
+        c, _ = client
+        cfg, skills = self._cfg(tmp_path, allow_scripts=False)
+        self._skill(skills, "hasscripts", "---\ntools: [read_file]\n---\nx\n",
+                    scripts=["run.sh"])
+        self._patch_cfg(monkeypatch, cfg)
+        r = c.post("/v1/agent/task", json={"task": "t", "skills": ["hasscripts"]})
+        assert r.status_code == 400 and "scripts" in r.json()["detail"].lower()
+
+    def test_shell_in_skill_grant_rejected_ceiling_clamp(self, client, monkeypatch, tmp_path):
+        # A skill can't smuggle a shell grant past the ceiling any more than a
+        # spec can — the shell reject runs on the merged (unioned) grant.
+        c, _ = client
+        cfg, skills = self._cfg(tmp_path)
+        self._skill(skills, "danger",
+                    "---\ntools: [read_file, execute_shell_command]\n"
+                    "provider: p\nmodel: m\n---\nx\n")
+        self._patch_cfg(monkeypatch, cfg)
+        r = c.post("/v1/agent/task", json={"task": "t", "skills": ["danger"]})
+        assert r.status_code == 400 and "shell" in r.json()["detail"].lower()
+
+    def test_no_skill_no_spec_no_tools_still_422(self, client):
+        # Invariant preserved: with no grant source at all, 422.
+        c, _ = client
+        assert c.post("/v1/agent/task", json={"task": "t"}).status_code == 422
+        assert c.post("/v1/agent/task", json={"task": "t", "skills": []}).status_code == 422
+
+    # --- merge/compose: assert on the MINTED meta ----------------------------
+
+    def test_skill_supplies_grant_and_config(self, client, monkeypatch, tmp_path):
+        c, _ = client
+        cfg, skills = self._cfg(tmp_path)
+        self._skill(skills, "ci-triage",
+                    "---\ntools: [read_file, grep]\nprovider: skprov\nmodel: skmodel\n"
+                    "budget: {iterations: 4}\n---\nbe terse\n",
+                    references=["checklist.md"])
+        self._patch_cfg(monkeypatch, cfg)
+        one = self._mint(c, monkeypatch, {"task": "t", "skills": ["ci-triage"]})
+        assert one["tools"] == ["read_file", "grep"]
+        assert one["provider"] == "skprov" and one["model"] == "skmodel"
+        assert one["budget"] == {"iterations": 4}
+
+    def test_scripts_allowed_when_opted_in(self, client, monkeypatch, tmp_path):
+        # allow_skill_scripts=True: the skill loads (scripts stay inert but the
+        # refusal is lifted).
+        c, _ = client
+        cfg, skills = self._cfg(tmp_path, allow_scripts=True)
+        self._skill(skills, "hasscripts",
+                    "---\ntools: [read_file]\nprovider: p\nmodel: m\n---\nx\n",
+                    scripts=["run.sh"])
+        self._patch_cfg(monkeypatch, cfg)
+        one = self._mint(c, monkeypatch, {"task": "t", "skills": ["hasscripts"]})
+        assert one["tools"] == ["read_file"]
+
+    def test_multi_skill_grant_union(self, client, monkeypatch, tmp_path):
+        c, _ = client
+        cfg, skills = self._cfg(tmp_path)
+        self._skill(skills, "a",
+                    "---\ntools: [read_file]\nprovider: p\nmodel: m\n---\nx\n")
+        self._skill(skills, "b", "---\ntools: [grep, list_directory]\n---\nx\n")
+        self._patch_cfg(monkeypatch, cfg)
+        one = self._mint(c, monkeypatch, {"task": "t", "skills": ["a", "b"]})
+        # Union, de-duped, order-preserving.
+        assert one["tools"] == ["read_file", "grep", "list_directory"]
+
+    def test_request_tools_union_with_skill(self, client, monkeypatch, tmp_path):
+        # A skill ADDS to the request grant (it never replaces it).
+        c, _ = client
+        cfg, skills = self._cfg(tmp_path)
+        self._skill(skills, "a",
+                    "---\ntools: [grep]\nprovider: p\nmodel: m\n---\nx\n")
+        self._patch_cfg(monkeypatch, cfg)
+        one = self._mint(c, monkeypatch, {
+            "task": "t", "tools": ["read_file"], "skills": ["a"]})
+        assert one["tools"] == ["read_file", "grep"]

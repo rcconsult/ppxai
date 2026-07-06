@@ -941,9 +941,11 @@
         "workdir": { "root": "~/.ppxai/runs", "writable": true, "cleanup": "keep" },
         "read_paths": { "allow": [], "deny": [".env", ".git", ".ssh", "secrets", "node_modules"], "follow_symlinks": false },
         "skills_dir": null,
+        "__comment_skills_dir": "v1.19.0 (/task T4): a directory of agent SKILL directories. When set, `POST /v1/agent/task {\"skills\":[\"<name>\"]}` (and the web `/task run --skill <name>`) resolves <name> under this dir (NAME only — no path/traversal). Each skill is `<name>/SKILL.md` (a spec, T3 loader) + optional `references/` (mounted into the run read-scope when enforcement=in_process) + optional `scripts/` (INERT). Multiple skills compose: grants union, read-roots union, still clamped by the ceiling (no-shell, task_tier_enabled). A scripts/-bearing skill is refused unless allow_skill_scripts is true. null = skills disabled.",
         "specs_dir": null,
         "__comment_specs_dir": "v1.19.0 (/task T3): a directory of agent spec files. When set, `POST /v1/agent/task {\"spec\":\"<name>\"}` (and the web `/task run --spec <name>`) resolves <name> under this dir (NAME only — no path/traversal; .md front-matter, .json, .yaml). Spec fields fill any omitted request field; explicit request fields win; the merged grant is clamped by the same ceiling as a direct request (no-shell, task_tier_enabled). null = spec files disabled.",
-        "allow_skill_scripts": false
+        "allow_skill_scripts": false,
+        "__comment_allow_skill_scripts": "v1.19.0 (/task T4): scripts/ in a skill can never execute in the in-process tier (no shell grant). Default false REFUSES a scripts/-bearing skill up front (400) rather than loading it with silently-inert scripts. Set true to acknowledge scripts stay inert and load the skill anyway; running skill scripts needs the container tier (T9)."
       }
     },
     "container": {

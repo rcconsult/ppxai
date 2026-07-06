@@ -86,6 +86,7 @@ from pydantic import BaseModel, Field, model_validator
 from ...common.logger import get_logger
 from ...config.tools import get_agent_config
 from ...engine.agent_runs import RunMeta
+from ...engine.agent_skill import AgentSkillError, LoadedSkill, load_skill
 from ...engine.agent_spec import AgentSpec, AgentSpecError, load_spec_file
 from ...engine.agent_scoped_tools import ScopedToolManager
 from ...engine.client import EngineClient
@@ -438,6 +439,18 @@ class AgentTaskRequest(BaseModel):
             "(no-shell, task_tier_enabled)."
         ),
     )
+    skills: list[str] = Field(
+        default_factory=list,
+        description=(
+            "T4: names of skill directories under tools.agent.sandbox.skills_dir "
+            "(NAME only — no path, no traversal). Each skill's SKILL.md is a spec "
+            "(T3 loader) and its directory is mounted into the run's read-scope. "
+            "Multiple skills compose (tool grants union, read roots union); the "
+            "merged grant faces the same ceiling as a direct request. A skill "
+            "that requires scripts/ is refused unless allow_skill_scripts is on "
+            "(scripts stay inert until the container tier)."
+        ),
+    )
     provider: Optional[str] = Field(None, description="Provider (per-run intent).")
     model: Optional[str] = Field(None, description="Model (per-run intent).")
     system: Optional[str] = Field(None, description="Optional system message.")
@@ -466,15 +479,41 @@ class AgentTaskRequest(BaseModel):
     @model_validator(mode="after")
     def _grant_required_without_spec(self) -> "AgentTaskRequest":
         # Preserve the /task invariant "a tool-capable run can never go tool-free
-        # by accident" (422) — but let a spec supply the grant. With a spec, the
-        # non-empty check happens post-merge in the route (400). Without one, an
-        # empty/absent grant is a request-shape error here.
-        if not self.spec and not self.tools:
+        # by accident" (422) — but let a spec OR a skill supply the grant. With
+        # either, the non-empty check happens post-merge in the route (400).
+        # Without any grant source, an empty/absent grant is a request-shape
+        # error here.
+        if not self.spec and not self.skills and not self.tools:
             raise ValueError(
-                "tools is required and must be non-empty (or provide a `spec` "
-                "that supplies it)"
+                "tools is required and must be non-empty (or provide a `spec` / "
+                "`skills` that supplies it)"
             )
         return self
+
+
+# --- T3/T4: name-only resolution under an operator-configured root --------
+
+def _reject_unsafe_name(name: str, kind: str) -> None:
+    """400 unless `name` is a bare name (no separator / parent-ref / absolute).
+
+    Shared by the spec (T3) and skill (T4) resolvers so both enforce the SAME
+    traversal defence at the trust boundary — a caller may name a file/dir
+    under the configured root, never point at an arbitrary path.
+    """
+    if not name or "/" in name or "\\" in name or ".." in name or Path(name).is_absolute():
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid {kind} name {name!r}: a bare name is required (no path).",
+        )
+
+
+def _within_root(root: Path, candidate: Path) -> bool:
+    """True if `candidate` resolves to `root` or something under it.
+
+    Symlink-escape defence: `candidate` is already `.resolve()`d by the caller;
+    we confirm containment against the resolved root.
+    """
+    return root == candidate or root in candidate.parents
 
 
 # --- T3: spec resolution + precedence merge -------------------------------
@@ -494,11 +533,7 @@ def _resolve_named_spec(name: str) -> AgentSpec:
             status_code=400,
             detail="Spec files are not enabled: set tools.agent.sandbox.specs_dir.",
         )
-    if not name or "/" in name or "\\" in name or ".." in name or Path(name).is_absolute():
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid spec name {name!r}: a bare name is required (no path).",
-        )
+    _reject_unsafe_name(name, "spec")
     root = Path(specs_dir).expanduser().resolve()
     # Accept an explicit extension, else try the known ones in a stable order.
     candidates = (
@@ -512,7 +547,7 @@ def _resolve_named_spec(name: str) -> AgentSpec:
         except OSError:
             continue
         # Containment check: the resolved file must live under specs_dir.
-        if root not in real.parents and real != root:
+        if not _within_root(root, real):
             continue
         if real.is_file():
             try:
@@ -525,28 +560,120 @@ def _resolve_named_spec(name: str) -> AgentSpec:
     )
 
 
-def _merge_task_fields(req: AgentTaskRequest) -> dict:
-    """Effective run fields with precedence: request > spec > server default.
+def _resolve_named_skill(name: str) -> LoadedSkill:
+    """Load a skill by NAME from `tools.agent.sandbox.skills_dir` (T4).
 
-    Returns {task, tools, provider, model, system, budget(dict), network(list)}.
+    Same name-only discipline as the spec resolver: reject any name with a
+    path separator / parent-ref / absolute form, resolve `<skills_dir>/<name>`,
+    and confirm the real directory is still INSIDE skills_dir (symlink-escape
+    defence) BEFORE reading its SKILL.md. 400 on any problem — an unknown or
+    malformed skill is a request error, not a server fault.
+    """
+    skills_dir = (get_agent_config().get("sandbox") or {}).get("skills_dir")
+    if not skills_dir:
+        raise HTTPException(
+            status_code=400,
+            detail="Skills are not enabled: set tools.agent.sandbox.skills_dir.",
+        )
+    _reject_unsafe_name(name, "skill")
+    root = Path(skills_dir).expanduser().resolve()
+    try:
+        real = (root / name).resolve()
+    except OSError as exc:
+        raise HTTPException(status_code=400, detail=f"Skill {name!r}: {exc}")
+    if not _within_root(root, real) or not real.is_dir():
+        raise HTTPException(
+            status_code=400,
+            detail=f"Skill {name!r} not found under skills_dir ({root}).",
+        )
+    try:
+        return load_skill(real, name)
+    except AgentSkillError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+def _load_skills(names: list[str]) -> list[LoadedSkill]:
+    """Resolve every `--skill <name>`, refusing a scripts-requiring skill unless
+    `allow_skill_scripts` is on.
+
+    A skill's scripts/ can never run in the in-process tier (no shell grant),
+    so a skill that ships scripts/ is refused up front UNLESS the operator has
+    explicitly set allow_skill_scripts — matching the plan's "reject/warn on a
+    skill that requires scripts/ while allow_skill_scripts:false". The gate is
+    an operator ceiling, not a per-request field.
+    """
+    if not names:
+        return []
+    allow_scripts = bool(get_agent_config().get("sandbox", {}).get("allow_skill_scripts", False))
+    loaded: list[LoadedSkill] = []
+    for name in names:
+        skill = _resolve_named_skill(name)
+        if skill.has_scripts and not allow_scripts:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"Skill {name!r} ships a scripts/ directory, which cannot run "
+                    "in the in-process tier (no shell grant; scripts need the "
+                    "container tier). Set tools.agent.sandbox.allow_skill_scripts "
+                    "to acknowledge they stay inert, or use a skill without scripts/."
+                ),
+            )
+        loaded.append(skill)
+    return loaded
+
+
+def _merge_task_fields(req: AgentTaskRequest) -> dict:
+    """Effective run fields with precedence: request > spec > skills > default.
+
+    Returns {task, tools, provider, model, system, budget(dict), network(list),
+    read_roots(list)}. Skills UNION their tool grants into the effective grant
+    (that is their purpose — mount capability) and each skill dir is added to
+    `read_roots` for the run read-scope (T2). Scalars (provider/model/system/
+    budget/network) take request > spec > first-skill-that-sets-it > default.
+
     The caller runs the SAME ceiling guards (shell-reject, non-empty grant,
-    provider/model present) on these merged values — so a spec can't smuggle a
-    grant past the checks a direct request faces.
+    provider/model present) on these merged values — so neither a spec nor a
+    skill can smuggle a grant past the checks a direct request faces.
     """
     spec = _resolve_named_spec(req.spec) if req.spec else AgentSpec()
+    skills = _load_skills(req.skills)
     sub_defaults = get_agent_config().get("default_subagent", {}) or {}
 
+    # A skill scalar is the first skill (in --skill order) that sets it — so
+    # composition is deterministic and skill order is meaningful for scalars.
+    def _skill_scalar(attr: str):
+        for s in skills:
+            val = getattr(s.spec, attr, None)
+            if val is not None:
+                return val
+        return None
+
     task = req.task or spec.task  # req.task is required (min_length=1); spec.task is a fallback only if ever relaxed
-    tools = list(req.tools) if req.tools else list(spec.tools or [])
-    provider = req.provider or spec.provider or sub_defaults.get("provider")
-    model = req.model or spec.model or sub_defaults.get("model")
-    system = req.system if req.system is not None else spec.system
-    budget = _budget_dict(req.budget) or dict(spec.budget or {})
+    # Grant = the request-or-spec base grant UNION every skill's grant. A skill
+    # ADDS capability; it never removes what the request/spec asked for.
+    base_tools = list(req.tools) if req.tools else list(spec.tools or [])
+    tools = list(base_tools)
+    for s in skills:
+        for t in (s.spec.tools or []):
+            if t not in tools:
+                tools.append(t)
+    provider = req.provider or spec.provider or _skill_scalar("provider") or sub_defaults.get("provider")
+    model = req.model or spec.model or _skill_scalar("model") or sub_defaults.get("model")
+    system = req.system if req.system is not None else (spec.system if spec.system is not None else _skill_scalar("system"))
+    budget = _budget_dict(req.budget) or dict(spec.budget or {}) or dict(_skill_scalar("budget") or {})
     network = (
         list(req.network.allow_outbound) if req.network is not None
-        else list(spec.network or [])
+        else list(spec.network or []) or list(_skill_scalar("network") or [])
     )
+    # T4: each skill dir is mounted into the run read-scope. De-dup while
+    # preserving --skill order so the run can read references/ (and only these
+    # new roots), not siblings outside the skills.
+    read_roots: list[str] = []
+    for s in skills:
+        if s.read_root not in read_roots:
+            read_roots.append(s.read_root)
     return {
+        "read_roots": read_roots,
         "task": task, "tools": tools, "provider": provider, "model": model,
         "system": system, "budget": budget, "network": network,
     }
@@ -651,6 +778,7 @@ async def create_agent_task(req: AgentTaskRequest, request: Request) -> AgentRun
         allow_outbound=eff["network"],
         allow_spawn=True,  # top-level run may spawn ONE child (depth=1; Inc 7)
         system=eff["system"],  # request or spec: caller's agent framing (AGENT.md)
+        extra_read_paths=eff["read_roots"],  # T4: mounted --skill dirs
     )
     registry.run_in_background(meta, runner)
     return AgentRunResponse(run_id=meta.run_id, status=meta.status)
@@ -666,6 +794,7 @@ def build_task_runner(
     allow_outbound: list,
     allow_spawn: bool = False,
     system: Optional[str] = None,
+    extra_read_paths: Optional[list] = None,
 ):
     """Build the async runner that drives a tool-capable run (Inc 4–7).
 
@@ -679,6 +808,11 @@ def build_task_runner(
     registered IF it's in the grant; a child run is always built with
     allow_spawn=False, so it can never spawn — enforcing the N=1 / depth=1
     rule structurally (a grandchild is impossible).
+
+    extra_read_paths (T4): additional read roots mounted into this run's
+    read-scope on TOP of the static sandbox `read_paths.allow` — the `--skill`
+    directories. Only consulted when the filesystem seal is engaged
+    (enforcement="in_process"); ignored otherwise (nothing to enforce).
     """
     async def _runner(m) -> str:
         engine = EngineClient()
@@ -759,7 +893,9 @@ def build_task_runner(
             )
             os.makedirs(workdir, exist_ok=True)
             engine.set_working_dir(workdir)  # relative tool paths resolve here
-            fs_policy = build_filesystem_policy(sandbox, workdir)
+            fs_policy = build_filesystem_policy(
+                sandbox, workdir, extra_read_paths=extra_read_paths
+            )
 
             def _on_path(allowed: bool, payload: dict) -> None:  # noqa: F811
                 # Allowed reads are silent (they'd fire on every read); only the

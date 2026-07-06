@@ -7,6 +7,10 @@
  *   /task run "<desc>" --spec <name>   (T3) configure from a spec file under
  *                      tools.agent.sandbox.specs_dir; explicit flags override
  *                      the file. The server resolves the name + clamps the grant.
+ *   /task run "<desc>" --skill <name>  (T4) mount a skill dir under
+ *                      tools.agent.sandbox.skills_dir: SKILL.md is a spec and the
+ *                      skill's references/ join the run read-scope. Repeatable /
+ *                      comma-separated; grants union, still ⊆ the operator ceiling.
  *   /task ls | show <id> | watch <id> | cancel <id> | help
  *
  * Extends AgentRunController: the run registry endpoints (list, show, live SSE
@@ -81,7 +85,8 @@ function parseTaskArgs(argline) {
     const toks = _tokenize((argline || '').trim());
     const out = {
         task: '', tools: [], provider: null, model: null, system: null,
-        network: { allow_outbound: [] }, budget: {}, spec: null, errors: [],
+        network: { allow_outbound: [] }, budget: {}, spec: null, skills: [],
+        errors: [],
     };
     let i = 0;
     const desc = [];
@@ -114,6 +119,15 @@ function parseTaskArgs(argline) {
             case '--system':   v = value('--system');   if (v) out.system = v;   break;
             case '--budget':   v = value('--budget');   if (v) _parseBudget(v, out); break;
             case '--spec':     v = value('--spec');     if (v) out.spec = v;     break;
+            case '--skill':
+                // T4: repeatable and/or comma-separated — skills compose.
+                v = value('--skill');
+                if (v) {
+                    for (const s of v.split(',').map((x) => x.trim()).filter(Boolean)) {
+                        if (!out.skills.includes(s)) out.skills.push(s);
+                    }
+                }
+                break;
             default:
                 out.errors.push(`unknown flag: ${t}`);
         }
@@ -162,28 +176,30 @@ class TaskController extends _AgentRunControllerBase {
         }
         if (!spec.task) {
             this.app.showSystemMessage(
-                'Usage: /task run "<desc>" --tools <a,b,c> [--spec <name>] [--allow host] [--budget iters=,time=,tokens=] [--system "…"]'
+                'Usage: /task run "<desc>" --tools <a,b,c> [--spec <name>] [--skill <name>] [--allow host] [--budget iters=,time=,tokens=] [--system "…"]'
             );
             return;
         }
-        if (!spec.tools.length && !spec.spec) {
-            // A grant is required — but a --spec may supply it (T3). The server
-            // clamps the merged grant (no-shell, ceiling); we only guard the
-            // "neither tools nor spec" case here to fail fast.
+        const hasResolvedSource = Boolean(spec.spec) || spec.skills.length > 0;
+        if (!spec.tools.length && !hasResolvedSource) {
+            // A grant is required — but a --spec or --skill may supply it (T3/T4).
+            // The server clamps the merged grant (no-shell, ceiling); we only
+            // guard the "no grant source at all" case here to fail fast.
             this.app.showSystemMessage(
-                '❌ /task run needs a tool grant (--tools a,b,c) or a --spec that supplies one. A tool-free run belongs on /agentrun.'
+                '❌ /task run needs a tool grant (--tools a,b,c), a --spec, or a --skill that supplies one. A tool-free run belongs on /agentrun.'
             );
             return;
         }
 
-        // With a --spec, provider/model may come from the file; don't force the
-        // session's current provider/model onto the request (that would override
-        // the spec). Without a spec, keep the T1 behavior of defaulting to the
-        // session's provider/model.
-        const provider = spec.provider || (spec.spec ? null : this.app.state.currentProvider);
-        const model = spec.model || (spec.spec ? null : this.app.state.currentModel);
+        // With a --spec or --skill, provider/model/grant may come from the file;
+        // don't force the session's current provider/model onto the request
+        // (that would override the resolved source). Without one, keep the T1
+        // behavior of defaulting to the session's provider/model.
+        const provider = spec.provider || (hasResolvedSource ? null : this.app.state.currentProvider);
+        const model = spec.model || (hasResolvedSource ? null : this.app.state.currentModel);
         const body = { task: spec.task, tools: spec.tools };
         if (spec.spec) body.spec = spec.spec;
+        if (spec.skills.length) body.skills = spec.skills;
         if (provider) body.provider = provider;
         if (model) body.model = model;
         if (spec.system) body.system = spec.system;
@@ -210,10 +226,11 @@ class TaskController extends _AgentRunControllerBase {
             provider, model,
             status: started.status || 'running',
         };
-        // A spec resolved server-side — the client didn't know the file's
-        // grant/budget/provider. Reflect the authoritative merged meta in the
-        // pane so it shows what actually runs (T3 trial expectation).
-        if (spec.spec) {
+        // A spec or skill resolved server-side — the client didn't know the
+        // file's grant/budget/provider (or the skill's unioned grant). Reflect
+        // the authoritative merged meta in the pane so it shows what actually
+        // runs (T3/T4 trial expectation).
+        if (hasResolvedSource) {
             try {
                 const meta = await this.app.apiClient.get(`/v1/agent/runs/${runId}`);
                 paneInfo = {
@@ -243,6 +260,7 @@ class TaskController extends _AgentRunControllerBase {
             '/task — tool-capable background runs (sandboxed tier; default-off):',
             '  /task run "<desc>" --tools a,b,c [--allow host] [--provider p] [--model m] [--budget iters=,time=,tokens=] [--system "…"]',
             '  /task run "<desc>" --spec <name>   configure from a spec file (specs_dir); flags override the file',
+            '  /task run "<desc>" --skill <name>  mount a skill (skills_dir): SKILL.md grant + references/ into read-scope; repeatable',
             '  /task ls                list runs',
             '  /task show <id>         open a run pane',
             '  /task watch <id>        open + live-tail a run',

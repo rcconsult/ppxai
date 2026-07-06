@@ -206,6 +206,35 @@ class TestBuildAndConfig:
         assert isinstance(pol.check("read", str(dirs["root"] / "skills" / "s.md")), Allow)
         assert isinstance(pol.check("read", str(dirs["root"] / "specs")), Allow)
 
+    def test_extra_read_paths_mounts_skill_scope(self, dirs):
+        # T4: a --skill dir is mounted per-run via extra_read_paths. The skill's
+        # references/ becomes readable; a SIBLING outside the mounted dir stays
+        # denied (the T4 acceptance signal — scoped mount, not a hole).
+        skill = dirs["root"] / "ci-triage"
+        (skill / "references").mkdir(parents=True)
+        sibling = dirs["root"] / "other-secret"
+        sibling.mkdir()
+        sandbox = _normalize_sandbox({
+            "enforcement": "in_process",
+            "read_paths": {"allow": []},   # NO blanket allow — only the mount
+        })
+        pol = build_filesystem_policy(
+            sandbox, str(dirs["workdir"]), extra_read_paths=[str(skill)]
+        )
+        # inside the mounted skill dir → allowed
+        assert isinstance(pol.check("read", str(skill / "references" / "checklist.md")), Allow)
+        assert isinstance(pol.check("read", str(skill / "SKILL.md")), Allow)
+        # a sibling OUTSIDE the skill dir → denied
+        assert isinstance(pol.check("read", str(sibling / "leak.txt")), Deny)
+
+    def test_extra_read_paths_none_is_noop(self, dirs):
+        sandbox = _normalize_sandbox({
+            "enforcement": "in_process",
+            "read_paths": {"allow": [str(dirs["allowed"])]},
+        })
+        pol = build_filesystem_policy(sandbox, str(dirs["workdir"]), extra_read_paths=None)
+        assert isinstance(pol.check("read", str(dirs["allowed"] / "x")), Allow)
+
     def test_normalize_defaults(self):
         sb = _normalize_sandbox({})
         assert sb["enforcement"] == "off"          # non-breaking default

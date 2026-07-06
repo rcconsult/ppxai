@@ -197,13 +197,23 @@ class FilesystemPolicy:
         return PathDecision(False, mode, target, decision.reason)
 
 
-def build_filesystem_policy(sandbox: dict, workdir: str) -> FilesystemPolicy:
+def build_filesystem_policy(
+    sandbox: dict,
+    workdir: str,
+    extra_read_paths: Optional[List[str]] = None,
+) -> FilesystemPolicy:
     """Construct a per-run FilesystemPolicy from the `tools.agent.sandbox` block.
 
     The read scope is `read_paths.allow` + the configured `skills_dir`/`specs_dir`
     (so a run can always read its skill/spec roots — T4 resolves `--skill` there)
-    + the workdir (added by FilesystemPolicy). Relative paths resolve against the
-    workdir.
+    + `extra_read_paths` (T4: the specific `--skill <name>` directories mounted
+    for THIS run) + the workdir (added by FilesystemPolicy). Relative paths
+    resolve against the workdir.
+
+    `extra_read_paths` are per-run, unlike the static `skills_dir` root: a run
+    launched with `--skill ci-triage` gets `skills/ci-triage/` mounted here even
+    if the blanket `skills_dir` isn't configured, so the mount is explicit and
+    scoped to the skills the run actually named.
     """
     rp = sandbox.get("read_paths", {}) or {}
     read_roots = list(rp.get("allow", []) or [])
@@ -211,6 +221,7 @@ def build_filesystem_policy(sandbox: dict, workdir: str) -> FilesystemPolicy:
         root = sandbox.get(key)
         if root:
             read_roots.append(root)
+    read_roots.extend(r for r in (extra_read_paths or []) if r)
     return FilesystemPolicy(
         read_roots=read_roots,
         workdir=workdir,

@@ -152,23 +152,39 @@ outside the operator's allowance is refused).
 
 ---
 
-## T4 — skills: `--skill <name>` (references mounted into read-scope)
+## T4 — skills: `--skill <name>` (references mounted into read-scope) — ✅ DONE
 
 **Capability:** `--skill ci-triage` loads `SKILL.md` as the spec **and** mounts
 the skill's `references/` into the run's read-scope; `scripts/` stay inert.
 
-**Build:** resolve `--skill <name>` under `sandbox.skills_dir` (name, never an
-arbitrary path); `SKILL.md` → spec (T3 loader); add the skill dir to the run's
-`read_paths.allow` (T2 enforcement); reject / warn on a skill that requires
-`scripts/` while `allow_skill_scripts:false`. Multiple `--skill` compose
-(grants union, still ⊆ ceiling).
+**Build (landed):** `engine/agent_skill.py` (`load_skill` — reads `SKILL.md`
+through the T3 loader, detects `references/`/`scripts/`); route
+`_resolve_named_skill` resolves `--skill <name>` under `sandbox.skills_dir`
+(name-only, symlink-contained — shares `_reject_unsafe_name`/`_within_root`
+with the T3 spec resolver); `_load_skills` refuses a `scripts/`-bearing skill
+unless `allow_skill_scripts` is on. `_merge_task_fields` unions every skill's
+grant into the effective grant and returns `read_roots`; the route threads
+those through `build_task_runner(extra_read_paths=…)` →
+`build_filesystem_policy(extra_read_paths=…)` (T2 enforcement). Multiple
+`--skill` compose (grants union + read-roots union, still ⊆ ceiling — the
+shell-reject/non-empty/provider guards run on the MERGED grant). Web client:
+`--skill` flag (repeatable + comma-split, de-duped) in `task-controller.js`.
 
-**Trial:** create `~/.ppxai/skills/ci-triage/{SKILL.md, references/checklist.md}`;
-`/task run --skill ci-triage`; confirm the agent reads `references/checklist.md`
-but a read of a sibling outside the skill dir is denied.
+**Trial:** point `sandbox.skills_dir` at `examples/task-skills/` (with
+`enforcement:"in_process"`); `/task run --skill ci-triage`; confirm the agent
+reads `references/checklist.md` but a read of a sibling outside the skill dir is
+denied. `--skill needs-scripts` → 400 (scripts gate). Examples ship in
+[examples/task-skills/](../examples/task-skills/) (ci-triage, secrets-scan,
+needs-scripts + README recipe), loader-verified.
 
-**Tests:** skill resolution-by-name (path-escape refused); read-scope includes
-references, excludes siblings; scripts-required refusal; multi-skill compose.
+**Tests (landed):** `test_agent_skill.py` (8 — loader: manifest→spec,
+read_root, references present/absent, missing/malformed manifest, scripts
+detection); `test_agent_runs.py::TestTaskSkills` (11 — resolution-by-name +
+path-escape, not-found, no-manifest, scripts refuse/allow, shell-in-skill
+clamp, no-source-422, grant supply, multi-skill union, request∪skill);
+`test_filesystem_policy.py` (2 — `extra_read_paths` mounts skill scope /
+siblings denied, None is no-op); `test_task_controller_behavior.py` (scenarios
+3c/3d — `--skill` parse + body).
 
 **Deliberately NOT yet:** runnable skill scripts (needs T9 container tier).
 

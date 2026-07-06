@@ -101,6 +101,31 @@ function makeApp(opts) {{
     assert(q.errors.some((e) => /needs a value/.test(e)), "--spec missing value not flagged");
   }}
 
+  // --- Scenario 3c: parseTaskArgs — --skill (T4), repeatable + comma-split ---
+  {{
+    const p = parseTaskArgs('"triage" --skill ci-triage --skill secrets-scan');
+    assert(eq(p.skills, ["ci-triage", "secrets-scan"]), "repeated --skill: " + JSON.stringify(p.skills));
+    assert(eq(p.tools, []), "no --tools OK when --skill present");
+    assert(p.errors.length === 0, "no errors with --skill: " + p.errors);
+    const c = parseTaskArgs('x --skill a,b,a');
+    assert(eq(c.skills, ["a", "b"]), "comma-split + de-dup: " + JSON.stringify(c.skills));
+    const q = parseTaskArgs('x --skill');
+    assert(q.errors.some((e) => /needs a value/.test(e)), "--skill missing value not flagged");
+  }}
+
+  // --- Scenario 3d: run() sends skills in the body, doesn't force UI provider ---
+  {{
+    const app = makeApp({{ state: {{ currentProvider: "nvidia", currentModel: "qwen" }} }});
+    const c = new TaskController(app);
+    c._watchDetached = async () => {{}};
+    await c.run('"triage" --skill ci-triage');
+    const [url, body] = app._posts[0];
+    assert(url === "/v1/agent/task", "wrong url: " + url);
+    assert(eq(body.skills, ["ci-triage"]), "skills in body: " + JSON.stringify(body.skills));
+    assert(body.provider === undefined, "skill launch must not force UI provider");
+    assert(body.model === undefined, "skill launch must not force UI model");
+  }}
+
   // --- Scenario 4: run() builds the POST body + provider/model fallback + watches ---
   {{
     const app = makeApp({{ state: {{ currentProvider: "nvidia", currentModel: "qwen" }} }});
