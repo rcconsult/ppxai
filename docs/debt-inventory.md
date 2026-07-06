@@ -953,8 +953,10 @@ genuine open set. (Lettered q–t; upstream owns p = external review round.)**
   Triplet incomplete). T5 PART LANDED (2026-07-06):** `AgentRunStore.persist_state/
   load_state` + the `FilesystemAgentRunStore` implementation exist and the first
   write ships with the T5 `waiting` park (checkpoint written on park, updated with
-  `last_response` on resume). Remaining under this item: the **T6**
-  `completed_pending_ack` hold write, and **T7** as the consumer (resume = reload
+  `last_response` on resume). **T6 PART LANDED (2026-07-07):** the
+  `completed_pending_ack` hold and `finalized` transitions also snapshot to
+  `state.json` (`result_ready_at`/`result_chars`, then `via`/`acked_at`).
+  Remaining under this item: **T7** as the consumer (resume = reload
   the checkpoint). Original context: the run slot wrote `meta.json` + `events.jsonl`
   but NOT `state.json` (`agent_runs.py` comments said "Inc 2-3"); a consumer
   expecting the full ADR-0005 Triplet (e.g. ppxai-sre `heartbeat.py` reconstructing

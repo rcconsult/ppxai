@@ -578,6 +578,20 @@
 .task-run-view .agent-run-status[data-status="cancelled"]   { color: #f59e0b; }
 .task-run-view .agent-run-status[data-status="interrupted"] { color: #f59e0b; }
 .task-run-view .agent-run-status[data-status="waiting"]     { color: #f59e0b; }
+.task-run-view .agent-run-status[data-status="completed_pending_ack"] { color: #0ea5e9; }
+.task-run-view .agent-run-status[data-status="finalized"]   { color: #22c55e; }
+/* T6 Collect — visible only while a result is held (completed_pending_ack). */
+.task-ack-btn {
+    font-size: 0.78em;
+    padding: 2px 10px;
+    cursor: pointer;
+    background: var(--bg-tertiary);
+    color: #0ea5e9;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    white-space: nowrap;
+}
+.task-ack-btn:hover { background: var(--bg-hover); }
 .task-cancel-btn {
     font-size: 0.78em;
     padding: 2px 10px;

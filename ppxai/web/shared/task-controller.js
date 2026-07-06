@@ -15,6 +15,10 @@
  *                      `waiting{consent}` — the pane's consent card is the
  *                      clickable equivalent. Free text rides along as a note
  *                      (a text-only answer to a consent park is a deny).
+ *   /task ack <id>     (T6) collect a held result — a finished top-level task
+ *                      run parks its result in `completed_pending_ack` (📬)
+ *                      until acked (the pane's Collect button is equivalent);
+ *                      the retention TTL is the GC backstop.
  *   /task ls | show <id> | watch <id> | cancel <id> | help
  *
  * Extends AgentRunController: the run registry endpoints (list, show, live SSE
@@ -166,6 +170,7 @@ class TaskController extends _AgentRunControllerBase {
             case 'watch':  return this.show(rest);
             case 'cancel': return this.cancel(rest.trim());
             case 'respond': return this.respondCmd(rest);
+            case 'ack': return this.ack(rest.trim());
             default:
                 this.app.showSystemMessage(`Unknown /task subcommand: ${verb}. Try /task help.`);
                 return undefined;
@@ -314,6 +319,7 @@ class TaskController extends _AgentRunControllerBase {
             '  /task show <id>         open a run pane',
             '  /task watch <id>        open + live-tail a run',
             '  /task respond <id> approve|deny|"<text>"  answer a run parked in waiting (consent card)',
+            '  /task ack <id>          collect a held result (📬 completed_pending_ack → finalized)',
             '  /task cancel <id>       cancel a run',
         ].join('\n'));
     }

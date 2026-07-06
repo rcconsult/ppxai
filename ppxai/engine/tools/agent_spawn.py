@@ -348,7 +348,11 @@ class SpawnSubagentTool(BaseTool):
         child set no time budget. On timeout we CANCEL the child rather than
         orphan it — otherwise the parent would report 'timed out' while the
         child kept running, emitting events and consuming budget."""
-        terminal = ("completed", "failed", "cancelled", "interrupted")
+        # Children are started WITHOUT hold_result (the awaiting parent IS the
+        # collector), so completed_pending_ack/finalized shouldn't occur here —
+        # included defensively so a held child could never wedge the parent.
+        terminal = ("completed", "completed_pending_ack", "finalized",
+                    "failed", "cancelled", "interrupted")
         task = self._registry.get_run_task(child_run_id)
 
         # Wait cap: child's time_s + margin, else the default backstop. The

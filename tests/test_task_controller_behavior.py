@@ -233,6 +233,22 @@ function makeApp(opts) {{
     assert(calls[0] === "run_1 approve", "respond route: " + calls[0]);
   }}
 
+  // --- Scenario 10 (T6): ack — POST + verb routing ---
+  {{
+    const app = makeApp({{}});
+    const c = new TaskController(app);
+    await c.ack("run_7");
+    assert(app._posts.some(([u]) => u === "/v1/agent/runs/run_7/ack"),
+      "ack did not POST the ack endpoint");
+    assert(app._msgs.some((m) => /collected/.test(m)), "collect confirmation shown");
+    await c.ack("");
+    assert(app._msgs.some((m) => /Usage: \/task ack/.test(m)), "ack usage shown");
+    const calls = [];
+    c.ack = async (id) => calls.push(id);
+    await c.handle('ack run_8');
+    assert(calls[0] === "run_8", "ack route: " + calls[0]);
+  }}
+
   console.log("ALL OK");
 }})().catch((e) => {{ console.error(e.message || e); process.exit(1); }});
 """

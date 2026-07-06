@@ -1049,6 +1049,56 @@ consumer). `spawn_consent:"auto"` still skips the park entirely.
 
 ---
 
+## Build plan T6 — two-phase termination: `completed_pending_ack` + `POST /ack`
+
+Added: `POST /v1/agent/runs/<id>/ack` (route), `AgentRunRegistry.ack_run` /
+`_finalize` / `maybe_reap_hold`, `RunMeta.hold_result`/`acked_at`, Collect
+button + `/task ack` (client). Changed: `run_in_background._drive` success
+branch (hold split), GET read paths (lazy reap), `config/tools.py`
+(`result_retention_s`, default 3600 s). New statuses: **`completed_pending_ack`**
+(run exited, result HELD) and **`finalized`** (collected / GC-eligible) — both
+out of the AppState badge set (the run consumes nothing).
+
+```
+run_in_background._drive success:                     [engine/agent_runs.py]
+  body = await runner(meta)
+  ├─ meta.hold_result (top-level /task run — the route sets it)
+  │    finish_run(status="completed_pending_ack", result=body)   ← record persists
+  │    persist_state({status, result_ready_at, result_chars})    ← state.json
+  │    emit_event("agent_result_ready", category="result")       ← INSTEAD of agent_run_complete
+  └─ else (tool-free /run tier · spawn children — collected inline)
+       finish_run(status="completed") + emit "agent_run_complete"   (unchanged)
+
+POST /v1/agent/runs/{id}/ack                          [routes/agent_v1.py]
+├─ 404 unknown · 403 not owner (Inc 8b)
+├─ registry.ack_run(id)
+│    finalized already → (True, "already")  → 200 (idempotent, no dup event)
+│    not completed_pending_ack → (False, …) → 409 (nothing held)
+│    else _finalize(via="ack"): status="finalized"; acked_at; persist_meta;
+│         persist_state({status:"finalized", via, acked_at});
+│         emit "agent_run_finalized" {via}
+└─ {ok:true, run_id, status:"finalized"}
+
+GET /runs · GET /runs/{id}  (lazy retention backstop — no timer task)
+└─ registry.maybe_reap_hold(meta, config.result_retention_s)
+     held AND finished_at + retention elapsed → _finalize(via="retention")
+     (0/None disables; finalize marks GC-eligible, deletes NOTHING)
+
+client (web):
+  agent_result_ready on the tail → watcher breaks → pane renders the held
+    result, status chip 📬 result ready, Collect button visible
+  Collect button | /task ack <id> → POST …/ack → chip ✅ collected
+  reopen via /task ls (📬 icon) → focus() GET → result re-rendered from meta
+```
+
+Design choice: **explicit collect** (button + verb), not silent auto-ack-on-view
+— the user issues the receipt, which is what makes the disconnect-then-collect
+trial observable. Children never hold (`hold_result` unset): the awaiting
+parent IS their collector, so `spawn_subagent._await_child` still sees a
+`completed` child (its terminal tuple includes the new statuses defensively).
+
+---
+
 <!-- Inc 10+ sections appended here as they land. Template:
 ## Increment N — <title>
 Added/changed: <files>. Execution model change: <if any>.

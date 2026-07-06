@@ -266,32 +266,76 @@ scenarios 9/9b (respond mapping, token fetch, not-waiting guard, routing).
 
 ---
 
-## T6 — two-phase termination: `completed_pending_ack` + `POST /ack`
+## T6 — two-phase termination: `completed_pending_ack` + `POST /ack` — ✅ DONE
 
 **Capability:** a finished run **holds its result** until collected, so a
-disconnected UI never loses it; `/task ack <id>` (or auto-ack on view) finalizes.
+disconnected UI never loses it; `/task ack <id>` (or the pane's Collect
+button) finalizes.
 
-**Build (server):** `completed_pending_ack` status + `AGENT_RESULT_READY`
-event; the run exits (frees tokens/CPU, sandbox torn down) but the record +
-artifacts persist; `POST /runs/{id}/ack` (`→ finalized`, GC-eligible) with a
-**retention TTL** backstop. **Client:** result view + "Collect result"
-affordance / auto-ack on pane view; `/task ack`.
+**Build (landed, server):** `hold_result` on `RunMeta`/`start_run` — set by
+the `/task` route for **top-level** runs only (sub-agent children and the
+tool-free `/run` tier still land `completed`: their parent/caller collects
+inline). On success a held run lands **`completed_pending_ack`** and emits
+`agent_result_ready` (category=`result`) *instead of* `agent_run_complete`;
+the run has exited (control/sandbox torn down, out of the AppState badge set)
+but the record + result persist. `POST /runs/{id}/ack` (owner-scoped 403,
+404/409) → `AgentRunRegistry.ack_run` → **`finalized`** + `agent_run_finalized`
+(idempotent: re-acking a finalized run is 200, no duplicate event). Retention
+backstop: `tools.agent.result_retention_s` (default 3600 s, 0 disables) via
+`maybe_reap_hold` — a **lazy reaper on the GET read paths** (no timer task; an
+expired hold finalizes with `via:"retention"` the next time anyone looks).
+Finalizing never deletes data — it marks the run GC-eligible; `acked_at` on
+the meta projection records collection. **Explicit collect, not silent
+auto-ack** — the user issues the receipt (matches the trial below).
+**Client (landed):** Collect button in `TaskRunView` (visible only while
+`completed_pending_ack`); `/task ack <id>` verb; 📬 result-ready / ✅ collected
+status labels + `ls` icons; watcher/poll terminal sets grew
+(`completed_pending_ack`/`finalized` statuses; `agent_result_ready`/
+`agent_run_finalized` stream markers); held/finalized runs render their result
+like `completed`.
 
-**Persistence (debt (r), cont.).** The "record + artifacts persist after the run
-exits" promise is the same `state.json` write introduced in T5 — reuse
-`persist_state()` to snapshot the held result/terminal state so a
-`completed_pending_ack` run survives a restart and reopens intact (the trial
-below closes the pane and reopens via `/task ls`). Still flat `agent-0/`.
+**Persistence (landed — debt (r), cont.):** `persist_state()` snapshots the
+hold (`{status: completed_pending_ack, result_ready_at, result_chars}`) and
+the finalization (`{status: finalized, via, acked_at}`) — with `meta.json`
+(which carries the result body) a held run survives a restart and reopens
+intact. Still flat `agent-0/`. Remaining under (r): **T7** consumes the
+checkpoint (resume = reload `state.json`).
 
-**Trial:** `/task run "summarize docs/README.md" --tools read_file`; on finish
-the pane shows the held result; **close the pane, reopen via `/task ls`** — the
-result is still there; `/task ack <id>` → finalized; confirm a later `ls` shows
-it GC-eligible / gone after TTL.
+**Trial (concrete recipe):** config as in the T5 trial (tier on,
+`default_subagent` set); serve the checkout (`PPXAI_WEB_DIR=$PWD/ppxai/web
+uv run ppxai-server`).
 
-**Tests:** terminal-hold unit (result persists post-exit); `/ack` transition +
-idempotency; retention-TTL reaper; disconnect-then-collect behavioral test.
+1. `/task run "summarize docs/README.md" --tools read_file` → on finish the
+   pane shows 📬 result ready + the held result + a Collect button;
+   `/task ls` shows 📬.
+2. **Close the pane, reopen via `/task ls`** — the result is still there
+   (served from `meta.json`; nothing was lost by disconnecting).
+3. `/task ack <id>` (or Collect) → `✅ collected`; `GET /runs/<id>` shows
+   `status:"finalized"`, `acked_at` set, result still present; a second ack
+   is a no-op 200.
+4. Retention: set `tools.agent.result_retention_s` low (e.g. 30), run
+   another task, wait past the TTL, then `/task ls` — the run shows
+   finalized (reaped on read, `agent_run_finalized {via:"retention"}` on its
+   event log).
+5. API-level: `~/.ppxai/runs/<id>/agent-0/state.json` shows the
+   `completed_pending_ack` snapshot, then `finalized` after ack.
 
-**Deliberately NOT yet:** interrupted-resume (T7).
+**Tests (landed):** `test_agent_runs.py::TestHoldAndAck` (7 — hold lands
+pending_ack + state.json snapshot + result_ready-instead-of-complete + badge
+exit, no-hold still completes, ack transition + idempotency (single finalize
+event), non-held/unknown ack rejected, reaper expires only stale holds,
+reaper disabled at 0/None); `TestAckRoute` (4 — 404, 409 not-held,
+ack→finalized + result retained + idempotent 200, GET reaps expired holds on
+single + list reads); `TestDisconnectThenCollectE2E` (1 — run finishes with
+no client attached, held result collected later, then finalized; ctx_client);
+`TestAgentConfig` (2 — `result_retention_s` whitelist);
+`test_task_controller_behavior.py` scenario 10 (ack POST + verb routing).
+Existing /task success assertions updated `completed` →
+`completed_pending_ack` (the T6 semantic change).
+
+**Deliberately NOT yet:** interrupted-resume (T7); artifact GC (finalized =
+GC-eligible marker only); auto-ack-on-view (explicit collect keeps the
+receipt in the user's hands — revisit if the friction annoys).
 
 ---
 

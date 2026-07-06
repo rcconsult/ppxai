@@ -29,11 +29,13 @@ class TaskRunView extends AgentRunView {
         this._events = [];
         this._onCancel = null;
         this._onRespond = null;
+        this._onAck = null;
         this._waiting = null;   // {kind, prompt, token, …} while parked (T5)
         this._metaEl = null;
         this._eventsEl = null;
         this._consentEl = null;
         this._cancelBtn = null;
+        this._ackBtn = null;
         if (meta) this._absorbMeta(meta);
         if (meta && meta.status) this._status = meta.status;
     }
@@ -52,7 +54,9 @@ class TaskRunView extends AgentRunView {
         return {
             pending: 'pending', running: 'running…', waiting: '✋ waiting',
             cancelling: 'cancelling…',
-            completed: '✅ completed', failed: '❌ failed',
+            completed: '✅ completed',
+            completed_pending_ack: '📬 result ready', finalized: '✅ collected',
+            failed: '❌ failed',
             cancelled: '⏹️ cancelled', interrupted: '⏸️ interrupted',
         }[status] || status;
     }
@@ -68,6 +72,7 @@ class TaskRunView extends AgentRunView {
             +   `<span class="agent-run-id" title="${esc(this._runId)}">${esc(this._runId)}</span>`
             +   `<span class="agent-run-status" data-status="${esc(this._status)}">`
             +     `${esc(this._statusLabel(this._status))}</span>`
+            +   `<button class="task-ack-btn" type="button" title="Collect the held result (finalize this run)">Collect</button>`
             +   `<button class="task-cancel-btn" type="button" title="Cancel this run">Cancel</button>`
             + `</div>`
             + (this._task ? `<div class="agent-run-task">${esc(this._task)}</div>` : '')
@@ -85,10 +90,15 @@ class TaskRunView extends AgentRunView {
         if (this._cancelBtn) {
             this._cancelBtn.addEventListener('click', () => { if (this._onCancel) this._onCancel(); });
         }
+        this._ackBtn = container.querySelector('.task-ack-btn');
+        if (this._ackBtn) {
+            this._ackBtn.addEventListener('click', () => { if (this._onAck) this._onAck(); });
+        }
         this._renderMeta();
         this._renderConsent();
         this._renderEvents();
         this._syncCancelBtn();
+        this._syncAckBtn();
     }
 
     unmount() {
@@ -97,6 +107,7 @@ class TaskRunView extends AgentRunView {
         this._eventsEl = null;
         this._consentEl = null;
         this._cancelBtn = null;
+        this._ackBtn = null;
     }
 
     // ── Controller hooks ──────────────────────────────────────────────────────
@@ -106,6 +117,9 @@ class TaskRunView extends AgentRunView {
 
     /** Wire the consent card's Approve/Deny to the controller (T5). */
     setOnRespond(fn) { this._onRespond = fn; }
+
+    /** Wire the Collect button (T6: ack a held result) to the controller. */
+    setOnAck(fn) { this._onAck = fn; }
 
     /** Drop the consent card (park answered elsewhere / run resumed). */
     clearWaiting() {
@@ -168,6 +182,7 @@ class TaskRunView extends AgentRunView {
             this._renderConsent();
         }
         this._syncCancelBtn();
+        this._syncAckBtn();
         return ok;
     }
 
@@ -188,6 +203,13 @@ class TaskRunView extends AgentRunView {
         if (!this._cancelBtn) return;
         const done = TaskRunView._TERMINAL.has(this._status) || this._status === 'cancelling';
         this._cancelBtn.style.display = done ? 'none' : '';
+    }
+
+    /** Collect is visible ONLY while a result is held (T6). */
+    _syncAckBtn() {
+        if (!this._ackBtn) return;
+        this._ackBtn.style.display =
+            this._status === 'completed_pending_ack' ? '' : 'none';
     }
 
     _egressLabel(n) {
@@ -290,6 +312,8 @@ class TaskRunView extends AgentRunView {
             case 'spawn_denied':      return `⛔ spawn denied: ${TaskRunView._short(d.reason, 80)}`;
             case 'agent_waiting':     return `✋ waiting (${d.kind || 'consent'}): ${TaskRunView._short(d.prompt, 80)}`;
             case 'agent_resumed':     return `▶ resumed — ${d.approved ? 'approved' : 'denied'}${d.via === 'timeout' ? ' (timed out)' : ''}`;
+            case 'agent_result_ready':   return `📬 result ready (${d.chars || 0} chars) — collect via the button or /task ack`;
+            case 'agent_run_finalized':  return `✅ collected${d.via === 'retention' ? ' (retention expired)' : ''}`;
             case 'subagent_spawned':  return `⑂ sub-agent ${d.child_run_id || ''}`;
             case 'subagent_finished': return `⑂ sub-agent ${d.status || 'done'}`;
             default: return String(ev.type);
@@ -297,7 +321,10 @@ class TaskRunView extends AgentRunView {
     }
 }
 
-TaskRunView._TERMINAL = new Set(['completed', 'failed', 'cancelled', 'interrupted']);
+TaskRunView._TERMINAL = new Set([
+    'completed', 'completed_pending_ack', 'finalized',
+    'failed', 'cancelled', 'interrupted',
+]);
 // Max live-log lines kept in the array AND the DOM (bounded in lock-step).
 TaskRunView._MAX_LOG_EVENTS = 200;
 

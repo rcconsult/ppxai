@@ -52,6 +52,8 @@ class AgentRunController {
      *   - setOnCancel(fn)  — a Cancel button that POSTs /runs/{id}/cancel.
      *   - setOnRespond(fn) — a consent card (T5) that POSTs /runs/{id}/respond
      *     with {token, approved, text}.
+     *   - setOnAck(fn)     — a Collect button (T6) that POSTs /runs/{id}/ack
+     *     to collect a held result (completed_pending_ack → finalized).
      */
     _wireView(view, runId) {
         if (view && typeof view.setOnCancel === 'function') {
@@ -59,6 +61,9 @@ class AgentRunController {
         }
         if (view && typeof view.setOnRespond === 'function') {
             view.setOnRespond((payload) => this.respond(runId, payload));
+        }
+        if (view && typeof view.setOnAck === 'function') {
+            view.setOnAck(() => this.ack(runId));
         }
     }
 
@@ -115,7 +120,10 @@ class AgentRunController {
         runs.slice(0, 20).forEach((r) => {
             const row = document.createElement('button');
             row.className = 'agent-run-row';
-            const icon = { completed: '✅', failed: '❌', running: '🤖', waiting: '✋' }[r.status] || 'ℹ️';
+            const icon = {
+                completed: '✅', completed_pending_ack: '📬', finalized: '✅',
+                failed: '❌', running: '🤖', waiting: '✋',
+            }[r.status] || 'ℹ️';
             row.textContent = `${icon} ${r.run_id}  ${r.status}  ${(r.task || '').slice(0, 50)}`;
             row.addEventListener('click', () => this.focus(r.run_id, r.task));
             list.appendChild(row);
@@ -233,6 +241,26 @@ class AgentRunController {
         return true;
     }
 
+    /**
+     * Collect a held result (T6): POST /runs/{id}/ack — the receipt that
+     * flips completed_pending_ack → finalized. The result body stays on the
+     * run record (ack only marks it collected / GC-eligible). Shared by the
+     * pane's Collect button (via _wireView) and the `/task ack` verb.
+     */
+    async ack(runId) {
+        if (!runId) { this.app.showSystemMessage('Usage: /task ack <id>'); return false; }
+        try {
+            await this.app.apiClient.post(`/v1/agent/runs/${runId}/ack`, {});
+        } catch (e) {
+            this.app.showSystemMessage(`❌ Could not ack ${runId}: ${e.message}`);
+            return false;
+        }
+        this.app.showSystemMessage(`📬 ${runId} — result collected (finalized)`);
+        const view = this._liveView(runId);
+        if (view) view.setStatus('finalized');
+        return true;
+    }
+
     /** Append a chat message; return its `.message-content` element (or null). */
     _messageBody(text) {
         const el = this.app.addMessage('system', text);
@@ -343,12 +371,19 @@ class AgentRunController {
      * reopening a finished run refreshes the pane WITHOUT re-spamming chat.
      */
     _renderTerminal(runId, run, announce) {
-        const icon = { completed: '✅', failed: '❌', cancelled: '⏹️', interrupted: '⏸️' }[run.status] || 'ℹ️';
+        const icon = {
+            completed: '✅', completed_pending_ack: '📬', finalized: '✅',
+            failed: '❌', cancelled: '⏹️', interrupted: '⏸️',
+        }[run.status] || 'ℹ️';
         const view = this._liveView(runId);
         if (view) { view.unpin(); view.setStatus(run.status); }
         if (announce) this.app.showSystemMessage(`${icon} ${runId} — ${run.status}`);
 
-        if (run.status === 'completed') {
+        if (AgentRunController._SUCCESS.has(run.status)) {
+            // completed / completed_pending_ack / finalized — all carry the
+            // result body. A held run (T6) renders it too; collecting is the
+            // pane's explicit Collect button / `/task ack`, never a silent
+            // auto-ack (the user decides when the receipt is issued).
             if (view) view.setResult(run.result || '');
             else this.app.addMessage('assistant', run.result || '(empty result)');
         } else {
@@ -426,15 +461,29 @@ class AgentRunController {
 
 // Terminal run statuses (ADR 0003: cancelled/interrupted are resumable
 // terminal states distinct from failed). Polling stops on any of these.
-AgentRunController._TERMINAL = new Set(['completed', 'failed', 'cancelled', 'interrupted']);
+// T6: completed_pending_ack (result held, run exited) and finalized
+// (collected) are both terminal for polling purposes.
+AgentRunController._TERMINAL = new Set([
+    'completed', 'completed_pending_ack', 'finalized',
+    'failed', 'cancelled', 'interrupted',
+]);
+
+// Success statuses whose record carries a result body to render.
+AgentRunController._SUCCESS = new Set([
+    'completed', 'completed_pending_ack', 'finalized',
+]);
 
 // Terminal SSE run-event types — the registry emits `agent_run_<status>`
 // (engine/agent_runs.py: complete/error explicitly, cancelled/interrupted via
 // `f"agent_run_{stop.status}"`). The live stream stays open after these, so the
 // tail loop must break on them. `agent_run_cancelling` is a transition, NOT
-// terminal (the real `agent_run_cancelled` follows).
+// terminal (the real `agent_run_cancelled` follows). T6: a held /task run
+// emits `agent_result_ready` INSTEAD of `agent_run_complete`; the later
+// `agent_run_finalized` (ack/retention) is also a stream-terminal marker for
+// any tail that reattached to a held run.
 AgentRunController._TERMINAL_EVENTS = new Set([
-    'agent_run_complete', 'agent_run_error', 'agent_run_cancelled', 'agent_run_interrupted',
+    'agent_run_complete', 'agent_result_ready', 'agent_run_finalized',
+    'agent_run_error', 'agent_run_cancelled', 'agent_run_interrupted',
 ]);
 
 

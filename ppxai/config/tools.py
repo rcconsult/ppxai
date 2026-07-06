@@ -182,6 +182,13 @@ def get_agent_config() -> Dict[str, Any]:
         # interactive consent seam (spawn_subagent today; ask-user later).
         # Override via `"tools": {"agent": {"consent_ttl_s": 900}}`.
         "consent_ttl_s": float(agent_config.get("consent_ttl_s", 300.0)),
+        # v1.19.x build plan T6 — how long a `completed_pending_ack` run holds
+        # its uncollected result before the lazy retention reaper finalizes it
+        # (seconds; reaped on the next read — no timer task). 0 disables the
+        # backstop (holds persist until an explicit /ack). Finalizing never
+        # deletes data — it only marks the run GC-eligible.
+        # Override via `"tools": {"agent": {"result_retention_s": 86400}}`.
+        "result_retention_s": float(agent_config.get("result_retention_s", 3600.0)),
         # v1.19.0 — the tool-capable `/v1/agent/task` tier ships DEFAULT-OFF.
         # The tier is sandboxed in-process only (no OS isolation; ADR 0003
         # tier-d deferred) and is safe ONLY for trusted operators (threat model

@@ -564,6 +564,20 @@ class TestAgentConfig:
         )
         assert tools_cfg.get_agent_config()["consent_ttl_s"] == 42.0
 
+    def test_result_retention_defaults_3600(self, monkeypatch):
+        # T6: same whitelist trap — result_retention_s must be surfaced or the
+        # retention reaper silently ignores the operator's config.
+        from ppxai.config import tools as tools_cfg
+        monkeypatch.setattr(tools_cfg, "get_tool_config", lambda name: {})
+        assert tools_cfg.get_agent_config()["result_retention_s"] == 3600.0
+
+    def test_result_retention_reads_from_config(self, monkeypatch):
+        from ppxai.config import tools as tools_cfg
+        monkeypatch.setattr(
+            tools_cfg, "get_tool_config", lambda name: {"result_retention_s": 0}
+        )
+        assert tools_cfg.get_agent_config()["result_retention_s"] == 0.0
+
 
 class TestAgentRunRoutes:
     def test_list_empty(self, client):
@@ -600,7 +614,10 @@ class TestAgentRunRoutes:
 
         return _FakeProvider()
 
-    _TERMINAL = ("completed", "failed", "cancelled", "interrupted")
+    # T6 grew the set again: a held /task run lands completed_pending_ack
+    # (finalized after ack); the /run tier still lands completed.
+    _TERMINAL = ("completed", "completed_pending_ack", "finalized",
+                 "failed", "cancelled", "interrupted")
 
     @classmethod
     def _poll_terminal(cls, c, run_id, timeout_s=5.0):
@@ -784,7 +801,7 @@ class TestAgentRunRoutes:
             "task": "t", "tools": ["read_file"], "provider": "openai", "model": "m",
         })
         assert r.status_code == 200          # accepted, not 400-by-class
-        assert r.json()["status"] in ("running", "completed")
+        assert r.json()["status"] in ("running", "completed", "completed_pending_ack")
         assert len(reg.list_runs()) == 1     # run was minted
 
     def test_task_enforces_grant_end_to_end(self, client, monkeypatch):
@@ -848,7 +865,8 @@ class TestAgentRunRoutes:
         assert resp.status_code == 200
         rid = resp.json()["run_id"]
         one = self._poll_terminal(c, rid)
-        assert one["status"] == "completed"
+        # T6: a successful top-level /task run HOLDS its result until /ack.
+        assert one["status"] == "completed_pending_ack"
         assert one["result"] == "done"
         # AC-1: the off-grant tool was denied — base never ran it
         assert isinstance(stub.tool_manager, ScopedToolManager)
@@ -916,7 +934,7 @@ class TestAgentRunRoutes:
         assert resp.status_code == 200
         rid = resp.json()["run_id"]
         one = self._poll_terminal(c, rid)
-        assert one["status"] == "completed"
+        assert one["status"] == "completed_pending_ack"  # T6: held until /ack
         # the allowlist persisted on the run meta (provenance/audit)
         assert one["network"] == ["api.github.com"]
         # AC-2: evil.com NEVER fetched; only the allowed host ran
@@ -1076,7 +1094,7 @@ class TestAgentRunRoutes:
         })
         rid = resp.json()["run_id"]
         one = self._poll_terminal(c, rid)
-        assert one["status"] == "completed"
+        assert one["status"] == "completed_pending_ack"  # T6: held until /ack
         assert one["resumable"] is False
 
     def test_task_token_budget_interrupts(self, client, monkeypatch):
@@ -1257,7 +1275,8 @@ class TestTaskSpecFiles:
 
         return _FakeProvider()
 
-    _TERMINAL = ("completed", "failed", "cancelled", "interrupted")
+    _TERMINAL = ("completed", "completed_pending_ack", "finalized",
+                 "failed", "cancelled", "interrupted")
 
     @classmethod
     def _poll_terminal(cls, c, run_id, timeout_s=5.0):
@@ -1868,8 +1887,10 @@ class TestConsentParkE2E:
         okr = c.post(f"/v1/agent/runs/{rid}/respond",
                      json={"token": w["token"], "approved": True})
         assert okr.status_code == 200 and okr.json()["ok"] is True
-        done = self._poll_status(c, rid, ("completed", "failed"))
-        assert done["status"] == "completed", done
+        # T6: the top-level /task run HOLDS its result; the child (collected
+        # inline by the parent) lands plain completed.
+        done = self._poll_status(c, rid, ("completed_pending_ack", "failed"))
+        assert done["status"] == "completed_pending_ack", done
         assert "completed" in done["result"] and "child done" in done["result"]
         children = [m for m in reg.list_runs() if m.parent_run_id == rid]
         assert len(children) == 1 and children[0].status == "completed"
@@ -1886,10 +1907,10 @@ class TestConsentParkE2E:
         okr = c.post(f"/v1/agent/runs/{rid}/respond",
                      json={"token": one["waiting"]["token"], "approved": False})
         assert okr.status_code == 200
-        done = self._poll_status(c, rid, ("completed", "failed"))
-        # The RUN completes (the denial is the tool's answer, not a run error);
-        # the spawn itself was refused and no child was minted.
-        assert done["status"] == "completed"
+        done = self._poll_status(c, rid, ("completed_pending_ack", "failed"))
+        # The RUN succeeds (the denial is the tool's answer, not a run error)
+        # and holds its result (T6); the spawn itself was refused, no child.
+        assert done["status"] == "completed_pending_ack"
         assert "cannot spawn sub-agent" in done["result"]
         assert [m for m in reg.list_runs() if m.parent_run_id == rid] == []
         evs = c.get(f"/v1/agent/runs/{rid}/events?category=consent").json()["events"]
@@ -1907,11 +1928,235 @@ class TestConsentParkE2E:
         )
         rid = self._launch(c, monkeypatch)
         self._poll_status(c, rid, ("waiting",))
-        done = self._poll_status(c, rid, ("completed", "failed"))
-        assert done["status"] == "completed"
+        done = self._poll_status(c, rid, ("completed_pending_ack", "failed"))
+        assert done["status"] == "completed_pending_ack"
         assert "cannot spawn sub-agent" in done["result"]
         assert [m for m in reg.list_runs() if m.parent_run_id == rid] == []
         evs = c.get(f"/v1/agent/runs/{rid}/events?category=consent").json()["events"]
         resumed = next(e for e in evs if e["type"] == "agent_resumed")
         assert resumed["data"]["via"] == "timeout"
         assert resumed["data"]["approved"] is False
+
+
+# ---------------------------------------------------------------------------
+# T6 — two-phase termination: completed_pending_ack hold + POST /ack + reaper
+# ---------------------------------------------------------------------------
+
+
+class TestHoldAndAck:
+    """Registry-level T6: hold-on-success, ack transition + idempotency,
+    the lazy retention reaper, and the state.json snapshots."""
+
+    @staticmethod
+    async def _drive_to_done(registry, meta, body="held body"):
+        import asyncio
+
+        async def runner(m):
+            return body
+
+        registry.run_in_background(meta, runner)
+        for _ in range(200):
+            if registry.get_run(meta.run_id).status not in ("pending", "running"):
+                return registry.get_run(meta.run_id)
+            await asyncio.sleep(0.01)
+        raise AssertionError("run never finished")
+
+    @pytest.mark.asyncio
+    async def test_hold_result_lands_pending_ack_with_snapshot(self, registry):
+        meta = registry.start_run(task="t", tools=["read_file"], provider="p",
+                                  model="m", hold_result=True)
+        held = await self._drive_to_done(registry, meta)
+        assert held.status == "completed_pending_ack"
+        assert held.result == "held body"          # result persists post-exit
+        assert registry.get_control(meta.run_id) is None  # run exited
+        state = registry._store.load_state(meta.run_id)
+        assert state["status"] == "completed_pending_ack"
+        assert state["result_chars"] == len("held body")
+        types = [e.type for e in registry.read_events(meta.run_id)]
+        assert "agent_result_ready" in types
+        assert "agent_run_complete" not in types   # held → result_ready INSTEAD
+        assert registry.active_summary() == []     # exited → out of the badge set
+
+    @pytest.mark.asyncio
+    async def test_no_hold_still_lands_completed(self, registry):
+        # The tool-free /run tier (and sub-agent children) never hold.
+        meta = registry.start_run(task="t", tools=[], provider="p", model="m")
+        one = await self._drive_to_done(registry, meta, body="plain")
+        assert one.status == "completed"
+        types = [e.type for e in registry.read_events(meta.run_id)]
+        assert "agent_run_complete" in types
+        assert "agent_result_ready" not in types
+
+    def _seed_held(self, registry, finished_ago=0.0):
+        import time as _t
+
+        meta = registry.start_run(task="t", tools=["read_file"], provider="p",
+                                  model="m", hold_result=True)
+        registry.finish_run(meta, status="completed_pending_ack", result="r")
+        if finished_ago:
+            meta.finished_at = _t.time() - finished_ago
+            registry._store.persist_meta(meta)
+        return meta
+
+    def test_ack_transitions_and_is_idempotent(self, registry):
+        meta = self._seed_held(registry)
+        ok, why = registry.ack_run(meta.run_id)
+        assert ok, why
+        one = registry.get_run(meta.run_id)
+        assert one.status == "finalized" and one.acked_at is not None
+        assert one.result == "r"                   # ack never deletes the body
+        state = registry._store.load_state(meta.run_id)
+        assert state["status"] == "finalized" and state["via"] == "ack"
+        # Idempotent second ack: still ok, no duplicate finalize event.
+        ok2, why2 = registry.ack_run(meta.run_id)
+        assert ok2 and "already" in why2
+        types = [e.type for e in registry.read_events(meta.run_id)]
+        assert types.count("agent_run_finalized") == 1
+
+    def test_ack_non_held_rejected(self, registry):
+        meta = registry.start_run(task="t", tools=[], provider="p", model="m")
+        registry.finish_run(meta, status="completed", result="x")
+        ok, why = registry.ack_run(meta.run_id)
+        assert not ok and "completed_pending_ack" in why
+        ok, why = registry.ack_run("run_nope")
+        assert not ok and "unknown" in why
+
+    def test_reaper_finalizes_expired_hold_only(self, registry):
+        fresh = self._seed_held(registry)
+        stale = self._seed_held(registry, finished_ago=100.0)
+        registry.maybe_reap_hold(registry.get_run(fresh.run_id), 50.0)
+        registry.maybe_reap_hold(registry.get_run(stale.run_id), 50.0)
+        assert registry.get_run(fresh.run_id).status == "completed_pending_ack"
+        reaped = registry.get_run(stale.run_id)
+        assert reaped.status == "finalized" and reaped.acked_at is not None
+        assert registry._store.load_state(stale.run_id)["via"] == "retention"
+        types = [e.type for e in registry.read_events(stale.run_id)]
+        assert "agent_run_finalized" in types
+
+    def test_reaper_disabled_when_retention_unset(self, registry):
+        stale = self._seed_held(registry, finished_ago=1e6)
+        registry.maybe_reap_hold(registry.get_run(stale.run_id), 0)
+        registry.maybe_reap_hold(registry.get_run(stale.run_id), None)
+        assert registry.get_run(stale.run_id).status == "completed_pending_ack"
+
+
+class TestAckRoute:
+    """POST /v1/agent/runs/{id}/ack + the lazy reap on the GET read paths."""
+
+    def _seed_held(self, reg, finished_ago=0.0):
+        import time as _t
+
+        m = reg.start_run(task="t", tools=["read_file"], provider="p",
+                          model="m", hold_result=True)
+        reg.finish_run(m, status="completed_pending_ack", result="held")
+        if finished_ago:
+            m.finished_at = _t.time() - finished_ago
+            reg._store.persist_meta(m)
+        return m
+
+    def test_unknown_run_404(self, client):
+        c, _ = client
+        assert c.post("/v1/agent/runs/run_nope/ack").status_code == 404
+
+    def test_not_held_409(self, client):
+        c, reg = client
+        m = reg.start_run(task="t", tools=[], provider="p", model="m")
+        reg.finish_run(m, status="completed", result="x")
+        r = c.post(f"/v1/agent/runs/{m.run_id}/ack")
+        assert r.status_code == 409
+        assert "completed_pending_ack" in r.json()["detail"]
+
+    def test_ack_held_then_idempotent(self, client):
+        c, reg = client
+        m = self._seed_held(reg)
+        r = c.post(f"/v1/agent/runs/{m.run_id}/ack")
+        assert r.status_code == 200
+        assert r.json() == {"ok": True, "run_id": m.run_id, "status": "finalized"}
+        one = c.get(f"/v1/agent/runs/{m.run_id}").json()
+        assert one["status"] == "finalized"
+        assert one["result"] == "held"             # collection ≠ deletion
+        assert one["acked_at"] is not None
+        # idempotent: a second ack (UI button + typed verb racing) is 200
+        assert c.post(f"/v1/agent/runs/{m.run_id}/ack").status_code == 200
+
+    def test_get_reaps_expired_hold(self, client, monkeypatch):
+        c, reg = client
+        from ppxai.server.routes import agent_v1
+        real = agent_v1.get_agent_config
+        monkeypatch.setattr(
+            agent_v1, "get_agent_config",
+            lambda: {**real(), "result_retention_s": 50.0},
+        )
+        stale = self._seed_held(reg, finished_ago=100.0)
+        fresh = self._seed_held(reg)
+        one = c.get(f"/v1/agent/runs/{stale.run_id}").json()
+        assert one["status"] == "finalized"        # reaped on read
+        listed = {r["run_id"]: r for r in c.get("/v1/agent/runs").json()["runs"]}
+        assert listed[stale.run_id]["status"] == "finalized"
+        assert listed[fresh.run_id]["status"] == "completed_pending_ack"
+
+
+class TestDisconnectThenCollectE2E:
+    """T6 behavioral core: the run finishes while NO client is attached; the
+    held result is still collectable later (from disk, via the registry),
+    then /ack finalizes it. Uses ctx_client — the background run must
+    complete on the persistent portal loop."""
+
+    def test_disconnect_then_collect(self, ctx_client, monkeypatch):
+        import time as _t
+
+        c, reg = ctx_client
+        from ppxai.server.routes import agent_v1
+        from ppxai.engine.types import Event, EventType
+        from ppxai.engine.providers.openai_compat import OpenAICompatibleProvider
+
+        class _P(OpenAICompatibleProvider):
+            def __init__(self):
+                pass
+        monkeypatch.setattr(agent_v1, "_build_provider", lambda name: _P())
+        monkeypatch.setattr(agent_v1, "_validate_provider_or_400", lambda name: None)
+
+        class _StubEngine:
+            def __init__(self):
+                self.tool_manager = type("TM", (), {"max_iterations": 3})()
+
+            def set_provider(self, p):
+                pass
+
+            def set_model(self, m):
+                pass
+
+            def enable_tools(self):
+                pass
+
+            async def chat(self, task, stream=False):
+                yield Event(type=EventType.STREAM_END, data="the held answer")
+
+        monkeypatch.setattr(agent_v1, "EngineClient", lambda: _StubEngine(),
+                            raising=False)
+
+        r = c.post("/v1/agent/task", json={
+            "task": "do it", "tools": ["read_file"], "provider": "p", "model": "m",
+        })
+        assert r.status_code == 200, r.text
+        rid = r.json()["run_id"]
+
+        # "Disconnect": no client watches anything; just wait for the hold.
+        deadline = _t.monotonic() + 5.0
+        one = None
+        while _t.monotonic() < deadline:
+            one = c.get(f"/v1/agent/runs/{rid}").json()
+            if one["status"] == "completed_pending_ack":
+                break
+            _t.sleep(0.02)
+        assert one and one["status"] == "completed_pending_ack", one
+        assert one["result"] == "the held answer"
+        # the result_ready marker is on the durable event log
+        evs = c.get(f"/v1/agent/runs/{rid}/events?category=result").json()["events"]
+        assert any(e["type"] == "agent_result_ready" for e in evs)
+
+        # Collect: ack → finalized; the result stays on the record.
+        assert c.post(f"/v1/agent/runs/{rid}/ack").status_code == 200
+        after = c.get(f"/v1/agent/runs/{rid}").json()
+        assert after["status"] == "finalized"
+        assert after["result"] == "the held answer"

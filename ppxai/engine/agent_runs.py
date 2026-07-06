@@ -63,9 +63,11 @@ class RunMeta:
 
     run_id: str
     task: str
-    # pending | running | waiting | cancelling | completed | failed |
-    # cancelled | interrupted (Inc 6 adds cancelling/cancelled/interrupted;
-    # T5 adds waiting — parked alive on a resume token, see park_run)
+    # pending | running | waiting | cancelling | completed |
+    # completed_pending_ack | finalized | failed | cancelled | interrupted
+    # (Inc 6 adds cancelling/cancelled/interrupted; T5 adds waiting — parked
+    # alive on a resume token, see park_run; T6 adds completed_pending_ack —
+    # run exited, result HELD until POST /ack collects it → finalized)
     status: str = "pending"
     agent_n: int = 0  # slot index; 0 = top-level run, >0 = sub-agents (Inc 7)
     parent_run_id: Optional[str] = None  # set for sub-agents (Inc 7)
@@ -82,6 +84,14 @@ class RunMeta:
     # only, so exposing it on the meta is deliberate: the owner IS the
     # principal allowed to answer).
     waiting: Optional[dict] = None
+    # T6: two-phase termination. hold_result=True (set by the /task route for
+    # TOP-LEVEL tool-capable runs) makes a successful run land in
+    # `completed_pending_ack` instead of `completed` — the run has exited
+    # (budget/CPU freed, sandbox torn down) but the result is HELD until
+    # POST .../ack collects it (→ finalized). Sub-agent children and the
+    # tool-free /run tier never hold (the parent / the caller collects inline).
+    hold_result: bool = False
+    acked_at: Optional[float] = None  # T6: when /ack or the retention reaper finalized the run
     created_at: float = 0.0
     started_at: Optional[float] = None  # set when execution begins (Inc 2 background)
     finished_at: Optional[float] = None
@@ -432,8 +442,12 @@ class AgentRunRegistry:
         self._active: dict[str, dict[str, Any]] = {}
 
     # -- Inc 9: active-run summary + change notification ------------------
+    # T6: completed_pending_ack and finalized are both "run has exited" states
+    # (out of the active/badge set) — the ack distinction is about whether the
+    # RESULT was collected, not whether work is still consuming resources.
     _TERMINAL_STATUSES = frozenset(
-        {"completed", "failed", "cancelled", "interrupted"}
+        {"completed", "completed_pending_ack", "finalized",
+         "failed", "cancelled", "interrupted"}
     )
 
     def on_change(self, callback) -> None:
@@ -505,6 +519,7 @@ class AgentRunRegistry:
         network: Optional[list] = None,
         budget: Optional[dict] = None,
         owner: Optional[str] = None,
+        hold_result: bool = False,
     ) -> RunMeta:
         """Mint a run, persist it in `pending` state, return its meta.
 
@@ -525,6 +540,7 @@ class AgentRunRegistry:
             model=model,
             parent_run_id=parent_run_id,
             owner=owner,
+            hold_result=hold_result,
             created_at=time.time(),
         )
         self._store.persist_meta(meta)
@@ -770,6 +786,71 @@ class AgentRunRegistry:
         )
         return (True, "")
 
+    # --- two-phase termination: ack + retention reaper (T6) ---------------
+
+    def _finalize(self, meta: RunMeta, *, via: str) -> None:
+        """completed_pending_ack → finalized (result collected / retention
+        expired). The record and result body REMAIN on disk — `finalized`
+        marks the run GC-eligible, it does not delete anything."""
+        now = time.time()
+        meta.status = "finalized"
+        meta.acked_at = now
+        self._store.persist_meta(meta)
+        self._index_active(meta)  # defensive; the run left the index at hold time
+        self._store.persist_state(meta.run_id, {
+            "schema": 1,
+            "run_id": meta.run_id,
+            "status": "finalized",
+            "via": via,
+            "acked_at": now,
+            "updated_at": now,
+        }, agent_n=meta.agent_n)
+        self.emit_event(
+            meta.run_id, "agent_run_finalized", level="info",
+            category="lifecycle", data={"via": via},
+        )
+        self._notify_change()
+        logger.info(f"Agent run {meta.run_id} finalized (via {via})")
+
+    def ack_run(self, run_id: str) -> tuple[bool, str]:
+        """Collect a held result (T6): `completed_pending_ack → finalized`.
+
+        Idempotent — acking an already-finalized run is (True, "already
+        finalized"), so a UI that acks on view and a user typing `/task ack`
+        can't race each other into an error. Any other status is (False,
+        reason): there is nothing held to collect."""
+        meta = self._store.load_meta(run_id)
+        if meta is None:
+            return (False, "unknown run")
+        if meta.status == "finalized":
+            return (True, "already finalized")
+        if meta.status != "completed_pending_ack":
+            return (
+                False,
+                f"status is {meta.status!r} — only a completed_pending_ack "
+                "run holds a result to collect",
+            )
+        self._finalize(meta, via="ack")
+        return (True, "")
+
+    def maybe_reap_hold(
+        self, meta: RunMeta, retention_s: Optional[float]
+    ) -> RunMeta:
+        """Lazy retention-TTL backstop (T6): finalize a held run whose
+        retention window has elapsed. Called from the read paths (GET
+        /runs, GET /runs/{id}) with an already-loaded meta — no timer task,
+        no extra disk reads; an expired hold is reaped the next time anyone
+        looks at it. retention_s None/<=0 disables reaping."""
+        if (
+            retention_s
+            and retention_s > 0
+            and meta.status == "completed_pending_ack"
+            and meta.finished_at
+            and time.time() - meta.finished_at >= retention_s
+        ):
+            self._finalize(meta, via="retention")
+        return meta
+
     def run_in_background(
         self,
         meta: RunMeta,
@@ -781,7 +862,9 @@ class AgentRunRegistry:
         `runner(meta)` — an async callable that performs the actual work
         (the route supplies one that calls `provider.oneshot`) and returns
         the result body. On success the run is finished `completed` with
-        that body; on any exception it's finished `failed` with the error.
+        that body — or `completed_pending_ack` when `meta.hold_result` is
+        set (T6 two-phase termination: the result is HELD until /ack); on
+        any exception it's finished `failed` with the error.
 
         Fire-and-track: the task is held in `self._tasks` (and, keyed by id,
         in `self._run_tasks`) so it isn't GC'd, and removed on completion. The
@@ -813,11 +896,34 @@ class AgentRunRegistry:
         async def _drive() -> None:
             try:
                 body = await runner(meta)
-                self.finish_run(meta, status="completed", result=body)
-                self.emit_event(
-                    meta.run_id, "agent_run_complete", level="info",
-                    category="result", data={"chars": len(body or "")},
-                )
+                if getattr(meta, "hold_result", False):
+                    # T6 two-phase termination: the run EXITS (this task ends;
+                    # controls/sandbox are torn down in finally) but the result
+                    # is HELD until POST .../ack collects it. A disconnected
+                    # UI can't lose the result — meta.json + state.json keep it
+                    # across a restart; the retention TTL is the GC backstop.
+                    self.finish_run(
+                        meta, status="completed_pending_ack", result=body
+                    )
+                    now = time.time()
+                    self._store.persist_state(meta.run_id, {
+                        "schema": 1,
+                        "run_id": meta.run_id,
+                        "status": "completed_pending_ack",
+                        "result_ready_at": now,
+                        "result_chars": len(body or ""),
+                        "updated_at": now,
+                    }, agent_n=meta.agent_n)
+                    self.emit_event(
+                        meta.run_id, "agent_result_ready", level="info",
+                        category="result", data={"chars": len(body or "")},
+                    )
+                else:
+                    self.finish_run(meta, status="completed", result=body)
+                    self.emit_event(
+                        meta.run_id, "agent_run_complete", level="info",
+                        category="result", data={"chars": len(body or "")},
+                    )
             except RunStopped as stop:
                 # Expected non-failure stop (cancel / budget). Record the
                 # subclass's status + resumable flag, not `failed`.

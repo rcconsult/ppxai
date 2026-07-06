@@ -12,13 +12,20 @@ module is the HTTP surface over `engine.agent_runs.AgentRunRegistry`:
     POST /v1/agent/runs/<id>/cancel → cooperative cancel (Inc 6)
     POST /v1/agent/runs/<id>/respond → answer a `waiting` park (T5),
                                     token-checked + owner-scoped
+    POST /v1/agent/runs/<id>/ack  → collect a held result (T6):
+                                    completed_pending_ack → finalized
 
 Execution model: runs execute in the **background** (Inc 2). A POST
 validates + builds the provider synchronously (a bad provider 400s up
 front), mints the run, fires it into a background `asyncio.Task`, and
 returns immediately with `status:"running"`. Poll the meta or tail the
 event stream to watch it reach a terminal status (completed / failed /
-cancelled / interrupted).
+cancelled / interrupted). T6: a successful TOP-LEVEL `/task` run lands in
+`completed_pending_ack` — the run has exited but its result is HELD until
+`POST .../ack` collects it (→ `finalized`), so a disconnected UI never
+loses a result; `tools.agent.result_retention_s` is the lazy-reaped
+GC backstop. The tool-free `/run` tier and sub-agent children still land
+`completed` (their caller/parent collects inline).
 
 Two tiers:
 - `/run` is tool-FREE (oneshot, safe). Its `tools` field is recorded for
@@ -258,6 +265,9 @@ class RunMetaResponse(BaseModel):
     # token here is deliberate (it's what the consent card / `/task respond`
     # presents back to POST .../respond).
     waiting: Optional[dict] = None
+    # T6: when the held result was collected (/ack) or retention-reaped;
+    # None until the run is finalized.
+    acked_at: Optional[float] = None
     created_at: float = 0.0
     started_at: Optional[float] = None
     finished_at: Optional[float] = None
@@ -279,6 +289,7 @@ class RunMetaResponse(BaseModel):
             budget=dict(getattr(m, "budget", {}) or {}),
             resumable=bool(getattr(m, "resumable", False)),
             waiting=getattr(m, "waiting", None),
+            acked_at=getattr(m, "acked_at", None),
             created_at=m.created_at,
             started_at=m.started_at,
             finished_at=m.finished_at,
@@ -776,6 +787,11 @@ async def create_agent_task(req: AgentTaskRequest, request: Request) -> AgentRun
         network=eff["network"],
         budget=eff["budget"],
         owner=_caller_owner(request),
+        # T6 two-phase termination: a top-level /task run HOLDS its result
+        # (completed_pending_ack) until POST .../ack collects it, so a
+        # disconnected UI never loses it. Sub-agent children don't hold —
+        # the awaiting parent is their collector.
+        hold_result=True,
     )
 
     runner = build_task_runner(
@@ -994,7 +1010,10 @@ async def list_agent_runs(request: Request) -> RunListResponse:
     (loopback UX)."""
     registry = get_agent_run_registry()
     caller = _caller_owner(request)
-    runs = registry.list_runs()
+    # T6: lazy retention backstop — an expired completed_pending_ack hold is
+    # finalized the next time anyone lists the runs (no timer task).
+    retention = float(get_agent_config().get("result_retention_s", 3600.0))
+    runs = [registry.maybe_reap_hold(m, retention) for m in registry.list_runs()]
     if caller is not None:
         runs = [m for m in runs if m.owner is None or m.owner == caller]
     return RunListResponse(
@@ -1011,6 +1030,9 @@ async def get_agent_run(run_id: str, request: Request) -> RunMetaResponse:
     if meta is None:
         raise HTTPException(status_code=404, detail=f"Unknown run_id: {run_id!r}")
     _authorize_run_access(request, meta)
+    # T6: single-run lazy reap (already-loaded meta — no extra disk read).
+    retention = float(get_agent_config().get("result_retention_s", 3600.0))
+    meta = registry.maybe_reap_hold(meta, retention)
     return RunMetaResponse.from_meta(meta)
 
 
@@ -1088,6 +1110,29 @@ async def respond_agent_run(
             detail=f"Run {run_id!r} cannot accept a response: {why}.",
         )
     return {"ok": True, "run_id": run_id, "status": "running"}
+
+
+@router.post("/runs/{run_id}/ack")
+async def ack_agent_run(run_id: str, request: Request) -> dict:
+    """Collect a held result (T6): `completed_pending_ack → finalized`.
+
+    The run already exited (tokens/CPU freed, sandbox torn down) — ack is
+    the collection receipt that makes the record GC-eligible. Idempotent:
+    acking a finalized run is 200 (a UI collect and a typed `/task ack`
+    can't race into an error). 404 unknown run, 403 not the owner (Inc 8b),
+    409 when the run holds nothing (any other status)."""
+    registry = get_agent_run_registry()
+    meta = registry.get_run(run_id)
+    if meta is None:
+        raise HTTPException(status_code=404, detail=f"Unknown run_id: {run_id!r}")
+    _authorize_run_access(request, meta)
+    ok, why = registry.ack_run(run_id)
+    if not ok:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Run {run_id!r} cannot be acked: {why}.",
+        )
+    return {"ok": True, "run_id": run_id, "status": "finalized"}
 
 
 def _parse_categories(category: Optional[str]) -> Optional[set[str]]:
