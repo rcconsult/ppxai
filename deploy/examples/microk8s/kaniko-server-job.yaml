@@ -1,0 +1,43 @@
+# Kaniko build job for coder-server image.
+# Uses the microk8s built-in registry (container-registry namespace).
+#
+# Usage:
+#   microk8s kubectl delete job build-coder-server -n coder --ignore-not-found
+#   microk8s kubectl apply -f deploy/microk8s/kaniko-server-job.yaml
+#   microk8s kubectl logs -f job/build-coder-server -n coder
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: build-coder-server
+  namespace: coder
+  labels:
+    app.kubernetes.io/name: coder
+    app.kubernetes.io/component: build
+spec:
+  ttlSecondsAfterFinished: 600
+  template:
+    spec:
+      restartPolicy: Never
+      initContainers:
+        - name: wait-for-registry
+          image: busybox
+          command: ['sh', '-c', 'until nc -z registry.container-registry.svc.cluster.local 5000; do echo "waiting for registry..."; sleep 3; done']
+      containers:
+        - name: kaniko
+          image: gcr.io/kaniko-project/executor:latest
+          args:
+            - --dockerfile=/workspace/deploy/images/server/Dockerfile
+            - --context=dir:///workspace
+            - --destination=registry.container-registry.svc.cluster.local:5000/coder-server:latest
+            - --insecure
+            - --skip-tls-verify
+            - --cache=false
+          volumeMounts:
+            - name: source
+              mountPath: /workspace
+      volumes:
+        - name: source
+          hostPath:
+            path: /path/to/ppxai
+            type: Directory

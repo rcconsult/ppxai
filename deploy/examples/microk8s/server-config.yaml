@@ -1,0 +1,254 @@
+# coder-server-config ConfigMap — mounted into every server pod at
+# /root/.ppxai/ppxai-config.json
+# API keys come from the coder-api-keys Secret (env vars); this file
+# holds only structural provider/model configuration.
+#
+# This file is the source of truth for the deployed coder ConfigMap.
+# Last sync from cluster: 2026-04-29.
+# Sync workflow:
+#   1. Edit this file and `kubectl apply -f server-config.yaml`
+#   2. OR edit the live ConfigMap and `kubectl get configmap ... -o jsonpath='{.data.ppxai-config\.json}' > /tmp/cfg.json` then sync back here.
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: coder-server-config
+  namespace: coder
+  labels:
+    app.kubernetes.io/name: coder
+    app.kubernetes.io/component: server-config
+data:
+  ppxai-config.json: |
+    {
+      "bootstrap": {
+        "enabled": true,
+        "files": [
+          "AGENTS.md",
+          "CLAUDE.md",
+          "INSTRUCTIONS.md"
+        ]
+      },
+      "default_provider": "vllm-qwen36",
+      "providers": {
+        "dgx-spark": {
+          "api_key_env": "VLLM_API_KEY",
+          "base_url": "http://dgx-spark.internal.example:8000/v1",
+          "capabilities": {
+            "native_tool_calling": true,
+            "realtime_info": true,
+            "weather": true,
+            "web_fetch": true,
+            "web_search": true
+          },
+          "coding_model": "Qwen/Qwen3.6-35B-A3B-FP8",
+          "default_model": "Qwen/Qwen3.6-35B-A3B-FP8",
+          "generation_params": {
+            "frequency_penalty": 0,
+            "temperature": 0.2,
+            "top_p": 0.9
+          },
+          "models": {
+            "Qwen/Qwen3.6-35B-A3B-FP8": {
+              "context_limit": 131072,
+              "description": "MoE: 35B total / 3B active, FP8, DGX Spark GB10. Note: HF config supports 262K but vLLM is launched with --max-model-len 131072; advertising the server's actual ceiling so ppxai's context-budget warnings fire before the model rejects.",
+              "max_tokens": 8192,
+              "name": "Qwen3.6 35B-A3B FP8 (MoE)"
+            }
+          },
+          "name": "DGX Spark (Qwen3.6 35B-A3B)",
+          "system_prompt": "You are a helpful AI coding assistant running on DGX Spark. Be concise and direct.\n\nCRITICAL TOOL RULES:\n1. Call tools directly using native function calling - NEVER output XML like <tool_call>\n2. Read the COMPLETE tool result. If it contains 'FAILED' or 'Error:', say 'The operation failed: [error]' - do NOT claim success\n3. After repeated failure (2+ attempts), STOP and report the error\n4. For apply_patch: use unified diff with '--- a/path', '+++ b/path', @@ markers, 3+ context lines\n5. For multi-file tasks, read ALL files - not just the first 2\n6. Complete ALL steps in multi-step tasks - do not stop at 3/4\n7. For office-format files, PREFER native tools over shell+python: read_pdf / get_pdf_page_image for .pdf, list_pptx_slides / read_pptx_slide_text / render_pptx_slide / summarize_pptx_visual for .pptx, list_excel_sheets / read_excel_sheet for .xlsx, read_docx for .docx, read_csv / list_csv_columns for .csv. Only fall back to shell+python (e.g. python-pptx, openpyxl) when the native tool cannot do what's needed (e.g. style editing, chart creation).",
+          "tool_calling": {
+            "fallback_on_empty": true,
+            "mode": "native",
+            "strip_json_from_text": true
+          }
+        },
+        "perplexity": {
+          "api_key_env": "PERPLEXITY_API_KEY",
+          "base_url": "https://api.perplexity.ai",
+          "capabilities": {
+            "native_tool_calling": false,
+            "realtime_info": true,
+            "weather": true,
+            "web_fetch": true,
+            "web_search": true
+          },
+          "coding_model": "sonar-pro",
+          "default_model": "sonar-pro",
+          "generation_params": {
+            "frequency_penalty": 0.15,
+            "temperature": 0.2,
+            "top_p": 0.9
+          },
+          "models": {
+            "sonar": {
+              "context_limit": 128000,
+              "description": "Lightweight search model with real-time grounding",
+              "max_tokens": 2048,
+              "name": "Sonar"
+            },
+            "sonar-pro": {
+              "context_limit": 200000,
+              "description": "Advanced search model for complex queries (200K context)",
+              "max_tokens": 8192,
+              "name": "Sonar Pro"
+            },
+            "sonar-reasoning-pro": {
+              "context_limit": 128000,
+              "description": "Precision reasoning with Chain of Thought (DeepSeek-R1)",
+              "max_tokens": 12288,
+              "name": "Sonar Reasoning Pro"
+            }
+          },
+          "name": "Perplexity AI",
+          "system_prompt": "You have two capabilities: (1) NATIVE WEB SEARCH for research, facts, and current information - use this automatically for questions and cite sources as markdown links. (2) EXTERNAL TOOLS for file operations, shell commands, and editing - when tools are available and the user asks to DO something (cd, ls, edit, fix, run, create, analyze), execute the appropriate tool immediately instead of explaining how. For actions: act first, report results briefly. For questions: search and cite. Never tell the user to do manually what a tool can do."
+        },
+        "vllm-qwen35": {
+          "api_key_env": "VLLM_API_KEY",
+          "base_url": "http://vllm-qwen35-27b-fp8-worker.vllm.svc.cluster.local/v1",
+          "capabilities": {
+            "native_tool_calling": true,
+            "realtime_info": true,
+            "weather": true,
+            "web_fetch": true,
+            "web_search": true
+          },
+          "coding_model": "Qwen/Qwen3.5-27B-FP8",
+          "default_model": "Qwen/Qwen3.5-27B-FP8",
+          "generation_params": {
+            "frequency_penalty": 0,
+            "temperature": 0.2,
+            "top_p": 0.9
+          },
+          "models": {
+            "Qwen/Qwen3.5-27B-FP8": {
+              "context_limit": 131072,
+              "description": "In-cluster vLLM worker (H100 NVL), qwen3_coder tool parser, 128K context. Shared with production Open WebUI \u2014 use as fallback only.",
+              "max_tokens": 8192,
+              "name": "Qwen3.5 27B FP8 (shared with prod Open WebUI)"
+            }
+          },
+          "name": "vLLM Qwen3.5 27B FP8 (fallback)",
+          "system_prompt": "You are a helpful AI coding assistant. Be concise and direct.\n\nCRITICAL TOOL RULES:\n1. Call tools directly using native function calling - NEVER output XML like <tool_call>\n2. Read the COMPLETE tool result. If it contains 'FAILED' or 'Error:', say 'The operation failed: [error]' - do NOT claim success\n3. After repeated failure (2+ attempts), STOP and report the error\n4. For apply_patch: use unified diff with '--- a/path', '+++ b/path', @@ markers, 3+ context lines\n5. For multi-file tasks, read ALL files - not just the first 2\n6. Complete ALL steps in multi-step tasks - do not stop at 3/4\n7. For office-format files, PREFER native tools over shell+python: read_pdf / get_pdf_page_image for .pdf, list_pptx_slides / read_pptx_slide_text / render_pptx_slide / summarize_pptx_visual for .pptx, list_excel_sheets / read_excel_sheet for .xlsx, read_docx for .docx, read_csv / list_csv_columns for .csv. Only fall back to shell+python (e.g. python-pptx, openpyxl) when the native tool cannot do what's needed (e.g. style editing, chart creation).",
+          "tool_calling": {
+            "fallback_on_empty": true,
+            "mode": "native",
+            "strip_json_from_text": true
+          }
+        },
+        "vllm-qwen36": {
+          "api_key_env": "VLLM_API_KEY",
+          "base_url": "http://vllm-qwen36-27b-fp8-mig.vllm.svc.cluster.local/v1",
+          "capabilities": {
+            "native_tool_calling": true,
+            "realtime_info": true,
+            "weather": true,
+            "web_fetch": true,
+            "web_search": true
+          },
+          "coding_model": "Qwen/Qwen3.6-27B-FP8",
+          "default_model": "Qwen/Qwen3.6-27B-FP8",
+          "generation_params": {
+            "frequency_penalty": 0,
+            "temperature": 0.2,
+            "top_p": 0.9
+          },
+          "models": {
+            "Qwen/Qwen3.6-27B-FP8": {
+              "context_limit": 32768,
+              "description": "In-cluster vLLM (H100 NVL MIG), reasoning + qwen3_coder parser, 32K context",
+              "max_tokens": 8192,
+              "name": "Qwen3.6 27B FP8"
+            }
+          },
+          "name": "vLLM Qwen3.6 27B FP8",
+          "system_prompt": "You are a helpful AI coding assistant. Be concise and direct.\n\nCRITICAL TOOL RULES:\n1. Call tools directly using native function calling - NEVER output XML like <tool_call>\n2. Read the COMPLETE tool result. If it contains 'FAILED' or 'Error:', say 'The operation failed: [error]' - do NOT claim success\n3. After repeated failure (2+ attempts), STOP and report the error\n4. For apply_patch: use unified diff with '--- a/path', '+++ b/path', @@ markers, 3+ context lines\n5. For multi-file tasks, read ALL files - not just the first 2\n6. Complete ALL steps in multi-step tasks - do not stop at 3/4\n7. For office-format files, PREFER native tools over shell+python: read_pdf / get_pdf_page_image for .pdf, list_pptx_slides / read_pptx_slide_text / render_pptx_slide / summarize_pptx_visual for .pptx, list_excel_sheets / read_excel_sheet for .xlsx, read_docx for .docx, read_csv / list_csv_columns for .csv. Only fall back to shell+python (e.g. python-pptx, openpyxl) when the native tool cannot do what's needed (e.g. style editing, chart creation).",
+          "tool_calling": {
+            "fallback_on_empty": true,
+            "mode": "native",
+            "strip_json_from_text": true
+          }
+        },
+        "dgx-cluster": {
+          "name": "DGX Cluster (MiniMax-M2.7 NVFP4)",
+          "base_url": "https://dgx-cluster.internal.example/vllm/v1",
+          "api_key_env": "DGX_CLUSTER_API_KEY",
+          "default_model": "minimax-m2.7",
+          "coding_model": "minimax-m2.7",
+          "system_prompt": "You are a helpful AI coding assistant running on the clustered DGX deployment. Be concise and direct.\n\nCRITICAL TOOL RULES:\n1. Call tools directly using native function calling - NEVER output XML like <tool_call>\n2. Read the COMPLETE tool result. If it contains 'FAILED' or 'Error:', say 'The operation failed: [error]' - do NOT claim success\n3. After repeated failure (2+ attempts), STOP and report the error\n4. For apply_patch: use unified diff with '--- a/path', '+++ b/path', @@ markers, 3+ context lines\n5. For multi-file tasks, read ALL files - not just the first 2\n6. Complete ALL steps in multi-step tasks - do not stop at 3/4\n7. For office-format files, PREFER native tools over shell+python: read_pdf / get_pdf_page_image for .pdf, list_pptx_slides / read_pptx_slide_text / render_pptx_slide / summarize_pptx_visual for .pptx, list_excel_sheets / read_excel_sheet for .xlsx, read_docx for .docx, read_csv / list_csv_columns for .csv. Only fall back to shell+python (e.g. python-pptx, openpyxl) when the native tool cannot do what's needed (e.g. style editing, chart creation).",
+          "generation_params": {
+            "temperature": 0.2,
+            "top_p": 0.9,
+            "frequency_penalty": 0.0
+          },
+          "tool_calling": {
+            "mode": "native",
+            "fallback_on_empty": true,
+            "strip_json_from_text": true
+          },
+          "models": {
+            "minimax-m2.7": {
+              "name": "MiniMax-M2.7 NVFP4 (DGX Cluster)",
+              "description": "MoE, NVFP4 (compressed-tensors), 192K vLLM max-model-len, PP=2 across cluster-01 (head) + cluster-02 (worker). Swap-in for Qwen3.5-122B (2026-06-09) — faster agent workloads.",
+              "context_limit": 196608,
+              "max_tokens": 8192
+            }
+          },
+          "capabilities": {
+            "web_search": true,
+            "web_fetch": true,
+            "weather": true,
+            "realtime_info": true,
+            "native_tool_calling": true
+          }
+        }
+      },
+      "server": {
+        "auto_enable_agent": true,
+        "auto_enable_tools": true,
+        "idle_timeout": 0,
+        "port": 54320,
+        "working_dir": "/workspace"
+      },
+      "session": {
+        "auto_restore": "never"
+      },
+      "system_prompt": "You are an expert AI coding assistant. Be concise and precise. When using tools, execute them directly and report results briefly. Focus on code quality, correctness, and best practices.",
+      "system_prompt_mode": "prepend",
+      "tools": {
+        "agent": {
+          "checkpoint_backend": "none",
+          "max_iterations": 50,
+          "max_tool_iterations": 50,
+          "zombie_threshold": 6
+        },
+        "shell": {
+          "require_consent": true,
+          "timeout": 300,
+          "login_shell": true,
+          "shell_bin": "/bin/bash"
+        },
+        "vision_model": {
+          "api_key_env": "VLLM_API_KEY",
+          "auto_caption": true,
+          "enabled": true,
+          "endpoint": "http://vllm-qwen3-vl-8b-fp8-lmcache-mig.vllm.svc.cluster.local/v1",
+          "max_tokens": 200,
+          "model": "Qwen/Qwen3-VL-8B-Instruct",
+          "timeout": 30
+        }
+      },
+      "version": "1.3",
+      "file_tree": {
+        "ignore_dirs": [
+          ".git",
+          "node_modules",
+          "__pycache__",
+          ".tox",
+          "dist",
+          "build",
+          ".eggs",
+          ".mypy_cache"
+        ]
+      }
+    }

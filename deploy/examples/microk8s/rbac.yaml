@@ -1,0 +1,58 @@
+# ServiceAccount + namespaced Role + RoleBinding (least privilege)
+# Scoped to 'coder' namespace only — no cluster-wide access.
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: session-manager
+  namespace: coder
+  labels:
+    app.kubernetes.io/name: coder
+    app.kubernetes.io/component: session-manager
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: coder-session-manager
+  namespace: coder
+  labels:
+    app.kubernetes.io/name: coder
+    app.kubernetes.io/component: session-manager
+rules:
+  # Pods
+  - apiGroups: [""]
+    resources: [pods]
+    verbs: [get, list, create, delete]
+  # Services
+  - apiGroups: [""]
+    resources: [services]
+    verbs: [get, list, create, delete]
+  # PVCs
+  - apiGroups: [""]
+    resources: [persistentvolumeclaims]
+    verbs: [get, list, create, delete]
+  # Ingress (create sessions ingress + patch per-user routes)
+  - apiGroups: [networking.k8s.io]
+    resources: [ingresses]
+    verbs: [get, list, create, update, patch, delete]
+  # ConfigMaps and Secrets (read-only — for serving config to pods)
+  - apiGroups: [""]
+    resources: [configmaps, secrets]
+    verbs: [get, list]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: coder-session-manager
+  namespace: coder
+  labels:
+    app.kubernetes.io/name: coder
+    app.kubernetes.io/component: session-manager
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: coder-session-manager
+subjects:
+  - kind: ServiceAccount
+    name: session-manager
+    namespace: coder

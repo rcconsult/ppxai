@@ -1,0 +1,109 @@
+# Egress-deny + Ingress-isolation NetworkPolicy for per-user coder-server pods
+# (H2 egress + debt-(v) ingress).
+#
+# Enforced by Calico (the cluster CNI). The per-user pods run a coding agent
+# with arbitrary root shell — if that agent is compromised or prompt-injected,
+# this policy stops it from reaching other namespaces or exfiltrating to
+# arbitrary destinations. Only the endpoints the providers actually need are
+# allowed.
+#
+# IMPORTANT — Calico NetworkPolicy is IP-based, NOT DNS-aware. The external
+# ipBlock CIDRs below must be RESOLVED to IPs for each provider host you use:
+#   <your inference host>  -> <PROVIDER_IP>   (resolve with `dig +short`)
+#   api.perplexity.ai      -> a Cloudflare /24 (IPs ROTATE within it)
+# If an upstream IP changes, chat to that provider breaks until this list is
+# updated. Group in-cluster corporate hosts into their enclosing CIDR; a
+# Cloudflare-fronted API needs the enclosing /24(s) (still rotates within them).
+#
+# Ingress IS restricted (debt (v), 2026-07-06): without it, ANY pod in the
+# namespace (a neighbor user's pod, a benchmark job, a compromised sidecar) or
+# anyone with `kubectl port-forward` could reach <pod-ip>:54320 directly and
+# drive that user's engine, bypassing ingress-nginx + LDAP + the coder_session
+# cookie entirely (north-south auth only protects the ingress path). Live-proven
+# HTTP 200 on /status,/sessions,/state before this rule. The Ingress block below
+# allows EXACTLY the two legitimate inbound sources — see the caveat there.
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: coder-server-egress
+  namespace: coder
+  labels:
+    app.kubernetes.io/name: coder
+    app.kubernetes.io/component: server-egress
+spec:
+  podSelector:
+    matchLabels:
+      app: coder-server
+  policyTypes:
+    - Egress
+    - Ingress
+  ingress:
+    # 1. ingress-nginx controller — the ONLY legitimate north-south proxy path
+    #    (user HTTP → :54320). The controller runs in the `ingress` namespace as
+    #    a real pod (NOT hostNetwork), so a namespaceSelector matches it; Calico
+    #    enforces against the controller's real pod identity.
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress
+      ports:
+        - protocol: TCP
+          port: 54320
+    # 2. kubelet health/readiness probes — CRITICAL: these come from the NODE IP
+    #    (liveness GET /health + readiness TCP on 54320), NOT a pod, so they need
+    #    an ipBlock, NOT a selector. WITHOUT THIS the readiness probe is dropped
+    #    → the Service gets no endpoints → nginx 503s → login is impossible, and
+    #    liveness failures would CrashLoop the pod. Set this to the subnet your
+    #    cluster nodes sit in (e.g. one /24 covering all worker nodes).
+    - from:
+        - ipBlock:
+            cidr: <NODE_SUBNET_CIDR>
+      ports:
+        - protocol: TCP
+          port: 54320
+  # Everything else inbound: DENIED (Ingress policyType + only the two rules above).
+  egress:
+    # DNS (CoreDNS/kube-dns) — required or every .svc.cluster.local lookup fails.
+    # MUST select by namespace, NOT the kube-dns Service ClusterIP: Calico
+    # enforces egress against the real destination POD IP after kube-proxy
+    # DNAT, so an ipBlock of the kube-dns Service VIP (in the SERVICE CIDR) never
+    # matches the CoreDNS POD IP (in the POD CIDR) and silently drops every lookup.
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # In-cluster vLLM services (qwen35, qwen36, qwen3-vl sidecar) in the vllm ns.
+    # No port restriction: Calico enforces against the real backing-pod port
+    # after the Service maps port 80 -> targetPort (qwen35 listens on 8004,
+    # qwen36 on 8006, the VL sidecar on others). Pinning ports here silently
+    # drops whichever model uses a port we didn't list. The vllm namespace is
+    # a trusted in-cluster inference tier, so allow all TCP to it.
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: vllm
+    # External corporate vLLM endpoints (dgx-cluster + dgx-spark) — <CORPORATE_CIDR>.
+    - to:
+        - ipBlock:
+            cidr: <CORPORATE_CIDR>
+      ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 8000
+    # Perplexity API (Cloudflare-fronted — IPs rotate within these /24s).
+    - to:
+        - ipBlock:
+            cidr: <PROVIDER_CIDR_1>
+        - ipBlock:
+            cidr: <PROVIDER_CIDR_2>
+      ports:
+        - protocol: TCP
+          port: 443
+  # Everything else: DENIED (no further egress rules = implicit deny).

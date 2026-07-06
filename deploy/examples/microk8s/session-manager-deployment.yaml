@@ -1,0 +1,139 @@
+# Session manager — manages per-user ppxai-server pods.
+# Deployment + Service (plain manifests, no Helm).
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: session-manager
+  namespace: coder
+  labels:
+    app.kubernetes.io/name: coder
+    app.kubernetes.io/component: session-manager
+    environment: development
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: session-manager
+  template:
+    metadata:
+      labels:
+        app: session-manager
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+    spec:
+      serviceAccountName: session-manager
+      containers:
+        - name: session-manager
+          image: <REGISTRY_HOST>:<REGISTRY_PORT>/coder-session-manager:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          env:
+            - name: NAMESPACE
+              value: coder
+            - name: REGISTRY_DIR
+              value: /registry
+            - name: MAX_SESSIONS
+              value: "10"
+            - name: TTL_MINUTES
+              value: "60"
+            - name: SERVER_IMAGE
+              value: <REGISTRY_HOST>:<REGISTRY_PORT>/coder-server:latest
+            - name: WORKSPACE_SIZE
+              value: "10Gi"
+            - name: TEMP_SIZE
+              value: "2Gi"
+            - name: INGRESS_NAME
+              value: coder-ingress
+            - name: INGRESS_HOST
+              value: coder.example.com
+            - name: APP_PREFIX
+              value: coder
+            - name: WORKSPACE_SC
+              value: trad-microk8s-hostpath-custom
+            - name: EPHEMERAL_SC
+              value: microk8s-hostpath
+            - name: CONFIG_CM
+              value: coder-server-config
+            - name: SECRET_NAME
+              value: coder-api-keys
+            - name: AUTH_MODE
+              value: ldap
+            - name: LDAP_URL
+              value: "ldaps://dc.example.com:636"
+            - name: LDAP_BASE_DN
+              value: "dc=example,dc=com"
+            - name: LDAP_BIND_DN
+              value: "CN=svc-ldap-bind,OU=ServiceAccounts,DC=example,DC=com"
+            - name: LDAP_BIND_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: ldap-bind-secret
+                  key: bindPassword
+            - name: LDAP_USER_FILTER
+              value: "(objectClass=person)"
+            - name: LDAP_USERNAME_ATTR
+              value: "sAMAccountName"
+            - name: LDAP_CACHE_TTL
+              value: "300"
+            # --- C1: per-user session cookie auth ---
+            - name: SESSION_SIGNING_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: coder-session-signing
+                  key: SESSION_SIGNING_KEY
+            - name: TLS_SECRET_NAME
+              value: your-tls-secret
+            - name: COOKIE_SECURE
+              value: "true"
+            - name: COOKIE_DOMAIN
+              value: coder.example.com
+            - name: REQUIRE_LIVE_SESSION
+              value: "true"
+          volumeMounts:
+            - name: registry
+              mountPath: /registry
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            timeoutSeconds: 3
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+      volumes:
+        - name: registry
+          persistentVolumeClaim:
+            claimName: coder-registry
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: session-manager
+  namespace: coder
+  labels:
+    app.kubernetes.io/name: coder
+    app.kubernetes.io/component: session-manager
+spec:
+  selector:
+    app: session-manager
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080

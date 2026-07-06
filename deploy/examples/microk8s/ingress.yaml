@@ -1,0 +1,69 @@
+# TLS ingress for coder.example.com — UNAUTHENTICATED paths only.
+# Holds /api (session-manager), /login (static login page), and the catch-all.
+# The per-user /s/<slug> routes live on a SEPARATE Ingress
+# (coder-sessions-ingress-auth) that the session-manager creates + patches at
+# runtime; that one carries the auth-url annotation (C1) so every per-user
+# request is checked against the signed session cookie. The split is required
+# because ingress-nginx auth annotations apply to all paths in an Ingress —
+# gating /login/​/api here would make login impossible.
+#
+# Prerequisites:
+#   your-tls-secret TLS secret — auto-synced by Reflector from openwebui namespace.
+#   See secrets.yaml.template for annotation details.
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: coder-ingress
+  namespace: coder
+  labels:
+    app.kubernetes.io/name: coder
+    app.kubernetes.io/component: ingress
+    environment: development
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    # SSE: disable buffering so streaming responses reach the browser immediately
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    nginx.ingress.kubernetes.io/proxy-http-version: "1.1"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - coder.example.com
+      secretName: your-tls-secret
+  rules:
+    - host: coder.example.com
+      http:
+        paths:
+          # Session manager REST API
+          - path: /api(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: session-manager
+                port:
+                  number: 8080
+          # Login page — served by the login nginx pod (static HTML + JS)
+          - path: /login(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: login
+                port:
+                  number: 80
+          # NOTE: per-user /s/<slug> routes are NOT here — they live on the
+          # separate auth-gated Ingress (coder-sessions-ingress-auth), created +
+          # patched at runtime by the session-manager. See header comment.
+          # Catch-all — serves login page for root and unmatched paths
+          - path: /()(.*)?
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: login
+                port:
+                  number: 80

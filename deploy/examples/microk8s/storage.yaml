@@ -1,0 +1,46 @@
+# Static PV + PVC for session manager registry
+# Matches cluster convention: static PV with trad-microk8s-hostpath-custom (Retain)
+#
+# Prerequisites:
+#   sudo mkdir -p <REGISTRY_HOSTPATH>
+#   sudo chown -R 1000:1000 <PV_HOSTPATH>
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: coder-registry-pv
+  labels:
+    app.kubernetes.io/name: coder
+    app.kubernetes.io/component: session-manager
+    type: local
+spec:
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: trad-microk8s-hostpath-custom
+  local:
+    path: <REGISTRY_HOSTPATH>
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: Exists
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: coder-registry
+  namespace: coder
+  labels:
+    app.kubernetes.io/name: coder
+    app.kubernetes.io/component: session-manager
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: trad-microk8s-hostpath-custom
+  resources:
+    requests:
+      storage: 5Gi
