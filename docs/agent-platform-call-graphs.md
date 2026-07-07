@@ -1151,6 +1151,46 @@ inspectable, not a mid-conversation snapshot.
 
 ---
 
+## Build plan T8a — VSCode port of the `/task` family
+
+Added: `vscode-extension/src/taskController.ts` (IoC controller, VSCode-free),
+`/v1/agent/*` typed slice in `httpClient.ts`, `/task` route + UI adapter in
+`chatPanel.ts`, `/task` in the completion catalog. **No server changes** — the
+whole increment is a second client over the T1–T7 surface. T8b (TUI) is split
+out pending the transport decision (in-process registry = debt (t) vs HTTP
+client in the TUIs) — see the plan doc §T8.
+
+```
+webview input "/task <verb> …"                    [chatPanel.handleSlashCommand]
+└─ command === 'task' → getTaskController().handle(argsText)   [BEFORE factory
+   │                                                    dispatch — factory has no /task]
+   ├─ run    → parseTaskArgs (same grammar as web) → backend.agentTask(body)
+   │            403/400 detail verbatim · session provider/model fallback
+   │            → systemMessage launch line → watchDetached(run_id)
+   ├─ ls     → agentRuns() → icon rows into the transcript
+   ├─ show|watch <id> → agentRun(id) → renderRun (+ re-watch if live)
+   ├─ respond <id> … → agentRun(id).waiting.token → agentRunRespond
+   ├─ ack <id> / resume <id> / cancel <id> → POST; 409 reasons verbatim
+   └─ help
+
+watchDetached(id)  [poll; web degraded-path contract: backoff 1.5s→30s,
+                    no run-duration ceiling, give up only on consecutive fails]
+└─ loop agentRun(id):
+   ├─ status waiting + unseen token → vscode QuickPick (✋ Approve/Deny —
+   │     same idiom as shell/file consent) → agentRunRespond({token, approved})
+   │     dismissed → hint line; the T5 TTL is the fail-closed backstop
+   └─ terminal → renderRun:
+        completed_pending_ack → fullResponse(result) + "/task ack" hint (T6)
+        interrupted|cancelled + resumable → "/task resume" hint (T7)
+```
+
+Parity is TESTED, not assumed (`tests/test_vscode_task_controller.py`): the
+verb set, the `/v1/agent/*` endpoint set, and the terminal/success status sets
+are regex-extracted from BOTH clients and compared — a verb/endpoint/status
+added to one client fails the sentinel until the other grows it too.
+
+---
+
 <!-- Inc 10+ sections appended here as they land. Template:
 ## Increment N — <title>
 Added/changed: <files>. Execution model change: <if any>.

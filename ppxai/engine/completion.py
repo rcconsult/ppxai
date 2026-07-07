@@ -79,6 +79,12 @@ _BUILTIN_SPECIAL_COMMANDS: List[Dict[str, Any]] = [
     {"text": "/agentruns", "display": "/agentruns",
      "description": "List recent agent runs (experimental)",
      "kind": "command"},
+    # v1.19.x /task — the tool-capable sandboxed tier (web T1+, VSCode T8a).
+    # Client-side family (web command-dispatcher.js / VSCode chatPanel.ts),
+    # not the CommandFactory; listed so autocomplete surfaces it.
+    {"text": "/task", "display": "/task",
+     "description": "Tool-capable background agent runs (run·ls·show·respond·ack·resume·cancel)",
+     "kind": "command"},
 ]
 
 # Context-provider shortcuts — handled by ContextInjector, not the

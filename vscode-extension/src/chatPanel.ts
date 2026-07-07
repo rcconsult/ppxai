@@ -23,6 +23,9 @@ import { generateHelpText } from './shared/commands';
 
 import { AppState } from './appState';
 
+// v1.19.x T8a: the /task command family (tool-capable /v1/agent/task tier).
+import { TaskController, ConsentAnswer } from './taskController';
+
 // v1.18.1 envelope dispatch: factory result + side-effects rendering.
 import { CommandRenderer, RendererHost } from './commandRenderer';
 import { SideEffectsHandler, SideEffectHost } from './sideEffectsHandler';
@@ -204,6 +207,9 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     private _commandRenderer?: CommandRenderer;
     private _sideEffectsHandler?: SideEffectsHandler;
 
+    // v1.19.x T8a: /task family controller (lazy — needs _view for output).
+    private _taskController?: TaskController;
+
     constructor(
         context: vscode.ExtensionContext,
         backend: HttpClient
@@ -237,6 +243,47 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                     vscode.window.showWarningMessage(message, options, ...actions)
             }
         };
+    }
+
+    /**
+     * v1.19.x T8a: the /task controller, wired to the webview transcript
+     * (systemMessage / fullResponse) and the native QuickPick for the T5
+     * consent park — same dialog idiom as the shell/file consent handlers.
+     */
+    private getTaskController(): TaskController {
+        if (!this._taskController) {
+            this._taskController = new TaskController(
+                this._backend,
+                {
+                    system: (text) => {
+                        this._view?.webview.postMessage({ type: 'systemMessage', content: text });
+                    },
+                    result: (text) => {
+                        this._view?.webview.postMessage({ type: 'fullResponse', content: text });
+                    },
+                    askConsent: async (runId, kind, prompt): Promise<ConsentAnswer | undefined> => {
+                        const selected = await vscode.window.showQuickPick(
+                            [
+                                { label: '$(check) Approve', detail: 'Let the run proceed (POST /respond approved)', value: 'approve' },
+                                { label: '$(x) Deny', detail: 'Refuse — the run continues without the action', value: 'deny' },
+                            ],
+                            {
+                                placeHolder: prompt.length > 80 ? prompt.slice(0, 80) + '…' : prompt,
+                                title: `✋ Agent run ${runId} needs ${kind}`,
+                                ignoreFocusOut: true,
+                            }
+                        );
+                        if (!selected) { return undefined; }  // dismissed → TTL backstop
+                        return { approved: selected.value === 'approve' };
+                    },
+                },
+                () => ({
+                    provider: this._appState.get('currentProvider') || null,
+                    model: this._appState.get('currentModel') || null,
+                })
+            );
+        }
+        return this._taskController;
     }
 
     /**
@@ -1008,6 +1055,14 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             // VSCode-specific UX.
             if (command === 'preview') {
                 await this.handlePreviewCommand(argsArr);
+                return;
+            }
+
+            // /task: the tool-capable agent-run tier (v1.19.x T8a) is a
+            // CLIENT-side family in every client (web dispatcher, VSCode
+            // here) — it drives /v1/agent/*, not the command factory.
+            if (command === 'task') {
+                await this.getTaskController().handle(argsText);
                 return;
             }
 

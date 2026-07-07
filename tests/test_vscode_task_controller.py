@@ -1,0 +1,162 @@
+"""Static structural tests for the VSCode /task port (v1.19.x build plan T8a).
+
+Why structural-only: the repo has no TS runtime test harness (see
+test_vscode_visibility_reanchor.py for the precedent); `npm run compile`
+typechecks the sources, and these fences pin the cross-client contract —
+the parts that would drift silently:
+
+  - VERB PARITY: the VSCode controller must route exactly the web
+    controller's verb set (run/ls/list/show/watch/cancel/respond/ack/
+    resume/help). A verb added to one client and not the other is the
+    T8 "parity sentinel" failure the plan calls out.
+  - ENDPOINT PARITY: both clients must drive the same /v1/agent/* paths.
+  - WIRING: chatPanel routes `/task` to the controller BEFORE factory
+    dispatch (the factory would 404 it); httpClient exposes the typed
+    agent* methods; the consent QuickPick answers with the park token.
+  - STATUS PARITY: the terminal/success status sets match the web sets
+    (a status added server-side must reach both watchers).
+"""
+
+from __future__ import annotations
+
+import re
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+TS_CONTROLLER = ROOT / "vscode-extension" / "src" / "taskController.ts"
+TS_CHAT_PANEL = ROOT / "vscode-extension" / "src" / "chatPanel.ts"
+TS_HTTP_CLIENT = ROOT / "vscode-extension" / "src" / "httpClient.ts"
+WEB_TASK = ROOT / "ppxai" / "web" / "shared" / "task-controller.js"
+WEB_BASE = ROOT / "ppxai" / "web" / "shared" / "agent-run-controller.js"
+
+
+def _read(p: Path) -> str:
+    return p.read_text(encoding="utf-8")
+
+
+def _case_verbs(src: str) -> set[str]:
+    """Verbs routed by a `switch (verb)` handle() — `case 'x':` labels."""
+    # Scope to the handle() routing switch: both files put it in a method
+    # whose cases are single-word verbs; filter out non-verb switches
+    # (event-type switches use snake_case/longer names).
+    verbs = set(re.findall(r"case '([a-z]+)':", src))
+    return {v for v in verbs if v in {
+        "run", "ls", "list", "show", "open", "watch",
+        "cancel", "respond", "ack", "resume", "help",
+    }}
+
+
+class TestVerbParity:
+    def test_vscode_routes_the_full_web_verb_set(self):
+        web = _case_verbs(_read(WEB_TASK))
+        ts = _case_verbs(_read(TS_CONTROLLER))
+        assert web, "web verb set unexpectedly empty (regex drift?)"
+        missing = web - ts
+        extra = ts - web
+        assert not missing, f"VSCode /task is missing web verbs: {sorted(missing)}"
+        assert not extra, f"VSCode /task grew verbs the web lacks: {sorted(extra)}"
+
+
+class TestEndpointParity:
+    # Every /v1/agent/* path the web pair drives must appear in the
+    # VSCode httpClient (template-literal form).
+    _ENDPOINTS = [
+        "/v1/agent/task",
+        "/v1/agent/runs",
+        "/cancel",
+        "/respond",
+        "/ack",
+        "/resume",
+    ]
+
+    def test_http_client_covers_all_agent_endpoints(self):
+        src = _read(TS_HTTP_CLIENT)
+        for ep in self._ENDPOINTS:
+            assert ep in src, f"httpClient.ts lacks the {ep} endpoint"
+
+    def test_web_drives_the_same_endpoints(self):
+        # The other half of the sentinel: if the web client adds an agent
+        # endpoint, this fails until the VSCode list above grows too.
+        web = _read(WEB_TASK) + _read(WEB_BASE)
+        for ep in self._ENDPOINTS:
+            assert ep in web, f"web controllers lack the {ep} endpoint"
+
+    def test_backend_interface_matches_http_client_methods(self):
+        # The controller's TaskBackend slice and the concrete httpClient
+        # must agree on method names, or chatPanel's wiring breaks at
+        # runtime (structural typing hides a *missing* method until call).
+        controller = _read(TS_CONTROLLER)
+        client = _read(TS_HTTP_CLIENT)
+        methods = re.findall(r"^\s{4}(agent\w+)\(", controller, re.M)
+        assert set(methods) >= {
+            "agentTask", "agentRuns", "agentRun", "agentRunCancel",
+            "agentRunRespond", "agentRunAck", "agentRunResume",
+        }
+        for m in methods:
+            assert re.search(rf"async {m}\(", client), (
+                f"httpClient.ts lacks async {m}() required by TaskBackend"
+            )
+
+
+class TestStatusParity:
+    def _web_set(self, name: str) -> set[str]:
+        src = _read(WEB_BASE)
+        m = re.search(rf"{name} = new Set\(\[(.*?)\]\)", src, re.S)
+        assert m, f"web {name} set not found"
+        return set(re.findall(r"'([a-z_]+)'", m.group(1)))
+
+    def _ts_set(self, name: str) -> set[str]:
+        src = _read(TS_CONTROLLER)
+        m = re.search(rf"{name} = new Set\(\[(.*?)\]\)", src, re.S)
+        assert m, f"TS {name} set not found"
+        return set(re.findall(r"'([a-z_]+)'", m.group(1)))
+
+    def test_terminal_statuses_match(self):
+        assert self._ts_set("TERMINAL_STATUSES") == self._web_set("_TERMINAL")
+
+    def test_success_statuses_match(self):
+        assert self._ts_set("SUCCESS_STATUSES") == self._web_set("_SUCCESS")
+
+
+class TestChatPanelWiring:
+    def test_task_routed_before_factory_dispatch(self):
+        src = _read(TS_CHAT_PANEL)
+        task_pos = src.find("command === 'task'")
+        factory_pos = src.find("await this.dispatchFactoryCommand(command, argsText)")
+        assert task_pos != -1, "chatPanel does not route /task"
+        assert factory_pos != -1, "factory dispatch anchor moved (test drift)"
+        assert task_pos < factory_pos, (
+            "/task must be intercepted BEFORE factory dispatch — the "
+            "CommandFactory has no /task handler and would 404 it"
+        )
+        assert "getTaskController().handle(argsText)" in src
+
+    def test_controller_constructed_with_backend_ui_defaults(self):
+        src = _read(TS_CHAT_PANEL)
+        m = re.search(r"new TaskController\((.*?)\n\s{8}\);", src, re.S)
+        assert m, "TaskController construction not found"
+        ctor = m.group(0)
+        assert "this._backend" in ctor
+        assert "systemMessage" in ctor and "fullResponse" in ctor
+        assert "currentProvider" in ctor and "currentModel" in ctor
+
+    def test_consent_quickpick_answers_with_approved_flag(self):
+        # The T5 park answer path: QuickPick → {approved: bool}; a dismissed
+        # dialog returns undefined (the TTL is the fail-closed backstop).
+        src = _read(TS_CHAT_PANEL)
+        assert "askConsent" in src
+        assert "approved: selected.value === 'approve'" in src
+        assert re.search(r"if \(!selected\) \{ return undefined; \}", src)
+
+
+class TestConsentTokenDiscipline:
+    def test_watcher_sends_the_park_token(self):
+        # The respond payload must carry the resume token from the run meta
+        # (waiting.token) — the server 409s otherwise (T5 token check).
+        src = _read(TS_CONTROLLER)
+        assert "token: run.waiting.token" in src
+        assert "consentSeen" in src  # one QuickPick per park, not per poll
+
+    def test_respond_verb_reads_token_from_meta(self):
+        src = _read(TS_CONTROLLER)
+        assert "token: meta.waiting.token" in src

@@ -1572,6 +1572,112 @@ export class HttpClient {
         return result;
     }
 
+    // === Agent run registry — /v1/agent/* (v1.19.x build plan T8a) ========
+    //
+    // The tool-capable /task tier's wire surface (ADR 0003 Stage 2). These
+    // mirror the web client's calls exactly; taskController.ts consumes them
+    // through its TaskBackend interface. Error detail matters here — the
+    // tier's guardrail 4xx bodies (403 tier-off hint, 400 shell-grant, 409
+    // respond/ack/resume refusal reasons) are surfaced VERBATIM so the user
+    // sees WHY, not just that it failed.
+
+    /** Extract `detail` from a FastAPI error body, else the status text. */
+    private async agentError(response: Response, fallback: string): Promise<Error> {
+        let detail: string | null = null;
+        try {
+            const body = await response.json() as { detail?: string };
+            if (body && typeof body.detail === 'string') { detail = body.detail; }
+        } catch { /* non-JSON error body — keep the fallback */ }
+        return new Error(detail || `${fallback}: ${response.statusText}`);
+    }
+
+    /** POST /v1/agent/task — launch a tool-capable, sandboxed run. */
+    async agentTask(body: Record<string, any>): Promise<{ run_id: string; status: string }> {
+        const response = await fetch(`${this.baseUrl}/v1/agent/task`, {
+            method: 'POST',
+            headers: this.getHeaders(true),
+            body: JSON.stringify(body)
+        });
+        if (!response.ok) {
+            throw await this.agentError(response, 'Task launch failed');
+        }
+        return response.json() as Promise<{ run_id: string; status: string }>;
+    }
+
+    /** GET /v1/agent/runs — list runs (newest first, owner-scoped). */
+    async agentRuns(): Promise<{ runs: any[] }> {
+        const response = await fetch(`${this.baseUrl}/v1/agent/runs`, {
+            headers: this.getHeaders()
+        });
+        if (!response.ok) {
+            throw await this.agentError(response, 'Failed to list agent runs');
+        }
+        return response.json() as Promise<{ runs: any[] }>;
+    }
+
+    /** GET /v1/agent/runs/{id} — one run's meta (incl. waiting/resumable). */
+    async agentRun(runId: string): Promise<any> {
+        const response = await fetch(`${this.baseUrl}/v1/agent/runs/${encodeURIComponent(runId)}`, {
+            headers: this.getHeaders()
+        });
+        if (!response.ok) {
+            throw await this.agentError(response, `Failed to fetch run ${runId}`);
+        }
+        return response.json();
+    }
+
+    /** POST /v1/agent/runs/{id}/cancel — cooperative cancel (Inc 6). */
+    async agentRunCancel(runId: string): Promise<any> {
+        const response = await fetch(`${this.baseUrl}/v1/agent/runs/${encodeURIComponent(runId)}/cancel`, {
+            method: 'POST',
+            headers: this.getHeaders(true),
+            body: JSON.stringify({})
+        });
+        if (!response.ok) {
+            throw await this.agentError(response, `Failed to cancel run ${runId}`);
+        }
+        return response.json();
+    }
+
+    /** POST /v1/agent/runs/{id}/respond — answer a waiting park (T5). */
+    async agentRunRespond(runId: string, body: Record<string, any>): Promise<any> {
+        const response = await fetch(`${this.baseUrl}/v1/agent/runs/${encodeURIComponent(runId)}/respond`, {
+            method: 'POST',
+            headers: this.getHeaders(true),
+            body: JSON.stringify(body)
+        });
+        if (!response.ok) {
+            throw await this.agentError(response, `Failed to respond to run ${runId}`);
+        }
+        return response.json();
+    }
+
+    /** POST /v1/agent/runs/{id}/ack — collect a held result (T6). */
+    async agentRunAck(runId: string): Promise<any> {
+        const response = await fetch(`${this.baseUrl}/v1/agent/runs/${encodeURIComponent(runId)}/ack`, {
+            method: 'POST',
+            headers: this.getHeaders(true),
+            body: JSON.stringify({})
+        });
+        if (!response.ok) {
+            throw await this.agentError(response, `Failed to ack run ${runId}`);
+        }
+        return response.json();
+    }
+
+    /** POST /v1/agent/runs/{id}/resume — conditional resume (T7). */
+    async agentRunResume(runId: string): Promise<any> {
+        const response = await fetch(`${this.baseUrl}/v1/agent/runs/${encodeURIComponent(runId)}/resume`, {
+            method: 'POST',
+            headers: this.getHeaders(true),
+            body: JSON.stringify({})
+        });
+        if (!response.ok) {
+            throw await this.agentError(response, `Failed to resume run ${runId}`);
+        }
+        return response.json();
+    }
+
     // === Agent Mode (v1.11.8) ===
 
     /**

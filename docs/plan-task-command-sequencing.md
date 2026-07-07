@@ -413,18 +413,89 @@ chat transcript, is the durable unit).
 
 ---
 
-## T8 — cross-client port: TUI + VSCode
+## T8 — cross-client port: TUI + VSCode — SPLIT into T8a / T8b
 
-**Capability:** the full `/task` family in Rich/Textual TUI and the VSCode
-extension, reusing the same endpoints and envelopes.
+The two clients have opposite transport realities, so T8 lands in two
+independently-trialable halves:
 
-**Build:** TUI command handlers + a task-run view; VSCode `TaskController`
-mirror + webview panel controls; both drive the identical `/v1/agent/*`
-surface. Consent/ack/resume affordances per client idiom.
+- **T8a — VSCode (✅ DONE):** the extension already speaks
+  HTTP to ppxai-server (`httpClient.ts`), so the port is a faithful mirror
+  of the web client over the identical `/v1/agent/*` surface.
+- **T8b — Rich/Textual TUI (⏸️ PARKED, 2026-07-07 — resume here):** the TUIs
+  are **in-process** — they have NO channel to a ppxai-server. Porting `/task`
+  there forces the transport decision that is debt Item 37(t)'s SDK question:
+  **(1)** embed the registry + an embeddable `build_task_runner` in-process
+  (runs live in the TUI's event loop; retires (t) as a by-product — the
+  recommended direction, since it also unblocks the ppxai-sre SDK model), or
+  **(2)** grow an HTTP client in the TUIs pointed at a running server
+  (matches the plan's original "identical surface" wording but adds a
+  server dependency to standalone terminal use). Decide before building;
+  do NOT guess this one silently. **Resume checklist:** pick the transport →
+  if (1), first extract `build_task_runner` from `server/routes/agent_v1.py`
+  into an engine-level module (that IS the debt-(t) work; keep the route a
+  thin caller so the T1–T7 tests stay green) → then Rich + Textual `/task`
+  handlers + per-TUI run view + consent affordance → extend the T8a parity
+  sentinels (`tests/test_vscode_task_controller.py` pattern) to the TUI
+  dispatch surface.
 
-**Trial:** run T1–T7 trials from TUI and VSCode.
+### T8a — VSCode port — ✅ DONE
 
-**Tests:** per-client dispatch + envelope tests; parity sentinel across clients.
+**Build (landed):** `vscode-extension/src/taskController.ts` — a
+dependency-injected (IoC, same pattern as `handlers/consent.ts`), VSCode-free
+controller with **verb-for-verb parity** with the web client
+(run/ls/list/show/open/watch/cancel/respond/ack/resume/help; the same
+`parseTaskArgs` grammar incl. `--spec`/`--skill`/`--budget` suffixes).
+`httpClient.ts` grows the typed `/v1/agent/*` slice (agentTask/agentRuns/
+agentRun/agentRunCancel/agentRunRespond/agentRunAck/agentRunResume) with the
+tier's guardrail 4xx `detail` bodies surfaced **verbatim** (403 tier-off
+hint, 400 shell-grant, 409 respond/ack/resume refusal reasons).
+`chatPanel.ts` routes `/task` client-side BEFORE factory dispatch (the
+CommandFactory has no /task) and wires the UI adapter: transcript output via
+`systemMessage`/`fullResponse`, and — per VSCode idiom — the **T5 consent
+park pops a native QuickPick** (Approve/Deny; same dialog pattern as
+shell/file consent), raised automatically by the poll watcher once per
+resume token; a dismissed dialog leaves the TTL as the fail-closed backstop
+(`/task respond` still works). The watcher is poll-based with the web
+degraded-path contract (backoff, no run-duration ceiling, give-up only on
+consecutive GET failures); terminal renders include the 📬 `/task ack` and
+▶️ `/task resume` hints. `/task` added to the completion catalog
+(`engine/completion.py`) for all clients.
+
+**Trial (concrete recipe):** server as in T5–T7 trials (tier on,
+`default_subagent`); `code --install-extension` a fresh VSIX or F5 the
+extension; point `ppxai.serverUrl` at the server.
+
+1. In the VSCode chat panel: `/task run "summarize docs/README.md" --tools
+   read_file` → launch line, then (poll) 📬 result ready + the result +
+   the `/task ack` hint; `/task ack <id>` → ✅ collected.
+2. `/task run "spawn a child to summarize docs/README.md" --tools
+   read_file,spawn_subagent` → when the run parks, a **QuickPick pops**
+   (✋ Agent run … needs consent) → Approve → child spawns, parent holds;
+   Deny → refusal text; Escape → hint line + TTL backstop
+   (`/task respond <id> approve` still answers it).
+3. `/task ls` shows the same runs (and icons) as the web pane; kill/restart
+   the server → ⏸️ interrupted → `/task resume <id>` → continues.
+4. 403/400/409 guardrails (tier off, shell grant, wrong-token respond,
+   re-resume after success) all show the server's own reason text.
+
+**Tests (landed):** `tests/test_vscode_task_controller.py` (11 structural —
+the repo's TS-testing idiom, see test_vscode_visibility_reanchor.py):
+**verb-parity sentinel** (VSCode routes exactly the web verb set),
+**endpoint-parity sentinel** (both clients drive the same `/v1/agent/*`
+paths; TaskBackend methods exist on httpClient), **status-parity**
+(terminal/success sets match the web sets), chatPanel wiring
+(task-before-factory, controller construction, QuickPick → `{approved}`),
+consent-token discipline (park token rides every respond; one QuickPick per
+park). Plus `npm run compile` (tsc + esbuild) green.
+
+### T8b — TUI port — ⏸️ PARKED
+
+Parked 2026-07-07 pending the transport decision above (option 1 recommended —
+it retires debt (t) and gives ppxai-sre the embeddable runner). Scope when
+resumed: Rich + Textual command handlers (`/task` family), a run view per TUI
+idiom, consent prompt via each TUI's consent affordance, the same parity
+sentinels. Until then the `/task` family ships in **web + VSCode**; the TUIs
+keep their in-process `/agent` loop.
 
 ---
 
