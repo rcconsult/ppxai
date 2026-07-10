@@ -637,6 +637,44 @@ or the next release prep — whichever comes first.
 
 ---
 
+### Item 39 — `rtk discover` false-negatives under hook rewriting; `rtk gain` is ground truth [tooling]
+
+**What's wrong:** the 2026-07-11 `rtk discover` run reported "2.2% rtk
+adoption, 489 commands / ~118K tokens of missed savings" — a false alarm.
+`discover` scans Claude Code transcripts, which record the **model-emitted**
+command; the global `rtk hook claude` PreToolUse[Bash] hook rewrites eligible
+commands via `updatedInput` *after* the transcript records them, so every
+hook-rewritten execution is miscounted as "missed". Verified live 2026-07-11:
+a plain `grep -c` incremented `rtk gain`'s executed-command counter
+(2517→2518) while `rtk gain` itself does not self-count; `gain` shows 1.1M
+tokens actually saved (50.1% of 2.2M input) — an order of magnitude above
+discover's claimed 118K "missed". Cross-check: discover claims 238 missed
+`grep -n`; gain shows 266 executed `rtk grep`.
+
+**What's real in the discover output:** the "TOP UNHANDLED" list ($UV run
+35×, jq 26×, stat 7×, git rev-parse 5×) — rtk has no handlers for these.
+Upstream feature-request material (github.com/rtk-ai/rtk/issues), not ppxai
+debt. The residual genuine miss rate inside the "missed savings" table is
+unknown but small (some entries may predate the 2026-05-10 hook install or
+be compound/piped forms the hook skips).
+
+**Why recorded here:** `rtk discover` is in the standing toolkit
+(`~/.claude/RTK.md` → "Analyze Claude Code history for missed
+opportunities"); without this note, the next discover run re-triggers a
+false "the hook is broken" investigation.
+
+**Planned:** no action. Use `rtk gain` / `rtk gain --history` as the
+adoption ground truth; ignore discover's "missed savings" percentages on
+hook-enabled hosts.
+
+**Trigger to revisit:** an rtk release notes fix for discover counting
+hook-rewritten commands, OR `rtk gain` totals plateau across sessions
+(would indicate the hook actually stopped rewriting).
+
+**Effort:** none (documentation-only entry).
+
+---
+
 ## Recently moved out of debt scope
 
 These items left the debt inventory because they're not bug-fix-class
