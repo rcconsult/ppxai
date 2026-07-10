@@ -237,6 +237,17 @@ def _cors_kwargs() -> dict:
     its UI origin(s).
     """
     origins = _env_list("PPXAI_ALLOWED_ORIGINS")
+    if "*" in origins:
+        # A literal "*" combined with allow_credentials=True (set below) makes
+        # Starlette REFLECT any Origin — the exact wildcard-reflection hole the
+        # loopback default exists to close. Fail closed: drop the wildcard,
+        # keep any explicit origins, and say so loudly.
+        logger.warning(
+            'PPXAI_ALLOWED_ORIGINS contains "*", which would reflect ANY '
+            "origin with credentials enabled - ignoring the wildcard. "
+            "List the UI origin(s) explicitly instead."
+        )
+        origins = [o for o in origins if o != "*"]
     if origins:
         return {"allow_origins": origins}
     return {"allow_origin_regex": r"^https?://(127\.0\.0\.1|localhost)(:\d+)?$"}

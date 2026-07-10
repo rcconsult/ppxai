@@ -79,6 +79,29 @@ class TestCorsKwargs:
             "allow_origins": ["https://coder.example.com"]
         }
 
+    def test_wildcard_origin_is_dropped_to_loopback_default(self, monkeypatch):
+        # "*" + allow_credentials=True would make Starlette reflect ANY
+        # origin — the wildcard must be ignored, not honored. Spy on the
+        # module logger directly (the project Logger noops when debug
+        # logging is off, so caplog can't see it).
+        warnings: list[str] = []
+        monkeypatch.setattr(http_module.logger, "warning", warnings.append)
+        monkeypatch.setenv("PPXAI_ALLOWED_ORIGINS", "*")
+        kw = http_module._cors_kwargs()
+        assert "allow_origin_regex" in kw
+        assert "allow_origins" not in kw
+        assert any("PPXAI_ALLOWED_ORIGINS" in w for w in warnings)
+
+    def test_wildcard_dropped_but_explicit_origins_kept(self, monkeypatch):
+        warnings: list[str] = []
+        monkeypatch.setattr(http_module.logger, "warning", warnings.append)
+        monkeypatch.setenv(
+            "PPXAI_ALLOWED_ORIGINS", "*, https://coder.example.com"
+        )
+        kw = http_module._cors_kwargs()
+        assert kw == {"allow_origins": ["https://coder.example.com"]}
+        assert any("PPXAI_ALLOWED_ORIGINS" in w for w in warnings)
+
 
 class TestHostMiddleware:
     def _client(self):

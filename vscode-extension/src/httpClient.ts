@@ -1591,12 +1591,21 @@ export class HttpClient {
         return new Error(detail || `${fallback}: ${response.statusText}`);
     }
 
+    // Per-request timeout for the agent REST calls. Without it a hung
+    // connection stalls the fetch forever — taskController's poll watcher
+    // then never increments its failure counter, so its pollMaxFailures
+    // give-up tripwire never fires. A timed-out fetch throws (AbortError),
+    // which the watcher counts like any other failure. Does NOT apply to
+    // the long-lived events stream (agentRunEvents).
+    private agentTimeoutMs = 15000;
+
     /** POST /v1/agent/task — launch a tool-capable, sandboxed run. */
     async agentTask(body: Record<string, any>): Promise<{ run_id: string; status: string }> {
         const response = await fetch(`${this.baseUrl}/v1/agent/task`, {
             method: 'POST',
             headers: this.getHeaders(true),
-            body: JSON.stringify(body)
+            body: JSON.stringify(body),
+            signal: AbortSignal.timeout(this.agentTimeoutMs)
         });
         if (!response.ok) {
             throw await this.agentError(response, 'Task launch failed');
@@ -1607,7 +1616,8 @@ export class HttpClient {
     /** GET /v1/agent/runs — list runs (newest first, owner-scoped). */
     async agentRuns(): Promise<{ runs: any[] }> {
         const response = await fetch(`${this.baseUrl}/v1/agent/runs`, {
-            headers: this.getHeaders()
+            headers: this.getHeaders(),
+            signal: AbortSignal.timeout(this.agentTimeoutMs)
         });
         if (!response.ok) {
             throw await this.agentError(response, 'Failed to list agent runs');
@@ -1618,7 +1628,8 @@ export class HttpClient {
     /** GET /v1/agent/runs/{id} — one run's meta (incl. waiting/resumable). */
     async agentRun(runId: string): Promise<any> {
         const response = await fetch(`${this.baseUrl}/v1/agent/runs/${encodeURIComponent(runId)}`, {
-            headers: this.getHeaders()
+            headers: this.getHeaders(),
+            signal: AbortSignal.timeout(this.agentTimeoutMs)
         });
         if (!response.ok) {
             throw await this.agentError(response, `Failed to fetch run ${runId}`);
@@ -1626,12 +1637,48 @@ export class HttpClient {
         return response.json();
     }
 
+    /**
+     * GET /v1/agent/runs/{id}/events?live=1 — async-iterate the parsed
+     * `data:` events of a run's live SSE stream (same wire parsing as the
+     * web client's _tailEvents). The stream is long-lived by design — no
+     * request timeout; the consumer (taskController.runWatch) falls back to
+     * meta polling when the stream errors or ends early.
+     */
+    async *agentRunEvents(runId: string): AsyncGenerator<any, void, unknown> {
+        const response = await fetch(
+            `${this.baseUrl}/v1/agent/runs/${encodeURIComponent(runId)}/events?live=1`,
+            { headers: this.getHeaders() }
+        );
+        if (!response.ok || !response.body) {
+            throw new Error(`stream ${response.status}`);
+        }
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        try {
+            for (;;) {
+                const { done, value } = await reader.read();
+                if (done) { return; }
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop() || '';
+                for (const line of lines) {
+                    if (!line.startsWith('data: ')) { continue; }
+                    try { yield JSON.parse(line.slice(6)); } catch { /* skip bad frame */ }
+                }
+            }
+        } finally {
+            void reader.cancel().catch(() => { /* already closed */ });
+        }
+    }
+
     /** POST /v1/agent/runs/{id}/cancel — cooperative cancel (Inc 6). */
     async agentRunCancel(runId: string): Promise<any> {
         const response = await fetch(`${this.baseUrl}/v1/agent/runs/${encodeURIComponent(runId)}/cancel`, {
             method: 'POST',
             headers: this.getHeaders(true),
-            body: JSON.stringify({})
+            body: JSON.stringify({}),
+            signal: AbortSignal.timeout(this.agentTimeoutMs)
         });
         if (!response.ok) {
             throw await this.agentError(response, `Failed to cancel run ${runId}`);
@@ -1644,7 +1691,8 @@ export class HttpClient {
         const response = await fetch(`${this.baseUrl}/v1/agent/runs/${encodeURIComponent(runId)}/respond`, {
             method: 'POST',
             headers: this.getHeaders(true),
-            body: JSON.stringify(body)
+            body: JSON.stringify(body),
+            signal: AbortSignal.timeout(this.agentTimeoutMs)
         });
         if (!response.ok) {
             throw await this.agentError(response, `Failed to respond to run ${runId}`);
@@ -1657,7 +1705,8 @@ export class HttpClient {
         const response = await fetch(`${this.baseUrl}/v1/agent/runs/${encodeURIComponent(runId)}/ack`, {
             method: 'POST',
             headers: this.getHeaders(true),
-            body: JSON.stringify({})
+            body: JSON.stringify({}),
+            signal: AbortSignal.timeout(this.agentTimeoutMs)
         });
         if (!response.ok) {
             throw await this.agentError(response, `Failed to ack run ${runId}`);
@@ -1670,7 +1719,8 @@ export class HttpClient {
         const response = await fetch(`${this.baseUrl}/v1/agent/runs/${encodeURIComponent(runId)}/resume`, {
             method: 'POST',
             headers: this.getHeaders(true),
-            body: JSON.stringify({})
+            body: JSON.stringify({}),
+            signal: AbortSignal.timeout(this.agentTimeoutMs)
         });
         if (!response.ok) {
             throw await this.agentError(response, `Failed to resume run ${runId}`);

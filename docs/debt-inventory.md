@@ -1133,6 +1133,49 @@ genuine open set. (Lettered q–t; upstream owns p = external review round.)**
   **Trigger:** before any real multi-tenant coder deployment; higher priority than
   (u) if coder is shipping to more than one user.
 
+- **(w) CLOSED (2026-07-11) — external review round (Antigravity, of T3–T8a).**
+  8 findings on the agent architecture; each verified against the code before
+  acting (verify-don't-assume). **Fixed + tested (landed with this entry):**
+  (1) CORS: a literal `*` in `PPXAI_ALLOWED_ORIGINS` is dropped with a warning
+  instead of reaching Starlette next to `allow_credentials=True`
+  (`http.py::_cors_kwargs`; wildcard-with-credentials would reflect ANY origin);
+  (2) VSCode `/task` black-box UX: `httpClient.agentRunEvents()` now tails
+  `GET /runs/{id}/events?live=1` (same wire parsing as web `_tailEvents`) and
+  `taskController.runWatch` is tail→poll (web `_runWatch` parity) — action
+  events render as one-line transcript entries, heartbeat/lifecycle filtered;
+  (3) unbounded watcher fetches: all 7 agent REST calls carry
+  `AbortSignal.timeout(15s)` so a hung connection counts as a poll failure and
+  the `pollMaxFailures` tripwire actually fires (the long-lived events stream
+  is exempt by design); (4) consent-park latency: an `agent_waiting` stream
+  event raises the QuickPick immediately (shared, token-deduped
+  `maybeAskConsent` across tail + poll paths) instead of waiting out a poll
+  backoff of up to 30s against `consent_ttl`. Sentinels extended:
+  `/events?live=1` endpoint parity, `agentRunEvents` in the backend-interface
+  check, new `TERMINAL_EVENTS` set-parity test. **Reviewed + REJECTED (the
+  reviewer's updated pass re-asserts these without new evidence — recorded here
+  so future rounds don't re-litigate):**
+    - *"Brittle IPv6 Host parsing / `[evil.com]` bypass or ValueError"* — false.
+      `http.py` guards `.index("]")` with `and "]" in host` (no ValueError
+      path), `[evil.com]` extracts `evil.com` which still hits the allowlist
+      (rejected), and every malformed shape (unclosed bracket, multi-colon)
+      falls through to the allowlist check — all paths fail closed. `urlsplit`
+      would be cosmetic (and raises on invalid ports, needing its own guard).
+    - *"sweep_orphans() in get_agent_run_registry() risks concurrent races"* —
+      false in this process model. Every caller is an `async def`
+      route/middleware (verified: all 9 agent_v1 routes, `/state`, auth
+      helper); the getter has no `await` between check and set, so it cannot
+      interleave on the event loop. Separate uvicorn workers each sweeping once
+      is the CORRECT T7 semantic (fresh process = orphaned futures). A lifespan
+      hook would lose the laziness (touch `~/.ppxai/runs/` even with the agent
+      tier off). Invariant now pinned in a comment at the getter — add a lock
+      IF a sync-def/threadpool caller ever appears.
+    - *"`task = req.task or spec.task` is dead code"* — deliberate; the inline
+      comment at the site already documents it as forward-compat for relaxing
+      `AgentTaskRequest.task` to optional.
+    - *"naive quote-strip in respondCmd"* — byte-identical to the web client's
+      strip (verb-for-verb parity is the T8a contract); an escaped quote in a
+      consent free-text answer rides harmlessly as literal text.
+
 **Branch when ready:** (f)-rebinding + (e)-provider-call + (p)-sync-DNS land with
 tier-d OS-isolation; (p)-token-O(N)/role-mint with Inc 8b RBAC; (a)/(b)/(q) with
 N>1 sub-agents + the `agent_n`-nesting / `/task` design; **(r) RETIRED

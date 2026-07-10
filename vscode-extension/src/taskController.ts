@@ -23,9 +23,12 @@
  *     the existing shell/file consent dialogs in handlers/consent.ts), raised
  *     automatically by the watcher when a run parks — the token from the
  *     run meta rides along to POST /respond.
- *   - The watcher is POLL-based (extension host; no SSE tail needed for a
- *     status card) with the same backoff/give-up contract as the web
- *     degraded path: no run-duration ceiling, gives up only after
+ *   - The watcher mirrors the web tail→poll cycle: it tails the run's live
+ *     SSE events stream (tool_call / tool_denied / network_* / path_denied
+ *     as one-line transcript entries — the same "what the agent DID" set the
+ *     web live log shows), reacts to a T5 park (`agent_waiting`) immediately,
+ *     and falls back to meta polling with the same backoff/give-up contract
+ *     as the web degraded path: no run-duration ceiling, gives up only after
  *     consecutive GET failures.
  *
  * Dependency-injected (Inversion of Control, like handlers/consent.ts):
@@ -68,6 +71,7 @@ export interface TaskBackend {
     agentTask(body: Record<string, any>): Promise<{ run_id: string; status: string }>;
     agentRuns(): Promise<{ runs: AgentRunMeta[] }>;
     agentRun(runId: string): Promise<AgentRunMeta>;
+    agentRunEvents(runId: string): AsyncIterable<any>;
     agentRunCancel(runId: string): Promise<any>;
     agentRunRespond(runId: string, body: Record<string, any>): Promise<any>;
     agentRunAck(runId: string): Promise<any>;
@@ -226,6 +230,44 @@ export const TERMINAL_STATUSES = new Set([
 export const SUCCESS_STATUSES = new Set([
     'completed', 'completed_pending_ack', 'finalized',
 ]);
+
+/**
+ * Terminal SSE run-event types (parity with the web _TERMINAL_EVENTS set).
+ * The live stream stays open after the run ends, so the tail loop must
+ * break on these; `agent_run_cancelling` is a transition, NOT terminal.
+ */
+export const TERMINAL_EVENTS = new Set([
+    'agent_run_complete', 'agent_result_ready', 'agent_run_finalized',
+    'agent_run_error', 'agent_run_cancelled', 'agent_run_interrupted',
+]);
+
+/**
+ * One-line transcript text for a streamed action event, or null to skip.
+ * Same "what the agent DID" set as the web live log (task-run-view.js
+ * _eventText): tools, egress, fs denials, spawns, parks. Heartbeats
+ * (agent_beat), lifecycle (agent_run_*), and unknown types render nothing —
+ * the status line and renderRun() already convey those.
+ */
+export function eventText(ev: any): string | null {
+    if (!ev || !ev.type) { return null; }
+    const d = ev.data || {};
+    const short = (s: any, n = 60): string => {
+        const t = String(s == null ? '' : s);
+        return t.length > n ? t.slice(0, n) + '…' : t;
+    };
+    switch (ev.type) {
+        case 'tool_call':    return `→ ${d.tool || d.name || 'tool'}`;
+        case 'tool_result':  return `✓ ${d.tool || 'tool'}  ${short(d.result)}`;
+        case 'tool_denied':  return `⛔ tool denied: ${d.tool || ''} (off-grant)`;
+        case 'network_policy_allowed': return `↗ allow ${short((d.target_host || '') + (d.target_path || ''), 80)}`;
+        case 'network_policy_denied':  return `⛔ egress denied ${short((d.target_host || '') + (d.target_path || ''), 80)}`;
+        case 'path_denied':            return `⛔ fs denied (${d.mode || ''}) ${short(d.target_path, 70)}`;
+        case 'spawn_denied':  return `⛔ spawn denied: ${short(d.reason, 80)}`;
+        case 'agent_waiting': return `✋ waiting (${d.kind || 'consent'}): ${short(d.prompt, 80)}`;
+        case 'agent_resumed': return `▶ resumed — ${d.approved ? 'approved' : 'denied'}${d.via === 'timeout' ? ' (timed out)' : ''}`;
+        default: return null;
+    }
+}
 
 const STATUS_ICONS: Record<string, string> = {
     completed: '✅', completed_pending_ack: '📬', finalized: '✅',
@@ -509,12 +551,47 @@ export class TaskController {
     }
 
     /**
-     * Poll the run until terminal. On a T5 park, raise the consent QuickPick
-     * (once per resume token) and POST the answer. On terminal, render the
-     * outcome (+ ack/resume hints). Gives up only after pollMaxFailures
-     * CONSECUTIVE GET failures — never on run duration.
+     * The tail → poll → render cycle (parity with the web _runWatch).
+     *
+     * Tail the run's live SSE events first: action events become one-line
+     * transcript entries, and a T5 park (`agent_waiting`) raises the consent
+     * QuickPick IMMEDIATELY — no poll-backoff latency between the park and
+     * the dialog. The stream can end/fail BEFORE the run is terminal
+     * (transient outage, older server, proxy buffering), so ALWAYS fall back
+     * to meta polling until the run actually finishes, then render.
      */
     private async runWatch(runId: string): Promise<void> {
+        try {
+            for await (const ev of this.backend.agentRunEvents(runId)) {
+                const line = eventText(ev);
+                if (line) { this.ui.system(`  ${line}`); }
+                if (ev && ev.type === 'agent_waiting') {
+                    // Park discovered live — fetch the meta for the resume
+                    // token and ask now (deduped per token in maybeAskConsent).
+                    let parked: AgentRunMeta | null = null;
+                    try { parked = await this.backend.agentRun(runId); } catch { parked = null; }
+                    if (parked) { await this.maybeAskConsent(runId, parked); }
+                }
+                if (ev && TERMINAL_EVENTS.has(ev.type)) { break; }
+            }
+        } catch {
+            // Live stream unavailable — degrade silently to the poll path.
+        }
+        const run = await this.pollUntilTerminal(runId);
+        if (!run) {
+            this.ui.system(`⚠️ ${runId} — lost contact with the server; /task show ${runId} to retry.`);
+            return;
+        }
+        this.renderRun(run);
+    }
+
+    /**
+     * Degraded-path poll (also the terminal-meta fetch after a clean tail):
+     * GET the run until terminal, then return it. On a T5 park, raise the
+     * consent QuickPick (once per resume token). Gives up (null) only after
+     * pollMaxFailures CONSECUTIVE GET failures — never on run duration.
+     */
+    private async pollUntilTerminal(runId: string): Promise<AgentRunMeta | null> {
         let delay = this.pollIntervalMs;
         let failures = 0;
         for (;;) {
@@ -527,34 +604,40 @@ export class TaskController {
             if (run) {
                 failures = 0;
                 if (TERMINAL_STATUSES.has(run.status)) {
-                    this.renderRun(run);
-                    return;
+                    return run;
                 }
-                if (run.status === 'waiting' && run.waiting && run.waiting.token
-                        && !this.consentSeen.has(run.waiting.token)) {
-                    this.consentSeen.add(run.waiting.token);
-                    const answer = await this.ui.askConsent(
-                        runId, run.waiting.kind || 'consent', run.waiting.prompt || ''
-                    );
-                    // Dismissed dialog = no answer sent; the park's TTL is the
-                    // fail-closed backstop (and /task respond still works).
-                    if (answer) {
-                        const payload: Record<string, any> = { token: run.waiting.token };
-                        if (answer.approved !== undefined) { payload.approved = answer.approved; }
-                        if (answer.text) { payload.text = answer.text; }
-                        await this.respond(runId, payload);
-                    } else {
-                        this.ui.system(
-                            `✋ ${runId} is waiting — answer with /task respond ${runId} approve|deny`
-                        );
-                    }
-                }
+                await this.maybeAskConsent(runId, run);
             } else if (++failures >= this.pollMaxFailures) {
-                this.ui.system(`⚠️ ${runId} — lost contact with the server; /task show ${runId} to retry.`);
-                return;
+                return null;
             }
             await this.sleep(delay);
             delay = Math.min(delay * 2, this.pollMaxIntervalMs);
+        }
+    }
+
+    /**
+     * Raise the consent QuickPick for a waiting{consent} park — once per
+     * resume token (shared by the SSE tail and the poll path, so a park
+     * surfaced by both never double-asks).
+     */
+    private async maybeAskConsent(runId: string, run: AgentRunMeta): Promise<void> {
+        if (run.status !== 'waiting' || !run.waiting || !run.waiting.token) { return; }
+        if (this.consentSeen.has(run.waiting.token)) { return; }
+        this.consentSeen.add(run.waiting.token);
+        const answer = await this.ui.askConsent(
+            runId, run.waiting.kind || 'consent', run.waiting.prompt || ''
+        );
+        // Dismissed dialog = no answer sent; the park's TTL is the
+        // fail-closed backstop (and /task respond still works).
+        if (answer) {
+            const payload: Record<string, any> = { token: run.waiting.token };
+            if (answer.approved !== undefined) { payload.approved = answer.approved; }
+            if (answer.text) { payload.text = answer.text; }
+            await this.respond(runId, payload);
+        } else {
+            this.ui.system(
+                `✋ ${runId} is waiting — answer with /task respond ${runId} approve|deny`
+            );
         }
     }
 }

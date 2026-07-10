@@ -63,6 +63,7 @@ class TestEndpointParity:
     _ENDPOINTS = [
         "/v1/agent/task",
         "/v1/agent/runs",
+        "/events?live=1",
         "/cancel",
         "/respond",
         "/ack",
@@ -89,11 +90,13 @@ class TestEndpointParity:
         client = _read(TS_HTTP_CLIENT)
         methods = re.findall(r"^\s{4}(agent\w+)\(", controller, re.M)
         assert set(methods) >= {
-            "agentTask", "agentRuns", "agentRun", "agentRunCancel",
-            "agentRunRespond", "agentRunAck", "agentRunResume",
+            "agentTask", "agentRuns", "agentRun", "agentRunEvents",
+            "agentRunCancel", "agentRunRespond", "agentRunAck",
+            "agentRunResume",
         }
         for m in methods:
-            assert re.search(rf"async {m}\(", client), (
+            # `async *name(` — the events tail is an async generator.
+            assert re.search(rf"async \*?{m}\(", client), (
                 f"httpClient.ts lacks async {m}() required by TaskBackend"
             )
 
@@ -116,6 +119,12 @@ class TestStatusParity:
 
     def test_success_statuses_match(self):
         assert self._ts_set("SUCCESS_STATUSES") == self._web_set("_SUCCESS")
+
+    def test_terminal_events_match(self):
+        # The SSE tail loops of both clients must break on the same
+        # stream-terminal run-event set (the live stream stays open after
+        # the run ends — a mismatch parks one client's tail forever).
+        assert self._ts_set("TERMINAL_EVENTS") == self._web_set("_TERMINAL_EVENTS")
 
 
 class TestChatPanelWiring:

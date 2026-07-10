@@ -37,16 +37,7 @@ Each has a dedicated doc — read it before changing code in that area.
 - VSCode extension bundled via esbuild (v1.18.2) — 128 KB VSIX (was 1.1 MB), 15 files (was 804); CI has 500 KB size-budget gate.
 - **v1 API gateway** (v1.18.3) — `POST /v1/oneshot` is the first stable, semver-versioned external surface. Internal endpoints (`/chat`, `/command/*`, etc.) keep evolving. v1.19.0: opt-in provider-side web search via `tools.web_search.oneshot_grounding` (default off; Option A — no tool exposed, perimeter unchanged). See [docs/api-gateway.md](docs/api-gateway.md).
 
-## Codebase Statistics (v1.18.7, approximate)
-
-| Language | Files | Lines |
-|----------|------:|------:|
-| Python (core) | ~187 | ~64,000 |
-| Python (tests) | ~158 | ~60,000 |
-| TypeScript (VSCode) | 19 | ~9,500 |
-| JavaScript (Web) | ~21 | ~9,900 |
-| CSS | 8 | ~4,900 |
-| **Total** | **~393** | **~148,000** |
+## Codebase Statistics
 
 Tests: **3,907 passing, 3 skipped** on Unix with `uv sync --all-extras` (the v1.18.7 canonical pre-tag count; 3,910 collected). The count is environment-dependent: a base venv without the `[data]`/multipart extras skips the office + upload suites (~3,841 passing), and the release script's own run reports whatever its env yields (v1.18.7's README badge shows `3844`). On Windows the 7 `TestKillPreviewBackend` cases also skip (`os.getpgid`/`os.killpg` can't be `patch()`-ed).
 
@@ -68,42 +59,6 @@ Tests: **3,907 passing, 3 skipped** on Unix with `uv sync --all-extras` (the v1.
 `~/.ppxai/` subdirs: `bin/` (Windows only), `web/` (with `lib/` and `shared/`), `sessions/`, `exports/`, `checkpoints/`, `logs/`, `usage/`.
 
 ## Architecture
-
-```
-ppxai/
-├── engine/              # Core business logic (no UI)
-│   ├── client.py        # EngineClient facade
-│   ├── types.py         # Message, Event, UsageStats, Protocols
-│   ├── session.py       # Session management
-│   ├── session_store.py # Content-addressed file storage for uploads
-│   ├── file_preprocessing.py  # Central file dispatcher (images/text/PDF/Office)
-│   ├── image_validation.py    # Magic-byte sniffing, size/dimension limits
-│   ├── model_deprecations.py  # Deprecation table for /doctor
-│   ├── model_profiles.py      # ModelProfile registry with supports_vision
-│   ├── providers/       # Perplexity, OpenAI-compat (BaseProvider ABC)
-│   └── tools/           # Tool system + builtins (incl. pdf_tools.py)
-├── server/              # HTTP/SSE server for IDE
-│   ├── http.py          # FastAPI app, lifespan, CLI entry points
-│   ├── models.py        # Pydantic request/response models
-│   ├── state.py         # Shared server state
-│   ├── streaming.py     # SSE event generators
-│   └── routes/          # 17 route modules
-├── tui/
-│   ├── keys.py          # Key binding registry
-│   └── widgets/file_tree.py  # Norton Commander browser
-├── main.py              # TUI entry point
-├── commands.py          # Slash command handlers
-├── commands/            # Command modules
-└── config/              # Configuration system
-
-vscode-extension/        # TypeScript VSCode extension
-├── src/
-│   ├── extension.ts     # Entry point
-│   ├── httpClient.ts    # HTTP + SSE client
-│   ├── chatPanel.ts     # Webview chat UI
-│   └── handlers/        # eventBus, stream, consent, agentStateMachine
-└── media/webview/       # External CSS/JS
-```
 
 **Configuration files:**
 

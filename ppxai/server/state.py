@@ -192,6 +192,11 @@ def get_agent_run_registry():
     """
     global _agent_run_registry
     if _agent_run_registry is None:
+        # INVARIANT (external review round (w)): every caller is an
+        # `async def` route/middleware, so this check-then-set and the
+        # one-shot sweep below run on the single event loop and cannot
+        # interleave. If a sync-def endpoint or a thread ever calls this
+        # getter (threadpool), add a lock here first.
         from ..config.loader import PPXAI_HOME
         from ..engine.agent_runs import AgentRunRegistry, FilesystemAgentRunStore
         store = FilesystemAgentRunStore(PPXAI_HOME / "runs")
