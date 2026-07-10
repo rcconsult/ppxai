@@ -577,6 +577,66 @@ missing abstraction visible).
 
 ---
 
+### Item 38 — model-catalog watch list (verified live 2026-07-11)
+
+Full live sweep 2026-07-11 (method: `set -a; . ~/.ppxai/.env; set +a` + curl
+each provider's `/models` with bearer; Perplexity has no `/models` — verified
+via docs + changelog). **Result: every configured model on all four providers
+is still live — no dead models, no config change required now.** OpenAI 7/7
+(incl. `gpt-5.3-codex`, still the newest codex line), Gemini 5/5 (incl. both
+`gemma-4-*`), NVIDIA 9/9 (unusually, zero NIM retirements this round),
+Perplexity 4/4 Sonar models unchanged. `model_deprecations.py` verification
+date bumped to 2026-07-11; no new table entries needed.
+
+**Watch items (act on trigger, not now):**
+
+1. **OpenAI gpt-5.6 "Sol / Terra / Luna"** — announced 2026-07-09, limited
+   preview (~20 orgs), GA "in the coming weeks". New naming: number =
+   generation, Sol/Terra/Luna = durable capability tiers. Pricing per MTok:
+   Sol $5/$30, Terra $2.50/$15, Luna $1/$6. **Terra ≈ GPT-5.5 performance at
+   HALF the price** → on GA, our configured `gpt-5.5` ($5/$30) becomes poor
+   value (candidate for our own deprecation table), and `gpt-5.4-mini`
+   ($0.75/$4.50, benchmark champion 97.5%) must be re-benchmarked against
+   Luna before any default switch. The three ids already appear in live
+   `/models` (2026-07-11) but are preview-gated. **Trigger:** gpt-5.6 GA →
+   add family, run `benchmarks/llm-eval`, re-pick default + flagship.
+
+2. **Perplexity Agent API (the "search/coding API" addition)** — a NEW
+   surface beside Sonar chat completions and the Search API. Changelog
+   2026-05→07: exposes third-party + coding-focused models
+   (`openai/gpt-5.6-{sol,terra,luna}`, `anthropic/claude-sonnet-5`,
+   `anthropic/claude-opus-4-8`, `xai/grok-4.5` "flagship coding and agentic",
+   `perplexity/kimi-k2.7-code` "coding and agentic", `perplexity/glm-5.2`,
+   `nvidia/nemotron-3-super-120b-a12b`) plus a `finance_search` tool. Docs
+   are being restructured (the overview path 404s); endpoint shape /
+   OpenAI-compatibility / pricing unverified. **Trigger:** evaluate when docs
+   stabilize — could be (a) a second Perplexity provider entry if
+   OpenAI-compatible, (b) a web_search backend alternative (Search API), or
+   (c) out of scope. Note `anthropic/*` via this API would intersect the
+   roadmap's native Anthropic-provider item.
+
+3. **`gemini-3.1-pro-preview` succession** — still live, no announced
+   shutdown, but it is the only *preview*-class model left in our catalog and
+   Google retires previews on ~2–3-month cycles once a successor lands
+   (precedents: `gemini-3-pro-preview` → shutdown 2026-03-09,
+   `gemini-3.1-flash-lite-preview` → shutdown 2026-05-25, both bit us before).
+   **Trigger:** a GA `gemini-3.1-pro`/`gemini-3.5-pro` appears → migrate + add
+   the preview to the deprecations table. New Gemini families seen 2026-07-11
+   worth a look at next refresh: `gemini-omni-flash-preview`,
+   `deep-research-*`, `antigravity-preview-05-2026`.
+
+4. **NVIDIA next-refresh candidates** (no action now): `z-ai/glm-5.2`,
+   `minimaxai/minimax-m3`, `mistralai/mistral-small-4-119b-2603`,
+   `mistralai/mistral-medium-3.5-128b`, `google/gemma-4-31b-it`,
+   `moonshotai/kimi-k2.6` (already configured). NVIDIA publishes no
+   deprecation calendar — the live-catalog diff IS the check; re-run the
+   sweep at the next release prep.
+
+**Trigger:** gpt-5.6 GA announcement, Perplexity Agent API docs stabilizing,
+or the next release prep — whichever comes first.
+
+---
+
 ## Recently moved out of debt scope
 
 These items left the debt inventory because they're not bug-fix-class

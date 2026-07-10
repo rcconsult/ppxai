@@ -21,8 +21,12 @@ Sources:
                 (NVIDIA does not publish a deprecation calendar; "retired"
                 here means absent from the live catalog on the verification date).
 
-Verification date: 2026-05-31 (live /models sweep across OpenAI, Gemini,
-NVIDIA NIM; Perplexity has no /models endpoint, verified via changelog).
+Verification date: 2026-07-11 (live /models sweep across OpenAI, Gemini,
+NVIDIA NIM; Perplexity has no /models endpoint, verified via docs/changelog).
+2026-07-11 sweep result: every model in the shipped catalog is still live on
+all four providers — no new retirements to add. Watch items (gpt-5.6 GA,
+Perplexity Agent API, gemini-3.1-pro-preview succession) are tracked in
+docs/debt-inventory.md Item 38.
 """
 
 from __future__ import annotations
