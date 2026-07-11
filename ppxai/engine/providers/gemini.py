@@ -54,6 +54,90 @@ def is_available() -> bool:
     return _genai_available
 
 
+# JSON-Schema keys the google-genai ``Schema`` model accepts (camelCase alias
+# form, verified against SDK 1.56.0). Any OTHER key is rejected by pydantic
+# with ``extra_forbidden``, which fails the WHOLE request client-side — one
+# incompatible tool schema kills the run before anything reaches the API.
+_GEMINI_SCHEMA_KEYS = frozenset({
+    "type", "format", "title", "description", "nullable", "default",
+    "enum", "example", "pattern",
+    "minimum", "maximum", "minLength", "maxLength",
+    "minItems", "maxItems", "minProperties", "maxProperties",
+    "items", "properties", "required", "propertyOrdering",
+    "additionalProperties", "anyOf",
+})
+
+# Keys whose value is itself a schema / collection of schemas — recurse.
+_GEMINI_SUBSCHEMA_LIST_KEYS = ("anyOf",)
+
+
+def _sanitize_schema_for_gemini(schema):
+    """Downgrade a JSON-Schema fragment to the subset Gemini accepts.
+
+    OpenAI-compatible providers take raw JSON Schema, but Gemini's
+    function-declaration ``Schema`` is a strict OpenAPI-style subset:
+    ``oneOf`` and friends are ``extra_forbidden`` (caught live on v1.19.0
+    ``/task`` — ``spawn_subagent.allow_outbound`` uses ``items.oneOf`` and
+    the ValidationError failed the run instantly). Applied to EVERY tool's
+    parameters in :meth:`GeminiProvider._convert_tools_to_gemini` so future
+    tools can't reintroduce the failure.
+
+    Lossy on purpose, in the permissive direction — the model may produce
+    arguments the original schema would have constrained further; the tool
+    itself remains the enforcement point:
+
+      * ``oneOf`` -> ``anyOf`` (the union form the SDK supports)
+      * ``allOf`` -> shallow merge of its (sanitized) variants
+      * list-form ``type`` (``["string", "null"]``) -> single type + nullable
+      * unsupported keys -> dropped
+    """
+    if not isinstance(schema, dict):
+        return schema
+
+    out = {}
+    for key, value in schema.items():
+        if key == "oneOf":
+            variants = [_sanitize_schema_for_gemini(v) for v in value] \
+                if isinstance(value, list) else []
+            out.setdefault("anyOf", []).extend(variants)
+        elif key == "allOf":
+            # Shallow-merge the variants: properties/required union,
+            # first-wins for scalar keys.
+            merged = {}
+            for variant in (value if isinstance(value, list) else []):
+                variant = _sanitize_schema_for_gemini(variant)
+                if not isinstance(variant, dict):
+                    continue
+                for k, v in variant.items():
+                    if k == "properties" and isinstance(merged.get(k), dict):
+                        merged[k] = {**v, **merged[k]}
+                    elif k == "required" and isinstance(merged.get(k), list):
+                        merged[k] = list(dict.fromkeys(merged[k] + v))
+                    else:
+                        merged.setdefault(k, v)
+            for k, v in merged.items():
+                out.setdefault(k, v)
+        elif key == "type" and isinstance(value, list):
+            non_null = [t for t in value if t != "null"]
+            if non_null:
+                out["type"] = non_null[0]
+            if "null" in value:
+                out["nullable"] = True
+        elif key not in _GEMINI_SCHEMA_KEYS:
+            continue  # unsupported keyword — drop rather than fail the request
+        elif key == "properties" and isinstance(value, dict):
+            out[key] = {name: _sanitize_schema_for_gemini(sub)
+                        for name, sub in value.items()}
+        elif key in ("items", "additionalProperties"):
+            out[key] = _sanitize_schema_for_gemini(value)
+        elif key in _GEMINI_SUBSCHEMA_LIST_KEYS and isinstance(value, list):
+            existing = out.setdefault(key, [])
+            existing.extend(_sanitize_schema_for_gemini(v) for v in value)
+        else:
+            out[key] = value
+    return out
+
+
 class GeminiProvider(BaseProvider):
     """Native provider for Google Gemini API.
 
@@ -746,9 +830,12 @@ class GeminiProvider(BaseProvider):
                     "name": func.get("name", ""),
                     "description": func.get("description", ""),
                 }
-                # Parameters are in JSON Schema format, same for both APIs
+                # Parameters are JSON Schema, but Gemini validates a strict
+                # OpenAPI subset — sanitize or one bad tool kills the request.
                 if "parameters" in func:
-                    declaration["parameters"] = func["parameters"]
+                    declaration["parameters"] = _sanitize_schema_for_gemini(
+                        func["parameters"]
+                    )
                 declarations.append(declaration)
         return declarations
 
