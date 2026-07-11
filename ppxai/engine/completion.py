@@ -85,6 +85,11 @@ _BUILTIN_SPECIAL_COMMANDS: List[Dict[str, Any]] = [
     {"text": "/task", "display": "/task",
      "description": "Tool-capable background agent runs (run·ls·show·respond·ack·resume·cancel)",
      "kind": "command"},
+    # Item 40: /v1 bearer management (web client-side; VSCode uses the
+    # ppxai.setApiToken command-palette entry instead).
+    {"text": "/token", "display": "/token",
+     "description": "Manage the /v1 API bearer token (status·set·mint·clear)",
+     "kind": "command"},
 ]
 
 # Context-provider shortcuts — handled by ContextInjector, not the
@@ -177,6 +182,46 @@ _EMOJI_OPTIONS: List[Tuple[str, str]] = [
     ("off", "Convert to text symbols"),
 ]
 
+# /task verbs (v1.19.x tool-capable tier). Mirrors the client dispatchers
+# (web task-controller.js handle(), VSCode taskController.ts) — the parity
+# sentinel in tests/test_vscode_task_controller.py pins THAT pair; this
+# table lists the canonical verbs (aliases `list`/`open` omitted as noise).
+_TASK_SUBCOMMANDS: List[Tuple[str, str]] = [
+    ("run",     'Launch a run: /task run "<desc>" --tools a,b,c'),
+    ("ls",      "List runs"),
+    ("show",    "Open a run pane"),
+    ("watch",   "Open + live-tail a run"),
+    ("respond", "Answer a run parked in waiting (approve|deny|text)"),
+    ("ack",     "Collect a held result (📬 → finalized)"),
+    ("resume",  "Continue an interrupted/cancelled run"),
+    ("cancel",  "Cancel a run"),
+    ("help",    "Show /task help"),
+]
+
+# Which run statuses make sense as the <id> argument of each /task verb.
+# None = any run (inspection verbs work on everything, incl. finalized).
+_TASK_ID_VERB_STATUSES: Dict[str, Optional[frozenset]] = {
+    "respond": frozenset({"waiting"}),
+    "ack":     frozenset({"completed_pending_ack"}),
+    "resume":  frozenset({"interrupted", "cancelled"}),
+    "cancel":  frozenset({"pending", "running", "waiting", "cancelling"}),
+    "show":    None,
+    "open":    None,
+    "watch":   None,
+}
+
+_TASK_RESPOND_ANSWERS: List[Tuple[str, str]] = [
+    ("approve", "Approve the parked request"),
+    ("deny",    "Deny the parked request"),
+]
+
+_TOKEN_SUBCOMMANDS: List[Tuple[str, str]] = [
+    ("status", "Show whether a /v1 bearer token is stored (masked)"),
+    ("set",    "Store a token — prompts for the value; never type it inline"),
+    ("mint",   "Mint + store a token via the loopback bootstrap (local server)"),
+    ("clear",  "Remove the stored token"),
+]
+
 
 def complete(
     buffer: str,
@@ -185,6 +230,7 @@ def complete(
     working_dir: Optional[str] = None,
     current_provider: Optional[str] = None,
     tool_names: Optional[List[Tuple[str, str]]] = None,
+    agent_runs: Optional[List[Dict[str, Any]]] = None,
 ) -> List[Dict[str, Any]]:
     """Compute completions for a given input buffer + cursor position.
 
@@ -203,6 +249,12 @@ def complete(
         tool_names: Optional list of (tool_name, description) pairs used
                     by `/tools help <tool>` completion. Server and Rich
                     pass `engine_client.tool_manager.list_tools()`.
+        agent_runs: Optional snapshot of agent runs for `/task <verb> <id>`
+                    completion — dicts with {id, status, task, resumable},
+                    newest-first. Only the server can supply this (the
+                    AgentRunRegistry is server-side state; the in-process
+                    TUIs have no channel to it — T8b parked), so callers
+                    without it simply get no run-id suggestions.
 
     Returns:
         List of completion item dicts with a stable JSON schema
@@ -229,6 +281,7 @@ def complete(
     if space_idx > 0:
         return _complete_slash_args(
             text, space_idx, wd, current_provider, tools,
+            agent_runs or [],
         )
 
     # Bare command name
@@ -297,6 +350,7 @@ def _complete_slash_args(
     wd: str,
     current_provider: Optional[str],
     tool_names: List[Tuple[str, str]],
+    agent_runs: List[Dict[str, Any]],
 ) -> List[Dict[str, Any]]:
     """Route `/cmd ...` to the right arg completer.
 
@@ -323,6 +377,13 @@ def _complete_slash_args(
         return _complete_model(args_region, current_provider)
     if canonical == "provider":
         return _complete_provider(args_region)
+    if canonical == "task":
+        return _complete_task(args_region, agent_runs)
+    if canonical == "token":
+        completed, token = _split_args(args_region)
+        if not completed:
+            return _filter_table(token, _TOKEN_SUBCOMMANDS, "subcommand")
+        return []
 
     # Path arg commands
     path_opts = _PATH_ARG_COMMANDS.get(canonical)
@@ -399,6 +460,60 @@ def _complete_tools(
         return _filter_table(token, tool_names, "tool")
 
     return []
+
+
+def _complete_task(
+    args_region: str,
+    agent_runs: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    """`/task <verb>` + status-aware `/task <verb> <run_id>` completion.
+
+    The verb determines which runs make sense as its id argument
+    (`_TASK_ID_VERB_STATUSES`): `ack` only offers 📬 held results,
+    `respond` only ✋ parked runs, `resume` only interrupted/cancelled
+    (and resumable) ones, `cancel` only in-flight ones; the inspection
+    verbs (show/watch/open) offer everything. Suggestions carry the
+    run's task text so users pick by meaning, not by hex id.
+    """
+    completed, token = _split_args(args_region)
+
+    if not completed:
+        return _filter_table(token, _TASK_SUBCOMMANDS, "subcommand")
+
+    verb = completed[0].lower()
+
+    # `/task respond <id> <answer>` — the third token is the answer word.
+    if verb == "respond" and len(completed) == 2:
+        return _filter_table(token, _TASK_RESPOND_ANSWERS, "subcommand")
+
+    if len(completed) != 1 or verb not in _TASK_ID_VERB_STATUSES:
+        return []
+
+    statuses = _TASK_ID_VERB_STATUSES[verb]
+    token_lower = token.lower()
+    items: List[Dict[str, Any]] = []
+    for run in agent_runs:
+        run_id = str(run.get("id", ""))
+        status = str(run.get("status", ""))
+        if not run_id:
+            continue
+        if statuses is not None and status not in statuses:
+            continue
+        if verb == "resume" and not run.get("resumable", False):
+            continue
+        if token_lower and not run_id.lower().startswith(token_lower):
+            continue
+        task_text = str(run.get("task", "")).strip()
+        if len(task_text) > 48:
+            task_text = task_text[:47] + "…"
+        items.append({
+            "text": run_id,
+            "display": run_id,
+            "description": f"{status} — {task_text}" if task_text else status,
+            "kind": "run",
+            "replace_start": -len(token),
+        })
+    return items
 
 
 def _complete_usage(args_region: str) -> List[Dict[str, Any]]:

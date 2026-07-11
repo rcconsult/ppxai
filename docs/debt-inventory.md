@@ -675,6 +675,79 @@ hook-rewritten commands, OR `rtk gain` totals plateau across sessions
 
 ---
 
+### Item 40 — web + VSCode clients cannot present a bearer token; `/task` unusable on auth-enforcing hosts [agent platform / clients] — ✅ FIXED (2026-07-11, pending live trial)
+
+**Build (landed):** both clients grew a /v1-scoped bearer seam — scoped to
+`/v1/*` ONLY because `server/auth.py` validates any presented bearer even on
+loopback-exempt UI routes (a stale token attached everywhere would 401 the
+whole client, not just the agent API).
+
+- **web:** `ApiClient.setApiToken()` + `headersFor(endpoint)` (get/post +
+  the `_tailEvents` live stream); token persisted in
+  `localStorage['ppxai-api-token']`, restored on app init. New client-side
+  **`/token status|set|mint|clear`** command (command-dispatcher):
+  `set` takes the value via `window.prompt()` — NEVER inline, every
+  dispatched command line is echoed into the server debug log; `mint`
+  self-provisions via the loopback bootstrap (`POST /v1/tokens`, sent
+  bare — a stale stored bearer would be validated and rejected even on
+  the exempt mint). `/token` registered in both web catalogs + the
+  engine completion builtins (`_TOKEN_SUBCOMMANDS`).
+- **VSCode:** `HttpClient.setApiToken()` + `v1Headers()` used by all 8
+  agent-slice call sites (task/runs/run/events/cancel/respond/ack/resume);
+  token in `SecretStorage` (`ppxai.apiToken`) — never settings.json (sync +
+  dotfile leak) — via the new `ppxai.setApiToken` command (masked input;
+  empty submit clears).
+- **Tests:** `tests/test_api_client_auth_behavior.py` (Node harness — bearer
+  on /v1 GET+POST, absent on UI routes, headersFor seam, clear);
+  `tests/test_vscode_task_controller.py::TestBearerParity` (6 sentinels —
+  both seams exist, every VSCode agent call site uses `v1Headers`, secret
+  sources are the safe ones). Server side unchanged — already covered by
+  `test_auth_middleware.py` + `test_tokens_v1_route.py`.
+
+**Trial recipe:** restore the file token store
+(`cp ~/.ppxai/ppxai-config.json.backup.tasktrials ~/.ppxai/ppxai-config.json`),
+restart the server, web UI: `/task ls` → expect 401 error; `/token mint` →
+minted+stored; `/task ls` again → works; `/task run …` full T5 flow under
+auth. VSCode: command palette → "ppxai: Set API Token" → paste a minted
+token → `/task ls` works.
+
+**Original entry (for context):** neither shipped client can authenticate to the v1 agent
+API. `ppxai/web/` has zero `Authorization` handling and so does
+`vscode-extension/src/` (verified by grep 2026-07-11). Meanwhile
+`/v1/agent/*` stays bearer-protected **even from loopback** (Inc 8b:
+`_LOOPBACK_PROTECTED_PREFIXES` in `server/auth.py`; only the tool-free
+`/v1/agent/run` + unowned-run reads are carved out), and auth is enforced
+whenever a mint-capable store is configured (`server.secrets.providers`
+containing `file` — presence ⇒ enforce, even with zero tokens). Net effect:
+on any host with a file token store, the ENTIRE `/task` family 401s from
+both shipped UIs. Caught live in the 2026-07-11 T5 trial on this host
+(file store left over from the Inc 8 `/v1/tokens` trial); worked around by
+temporarily removing the file provider from the user config.
+
+**Why it wasn't caught earlier:** every T1–T8a live trial ran on auth-off
+hosts (no mint-capable store configured), which is the fresh-install
+default — the trial recipes never mention tokens because they never needed
+one.
+
+**What's needed:** per-client token plumbing, not a server change:
+- **web:** a settings affordance to store a token (localStorage) +
+  `Authorization: Bearer` injection in `apiClient` and the SSE/event-tail
+  fetches; the loopback-exempt `POST /v1/tokens` bootstrap mint (Inc 8a)
+  already gives a local browser a way to acquire one.
+- **VSCode:** `ppxai.apiToken` via `SecretStorage` (not settings.json) +
+  the same header in `httpClient.ts` (incl. `agentRunEvents`).
+- Parity sentinels: extend `tests/test_vscode_task_controller.py` so the
+  header wiring can't drift between the two clients.
+
+**Release consideration:** v1.19.0 ships `/task` in web + VSCode as a
+headline feature — "unusable the moment an operator configures the token
+store" is a real deployment cliff. Either land this before tagging or
+document the auth-off requirement loudly in the release notes.
+
+**Effort:** ~half a day both clients + sentinels.
+
+---
+
 ## Recently moved out of debt scope
 
 These items left the debt inventory because they're not bug-fix-class

@@ -163,6 +163,11 @@ class TaskController extends _AgentRunControllerBase {
         const sp = trimmed.search(/\s/);
         const verb = (sp === -1 ? trimmed : trimmed.slice(0, sp)).toLowerCase();
         const rest = sp === -1 ? '' : trimmed.slice(sp + 1).trim();
+        // Run ids never contain whitespace — id-taking verbs use only the
+        // first token so a multi-line paste degrades to acting on the first
+        // id instead of sending the whole blob as one bogus id (live-trial
+        // stumble, 2026-07-11).
+        const firstTok = ((rest.split(/\s/, 1)[0]) || '');
         switch (verb) {
             case '':
             case 'help':   return this.help();
@@ -170,12 +175,12 @@ class TaskController extends _AgentRunControllerBase {
             case 'ls':
             case 'list':   return this.list();
             case 'show':
-            case 'open':   return this.show(rest);
-            case 'watch':  return this.show(rest);
-            case 'cancel': return this.cancel(rest.trim());
+            case 'open':   return this.show(firstTok);
+            case 'watch':  return this.show(firstTok);
+            case 'cancel': return this.cancel(firstTok);
             case 'respond': return this.respondCmd(rest);
-            case 'ack': return this.ack(rest.trim());
-            case 'resume': return this.resume(rest.trim());
+            case 'ack': return this.ack(firstTok);
+            case 'resume': return this.resume(firstTok);
             default:
                 this.app.showSystemMessage(`Unknown /task subcommand: ${verb}. Try /task help.`);
                 return undefined;
@@ -190,8 +195,12 @@ class TaskController extends _AgentRunControllerBase {
             return;
         }
         if (!spec.task) {
+            // NB: usage strings wrap the syntax in backticks — the web
+            // renderer is markdown→innerHTML, so a bare `<id>`/`<desc>`
+            // placeholder parses as an HTML tag and silently vanishes
+            // (caught live 2026-07-11); code spans render entities escaped.
             this.app.showSystemMessage(
-                'Usage: /task run "<desc>" --tools <a,b,c> [--spec <name>] [--skill <name>] [--allow host] [--budget iters=,time=,tokens=] [--system "…"]'
+                'Usage: `/task run "<desc>" --tools <a,b,c> [--spec <name>] [--skill <name>] [--allow host] [--budget iters=,time=,tokens=] [--system "…"]`'
             );
             return;
         }
@@ -278,7 +287,7 @@ class TaskController extends _AgentRunControllerBase {
         const runId = sp === -1 ? trimmed : trimmed.slice(0, sp);
         let answer = sp === -1 ? '' : trimmed.slice(sp + 1).trim();
         if (!runId || !answer) {
-            this.app.showSystemMessage('Usage: /task respond <id> approve|deny|"<text>"');
+            this.app.showSystemMessage('Usage: `/task respond <id> approve|deny|"<text>"`');
             return;
         }
         // Strip one layer of quotes off a quoted free-text answer.
@@ -310,23 +319,25 @@ class TaskController extends _AgentRunControllerBase {
     /** /task show|open|watch <id> — focus (and live-tail) a run's pane. */
     show(runId) {
         const id = (runId || '').trim();
-        if (!id) { this.app.showSystemMessage('Usage: /task show <id>'); return undefined; }
+        if (!id) { this.app.showSystemMessage('Usage: `/task show <id>`'); return undefined; }
         return this.focus(id, '');
     }
 
     help() {
+        // Syntax in code spans (see the run() usage note): the markdown
+        // renderer would otherwise eat every <placeholder> as an HTML tag.
         this.app.showSystemMessage([
             '/task — tool-capable background runs (sandboxed tier; default-off):',
-            '  /task run "<desc>" --tools a,b,c [--allow host] [--provider p] [--model m] [--budget iters=,time=,tokens=] [--system "…"]',
-            '  /task run "<desc>" --spec <name>   configure from a spec file (specs_dir); flags override the file',
-            '  /task run "<desc>" --skill <name>  mount a skill (skills_dir): SKILL.md grant + references/ into read-scope; repeatable',
-            '  /task ls                list runs',
-            '  /task show <id>         open a run pane',
-            '  /task watch <id>        open + live-tail a run',
-            '  /task respond <id> approve|deny|"<text>"  answer a run parked in waiting (consent card)',
-            '  /task ack <id>          collect a held result (📬 completed_pending_ack → finalized)',
-            '  /task resume <id>       continue an interrupted/cancelled run from its checkpoint',
-            '  /task cancel <id>       cancel a run',
+            '  `/task run "<desc>" --tools a,b,c [--allow host] [--provider p] [--model m] [--budget iters=,time=,tokens=] [--system "…"]`',
+            '  `/task run "<desc>" --spec <name>` — configure from a spec file (specs_dir); flags override the file',
+            '  `/task run "<desc>" --skill <name>` — mount a skill (skills_dir): SKILL.md grant + references/ into read-scope; repeatable',
+            '  `/task ls` — list runs',
+            '  `/task show <id>` — open a run pane',
+            '  `/task watch <id>` — open + live-tail a run',
+            '  `/task respond <id> approve|deny|"<text>"` — answer a run parked in waiting (consent card)',
+            '  `/task ack <id>` — collect a held result (📬 completed_pending_ack → finalized)',
+            '  `/task resume <id>` — continue an interrupted/cancelled run from its checkpoint',
+            '  `/task cancel <id>` — cancel a run',
         ].join('\n'));
     }
 }

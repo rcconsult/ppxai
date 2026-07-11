@@ -27,6 +27,8 @@ class ApiClient {
         this.serverUrl = serverUrl;
         // Generate unique session ID for this client instance (v1.14.0)
         this.sessionId = sessionId || `webapp-${generateUUID()}`;
+        // Bearer token for the /v1/* API (Item 40). null = none attached.
+        this.apiToken = null;
         console.log(`[ApiClient] Session ID: ${this.sessionId}`);
     }
 
@@ -35,6 +37,31 @@ class ApiClient {
      */
     setServerUrl(url) {
         this.serverUrl = url;
+    }
+
+    /**
+     * Set (or clear, with null/'') the bearer token attached to /v1/* calls.
+     *
+     * Item 40: `/v1/agent/*` + `/v1/tokens` stay bearer-protected even from
+     * loopback (server/auth.py Inc 8b), so the client must be able to
+     * present one. Scoped to `/v1/` ONLY — the server validates any bearer
+     * it is handed, even on loopback-exempt UI routes, so a stale token on
+     * every request would 401 the whole UI instead of just the agent API.
+     */
+    setApiToken(token) {
+        this.apiToken = token || null;
+    }
+
+    /**
+     * Headers for a specific endpoint — session headers plus the bearer
+     * when the endpoint is under the token-protected /v1/ surface.
+     */
+    headersFor(endpoint, includeContentType = false) {
+        const headers = this.getHeaders(includeContentType);
+        if (this.apiToken && typeof endpoint === 'string' && endpoint.startsWith('/v1/')) {
+            headers['Authorization'] = `Bearer ${this.apiToken}`;
+        }
+        return headers;
     }
 
     /**
@@ -94,7 +121,7 @@ class ApiClient {
      */
     async get(endpoint) {
         const response = await fetch(`${this.serverUrl}${endpoint}`, {
-            headers: this.getHeaders()
+            headers: this.headersFor(endpoint)
         });
         if (!response.ok) await this._throwHttpError(response);
         return response.json();
@@ -106,7 +133,7 @@ class ApiClient {
     async post(endpoint, body = {}) {
         const response = await fetch(`${this.serverUrl}${endpoint}`, {
             method: 'POST',
-            headers: this.getHeaders(true),
+            headers: this.headersFor(endpoint, true),
             body: JSON.stringify(body)
         });
         if (!response.ok) await this._throwHttpError(response);

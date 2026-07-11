@@ -238,6 +238,14 @@ export async function activate(context: vscode.ExtensionContext) {
     // Initialize HTTP backend (connects to ppxai-server)
     backend = getHttpClient();
 
+    // Item 40: restore the /v1 API bearer from SecretStorage (set via the
+    // `ppxai.setApiToken` command below). SecretStorage — never settings —
+    // so the token can't sync to other machines or leak into dotfiles.
+    try {
+        const storedApiToken = await context.secrets.get('ppxai.apiToken');
+        if (storedApiToken) { backend.setApiToken(storedApiToken); }
+    } catch { /* secrets unavailable — run token-less */ }
+
     // Initialize chat view provider
     const chatViewProvider = new ChatViewProvider(context, backend);
 
@@ -258,6 +266,29 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.commands.registerCommand('ppxai.openChat', () => {
             vscode.commands.executeCommand('ppxai.chatView.focus');
+        })
+    );
+
+    // Item 40: set/clear the bearer for the protected /v1 API surface
+    // (`/task` family + /v1/tokens). Masked input; empty submit clears.
+    context.subscriptions.push(
+        vscode.commands.registerCommand('ppxai.setApiToken', async () => {
+            const value = await vscode.window.showInputBox({
+                prompt: 'ppxai API token for /v1 calls (leave empty to clear)',
+                password: true,
+                ignoreFocusOut: true,
+            });
+            if (value === undefined) { return; } // dismissed — no change
+            if (value.trim() === '') {
+                await context.secrets.delete('ppxai.apiToken');
+                backend.setApiToken(undefined);
+                vscode.window.showInformationMessage('ppxai: API token cleared.');
+                return;
+            }
+            await context.secrets.store('ppxai.apiToken', value.trim());
+            backend.setApiToken(value.trim());
+            vscode.window.showInformationMessage(
+                `ppxai: API token stored (…${value.trim().slice(-4)}) — attached to /v1 calls.`);
         })
     );
 

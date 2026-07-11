@@ -103,6 +103,11 @@ const SLASH_COMMANDS = {
         usage: '/task run "<desc>" --tools a,b,c [--allow host] [--budget iters=,time=,tokens=]',
         category: CommandCategory.TOOLS
     },
+    '/token': {
+        description: 'Manage the bearer token attached to /v1 API calls (status|set|mint|clear)',
+        usage: '/token [status|set|mint|clear]',
+        category: CommandCategory.TOOLS
+    },
 
     // === Checkpoint ===
     '/checkpoint': {

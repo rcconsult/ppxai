@@ -169,3 +169,67 @@ class TestConsentTokenDiscipline:
     def test_respond_verb_reads_token_from_meta(self):
         src = _read(TS_CONTROLLER)
         assert "token: meta.waiting.token" in src
+
+
+class TestBearerParity:
+    """Item 40: both clients must attach the /v1 bearer the same way.
+
+    The bearer is scoped to /v1/* ONLY — server/auth.py validates any
+    presented bearer even on loopback-exempt UI routes, so a stale token
+    attached everywhere would 401 the whole client. These fences pin:
+    (a) each client has the setter + scoped-header seam, (b) every
+    /v1/agent call site actually uses it, (c) the token sources are the
+    safe ones (web localStorage via /token; VSCode SecretStorage — never
+    settings.json).
+    """
+
+    TS_EXTENSION = ROOT / "vscode-extension" / "src" / "extension.ts"
+    TS_PACKAGE = ROOT / "vscode-extension" / "package.json"
+    WEB_API = ROOT / "ppxai" / "web" / "shared" / "api-client.js"
+    WEB_DISPATCH = ROOT / "ppxai" / "web" / "shared" / "command-dispatcher.js"
+
+    def test_web_api_client_has_scoped_bearer_seam(self):
+        src = _read(self.WEB_API)
+        assert "setApiToken" in src
+        assert "headersFor" in src
+        assert "startsWith('/v1/')" in src, "bearer must be scoped to /v1/*"
+
+    def test_web_event_tail_uses_the_seam(self):
+        src = _read(WEB_BASE)
+        assert "api.headersFor" in src, (
+            "_tailEvents must use headersFor — a raw getHeaders() 401s the "
+            "live tail on auth-enforcing hosts"
+        )
+
+    def test_web_token_command_never_takes_inline_secret_silently(self):
+        src = _read(self.WEB_DISPATCH)
+        assert "_handleTokenCommand" in src
+        assert "window.prompt" in src, "token entry must go through prompt()"
+        assert "ppxai-api-token" in src  # the localStorage key
+
+    def test_vscode_client_has_scoped_bearer_seam(self):
+        src = _read(TS_HTTP_CLIENT)
+        assert "setApiToken" in src
+        assert "v1Headers" in src
+
+    def test_every_vscode_agent_call_site_uses_v1_headers(self):
+        src = _read(TS_HTTP_CLIENT)
+        start = src.index("// === Agent run registry")
+        end = src.index("// === Agent Mode (v1.11.8) ===")
+        agent_slice = src[start:end]
+        assert "this.getHeaders(" not in agent_slice, (
+            "an agent-slice call site regressed to plain getHeaders() — "
+            "it would 401 on auth-enforcing hosts"
+        )
+        # All 8 endpoints: task, runs, run, events, cancel, respond, ack, resume.
+        assert agent_slice.count("this.v1Headers(") == 8
+
+    def test_vscode_token_comes_from_secret_storage(self):
+        src = _read(self.TS_EXTENSION)
+        assert "context.secrets.get('ppxai.apiToken')" in src
+        assert "registerCommand('ppxai.setApiToken'" in src
+        assert "password: true" in src, "input box must mask the token"
+        pkg = _read(self.TS_PACKAGE)
+        assert '"ppxai.setApiToken"' in pkg, "command missing from package.json"
+        # Never a settings-based token: settings sync + dotfiles leak secrets.
+        assert '"ppxai.apiToken"' not in pkg

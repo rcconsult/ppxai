@@ -276,3 +276,132 @@ class TestDynamicCompletion:
         assert isinstance(items, list)
         for item in items:
             assert item["kind"] == "provider"
+
+
+class TestTaskCompletion:
+    """`/task` verb + status-aware run-id completion (v1.19.x).
+
+    Run ids come from the `agent_runs` snapshot kwarg — only the server
+    can supply it (the AgentRunRegistry is server-side state), so the
+    no-snapshot case must degrade to verbs-only, never error.
+    """
+
+    _RUNS = [
+        {"id": "run_aaa111", "status": "completed_pending_ack",
+         "task": "summarize docs/README.md", "resumable": False},
+        {"id": "run_bbb222", "status": "waiting",
+         "task": "spawn a child", "resumable": False},
+        {"id": "run_ccc333", "status": "interrupted",
+         "task": "long research sweep", "resumable": True},
+        {"id": "run_ddd444", "status": "interrupted",
+         "task": "not resumable one", "resumable": False},
+        {"id": "run_eee555", "status": "running",
+         "task": "active run", "resumable": False},
+        {"id": "run_fff666", "status": "finalized",
+         "task": "already collected", "resumable": False},
+    ]
+
+    def test_task_verbs_complete(self):
+        items = complete("/task ")
+        texts = [i["text"] for i in items]
+        for verb in ("run", "ls", "show", "watch", "respond",
+                     "ack", "resume", "cancel", "help"):
+            assert verb in texts
+
+    def test_task_verb_prefix_filter(self):
+        texts = [i["text"] for i in complete("/task re")]
+        assert "respond" in texts
+        assert "resume" in texts
+        assert "run" not in texts
+
+    def test_ack_offers_only_held_results(self):
+        items = complete("/task ack ", agent_runs=self._RUNS)
+        assert [i["text"] for i in items] == ["run_aaa111"]
+        assert items[0]["kind"] == "run"
+        assert "completed_pending_ack" in items[0]["description"]
+        assert "summarize docs/README.md" in items[0]["description"]
+
+    def test_respond_offers_only_waiting(self):
+        items = complete("/task respond ", agent_runs=self._RUNS)
+        assert [i["text"] for i in items] == ["run_bbb222"]
+
+    def test_respond_second_arg_offers_answers(self):
+        texts = [i["text"] for i in
+                 complete("/task respond run_bbb222 ", agent_runs=self._RUNS)]
+        assert texts == ["approve", "deny"]
+
+    def test_resume_requires_resumable(self):
+        items = complete("/task resume ", agent_runs=self._RUNS)
+        assert [i["text"] for i in items] == ["run_ccc333"]
+
+    def test_cancel_offers_in_flight_only(self):
+        texts = [i["text"] for i in
+                 complete("/task cancel ", agent_runs=self._RUNS)]
+        assert set(texts) == {"run_bbb222", "run_eee555"}
+
+    def test_show_offers_everything(self):
+        texts = [i["text"] for i in
+                 complete("/task show ", agent_runs=self._RUNS)]
+        assert len(texts) == len(self._RUNS)
+
+    def test_id_prefix_filter_and_replace_start(self):
+        items = complete("/task show run_a", agent_runs=self._RUNS)
+        assert [i["text"] for i in items] == ["run_aaa111"]
+        assert items[0]["replace_start"] == -len("run_a")
+
+    def test_no_snapshot_degrades_to_empty_ids(self):
+        assert complete("/task ack ") == []
+
+    def test_run_verb_gets_no_id_completion(self):
+        # `/task run` takes a quoted description, not an id.
+        assert complete("/task run ", agent_runs=self._RUNS) == []
+
+
+class TestTaskCompletionRoute:
+    """POST /complete supplies the agent-run snapshot (server-side glue).
+
+    The registry is server state, so the route — not the engine — is where
+    run ids enter the completion pipeline. Pin that wiring: a held run must
+    surface for `/task ack `, and a non-/task buffer must not touch the
+    registry snapshot path at all.
+    """
+
+    def _client(self, tmp_path, monkeypatch):
+        from types import SimpleNamespace
+        from fastapi import FastAPI
+        from fastapi.testclient import TestClient
+        import ppxai.server.state as state
+        from ppxai.engine.agent_runs import (
+            AgentRunRegistry, FilesystemAgentRunStore, RunMeta,
+        )
+        from ppxai.server.routes import completion as completion_route
+
+        reg = AgentRunRegistry(FilesystemAgentRunStore(tmp_path / "runs"))
+        reg._store.persist_meta(RunMeta(
+            run_id="run_held1", task="summarize docs", tools=["read_file"],
+            status="completed_pending_ack", created_at=1.0,
+        ))
+        monkeypatch.setattr(state, "_agent_run_registry", reg)
+
+        app = FastAPI()
+        app.include_router(completion_route.router)
+        # The route only needs `.engine` off the session; None short-circuits
+        # the engine-derived kwargs (working dir / provider / tools).
+        app.dependency_overrides[completion_route.get_session] = (
+            lambda: SimpleNamespace(engine=None)
+        )
+        return TestClient(app)
+
+    def test_task_ack_offers_held_run(self, tmp_path, monkeypatch):
+        client = self._client(tmp_path, monkeypatch)
+        r = client.post("/complete", json={"buffer": "/task ack "})
+        assert r.status_code == 200
+        items = r.json()["items"]
+        assert [i["text"] for i in items] == ["run_held1"]
+        assert items[0]["kind"] == "run"
+
+    def test_non_task_buffer_gets_no_run_items(self, tmp_path, monkeypatch):
+        client = self._client(tmp_path, monkeypatch)
+        r = client.post("/complete", json={"buffer": "/usage "})
+        assert r.status_code == 200
+        assert all(i["kind"] != "run" for i in r.json()["items"])

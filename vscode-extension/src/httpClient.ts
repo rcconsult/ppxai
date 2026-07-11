@@ -237,6 +237,8 @@ export class HttpClient {
     private _toolsVerbose: boolean = false;
     // v1.14.0: Session ID for server-side session isolation
     private _sessionId: string;
+    // Item 40: bearer token for the /v1/* API. undefined = none attached.
+    private _apiToken: string | undefined;
 
     constructor(baseUrl: string = 'http://127.0.0.1:54320', sessionId?: string) {
         this.baseUrl = baseUrl;
@@ -262,6 +264,32 @@ export class HttpClient {
         };
         if (contentType) {
             headers['Content-Type'] = 'application/json';
+        }
+        return headers;
+    }
+
+    /**
+     * Set (or clear, with undefined/'') the bearer attached to /v1/* calls.
+     *
+     * Item 40: `/v1/agent/*` + `/v1/tokens` stay bearer-protected even from
+     * loopback (server auth Inc 8b). Sourced from VSCode SecretStorage via
+     * the `ppxai.setApiToken` command — never from settings.json (secrets
+     * must not sync or land in dotfiles).
+     */
+    setApiToken(token: string | undefined): void {
+        this._apiToken = token || undefined;
+    }
+
+    /**
+     * Headers for the protected /v1 surface: session headers + bearer.
+     * Kept SEPARATE from getHeaders(): the server validates any presented
+     * bearer even on loopback-exempt UI routes, so a stale token attached
+     * everywhere would 401 the whole extension instead of just /v1 calls.
+     */
+    private v1Headers(contentType: boolean = false): Record<string, string> {
+        const headers = this.getHeaders(contentType);
+        if (this._apiToken) {
+            headers['Authorization'] = `Bearer ${this._apiToken}`;
         }
         return headers;
     }
@@ -1603,7 +1631,7 @@ export class HttpClient {
     async agentTask(body: Record<string, any>): Promise<{ run_id: string; status: string }> {
         const response = await fetch(`${this.baseUrl}/v1/agent/task`, {
             method: 'POST',
-            headers: this.getHeaders(true),
+            headers: this.v1Headers(true),
             body: JSON.stringify(body),
             signal: AbortSignal.timeout(this.agentTimeoutMs)
         });
@@ -1616,7 +1644,7 @@ export class HttpClient {
     /** GET /v1/agent/runs — list runs (newest first, owner-scoped). */
     async agentRuns(): Promise<{ runs: any[] }> {
         const response = await fetch(`${this.baseUrl}/v1/agent/runs`, {
-            headers: this.getHeaders(),
+            headers: this.v1Headers(),
             signal: AbortSignal.timeout(this.agentTimeoutMs)
         });
         if (!response.ok) {
@@ -1628,7 +1656,7 @@ export class HttpClient {
     /** GET /v1/agent/runs/{id} — one run's meta (incl. waiting/resumable). */
     async agentRun(runId: string): Promise<any> {
         const response = await fetch(`${this.baseUrl}/v1/agent/runs/${encodeURIComponent(runId)}`, {
-            headers: this.getHeaders(),
+            headers: this.v1Headers(),
             signal: AbortSignal.timeout(this.agentTimeoutMs)
         });
         if (!response.ok) {
@@ -1647,7 +1675,7 @@ export class HttpClient {
     async *agentRunEvents(runId: string): AsyncGenerator<any, void, unknown> {
         const response = await fetch(
             `${this.baseUrl}/v1/agent/runs/${encodeURIComponent(runId)}/events?live=1`,
-            { headers: this.getHeaders() }
+            { headers: this.v1Headers() }
         );
         if (!response.ok || !response.body) {
             throw new Error(`stream ${response.status}`);
@@ -1676,7 +1704,7 @@ export class HttpClient {
     async agentRunCancel(runId: string): Promise<any> {
         const response = await fetch(`${this.baseUrl}/v1/agent/runs/${encodeURIComponent(runId)}/cancel`, {
             method: 'POST',
-            headers: this.getHeaders(true),
+            headers: this.v1Headers(true),
             body: JSON.stringify({}),
             signal: AbortSignal.timeout(this.agentTimeoutMs)
         });
@@ -1690,7 +1718,7 @@ export class HttpClient {
     async agentRunRespond(runId: string, body: Record<string, any>): Promise<any> {
         const response = await fetch(`${this.baseUrl}/v1/agent/runs/${encodeURIComponent(runId)}/respond`, {
             method: 'POST',
-            headers: this.getHeaders(true),
+            headers: this.v1Headers(true),
             body: JSON.stringify(body),
             signal: AbortSignal.timeout(this.agentTimeoutMs)
         });
@@ -1704,7 +1732,7 @@ export class HttpClient {
     async agentRunAck(runId: string): Promise<any> {
         const response = await fetch(`${this.baseUrl}/v1/agent/runs/${encodeURIComponent(runId)}/ack`, {
             method: 'POST',
-            headers: this.getHeaders(true),
+            headers: this.v1Headers(true),
             body: JSON.stringify({}),
             signal: AbortSignal.timeout(this.agentTimeoutMs)
         });
@@ -1718,7 +1746,7 @@ export class HttpClient {
     async agentRunResume(runId: string): Promise<any> {
         const response = await fetch(`${this.baseUrl}/v1/agent/runs/${encodeURIComponent(runId)}/resume`, {
             method: 'POST',
-            headers: this.getHeaders(true),
+            headers: this.v1Headers(true),
             body: JSON.stringify({}),
             signal: AbortSignal.timeout(this.agentTimeoutMs)
         });

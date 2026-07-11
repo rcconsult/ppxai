@@ -197,6 +197,29 @@ function makeApp(opts) {{
     assert(calls[5][0] === "help", "empty -> help");
   }}
 
+  // --- Scenario 8b: id verbs trim a pasted blob to the first token ---
+  // A multi-line paste of several `/task ack <id>` commands arrives as one
+  // argline; the id-taking verbs must act on the FIRST id instead of
+  // sending the whole blob as one bogus id (live-trial stumble 2026-07-11).
+  {{
+    const app = makeApp({{}});
+    const c = new TaskController(app);
+    const calls = [];
+    c.show = (id) => calls.push(["show", id]);
+    c.cancel = async (id) => calls.push(["cancel", id]);
+    c.ack = async (id) => calls.push(["ack", id]);
+    c.resume = async (id) => calls.push(["resume", id]);
+    await c.handle('ack run_1 /task ack run_2 /task ack run_3');
+    await c.handle('show run_4 trailing junk');
+    await c.handle('cancel run_5	/task cancel run_6');
+    await c.handle('resume run_7 run_8');
+    assert(calls[0][0] === "ack" && calls[0][1] === "run_1",
+      "pasted ack blob trims to first id: " + JSON.stringify(calls[0]));
+    assert(calls[1][1] === "run_4", "show trims trailing junk");
+    assert(calls[2][1] === "run_5", "cancel trims at tab");
+    assert(calls[3][1] === "run_7", "resume trims to first id");
+  }}
+
   // --- Scenario 9 (T5): respondCmd — token fetch + answer mapping ---
   {{
     const app = makeApp({{ getReturn: {{ run_id: "run_9", status: "waiting",
@@ -226,7 +249,7 @@ function makeApp(opts) {{
     assert(app._posts.length === 0, "must NOT POST when the run is not waiting");
     assert(app._msgs.some((m) => /not waiting/.test(m)), "not-waiting hint shown");
     await c.respondCmd('run_9');
-    assert(app._msgs.some((m) => /Usage: \/task respond/.test(m)), "usage shown");
+    assert(app._msgs.some((m) => /Usage: `\/task respond/.test(m)), "usage shown");
     const calls = [];
     c.respondCmd = async (rest) => calls.push(rest);
     await c.handle('respond run_1 approve');
@@ -242,7 +265,7 @@ function makeApp(opts) {{
       "ack did not POST the ack endpoint");
     assert(app._msgs.some((m) => /collected/.test(m)), "collect confirmation shown");
     await c.ack("");
-    assert(app._msgs.some((m) => /Usage: \/task ack/.test(m)), "ack usage shown");
+    assert(app._msgs.some((m) => /Usage: `\/task ack/.test(m)), "ack usage shown");
     const calls = [];
     c.ack = async (id) => calls.push(id);
     await c.handle('ack run_8');

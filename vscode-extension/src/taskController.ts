@@ -302,6 +302,10 @@ export class TaskController {
         const sp = trimmed.search(/\s/);
         const verb = (sp === -1 ? trimmed : trimmed.slice(0, sp)).toLowerCase();
         const rest = sp === -1 ? '' : trimmed.slice(sp + 1).trim();
+        // Run ids never contain whitespace — id-taking verbs use only the
+        // first token so a multi-line paste degrades to acting on the first
+        // id instead of sending the whole blob as one bogus id (web parity).
+        const firstTok = (rest.split(/\s/, 1)[0]) || '';
         switch (verb) {
             case '':
             case 'help':    return this.help();
@@ -310,11 +314,11 @@ export class TaskController {
             case 'list':    return this.list();
             case 'show':
             case 'open':
-            case 'watch':   return this.show(rest.trim());
-            case 'cancel':  return this.cancel(rest.trim());
+            case 'watch':   return this.show(firstTok);
+            case 'cancel':  return this.cancel(firstTok);
             case 'respond': return this.respondCmd(rest);
-            case 'ack':     return void await this.ack(rest.trim());
-            case 'resume':  return void await this.resume(rest.trim());
+            case 'ack':     return void await this.ack(firstTok);
+            case 'resume':  return void await this.resume(firstTok);
             default:
                 this.ui.system(`Unknown /task subcommand: ${verb}. Try /task help.`);
         }
@@ -329,7 +333,7 @@ export class TaskController {
         }
         if (!spec.task) {
             this.ui.system(
-                'Usage: /task run "<desc>" --tools <a,b,c> [--spec <name>] [--skill <name>] [--allow host] [--budget iters=,time=,tokens=] [--system "…"]'
+                'Usage: `/task run "<desc>" --tools <a,b,c> [--spec <name>] [--skill <name>] [--allow host] [--budget iters=,time=,tokens=] [--system "…"]`'
             );
             return;
         }
@@ -391,7 +395,7 @@ export class TaskController {
 
     /** /task show|watch <id> — print the run's state (+ result) and re-watch. */
     async show(runId: string): Promise<void> {
-        if (!runId) { this.ui.system('Usage: /task show <id>'); return; }
+        if (!runId) { this.ui.system('Usage: `/task show <id>`'); return; }
         let run: AgentRunMeta;
         try {
             run = await this.backend.agentRun(runId);
@@ -407,7 +411,7 @@ export class TaskController {
 
     /** /task cancel <id> — cooperative cancel. */
     async cancel(runId: string): Promise<void> {
-        if (!runId) { this.ui.system('Usage: /task cancel <id>'); return; }
+        if (!runId) { this.ui.system('Usage: `/task cancel <id>`'); return; }
         try {
             await this.backend.agentRunCancel(runId);
         } catch (e: any) {
@@ -429,7 +433,7 @@ export class TaskController {
         const runId = sp === -1 ? trimmed : trimmed.slice(0, sp);
         let answer = sp === -1 ? '' : trimmed.slice(sp + 1).trim();
         if (!runId || !answer) {
-            this.ui.system('Usage: /task respond <id> approve|deny|"<text>"');
+            this.ui.system('Usage: `/task respond <id> approve|deny|"<text>"`');
             return;
         }
         const q = answer[0];
@@ -471,7 +475,7 @@ export class TaskController {
 
     /** /task ack <id> — collect a held result (T6). */
     async ack(runId: string): Promise<boolean> {
-        if (!runId) { this.ui.system('Usage: /task ack <id>'); return false; }
+        if (!runId) { this.ui.system('Usage: `/task ack <id>`'); return false; }
         try {
             await this.backend.agentRunAck(runId);
         } catch (e: any) {
@@ -484,7 +488,7 @@ export class TaskController {
 
     /** /task resume <id> — conditionally continue an interrupted run (T7). */
     async resume(runId: string): Promise<boolean> {
-        if (!runId) { this.ui.system('Usage: /task resume <id>'); return false; }
+        if (!runId) { this.ui.system('Usage: `/task resume <id>`'); return false; }
         try {
             await this.backend.agentRunResume(runId);
         } catch (e: any) {

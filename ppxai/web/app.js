@@ -84,6 +84,13 @@ class PpxaiApp {
 
         // Shared API client — wraps all HTTP calls to the server (v1.16.2)
         this.apiClient = new ApiClient(this.serverUrl, this.sessionId);
+        // Item 40: restore the /v1 bearer token, if one was stored via
+        // /token set|mint. Scoped to /v1/* inside the client (see
+        // ApiClient.setApiToken for why it must not ride on UI routes).
+        try {
+            const storedToken = localStorage.getItem('ppxai-api-token');
+            if (storedToken) this.apiClient.setApiToken(storedToken);
+        } catch (_e) { /* storage unavailable (private mode) — token-less */ }
 
         // Stream handler — SSE client for /chat (v1.16.2)
         this.streamHandler = new StreamHandler({
@@ -202,6 +209,7 @@ class PpxaiApp {
                 '/agentrun': { description: 'Start a background agent run (v1 platform)', usage: '/agentrun <task>' },
                 '/agentruns': { description: 'List recent agent runs', usage: '/agentruns' },
                 '/task': { description: 'Tool-capable background runs (run|ls|show|watch|cancel)', usage: '/task run "<desc>" --tools a,b,c' },
+                '/token': { description: 'Manage the /v1 API bearer token (Item 40)', usage: '/token [status|set|mint|clear]' },
                 '/checkpoint': { description: 'Manage checkpoints', usage: '/checkpoint [status|list|undo|backend|clear|info]' },
                 '/usage': { description: 'Show token usage stats', usage: '/usage [24h|week|month|all|show|reset]' },
                 '/status': { description: 'Show current status', usage: '/status' },

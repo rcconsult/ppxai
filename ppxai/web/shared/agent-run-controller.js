@@ -77,7 +77,7 @@ class AgentRunController {
     /** /agentrun <task> — launch a background oneshot run, render in a pane. */
     async start(task) {
         if (!task) {
-            this.app.showSystemMessage('Usage: /agentrun <task>');
+            this.app.showSystemMessage('Usage: `/agentrun <task>`');
             return;
         }
         // Pass the UI's current provider/model as the run's explicit per-run
@@ -209,7 +209,7 @@ class AgentRunController {
      * the /task pane wires its Cancel button here via _wireView.
      */
     async cancel(runId) {
-        if (!runId) { this.app.showSystemMessage('Usage: /task cancel <id>'); return; }
+        if (!runId) { this.app.showSystemMessage('Usage: `/task cancel <id>`'); return; }
         try {
             await this.app.apiClient.post(`/v1/agent/runs/${runId}/cancel`, {});
         } catch (e) {
@@ -253,7 +253,7 @@ class AgentRunController {
      * pane's Collect button (via _wireView) and the `/task ack` verb.
      */
     async ack(runId) {
-        if (!runId) { this.app.showSystemMessage('Usage: /task ack <id>'); return false; }
+        if (!runId) { this.app.showSystemMessage('Usage: `/task ack <id>`'); return false; }
         try {
             await this.app.apiClient.post(`/v1/agent/runs/${runId}/ack`, {});
         } catch (e) {
@@ -274,7 +274,7 @@ class AgentRunController {
      * detached watcher (the old one broke at the interrupt).
      */
     async resume(runId) {
-        if (!runId) { this.app.showSystemMessage('Usage: /task resume <id>'); return false; }
+        if (!runId) { this.app.showSystemMessage('Usage: `/task resume <id>`'); return false; }
         try {
             await this.app.apiClient.post(`/v1/agent/runs/${runId}/resume`, {});
         } catch (e) {
@@ -463,9 +463,12 @@ class AgentRunController {
     /** Async-iterate the parsed `data:` events of a run's live SSE stream. */
     async *_tailEvents(runId) {
         const api = this.app.apiClient;
+        const path = `/v1/agent/runs/${runId}/events?live=1`;
         const resp = await fetch(
-            `${api.serverUrl}/v1/agent/runs/${runId}/events?live=1`,
-            { headers: api.getHeaders() }
+            `${api.serverUrl}${path}`,
+            // headersFor attaches the bearer on /v1/* (Item 40); a raw
+            // getHeaders() here would 401 the tail on auth-enforcing hosts.
+            { headers: api.headersFor ? api.headersFor(path) : api.getHeaders() }
         );
         if (!resp.ok || !resp.body) throw new Error(`stream ${resp.status}`);
         const reader = resp.body.getReader();

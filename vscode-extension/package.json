@@ -23,6 +23,11 @@
         "category": "ppxai"
       },
       {
+        "command": "ppxai.setApiToken",
+        "title": "Set API Token (/v1 bearer)",
+        "category": "ppxai"
+      },
+      {
         "command": "ppxai.explainSelection",
         "title": "Explain Selection",
         "category": "ppxai"

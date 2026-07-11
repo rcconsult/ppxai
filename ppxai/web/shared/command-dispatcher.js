@@ -110,6 +110,13 @@ class CommandDispatcher {
                 return;
             }
 
+            // Item 40: `/token` — manage the /v1 API bearer this client
+            // attaches (the agent/token API stays protected even on loopback).
+            if (cmd === '/token') {
+                await this._handleTokenCommand(args);
+                return;
+            }
+
             // /help: render the server catalog, then append the web-only
             // experimental agent-platform commands the CommandFactory can't
             // see (they're client-side shims, not factory commands).
@@ -124,6 +131,93 @@ class CommandDispatcher {
             await this._dispatchToFactory(cmd.slice(1), args);
         } finally {
             this.app.state.isHandlingCommand = false;
+        }
+    }
+
+    /**
+     * Item 40: `/token status|set|mint|clear` — bearer management for the
+     * protected /v1 API surface.
+     *
+     * Security shape:
+     * - `set` takes the value via a browser prompt(), NEVER inline — every
+     *   dispatched command line is echoed as a system message AND forwarded
+     *   to the server debug log (see `> ${input}` above), so an inline
+     *   secret would land in ~/.ppxai/logs. An inline value is still
+     *   accepted (it already echoed) but answered with a rotate warning.
+     * - `mint` uses the loopback bootstrap: POST /v1/tokens is exempt from
+     *   auth for a DIRECT local browser (server/auth.py::_is_bootstrap_mint),
+     *   so a token-less local client can self-provision its first token.
+     *   The raw material is returned exactly once; we store it and show
+     *   only a masked tail.
+     * - Storage: localStorage['ppxai-api-token'] — restored on app init.
+     */
+    async _handleTokenCommand(args) {
+        const verb = (args.split(/\s+/, 1)[0] || 'status').toLowerCase();
+        const inline = args.slice(verb.length).trim();
+        const api = this.app.apiClient;
+        const masked = (t) => (t && t.length > 4 ? `…${t.slice(-4)}` : '(set)');
+        const store = (t) => {
+            try { localStorage.setItem('ppxai-api-token', t); } catch (_e) { /* private mode */ }
+            api.setApiToken(t);
+        };
+        switch (verb) {
+            case 'status': {
+                const t = api.apiToken;
+                this.app.showSystemMessage(t
+                    ? `🔑 API token attached to /v1 calls (${masked(t)}). \`/token clear\` to remove.`
+                    : 'No API token stored. `/token mint` (local server) or `/token set` (paste one).');
+                return;
+            }
+            case 'set': {
+                let value = inline;
+                if (!value) {
+                    value = (typeof window !== 'undefined' && window.prompt)
+                        ? (window.prompt('Paste the API token (stored locally, attached to /v1 calls):') || '').trim()
+                        : '';
+                    if (!value) { this.app.showSystemMessage('No token entered — nothing stored.'); return; }
+                    store(value);
+                    this.app.showSystemMessage(`🔑 Token stored (${masked(value)}).`);
+                    return;
+                }
+                store(value);
+                this.app.showSystemMessage(
+                    `🔑 Token stored (${masked(value)}) — ⚠️ it was typed inline, so it was echoed ` +
+                    'into the chat + debug log. Prefer `/token set` without a value (prompt), and ' +
+                    'consider rotating this token.');
+                return;
+            }
+            case 'mint': {
+                try {
+                    // A stale stored bearer would be validated (and rejected)
+                    // even on the loopback-exempt mint — send this one bare.
+                    const hadToken = api.apiToken;
+                    api.setApiToken(null);
+                    let resp;
+                    try {
+                        resp = await api.post('/v1/tokens', { owner: 'web-local', roles: [] });
+                    } finally {
+                        if (!resp) api.setApiToken(hadToken);
+                    }
+                    store(resp.token);
+                    this.app.showSystemMessage(
+                        `🔑 Minted + stored token ${masked(resp.token)} ` +
+                        `(id ${resp.meta.token_id}, owner ${resp.meta.owner}). Attached to /v1 calls from now on.`);
+                } catch (e) {
+                    this.app.showSystemMessage(
+                        `❌ Mint failed: ${e.message}. Minting needs a mint-capable token store ` +
+                        '(server.secrets.providers type "file") and a DIRECT local connection; ' +
+                        'remotely, ask the operator for a token and use `/token set`.');
+                }
+                return;
+            }
+            case 'clear': {
+                try { localStorage.removeItem('ppxai-api-token'); } catch (_e) { /* ignore */ }
+                api.setApiToken(null);
+                this.app.showSystemMessage('🔑 Token cleared — /v1 calls are unauthenticated again.');
+                return;
+            }
+            default:
+                this.app.showSystemMessage('Usage: `/token [status|set|mint|clear]`');
         }
     }
 
@@ -163,7 +257,7 @@ class CommandDispatcher {
      */
     _appendExperimentalHelp() {
         const cat = this.app.slashCommands || {};
-        const lines = ['/agentrun', '/agentruns', '/task']
+        const lines = ['/agentrun', '/agentruns', '/task', '/token']
             .filter((c) => cat[c])
             .map((c) => `  ${c} — ${cat[c].description}  (usage: ${cat[c].usage})`);
         if (lines.length) {
