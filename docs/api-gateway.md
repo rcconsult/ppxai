@@ -83,7 +83,12 @@ your use case is internal-client-shaped and we should talk about it.
 
 ## Authentication
 
-**v1.18.3 status: optional bearer-token auth (opt-in, default off).**
+**v1.19.0 status: optional bearer-token auth, backed by a pluggable
+provider chain (opt-in; default is still unauthenticated on an unset
+`PPXAI_API_TOKEN`).** A `file` provider can additionally be configured
+to enforce auth unconditionally and to unlock a self-service token
+registry at `/v1/tokens`. See "What changed" below for the delta from
+the v1.18.3 single-token model.
 
 ### Threat model
 
@@ -101,14 +106,34 @@ on your behalf."
 
 ### Enabling auth
 
-Set the `PPXAI_API_TOKEN` environment variable to the token clients
-must present. Empty / whitespace-only values are treated as "auth
-disabled" so a stray empty config entry doesn't lock everyone out.
+Auth enforcement is decided by a **provider chain**, configured under
+`server.secrets.providers` in `ppxai-config.json`. Each entry is
+`{"type": "env", "var": "..."}` or `{"type": "file", "path": "..."}`.
+Omit the whole `server.secrets` block (or leave `providers` empty) and
+the server falls back to a single `env` provider on `PPXAI_API_TOKEN` —
+byte-identical to the v1.18.3 behavior.
+
+```json
+"server": {
+  "secrets": {
+    "providers": [
+      { "type": "file", "path": "~/.ppxai/tokens.json" },
+      { "type": "env", "var": "PPXAI_API_TOKEN" }
+    ]
+  }
+}
+```
+
+The simplest opt-in — no config file changes — is still the env var:
 
 ```bash
 export PPXAI_API_TOKEN="$(openssl rand -hex 32)"
 ppxai-server
 ```
+
+Empty / whitespace-only values of `PPXAI_API_TOKEN` are treated as
+"this provider doesn't enforce" so a stray empty config entry doesn't
+lock everyone out.
 
 Clients send the token via the standard `Authorization: Bearer …`
 header (case-insensitive scheme per RFC 7235):
@@ -121,19 +146,65 @@ Content-Type: application/json
 
 ### Behavior
 
-- **Auth disabled (default):** all routes serve as before. Localhost
-  desktop UX unchanged.
-- **Auth enabled:** every request needs the right `Authorization`
-  header or it gets `401 Unauthorized` with `WWW-Authenticate: Bearer
-  realm="ppxai"`.
+Whether auth is enforced is a per-provider decision, evaluated across
+the whole chain (`ppxai/server/auth.py::_provider_enforces_auth`):
+
+- **`env` provider** enforces only while its var is set and non-empty
+  — unset means "this provider is inactive," matching the v1.18.3
+  loopback desktop UX.
+- **A mint-capable provider (`file`) enforces by mere presence**, even
+  with zero tokens minted. An empty token store means "no one gets in"
+  (401), not "everyone gets in" — this closes the footgun where
+  revoking the last token would otherwise silently open the server.
+- **A read-only provider whose capabilities can't be introspected**
+  (a future non-`env` backend) fails closed and is assumed to enforce.
+- **No providers configured at all** → auth disabled, all routes serve
+  as before.
+
+When auth is enforced:
+
+- Every request needs a valid `Authorization: Bearer <token>` header,
+  or it gets `401 Unauthorized` with `WWW-Authenticate: Bearer
+  realm="ppxai"`. **A presented bearer is always validated** — even on
+  a route that would otherwise be loopback-exempt (see below) — so an
+  invalid or expired token on an exempt route still 401s instead of
+  being silently ignored.
 - **CORS preflight (OPTIONS) is exempted** — browsers don't send
   `Authorization` on preflight by spec; the actual request that
   follows is auth-checked normally.
-- **The token is read from the env var on every request.** Operators
-  can rotate / disable / re-enable by updating the variable without a
-  server restart (e.g. via k8s ConfigMap reload, though the pod still
-  needs to see the new value — env-var reload depends on your
-  deployment mechanism).
+- **Loopback exemptions** apply only when the caller presents **no**
+  bearer at all (a genuine local browser has none to send). "Loopback"
+  means the peer IP is `127.0.0.1` / `::1` / `localhost` **and** the
+  request carries no proxy-forwarding header (`X-Forwarded-For` etc.)
+  — a request that passed through a reverse proxy is never treated as
+  loopback, even if the rewritten IP looks local. The exemptions:
+  - Unauthenticated loopback `POST /v1/tokens`, whenever a mint-capable
+    (`file`) provider is configured — not gated on the store being
+    empty; repeat local mints are deliberate (this is how an operator
+    bootstraps and re-provisions a file-backed deployment).
+  - The loopback UI/static/`/chat` surface — the local desktop/web
+    client carries no bearer by default.
+  - The exact path `POST /v1/agent/run` (the tool-free oneshot run
+    tier) — behaviorally identical to `/v1/oneshot`, so it's exempted
+    the same way; the tool-capable `/v1/agent/task` tier and
+    `/runs/{id}/cancel` stay protected.
+  - Loopback `GET` of an **unowned** run's metadata or event stream
+    (`/v1/agent/runs/{id}` and `/v1/agent/runs/{id}/events`) — i.e. a
+    run the token-less local browser itself created via the exempt
+    `POST /v1/agent/run`. A run created with a bearer (any `/task` run,
+    or any run minted by an authenticated caller) is **not** exempt.
+  - CORS preflight (`OPTIONS`).
+- **Everything else under `/v1/agent` and `/v1/tokens` stays
+  bearer-protected even from loopback** — a local browser being
+  trusted to load the UI does not extend to reading another owner's
+  run transcripts or administering tokens.
+- **The env provider's var is read live on every request.** Operators
+  can rotate / disable / re-enable that provider by updating the
+  variable without a server restart (e.g. via k8s ConfigMap reload,
+  though the pod still needs to see the new value — env-var reload
+  depends on your deployment mechanism). A `file` provider's store is
+  likewise re-read per request (no server restart needed to mint,
+  revoke, or pick up a manually edited `tokens.json`).
 
 ### Transport perimeter: CORS + Host validation (v1.19.x)
 
@@ -182,65 +253,112 @@ NetworkPolicy — not a replacement for it.
 - **Prompt-injection defenses** are not auth's job. A malicious prompt
   body still works regardless of the caller's identity.
 
-### Limitations of v1
+### Limitations of the env-only (`env`) provider
 
-The v1.18.3 model is **single shared token**. Deliberately scoped to
-unblock the loopback-leaving deployments without committing to a
-larger design. Specifically NOT in v1:
+The **single-shared-token** model — an `env` provider with no `file`
+provider alongside it — is still the default and is deliberately
+minimal. It does NOT give you:
 
 - Multiple per-agent tokens (everyone uses the same secret).
-- Per-token attribution in logs (the audit trail says "authenticated
-  caller," not "outlook-monitor").
+- Per-token attribution (the audit trail says "authenticated caller,"
+  not "outlook-monitor").
 - Token rotation / expiry (you rotate by changing the env var; no
   graceful handover window).
 - Scoped tokens (a token that can call `/v1/oneshot` but not `/chat`).
 - Rate-limiting per token.
 - OAuth/OIDC integration (no JWT validation; no corporate IdP).
 
-If your use case needs any of these, see "Future directions" below
-and either file an issue or write the ADR.
+Everything except OAuth/OIDC and per-token rate-limiting is available
+today by adding a `file` provider to the chain — see below.
 
-### Future directions
+### The token registry (`file` provider, `/v1/tokens`) — shipped v1.19.0
 
-The natural next step is a **token registry** managed via gateway
-endpoints — closer to GitHub PATs than to a login flow:
+Configuring a `file` provider (`{"type": "file", "path":
+"~/.ppxai/tokens.json"}`) under `server.secrets.providers` turns on a
+multi-token registry, managed via three gateway endpoints
+(`ppxai/server/routes/tokens_v1.py`). **Shipped ≠ sealed:** these
+endpoints work as documented here, but their request/response shapes
+remain under the `/v1/agent/*` in-development exemption above — don't
+build against them as a frozen contract until that notice is removed.
 
-- `POST /v1/tokens` — create a new token with a name and optional
-  scopes. Returns `{token_id, token_value}`. The full value is shown
-  exactly once (like GitHub).
-- `GET /v1/tokens` — list tokens (without values) — `[{id, name,
-  scopes, created_at, last_used_at}]`.
-- `DELETE /v1/tokens/{id}` — revoke a token.
-- `POST /v1/tokens/{id}/rotate` — generate a new value, invalidate
-  the old, return the new value.
+- `POST /v1/tokens` — mint a token. Body: `{"owner": "<principal>",
+  "roles": ["..."], "ttl_s": <optional seconds>}`. Returns
+  `{"token": "<raw material>", "meta": {token_id, owner, roles,
+  expires_at, revoked, source}}`. **The raw `token` value is returned
+  exactly once** (GitHub-PAT style) — it is never persisted and never
+  logged; only a salted SHA-256 hash (`sha256:<salt>:<digest>`) is
+  written to `~/.ppxai/tokens.json`, one random salt per token, so a
+  stolen store file can't be replayed into a working token.
+- `GET /v1/tokens` — list token **metadata only**, never material:
+  `[{token_id, owner, roles, expires_at, revoked, source}]`.
+- `DELETE /v1/tokens/{token_id}` — revoke a token. Revocation is
+  one-way; a second revoke of the same id 404s (indistinguishable from
+  an unknown id, see owner-scoping below).
 
-This would supersede the env-var token (kept as a bootstrap mechanism
-for the first token). Each token can carry:
+There is no rotate endpoint — rotation is mint-a-new-token +
+revoke-the-old-one.
 
-- **`name`** for audit attribution ("outlook-monitor", "incident-responder").
-- **`scopes`** like `["oneshot:invoke", "chat:read"]` so a classifier
-  agent can call `/v1/oneshot` but can't `/chat` with tools.
-- **`expires_at`** for time-bounded rotation.
-- **`last_used_at`** for stale-token detection.
+**Owner-scoping.** An authenticated remote caller may only list its own
+`owner`'s tokens (others are filtered out of the `GET` response) and
+mint only under its own `owner` (minting for a different owner is
+`403`). Revoking a token owned by someone else 404s — the same status
+as revoking an unknown id — so ownership can't be probed via status
+code. The **unscoped operator** — no bearer presented, either because
+auth is disabled or because the request qualifies for a loopback
+exemption — may administer tokens for any owner; this is how an
+operator bootstraps or re-provisions a deployment from the local
+machine.
 
-For corporate environments, a third direction is **OIDC / JWT
-validation**: drop the local token registry, validate JWTs from a
-configured issuer (Auth0, Okta, Azure AD, k8s ServiceAccount tokens).
-Each call's identity comes from the JWT's `sub` / `aud` / custom
-claims; ppxai-server doesn't store any secrets. This is the
-production-grade option and ships as `/v1/auth/jwt` config plus an
-optional path-based verification policy. Defer until there's actual
-demand.
+**Mixed chains.** A chain can run `file` alongside `env` (see the
+config example above) so an existing `PPXAI_API_TOKEN` deployment keeps
+working unchanged while individual per-agent tokens are minted
+incrementally. Mutating operations always route to the first
+capable provider in the chain; against an `env`-only (read-only) chain,
+`POST`/`DELETE /v1/tokens` return `405` — configure a `file` provider
+to unlock them.
 
-**Naming note:** the future endpoints are named `/v1/tokens` (CRUD on
-API tokens, modeled after GitHub PATs) rather than `/v1/auth` (which
-typically means OAuth-style login flows). `/v1/auth/...` is reserved
-for the OIDC/JWT direction if that lands.
+**Roles.** The `roles` field is accepted and stored today for future
+routing/authz use; the current auth/authz gate does not yet branch on
+role content — it's a forward-compatible label, not yet an enforcement
+axis.
 
-These are speculative — no commitment until an ADR pins the design.
-The v1.18.3 single-token model intentionally has no migration cost
-to the registry version (env-var bootstrap stays valid; registry
-becomes the production path).
+### What's still not in v1.19.0
+
+- Scoped/least-privilege tokens (a `roles` label exists, but no gate
+  currently restricts a token to a subset of endpoints).
+- Rate-limiting per token.
+- OAuth/OIDC integration (no JWT validation; no corporate IdP). If your
+  use case needs this, file an issue or write an ADR — the design
+  space (validate JWTs from a configured issuer, e.g. Auth0/Okta/Azure
+  AD/k8s ServiceAccount tokens, with identity from `sub`/`aud`/custom
+  claims) is still open and unclaimed by any code; a future OIDC surface
+  would live under `/v1/auth/...` precisely because `/v1/tokens` is
+  already spoken for by the shipped PAT-style registry above.
+
+### What changed: v1.18.3 → v1.19.0
+
+- **v1.18.3:** a single optional bearer via `PPXAI_API_TOKEN`, checked
+  directly in `server/auth.py`. No `/v1/tokens`. No loopback carve-outs
+  beyond CORS preflight.
+- **v1.19.0 (Inc 8a/8b):** auth delegates to a pluggable
+  `ProviderChain` (`ppxai/server/secrets/`). With no `server.secrets`
+  config, behavior is byte-identical to v1.18.3 (a single `env`
+  provider is synthesized as the default). Adding a `file` provider
+  unlocks the `/v1/tokens` registry, owner-scoped multi-token
+  management, and per-run authorization (a run created with a bearer
+  is owned by that bearer's principal; loopback reads of *unowned* runs
+  stay exempt, owned runs do not). This is additive and non-breaking:
+  the env-var bootstrap keeps working standalone or alongside a `file`
+  provider.
+- **Client consequence.** Because a presented bearer is always
+  validated — including on loopback-exempt routes — ppxai's own web and
+  VSCode clients (v1.19.0) attach the stored bearer **only to `/v1/*`
+  paths**, never globally: a stale or wrong token would otherwise 401
+  the whole desktop UI instead of just the `/v1/agent` and `/v1/tokens`
+  calls. The web client exposes this via `/token status|set|mint|clear`
+  (mint uses the loopback bootstrap exemption above and stores the
+  result in `localStorage`); VSCode exposes it via the **"ppxai: Set
+  API Token"** command palette entry, backed by `SecretStorage`.
 
 ---
 

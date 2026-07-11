@@ -78,10 +78,11 @@ def _provider_enforces_auth() -> bool:
     - A read-only non-env stub (k8s, ...) we can't introspect is assumed
       to enforce — fail closed.
 
-    First-token bootstrap when a mutable store is empty is handled
-    separately by a loopback exemption on ``POST /v1/tokens`` (see
-    ``routes/tokens_v1.py``), so closing the server here does not lock
-    out the local operator.
+    Closing the server here does not lock out the local operator: a
+    loopback ``POST /v1/tokens`` is exempted whenever a mint-capable
+    store is configured — not only while it is empty — so first-token
+    bootstrap and repeat local mints both work (see
+    ``_is_bootstrap_mint`` below).
     """
     try:
         chain = get_secret_provider()
@@ -272,8 +273,10 @@ def check_request(request: Request) -> Optional[JSONResponse]:
     v1.19.0: validates against the provider chain. On success the
     resolved :class:`TokenRecord` is stashed on ``request.state.principal``
     so downstream code (Inc 8b per-run authz) can read the owner without
-    re-resolving. A loopback ``POST /v1/tokens`` is exempted while the
-    mutable token store is empty, to bootstrap the first token. Loopback
+    re-resolving. A loopback ``POST /v1/tokens`` is exempted whenever a
+    mint-capable store is configured (not only while it is empty —
+    first-token bootstrap is the motivating case, repeat local mints
+    are deliberate; see ``_is_bootstrap_mint``). Loopback
     requests to the interactive UI/static/chat surface are also exempted
     (the local browser carries no bearer) — but the ``/v1/agent`` and
     ``/v1/tokens`` API stays protected even from loopback.
@@ -298,7 +301,9 @@ def check_request(request: Request) -> Optional[JSONResponse]:
     # invalid/malformed bearer also falls through (→ 401), never silently
     # accepted via the exemption.
     if not has_bearer:
-        # First-token bootstrap: loopback mint into an empty mutable store.
+        # Loopback mint into a configured mutable store (first-token
+        # bootstrap is the motivating case; NOT gated on the store being
+        # empty — repeat local mints are deliberate).
         if _is_bootstrap_mint(request):
             return None
         # Loopback UI/static/chat surface: a local browser carries no bearer,

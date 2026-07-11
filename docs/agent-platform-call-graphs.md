@@ -555,7 +555,8 @@ auth_middleware (http.py)
                mere presence (empty store => still 401, not open); env enforces
                only when its var is set. [post-Inc-9 §H]
        2. method == OPTIONS          -> proceed   # CORS preflight (no auth hdr)
-       3. loopback POST /v1/tokens into EMPTY store -> proceed  # bootstrap mint
+       3. loopback POST /v1/tokens w/ mutable store -> proceed  # bootstrap mint
+            (NOT gated on the store being empty — repeat local mints deliberate)
        4. loopback UI/static/chat    -> proceed   # local browser carries no
             bearer; EXEMPT iff path NOT under (/v1/agent, /v1/tokens) — the
             sensitive API stays protected even from loopback. Remote NEVER

@@ -165,7 +165,9 @@ class TestAuthDelegation:
 
 class TestEmptyStorePolicy:
     """A configured mutable (file) store enforces auth even when empty,
-    and a loopback POST /v1/tokens bootstraps the first token."""
+    and a loopback POST /v1/tokens mints without a bearer — whenever a
+    mutable store is configured, NOT only while it is empty (see
+    test_loopback_mint_allowed_even_with_existing_tokens)."""
 
     def _request(self, header_value=None, method="GET", path="/x", client_host="1.2.3.4"):
         scope = {
