@@ -37,7 +37,7 @@ Each has a dedicated doc — read it before changing code in that area.
 - VSCode extension bundled via esbuild (v1.18.2) — 128 KB VSIX (was 1.1 MB), 15 files (was 804); CI has 500 KB size-budget gate.
 - **v1 API gateway** (v1.18.3) — `POST /v1/oneshot` is the first stable, semver-versioned external surface. Internal endpoints (`/chat`, `/command/*`, etc.) keep evolving. v1.19.0: opt-in provider-side web search via `tools.web_search.oneshot_grounding` (default off; Option A — no tool exposed, perimeter unchanged). See [docs/api-gateway.md](docs/api-gateway.md).
 
-## Codebase Statistics
+## Test-count expectations
 
 Tests: **3,907 passing, 3 skipped** on Unix with `uv sync --all-extras` (the v1.18.7 canonical pre-tag count; 3,910 collected). The count is environment-dependent: a base venv without the `[data]`/multipart extras skips the office + upload suites (~3,841 passing), and the release script's own run reports whatever its env yields (v1.18.7's README badge shows `3844`). On Windows the 7 `TestKillPreviewBackend` cases also skip (`os.getpgid`/`os.killpg` can't be `patch()`-ed).
 
@@ -59,6 +59,8 @@ Tests: **3,907 passing, 3 skipped** on Unix with `uv sync --all-extras` (the v1.
 `~/.ppxai/` subdirs: `bin/` (Windows only), `web/` (with `lib/` and `shared/`), `sessions/`, `exports/`, `checkpoints/`, `logs/`, `usage/`.
 
 ## Architecture
+
+Layout is discoverable with `ls`: `ppxai/{engine,server,tui,commands,config}` + `vscode-extension/` (see the Key Design Decisions layering below).
 
 **Configuration files:**
 
@@ -162,18 +164,6 @@ GH_TOKEN=$(cat .github/gh-token.env) gh release list
 5. **Hybrid config** — Secrets (`.env`) separate from settings (`ppxai-config.json`)
 6. **Built-in providers** — Perplexity and Gemini always available without config
 7. **Transactional state management** — checkpoint/commit/rollback for atomic multi-step operations
-
-## VSCode Extension
-
-Install:
-```bash
-code --install-extension ppxai-X.Y.Z.vsix
-./ppxai-server-{platform}
-```
-
-Settings: `ppxai.serverUrl` (default `http://127.0.0.1:54320`), `ppxai.defaultProvider`, `ppxai.defaultModel`, `ppxai.enableTools`.
-
-Commands: `ppxai.openChat`, `ppxai.explainSelection`, `ppxai.generateTests`, `ppxai.switchProvider`, `ppxai.switchModel`.
 
 ## ppxaide / Terminal Images
 
