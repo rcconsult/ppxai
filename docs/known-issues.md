@@ -7,10 +7,10 @@ Each entry includes root cause, workaround status, and upgrade/resolution criter
 
 ## [KI-001] google-genai SDK ≥1.57.0 — Code Editing Regression
 
-**Status:** Open (unresolved upstream) — SDK pinned to `<1.57.0`
+**Status:** RESOLVED BY UPGRADE (2026-07-11) — SDK raised to 2.11.0, ceiling-pinned `<2.12.0`
 **Detected:** February 8, 2026
-**Affected versions:** google-genai 1.57.0 through 1.65.0 (latest as of Feb 27, 2026)
-**Upstream issues:** [#1789](https://github.com/googleapis/python-genai/issues/1789), [#1818](https://github.com/googleapis/python-genai/issues/1818)
+**Affected versions:** google-genai 1.57.0 through at least 1.65.0 (observed Feb 2026). **Not reproducible on 2.11.0**: the 2026-07-11 benchmark gate ran 3× on gemini-2.5-flash — code editing **100% in all three runs** (was 0% on 1.62.0), overall 70.2–74.4% vs 68.6% for the prior same-suite run on 1.56.0. The upstream v1.57.0 change was never reverted (full changelog sweep to 2.11.0), so the healing happened elsewhere in the SDK/stack — treat the regression as version-specific, keep the ceiling pin and the benchmark gate for every future raise.
+**Upstream tracking:** **none.** Upstream shipped the behavior deliberately as a fix ("keep the history in chat when the API yields such a part", commit [`215c852`](https://github.com/googleapis/python-genai/commit/215c8524659c0b2ca945b6cd7887b3501db61be4)); no upstream issue tracks this regression. [#1789](https://github.com/googleapis/python-genai/issues/1789) (empty finish message on MALFORMED_FUNCTION_CALL — still open) and [#1818](https://github.com/googleapis/python-genai/issues/1818) (AFC config persistence — closed as not planned) are **related-but-different** bugs from the original v1.15.3 analysis; an earlier revision of this entry wrongly promoted them to the upgrade gate. Waiting on them can never signal a fix — the only valid gate is our own benchmark (below).
 
 ### What broke
 
@@ -42,16 +42,47 @@ This change lets incomplete responses (empty or whitespace-only text parts) pass
 strips empty text parts from all three response paths (streaming, non-streaming, sync).
 This remains active even with the pin as a safety net if the pin is ever relaxed.
 
-### How to verify a fix before upgrading
+### How to verify before upgrading (benchmark gate — the ONLY gate)
 
-1. Check upstream issues [#1789](https://github.com/googleapis/python-genai/issues/1789) and [#1818](https://github.com/googleapis/python-genai/issues/1818) are closed.
-2. Bump the pin in `pyproject.toml` to the candidate version and run `uv lock`.
-3. Run the benchmark suite against gemini-2.5-flash (or gemini-3-flash-preview):
+There is no upstream signal to wait for (see **Upstream tracking**). The
+`_filter_empty_parts()` safety net may neutralize the swallowing on newer
+SDKs, but only the benchmark can prove it:
+
+1. Bump the pin in `pyproject.toml` (both the `gemini` extra and the main
+   deps carry it) to the candidate version and run `uv lock` + `uv sync --all-extras`.
+2. Run the Gemini unit suites first (cheap gate):
+   `pytest tests/test_gemini_tool_schema.py tests/test_gemini_null_parts.py tests/test_gemini_extras.py`.
+3. Run the benchmark suite (3 separate invocations — there is no `--runs`
+   flag) against gemini-2.5-flash (or gemini-3-flash-preview):
    ```bash
-   python benchmarks/llm-eval/run_benchmarks.py --model gemini-2.5-flash --runs 3
+   cd benchmarks/llm-eval && python benchmark.py --provider gemini --model gemini-2.5-flash
    ```
+   Beware free-tier rate-limit contamination — throttled runs read as fake
+   quality regressions.
 4. Verify code editing score ≥50% and overall score ≥75%.
-5. If passing, remove the `<1.57.0` upper bound and update this entry.
+5. If passing, raise the ceiling to the verified version (e.g. `<2.12.0`) —
+   do NOT remove the upper bound entirely; this SDK has regressed us before,
+   so every ceiling raise goes through this gate.
+
+### Upstream review log
+
+- **2026-07-11 (verdict)**: pin raised to `<2.12.0`, locked at 2.11.0.
+  Benchmark gate 3× gemini-2.5-flash: code editing 100/100/100%, overall
+  74.4/70.2/74.4% (prior same-suite run on 1.56.0: 68.6%; the ≥75% figure in
+  the gate was calibrated to the old 26-test suite — today's suite has 36
+  tests incl. agentic_tool_loops + efficiency). Gemini unit suites 34/34.
+  Note: the Feb rollback log shows `_filter_empty_parts()` did NOT fix the
+  0% on 1.62.0 (only the rollback did), so the filter is defense-in-depth,
+  not the reason 2.11.0 passes.
+- **2026-07-11** (SDK at 2.11.0, released 2026-07-09): change not reverted;
+  no GenerateContent-surface breaking changes in 1.57.0→2.11.0 (all breaking
+  entries scoped to the Interactions/Agent-Platform surface; v2.0.0 notes
+  explicitly disclaim GenerateContent impact). AFC breaking change announced
+  in 2.8.0 docs — ppxai does not use automatic function calling. Classic
+  `Schema` still rejects `oneOf` (only Agent-Platform `JSONSchema` gained
+  `one_of` in 1.74.0) — the `_sanitize_schema_for_gemini()` downgrade in
+  `gemini.py` stays required at any version;
+  `tests/test_gemini_tool_schema.py` pins both directions.
 
 ### Archive
 
