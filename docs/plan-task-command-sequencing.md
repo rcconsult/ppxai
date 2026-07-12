@@ -152,6 +152,15 @@ body), `.json`/`.yaml`, or `.jsonl` (batch fan-out).
 instructions); `/task run --spec triage "the CI job is red"`; confirm the
 pane shows the grant/budget from the file. `--batch three.jsonl` mints 3 runs.
 
+**Trial-verified 2026-07-12 (macOS, auth-ON):** API trial against the installed
+server with a `server.secrets` file token store. Bootstrap-minted a bearer
+(`POST /v1/tokens`), launched `--spec triage`; the run meta carried the
+spec's `tools:[read_file,grep,list_directory]` + `budget:{iters8,time120}`,
+while a request `provider/model` override beat the spec (precedence). Lifecycle
+`completed_pending_ack → ack → finalized`; the `rejected-shell` spec 400'd on
+the shell-grant ceiling clamp. Runnable recipe (auth-off and auth-on variants):
+`examples/task-specs/README.md`.
+
 **Tests:** loader unit tests (md front-matter, json, jsonl, missing/oversized,
 bad yaml); precedence-merge tests; ceiling-clamp test (spec asking for a tool
 outside the operator's allowance is refused).

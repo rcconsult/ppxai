@@ -27,6 +27,11 @@ Usage:
   python3 scripts/gateway-smoke.py --skip-llm          # free, perimeter only
   python3 scripts/gateway-smoke.py --token <bearer>    # auth-enforcing host
 
+On an auth-enforcing host (a `server.secrets` file token store) the script
+auto-provisions its own bearer via the loopback bootstrap mint (`POST
+/v1/tokens`) when no --token / PPXAI_API_TOKEN is given, so the protected
+steps still run. Pass --token to use a specific bearer instead.
+
 Exit code 0 = every non-skipped step passed.
 """
 
@@ -76,6 +81,24 @@ class Gateway:
             except (ValueError, UnicodeDecodeError):
                 payload = None
             return e.code, payload
+
+    def bootstrap_token(self, owner: str = "gateway-smoke"):
+        """Mint a bearer via the loopback bootstrap path (auth-enabled hosts).
+
+        When `server.secrets` configures a file (mint-capable) token store,
+        auth is enforced and the protected surfaces (`/v1/agent/runs` list,
+        `POST /v1/agent/task`, monitor channels) reject a bearer-less caller
+        even on loopback — only `/v1/oneshot` and `POST /v1/agent/run` stay
+        exempt (see ppxai/server/auth.py `_LOOPBACK_EXEMPT_AGENT_PATHS`). But
+        `POST /v1/tokens` is loopback-exempt precisely so a local operator can
+        mint the first token, so the smoke test provisions its own. Returns
+        the token material, or None if minting isn't available.
+        """
+        code, body = self.request("POST", "/v1/tokens", {"owner": owner})
+        if code == 201 and isinstance(body, dict) and body.get("token"):
+            self.token = body["token"]
+            return self.token
+        return None
 
     def poll_run(self, run_id: str, terminal: set) -> dict:
         """Poll run meta until its status enters `terminal` (or timeout)."""
@@ -178,6 +201,20 @@ def main() -> int:
         # 1. /status
         code, _ = gw.request("GET", "/status")
         record("GET /status", PASS if code == 200 else FAIL, f"http {code}")
+
+        # Auth probe: if the run-registry list 401s and we have no token, the
+        # host runs a mint-capable token store (server.secrets file provider).
+        # Provision a bearer via the loopback bootstrap so the protected steps
+        # (runs list, /task) still exercise instead of failing. --token / env
+        # override this entirely.
+        if not gw.token:
+            probe, _ = gw.request("GET", "/v1/agent/runs")
+            if probe == 401:
+                if gw.bootstrap_token():
+                    record("auth: loopback bootstrap-mint", PASS, "token store detected → minted")
+                else:
+                    record("auth: loopback bootstrap-mint", FAIL,
+                           "runs list 401 but /v1/tokens mint failed — pass --token")
 
         # 2. run registry
         code, body = gw.request("GET", "/v1/agent/runs")

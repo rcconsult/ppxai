@@ -51,7 +51,7 @@ Confirm the run pane shows the **grant + budget from the file** (not the flag
 line) — that is the T3 acceptance signal. `--model foo --spec triage` proves
 precedence: the flag wins, the spec fills the rest.
 
-Or hit the API directly:
+Or hit the API directly (auth **off** — no `server.secrets` file store):
 
 ```bash
 curl -s localhost:54320/v1/agent/task \
@@ -61,6 +61,28 @@ curl -s localhost:54320/v1/agent/task \
 curl -s localhost:54320/v1/agent/task -H 'content-type: application/json' \
   -d '{"task":"x","spec":"rejected-shell"}'      # 400, "shell ... not permitted"
 ```
+
+### Auth-enabled host (a `server.secrets` file token store)
+
+With a mint-capable token store configured, `POST /v1/agent/task` requires a
+bearer **even on loopback** (only `/v1/oneshot` and `POST /v1/agent/run` stay
+exempt — see `ppxai/server/auth.py`). Mint one first via the loopback
+bootstrap, then carry it:
+
+```bash
+# Bootstrap-mint the first token (loopback-exempt because the store can mint):
+TOKEN=$(curl -s localhost:54320/v1/tokens -H 'content-type: application/json' \
+  -d '{"owner":"trial"}' | python3 -c 'import sys,json;print(json.load(sys.stdin)["token"])')
+
+curl -s localhost:54320/v1/agent/task \
+  -H "authorization: Bearer $TOKEN" -H 'content-type: application/json' \
+  -d '{"task":"the CI job is red","spec":"triage"}'
+```
+
+In the **web / VSCode** clients, mint + store the bearer once with
+`/token mint` (or the "ppxai: Set API Token" palette entry); every `/task`
+verb then carries it automatically. A bearer-less `/task ls` returns 401 with
+a hint pointing at `/token`.
 
 ## Notes
 
