@@ -59,6 +59,14 @@ class TestRunMeta:
         m = RunMeta(run_id="r", task="t", budget={"iterations": 3}, resumable=True)
         assert RunMeta.from_dict(m.to_dict()) == m
 
+    def test_workdir_roundtrips_and_defaults_none(self):
+        # v1.19.x workdir-alignment: additive field — a pre-workdir meta.json
+        # (no key) must load with workdir=None, and the field round-trips.
+        old = {"run_id": "r", "task": "t"}
+        assert RunMeta.from_dict(old).workdir is None
+        m = RunMeta(run_id="r", task="t", workdir="/repo")
+        assert RunMeta.from_dict(m.to_dict()) == m
+
 
 # ---------------------------------------------------------------------------
 # RunControl — cooperative budget/cancel (Inc 6)
@@ -837,6 +845,7 @@ class TestAgentRunRoutes:
             def __init__(self): self.tool_manager = _BaseTM()
             def set_provider(self, p): pass
             def set_model(self, m): pass
+            def set_working_dir(self, d): pass  # v1.19.x: unsealed runs set the default wd
             def enable_tools(self): pass
             async def chat(self, task, stream=False):
                 # the route wrapped self.tool_manager in ScopedToolManager;
@@ -908,6 +917,7 @@ class TestAgentRunRoutes:
             def __init__(self): self.tool_manager = _BaseTM()
             def set_provider(self, p): pass
             def set_model(self, m): pass
+            def set_working_dir(self, d): pass  # v1.19.x: unsealed runs set the default wd
             def enable_tools(self): pass
             async def chat(self, task, stream=False):
                 # one denied (evil.com), one allowed (api.github.com)
@@ -977,6 +987,7 @@ class TestAgentRunRoutes:
             def __init__(self): self.tool_manager = _BaseTM()
             def set_provider(self, p): pass
             def set_model(self, m): pass
+            def set_working_dir(self, d): pass  # v1.19.x: unsealed runs set the default wd
             def enable_tools(self): pass
             async def chat(self, task, stream=False):
                 # provider blew up mid-call — engine surfaces it as an event
@@ -1019,6 +1030,7 @@ class TestAgentRunRoutes:
             def __init__(self): self.tool_manager = _BaseTM()
             def set_provider(self, p): pass
             def set_model(self, m): pass
+            def set_working_dir(self, d): pass  # v1.19.x: unsealed runs set the default wd
             def enable_tools(self): pass
             async def chat(self, task, stream=False):
                 for _ in range(n_tool_calls):
@@ -1138,6 +1150,7 @@ class TestAgentRunRoutes:
                 self.session = _Session()
             def set_provider(self, p): pass
             def set_model(self, m): pass
+            def set_working_dir(self, d): pass  # v1.19.x: unsealed runs set the default wd
             def enable_tools(self): pass
             async def chat(self, task, stream=False):
                 for _ in range(10):
@@ -2126,6 +2139,9 @@ class TestDisconnectThenCollectE2E:
             def set_model(self, m):
                 pass
 
+            def set_working_dir(self, d):
+                pass  # v1.19.x: unsealed runs set the default wd
+
             def enable_tools(self):
                 pass
 
@@ -2379,3 +2395,173 @@ class TestResumeRoute:
         # the resumed leg reuses the SAME event log (seq continues)
         seqs = [e["seq"] for e in evs]
         assert seqs == sorted(seqs) and len(set(seqs)) == len(seqs)
+
+
+# ---------------------------------------------------------------------------
+# Workdir alignment (v1.19.x) — per-run working-dir intent
+# ---------------------------------------------------------------------------
+
+
+class TestWorkdirAlignment:
+    """A /task run's working dir is deterministic per-run intent: request
+    `workdir` (seal OFF) → server default (server.working_dir → home) — never
+    the server process launch dir. Sealed runs keep their jail; a requested
+    workdir is then ignored and the launch response flags it so clients warn.
+    """
+
+    def _capture_build(self, monkeypatch):
+        from ppxai.server.routes import agent_v1
+        captured = {}
+
+        def fake_build(reg_, **kw):
+            captured.update(kw)
+
+            async def _ok(m):
+                return "ok"
+            return _ok
+
+        monkeypatch.setattr(agent_v1, "build_task_runner", fake_build)
+        monkeypatch.setattr(agent_v1, "_validate_provider_or_400", lambda n: None)
+        return captured
+
+    def _body(self, **extra):
+        return {"task": "t", "tools": ["read_file"], "provider": "p",
+                "model": "m", **extra}
+
+    def test_workdir_threaded_to_meta_runner_and_response(
+        self, client, monkeypatch, tmp_path
+    ):
+        c, reg = client
+        captured = self._capture_build(monkeypatch)
+        wd = str(tmp_path)
+        r = c.post("/v1/agent/task", json=self._body(workdir=wd))
+        assert r.status_code == 200
+        assert r.json()["workdir_ignored"] is False
+        import os as _os
+        expect = _os.path.abspath(_os.path.expanduser(wd))
+        assert captured["workdir"] == expect
+        run_id = r.json()["run_id"]
+        assert reg.get_run(run_id).workdir == expect
+        # …and the wire projection carries it (clients display `wd:`).
+        assert c.get(f"/v1/agent/runs/{run_id}").json()["workdir"] == expect
+
+    def test_nonexistent_workdir_is_a_400_not_a_mid_run_surprise(
+        self, client, monkeypatch, tmp_path
+    ):
+        c, reg = client
+        self._capture_build(monkeypatch)
+        r = c.post("/v1/agent/task",
+                   json=self._body(workdir=str(tmp_path / "nope")))
+        assert r.status_code == 400
+        assert "workdir" in r.json()["detail"]
+        assert reg.list_runs() == []  # nothing minted
+
+    def test_absent_workdir_stays_none_until_the_runner_defaults(
+        self, client, monkeypatch
+    ):
+        # The route records None (intent absent); the runner applies the
+        # server default at execution — so meta distinguishes "explicit"
+        # from "defaulted".
+        c, reg = client
+        captured = self._capture_build(monkeypatch)
+        r = c.post("/v1/agent/task", json=self._body())
+        assert r.status_code == 200
+        assert r.json()["workdir_ignored"] is False
+        assert captured["workdir"] is None
+        assert reg.get_run(r.json()["run_id"]).workdir is None
+
+    def test_sealed_run_ignores_workdir_and_flags_it(
+        self, client, monkeypatch, tmp_path
+    ):
+        c, reg = client
+        from ppxai.server.routes import agent_v1
+        captured = self._capture_build(monkeypatch)
+        real = agent_v1.get_agent_config  # already task_tier_enabled=True
+        monkeypatch.setattr(
+            agent_v1, "get_agent_config",
+            lambda: {**real(), "sandbox": {"enforcement": "in_process"}},
+        )
+        r = c.post("/v1/agent/task", json=self._body(workdir=str(tmp_path)))
+        assert r.status_code == 200
+        assert r.json()["workdir_ignored"] is True  # client renders the ⚠️
+        assert captured["workdir"] is None          # the jail wins
+        assert reg.get_run(r.json()["run_id"]).workdir is None
+
+    def test_resume_threads_the_persisted_workdir(self, client, monkeypatch, tmp_path):
+        c, reg = client
+        captured = self._capture_build(monkeypatch)
+        m = reg.start_run(task="t", tools=["read_file"], provider="p",
+                          model="m", hold_result=True, workdir=str(tmp_path))
+        reg.finish_run(m, status="interrupted", error="budget", resumable=True)
+        r = c.post(f"/v1/agent/runs/{m.run_id}/resume")
+        assert r.status_code == 200
+        assert captured["workdir"] == str(tmp_path)
+
+    def test_runner_sets_unsealed_workdir_deterministically(
+        self, client, monkeypatch, tmp_path
+    ):
+        # The unsealed runner must set SOME deterministic working dir on the
+        # run engine — the requested intent when given (vanished dir falls
+        # back), else the server default — never silently inherit the
+        # process launch dir (os.getcwd()).
+        import asyncio
+        _c, reg = client
+        from ppxai.server.routes import agent_v1
+        from ppxai.engine.types import Event, EventType
+
+        seen = {}
+
+        class _StubEngine:
+            def __init__(self):
+                self.tool_manager = type("TM", (), {"max_iterations": 3})()
+            def set_provider(self, p): pass
+            def set_model(self, m): pass
+            def set_working_dir(self, d): seen["wd"] = d
+            def enable_tools(self): pass
+            async def chat(self, task, stream=False):
+                yield Event(type=EventType.STREAM_END, data="ok")
+
+        monkeypatch.setattr(
+            agent_v1, "EngineClient", lambda: _StubEngine(), raising=False
+        )
+        monkeypatch.setattr(
+            agent_v1, "get_default_working_dir", lambda: str(tmp_path)
+        )
+
+        def _drive(**runner_kw):
+            m = reg.start_run(task="t", tools=["read_file"],
+                              provider="p", model="m")
+            runner = agent_v1.build_task_runner(
+                reg, provider_name="p", model="m", task="t",
+                tools=["read_file"], allow_outbound=[], **runner_kw,
+            )
+            asyncio.run(runner(m))
+            return seen["wd"]
+
+        # absent intent → the server default (not os.getcwd())
+        assert _drive() == str(tmp_path)
+        # explicit intent wins
+        (tmp_path / "x").mkdir()
+        assert _drive(workdir=str(tmp_path / "x")) == str(tmp_path / "x")
+        # a vanished recorded workdir (the resume case) falls back safely
+        assert _drive(workdir=str(tmp_path / "gone")) == str(tmp_path)
+
+    def test_default_working_dir_prefers_config_then_home(
+        self, monkeypatch, tmp_path
+    ):
+        # The runner's fallback: server.working_dir when set + existing,
+        # else home — NEVER os.getcwd() (the pre-v1.19.x behavior that made
+        # runs depend on where the operator launched the server).
+        from pathlib import Path
+        import ppxai.server.session_manager as sm
+        monkeypatch.setattr(
+            sm, "get_server_config", lambda: {"working_dir": str(tmp_path)}
+        )
+        assert sm.get_default_working_dir() == str(tmp_path)
+        monkeypatch.setattr(
+            sm, "get_server_config",
+            lambda: {"working_dir": str(tmp_path / "gone")},
+        )
+        assert sm.get_default_working_dir() == str(Path.home())
+        monkeypatch.setattr(sm, "get_server_config", lambda: {})
+        assert sm.get_default_working_dir() == str(Path.home())

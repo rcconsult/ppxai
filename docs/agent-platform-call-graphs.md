@@ -933,6 +933,41 @@ persisted `events.jsonl` (the run's event stream is the observation channel;
   `TestProviderToolPrefix`). The structural driver — Gemini tool loops run
   text-flattened with no `tool_call_id` threading — is debt Item 41.
 
+**§N — workdir alignment (2026-07-12).** A `/task` run's cwd was
+`os.getcwd()` of the SERVER PROCESS: the per-run `EngineClient()` bypasses
+the SessionManager (which applies `server.working_dir` → home to every UI
+session), so "summarize README.md" worked or failed depending on where the
+operator launched the server (caught live: VSCode trial run failed from a
+home-launched server; earlier web successes were a repo-launched-server
+coincidence — client semantics were always identical). Now deterministic
+per-run intent, uniform across `/task`, resume, and spawned children:
+
+```
+"/task run "…" [--work-dir <p>]"        [web task-controller.js / VSCode taskController.ts]
+  -> body.workdir = --work-dir | session workingDir (appState)   # like provider/model
+  -> POST /v1/agent/task {…, workdir}
+       -> seal ON  -> ignore + respond {workdir_ignored:true}    # jail always wins
+                       client renders "⚠️ sandbox seal active …" # warn-don't-fail
+       -> seal OFF -> 400 unless isdir; meta.workdir = abspath   # fail at launch, not mid-run
+  _runner (build_task_runner(workdir=…))
+       -> sealed:   engine.set_working_dir(<jail>/work)          # unchanged (T2)
+       -> unsealed: engine.set_working_dir(workdir | get_default_working_dir())
+                    # session_manager module fn: server.working_dir → home; NEVER getcwd
+                    # vanished recorded dir (resume case) falls back to the default
+  resume: build_task_runner(workdir=meta.workdir)                # persisted intent
+  spawn_subagent: parent_workdir threads to child start_run + runner
+```
+
+The tool-free `/v1/agent/run` tier gets NO workdir (it executes no tools —
+dead plumbing). NO per-run unseal: the seal is operator posture per
+deployment (desktop OFF / coder-pod OFF / embedded-agents ON — profile
+table in api-gateway.md §"Run working directory"); in-jail relaxation is
+skill read-root mounts (T4). Meta/wire: `RunMeta.workdir` (additive, old
+metas load as None) + `RunMetaResponse.workdir` (VSCode `/task show` prints
+`wd:`). Tests: `TestWorkdirAlignment` (route/runner/resume/default),
+`TestWorkdirParity` sentinel (flag + threading + warning in both clients),
+spawn ctor-contract updated.
+
 ## Build plan T1 — `/task` command family (web client surface)
 
 Added: `web/shared/task-controller.js` (`TaskController extends AgentRunController`),

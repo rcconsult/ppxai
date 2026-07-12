@@ -99,6 +99,12 @@ class RunMeta:
     # Recorded by the /task route only (the tool-free tier isn't resumable).
     system: Optional[str] = None
     read_roots: list = field(default_factory=list)
+    # v1.19.x workdir-alignment: the run's working directory as EFFECTIVE
+    # per-run intent (client-sent session wd or --work-dir), applied only
+    # while the filesystem seal is OFF. None = server default
+    # (server.working_dir config, else home). Sealed runs never record one —
+    # the per-run jail always wins. Persisted so resume rebuilds faithfully.
+    workdir: Optional[str] = None
     created_at: float = 0.0
     started_at: Optional[float] = None  # set when execution begins (Inc 2 background)
     finished_at: Optional[float] = None
@@ -575,6 +581,7 @@ class AgentRunRegistry:
         hold_result: bool = False,
         system: Optional[str] = None,
         read_roots: Optional[list] = None,
+        workdir: Optional[str] = None,
     ) -> RunMeta:
         """Mint a run, persist it in `pending` state, return its meta.
 
@@ -598,6 +605,7 @@ class AgentRunRegistry:
             hold_result=hold_result,
             system=system,
             read_roots=list(read_roots or []),
+            workdir=workdir,
             created_at=time.time(),
         )
         self._store.persist_meta(meta)

@@ -68,10 +68,27 @@ class TestConstructorContract:
             parent_allow_outbound=[],
             parent_provider="p",
             parent_model="m",
+            parent_workdir="/some/dir",  # v1.19.x workdir-alignment
             request_consent=None,
             consent_policy="deny",
             runner_builder=lambda reg, **kw: None,
         )
+
+    def test_parent_workdir_is_optional_and_threaded(self, registry):
+        # Optional (old call sites keep working) and stored for the child.
+        t = SpawnSubagentTool(
+            registry=registry, parent_run_id="r",
+            parent_tools=[], parent_allow_outbound=[],
+            parent_provider="p", parent_model="m",
+        )
+        assert t._parent_workdir is None
+        t2 = SpawnSubagentTool(
+            registry=registry, parent_run_id="r",
+            parent_tools=[], parent_allow_outbound=[],
+            parent_provider="p", parent_model="m",
+            parent_workdir="/repo",
+        )
+        assert t2._parent_workdir == "/repo"
 
     def test_parent_owner_is_optional(self, registry):
         # Defaulting keeps the unowned (auth-off) path working.

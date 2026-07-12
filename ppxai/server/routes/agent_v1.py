@@ -105,6 +105,7 @@ from ...engine.tools.agent_spawn import SpawnSubagentTool
 from ...engine.tools.filesystem_policy import build_filesystem_policy
 from ...engine.tools.network_policy import NetworkPolicy, grant_has_shell
 from ...engine.types import EventType
+from ..session_manager import get_default_working_dir
 from ..state import get_agent_run_registry
 # Reuse oneshot's provider construction so Inc 1 has zero provider-wiring
 # duplication; the synchronous run IS a oneshot call under the hood.
@@ -275,6 +276,9 @@ class RunMetaResponse(BaseModel):
     finished_at: Optional[float] = None
     result: Optional[str] = None
     error: Optional[str] = None
+    # v1.19.x workdir-alignment: the run's effective working dir (per-run
+    # intent; None = server default or a sealed run's jail).
+    workdir: Optional[str] = None
 
     @classmethod
     def from_meta(cls, m: RunMeta) -> "RunMetaResponse":
@@ -297,6 +301,7 @@ class RunMetaResponse(BaseModel):
             finished_at=m.finished_at,
             result=m.result,
             error=m.error,
+            workdir=getattr(m, "workdir", None),
         )
 
 
@@ -305,6 +310,10 @@ class AgentRunResponse(BaseModel):
 
     run_id: str
     status: str
+    # v1.19.x workdir-alignment: True when the request carried a `workdir`
+    # but the filesystem seal is ON — the run keeps its per-run jail and the
+    # client should surface a warning. Absent/False otherwise.
+    workdir_ignored: bool = False
 
 
 class RunListResponse(BaseModel):
@@ -495,6 +504,18 @@ class AgentTaskRequest(BaseModel):
             "fetch_url, get_weather) reaches nothing. Each entry is a host "
             "string (exact, or `*.suffix` single-label glob) or "
             "{host, paths:[prefix,...]}."
+        ),
+    )
+    workdir: Optional[str] = Field(
+        None,
+        description=(
+            "Working directory for the run's relative tool paths — per-run "
+            "intent like provider/model (clients thread their session "
+            "working dir; `--work-dir` overrides). Honored ONLY while the "
+            "filesystem seal is OFF: a sealed run keeps its per-run jail and "
+            "the response flags `workdir_ignored`. Absent = the server "
+            "default (`server.working_dir` config, else home) — never the "
+            "server process launch dir. Must exist (400 otherwise)."
         ),
     )
 
@@ -784,6 +805,32 @@ async def create_agent_task(req: AgentTaskRequest, request: Request) -> AgentRun
     # build_task_runner, so we don't construct one here just to discard it.
     _validate_provider_or_400(provider_name)
 
+    # v1.19.x workdir-alignment: per-run working directory intent. Honored
+    # only while the filesystem seal is OFF — a sealed run keeps its per-run
+    # jail (warn-don't-fail, so the same client invocation stays portable
+    # across sealed and unsealed hosts). Validated up front: launching a run
+    # that would resolve relative paths against a nonexistent directory is a
+    # request error, not a mid-run surprise.
+    workdir: Optional[str] = None
+    workdir_ignored = False
+    if req.workdir:
+        sealed = (get_agent_config().get("sandbox", {}) or {}).get(
+            "enforcement"
+        ) == "in_process"
+        if sealed:
+            workdir_ignored = True
+        else:
+            wd = os.path.abspath(os.path.expanduser(req.workdir))
+            if not os.path.isdir(wd):
+                raise HTTPException(
+                    status_code=400,
+                    detail=(
+                        f"workdir does not exist or is not a directory: "
+                        f"{req.workdir}"
+                    ),
+                )
+            workdir = wd
+
     meta = registry.start_run(
         task=eff["task"], tools=tools, provider=provider_name, model=model,
         network=eff["network"],
@@ -798,6 +845,7 @@ async def create_agent_task(req: AgentTaskRequest, request: Request) -> AgentRun
         # rebuild the scoped runner faithfully after an interrupt/restart.
         system=eff["system"],
         read_roots=eff["read_roots"],
+        workdir=workdir,
     )
 
     runner = build_task_runner(
@@ -810,9 +858,12 @@ async def create_agent_task(req: AgentTaskRequest, request: Request) -> AgentRun
         allow_spawn=True,  # top-level run may spawn ONE child (depth=1; Inc 7)
         system=eff["system"],  # request or spec: caller's agent framing (AGENT.md)
         extra_read_paths=eff["read_roots"],  # T4: mounted --skill dirs
+        workdir=workdir,
     )
     registry.run_in_background(meta, runner)
-    return AgentRunResponse(run_id=meta.run_id, status=meta.status)
+    return AgentRunResponse(
+        run_id=meta.run_id, status=meta.status, workdir_ignored=workdir_ignored
+    )
 
 
 def build_task_runner(
@@ -826,6 +877,7 @@ def build_task_runner(
     allow_spawn: bool = False,
     system: Optional[str] = None,
     extra_read_paths: Optional[list] = None,
+    workdir: Optional[str] = None,
 ):
     """Build the async runner that drives a tool-capable run (Inc 4–7).
 
@@ -844,6 +896,12 @@ def build_task_runner(
     read-scope on TOP of the static sandbox `read_paths.allow` — the `--skill`
     directories. Only consulted when the filesystem seal is engaged
     (enforcement="in_process"); ignored otherwise (nothing to enforce).
+
+    workdir (v1.19.x): the run's working directory as per-run intent, applied
+    only when the seal is OFF (the sealed branch always uses the per-run
+    jail). None → the server default (server.working_dir config, else home) —
+    deliberately NEVER the process launch dir, which made a run's relative
+    paths depend on how the operator happened to start the server.
     """
     async def _runner(m) -> str:
         engine = EngineClient()
@@ -889,6 +947,7 @@ def build_task_runner(
                 parent_allow_outbound=list(allow_outbound),
                 parent_provider=provider_name,
                 parent_model=model,
+                parent_workdir=workdir,  # child resolves paths where the parent does
                 request_consent=_spawn_consent,
                 consent_policy=spawn_consent,
                 runner_builder=build_task_runner,
@@ -923,13 +982,13 @@ def build_task_runner(
         _on_path = None
         sandbox = get_agent_config().get("sandbox", {}) or {}
         if sandbox.get("enforcement") == "in_process":
-            workdir = os.path.join(
+            jail_workdir = os.path.join(
                 os.path.expanduser(sandbox["workdir"]["root"]), m.run_id, "work"
             )
-            os.makedirs(workdir, exist_ok=True)
-            engine.set_working_dir(workdir)  # relative tool paths resolve here
+            os.makedirs(jail_workdir, exist_ok=True)
+            engine.set_working_dir(jail_workdir)  # relative tool paths resolve here
             fs_policy = build_filesystem_policy(
-                sandbox, workdir, extra_read_paths=extra_read_paths
+                sandbox, jail_workdir, extra_read_paths=extra_read_paths
             )
 
             def _on_path(allowed: bool, payload: dict) -> None:  # noqa: F811
@@ -940,6 +999,16 @@ def build_task_runner(
                         m.run_id, "path_denied", level="warning",
                         category="filesystem", data={**payload, "run_id": m.run_id},
                     )
+        else:
+            # Seal OFF: apply the per-run workdir intent, else the server
+            # default — never the process launch dir (v1.19.x
+            # workdir-alignment; a resume whose recorded workdir has since
+            # vanished falls back to the default rather than aiming tools at
+            # a dead path).
+            effective_wd = workdir
+            if effective_wd and not os.path.isdir(effective_wd):
+                effective_wd = None
+            engine.set_working_dir(effective_wd or get_default_working_dir())
 
         engine.tool_manager = ScopedToolManager(
             engine.tool_manager, list(tools), on_deny=_on_deny,
@@ -1190,6 +1259,7 @@ async def resume_agent_run(run_id: str, request: Request) -> dict:
         allow_spawn=True,  # same shape as a fresh top-level /task run
         system=getattr(meta, "system", None),
         extra_read_paths=list(getattr(meta, "read_roots", []) or []),
+        workdir=getattr(meta, "workdir", None),  # resume where the run ran
     )
     registry.resume_run(meta, runner)
     return {"ok": True, "run_id": run_id, "status": "running"}

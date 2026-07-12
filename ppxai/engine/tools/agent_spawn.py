@@ -137,6 +137,7 @@ class SpawnSubagentTool(BaseTool):
         parent_provider: str,
         parent_model: str,
         parent_owner: Optional[str] = None,
+        parent_workdir: Optional[str] = None,
         request_consent: Optional[Callable[[str], Awaitable[bool]]] = None,
         consent_policy: str = "deny",
         runner_builder: Callable = None,
@@ -154,6 +155,9 @@ class SpawnSubagentTool(BaseTool):
         # privilege leak, since the child's transcript/result derive from the
         # parent's authorized work.
         self._parent_owner = parent_owner
+        # v1.19.x workdir-alignment: the child resolves relative tool paths
+        # where the parent does (same per-run intent; None = server default).
+        self._parent_workdir = parent_workdir
         self._parent_tools = set(parent_tools or [])
         self._parent_allow_outbound = list(parent_allow_outbound or [])
         self._parent_policy = NetworkPolicy(self._parent_allow_outbound)
@@ -325,6 +329,7 @@ class SpawnSubagentTool(BaseTool):
             network=child_allow,
             parent_run_id=self._parent_run_id,
             owner=self._parent_owner,  # Inc 8b: child inherits parent's owner
+            workdir=self._parent_workdir,  # child works where the parent works
         )
         self._registry.emit_event(
             self._parent_run_id, "subagent_spawned", level="info",
@@ -343,6 +348,7 @@ class SpawnSubagentTool(BaseTool):
             tools=child_tools,
             allow_outbound=child_allow,
             allow_spawn=False,
+            workdir=self._parent_workdir,
         )
 
         # 5. Run to completion and collect the result. We drive the child

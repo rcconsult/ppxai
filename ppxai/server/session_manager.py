@@ -23,6 +23,27 @@ from ..engine import EngineClient
 logger = get_logger("session_manager")
 
 
+def get_default_working_dir() -> str:
+    """The server-wide default working directory.
+
+    `server.working_dir` from config when set and existing, else the user's
+    home. Used for every new session engine AND (v1.19.x) as the fallback
+    working dir of an unsealed /v1/agent/task run — so a run's relative
+    tool paths never silently depend on where the server process happened
+    to be launched from.
+    """
+    configured = get_server_config().get("working_dir")
+    if configured:
+        path = Path(configured).expanduser()
+        if path.is_dir():
+            return str(path)
+        logger.warning(
+            f"Configured working_dir '{configured}' does not exist, "
+            f"falling back to home"
+        )
+    return str(Path.home())
+
+
 @dataclass
 class Session:
     """Individual session data."""
@@ -107,14 +128,7 @@ class SessionManager:
     @staticmethod
     def _get_default_working_dir() -> str:
         """Get the default working directory from config or fall back to home."""
-        server_config = get_server_config()
-        configured = server_config.get("working_dir")
-        if configured:
-            path = Path(configured).expanduser()
-            if path.is_dir():
-                return str(path)
-            logger.warning(f"Configured working_dir '{configured}' does not exist, falling back to home")
-        return str(Path.home())
+        return get_default_working_dir()
 
     @classmethod
     def get_instance(cls) -> 'SessionManager':
