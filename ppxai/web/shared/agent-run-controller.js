@@ -72,6 +72,20 @@ class AgentRunController {
         }
     }
 
+    /**
+     * Error → transcript text. A 401 from the /v1 surface almost always
+     * means "no bearer attached" — point at the in-chat fix instead of
+     * only relaying the bare FastAPI detail (Item 40 trial feedback; the
+     * VSCode taskController.errText carries the same hint).
+     */
+    _errText(e) {
+        const msg = (e && e.message) || String(e);
+        if (e && e.status === 401) {
+            return `${msg} — 💡 no /v1 API token attached: run \`/token mint\` (local server) or \`/token set\` (paste one).`;
+        }
+        return msg;
+    }
+
     // ── Commands ──────────────────────────────────────────────────────────────
 
     /** /agentrun <task> — launch a background oneshot run, render in a pane. */
@@ -89,7 +103,7 @@ class AgentRunController {
         try {
             started = await this.app.apiClient.post('/v1/agent/run', body);
         } catch (e) {
-            this.app.showSystemMessage(`❌ Agent run rejected: ${e.message}`);
+            this.app.showSystemMessage(`❌ Agent run rejected: ${this._errText(e)}`);
             return;
         }
         const runId = started.run_id;
@@ -110,7 +124,7 @@ class AgentRunController {
         try {
             data = await this.app.apiClient.get('/v1/agent/runs');
         } catch (e) {
-            this.app.showSystemMessage(`❌ Could not list runs: ${e.message}`);
+            this.app.showSystemMessage(`❌ Could not list runs: ${this._errText(e)}`);
             return;
         }
         const runs = (data && data.runs) || [];
@@ -213,7 +227,7 @@ class AgentRunController {
         try {
             await this.app.apiClient.post(`/v1/agent/runs/${runId}/cancel`, {});
         } catch (e) {
-            this.app.showSystemMessage(`❌ Could not cancel ${runId}: ${e.message}`);
+            this.app.showSystemMessage(`❌ Could not cancel ${runId}: ${this._errText(e)}`);
             return;
         }
         this.app.showSystemMessage(`⏹️ ${runId} — cancel requested`);
@@ -232,7 +246,7 @@ class AgentRunController {
         try {
             await this.app.apiClient.post(`/v1/agent/runs/${runId}/respond`, payload);
         } catch (e) {
-            this.app.showSystemMessage(`❌ Could not respond to ${runId}: ${e.message}`);
+            this.app.showSystemMessage(`❌ Could not respond to ${runId}: ${this._errText(e)}`);
             return false;
         }
         const label = payload.approved === true ? 'approved'
@@ -257,7 +271,7 @@ class AgentRunController {
         try {
             await this.app.apiClient.post(`/v1/agent/runs/${runId}/ack`, {});
         } catch (e) {
-            this.app.showSystemMessage(`❌ Could not ack ${runId}: ${e.message}`);
+            this.app.showSystemMessage(`❌ Could not ack ${runId}: ${this._errText(e)}`);
             return false;
         }
         this.app.showSystemMessage(`📬 ${runId} — result collected (finalized)`);
@@ -278,7 +292,7 @@ class AgentRunController {
         try {
             await this.app.apiClient.post(`/v1/agent/runs/${runId}/resume`, {});
         } catch (e) {
-            this.app.showSystemMessage(`❌ Could not resume ${runId}: ${e.message}`);
+            this.app.showSystemMessage(`❌ Could not resume ${runId}: ${this._errText(e)}`);
             return false;
         }
         this.app.showSystemMessage(`▶️ ${runId} — resumed (running)`);

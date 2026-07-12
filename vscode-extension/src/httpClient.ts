@@ -280,6 +280,11 @@ export class HttpClient {
         this._apiToken = token || undefined;
     }
 
+    /** The bearer currently attached to /v1 calls (undefined = none). */
+    get apiToken(): string | undefined {
+        return this._apiToken;
+    }
+
     /**
      * Headers for the protected /v1 surface: session headers + bearer.
      * Kept SEPARATE from getHeaders(): the server validates any presented
@@ -1616,7 +1621,11 @@ export class HttpClient {
             const body = await response.json() as { detail?: string };
             if (body && typeof body.detail === 'string') { detail = body.detail; }
         } catch { /* non-JSON error body — keep the fallback */ }
-        return new Error(detail || `${fallback}: ${response.statusText}`);
+        const err = new Error(detail || `${fallback}: ${response.statusText}`);
+        // Surface the HTTP status so callers can special-case auth
+        // failures (taskController appends the /token hint on 401).
+        (err as Error & { status?: number }).status = response.status;
+        return err;
     }
 
     // Per-request timeout for the agent REST calls. Without it a hung
@@ -1754,6 +1763,32 @@ export class HttpClient {
             throw await this.agentError(response, `Failed to resume run ${runId}`);
         }
         return response.json();
+    }
+
+    // === /v1/tokens (Item 40) =============================================
+    // Kept OUTSIDE the agent-registry section on purpose: the parity
+    // sentinel (tests/test_vscode_task_controller.py) enforces that every
+    // agent call site uses v1Headers, while the mint below is the one
+    // documented bare call.
+
+    /**
+     * POST /v1/tokens — mint a bearer via the loopback bootstrap
+     * (server/auth.py::_is_bootstrap_mint). Deliberately sent WITHOUT the
+     * stored bearer (getHeaders, not v1Headers): a stale token would be
+     * validated — and rejected — even on the loopback-exempt mint route.
+     * Same reason the web client nulls its token before minting.
+     */
+    async mintApiToken(owner: string): Promise<{ token: string; meta: { token_id: string; owner: string } }> {
+        const response = await fetch(`${this.baseUrl}/v1/tokens`, {
+            method: 'POST',
+            headers: this.getHeaders(true),
+            body: JSON.stringify({ owner, roles: [] }),
+            signal: AbortSignal.timeout(this.agentTimeoutMs)
+        });
+        if (!response.ok) {
+            throw await this.agentError(response, 'Token mint failed');
+        }
+        return response.json() as Promise<{ token: string; meta: { token_id: string; owner: string } }>;
     }
 
     // === Agent Mode (v1.11.8) ===
@@ -2038,7 +2073,9 @@ export class HttpClient {
             const response = await fetch(`${this.baseUrl}/complete`, {
                 method: 'POST',
                 headers: this.getHeaders(true),
-                body: JSON.stringify({ buffer, cursor }),
+                // `client` lets the engine hide client-side commands this
+                // client doesn't implement (engine/completion.py _CLIENT_GATES).
+                body: JSON.stringify({ buffer, cursor, client: 'vscode' }),
             });
             if (!response.ok) { return []; }
             const data = await response.json() as { items: Array<any> };

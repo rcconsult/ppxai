@@ -24,6 +24,10 @@ class CompleteRequest(BaseModel):
     """Autocomplete request body."""
     buffer: str
     cursor: int = -1  # -1 = end of buffer
+    # Which client is asking ("web" | "vscode"). Client-side-only
+    # commands (/task, /token, /agentrun…) are surfaced only to clients
+    # that implement them; None (legacy caller) = no filtering.
+    client: Optional[str] = None
 
 
 class CompleteResponse(BaseModel):
@@ -85,6 +89,7 @@ async def complete_endpoint(
         current_provider=current_provider,
         tool_names=tool_names,
         agent_runs=agent_runs,
+        client=request.client,
     )
 
     return CompleteResponse(items=items)

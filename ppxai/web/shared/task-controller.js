@@ -4,6 +4,7 @@
  * The `/task` command family (v1.19.x, build plan T1):
  *   /task run "<desc>" --tools a,b,c [--allow host] [--provider p] [--model m]
  *                      [--budget iters=,time=,tokens=] [--system "…"] [--spec <name>]
+ *                      [--work-dir <path>]  (default: the session's working dir)
  *   /task run "<desc>" --spec <name>   (T3) configure from a spec file under
  *                      tools.agent.sandbox.specs_dir; explicit flags override
  *                      the file. The server resolves the name + clamps the grant.
@@ -98,6 +99,7 @@ function parseTaskArgs(argline) {
     const out = {
         task: '', tools: [], provider: null, model: null, system: null,
         network: { allow_outbound: [] }, budget: {}, spec: null, skills: [],
+        workdir: null,
         errors: [],
     };
     let i = 0;
@@ -131,6 +133,9 @@ function parseTaskArgs(argline) {
             case '--system':   v = value('--system');   if (v) out.system = v;   break;
             case '--budget':   v = value('--budget');   if (v) _parseBudget(v, out); break;
             case '--spec':     v = value('--spec');     if (v) out.spec = v;     break;
+            // v1.19.x workdir-alignment: explicit per-run working dir. Without
+            // it the session's working dir rides along (see run()).
+            case '--work-dir': v = value('--work-dir'); if (v) out.workdir = v; break;
             case '--skill':
                 // T4: repeatable and/or comma-separated — skills compose.
                 v = value('--skill');
@@ -229,6 +234,11 @@ class TaskController extends _AgentRunControllerBase {
         if (spec.system) body.system = spec.system;
         if (spec.network.allow_outbound.length) body.network = { allow_outbound: spec.network.allow_outbound };
         if (Object.keys(spec.budget).length) body.budget = spec.budget;
+        // v1.19.x workdir-alignment: the session's working dir rides along as
+        // per-run intent (like provider/model) so "summarize README.md" means
+        // the same thing in chat and in /task run; --work-dir overrides.
+        const workdir = spec.workdir || this.app.state.workingDir || null;
+        if (workdir) body.workdir = workdir;
 
         let started;
         try {
@@ -237,10 +247,15 @@ class TaskController extends _AgentRunControllerBase {
             // Surface the tier's own guardrail messages verbatim (403 tier
             // disabled + enable hint, 400 shell grant, 400 missing provider,
             // 400 unknown/invalid spec).
-            this.app.showSystemMessage(`❌ Task rejected: ${e.message}`);
+            this.app.showSystemMessage(`❌ Task rejected: ${this._errText(e)}`);
             return;
         }
 
+        if (started.workdir_ignored) {
+            this.app.showSystemMessage(
+                '⚠️ sandbox seal active — --work-dir ignored; the run stays in its per-run jail.'
+            );
+        }
         const runId = started.run_id;
         // Optimistic pane info from what the client parsed.
         let paneInfo = {
@@ -299,7 +314,7 @@ class TaskController extends _AgentRunControllerBase {
         try {
             meta = await this.app.apiClient.get(`/v1/agent/runs/${runId}`);
         } catch (e) {
-            this.app.showSystemMessage(`❌ Could not fetch ${runId}: ${e.message}`);
+            this.app.showSystemMessage(`❌ Could not fetch ${runId}: ${this._errText(e)}`);
             return;
         }
         if (!meta.waiting || !meta.waiting.token) {
@@ -328,7 +343,7 @@ class TaskController extends _AgentRunControllerBase {
         // renderer would otherwise eat every <placeholder> as an HTML tag.
         this.app.showSystemMessage([
             '/task — tool-capable background runs (sandboxed tier; default-off):',
-            '  `/task run "<desc>" --tools a,b,c [--allow host] [--provider p] [--model m] [--budget iters=,time=,tokens=] [--system "…"]`',
+            '  `/task run "<desc>" --tools a,b,c [--allow host] [--provider p] [--model m] [--budget iters=,time=,tokens=] [--system "…"] [--work-dir <path>]`',
             '  `/task run "<desc>" --spec <name>` — configure from a spec file (specs_dir); flags override the file',
             '  `/task run "<desc>" --skill <name>` — mount a skill (skills_dir): SKILL.md grant + references/ into read-scope; repeatable',
             '  `/task ls` — list runs',

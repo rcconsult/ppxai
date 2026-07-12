@@ -9,6 +9,7 @@
  *   /task run "<desc>" --tools a,b,c [--allow host] [--provider p] [--model m]
  *                      [--budget iters=,time=,tokens=] [--system "…"]
  *                      [--spec <name>] [--skill <name>]
+ *                      [--work-dir <path>]  (default: the session's working dir)
  *   /task ls | list          list runs
  *   /task show <id> | watch <id>   print a run's meta/result + (re)watch it
  *   /task respond <id> approve|deny|"<text>"   answer a waiting{consent} park
@@ -51,6 +52,7 @@ export interface AgentRunMeta {
     owner?: string | null;
     provider?: string | null;
     model?: string | null;
+    workdir?: string | null;
     tools?: string[];
     network?: any[];
     budget?: Record<string, number>;
@@ -68,7 +70,7 @@ export interface AgentRunMeta {
 
 /** The httpClient slice this controller drives (see httpClient.ts). */
 export interface TaskBackend {
-    agentTask(body: Record<string, any>): Promise<{ run_id: string; status: string }>;
+    agentTask(body: Record<string, any>): Promise<{ run_id: string; status: string; workdir_ignored?: boolean }>;
     agentRuns(): Promise<{ runs: AgentRunMeta[] }>;
     agentRun(runId: string): Promise<AgentRunMeta>;
     agentRunEvents(runId: string): AsyncIterable<any>;
@@ -94,10 +96,11 @@ export interface TaskUi {
     askConsent(runId: string, kind: string, prompt: string): Promise<ConsentAnswer | undefined>;
 }
 
-/** Session defaults (UI provider/model) — mirrors the web fallback rule. */
+/** Session defaults (UI provider/model/workdir) — mirrors the web fallback rule. */
 export interface TaskDefaults {
     provider?: string | null;
     model?: string | null;
+    workingDir?: string | null;
 }
 
 // ============================================================================
@@ -114,6 +117,7 @@ export interface ParsedTaskArgs {
     budget: Record<string, number>;
     spec: string | null;
     skills: string[];
+    workdir: string | null;
     errors: string[];
 }
 
@@ -167,6 +171,7 @@ export function parseTaskArgs(argline: string): ParsedTaskArgs {
     const out: ParsedTaskArgs = {
         task: '', tools: [], provider: null, model: null, system: null,
         network: { allow_outbound: [] }, budget: {}, spec: null, skills: [],
+        workdir: null,
         errors: [],
     };
     let i = 0;
@@ -200,6 +205,9 @@ export function parseTaskArgs(argline: string): ParsedTaskArgs {
             case '--system':   v = value('--system');   if (v) { out.system = v; }   break;
             case '--budget':   v = value('--budget');   if (v) { parseBudget(v, out); } break;
             case '--spec':     v = value('--spec');     if (v) { out.spec = v; }     break;
+            // v1.19.x workdir-alignment: explicit per-run working dir. Without
+            // it the session's working dir rides along (see run()).
+            case '--work-dir': v = value('--work-dir'); if (v) { out.workdir = v; } break;
             case '--skill':
                 // T4: repeatable and/or comma-separated — skills compose.
                 v = value('--skill');
@@ -324,6 +332,20 @@ export class TaskController {
         }
     }
 
+    /**
+     * Error → transcript text. A 401 from the /v1 surface almost always
+     * means "no bearer attached" — point at the in-chat fix instead of
+     * only relaying the bare FastAPI detail (Item 40 VSCode trial
+     * feedback: the raw 401 gave no clue that `/token` exists).
+     */
+    private errText(e: any): string {
+        const msg = e?.message ?? String(e);
+        if (e?.status === 401) {
+            return `${msg} — 💡 no /v1 API token attached: run \`/token mint\` (local server) or \`/token set\` (paste one).`;
+        }
+        return msg;
+    }
+
     /** /task run — launch a tool-capable sandboxed run. */
     async run(argline: string): Promise<void> {
         const spec = parseTaskArgs(argline);
@@ -333,7 +355,7 @@ export class TaskController {
         }
         if (!spec.task) {
             this.ui.system(
-                'Usage: `/task run "<desc>" --tools <a,b,c> [--spec <name>] [--skill <name>] [--allow host] [--budget iters=,time=,tokens=] [--system "…"]`'
+                'Usage: `/task run "<desc>" --tools <a,b,c> [--spec <name>] [--skill <name>] [--allow host] [--budget iters=,time=,tokens=] [--system "…"] [--work-dir <path>]`'
             );
             return;
         }
@@ -358,15 +380,23 @@ export class TaskController {
         if (spec.system) { body.system = spec.system; }
         if (spec.network.allow_outbound.length) { body.network = { allow_outbound: spec.network.allow_outbound }; }
         if (Object.keys(spec.budget).length) { body.budget = spec.budget; }
+        // v1.19.x workdir-alignment: the session's working dir rides along as
+        // per-run intent (like provider/model) so "summarize README.md" means
+        // the same thing in chat and in /task run; --work-dir overrides.
+        const workdir = spec.workdir || defaults.workingDir || null;
+        if (workdir) { body.workdir = workdir; }
 
-        let started: { run_id: string; status: string };
+        let started: { run_id: string; status: string; workdir_ignored?: boolean };
         try {
             started = await this.backend.agentTask(body);
         } catch (e: any) {
             // Surface the tier's own guardrail messages verbatim (403 tier
             // disabled, 400 shell grant / unknown spec / missing provider).
-            this.ui.system(`❌ Task rejected: ${e.message}`);
+            this.ui.system(`❌ Task rejected: ${this.errText(e)}`);
             return;
+        }
+        if (started.workdir_ignored) {
+            this.ui.system('⚠️ sandbox seal active — --work-dir ignored; the run stays in its per-run jail.');
         }
         this.ui.system(`🛠️ ${started.run_id} — task ${started.status} (watching; /task show ${started.run_id})`);
         void this.watchDetached(started.run_id);
@@ -378,7 +408,7 @@ export class TaskController {
         try {
             data = await this.backend.agentRuns();
         } catch (e: any) {
-            this.ui.system(`❌ Could not list runs: ${e.message}`);
+            this.ui.system(`❌ Could not list runs: ${this.errText(e)}`);
             return;
         }
         const runs = data.runs || [];
@@ -400,7 +430,7 @@ export class TaskController {
         try {
             run = await this.backend.agentRun(runId);
         } catch (e: any) {
-            this.ui.system(`❌ Could not fetch ${runId}: ${e.message}`);
+            this.ui.system(`❌ Could not fetch ${runId}: ${this.errText(e)}`);
             return;
         }
         this.renderRun(run);
@@ -415,7 +445,7 @@ export class TaskController {
         try {
             await this.backend.agentRunCancel(runId);
         } catch (e: any) {
-            this.ui.system(`❌ Could not cancel ${runId}: ${e.message}`);
+            this.ui.system(`❌ Could not cancel ${runId}: ${this.errText(e)}`);
             return;
         }
         this.ui.system(`⏹️ ${runId} — cancel requested`);
@@ -444,7 +474,7 @@ export class TaskController {
         try {
             meta = await this.backend.agentRun(runId);
         } catch (e: any) {
-            this.ui.system(`❌ Could not fetch ${runId}: ${e.message}`);
+            this.ui.system(`❌ Could not fetch ${runId}: ${this.errText(e)}`);
             return;
         }
         if (!meta.waiting || !meta.waiting.token) {
@@ -464,7 +494,7 @@ export class TaskController {
         try {
             await this.backend.agentRunRespond(runId, payload);
         } catch (e: any) {
-            this.ui.system(`❌ Could not respond to ${runId}: ${e.message}`);
+            this.ui.system(`❌ Could not respond to ${runId}: ${this.errText(e)}`);
             return false;
         }
         const label = payload.approved === true ? 'approved'
@@ -479,7 +509,7 @@ export class TaskController {
         try {
             await this.backend.agentRunAck(runId);
         } catch (e: any) {
-            this.ui.system(`❌ Could not ack ${runId}: ${e.message}`);
+            this.ui.system(`❌ Could not ack ${runId}: ${this.errText(e)}`);
             return false;
         }
         this.ui.system(`📬 ${runId} — result collected (finalized)`);
@@ -493,7 +523,7 @@ export class TaskController {
             await this.backend.agentRunResume(runId);
         } catch (e: any) {
             // The 409 refusal reason (resume_refusal matrix) verbatim.
-            this.ui.system(`❌ Could not resume ${runId}: ${e.message}`);
+            this.ui.system(`❌ Could not resume ${runId}: ${this.errText(e)}`);
             return false;
         }
         this.ui.system(`▶️ ${runId} — resumed (running)`);
@@ -504,7 +534,7 @@ export class TaskController {
     help(): void {
         this.ui.system([
             '/task — tool-capable background runs (sandboxed tier; default-off):',
-            '  /task run "<desc>" --tools a,b,c [--allow host] [--provider p] [--model m] [--budget iters=,time=,tokens=] [--system "…"]',
+            '  /task run "<desc>" --tools a,b,c [--allow host] [--provider p] [--model m] [--budget iters=,time=,tokens=] [--system "…"] [--work-dir <path>]',
             '  /task run "<desc>" --spec <name>   configure from a spec file (specs_dir)',
             '  /task run "<desc>" --skill <name>  mount a skill (skills_dir); repeatable',
             '  /task ls                list runs',
@@ -525,6 +555,7 @@ export class TaskController {
         const bits = [`${icon} ${run.run_id} — ${run.status}`];
         if (run.provider || run.model) { bits.push(`${run.provider || ''} · ${run.model || ''}`); }
         if (run.tools && run.tools.length) { bits.push(`tools: ${run.tools.join(', ')}`); }
+        if (run.workdir) { bits.push(`wd: ${run.workdir}`); }
         this.ui.system(bits.join('  |  '));
         if (SUCCESS_STATUSES.has(run.status) && run.result) {
             this.ui.result(run.result);

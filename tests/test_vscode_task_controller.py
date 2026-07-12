@@ -242,7 +242,10 @@ class TestBearerParity:
     def test_every_vscode_agent_call_site_uses_v1_headers(self):
         src = _read(TS_HTTP_CLIENT)
         start = src.index("// === Agent run registry")
-        end = src.index("// === Agent Mode (v1.11.8) ===")
+        # The registry slice ends where the /v1/tokens section begins —
+        # the mint there is the one documented BARE call (loopback
+        # bootstrap; a stale bearer would be validated and rejected).
+        end = src.index("// === /v1/tokens (Item 40)")
         agent_slice = src[start:end]
         assert "this.getHeaders(" not in agent_slice, (
             "an agent-slice call site regressed to plain getHeaders() — "
@@ -260,3 +263,85 @@ class TestBearerParity:
         assert '"ppxai.setApiToken"' in pkg, "command missing from package.json"
         # Never a settings-based token: settings sync + dotfiles leak secrets.
         assert '"ppxai.apiToken"' not in pkg
+
+
+class TestTokenCommandParity:
+    """Item 40 follow-up (2026-07-12): `/token` is an in-chat command in
+    BOTH clients — the VSCode trial showed a palette-only VSCode flow is
+    undiscoverable (autocomplete offered /token, dispatch answered
+    "Unknown command", and the /task 401 never named the fix).
+    """
+
+    WEB_DISPATCH = ROOT / "ppxai" / "web" / "shared" / "command-dispatcher.js"
+
+    def test_token_routed_before_factory_dispatch_in_vscode(self):
+        src = _read(TS_CHAT_PANEL)
+        token_pos = src.find("command === 'token'")
+        factory_pos = src.find("await this.dispatchFactoryCommand(command, argsText)")
+        assert token_pos != -1, "chatPanel does not route /token"
+        assert token_pos < factory_pos, (
+            "/token must be intercepted BEFORE factory dispatch — the "
+            "CommandFactory has no /token handler and would 404 it"
+        )
+
+    def test_both_clients_implement_the_same_verb_set(self):
+        for src in (_read(self.WEB_DISPATCH), _read(TS_CHAT_PANEL)):
+            for verb in ("status", "set", "mint", "clear"):
+                assert f"case '{verb}':" in src, f"/token {verb} missing"
+
+    def test_vscode_mint_is_deliberately_bare(self):
+        # The loopback bootstrap mint must NOT attach a (possibly stale)
+        # bearer — server/auth.py validates any presented bearer even on
+        # exempt routes. Web nulls its token first; VSCode's mint method
+        # builds bare headers.
+        src = _read(TS_HTTP_CLIENT)
+        start = src.index("// === /v1/tokens (Item 40)")
+        end = src.index("// === Agent Mode (v1.11.8) ===")
+        token_slice = src[start:end]
+        assert "'/v1/tokens'" in token_slice.replace('`', "'") or \
+            "/v1/tokens" in token_slice
+        assert "this.getHeaders(true)" in token_slice
+        assert "this.v1Headers(" not in token_slice
+        web = _read(self.WEB_DISPATCH)
+        assert "api.setApiToken(null)" in web, (
+            "web mint must null the stored token before POSTing"
+        )
+
+    def test_vscode_token_command_shares_the_palette_secret_key(self):
+        # /token and the "ppxai: Set API Token" palette entry must read and
+        # write the SAME SecretStorage key, or the two flows desync.
+        src = _read(TS_CHAT_PANEL)
+        assert "secrets.store('ppxai.apiToken'" in src
+        assert "secrets.delete('ppxai.apiToken'" in src
+        # Bare `/token set` defers to the palette's masked input box —
+        # the webview transcript must never see the raw value.
+        assert "executeCommand('ppxai.setApiToken')" in src
+
+    def test_workdir_flag_and_threading_parity(self):
+        # v1.19.x workdir-alignment: both clients must parse --work-dir AND
+        # thread the session working dir as the fallback per-run intent —
+        # one client threading and the other not would silently re-diverge
+        # the "summarize README.md" semantics the feature exists to align.
+        web, ts = _read(WEB_TASK), _read(TS_CONTROLLER)
+        for src, name in ((web, "web"), (ts, "vscode")):
+            assert "'--work-dir'" in src, f"{name} parser lacks --work-dir"
+            assert "body.workdir = workdir" in src, (
+                f"{name} launch does not thread workdir"
+            )
+        assert "this.app.state.workingDir" in web
+        assert "defaults.workingDir" in ts
+        # Sealed-host warning: same message, gated on the response flag.
+        for src, name in ((web, "web"), (ts, "vscode")):
+            assert "workdir_ignored" in src, f"{name} ignores the seal flag"
+            assert "sandbox seal active" in src, f"{name} lacks the seal warning"
+
+    def test_401_hint_parity(self):
+        # Both task controllers must point a 401 at the in-chat fix.
+        hint = "/token mint"
+        assert hint in _read(TS_CONTROLLER), "VSCode 401 hint missing"
+        assert hint in _read(WEB_BASE), "web 401 hint missing"
+        for src, name in ((_read(TS_CONTROLLER), "vscode"),
+                          (_read(WEB_BASE), "web")):
+            assert re.search(r"status === 401", src), (
+                f"{name} hint must gate on e.status === 401, not string-match"
+            )

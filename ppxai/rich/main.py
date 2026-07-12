@@ -222,6 +222,7 @@ class PPXAICompleter(Completer):
             working_dir=self._get_working_dir(),
             current_provider=self._get_current_provider(),
             tool_names=self._get_tool_names(),
+            client="rich",
         )
         for item in items:
             yield Completion(

@@ -70,27 +70,49 @@ _IGNORE_DIRS = frozenset({
 _BUILTIN_SPECIAL_COMMANDS: List[Dict[str, Any]] = [
     {"text": "/quit", "description": "Exit the application", "kind": "command"},
     {"text": "/exit", "description": "Exit the application", "kind": "command"},
-    # v1.19.0 agent platform — web-client-only commands (handled in
-    # command-dispatcher.js, not the CommandFactory). Listed here so the
-    # server-driven autocomplete surfaces them; harmless in other clients.
+    # v1.19.0 agent platform — client-side commands (handled in the web
+    # dispatcher / VSCode chatPanel, NOT the CommandFactory). Each entry's
+    # `clients` set names the clients that actually implement it, and the
+    # completion engine surfaces the entry only to those clients: an
+    # unfiltered list taught users to type commands that answered
+    # "Unknown command" everywhere else (Item 40 VSCode trial, 2026-07-12).
+    # Entries without a `clients` key are universal.
     {"text": "/agentrun", "display": "/agentrun",
      "description": "Start a background agent run (v1 platform, experimental)",
-     "kind": "command"},
+     "kind": "command", "clients": {"web"}},
     {"text": "/agentruns", "display": "/agentruns",
      "description": "List recent agent runs (experimental)",
-     "kind": "command"},
-    # v1.19.x /task — the tool-capable sandboxed tier (web T1+, VSCode T8a).
-    # Client-side family (web command-dispatcher.js / VSCode chatPanel.ts),
-    # not the CommandFactory; listed so autocomplete surfaces it.
+     "kind": "command", "clients": {"web"}},
+    # v1.19.x /task — the tool-capable sandboxed tier (web T1+, VSCode T8a;
+    # the in-process TUIs have no channel to the registry — T8b parked).
     {"text": "/task", "display": "/task",
      "description": "Tool-capable background agent runs (run·ls·show·respond·ack·resume·cancel)",
-     "kind": "command"},
-    # Item 40: /v1 bearer management (web client-side; VSCode uses the
-    # ppxai.setApiToken command-palette entry instead).
+     "kind": "command", "clients": {"web", "vscode"}},
+    # Item 40: /v1 bearer management (web command-dispatcher.js + VSCode
+    # chatPanel.ts; VSCode additionally has the ppxai.setApiToken
+    # command-palette entry for masked paste).
     {"text": "/token", "display": "/token",
      "description": "Manage the /v1 API bearer token (status·set·mint·clear)",
-     "kind": "command"},
+     "kind": "command", "clients": {"web", "vscode"}},
 ]
+
+# Command name (no slash) → clients that implement it. Derived once from
+# the entries above; commands without a `clients` tag never appear here.
+_CLIENT_GATES: Dict[str, frozenset] = {
+    bi["text"].lstrip("/"): frozenset(bi["clients"])
+    for bi in _BUILTIN_SPECIAL_COMMANDS
+    if "clients" in bi
+}
+
+
+def _client_allows(name: str, client: Optional[str]) -> bool:
+    """True when `client` may see the client-side command `name` (no slash).
+
+    `client=None` (legacy/unknown caller) fails open — the pre-gating
+    behaviour — so only callers that declare themselves get filtering.
+    """
+    gate = _CLIENT_GATES.get(name)
+    return gate is None or client is None or client in gate
 
 # Context-provider shortcuts — handled by ContextInjector, not the
 # filesystem. They appear in the @ dropdown alongside file refs so
@@ -231,6 +253,7 @@ def complete(
     current_provider: Optional[str] = None,
     tool_names: Optional[List[Tuple[str, str]]] = None,
     agent_runs: Optional[List[Dict[str, Any]]] = None,
+    client: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
     """Compute completions for a given input buffer + cursor position.
 
@@ -255,6 +278,11 @@ def complete(
                     AgentRunRegistry is server-side state; the in-process
                     TUIs have no channel to it — T8b parked), so callers
                     without it simply get no run-id suggestions.
+        client: Which client is asking — "web", "vscode", "rich",
+                "textual". Client-side-only commands (/task, /token,
+                /agentrun…) are surfaced only to the clients that
+                implement them. None (legacy/unknown caller) fails open:
+                no filtering.
 
     Returns:
         List of completion item dicts with a stable JSON schema
@@ -281,11 +309,11 @@ def complete(
     if space_idx > 0:
         return _complete_slash_args(
             text, space_idx, wd, current_provider, tools,
-            agent_runs or [],
+            agent_runs or [], client,
         )
 
     # Bare command name
-    return _complete_commands(text)
+    return _complete_commands(text, client)
 
 
 # =============================================================================
@@ -293,7 +321,9 @@ def complete(
 # =============================================================================
 
 
-def _complete_commands(prefix: str) -> List[Dict[str, Any]]:
+def _complete_commands(
+    prefix: str, client: Optional[str] = None
+) -> List[Dict[str, Any]]:
     """Complete slash command names from the CommandFactory registry.
 
     Consumes the public `CommandFactory.iter_completion_specs()` snapshot
@@ -327,13 +357,17 @@ def _complete_commands(prefix: str) -> List[Dict[str, Any]]:
                 "replace_start": -len(prefix),
             })
 
-    # Builtins
+    # Builtins — client-side commands only for clients that implement
+    # them. The internal `clients` tag is stripped from the emitted item
+    # (it's a set, not part of the JSON schema).
     for bi in _BUILTIN_SPECIAL_COMMANDS:
-        if bi["text"].startswith(prefix_lower):
-            items.append({
-                **bi,
-                "replace_start": -len(prefix),
-            })
+        if not bi["text"].startswith(prefix_lower):
+            continue
+        if not _client_allows(bi["text"][1:], client):
+            continue
+        item = {k: v for k, v in bi.items() if k != "clients"}
+        item["replace_start"] = -len(prefix)
+        items.append(item)
 
     items.sort(key=lambda e: e["text"])
     return items
@@ -351,6 +385,7 @@ def _complete_slash_args(
     current_provider: Optional[str],
     tool_names: List[Tuple[str, str]],
     agent_runs: List[Dict[str, Any]],
+    client: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
     """Route `/cmd ...` to the right arg completer.
 
@@ -378,8 +413,14 @@ def _complete_slash_args(
     if canonical == "provider":
         return _complete_provider(args_region)
     if canonical == "task":
+        # Same gate as the name completion: no verb/run-id suggestions
+        # for a command this client can't dispatch.
+        if not _client_allows("task", client):
+            return []
         return _complete_task(args_region, agent_runs)
     if canonical == "token":
+        if not _client_allows("token", client):
+            return []
         completed, token = _split_args(args_region)
         if not completed:
             return _filter_table(token, _TOKEN_SUBCOMMANDS, "subcommand")

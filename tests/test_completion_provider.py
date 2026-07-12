@@ -405,3 +405,79 @@ class TestTaskCompletionRoute:
         r = client.post("/complete", json={"buffer": "/usage "})
         assert r.status_code == 200
         assert all(i["kind"] != "run" for i in r.json()["items"])
+
+
+class TestClientGating:
+    """Client-side commands are surfaced only to clients that implement
+    them (Item 40 follow-up, 2026-07-12).
+
+    /agentrun + /agentruns are web-only; /task + /token are web+VSCode;
+    the in-process TUIs (rich/textual) implement none of them. Before
+    gating, autocomplete taught TUI/VSCode users to type commands that
+    answered "Unknown command".
+    """
+
+    _GATED_WEB_ONLY = {"/agentrun", "/agentruns"}
+    _GATED_WEB_VSCODE = {"/task", "/token"}
+
+    def _names(self, prefix, client):
+        return {i["text"] for i in complete(prefix, client=client)}
+
+    def test_web_sees_all_client_side_commands(self):
+        names = self._names("/", "web")
+        assert self._GATED_WEB_ONLY <= names
+        assert self._GATED_WEB_VSCODE <= names
+
+    def test_vscode_sees_task_and_token_but_not_agentrun(self):
+        names = self._names("/", "vscode")
+        assert self._GATED_WEB_VSCODE <= names
+        assert not (self._GATED_WEB_ONLY & names)
+
+    def test_tuis_see_no_client_side_commands(self):
+        for client in ("rich", "textual"):
+            names = self._names("/", client)
+            assert not ((self._GATED_WEB_ONLY | self._GATED_WEB_VSCODE)
+                        & names), client
+            # Universal builtins + factory commands stay visible.
+            assert "/quit" in names
+
+    def test_none_client_fails_open(self):
+        # Legacy callers (no client declared) keep the full catalog.
+        names = self._names("/", None)
+        assert self._GATED_WEB_ONLY <= names
+        assert self._GATED_WEB_VSCODE <= names
+
+    def test_unknown_client_gets_only_universal(self):
+        names = self._names("/", "some-future-client")
+        assert not ((self._GATED_WEB_ONLY | self._GATED_WEB_VSCODE)
+                    & names)
+
+    def test_clients_tag_never_leaks_into_items(self):
+        # The internal `clients` set is not part of the JSON item schema
+        # (FastAPI could not serialize it).
+        for item in complete("/", client="web"):
+            assert "clients" not in item
+
+    def test_arg_completion_gated_too(self):
+        # /token subcommands only where /token exists…
+        assert [i["text"] for i in complete("/token ", client="web")] == \
+            ["status", "set", "mint", "clear"]
+        assert complete("/token ", client="rich") == []
+        # …same for /task verbs.
+        assert complete("/task ", client="textual") == []
+        assert any(i["text"] == "run"
+                   for i in complete("/task ", client="vscode"))
+
+    def test_route_passes_client_through(self, tmp_path, monkeypatch):
+        route = TestTaskCompletionRoute()
+        client = route._client(tmp_path, monkeypatch)
+        # VSCode sees /token (and the response serializes cleanly).
+        r = client.post("/complete",
+                        json={"buffer": "/to", "client": "vscode"})
+        assert r.status_code == 200
+        assert "/token" in [i["text"] for i in r.json()["items"]]
+        # A TUI-declared caller gets no run-id items even with a held run.
+        r = client.post("/complete",
+                        json={"buffer": "/task ack ", "client": "rich"})
+        assert r.status_code == 200
+        assert r.json()["items"] == []

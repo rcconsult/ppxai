@@ -83,6 +83,7 @@ class TextualCompleter:
             working_dir=str(self.working_dir),
             current_provider=self._get_current_provider(),
             tool_names=self._get_tool_names(),
+            client="textual",
         )
 
         completions: List[Tuple[str, str]] = []

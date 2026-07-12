@@ -304,7 +304,9 @@ class ApiClient {
     }
 
     async complete(buffer, cursor = -1) {
-        return this.post('/complete', { buffer, cursor });
+        // `client` lets the engine hide client-side commands this client
+        // doesn't implement (see engine/completion.py _CLIENT_GATES).
+        return this.post('/complete', { buffer, cursor, client: 'web' });
     }
 
     // === Working Directory ===

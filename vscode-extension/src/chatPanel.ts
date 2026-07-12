@@ -280,10 +280,89 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                 () => ({
                     provider: this._appState.get('currentProvider') || null,
                     model: this._appState.get('currentModel') || null,
+                    // v1.19.x workdir-alignment: the session's working dir
+                    // rides on /task run as per-run intent (--work-dir overrides).
+                    workingDir: this._appState.get('workingDir') || null,
                 })
             );
         }
         return this._taskController;
+    }
+
+    /**
+     * Item 40: `/token status|set|mint|clear` — manage the /v1 API bearer
+     * in-chat, verb-for-verb with the web client's _handleTokenCommand
+     * (command-dispatcher.js). Per-client idiom:
+     *   - Persistence is SecretStorage under the SAME `ppxai.apiToken` key
+     *     as the "ppxai: Set API Token" palette entry, so both flows stay
+     *     in sync.
+     *   - Bare `/token set` opens that palette's masked input instead of a
+     *     browser prompt() — the webview transcript never sees the value.
+     *   - `mint` self-provisions via the loopback bootstrap
+     *     (httpClient.mintApiToken sends the request bare on purpose).
+     */
+    private async handleTokenCommand(argsText: string): Promise<void> {
+        const system = (text: string) => {
+            this._view?.webview.postMessage({ type: 'systemMessage', content: text });
+        };
+        const trimmed = argsText.trim();
+        const verb = (trimmed.split(/\s+/, 1)[0] || 'status').toLowerCase();
+        const inline = trimmed.slice(verb.length).trim();
+        const masked = (t: string) => (t && t.length > 4 ? `…${t.slice(-4)}` : '(set)');
+        const store = async (t: string) => {
+            await this._context.secrets.store('ppxai.apiToken', t);
+            this._backend.setApiToken(t);
+        };
+        switch (verb) {
+            case 'status': {
+                const t = this._backend.apiToken;
+                system(t
+                    ? `🔑 API token attached to /v1 calls (${masked(t)}). \`/token clear\` to remove.`
+                    : 'No API token stored. `/token mint` (local server) or `/token set` (paste one).');
+                return;
+            }
+            case 'set': {
+                if (!inline) {
+                    // Masked input via the existing palette command; report
+                    // the resulting state (it may have been dismissed).
+                    await vscode.commands.executeCommand('ppxai.setApiToken');
+                    const t = this._backend.apiToken;
+                    system(t
+                        ? `🔑 API token attached to /v1 calls (${masked(t)}).`
+                        : 'No API token stored.');
+                    return;
+                }
+                await store(inline);
+                system(
+                    `🔑 Token stored (${masked(inline)}) — ⚠️ it was typed inline, so it was echoed ` +
+                    'into the chat + debug log. Prefer `/token set` without a value (masked input), ' +
+                    'and consider rotating this token.');
+                return;
+            }
+            case 'mint': {
+                try {
+                    const resp = await this._backend.mintApiToken('vscode-local');
+                    await store(resp.token);
+                    system(
+                        `🔑 Minted + stored token ${masked(resp.token)} ` +
+                        `(id ${resp.meta.token_id}, owner ${resp.meta.owner}). Attached to /v1 calls from now on.`);
+                } catch (e: any) {
+                    system(
+                        `❌ Mint failed: ${e?.message ?? e}. Minting needs a mint-capable token store ` +
+                        '(server.secrets.providers type "file") and a DIRECT local connection; ' +
+                        'remotely, ask the operator for a token and use `/token set`.');
+                }
+                return;
+            }
+            case 'clear': {
+                await this._context.secrets.delete('ppxai.apiToken');
+                this._backend.setApiToken(undefined);
+                system('🔑 Token cleared — /v1 calls are unauthenticated again.');
+                return;
+            }
+            default:
+                system('Usage: `/token [status|set|mint|clear]`');
+        }
     }
 
     /**
@@ -1066,6 +1145,15 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                 return;
             }
 
+            // Item 40: /token — manage the /v1 bearer in-chat (verb parity
+            // with the web dispatcher's _handleTokenCommand; persistence is
+            // SecretStorage, not localStorage). Must run BEFORE factory
+            // dispatch — the factory would 404 it.
+            if (command === 'token') {
+                await this.handleTokenCommand(argsText);
+                return;
+            }
+
             // /help: factory output + VSCode-specific keyboard shortcut
             // augmentation (TUI/web don't have these shortcuts).
             if (command === 'help' || command === 'h' || command === '?') {
@@ -1747,6 +1835,13 @@ Review your previous actions and continue. If the task is complete, respond with
 
         // Use shared help generator for consistent output across Web App and VSCode
         let helpText = generateHelpText();
+
+        // Client-side agent-platform commands — the server's CommandFactory
+        // catalog doesn't know about these shims (mirrors the web
+        // dispatcher's _appendExperimentalHelp).
+        helpText += '\n**Agent platform (client-side, experimental):**\n';
+        helpText += '- `/task` - Tool-capable background agent runs (run·ls·show·respond·ack·resume·cancel)\n';
+        helpText += '- `/token` - Manage the /v1 API bearer token (status·set·mint·clear)\n';
 
         // Add VSCode-specific keyboard shortcuts
         helpText += '\n**Keyboard Shortcuts:**\n';

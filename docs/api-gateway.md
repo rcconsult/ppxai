@@ -61,6 +61,43 @@ What we explicitly do *not* guarantee:
 > **trusted operators** (the task/grant is operator-authored), not for untrusted
 > input. See [decisions/0003-agent-platform-architecture.md](decisions/0003-agent-platform-architecture.md).
 
+#### Run working directory (v1.19.x workdir-alignment)
+
+A `/v1/agent/task` run's relative tool paths resolve deterministically —
+never against the server process launch dir:
+
+1. `workdir` in the request body — per-run intent like `provider`/`model`.
+   The ppxai clients thread their **session working dir** automatically
+   (`--work-dir` on `/task run` overrides), so "summarize README.md" means
+   the same thing in chat and in a task run. Must exist (400 otherwise).
+2. Absent: the **server default** — `server.working_dir` config, else the
+   user's home (the same default every new UI session gets).
+3. Filesystem seal ON (`tools.agent.sandbox.enforcement: "in_process"`):
+   the per-run jail **always wins**; a requested `workdir` is ignored and
+   the launch response carries `workdir_ignored: true` (clients render a
+   warning). Warn-don't-fail keeps the same invocation portable across
+   sealed and unsealed hosts.
+
+The effective workdir is recorded on the run meta (`workdir`, `null` =
+default/jail), returned by `GET /v1/agent/runs/<id>`, reused verbatim by
+`POST .../resume`, and inherited by `spawn_subagent` children. The
+tool-free `/v1/agent/run` tier has no `workdir` — it executes no tools,
+so there is nothing to resolve paths against.
+
+**Sandbox posture profiles.** The seal is *operator posture per
+deployment*, never a wire flag — there is deliberately no per-run
+"unseal" (any bearer holder could otherwise escape the operator's
+config):
+
+| Profile | Seal | Why |
+|---|---|---|
+| Desktop / IDE assistant | OFF (default) | The user is the trust boundary; runs work on the user's own project via the session workdir; T5 consent gates risky actions. |
+| Coder pod (k8s) | OFF | The pod + NetworkPolicies + app-layer bearer are the real walls; the in-process seal would add friction, not protection. Per-run egress allowlists (AC-2) still apply. |
+| Embedded agents (e.g. ppxai-sre) | ON | Unattended runs over untrusted input (prompt-injection surface) get least-privilege reads: the jail plus skill-mounted read roots. Relaxation = mount more roots via `--skill`, not unsealing. |
+
+For genuinely hostile workloads the answer is OS isolation (ADR 0003
+tier-d container), not a stronger in-process jail.
+
 ### What's not in the gateway tier
 
 These endpoints are **internal** and may change at any time:
@@ -355,10 +392,14 @@ axis.
   VSCode clients (v1.19.0) attach the stored bearer **only to `/v1/*`
   paths**, never globally: a stale or wrong token would otherwise 401
   the whole desktop UI instead of just the `/v1/agent` and `/v1/tokens`
-  calls. The web client exposes this via `/token status|set|mint|clear`
-  (mint uses the loopback bootstrap exemption above and stores the
-  result in `localStorage`); VSCode exposes it via the **"ppxai: Set
-  API Token"** command palette entry, backed by `SecretStorage`.
+  calls. Both clients expose the same in-chat `/token
+  status|set|mint|clear` family (mint uses the loopback bootstrap
+  exemption above; a 401 from `/task` points at it). Storage differs
+  per client: web keeps the token in `localStorage` (mint owner
+  `web-local`); VSCode keeps it in `SecretStorage` (mint owner
+  `vscode-local`), shared with the **"ppxai: Set API Token"** command
+  palette entry — which is also what a bare `/token set` opens there,
+  so the raw value never transits the webview transcript.
 
 ---
 

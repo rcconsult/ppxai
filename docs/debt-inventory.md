@@ -697,6 +697,22 @@ whole client, not just the agent API).
   token in `SecretStorage` (`ppxai.apiToken`) — never settings.json (sync +
   dotfile leak) — via the new `ppxai.setApiToken` command (masked input;
   empty submit clears).
+- **Follow-up (2026-07-12, from the VSCode trial leg):** the palette-only
+  VSCode flow was undiscoverable — server-driven autocomplete offered
+  `/token` (engine builtin), dispatch answered "Unknown command", and the
+  `/task` 401 never named the fix. Landed: (1) the same in-chat
+  **`/token status|set|mint|clear`** family in VSCode (`chatPanel.ts`,
+  same SecretStorage key as the palette entry; bare `set` opens the
+  palette's masked input; `mint` self-provisions via
+  `HttpClient.mintApiToken('vscode-local')`, sent bare like web);
+  (2) per-client completion gating — `complete(..., client=)` +
+  `_CLIENT_GATES` in `engine/completion.py` hide client-side commands
+  (`/task`, `/token`, `/agentrun`, `/agentruns`) from clients that don't
+  implement them (TUIs now see none of them; fail-open for legacy
+  callers); (3) a 401 from any `/task`/`/agentrun` verb now appends
+  "run `/token mint` … or `/token set`" in BOTH clients
+  (`taskController.errText` / `agent-run-controller._errText`).
+  Fences: `TestTokenCommandParity` + `TestClientGating`.
 - **Tests:** `tests/test_api_client_auth_behavior.py` (Node harness — bearer
   on /v1 GET+POST, absent on UI routes, headersFor seam, clear);
   `tests/test_vscode_task_controller.py::TestBearerParity` (6 sentinels —
@@ -708,8 +724,9 @@ whole client, not just the agent API).
 (`cp ~/.ppxai/ppxai-config.json.backup.tasktrials ~/.ppxai/ppxai-config.json`),
 restart the server, web UI: `/task ls` → expect 401 error; `/token mint` →
 minted+stored; `/task ls` again → works; `/task run …` full T5 flow under
-auth. VSCode: command palette → "ppxai: Set API Token" → paste a minted
-token → `/task ls` works.
+auth. VSCode: `/task ls` → expect 401 **with the `/token` hint** →
+`/token mint` → `/task ls` works (or: palette "ppxai: Set API Token" /
+`/token set` to paste one — both write the same SecretStorage key).
 
 **Original entry (for context):** neither shipped client can authenticate to the v1 agent
 API. `ppxai/web/` has zero `Authorization` handling and so does

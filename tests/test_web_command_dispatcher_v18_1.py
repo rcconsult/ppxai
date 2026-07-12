@@ -160,9 +160,13 @@ class TestNoBespokeBranches:
             tightens with the extraction — agent-run growth now lands in the
             controller, not here. (Its own fences live in TestAgentRunFireAndForget,
             which read CONTROLLER.)
+          - <340 after Item 40 (v1.19.0): _handleTokenCommand grew inline
+            (~70 lines, 334 total) — cohesive + security-commented, so it
+            stayed. If /token grows further, extract it into a
+            token-controller.js like the agent-run extraction above.
         """
         line_count = len(_read().splitlines())
-        assert line_count < 300, (
+        assert line_count < 340, (
             f"command-dispatcher.js has grown to {line_count} lines. "
             f"That's a smell — a bespoke handler is probably creeping "
             f"back. Compare to the factory + side-effects pattern."
