@@ -1,0 +1,1909 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Multi-LLM Interface for Developers - Terminal & VSCode">
+      
+      
+      
+        <link rel="canonical" href="https://rcconsult.github.io/ppxai/1.19.0/plan-task-command-sequencing/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>/task command — incremental build plan - ppxai Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#task-command-incremental-build-plan" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="ppxai Documentation" class="md-header__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ppxai Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              /task command — incremental build plan
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="ppxai Documentation" class="md-nav__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ppxai Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../provider-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provider Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../task-agent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Task Agent Platform
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../session-agent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Session Agent Mode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../bootstrap-context-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bootstrap Context
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../context-injection/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Context Injection
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../checkpoint-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Checkpoint & Undo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../file-editing-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    File Editing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../shell-consent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shell Consent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../custom-tool-development-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../custom-command-development-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ollama-limitations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ollama Limitations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vllm-tool-calling-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    vLLM Tool Calling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../container-tools-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Container Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../autorouter-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autorouter Config
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release Notes
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Release Notes
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../RELEASE-NOTES-v1.16.1.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../RELEASE-NOTES-v1.16.0.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../RELEASE-NOTES-v1.15.6.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.15.6
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#t1-launch-observe-run-ls-show-watch-cancel-done" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1 — launch + observe: run · ls · show · watch · cancel — ✅ DONE
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#t2-the-seal-read_paths-enforcement-toolsagentsandbox-in_process-done" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T2 — the seal: read_paths enforcement + tools.agent.sandbox (in_process) — ✅ DONE
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#t3-spec-files-spec-system-file-batch-done-spec-system-file-batch-deferred-to-t3b" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T3 — spec files: --spec · --system-file · --batch — ✅ DONE (--spec); --system-file/--batch deferred to T3.b
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#t4-skills-skill-name-references-mounted-into-read-scope-done" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T4 — skills: --skill &lt;name&gt; (references mounted into read-scope) — ✅ DONE
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#t5-interactive-consent-waiting-post-respond-done" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T5 — interactive consent: waiting + POST /respond — ✅ DONE
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#t6-two-phase-termination-completed_pending_ack-post-ack-done" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T6 — two-phase termination: completed_pending_ack + POST /ack — ✅ DONE
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#t7-interrupted-resume-post-resume-done" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T7 — interrupted resume: POST /resume — ✅ DONE
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#t8-cross-client-port-tui-vscode-split-into-t8a-t8b" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T8 — cross-client port: TUI + VSCode — SPLIT into T8a / T8b
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="T8 — cross-client port: TUI + VSCode — SPLIT into T8a / T8b">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#t8a-vscode-port-done" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T8a — VSCode port — ✅ DONE
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t8b-tui-port-parked" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T8b — TUI port — ⏸️ PARKED
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#t9-future-tier-d-container-enforcement" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T9 — (future, tier-d) container enforcement
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dependency-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dependency summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="task-command-incremental-build-plan"><code>/task</code> command — incremental build plan<a class="headerlink" href="#task-command-incremental-build-plan" title="Permanent link">&para;</a></h1>
+<p>Sequencing plan for the interactive <strong><code>/task</code></strong> command family (design:
+<a href="../agent-task-command-design.html">agent-task-command-design.html</a>; lifecycle:
+<a href="../agent-task-lifecycle.html">agent-task-lifecycle.html</a>; architecture:
+<a href="../decisions/0003-agent-platform-architecture/">decisions/0003-agent-platform-architecture.md</a>
+§8–§9). Same contract as the Stage-2 increment plan
+(<a href="../plan-v1.19.0-sequencing/">plan-v1.19.0-sequencing.md</a>):</p>
+<blockquote>
+<p><strong>Build contract.</strong> Each increment is a <strong>vertical slice</strong> that brings
+exactly the server + client bits needed to <strong>live-trial it end-to-end</strong>,
+nothing speculative. Bring a seam early only when it's the right shape
+(e.g. the read-path enforcement point). <strong>Web first</strong> — TUI + VSCode are a
+late port. Every increment ships with tests and a concrete trial before the
+next one starts.</p>
+</blockquote>
+<p><strong>Where we start.</strong> The tool-capable tier already exists server-side:
+<code>POST /v1/agent/task</code>, <code>GET /runs</code>, <code>GET /runs/{id}</code>, <code>GET /runs/{id}/events</code>
+(SSE), <code>POST /runs/{id}/cancel</code>, owner-scoped authz, <code>task_tier_enabled</code>
+default-off gate, no-shell rejection. There is <strong>no <code>/task</code> client command in
+any client</strong> — <code>/agentrun</code> (tool-free) is the only agent slash command shipped.
+So T1 is mostly client work over existing endpoints; new server machinery
+arrives only where the lifecycle needs it (T5–T7) and where the filesystem
+seal needs it (T2).</p>
+<p><strong>Trial prerequisites (every increment).</strong>
+- Enable the tier: <code>tools.agent.task_tier_enabled: true</code> in <code>~/.ppxai/ppxai-config.json</code>.
+- Run the web client against <strong>live source</strong>: <code>PPXAI_WEB_DIR=$PWD/ppxai/web uv run ppxai-server</code> (edits to <code>ppxai/web/</code> don't reach <code>~/.ppxai/web</code> otherwise — see <code>docs/lessons/web-assets-served-from-ppxai-home.md</code>).
+- Trial with <strong>auth disabled</strong> (default — no <code>server.secrets</code> file store, <code>PPXAI_API_TOKEN</code> unset): <code>/task</code> is loopback-reachable without a bearer (<code>auth.py::check_request</code> → <code>if not is_auth_enabled(): return None</code>). A token-carrying web client for the auth-enabled case is a follow-up, not a blocker.
+- Set a default subagent so a bare <code>--tools</code> launch has a provider/model: <code>tools.agent.default_subagent: {provider, model}</code>.</p>
+<hr />
+<h2 id="t1-launch-observe-run-ls-show-watch-cancel-done">T1 — launch + observe: <code>run · ls · show · watch · cancel</code> — ✅ DONE<a class="headerlink" href="#t1-launch-observe-run-ls-show-watch-cancel-done" title="Permanent link">&para;</a></h2>
+<p><strong>Shipped:</strong> <code>0ff4370b</code> (+ <code>42543961</code> log-noise fix, <code>22d7757f</code> call graph),
+live-trial-verified in-browser (run/ls/cancel; pane with chips + live log +
+result). <code>TaskController extends AgentRunController</code>, <code>TaskRunView extends
+AgentRunView</code>; <code>/agentrun</code> unchanged.</p>
+<p><strong>Capability:</strong> <code>/task run "&lt;desc&gt;" --tools …</code> mints a tool-capable run and
+renders it in a right-panel pane; <code>/task ls</code> lists runs; <code>show</code>/<code>watch</code> focus +
+live-tail a pane; <code>cancel</code> stops one. All over <strong>existing</strong> endpoints.</p>
+<p><strong>Build (client only):</strong>
+- <code>web/shared/task-controller.js</code> — <code>TaskController</code>, mirror of
+  <code>AgentRunController</code>; register <code>/task</code> in <code>command-dispatcher.js</code> next to
+  <code>/agentrun</code> and route sub-verbs (<code>run|ls|show|open|watch|cancel|help</code>).
+- Launch-line flag parser: <code>--tools a,b,c</code>, <code>--allow host[/path],…</code>,
+  <code>--provider</code>, <code>--model</code>, <code>--budget iters=,time=,tokens=</code>, <code>--system "…"</code>,
+  <code>--work-dir &lt;path&gt;</code> (per-run working directory intent, 2026-07-12,
+  post-T8a: clients thread the session working dir by default; the server
+  honors it only when the T2 seal is OFF — sealed runs keep their jail and
+  the launch response flags <code>workdir_ignored</code>)
+  → <code>AgentTaskRequest</code> body.
+- <code>web/components/views/task-run-view.js</code> — <code>TaskRunView</code>, extends the
+  <code>AgentRunView</code> pane: grant chips, egress chips, budget meter, live events
+  log (<code>tool_call</code>/<code>tool_result</code>/<code>tool_denied</code>/<code>network_*</code>/<code>spawn_*</code>), a
+  <strong>Cancel</strong> button while non-terminal.
+- Surface the tier errors verbatim: 403 (tier disabled + enable hint), 400
+  (shell grant), 400 (missing provider/model).</p>
+<p><strong>Trial:</strong> enable the tier; <code>/task run "list the files under docs and count the
+markdown ones" --tools read_file,grep,list_directory</code>; watch the tool loop in
+the pane; <code>/task ls</code>; <code>/task cancel &lt;id&gt;</code> mid-run and confirm it stops.</p>
+<p><strong>Tests:</strong> flag-parser unit tests (grant/allow/budget parsing, bad input);
+dispatcher routing test (<code>/task run|ls|cancel</code> → controller); a Node
+behavioral test mirroring <code>test_agent_run_controller_behavior.py</code>.</p>
+<p><strong>Deliberately NOT yet:</strong> spec/skill files, read-scope, <code>respond</code>/<code>ack</code>/<code>resume</code>.</p>
+<hr />
+<h2 id="t2-the-seal-read_paths-enforcement-toolsagentsandbox-in_process-done">T2 — the seal: <code>read_paths</code> enforcement + <code>tools.agent.sandbox</code> (in_process) — ✅ DONE<a class="headerlink" href="#t2-the-seal-read_paths-enforcement-toolsagentsandbox-in_process-done" title="Permanent link">&para;</a></h2>
+<p><strong>Shipped:</strong> <code>89b18ac0</code> (+ <code>9bd8c790</code> call graph). <code>engine/tools/filesystem_policy.py</code>
+(<code>FilesystemPolicy</code>), <code>config/tools.py</code> sandbox parsing (default <code>enforcement:"off"</code>
+→ non-breaking), the <code>ScopedToolManager</code> path chokepoint (<code>path_denied</code>), and the
+per-run workdir in <code>build_task_runner</code>. Live-trialed: allowed read → ok, <code>/etc/hosts</code>
+→ denied; 24 unit tests. <code>container</code> sub-block schema defined but inert (T9).</p>
+<p><strong>Capability:</strong> a run can read/write <strong>only</strong> inside configured locations; an
+attempt to read outside the allowlist is denied with a <code>path_denied</code> event.
+Brought early so every later increment is trialed confined.</p>
+<p><strong>Build (server):</strong>
+- Parse <code>tools.agent.sandbox</code> in <code>config/tools.py</code> (<code>get_agent_config</code>):
+  <code>workdir{root,writable,cleanup}</code>, <code>read_paths{allow,deny,follow_symlinks}</code>,
+  <code>skills_dir</code>, <code>specs_dir</code>, <code>allow_skill_scripts</code>, <code>enforcement:"in_process"</code>.
+  (Ship the <code>container</code> sub-block <strong>schema</strong> but leave it inert.)
+- <strong>New primitive</strong> — read-path jail in <code>ScopedToolManager</code>: resolve every
+  path arg of <code>read_file</code>/<code>grep</code>/<code>list_directory</code>/<code>write_file</code>/<code>apply_patch</code>
+  and check it against <code>read_paths</code> (deny wins; symlinks resolved then
+  re-checked) and the per-run <code>workdir</code> (the only writable root). Off-scope →
+  denied + <code>path_denied</code> event, same shape as <code>tool_denied</code>.
+- Per-run <code>workdir</code> = <code>sandbox.workdir.root/{run_id}/work</code>, created at
+  <code>start_run</code>, cleaned per <code>cleanup</code>.
+- <strong><code>--work-dir &lt;path&gt;</code> flag (2026-07-12, post-T8a):</strong> clients thread the
+  session working dir by default; the server only honors it when this T2
+  seal is OFF — sealed runs keep their jail regardless, and the launch
+  response flags <code>workdir_ignored</code> so the client can surface it.</p>
+<p><strong>Trial:</strong> set <code>read_paths.allow: ["~/.ppxai/skills"]</code>; <code>/task run "read
+/etc/hosts" --tools read_file</code> → denied; <code>/task run "read the file
+~/.ppxai/skills/x.md" --tools read_file</code> → ok; a <code>write_file</code> outside
+<code>workdir</code> → denied.</p>
+<p><strong>Tests:</strong> path-jail unit suite (allow/deny/symlink-escape/<code>..</code>-escape/absolute
+vs relative/workdir write); config-parse defaults; a run-level test asserting
+<code>path_denied</code> fires and the tool never executes.</p>
+<p><strong>Deliberately NOT yet:</strong> container enforcement (T9); skill mounting (T4).</p>
+<hr />
+<h2 id="t3-spec-files-spec-system-file-batch-done-spec-system-file-batch-deferred-to-t3b">T3 — spec files: <code>--spec</code> · <code>--system-file</code> · <code>--batch</code> — ✅ DONE (<code>--spec</code>); <code>--system-file</code>/<code>--batch</code> deferred to T3.b<a class="headerlink" href="#t3-spec-files-spec-system-file-batch-done-spec-system-file-batch-deferred-to-t3b" title="Permanent link">&para;</a></h2>
+<p><strong>Shipped:</strong> <code>engine/agent_spec.py</code> (loader: md front-matter / json / yaml /
+jsonl-batch → <code>AgentSpec</code>, size-bounded, clear errors); <code>/v1/agent/task</code> gains a
+<code>spec</code> NAME field resolved under <code>sandbox.specs_dir</code> (name-only, path-escape +
+containment guarded, 400 on any problem) with <strong>precedence request &gt; spec &gt;
+default_subagent</strong> and the ceiling clamp run on the MERGED grant (shell-in-spec
+→ 400; empty merged grant → 400; no-spec-no-tools still → 422 via a
+<code>model_validator</code>, preserving the invariant). Web client <code>--spec &lt;name&gt;</code>
+(task-controller flag + pane reflects the server-merged meta). Tests:
+<code>test_agent_spec.py</code> (22 loader), <code>test_agent_runs.py::TestTaskSpecFiles</code> (9
+route), <code>test_task_controller_behavior.py</code> scenario 3b.</p>
+<p><strong>Deferred to T3.b (client-only conveniences, browser File-API reads):</strong>
+<code>--system-file</code> (prose file → <code>system</code>) and <code>--batch &lt;file.jsonl&gt;</code> (one run per
+line). The loader already parses jsonl (<code>load_batch_lines</code>) and prose-as-system
+(a <code>.md</code> with no front-matter), so T3.b is client glue: read the local file in
+the browser and either inline <code>system</code> or fan out N <code>/task</code> POSTs. Not
+headless-testable, hence split from the load-bearing server slice.</p>
+<p><strong>Capability:</strong> configure a run from a file — <code>.md</code> (YAML front-matter +
+body), <code>.json</code>/<code>.yaml</code>, or <code>.jsonl</code> (batch fan-out).</p>
+<p><strong>Build:</strong>
+- Spec loader (<code>engine/agent_spec.py</code>): normalize <code>.md</code>/<code>.json</code>/<code>.yaml</code> → the
+  agent-spec schema (task, system, tools, provider, model, budget, network,
+  read_paths). Reuse <code>bootstrap.py::_parse_yaml_front_matter</code> for front-matter;
+  body → <code>system</code>.
+- Client: <code>--spec &lt;path&gt;</code> (local: server reads under <code>specs_dir</code> by <strong>name</strong>;
+  remote/web: client reads + <strong>inlines</strong> into the request), <code>--system-file</code>
+  (prose → <code>system</code>), <code>--batch &lt;file.jsonl&gt;</code> (one run per line).
+- Precedence: CLI flags &gt; <code>--spec</code> &gt; server <code>default_subagent</code>; clamped by the
+  operator ceiling (allowed grant · no-shell · <code>task_tier_enabled</code>).</p>
+<p><strong>Trial:</strong> author <code>specs/triage.md</code> (front-matter grant+budget, body =
+instructions); <code>/task run --spec triage "the CI job is red"</code>; confirm the
+pane shows the grant/budget from the file. <code>--batch three.jsonl</code> mints 3 runs.</p>
+<p><strong>Trial-verified 2026-07-12 (macOS, auth-ON):</strong> API trial against the installed
+server with a <code>server.secrets</code> file token store. Bootstrap-minted a bearer
+(<code>POST /v1/tokens</code>), launched <code>--spec triage</code>; the run meta carried the
+spec's <code>tools:[read_file,grep,list_directory]</code> + <code>budget:{iters8,time120}</code>,
+while a request <code>provider/model</code> override beat the spec (precedence). Lifecycle
+<code>completed_pending_ack → ack → finalized</code>; the <code>rejected-shell</code> spec 400'd on
+the shell-grant ceiling clamp. Runnable recipe (auth-off and auth-on variants):
+<code>examples/task-specs/README.md</code>.</p>
+<p><strong>Tests:</strong> loader unit tests (md front-matter, json, jsonl, missing/oversized,
+bad yaml); precedence-merge tests; ceiling-clamp test (spec asking for a tool
+outside the operator's allowance is refused).</p>
+<p><strong>Deliberately NOT yet:</strong> skill directories (T4).</p>
+<hr />
+<h2 id="t4-skills-skill-name-references-mounted-into-read-scope-done">T4 — skills: <code>--skill &lt;name&gt;</code> (references mounted into read-scope) — ✅ DONE<a class="headerlink" href="#t4-skills-skill-name-references-mounted-into-read-scope-done" title="Permanent link">&para;</a></h2>
+<p><strong>Capability:</strong> <code>--skill ci-triage</code> loads <code>SKILL.md</code> as the spec <strong>and</strong> mounts
+the skill's <code>references/</code> into the run's read-scope; <code>scripts/</code> stay inert.</p>
+<p><strong>Build (landed):</strong> <code>engine/agent_skill.py</code> (<code>load_skill</code> — reads <code>SKILL.md</code>
+through the T3 loader, detects <code>references/</code>/<code>scripts/</code>); route
+<code>_resolve_named_skill</code> resolves <code>--skill &lt;name&gt;</code> under <code>sandbox.skills_dir</code>
+(name-only, symlink-contained — shares <code>_reject_unsafe_name</code>/<code>_within_root</code>
+with the T3 spec resolver); <code>_load_skills</code> refuses a <code>scripts/</code>-bearing skill
+unless <code>allow_skill_scripts</code> is on. <code>_merge_task_fields</code> unions every skill's
+grant into the effective grant and returns <code>read_roots</code>; the route threads
+those through <code>build_task_runner(extra_read_paths=…)</code> →
+<code>build_filesystem_policy(extra_read_paths=…)</code> (T2 enforcement). Multiple
+<code>--skill</code> compose (grants union + read-roots union, still ⊆ ceiling — the
+shell-reject/non-empty/provider guards run on the MERGED grant). Web client:
+<code>--skill</code> flag (repeatable + comma-split, de-duped) in <code>task-controller.js</code>.</p>
+<p><strong>Trial:</strong> point <code>sandbox.skills_dir</code> at <code>examples/task-skills/</code> (with
+<code>enforcement:"in_process"</code>); <code>/task run --skill ci-triage</code>; confirm the agent
+reads <code>references/checklist.md</code> but a read of a sibling outside the skill dir is
+denied. <code>--skill needs-scripts</code> → 400 (scripts gate). Examples ship in
+<a href="../examples/task-skills/">examples/task-skills/</a> (ci-triage, secrets-scan,
+needs-scripts + README recipe), loader-verified.</p>
+<p><strong>Trial-verified 2026-07-12 (macOS, auth-ON, <code>enforcement:in_process</code>):</strong> API
+trial against the installed server (isolated <code>PPXAI_CONFIG_FILE</code> with the seal
+on). <code>skills:["ci-triage"]</code> → run meta carried the SKILL.md grant
+<code>[read_file,grep,list_directory]</code> + budget <code>{iterations:8}</code>; the agent read the
+mounted <code>references/checklist.md</code> in-scope (no denial), while a forced read of
+an out-of-scope path (repo <code>README.md</code>) emitted a <code>path_denied</code>
+(<code>"path is outside the run read scope"</code>) — the seal held. Compose
+<code>skills:["ci-triage","secrets-scan"]</code> → grant union <code>[grep,list_directory,read_file]</code>.
+<code>skills:["needs-scripts"]</code> → 400 (<code>scripts/ … cannot run in the in-process
+tier</code>, <code>allow_skill_scripts</code> off). Auth-aware recipe:
+<code>examples/task-skills/README.md</code>.</p>
+<p><strong>Tests (landed):</strong> <code>test_agent_skill.py</code> (8 — loader: manifest→spec,
+read_root, references present/absent, missing/malformed manifest, scripts
+detection); <code>test_agent_runs.py::TestTaskSkills</code> (11 — resolution-by-name +
+path-escape, not-found, no-manifest, scripts refuse/allow, shell-in-skill
+clamp, no-source-422, grant supply, multi-skill union, request∪skill);
+<code>test_filesystem_policy.py</code> (2 — <code>extra_read_paths</code> mounts skill scope /
+siblings denied, None is no-op); <code>test_task_controller_behavior.py</code> (scenarios
+3c/3d — <code>--skill</code> parse + body).</p>
+<p><strong>Deliberately NOT yet:</strong> runnable skill scripts (needs T9 container tier).</p>
+<hr />
+<h2 id="t5-interactive-consent-waiting-post-respond-done">T5 — interactive consent: <code>waiting</code> + <code>POST /respond</code> — ✅ DONE<a class="headerlink" href="#t5-interactive-consent-waiting-post-respond-done" title="Permanent link">&para;</a></h2>
+<p><strong>Capability:</strong> a run that needs a human <strong>parks</strong> instead of hard-denying; the
+pane shows a consent card; <code>/task respond &lt;id&gt; approve|deny|"&lt;text&gt;"</code> (or the
+button) resumes it.</p>
+<p><strong>Build (landed, server):</strong> <code>waiting</code> status (non-terminal — stays in the
+AppState badge mirror) + <code>agent_waiting</code>/<code>agent_resumed</code> events
+(category=<code>consent</code>, token rides the event data); <code>AgentRunRegistry.park_run</code>
+(resume token + TTL; timeout → denial, fail-closed; a cancel resolves the
+waiter promptly instead of idling out the TTL) + <code>respond_run</code> (token-checked);
+<code>POST /runs/{id}/respond</code> (<code>waiting → running</code>, owner-scoped 403, 409 on
+not-parked / token mismatch / already answered / parked-before-restart);
+<code>RunMeta.waiting</code> + the meta projection carry {kind, prompt, token, since,
+expires_at, ttl_s}. The <strong>existing</strong> spawn-consent seam (previously auto-denied
+over HTTP) now parks in <code>waiting{consent}</code> under <code>spawn_consent:"deny"</code>;
+<code>"auto"</code> still skips the park. TTL: <code>tools.agent.consent_ttl_s</code> (default 300 s).
+<strong>Client (landed):</strong> consent card (prompt + Approve/Deny + optional note field,
+built with safe DOM methods — the prompt embeds model-derived text) in
+<code>TaskRunView</code>, raised by the SSE <code>agent_waiting</code> / meta <code>waiting</code>, cleared on
+resume; <code>/task respond</code> verb (approve/deny words → <code>approved</code>, else free text);
+✋ waiting status in pane + <code>ls</code> rows.</p>
+<p><strong>Persistence (landed — debt (r), <code>state.json</code>, Inspection Triplet 3rd file):</strong>
+<code>AgentRunStore.persist_state/load_state</code> + the <code>FilesystemAgentRunStore</code>
+implementation (atomic write, shared with <code>meta.json</code>); written when a run
+enters <code>waiting</code> and updated on resume (<code>last_response</code>). Flat <code>agent-0/</code> slot
+only. The park's <em>future</em> is in-memory — a parked run does not survive a
+restart in flight; its checkpoint does (T7 <code>/resume</code> is the consumer). This
+retires debt (r) as a standalone item.</p>
+<p><strong>Trial (concrete recipe):</strong></p>
+<ol>
+<li>Config (<code>~/.ppxai/ppxai-config.json</code> → <code>tools.agent</code>): <code>task_tier_enabled:
+   true</code>, a working <code>default_subagent</code> {provider, model}, and <code>spawn_consent</code>
+   left at its default <code>"deny"</code> (that IS the park mode now). Optionally
+   <code>consent_ttl_s</code> (default 300) — set it low (e.g. 30) to trial the timeout.</li>
+<li>Serve the checkout (an installed <code>~/.ppxai/web</code> bundle won't have the
+   consent card): <code>PPXAI_WEB_DIR=$PWD/ppxai/web uv run ppxai-server</code>, then
+   open the web UI. (Config/env shadowing gotchas: see the T1 "trialing from
+   source" note in <a href="../agent-platform-call-graphs/">agent-platform-call-graphs.md</a>.)</li>
+<li><strong>Park:</strong> <code>/task run "spawn a child to summarize docs/README.md" --tools
+   read_file,spawn_subagent</code> → pane status flips to ✋ waiting and the consent
+   card appears (prompt = the spawn summary); <code>/task ls</code> shows ✋.</li>
+<li><strong>Approve:</strong> click Approve (or <code>/task respond &lt;id&gt; approve</code>) →
+   <code>agent_resumed</code> in the live log, the child spawns (<code>subagent_spawned</code>),
+   the parent completes with the child's result embedded.</li>
+<li><strong>Deny:</strong> rerun step 3, click Deny (or <code>/task respond &lt;id&gt; deny</code>) →
+   visible <code>spawn_denied</code> in the log; the run completes with the refusal
+   text; no child appears in <code>/task ls</code>.</li>
+<li><strong>Timeout:</strong> rerun step 3 with a low <code>consent_ttl_s</code>, answer nothing →
+   after the TTL the run resumes on its own with a denial
+   (<code>agent_resumed {via:"timeout", approved:false}</code>).</li>
+<li><strong>API-level checks (curl/PowerShell):</strong> <code>GET /v1/agent/runs/&lt;id&gt;</code> while
+   parked shows the <code>waiting</code> block incl. <code>token</code>; <code>POST .../respond</code> with a
+   wrong token → 409; with <code>{token, approved:true}</code> → 200 <code>{status:running}</code>;
+   <code>~/.ppxai/runs/&lt;id&gt;/agent-0/state.json</code> holds the waiting checkpoint and,
+   after resume, the <code>last_response</code>.</li>
+</ol>
+<p><strong>Trial-verified 2026-07-12 (macOS, auth-ON):</strong> API trial via
+<code>scripts/trial-task-lifecycle.py</code> against the installed server. A
+<code>spawn_subagent</code> grant under <code>spawn_consent:"deny"</code> parked the run in
+<code>waiting{consent}</code> (token present); <code>POST /runs/{id}/respond</code> with a wrong
+token → 409, with <code>{token, approved:true}</code> → 200, and the approved run ran to
+a terminal state.</p>
+<p><strong>Tests (landed):</strong> <code>test_agent_runs.py::TestStateJson</code> (5 — roundtrip/replace,
+missing/corrupt/non-dict → None, atomic no-tmp); <code>TestParkRespond</code> (7 —
+approve roundtrip incl. state.json + consent-category events, token
+mismatch survives park, TTL denial + late respond, never-parked, cancel
+unblocks park, park refused when cancel already pending);
+<code>TestRespondRoute</code> (4 — 404, 409 not-waiting, 422 answer-less, meta carries
+waiting); <code>TestConsentParkE2E</code> (3 — park→approve→child spawns,
+park→deny→<code>spawn_denied</code> + no child, unanswered park times out to denial;
+context-managed TestClient so the parked task survives across requests);
+<code>TestAgentConfig</code> (2 — <code>consent_ttl_s</code> whitelist); <code>test_task_controller_behavior.py</code>
+scenarios 9/9b (respond mapping, token fetch, not-waiting guard, routing).</p>
+<p><strong>Deliberately NOT yet:</strong> two-phase termination (T6); ask-user
+<code>waiting{input}</code> parks (the wire + registry already carry <code>text</code>/<code>kind</code>).</p>
+<hr />
+<h2 id="t6-two-phase-termination-completed_pending_ack-post-ack-done">T6 — two-phase termination: <code>completed_pending_ack</code> + <code>POST /ack</code> — ✅ DONE<a class="headerlink" href="#t6-two-phase-termination-completed_pending_ack-post-ack-done" title="Permanent link">&para;</a></h2>
+<p><strong>Capability:</strong> a finished run <strong>holds its result</strong> until collected, so a
+disconnected UI never loses it; <code>/task ack &lt;id&gt;</code> (or the pane's Collect
+button) finalizes.</p>
+<p><strong>Build (landed, server):</strong> <code>hold_result</code> on <code>RunMeta</code>/<code>start_run</code> — set by
+the <code>/task</code> route for <strong>top-level</strong> runs only (sub-agent children and the
+tool-free <code>/run</code> tier still land <code>completed</code>: their parent/caller collects
+inline). On success a held run lands <strong><code>completed_pending_ack</code></strong> and emits
+<code>agent_result_ready</code> (category=<code>result</code>) <em>instead of</em> <code>agent_run_complete</code>;
+the run has exited (control/sandbox torn down, out of the AppState badge set)
+but the record + result persist. <code>POST /runs/{id}/ack</code> (owner-scoped 403,
+404/409) → <code>AgentRunRegistry.ack_run</code> → <strong><code>finalized</code></strong> + <code>agent_run_finalized</code>
+(idempotent: re-acking a finalized run is 200, no duplicate event). Retention
+backstop: <code>tools.agent.result_retention_s</code> (default 3600 s, 0 disables) via
+<code>maybe_reap_hold</code> — a <strong>lazy reaper on the GET read paths</strong> (no timer task; an
+expired hold finalizes with <code>via:"retention"</code> the next time anyone looks).
+Finalizing never deletes data — it marks the run GC-eligible; <code>acked_at</code> on
+the meta projection records collection. <strong>Explicit collect, not silent
+auto-ack</strong> — the user issues the receipt (matches the trial below).
+<strong>Client (landed):</strong> Collect button in <code>TaskRunView</code> (visible only while
+<code>completed_pending_ack</code>); <code>/task ack &lt;id&gt;</code> verb; 📬 result-ready / ✅ collected
+status labels + <code>ls</code> icons; watcher/poll terminal sets grew
+(<code>completed_pending_ack</code>/<code>finalized</code> statuses; <code>agent_result_ready</code>/
+<code>agent_run_finalized</code> stream markers); held/finalized runs render their result
+like <code>completed</code>.</p>
+<p><strong>Persistence (landed — debt (r), cont.):</strong> <code>persist_state()</code> snapshots the
+hold (<code>{status: completed_pending_ack, result_ready_at, result_chars}</code>) and
+the finalization (<code>{status: finalized, via, acked_at}</code>) — with <code>meta.json</code>
+(which carries the result body) a held run survives a restart and reopens
+intact. Still flat <code>agent-0/</code>. Remaining under (r): <strong>T7</strong> consumes the
+checkpoint (resume = reload <code>state.json</code>).</p>
+<p><strong>Trial (concrete recipe):</strong> config as in the T5 trial (tier on,
+<code>default_subagent</code> set); serve the checkout (<code>PPXAI_WEB_DIR=$PWD/ppxai/web
+uv run ppxai-server</code>).</p>
+<ol>
+<li><code>/task run "summarize docs/README.md" --tools read_file</code> → on finish the
+   pane shows 📬 result ready + the held result + a Collect button;
+   <code>/task ls</code> shows 📬.</li>
+<li><strong>Close the pane, reopen via <code>/task ls</code></strong> — the result is still there
+   (served from <code>meta.json</code>; nothing was lost by disconnecting).</li>
+<li><code>/task ack &lt;id&gt;</code> (or Collect) → <code>✅ collected</code>; <code>GET /runs/&lt;id&gt;</code> shows
+   <code>status:"finalized"</code>, <code>acked_at</code> set, result still present; a second ack
+   is a no-op 200.</li>
+<li>Retention: set <code>tools.agent.result_retention_s</code> low (e.g. 30), run
+   another task, wait past the TTL, then <code>/task ls</code> — the run shows
+   finalized (reaped on read, <code>agent_run_finalized {via:"retention"}</code> on its
+   event log).</li>
+<li>API-level: <code>~/.ppxai/runs/&lt;id&gt;/agent-0/state.json</code> shows the
+   <code>completed_pending_ack</code> snapshot, then <code>finalized</code> after ack.</li>
+</ol>
+<p><strong>Trial-verified 2026-07-12 (macOS, auth-ON):</strong> via
+<code>scripts/trial-task-lifecycle.py</code>. A top-level <code>/task</code> run held its result
+(<code>completed_pending_ack</code>, result body present); <code>POST /runs/{id}/ack</code> → 200 →
+<code>finalized</code> with <code>acked_at</code> set and the result still present; a second ack was
+an idempotent 200.</p>
+<p><strong>Tests (landed):</strong> <code>test_agent_runs.py::TestHoldAndAck</code> (7 — hold lands
+pending_ack + state.json snapshot + result_ready-instead-of-complete + badge
+exit, no-hold still completes, ack transition + idempotency (single finalize
+event), non-held/unknown ack rejected, reaper expires only stale holds,
+reaper disabled at 0/None); <code>TestAckRoute</code> (4 — 404, 409 not-held,
+ack→finalized + result retained + idempotent 200, GET reaps expired holds on
+single + list reads); <code>TestDisconnectThenCollectE2E</code> (1 — run finishes with
+no client attached, held result collected later, then finalized; ctx_client);
+<code>TestAgentConfig</code> (2 — <code>result_retention_s</code> whitelist);
+<code>test_task_controller_behavior.py</code> scenario 10 (ack POST + verb routing).
+Existing /task success assertions updated <code>completed</code> →
+<code>completed_pending_ack</code> (the T6 semantic change).</p>
+<p><strong>Deliberately NOT yet:</strong> interrupted-resume (T7); artifact GC (finalized =
+GC-eligible marker only); auto-ack-on-view (explicit collect keeps the
+receipt in the user's hands — revisit if the friction annoys).</p>
+<hr />
+<h2 id="t7-interrupted-resume-post-resume-done">T7 — interrupted resume: <code>POST /resume</code> — ✅ DONE<a class="headerlink" href="#t7-interrupted-resume-post-resume-done" title="Permanent link">&para;</a></h2>
+<p><strong>Capability:</strong> an <code>interrupted</code> run (engine restart / kill / budget cap) can be
+<strong>conditionally</strong> resumed; <code>/task resume &lt;id&gt;</code> (or the button) continues it, or
+refuses with a reason if the checkpoint is inconclusive (open-decision #5).</p>
+<p><strong>Build (landed, server):</strong> <code>POST /runs/{id}/resume</code> (owner-scoped 403; same
+<code>task_tier_enabled</code> 403 gate as POST /task — resume re-enters the tool tier;
+404/409). The decision matrix is <code>resume_refusal()</code> (pure meta rules): only
+<code>interrupted</code>/<code>cancelled</code> + <code>resumable</code> + <strong>top-level /task</strong> (<code>hold_result</code>)
+runs with no recorded <code>result</code> and complete rebuild inputs; everything else is
+refused with the stated reason and the run is unchanged. Resume REBUILDS the
+scoped runner via <code>build_task_runner</code> from the <strong>persisted inputs</strong> — task/
+grant/egress/budget were already on the meta; T7 adds <code>system</code> + <code>read_roots</code>
+(the T4 skill mounts) to <code>RunMeta</code> so the rebuild is faithful — and
+<code>resume_run()</code> clears the stale stop fields, snapshots <code>state.json</code>
+(<code>resumed_from</code>), emits <code>agent_run_resume</code>, and drives it like a fresh run
+under the SAME run_id (identical AC-1/AC-2 sandbox, fresh budget window,
+events append to the same log — seq continues; a T6 hold applies to the
+resumed leg too). <strong>Restart-orphan sweep:</strong> <code>sweep_orphans()</code> runs once at
+registry construction — any run stranded <code>pending/running/waiting/cancelling</code>
+on disk (its task/control/consent future died with the process) lands
+<code>interrupted</code> ("server restarted…", <code>resumable</code> iff the checkpoint is
+conclusive), with a <code>state.json</code> <code>via:"restart_sweep"</code> snapshot + event. A
+resumable stop (cancel/budget) now also writes its own <code>state.json</code> checkpoint
+at stop time. <strong>Client (landed):</strong> Resume button in <code>TaskRunView</code> (visible only
+when <code>resumable</code> AND <code>interrupted</code>/<code>cancelled</code>); <code>/task resume &lt;id&gt;</code> verb;
+resume restarts the detached watcher; the 409 refusal reason is surfaced
+verbatim; <code>agent_run_resume</code> gets a transcript line.</p>
+<p><strong>Persistence (debt (r) — RETIRED):</strong> T5 wrote the park checkpoint, T6 the
+hold/finalize snapshots, T7 adds the stop + restart-sweep + resume snapshots
+AND is the consumer. The Inspection Triplet is complete on the flat <code>agent-0/</code>
+slot (the multi-slot/service Triplet remains (q)/<code>agent_n</code> nesting).</p>
+<p><strong>Trial (concrete recipe):</strong> config as in T5/T6 (tier on, <code>default_subagent</code>).</p>
+<ol>
+<li><strong>Restart-interrupt:</strong> start a run that stays busy (e.g. <code>/task run
+   "spawn a child to summarize docs/README.md" --tools
+   read_file,spawn_subagent</code> and leave the consent card unanswered, or any
+   long run), then kill the server mid-flight. Restart it → <code>/task ls</code> shows
+   the run <strong>⏸️ interrupted</strong> ("server restarted…"), with a Resume button on
+   its pane (the sweep judged it resumable).</li>
+<li><strong>Resume:</strong> <code>/task resume &lt;id&gt;</code> (or the button) → <code>▶️ resumed (running)</code>;
+   the run re-executes with the same grant/egress/budget/system and lands
+   📬 result ready (T6 hold) — same run_id, same event log (<code>agent_run_resume</code>
+   visible in it).</li>
+<li><strong>Budget-interrupt path:</strong> <code>/task run "…" --tools read_file --budget
+   iters=1</code> → lands ⏸️ interrupted (resumable); <code>/task resume &lt;id&gt;</code> gives it a
+   fresh budget window and it completes.</li>
+<li><strong>Refusals:</strong> <code>/task resume</code> a completed/held run → 409 "not resumable";
+   resume an <code>/agentrun</code>-tier cancelled run → 409 "only a top-level /task
+   run…"; after a successful resume completes and you re-resume → 409 "work
+   already captured".</li>
+<li>API-level: <code>state.json</code> shows the stop checkpoint, then
+   <code>{status: running, resumed_from: interrupted}</code> after resume.</li>
+</ol>
+<p><strong>Trial-verified 2026-07-12 (macOS, auth-ON):</strong> via
+<code>scripts/trial-task-lifecycle.py</code>, restart-interrupt path. A consent-parked
+run had the server killed under it and restarted; the registry's
+construction-time <code>sweep_orphans()</code> landed it <code>interrupted</code> + <code>resumable:true</code>;
+<code>POST /runs/{id}/resume</code> → 200 re-entered the tool tier under the same run_id
+and the run reached a terminal state; the refusal arm (<code>resume</code> a <code>finalized</code>
+run) → 409. <strong>Investigation note:</strong> an earlier trial appeared to show a
+<code>waiting</code> run NOT being swept — that was a <strong>test-harness bug, not a product
+one</strong>: the installed <code>ppxai-server</code> is a PyInstaller onefile (bootloader
+parent + real-server child), so <code>Popen.terminate()</code> on the parent left the
+child holding the port; the "restarted" server couldn't bind and the GET hit
+the stale old process where the sweep never ran (<code>resumable:false</code> was the
+tell). Fixed by killing the whole process group (<code>start_new_session</code> +
+<code>os.killpg</code>); the sweep itself works exactly as documented. See
+<a href="../docs/lessons/stale-server-invalidates-acceptance.md">docs/lessons/stale-server-invalidates-acceptance.md</a>.</p>
+<p><strong>Client observation 2026-07-12 (VSCode, auth-ON):</strong> a <code>/task resume</code> of an
+interrupted run refused with <em>"not marked resumable (the stop did not land at a
+clean checkpoint)"</em> — <strong>correct behavior, not a bug.</strong> The target run was
+created <strong>2026-07-02, before T6 landed (2026-07-07)</strong>, so its meta has
+<code>hold_result=False</code> and the sweep can never mark it resumable; a same-day run
+created by the current binary had <code>hold_result=True</code> and resumed fine. Only
+runs stranded from a pre-T6 binary hit this. Minor UX polish (not scheduled):
+the refusal reason could distinguish "created before resume support" from
+"stopped uncleanly."</p>
+<p><strong>Tests (landed):</strong> <code>test_agent_runs.py::TestResumeRefusal</code> (9 — the full
+decision matrix incl. every non-candidate status, in-flight, non-task,
+result-present, missing inputs); <code>TestSweepOrphans</code> (4 — all orphanable
+statuses swept with state.json/event + terminal untouched, resumable
+judgement, in-flight-not-swept, idempotent); <code>TestResumeRoute</code> (5 — tier-gate
+403, 404, 409 leaves run unchanged, /run-tier refused, e2e rebuild-from-
+persisted-inputs → resumed leg holds + same-log seq monotonic; ctx_client);
+<code>test_task_controller_behavior.py</code> scenario 11 (resume POST + watcher restart
++ routing + verbatim refusal).</p>
+<p><strong>Deliberately NOT yet:</strong> cross-client port (T8); transcript-level
+continuation (a resume re-executes the bounded task from its start — the
+conversation state of the dead leg is not replayed; the run record, not the
+chat transcript, is the durable unit).</p>
+<hr />
+<h2 id="t8-cross-client-port-tui-vscode-split-into-t8a-t8b">T8 — cross-client port: TUI + VSCode — SPLIT into T8a / T8b<a class="headerlink" href="#t8-cross-client-port-tui-vscode-split-into-t8a-t8b" title="Permanent link">&para;</a></h2>
+<p>The two clients have opposite transport realities, so T8 lands in two
+independently-trialable halves:</p>
+<ul>
+<li><strong>T8a — VSCode (✅ DONE):</strong> the extension already speaks
+  HTTP to ppxai-server (<code>httpClient.ts</code>), so the port is a faithful mirror
+  of the web client over the identical <code>/v1/agent/*</code> surface.</li>
+<li><strong>T8b — Rich/Textual TUI (⏸️ PARKED, 2026-07-07 — resume here):</strong> the TUIs
+  are <strong>in-process</strong> — they have NO channel to a ppxai-server. Porting <code>/task</code>
+  there forces the transport decision that is debt Item 37(t)'s SDK question:
+  <strong>(1)</strong> embed the registry + an embeddable <code>build_task_runner</code> in-process
+  (runs live in the TUI's event loop; retires (t) as a by-product — the
+  recommended direction, since it also unblocks the ppxai-sre SDK model), or
+  <strong>(2)</strong> grow an HTTP client in the TUIs pointed at a running server
+  (matches the plan's original "identical surface" wording but adds a
+  server dependency to standalone terminal use). Decide before building;
+  do NOT guess this one silently. <strong>Resume checklist:</strong> pick the transport →
+  if (1), first extract <code>build_task_runner</code> from <code>server/routes/agent_v1.py</code>
+  into an engine-level module (that IS the debt-(t) work; keep the route a
+  thin caller so the T1–T7 tests stay green) → then Rich + Textual <code>/task</code>
+  handlers + per-TUI run view + consent affordance → extend the T8a parity
+  sentinels (<code>tests/test_vscode_task_controller.py</code> pattern) to the TUI
+  dispatch surface.</li>
+</ul>
+<h3 id="t8a-vscode-port-done">T8a — VSCode port — ✅ DONE<a class="headerlink" href="#t8a-vscode-port-done" title="Permanent link">&para;</a></h3>
+<p><strong>Build (landed):</strong> <code>vscode-extension/src/taskController.ts</code> — a
+dependency-injected (IoC, same pattern as <code>handlers/consent.ts</code>), VSCode-free
+controller with <strong>verb-for-verb parity</strong> with the web client
+(run/ls/list/show/open/watch/cancel/respond/ack/resume/help; the same
+<code>parseTaskArgs</code> grammar incl. <code>--spec</code>/<code>--skill</code>/<code>--budget</code>/<code>--work-dir</code>
+suffixes).
+<code>httpClient.ts</code> grows the typed <code>/v1/agent/*</code> slice (agentTask/agentRuns/
+agentRun/agentRunCancel/agentRunRespond/agentRunAck/agentRunResume) with the
+tier's guardrail 4xx <code>detail</code> bodies surfaced <strong>verbatim</strong> (403 tier-off
+hint, 400 shell-grant, 409 respond/ack/resume refusal reasons).
+<code>chatPanel.ts</code> routes <code>/task</code> client-side BEFORE factory dispatch (the
+CommandFactory has no /task) and wires the UI adapter: transcript output via
+<code>systemMessage</code>/<code>fullResponse</code>, and — per VSCode idiom — the <strong>T5 consent
+park pops a native QuickPick</strong> (Approve/Deny; same dialog pattern as
+shell/file consent), raised automatically by the poll watcher once per
+resume token; a dismissed dialog leaves the TTL as the fail-closed backstop
+(<code>/task respond</code> still works). The watcher is poll-based with the web
+degraded-path contract (backoff, no run-duration ceiling, give-up only on
+consecutive GET failures); terminal renders include the 📬 <code>/task ack</code> and
+▶️ <code>/task resume</code> hints. <code>/task</code> added to the completion catalog
+(<code>engine/completion.py</code>) for all clients.</p>
+<p><strong>Trial (concrete recipe):</strong> server as in T5–T7 trials (tier on,
+<code>default_subagent</code>); <code>code --install-extension</code> a fresh VSIX or F5 the
+extension; point <code>ppxai.serverUrl</code> at the server.</p>
+<ol>
+<li>In the VSCode chat panel: <code>/task run "summarize docs/README.md" --tools
+   read_file</code> → launch line, then (poll) 📬 result ready + the result +
+   the <code>/task ack</code> hint; <code>/task ack &lt;id&gt;</code> → ✅ collected.</li>
+<li><code>/task run "spawn a child to summarize docs/README.md" --tools
+   read_file,spawn_subagent</code> → when the run parks, a <strong>QuickPick pops</strong>
+   (✋ Agent run … needs consent) → Approve → child spawns, parent holds;
+   Deny → refusal text; Escape → hint line + TTL backstop
+   (<code>/task respond &lt;id&gt; approve</code> still answers it).</li>
+<li><code>/task ls</code> shows the same runs (and icons) as the web pane; kill/restart
+   the server → ⏸️ interrupted → <code>/task resume &lt;id&gt;</code> → continues.</li>
+<li>403/400/409 guardrails (tier off, shell grant, wrong-token respond,
+   re-resume after success) all show the server's own reason text.</li>
+</ol>
+<p><strong>Tests (landed):</strong> <code>tests/test_vscode_task_controller.py</code> (11 structural —
+the repo's TS-testing idiom, see test_vscode_visibility_reanchor.py):
+<strong>verb-parity sentinel</strong> (VSCode routes exactly the web verb set),
+<strong>endpoint-parity sentinel</strong> (both clients drive the same <code>/v1/agent/*</code>
+paths; TaskBackend methods exist on httpClient), <strong>status-parity</strong>
+(terminal/success sets match the web sets), chatPanel wiring
+(task-before-factory, controller construction, QuickPick → <code>{approved}</code>),
+consent-token discipline (park token rides every respond; one QuickPick per
+park). Plus <code>npm run compile</code> (tsc + esbuild) green.</p>
+<h3 id="t8b-tui-port-parked">T8b — TUI port — ⏸️ PARKED<a class="headerlink" href="#t8b-tui-port-parked" title="Permanent link">&para;</a></h3>
+<p>Parked 2026-07-07 pending the transport decision above (option 1 recommended —
+it retires debt (t) and gives ppxai-sre the embeddable runner). Scope when
+resumed: Rich + Textual command handlers (<code>/task</code> family), a run view per TUI
+idiom, consent prompt via each TUI's consent affordance, the same parity
+sentinels. Until then the <code>/task</code> family ships in <strong>web + VSCode</strong>; the TUIs
+keep their in-process <code>/agent</code> loop.</p>
+<hr />
+<h2 id="t9-future-tier-d-container-enforcement">T9 — (future, tier-d) container enforcement<a class="headerlink" href="#t9-future-tier-d-container-enforcement" title="Permanent link">&para;</a></h2>
+<p>Deferred with the OS-isolation tier. Flip <code>sandbox.enforcement:"container"</code>:
+the T2 scoping fields become real OS boundaries — read-only root fs, <code>workdir</code>
+= pod <code>emptyDir</code>, <strong>skills/specs = read-only ConfigMap mounts</strong>, egress = a k8s
+NetworkPolicy, and <code>allow_skill_scripts</code> becomes runnable. The config schema
+(T2) already anticipates this; no new config surface, only the enforcer. This
+is the tier that lets <code>/task</code> accept <strong>untrusted</strong> input and become sealable.</p>
+<hr />
+<h2 id="dependency-summary">Dependency summary<a class="headerlink" href="#dependency-summary" title="Permanent link">&para;</a></h2>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>T1 launch/observe ─┬─► T2 read_paths seal ─┬─► T3 spec files ─► T4 skills
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>                   │                        │
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>                   ├─► T5 waiting/respond   │   (T4 needs T2 + T3)
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>                   ├─► T6 pending_ack/ack    │
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>                   └─► T7 interrupted/resume ┘
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>                                  │
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>                                  ▼
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>                     T8 TUI + VSCode port
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>                                  │
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>                                  ▼
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>                     T9 container enforcement (tier-d, future)
+</span></code></pre></div>
+<p>T2–T7 each depend only on T1 (a <code>/task</code> run to drive) except T4 (needs T2 + T3).
+Order is value + safety first: launch, then the seal, then config (spec/skill),
+then the lifecycle transitions, then ports. Every increment is independently
+live-trial-verified before the next begins.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/rcconsult/ppxai" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

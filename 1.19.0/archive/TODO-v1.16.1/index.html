@@ -1,0 +1,2793 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Multi-LLM Interface for Developers - Terminal & VSCode">
+      
+      
+      
+        <link rel="canonical" href="https://rcconsult.github.io/ppxai/1.19.0/archive/TODO-v1.16.1/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>TODO — v1.16.1: Norton Commander File Tree + CommandFactory Server Pattern - ppxai Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#todo-v1161-norton-commander-file-tree-commandfactory-server-pattern" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="ppxai Documentation" class="md-header__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ppxai Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              TODO — v1.16.1: Norton Commander File Tree + CommandFactory Server Pattern
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="ppxai Documentation" class="md-nav__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ppxai Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../provider-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provider Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../task-agent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Task Agent Platform
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../session-agent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Session Agent Mode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../bootstrap-context-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bootstrap Context
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../context-injection/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Context Injection
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../checkpoint-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Checkpoint & Undo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../file-editing-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    File Editing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../shell-consent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shell Consent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../custom-tool-development-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../custom-command-development-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ollama-limitations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ollama Limitations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../vllm-tool-calling-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    vLLM Tool Calling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../container-tools-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Container Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../autorouter-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autorouter Config
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release Notes
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Release Notes
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../RELEASE-NOTES-v1.16.1.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../RELEASE-NOTES-v1.16.0.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../RELEASE-NOTES-v1.15.6.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.15.6
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#target-layout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Target Layout
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#key-bindings-new-changed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Bindings (new / changed)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-1-filetree-widget" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 1 — FileTree Widget
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Phase 1 — FileTree Widget">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#step-11-create-ppxaituiwidgetsfile_treepy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 1.1 — Create ppxai/tui/widgets/file_tree.py
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-12-unit-tests-teststest_file_treepy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 1.2 — Unit tests (tests/test_file_tree.py)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-2-layout-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 2 — Layout Integration
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Phase 2 — Layout Integration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#step-21-update-ppxaituiapppy-compose" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 2.1 — Update ppxai/tui/app.py compose()
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-22-add-file-tree-css-to-layouttcss" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 2.2 — Add #file-tree CSS to layout.tcss
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-23-add-_file_tree_visible-state-to-ppxaideapp__init__" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 2.3 — Add _file_tree_visible state to PPXAIDEApp.__init__()
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-24-add-action_toggle_file_tree-and-ctrlb-binding" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 2.4 — Add action_toggle_file_tree() and Ctrl+B binding
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-25-update-_apply_split_ratio-for-3-pane-awareness" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 2.5 — Update _apply_split_ratio() for 3-pane awareness
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-3-key-bindings-and-event-handlers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 3 — Key Bindings and Event Handlers
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Phase 3 — Key Bindings and Event Handlers">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#step-31-update-action_toggle_focus-for-3-stop-cycle" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 3.1 — Update action_toggle_focus() for 3-stop cycle
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-32-update-action_cancel-for-file-tree-escape" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 3.2 — Update action_cancel() for file tree escape
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-33-add-event-handlers-in-apppy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 3.3 — Add event handlers in app.py
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-34-add-inject_text-to-inputbox" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 3.4 — Add inject_text() to InputBox
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-4-polish" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 4 — Polish
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Phase 4 — Polish">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#step-41-filetree-header-with-current-directory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 4.1 — FileTree header with current directory
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-42-resize-keys-for-file-tree-and-side-panel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 4.2 — Resize keys for file tree and side panel
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-43-theme-auto-sync" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 4.3 — Theme auto-sync
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-44-footer-binding-display" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 4.4 — Footer binding display
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-5-docs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 5 — Docs
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Phase 5 — Docs">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#step-51-update-roadmapmd" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 5.1 — Update ROADMAP.md
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-6-bug-fixes-and-improvements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 6 — Bug Fixes and Improvements
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Phase 6 — Bug Fixes and Improvements">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#step-61-fix-4-failing-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 6.1 — Fix 4 failing tests
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-62-side-panel-save-prompt" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 6.2 — Side panel save prompt
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-63-textual-renderer-artifact-tabs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 6.3 — Textual renderer artifact tabs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-64-print-to-logger-migration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 6.4 — Print to logger migration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-65-gemini-3-action-items-cleanup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 6.5 — Gemini 3 action items cleanup
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#critical-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Critical Files
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reused-infrastructure-no-changes-needed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reused Infrastructure (No Changes Needed)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-7-commandfactory-server-pattern-poc-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 7 — CommandFactory Server Pattern (POC: /usage)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Phase 7 — CommandFactory Server Pattern (POC: /usage)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Architecture
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-71-add-to_dict-to-commandresult-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 7.1 — Add to_dict() to CommandResult types
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-72-add-servercommandcontext-adapter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 7.2 — Add ServerCommandContext adapter
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-73-add-generic-command-execution-endpoint" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 7.3 — Add generic command execution endpoint
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-74-replace-web-app-handleusagecommand-with-server-call" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 7.4 — Replace web app handleUsageCommand() with server call
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-75-add-shared-formatters-for-commandresult-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 7.5 — Add shared formatters for CommandResult types
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-76-replace-vscode-handleusagecommand-with-server-call" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 7.6 — Replace VSCode handleUsageCommand() with server call
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-77-structured-metadata-for-rich-rendering" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 7.7 — Structured metadata for rich rendering
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-78-integration-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 7.8 — Integration tests
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#future-generalize-to-all-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Future: Generalize to all commands
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#out-of-scope-v1170" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Out of Scope (v1.17.0+)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-8-pre-release-technical-debt-sharedcommon-codebase" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 8 — Pre-Release Technical Debt: Shared/Common Codebase
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Phase 8 — Pre-Release Technical Debt: Shared/Common Codebase">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#81-fix-duplicate-checkpoint-manager-init-in-set_working_dir" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8.1 — Fix duplicate checkpoint manager init in set_working_dir()
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#82-fix-duplicate-model-switch-context-reset-in-set_model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8.2 — Fix duplicate model-switch context-reset in set_model()
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#83-remove-unused-asdict-import-in-clientpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8.3 — Remove unused asdict import in client.py
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#84-standardise-set_-vs-switch_-method-naming" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8.4 — Standardise set_* vs switch_* method naming
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#85-remove-redundant-session-alternation-validation-in-_save_with_extras" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8.5 — Remove redundant session alternation validation in _save_with_extras()
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#86-rich-renderer-complete-consentresult-and-promptresult" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8.6 — Rich renderer: complete ConsentResult and PromptResult
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#87-client-passes-sequential-after-8186-tested" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8.7 — Client passes (sequential, after 8.1–8.6 tested)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-10-regex-audit-replace-fragile-patterns-with-robust-parsers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 10 — Regex Audit: Replace Fragile Patterns with Robust Parsers
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Phase 10 — Regex Audit: Replace Fragile Patterns with Robust Parsers">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#101-fix-file-modification-claims-detection-in-validatorpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10.1 — Fix file modification claims detection in validator.py
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#102-replace-regex-markdown-link-parsing-with-bracket-counting-parser" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10.2 — Replace regex markdown link parsing with bracket-counting parser
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#103-simplify-success-claim-detection-in-validatorpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10.3 — Simplify success-claim detection in validator.py
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#104-use-_find_json_objects-for-tool-json-detection-in-validatorpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10.4 — Use _find_json_objects() for tool JSON detection in validator.py
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#105-tighten-rich-markup-stripping-in-chat_viewpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10.5 — Tighten Rich markup stripping in chat_view.py
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#106-replace-inline-markdown-formatting-regex-with-linear-pass" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10.6 — Replace inline markdown formatting regex with linear pass
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#testing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Testing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#testing-gate-between-phases" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Testing gate between phases
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#phase-9-bug-fixes-from-web-debug-log-review" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 9 — Bug Fixes from Web Debug Log Review
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Phase 9 — Bug Fixes from Web Debug Log Review">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#91-fix-typeerror-bool-object-is-not-iterable-in-codexresponses-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.1 — Fix TypeError: 'bool' object is not iterable in Codex/Responses API
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#92-add-traceback-logging-to-sse-event-generator-exception-handler" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.2 — Add traceback logging to SSE event generator exception handler
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#93-fix-lazy-imports-in-contextpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.3 — Fix lazy imports in context.py
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#94-fix-lazy-imports-in-sessionpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.4 — Fix lazy imports in session.py
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#95-validate-message-alternation-before-sending-to-provider" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.5 — Validate message alternation before sending to provider
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="todo-v1161-norton-commander-file-tree-commandfactory-server-pattern">TODO — v1.16.1: Norton Commander File Tree + CommandFactory Server Pattern<a class="headerlink" href="#todo-v1161-norton-commander-file-tree-commandfactory-server-pattern" title="Permanent link">&para;</a></h1>
+<h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
+<p>Transform ppxaide from a two-pane layout (chat | optional side panel) into a
+Norton Commander style: a permanently visible (Ctrl+B togglable) file tree on
+the left, with the existing chat + side panel on the right.</p>
+<p>Also: unify command execution across all clients via CommandFactory server pattern.</p>
+<p><strong>Reference:</strong> <a href="../ROADMAP.md">ROADMAP.md — v1.16.1</a></p>
+<h2 id="target-layout">Target Layout<a class="headerlink" href="#target-layout" title="Permanent link">&para;</a></h2>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>┌──────────────────┬──────────────────────────────────────────┐
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>│  FileTree (25%)  │  chat-pane + side-panel (75%)            │
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>│                  │  ┌──────────────────────┬─────────────┐  │
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>│  DirectoryTree   │  │ ChatView (1fr)        │  SidePanel  │  │
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>│                  │  │                      │  (optional) │  │
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>│  Ctrl+B = toggle │  ├──────────────────────┴─────────────┤  │
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>│                  │  │ InputBox (always at bottom)         │  │
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>└──────────────────┴──────────────────────────────────────────┘
+</span></code></pre></div>
+<p><strong>Width rules:</strong>
+- File tree visible: <code>#file-tree 25%</code>, chat+panel share remaining 75%
+- File tree hidden: chat+panel share 100% (existing behavior unchanged)
+- Side panel open: splits the available space using existing <code>SPLIT_RATIOS</code> logic</p>
+<h2 id="key-bindings-new-changed">Key Bindings (new / changed)<a class="headerlink" href="#key-bindings-new-changed" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Ctrl+B</code></td>
+<td>Toggle file tree show/hide</td>
+</tr>
+<tr>
+<td><code>Enter</code> (in file tree)</td>
+<td>Open file preview in side panel (read-only)</td>
+</tr>
+<tr>
+<td><code>Ctrl+Enter</code> (in file tree)</td>
+<td>Open file editor in side panel (editable)</td>
+</tr>
+<tr>
+<td><code>Space</code> (in file tree)</td>
+<td>Inject <code>@file:path</code> at cursor in chat input</td>
+</tr>
+<tr>
+<td><code>Escape</code> (in file tree)</td>
+<td>Return focus to chat input</td>
+</tr>
+<tr>
+<td><code>F6</code> / <code>Ctrl+Tab</code></td>
+<td>Cycle focus: input → file tree → side panel → input</td>
+</tr>
+<tr>
+<td><code>↑↓</code> (in file tree)</td>
+<td>Navigate files/dirs (free from Textual DirectoryTree)</td>
+</tr>
+<tr>
+<td><code>→</code> / <code>←</code> (in file tree)</td>
+<td>Expand / collapse directory</td>
+</tr>
+<tr>
+<td><code>-</code> / <code>=</code></td>
+<td>Resize panes (file tree when focused, or chat/panel split)</td>
+</tr>
+<tr>
+<td><code>V</code> (in DataViewer/TableViewer)</td>
+<td>Toggle tree/table ↔ source view</td>
+</tr>
+<tr>
+<td><code>E</code> (in DataViewer)</td>
+<td>Expand all tree nodes</td>
+</tr>
+<tr>
+<td><code>C</code> (in DataViewer)</td>
+<td>Collapse all tree nodes</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="phase-1-filetree-widget">Phase 1 — FileTree Widget<a class="headerlink" href="#phase-1-filetree-widget" title="Permanent link">&para;</a></h2>
+<p><strong>Goal:</strong> Self-contained widget with correct key bindings and messages.
+No layout changes yet — mount it temporarily for isolated testing.</p>
+<h3 id="step-11-create-ppxaituiwidgetsfile_treepy">Step 1.1 — Create <code>ppxai/tui/widgets/file_tree.py</code><a class="headerlink" href="#step-11-create-ppxaituiwidgetsfile_treepy" title="Permanent link">&para;</a></h3>
+<p>New widget extending Textual's <code>DirectoryTree</code>:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">textual.widgets</span><span class="w"> </span><span class="kn">import</span> <span class="n">DirectoryTree</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">textual.binding</span><span class="w"> </span><span class="kn">import</span> <span class="n">Binding</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">textual.message</span><span class="w"> </span><span class="kn">import</span> <span class="n">Message</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="k">class</span><span class="w"> </span><span class="nc">FileTree</span><span class="p">(</span><span class="n">DirectoryTree</span><span class="p">):</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>    <span class="k">class</span><span class="w"> </span><span class="nc">FilePreview</span><span class="p">(</span><span class="n">Message</span><span class="p">):</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>        <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>    <span class="k">class</span><span class="w"> </span><span class="nc">FileEdit</span><span class="p">(</span><span class="n">Message</span><span class="p">):</span>
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>        <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>    <span class="k">class</span><span class="w"> </span><span class="nc">FileInject</span><span class="p">(</span><span class="n">Message</span><span class="p">):</span>
+</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>        <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
+</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>
+</span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>    <span class="n">BINDINGS</span> <span class="o">=</span> <span class="p">[</span>
+</span><span id="__span-1-18"><a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a>        <span class="n">Binding</span><span class="p">(</span><span class="s2">&quot;enter&quot;</span><span class="p">,</span>      <span class="s2">&quot;preview&quot;</span><span class="p">,</span> <span class="s2">&quot;Preview&quot;</span><span class="p">,</span> <span class="n">show</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+</span><span id="__span-1-19"><a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a>        <span class="n">Binding</span><span class="p">(</span><span class="s2">&quot;ctrl+enter&quot;</span><span class="p">,</span> <span class="s2">&quot;edit&quot;</span><span class="p">,</span>    <span class="s2">&quot;Edit&quot;</span><span class="p">,</span>    <span class="n">show</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+</span><span id="__span-1-20"><a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a>        <span class="n">Binding</span><span class="p">(</span><span class="s2">&quot;space&quot;</span><span class="p">,</span>      <span class="s2">&quot;inject&quot;</span><span class="p">,</span>  <span class="s2">&quot;@file&quot;</span><span class="p">,</span>   <span class="n">show</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+</span><span id="__span-1-21"><a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a>        <span class="n">Binding</span><span class="p">(</span><span class="s2">&quot;escape&quot;</span><span class="p">,</span>     <span class="s2">&quot;dismiss&quot;</span><span class="p">,</span> <span class="s2">&quot;Back&quot;</span><span class="p">,</span>    <span class="n">show</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+</span><span id="__span-1-22"><a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a>    <span class="p">]</span>
+</span><span id="__span-1-23"><a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a>
+</span><span id="__span-1-24"><a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a>    <span class="c1"># Track currently selected path</span>
+</span><span id="__span-1-25"><a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a>    <span class="n">_selected_path</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span id="__span-1-26"><a id="__codelineno-1-26" name="__codelineno-1-26" href="#__codelineno-1-26"></a>
+</span><span id="__span-1-27"><a id="__codelineno-1-27" name="__codelineno-1-27" href="#__codelineno-1-27"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">on_directory_tree_file_selected</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span> <span class="o">...</span>
+</span><span id="__span-1-28"><a id="__codelineno-1-28" name="__codelineno-1-28" href="#__codelineno-1-28"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">action_preview</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span> <span class="o">...</span>   <span class="c1"># post FilePreview</span>
+</span><span id="__span-1-29"><a id="__codelineno-1-29" name="__codelineno-1-29" href="#__codelineno-1-29"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">action_edit</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span> <span class="o">...</span>      <span class="c1"># post FileEdit</span>
+</span><span id="__span-1-30"><a id="__codelineno-1-30" name="__codelineno-1-30" href="#__codelineno-1-30"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">action_inject</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span> <span class="o">...</span>    <span class="c1"># post FileInject</span>
+</span><span id="__span-1-31"><a id="__codelineno-1-31" name="__codelineno-1-31" href="#__codelineno-1-31"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">action_dismiss</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span> <span class="o">...</span>   <span class="c1"># focus InputBox</span>
+</span></code></pre></div>
+<p>Key behaviors:
+- <code>on_directory_tree_file_selected</code> stores path but does NOT open anything
+  (prevents double-open on Enter — handled by <code>action_preview</code>)
+- Arrow/expand/collapse are native DirectoryTree behavior (no custom code)
+- Root path: <code>Path(os.getcwd())</code> — passed at construction from <code>app.py</code></p>
+<p><strong>Status:</strong> ✅ Done (0e032fa)</p>
+<h3 id="step-12-unit-tests-teststest_file_treepy">Step 1.2 — Unit tests (<code>tests/test_file_tree.py</code>)<a class="headerlink" href="#step-12-unit-tests-teststest_file_treepy" title="Permanent link">&para;</a></h3>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Test FilePreview message emitted on Enter</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="c1"># Test FileEdit message emitted on Ctrl+Enter</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="c1"># Test FileInject message emitted on Space</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1"># Test action_dismiss focuses InputBox</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="c1"># Test _selected_path updated on file selection</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="c1"># Test filter_paths excludes _HIDDEN_DIRS</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="c1"># Test _get_cursor_file_path handles DirEntry and Path</span>
+</span></code></pre></div>
+<p><strong>Status:</strong> ✅ Done (6d86194) — 28 tests: messages, bindings, filter_paths, mount, _get_cursor_file_path, FilePreview/Edit/Inject actions, dismiss</p>
+<hr />
+<h2 id="phase-2-layout-integration">Phase 2 — Layout Integration<a class="headerlink" href="#phase-2-layout-integration" title="Permanent link">&para;</a></h2>
+<p><strong>Goal:</strong> Mount FileTree in the app, update CSS and split ratio logic.</p>
+<h3 id="step-21-update-ppxaituiapppy-compose">Step 2.1 — Update <code>ppxai/tui/app.py</code> compose()<a class="headerlink" href="#step-21-update-ppxaituiapppy-compose" title="Permanent link">&para;</a></h3>
+<p>Change:
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">with</span> <span class="n">Horizontal</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="s2">&quot;main-content&quot;</span><span class="p">):</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>    <span class="k">with</span> <span class="n">Vertical</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="s2">&quot;chat-pane&quot;</span><span class="p">):</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>        <span class="k">yield</span> <span class="n">ChatView</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="s2">&quot;chat-view&quot;</span><span class="p">)</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>        <span class="k">yield</span> <span class="n">InputBox</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="s2">&quot;input-box&quot;</span><span class="p">)</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>    <span class="k">yield</span> <span class="n">SidePanel</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="s2">&quot;side-panel&quot;</span><span class="p">)</span>
+</span></code></pre></div></p>
+<p>To:
+<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">with</span> <span class="n">Horizontal</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="s2">&quot;main-content&quot;</span><span class="p">):</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>    <span class="k">yield</span> <span class="n">FileTree</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()),</span> <span class="nb">id</span><span class="o">=</span><span class="s2">&quot;file-tree&quot;</span><span class="p">)</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>    <span class="k">with</span> <span class="n">Vertical</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="s2">&quot;chat-pane&quot;</span><span class="p">):</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>        <span class="k">yield</span> <span class="n">ChatView</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="s2">&quot;chat-view&quot;</span><span class="p">)</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>        <span class="k">yield</span> <span class="n">InputBox</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="s2">&quot;input-box&quot;</span><span class="p">)</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>    <span class="k">yield</span> <span class="n">SidePanel</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="s2">&quot;side-panel&quot;</span><span class="p">)</span>
+</span></code></pre></div></p>
+<p>Also add import:
+<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">ppxai.tui.widgets.file_tree</span><span class="w"> </span><span class="kn">import</span> <span class="n">FileTree</span>
+</span></code></pre></div></p>
+<h3 id="step-22-add-file-tree-css-to-layouttcss">Step 2.2 — Add <code>#file-tree</code> CSS to <code>layout.tcss</code><a class="headerlink" href="#step-22-add-file-tree-css-to-layouttcss" title="Permanent link">&para;</a></h3>
+<div class="language-css highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nt">FileTree</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">    </span><span class="k">width</span><span class="p">:</span><span class="w"> </span><span class="mi">25</span><span class="kt">%</span><span class="p">;</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">    </span><span class="k">height</span><span class="p">:</span><span class="w"> </span><span class="mi">100</span><span class="kt">%</span><span class="p">;</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">    </span><span class="k">border-right</span><span class="p">:</span><span class="w"> </span><span class="kc">solid</span><span class="w"> </span><span class="err">$</span><span class="n">surface-lighten-1</span><span class="p">;</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">    </span><span class="k">background</span><span class="p">:</span><span class="w"> </span><span class="err">$</span><span class="n">surface</span><span class="p">;</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="p">}</span>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="nt">FileTree</span><span class="p">.</span><span class="nc">hidden</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">    </span><span class="k">display</span><span class="p">:</span><span class="w"> </span><span class="kc">none</span><span class="p">;</span>
+</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="p">}</span>
+</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>
+</span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="nt">FileTree</span><span class="w"> </span><span class="nt">DirectoryTree</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-6-13"><a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a><span class="w">    </span><span class="k">background</span><span class="p">:</span><span class="w"> </span><span class="err">$</span><span class="n">surface</span><span class="p">;</span>
+</span><span id="__span-6-14"><a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a><span class="w">    </span><span class="n">scrollbar-background</span><span class="p">:</span><span class="w"> </span><span class="err">$</span><span class="n">surface</span><span class="p">;</span>
+</span><span id="__span-6-15"><a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a><span class="w">    </span><span class="k">scrollbar-color</span><span class="p">:</span><span class="w"> </span><span class="err">$</span><span class="n">panel</span><span class="p">;</span>
+</span><span id="__span-6-16"><a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a><span class="w">    </span><span class="n">scrollbar-color-hover</span><span class="p">:</span><span class="w"> </span><span class="err">$</span><span class="n">primary</span><span class="p">;</span>
+</span><span id="__span-6-17"><a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a><span class="p">}</span>
+</span></code></pre></div>
+<h3 id="step-23-add-_file_tree_visible-state-to-ppxaideapp__init__">Step 2.3 — Add <code>_file_tree_visible</code> state to <code>PPXAIDEApp.__init__()</code><a class="headerlink" href="#step-23-add-_file_tree_visible-state-to-ppxaideapp__init__" title="Permanent link">&para;</a></h3>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="bp">self</span><span class="o">.</span><span class="n">_file_tree_visible</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+</span></code></pre></div>
+<h3 id="step-24-add-action_toggle_file_tree-and-ctrlb-binding">Step 2.4 — Add <code>action_toggle_file_tree()</code> and <code>Ctrl+B</code> binding<a class="headerlink" href="#step-24-add-action_toggle_file_tree-and-ctrlb-binding" title="Permanent link">&para;</a></h3>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># In BINDINGS:</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="n">Binding</span><span class="p">(</span><span class="s2">&quot;ctrl+b&quot;</span><span class="p">,</span> <span class="s2">&quot;toggle_file_tree&quot;</span><span class="p">,</span> <span class="s2">&quot;Files&quot;</span><span class="p">,</span> <span class="n">show</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="c1"># New method:</span>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="k">def</span><span class="w"> </span><span class="nf">action_toggle_file_tree</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>    <span class="n">file_tree</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">query_one</span><span class="p">(</span><span class="s2">&quot;#file-tree&quot;</span><span class="p">,</span> <span class="n">FileTree</span><span class="p">)</span>
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">_file_tree_visible</span> <span class="o">=</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_file_tree_visible</span>
+</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_file_tree_visible</span><span class="p">:</span>
+</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>        <span class="n">file_tree</span><span class="o">.</span><span class="n">remove_class</span><span class="p">(</span><span class="s2">&quot;hidden&quot;</span><span class="p">)</span>
+</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>    <span class="k">else</span><span class="p">:</span>
+</span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a>        <span class="n">file_tree</span><span class="o">.</span><span class="n">add_class</span><span class="p">(</span><span class="s2">&quot;hidden&quot;</span><span class="p">)</span>
+</span><span id="__span-8-12"><a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a>    <span class="c1"># No need to call _apply_split_ratio() — CSS handles it via 1fr</span>
+</span></code></pre></div>
+<h3 id="step-25-update-_apply_split_ratio-for-3-pane-awareness">Step 2.5 — Update <code>_apply_split_ratio()</code> for 3-pane awareness<a class="headerlink" href="#step-25-update-_apply_split_ratio-for-3-pane-awareness" title="Permanent link">&para;</a></h3>
+<p>The chat pane and side panel split logic is unchanged — they share whatever
+space is left after the file tree's 25% CSS width. The <code>styles.width</code>
+assignments in <code>_apply_split_ratio()</code> remain as percentages of total,
+but when file tree is visible they should sum to 75%.</p>
+<p>Update to:
+<div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">_apply_split_ratio</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>    <span class="n">available</span> <span class="o">=</span> <span class="mi">75</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_file_tree_visible</span> <span class="k">else</span> <span class="mi">100</span>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>    <span class="n">chat_pct</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">SPLIT_RATIOS</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_split_index</span><span class="p">]</span> <span class="o">*</span> <span class="n">available</span> <span class="o">/</span> <span class="mi">100</span><span class="p">)</span>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>    <span class="n">panel_pct</span> <span class="o">=</span> <span class="n">available</span> <span class="o">-</span> <span class="n">chat_pct</span>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>    <span class="n">chat_pane</span><span class="o">.</span><span class="n">styles</span><span class="o">.</span><span class="n">width</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">chat_pct</span><span class="si">}</span><span class="s2">%&quot;</span>
+</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>    <span class="n">side_panel</span><span class="o">.</span><span class="n">styles</span><span class="o">.</span><span class="n">width</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">panel_pct</span><span class="si">}</span><span class="s2">%&quot;</span>
+</span></code></pre></div></p>
+<p><strong>Status:</strong> ✅ Done (0e032fa)</p>
+<hr />
+<h2 id="phase-3-key-bindings-and-event-handlers">Phase 3 — Key Bindings and Event Handlers<a class="headerlink" href="#phase-3-key-bindings-and-event-handlers" title="Permanent link">&para;</a></h2>
+<h3 id="step-31-update-action_toggle_focus-for-3-stop-cycle">Step 3.1 — Update <code>action_toggle_focus()</code> for 3-stop cycle<a class="headerlink" href="#step-31-update-action_toggle_focus-for-3-stop-cycle" title="Permanent link">&para;</a></h3>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">action_toggle_focus</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>    <span class="n">file_tree</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">query_one</span><span class="p">(</span><span class="s2">&quot;#file-tree&quot;</span><span class="p">,</span> <span class="n">FileTree</span><span class="p">)</span>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>    <span class="n">side_panel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">query_one</span><span class="p">(</span><span class="s2">&quot;#side-panel&quot;</span><span class="p">,</span> <span class="n">SidePanel</span><span class="p">)</span>
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>    <span class="n">input_box</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">query_one</span><span class="p">(</span><span class="s2">&quot;#input-box&quot;</span><span class="p">,</span> <span class="n">InputBox</span><span class="p">)</span>
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>    <span class="n">focused</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">focused</span>
+</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>
+</span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>    <span class="k">if</span> <span class="n">focused</span> <span class="ow">and</span> <span class="n">input_box</span> <span class="ow">in</span> <span class="n">focused</span><span class="o">.</span><span class="n">ancestors_with_self</span><span class="p">:</span>
+</span><span id="__span-10-8"><a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>        <span class="c1"># input → file tree (if visible) or side panel (if open)</span>
+</span><span id="__span-10-9"><a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_file_tree_visible</span><span class="p">:</span>
+</span><span id="__span-10-10"><a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a>            <span class="n">file_tree</span><span class="o">.</span><span class="n">focus</span><span class="p">()</span>
+</span><span id="__span-10-11"><a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a>        <span class="k">elif</span> <span class="n">side_panel</span><span class="o">.</span><span class="n">is_open</span><span class="p">:</span>
+</span><span id="__span-10-12"><a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a>            <span class="n">side_panel</span><span class="o">.</span><span class="n">focus</span><span class="p">()</span>
+</span><span id="__span-10-13"><a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a>    <span class="k">elif</span> <span class="n">focused</span> <span class="ow">and</span> <span class="n">file_tree</span> <span class="ow">in</span> <span class="n">focused</span><span class="o">.</span><span class="n">ancestors_with_self</span><span class="p">:</span>
+</span><span id="__span-10-14"><a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a>        <span class="c1"># file tree → side panel (if open) or back to input</span>
+</span><span id="__span-10-15"><a id="__codelineno-10-15" name="__codelineno-10-15" href="#__codelineno-10-15"></a>        <span class="k">if</span> <span class="n">side_panel</span><span class="o">.</span><span class="n">is_open</span><span class="p">:</span>
+</span><span id="__span-10-16"><a id="__codelineno-10-16" name="__codelineno-10-16" href="#__codelineno-10-16"></a>            <span class="n">side_panel</span><span class="o">.</span><span class="n">focus</span><span class="p">()</span>
+</span><span id="__span-10-17"><a id="__codelineno-10-17" name="__codelineno-10-17" href="#__codelineno-10-17"></a>        <span class="k">else</span><span class="p">:</span>
+</span><span id="__span-10-18"><a id="__codelineno-10-18" name="__codelineno-10-18" href="#__codelineno-10-18"></a>            <span class="n">input_box</span><span class="o">.</span><span class="n">focus</span><span class="p">()</span>
+</span><span id="__span-10-19"><a id="__codelineno-10-19" name="__codelineno-10-19" href="#__codelineno-10-19"></a>    <span class="k">else</span><span class="p">:</span>
+</span><span id="__span-10-20"><a id="__codelineno-10-20" name="__codelineno-10-20" href="#__codelineno-10-20"></a>        <span class="c1"># side panel or anywhere else → input</span>
+</span><span id="__span-10-21"><a id="__codelineno-10-21" name="__codelineno-10-21" href="#__codelineno-10-21"></a>        <span class="n">input_box</span><span class="o">.</span><span class="n">focus</span><span class="p">()</span>
+</span></code></pre></div>
+<h3 id="step-32-update-action_cancel-for-file-tree-escape">Step 3.2 — Update <code>action_cancel()</code> for file tree escape<a class="headerlink" href="#step-32-update-action_cancel-for-file-tree-escape" title="Permanent link">&para;</a></h3>
+<p>Add before the side panel check:
+<div class="language-python highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="n">file_tree</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">query_one</span><span class="p">(</span><span class="s2">&quot;#file-tree&quot;</span><span class="p">,</span> <span class="n">FileTree</span><span class="p">)</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="n">focused</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">focused</span>
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="k">if</span> <span class="n">focused</span> <span class="ow">and</span> <span class="n">file_tree</span> <span class="ow">in</span> <span class="n">focused</span><span class="o">.</span><span class="n">ancestors_with_self</span><span class="p">:</span>
+</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">query_one</span><span class="p">(</span><span class="s2">&quot;#input-box&quot;</span><span class="p">,</span> <span class="n">InputBox</span><span class="p">)</span><span class="o">.</span><span class="n">focus</span><span class="p">()</span>
+</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>    <span class="k">return</span>
+</span></code></pre></div></p>
+<h3 id="step-33-add-event-handlers-in-apppy">Step 3.3 — Add event handlers in <code>app.py</code><a class="headerlink" href="#step-33-add-event-handlers-in-apppy" title="Permanent link">&para;</a></h3>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">on_file_tree_file_preview</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">:</span> <span class="n">FileTree</span><span class="o">.</span><span class="n">FilePreview</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Enter on file: open read-only preview in side panel.&quot;&quot;&quot;</span>
+</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>    <span class="n">path</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">path</span>
+</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>    <span class="n">content</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s2">&quot;replace&quot;</span><span class="p">)</span>
+</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>    <span class="n">side_panel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">query_one</span><span class="p">(</span><span class="s2">&quot;#side-panel&quot;</span><span class="p">,</span> <span class="n">SidePanel</span><span class="p">)</span>
+</span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>    <span class="k">await</span> <span class="n">side_panel</span><span class="o">.</span><span class="n">show_file</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">),</span> <span class="n">content</span><span class="p">,</span> <span class="n">read_only</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a>
+</span><span id="__span-12-8"><a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">on_file_tree_file_edit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">:</span> <span class="n">FileTree</span><span class="o">.</span><span class="n">FileEdit</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-12-9"><a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Ctrl+Enter on file: open editable in side panel.&quot;&quot;&quot;</span>
+</span><span id="__span-12-10"><a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a>    <span class="n">path</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">path</span>
+</span><span id="__span-12-11"><a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a>    <span class="n">content</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">read_text</span><span class="p">(</span><span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s2">&quot;replace&quot;</span><span class="p">)</span>
+</span><span id="__span-12-12"><a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a>    <span class="n">side_panel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">query_one</span><span class="p">(</span><span class="s2">&quot;#side-panel&quot;</span><span class="p">,</span> <span class="n">SidePanel</span><span class="p">)</span>
+</span><span id="__span-12-13"><a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a>    <span class="k">await</span> <span class="n">side_panel</span><span class="o">.</span><span class="n">show_file</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">),</span> <span class="n">content</span><span class="p">,</span> <span class="n">read_only</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</span><span id="__span-12-14"><a id="__codelineno-12-14" name="__codelineno-12-14" href="#__codelineno-12-14"></a>
+</span><span id="__span-12-15"><a id="__codelineno-12-15" name="__codelineno-12-15" href="#__codelineno-12-15"></a><span class="k">def</span><span class="w"> </span><span class="nf">on_file_tree_file_inject</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">:</span> <span class="n">FileTree</span><span class="o">.</span><span class="n">FileInject</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-12-16"><a id="__codelineno-12-16" name="__codelineno-12-16" href="#__codelineno-12-16"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Space on file: inject @file:path into chat input.&quot;&quot;&quot;</span>
+</span><span id="__span-12-17"><a id="__codelineno-12-17" name="__codelineno-12-17" href="#__codelineno-12-17"></a>    <span class="n">rel</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">relative_to</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()))</span>
+</span><span id="__span-12-18"><a id="__codelineno-12-18" name="__codelineno-12-18" href="#__codelineno-12-18"></a>    <span class="n">input_box</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">query_one</span><span class="p">(</span><span class="s2">&quot;#input-box&quot;</span><span class="p">,</span> <span class="n">InputBox</span><span class="p">)</span>
+</span><span id="__span-12-19"><a id="__codelineno-12-19" name="__codelineno-12-19" href="#__codelineno-12-19"></a>    <span class="n">input_box</span><span class="o">.</span><span class="n">inject_text</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;@file:</span><span class="si">{</span><span class="n">rel</span><span class="si">}</span><span class="s2"> &quot;</span><span class="p">)</span>
+</span></code></pre></div>
+<h3 id="step-34-add-inject_text-to-inputbox">Step 3.4 — Add <code>inject_text()</code> to <code>InputBox</code><a class="headerlink" href="#step-34-add-inject_text-to-inputbox" title="Permanent link">&para;</a></h3>
+<p>In <code>ppxai/tui/widgets/input_box.py</code>:
+<div class="language-python highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">inject_text</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Insert text at cursor position in ChatTextArea.&quot;&quot;&quot;</span>
+</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>    <span class="n">text_area</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">query_one</span><span class="p">(</span><span class="n">ChatTextArea</span><span class="p">)</span>
+</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>    <span class="n">text_area</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+</span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>    <span class="n">text_area</span><span class="o">.</span><span class="n">focus</span><span class="p">()</span>
+</span></code></pre></div></p>
+<p><strong>Status:</strong> ✅ Done (0e032fa)</p>
+<hr />
+<h2 id="phase-4-polish">Phase 4 — Polish<a class="headerlink" href="#phase-4-polish" title="Permanent link">&para;</a></h2>
+<h3 id="step-41-filetree-header-with-current-directory">Step 4.1 — FileTree header with current directory<a class="headerlink" href="#step-41-filetree-header-with-current-directory" title="Permanent link">&para;</a></h3>
+<p>Root node label shows truncated cwd (last 2 path components) via <code>_short_path()</code>.
+<code>update_root_path()</code> method syncs label when working directory changes.
+<code>app.py:_on_working_dir_changed()</code> calls <code>file_tree.update_root_path()</code>.</p>
+<p><strong>Status:</strong> ✅ Done</p>
+<h3 id="step-42-resize-keys-for-file-tree-and-side-panel">Step 4.2 — Resize keys for file tree and side panel<a class="headerlink" href="#step-42-resize-keys-for-file-tree-and-side-panel" title="Permanent link">&para;</a></h3>
+<p>Primary keys: <code>-</code> (shrink) / <code>=</code> (grow) — work in all terminals.
+Ctrl+[/] kept as fallback but unreliable (Ctrl+[ = ESC in most terminals).
+<code>action_resize_panel()</code> detects focus in file tree and resizes tree width.
+<code>TREE_WIDTHS = [15, 20, 25, 30, 35]</code> with default index 2 (25%).
+<code>_apply_tree_width()</code> sets CSS width on file tree.
+<code>_apply_split_ratio()</code> uses dynamic <code>TREE_WIDTHS[index]</code> instead of hardcoded 25%.</p>
+<p><strong>Side panel fast path:</strong> <code>side_panel.show_file()</code> reuses existing CodeEditor
+for code-to-code transitions via <code>load_text()</code> instead of destroy+remount.
+Avoids tree-sitter re-initialization overhead when browsing files.</p>
+<p><strong>Status:</strong> ✅ Done</p>
+<h3 id="step-43-theme-auto-sync">Step 4.3 — Theme auto-sync<a class="headerlink" href="#step-43-theme-auto-sync" title="Permanent link">&para;</a></h3>
+<p><code>DirectoryTree</code> uses Textual's CSS variable system (<code>$surface</code>, <code>$primary</code>, etc.)
+so it auto-syncs with app theme changes. No extra <code>watch_theme()</code> needed.</p>
+<p><strong>Status:</strong> ✅ Done (inherits from DirectoryTree CSS variables)</p>
+<h3 id="step-44-footer-binding-display">Step 4.4 — Footer binding display<a class="headerlink" href="#step-44-footer-binding-display" title="Permanent link">&para;</a></h3>
+<p>Add <code>Ctrl+B</code> to the visible footer bindings list.</p>
+<p><strong>Status:</strong> ✅ Done (0e032fa) — <code>show=True</code> in binding</p>
+<hr />
+<h2 id="phase-5-docs">Phase 5 — Docs<a class="headerlink" href="#phase-5-docs" title="Permanent link">&para;</a></h2>
+<h3 id="step-51-update-roadmapmd">Step 5.1 — Update ROADMAP.md<a class="headerlink" href="#step-51-update-roadmapmd" title="Permanent link">&para;</a></h3>
+<p>Mark v1.16.1 file tree tasks as done as each phase completes.</p>
+<p><strong>Status:</strong> ✅ Done</p>
+<hr />
+<h2 id="phase-6-bug-fixes-and-improvements">Phase 6 — Bug Fixes and Improvements<a class="headerlink" href="#phase-6-bug-fixes-and-improvements" title="Permanent link">&para;</a></h2>
+<p>Items discovered during code review and test runs.</p>
+<h3 id="step-61-fix-4-failing-tests">Step 6.1 — Fix 4 failing tests<a class="headerlink" href="#step-61-fix-4-failing-tests" title="Permanent link">&para;</a></h3>
+<p><strong>Severity:</strong> High | <strong>Effort:</strong> ~30m</p>
+<ul>
+<li>2 Perplexity model config tests: swapped coding_model/default_model expectations
+  to match v1.14.2 config change (sonar-pro is now default, sonar is coding)</li>
+<li>2 shell tool tests: Windows <code>cmd.exe</code> doesn't support single quotes in arguments;
+  use platform-aware quoting (<code>_Q</code> helper)</li>
+</ul>
+<p><strong>Status:</strong> ✅ Done (d29333a+)</p>
+<h3 id="step-62-side-panel-save-prompt">Step 6.2 — Side panel save prompt<a class="headerlink" href="#step-62-side-panel-save-prompt" title="Permanent link">&para;</a></h3>
+<p><strong>Severity:</strong> Medium | <strong>Effort:</strong> ~15m</p>
+<p>Reuses existing <code>ConfirmCloseScreen</code> from <code>screens/editor.py</code>.
+<code>close()</code> now shows Y/N/Esc dialog when <code>_modified</code> is True.
+<code>_do_close()</code> extracted for the actual close logic.</p>
+<p><strong>File:</strong> <code>ppxai/tui/widgets/side_panel.py</code>
+<strong>Status:</strong> ✅ Done</p>
+<h3 id="step-63-textual-renderer-artifact-tabs">Step 6.3 — Textual renderer artifact tabs<a class="headerlink" href="#step-63-textual-renderer-artifact-tabs" title="Permanent link">&para;</a></h3>
+<p><strong>Severity:</strong> Medium | <strong>Effort:</strong> N/A (deferred)</p>
+<p><code>CompositeResult</code> is never instantiated by any command — no real usage exists.
+<code>ArtifactPanel</code> widget is ready; wiring deferred until a command produces composite output.
+Removed TODO comment from renderer, added note explaining the situation.</p>
+<p><strong>File:</strong> <code>ppxai/rendering/textual_renderer.py</code>
+<strong>Status:</strong> ✅ Done (deferred — no real usage)</p>
+<h3 id="step-64-print-to-logger-migration">Step 6.4 — Print to logger migration<a class="headerlink" href="#step-64-print-to-logger-migration" title="Permanent link">&para;</a></h3>
+<p><strong>Severity:</strong> Low | <strong>Effort:</strong> ~5m</p>
+<p>2 consent error <code>print()</code> calls → <code>logger.error()</code>.</p>
+<p><strong>File:</strong> <code>ppxai/engine/client.py</code>
+<strong>Status:</strong> ✅ Done</p>
+<h3 id="step-65-gemini-3-action-items-cleanup">Step 6.5 — Gemini 3 action items cleanup<a class="headerlink" href="#step-65-gemini-3-action-items-cleanup" title="Permanent link">&para;</a></h3>
+<p><strong>Severity:</strong> Low | <strong>Effort:</strong> ~15m</p>
+<p>Updated ROADMAP.md action items: 5 items marked done (pricing, thinking_level,
+model profiles, deprecations, SDK pin). 2 items assessed and deferred:
+- Thought signatures: transparent; SDK handles propagation. No ppxai changes needed.
+- Multimodal tool responses: text-only pipeline; deferred to v1.17.0+.</p>
+<p><strong>File:</strong> <code>ROADMAP.md</code>
+<strong>Status:</strong> ✅ Done</p>
+<hr />
+<h2 id="critical-files">Critical Files<a class="headerlink" href="#critical-files" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Change</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ppxai/tui/widgets/file_tree.py</code></td>
+<td><strong>CREATE</strong> — new FileTree widget</td>
+</tr>
+<tr>
+<td><code>ppxai/tui/app.py</code></td>
+<td>compose(), bindings, focus, event handlers</td>
+</tr>
+<tr>
+<td><code>ppxai/tui/themes/layout.tcss</code></td>
+<td>FileTree CSS, split ratio updates</td>
+</tr>
+<tr>
+<td><code>ppxai/tui/widgets/input_box.py</code></td>
+<td>Add <code>inject_text()</code> method</td>
+</tr>
+<tr>
+<td><code>ppxai/tui/widgets/side_panel.py</code></td>
+<td>Save prompt on close (Step 6.2)</td>
+</tr>
+<tr>
+<td><code>ppxai/rendering/textual_renderer.py</code></td>
+<td>Artifact tabs (Step 6.3)</td>
+</tr>
+<tr>
+<td><code>ppxai/engine/client.py</code></td>
+<td>Print → logger (Step 6.4)</td>
+</tr>
+<tr>
+<td><code>tests/test_file_tree.py</code></td>
+<td>✅ Done — 28 unit tests</td>
+</tr>
+<tr>
+<td><code>tests/test_file_tree_integration.py</code></td>
+<td><strong>CREATE</strong> — integration tests</td>
+</tr>
+</tbody>
+</table>
+<h2 id="reused-infrastructure-no-changes-needed">Reused Infrastructure (No Changes Needed)<a class="headerlink" href="#reused-infrastructure-no-changes-needed" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>SidePanel.show_file(path, content, mode, read_only)</code> — called directly</li>
+<li><code>_apply_split_ratio()</code> — extended, not rewritten</li>
+<li><code>action_toggle_focus()</code> / <code>action_cancel()</code> — extended with FileTree branch</li>
+<li><code>Ctrl+[/]</code> resize — extended for file tree resize</li>
+</ul>
+<h2 id="phase-7-commandfactory-server-pattern-poc-usage">Phase 7 — CommandFactory Server Pattern (POC: /usage)<a class="headerlink" href="#phase-7-commandfactory-server-pattern-poc-usage" title="Permanent link">&para;</a></h2>
+<p><strong>Goal:</strong> Single command implementation serves all clients. Only rendering differs.</p>
+<h3 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>User: /usage [args]
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>        │
+</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>        ▼
+</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>  handle_usage(context, args) → CommandResult   ← SINGLE implementation
+</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>        │           │           │           │
+</span><span id="__span-14-6"><a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a>    ppxai(Rich)  ppxaide     server       web/vscode
+</span><span id="__span-14-7"><a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a>    RichRenderer TextualRenderer to_dict()  formatTableResult()
+</span></code></pre></div>
+<h3 id="step-71-add-to_dict-to-commandresult-types">Step 7.1 — Add <code>to_dict()</code> to CommandResult types<a class="headerlink" href="#step-71-add-to_dict-to-commandresult-types" title="Permanent link">&para;</a></h3>
+<p>Serialization for HTTP/JSON transport on <code>TableResult</code>, <code>ConfirmationResult</code>,
+<code>KeyValueResult</code>, <code>ErrorResult</code>.</p>
+<p><strong>File:</strong> <code>ppxai/commands/results.py</code>
+<strong>Status:</strong> ✅ Done (d29333a)</p>
+<h3 id="step-72-add-servercommandcontext-adapter">Step 7.2 — Add <code>ServerCommandContext</code> adapter<a class="headerlink" href="#step-72-add-servercommandcontext-adapter" title="Permanent link">&para;</a></h3>
+<p>Wraps <code>EngineClient</code> for server-side command execution. Uses public methods only.</p>
+<p><strong>File:</strong> <code>ppxai/commands/context.py</code>
+<strong>Status:</strong> ✅ Done (f2b2171, d29333a)</p>
+<h3 id="step-73-add-generic-command-execution-endpoint">Step 7.3 — Add generic command execution endpoint<a class="headerlink" href="#step-73-add-generic-command-execution-endpoint" title="Permanent link">&para;</a></h3>
+<p><code>POST /command/{name}</code> — 10-line generic dispatcher via CommandFactory.</p>
+<p><strong>File:</strong> <code>ppxai/server/http.py</code>
+<strong>Status:</strong> ✅ Done (d29333a)</p>
+<h3 id="step-74-replace-web-app-handleusagecommand-with-server-call">Step 7.4 — Replace web app <code>handleUsageCommand()</code> with server call<a class="headerlink" href="#step-74-replace-web-app-handleusagecommand-with-server-call" title="Permanent link">&para;</a></h3>
+<p>Single <code>fetch()</code> + <code>renderCommandResult()</code> dispatcher.</p>
+<p><strong>File:</strong> <code>ppxai/web/app.js</code>
+<strong>Status:</strong> ✅ Done (d29333a)</p>
+<h3 id="step-75-add-shared-formatters-for-commandresult-types">Step 7.5 — Add shared formatters for CommandResult types<a class="headerlink" href="#step-75-add-shared-formatters-for-commandresult-types" title="Permanent link">&para;</a></h3>
+<p><code>formatTableResult()</code> with usage-aware rich rendering (bullet summary + table).
+<code>formatKeyValueResult()</code> for key-value pairs.
+No-cache headers on <code>/shared/</code> route.</p>
+<p><strong>Files:</strong> <code>ppxai/web/shared/formatters.js</code>, <code>vscode-extension/src/shared/formatters.ts</code>
+<strong>Status:</strong> ✅ Done (d29333a)</p>
+<h3 id="step-76-replace-vscode-handleusagecommand-with-server-call">Step 7.6 — Replace VSCode <code>handleUsageCommand()</code> with server call<a class="headerlink" href="#step-76-replace-vscode-handleusagecommand-with-server-call" title="Permanent link">&para;</a></h3>
+<p><code>executeCommand()</code> in httpClient.ts + <code>renderCommandResult()</code> in chatPanel.ts.</p>
+<p><strong>Files:</strong> <code>vscode-extension/src/httpClient.ts</code>, <code>vscode-extension/src/chatPanel.ts</code>
+<strong>Status:</strong> ✅ Done (d29333a)</p>
+<h3 id="step-77-structured-metadata-for-rich-rendering">Step 7.7 — Structured metadata for rich rendering<a class="headerlink" href="#step-77-structured-metadata-for-rich-rendering" title="Permanent link">&para;</a></h3>
+<p>Usage <code>TableResult</code> includes structured metadata (total_tokens, prompt_tokens, etc.)
+so formatters can render bullet-point summaries above the table.</p>
+<p><strong>File:</strong> <code>ppxai/commands/tools.py</code>
+<strong>Status:</strong> ✅ Done (d29333a)</p>
+<h3 id="step-78-integration-tests">Step 7.8 — Integration tests<a class="headerlink" href="#step-78-integration-tests" title="Permanent link">&para;</a></h3>
+<p>18 tests validating counter values across 3 real providers (Perplexity, Gemini, OpenAI).
+Tests compare table row values against raw <code>session.get_usage()</code> data.</p>
+<p><strong>File:</strong> <code>tests/test_usage_integration.py</code>
+<strong>Status:</strong> ✅ Done (d29333a)</p>
+<h3 id="future-generalize-to-all-commands">Future: Generalize to all commands<a class="headerlink" href="#future-generalize-to-all-commands" title="Permanent link">&para;</a></h3>
+<p><code>POST /command/{name}</code> already works for ANY registered command. Next steps:
+- Migrate <code>/provider</code>, <code>/model</code>, <code>/tools</code>, <code>/status</code> to use same pattern
+- Remove bespoke server endpoints as clients migrate
+- Web app and VSCode switch statements shrink to just <code>renderCommandResult()</code></p>
+<hr />
+<h2 id="out-of-scope-v1170">Out of Scope (v1.17.0+)<a class="headerlink" href="#out-of-scope-v1170" title="Permanent link">&para;</a></h2>
+<ul>
+<li>File tree in web app or Rich CLI</li>
+<li>Create / rename / delete from tree</li>
+<li>Git status markers (modified / untracked files)</li>
+<li>Bookmarks / pinned directories</li>
+</ul>
+<hr />
+<h2 id="phase-8-pre-release-technical-debt-sharedcommon-codebase">Phase 8 — Pre-Release Technical Debt: Shared/Common Codebase<a class="headerlink" href="#phase-8-pre-release-technical-debt-sharedcommon-codebase" title="Permanent link">&para;</a></h2>
+<p><strong>Goal:</strong> Fix confirmed bugs, remove dead code, and eliminate duplication in the shared engine/commands/rendering layer before touching any client. All items tested before moving to client passes.</p>
+<hr />
+<h3 id="81-fix-duplicate-checkpoint-manager-init-in-set_working_dir">8.1 — Fix duplicate checkpoint manager init in <code>set_working_dir()</code><a class="headerlink" href="#81-fix-duplicate-checkpoint-manager-init-in-set_working_dir" title="Permanent link">&para;</a></h3>
+<p><strong>Severity:</strong> 🔴 High (bug — checkpoint ID restore is silently skipped)
+<strong>File:</strong> <code>ppxai/engine/client.py:211-218</code>
+<strong>Effort:</strong> ~5 min</p>
+<p><code>set_working_dir()</code> calls <code>self._init_checkpoint_manager(path)</code> on line 209, then immediately re-executes the identical 8-line block inline (lines 211-218), overwriting the checkpoint manager without running the checkpoint-ID-restore logic from <code>_init_checkpoint_manager</code>. The inline block is dead duplication.</p>
+<p><strong>Fix:</strong> Delete lines 211-218 (the inline block). The method call on line 209 is correct.</p>
+<p><strong>Status:</strong> ✅ Done (c47dd61)</p>
+<hr />
+<h3 id="82-fix-duplicate-model-switch-context-reset-in-set_model">8.2 — Fix duplicate model-switch context-reset in <code>set_model()</code><a class="headerlink" href="#82-fix-duplicate-model-switch-context-reset-in-set_model" title="Permanent link">&para;</a></h3>
+<p><strong>Severity:</strong> 🟡 Medium (duplication, not a bug — both branches are correct, just verbose)
+<strong>File:</strong> <code>ppxai/engine/client.py:557-561 and 572-576</code>
+<strong>Effort:</strong> ~10 min</p>
+<p>The 5-line block:
+<div class="language-python highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="k">if</span> <span class="n">reset_context</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">messages</span><span class="p">:</span>
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>    <span class="n">removed</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">reset_for_model_switch</span><span class="p">()</span>
+</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">last_model_switch_reset</span> <span class="o">=</span> <span class="n">removed</span>
+</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a>    <span class="k">if</span> <span class="n">removed</span><span class="p">:</span>
+</span><span id="__span-15-5"><a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a>        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Reset context for model switch to </span><span class="si">{</span><span class="n">model_id</span><span class="si">}</span><span class="s2">: removed </span><span class="si">{</span><span class="n">removed</span><span class="si">}</span><span class="s2"> messages&quot;</span><span class="p">)</span>
+</span></code></pre></div>
+appears verbatim twice — once for models in the list (lines 557-561) and once for the flexible fallback (lines 572-576). Both branches then call <code>self._log_model_hints_transition(model_id)</code> and <code>return True</code>.</p>
+<p><strong>Fix:</strong> Extract the repeated block + final two lines into <code>_apply_model_switch(model_id, reset_context)</code>, call from both branches. Reduces <code>set_model()</code> by ~12 lines.</p>
+<p><strong>Status:</strong> ✅ Done (c47dd61)</p>
+<hr />
+<h3 id="83-remove-unused-asdict-import-in-clientpy">8.3 — Remove unused <code>asdict</code> import in <code>client.py</code><a class="headerlink" href="#83-remove-unused-asdict-import-in-clientpy" title="Permanent link">&para;</a></h3>
+<p><strong>Severity:</strong> 🟢 Low
+<strong>File:</strong> <code>ppxai/engine/client.py:12</code>
+<strong>Effort:</strong> ~1 min</p>
+<p><code>from dataclasses import asdict</code> — imported but never called anywhere in the file.</p>
+<p><strong>Fix:</strong> Delete the import line.</p>
+<p><strong>Status:</strong> ✅ Done (c47dd61)</p>
+<hr />
+<h3 id="84-standardise-set_-vs-switch_-method-naming">8.4 — Standardise <code>set_*</code> vs <code>switch_*</code> method naming<a class="headerlink" href="#84-standardise-set_-vs-switch_-method-naming" title="Permanent link">&para;</a></h3>
+<p><strong>Severity:</strong> 🟡 Medium (API inconsistency, causes adapter boilerplate)
+<strong>Files:</strong> <code>ppxai/commands/handler.py</code>, <code>ppxai/commands/context.py</code>
+<strong>Effort:</strong> ~30 min</p>
+<p><code>CommandHandler</code> uses <code>switch_provider()</code> / <code>switch_model()</code>, while <code>EngineClient</code> and <code>CommandContext</code> protocol use <code>set_provider()</code> / <code>set_model()</code>. The <code>RichCommandContext</code> adapter (context.py lines 71-72) exists solely to bridge this mismatch.</p>
+<p><strong>Fix:</strong> Rename <code>CommandHandler.switch_provider()</code> → <code>set_provider()</code> and <code>switch_model()</code> → <code>set_model()</code> throughout <code>handler.py</code>. Remove the bridging aliases from <code>context.py</code>.</p>
+<p><strong>Status:</strong> ✅ Done (c47dd61)</p>
+<hr />
+<h3 id="85-remove-redundant-session-alternation-validation-in-_save_with_extras">8.5 — Remove redundant session alternation validation in <code>_save_with_extras()</code><a class="headerlink" href="#85-remove-redundant-session-alternation-validation-in-_save_with_extras" title="Permanent link">&para;</a></h3>
+<p><strong>Severity:</strong> 🟢 Low (double-validation, no bug)
+<strong>File:</strong> <code>ppxai/engine/session.py</code>
+<strong>Effort:</strong> ~5 min</p>
+<p><code>_save_with_extras()</code> calls <code>validate_and_fix_alternation()</code> before saving (line ~800), but <code>_save_with_extras</code> is always called via <code>save()</code> which also calls it (line ~516). Validation runs twice.</p>
+<p><strong>Fix:</strong> Remove the <code>validate_and_fix_alternation()</code> call from <code>_save_with_extras()</code>. Validation in <code>save()</code> is sufficient.</p>
+<p><strong>Status:</strong> ✅ Done (c47dd61)</p>
+<hr />
+<h3 id="86-rich-renderer-complete-consentresult-and-promptresult">8.6 — Rich renderer: complete <code>ConsentResult</code> and <code>PromptResult</code><a class="headerlink" href="#86-rich-renderer-complete-consentresult-and-promptresult" title="Permanent link">&para;</a></h3>
+<p><strong>Severity:</strong> 🟡 Medium (feature gap — interactive prompts fall back to placeholder text)
+<strong>File:</strong> <code>ppxai/rendering/rich_renderer.py</code>
+<strong>Effort:</strong> ~1h</p>
+<p>Two renderers have TODO placeholders:
+- <code>ConsentResult</code> renderer: shows options as text instead of interactive prompt
+- <code>PromptResult</code> renderer: prints "not yet implemented"</p>
+<p><strong>Fix:</strong> Implement both using <code>prompt_toolkit</code> or Rich's <code>Prompt.ask()</code>.</p>
+<p><strong>Status:</strong> ✅ Done (3d1a57f) — 18 tests in tests/rendering/test_rich_interactive.py</p>
+<hr />
+<h3 id="87-client-passes-sequential-after-8186-tested">8.7 — Client passes (sequential, after 8.1–8.6 tested)<a class="headerlink" href="#87-client-passes-sequential-after-8186-tested" title="Permanent link">&para;</a></h3>
+<p>Each client analysed in order. Each pass:
+1. Scan for tech debt (TODOs, dead code, duplication, config issues)
+2. Write implementation plan in this document
+3. Implement + test
+4. Commit before moving to next client</p>
+<table>
+<thead>
+<tr>
+<th>Order</th>
+<th>Client</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>ppxai</strong> (Rich TUI — <code>ppxai/rich/</code>)</td>
+<td>✅ Done (450b69a) — 8 fixes: 7 lazy imports→top, unused _render_markdown field, unused CODING_MODEL+web_premium imports, lazy normalize_consent_response, dead unreachable guard, no-op while loop</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>ppxaide</strong> (Textual TUI — <code>ppxai/tui/</code>)</td>
+<td>✅ Done (2bbdd10) — 5 files: 7 lazy imports in <strong>init</strong>.py main(), can_display_images in app.py, Path in input_box on_key(), os/logging/terminal symbols in image_handlers</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>server</strong> (<code>ppxai/server/</code> — incl. CommandFactory generalisation)</td>
+<td>✅ Done — http.py: removed StaticFiles, moved 28 lazy imports to top, extracted is_path_allowed()+MIME_TYPES+DEFAULT_HOST/PORT to module level, removed dead check_idle_shutdown(); session_manager.py: moved EngineClient+get_available_providers+os to module top, removed TYPE_CHECKING guard</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>web app</strong> (<code>ppxai/web/</code>)</td>
+<td>✅ Done — removed duplicate <code>generateUUID()</code> method from app.js (global from api-client.js used instead); extracted <code>escapeHtml()</code> to shared/formatters.js (removed from app.js, table-viewer.js, tree-viewer.js); updated test harness HTMLs to load formatters.js before components; 83 Playwright tests pass</td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>VSCode extension</strong> (<code>vscode-extension/</code>)</td>
+<td>✅ Done — deleted dead backend.ts + aiClient.ts (735 lines, never imported); replaced hand-rolled generateUUID() in httpClient.ts with crypto.randomUUID() (Node.js stdlib); TS compile clean</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="phase-10-regex-audit-replace-fragile-patterns-with-robust-parsers">Phase 10 — Regex Audit: Replace Fragile Patterns with Robust Parsers<a class="headerlink" href="#phase-10-regex-audit-replace-fragile-patterns-with-robust-parsers" title="Permanent link">&para;</a></h2>
+<p><strong>Background:</strong> The codebase already contains a proven hand-written JSON subset parser
+(<code>_find_json_objects()</code> in <code>parser.py</code>) after regex was found insufficient for nested
+tool call structures. This phase applies the same principle across the remaining regex
+usage: identify instances where regex is doing work that a proper parser would do more
+reliably.</p>
+<hr />
+<h3 id="101-fix-file-modification-claims-detection-in-validatorpy">10.1 — Fix file modification claims detection in <code>validator.py</code><a class="headerlink" href="#101-fix-file-modification-claims-detection-in-validatorpy" title="Permanent link">&para;</a></h3>
+<p><strong>Severity:</strong> 🔴 High (false negatives in hallucination detection)
+<strong>File:</strong> <code>ppxai/engine/tools/validator.py:272-281</code>
+<strong>Effort:</strong> ~30 min</p>
+<p>Pattern <code>[^\s\</code>\"']+.\w{1,5}<code>fails on:
+- Multi-dot filenames:</code>config.backup.json<code>→ captures only</code>json<code>- Dot-only names:</code>.env<code>,</code>.gitignore<code>(no name part before the dot)
+- Long-ish extensions:</code>.backup<code>,</code>.min.js`</p>
+<p>These are all common in real tool results, so false negatives are frequent.</p>
+<p><strong>Fix:</strong> Replace with two-pass extraction:
+1. Extract quoted/backtick-delimited filenames first (highest confidence)
+2. Fall back to action-verb proximity scan (detect word near "saved"/"created"/etc.)
+3. Validate candidates against filesystem if working_dir is available</p>
+<p><strong>Status:</strong> ✅ Done — commit <code>8937c33</code></p>
+<hr />
+<h3 id="102-replace-regex-markdown-link-parsing-with-bracket-counting-parser">10.2 — Replace regex markdown link parsing with bracket-counting parser<a class="headerlink" href="#102-replace-regex-markdown-link-parsing-with-bracket-counting-parser" title="Permanent link">&para;</a></h3>
+<p><strong>Severity:</strong> 🔴 High (silently drops valid links in rendered output)
+<strong>File:</strong> <code>ppxai/rendering/markdown_tables.py:54-90</code>
+<strong>Effort:</strong> ~45 min</p>
+<p>Patterns <code>([^\]]+)</code> and <code>([^)]+)</code> break on:
+- Link text with nested brackets: <code>[API [v2]](url)</code> → misparses entirely
+- URLs with parentheses: <code>[docs](https://example.com/func(v2))</code> → truncates URL
+- Escaped chars inside either component</p>
+<p><strong>Fix:</strong> Replace both patterns with a character-level state machine (same approach as
+<code>_find_json_objects()</code> in <code>parser.py</code>): scan forward tracking bracket/paren depth,
+stop at the matching close character. This handles all valid markdown link syntax.</p>
+<p><strong>Status:</strong> ✅ Done — commit <code>8937c33</code></p>
+<hr />
+<h3 id="103-simplify-success-claim-detection-in-validatorpy">10.3 — Simplify success-claim detection in <code>validator.py</code><a class="headerlink" href="#103-simplify-success-claim-detection-in-validatorpy" title="Permanent link">&para;</a></h3>
+<p><strong>Severity:</strong> 🟡 Medium (performance + false positives)
+<strong>File:</strong> <code>ppxai/engine/tools/validator.py:74-85</code>
+<strong>Effort:</strong> ~20 min</p>
+<p>The current 10-alternation regex <code>(created|written|saved|modified|updated|...)</code> is:
+- Slow on every validation call
+- Matches capability statements: "I can create files" (not a claim)
+- Misses natural variants: "file generation completed", "write operation succeeded"</p>
+<p><strong>Fix:</strong> Replace regex alternation with keyword set + 50-char proximity window:
+<div class="language-python highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="n">SUCCESS_VERBS</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;created&#39;</span><span class="p">,</span> <span class="s1">&#39;written&#39;</span><span class="p">,</span> <span class="s1">&#39;saved&#39;</span><span class="p">,</span> <span class="s1">&#39;modified&#39;</span><span class="p">,</span> <span class="s1">&#39;updated&#39;</span><span class="p">,</span> <span class="s1">&#39;completed&#39;</span><span class="p">,</span> <span class="s1">&#39;generated&#39;</span><span class="p">,</span> <span class="s1">&#39;deleted&#39;</span><span class="p">}</span>
+</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="n">CLAIM_SIGNALS</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;i&#39;ve&quot;</span><span class="p">,</span> <span class="s2">&quot;i have&quot;</span><span class="p">,</span> <span class="s2">&quot;successfully&quot;</span><span class="p">,</span> <span class="s2">&quot;has been&quot;</span><span class="p">,</span> <span class="s2">&quot;was&quot;</span><span class="p">,</span> <span class="s2">&quot;were&quot;</span><span class="p">}</span>
+</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="c1"># Claim = SUCCESS_VERB within 50 chars of a CLAIM_SIGNAL in lowercased text</span>
+</span></code></pre></div>
+Faster, tunable without regex knowledge, and separable from capability statements.</p>
+<p><strong>Status:</strong> ✅ Done — commit <code>8937c33</code></p>
+<hr />
+<h3 id="104-use-_find_json_objects-for-tool-json-detection-in-validatorpy">10.4 — Use <code>_find_json_objects()</code> for tool JSON detection in <code>validator.py</code><a class="headerlink" href="#104-use-_find_json_objects-for-tool-json-detection-in-validatorpy" title="Permanent link">&para;</a></h3>
+<p><strong>Severity:</strong> 🟡 Medium (duplication — robust parser exists but isn't used here)
+<strong>File:</strong> <code>ppxai/engine/tools/validator.py:101-105</code>
+<strong>Effort:</strong> ~15 min</p>
+<p>The validator uses regex to detect tool call JSON in response text:
+<div class="language-python highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;\{[^</span><span class="si">{}</span><span class="s1">]*&quot;tool&quot;[^</span><span class="si">{}</span><span class="s1">]*\}&#39;</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>
+</span></code></pre></div>
+This fails for any tool call with nested arguments (common). <code>_find_json_objects()</code> in
+<code>parser.py</code> already handles full nested JSON correctly.</p>
+<p><strong>Fix:</strong> Import and call <code>_find_json_objects()</code> instead. The validator and parser are both
+in <code>ppxai/engine/tools/</code> so no circular dependency.</p>
+<p><strong>Status:</strong> ✅ Done — commit <code>8937c33</code></p>
+<hr />
+<h3 id="105-tighten-rich-markup-stripping-in-chat_viewpy">10.5 — Tighten Rich markup stripping in <code>chat_view.py</code><a class="headerlink" href="#105-tighten-rich-markup-stripping-in-chat_viewpy" title="Permanent link">&para;</a></h3>
+<p><strong>Severity:</strong> 🟡 Medium (strips user content like <code>[1]</code> citation markers)
+<strong>File:</strong> <code>ppxai/tui/widgets/chat_view.py:14</code>
+<strong>Effort:</strong> ~20 min</p>
+<p>Pattern <code>[/?[^\]]*]</code> strips every <code>[...]</code> token including:
+- <code>[1]</code>, <code>[2]</code> — inline citation markers from Perplexity responses
+- <code>[DONE]</code> — visible to users if it leaks
+- Any bracketed user text</p>
+<p><strong>Fix:</strong> Match only valid Rich tag syntax (tag names are identifiers, optionally with
+<code>/</code> prefix and <code>=value</code> suffix):
+<div class="language-python highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;\[/?[a-zA-Z][a-zA-Z0-9_\- ]*(?:=[^\]]+)?\]&#39;</span><span class="p">)</span>
+</span></code></pre></div>
+Preserves <code>[1]</code>, <code>[2]</code>, <code>[DONE]</code> since they don't match identifier syntax.</p>
+<p><strong>Status:</strong> ✅ Done — commit <code>8937c33</code></p>
+<hr />
+<h3 id="106-replace-inline-markdown-formatting-regex-with-linear-pass">10.6 — Replace inline markdown formatting regex with linear pass<a class="headerlink" href="#106-replace-inline-markdown-formatting-regex-with-linear-pass" title="Permanent link">&para;</a></h3>
+<p><strong>Severity:</strong> 🟢 Low (edge cases only, main use cases work)
+<strong>File:</strong> <code>ppxai/rendering/markdown_tables.py:116-152</code>
+<strong>Effort:</strong> ~30 min</p>
+<p>The multi-alternation pattern for bold/italic/code formatting can't handle:
+- Overlapping spans: <code>**bold _and italic_**</code>
+- Adjacent same-type spans: <code>**a** **b**</code>
+- Escaped markers: <code>\*not italic\*</code></p>
+<p><strong>Fix:</strong> Single linear pass with explicit priority order: code spans first (highest
+priority, no nesting), then bold, then italic. Each consumes its markers so the
+others can't re-match.</p>
+<p><strong>Status:</strong> ✅ Done — commit <code>8937c33</code></p>
+<hr />
+<h3 id="testing">Testing<a class="headerlink" href="#testing" title="Permanent link">&para;</a></h3>
+<p>Each fix should include edge-case tests covering the failure patterns documented above.
+Key test cases:
+- <code>.env</code>, <code>config.backup.json</code>, <code>styles.min.css</code> for 10.1
+- <code>[API [v2]](url)</code>, <code>[docs](https://example.com/func(v2))</code> for 10.2
+- <code>"I can create files"</code> (should NOT match) for 10.3
+- Nested tool call JSON for 10.4</p>
+<hr />
+<h3 id="testing-gate-between-phases">Testing gate between phases<a class="headerlink" href="#testing-gate-between-phases" title="Permanent link">&para;</a></h3>
+<p>After 8.1–8.6 are done:
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/<span class="w"> </span>-x<span class="w"> </span>-q<span class="w">   </span><span class="c1"># must be 0 failures before client passes begin</span>
+</span></code></pre></div></p>
+<hr />
+<h2 id="phase-9-bug-fixes-from-web-debug-log-review">Phase 9 — Bug Fixes from Web Debug Log Review<a class="headerlink" href="#phase-9-bug-fixes-from-web-debug-log-review" title="Permanent link">&para;</a></h2>
+<p>Items found by analysing <code>~/.ppxai/logs/server-debug.log</code> from a live web session.</p>
+<hr />
+<h3 id="91-fix-typeerror-bool-object-is-not-iterable-in-codexresponses-api">9.1 — Fix <code>TypeError: 'bool' object is not iterable</code> in Codex/Responses API<a class="headerlink" href="#91-fix-typeerror-bool-object-is-not-iterable-in-codexresponses-api" title="Permanent link">&para;</a></h3>
+<p><strong>Severity:</strong> 🔴 Critical (complete chat failure for gpt-5.1-codex and gpt-5.1-codex-mini)
+<strong>File:</strong> <code>ppxai/engine/providers/openai_native.py:620</code>
+<strong>Effort:</strong> ~10 min</p>
+<p><code>_non_stream_responses()</code> iterates <code>getattr(item, "content", [])</code> for Responses API
+message output items. When <code>item.content</code> exists but holds a bool <code>True</code> (seen on some
+Codex model variants), the fallback <code>[]</code> is never used and iterating a bool raises
+<code>TypeError: 'bool' object is not iterable</code>.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="c1"># BEFORE (line 620):</span>
+</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a><span class="k">for</span> <span class="n">part</span> <span class="ow">in</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">,</span> <span class="p">[]):</span>
+</span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a>
+</span><span id="__span-20-4"><a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a><span class="c1"># AFTER:</span>
+</span><span id="__span-20-5"><a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a><span class="n">item_content</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+</span><span id="__span-20-6"><a id="__codelineno-20-6" name="__codelineno-20-6" href="#__codelineno-20-6"></a><span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">item_content</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+</span><span id="__span-20-7"><a id="__codelineno-20-7" name="__codelineno-20-7" href="#__codelineno-20-7"></a>    <span class="k">for</span> <span class="n">part</span> <span class="ow">in</span> <span class="n">item_content</span><span class="p">:</span>
+</span><span id="__span-20-8"><a id="__codelineno-20-8" name="__codelineno-20-8" href="#__codelineno-20-8"></a>        <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">part</span><span class="p">,</span> <span class="s2">&quot;type&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;output_text&quot;</span><span class="p">:</span>
+</span><span id="__span-20-9"><a id="__codelineno-20-9" name="__codelineno-20-9" href="#__codelineno-20-9"></a>            <span class="n">content</span> <span class="o">+=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">part</span><span class="p">,</span> <span class="s2">&quot;text&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+</span><span id="__span-20-10"><a id="__codelineno-20-10" name="__codelineno-20-10" href="#__codelineno-20-10"></a><span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">item_content</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+</span><span id="__span-20-11"><a id="__codelineno-20-11" name="__codelineno-20-11" href="#__codelineno-20-11"></a>    <span class="n">content</span> <span class="o">+=</span> <span class="n">item_content</span>
+</span></code></pre></div>
+<p><strong>Status:</strong> ✅ Done — <code>isinstance</code> guard on <code>item_content</code>; 4 regression tests in <code>test_tool_messages.py::TestNonStreamResponsesContentExtraction</code></p>
+<hr />
+<h3 id="92-add-traceback-logging-to-sse-event-generator-exception-handler">9.2 — Add traceback logging to SSE event generator exception handler<a class="headerlink" href="#92-add-traceback-logging-to-sse-event-generator-exception-handler" title="Permanent link">&para;</a></h3>
+<p><strong>Severity:</strong> 🟡 Medium (diagnostic quality — errors surface as bare messages with no stack)
+<strong>File:</strong> <code>ppxai/server/http.py:452-453</code>
+<strong>Effort:</strong> ~5 min</p>
+<p>The SSE <code>except Exception as e:</code> handler only logs <code>str(e)</code>. Without the traceback
+the root cause of errors like the <code>datetime</code> NameError (now fixed) took hours to trace.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="c1"># BEFORE:</span>
+</span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a><span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+</span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a>    <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Exception in SSE event generator: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span id="__span-21-4"><a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a>
+</span><span id="__span-21-5"><a id="__codelineno-21-5" name="__codelineno-21-5" href="#__codelineno-21-5"></a><span class="c1"># AFTER:</span>
+</span><span id="__span-21-6"><a id="__codelineno-21-6" name="__codelineno-21-6" href="#__codelineno-21-6"></a><span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+</span><span id="__span-21-7"><a id="__codelineno-21-7" name="__codelineno-21-7" href="#__codelineno-21-7"></a>    <span class="kn">import</span><span class="w"> </span><span class="nn">traceback</span>
+</span><span id="__span-21-8"><a id="__codelineno-21-8" name="__codelineno-21-8" href="#__codelineno-21-8"></a>    <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Exception in SSE event generator: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="se">\n</span><span class="si">{</span><span class="n">traceback</span><span class="o">.</span><span class="n">format_exc</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span></code></pre></div>
+<p>Note: <code>import traceback</code> should move to module top (no-lazy-imports rule).</p>
+<p><strong>Status:</strong> ✅ Done — <code>traceback</code> imported at module top; both <code>sse_event_generator</code> and <code>sse_coding_task_generator</code> now log full tracebacks on exception</p>
+<hr />
+<h3 id="93-fix-lazy-imports-in-contextpy">9.3 — Fix lazy imports in <code>context.py</code><a class="headerlink" href="#93-fix-lazy-imports-in-contextpy" title="Permanent link">&para;</a></h3>
+<p><strong>Severity:</strong> 🟡 Medium (violates no-lazy-imports rule — 8 inline imports inside methods)
+<strong>File:</strong> <code>ppxai/engine/context.py</code>
+<strong>Effort:</strong> ~20 min</p>
+<p>Lazy imports found:
+- <code>import subprocess</code> inside <code>inject_git_context()</code> (line ~494)
+- <code>import pyperclip</code> inside <code>inject_clipboard_context()</code> (line ~643)
+- <code>import httpx</code> inside <code>inject_url_context()</code> (line ~712)
+- <code>import re</code> inside <code>inject_url_context()</code> (line ~773)
+- <code>import trafilatura</code> inside <code>inject_url_context()</code> (line ~777)
+- <code>from ...config import get_max_injection_size</code> inside <code>_get_max_injection_size()</code> (line ~64)
+- Several <code>from .bootstrap import ...</code> inside instance methods</p>
+<p><strong>Fix:</strong> Move all to module top. Guard optional deps (<code>pyperclip</code>, <code>trafilatura</code>, <code>httpx</code>)
+with try/except at module level and check for <code>None</code> at call sites.</p>
+<p><strong>Status:</strong> ✅ Done — commit <code>d16ea8a</code></p>
+<hr />
+<h3 id="94-fix-lazy-imports-in-sessionpy">9.4 — Fix lazy imports in <code>session.py</code><a class="headerlink" href="#94-fix-lazy-imports-in-sessionpy" title="Permanent link">&para;</a></h3>
+<p><strong>Severity:</strong> 🟡 Medium (violates no-lazy-imports rule)
+<strong>File:</strong> <code>ppxai/engine/session.py:691-692</code>
+<strong>Effort:</strong> ~5 min</p>
+<p><code>save_usage_to_persistent_storage()</code> contains:
+<div class="language-python highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span>        <span class="c1"># already imported at line 12 — duplicate</span>
+</span><span id="__span-22-2"><a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">..usage</span><span class="w"> </span><span class="kn">import</span> <span class="n">save_session_usage</span>  <span class="c1"># lazy</span>
+</span></code></pre></div></p>
+<p><code>datetime</code> is already imported at module level (line 12) — the lazy import is redundant.
+<code>save_session_usage</code> should be imported at module top.</p>
+<p><strong>Status:</strong> ✅ Done — commit <code>704ba1c</code></p>
+<hr />
+<h3 id="95-validate-message-alternation-before-sending-to-provider">9.5 — Validate message alternation before sending to provider<a class="headerlink" href="#95-validate-message-alternation-before-sending-to-provider" title="Permanent link">&para;</a></h3>
+<p><strong>Severity:</strong> 🟡 Medium (prevents recurring 400 errors from Perplexity and other strict providers)
+<strong>File:</strong> <code>ppxai/engine/chat.py</code>
+<strong>Effort:</strong> ~30 min</p>
+<p>Message alternation violations occur 6+ times in the log (400 from Perplexity <code>sonar</code>).
+The existing <code>validate_and_fix_alternation()</code> in session.py is called on <em>save</em> (after the
+error). It should also run <em>before</em> messages are sent to the provider at the start of each
+<code>chat_with_tools</code> iteration.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="c1"># In chat_with_tools(), before: async for event in ctx.provider.chat(...)</span>
+</span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a><span class="n">messages</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">get_messages</span><span class="p">()</span>
+</span><span id="__span-23-3"><a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a><span class="n">fixed</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">validate_and_fix_alternation</span><span class="p">()</span>
+</span><span id="__span-23-4"><a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a><span class="k">if</span> <span class="n">fixed</span><span class="p">:</span>
+</span><span id="__span-23-5"><a id="__codelineno-23-5" name="__codelineno-23-5" href="#__codelineno-23-5"></a>    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Pre-flight alternation fix: removed </span><span class="si">{</span><span class="n">fixed</span><span class="si">}</span><span class="s2"> messages&quot;</span><span class="p">)</span>
+</span><span id="__span-23-6"><a id="__codelineno-23-6" name="__codelineno-23-6" href="#__codelineno-23-6"></a>    <span class="n">messages</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">get_messages</span><span class="p">()</span>  <span class="c1"># re-fetch after fix</span>
+</span></code></pre></div>
+<p><strong>Status:</strong> ✅ Done — commit <code>704ba1c</code> (also applied to <code>chat_simple</code>; trailing user message
+is popped before fix and re-inserted after, so the current request is never removed)</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/rcconsult/ppxai" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

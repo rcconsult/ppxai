@@ -1,0 +1,2742 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Multi-LLM Interface for Developers - Terminal & VSCode">
+      
+      
+      
+        <link rel="canonical" href="https://rcconsult.github.io/ppxai/1.19.0/decisions/0003-agent-platform-architecture/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>ADR 0003 — Agent platform architecture - ppxai Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#adr-0003-agent-platform-architecture" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="ppxai Documentation" class="md-header__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ppxai Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              ADR 0003 — Agent platform architecture
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="ppxai Documentation" class="md-nav__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ppxai Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../provider-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provider Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../task-agent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Task Agent Platform
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../session-agent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Session Agent Mode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../bootstrap-context-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bootstrap Context
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../context-injection/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Context Injection
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../checkpoint-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Checkpoint & Undo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../file-editing-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    File Editing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../shell-consent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shell Consent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../custom-tool-development-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../custom-command-development-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ollama-limitations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ollama Limitations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../vllm-tool-calling-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    vLLM Tool Calling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../container-tools-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Container Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../autorouter-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autorouter Config
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release Notes
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Release Notes
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../RELEASE-NOTES-v1.16.1.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../RELEASE-NOTES-v1.16.0.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../RELEASE-NOTES-v1.15.6.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.15.6
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#context" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Context
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Context">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#current-state-verified-2026-05-03" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Current state (verified 2026-05-03)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-sub-agents-and-autonomous-agents-actually-need" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What sub-agents and autonomous agents actually need
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#decision-space" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision space
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Decision space">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#question-a-what-does-the-outer-continuation-loop-actually-buy-us" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Question A — what does the outer continuation loop actually buy us?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#question-b-where-does-run-state-live" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Question B — where does run state live?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#question-c-sub-agent-execution-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Question C — sub-agent execution model
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#question-d-engine-lifecycle-per-sub-agent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Question D — engine lifecycle per sub-agent
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#proposed-architecture-v119x-agent-platform" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Proposed architecture (v1.19.x agent platform)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#decision" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Decision">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#stage-1-v118x-or-early-v1190-instrument-decide-a" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage 1 (v1.18.x or early v1.19.0) — Instrument + decide A
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage-2-v1190-build-the-run-registry-background-tasks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage 2 (v1.19.0) — Build the run registry + background tasks
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage-3-v119x-sub-agent-tool" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage 3 (v1.19.x) — Sub-agent tool
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#out-of-scope-for-now-defer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Out of scope for now (defer)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#resolved-mvp-design-read-only-research-sub-agents-2026-06-15" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Resolved MVP design — read-only research sub-agents (2026-06-15)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Resolved MVP design — read-only research sub-agents (2026-06-15)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-scope-one-sub-agent-full-multi-id-plumbing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Scope — one sub-agent, full multi-ID plumbing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-run-unit-one-chat_with_tools-invocation-this-is-what-sidesteps-question-a" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Run unit — one chat_with_tools invocation (this is what sidesteps Question A)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-capability-model-read-only-but-fully-sandboxed-read-only-injection-safe" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Capability model — read-only, but fully sandboxed (read-only ≠ injection-safe)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-tool-execution-boundary-subprocesspod-not-the-agent-runtime" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Tool-execution boundary — subprocess/pod, not the agent runtime
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-results-reuse-the-adr-0006-artifact-contract-dont-invent-result-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Results — reuse the ADR 0006 artifact contract (don't invent result types)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-run-workspace-triplet-files-for-co-located-readers-registry-api-for-remote" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Run workspace — Triplet files for co-located readers, registry API for remote
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#7-ownership-the-run-secret-reuse-c1-signed-bearer-dont-roll-crypto" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Ownership &amp; the run secret — reuse C1 signed-bearer, don't roll crypto
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#8-lifecycle-ttl-gated-cascade-two-phase-termination-one-waiting-state-machine" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Lifecycle — TTL-gated cascade, two-phase termination, one WAITING state machine
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#9-config-inheritance-inherit-infra-inject-intent-default-deny-capability" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Config inheritance — inherit infra, inject intent, default-deny capability
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#10-appstate-one-running-agents-summary-field" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. AppState — one running-agents summary field
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#11-additive-wire-event-surface-v1-contract-stays-byte-identical" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11. Additive wire &amp; event surface (v1 contract stays byte-identical)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#11a-event-record-schema-eventsjsonl-level-category-resolved-2026-06-15" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11a. Event-record schema (events.jsonl) — level + category (resolved 2026-06-15)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mvp-build-order-the-first-slice" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MVP build order (the first slice)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#open-decisions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Open decisions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#consequences" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consequences
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="adr-0003-agent-platform-architecture">ADR 0003 — Agent platform architecture<a class="headerlink" href="#adr-0003-agent-platform-architecture" title="Permanent link">&para;</a></h1>
+<p><strong>Date:</strong> 2026-05-03 (revised 2026-06-15 — MVP design resolved)
+<strong>Status:</strong> Accepted — implemented (Stage 2 shipped in v1.19.0: Inc 1-9 +
+/task T1-T8a; Question A resolved 2026-06-15 as A1). Wire shapes in §11 are
+the original PROPOSAL and differ from the shipped API — agent_v1.py is
+authoritative.
+<strong>MVP design resolved 2026-06-15</strong> — see "Resolved MVP design — read-only
+research sub-agents" below. The MVP sidesteps Question A by defining a run as
+a single <code>chat_with_tools</code> invocation, so Stage 2 can proceed for the
+read-only research slice without waiting on the week-of-usage data.
+<strong>Related:</strong>
+- <a href="../../archive/TODO-v1.18.2-agent-loop-unification/"><code>docs/archive/TODO-v1.18.2-agent-loop-unification.md</code></a> — the immediate refactor blocked on this ADR
+- <code>ppxai/commands/agent.py</code> — TUI-side outer continuation loop (<code>handle_agent</code>)
+- <code>ppxai/engine/chat.py</code> — <code>chat_with_tools</code> inner tool loop, AGENT_BEAT emission (lines 559, 875, 1066, 1138)
+- <code>ppxai/engine/types.py</code> — <code>EventType.AGENT_BEAT</code> / <code>AGENT_RUN_START</code> / <code>AGENT_RUN_COMPLETE</code> / <code>AGENT_RUN_ERROR</code> / <code>AGENT_ZOMBIE</code> (v1.18.0); planned v1.19.x additions: <code>AGENT_SERVICE_DOWN</code> (per §13 / caveat C5)
+- <code>vscode-extension/src/chatPanel.ts::handleAgentCommand</code> — VSCode-side replica of the outer loop (~150 LoC)
+- <a href="../../../ppxai-sre/docs/PPXAI-INTEGRATION-V1.19.md"><code>../../../ppxai-sre/docs/PPXAI-INTEGRATION-V1.19.md</code></a> — consumer-side integration plan with caveats (C1-C5) and asks (A1-A3) folded into "Open decisions" §6-§13 below
+- <a href="../../research/2026-05-10-ppxai-sre-requirements/"><code>../research/2026-05-10-ppxai-sre-requirements.md</code></a> — gap analysis driving Stage 2 scope</p>
+<h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
+<p>ppxai has agent execution today, but the design predates the
+"agents-platform" use cases that are now driving the roadmap:
+<strong>sub-agents</strong> (a parent agent spawning scoped child agents in
+parallel) and <strong>autonomous agents</strong> (long-running, self-driving
+runs that outlive any client connection).</p>
+<p>The current shape can't support either without significant work:</p>
+<h3 id="current-state-verified-2026-05-03">Current state (verified 2026-05-03)<a class="headerlink" href="#current-state-verified-2026-05-03" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>                         ┌── chat_with_tools (engine/chat.py) ───────────┐
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>                         │  Inner tool loop. One chat() call.            │
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>                         │  Model calls tools until it stops.            │
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>                         │  Emits AGENT_BEAT per tool iteration.         │
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>                         └───────────────────────────────────────────────┘
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>                                              ▲
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>                                              │ called per iteration
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>              ┌────────────── handle_agent (commands/agent.py) ─────────────┐
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>              │  Outer continuation loop, in-process via asyncio.run.       │
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>              │  Builds continuation prompt; matches &quot;TASK_COMPLETE:&quot; in    │
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>              │  model output to decide whether to keep iterating.          │
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>              │  NOT HTTP-aware. Blocks the request handler.                │
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>              └─────────────────────────────────────────────────────────────┘
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>                          ▲                  ▲                    ▲
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>                          │ in-process       │ NOT used           │ replicated
+</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>                  ┌─── Rich TUI ────┐ ┌─── web (web/...) ────┐ ┌── VSCode ────┐
+</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>                  │ factory dispatch │ │ streamChat(&#39;/agent&#39;) │ │ handleAgent  │
+</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>                  │   handle_agent   │ │ → /chat (no outer    │ │ Command —    │
+</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>                  │                  │ │   loop, just gate)   │ │ ~150 LoC of  │
+</span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>                  │                  │ │                      │ │ duplicated   │
+</span><span id="__span-0-21"><a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>                  │                  │ │                      │ │ outer loop   │
+</span><span id="__span-0-22"><a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>                  └──────────────────┘ └──────────────────────┘ └──────────────┘
+</span></code></pre></div>
+<p>What's already in place:
+- AGENT_BEAT / AGENT_RUN_START / AGENT_RUN_COMPLETE / AGENT_RUN_ERROR /
+  AGENT_ZOMBIE event types (v1.18.0).
+- AppState has <code>agent_beat</code> field; web + VSCode + ppxaide all render it.
+- <code>validate_agent_task</code> shared validator (v1.18.1) — <code>/chat</code> route
+  applies it before web requests reach the engine.
+- <code>prompt_text</code> SideEffectKind (v1.18.3) — auto-resume when the
+  validator rejects a vague task.</p>
+<p>What's missing:
+- <strong>Run identity.</strong> No <code>run_id</code>. Can't address a running agent later.
+- <strong>Run persistence.</strong> Engine restart loses everything mid-run.
+- <strong>Run registry.</strong> No <code>GET /agent/runs</code>, can't list/inspect/replay.
+- <strong>Parent/child relationship.</strong> No model for sub-agents.
+- <strong>Resource budgets.</strong> Implicit <code>max_iterations</code>; no token/time caps.
+- <strong>Cancellation by run-id.</strong> <code>POST /interrupt</code> cancels the current
+  request stream, not "this specific agent run."
+- <strong>Sub-agent tool.</strong> No <code>spawn_subagent</code> primitive.</p>
+<h3 id="what-sub-agents-and-autonomous-agents-actually-need">What sub-agents and autonomous agents actually need<a class="headerlink" href="#what-sub-agents-and-autonomous-agents-actually-need" title="Permanent link">&para;</a></h3>
+<p>The two roadmap use cases share the same architectural primitives:</p>
+<table>
+<thead>
+<tr>
+<th>Primitive</th>
+<th>Sub-agents need it for</th>
+<th>Autonomous agents need it for</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Run identity</strong> (<code>run_id</code>)</td>
+<td>Parent observes children by ID</td>
+<td>Address the run after the user's session ends</td>
+</tr>
+<tr>
+<td><strong>Run lifecycle state</strong></td>
+<td>Know when child completed</td>
+<td>Know whether yesterday's run finished, failed, or zombied</td>
+</tr>
+<tr>
+<td><strong>Run persistence</strong></td>
+<td>Child records (meta/state/events/artifacts) survive; live work resumes only with the additive resume upgrade</td>
+<td><strong>Records</strong> survive any restart and survive <strong>client disconnect</strong> while live (§8 TTL reaper); resuming an in-flight run across an <strong>engine</strong> restart is the additive upgrade — see MVP build order</td>
+</tr>
+<tr>
+<td><strong>Run registry / index</strong></td>
+<td>"list my children"</td>
+<td>"list my runs," "list runs since X"</td>
+</tr>
+<tr>
+<td><strong>Parent/child link</strong></td>
+<td>Native</td>
+<td>Optional but useful</td>
+</tr>
+<tr>
+<td><strong>Resource budget</strong></td>
+<td>Stop runaway children</td>
+<td>Stop runaway autonomous runs</td>
+</tr>
+<tr>
+<td><strong>Cancel by <code>run_id</code></strong></td>
+<td>Cancel one child without killing parent</td>
+<td>Cancel a specific autonomous run</td>
+</tr>
+</tbody>
+</table>
+<p>Both use cases are unblocked by the same infrastructure. <strong>Either
+both work or neither does</strong> — the agent-loop unification question
+is downstream of this architectural decision, not separate.</p>
+<h2 id="decision-space">Decision space<a class="headerlink" href="#decision-space" title="Permanent link">&para;</a></h2>
+<h3 id="question-a-what-does-the-outer-continuation-loop-actually-buy-us">Question A — what does the outer continuation loop actually buy us?<a class="headerlink" href="#question-a-what-does-the-outer-continuation-loop-actually-buy-us" title="Permanent link">&para;</a></h3>
+<p>The outer loop in <code>handle_agent</code> and VSCode's <code>handleAgentCommand</code>
+sends a continuation prompt if the model's text response doesn't
+contain <code>TASK_COMPLETE:</code>. It's distinct from <code>chat_with_tools</code>'s
+inner tool loop:</p>
+<ul>
+<li><strong>Inner loop</strong> stops when the model stops calling tools.</li>
+<li><strong>Outer loop</strong> stops when the model either says <code>TASK_COMPLETE:</code>
+  or runs out of <code>max_iterations</code>.</li>
+</ul>
+<p>The outer loop was added in the GPT-3.5 era when models stopped
+mid-task. Frontier models (gpt-5-mini, gpt-5.5, qwen3.5-122b)
+typically tool-use through complex tasks in one chat turn. <strong>We
+don't have data on how often the outer loop actually fires usefully
+on modern models.</strong></p>
+<p>Three possible answers:
+- <strong>(A1)</strong> It rarely fires usefully → eliminate it. Modern models
+  finish in one turn or they don't.
+- <strong>(A2)</strong> It sometimes fires usefully → keep it but server-side
+  only.
+- <strong>(A3)</strong> It's load-bearing → keep it AND make it
+  HTTP-streaming-compatible (the original v1.18.2 plan).</p>
+<p><strong>Decision input needed:</strong> instrument <code>chat_with_tools</code> to log
+how often the outer loop's <code>TASK_COMPLETE:</code> check returns false
+across a week of real usage. Without that data, picking is opinion.</p>
+<h3 id="question-b-where-does-run-state-live">Question B — where does run state live?<a class="headerlink" href="#question-b-where-does-run-state-live" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Location</th>
+<th>Pros</th>
+<th>Cons</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>In-memory dict</strong> on <code>EngineClient</code></td>
+<td>Trivial; today's status quo</td>
+<td>Dies on restart; no observability across sessions</td>
+</tr>
+<tr>
+<td><strong>Filesystem</strong> under <code>~/.ppxai/runs/&lt;run_id&gt;/agent-&lt;n&gt;/</code> (the ADR 0005 Inspection Triplet path — canonical)</td>
+<td>Plays well with existing convention (<code>sessions/</code>, <code>checkpoints/</code>, <code>usage/</code>); inspectable with <code>ls</code>/<code>cat</code>; append-only <code>events.jsonl</code> is robust</td>
+<td>List/filter operations need a directory scan</td>
+</tr>
+<tr>
+<td><strong>SQLite</strong> under <code>~/.ppxai/agent-runs.db</code></td>
+<td>Indexed queries (by status, by parent, by date); atomicity; concurrent writers</td>
+<td>New dependency surface; schema migrations</td>
+</tr>
+</tbody>
+</table>
+<p>The migration filesystem → SQLite is mechanical if we put the
+write/read API behind a single class (<code>AgentRunRegistry</code>). Start
+filesystem; migrate later if <code>list runs</code> becomes a bottleneck.</p>
+<blockquote>
+<p><strong>Forward note (2026-06-15):</strong> this "API behind one class" instinct is
+the seed of a broader capability — a <strong>pluggable memory/log/knowledge
+persistence channel</strong> (JSONL / markdown / SQLite / mem0 / vector
+stores) shared across agent runs, sessions, and checkpoints, with the
+backend chosen by config. Tracked as <strong>debt-inventory Item 35</strong>; likely
+its own ADR once <code>AgentRunRegistry</code> ships as its first consumer.</p>
+</blockquote>
+<h3 id="question-c-sub-agent-execution-model">Question C — sub-agent execution model<a class="headerlink" href="#question-c-sub-agent-execution-model" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Pros</th>
+<th>Cons</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Same-process asyncio.Task</strong></td>
+<td>Simple; shares event loop; trivial parent/child observability</td>
+<td>One sub-agent that hangs blocks the loop; no GIL parallelism</td>
+</tr>
+<tr>
+<td><strong>Same-process subprocess</strong></td>
+<td>Process isolation; OOM in child doesn't kill parent</td>
+<td>Heavier; IPC overhead; child needs full ppxai environment</td>
+</tr>
+<tr>
+<td><strong>Worker pool / queue</strong></td>
+<td>Scales beyond one machine; survives engine restart of parent</td>
+<td>Significant infra; overkill for desktop-app use case</td>
+</tr>
+</tbody>
+</table>
+<p>Same-process asyncio.Task is the right starting point for a
+desktop tool. The <code>AgentRunRegistry</code> abstraction makes the
+worker-pool migration trivial later.</p>
+<h3 id="question-d-engine-lifecycle-per-sub-agent">Question D — engine lifecycle per sub-agent<a class="headerlink" href="#question-d-engine-lifecycle-per-sub-agent" title="Permanent link">&para;</a></h3>
+<p>A sub-agent has its own message history, its own provider/model
+choice, its own tool budget. Two ways to model this:</p>
+<ul>
+<li><strong>(D1)</strong> New <code>EngineClient</code> per sub-agent run. Most flexible;
+  parent and child are fully independent. But <code>EngineClient</code>
+  construction needs to be cheap (verify before committing).</li>
+<li><strong>(D2)</strong> Reuse parent's <code>EngineClient</code>, push/pop a "scope" for
+  each sub-agent. Simpler concurrency story but the scope mechanism
+  is new code with edge cases (mid-run scope leaks, tool calls
+  attributed to wrong run).</li>
+</ul>
+<p>D1 wins on isolation; pre-condition is verifying construction cost.</p>
+<h2 id="proposed-architecture-v119x-agent-platform">Proposed architecture (v1.19.x agent platform)<a class="headerlink" href="#proposed-architecture-v119x-agent-platform" title="Permanent link">&para;</a></h2>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>                ┌──── AgentRunRegistry ────────────────────────────┐
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>                │  ~/.ppxai/runs/&lt;run_id&gt;/agent-&lt;n&gt;/  (ADR 0005)  │
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>                │     ├── meta.json   (task, parent, status, ...)  │
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>                │     ├── events.jsonl (append-only)               │
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>                │     ├── state.json  (iteration, budget, tools)   │
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>                │     ├── transcript.md                            │
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>                │     └── artifacts/  (run-owned, §5)              │
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>                │                                                  │
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>                │  start_run(task, parent_run_id?, budget) → run_id│
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>                │  list_runs(filter?) → [meta]                     │
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>                │  get_run(run_id) → meta + state                  │
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>                │  events(run_id, since?) → AsyncIterator[Event]   │
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>                │  cancel_run(run_id) → bool                       │
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>                └──────────────────────────────────────────────────┘
+</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>                                     ▲
+</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>                                     │
+</span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>       ┌─── POST /command/agent ─────┴──────────── spawn_subagent tool ────┐
+</span><span id="__span-1-18"><a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a>       │  Returns immediately:                       Engine-side built-in  │
+</span><span id="__span-1-19"><a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a>       │   {ok, result, side_effects:                tool. Calls           │
+</span><span id="__span-1-20"><a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a>       │    [{kind: &quot;agent_run_started&quot;,             registry.start_run    │
+</span><span id="__span-1-21"><a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a>       │      run_id, task}], events:[]}             with parent_run_id    │
+</span><span id="__span-1-22"><a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a>       │  Background asyncio.create_task             = current run_id.     │
+</span><span id="__span-1-23"><a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a>       │  drives the loop.                                                 │
+</span><span id="__span-1-24"><a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a>       └────────────────────────────────────────────────────────────────────┘
+</span><span id="__span-1-25"><a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a>                                     │
+</span><span id="__span-1-26"><a id="__codelineno-1-26" name="__codelineno-1-26" href="#__codelineno-1-26"></a>                                     ▼
+</span><span id="__span-1-27"><a id="__codelineno-1-27" name="__codelineno-1-27" href="#__codelineno-1-27"></a>       ┌──── live SSE stream OR replay-from-events.jsonl ────────────────┐
+</span><span id="__span-1-28"><a id="__codelineno-1-28" name="__codelineno-1-28" href="#__codelineno-1-28"></a>       │  Clients (Rich, ppxaide, web, VSCode) consume the same stream.  │
+</span><span id="__span-1-29"><a id="__codelineno-1-29" name="__codelineno-1-29" href="#__codelineno-1-29"></a>       │  GET /agent/runs/&lt;id&gt;/events?since=&lt;offset&gt; for replay.         │
+</span><span id="__span-1-30"><a id="__codelineno-1-30" name="__codelineno-1-30" href="#__codelineno-1-30"></a>       │  GET /agent/runs/&lt;id&gt;/events?live=1         for live tail.      │
+</span><span id="__span-1-31"><a id="__codelineno-1-31" name="__codelineno-1-31" href="#__codelineno-1-31"></a>       └─────────────────────────────────────────────────────────────────┘
+</span></code></pre></div>
+<p><strong>Wire shape for runs (proposed):</strong></p>
+<div class="language-http highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="err">POST /command/agent          → {ok, result, side_effects: [agent_run_started], events: []}</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="err">GET  /agent/runs             → {runs: [{run_id, task, status, started_at, parent_run_id?, ...}]}</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="err">GET  /agent/runs/&lt;id&gt;        → {meta, state}</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="err">GET  /agent/runs/&lt;id&gt;/events → SSE stream (live + replay; ?since=N for resume)</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="err">POST /agent/runs/&lt;id&gt;/cancel → {ok, status: &quot;cancelling&quot;}</span>
+</span></code></pre></div>
+<p><strong>SideEffectKind additions (proposed):</strong></p>
+<ul>
+<li><code>AGENT_RUN_STARTED</code> payload: <code>{run_id, task, parent_run_id?}</code> —
+  the immediate reply to <code>POST /command/agent</code>. Clients render
+  "🤖 run started" and subscribe to the live event stream by id.</li>
+<li><code>AGENT_RUN_REFERENCE</code> payload: <code>{run_id}</code> — emitted from the
+  <code>spawn_subagent</code> tool so the parent's own UI can show the child
+  with a clickable link/button.</li>
+</ul>
+<h2 id="decision">Decision<a class="headerlink" href="#decision" title="Permanent link">&para;</a></h2>
+<p><strong>Recommended path forward (3 stages):</strong></p>
+<h3 id="stage-1-v118x-or-early-v1190-instrument-decide-a">Stage 1 (v1.18.x or early v1.19.0) — Instrument + decide A<a class="headerlink" href="#stage-1-v118x-or-early-v1190-instrument-decide-a" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Add a counter in <code>chat_with_tools</code> / <code>handle_agent</code> for "outer
+  loop fired more than once" vs "completed in one inner loop."</li>
+<li>Surface as a usage stat in <code>~/.ppxai/usage/usage.json</code> under a
+  new <code>agent_run_stats</code> key.</li>
+<li>Run for one week of real usage, then commit to A1, A2, or A3.</li>
+</ul>
+<h3 id="stage-2-v1190-build-the-run-registry-background-tasks">Stage 2 (v1.19.0) — Build the run registry + background tasks<a class="headerlink" href="#stage-2-v1190-build-the-run-registry-background-tasks" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>ppxai/engine/agent_runs.py</code> — <code>AgentRunRegistry</code> with the
+  filesystem layout above.</li>
+<li>Refactor <code>handle_agent</code> so the HTTP path returns
+  <code>agent_run_started</code> immediately and runs the loop as a
+  background <code>asyncio.create_task</code> reading from / writing to the
+  registry.</li>
+<li>The TUI factory path keeps its in-process <code>asyncio.run</code> for
+  backward compatibility, but it ALSO writes to the registry so
+  TUI users can list past runs.</li>
+<li>Delete VSCode's <code>handleAgentCommand</code>; route <code>/agent &lt;task&gt;</code>
+  through <code>POST /command/agent</code> like every other command.</li>
+</ul>
+<h3 id="stage-3-v119x-sub-agent-tool">Stage 3 (v1.19.x) — Sub-agent tool<a class="headerlink" href="#stage-3-v119x-sub-agent-tool" title="Permanent link">&para;</a></h3>
+<ul>
+<li>New built-in tool <code>spawn_subagent(task, scope_files?, budget?,
+  return_mode: "summary" | "run_id")</code>.</li>
+<li>Engine-side: creates a child <code>EngineClient</code> (Decision D1) and a
+  child run in the registry with <code>parent_run_id = current_run_id</code>.</li>
+<li><code>return_mode="summary"</code> (default) blocks the parent tool call
+  until the child completes, returns the child's final text.</li>
+<li><code>return_mode="run_id"</code> returns immediately for parallel
+  spawning; parent uses a separate <code>wait_for_subagent(run_id)</code>
+  tool to collect.</li>
+</ul>
+<h3 id="out-of-scope-for-now-defer">Out of scope for now (defer)<a class="headerlink" href="#out-of-scope-for-now-defer" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Cron-driven autonomous runs (needs scheduler integration).</li>
+<li>Cross-machine run distribution (needs worker pool).</li>
+<li>Run-level RBAC / multi-user (single-user tool today).</li>
+</ul>
+<h2 id="resolved-mvp-design-read-only-research-sub-agents-2026-06-15">Resolved MVP design — read-only research sub-agents (2026-06-15)<a class="headerlink" href="#resolved-mvp-design-read-only-research-sub-agents-2026-06-15" title="Permanent link">&para;</a></h2>
+<p>A design conversation on 2026-06-14/15 resolved the MVP scope and the
+cross-cutting concerns (security, consent, results, lifecycle) that the
+original "Decision space" deliberately left open. <strong>This section is the
+design of record for the first slice.</strong> It resolves Question C
+(execution model), the direction of Question D (engine lifecycle), and
+open-decision item 4 (cascade cancel), and adds five dimensions the
+original ADR did not cover (capability sandbox, run secret, results,
+two-phase termination, config inheritance). Question A (outer loop) was
+<strong>sidestepped</strong> by the run-unit definition below at MVP-design time, and
+has since been <strong>resolved outright as A1 — eliminate the outer loop</strong>
+(see open-decision #1, 2026-06-15); the run-unit definition is now the
+answer for the general agent too, not just the MVP.</p>
+<p>Guiding principle, inherited from the v1.18.8 <code>/files/*</code> parity charter:
+<strong>for any reader that may be remote or pod-sandboxed, the registry API is
+the contract</strong> — because such a reader has no shared FS with the main app,
+so nothing observable about a run may be reachable <em>only</em> by reading the
+filesystem.</p>
+<p>This does <strong>not</strong> demote ADR 0005. Co-located / PVC-shared readers (Rich
+TUI, <code>kubectl exec cat</code>, sibling ppxai-sre agents on a shared volume)
+<strong>may read the Inspection Triplet files directly</strong> — <code>events.jsonl</code> /
+<code>state.json</code> remain a first-class inspection contract per
+<a href="../0005-inspection-triplet/">ADR 0005</a>. The rule is one of <em>supersetting</em>,
+not replacement: <strong>the registry API never exposes less than the Triplet
+files do.</strong> The API is the contract for readers that <em>can't</em> touch the FS;
+the Triplet is the contract for readers that can. Same bytes, two
+access paths, neither second-class — exactly ADR 0005's "the bus reads
+from the filesystem, not the other way around," extended to the HTTP
+adapter.</p>
+<h3 id="1-scope-one-sub-agent-full-multi-id-plumbing">1. Scope — one sub-agent, full multi-ID plumbing<a class="headerlink" href="#1-scope-one-sub-agent-full-multi-id-plumbing" title="Permanent link">&para;</a></h3>
+<ul>
+<li>The MVP spawns <strong>at most one</strong> sub-agent. The registry, <code>run_id</code>,
+  <code>parent_run_id</code>, and every wire shape are built for <strong>N</strong> from day one.</li>
+<li>Concurrency is a single config knob <code>tools.agent.max_concurrent_subagents</code>
+  (default <code>1</code>). Raising it to N is the multi-agent system; no wire change.</li>
+<li><strong>Rationale:</strong> the ID/registry/lifecycle plumbing is the expensive,
+  hard-to-retrofit part; the cap is one integer. Build the platform, ship
+  it gated.</li>
+</ul>
+<h3 id="2-run-unit-one-chat_with_tools-invocation-this-is-what-sidesteps-question-a">2. Run unit — one <code>chat_with_tools</code> invocation (this is what sidesteps Question A)<a class="headerlink" href="#2-run-unit-one-chat_with_tools-invocation-this-is-what-sidesteps-question-a" title="Permanent link">&para;</a></h3>
+<ul>
+<li>An MVP research run = a <strong>single inner-loop (<code>chat_with_tools</code>)
+  invocation</strong>. No outer continuation loop, no <code>TASK_COMPLETE:</code> polling.</li>
+<li>This <strong>defers Question A</strong>: a read-only research agent does not need
+  outer-loop continuation semantics. Whether the <em>general</em> agent keeps the
+  outer loop remains gated on Stage-1 instrumentation; the MVP does not
+  block on it. When the data lands, the outer loop (if kept) wraps the
+  same run unit additively.</li>
+</ul>
+<h3 id="3-capability-model-read-only-but-fully-sandboxed-read-only-injection-safe">3. Capability model — read-only, but fully sandboxed (read-only ≠ injection-safe)<a class="headerlink" href="#3-capability-model-read-only-but-fully-sandboxed-read-only-injection-safe" title="Permanent link">&para;</a></h3>
+<p>Read-only removes write/corruption blast radius. It does <strong>not</strong> remove
+the two threats that dominate research agents, both of which the MVP must
+handle from day one:</p>
+<ul>
+<li><strong>Prompt injection via fetched content is the <em>defining</em> risk.</strong> The
+  agent curls a page, feeds it to the model; that page can steer the
+  model to exfiltrate via the <em>next</em> network call. The network tool is
+  the exfil channel — so the egress allowlist is a <strong>ship-gate, not a
+  nice-to-have: the read-only research MVP does not ship if egress
+  control slips</strong>, because prompt-injection exfiltration is the central
+  threat the whole sandbox exists to contain.</li>
+<li><strong>Read scope must exclude secrets-at-rest.</strong> A read-only agent that can
+  <code>grep ~/.ppxai/.env</code> has already lost. Path-jail bounds <em>what it can
+  read</em>, independent of writes.</li>
+</ul>
+<p>Capability tiers, enforced at the <strong>tool-execution boundary</strong> (not the
+agent loop), carried in <code>meta.json</code> as the run's grant:</p>
+<table>
+<thead>
+<tr>
+<th>Tier</th>
+<th>Mechanism</th>
+<th>MVP</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>a. <strong>Tool allowlist</strong></td>
+<td>dispatcher denies any tool not in the run's grant (research = <code>web_search</code>, <code>read_file</code>, <code>grep</code>/<code>find</code>, <code>fetch_url</code>; <strong>no shell tool at all</strong> — see note below — no <code>write_file</code>)</td>
+<td>✅ required</td>
+</tr>
+<tr>
+<td>b. <strong>Read-path jail</strong></td>
+<td>file/grep ops confined to a subtree, <code>~/.ppxai/</code> excluded; extends existing <code>_within_tree</code> + cwd-grounding</td>
+<td>✅ required</td>
+</tr>
+<tr>
+<td>c. <strong>Egress allowlist</strong></td>
+<td>outbound network via an allowlist proxy; emits <code>NETWORK_POLICY_DENIED</code>/<code>_ALLOWED</code> (open-decision item 8 / Phase 5)</td>
+<td>✅ required</td>
+</tr>
+<tr>
+<td>d. <strong>OS isolation</strong></td>
+<td>tool execution in a separate process (seccomp/namespaces) or <strong>k8s pod</strong></td>
+<td>deferred to untrusted/write agents</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Note (resolved 2026-06-16):</strong> the research grant carries <strong>no shell tool</strong>.
+Network access is via the dedicated <code>fetch_url</code> / <code>web_search</code> tools, which
+are governed by the tier-c egress allowlist; an arbitrary shell (<code>curl</code>,
+<code>pip</code>, …) cannot be egress-confined without tier-d (deferred), so
+<code>/v1/agent/task</code> rejects a shell grant up front. See open-decision 8's
+"No shell in /task" landed note. The earlier "read-only <code>curl</code>" phrasing is
+superseded — <code>curl</code> is shell and is out of scope for the MVP grant.</p>
+<p><strong>v1.19.0 preview posture — threat model (A), default-off, unsealed
+(2026-06-20).</strong> The tool-capable <code>/v1/agent/task</code> tier ships as a PREVIEW
+under an explicit precondition: <strong>(A) trusted operators only</strong> — the task text
+and the capability grant are authored by the operator running ppxai (or by a
+consumer like ppxai-sre rendering its own <code>AGENT.md</code>). Untrusted <em>content</em> may
+be fetched, but untrusted <em>input</em> never reaches the task/grant. Consequence:
+the sandbox's job in this release is to <strong>bound the blast radius of prompt
+injection</strong> within an operator-launched run (tiers a–c above), <strong>not</strong> to
+contain a hostile operator — which is why the <strong>in-process</strong> tool-execution
+boundary (tiers a–c) is adequate for the preview and <strong>tier-d OS isolation +
+DNS-rebinding/TOCTOU egress hardening remain deferred</strong>. To make (A)
+<em>code-enforced</em> rather than an assumption about auth config, <code>/v1/agent/task</code>
+ships <strong>default-off</strong> behind <code>tools.agent.task_tier_enabled</code> (the tool-free
+<code>/v1/agent/run</code> tier is always on). The whole agents API is <strong>in development
+and unsealed</strong> — see <a href="../../api-gateway/">docs/api-gateway.md</a> — and only
+becomes a stability-committed consumer contract once designed, tested,
+validated, and explicitly sealed. Exposing <code>/task</code> to untrusted input, or
+sealing the API, requires tier-d first.</p>
+</blockquote>
+<h3 id="4-tool-execution-boundary-subprocesspod-not-the-agent-runtime">4. Tool-execution boundary — subprocess/pod, not the agent runtime<a class="headerlink" href="#4-tool-execution-boundary-subprocesspod-not-the-agent-runtime" title="Permanent link">&para;</a></h3>
+<p>The agent loop stays an in-process <code>asyncio.Task</code> (resolves <strong>Question C
+→ same-process asyncio.Task</strong>; I/O-bound work needs no GIL escape). What
+gets sandboxed is the <strong>tool call</strong>, not the loop:</p>
+<blockquote>
+<p><strong>Non-negotiable invariant:</strong> <em>every</em> tool in a run's grant executes
+through the sandbox-executing adapter; <strong>no allowed tool may keep an
+in-process fast-path.</strong> This is the load-bearing implementation risk —
+<code>read_file</code>, <code>grep</code>/<code>find</code>, and <code>curl</code>/web all run <strong>in-process today</strong>,
+so the MVP must route them through the adapter or the sandbox is
+theater. The capability grant (§3) is enforced <em>inside</em> that adapter, so
+a bypass is simultaneously a sandbox escape and a grant escape.</p>
+<p><strong>Acceptance criterion AC-1 (named ship-gate):</strong> an automated test
+asserts that for every tool in a run's grant, resolution goes through
+the sandbox-executing adapter and <strong>no granted tool resolves to a
+direct in-process call</strong>. The MVP does not ship while AC-1 fails — it
+is the test that proves the sandbox is real rather than theater. Pair
+with <strong>AC-2:</strong> egress for a granted network tool is denied-by-default
+and every allow/deny emits a typed <code>NETWORK_POLICY_*</code> event (§3 tier-c
+/ open-decision 8).</p>
+</blockquote>
+<ul>
+<li>MVP: tools run in a <strong>subprocess</strong> with a restricted environment — no
+  secrets in env, cwd-jailed, network via the tier-c allowlist proxy.</li>
+<li>Hardened/headless: reuse the existing multi-tenant <strong>k8s session-manager
+  pod</strong> (<code>deploy/images/session-manager/</code>) — don't invent new isolation.</li>
+<li>The subprocess/pod is the <em>one</em> legitimate place a separate process
+  earns its keep; it is invisible to the registry and the wire surface,
+  which only ever see the agent run.</li>
+</ul>
+<blockquote>
+<p><strong>Tier separation at the endpoint (implementation note, 2026-06-15).</strong>
+Tool-calling is a categorically different safety tier from the tool-free
+gateway. <code>/v1/oneshot</code> and <code>POST /v1/agent/run</code> are safe <em>because</em> they
+have no tools — no sandbox required. The tool-capable tier is therefore a
+<strong>separate endpoint, <code>POST /v1/agent/task</code></strong>, not a flag on the safe
+path: a <code>task</code> <em>requires</em> a capability grant and routes every tool call
+through the per-run allowlist (a <code>ScopedToolManager</code> that filters the
+offered set AND enforces at <code>execute_tool</code> — AC-1). Locking the tiers to
+distinct URLs prevents accidentally granting tools to the safe path.
+In-process allowlist lands first (Inc 4); subprocess/pod OS-isolation
+(tier-d) is a later additive upgrade behind the same endpoint.</p>
+</blockquote>
+<h3 id="5-results-reuse-the-adr-0006-artifact-contract-dont-invent-result-types">5. Results — reuse the ADR 0006 artifact contract (don't invent result types)<a class="headerlink" href="#5-results-reuse-the-adr-0006-artifact-contract-dont-invent-result-types" title="Permanent link">&para;</a></h3>
+<p>A run result = a <strong>primary body</strong> (markdown/html) + a list of
+<strong><code>MarshallableArtifact</code> refs</strong> (<code>TextAttachmentRef</code> / <code>ImageAttachmentRef</code>
+/ <code>OfficeAttachmentRef</code> / <code>PdfAttachmentRef</code> per
+<a href="../0006-content-block-schema-separation/">ADR 0006</a>). The main app
+resolves each ref through the <strong>same <code>/files/preview</code> + artifact-projector
+pipeline</strong> chat attachments use (the v1.18.8 files-parity contract), so
+csv/xlsx/pptx/png/code all render with zero new transport. A genuinely new
+output kind = one new <code>ArtifactRef</code> subclass, never a new result channel.
+Mirrors the message content-block model.</p>
+<blockquote>
+<p><strong>Artifact addressing — authority is the run, not the session
+(corrects a draft inconsistency).</strong> Run artifacts are addressed by
+<strong><code>(run_id, artifact_id)</code></strong> and <strong>owned by the <code>AgentRunRegistry</code></strong>,
+stored under the run workspace (<code>~/.ppxai/runs/&lt;run_id&gt;/agent-&lt;n&gt;/artifacts/</code>,
+the ADR 0005 Triplet path) and resolved
+<em>only</em> via <code>GET /v1/agent/runs/&lt;id&gt;/artifacts/&lt;artifact_id&gt;</code>. We <strong>reuse
+the <code>SessionFileStore</code> content-addressing <em>mechanism</em></strong> (blob hashing,
+dedup) but <strong>not its authority</strong> — the current-session file store must
+never be the source of truth for a run artifact. This is the direct
+lesson of the v1.18.8 stale-<code>file_id</code> bugs: a session-scoped store
+cannot own something whose lifetime is a <em>run</em> (which may outlive,
+precede, or belong to a different session than the one that reads it).
+A run <code>artifact_id</code> is meaningless outside its <code>run_id</code> namespace.</p>
+</blockquote>
+<h3 id="6-run-workspace-triplet-files-for-co-located-readers-registry-api-for-remote">6. Run workspace — Triplet files for co-located readers, registry API for remote<a class="headerlink" href="#6-run-workspace-triplet-files-for-co-located-readers-registry-api-for-remote" title="Permanent link">&para;</a></h3>
+<p><code>~/.ppxai/runs/&lt;run_id&gt;/agent-&lt;n&gt;/{meta.json, state.json, events.jsonl,
+transcript.md, artifacts/}</code> — the <strong>ADR 0005 Inspection Triplet path</strong>
+(canonical; <code>agent-&lt;n&gt;</code> scopes the per-agent slot, <code>&lt;n&gt;=0</code> for a top-level
+run, incrementing for sub-agents) — is <strong>both</strong> the storage layout <strong>and</strong>
+a first-class inspection contract for co-located / PVC-shared readers (per
+ADR 0005). The <strong>registry API</strong> (<code>GET /v1/agent/runs/&lt;id&gt;/...</code>) is the
+contract for readers that have <strong>no shared FS</strong> — a pod-sandboxed tool, a
+remote client. The API is a superset adapter over the same Triplet bytes
+(§"Guiding principle" above): it never exposes less than the files do, and
+it is the <em>only</em> path a no-shared-FS reader can use. So the main app reads
+the registry API (uniform across local and pod runs); local inspection
+tools may read the directory directly.</p>
+<h3 id="7-ownership-the-run-secret-reuse-c1-signed-bearer-dont-roll-crypto">7. Ownership &amp; the run secret — reuse C1 signed-bearer, don't roll crypto<a class="headerlink" href="#7-ownership-the-run-secret-reuse-c1-signed-bearer-dont-roll-crypto" title="Permanent link">&para;</a></h3>
+<p>At spawn the registry mints a <strong>256-bit random run token</strong> = the run's
+ephemeral capability credential, lifetime = run lifetime, <strong>auto-revoked
+at any terminal state</strong>. This is open-decision item 9 (<code>/v1/tokens</code>) in
+minimal form: one token per run.</p>
+<ul>
+<li><strong>Do not invent a bespoke SHA256 handshake.</strong> A SHA256 <em>hash</em> is not a
+  key, and rolling channel crypto is a footgun. Extend the existing
+  per-resource auth gate — the <strong>v1.18.7 C1 fix</strong> (signed token +
+  <code>/authz</code> gate, fail-closed on missing/short signing key, 403 on
+  ownership mismatch). A run is just another protected resource scoped by
+  <code>run_id</code>.</li>
+<li><strong>Mutual auth:</strong> the main app proves ownership (it minted the run); the
+  sub-agent proves authenticity (presents the run token). The token is
+  injected into the sub-agent process via <strong>stdin/env at creation, never
+  argv</strong> (argv leaks in <code>ps</code>).</li>
+<li>"Prove possession before revealing data" = an <strong>HMAC challenge–response</strong>
+  over the run token, so the secret itself is never shipped on the wire
+  after the initial handout. "One-time use" applies to the <em>initial
+  handout</em>, not the monitor stream (which tails repeatedly within the run).</li>
+<li>Same-process MVP collapses this to an ownership check; the full
+  handshake matters only once the sub-agent crosses the process/pod
+  boundary. The token model is additive now; the handshake lands with
+  tier-d isolation.</li>
+<li><strong><code>run_token</code> classification — it is a bearer capability, and it stays
+  out of the MVP response.</strong> Decide what it is before returning it: in the
+  MVP the run_token is the <strong>sub-agent's</strong> credential to prove
+  authenticity to the registry, handed to the sub-agent process directly
+  (stdin/env). The <strong>monitoring client never needs it</strong> — web/VSCode
+  authenticate with their existing session/bearer, and the registry
+  checks <strong>ownership</strong> (<code>session owns run_id</code>). So <code>POST /v1/agent/run</code>
+  returns <strong><code>{run_id, status}</code> only</strong>; the token is internal. It surfaces
+  on the wire <em>only</em> once a client orchestrates separate-process
+  sub-agents, and even then the server should hand it to the sub-agent
+  rather than echo it to the UI. <strong>Never log or persist it raw</strong> (treat
+  like the C1 signing key); redact in any event/audit payload.</li>
+<li><strong>Monitor-channel authz:</strong> the <code>/events</code>, <code>/result</code>, and <code>/artifacts</code>
+  endpoints for a <code>run_id</code> are sensitive (transcript, tool output). Only
+  the owning session/token may read them — the per-run version of the C1
+  cross-user fix. Don't let any bearer holder read any run.</li>
+</ul>
+<h3 id="8-lifecycle-ttl-gated-cascade-two-phase-termination-one-waiting-state-machine">8. Lifecycle — TTL-gated cascade, two-phase termination, one <code>WAITING</code> state machine<a class="headerlink" href="#8-lifecycle-ttl-gated-cascade-two-phase-termination-one-waiting-state-machine" title="Permanent link">&para;</a></h3>
+<blockquote>
+<p><strong>Visual references:</strong> <a href="../../agent-task-lifecycle.html">agent-task-lifecycle.html</a>
+renders this state machine (built vs designed states, the <code>/respond</code> and
+<code>/ack</code> mechanisms); <a href="../../agent-task-command-design.html">agent-task-command-design.html</a>
+proposes the <code>/task</code> command family that drives these transitions.</p>
+</blockquote>
+<p><strong>Cascade cleanup is TTL-gated, never instant-on-disconnect</strong> —
+instant-kill-on-disconnect would contradict the entire "semi-autonomous,
+UI non-blocking" premise (it would make a foreground agent). Distinguish
+disconnect from death:</p>
+<ul>
+<li><strong>Clean close</strong> (UI exits gracefully) → explicit <code>cancel</code> → cascade
+  teardown of children + tool sandboxes now.</li>
+<li><strong>Crash / vanish</strong> → <strong>heartbeat reaper with a grace TTL</strong>, reusing the
+  v1.18.0 heartbeat primitives + the session-manager TTL teardown (k8s
+  owner-reference GC for the pod case). Within the grace window the run
+  <strong>keeps going</strong> (autonomous, within budget). This resolves
+  open-decision item 4 with a TTL gate.</li>
+</ul>
+<p><strong>Two-phase termination — separate compute teardown from artifact
+retention:</strong></p>
+<ul>
+<li>At self-declared done, the agent writes results, emits
+  <code>AGENT_RESULT_READY</code> with artifact refs, and <strong>the agent process dies</strong>
+  (stops consuming tokens/CPU; tool sandbox torn down). The run enters
+  <code>COMPLETED_PENDING_ACK</code> — <strong>record + artifacts persist</strong>.</li>
+<li>The main app fetches/validates results, then <code>POST …/ack</code> → run →
+  <code>FINALIZED</code> → GC-eligible. This gives <strong>at-least-once result delivery</strong>:
+  if the UI was disconnected when the agent finished, results are not
+  GC'd before collection. A retention TTL is the backstop (acked OR
+  expired → reaped).</li>
+<li>The agent <strong>does not block</strong> waiting for ack — fire results, die, the
+  <em>registry</em> holds the pending state. Blocking a live process on
+  confirmation re-couples what we decoupled.</li>
+</ul>
+<p><strong><code>WAITING</code> is for mid-run gates only — terminal-ack is NOT a <code>WAITING</code>
+variant.</strong> A mid-run decision ("found 3 approaches, which to deep-dive?")
+and a consent gate share one mechanism: the run enters <code>WAITING</code>, emits a
+request tagged with <code>run_id</code>, parks with a resume token + TTL, and resumes
+via <code>POST …/respond</code>. <strong>End-of-run acknowledgement is a distinct,
+canonical model</strong> — <code>COMPLETED_PENDING_ACK → FINALIZED</code> via <code>POST …/ack</code>
+(two-phase termination below). These are deliberately separate: <code>WAITING</code>
+is a <em>live process parked mid-run</em> awaiting input to continue; ack is a
+<em>dead process</em> whose registry record persists until the result is
+collected. Conflating them (an earlier draft modeled terminal-ack as
+<code>WAITING{terminal_ack}</code>) would couple result-retention to the live-process
+resume path, which two-phase termination exists to avoid. One model each.</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>SPAWNING → RUNNING ⇄ WAITING{consent | input}              (mid-run, resumed via /respond)
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>RUNNING  → COMPLETED_PENDING_ACK → FINALIZED               (end-of-run, /ack | retention-TTL)
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>RUNNING  → FAILED (provider) | ZOMBIE (tool-loop) | BUDGET_EXCEEDED | CANCELLED (explicit | cascade-TTL)
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>RUNNING  → INTERRUPTED (engine restart / cancel / budget cap killed the live asyncio.Task; records + checkpoint persist; resume is CONDITIONAL — see open-decision #5: only if the checkpoint is conclusive and artifacts don&#39;t already capture the work, else stays INTERRUPTED for an explicit decision)
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>any terminal → tool sandbox torn down; artifacts retained until FINALIZED/GC
+</span></code></pre></div>
+<p><strong>Consent for unattended runs (resolves the "semi-autonomous" tension):</strong></p>
+<ul>
+<li><strong>Pre-authorized scope (default).</strong> At spawn the user grants the
+  capability envelope (§3 tiers); the run executes within it with <strong>no
+  per-tool prompts</strong>, and anything outside the envelope is a <strong>hard deny,
+  not a prompt</strong>. The grant <em>is</em> the consent — this is what makes the run
+  non-blocking.</li>
+<li><strong>Deferred consent (escape hatch).</strong> An out-of-envelope request →
+  <code>WAITING{consent}</code> → surfaced to the parent UI as a pending badge →
+  resumed on async approval. Keeps human-in-loop for sensitive ops
+  without making the whole run interactive.</li>
+<li>Headless policy (<code>CONSENT_DECISION</code> stream, pre-tool hook) stays
+  v1.20.x (open-decision items 11/12).</li>
+</ul>
+<h3 id="9-config-inheritance-inherit-infra-inject-intent-default-deny-capability">9. Config inheritance — inherit infra, inject intent, default-deny capability<a class="headerlink" href="#9-config-inheritance-inherit-infra-inject-intent-default-deny-capability" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Inherit (parent defaults)</th>
+<th>Inject (explicit per spawn)</th>
+<th>Never inherit</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>provider/model + API keys, timeouts, model-profile registry, shell-wrapper config</td>
+<td>task definition, persona/spec, <strong>tool allowlist</strong>, read-path scope, budgets, system prompt, egress allowlist</td>
+<td>parent's conversation history (fresh context), parent's <strong>interactive consent grants</strong> (no transitive privilege), debug/UI-only state</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>Agent-spec is a first-class artifact</strong> (new): persona + default tool
+  grant + budget + system-prompt fragment, in one schema reused by
+  interactive spawn <em>and</em> ppxai-sre.</li>
+<li><strong>API keys:</strong> same-process child just has them (MVP-fine). When tier-d
+  isolation lands, the spec carries a <strong>token <em>reference</em>, not a raw
+  key</strong>, so the swap to per-agent identity (item 9) is non-breaking.</li>
+</ul>
+<p><strong>Filesystem sealing — <code>tools.agent.sandbox</code> (proposed).</strong> The <em>read-path
+scope</em> and <em>workdir</em> injected fields above are governed by a new
+<code>tools.agent.sandbox</code> config block that <strong>seals</strong> where a task may read and
+write. The scoping fields (<code>workdir</code>, <code>read_paths</code>, <code>skills_dir</code>, <code>specs_dir</code>)
+are tier-agnostic; an <code>enforcement</code> selector picks how they are realized —
+<strong>one schema, two enforcers</strong>:</p>
+<ul>
+<li><code>enforcement: "in_process"</code> (preview) — a Python path-jail in
+  <code>ScopedToolManager</code>: every <code>read_file</code>/<code>grep</code>/<code>write_file</code> path is resolved
+  and checked against <code>read_paths</code> / the per-run <code>workdir</code> before the real
+  tool runs. <code>--skill</code>/<code>--spec</code> resolve by <strong>name</strong> under the configured roots
+  (not an arbitrary path). Best-effort under threat model A — operator hygiene,
+  not a boundary against hostile task text. <strong>Note:</strong> <code>ScopedToolManager</code>
+  today scopes tool <em>names</em> only; read-path enforcement is the new primitive
+  this block requires.</li>
+<li><code>enforcement: "container"</code> (tier-d) — the <em>same</em> fields become real OS
+  boundaries: read-only root fs; <code>workdir</code> = the pod's writable <code>emptyDir</code>
+  mount; <strong>skills &amp; specs = ConfigMaps injected into the pod and mounted
+  read-only</strong> (operator seals what a task sees without rebuilding the image);
+  egress = a k8s NetworkPolicy realizing the same AC-2 allowlist. This is the
+  hard boundary that lets a task take untrusted input.</li>
+</ul>
+<p>Ship the config keys <strong>with</strong> the enforcer, never before — parsed-but-unenforced
+scoping is a false sense of security. Full field schema + the <code>/task</code> command
+surface: <a href="../../agent-task-command-design.html">agent-task-command-design.html</a> §5–§6.</p>
+<h3 id="10-appstate-one-running-agents-summary-field">10. AppState — one running-agents summary field<a class="headerlink" href="#10-appstate-one-running-agents-summary-field" title="Permanent link">&para;</a></h3>
+<p>Add a <code>background_agents</code> summary field to
+<code>engine/app_state_schema.json</code> (auto-mirrors to web + VSCode + the
+schema via the existing 4-mirror DTO; bump the sentinel counts in
+<code>tests/test_app_state.py</code>). The UI shows a background-agents badge that
+survives reconnects through the existing <code>state_sync</code> mechanism.</p>
+<h3 id="11-additive-wire-event-surface-v1-contract-stays-byte-identical">11. Additive wire &amp; event surface (v1 contract stays byte-identical)<a class="headerlink" href="#11-additive-wire-event-surface-v1-contract-stays-byte-identical" title="Permanent link">&para;</a></h3>
+<p>All additions are <strong>purely additive</strong> — <code>POST /v1/oneshot</code> and the
+existing <code>AGENT_RUN_*</code> payloads are untouched (ppxai-sre constraint).</p>
+<blockquote>
+<p><strong>Note (shipped v1.19.0):</strong> this section is the original proposal and
+predates the implementation — the shipped request/response shapes differ
+in detail (e.g. <code>respond</code> takes <code>RespondRequest{token, approved?, text?}</code>,
+not <code>{resume_token, response}</code> as sketched below). <code>ppxai/server/routes/agent_v1.py</code>
+is authoritative for the actual wire contract.</p>
+</blockquote>
+<div class="language-http highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="err">POST /v1/agent/run                  → {run_id, status}   (run_token is internal — §7, never in this response for the MVP)</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="err">     body: {task, persona?, provider?, model?, tools[], read_scope?,</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="err">            budget{tokens,time_s,iterations}, network{allow_outbound[]},</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="err">            idempotency_key?}</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="err">GET  /v1/agent/runs                  → {runs:[...]}</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="err">GET  /v1/agent/runs/&lt;id&gt;             → {meta, state}   (status snapshot)</span>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="err">GET  /v1/agent/runs/&lt;id&gt;/events      → SSE (live + ?since=N replay);</span>
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="err">                                       filters ?min_level= &amp; ?category= (see §11a)</span>
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="err">GET  /v1/agent/runs/&lt;id&gt;/result      → {body, artifact_refs:[...]}</span>
+</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="err">GET  /v1/agent/runs/&lt;id&gt;/artifacts/&lt;artifact_id&gt;  → resolves via /files/preview</span>
+</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="err">POST /v1/agent/runs/&lt;id&gt;/respond     → {resume_token, response}   (answer a WAITING)</span>
+</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="err">POST /v1/agent/runs/&lt;id&gt;/ack         → {ok, status:&quot;finalized&quot;}   (two-phase termination)</span>
+</span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="err">POST /v1/agent/runs/&lt;id&gt;/cancel      → {ok, status:&quot;cancelling&quot;}</span>
+</span></code></pre></div>
+<ul>
+<li><strong>Spawn idempotency:</strong> client-supplied <code>idempotency_key</code> → registry
+  dedup, so a retried POST never double-spawns.</li>
+<li><strong>Fan-out backpressure:</strong> <code>max_concurrent_subagents</code> caps spawn (cf.
+  the Workflow engine's <code>min(16, cores-2)</code> cap) — unbounded spawn =
+  resource exhaustion + provider rate-limit storms.</li>
+<li><strong>Per-run cost attribution:</strong> surface the existing per-<code>EngineClient</code>
+  usage counter keyed by <code>run_id</code>; budget enforcement reads the same
+  counter.</li>
+</ul>
+<p><strong>New <code>EventType</code> members (additive):</strong></p>
+<ul>
+<li><code>AGENT_RESULT_READY</code> — <code>{run_id, status, body_ref, artifact_refs[]}</code> —
+  emitted on <code>COMPLETED_PENDING_ACK</code>.</li>
+<li><code>AGENT_WAITING</code> — <code>{run_id, wait_kind: "consent"|"input", prompt,
+  resume_token, ttl_s}</code>. Mid-run gates only — end-of-run uses
+  <code>AGENT_RESULT_READY</code> + <code>/ack</code>, never a <code>WAITING</code> variant (§8).</li>
+<li><code>NETWORK_POLICY_DENIED</code> / <code>NETWORK_POLICY_ALLOWED</code> — <strong>MVP ship-gate,
+  not Phase 5.</strong> The read-only research MVP's egress allowlist (§3 tier-c,
+  build-order step 2) is the central prompt-injection-exfiltration
+  defense, so these typed events ship with the first slice. (Item 8 /
+  Phase 5 is the <em>ppxai-sre-consumer</em> commitment for the same events; the
+  MVP requires them earlier, not later.) <code>AGENT_SERVICE_DOWN</code> in §13.)</li>
+</ul>
+<p><strong>New <code>SideEffectKind</code>:</strong> <code>AGENT_RUN_STARTED</code> (already proposed above).</p>
+<h3 id="11a-event-record-schema-eventsjsonl-level-category-resolved-2026-06-15">11a. Event-record schema (<code>events.jsonl</code>) — level + category (resolved 2026-06-15)<a class="headerlink" href="#11a-event-record-schema-eventsjsonl-level-category-resolved-2026-06-15" title="Permanent link">&para;</a></h3>
+<p>Each <code>events.jsonl</code> line is one JSON object. <strong>Always persist every
+event; filter on read</strong> — the file is the durable inspection/audit record
+(ADR 0005), so verbosity is a render/query concern, never a capture one.
+Two orthogonal filter axes, both in the schema from the first persisted
+event (additive-after-persist is painful, so they ship in Inc 3):</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>{
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>  &quot;seq&quot;:      42,              // monotonic per-run sequence (the ?since= cursor)
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>  &quot;ts&quot;:       1781551062.81,   // epoch seconds
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>  &quot;type&quot;:     &quot;tool_call&quot;,     // existing EventType value
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>  &quot;level&quot;:    &quot;debug&quot;,         // debug | info | warning | error  (severity axis)
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>  &quot;category&quot;: &quot;tool&quot;,          // lifecycle | tool | network | consent | result  (kind axis)
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>  &quot;data&quot;:     { ... }          // type-specific payload
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>}
+</span></code></pre></div>
+<ul>
+<li><strong>Filtering:</strong> <code>GET …/events?min_level=info</code> drops <code>debug</code>;
+  <code>?category=lifecycle,result</code> keeps only those kinds. Both axes
+  independent → "show errors but hide tool noise" is expressible. Applied
+  server-side on replay AND honored on the live SSE tail.</li>
+<li><strong>UI:</strong> a verbosity slider (min_level) + per-category toggles. Clients
+  that want everything pass no filter; the file always has it all.</li>
+<li><strong>Defaults:</strong> lifecycle/result events are <code>info</code>; per-tool-iteration
+  detail is <code>debug</code>; policy denials are <code>warning</code>; failures are <code>error</code>.
+  <code>category</code> maps to the subsystem (lifecycle = run start/complete/status,
+  tool = tool_call/result, network = NETWORK_POLICY_*, consent = WAITING/
+  consent, result = AGENT_RESULT_READY). Mapping lives in one place so a
+  new EventType gets classified once, not in every client (fixes the
+  "derive from type name" drift the pre-platform event system had).</li>
+</ul>
+<h3 id="mvp-build-order-the-first-slice">MVP build order (the first slice)<a class="headerlink" href="#mvp-build-order-the-first-slice" title="Permanent link">&para;</a></h3>
+<ol>
+<li><code>engine/agent_runs.py</code> — <code>AgentRunRegistry</code> + the state machine (§8),
+   filesystem backend, in-memory live index. <strong>Keystone.</strong> Put
+   read/write behind a narrow interface (not raw FS calls inline) so the
+   pluggable-persistence-channel extraction (debt Item 35) is cheap later
+   — shape the seam now, defer the abstraction.</li>
+<li>Capability grant + tool-allowlist enforcement at the dispatcher (§3a/b);
+   egress allowlist proxy (§3c) with <code>NETWORK_POLICY_*</code> events.</li>
+<li>Background driver: <code>POST /v1/agent/run</code> mints run + (internal) token,
+   starts the <code>asyncio.Task</code>, returns <code>{run_id, status}</code> immediately
+   (token stays server-side — §7); <code>run_id</code>/<code>parent_run_id</code> added to the
+   existing <code>AGENT_RUN_START</code> payload.</li>
+<li>Monitor: <code>GET …/events</code> (live + replay), <code>GET …/result</code>,
+   <code>GET …/artifacts/&lt;id&gt;</code> (via files-parity); per-run authz (§7).</li>
+<li>Two-phase termination + <code>WAITING</code>/<code>respond</code>/<code>ack</code>; TTL reaper + cascade.</li>
+<li><code>spawn_subagent</code> tool (Stage 3) gated to <code>max_concurrent_subagents</code>;
+   result returns as artifact refs.</li>
+<li>AppState <code>background_agents</code> field + 4-mirror sync (§10).</li>
+</ol>
+<p>Subprocess tool-execution (§4) is required for step 2's sandbox even at
+N=1 — that is the deliberate "build the sandbox infra now" choice. Pod
+isolation (tier d) and restart-durable persistence stay additive upgrades.</p>
+<h2 id="open-decisions">Open decisions<a class="headerlink" href="#open-decisions" title="Permanent link">&para;</a></h2>
+<p>These are gaps this ADR cannot close without input or measurement.
+Items 1-5 are ppxai-internal; items 6-13 are consumer-driven, surfaced
+2026-05-10 in <a href="../../../ppxai-sre/docs/PPXAI-INTEGRATION-V1.19.md"><code>../../../ppxai-sre/docs/PPXAI-INTEGRATION-V1.19.md</code></a>
+(caveats C1-C5 and asks A1-A3) and need answers before Stage 2 implementation
+lands. Items 6-12 (C1-C4, A1-A3) were folded in commit <code>42ed8f00</code> (2026-05-10).
+Item 13 (C5 — agent-served services routing) was filed by the consumer in
+peer commits <code>a604b0c</code> + <code>b3ba0f6</code> (2026-05-10) <strong>after</strong> <code>42ed8f00</code>, with the
+C5.1-C5.5 open-shape questions surfaced via the outlook-monitor Phase-4
+fit-test; folded here as a follow-on. Each carries a recommended position;
+items marked LOAD-BEARING block ppxai-sre's planned features in their current
+shape.</p>
+<blockquote>
+<p><strong>Resolved by the MVP design (2026-06-15)</strong> — item numbers below are
+unchanged; resolutions are annotated inline. Additionally <strong>Question C</strong>
+(not previously a numbered item) is resolved: same-process
+<code>asyncio.Task</code> for the agent loop (I/O-bound work needs no GIL escape),
+with isolation moved to the <strong>tool-execution</strong> boundary
+(subprocess/pod), not the loop — see Resolved MVP design §4.</p>
+</blockquote>
+<ol>
+<li><strong>Question A</strong> — outer-loop value.
+   <strong>RESOLVED (2026-06-15): A1 — eliminate the outer continuation loop.</strong>
+   A run is one <code>chat_with_tools</code> invocation; the model finishes in a
+   single inner tool-loop or it doesn't. We accept the small risk that
+   some older/weaker model occasionally stops mid-task, in exchange for
+   the simplicity of one loop instead of two (and deleting the ~150 LoC
+   VSCode replica + the <code>TASK_COMPLETE:</code> marker convention). The MVP
+   already runs this way (one invocation per run); A1 makes that the
+   answer for the <em>general</em> agent too, not just the read-only MVP. If a
+   regression surfaces on a specific model, revisit A2 (server-side
+   re-prompt) for that case — but do not build it speculatively.</li>
+<li><strong>Question B</strong> — filesystem vs SQLite for the registry. Recommend
+   filesystem; revisit if listing runs becomes slow. (MVP: filesystem.)</li>
+<li><strong>Question D</strong> — <code>EngineClient</code> lifecycle per sub-agent.
+   <strong>RESOLVED (2026-06-15): D1 — a new <code>EngineClient</code> per sub-agent run.</strong>
+   Isolation wins (independent history / provider / tool budget; clean
+   per-run attribution; a child crash can't corrupt the parent). We
+   commit to D1 now and <strong>optimize later if needed</strong> — construction cost
+   is not a gate. If profiling later shows <code>EngineClient()</code> construction
+   is a measurable bottleneck under fan-out, optimize then (lazy init,
+   pooling, or selective D2-style scoping for cheap children) — but ship
+   D1 first; correctness and isolation before micro-optimization.</li>
+<li><strong>Cancellation semantics for sub-agents — RESOLVED (2026-06-15):</strong>
+   cascading cancel, but <strong>TTL-gated, not instant-on-disconnect</strong> (else
+   it defeats semi-autonomy). Clean close → explicit cancel now; crash →
+   heartbeat reaper past a grace TTL. See Resolved MVP design §8.</li>
+<li>
+<p><strong>Budget enforcement</strong> — token cap and time cap need to interrupt
+   mid-tool-call cleanly. Today's <code>_active_subprocesses</code> cleanup
+   (commit <code>a746a7c6</code>) is the foundation; needs extending to a
+   per-run budget tracker.
+   <strong>RESOLVED (2026-06-15): clean interruption = checkpoint, then
+   <em>conditional</em> resume.</strong> A mid-tool-call interruption (budget cap hit,
+   cancel, or engine restart) must first write the agent's progress to the
+   run's <code>state.json</code> checkpoint (iteration, budget consumed, last tool,
+   any partial result, plus refs to artifacts produced so far). The
+   checkpoint is unconditional — never lose the record of mid-run work.
+   <strong>Resume is conditional, not automatic</strong> — on recovery the registry
+   evaluates whether resuming is worthwhile:</p>
+</li>
+<li>
+<p><strong>Checkpoint inconclusive</strong> (interrupted mid-tool-call with no
+     coherent resumable state, or a partial/corrupt <code>state.json</code>) →
+     <strong>do not auto-resume.</strong> Resuming from guesswork risks duplicated or
+     wrong work; leave the run <code>INTERRUPTED</code> and surface it for an
+     explicit operator/parent decision.</p>
+</li>
+<li><strong>Artifacts already represent sufficient work</strong> → if the run produced
+     artifacts that adequately capture the deliverable, <strong>prefer
+     finalizing with what exists</strong> over re-running. A sub-agent whose
+     output is already on disk does not need its compute resumed.</li>
+<li><strong>Conclusive checkpoint AND work not already captured</strong> → resume from
+     the checkpoint.</li>
+</ol>
+<p>This couples open-decision #5 (budget) with ROADMAP Phase 3 (run
+   persistence + recovery) and the <code>INTERRUPTED</code> state (§8): the budget
+   tracker fires the interrupt, the checkpoint captures progress, and the
+   <em>resume-decision</em> (additive upgrade per §8) gates whether to replay. A
+   resumability/conclusiveness flag in <code>state.json</code> (set when the agent
+   reaches a clean checkpoint boundary, cleared on entry to a tool call)
+   is the mechanism; artifact-sufficiency is judged against the run's
+   declared result contract. Semantics pinned: <strong>never lose mid-run work,
+   never blindly resume into garbage or redundant compute.</strong>
+6. <strong>C4 — Tools first-class on <code>POST /v1/agent/run</code></strong> [LOAD-BEARING].
+   Without a <code>tools</code> field on the run-spawn request, ppxai-sre's
+   manager-executor pattern would have to reimplement the runtime
+   itself. <strong>Recommended position:</strong> mandatory in v1.19.x Phase 1.
+   Same <code>tools</code> shape <code>/v1/oneshot</code> would accept once it grows tool
+   support, so the wire surfaces stay consistent. ROADMAP Phase 1
+   row to be amended.
+7. <strong>C3 — SSE on <code>GET /v1/agent/runs/&lt;id&gt;/events</code></strong>. Polling gates
+   the manager-executor pattern on round-trip latency
+   (<code>incident-responder</code> needs live triage commentary while the
+   executor runs <code>kubectl describe</code>, Prom queries, etc.). The ADR's
+   own "Wire shape for runs" section already proposes
+   <code>GET /agent/runs/&lt;id&gt;/events</code> as SSE; this elevates that proposal
+   from notional to committed. <strong>Recommended position:</strong> SSE channel
+   in v1.19.x Phase 1; polling <code>GET /v1/agent/runs/&lt;id&gt;</code> stays as
+   the status-snapshot path. ROADMAP Phase 1 row to be amended.
+8. <strong>C1 — Typed <code>EventType.NETWORK_POLICY_DENIED</code> /
+   <code>NETWORK_POLICY_ALLOWED</code></strong> [LOAD-BEARING — MVP ship-gate AND ppxai-sre audit].
+   <strong>RESOLVED (2026-06-15): these ship with the read-only research MVP,
+   not Phase 5.</strong> The egress allowlist is the MVP's central
+   prompt-injection-exfiltration defense (Resolved MVP design §3 tier-c,
+   build-order step 2), so the typed events that audit it are part of the
+   first ship gate — the registry/background-agent slice does not ship
+   without them. The events emit stable payloads (analogous to
+   <code>EventType.PROVIDER_THROTTLED</code>) so ppxai-sre's <code>AuditLogger</code> consumes
+   them as data, not by tapping internal code paths. Payload shape:
+   <code>{tool, target_host, target_path, reason, allowlist_rule_id, run_id}</code>.
+   The "Phase 5" framing was the ppxai-sre-consumer commitment; the MVP
+   pulls it forward. ROADMAP Phase 1 (MVP) and Phase 5 rows to be amended
+   so the requirement appears in the first slice.
+   <strong>LANDED (Inc 5):</strong> <code>engine/tools/network_policy.py</code> (<code>NetworkPolicy</code>,
+   fail-closed, host exact/<code>*.suffix</code>-glob + path-prefix, https-only);
+   enforced at the <code>ScopedToolManager.execute_tool</code> egress chokepoint for
+   network-capable tools; <code>network.allow_outbound</code> in the <code>/v1/agent/task</code>
+   request, persisted to <code>RunMeta.network</code>. Events fire on the <code>network</code>
+   category with the payload above (<code>allowlist_rule_id</code> = matched rule index
+   or <code>null</code>). Tests: <code>tests/test_network_policy.py</code> +
+   <code>test_task_enforces_egress_end_to_end</code>.
+   <strong>Superset rule (security review fix, 2026-06-16):</strong> a tool's real egress
+   host can be chosen at call time and is not predictable pre-call
+   (<code>web_search</code> → Perplexity/Gemini/DDG fallback; <code>get_weather</code> → https/http
+   fallback). <code>authorize(name, kwargs)</code> therefore enumerates the tool's FULL
+   set of possible targets (<code>tool_targets</code>) and allows only if <strong>every</strong> one
+   passes <code>check()</code>. A run allowlisting just DuckDuckGo cannot run
+   <code>web_search</code> (it could reach <code>api.perplexity.ai</code>); <code>get_weather</code> is
+   un-allowlistable under the MVP (http fallback). This was load-bearing:
+   without it, the audit event named the wrong host and a confused-deputy
+   exfil path stayed open.
+   <strong>No shell in /task (security review fix, 2026-06-16):</strong> <code>execute_shell_
+   command</code> runs arbitrary commands whose egress the allowlist cannot inspect
+   (a <code>curl</code>/<code>pip</code> would bypass the chokepoint with no <code>network_policy_denied</code>
+   event), so it cannot satisfy AC-2 — only tier-d OS isolation can, which is
+   deferred. The <code>/v1/agent/task</code> route rejects a grant containing a shell
+   tool with a 400, and <code>ScopedToolManager</code> refuses to execute one whenever an
+   egress policy is active (defense-in-depth). This matches §3a's corrected
+   research grant — <strong>no shell tool at all</strong> (not merely "no shell-write"):
+   read-only shell / <code>curl</code> is also excluded, because any shell escapes the
+   egress allowlist. Tests: <code>test_task_rejects_shell_grant</code> +
+   <code>test_shell_denied_under_egress_policy_backstop</code>.
+9. <strong>C2 — <code>/v1/tokens</code> pluggable resolver from day one</strong>
+   [LOAD-BEARING for v1.20.x migration cost]. ROADMAP today says
+   "<code>~/.ppxai/tokens.json</code> (single-machine) OR k8s secret (cluster)" —
+   left unspecified. SRE agents deploy to k8s; the k8s-secret path
+   is load-bearing. If we ship v1.19.x with a single hardcoded
+   storage shape, the v1.20.x credential broker becomes a wire
+   re-shape. <strong>Recommended position:</strong> define the resolver protocol
+   in v1.19.x Phase 7 even though the credential broker proper is
+   v1.20.x. Same code path supports <code>~/.ppxai/.env</code> / k8s secret /
+   Vault. ROADMAP Phase 7 row to be amended.</p>
+<p><strong>C2 amendment (v1.19.0, resolved) — the <code>SecretProvider</code> seam.</strong>
+   The "pluggable resolver" above is concretized as a single Protocol
+   that both <code>/v1/tokens</code> and the per-run authz gate consume, blind to
+   the backend. Decoupling the <em>validator</em> from the <em>source</em> is the
+   same decoupling C5.2 already made (<code>auth: "bearer"</code> does not mandate
+   the <code>/v1/tokens</code> source) — this generalizes it.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># ppxai/server/secrets/base.py</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">SecretRef</span><span class="p">:</span>        <span class="c1"># opaque pointer to material, NOT the material</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>    <span class="o">...</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="k">class</span><span class="w"> </span><span class="nc">TokenRecord</span><span class="p">:</span>      <span class="c1"># metadata only — safe to list/log</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>    <span class="n">token_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">;</span> <span class="n">secret_ref</span><span class="p">:</span> <span class="n">SecretRef</span><span class="p">;</span> <span class="n">owner</span><span class="p">:</span> <span class="nb">str</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>    <span class="n">roles</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">];</span> <span class="n">expires_at</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span><span class="p">;</span> <span class="n">revoked</span><span class="p">:</span> <span class="nb">bool</span>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="k">class</span><span class="w"> </span><span class="nc">SecretProvider</span><span class="p">(</span><span class="n">Protocol</span><span class="p">):</span>
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
+</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">resolve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">presented</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TokenRecord</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>   <span class="c1"># validate inbound bearer</span>
+</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">list</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">TokenRecord</span><span class="p">]:</span> <span class="o">...</span>                       <span class="c1"># metadata only</span>
+</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">mint</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">owner</span><span class="p">,</span> <span class="n">roles</span><span class="p">,</span> <span class="n">ttl_s</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">TokenRecord</span><span class="p">]:</span> <span class="o">...</span>  <span class="c1"># material once</span>
+</span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">revoke</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">token_id</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span> <span class="o">...</span>
+</span><span id="__span-6-13"><a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">capabilities</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span> <span class="o">...</span>   <span class="c1"># {&quot;mint&quot;,&quot;revoke&quot;,&quot;rotate&quot;,&quot;list&quot;}</span>
+</span></code></pre></div>
+<p>Load-bearing properties:
+   - <strong><code>resolve()</code> is the validator.</strong> Today's <code>server/auth.py</code>
+     single-shared-token check becomes <code>EnvSecretProvider.resolve()</code>
+     with one record — zero behavior change when no <code>secrets</code> config
+     is present (full backward compat; unauth-if-unset preserved).
+   - <strong><code>capabilities()</code> lets read-only backends coexist with mutable
+     ones.</strong> <code>env</code> / <code>k8s</code> Secret are read-only (operator rotates
+     out-of-band) → <code>/v1/tokens</code> <code>mint</code>/<code>revoke</code> return <strong>405</strong> for
+     them; <code>file</code> is fully mutable. This is what lets the <em>same</em>
+     <code>/v1/tokens</code> wire serve file-today and k8s-later with no re-shape
+     — the migration-cost property C2 was filed to protect.
+   - <strong><code>SecretRef</code>, never raw material, crosses the seam</strong> except at
+     <code>mint()</code> (returns material once, GitHub-PAT style) and <code>resolve()</code>.
+     This is the lifecycle hook — rotation/expiry/audit live behind the
+     ref. Consistent with §7's "token <em>reference</em>, not raw token" at
+     the process boundary.
+   - <strong><code>ProviderChain</code> composite</strong> tries providers in order, so a
+     deployment runs file-tokens <em>plus</em> legacy <code>PPXAI_API_TOKEN</code>
+     simultaneously → non-breaking migration. C5.2's
+     <code>header:X-Custom-Token</code> is just another provider in the chain.</p>
+<p>First providers (single-machine first): <code>EnvSecretProvider</code>
+   (<code>resolve</code> only, wraps today's auth), <code>FileSecretProvider</code>
+   (<code>~/.ppxai/tokens.json</code>, stores <strong>hashes</strong>, perms <code>0600</code> /
+   owner-only ACL on Windows, all capabilities). <code>K8sSecretProvider</code>
+   /<code>VaultSecretProvider</code> are interface stubs deferred to v1.20.x.</p>
+<p>Config (omit <code>secrets</code> → today's behavior):
+   <div class="language-text highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>&quot;server&quot;: { &quot;secrets&quot;: { &quot;providers&quot;: [
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>  { &quot;type&quot;: &quot;file&quot;, &quot;path&quot;: &quot;~/.ppxai/tokens.json&quot; },
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>  { &quot;type&quot;: &quot;env&quot;,  &quot;var&quot;: &quot;PPXAI_API_TOKEN&quot; }
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>] } }
+</span></code></pre></div></p>
+<p><strong>Increment split (build-contract gated):</strong>
+   - <strong>Inc 8a</strong> — <code>SecretProvider</code> seam + <code>Env</code>/<code>File</code> providers +
+     <code>/v1/tokens</code> CRUD. No authz change. Trial: mint→list→revoke via
+     file provider; legacy env token still authenticates.
+   - <strong>Inc 8b</strong> — per-run authz. <code>start_run</code> stamps
+     <code>RunMeta.owner = resolve(bearer).owner</code>; <code>/events|/result|</code>
+     <code>/artifacts|/cancel</code> return <strong>403</strong> on ownership mismatch. The
+     authz code calls <code>resolve()</code> and is blind to the backend. Trial:
+     token A's run, token B → 403.
+10. <strong>A3 — <code>run_id</code> and <code>parent_run_id</code> on <code>EventType.AGENT_RUN_START</code></strong>.
+    Phase 1 introduces a <code>run_id</code> per run; ppxai-sre's audit JSONL
+    keys by <code>run_id</code>. The native v1.18.0 <code>AGENT_RUN_START</code> payload
+    predates the run namespace and doesn't carry one. <strong>Recommended
+    position:</strong> additive fields on the existing event type, no new
+    event needed. The namespace is the only new state. Fold into
+    Phase 1 implementation note (no separate ROADMAP row).
+11. <strong>A1 — <code>EventType.CONSENT_DECISION</code> event stream</strong>.
+    Symmetric with C1 for non-network consent decisions. ppxai-sre's
+    <code>AuditLogger</code> records every consent decision (allow/deny/
+    approval_required) keyed by tool + args hash. Today the consent
+    contract is per-call dialog; without an event stream they tap
+    internals. Payload:
+    <code>{tool, args_hash, decision, reason, source: user|policy, run_id}</code>.
+    <strong>Recommended position:</strong> v1.19.x should-have. Cheap to add
+    once the consent flow is event-emitting; cheap to defer to
+    v1.20.x if Phase 5 (C1) is enough for the threat model
+    ppxai-sre is shipping in v1.19.x.
+12. <strong>A2 — Pre-tool-call hook for tier classification</strong>.
+    ppxai-sre's 3-tier classification (Autonomous / Notify-and-Act /
+    Require-Approval) must fire <strong>before</strong> ppxai's consent dialog —
+    otherwise the user sees a dialog for tier-1 read-only verbs that
+    should auto-approve. Two options proposed by the consumer: (a)
+    <code>ToolEngineProtocol.pre_execute(tool_name, args) → AllowReason
+    | DenyReason | DefaultConsent</code>, or (b) consent contract documents
+    a "headless mode" where decisions come from a registered policy
+    callable. <strong>Recommended position:</strong> option (b), defer to
+    v1.20.x. Keeps the consent contract as the single boundary and
+    avoids adding a parallel hook surface. Doesn't block v1.19.x;
+    ppxai-sre's policy engine works without it (just renders dialogs
+    that the autonomous agent auto-approves via test harness).
+13. <strong>C5 — Agent-served services routing</strong> [LOAD-BEARING for ppxai-sre
+    long-lived service agents]. Several planned ppxai-sre agents are
+    not "compute and exit" — they run as long-lived services that
+    ALSO bind their own HTTP endpoints for human and machine
+    consumers (<code>incident-responder</code> on-call dashboard,
+    <code>cost-optimizer</code> FinOps approval queue, <code>cert-monitor</code> health
+    endpoint, <code>log-analyst</code> <code>POST /query</code> interface). Each agent
+    must declare "I bind a UI on port X and a REST API on port Y"
+    as part of its run spec; ppxai's runtime (or k8s session-manager
+    in production) reverse-proxies external traffic to those
+    bindings.</p>
+<div class="language-text highlight"><pre><span></span><code>**Recommended position:** v1.19.x Phase 1 extends
+`POST /v1/agent/run`&#39;s request body with an optional `services`
+object mapping name → `{port, path, auth}`; the response carries
+a `services` map of name → externally-reachable URL of the form
+`…/v1/agent/runs/&lt;id&gt;/services/&lt;name&gt;/`. ROADMAP Phase 1 row
+amended. When `services` is omitted or empty, ppxai&#39;s runtime
+skips reverse-proxy registration (the CronJob case, where the
+agent doesn&#39;t stay up to receive inbound traffic). The bound
+service&#39;s logs / state are exposed via the **Inspection
+Triplet pattern** (per [ADR 0005](0005-inspection-triplet.md))
+at `runs/&lt;run_id&gt;/agent-&lt;n&gt;/services/&lt;name&gt;/{state.json, events.jsonl}`
+— the C5 ask doesn&#39;t need to invent an inspection surface.
+
+Five sub-question resolutions pinned by peer outlook-monitor
+Phase-4 fit-test (sharpened in peer commit `b3ba0f6`):
+
+- **C5.1 — Auth surface scope.** Narrow v1.19.x to
+  `bearer | none`. The proposed `session` auth (cookie domain,
+  CSRF, SameSite, Secure all unspecified) is deferred to v1.20.x
+  alongside the OIDC work that&#39;s already deferred. One protocol
+  fully specified beats three half-specified.
+- **C5.2 — Bearer auth source.** `auth: &quot;bearer&quot;` does NOT
+  mandate the `/v1/tokens` source. Per-service field
+  `token_source: &quot;v1-tokens&quot;` (default) or
+  `token_source: &quot;header:X-Custom-Token&quot;` for per-deployment
+  static-secret models. outlook-monitor uses the latter
+  (`OUTLOOK_ADMIN_TOKEN` env var rotated via secret update); the
+  Phase 7 `/v1/tokens` registry is the default but not the
+  only validator.
+- **C5.3 — Inbound network policy shape.** Symmetric primitive
+  on the same allowlist as Phase 5&#39;s outbound. In `meta.json`:
+
+  ```yaml
+  network:
+    allow_outbound: [...]   # egress allowlist — MVP ship-gate (§3 tier-c / open-decision 8)
+    allow_inbound:          # C5
+      services/dashboard: {sources: [token-role:oncall], paths: [/]}
+      services/api: {sources: [token-role:slackbot], paths: [/v1/]}
+  ```
+
+  Committed in v1.19.x to avoid a v1.20.x retrofit.
+- **C5.4 — Lifecycle: restart policy + drain.** Adopt k8s
+  vocabulary: `restart_policy: &quot;Always&quot; | &quot;OnFailure&quot; | &quot;Never&quot;`
+  per service. Clean-exit drain via explicit
+  `POST /v1/agent/runs/&lt;id&gt;/terminate` that marks the run as
+  terminating before the next `AGENT_SERVICE_DOWN` fires (so
+  ppxai&#39;s restart loop doesn&#39;t re-spawn an agent that intends to
+  exit, e.g. outlook-monitor&#39;s `/admin/drain`). Pinned: explicit
+  terminate API, not exit-code conventions.
+- **C5.5 — Reverse-proxy path semantics.** ppxai injects
+  `X-Forwarded-Prefix` and the agent renders relative URLs
+  assuming that prefix. Standard ASGI/WSGI middleware handles it
+  on the agent side without code changes; avoids the
+  double-prefix / broken-relative-URL trap.
+
+Plus two clarifications folded directly into the wire shape:
+
+- **Multi-name-same-port.** Routing key is `(port, path)`, not
+  `port` alone. Outlook-monitor binds `/metrics` and `/healthz`
+  on port 9090; the `services` map allows multiple name entries
+  on the same port.
+- **CronJob compatibility.** `services` is optional and
+  explicitly empty for CronJob runs; ppxai&#39;s runtime skips
+  reverse-proxy registration when omitted.
+
+**Companion event type — `EventType.AGENT_SERVICE_DOWN`.**
+Symmetric with the existing `EventType.AGENT_ZOMBIE` (v1.18.0).
+Emitted by ppxai&#39;s runtime when a bound service exits or stops
+responding to liveness probes; consumers&#39; restart policy
+(managed by ppxai per `C5.4` vs. agent-internal supervision)
+decides what happens next. Payload shape:
+`{run_id, service_name, port, reason: &quot;exited&quot; | &quot;unresponsive&quot;, exit_code?}`.
+Doc-only addition to ADR 0003 until Phase 1 implementation ships;
+extends the v1.18.0 event-type list at line 9 (kept in sync there).
+</code></pre></div>
+<h2 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">&para;</a></h2>
+<p>If accepted (post-Stage-1 instrumentation):</p>
+<ul>
+<li>Agent-loop unification (<code>docs/archive/TODO-v1.18.2-agent-loop-unification.md</code>)
+  is closed by Stage 2 — it's no longer a standalone refactor.</li>
+<li>Sub-agent tool (currently a roadmap wishlist item) becomes a
+  concrete v1.19.x deliverable.</li>
+<li>Autonomous agent runs become <strong>client-disconnect-survivable</strong> in
+  Stage 2 already (the run keeps going past UI disconnect within budget,
+  per §8's TTL reaper). Two things are explicitly <strong>not</strong> in Stage 2 and
+  remain additive upgrades: (a) <strong>engine-restart resume</strong> — a host-process
+  restart kills the in-flight <code>asyncio.Task</code>; the records persist and the
+  run is marked <code>INTERRUPTED</code>, but live work does not auto-resume until the
+  resume upgrade lands; (b) scheduling integration (cron-driven runs).</li>
+<li>VSCode loses ~150 LoC of duplicated client-side iteration code.</li>
+<li>Web's <code>_dispatchAgent</code> stays as-is (already aligned).</li>
+<li>New persistent state on disk requires a migration policy:
+  <code>~/.ppxai/runs/</code> directory created on first use; old runs
+  garbage-collected after N days (config knob, default 30d).</li>
+</ul>
+<p>If rejected: the agent-loop-unification TODO can still proceed via
+Stage 2 alone (in-memory background task without persistence), but
+sub-agents and autonomous agents stay out of reach until the
+registry is built.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/rcconsult/ppxai" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
