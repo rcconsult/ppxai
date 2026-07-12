@@ -61,7 +61,7 @@ read `ci-triage/references/checklist.md` **but a read of a sibling outside the
 skill dir is denied**. That "readable inside / denied outside" pair proves the
 mount is scoped, not a hole in the seal.
 
-Or hit the API directly:
+Or hit the API directly (auth **off** — no `server.secrets` file store):
 
 ```bash
 curl -s localhost:54320/v1/agent/task \
@@ -71,6 +71,23 @@ curl -s localhost:54320/v1/agent/task \
 curl -s localhost:54320/v1/agent/task -H 'content-type: application/json' \
   -d '{"task":"x","skills":["needs-scripts"]}'     # 400, "scripts ... cannot run"
 ```
+
+### Auth-enabled host (a `server.secrets` file token store)
+
+`POST /v1/agent/task` needs a bearer even on loopback (only `/v1/oneshot` and
+`POST /v1/agent/run` stay exempt). Bootstrap-mint one, then carry it:
+
+```bash
+TOKEN=$(curl -s localhost:54320/v1/tokens -H 'content-type: application/json' \
+  -d '{"owner":"trial"}' | python3 -c 'import sys,json;print(json.load(sys.stdin)["token"])')
+
+curl -s localhost:54320/v1/agent/task \
+  -H "authorization: Bearer $TOKEN" -H 'content-type: application/json' \
+  -d '{"task":"the CI job is red","skills":["ci-triage"]}'
+```
+
+In the **web / VSCode** clients, `/token mint` (or "ppxai: Set API Token")
+stores the bearer once and every `/task` verb carries it.
 
 ## Notes
 

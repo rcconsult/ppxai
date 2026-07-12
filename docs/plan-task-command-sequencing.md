@@ -194,6 +194,18 @@ denied. `--skill needs-scripts` → 400 (scripts gate). Examples ship in
 [examples/task-skills/](../examples/task-skills/) (ci-triage, secrets-scan,
 needs-scripts + README recipe), loader-verified.
 
+**Trial-verified 2026-07-12 (macOS, auth-ON, `enforcement:in_process`):** API
+trial against the installed server (isolated `PPXAI_CONFIG_FILE` with the seal
+on). `skills:["ci-triage"]` → run meta carried the SKILL.md grant
+`[read_file,grep,list_directory]` + budget `{iterations:8}`; the agent read the
+mounted `references/checklist.md` in-scope (no denial), while a forced read of
+an out-of-scope path (repo `README.md`) emitted a `path_denied`
+(`"path is outside the run read scope"`) — the seal held. Compose
+`skills:["ci-triage","secrets-scan"]` → grant union `[grep,list_directory,read_file]`.
+`skills:["needs-scripts"]` → 400 (`scripts/ … cannot run in the in-process
+tier`, `allow_skill_scripts` off). Auth-aware recipe:
+`examples/task-skills/README.md`.
+
 **Tests (landed):** `test_agent_skill.py` (8 — loader: manifest→spec,
 read_root, references present/absent, missing/malformed manifest, scripts
 detection); `test_agent_runs.py::TestTaskSkills` (11 — resolution-by-name +
