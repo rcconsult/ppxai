@@ -278,6 +278,13 @@ retires debt (r) as a standalone item.
    `~/.ppxai/runs/<id>/agent-0/state.json` holds the waiting checkpoint and,
    after resume, the `last_response`.
 
+**Trial-verified 2026-07-12 (macOS, auth-ON):** API trial via
+`scripts/trial-task-lifecycle.py` against the installed server. A
+`spawn_subagent` grant under `spawn_consent:"deny"` parked the run in
+`waiting{consent}` (token present); `POST /runs/{id}/respond` with a wrong
+token → 409, with `{token, approved:true}` → 200, and the approved run ran to
+a terminal state.
+
 **Tests (landed):** `test_agent_runs.py::TestStateJson` (5 — roundtrip/replace,
 missing/corrupt/non-dict → None, atomic no-tmp); `TestParkRespond` (7 —
 approve roundtrip incl. state.json + consent-category events, token
@@ -348,6 +355,12 @@ uv run ppxai-server`).
    event log).
 5. API-level: `~/.ppxai/runs/<id>/agent-0/state.json` shows the
    `completed_pending_ack` snapshot, then `finalized` after ack.
+
+**Trial-verified 2026-07-12 (macOS, auth-ON):** via
+`scripts/trial-task-lifecycle.py`. A top-level `/task` run held its result
+(`completed_pending_ack`, result body present); `POST /runs/{id}/ack` → 200 →
+`finalized` with `acked_at` set and the result still present; a second ack was
+an idempotent 200.
 
 **Tests (landed):** `test_agent_runs.py::TestHoldAndAck` (7 — hold lands
 pending_ack + state.json snapshot + result_ready-instead-of-complete + badge
@@ -424,6 +437,16 @@ slot (the multi-slot/service Triplet remains (q)/`agent_n` nesting).
    already captured".
 5. API-level: `state.json` shows the stop checkpoint, then
    `{status: running, resumed_from: interrupted}` after resume.
+
+**Trial-verified 2026-07-12 (macOS, auth-ON):** via
+`scripts/trial-task-lifecycle.py`, budget-interrupt path. A `--budget iters=1`
+run tripped the cap → `interrupted` + `resumable:true`; `POST /runs/{id}/resume`
+→ 200 re-entered the tool tier under the same run_id; and the refusal arm
+(`resume` a `finalized` run) → 409. **Observed nuance (not a blocker):** a
+`waiting` consent-parked run killed + restarted did NOT get swept to
+`interrupted` by the restart-orphan sweep on the installed binary (stayed
+`waiting`) — the `running`/budget interrupt paths behave as documented; the
+parked-run restart edge deserves a follow-up check against source.
 
 **Tests (landed):** `test_agent_runs.py::TestResumeRefusal` (9 — the full
 decision matrix incl. every non-candidate status, in-flight, non-task,
