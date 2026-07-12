@@ -133,39 +133,37 @@ def find_server_binary() -> Path | None:
 
 
 def install_web_ui():
-    """Install web UI files to ~/.ppxai/web/ if not present or outdated."""
+    """Install the bundled web UI to ~/.ppxai/web/ — version-gated.
+
+    The desktop binary ships a build-time snapshot of ppxai/web and must
+    refresh ~/.ppxai/web on UPGRADES (a new binary serving stale assets is
+    real version skew). But the previous name+size "outdated" check went
+    further: it re-imposed the bundle snapshot on EVERY launch whenever the
+    installed dir differed AT ALL — silently reverting any web file synced
+    after the binary was built. Caught live 2026-07-12 (a hotfixed
+    task-run-view.js was clobbered mid-trial, mtime = launch time); the same
+    mechanism explains the 2026-06-19 macOS observation of ~/.ppxai/web
+    "reverting to the .app's build-time snapshot" whose cause was never
+    located (this launcher lives at the repo ROOT — searches inside ppxai/
+    couldn't find it).
+
+    Gate on a version marker instead: refresh when ~/.ppxai/web is missing
+    or was installed by a DIFFERENT ppxai version (upgrade/downgrade or
+    legacy no-marker install); leave a same-version tree alone so local
+    syncs (build-install step 5b, hotfixes) survive launches. Dev web
+    iteration should use PPXAI_WEB_DIR, which bypasses ~/.ppxai/web
+    entirely (server/routes/static.py).
+    """
     web_dir = Path.home() / '.ppxai' / 'web'
     source_dir = get_resource_path('ppxai/web')
+    marker = web_dir / '.installed-by'
 
-    needs_update = False
-
-    if not web_dir.exists():
-        needs_update = True
-    else:
-        # Check if any source files are missing or different in destination
-        # Compare both file names AND sizes to detect content changes
-        for item in source_dir.iterdir():
-            dest = web_dir / item.name
-            if item.is_dir():
-                if not dest.exists():
-                    needs_update = True
-                    break
-                # Compare files by name AND size
-                source_files = {f.name: f.stat().st_size for f in item.rglob('*') if f.is_file()}
-                dest_files = {f.name: f.stat().st_size for f in dest.rglob('*') if f.is_file()}
-                if source_files != dest_files:
-                    needs_update = True
-                    break
-            else:
-                if not dest.exists():
-                    needs_update = True
-                    break
-                if item.stat().st_size != dest.stat().st_size:
-                    needs_update = True
-                    break
-
-    if not needs_update:
-        return web_dir
+    if web_dir.exists():
+        try:
+            if marker.read_text(encoding='utf-8').strip() == __version__:
+                return web_dir  # same-version install — respect local edits
+        except OSError:
+            pass  # no/unreadable marker → legacy install: refresh once
 
     # Copy web UI files
     web_dir.mkdir(parents=True, exist_ok=True)
@@ -179,6 +177,12 @@ def install_web_ui():
             shutil.copytree(item, dest)
         else:
             shutil.copy2(item, dest)
+
+    try:
+        marker.write_text(__version__ + "\n", encoding='utf-8')
+    except OSError:
+        pass  # marker is an optimization; failing to write it only means
+              # the next launch refreshes again
 
     print(f"Installed web UI to {web_dir}")
     return web_dir

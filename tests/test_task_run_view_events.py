@@ -108,3 +108,55 @@ def test_task_run_view_live_log_bounds_dom_not_just_array():
     proc = subprocess.run([NODE, "-e", script], capture_output=True, text=True, timeout=30)
     assert proc.returncode == 0, f"node harness failed:\nSTDOUT: {proc.stdout}\nSTDERR: {proc.stderr}"
     assert "ALL OK" in proc.stdout, proc.stdout
+
+
+# Same trusted-source loading pattern as the two harnesses above (the view is
+# a window-global browser file with no module exports; the harness evaluates
+# THIS REPO's file, never external input).
+_PARK_HARNESS = r"""
+const fs = require('fs');
+global.BaseView = class {{}};
+global.AgentRunView = class extends global.BaseView {{ _statusLabel(s) {{ return s; }} }};
+global.escapeHtml = (s) => s;
+global.window = {{}};
+global.document = {{ createElement: () => ({{}}) }};
+require('vm').runInThisContext(fs.readFileSync({view}, 'utf8'));
+const TRV = global.window.TaskRunView;
+function assert(c, m) {{ if (!c) throw new Error("FAIL: " + m); }}
+
+// A run killed WHILE PARKED replays: waiting (dead token) -> interrupted ->
+// resume/start -> fresh live waiting (valid token). The card must NOT be
+// left holding the dead pre-restart token after the interrupted event —
+// clicking it 409s ("run is not awaiting a response"; live 2026-07-12).
+const view = new TRV('r', 't', {{}});
+view.appendEvent({{ type: 'agent_waiting', data: {{ token: 'dead-token', prompt: 'old park' }} }});
+assert(view._waiting && view._waiting.token === 'dead-token', "replayed park did not raise the card");
+view.appendEvent({{ type: 'agent_run_interrupted', data: {{ reason: 'server restarted' }} }});
+assert(view._waiting === null, "interrupted did NOT drop the dead-token card (stale-consent 409 bug)");
+view.appendEvent({{ type: 'agent_run_resume', data: {{}} }});
+view.appendEvent({{ type: 'agent_waiting', data: {{ token: 'fresh-token', prompt: 'new park' }} }});
+assert(view._waiting && view._waiting.token === 'fresh-token', "fresh live park did not raise the card");
+
+// The other park-killing lifecycle events drop it too.
+for (const t of ['agent_run_cancelled', 'agent_run_error']) {{
+  view._waiting = {{ token: 'x' }};
+  view.appendEvent({{ type: t, data: {{}} }});
+  assert(view._waiting === null, t + " did not drop the card");
+}}
+// agent_resumed (the normal answer path) still drops it.
+view._waiting = {{ token: 'y' }};
+view.appendEvent({{ type: 'agent_resumed', data: {{ approved: true }} }});
+assert(view._waiting === null, "agent_resumed no longer drops the card (regression)");
+console.log("ALL OK");
+"""
+
+
+def test_task_run_view_park_invalidated_by_interrupt():
+    """A park cannot outlive the run's in-memory future: the replayed
+    agent_waiting of a run killed while parked must be dropped by the
+    agent_run_interrupted right behind it, so the card never dangles a dead
+    pre-restart token (T7 retrial 409, 2026-07-12)."""
+    script = _PARK_HARNESS.format(view=json.dumps(str(VIEW)))
+    proc = subprocess.run([NODE, "-e", script], capture_output=True, text=True, timeout=30)
+    assert proc.returncode == 0, f"node harness failed:\nSTDOUT: {proc.stdout}\nSTDERR: {proc.stderr}"
+    assert "ALL OK" in proc.stdout, proc.stdout

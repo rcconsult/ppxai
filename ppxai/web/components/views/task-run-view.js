@@ -170,7 +170,19 @@ class TaskRunView extends AgentRunView {
         if (ev.type === 'agent_waiting') {
             this._waiting = ev.data || null;
             this._renderConsent();
-        } else if (ev.type === 'agent_resumed') {
+        } else if (ev.type === 'agent_resumed'
+                   || ev.type === 'agent_run_interrupted'
+                   || ev.type === 'agent_run_cancelled'
+                   || ev.type === 'agent_run_error') {
+            // A park cannot outlive the run's in-memory future (registry
+            // rule): an interrupt/cancel/error invalidates it just as a
+            // respond does. Matters on RESUME — a run killed WHILE PARKED
+            // has agent_waiting with no agent_resumed in its replayed
+            // backlog; without this drop, the replay raises a card carrying
+            // the DEAD pre-restart token and clicking it 409s (live
+            // 2026-07-12). Replay order self-corrects: stale waiting raises,
+            // the interrupted right behind it drops, the fresh live park
+            // raises the valid card.
             this._waiting = null;
             this._renderConsent();
         }

@@ -294,20 +294,28 @@ refreshed the on-disk copy.
 > `uv run ppxai-server`). The override takes precedence over `~/.ppxai/web`.
 > Do the real sync below for the actual install.
 
-> **Correction (was wrong before 2026-06-19):** an earlier version of this
-> step claimed `ppxai-desktop` "auto-installs `~/.ppxai/web/` only when it
-> doesn't exist — subsequent launches don't refresh it." There is **no such
-> installer in the code** — nothing in `ppxai/` (nor the ppxai-desktop `.app`,
-> which has no launcher wrapper) copies `Contents/Resources/web` into
-> `~/.ppxai/web/`. The `.app` ships a build-time copy at
-> `Contents/Resources/web` that is **not consulted at runtime** (`WEB_UI_DIR`
-> is hardcoded to `~/.ppxai/web`). During a v1.19.0 web trial, `~/.ppxai/web/`
-> was *observed* reverting to the `.app`'s build-time snapshot after launching
-> the `.app` (the served `index.html` mtime matched the bundle and a
-> newer file vanished), but the mechanism was **not located in code** — treat
-> it as unconfirmed. Practical rule: **don't trial web changes against the
-> `.app`**; use `PPXAI_WEB_DIR` or sync `~/.ppxai/web/` and run
-> `ppxai-server`/`ppxai-desktop` instead. Re-sync after the `.app` runs.
+> **Mechanism LOCATED (2026-07-12; was "unconfirmed" 2026-06-19 to
+> 2026-07-12):** the copier is `install_web_ui()` in **`ppxai-desktop.py` at
+> the repo ROOT** — the PyInstaller entry script for the desktop binary (and
+> the `.app`, which wraps the same binary). It is not inside `ppxai/`, which
+> is why the 2026-06-19 investigation ("no such installer in the code")
+> couldn't find it while the reverts were real. Every desktop launch it
+> compared the bundled build-time web snapshot against `~/.ppxai/web/` **by
+> file name + size** and, on ANY difference, rmtree'd + recopied the whole
+> tree — silently reverting any web file synced after the binary was built
+> (reproduced live on Windows 2026-07-12: a hotfixed `task-run-view.js` was
+> clobbered mid-trial, mtime = launch time; same signature as the macOS
+> `.app` observation).
+>
+> **Fixed 2026-07-12:** `install_web_ui()` is now version-gated on a
+> `~/.ppxai/web/.installed-by` marker — it refreshes only when the marker's
+> version differs from the binary's (upgrade/downgrade or legacy no-marker
+> install) and otherwise leaves the tree alone, so same-version local syncs
+> survive launches. Consequence for this skill: step 5b syncs stay stable
+> across desktop launches **once the installed `ppxai-desktop` binary is
+> ≥ the fixed build**; with an older desktop binary the old clobber behavior
+> still applies (re-sync after it runs, or use `PPXAI_WEB_DIR`). Tests:
+> `tests/test_desktop_web_install.py`.
 
 Universal across all platforms:
 
