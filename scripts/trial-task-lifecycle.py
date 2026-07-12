@@ -65,6 +65,27 @@ def port_in_use(host: str, port: int) -> bool:
         return s.connect_ex((host, port)) == 0
 
 
+def _signal_tree(proc, how: str):
+    """SIGTERM/SIGKILL the process's whole group (POSIX) or the proc (Windows).
+
+    The installed ppxai-server is a PyInstaller onefile: a bootloader parent
+    plus the real server as a CHILD. Signalling only the Popen (parent) can
+    leave the child alive and holding the port. On POSIX we spawn it in its own
+    session (start_new_session) and kill the group here.
+    """
+    if proc is None:
+        return
+    if os.name == "nt":
+        (proc.kill if how == "kill" else proc.terminate)()
+        return
+    import signal
+    sig = signal.SIGKILL if how == "kill" else signal.SIGTERM
+    try:
+        os.killpg(os.getpgid(proc.pid), sig)
+    except (ProcessLookupError, PermissionError):
+        (proc.kill if how == "kill" else proc.terminate)()
+
+
 class Gateway:
     def __init__(self, base_url: str, token: str = ""):
         self.base_url = base_url.rstrip("/")
@@ -142,32 +163,15 @@ def main() -> int:
         print(f"  [{verdict}] {step}" + (f" — {detail}" if detail else ""))
 
     def spawn_server():
-        return subprocess.Popen([str(server_path)], stdout=subprocess.DEVNULL,
-                                stderr=subprocess.DEVNULL)
-
-    def launch_until_interrupted(tries=4):
-        """Launch a budget-iters=1 task and return its run_id once it lands
-        `interrupted`. Whether the model makes a tool call before answering (and
-        so trips the 1-iteration budget cap) is nondeterministic, so retry a few
-        times. Returns None if no attempt interrupted."""
-        home = str(Path.home())
-        for _ in range(tries):
-            code, body = gw.request("POST", "/v1/agent/task", {
-                "task": f"Do this in order, one read_file call per turn: "
-                        f"(1) read {home}/.ppxai/AGENTS.md; "
-                        f"(2) read {home}/.ppxai/ppxai-config.json; "
-                        f"(3) say which is longer.",
-                "tools": ["read_file"], "budget": {"iterations": 1}, **ov})
-            rid = (body or {}).get("run_id")
-            if not rid:
-                continue
-            m = gw.poll_until(rid, {"interrupted", "completed", "completed_pending_ack", "failed"})
-            if m.get("status") == "interrupted":
-                return rid, m
-            # tidy a fast-finishing attempt so it doesn't linger held
-            if m.get("status") == "completed_pending_ack":
-                gw.request("POST", f"/v1/agent/runs/{rid}/ack")
-        return None, None
+        # start_new_session=True → own process group so kill_server can signal
+        # the WHOLE tree. The PyInstaller onefile binary is a bootloader PARENT
+        # + a real-server CHILD; killing only the Popen (parent) leaves the
+        # child holding port 54320 — a stale server the next request silently
+        # hits. See docs/lessons/stale-server-invalidates-acceptance.md.
+        kwargs = {"stdout": subprocess.DEVNULL, "stderr": subprocess.DEVNULL}
+        if os.name != "nt":
+            kwargs["start_new_session"] = True
+        return subprocess.Popen([str(server_path)], **kwargs)
 
     def launch_until_parked(tries=3):
         """Launch a spawn_subagent run and return (run_id, waiting) once it parks.
@@ -194,11 +198,13 @@ def main() -> int:
     def kill_server(p):
         if p is None:
             return
-        p.terminate()
+        # Signal the whole process group (bootloader parent + server child), not
+        # just the Popen — else the child survives and keeps holding the port.
+        _signal_tree(p, "term")
         try:
             p.wait(timeout=10)
         except subprocess.TimeoutExpired:
-            p.kill()
+            _signal_tree(p, "kill")
         # wait for the port to actually free so a respawn can bind
         for _ in range(20):
             if not port_in_use("127.0.0.1", args.port):
@@ -276,33 +282,46 @@ def main() -> int:
         # Interrupt via a 1-iteration budget cap (retried until it trips, since
         # whether the model makes a tool call before answering is model-dependent),
         # then resume the interrupted run and confirm the transition. The refusal
-        # arm (resume a finalized run) is fully deterministic.
-        print("\nT7 — budget interrupt + resume")
-        rid, m = launch_until_interrupted()
-        if not rid:
-            record("T7 budget cap → interrupted", SKIP,
-                   "no attempt tripped the cap (model answered within 1 iteration each time)")
+        # arm (resume a finalized run) is fully deterministic. The interrupt is
+        # produced by the restart-orphan sweep (recipe step 1) — model-
+        # independent: park a run, kill the server (whole process tree — see
+        # _signal_tree), restart, and the registry's construction-time
+        # sweep_orphans() lands the stranded run `interrupted`+`resumable`.
+        print("\nT7 — restart interrupt + resume")
+        if not own_server:
+            record("T7 restart-interrupt", SKIP, "--base-url: cannot restart an external server")
         else:
-            record("T7 budget cap → interrupted+resumable",
-                   PASS if (m.get("status") == "interrupted" and m.get("resumable")) else FAIL,
-                   f"status={m.get('status')} resumable={m.get('resumable')}")
-            c, _ = gw.request("POST", f"/v1/agent/runs/{rid}/resume")
-            record("T7 resume interrupted run → 200 (re-enters tier, same run_id)",
-                   PASS if c == 200 else FAIL, f"http {c}")
-            m = gw.poll_until(rid, {"completed", "completed_pending_ack", "failed", "interrupted"})
-            record("T7 resume advanced the run (out of the pre-resume interrupt)",
-                   PASS if c == 200 else FAIL, f"status now {m.get('status')}")
-            # tidy any terminal hold
-            if m.get("status") == "completed_pending_ack":
-                gw.request("POST", f"/v1/agent/runs/{rid}/ack")
-            # keep resuming an interrupted run out of the way (best-effort)
-            legs = 0
-            while m.get("status") == "interrupted" and legs < 5:
-                legs += 1
-                gw.request("POST", f"/v1/agent/runs/{rid}/resume")
-                m = gw.poll_until(rid, {"completed", "completed_pending_ack", "failed", "interrupted"})
-            if m.get("status") == "completed_pending_ack":
-                gw.request("POST", f"/v1/agent/runs/{rid}/ack")
+            rid, _ = launch_until_parked()
+            if not rid:
+                record("T7 setup: park a run before restart", SKIP, "model never parked")
+            else:
+                print("  restarting server (run parked in-flight) …")
+                kill_server(proc)
+                proc = spawn_server()
+                if not wait_for_server(gw):
+                    record("T7 server restart", FAIL, "server did not come back")
+                else:
+                    m = gw.meta(rid)  # first registry access → triggers sweep_orphans()
+                    record("T7 restart-orphan sweep → interrupted+resumable",
+                           PASS if (m.get("status") == "interrupted" and m.get("resumable")) else FAIL,
+                           f"status={m.get('status')} resumable={m.get('resumable')}")
+                    c, _ = gw.request("POST", f"/v1/agent/runs/{rid}/resume")
+                    record("T7 resume interrupted run → 200 (same run_id)",
+                           PASS if c == 200 else FAIL, f"http {c}")
+                    m = gw.poll_until(rid, {"completed", "completed_pending_ack", "failed",
+                                            "waiting", "interrupted"})
+                    # resume re-enters the tier; the spawn may re-park (consent) —
+                    # a healthy resume, not a failure. FAIL only if still interrupted.
+                    record("T7 resumed run left the interrupt (re-entered tier)",
+                           PASS if m.get("status") != "interrupted" else FAIL,
+                           f"status={m.get('status')}")
+                    if m.get("status") == "waiting":
+                        w = m.get("waiting") or {}
+                        if w.get("token"):
+                            gw.request("POST", f"/v1/agent/runs/{rid}/respond",
+                                       {"token": w["token"], "approved": False})
+                    elif m.get("status") == "completed_pending_ack":
+                        gw.request("POST", f"/v1/agent/runs/{rid}/ack")
 
         # refusal (deterministic): resume a finalized run → 409
         if "finalized_rid" in dir():
@@ -311,11 +330,11 @@ def main() -> int:
 
     finally:
         if proc is not None:
-            proc.terminate()
+            _signal_tree(proc, "term")
             try:
                 proc.wait(timeout=10)
             except subprocess.TimeoutExpired:
-                proc.kill()
+                _signal_tree(proc, "kill")
 
     npass = sum(1 for _, v in results if v == PASS)
     nfail = sum(1 for _, v in results if v == FAIL)

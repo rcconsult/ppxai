@@ -60,6 +60,28 @@ def installed_server_path() -> Path:
     return Path.home() / ".local" / "bin" / "ppxai-server"
 
 
+def _signal_tree(proc, how: str):
+    """SIGTERM/SIGKILL the process's whole group (POSIX) or the proc (Windows).
+
+    The installed ppxai-server is a PyInstaller onefile: a bootloader parent
+    plus the real server as a CHILD. Signalling only the Popen (parent) can
+    leave the child alive and holding the port. We spawn it in its own session
+    (start_new_session) and kill the group here so nothing is orphaned. See
+    docs/lessons/stale-server-invalidates-acceptance.md.
+    """
+    if proc is None:
+        return
+    if os.name == "nt":
+        (proc.kill if how == "kill" else proc.terminate)()
+        return
+    import signal
+    sig = signal.SIGKILL if how == "kill" else signal.SIGTERM
+    try:
+        os.killpg(os.getpgid(proc.pid), sig)
+    except (ProcessLookupError, PermissionError):
+        (proc.kill if how == "kill" else proc.terminate)()
+
+
 class Gateway:
     def __init__(self, base_url: str, token: str = ""):
         self.base_url = base_url.rstrip("/")
@@ -190,10 +212,10 @@ def main() -> int:
                 print(f"server binary not found: {server}", file=sys.stderr)
                 return 2
             print(f"spawning {server} …")
-            proc = subprocess.Popen(
-                [str(server)],
-                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-            )
+            popen_kwargs = {"stdout": subprocess.DEVNULL, "stderr": subprocess.DEVNULL}
+            if os.name != "nt":
+                popen_kwargs["start_new_session"] = True  # own group → kill the whole tree
+            proc = subprocess.Popen([str(server)], **popen_kwargs)
         if not wait_for_server(gw):
             print(f"server did not answer /status within {STARTUP_WAIT_S}s", file=sys.stderr)
             return 2
@@ -288,11 +310,11 @@ def main() -> int:
 
     finally:
         if proc is not None:
-            proc.terminate()
+            _signal_tree(proc, "term")
             try:
                 proc.wait(timeout=10)
             except subprocess.TimeoutExpired:
-                proc.kill()
+                _signal_tree(proc, "kill")
 
     failed = [r for r in results if r[1] == FAIL]
     print(f"\ngateway-smoke: {len([r for r in results if r[1] == PASS])} passed, "

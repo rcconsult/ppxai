@@ -55,6 +55,32 @@ first prove 54320 is free, or target a known server explicitly.** A
 green (or red) result against an unverified port is evidence about
 *some* process, not necessarily the one you built.
 
+## Corollary: killing the server is a process-TREE operation
+
+The installed `ppxai-server` is a **PyInstaller onefile** binary: running
+it forks a **bootloader parent** plus the real server as a **child**
+(`pgrep -fl ppxai-server` after launch shows two PIDs). Consequences for
+any script that manages the server's lifecycle:
+
+- `subprocess.Popen(...).terminate()` / `.kill()` signals only the parent
+  (the bootloader). The **child keeps running and keeps port 54320**, so
+  the script leaks a server on exit and the *next* run either trips the
+  port guard or — worse — talks to the orphan.
+- This produced a phantom "product bug" during the T7 lifecycle trial
+  (2026-07-12): a server was "restarted" between a park and a GET, but the
+  restart silently failed to bind (old child still held the port), so the
+  GET hit the **stale** old process where the restart-orphan sweep had
+  never run — making a correct `waiting → interrupted` sweep look broken.
+  The `resumable:false` on the GET was the tell (the sweep sets it `true`).
+
+Fix, used in `scripts/gateway-smoke.py` and `scripts/trial-task-lifecycle.py`:
+spawn with `start_new_session=True` (POSIX) so parent + child share a
+process group, and kill the **group** with `os.killpg(os.getpgid(pid),
+SIG*)` (fall back to `terminate()`/`kill()` on Windows). `pkill -f
+ppxai-server` is the shell equivalent — it matches every PID, which is why
+the manual `pkill; sleep 1` between runs always worked where `terminate()`
+did not.
+
 ## Related
 
 - `scripts/gateway-smoke.py` — `port_in_use()` guard + `--base-url`

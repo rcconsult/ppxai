@@ -439,14 +439,20 @@ slot (the multi-slot/service Triplet remains (q)/`agent_n` nesting).
    `{status: running, resumed_from: interrupted}` after resume.
 
 **Trial-verified 2026-07-12 (macOS, auth-ON):** via
-`scripts/trial-task-lifecycle.py`, budget-interrupt path. A `--budget iters=1`
-run tripped the cap → `interrupted` + `resumable:true`; `POST /runs/{id}/resume`
-→ 200 re-entered the tool tier under the same run_id; and the refusal arm
-(`resume` a `finalized` run) → 409. **Observed nuance (not a blocker):** a
-`waiting` consent-parked run killed + restarted did NOT get swept to
-`interrupted` by the restart-orphan sweep on the installed binary (stayed
-`waiting`) — the `running`/budget interrupt paths behave as documented; the
-parked-run restart edge deserves a follow-up check against source.
+`scripts/trial-task-lifecycle.py`, restart-interrupt path. A consent-parked
+run had the server killed under it and restarted; the registry's
+construction-time `sweep_orphans()` landed it `interrupted` + `resumable:true`;
+`POST /runs/{id}/resume` → 200 re-entered the tool tier under the same run_id
+and the run reached a terminal state; the refusal arm (`resume` a `finalized`
+run) → 409. **Investigation note:** an earlier trial appeared to show a
+`waiting` run NOT being swept — that was a **test-harness bug, not a product
+one**: the installed `ppxai-server` is a PyInstaller onefile (bootloader
+parent + real-server child), so `Popen.terminate()` on the parent left the
+child holding the port; the "restarted" server couldn't bind and the GET hit
+the stale old process where the sweep never ran (`resumable:false` was the
+tell). Fixed by killing the whole process group (`start_new_session` +
+`os.killpg`); the sweep itself works exactly as documented. See
+[docs/lessons/stale-server-invalidates-acceptance.md](../docs/lessons/stale-server-invalidates-acceptance.md).
 
 **Tests (landed):** `test_agent_runs.py::TestResumeRefusal` (9 — the full
 decision matrix incl. every non-candidate status, in-flight, non-task,
