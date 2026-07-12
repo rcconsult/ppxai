@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import AsyncIterator, Dict, Any, List, Optional, Protocol, Callable
 
 from .types import AgentBeatState, Event, EventType, Message, UsageStats
-from .session import SessionManager
+from .session import SessionManager, strip_orphan_tool_calls
 from .tools.manager import ToolManager
 from .tools.builtin import web_premium
 from .tools.parser import parse_tool_call, detect_truncated_tool_call, strip_tool_json_from_text
@@ -716,6 +716,20 @@ async def chat_with_tools(
                 final_prompt = "\n\n---\n\n".join(parts)
                 messages = [Message("system", final_prompt)] + messages
 
+        # Bug B (v1.19.1): the pre-flight alternation fix runs once BEFORE this
+        # loop (line ~643), never per iteration. An orphan assistant.tool_calls
+        # created mid-turn — a tool cancelled/interrupted, or the loop-detect
+        # user injection below — would otherwise reach a strict provider on
+        # iterations 2+ and 400 with "tool_call_ids did not have response".
+        # Strip orphans from the OUTBOUND copy only; session state is untouched
+        # so an in-flight tool round-trip is never destroyed mid-turn.
+        messages, _outbound_orphans = strip_orphan_tool_calls(messages)
+        if _outbound_orphans:
+            logger.info(
+                f"Outbound orphan tool_calls stripped before provider call "
+                f"(iteration {iteration}): removed {_outbound_orphans} message(s)"
+            )
+
         # Get response from provider
         full_response = ""
         native_tool_calls = []
@@ -1104,8 +1118,10 @@ async def chat_with_tools(
                     "Do not call any more tools - just synthesize the information."
                 ))
 
+                # Bug B (v1.19.1): outbound orphan guard (see primary send).
+                _retry_messages, _ = strip_orphan_tool_calls(ctx.session.get_messages())
                 async for event in ctx.provider.chat(
-                    ctx.session.get_messages(), ctx.model, stream=False, tools=None
+                    _retry_messages, ctx.model, stream=False, tools=None
                 ):
                     if event.type in (EventType.ERROR, EventType.PROVIDER_THROTTLED):
                         yield event

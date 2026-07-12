@@ -26,6 +26,55 @@ from ..usage import save_session_usage
 logger = get_logger("session")
 
 
+def strip_orphan_tool_calls(messages: List[Message]) -> tuple[List[Message], int]:
+    """Single pass of orphan-``assistant.tool_calls`` cleanup.
+
+    An assistant message that carries ``tool_calls`` whose ``tool_call_id``s
+    are not all answered by the ``tool`` messages immediately following it is
+    an *orphan*: strict providers (OpenAI, and Perplexity's OpenAI-compatible
+    endpoint) reject the whole request with a 400 ("... tool_call_ids did not
+    have response messages"). Such orphans arise when a KeyboardInterrupt or a
+    tool cancellation fires between adding the assistant message and appending
+    every tool result.
+
+    Returns ``(cleaned, removed_count)``. Pure — does not mutate the input.
+
+    Used both by ``SessionManager.validate_and_fix_alternation`` (persistent
+    history repair) and by the chat tool-loop as a defensive *outbound-only*
+    guard before each provider call, so an orphan created mid-turn never
+    reaches a strict provider even though the once-per-turn pre-flight fix
+    already ran before the loop started.
+    """
+    cleaned: List[Message] = []
+    removed = 0
+    i = 0
+    while i < len(messages):
+        msg = messages[i]
+        if msg.role == "assistant" and msg.tool_calls:
+            expected_ids = {tc.get("id") for tc in msg.tool_calls if tc.get("id")}
+            seen_ids: set = set()
+            j = i + 1
+            while j < len(messages) and messages[j].role == "tool":
+                tcid = messages[j].tool_call_id
+                if tcid:
+                    seen_ids.add(tcid)
+                j += 1
+            missing = expected_ids - seen_ids
+            if expected_ids and missing:
+                removed += 1 + (j - i - 1)
+                logger.warning(
+                    f"Orphan tool_calls stripped: dropped assistant.tool_calls "
+                    f"+ {j - i - 1} partial tool messages (missing "
+                    f"{len(missing)} tool_call_ids: "
+                    f"{', '.join(sorted(missing))[:120]})."
+                )
+                i = j
+                continue
+        cleaned.append(msg)
+        i += 1
+    return cleaned, removed
+
+
 # Session state file location
 SESSION_STATE_FILE = Path.home() / ".ppxai" / "session-state.json"
 
@@ -818,46 +867,24 @@ class SessionManager:
         # response we just popped becomes orphaned). Without re-running
         # the cleanup we'd hand a freshly-broken history to the API.
         # Each iteration removes at most a finite number of messages, so
-        # the loop terminates in at most len(messages) passes.
-        def _strip_orphan_tool_calls(msgs: list) -> tuple[list, int]:
-            """Single pass of orphan-assistant.tool_calls cleanup.
-
-            Returns (cleaned, removed_count). Pure function; doesn't
-            mutate the input list.
-            """
-            cleaned: list = []
-            removed = 0
-            i = 0
-            while i < len(msgs):
-                msg = msgs[i]
-                if msg.role == "assistant" and msg.tool_calls:
-                    expected_ids = {
-                        tc.get("id") for tc in msg.tool_calls if tc.get("id")
-                    }
-                    seen_ids: set = set()
-                    j = i + 1
-                    while j < len(msgs) and msgs[j].role == "tool":
-                        tcid = msgs[j].tool_call_id
-                        if tcid:
-                            seen_ids.add(tcid)
-                        j += 1
-                    missing = expected_ids - seen_ids
-                    if expected_ids and missing:
-                        removed += 1 + (j - i - 1)
-                        logger.warning(
-                            f"Session alternation fix: dropped orphan "
-                            f"assistant.tool_calls + {j - i - 1} partial tool "
-                            f"messages (missing {len(missing)} tool_call_ids: "
-                            f"{', '.join(sorted(missing))[:120]})."
-                        )
-                        i = j
-                        continue
-                cleaned.append(msg)
-                i += 1
-            return cleaned, removed
-
-        fixed_messages, _orphan_removed = _strip_orphan_tool_calls(fixed_messages)
+        # the loop terminates in at most len(messages) passes. The pure pass
+        # lives at module scope (`strip_orphan_tool_calls`) so the chat
+        # tool-loop can reuse it as an outbound guard.
+        fixed_messages, _orphan_removed = strip_orphan_tool_calls(fixed_messages)
         removed_count += _orphan_removed
+
+        # Bug A (v1.19.1): stripping a tail orphan can expose a trailing user
+        # that the model had ALREADY begun answering (it responded with the
+        # now-removed tool_calls). That user prompt was sent — it is NOT an
+        # unsent draft — so the trailing-user drop below must not delete it,
+        # or the user's question silently vanishes on the next turn (observed
+        # as the recurring "DROPPED UNSENT USER PROMPT" log line eating real
+        # prompts). Guard the drop when an orphan just exposed the tail user.
+        orphan_exposed_trailing_user = (
+            _orphan_removed > 0
+            and bool(fixed_messages)
+            and fixed_messages[-1].role == "user"
+        )
 
         # Also ensure session ends in a state where appending a new user
         # message would be valid alternation.
@@ -880,7 +907,11 @@ class SessionManager:
         # parent's tool_call_ids. Drop it only when it's actually
         # orphaned. The model handles `tool → user` and
         # `tool → assistant_response` cleanly in the next turn.
-        while fixed_messages and fixed_messages[-1].role == "user":
+        while (
+            fixed_messages
+            and fixed_messages[-1].role == "user"
+            and not orphan_exposed_trailing_user
+        ):
             removed = fixed_messages.pop()
             removed_count += 1
             logger.warning(
@@ -888,6 +919,12 @@ class SessionManager:
                 f"(len={len(removed.text_content())}) — "
                 f"session was saved before the assistant responded. "
                 f"Preview: {removed.text_content()[:120]!r}"
+            )
+        if orphan_exposed_trailing_user:
+            logger.info(
+                "Session alternation fix: kept trailing user prompt exposed by "
+                "orphan tool_calls removal (it was answered-in-progress, not an "
+                "unsent draft) — the next turn will re-answer it."
             )
 
         # Trailing tool: only strip if it's truly orphan (no parent
