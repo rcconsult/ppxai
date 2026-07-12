@@ -45,7 +45,7 @@ What we explicitly do *not* guarantee:
 
 > ⚠️ **Exception to the guarantees above.** The agent platform endpoints —
 > `POST /v1/agent/run`, `POST /v1/agent/task`, `GET /v1/agent/runs[/<id>]`,
-> `/v1/agent/runs/<id>/{events,cancel,result}`, the run-event / monitor-SSE
+> `/v1/agent/runs/<id>/{events,cancel,respond,ack,resume}`, the run-event / monitor-SSE
 > event schema, and `POST /v1/tokens` — are **in development and NOT covered
 > by the v1 stability contract**, despite living under `/v1/`. Their request,
 > response, and event shapes WILL change.

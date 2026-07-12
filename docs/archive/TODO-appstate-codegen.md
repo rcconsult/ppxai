@@ -1,6 +1,6 @@
 # TODO: AppState Schema + Code Generation
 
-**Status:** Open
+**Status:** SUPERSEDED / not pursued (archived 2026-07-12) — AppState remains hand-written per client with sentinel tests (engine/app_state_schema.json is the cross-client SoT); codegen never started and the v1.18.0 target slipped without demand.
 **Priority:** Medium — builds on hand-crafted implementations (v1.17.1)
 **Target:** v1.18.0
 **Created:** 2026-03-20 (consolidated from TODO-appstate-{0..5}.md on 2026-04-02)

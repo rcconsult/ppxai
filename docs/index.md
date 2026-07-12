@@ -118,13 +118,14 @@ Python 3.11+, pytest for testing.
 
     [:octicons-arrow-right-24: Installation Guide](installation.md)
 
--   :material-robot:{ .lg .middle } **Agent Mode**
+-   :material-robot:{ .lg .middle } **Agents**
 
     ---
 
-    Autonomous task execution with tools
+    Background `/task` agent platform + in-session `/agent` mode
 
-    [:octicons-arrow-right-24: Agent Mode Guide](agent-mode-guide.md)
+    [:octicons-arrow-right-24: Task Agent Guide](task-agent-guide.md) ·
+    [Session Agent Guide](session-agent-guide.md)
 
 -   :material-file-document:{ .lg .middle } **Bootstrap Context**
 

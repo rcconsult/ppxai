@@ -1520,7 +1520,7 @@ archived snapshots:
   (it migrated `read_file`/`write_file` only). `TestServeImageConfinement`
   added (sibling-prefix path → 403 via `/files/image/`, verified to fail
   404 against the old check; in-tree image → 200). v1.18.8 Phase A — see
-  [plan-v1.18.8-files-parity.md](plan-v1.18.8-files-parity.md).
+  [archive/plan-v1.18.8-files-parity.md](archive/plan-v1.18.8-files-parity.md).
 
 - **Item 20 — v1.19.x alignment paperwork (closed 2026-05-24):** merged to
   master as `56bc2d38` (Stage-2 fold rebased from `42ed8f00`) + `7a2ea268`

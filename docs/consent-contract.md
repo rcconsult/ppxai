@@ -213,6 +213,29 @@ The document parsers are the OS-level read; corruption or
 malformed-input crashes (e.g., a malicious PDF) are tested per-tool
 in `test_pdf_tools.py`, `test_csv_tools.py`, `test_excel_pptx_tools.py`.
 
+## Agent-platform consent (v1.19.0 `/task` / `/v1/agent/*`)
+
+Two distinct gates, separate from the file-edit/shell contract above:
+
+| Operation | Triggers consent? | Default | Config key |
+|---|---|---|---|
+| `spawn_subagent` tool call | YES (server context) | **Deny** (fail-closed) | `tools.agent.spawn_consent: deny\|auto` |
+| Mid-run interactive park (T5) | YES — run parks as `waiting{kind:"consent"}` | **Deny on TTL expiry** (fail-closed) | `tools.agent.consent_ttl_s` (default 300s) |
+
+- **`spawn_subagent`:** with `spawn_consent: "deny"` (default), any
+  `spawn_subagent` call in a server-context run is refused outright — no
+  callback, no park. Setting `auto` approves without a human in the loop
+  (delegated trust, not an unattended default).
+- **T5 run park:** a run needing a human decision emits `AGENT_WAITING`
+  (`resume_token`, `ttl_s`) and halts at `status=waiting`. The human answers
+  via `POST /v1/agent/runs/{id}/respond` (`RespondRequest{token, approved?,
+  text?}`); a consent park requires `approved: true` to proceed — a
+  text-only answer is a denial. If the TTL lapses before a response, the
+  park resolves to denial, same fail-closed posture as shell consent.
+- See [docs/agent-task-lifecycle.html](agent-task-lifecycle.html) for the
+  full run-state machine and [ADR 0003 §8](decisions/0003-agent-platform-architecture.md)
+  for the design rationale.
+
 ## What's NOT covered by the consent layer
 
 These categories are **out of scope** for this doc and need

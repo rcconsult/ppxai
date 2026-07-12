@@ -488,7 +488,7 @@ ppxai/tui/                     # New module (Textual-based)
 | **highlight.js rebuild** | Added PowerShell, Dockerfile, DOS, AppleScript | ✅ Done |
 | **1,227 tests passing** | 34 preview + 16 SSL tests added | ✅ Done |
 
-**File Navigation:** Deferred to v1.16.0. See [docs/TODO-v1.16.0.md](docs/TODO-v1.16.0.md) for detailed spec.
+**File Navigation:** Deferred to v1.16.0. Detailed spec was never written (plan doc never created).
 
 ### v1.15.5 - Multi-Line Input & Escape Key Fix
 
@@ -726,7 +726,7 @@ ppxai/tui/                     # New module (Textual-based)
 > **Current status (2026-06-13):** **v1.18.0 through v1.18.7 have all shipped.**
 > Latest release: **v1.18.7** (2026-06-13). Active branch: **`bugfix/v1.18.8`**
 > — cross-client `/files/*` parity fixes (post-v1.18.7 review); see
-> [docs/plan-v1.18.8-files-parity.md](docs/plan-v1.18.8-files-parity.md) and
+> [docs/archive/plan-v1.18.8-files-parity.md](docs/archive/plan-v1.18.8-files-parity.md) and
 > debt items 25–28 in [docs/debt-inventory.md](docs/debt-inventory.md). For
 > per-release detail see [CHANGELOG.md](CHANGELOG.md) and
 > `docs/release-notes-v1.18.*.md`. **Not-yet-shipped** items in the tables
@@ -779,10 +779,15 @@ v1.18.1 because they're each substantial enough to deserve dedicated
 release notes — bundling four workstreams in one release made review
 impractical.
 
+> **2026-07-12: partially superseded by the shipped agent platform** —
+> per-run/preset selection is covered by `/v1/agent` per-run intent +
+> spec/skill files; only mid-session auto-routing remains, retargeted
+> v1.20.x+ — see [docs/TODO-routing.md](docs/TODO-routing.md) Disposition.
+
 | Feature | Description | Plan |
 |---------|-------------|------|
-| **AppState schema + generator** | YAML → Python/JS/TS codegen, CI `--check` mode | [TODO-appstate-codegen.md](docs/TODO-appstate-codegen.md) |
-| **AppState client wiring** | Replace hand-crafted with generated across Rich, Textual, Web, VSCode, k8s | [TODO-appstate-codegen.md](docs/TODO-appstate-codegen.md) |
+| **AppState schema + generator** | YAML → Python/JS/TS codegen, CI `--check` mode | [TODO-appstate-codegen.md](docs/archive/TODO-appstate-codegen.md) |
+| **AppState client wiring** | Replace hand-crafted with generated across Rich, Textual, Web, VSCode, k8s | [TODO-appstate-codegen.md](docs/archive/TODO-appstate-codegen.md) |
 | **Routing infrastructure** | `RoutingRole`, `ProviderPool`, `ModelRouter` classes | [TODO-routing.md](docs/TODO-routing.md) Phase 1 |
 | **Coding command routing** | Replace `coding_model` with `router.resolve(RoutingRole.CODER)` | [TODO-routing.md](docs/TODO-routing.md) Phase 2 |
 
@@ -1033,13 +1038,10 @@ needed; the full bundle is what makes v1.19.x "ready for ppxai-sre."
 
 ### v1.20.x - MCP integration Day-0 (planned)
 
-Wire MCP (Model Context Protocol) stdio servers into the engine. The
-`mcp>=0.1.0` optional extras dep has been declared since v1.9.x but
-the actual client code, registry, lifecycle, slash command, and
-per-client surface are **not present in ppxai today** (verified
-2026-05-23 via grep; the old `tool_manager.py` MCP loader was deleted
-in v1.11.7 during EngineClient migration). Day-0 surface is the
-ppxai-sre [`ppxai-outlook-agent
+Wire MCP (Model Context Protocol) stdio servers into the engine. MCP
+is not integrated in ppxai today — evidence + phasing live in
+[docs/mcp-integration-plan.md](docs/mcp-integration-plan.md) (verified
+2026-05-23). Day-0 surface is the ppxai-sre [`ppxai-outlook-agent
 mcp`](https://github.com/rcconsult/ppxai-sre/tree/master/agents/outlook-monitor)
 server (6 tools: `search_messages`, `scan_headers`, `get_message`,
 `list_recent`, `top_senders`, `sync_status`); the same plumbing
@@ -1118,7 +1120,7 @@ Cross-references:
 ## Future Considerations
 
 These are tracked but not prioritized:
-- **libghostty SDK** — `libghostty-vt` is a zero-dep library (not even libc) extracted from Ghostty's core (1M+ daily macOS users since 1.0 in late 2024). Provides VT sequence parsing + full terminal state (cursor, styles, wrapping, scrollback, reflow). **Zig API complete**, **C API functional** (proven by [ghostling](https://github.com/ghostty-org/ghostling) — complete terminal in single C file). Features: SIMD-accelerated parsing (>100 MB/s), DFA parser (14 states, O(1) transitions), Kitty Keyboard Protocol key encoder, Kitty Graphics Protocol, mouse encoding (SGR/X10/URxvt), terminal-to-HTML encoding, render state API with row/cell iterators. Platforms: macOS, Linux, Windows, WebAssembly, Android (x86_64 + aarch64 + 32-bit). Growing ecosystem: Rust wrappers, C# experiments, Windows ports, browser embeds. **ppxai integration:** CI pipeline ready (`.github/workflows/build-ghostty-vt.yml`), prebuilt libs at `libghostty-20260319` release, Python ctypes wrapper scaffolded (`ppxai/terminal/ghostty.py`). See [TODO](docs/TODO-libghostty-integration.md), [ghostling](https://github.com/ghostty-org/ghostling), [mitchellh.com/writing/libghostty-is-coming](https://mitchellh.com/writing/libghostty-is-coming)
+- **libghostty SDK** — `libghostty-vt` is a zero-dep library (not even libc) extracted from Ghostty's core (1M+ daily macOS users since 1.0 in late 2024). Provides VT sequence parsing + full terminal state (cursor, styles, wrapping, scrollback, reflow). **Zig API complete**, **C API functional** (proven by [ghostling](https://github.com/ghostty-org/ghostling) — complete terminal in single C file). Features: SIMD-accelerated parsing (>100 MB/s), DFA parser (14 states, O(1) transitions), Kitty Keyboard Protocol key encoder, Kitty Graphics Protocol, mouse encoding (SGR/X10/URxvt), terminal-to-HTML encoding, render state API with row/cell iterators. Platforms: macOS, Linux, Windows, WebAssembly, Android (x86_64 + aarch64 + 32-bit). Growing ecosystem: Rust wrappers, C# experiments, Windows ports, browser embeds. **ppxai integration:** CI pipeline ready (`.github/workflows/build-ghostty-vt.yml`), prebuilt libs at `libghostty-20260319` release, Python ctypes wrapper scaffolded (`ppxai/terminal/ghostty.py`). See TODO (plan doc never created), [ghostling](https://github.com/ghostty-org/ghostling), [mitchellh.com/writing/libghostty-is-coming](https://mitchellh.com/writing/libghostty-is-coming)
 - ~~**Per-provider tool config**~~ - ⏳ Partially addressed by Model Profile System (v1.15.6/v1.16.0)
 - **Custom tools** - User-defined tools in `~/.ppxai/tools/`
 - ~~**Provider-aware tool guidance**~~ - ✅ Implemented in v1.13.3
@@ -1377,4 +1379,4 @@ For archived planning documents:
 
 ---
 
-**Last Updated**: April 2, 2026
+**Last Updated**: July 12, 2026

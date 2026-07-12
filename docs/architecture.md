@@ -957,10 +957,11 @@ automatically:
   on the next `npm run compile`
 - VSCode `AppState` reads the bundled copy
 
-The v1.18.x schema-generator work in `docs/TODO-appstate-codegen.md`
-builds on this: runtime loading is the architecture; codegen adds
-compile-time type generation for TypeScript so the `AppStateFields`
-interface becomes an artifact instead of hand-maintained.
+The schema-generator work proposed in `docs/archive/TODO-appstate-codegen.md`
+would have built on this (runtime loading is the architecture; codegen would
+add compile-time type generation for TypeScript so the `AppStateFields`
+interface becomes an artifact instead of hand-maintained), but it was never
+pursued — see that doc's Status line (archived 2026-07-12, superseded).
 
 ## Agent Heartbeat Primitives (v1.18.0)
 

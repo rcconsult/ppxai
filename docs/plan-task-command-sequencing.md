@@ -47,7 +47,11 @@ live-tail a pane; `cancel` stops one. All over **existing** endpoints.
   `AgentRunController`; register `/task` in `command-dispatcher.js` next to
   `/agentrun` and route sub-verbs (`run|ls|show|open|watch|cancel|help`).
 - Launch-line flag parser: `--tools a,b,c`, `--allow host[/path],…`,
-  `--provider`, `--model`, `--budget iters=,time=,tokens=`, `--system "…"`
+  `--provider`, `--model`, `--budget iters=,time=,tokens=`, `--system "…"`,
+  `--work-dir <path>` (per-run working directory intent, 2026-07-12,
+  post-T8a: clients thread the session working dir by default; the server
+  honors it only when the T2 seal is OFF — sealed runs keep their jail and
+  the launch response flags `workdir_ignored`)
   → `AgentTaskRequest` body.
 - `web/components/views/task-run-view.js` — `TaskRunView`, extends the
   `AgentRunView` pane: grant chips, egress chips, budget meter, live events
@@ -92,6 +96,10 @@ Brought early so every later increment is trialed confined.
   denied + `path_denied` event, same shape as `tool_denied`.
 - Per-run `workdir` = `sandbox.workdir.root/{run_id}/work`, created at
   `start_run`, cleaned per `cleanup`.
+- **`--work-dir <path>` flag (2026-07-12, post-T8a):** clients thread the
+  session working dir by default; the server only honors it when this T2
+  seal is OFF — sealed runs keep their jail regardless, and the launch
+  response flags `workdir_ignored` so the client can surface it.
 
 **Trial:** set `read_paths.allow: ["~/.ppxai/skills"]`; `/task run "read
 /etc/hosts" --tools read_file` → denied; `/task run "read the file
@@ -444,7 +452,8 @@ independently-trialable halves:
 dependency-injected (IoC, same pattern as `handlers/consent.ts`), VSCode-free
 controller with **verb-for-verb parity** with the web client
 (run/ls/list/show/open/watch/cancel/respond/ack/resume/help; the same
-`parseTaskArgs` grammar incl. `--spec`/`--skill`/`--budget` suffixes).
+`parseTaskArgs` grammar incl. `--spec`/`--skill`/`--budget`/`--work-dir`
+suffixes).
 `httpClient.ts` grows the typed `/v1/agent/*` slice (agentTask/agentRuns/
 agentRun/agentRunCancel/agentRunRespond/agentRunAck/agentRunResume) with the
 tier's guardrail 4xx `detail` bodies surfaced **verbatim** (403 tier-off

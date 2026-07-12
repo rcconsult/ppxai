@@ -76,7 +76,7 @@ VERSION_FILES = {
 
 # verify_release() body-length floor. The auto-generated `**Full Changelog**:
 # https://...` link that softprops/action-gh-release emits when notes-file
-# publishing fails is ~80 chars. Any real `docs/RELEASE-NOTES-v*.md` file is
+# publishing fails is ~80 chars. Any real `docs/release-notes-v*.md` file is
 # multi-paragraph and well over 500 chars. v1.18.2's second-failure mode
 # (notes-file publish timed out, release body shipped with only the 80-char
 # link) went undetected for ~1 hour because verify_release didn't check.
@@ -282,7 +282,7 @@ def update_readme_badges(version: str, test_count: int | None = None):
 
 def create_release_notes(version: str, date: str):
     """Create release notes file if it doesn't exist."""
-    notes_file = PROJECT_ROOT / f"docs/RELEASE-NOTES-v{version}.md"
+    notes_file = PROJECT_ROOT / f"docs/release-notes-v{version}.md"
 
     if notes_file.exists():
         print(f"  ⏭️  Release notes already exist: {notes_file.name}")
@@ -342,7 +342,7 @@ This is a drop-in replacement for the previous version. No configuration changes
 
 def check_release_notes_not_template(version: str) -> bool:
     """Check if release notes exist and are not just the template."""
-    notes_file = PROJECT_ROOT / f"docs/RELEASE-NOTES-v{version}.md"
+    notes_file = PROJECT_ROOT / f"docs/release-notes-v{version}.md"
 
     if not notes_file.exists():
         return True  # Will be created later, that's OK
@@ -718,7 +718,7 @@ def wait_for_ci(version: str, timeout_minutes: int = 10) -> bool:
 
 def publish_release_notes(version: str, max_retries: int = 12):
     """Publish release notes to GitHub release and mark as latest."""
-    notes_file = PROJECT_ROOT / f"docs/RELEASE-NOTES-v{version}.md"
+    notes_file = PROJECT_ROOT / f"docs/release-notes-v{version}.md"
     tag = f"v{version}"
 
     if not notes_file.exists():
@@ -745,7 +745,7 @@ def publish_release_notes(version: str, max_retries: int = 12):
             else:
                 print(f"  ❌ Release {tag} not found after {max_retries} attempts")
                 print(f"     You can manually publish notes with:")
-                print(f"     gh release edit {tag} --notes-file docs/RELEASE-NOTES-{tag}.md --latest")
+                print(f"     gh release edit {tag} --notes-file docs/release-notes-{tag}.md --latest")
         else:
             print(f"  ❌ Failed to publish release notes: {result.stderr}")
             return
@@ -819,7 +819,7 @@ def verify_release(version: str) -> bool:
         body shipped with only the ~80-char auto-generated changelog link)
 
     Warns but does not exit when:
-      * body doesn't contain the first 200 chars of RELEASE-NOTES-v*.md
+      * body doesn't contain the first 200 chars of release-notes-v*.md
         (editorial drift between on-disk and published is allowed)
       * optional Intel Mac assets are missing (local build skipped)
 
@@ -913,15 +913,15 @@ def verify_release(version: str) -> bool:
               f"(threshold: {MIN_RELEASE_BODY_CHARS}).")
         print(f"     Release-notes publishing failed silently. Recover with:")
         print(f"     gh release edit v{version} \\")
-        print(f"       --notes-file docs/RELEASE-NOTES-v{version}.md")
+        print(f"       --notes-file docs/release-notes-v{version}.md")
         sys.exit(1)
 
-    notes_path = PROJECT_ROOT / f"docs/RELEASE-NOTES-v{version}.md"
+    notes_path = PROJECT_ROOT / f"docs/release-notes-v{version}.md"
     if notes_path.exists():
         expected_prefix = notes_path.read_text(encoding="utf-8").strip()[:200]
         if expected_prefix and expected_prefix not in body:
             print(f"  ⚠️  WARNING: release body does not contain the first 200 chars")
-            print(f"     of docs/RELEASE-NOTES-v{version}.md — manual review recommended.")
+            print(f"     of docs/release-notes-v{version}.md — manual review recommended.")
 
     print(f"  ✅ {len(assets)} assets verified, body {len(body)} chars.")
     return True
@@ -1027,7 +1027,7 @@ def main():
 
     # Pre-flight check: Warn if release notes are still template
     if not check_release_notes_not_template(version):
-        notes_file = f"docs/RELEASE-NOTES-v{version}.md"
+        notes_file = f"docs/release-notes-v{version}.md"
         print(f"\n  ⚠️  WARNING: Release notes appear to be template!")
         print(f"     File: {notes_file}")
         print(f"     Please edit the release notes with actual content before proceeding.")
@@ -1071,7 +1071,7 @@ def main():
 
         # Release notes
         dry_step += 1
-        notes_file = f"docs/RELEASE-NOTES-v{version}.md"
+        notes_file = f"docs/release-notes-v{version}.md"
         notes_exist = (PROJECT_ROOT / notes_file).exists()
         if notes_exist:
             print(f"  {dry_step}. 📄 Check release notes (exists: {notes_file})")

@@ -335,6 +335,51 @@ The server runs on `http://127.0.0.1:54320` by default.
 
 ---
 
+## Desktop Web App Executable
+
+The desktop web app executable (`ppxai-desktop`) provides a browser-based chat interface. Users can run it without Python installed.
+
+### Quick Build
+
+```bash
+# Install dependencies (including build extras)
+uv sync --extra build
+
+# Build desktop executable
+uv run pyinstaller ppxai-desktop.spec
+```
+
+The executable will be created at `dist/ppxai-desktop` (or `dist\ppxai-desktop.exe` on Windows).
+
+### Manual Build (without uv)
+
+```bash
+# Set up virtual environment
+python3 -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate.bat
+
+# Install dependencies
+pip install -e ".[build]"
+
+# Build with PyInstaller
+pyinstaller ppxai-desktop.spec
+```
+
+### Running the Desktop App
+
+```bash
+# macOS/Linux
+chmod +x ppxai-desktop-macos-arm64
+./ppxai-desktop-macos-arm64
+
+# Windows
+ppxai-desktop-windows.exe
+```
+
+This launches a browser-based chat interface. On macOS, `scripts/create-macos-app.sh` wraps this executable into a native `.app` bundle / `.dmg` installer.
+
+---
+
 ## VS Code Extension
 
 ### Quick Build

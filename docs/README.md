@@ -20,7 +20,8 @@
 | [Provider Setup Guide](provider-setup.md) | Configure AI providers (OpenAI, Gemini, Perplexity) |
 | [Autorouter Config](autorouter-config.md) | Automatic model routing for coding tasks |
 | [Custom Tool Development](custom-tool-development-guide.md) | Create your own tools for ppxai |
-| [Agent Mode Guide](agent-mode-guide.md) | Autonomous multi-step task execution |
+| [Task Agent Guide](task-agent-guide.md) | Background `/task` agent platform: grants, specs, skills, lifecycle (v1.19.0) |
+| [Session Agent Guide](session-agent-guide.md) | In-session `/agent` iterative tool execution |
 | [Checkpoint Guide](checkpoint-guide.md) | Undo and rollback agent operations |
 | [Ollama Limitations](ollama-limitations.md) | Local model constraints and workarounds |
 | [Tool Calling](tool-calling.md) | Native vs prompt-based tool calling (v1.15.3+) |

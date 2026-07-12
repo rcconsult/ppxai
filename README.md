@@ -47,7 +47,14 @@ echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc && source ~/.bashrc
 
 # Set up API key
 echo 'PERPLEXITY_API_KEY=pplx-xxxxx' > ~/.ppxai/.env
+```
 
+**Windows (PowerShell):** binaries install to `~/.ppxai/bin/` — add it to PATH:
+```powershell
+[Environment]::SetEnvironmentVariable("Path", "$env:USERPROFILE\.ppxai\bin;" + [Environment]::GetEnvironmentVariable("Path", "User"), "User")
+```
+
+```bash
 # Run Rich TUI (original)
 ppxai
 
@@ -119,7 +126,7 @@ See [docs/linux-terminal-setup.md](docs/linux-terminal-setup.md) for comprehensi
 
 The core innovation in v1.15.0 is a revolutionary renderer architecture that **completely decouples command logic from UI presentation**:
 
-- **17 CommandResult types** - Structured data for all command outputs (MessageResult, TableResult, CodeResult, ErrorResult, etc.)
+- **21 CommandResult types** - Structured data for all command outputs (MessageResult, TableResult, CodeResult, ErrorResult, etc.)
 - **Mechanical dispatch** - `isinstance()` checks route results to renderers, zero conditionals
 - **2 renderer implementations** - RichRenderer (legacy TUI) + TextualRenderer (ppxaide)
 - **UI-agnostic commands** - Same command code works in TUI, VSCode, Web, future GUIs
@@ -174,7 +181,7 @@ Switch providers anytime: `/provider gemini` or `/model gemini-2.5-pro`
 
 **ppxaide features (v1.15.0+):**
 - **Multi-line input** (v1.15.5) - Enter inserts newlines, Ctrl+Enter submits. Auto-expands from 1 to 18 lines
-- **Type-based renderer architecture** - All 32 commands return structured result objects (17 types), enabling mechanical UI dispatch without conditionals
+- **Type-based renderer architecture** - All commands return structured result objects (21 types), enabling mechanical UI dispatch without conditionals
 - **Markdown in chat bubbles** - Full markdown rendering with clickable URLs, headers, code blocks, and citations
 - **Modern async architecture** with real-time streaming and thinking indicators
 - **17+ themes** (vs 6 in Rich TUI) - cycle with Ctrl+T or Ctrl+P for palette
@@ -207,14 +214,27 @@ Attach files to conversations across all four clients:
 
 **How to attach:** `/attach <path>` (TUI), drag-drop or paperclip button (Web/VSCode), `a` key in file tree (ppxaide)
 
-### Agent Mode
+### Session Agent Mode (`/agent`)
 Enable with `/agent on` or click the Agent button in VSCode:
 - Iterative tool execution with automatic re-prompting
 - AI decides when to use tools and chains multiple calls
 - Consent-based safety for file edits and shell commands
 - Works with any provider that supports tool calling
 
-See [docs/agent-mode-guide.md](docs/agent-mode-guide.md) for details.
+See [docs/session-agent-guide.md](docs/session-agent-guide.md) for details.
+Distinct from the background **`/task` sub-agent platform** and one-off
+`/agentrun` runs (v1.19.0) — see the disambiguation table at the top of
+that guide.
+
+### Background Agent Platform (`/task`, v1.19.0)
+Durable, addressable background runs with per-run tool grants and a sandboxed workdir:
+- `/task run "…" --tools read_file [--spec name] [--skill name] [--allow host] [--budget …] [--work-dir path]`
+- Lifecycle: `/task ls|show|watch|cancel`, plus `respond` (interactive consent), `ack` (collect a held result), and `resume` (recover an interrupted run)
+- Spec files (`--spec`) and skills (`--skill`) grant reusable tool/read-scope bundles
+- Egress allowlists and budgets bound what a run can reach and spend
+- Ships in **Web** and **VSCode**; default-off via `tools.agent.task_tier_enabled`
+
+See [docs/task-agent-guide.md](docs/task-agent-guide.md) and [docs/api-gateway.md](docs/api-gateway.md) for details.
 
 ### Bootstrap Context (v1.14.0+)
 Load project-specific instructions from `AGENTS.md` or `CLAUDE.md`:
@@ -359,7 +379,8 @@ No telemetry. No tracking. Data only goes to the LLM provider you choose.
 | [Linux Desktop Integration](desktop/README.md) | One-click app launcher integration (v1.15.5) |
 | [Linux Terminal Setup](docs/linux-terminal-setup.md) | Ghostty/Kitty for Ctrl+Enter support (v1.15.5) |
 | [VSCode Extension](vscode-extension/README.md) | Installation and usage |
-| [Agent Mode](docs/agent-mode-guide.md) | Iterative tool execution |
+| [Session Agent Mode](docs/session-agent-guide.md) | In-session iterative tool execution (`/agent`) |
+| [Task Agent Guide](docs/task-agent-guide.md) | Background /task agent platform (v1.19.0) |
 | [Checkpoint & Undo](docs/checkpoint-guide.md) | Atomic rollback for agent tasks |
 | [Provider Setup](docs/provider-setup.md) | Configure any OpenAI-compatible API |
 | [Tool Development](docs/custom-tool-development-guide.md) | Add custom tools |
@@ -402,8 +423,8 @@ ppxai/
 │   │       ├── manager.py      # ToolManager with provider filtering
 │   │       ├── base.py         # BaseTool abstract class
 │   │       └── builtin/        # 10+ built-in tools
-│   ├── commands/               # 32 UI-agnostic command implementations
-│   │   ├── types.py            # 17 CommandResult types
+│   ├── commands/               # UI-agnostic command implementations — see /help
+│   │   ├── results.py          # 21 CommandResult types
 │   │   ├── context.py          # CommandContext protocol
 │   │   ├── factory.py          # CommandFactory (registry pattern)
 │   │   └── [show|tools|model|provider|...].py  # Individual commands
@@ -411,7 +432,7 @@ ppxai/
 │   │   ├── base.py             # BaseRenderer interface
 │   │   └── rich_renderer.py    # RichRenderer for legacy TUI
 │   ├── server/                 # HTTP + JSON-RPC servers
-│   │   ├── http_server.py      # FastAPI HTTP + SSE server (for VSCode/Web)
+│   │   ├── http.py             # FastAPI HTTP + SSE server (for VSCode/Web), 21 route modules
 │   │   └── jsonrpc.py          # JSON-RPC server over stdio (deprecated)
 │   ├── web/                    # Desktop Web App (ppxai-desktop)
 │   │   ├── server.py           # FastAPI server with SSE streaming
@@ -422,8 +443,10 @@ ppxai/
 │   │   ├── consent.py          # File/shell consent system
 │   │   └── preview.py          # HTML preview helpers
 │   ├── config/                 # Configuration system
-│   │   ├── settings.py         # Settings management
-│   │   └── provider_config.py  # Provider definitions
+│   │   ├── store.py            # ConfigStore (load/save ppxai-config.json)
+│   │   ├── loader.py           # Config loading/merging
+│   │   ├── providers.py        # Provider definitions
+│   │   └── defaults.py         # Default config values
 │   └── data/                   # Session/usage data storage
 ├── vscode-extension/           # VSCode extension (TypeScript)
 │   ├── src/
@@ -446,13 +469,13 @@ ppxai/
 │   ├── ppxai.png               # ppxai icon (CLI)
 │   ├── ppxaide-nobg.png        # ppxaide icon (TUI)
 │   └── [.ico|.icns files]      # Platform-specific icons
-├── tests/                      # 1624+ tests
+├── tests/                      # 3,900+ tests
 │   ├── test_tui.py             # Textual TUI tests (180+ tests)
 │   ├── test_engine.py          # Engine layer tests
 │   ├── test_commands.py        # Command tests
 │   └── test_*.py               # Provider, tool, config tests
 ├── docs/                       # Documentation
-│   ├── agent-mode-guide.md     # Iterative tool execution guide
+│   ├── session-agent-guide.md  # In-session /agent mode guide
 │   ├── checkpoint-guide.md     # Atomic rollback guide
 │   ├── linux-terminal-setup.md # Ghostty/Kitty setup for Ctrl+Enter
 │   ├── provider-setup.md       # Multi-provider configuration

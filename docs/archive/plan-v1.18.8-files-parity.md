@@ -1,5 +1,7 @@
 # v1.18.8 Plan — `/files/*` parity + post-release code-review fixes
 
+> Completed — shipped in release v1.18.8 (2026-06-14). Archived 2026-07-12.
+
 **Branch:** `bugfix/v1.18.8` (off master @ v1.18.7).
 **Class:** bugfix / post-release regression follow-up. No new features.
 **Source:** post-v1.18.7 code review. Two waves:

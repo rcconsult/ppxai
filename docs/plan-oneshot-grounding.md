@@ -1,6 +1,6 @@
 # Plan: Option A — config-driven native web search for oneshot
 
-**Status:** Proposed (awaiting go)
+**Status:** ✅ SHIPPED in v1.19.0 (2026-06-17) — tools.web_search.oneshot_grounding, default off. Doc kept as design record; trial recipe below is historical.
 **Branch:** `feature/v1.19.0`
 **Scope:** additive, capability-gated; the egress security perimeter is held
 **constant** by design (this is the whole point of Option A).

@@ -19,16 +19,21 @@ Thank you for your interest in contributing to ppxai! We welcome contributions f
    ```bash
    python scripts/bootstrap.py --all
    ```
-3. Set up configuration:
+3. Install all optional extras (recommended):
+   ```bash
+   uv sync --all-extras
+   ```
+   Without this, the office/upload test suites (docx, Excel, PPTX, PDF, multipart file upload) silently skip — roughly 66 fewer tests collected.
+4. Set up configuration:
    ```bash
    cp .env.example .env
    # Edit .env and add your API keys (e.g., PERPLEXITY_API_KEY)
    ```
-4. Run the application:
+5. Run the application:
    ```bash
    uv run ppxai
    ```
-5. Run tests:
+6. Run tests:
    ```bash
    uv run pytest tests/ -v
    ```

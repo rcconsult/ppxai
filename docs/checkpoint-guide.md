@@ -1,4 +1,4 @@
-# Checkpoint System User Guide (v1.12.4)
+# Checkpoint System User Guide (v1.12.4+, current through v1.19.0)
 
 ## Overview
 
@@ -795,6 +795,6 @@ A: Use `/checkpoint list` to see the last 10 checkpoints, or `/checkpoint info <
 
 ## See Also
 
-- [Agent Mode Guide](agent-mode-guide.md) - Autonomous agent mode documentation
+- [Session Agent Guide](session-agent-guide.md) - Autonomous agent mode documentation
 - [VSCode Checkpoint UI Spec](archive/v1.15.2-completed/VSCODE-CHECKPOINT-UI-SPEC.md) - VSCode extension implementation
 - [Release Notes v1.12.0](archive/release-notes/RELEASE-NOTES-v1.12.0.md) - Full feature list and changelog

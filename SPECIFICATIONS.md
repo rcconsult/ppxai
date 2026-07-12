@@ -1,5 +1,7 @@
 # Specification Guidelines for Code Generation
 
+> ⚠️ **Aspirational document.** The `/spec` and `/implement` commands described here were never implemented (no such commands exist in ppxai/commands/). Use these templates as manual prompt-writing patterns. Kept for reference; a command-ified version has no current target.
+
 This guide helps you write effective specifications for the `/implement` command in ppxai. Well-structured specifications lead to better, more accurate code implementations.
 
 ## Table of Contents

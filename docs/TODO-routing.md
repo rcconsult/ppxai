@@ -1,13 +1,37 @@
 # TODO: Multi-Model Routing
 
-**Status:** Planning
-**Target:** v1.18.x series
+**Status:** RETARGETED 2026-07-12 (was: Planning, v1.18.x — never started; all v1.18.x dates slipped)
+**Target:** v1.20.x+ (after agent-platform stabilizes)
 **Priority:** Medium — foundational for advanced agentic workflows
 
 > **Scheduling note (2026-04-02):** Consolidated to v1.18.x. Phase 1-2 target
 > v1.18.0, Phase 3-4 target v1.18.1, Phase 5 targets v1.18.2, Phase 6+ deferred
 > to v1.19.x. Requires thorough testing — agent mode and multi-tool calling
 > sequences must work correctly with mid-session provider switches.
+
+---
+
+## Disposition (2026-07-12)
+
+**Phases 1, 2, and 5** (`ProviderPool`/`ModelRouter` infrastructure, the
+`/preset` command, and per-run role→model selection) are **RETIRED** —
+superseded by the shipped agent platform's per-run intent
+(provider/model/workdir on `POST /v1/agent/run` and `/v1/agent/task`) plus
+operator-authored spec files (`--spec`, `sandbox.specs_dir`) and skills
+(`--skill`, `sandbox.skills_dir`). A spec file is effectively a named preset.
+**Do not rebuild parallel plumbing** — `ProviderPool`/`ModelRouter`/`/preset`
+would duplicate what specs + per-run intent already cover.
+
+**Phases 3, 4, and 6** (mid-session automatic role switching inside one live
+chat session, `PromptAnalyzer` per-prompt classification, and decision
+logging) **SURVIVE** as the retargeted scope for v1.20.x+. This is the part
+of the original plan that is genuinely not superseded: auto-switching models
+per role/prompt *inside* one live chat session (planner vs tools vs chat),
+not per-run selection. A future design in this space should build on spec
+files as the preset primitive rather than reintroducing `ModelRouter`.
+
+The phase sections below are kept for historical value and are annotated
+inline as **RETIRED** or **RETAINED** — nothing has been deleted.
 
 ---
 
@@ -206,7 +230,7 @@ This keeps simple presets short (2-3 lines) while allowing full control when nee
 
 ## Phased Implementation
 
-### Phase 1: Infrastructure (v1.18.0)
+### Phase 1: Infrastructure (v1.18.0) — **RETIRED** (superseded by shipped per-run intent + spec files; see Disposition above)
 
 **Goal:** Define config schema, build `ProviderPool` and `ModelRouter` — no actual routing yet.
 
@@ -278,7 +302,7 @@ class ModelRouter:
 
 ---
 
-### Phase 2: Coding Command Routing (v1.18.0)
+### Phase 2: Coding Command Routing (v1.18.0) — **RETIRED** (superseded by shipped per-run intent + spec files; see Disposition above)
 
 **Goal:** Replace `coding_model` + `/autoroute` with routing system. Simplest integration
 point — coding commands already switch models.
@@ -322,7 +346,7 @@ to swap a cached provider instance, NOT `set_provider()` which reconstructs ever
 
 ---
 
-### Phase 3: Agent Mode Routing (v1.18.1)
+### Phase 3: Agent Mode Routing (v1.18.1) — **RETAINED** (retargeted v1.20.x+; see Disposition above)
 
 **Goal:** In agent mode, route first turn to `planner` role, subsequent tool-loop
 iterations to `tools` role.
@@ -353,7 +377,7 @@ before sending to the new provider.
 
 ---
 
-### Phase 4: Chat Mode Routing + Mode Presets (v1.18.1)
+### Phase 4: Chat Mode Routing + Mode Presets (v1.18.1) — **RETAINED** (retargeted v1.20.x+; see Disposition above)
 
 **Goal:** Route regular chat to `chat` role. Support `mode_presets` for automatic
 preset switching when entering/leaving agent mode.
@@ -369,7 +393,7 @@ preset switching when entering/leaving agent mode.
 
 ---
 
-### Phase 5: `/preset` Command + TUI Integration (v1.18.2+)
+### Phase 5: `/preset` Command + TUI Integration (v1.18.2+) — **RETIRED** (superseded by shipped per-run intent + spec files; see Disposition above)
 
 **Goal:** User-facing commands for preset management.
 
@@ -393,7 +417,7 @@ preset switching when entering/leaving agent mode.
 
 ---
 
-### Phase 6: Prompt Analyzer + Automatic Routing (v1.19.x)
+### Phase 6: Prompt Analyzer + Automatic Routing (v1.19.x) — **RETAINED** (retargeted v1.20.x+; see Disposition above)
 
 **Goal:** ppxai analyzes user prompts to automatically route to the best role,
 with a tiered classifier that improves over time through usage data.
@@ -574,7 +598,7 @@ Category:
 
 ---
 
-### Phase 7: Adaptive Learning (v1.21.x — Future)
+### Phase 7: Adaptive Learning (v1.21.x — Future) — **RETAINED** (retargeted v1.20.x+ scope, builds on Phase 6; see Disposition above)
 
 **Goal:** The routing system improves over time by learning from its own decisions.
 

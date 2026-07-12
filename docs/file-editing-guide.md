@@ -1,4 +1,4 @@
-# File Editing Tools Guide (v1.11.0)
+# File Editing Tools Guide (v1.11.0+, current through v1.19.0)
 
 Both **ppxai** (Rich TUI) and **ppxaide** (Textual TUI) include powerful file editing capabilities that allow AI to make autonomous code modifications with your consent. This guide shows you how to use these tools effectively.
 

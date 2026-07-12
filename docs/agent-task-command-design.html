@@ -149,7 +149,7 @@
 <span class="p">&gt;</span> /task ack <span class="rid">r_2ab1</span>
   <span class="g-ok">✓</span> <span class="rid">r_2ab1</span>  <span class="dim">completed_pending_ack → finalized</span>   <span class="dim">result collected</span></pre>
   </div>
-  <div class="note"><b>Status today:</b> no <code>/task</code> command exists in any client — <code>/agentrun</code> (tool-free) is the only agent slash command shipped. This is the proposed surface. The launch, list, show, watch and cancel endpoints already exist; <code>respond</code>, <code>ack</code> and <code>resume</code> are designed (ADR&nbsp;0003 §8) and need building.</div>
+  <div class="note"><b>Status today:</b> the <code>/task</code> command family is <b>built and live</b> in web + VSCode as of v1.19.0 (T1–T8a) — <code>run</code>, <code>ls</code>, <code>show</code>, <code>watch</code>, <code>cancel</code>, <code>respond</code>, <code>ack</code> and <code>resume</code> all ship, backed by the full <code>waiting</code> / <code>completed_pending_ack</code> / <code>finalized</code> lifecycle. The TUI port (T8b) is parked pending a transport decision; the container tier (T9) stays deferred.</div>
 
   <h2><span class="n">01</span> Sub-commands</h2>
   <p class="sub">Verb-first, git-shaped. Read verbs observe; lifecycle verbs drive a transition. <code style="font-family:var(--mono)">{id}</code> accepts a run-id prefix.</p>
@@ -162,9 +162,9 @@
         <tr><td><code>show</code></td><td><code>/task show &lt;id&gt;</code> <span class="desc">(alias <code>open</code>)</span></td><td><code>GET …/runs/{id}</code></td><td class="trans">read · opens pane</td><td><span class="pill built">built</span></td></tr>
         <tr><td><code>watch</code></td><td><code>/task watch &lt;id&gt;</code></td><td><code>GET …/runs/{id}/events</code></td><td class="trans">read · live SSE tail</td><td><span class="pill built">built</span></td></tr>
         <tr><td><code>cancel</code></td><td><code>/task cancel &lt;id&gt;</code></td><td><code>POST …/runs/{id}/cancel</code></td><td class="trans">running|waiting <span class="to">→ cancelled</span></td><td><span class="pill built">built</span></td></tr>
-        <tr><td><code>respond</code></td><td><code>/task respond &lt;id&gt; approve|deny|"&lt;text&gt;"</code></td><td><code>POST …/runs/{id}/respond</code></td><td class="trans">waiting <span class="to">→ running</span></td><td><span class="pill plan">planned</span></td></tr>
-        <tr><td><code>ack</code></td><td><code>/task ack &lt;id&gt;</code></td><td><code>POST …/runs/{id}/ack</code></td><td class="trans">completed_pending_ack <span class="to">→ finalized</span></td><td><span class="pill plan">planned</span></td></tr>
-        <tr><td><code>resume</code></td><td><code>/task resume &lt;id&gt;</code></td><td><code>POST …/runs/{id}/resume</code></td><td class="trans">interrupted <span class="to">→ running</span> <span class="desc">(conditional)</span></td><td><span class="pill plan">planned</span></td></tr>
+        <tr><td><code>respond</code></td><td><code>/task respond &lt;id&gt; approve|deny|"&lt;text&gt;"</code></td><td><code>POST …/runs/{id}/respond</code></td><td class="trans">waiting <span class="to">→ running</span></td><td><span class="pill built">built</span></td></tr>
+        <tr><td><code>ack</code></td><td><code>/task ack &lt;id&gt;</code></td><td><code>POST …/runs/{id}/ack</code></td><td class="trans">completed_pending_ack <span class="to">→ finalized</span></td><td><span class="pill built">built</span></td></tr>
+        <tr><td><code>resume</code></td><td><code>/task resume &lt;id&gt;</code></td><td><code>POST …/runs/{id}/resume</code></td><td class="trans">interrupted <span class="to">→ running</span> <span class="desc">(conditional)</span></td><td><span class="pill built">built</span></td></tr>
       </tbody>
     </table>
   </div>
@@ -219,6 +219,7 @@
         <li><code>--allow host[/path],…</code> → <code>network.allow_outbound</code>. Empty = no egress (fail-closed).</li>
         <li><code>--provider</code> / <code>--model</code> — per-run intent; default from <code>tools.agent.default_subagent</code>.</li>
         <li><code>--budget iters=,time=,tokens=</code> → <code>BudgetSpec</code> (cooperative caps at loop boundaries).</li>
+        <li><code>--work-dir &lt;path&gt;</code> — working directory for the run's relative tool paths (default: the session's working dir; sealed runs keep their jail and warn).</li>
         <li><code>--persona &lt;name&gt;</code> / <code>--system "…"</code> — agent-spec / system framing layered on the bounded-agent default.</li>
       </ul>
     </div>
@@ -234,8 +235,8 @@
     </div>
   </div>
 
-  <h2><span class="n">04</span> What to build</h2>
-  <p class="sub">The launch/observe/cancel spine already exists server-side. The delta is the interactive-transition endpoints and the client command family + pane.</p>
+  <h2><span class="n">04</span> What was built (shipped v1.19.0)</h2>
+  <p class="sub">All items below shipped in v1.19.0 (T1–T8a). The launch/observe/cancel spine landed first; the interactive-transition endpoints and the client command family + pane followed.</p>
   <div class="delta">
     <div class="col have">
       <h4><span class="chip">have</span> already shipped</h4>
@@ -246,14 +247,15 @@
         <li>Web right-panel + <code>AgentRunView</code> pane (from the <code>/agentrun</code> tier — reusable)</li>
       </ul>
     </div>
-    <div class="col todo">
-      <h4><span class="chip">build</span> the delta</h4>
+    <div class="col have">
+      <h4><span class="chip">have</span> the delta (T5–T8a)</h4>
       <ul>
         <li><b>Endpoints:</b> <code>POST …/respond</code>, <code>…/ack</code>, <code>…/resume</code> + the <code>waiting</code> / <code>completed_pending_ack</code> / <code>finalized</code> statuses and <code>AGENT_WAITING</code> / <code>AGENT_RESULT_READY</code> events</li>
         <li><b>Client:</b> <code>TaskController</code> (mirror of <code>agent-run-controller.js</code>) + <code>TaskRunView</code> — the denser pane with per-state controls</li>
-        <li><b>Dispatch:</b> register <code>/task</code> + sub-verbs in <code>command-dispatcher.js</code>; flag parser for the launch line</li>
-        <li><b>Persona:</b> the agent-spec artifact behind <code>--persona</code> (shared with ppxai-sre)</li>
-        <li><b>Then:</b> port the family to TUI + VSCode (web first)</li>
+        <li><b>Dispatch:</b> <code>/task</code> + sub-verbs registered in the command dispatcher; flag parser for the launch line</li>
+        <li><b>VSCode (T8a):</b> <code>taskController.ts</code> with verb/endpoint/status parity sentinels + consent QuickPick</li>
+        <li><b>Parked:</b> TUI port (T8b) — pending a transport decision, since the TUIs are in-process with no server channel</li>
+        <li><b>Deferred:</b> container tier (T9)</li>
       </ul>
     </div>
   </div>
@@ -336,7 +338,7 @@
   <div class="note"><b>Ship the keys with the enforcer, never before.</b> Parsed-but-unenforced scoping is worse than none — an operator sets <code>read_paths</code> and assumes confinement that isn't there. So <code>tools.agent.sandbox</code> lands together with the in-process path-jail; the <code>container</code> block lands with tier-d. Until then this is a design contract, not live config.</div>
 
   <footer>
-    Companion to the <b>run-lifecycle state diagram</b>. Grounded in <code>ppxai/server/routes/agent_v1.py</code> (request shapes, existing routes), <code>ppxai/engine/agent_scoped_tools.py</code> (grant-only scoping today — read-path scoping is the new primitive), and <code>docs/decisions/0003-agent-platform-architecture.md §8–§9</code> (transitions · config inheritance). Proposal — not yet implemented.
+    Companion to the <b>run-lifecycle state diagram</b>. Grounded in <code>ppxai/server/routes/agent_v1.py</code> (request shapes, routes), <code>ppxai/engine/agent_scoped_tools.py</code> (grant-only scoping — read-path scoping under <code>tools.agent.sandbox</code>), and <code>docs/decisions/0003-agent-platform-architecture.md §8–§9</code> (transitions · config inheritance). The <code>/task</code> command family (§1–§4) is built and live as of v1.19.0; the container tier (§6 "tier-d") remains deferred.
   </footer>
 </div>
 </body>

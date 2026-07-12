@@ -75,7 +75,7 @@ python scripts/release.py v1.11.7 --redo --force
 
 ## Before Running
 
-1. **Edit release notes** - The script creates a template at `docs/RELEASE-NOTES-v{version}.md`
+1. **Edit release notes** - The script creates a template at `docs/release-notes-v{version}.md`
    - Fill in the summary, features, and bug fixes before running
    - Or run with `--dry-run` first to create the template
 
@@ -100,7 +100,7 @@ git push origin v{version}
 
 # If CI completed but release notes not published:
 unset GITHUB_TOKEN && source .github/gh-tokenv.env && export GH_TOKEN
-gh release edit v{version} --notes-file docs/RELEASE-NOTES-v{version}.md
+gh release edit v{version} --notes-file docs/release-notes-v{version}.md
 
 # To view release status:
 gh release view v{version}

@@ -100,19 +100,19 @@ def validate_release(version: str, allow_dirty: bool = False) -> bool:
     # Release notes existence check.
     #
     # Added 2026-05-10 after a v1.18.4 pre-flight near-miss: every
-    # release since v1.15.x has shipped a `docs/RELEASE-NOTES-vX.Y.Z.md`
+    # release since v1.15.x has shipped a `docs/release-notes-vX.Y.Z.md`
     # narrative companion to the CHANGELOG entry, but the validator
     # never enforced it. The file is named in the CLAUDE.md
     # "Pre-release checklist" item 2 as required, but humans (and AI
     # assistants) drifted into running validate-release.py and treating
     # green as "ready to tag" — without noticing the notes file was
     # never created.
-    notes_file = project_root / f"docs/RELEASE-NOTES-{version}.md"
+    notes_file = project_root / f"docs/release-notes-{version}.md"
     if not notes_file.exists():
         errors.append(
-            f"docs/RELEASE-NOTES-{version}.md: missing — every release "
+            f"docs/release-notes-{version}.md: missing — every release "
             "ships a narrative release-notes file alongside the "
-            "CHANGELOG entry (see prior RELEASE-NOTES-v1.18.{1,2,3}.md "
+            "CHANGELOG entry (see prior release-notes-v1.18.{1,2,3}.md "
             "for the convention)"
         )
 

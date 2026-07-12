@@ -1,7 +1,10 @@
 # ADR 0003 — Agent platform architecture
 
 **Date:** 2026-05-03 (revised 2026-06-15 — MVP design resolved)
-**Status:** Proposed. Question A (outer loop) still pending instrumentation;
+**Status:** Accepted — implemented (Stage 2 shipped in v1.19.0: Inc 1-9 +
+/task T1-T8a; Question A resolved 2026-06-15 as A1). Wire shapes in §11 are
+the original PROPOSAL and differ from the shipped API — agent_v1.py is
+authoritative.
 **MVP design resolved 2026-06-15** — see "Resolved MVP design — read-only
 research sub-agents" below. The MVP sidesteps Question A by defining a run as
 a single `chat_with_tools` invocation, so Stage 2 can proceed for the
@@ -622,6 +625,12 @@ survives reconnects through the existing `state_sync` mechanism.
 
 All additions are **purely additive** — `POST /v1/oneshot` and the
 existing `AGENT_RUN_*` payloads are untouched (ppxai-sre constraint).
+
+> **Note (shipped v1.19.0):** this section is the original proposal and
+> predates the implementation — the shipped request/response shapes differ
+> in detail (e.g. `respond` takes `RespondRequest{token, approved?, text?}`,
+> not `{resume_token, response}` as sketched below). `ppxai/server/routes/agent_v1.py`
+> is authoritative for the actual wire contract.
 
 ```http
 POST /v1/agent/run                  → {run_id, status}   (run_token is internal — §7, never in this response for the MVP)

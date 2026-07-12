@@ -211,11 +211,10 @@
         <text class="st-sub" x="500" y="82" text-anchor="middle">minted · not yet started</text></g>
 
       <!-- waiting -->
-      <g><rect class="node cat-wait planned-node" x="70" y="216" width="212" height="68" rx="11"/>
+      <g><rect class="node cat-wait" x="70" y="216" width="212" height="68" rx="11"/>
         <text class="st-name" x="176" y="242" text-anchor="middle">waiting</text>
         <text class="st-sub" x="176" y="258" text-anchor="middle">{ consent | input }</text>
-        <text class="st-sub" x="176" y="272" text-anchor="middle">parked · alive · resume-token+TTL</text>
-        <text class="tag" x="272" y="231" text-anchor="end">planned</text></g>
+        <text class="st-sub" x="176" y="272" text-anchor="middle">parked · alive · resume-token+TTL</text></g>
 
       <!-- running (hub) -->
       <g><rect class="node cat-active" x="412" y="222" width="176" height="56" rx="11"/>
@@ -223,21 +222,18 @@
         <text class="st-sub" x="500" y="262" text-anchor="middle">executing · scoped tool loop</text></g>
 
       <!-- completed_pending_ack -->
-      <g><rect class="node cat-ok planned-node" x="384" y="450" width="232" height="58" rx="11"/>
+      <g><rect class="node cat-ok" x="384" y="450" width="232" height="58" rx="11"/>
         <text class="st-name" x="500" y="474" text-anchor="middle">completed_pending_ack</text>
-        <text class="st-sub" x="500" y="490" text-anchor="middle">result held · process dead</text>
-        <text class="tag" x="606" y="466" text-anchor="end">planned</text></g>
+        <text class="st-sub" x="500" y="490" text-anchor="middle">result held · process dead</text></g>
 
       <!-- finalized -->
-      <g><rect class="node cat-ok planned-node" x="412" y="600" width="176" height="56" rx="11"/>
+      <g><rect class="node cat-ok" x="412" y="600" width="176" height="56" rx="11"/>
         <text class="st-name" x="500" y="624" text-anchor="middle">finalized</text>
-        <text class="st-sub" x="500" y="640" text-anchor="middle">acked · GC-eligible</text>
-        <text class="tag" x="580" y="616" text-anchor="end">planned</text></g>
+        <text class="st-sub" x="500" y="640" text-anchor="middle">acked · GC-eligible</text></g>
     </svg>
   </div>
   <p style="font-size:12.5px;color:var(--ink-2);margin:4px 2px 0">
-    Today the happy path collapses to a single terminal <code style="font-family:var(--mono)">completed</code>; the two-phase
-    <code style="font-family:var(--mono)">completed_pending_ack → finalized</code> is the designed evolution that makes result delivery <b>at-least-once</b>.
+    The happy path runs the two-phase <code style="font-family:var(--mono)">completed_pending_ack → finalized</code> hold, shipped in v1.19.0 (T6), making result delivery <b>at-least-once</b> — a disconnected UI can still collect the result via <code>/ack</code>.
   </p>
 
   <div class="cards">
@@ -245,6 +241,7 @@
       <p class="k">Mid-run · process alive</p>
       <h3>POST /v1/agent/runs/{id}/respond</h3>
       <p>A background run can't pop a dialog. When it needs a human — a <b>consent gate</b> for an action outside its granted envelope, or a <b>branching decision</b> — it enters <b>waiting</b>, emits <code>AGENT_WAITING</code> tagged with the run_id, and idles on a resume token + TTL. The process stays alive.</p>
+      <p>A run killed while parked drops its stale consent card on the client; <code>/task resume</code> rebuilds the runner from the persisted run meta rather than replaying the dead card.</p>
       <p class="foot">→ <code>/respond</code> hands back the answer and the run <b>continues</b>.</p>
     </div>
     <div class="card ack">
@@ -262,9 +259,9 @@
       <tbody>
         <tr><td><code>pending</code></td><td>pre-run</td><td>Run record minted; not yet scheduled.</td><td><span class="pill built">built</span></td></tr>
         <tr><td><code>running</code></td><td>active</td><td>Background task executing through the scoped tool loop.</td><td><span class="pill built">built</span></td></tr>
-        <tr><td><code>waiting{consent|input}</code></td><td>parked · alive</td><td>Hits an out-of-envelope action or a mid-run decision; parks on a resume token.</td><td><span class="pill plan">planned</span></td></tr>
-        <tr><td><code>completed_pending_ack</code></td><td>done · dead</td><td>Agent self-declared done, wrote results, exited; awaiting collection.</td><td><span class="pill plan">planned</span></td></tr>
-        <tr><td><code>finalized</code></td><td>terminal</td><td>Result acked (or retention TTL fired) → GC-eligible.</td><td><span class="pill plan">planned</span></td></tr>
+        <tr><td><code>waiting{consent|input}</code></td><td>parked · alive</td><td>Hits an out-of-envelope action or a mid-run decision; parks on a resume token.</td><td><span class="pill built">built</span></td></tr>
+        <tr><td><code>completed_pending_ack</code></td><td>done · dead</td><td>Agent self-declared done, wrote results, exited; awaiting collection.</td><td><span class="pill built">built</span></td></tr>
+        <tr><td><code>finalized</code></td><td>terminal</td><td>Result acked (or retention TTL fired) → GC-eligible.</td><td><span class="pill built">built</span></td></tr>
         <tr><td><code>failed</code></td><td>terminal · abnormal</td><td>Provider or engine error killed the run.</td><td><span class="pill built">built</span></td></tr>
         <tr><td><code>cancelled</code></td><td>terminal · abnormal</td><td>Explicit cancel, or cascade from a cancelled parent.</td><td><span class="pill built">built</span></td></tr>
         <tr><td><code>interrupted</code></td><td>terminal · abnormal</td><td>Engine restart / kill dropped the live task; records + checkpoint persist. Resume is <b>conditional</b> (open-decision&nbsp;#5).</td><td><span class="pill built">built</span></td></tr>
@@ -275,7 +272,7 @@
   </div>
 
   <footer>
-    Sources: designed lifecycle — <code>docs/decisions/0003-agent-platform-architecture.md §8</code> (two-phase termination, <code>/respond</code> · <code>/ack</code>). Built statuses — <code>ppxai/engine/agent_runs.py</code> (<code>_TERMINAL_STATUSES = {completed, failed, cancelled, interrupted}</code>). <code>/respond</code>, <code>/ack</code>, <code>waiting</code>, <code>completed_pending_ack</code>, and <code>finalized</code> are not yet implemented.
+    Sources: lifecycle design — <code>docs/decisions/0003-agent-platform-architecture.md §8</code> (two-phase termination, <code>/respond</code> · <code>/ack</code>). Built statuses — <code>ppxai/engine/agent_runs.py</code> (<code>_TERMINAL_STATUSES = {completed, completed_pending_ack, finalized, failed, cancelled, interrupted}</code>). <code>/respond</code>, <code>/ack</code>, <code>waiting</code>, and <code>completed_pending_ack</code>/<code>finalized</code> shipped in v1.19.0 (T5–T7); <code>zombie</code> and <code>budget_exceeded</code> remain unimplemented as distinct statuses (folded into other statuses today).
   </footer>
 </div>
 </body>

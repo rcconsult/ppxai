@@ -298,8 +298,9 @@ Each item below blocks Day-0 unless explicitly marked "Day-1+".
 
 **Branch when ready:** `feat/mcp-integration-day-0`.
 
-**Target release:** v1.20.x (after v1.18.6 ships and v1.19.x
-agent-platform Stage 2 work opens).  v1.20.x feels right because:
+**Target release:** v1.20.x (after v1.19.x agent-platform Stage 2 lands
+(Inc 1-9 + /task T1-T8a shipped as of 2026-07-12)).  v1.20.x feels right
+because:
 - v1.18.6 should stay scoped to ADR 0006 (no scope creep).
 - v1.19.x is committed to agent-platform Stage 2 + the credential
   broker — putting MCP in the middle of that work risks fighting for

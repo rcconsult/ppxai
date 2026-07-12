@@ -1,8 +1,19 @@
-# Agent Mode User Guide
+# Session Agent Mode User Guide (`/agent`)
 
 **Applies to**: v1.14.2+ (agent mode introduced v1.13.0; this guide tracks the v1.14.2+ shape)
 **Status**: Production Ready
-**Last verified against**: v1.18.8
+**Last verified against**: v1.19.0 (guide content unchanged; renamed + disambiguation banner added)
+**Renamed** from `agent-mode-guide.md` (v1.19.0) to disambiguate the three agent surfaces.
+
+> **⚠️ Three different "agents" — this guide covers only the first:**
+>
+> | Surface | What it is | Where documented |
+> |---|---|---|
+> | **`/agent` session mode** (this guide) | The IN-SESSION iterative loop: your current chat session plans + executes tools turn by turn, inside the session's context and working dir. | here |
+> | **`/agentrun` one-off runs** | Tool-FREE background runs (`POST /v1/agent/run`): a single prompt answered by a per-run provider/model, no tools, fire-and-forget with a result pane. Web client only. | [api-gateway.md](api-gateway.md) §`/v1/agent/*` |
+> | **`/task` sub-agent platform** (v1.19.0) | Tool-CAPABLE, sandboxed, durable background runs (`POST /v1/agent/task`): capability grants (`--tools`), spec/skill files, egress allowlists, budgets, consent parks, held results, resume. Web + VSCode. | [agent-task-command-design.html](agent-task-command-design.html), [api-gateway.md](api-gateway.md) |
+>
+> If you want a background agent that reads/edits files under a grant, you want **`/task`**, not this mode.
 
 This guide explains how to use autonomous agent mode for multi-step task execution. Agent mode works with both **ppxai** (Rich TUI) and **ppxaide** (Textual TUI).
 

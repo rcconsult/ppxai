@@ -522,7 +522,7 @@ Returns active hints for current session
 - [Context Injection Guide](context-injection.md) - `@file`, `@git`, `@tree` runtime injection
 - [Provider Setup Guide](provider-setup.md) - Configure AI providers
 - [Ollama Limitations](ollama-limitations.md) - Small model behavior
-- [Agent Mode Guide](agent-mode-guide.md) - Autonomous task execution
+- [Session Agent Guide](session-agent-guide.md) - Autonomous task execution
 
 ---
 

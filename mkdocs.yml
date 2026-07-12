@@ -38,7 +38,8 @@ nav:
     - Installation: installation.md
     - Provider Setup: provider-setup.md
   - User Guides:
-    - Agent Mode: agent-mode-guide.md
+    - Task Agent Platform: task-agent-guide.md
+    - Session Agent Mode: session-agent-guide.md
     - Bootstrap Context: bootstrap-context-guide.md
     - Context Injection: context-injection.md
     - Checkpoint & Undo: checkpoint-guide.md
