@@ -454,6 +454,16 @@ tell). Fixed by killing the whole process group (`start_new_session` +
 `os.killpg`); the sweep itself works exactly as documented. See
 [docs/lessons/stale-server-invalidates-acceptance.md](../docs/lessons/stale-server-invalidates-acceptance.md).
 
+**Client observation 2026-07-12 (VSCode, auth-ON):** a `/task resume` of an
+interrupted run refused with *"not marked resumable (the stop did not land at a
+clean checkpoint)"* — **correct behavior, not a bug.** The target run was
+created **2026-07-02, before T6 landed (2026-07-07)**, so its meta has
+`hold_result=False` and the sweep can never mark it resumable; a same-day run
+created by the current binary had `hold_result=True` and resumed fine. Only
+runs stranded from a pre-T6 binary hit this. Minor UX polish (not scheduled):
+the refusal reason could distinguish "created before resume support" from
+"stopped uncleanly."
+
 **Tests (landed):** `test_agent_runs.py::TestResumeRefusal` (9 — the full
 decision matrix incl. every non-candidate status, in-flight, non-task,
 result-present, missing inputs); `TestSweepOrphans` (4 — all orphanable
