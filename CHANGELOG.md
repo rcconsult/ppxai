@@ -5,7 +5,7 @@ All notable changes to ppxai will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.19.0] - unreleased
+## [1.19.0] - 2026-07-12
 
 Branch: `feature/v1.19.0`. Theme: **agent platform Stage 2 (ADR 0003)** — a durable, addressable `/v1/agent/*` background-run registry with a tool-capable sandboxed tier, plus the **`/task` command family** in web + VSCode, client bearer auth, and the surrounding hardening.
 

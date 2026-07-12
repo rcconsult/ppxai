@@ -9,8 +9,14 @@
     "port": 54320,
     "secrets": {
       "providers": [
-        { "type": "file", "path": "~/.ppxai/tokens.json" },
-        { "type": "env", "var": "PPXAI_API_TOKEN" }
+        {
+          "type": "file",
+          "path": "~/.ppxai/tokens.json"
+        },
+        {
+          "type": "env",
+          "var": "PPXAI_API_TOKEN"
+        }
       ]
     }
   },
