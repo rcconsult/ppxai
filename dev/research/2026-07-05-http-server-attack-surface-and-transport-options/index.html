@@ -1,0 +1,1581 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Multi-LLM Interface for Developers - Terminal & VSCode">
+      
+      
+      
+        <link rel="canonical" href="https://rcconsult.github.io/ppxai/dev/research/2026-07-05-http-server-attack-surface-and-transport-options/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>The out-of-process HTTP server as an attack surface — transport options for ppxai - ppxai Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#the-out-of-process-http-server-as-an-attack-surface-transport-options-for-ppxai" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="ppxai Documentation" class="md-header__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ppxai Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              The out-of-process HTTP server as an attack surface — transport options for ppxai
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="ppxai Documentation" class="md-nav__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ppxai Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../provider-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provider Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../task-agent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Task Agent Platform
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../session-agent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Session Agent Mode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../bootstrap-context-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bootstrap Context
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../context-injection/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Context Injection
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../checkpoint-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Checkpoint & Undo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../file-editing-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    File Editing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../shell-consent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shell Consent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../custom-tool-development-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../custom-command-development-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ollama-limitations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ollama Limitations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../vllm-tool-calling-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    vLLM Tool Calling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../container-tools-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Container Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../autorouter-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autorouter Config
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release Notes
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Release Notes
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../RELEASE-NOTES-v1.16.1.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../RELEASE-NOTES-v1.16.0.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../RELEASE-NOTES-v1.15.6.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.15.6
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#the-question" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The question
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-attack-surface-code-verified-default-install" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The attack surface (code-verified, default install)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#why-the-server-exists-the-value-it-buys-dont-discard-lightly" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why the server exists (the value it buys — don't discard lightly)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-key-insight-there-are-two-consumers-with-opposite-needs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The key insight: there are TWO consumers with OPPOSITE needs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The options
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The options">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#option-a-harden-the-http-server-in-place-status-quo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option A — Harden the HTTP server in place (status quo++)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#option-b-in-process-transport-for-local-clients-the-pi-shaped-move-scoped" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option B — In-process transport for local clients (the Pi-shaped move, scoped)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#option-c-ppxai-sre-uses-ppxai-as-an-embedded-sdk-no-http-at-all-for-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option C — ppxai-sre uses ppxai as an embedded SDK (no HTTP at all for it)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#option-d-full-pi-style-rewrite-rejected" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option D — Full Pi-style rewrite (rejected)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#recommendation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recommendation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#follow-up-artifacts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Follow-up artifacts
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="the-out-of-process-http-server-as-an-attack-surface-transport-options-for-ppxai">The out-of-process HTTP server as an attack surface — transport options for ppxai<a class="headerlink" href="#the-out-of-process-http-server-as-an-attack-surface-transport-options-for-ppxai" title="Permanent link">&para;</a></h1>
+<p><strong>Date:</strong> 2026-07-05
+<strong>Status:</strong> Reference (session research; code-verified against <code>feature/v1.19.0</code> @ <code>6add04f6</code>)
+<strong>Related:</strong>
+- <a href="../2026-06-18-pi-coding-agent-comparison/">2026-06-18-pi-coding-agent-comparison.md</a> — Pi's serverless in-process TS harness (the reference model)
+- <a href="../2026-07-05-tauri-desktop-shell-analysis/">2026-07-05-tauri-desktop-shell-analysis.md</a> — desktop-shell packaging (adjacent, not the same question)
+- <a href="../2026-06-24-ppxai-sdk-mutation-tools-for-sre-agents/">2026-06-24-ppxai-sdk-mutation-tools-for-sre-agents.md</a> — the SDK/embedded model for ppxai-sre
+- <a href="../../decisions/0003-agent-platform-architecture/">../decisions/0003-agent-platform-architecture.md</a></p>
+<h2 id="the-question">The question<a class="headerlink" href="#the-question" title="Permanent link">&para;</a></h2>
+<p>ppxai runs its engine behind an <strong>out-of-process HTTP server</strong> (FastAPI/uvicorn).
+This was an early decision to speed feature delivery — one server, many clients
+(Rich TUI, Textual TUI, web, VSCode) over HTTP+SSE. Pi (the TS coding agent)
+deliberately has <strong>no server</strong>: the whole harness is in-process TypeScript. The
+out-of-process server carries its own security attack surface. What are ppxai's
+options, and how does the sister repo <code>../ppxai-sre</code> (which consumes ppxai) constrain them?</p>
+<h2 id="the-attack-surface-code-verified-default-install">The attack surface (code-verified, default install)<a class="headerlink" href="#the-attack-surface-code-verified-default-install" title="Permanent link">&para;</a></h2>
+<p>On a default desktop install the server is an <strong>unauthenticated loopback HTTP
+service with wide-open CORS</strong>:</p>
+<ol>
+<li><strong>Auth is opt-in, default OFF.</strong> <code>PPXAI_API_TOKEN</code> unset ⇒ every request is
+   unauthenticated (<a href="../../ppxai/server/auth.py"><code>server/auth.py:4-8</code></a>). This is
+   deliberate for the loopback desktop UX (TUIs/web/VSCode carry no bearer), but
+   it means the default posture is "no auth."</li>
+<li><strong>CORS is <code>allow_origins=["*"]</code> with <code>allow_credentials=True</code></strong>
+   (<a href="../../ppxai/server/http.py"><code>server/http.py:193-201</code></a>). Any web origin the
+   user visits can script requests to <code>127.0.0.1:54320</code> — the classic
+   <strong>localhost-service DNS-rebinding / CSRF</strong> exposure. A malicious page can drive
+   the local engine (send chats, spend the user's provider tokens/$, read
+   sessions, and — with the tool tiers enabled — reach the tool surface).</li>
+<li><strong>Bind is loopback by default</strong> (<code>DEFAULT_HOST=127.0.0.1</code>) but <code>--host 0.0.0.0</code>
+   is a documented one-flag exposure (<a href="../../ppxai/server/http.py">Pi-comparison doc / <code>http.py:10</code></a>),
+   at which point "auth default-off" becomes a network-reachable unauthenticated
+   engine.</li>
+<li><strong>The port is a shared, discoverable rendezvous.</strong> Any local process (any user
+   account on a multi-user box; any malware) can find <code>:54320</code> and talk to it. In
+   Pi's in-process model there is <strong>no port, no listener, no local-RPC surface</strong> —
+   the attack surface simply doesn't exist because there's nothing to connect to.</li>
+<li><strong>The v1.19.0 agent platform widens the blast radius of (1)–(4).</strong> The tool-capable
+   <code>/task</code> tier, <code>spawn_subagent</code>, egress allowlists, and secret sources all sit
+   behind the same HTTP boundary. Mitigations exist (tier default-off, loopback
+   auth carve-outs, SSRF guard, per-run authz) precisely <em>because</em> the HTTP
+   surface is real — they are the tax the transport imposes.</li>
+</ol>
+<p><strong>Summary:</strong> the out-of-process server converts "run some Python" into "expose a
+long-lived, discoverable, default-unauthenticated, permissive-CORS network
+service on the user's machine." Every hardening item in debt Item 37 (loopback
+spoofing, forwarded-header trust, SSRF, owner-scoping, token verification) is a
+cost of <em>having a server</em>, not a cost of the engine.</p>
+<h2 id="why-the-server-exists-the-value-it-buys-dont-discard-lightly">Why the server exists (the value it buys — don't discard lightly)<a class="headerlink" href="#why-the-server-exists-the-value-it-buys-dont-discard-lightly" title="Permanent link">&para;</a></h2>
+<p>The server is not gratuitous. It is the <strong>fan-out point for four clients + external
+consumers</strong>:</p>
+<ul>
+<li>One engine instance serves Rich TUI, Textual TUI, web, and VSCode simultaneously,
+  with <code>AppState</code> sync + SSE push + the command envelope keeping them consistent.</li>
+<li>It is the <strong>stable, semver-versioned external product</strong>: <code>POST /v1/oneshot</code> and
+  <code>/v1/agent/*</code> are how <em>other software</em> (ppxai-sre) consumes ppxai. That is a
+  deliberate Stage-2 goal, not an accident.</li>
+<li>SSE streaming, background agent runs, and the durable run registry all assume a
+  persistent process a client attaches to.</li>
+</ul>
+<p>Pi has none of this because Pi is <strong>one developer, one process, one context
+window</strong>. ppxai is <strong>multi-client + an API-addressable governed backend</strong>. The
+Pi-comparison doc already pins this: <em>"which is precisely why it needs bearer
+auth, egress firewalls, and owner-scoped runs that Pi explicitly does NOT want."</em>
+So "just remove the server like Pi" is not a like-for-like move — it would delete
+the multi-client fan-out and the external gateway that are core to what ppxai <em>is</em>.</p>
+<h2 id="the-key-insight-there-are-two-consumers-with-opposite-needs">The key insight: there are TWO consumers with OPPOSITE needs<a class="headerlink" href="#the-key-insight-there-are-two-consumers-with-opposite-needs" title="Permanent link">&para;</a></h2>
+<p>The transport decision is not one decision. Two distinct consumers pull opposite ways:</p>
+<table>
+<thead>
+<tr>
+<th>Consumer</th>
+<th>What it needs</th>
+<th>Server verdict</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Interactive desktop user</strong> (TUIs, web, VSCode, single machine)</td>
+<td>Local engine + streaming; NO network service; no attack surface</td>
+<td>Server is <strong>pure liability</strong> here — an in-process or local-IPC transport is strictly safer</td>
+</tr>
+<tr>
+<td><strong>ppxai-sre</strong> (uses ppxai as a dependency/SDK; per the <a href="../2026-06-24-ppxai-sdk-mutation-tools-for-sre-agents/">SDK model</a>)</td>
+<td>An <strong>embedded</strong> sandboxed run runtime it drives in-process — NOT a remote HTTP server it POSTs to</td>
+<td>Server is <strong>also unnecessary</strong> here — the SDK model embeds <code>EngineClient</code> + the sandbox, no HTTP hop</td>
+</tr>
+<tr>
+<td><strong>Cluster/gateway deployment</strong> (ppxai-server in a pod, many agents call <code>/v1/*</code>)</td>
+<td>The HTTP gateway, WITH auth mandatory + NetworkPolicy</td>
+<td>Server is <strong>required</strong> — and here the attack surface is <em>managed</em> (bearer on, bound, behind NetworkPolicy)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>This is the crux:</strong> the two <em>local</em> consumers (desktop user, ppxai-sre-as-SDK)
+do <strong>not</strong> need the HTTP server at all. Only the <em>remote-gateway</em> deployment does —
+and there the surface is a managed, opt-in, authenticated one, which is the
+defensible case. The indefensible case is the <strong>default desktop install</strong>, where a
+network service with default-off auth exists solely to let a local browser tab
+talk to a local engine.</p>
+<h2 id="the-options">The options<a class="headerlink" href="#the-options" title="Permanent link">&para;</a></h2>
+<h3 id="option-a-harden-the-http-server-in-place-status-quo">Option A — Harden the HTTP server in place (status quo++)<a class="headerlink" href="#option-a-harden-the-http-server-in-place-status-quo" title="Permanent link">&para;</a></h3>
+<p>Keep the architecture; shrink the surface. Concrete, mostly-cheap moves:</p>
+<ol>
+<li><strong>Fix CORS</strong> — replace <code>allow_origins=["*"]</code> + credentials with an explicit
+   allowlist (the app's own origin) or drop credentialed CORS entirely for the
+   local case. Add <strong>Origin/Host header validation</strong> (anti-DNS-rebinding: reject
+   requests whose <code>Host</code> isn't <code>127.0.0.1:&lt;port&gt;</code>/<code>localhost</code>). <em>This is the single
+   highest-value, lowest-cost change and should happen regardless of any larger
+   decision.</em></li>
+<li><strong>Bind to a random high port + write it to a <code>0600</code> file</strong> the trusted clients
+   read (removes the fixed-<code>:54320</code> rendezvous).</li>
+<li><strong>Per-launch loopback token</strong> — desktop launcher mints an ephemeral token,
+   passes it to the clients it spawns; auth becomes default-<em>on</em> for loopback too
+   (the machinery already exists — <code>ProviderChain</code>, <code>/v1/tokens</code>, Inc 8b authz).</li>
+<li><strong>Unix domain socket instead of TCP</strong> (macOS/Linux) — filesystem-permission
+   gated, no port, no network stack, no rebinding. Windows: named pipe or the
+   random-port+token fallback. This removes most of the surface while keeping the
+   multi-client fan-out.</li>
+</ol>
+<p><strong>Buys:</strong> keeps every client + the external gateway working unchanged; closes the
+worst holes (CORS, fixed port, default-off auth) in days, not weeks. <strong>Costs:</strong>
+the server still exists; UDS/named-pipe adds a platform branch; doesn't help the
+"why is there a listener at all" objection for the pure-desktop case.</p>
+<h3 id="option-b-in-process-transport-for-local-clients-the-pi-shaped-move-scoped">Option B — In-process transport for local clients (the Pi-shaped move, scoped)<a class="headerlink" href="#option-b-in-process-transport-for-local-clients-the-pi-shaped-move-scoped" title="Permanent link">&para;</a></h3>
+<p>Give the <strong>in-process-capable</strong> clients a direct, no-socket path to the engine,
+and keep the HTTP server only for what genuinely needs it.</p>
+<ul>
+<li><strong>Rich/Textual TUIs</strong> already import Python — they can hold an <code>EngineClient</code>
+  directly and skip HTTP entirely (today they talk to the server; they need not).</li>
+<li><strong>Desktop web UI</strong> is the hard case — a browser <em>must</em> speak some wire protocol.
+  Options: a Tauri shell with Rust↔JS IPC (no localhost server — see the
+  <a href="../2026-07-05-tauri-desktop-shell-analysis/">Tauri analysis</a>), or a
+  same-process embedded webview with a custom protocol handler.</li>
+<li><strong>VSCode extension</strong> talks to its own extension host; it could consume an
+  in-process Node/py bridge, but today HTTP is simplest.</li>
+<li><strong>HTTP server becomes opt-in</strong>, started only for the <strong>remote-gateway</strong> deployment
+  (cluster, ppxai-sre-over-network if ever needed) — auth mandatory there.</li>
+</ul>
+<p><strong>Buys:</strong> the pure-desktop install has <strong>no network listener</strong> — the entire class
+of localhost-service attacks disappears for the common case. Matches Pi's "no
+server" security posture where it applies. <strong>Costs:</strong> significant — it splits the
+transport into two code paths (in-process vs HTTP), the web client still needs
+<em>a</em> transport (so Tauri or embedded-webview becomes coupled to this), and the
+<code>AppState</code>/command-envelope/SSE machinery must work over both. This is a
+multi-increment architectural change, not a patch.</p>
+<h3 id="option-c-ppxai-sre-uses-ppxai-as-an-embedded-sdk-no-http-at-all-for-it">Option C — ppxai-sre uses ppxai as an embedded SDK (no HTTP at all for it)<a class="headerlink" href="#option-c-ppxai-sre-uses-ppxai-as-an-embedded-sdk-no-http-at-all-for-it" title="Permanent link">&para;</a></h3>
+<p>This is <strong>already the recommended direction</strong> for ppxai-sre (see the
+<a href="../2026-06-24-ppxai-sdk-mutation-tools-for-sre-agents/">SDK-mutation-tools note</a>).
+ppxai-sre embeds <code>EngineClient</code> + the sandbox primitives and drives sandboxed
+sub-agent runs <strong>in-process</strong>, rather than POSTing to <code>/v1/agent/task</code> over HTTP.</p>
+<p><strong>For the transport question this means:</strong> the sister repo does <strong>not</strong> depend on
+the HTTP server for the mutation-tool path — it depends on an <strong>embeddable engine
+API</strong> (debt Item <strong>(t)</strong>: lift <code>build_task_runner</code> out of the server route into the
+engine). So hardening/removing the HTTP server for local use does <strong>not</strong> break
+ppxai-sre's intended integration — provided the embeddable runner exists. The HTTP
+<code>/v1/*</code> surface remains only for the deployments that genuinely want a remote
+gateway (and those run auth-on, behind a NetworkPolicy).</p>
+<p><strong>This is the load-bearing reconciliation:</strong> Options A/B for the desktop client and
+Option C for ppxai-sre are <strong>compatible</strong> — both point at "the HTTP server is for
+remote-gateway deployments only; local consumers (desktop + SDK) go in-process."</p>
+<h3 id="option-d-full-pi-style-rewrite-rejected">Option D — Full Pi-style rewrite (rejected)<a class="headerlink" href="#option-d-full-pi-style-rewrite-rejected" title="Permanent link">&para;</a></h3>
+<p>Rebuild the harness in-process in one language with no server, like Pi. <strong>Not
+viable.</strong> ppxai is ~64k LoC Python engine + ~60k LoC tests + 4 clients + a
+mid-flight v1.19.0 agent platform + the external <code>/v1/*</code> product. Pi is a
+single-developer tool with none of ppxai's multi-client or gateway obligations.
+This throws away the fan-out and the external product to solve a surface that
+Options A+C already close. Recorded only to close it explicitly.</p>
+<h2 id="recommendation">Recommendation<a class="headerlink" href="#recommendation" title="Permanent link">&para;</a></h2>
+<p><strong>Do A now; make C real next; treat B as the long-horizon desktop endgame; reject D.</strong></p>
+<ol>
+<li><strong>✅ DONE (2026-07-06):</strong> the CORS + Host/Origin-validation fix (Option A.1) —
+   debt <strong>(u)</strong>. <code>allow_origins=["*"] + allow_credentials=True</code> replaced with a
+   loopback-origin regex (overridable via <code>PPXAI_ALLOWED_ORIGINS</code>); anti-rebinding
+   Host-header validation added (bind-conditional, <code>PPXAI_TRUSTED_HOSTS</code> for
+   gateway/coder); k8s session-manager threads both from <code>INGRESS_HOST</code> into
+   per-user pods. 16 tests in <code>tests/test_host_cors_security.py</code>; documented in
+   <a href="../../api-gateway/">api-gateway.md</a> §"Transport perimeter". The sharpest edge is
+   now blunted.</li>
+<li><strong>Near term (A.2–A.4):</strong> random port + <code>0600</code> port file + per-launch loopback
+   token, so the desktop default becomes auth-<em>on</em> and un-discoverable. Consider
+   UDS/named-pipe to remove the TCP surface on macOS/Linux.</li>
+<li><strong>Structural (Option C):</strong> land the embeddable-runner API (debt <strong>(t)</strong>) so
+   ppxai-sre consumes ppxai as an in-process SDK and never depends on the local
+   HTTP server. This is already on the roadmap for the mutation-tool work; it
+   <em>also</em> happens to remove the sister repo from the "needs the server" column.</li>
+<li><strong>Long horizon (Option B):</strong> if/when the desktop shell moves to Tauri (separate
+   analysis), fold the web client onto Rust↔JS IPC and make the HTTP server
+   <strong>opt-in for remote-gateway deployments only</strong>. At that point the pure-desktop
+   install has no network listener — the Pi security posture, achieved without a
+   rewrite, and without losing the multi-client fan-out or the external gateway.</li>
+</ol>
+<p><strong>The framing that resolves the tension:</strong> ppxai should not choose "server vs no
+server" globally. It should make the HTTP server <strong>the remote-gateway transport,
+not the default-local transport.</strong> Local desktop use and ppxai-sre-as-SDK both go
+in-process; the server exists, authenticated and bounded, for the deployments that
+actually want a network-addressable governed backend. That keeps the value the
+server was introduced for while removing the attack surface from the 90% case
+where it was never needed.</p>
+<h2 id="follow-up-artifacts">Follow-up artifacts<a class="headerlink" href="#follow-up-artifacts" title="Permanent link">&para;</a></h2>
+<ul>
+<li>File the <strong>CORS/Host-validation</strong> fix as a security debt item (Item 37 or a new
+  entry) — it is actionable today and independent of the larger decision.</li>
+<li>The embeddable-runner (debt <strong>(t)</strong>) already carries the Option-C weight; annotate
+  it that it <em>also</em> removes ppxai-sre from the HTTP-dependency set.</li>
+<li>If B is pursued, it composes with the Tauri desktop-shell analysis (Rust↔JS IPC
+  is the web client's in-process transport).</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/rcconsult/ppxai" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

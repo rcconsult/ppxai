@@ -460,14 +460,42 @@
   
   
     <li class="md-nav__item">
-      <a href="../../agent-mode-guide/" class="md-nav__link">
+      <a href="../../task-agent-guide/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Agent Mode
+    Task Agent Platform
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../session-agent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Session Agent Mode
   
 
     
@@ -1423,6 +1451,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#11a-event-record-schema-eventsjsonl-level-category-resolved-2026-06-15" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11a. Event-record schema (events.jsonl) — level + category (resolved 2026-06-15)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#mvp-build-order-the-first-slice" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1482,7 +1521,10 @@
 
 <h1 id="adr-0003-agent-platform-architecture">ADR 0003 — Agent platform architecture<a class="headerlink" href="#adr-0003-agent-platform-architecture" title="Permanent link">&para;</a></h1>
 <p><strong>Date:</strong> 2026-05-03 (revised 2026-06-15 — MVP design resolved)
-<strong>Status:</strong> Proposed. Question A (outer loop) still pending instrumentation;
+<strong>Status:</strong> Accepted — implemented (Stage 2 shipped in v1.19.0: Inc 1-9 +
+/task T1-T8a; Question A resolved 2026-06-15 as A1). Wire shapes in §11 are
+the original PROPOSAL and differ from the shipped API — agent_v1.py is
+authoritative.
 <strong>MVP design resolved 2026-06-15</strong> — see "Resolved MVP design — read-only
 research sub-agents" below. The MVP sidesteps Question A by defining a run as
 a single <code>chat_with_tools</code> invocation, so Stage 2 can proceed for the
@@ -1493,7 +1535,7 @@ read-only research slice without waiting on the week-of-usage data.
 - <code>ppxai/engine/chat.py</code> — <code>chat_with_tools</code> inner tool loop, AGENT_BEAT emission (lines 559, 875, 1066, 1138)
 - <code>ppxai/engine/types.py</code> — <code>EventType.AGENT_BEAT</code> / <code>AGENT_RUN_START</code> / <code>AGENT_RUN_COMPLETE</code> / <code>AGENT_RUN_ERROR</code> / <code>AGENT_ZOMBIE</code> (v1.18.0); planned v1.19.x additions: <code>AGENT_SERVICE_DOWN</code> (per §13 / caveat C5)
 - <code>vscode-extension/src/chatPanel.ts::handleAgentCommand</code> — VSCode-side replica of the outer loop (~150 LoC)
-- <a href="../../../ppxai-sre-repo/docs/PPXAI-INTEGRATION-V1.19.md"><code>../../../ppxai-sre-repo/docs/PPXAI-INTEGRATION-V1.19.md</code></a> — consumer-side integration plan with caveats (C1-C5) and asks (A1-A3) folded into "Open decisions" §6-§13 below
+- <a href="../../../ppxai-sre/docs/PPXAI-INTEGRATION-V1.19.md"><code>../../../ppxai-sre/docs/PPXAI-INTEGRATION-V1.19.md</code></a> — consumer-side integration plan with caveats (C1-C5) and asks (A1-A3) folded into "Open decisions" §6-§13 below
 - <a href="../../research/2026-05-10-ppxai-sre-requirements/"><code>../research/2026-05-10-ppxai-sre-requirements.md</code></a> — gap analysis driving Stage 2 scope</p>
 <h2 id="context">Context<a class="headerlink" href="#context" title="Permanent link">&para;</a></h2>
 <p>ppxai has agent execution today, but the design predates the
@@ -1800,8 +1842,11 @@ design of record for the first slice.</strong> It resolves Question C
 (execution model), the direction of Question D (engine lifecycle), and
 open-decision item 4 (cascade cancel), and adds five dimensions the
 original ADR did not cover (capability sandbox, run secret, results,
-two-phase termination, config inheritance). Question A (outer loop)
-stays open but is <strong>sidestepped</strong> by the run-unit definition below.</p>
+two-phase termination, config inheritance). Question A (outer loop) was
+<strong>sidestepped</strong> by the run-unit definition below at MVP-design time, and
+has since been <strong>resolved outright as A1 — eliminate the outer loop</strong>
+(see open-decision #1, 2026-06-15); the run-unit definition is now the
+answer for the general agent too, not just the MVP.</p>
 <p>Guiding principle, inherited from the v1.18.8 <code>/files/*</code> parity charter:
 <strong>for any reader that may be remote or pod-sandboxed, the registry API is
 the contract</strong> — because such a reader has no shared FS with the main app,
@@ -1867,7 +1912,7 @@ agent loop), carried in <code>meta.json</code> as the run's grant:</p>
 <tbody>
 <tr>
 <td>a. <strong>Tool allowlist</strong></td>
-<td>dispatcher denies any tool not in the run's grant (research = <code>web_search</code>, <code>read_file</code>, <code>grep</code>/<code>find</code>, read-only <code>curl</code>; no shell-write, no <code>write_file</code>)</td>
+<td>dispatcher denies any tool not in the run's grant (research = <code>web_search</code>, <code>read_file</code>, <code>grep</code>/<code>find</code>, <code>fetch_url</code>; <strong>no shell tool at all</strong> — see note below — no <code>write_file</code>)</td>
 <td>✅ required</td>
 </tr>
 <tr>
@@ -1887,6 +1932,33 @@ agent loop), carried in <code>meta.json</code> as the run's grant:</p>
 </tr>
 </tbody>
 </table>
+<blockquote>
+<p><strong>Note (resolved 2026-06-16):</strong> the research grant carries <strong>no shell tool</strong>.
+Network access is via the dedicated <code>fetch_url</code> / <code>web_search</code> tools, which
+are governed by the tier-c egress allowlist; an arbitrary shell (<code>curl</code>,
+<code>pip</code>, …) cannot be egress-confined without tier-d (deferred), so
+<code>/v1/agent/task</code> rejects a shell grant up front. See open-decision 8's
+"No shell in /task" landed note. The earlier "read-only <code>curl</code>" phrasing is
+superseded — <code>curl</code> is shell and is out of scope for the MVP grant.</p>
+<p><strong>v1.19.0 preview posture — threat model (A), default-off, unsealed
+(2026-06-20).</strong> The tool-capable <code>/v1/agent/task</code> tier ships as a PREVIEW
+under an explicit precondition: <strong>(A) trusted operators only</strong> — the task text
+and the capability grant are authored by the operator running ppxai (or by a
+consumer like ppxai-sre rendering its own <code>AGENT.md</code>). Untrusted <em>content</em> may
+be fetched, but untrusted <em>input</em> never reaches the task/grant. Consequence:
+the sandbox's job in this release is to <strong>bound the blast radius of prompt
+injection</strong> within an operator-launched run (tiers a–c above), <strong>not</strong> to
+contain a hostile operator — which is why the <strong>in-process</strong> tool-execution
+boundary (tiers a–c) is adequate for the preview and <strong>tier-d OS isolation +
+DNS-rebinding/TOCTOU egress hardening remain deferred</strong>. To make (A)
+<em>code-enforced</em> rather than an assumption about auth config, <code>/v1/agent/task</code>
+ships <strong>default-off</strong> behind <code>tools.agent.task_tier_enabled</code> (the tool-free
+<code>/v1/agent/run</code> tier is always on). The whole agents API is <strong>in development
+and unsealed</strong> — see <a href="../../api-gateway/">docs/api-gateway.md</a> — and only
+becomes a stability-committed consumer contract once designed, tested,
+validated, and explicitly sealed. Exposing <code>/task</code> to untrusted input, or
+sealing the API, requires tier-d first.</p>
+</blockquote>
 <h3 id="4-tool-execution-boundary-subprocesspod-not-the-agent-runtime">4. Tool-execution boundary — subprocess/pod, not the agent runtime<a class="headerlink" href="#4-tool-execution-boundary-subprocesspod-not-the-agent-runtime" title="Permanent link">&para;</a></h3>
 <p>The agent loop stays an in-process <code>asyncio.Task</code> (resolves <strong>Question C
 → same-process asyncio.Task</strong>; I/O-bound work needs no GIL escape). What
@@ -1917,6 +1989,19 @@ and every allow/deny emits a typed <code>NETWORK_POLICY_*</code> event (§3 tier
   earns its keep; it is invisible to the registry and the wire surface,
   which only ever see the agent run.</li>
 </ul>
+<blockquote>
+<p><strong>Tier separation at the endpoint (implementation note, 2026-06-15).</strong>
+Tool-calling is a categorically different safety tier from the tool-free
+gateway. <code>/v1/oneshot</code> and <code>POST /v1/agent/run</code> are safe <em>because</em> they
+have no tools — no sandbox required. The tool-capable tier is therefore a
+<strong>separate endpoint, <code>POST /v1/agent/task</code></strong>, not a flag on the safe
+path: a <code>task</code> <em>requires</em> a capability grant and routes every tool call
+through the per-run allowlist (a <code>ScopedToolManager</code> that filters the
+offered set AND enforces at <code>execute_tool</code> — AC-1). Locking the tiers to
+distinct URLs prevents accidentally granting tools to the safe path.
+In-process allowlist lands first (Inc 4); subprocess/pod OS-isolation
+(tier-d) is a later additive upgrade behind the same endpoint.</p>
+</blockquote>
 <h3 id="5-results-reuse-the-adr-0006-artifact-contract-dont-invent-result-types">5. Results — reuse the ADR 0006 artifact contract (don't invent result types)<a class="headerlink" href="#5-results-reuse-the-adr-0006-artifact-contract-dont-invent-result-types" title="Permanent link">&para;</a></h3>
 <p>A run result = a <strong>primary body</strong> (markdown/html) + a list of
 <strong><code>MarshallableArtifact</code> refs</strong> (<code>TextAttachmentRef</code> / <code>ImageAttachmentRef</code>
@@ -1997,6 +2082,12 @@ minimal form: one token per run.</p>
   cross-user fix. Don't let any bearer holder read any run.</li>
 </ul>
 <h3 id="8-lifecycle-ttl-gated-cascade-two-phase-termination-one-waiting-state-machine">8. Lifecycle — TTL-gated cascade, two-phase termination, one <code>WAITING</code> state machine<a class="headerlink" href="#8-lifecycle-ttl-gated-cascade-two-phase-termination-one-waiting-state-machine" title="Permanent link">&para;</a></h3>
+<blockquote>
+<p><strong>Visual references:</strong> <a href="../../agent-task-lifecycle.html">agent-task-lifecycle.html</a>
+renders this state machine (built vs designed states, the <code>/respond</code> and
+<code>/ack</code> mechanisms); <a href="../../agent-task-command-design.html">agent-task-command-design.html</a>
+proposes the <code>/task</code> command family that drives these transitions.</p>
+</blockquote>
 <p><strong>Cascade cleanup is TTL-gated, never instant-on-disconnect</strong> —
 instant-kill-on-disconnect would contradict the entire "semi-autonomous,
 UI non-blocking" premise (it would make a foreground agent). Distinguish
@@ -2041,7 +2132,7 @@ resume path, which two-phase termination exists to avoid. One model each.</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>SPAWNING → RUNNING ⇄ WAITING{consent | input}              (mid-run, resumed via /respond)
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>RUNNING  → COMPLETED_PENDING_ACK → FINALIZED               (end-of-run, /ack | retention-TTL)
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>RUNNING  → FAILED (provider) | ZOMBIE (tool-loop) | BUDGET_EXCEEDED | CANCELLED (explicit | cascade-TTL)
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>RUNNING  → INTERRUPTED (engine restart killed the live asyncio.Task; records persist, live work does NOT auto-resume until the resume upgrade)
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>RUNNING  → INTERRUPTED (engine restart / cancel / budget cap killed the live asyncio.Task; records + checkpoint persist; resume is CONDITIONAL — see open-decision #5: only if the checkpoint is conclusive and artifacts don&#39;t already capture the work, else stays INTERRUPTED for an explicit decision)
 </span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>any terminal → tool sandbox torn down; artifacts retained until FINALIZED/GC
 </span></code></pre></div>
 <p><strong>Consent for unattended runs (resolves the "semi-autonomous" tension):</strong></p>
@@ -2083,6 +2174,31 @@ resume path, which two-phase termination exists to avoid. One model each.</p>
   isolation lands, the spec carries a <strong>token <em>reference</em>, not a raw
   key</strong>, so the swap to per-agent identity (item 9) is non-breaking.</li>
 </ul>
+<p><strong>Filesystem sealing — <code>tools.agent.sandbox</code> (proposed).</strong> The <em>read-path
+scope</em> and <em>workdir</em> injected fields above are governed by a new
+<code>tools.agent.sandbox</code> config block that <strong>seals</strong> where a task may read and
+write. The scoping fields (<code>workdir</code>, <code>read_paths</code>, <code>skills_dir</code>, <code>specs_dir</code>)
+are tier-agnostic; an <code>enforcement</code> selector picks how they are realized —
+<strong>one schema, two enforcers</strong>:</p>
+<ul>
+<li><code>enforcement: "in_process"</code> (preview) — a Python path-jail in
+  <code>ScopedToolManager</code>: every <code>read_file</code>/<code>grep</code>/<code>write_file</code> path is resolved
+  and checked against <code>read_paths</code> / the per-run <code>workdir</code> before the real
+  tool runs. <code>--skill</code>/<code>--spec</code> resolve by <strong>name</strong> under the configured roots
+  (not an arbitrary path). Best-effort under threat model A — operator hygiene,
+  not a boundary against hostile task text. <strong>Note:</strong> <code>ScopedToolManager</code>
+  today scopes tool <em>names</em> only; read-path enforcement is the new primitive
+  this block requires.</li>
+<li><code>enforcement: "container"</code> (tier-d) — the <em>same</em> fields become real OS
+  boundaries: read-only root fs; <code>workdir</code> = the pod's writable <code>emptyDir</code>
+  mount; <strong>skills &amp; specs = ConfigMaps injected into the pod and mounted
+  read-only</strong> (operator seals what a task sees without rebuilding the image);
+  egress = a k8s NetworkPolicy realizing the same AC-2 allowlist. This is the
+  hard boundary that lets a task take untrusted input.</li>
+</ul>
+<p>Ship the config keys <strong>with</strong> the enforcer, never before — parsed-but-unenforced
+scoping is a false sense of security. Full field schema + the <code>/task</code> command
+surface: <a href="../../agent-task-command-design.html">agent-task-command-design.html</a> §5–§6.</p>
 <h3 id="10-appstate-one-running-agents-summary-field">10. AppState — one running-agents summary field<a class="headerlink" href="#10-appstate-one-running-agents-summary-field" title="Permanent link">&para;</a></h3>
 <p>Add a <code>background_agents</code> summary field to
 <code>engine/app_state_schema.json</code> (auto-mirrors to web + VSCode + the
@@ -2092,18 +2208,26 @@ survives reconnects through the existing <code>state_sync</code> mechanism.</p>
 <h3 id="11-additive-wire-event-surface-v1-contract-stays-byte-identical">11. Additive wire &amp; event surface (v1 contract stays byte-identical)<a class="headerlink" href="#11-additive-wire-event-surface-v1-contract-stays-byte-identical" title="Permanent link">&para;</a></h3>
 <p>All additions are <strong>purely additive</strong> — <code>POST /v1/oneshot</code> and the
 existing <code>AGENT_RUN_*</code> payloads are untouched (ppxai-sre constraint).</p>
+<blockquote>
+<p><strong>Note (shipped v1.19.0):</strong> this section is the original proposal and
+predates the implementation — the shipped request/response shapes differ
+in detail (e.g. <code>respond</code> takes <code>RespondRequest{token, approved?, text?}</code>,
+not <code>{resume_token, response}</code> as sketched below). <code>ppxai/server/routes/agent_v1.py</code>
+is authoritative for the actual wire contract.</p>
+</blockquote>
 <div class="language-http highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="err">POST /v1/agent/run                  → {run_id, status}   (run_token is internal — §7, never in this response for the MVP)</span>
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="err">     body: {task, persona?, provider?, model?, tools[], read_scope?,</span>
 </span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="err">            budget{tokens,time_s,iterations}, network{allow_outbound[]},</span>
 </span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="err">            idempotency_key?}</span>
 </span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="err">GET  /v1/agent/runs                  → {runs:[...]}</span>
 </span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="err">GET  /v1/agent/runs/&lt;id&gt;             → {meta, state}   (status snapshot)</span>
-</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="err">GET  /v1/agent/runs/&lt;id&gt;/events      → SSE (live + ?since=N replay)</span>
-</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="err">GET  /v1/agent/runs/&lt;id&gt;/result      → {body, artifact_refs:[...]}</span>
-</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="err">GET  /v1/agent/runs/&lt;id&gt;/artifacts/&lt;artifact_id&gt;  → resolves via /files/preview</span>
-</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="err">POST /v1/agent/runs/&lt;id&gt;/respond     → {resume_token, response}   (answer a WAITING)</span>
-</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="err">POST /v1/agent/runs/&lt;id&gt;/ack         → {ok, status:&quot;finalized&quot;}   (two-phase termination)</span>
-</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="err">POST /v1/agent/runs/&lt;id&gt;/cancel      → {ok, status:&quot;cancelling&quot;}</span>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="err">GET  /v1/agent/runs/&lt;id&gt;/events      → SSE (live + ?since=N replay);</span>
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="err">                                       filters ?min_level= &amp; ?category= (see §11a)</span>
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="err">GET  /v1/agent/runs/&lt;id&gt;/result      → {body, artifact_refs:[...]}</span>
+</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="err">GET  /v1/agent/runs/&lt;id&gt;/artifacts/&lt;artifact_id&gt;  → resolves via /files/preview</span>
+</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="err">POST /v1/agent/runs/&lt;id&gt;/respond     → {resume_token, response}   (answer a WAITING)</span>
+</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="err">POST /v1/agent/runs/&lt;id&gt;/ack         → {ok, status:&quot;finalized&quot;}   (two-phase termination)</span>
+</span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="err">POST /v1/agent/runs/&lt;id&gt;/cancel      → {ok, status:&quot;cancelling&quot;}</span>
 </span></code></pre></div>
 <ul>
 <li><strong>Spawn idempotency:</strong> client-supplied <code>idempotency_key</code> → registry
@@ -2130,6 +2254,36 @@ existing <code>AGENT_RUN_*</code> payloads are untouched (ppxai-sre constraint).
   MVP requires them earlier, not later.) <code>AGENT_SERVICE_DOWN</code> in §13.)</li>
 </ul>
 <p><strong>New <code>SideEffectKind</code>:</strong> <code>AGENT_RUN_STARTED</code> (already proposed above).</p>
+<h3 id="11a-event-record-schema-eventsjsonl-level-category-resolved-2026-06-15">11a. Event-record schema (<code>events.jsonl</code>) — level + category (resolved 2026-06-15)<a class="headerlink" href="#11a-event-record-schema-eventsjsonl-level-category-resolved-2026-06-15" title="Permanent link">&para;</a></h3>
+<p>Each <code>events.jsonl</code> line is one JSON object. <strong>Always persist every
+event; filter on read</strong> — the file is the durable inspection/audit record
+(ADR 0005), so verbosity is a render/query concern, never a capture one.
+Two orthogonal filter axes, both in the schema from the first persisted
+event (additive-after-persist is painful, so they ship in Inc 3):</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>{
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>  &quot;seq&quot;:      42,              // monotonic per-run sequence (the ?since= cursor)
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>  &quot;ts&quot;:       1781551062.81,   // epoch seconds
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>  &quot;type&quot;:     &quot;tool_call&quot;,     // existing EventType value
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>  &quot;level&quot;:    &quot;debug&quot;,         // debug | info | warning | error  (severity axis)
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>  &quot;category&quot;: &quot;tool&quot;,          // lifecycle | tool | network | consent | result  (kind axis)
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>  &quot;data&quot;:     { ... }          // type-specific payload
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>}
+</span></code></pre></div>
+<ul>
+<li><strong>Filtering:</strong> <code>GET …/events?min_level=info</code> drops <code>debug</code>;
+  <code>?category=lifecycle,result</code> keeps only those kinds. Both axes
+  independent → "show errors but hide tool noise" is expressible. Applied
+  server-side on replay AND honored on the live SSE tail.</li>
+<li><strong>UI:</strong> a verbosity slider (min_level) + per-category toggles. Clients
+  that want everything pass no filter; the file always has it all.</li>
+<li><strong>Defaults:</strong> lifecycle/result events are <code>info</code>; per-tool-iteration
+  detail is <code>debug</code>; policy denials are <code>warning</code>; failures are <code>error</code>.
+  <code>category</code> maps to the subsystem (lifecycle = run start/complete/status,
+  tool = tool_call/result, network = NETWORK_POLICY_*, consent = WAITING/
+  consent, result = AGENT_RESULT_READY). Mapping lives in one place so a
+  new EventType gets classified once, not in every client (fixes the
+  "derive from type name" drift the pre-platform event system had).</li>
+</ul>
 <h3 id="mvp-build-order-the-first-slice">MVP build order (the first slice)<a class="headerlink" href="#mvp-build-order-the-first-slice" title="Permanent link">&para;</a></h3>
 <ol>
 <li><code>engine/agent_runs.py</code> — <code>AgentRunRegistry</code> + the state machine (§8),
@@ -2156,7 +2310,7 @@ isolation (tier d) and restart-durable persistence stay additive upgrades.</p>
 <h2 id="open-decisions">Open decisions<a class="headerlink" href="#open-decisions" title="Permanent link">&para;</a></h2>
 <p>These are gaps this ADR cannot close without input or measurement.
 Items 1-5 are ppxai-internal; items 6-13 are consumer-driven, surfaced
-2026-05-10 in <a href="../../../ppxai-sre-repo/docs/PPXAI-INTEGRATION-V1.19.md"><code>../../../ppxai-sre-repo/docs/PPXAI-INTEGRATION-V1.19.md</code></a>
+2026-05-10 in <a href="../../../ppxai-sre/docs/PPXAI-INTEGRATION-V1.19.md"><code>../../../ppxai-sre/docs/PPXAI-INTEGRATION-V1.19.md</code></a>
 (caveats C1-C5 and asks A1-A3) and need answers before Stage 2 implementation
 lands. Items 6-12 (C1-C4, A1-A3) were folded in commit <code>42ed8f00</code> (2026-05-10).
 Item 13 (C5 — agent-served services routing) was filed by the consumer in
@@ -2174,32 +2328,77 @@ with isolation moved to the <strong>tool-execution</strong> boundary
 (subprocess/pod), not the loop — see Resolved MVP design §4.</p>
 </blockquote>
 <ol>
-<li><strong>Question A</strong> — outer-loop value. Needs instrumentation data.
-   <strong>MVP-sidestepped (2026-06-15):</strong> the read-only research run is one
-   <code>chat_with_tools</code> invocation (Resolved MVP design §2), so the MVP
-   ships without this data. Still open for the <em>general</em> agent.</li>
+<li><strong>Question A</strong> — outer-loop value.
+   <strong>RESOLVED (2026-06-15): A1 — eliminate the outer continuation loop.</strong>
+   A run is one <code>chat_with_tools</code> invocation; the model finishes in a
+   single inner tool-loop or it doesn't. We accept the small risk that
+   some older/weaker model occasionally stops mid-task, in exchange for
+   the simplicity of one loop instead of two (and deleting the ~150 LoC
+   VSCode replica + the <code>TASK_COMPLETE:</code> marker convention). The MVP
+   already runs this way (one invocation per run); A1 makes that the
+   answer for the <em>general</em> agent too, not just the read-only MVP. If a
+   regression surfaces on a specific model, revisit A2 (server-side
+   re-prompt) for that case — but do not build it speculatively.</li>
 <li><strong>Question B</strong> — filesystem vs SQLite for the registry. Recommend
    filesystem; revisit if listing runs becomes slow. (MVP: filesystem.)</li>
-<li><strong>Question D</strong> — <code>EngineClient</code> construction cost. Direction set to
-   <strong>D1</strong> (new <code>EngineClient</code> per sub-agent run) per Resolved MVP design
-   §9; still needs the benchmark (<code>time</code> to spin up an EngineClient with
-   default provider). If under ~50ms, D1 is confirmed.</li>
+<li><strong>Question D</strong> — <code>EngineClient</code> lifecycle per sub-agent.
+   <strong>RESOLVED (2026-06-15): D1 — a new <code>EngineClient</code> per sub-agent run.</strong>
+   Isolation wins (independent history / provider / tool budget; clean
+   per-run attribution; a child crash can't corrupt the parent). We
+   commit to D1 now and <strong>optimize later if needed</strong> — construction cost
+   is not a gate. If profiling later shows <code>EngineClient()</code> construction
+   is a measurable bottleneck under fan-out, optimize then (lazy init,
+   pooling, or selective D2-style scoping for cheap children) — but ship
+   D1 first; correctness and isolation before micro-optimization.</li>
 <li><strong>Cancellation semantics for sub-agents — RESOLVED (2026-06-15):</strong>
    cascading cancel, but <strong>TTL-gated, not instant-on-disconnect</strong> (else
    it defeats semi-autonomy). Clean close → explicit cancel now; crash →
    heartbeat reaper past a grace TTL. See Resolved MVP design §8.</li>
-<li><strong>Budget enforcement</strong> — token cap and time cap need to interrupt
+<li>
+<p><strong>Budget enforcement</strong> — token cap and time cap need to interrupt
    mid-tool-call cleanly. Today's <code>_active_subprocesses</code> cleanup
    (commit <code>a746a7c6</code>) is the foundation; needs extending to a
-   per-run budget tracker.</li>
-<li><strong>C4 — Tools first-class on <code>POST /v1/agent/run</code></strong> [LOAD-BEARING].
+   per-run budget tracker.
+   <strong>RESOLVED (2026-06-15): clean interruption = checkpoint, then
+   <em>conditional</em> resume.</strong> A mid-tool-call interruption (budget cap hit,
+   cancel, or engine restart) must first write the agent's progress to the
+   run's <code>state.json</code> checkpoint (iteration, budget consumed, last tool,
+   any partial result, plus refs to artifacts produced so far). The
+   checkpoint is unconditional — never lose the record of mid-run work.
+   <strong>Resume is conditional, not automatic</strong> — on recovery the registry
+   evaluates whether resuming is worthwhile:</p>
+</li>
+<li>
+<p><strong>Checkpoint inconclusive</strong> (interrupted mid-tool-call with no
+     coherent resumable state, or a partial/corrupt <code>state.json</code>) →
+     <strong>do not auto-resume.</strong> Resuming from guesswork risks duplicated or
+     wrong work; leave the run <code>INTERRUPTED</code> and surface it for an
+     explicit operator/parent decision.</p>
+</li>
+<li><strong>Artifacts already represent sufficient work</strong> → if the run produced
+     artifacts that adequately capture the deliverable, <strong>prefer
+     finalizing with what exists</strong> over re-running. A sub-agent whose
+     output is already on disk does not need its compute resumed.</li>
+<li><strong>Conclusive checkpoint AND work not already captured</strong> → resume from
+     the checkpoint.</li>
+</ol>
+<p>This couples open-decision #5 (budget) with ROADMAP Phase 3 (run
+   persistence + recovery) and the <code>INTERRUPTED</code> state (§8): the budget
+   tracker fires the interrupt, the checkpoint captures progress, and the
+   <em>resume-decision</em> (additive upgrade per §8) gates whether to replay. A
+   resumability/conclusiveness flag in <code>state.json</code> (set when the agent
+   reaches a clean checkpoint boundary, cleared on entry to a tool call)
+   is the mechanism; artifact-sufficiency is judged against the run's
+   declared result contract. Semantics pinned: <strong>never lose mid-run work,
+   never blindly resume into garbage or redundant compute.</strong>
+6. <strong>C4 — Tools first-class on <code>POST /v1/agent/run</code></strong> [LOAD-BEARING].
    Without a <code>tools</code> field on the run-spawn request, ppxai-sre's
    manager-executor pattern would have to reimplement the runtime
    itself. <strong>Recommended position:</strong> mandatory in v1.19.x Phase 1.
    Same <code>tools</code> shape <code>/v1/oneshot</code> would accept once it grows tool
    support, so the wire surfaces stay consistent. ROADMAP Phase 1
-   row to be amended.</li>
-<li><strong>C3 — SSE on <code>GET /v1/agent/runs/&lt;id&gt;/events</code></strong>. Polling gates
+   row to be amended.
+7. <strong>C3 — SSE on <code>GET /v1/agent/runs/&lt;id&gt;/events</code></strong>. Polling gates
    the manager-executor pattern on round-trip latency
    (<code>incident-responder</code> needs live triage commentary while the
    executor runs <code>kubectl describe</code>, Prom queries, etc.). The ADR's
@@ -2207,8 +2406,8 @@ with isolation moved to the <strong>tool-execution</strong> boundary
    <code>GET /agent/runs/&lt;id&gt;/events</code> as SSE; this elevates that proposal
    from notional to committed. <strong>Recommended position:</strong> SSE channel
    in v1.19.x Phase 1; polling <code>GET /v1/agent/runs/&lt;id&gt;</code> stays as
-   the status-snapshot path. ROADMAP Phase 1 row to be amended.</li>
-<li><strong>C1 — Typed <code>EventType.NETWORK_POLICY_DENIED</code> /
+   the status-snapshot path. ROADMAP Phase 1 row to be amended.
+8. <strong>C1 — Typed <code>EventType.NETWORK_POLICY_DENIED</code> /
    <code>NETWORK_POLICY_ALLOWED</code></strong> [LOAD-BEARING — MVP ship-gate AND ppxai-sre audit].
    <strong>RESOLVED (2026-06-15): these ship with the read-only research MVP,
    not Phase 5.</strong> The egress allowlist is the MVP's central
@@ -2221,8 +2420,37 @@ with isolation moved to the <strong>tool-execution</strong> boundary
    <code>{tool, target_host, target_path, reason, allowlist_rule_id, run_id}</code>.
    The "Phase 5" framing was the ppxai-sre-consumer commitment; the MVP
    pulls it forward. ROADMAP Phase 1 (MVP) and Phase 5 rows to be amended
-   so the requirement appears in the first slice.</li>
-<li><strong>C2 — <code>/v1/tokens</code> pluggable resolver from day one</strong>
+   so the requirement appears in the first slice.
+   <strong>LANDED (Inc 5):</strong> <code>engine/tools/network_policy.py</code> (<code>NetworkPolicy</code>,
+   fail-closed, host exact/<code>*.suffix</code>-glob + path-prefix, https-only);
+   enforced at the <code>ScopedToolManager.execute_tool</code> egress chokepoint for
+   network-capable tools; <code>network.allow_outbound</code> in the <code>/v1/agent/task</code>
+   request, persisted to <code>RunMeta.network</code>. Events fire on the <code>network</code>
+   category with the payload above (<code>allowlist_rule_id</code> = matched rule index
+   or <code>null</code>). Tests: <code>tests/test_network_policy.py</code> +
+   <code>test_task_enforces_egress_end_to_end</code>.
+   <strong>Superset rule (security review fix, 2026-06-16):</strong> a tool's real egress
+   host can be chosen at call time and is not predictable pre-call
+   (<code>web_search</code> → Perplexity/Gemini/DDG fallback; <code>get_weather</code> → https/http
+   fallback). <code>authorize(name, kwargs)</code> therefore enumerates the tool's FULL
+   set of possible targets (<code>tool_targets</code>) and allows only if <strong>every</strong> one
+   passes <code>check()</code>. A run allowlisting just DuckDuckGo cannot run
+   <code>web_search</code> (it could reach <code>api.perplexity.ai</code>); <code>get_weather</code> is
+   un-allowlistable under the MVP (http fallback). This was load-bearing:
+   without it, the audit event named the wrong host and a confused-deputy
+   exfil path stayed open.
+   <strong>No shell in /task (security review fix, 2026-06-16):</strong> <code>execute_shell_
+   command</code> runs arbitrary commands whose egress the allowlist cannot inspect
+   (a <code>curl</code>/<code>pip</code> would bypass the chokepoint with no <code>network_policy_denied</code>
+   event), so it cannot satisfy AC-2 — only tier-d OS isolation can, which is
+   deferred. The <code>/v1/agent/task</code> route rejects a grant containing a shell
+   tool with a 400, and <code>ScopedToolManager</code> refuses to execute one whenever an
+   egress policy is active (defense-in-depth). This matches §3a's corrected
+   research grant — <strong>no shell tool at all</strong> (not merely "no shell-write"):
+   read-only shell / <code>curl</code> is also excluded, because any shell escapes the
+   egress allowlist. Tests: <code>test_task_rejects_shell_grant</code> +
+   <code>test_shell_denied_under_egress_policy_backstop</code>.
+9. <strong>C2 — <code>/v1/tokens</code> pluggable resolver from day one</strong>
    [LOAD-BEARING for v1.20.x migration cost]. ROADMAP today says
    "<code>~/.ppxai/tokens.json</code> (single-machine) OR k8s secret (cluster)" —
    left unspecified. SRE agents deploy to k8s; the k8s-secret path
@@ -2231,15 +2459,75 @@ with isolation moved to the <strong>tool-execution</strong> boundary
    re-shape. <strong>Recommended position:</strong> define the resolver protocol
    in v1.19.x Phase 7 even though the credential broker proper is
    v1.20.x. Same code path supports <code>~/.ppxai/.env</code> / k8s secret /
-   Vault. ROADMAP Phase 7 row to be amended.</li>
-<li><strong>A3 — <code>run_id</code> and <code>parent_run_id</code> on <code>EventType.AGENT_RUN_START</code></strong>.
+   Vault. ROADMAP Phase 7 row to be amended.</p>
+<p><strong>C2 amendment (v1.19.0, resolved) — the <code>SecretProvider</code> seam.</strong>
+   The "pluggable resolver" above is concretized as a single Protocol
+   that both <code>/v1/tokens</code> and the per-run authz gate consume, blind to
+   the backend. Decoupling the <em>validator</em> from the <em>source</em> is the
+   same decoupling C5.2 already made (<code>auth: "bearer"</code> does not mandate
+   the <code>/v1/tokens</code> source) — this generalizes it.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># ppxai/server/secrets/base.py</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">SecretRef</span><span class="p">:</span>        <span class="c1"># opaque pointer to material, NOT the material</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>    <span class="o">...</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="k">class</span><span class="w"> </span><span class="nc">TokenRecord</span><span class="p">:</span>      <span class="c1"># metadata only — safe to list/log</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>    <span class="n">token_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">;</span> <span class="n">secret_ref</span><span class="p">:</span> <span class="n">SecretRef</span><span class="p">;</span> <span class="n">owner</span><span class="p">:</span> <span class="nb">str</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>    <span class="n">roles</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">];</span> <span class="n">expires_at</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span><span class="p">;</span> <span class="n">revoked</span><span class="p">:</span> <span class="nb">bool</span>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="k">class</span><span class="w"> </span><span class="nc">SecretProvider</span><span class="p">(</span><span class="n">Protocol</span><span class="p">):</span>
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
+</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">resolve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">presented</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TokenRecord</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>   <span class="c1"># validate inbound bearer</span>
+</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">list</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">TokenRecord</span><span class="p">]:</span> <span class="o">...</span>                       <span class="c1"># metadata only</span>
+</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">mint</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">owner</span><span class="p">,</span> <span class="n">roles</span><span class="p">,</span> <span class="n">ttl_s</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">TokenRecord</span><span class="p">]:</span> <span class="o">...</span>  <span class="c1"># material once</span>
+</span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">revoke</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">token_id</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span> <span class="o">...</span>
+</span><span id="__span-6-13"><a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">capabilities</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span> <span class="o">...</span>   <span class="c1"># {&quot;mint&quot;,&quot;revoke&quot;,&quot;rotate&quot;,&quot;list&quot;}</span>
+</span></code></pre></div>
+<p>Load-bearing properties:
+   - <strong><code>resolve()</code> is the validator.</strong> Today's <code>server/auth.py</code>
+     single-shared-token check becomes <code>EnvSecretProvider.resolve()</code>
+     with one record — zero behavior change when no <code>secrets</code> config
+     is present (full backward compat; unauth-if-unset preserved).
+   - <strong><code>capabilities()</code> lets read-only backends coexist with mutable
+     ones.</strong> <code>env</code> / <code>k8s</code> Secret are read-only (operator rotates
+     out-of-band) → <code>/v1/tokens</code> <code>mint</code>/<code>revoke</code> return <strong>405</strong> for
+     them; <code>file</code> is fully mutable. This is what lets the <em>same</em>
+     <code>/v1/tokens</code> wire serve file-today and k8s-later with no re-shape
+     — the migration-cost property C2 was filed to protect.
+   - <strong><code>SecretRef</code>, never raw material, crosses the seam</strong> except at
+     <code>mint()</code> (returns material once, GitHub-PAT style) and <code>resolve()</code>.
+     This is the lifecycle hook — rotation/expiry/audit live behind the
+     ref. Consistent with §7's "token <em>reference</em>, not raw token" at
+     the process boundary.
+   - <strong><code>ProviderChain</code> composite</strong> tries providers in order, so a
+     deployment runs file-tokens <em>plus</em> legacy <code>PPXAI_API_TOKEN</code>
+     simultaneously → non-breaking migration. C5.2's
+     <code>header:X-Custom-Token</code> is just another provider in the chain.</p>
+<p>First providers (single-machine first): <code>EnvSecretProvider</code>
+   (<code>resolve</code> only, wraps today's auth), <code>FileSecretProvider</code>
+   (<code>~/.ppxai/tokens.json</code>, stores <strong>hashes</strong>, perms <code>0600</code> /
+   owner-only ACL on Windows, all capabilities). <code>K8sSecretProvider</code>
+   /<code>VaultSecretProvider</code> are interface stubs deferred to v1.20.x.</p>
+<p>Config (omit <code>secrets</code> → today's behavior):
+   <div class="language-text highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>&quot;server&quot;: { &quot;secrets&quot;: { &quot;providers&quot;: [
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>  { &quot;type&quot;: &quot;file&quot;, &quot;path&quot;: &quot;~/.ppxai/tokens.json&quot; },
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>  { &quot;type&quot;: &quot;env&quot;,  &quot;var&quot;: &quot;PPXAI_API_TOKEN&quot; }
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>] } }
+</span></code></pre></div></p>
+<p><strong>Increment split (build-contract gated):</strong>
+   - <strong>Inc 8a</strong> — <code>SecretProvider</code> seam + <code>Env</code>/<code>File</code> providers +
+     <code>/v1/tokens</code> CRUD. No authz change. Trial: mint→list→revoke via
+     file provider; legacy env token still authenticates.
+   - <strong>Inc 8b</strong> — per-run authz. <code>start_run</code> stamps
+     <code>RunMeta.owner = resolve(bearer).owner</code>; <code>/events|/result|</code>
+     <code>/artifacts|/cancel</code> return <strong>403</strong> on ownership mismatch. The
+     authz code calls <code>resolve()</code> and is blind to the backend. Trial:
+     token A's run, token B → 403.
+10. <strong>A3 — <code>run_id</code> and <code>parent_run_id</code> on <code>EventType.AGENT_RUN_START</code></strong>.
     Phase 1 introduces a <code>run_id</code> per run; ppxai-sre's audit JSONL
     keys by <code>run_id</code>. The native v1.18.0 <code>AGENT_RUN_START</code> payload
     predates the run namespace and doesn't carry one. <strong>Recommended
     position:</strong> additive fields on the existing event type, no new
     event needed. The namespace is the only new state. Fold into
-    Phase 1 implementation note (no separate ROADMAP row).</li>
-<li><strong>A1 — <code>EventType.CONSENT_DECISION</code> event stream</strong>.
+    Phase 1 implementation note (no separate ROADMAP row).
+11. <strong>A1 — <code>EventType.CONSENT_DECISION</code> event stream</strong>.
     Symmetric with C1 for non-network consent decisions. ppxai-sre's
     <code>AuditLogger</code> records every consent decision (allow/deny/
     approval_required) keyed by tool + args hash. Today the consent
@@ -2249,8 +2537,8 @@ with isolation moved to the <strong>tool-execution</strong> boundary
     <strong>Recommended position:</strong> v1.19.x should-have. Cheap to add
     once the consent flow is event-emitting; cheap to defer to
     v1.20.x if Phase 5 (C1) is enough for the threat model
-    ppxai-sre is shipping in v1.19.x.</li>
-<li><strong>A2 — Pre-tool-call hook for tier classification</strong>.
+    ppxai-sre is shipping in v1.19.x.
+12. <strong>A2 — Pre-tool-call hook for tier classification</strong>.
     ppxai-sre's 3-tier classification (Autonomous / Notify-and-Act /
     Require-Approval) must fire <strong>before</strong> ppxai's consent dialog —
     otherwise the user sees a dialog for tier-1 read-only verbs that
@@ -2262,9 +2550,8 @@ with isolation moved to the <strong>tool-execution</strong> boundary
     v1.20.x. Keeps the consent contract as the single boundary and
     avoids adding a parallel hook surface. Doesn't block v1.19.x;
     ppxai-sre's policy engine works without it (just renders dialogs
-    that the autonomous agent auto-approves via test harness).</li>
-<li>
-<p><strong>C5 — Agent-served services routing</strong> [LOAD-BEARING for ppxai-sre
+    that the autonomous agent auto-approves via test harness).
+13. <strong>C5 — Agent-served services routing</strong> [LOAD-BEARING for ppxai-sre
     long-lived service agents]. Several planned ppxai-sre agents are
     not "compute and exit" — they run as long-lived services that
     ALSO bind their own HTTP endpoints for human and machine
@@ -2275,78 +2562,81 @@ with isolation moved to the <strong>tool-execution</strong> boundary
     as part of its run spec; ppxai's runtime (or k8s session-manager
     in production) reverse-proxies external traffic to those
     bindings.</p>
-<p><strong>Recommended position:</strong> v1.19.x Phase 1 extends
-<code>POST /v1/agent/run</code>'s request body with an optional <code>services</code>
-object mapping name → <code>{port, path, auth}</code>; the response carries
-a <code>services</code> map of name → externally-reachable URL of the form
-<code>…/v1/agent/runs/&lt;id&gt;/services/&lt;name&gt;/</code>. ROADMAP Phase 1 row
-amended. When <code>services</code> is omitted or empty, ppxai's runtime
+<div class="language-text highlight"><pre><span></span><code>**Recommended position:** v1.19.x Phase 1 extends
+`POST /v1/agent/run`&#39;s request body with an optional `services`
+object mapping name → `{port, path, auth}`; the response carries
+a `services` map of name → externally-reachable URL of the form
+`…/v1/agent/runs/&lt;id&gt;/services/&lt;name&gt;/`. ROADMAP Phase 1 row
+amended. When `services` is omitted or empty, ppxai&#39;s runtime
 skips reverse-proxy registration (the CronJob case, where the
-agent doesn't stay up to receive inbound traffic). The bound
-service's logs / state are exposed via the <strong>Inspection
-Triplet pattern</strong> (per <a href="../0005-inspection-triplet/">ADR 0005</a>)
-at <code>runs/&lt;run_id&gt;/agent-&lt;n&gt;/services/&lt;name&gt;/{state.json, events.jsonl}</code>
-— the C5 ask doesn't need to invent an inspection surface.</p>
-<p>Five sub-question resolutions pinned by peer outlook-monitor
-Phase-4 fit-test (sharpened in peer commit <code>b3ba0f6</code>):</p>
-<ul>
-<li><strong>C5.1 — Auth surface scope.</strong> Narrow v1.19.x to
-  <code>bearer | none</code>. The proposed <code>session</code> auth (cookie domain,
+agent doesn&#39;t stay up to receive inbound traffic). The bound
+service&#39;s logs / state are exposed via the **Inspection
+Triplet pattern** (per [ADR 0005](0005-inspection-triplet.md))
+at `runs/&lt;run_id&gt;/agent-&lt;n&gt;/services/&lt;name&gt;/{state.json, events.jsonl}`
+— the C5 ask doesn&#39;t need to invent an inspection surface.
+
+Five sub-question resolutions pinned by peer outlook-monitor
+Phase-4 fit-test (sharpened in peer commit `b3ba0f6`):
+
+- **C5.1 — Auth surface scope.** Narrow v1.19.x to
+  `bearer | none`. The proposed `session` auth (cookie domain,
   CSRF, SameSite, Secure all unspecified) is deferred to v1.20.x
-  alongside the OIDC work that's already deferred. One protocol
-  fully specified beats three half-specified.</li>
-<li><strong>C5.2 — Bearer auth source.</strong> <code>auth: "bearer"</code> does NOT
-  mandate the <code>/v1/tokens</code> source. Per-service field
-  <code>token_source: "v1-tokens"</code> (default) or
-  <code>token_source: "header:X-Custom-Token"</code> for per-deployment
+  alongside the OIDC work that&#39;s already deferred. One protocol
+  fully specified beats three half-specified.
+- **C5.2 — Bearer auth source.** `auth: &quot;bearer&quot;` does NOT
+  mandate the `/v1/tokens` source. Per-service field
+  `token_source: &quot;v1-tokens&quot;` (default) or
+  `token_source: &quot;header:X-Custom-Token&quot;` for per-deployment
   static-secret models. outlook-monitor uses the latter
-  (<code>OUTLOOK_ADMIN_TOKEN</code> env var rotated via secret update); the
-  Phase 7 <code>/v1/tokens</code> registry is the default but not the
-  only validator.</li>
-<li><strong>C5.3 — Inbound network policy shape.</strong> Symmetric primitive
-  on the same allowlist as Phase 5's outbound. In <code>meta.json</code>:</li>
-</ul>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nt">network</span><span class="p">:</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">allow_outbound</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">...</span><span class="p p-Indicator">]</span><span class="w">   </span><span class="c1"># egress allowlist — MVP ship-gate (§3 tier-c / open-decision 8)</span>
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span><span class="nt">allow_inbound</span><span class="p">:</span><span class="w">          </span><span class="c1"># C5</span>
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span><span class="nt">services/dashboard</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">sources</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">token-role</span><span class="p p-Indicator">:</span><span class="nv">oncall</span><span class="p p-Indicator">],</span><span class="nt"> paths</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">/</span><span class="p p-Indicator">]}</span>
-</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">    </span><span class="nt">services/api</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt">sources</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">token-role</span><span class="p p-Indicator">:</span><span class="nv">slackbot</span><span class="p p-Indicator">],</span><span class="nt"> paths</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">/v1/</span><span class="p p-Indicator">]}</span>
-</span></code></pre></div>
-<p>Committed in v1.19.x to avoid a v1.20.x retrofit.
-- <strong>C5.4 — Lifecycle: restart policy + drain.</strong> Adopt k8s
-  vocabulary: <code>restart_policy: "Always" | "OnFailure" | "Never"</code>
+  (`OUTLOOK_ADMIN_TOKEN` env var rotated via secret update); the
+  Phase 7 `/v1/tokens` registry is the default but not the
+  only validator.
+- **C5.3 — Inbound network policy shape.** Symmetric primitive
+  on the same allowlist as Phase 5&#39;s outbound. In `meta.json`:
+
+  ```yaml
+  network:
+    allow_outbound: [...]   # egress allowlist — MVP ship-gate (§3 tier-c / open-decision 8)
+    allow_inbound:          # C5
+      services/dashboard: {sources: [token-role:oncall], paths: [/]}
+      services/api: {sources: [token-role:slackbot], paths: [/v1/]}
+  ```
+
+  Committed in v1.19.x to avoid a v1.20.x retrofit.
+- **C5.4 — Lifecycle: restart policy + drain.** Adopt k8s
+  vocabulary: `restart_policy: &quot;Always&quot; | &quot;OnFailure&quot; | &quot;Never&quot;`
   per service. Clean-exit drain via explicit
-  <code>POST /v1/agent/runs/&lt;id&gt;/terminate</code> that marks the run as
-  terminating before the next <code>AGENT_SERVICE_DOWN</code> fires (so
-  ppxai's restart loop doesn't re-spawn an agent that intends to
-  exit, e.g. outlook-monitor's <code>/admin/drain</code>). Pinned: explicit
+  `POST /v1/agent/runs/&lt;id&gt;/terminate` that marks the run as
+  terminating before the next `AGENT_SERVICE_DOWN` fires (so
+  ppxai&#39;s restart loop doesn&#39;t re-spawn an agent that intends to
+  exit, e.g. outlook-monitor&#39;s `/admin/drain`). Pinned: explicit
   terminate API, not exit-code conventions.
-- <strong>C5.5 — Reverse-proxy path semantics.</strong> ppxai injects
-  <code>X-Forwarded-Prefix</code> and the agent renders relative URLs
+- **C5.5 — Reverse-proxy path semantics.** ppxai injects
+  `X-Forwarded-Prefix` and the agent renders relative URLs
   assuming that prefix. Standard ASGI/WSGI middleware handles it
   on the agent side without code changes; avoids the
-  double-prefix / broken-relative-URL trap.</p>
-<p>Plus two clarifications folded directly into the wire shape:</p>
-<ul>
-<li><strong>Multi-name-same-port.</strong> Routing key is <code>(port, path)</code>, not
-  <code>port</code> alone. Outlook-monitor binds <code>/metrics</code> and <code>/healthz</code>
-  on port 9090; the <code>services</code> map allows multiple name entries
-  on the same port.</li>
-<li><strong>CronJob compatibility.</strong> <code>services</code> is optional and
-  explicitly empty for CronJob runs; ppxai's runtime skips
-  reverse-proxy registration when omitted.</li>
-</ul>
-<p><strong>Companion event type — <code>EventType.AGENT_SERVICE_DOWN</code>.</strong>
-Symmetric with the existing <code>EventType.AGENT_ZOMBIE</code> (v1.18.0).
-Emitted by ppxai's runtime when a bound service exits or stops
-responding to liveness probes; consumers' restart policy
-(managed by ppxai per <code>C5.4</code> vs. agent-internal supervision)
+  double-prefix / broken-relative-URL trap.
+
+Plus two clarifications folded directly into the wire shape:
+
+- **Multi-name-same-port.** Routing key is `(port, path)`, not
+  `port` alone. Outlook-monitor binds `/metrics` and `/healthz`
+  on port 9090; the `services` map allows multiple name entries
+  on the same port.
+- **CronJob compatibility.** `services` is optional and
+  explicitly empty for CronJob runs; ppxai&#39;s runtime skips
+  reverse-proxy registration when omitted.
+
+**Companion event type — `EventType.AGENT_SERVICE_DOWN`.**
+Symmetric with the existing `EventType.AGENT_ZOMBIE` (v1.18.0).
+Emitted by ppxai&#39;s runtime when a bound service exits or stops
+responding to liveness probes; consumers&#39; restart policy
+(managed by ppxai per `C5.4` vs. agent-internal supervision)
 decides what happens next. Payload shape:
-<code>{run_id, service_name, port, reason: "exited" | "unresponsive", exit_code?}</code>.
+`{run_id, service_name, port, reason: &quot;exited&quot; | &quot;unresponsive&quot;, exit_code?}`.
 Doc-only addition to ADR 0003 until Phase 1 implementation ships;
-extends the v1.18.0 event-type list at line 9 (kept in sync there).</p>
-</li>
-</ol>
+extends the v1.18.0 event-type list at line 9 (kept in sync there).
+</code></pre></div>
 <h2 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">&para;</a></h2>
 <p>If accepted (post-Stage-1 instrumentation):</p>
 <ul>

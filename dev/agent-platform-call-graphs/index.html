@@ -1,0 +1,2825 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Multi-LLM Interface for Developers - Terminal & VSCode">
+      
+      
+      
+        <link rel="canonical" href="https://rcconsult.github.io/ppxai/dev/agent-platform-call-graphs/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Agent platform — endpoint call graphs (per increment) - ppxai Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#agent-platform-endpoint-call-graphs-per-increment" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="ppxai Documentation" class="md-header__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ppxai Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Agent platform — endpoint call graphs (per increment)
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="ppxai Documentation" class="md-nav__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ppxai Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../provider-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provider Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../task-agent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Task Agent Platform
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../session-agent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Session Agent Mode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../bootstrap-context-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bootstrap Context
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../context-injection/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Context Injection
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../checkpoint-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Checkpoint & Undo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../file-editing-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    File Editing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../shell-consent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shell Consent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../custom-tool-development-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../custom-command-development-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ollama-limitations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ollama Limitations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vllm-tool-calling-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    vLLM Tool Calling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../container-tools-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Container Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../autorouter-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autorouter Config
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release Notes
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Release Notes
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../RELEASE-NOTES-v1.16.1.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../RELEASE-NOTES-v1.16.0.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../RELEASE-NOTES-v1.15.6.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.15.6
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#the-shared-two-layer-seam-stable-across-all-increments" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The shared two-layer seam (stable across all increments)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#increment-1-minimal-run-lifecycle-synchronous" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Increment 1 — minimal run lifecycle (synchronous)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Increment 1 — minimal run lifecycle (synchronous)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#post-v1agentrun-create-execute-synchronously" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        POST /v1/agent/run — create + execute synchronously
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get-v1agentruns-list" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GET /v1/agent/runs — list
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get-v1agentrunsrun_id-fetch-one" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GET /v1/agent/runs/{run_id} — fetch one
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#inc-1-store-surface-the-agentrunstore-protocol-so-far" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Inc-1 store surface (the AgentRunStore Protocol so far)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#increment-2-background-execution-live-status" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Increment 2 — background execution + live status
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Increment 2 — background execution + live status">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#post-v1agentrun-create-execute-in-background" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        POST /v1/agent/run — create + execute in background
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get-v1agentruns-get-v1agentrunsrun_id" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GET /v1/agent/runs / GET /v1/agent/runs/{run_id}
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#web-client-surface-consumer-of-the-above-no-new-endpoints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Web client surface (consumer of the above — no new endpoints)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#increment-3-events-monitor-channel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Increment 3 — events + monitor channel
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Increment 3 — events + monitor channel">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#emit-path-during-a-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        emit path (during a run)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get-v1agentrunsrun_idevents-replay-live-tail" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GET /v1/agent/runs/{run_id}/events — replay + live tail
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#web-client-inc-3-upgrade" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Web client (Inc 3 upgrade)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#increment-4-capability-grant-tool-allowlist-sandbox-seam-ac-1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Increment 4 — capability grant + tool allowlist (sandbox seam, AC-1)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Increment 4 — capability grant + tool allowlist (sandbox seam, AC-1)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#post-v1agenttask-tool-capable-allowlist-enforced-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        POST /v1/agent/task — tool-capable, allowlist-enforced run
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ac-1-enforcement-scopedtoolmanager-engineagent_scoped_toolspy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AC-1 enforcement (ScopedToolManager) [engine/agent_scoped_tools.py]
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#increment-5-egress-allowlist-network_policy_-ac-2-ship-gate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Increment 5 — egress allowlist + NETWORK_POLICY_* (AC-2 ship-gate)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Increment 5 — egress allowlist + NETWORK_POLICY_* (AC-2 ship-gate)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#post-v1agenttask-egress-wiring-delta-over-inc-4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        POST /v1/agent/task — egress wiring (delta over Inc 4)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#networkpolicy-enginetoolsnetwork_policypy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        NetworkPolicy [engine/tools/network_policy.py]
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#increment-6-budgets-cancel-conditional-resume-checkpoint" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Increment 6 — budgets + cancel + conditional-resume checkpoint
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Increment 6 — budgets + cancel + conditional-resume checkpoint">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#control-lifecycle-registry-engineagent_runspy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        control lifecycle (registry) [engine/agent_runs.py]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#post-v1agenttask-budgetcancel-polling-delta-over-inc-5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        POST /v1/agent/task — budget/cancel polling (delta over Inc 5)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#post-v1agentrunscancel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        POST /v1/agent/runs//cancel
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#increment-7-spawn_subagent-n1-sub-agent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Increment 7 — spawn_subagent (N=1 sub-agent)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Increment 7 — spawn_subagent (N=1 sub-agent)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tool-registration-depth-gate-routesagent_v1py-build_task_runner" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        tool registration (depth gate) [routes/agent_v1.py build_task_runner]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#spawnsubagenttoolexecute-enginetoolsagent_spawnpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SpawnSubagentTool.execute [engine/tools/agent_spawn.py]
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#increment-8a-pluggable-secret-source-framework-v1tokens" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Increment 8a — pluggable secret-source framework (/v1/tokens)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Increment 8a — pluggable secret-source framework (/v1/tokens)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#get-v1tokens-list-token-metadata-never-material" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GET /v1/tokens — list token metadata (never material)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#post-v1tokens-mint-material-returned-once" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        POST /v1/tokens — mint (material returned ONCE)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#delete-v1tokenstoken_id-revoke" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DELETE /v1/tokens/{token_id} — revoke
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#increment-8b-per-run-authorization-owner-scoped" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Increment 8b — per-run authorization (owner-scoped)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#increment-9-appstate-background_agents-mirror" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Increment 9 — AppState background_agents mirror
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#post-inc-9-hardening-review-benchmark-fixes-2026-06-16" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Post-Inc-9 hardening (review + benchmark fixes, 2026-06-16)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#build-plan-t1-task-command-family-web-client-surface" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Build plan T1 — /task command family (web client surface)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#build-plan-t2-filesystem-seal-toolsagentsandbox-in-process-jail" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Build plan T2 — filesystem seal (tools.agent.sandbox, in-process jail)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#build-plan-t5-interactive-consent-waiting-park-post-respond" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Build plan T5 — interactive consent: waiting park + POST /respond
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#build-plan-t6-two-phase-termination-completed_pending_ack-post-ack" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Build plan T6 — two-phase termination: completed_pending_ack + POST /ack
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#build-plan-t7-interrupted-resume-post-resume-restart-orphan-sweep" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Build plan T7 — interrupted resume: POST /resume + restart-orphan sweep
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#build-plan-t8a-vscode-port-of-the-task-family" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Build plan T8a — VSCode port of the /task family
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="agent-platform-endpoint-call-graphs-per-increment">Agent platform — endpoint call graphs (per increment)<a class="headerlink" href="#agent-platform-endpoint-call-graphs-per-increment" title="Permanent link">&para;</a></h1>
+<p><strong>Purpose:</strong> a reference map of what each <code>/v1/agent/*</code> endpoint actually
+calls, traced from code, maintained <strong>per increment</strong>. Use it for
+debugging (where does this path go?), refactoring (what depends on this
+seam?), and onboarding (the shape of the agent platform at a glance).</p>
+<p><strong>Maintenance rule:</strong> every increment that adds or changes an endpoint
+updates this doc in the same commit. Graphs are append-/amend-only per
+increment section so the historical shape stays traceable (mirrors the
+ADR-governance "factual-reality corrections" discipline). Source of truth
+is the code; if a graph and the code disagree, the code wins — fix the
+graph.</p>
+<ul>
+<li><strong>Plan / increments:</strong> <a href="../plan-v1.19.0-sequencing/">plan-v1.19.0-sequencing.md</a></li>
+<li><strong>Design:</strong> <a href="../decisions/0003-agent-platform-architecture/">decisions/0003-agent-platform-architecture.md</a></li>
+<li><strong>Triplet path:</strong> <a href="../decisions/0005-inspection-triplet/">decisions/0005-inspection-triplet.md</a></li>
+</ul>
+<h2 id="the-shared-two-layer-seam-stable-across-all-increments">The shared two-layer seam (stable across all increments)<a class="headerlink" href="#the-shared-two-layer-seam-stable-across-all-increments" title="Permanent link">&para;</a></h2>
+<p>Every endpoint funnels through the same layering. Increments thicken the
+leaves; this spine does not change.</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>   route handler (server/routes/agent_v1.py)   ← HTTP, Pydantic wire models
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>        │  get_agent_run_registry()            (server/state.py, lazy singleton)
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>        ▼
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>   AgentRunRegistry (engine/agent_runs.py)     ← service: identity, lifecycle, queries
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>        │  self._store.&lt;method&gt;
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>        ▼
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>   AgentRunStore  (Protocol)                   ← swappable seam (debt Item 35)
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>        │  implemented by
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>        ▼
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>   FilesystemAgentRunStore                     ← ALL disk I/O lives here
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>        ▼
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>   ~/.ppxai/runs/&lt;run_id&gt;/agent-&lt;n&gt;/...        ← ADR 0005 Inspection Triplet path
+</span></code></pre></div>
+<p>Invariants this seam enforces (check these when refactoring):
+- <strong>No route handler ever touches <code>Path</code> / <code>open()</code> directly</strong> — all
+  persistence goes through <code>AgentRunStore</code>. The Item 35 backend swap
+  replaces exactly <code>FilesystemAgentRunStore</code> and nothing above it.
+- <strong>The registry depends on the Protocol, not the concrete store.</strong></p>
+<hr />
+<h2 id="increment-1-minimal-run-lifecycle-synchronous">Increment 1 — minimal run lifecycle (synchronous)<a class="headerlink" href="#increment-1-minimal-run-lifecycle-synchronous" title="Permanent link">&para;</a></h2>
+<p>Added: <code>engine/agent_runs.py</code>, <code>server/routes/agent_v1.py</code>,
+<code>get_agent_run_registry()</code> in <code>server/state.py</code>.
+Execution model: <strong>synchronous</strong> — <code>POST /v1/agent/run</code> blocks on the LLM
+call before returning.</p>
+<h3 id="post-v1agentrun-create-execute-synchronously"><code>POST /v1/agent/run</code> — create + execute synchronously<a class="headerlink" href="#post-v1agentrun-create-execute-synchronously" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>create_agent_run(req)                                  [routes/agent_v1.py]
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>├─ get_agent_run_registry()                            [server/state.py]
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>│   └─ (first call) AgentRunRegistry(FilesystemAgentRunStore(PPXAI_HOME/&quot;runs&quot;))
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>├─ req.provider or get_default_provider()              [config/providers.py]  → 400 if none
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>├─ req.model    or get_default_model(provider)         [config/providers.py]  → 400 if none
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>├─ registry.start_run(task, tools, provider, model)   [engine/agent_runs.py]
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>│   ├─ _new_run_id()                          → secrets.token_hex → &quot;run_&lt;hex&gt;&quot;
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>│   ├─ RunMeta(status=&quot;pending&quot;, created_at=time.time())
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>│   └─ store.persist_meta(meta)               [FilesystemAgentRunStore]
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>│       └─ mkdir runs/&lt;id&gt;/agent-0/ ; write meta.json atomically (tmp + os.replace)
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>├─ _build_provider(provider_name)                      [routes/oneshot.py]  ← reused
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>│   └─ create_provider(...) → OpenAICompatibleProvider [engine/providers/]
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>├─ if not OpenAICompatibleProvider:
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>│   └─ registry.finish_run(meta, status=&quot;failed&quot;, error=...) → HTTPException 400
+</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>└─ try:
+</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>    ├─ provider.oneshot(prompt=task, model, system)   [providers/openai_compat.py]
+</span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>    │   └─ ← THE LLM CALL (blocking — the reason Inc 1 is synchronous)
+</span><span id="__span-1-18"><a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a>    ├─ registry.finish_run(meta, &quot;completed&quot;, result=content)  → store.persist_meta
+</span><span id="__span-1-19"><a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a>    └─ except: registry.finish_run(meta, &quot;failed&quot;, error=str(e)) → store.persist_meta
+</span><span id="__span-1-20"><a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a>   → AgentRunResponse(run_id, status)
+</span></code></pre></div>
+<p>The <strong>only leaf that leaves the process</strong> is <code>provider.oneshot()</code>.
+Everything else is registry → store → disk. (Inc 2 wraps the
+start_run → oneshot → finish_run segment in <code>asyncio.create_task</code> so the
+POST returns immediately; the registry/store contract is untouched.)</p>
+<h3 id="get-v1agentruns-list"><code>GET /v1/agent/runs</code> — list<a class="headerlink" href="#get-v1agentruns-list" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>list_agent_runs()                                      [routes/agent_v1.py]
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>├─ get_agent_run_registry()
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>├─ registry.list_runs()                                [engine/agent_runs.py]
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>│   └─ store.list_meta()                       [FilesystemAgentRunStore]
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>│       ├─ iterdir() over ~/.ppxai/runs/
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>│       ├─ load_meta(name, agent_n=0) per dir → RunMeta.from_dict(json)
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>│       │     (corrupt/missing → logged + skipped, not fatal)
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>│       └─ sort by created_at desc
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>└─ [RunMetaResponse.from_meta(m) ...]          → RunListResponse
+</span></code></pre></div>
+<h3 id="get-v1agentrunsrun_id-fetch-one"><code>GET /v1/agent/runs/{run_id}</code> — fetch one<a class="headerlink" href="#get-v1agentrunsrun_id-fetch-one" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>get_agent_run(run_id)                                  [routes/agent_v1.py]
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>├─ get_agent_run_registry()
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>├─ registry.get_run(run_id)                            [engine/agent_runs.py]
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>│   └─ store.load_meta(run_id)                 [FilesystemAgentRunStore]
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>│       └─ read runs/&lt;id&gt;/agent-0/meta.json → RunMeta.from_dict  (None if absent)
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>└─ if None → HTTPException 404 ; else RunMetaResponse.from_meta(meta)
+</span></code></pre></div>
+<h3 id="inc-1-store-surface-the-agentrunstore-protocol-so-far">Inc-1 store surface (the <code>AgentRunStore</code> Protocol so far)<a class="headerlink" href="#inc-1-store-surface-the-agentrunstore-protocol-so-far" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>persist_meta(meta)            create/overwrite meta.json (atomic)
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>load_meta(run_id, agent_n=0)  read one slot&#39;s meta, or None
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>list_meta()                   all top-level (agent-0) metas, newest-first
+</span></code></pre></div>
+<p>Later increments ADD to this Protocol (no reshape):
+<code>append_event</code> / <code>read_events</code> (Inc 3), <code>save_state</code> / <code>load_state</code>
+(Inc 2-3), sub-agent slot enumeration (Inc 7).</p>
+<hr />
+<h2 id="increment-2-background-execution-live-status">Increment 2 — background execution + live status<a class="headerlink" href="#increment-2-background-execution-live-status" title="Permanent link">&para;</a></h2>
+<p>Changed: <code>engine/agent_runs.py</code> (added <code>run_in_background</code> + <code>_tasks</code> set +
+<code>RunMeta.started_at</code>), <code>server/routes/agent_v1.py</code> (POST no longer awaits
+the LLM call). <strong>Execution model change: synchronous → background.</strong> GET
+endpoints unchanged (they already read from the store; now they observe
+<code>running</code> mid-flight). Store Protocol unchanged this increment.</p>
+<h3 id="post-v1agentrun-create-execute-in-background"><code>POST /v1/agent/run</code> — create + execute in background<a class="headerlink" href="#post-v1agentrun-create-execute-in-background" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>create_agent_run(req)                                  [routes/agent_v1.py]
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>├─ get_agent_run_registry()
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>├─ provider/model resolution (PER-RUN INTENT, ADR 0003 §9):
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>│   req.provider/model  →  tools.agent.default_subagent (config)  →  400
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>│   (the interactive session&#39;s chat provider is NOT consulted — a
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>│    sub-agent&#39;s model is chosen for its task. Per-session sub-agent
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>│    config is a middle layer, debt Item 36.)   [config/tools.py]
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>├─ _build_provider(provider_name)                      [routes/oneshot.py]
+</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>│   └─ → 400 (no run created) if unknown / not OpenAICompatibleProvider
+</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>│       ↑ carve-out now runs BEFORE minting (Inc 1 minted-then-failed)
+</span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>├─ registry.start_run(...)                  → RunMeta(status=&quot;pending&quot;), persist
+</span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a>├─ registry.run_in_background(meta, _runner)           [engine/agent_runs.py]
+</span><span id="__span-5-13"><a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a>│   ├─ meta.status=&quot;running&quot;; meta.started_at=now; store.persist_meta
+</span><span id="__span-5-14"><a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a>│   ├─ task = asyncio.create_task(_drive())   ; self._tasks.add(task)
+</span><span id="__span-5-15"><a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a>│   │   └─ _drive(): await _runner(meta)
+</span><span id="__span-5-16"><a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a>│   │        ├─ ok  → finish_run(&quot;completed&quot;, result=body) → persist
+</span><span id="__span-5-17"><a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a>│   │        └─ exc → finish_run(&quot;failed&quot;, error=str) → persist
+</span><span id="__span-5-18"><a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a>│   └─ task.add_done_callback(self._tasks.discard)
+</span><span id="__span-5-19"><a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a>│       (_runner = asyncio.to_thread(provider.oneshot, ...) — blocking
+</span><span id="__span-5-20"><a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a>│        call runs off the event loop so GET polls aren&#39;t starved)
+</span><span id="__span-5-21"><a id="__codelineno-5-21" name="__codelineno-5-21" href="#__codelineno-5-21"></a>└─ return AgentRunResponse(run_id, status=&quot;running&quot;)   ← INSTANT, no await
+</span></code></pre></div>
+<p>The POST returns while <code>_drive</code> runs concurrently. The run's terminal
+state is observed by polling <code>GET /v1/agent/runs/&lt;id&gt;</code> (below, unchanged).
+<code>self._tasks</code> holds a strong ref so the loop doesn't GC the in-flight
+task; the done-callback removes it. Cancel-by-id + shutdown drain = Inc 6.</p>
+<h3 id="get-v1agentruns-get-v1agentrunsrun_id"><code>GET /v1/agent/runs</code> / <code>GET /v1/agent/runs/{run_id}</code><a class="headerlink" href="#get-v1agentruns-get-v1agentrunsrun_id" title="Permanent link">&para;</a></h3>
+<p>Unchanged from Inc 1 (registry → store → disk). They now return
+<code>status:"running"</code> for an in-flight run and the terminal status once
+<code>_drive</code> has called <code>finish_run</code>. <code>started_at</code> is populated once
+background execution begins.</p>
+<h3 id="web-client-surface-consumer-of-the-above-no-new-endpoints">Web client surface (consumer of the above — no new endpoints)<a class="headerlink" href="#web-client-surface-consumer-of-the-above-no-new-endpoints" title="Permanent link">&para;</a></h3>
+<p>Added alongside Inc 2 so the live <code>running → completed</code> status is
+trialable in-app, not just via curl.</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>chat input &quot;/agentrun &lt;task&gt;&quot;            [web/app.js sendMessage]
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>└─ handleSlashCommand → commandDispatcher.dispatch()  [command-dispatcher.js]
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>   └─ cmd === &quot;/agentrun&quot; → _dispatchAgentRun(task)
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>      ├─ apiClient.post(&quot;/v1/agent/run&quot;, {task, tools:[]})   → {run_id, status:&quot;running&quot;}
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>      ├─ showSystemMessage(&quot;🤖 &lt;run_id&gt; — running…&quot;)
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>      └─ poll loop (600ms, ≤2min):
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>           apiClient.get(&quot;/v1/agent/runs/&lt;id&gt;&quot;)
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>             completed → showSystemMessage(&quot;✅ …&quot;) + addMessage(&quot;assistant&quot;, result)
+</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>             failed    → showSystemMessage(&quot;❌ … &lt;error&gt;&quot;)
+</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>             (else keep polling; run continues server-side regardless)
+</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>
+</span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a>chat input &quot;/agentruns&quot;
+</span><span id="__span-6-13"><a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a>└─ _dispatchAgentRunsList()
+</span><span id="__span-6-14"><a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a>   └─ apiClient.get(&quot;/v1/agent/runs&quot;) → render newest-20 as a system line
+</span></code></pre></div>
+<p>Served from <code>~/.ppxai/web/</code> (NOT the repo) by default — see static.py
+<code>WEB_UI_DIR</code>. <strong>Since v1.19.0</strong> you no longer have to copy files there to trial
+edits: set <code>PPXAI_WEB_DIR=$PWD/ppxai/web</code> and any launcher (<code>uv run
+ppxai-server</code>, desktop) serves the checkout live (<code>_resolve_web_ui_dir</code>).</p>
+<hr />
+<h2 id="increment-3-events-monitor-channel">Increment 3 — events + monitor channel<a class="headerlink" href="#increment-3-events-monitor-channel" title="Permanent link">&para;</a></h2>
+<p>Added: <code>RunEvent</code> dataclass + <code>LEVELS</code>/<code>CATEGORIES</code> + <code>emit_event</code> /
+<code>read_events</code> / <code>subscribe</code> / <code>unsubscribe</code> on the registry;
+<code>append_event</code> / <code>read_events</code> on the store Protocol + Filesystem impl;
+<code>GET /v1/agent/runs/&lt;id&gt;/events</code> route. Background driver now emits
+lifecycle/result events. Store Protocol grew (additive).</p>
+<h3 id="emit-path-during-a-run">emit path (during a run)<a class="headerlink" href="#emit-path-during-a-run" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>registry.emit_event(run_id, type, level=, category=, data=)  [agent_runs.py]
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>├─ seed self._seq[run_id] from persisted max on first emit (restart-safe)
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>├─ seq = ++self._seq[run_id]
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>├─ RunEvent(seq, ts, type, level, category, data)
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>├─ store.append_event(run_id, event)        [FilesystemAgentRunStore]
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>│   └─ append one JSON line to runs/&lt;id&gt;/agent-0/events.jsonl
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>└─ fan out: for q in self._subscribers[run_id]: q.put_nowait(event)
+</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>            on QueueFull (slow consumer): set q._ppxai_overflowed = True
+</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>            — NEVER block the emitter, NEVER silently drop. The event is
+</span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>            on disk; the SSE generator self-heals (see below). Disk is the
+</span><span id="__span-7-11"><a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a>            source of truth; the queue is a fast-path notifier.
+</span><span id="__span-7-12"><a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a>
+</span><span id="__span-7-13"><a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a>emitters (Inc 3): run_in_background._drive →
+</span><span id="__span-7-14"><a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a>  agent_run_start (info/lifecycle), agent_run_complete (info/result),
+</span><span id="__span-7-15"><a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a>  agent_run_error (error/lifecycle)
+</span></code></pre></div>
+<h3 id="get-v1agentrunsrun_idevents-replay-live-tail"><code>GET /v1/agent/runs/{run_id}/events</code> — replay + live tail<a class="headerlink" href="#get-v1agentrunsrun_idevents-replay-live-tail" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>get_agent_run_events(run_id, since, live, min_level, category)  [routes/agent_v1.py]
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>├─ registry.get_run(run_id)  → 404 if unknown
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>├─ cats = parse ?category=    (comma-separated set)
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>├─ if not live:  read_events(since, min_level, cats) → {&quot;events&quot;: [...]}  ← JSON replay
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>│   (non-live reads the backlog directly — no queue, no race)
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>└─ if live:  StreamingResponse(_sse(), text/event-stream)
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>     _sse():
+</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>       q = registry.subscribe(run_id)       ← SUBSCRIBE FIRST (lost-event fix):
+</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>       backlog = read_events(since, ...)     ← THEN snapshot, so an event in the
+</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>                                               window lands in q, not lost
+</span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a>       yield each backlog event as &quot;data: {json}\n\n&quot;  (advances last_seq)
+</span><span id="__span-8-12"><a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a>       loop:
+</span><span id="__span-8-13"><a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a>         if request.is_disconnected(): break
+</span><span id="__span-8-14"><a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a>         if q._ppxai_overflowed:             ← slow-consumer self-heal
+</span><span id="__span-8-15"><a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a>           clear flag; replay read_events(since=last_seq) from disk; continue
+</span><span id="__span-8-16"><a id="__codelineno-8-16" name="__codelineno-8-16" href="#__codelineno-8-16"></a>           (no silent gap — durable log fills what the queue dropped)
+</span><span id="__span-8-17"><a id="__codelineno-8-17" name="__codelineno-8-17" href="#__codelineno-8-17"></a>         ev = await q.get() (15s timeout → &quot;: keepalive&quot;)
+</span><span id="__span-8-18"><a id="__codelineno-8-18" name="__codelineno-8-18" href="#__codelineno-8-18"></a>         skip if ev.seq &lt;= last_seq or not ev.passes(min_level, cats)
+</span><span id="__span-8-19"><a id="__codelineno-8-19" name="__codelineno-8-19" href="#__codelineno-8-19"></a>         advance last_seq; yield &quot;data: {json}\n\n&quot;
+</span><span id="__span-8-20"><a id="__codelineno-8-20" name="__codelineno-8-20" href="#__codelineno-8-20"></a>       finally: registry.unsubscribe(run_id, q)   (runs on disconnect)
+</span></code></pre></div>
+<p>Filters (<code>min_level</code> + <code>category</code>, ADR 0003 §11a) apply on BOTH the
+replay backlog and the live tail. Always-persist / filter-on-read: the
+file has everything; the endpoint subsets it.</p>
+<h3 id="web-client-inc-3-upgrade">Web client (Inc 3 upgrade)<a class="headerlink" href="#web-client-inc-3-upgrade" title="Permanent link">&para;</a></h3>
+<p><code>/agentrun</code> switches from poll-loop to the SSE tail: after POST, open
+<code>GET …/events?live=1</code> and render frames as they arrive; close on the
+terminal <code>agent_run_complete</code>/<code>agent_run_error</code> event. (Verbosity slider +
+category toggles are a follow-up UI refinement.)</p>
+<hr />
+<h2 id="increment-4-capability-grant-tool-allowlist-sandbox-seam-ac-1">Increment 4 — capability grant + tool allowlist (sandbox seam, AC-1)<a class="headerlink" href="#increment-4-capability-grant-tool-allowlist-sandbox-seam-ac-1" title="Permanent link">&para;</a></h2>
+<p>Added: <code>engine/agent_scoped_tools.py</code> (<code>ScopedToolManager</code>); new
+<code>POST /v1/agent/task</code> route (tool-capable tier). <code>/v1/agent/run</code> unchanged
+(tool-free tier). <strong>Tier separation at the URL</strong> — tool-calling is a
+distinct safety tier from the safe tool-free path; the two never mix.</p>
+<h3 id="post-v1agenttask-tool-capable-allowlist-enforced-run"><code>POST /v1/agent/task</code> — tool-capable, allowlist-enforced run<a class="headerlink" href="#post-v1agenttask-tool-capable-allowlist-enforced-run" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>create_agent_task(req)                                 [routes/agent_v1.py]
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>├─ grant required + non-empty (pydantic min_length=1 → 422 otherwise)
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>├─ provider/model: request → tools.agent.default_subagent → 400
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>├─ _v1_provider_or_400 = _build_provider only (400 on unknown/no-key).
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>│    v1.19.x: provider-AGNOSTIC — no OpenAI-compat class guard; any
+</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>│    BaseProvider works (engine.chat is abstract on all). [post-Inc-9 §A]
+</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>├─ registry.start_run(task, tools=grant, owner=caller, ...) → RunMeta(running)
+</span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a>└─ registry.run_in_background(meta, _runner):
+</span><span id="__span-9-9"><a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a>     _runner(m):
+</span><span id="__span-9-10"><a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a>       engine = EngineClient(); set_provider/model; enable_tools()  [ADR §9 D1]
+</span><span id="__span-9-11"><a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a>       engine.system_prompt_override = compose_agent_system_prompt(req.system)
+</span><span id="__span-9-12"><a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a>                                ← v1.19.x bounded-agent framing + caller&#39;s
+</span><span id="__span-9-13"><a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a>                                  AGENT.md; replaces provider chat prompt
+</span><span id="__span-9-14"><a id="__codelineno-9-14" name="__codelineno-9-14" href="#__codelineno-9-14"></a>                                  so the model uses GRANTED tools, not native
+</span><span id="__span-9-15"><a id="__codelineno-9-15" name="__codelineno-9-15" href="#__codelineno-9-15"></a>                                  fallback. [post-Inc-9 §B]
+</span><span id="__span-9-16"><a id="__codelineno-9-16" name="__codelineno-9-16" href="#__codelineno-9-16"></a>       engine.tool_manager = ScopedToolManager(engine.tool_manager,
+</span><span id="__span-9-17"><a id="__codelineno-9-17" name="__codelineno-9-17" href="#__codelineno-9-17"></a>                                grant, on_deny=emit tool_denied)
+</span><span id="__span-9-18"><a id="__codelineno-9-18" name="__codelineno-9-18" href="#__codelineno-9-18"></a>       async for ev in engine.chat(task):    ← chat_with_tools loop
+</span><span id="__span-9-19"><a id="__codelineno-9-19" name="__codelineno-9-19" href="#__codelineno-9-19"></a>         (provider&#39;s non-streaming SDK call runs via asyncio.to_thread so
+</span><span id="__span-9-20"><a id="__codelineno-9-20" name="__codelineno-9-20" href="#__codelineno-9-20"></a>          this run never starves the event loop — [post-Inc-9 §C])
+</span><span id="__span-9-21"><a id="__codelineno-9-21" name="__codelineno-9-21" href="#__codelineno-9-21"></a>         TOOL_CALL  → control.check() [budget/cancel] → emit_event(tool_call)
+</span><span id="__span-9-22"><a id="__codelineno-9-22" name="__codelineno-9-22" href="#__codelineno-9-22"></a>         STREAM_END → capture final text → run result
+</span></code></pre></div>
+<h3 id="ac-1-enforcement-scopedtoolmanager-engineagent_scoped_toolspy">AC-1 enforcement (ScopedToolManager)  [engine/agent_scoped_tools.py]<a class="headerlink" href="#ac-1-enforcement-scopedtoolmanager-engineagent_scoped_toolspy" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>Two layers, both required:
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>1. OFFERED set filtered to the grant (model never SEES off-grant tools):
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>   get_tools_openai_format / get_available_tools / list_tools / get_tool /
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>   get_tools_prompt → only names in grant. (get_tools_prompt is the
+</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>   prompt-based / native-fallback path — it re-renders the base prompt BOUND
+</span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>   to the scoped manager so it enumerates only granted tools. v1.19.x: the
+</span><span id="__span-10-8"><a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>   shell-wrapper context is gated AT THE SOURCE via
+</span><span id="__span-10-9"><a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a>   get_tools_prompt(include_wrapper_context=has_shell_grant) — never emitted
+</span><span id="__span-10-10"><a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a>   for a no-shell grant — instead of emitted-then-substring-stripped. Part
+</span><span id="__span-10-11"><a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a>   of AC-1. [post-Inc-9 §D])
+</span><span id="__span-10-12"><a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a>
+</span><span id="__span-10-13"><a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a>2. execute_tool CHOKEPOINT (the AC-1 + AC-2 invariants — backstop):
+</span><span id="__span-10-14"><a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a>   execute_tool(name, **kw):
+</span><span id="__span-10-15"><a id="__codelineno-10-15" name="__codelineno-10-15" href="#__codelineno-10-15"></a>     name not in grant → on_deny(name)  [emit tool_denied warning/tool]
+</span><span id="__span-10-16"><a id="__codelineno-10-16" name="__codelineno-10-16" href="#__codelineno-10-16"></a>                        → return model-readable &quot;not permitted&quot; (NO raise,
+</span><span id="__span-10-17"><a id="__codelineno-10-17" name="__codelineno-10-17" href="#__codelineno-10-17"></a>                          loop continues; tool did NOT run)
+</span><span id="__span-10-18"><a id="__codelineno-10-18" name="__codelineno-10-18" href="#__codelineno-10-18"></a>     name in SHELL_TOOL_NAMES AND network_policy set:   ← AC-2 shell backstop
+</span><span id="__span-10-19"><a id="__codelineno-10-19" name="__codelineno-10-19" href="#__codelineno-10-19"></a>        → on_network(False, …) [emit network_policy_denied]
+</span><span id="__span-10-20"><a id="__codelineno-10-20" name="__codelineno-10-20" href="#__codelineno-10-20"></a>        → return &quot;not permitted&quot; (shell escapes egress; route 400s it up front,
+</span><span id="__span-10-21"><a id="__codelineno-10-21" name="__codelineno-10-21" href="#__codelineno-10-21"></a>          this is defense-in-depth; NEVER runs)
+</span><span id="__span-10-22"><a id="__codelineno-10-22" name="__codelineno-10-22" href="#__codelineno-10-22"></a>     name in grant AND is_network_tool(name) AND network_policy set:   ← AC-2
+</span><span id="__span-10-23"><a id="__codelineno-10-23" name="__codelineno-10-23" href="#__codelineno-10-23"></a>        network_policy.authorize(name, kw):   ← SUPERSET rule over ALL targets
+</span><span id="__span-10-24"><a id="__codelineno-10-24" name="__codelineno-10-24" href="#__codelineno-10-24"></a>            targets = tool_targets(name, kw)  [fetch_url→[url kwarg];
+</span><span id="__span-10-25"><a id="__codelineno-10-25" name="__codelineno-10-25" href="#__codelineno-10-25"></a>              web_search→[ddg, html.ddg, api.perplexity.ai,
+</span><span id="__span-10-26"><a id="__codelineno-10-26" name="__codelineno-10-26" href="#__codelineno-10-26"></a>                          generativelanguage.googleapis.com] (call-time
+</span><span id="__span-10-27"><a id="__codelineno-10-27" name="__codelineno-10-27" href="#__codelineno-10-27"></a>                          backend + fallback chain — ALL possible);
+</span><span id="__span-10-28"><a id="__codelineno-10-28" name="__codelineno-10-28" href="#__codelineno-10-28"></a>              get_weather→[https://wttr.in, http://wttr.in] (https+fallback)]
+</span><span id="__span-10-29"><a id="__codelineno-10-29" name="__codelineno-10-29" href="#__codelineno-10-29"></a>            allowed IFF every target passes check()  (else first failing
+</span><span id="__span-10-30"><a id="__codelineno-10-30" name="__codelineno-10-30" href="#__codelineno-10-30"></a>              target is the deny reason — e.g. web_search with only ddg
+</span><span id="__span-10-31"><a id="__codelineno-10-31" name="__codelineno-10-31" href="#__codelineno-10-31"></a>              allowlisted → DENY on api.perplexity.ai)
+</span><span id="__span-10-32"><a id="__codelineno-10-32" name="__codelineno-10-32" href="#__codelineno-10-32"></a>          deny → on_network(False, payload) [emit network_policy_denied]
+</span><span id="__span-10-33"><a id="__codelineno-10-33" name="__codelineno-10-33" href="#__codelineno-10-33"></a>               → return model-readable &quot;network access denied&quot; (request
+</span><span id="__span-10-34"><a id="__codelineno-10-34" name="__codelineno-10-34" href="#__codelineno-10-34"></a>                 NEVER fired; fail-closed)
+</span><span id="__span-10-35"><a id="__codelineno-10-35" name="__codelineno-10-35" href="#__codelineno-10-35"></a>          allow→ on_network(True, payload)  [emit network_policy_allowed]
+</span><span id="__span-10-36"><a id="__codelineno-10-36" name="__codelineno-10-36" href="#__codelineno-10-36"></a>     name in grant (passed both) → base.execute_tool(name)  ← only path to real tool
+</span><span id="__span-10-37"><a id="__codelineno-10-37" name="__codelineno-10-37" href="#__codelineno-10-37"></a>
+</span><span id="__span-10-38"><a id="__codelineno-10-38" name="__codelineno-10-38" href="#__codelineno-10-38"></a>   AC-1 test: an off-grant call never reaches base.execute_tool
+</span><span id="__span-10-39"><a id="__codelineno-10-39" name="__codelineno-10-39" href="#__codelineno-10-39"></a>   (test_ac1_off_grant_tool_never_reaches_base +
+</span><span id="__span-10-40"><a id="__codelineno-10-40" name="__codelineno-10-40" href="#__codelineno-10-40"></a>    test_task_enforces_grant_end_to_end).
+</span><span id="__span-10-41"><a id="__codelineno-10-41" name="__codelineno-10-41" href="#__codelineno-10-41"></a>   AC-2 test: an off-allowlist network target never reaches base.execute_tool
+</span><span id="__span-10-42"><a id="__codelineno-10-42" name="__codelineno-10-42" href="#__codelineno-10-42"></a>   (test_ac2_denied_target_never_runs_and_emits_denied +
+</span><span id="__span-10-43"><a id="__codelineno-10-43" name="__codelineno-10-43" href="#__codelineno-10-43"></a>    test_task_enforces_egress_end_to_end).
+</span><span id="__span-10-44"><a id="__codelineno-10-44" name="__codelineno-10-44" href="#__codelineno-10-44"></a>
+</span><span id="__span-10-45"><a id="__codelineno-10-45" name="__codelineno-10-45" href="#__codelineno-10-45"></a>All other attributes delegate to the base manager (__getattr__) so
+</span><span id="__span-10-46"><a id="__codelineno-10-46" name="__codelineno-10-46" href="#__codelineno-10-46"></a>chat_with_tools treats it as a normal manager with a smaller toolset.
+</span></code></pre></div>
+<p><code>/v1/agent/run</code> stays the tool-free tier: its <code>tools</code> field is recorded
+for provenance but never executed (oneshot has no tool loop). Tools are
+only <em>enforced and executed</em> via <code>/task</code>.</p>
+<hr />
+<h2 id="increment-5-egress-allowlist-network_policy_-ac-2-ship-gate">Increment 5 — egress allowlist + NETWORK_POLICY_* (AC-2 ship-gate)<a class="headerlink" href="#increment-5-egress-allowlist-network_policy_-ac-2-ship-gate" title="Permanent link">&para;</a></h2>
+<p>Added: <code>engine/tools/network_policy.py</code>. Changed: <code>agent_scoped_tools.py</code>
+(egress chokepoint), <code>routes/agent_v1.py</code> (<code>network</code> field + on_network),
+<code>agent_runs.py</code> (<code>RunMeta.network</code>), <code>types.py</code> (two EventTypes).</p>
+<p>Execution model: no new endpoint. A tool-capable run ALWAYS gets a
+<code>NetworkPolicy</code> installed (even with no <code>network</code> spec → empty → fail-closed),
+so a granted network tool is deny-by-default.</p>
+<h3 id="post-v1agenttask-egress-wiring-delta-over-inc-4">POST /v1/agent/task — egress wiring (delta over Inc 4)<a class="headerlink" href="#post-v1agenttask-egress-wiring-delta-over-inc-4" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>create_agent_task(req: AgentTaskRequest{..., network?{allow_outbound[]}})
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>  grant_has_shell(req.tools)?  → 400  (shell escapes egress; tier-d only — AC-2)
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>  registry.start_run(..., network=req.network.allow_outbound)  → RunMeta.network persisted
+</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>  _runner(m):
+</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>    net_policy = NetworkPolicy(req.network.allow_outbound or [])   ← empty = fail-closed
+</span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>    on_network(allowed, payload):
+</span><span id="__span-11-7"><a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a>        emit network_policy_allowed|denied  (category=network,
+</span><span id="__span-11-8"><a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a>            info|warning, data={...payload, run_id})
+</span><span id="__span-11-9"><a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a>    engine.tool_manager = ScopedToolManager(base, grant,
+</span><span id="__span-11-10"><a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a>        on_deny=…, network_policy=net_policy, on_network=on_network)
+</span><span id="__span-11-11"><a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a>    async for ev in engine.chat(task):   ← egress enforced inside execute_tool
+</span></code></pre></div>
+<h3 id="networkpolicy-enginetoolsnetwork_policypy">NetworkPolicy  [engine/tools/network_policy.py]<a class="headerlink" href="#networkpolicy-enginetoolsnetwork_policypy" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>NetworkPolicy(allow_outbound[]) → normalized [_Rule(host, paths, rule_id)]
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>
+</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>check(url) -&gt; Allow(rule_id) | Deny(reason):   ← per-URL primitive
+</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>   no url                        → Deny  (unresolvable target; fail-closed)
+</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>   scheme != &quot;https&quot;             → Deny  (https-only; bare/empty scheme also
+</span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>                                          rejected — v1.19.x [post-Inc-9 §F])
+</span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a>   for rule in rules:
+</span><span id="__span-12-8"><a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>     rule.matches_host(host):           exact, or &quot;*.suffix&quot; single-label,
+</span><span id="__span-12-9"><a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a>                                        suffix-anchored (blocks lookalikes)
+</span><span id="__span-12-10"><a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a>        rule.matches_path(path) is False → Deny(path not in prefixes)
+</span><span id="__span-12-11"><a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a>        _host_resolves_to_blocked_ip(host) → Deny  ← SSRF guard: an allowlisted
+</span><span id="__span-12-12"><a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a>           name that resolves to loopback/private/link-local/reserved is
+</span><span id="__span-12-13"><a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a>           blocked (incl. 169.254.169.254). DNS lookup runs ONLY after the
+</span><span id="__span-12-14"><a id="__codelineno-12-14" name="__codelineno-12-14" href="#__codelineno-12-14"></a>           host+path match; resolution failure does NOT block. Does NOT cover
+</span><span id="__span-12-15"><a id="__codelineno-12-15" name="__codelineno-12-15" href="#__codelineno-12-15"></a>           DNS-rebinding TOCTOU (→ tier-d). [post-Inc-9 §F]
+</span><span id="__span-12-16"><a id="__codelineno-12-16" name="__codelineno-12-16" href="#__codelineno-12-16"></a>        else → Allow(rule_id)
+</span><span id="__span-12-17"><a id="__codelineno-12-17" name="__codelineno-12-17" href="#__codelineno-12-17"></a>   no rule matched               → Deny(host not in allowlist)
+</span><span id="__span-12-18"><a id="__codelineno-12-18" name="__codelineno-12-18" href="#__codelineno-12-18"></a>empty rules                      → Deny everything (fail-closed)
+</span><span id="__span-12-19"><a id="__codelineno-12-19" name="__codelineno-12-19" href="#__codelineno-12-19"></a>
+</span><span id="__span-12-20"><a id="__codelineno-12-20" name="__codelineno-12-20" href="#__codelineno-12-20"></a>authorize(name, kwargs) -&gt; ToolDecision:      ← the chokepoint decision
+</span><span id="__span-12-21"><a id="__codelineno-12-21" name="__codelineno-12-21" href="#__codelineno-12-21"></a>   targets = tool_targets(name, kwargs)        every URL the call COULD reach
+</span><span id="__span-12-22"><a id="__codelineno-12-22" name="__codelineno-12-22" href="#__codelineno-12-22"></a>   no targets                    → Deny  (unresolvable; fail-closed)
+</span><span id="__span-12-23"><a id="__codelineno-12-23" name="__codelineno-12-23" href="#__codelineno-12-23"></a>   ALL targets pass check()      → Allow (superset rule — see below)
+</span><span id="__span-12-24"><a id="__codelineno-12-24" name="__codelineno-12-24" href="#__codelineno-12-24"></a>   any target fails check()      → Deny  (reports the first failing target)
+</span><span id="__span-12-25"><a id="__codelineno-12-25" name="__codelineno-12-25" href="#__codelineno-12-25"></a>   ToolDecision.approved_targets = ALL allowlisted hosts (the full superset,
+</span><span id="__span-12-26"><a id="__codelineno-12-26" name="__codelineno-12-26" href="#__codelineno-12-26"></a>     not just targets[0]) → surfaced in the network_policy_allowed audit
+</span><span id="__span-12-27"><a id="__codelineno-12-27" name="__codelineno-12-27" href="#__codelineno-12-27"></a>     event so a multi-backend tool&#39;s log shows every approved host. [§G]
+</span><span id="__span-12-28"><a id="__codelineno-12-28" name="__codelineno-12-28" href="#__codelineno-12-28"></a>
+</span><span id="__span-12-29"><a id="__codelineno-12-29" name="__codelineno-12-29" href="#__codelineno-12-29"></a>Superset rule (AC-2): web_search&#39;s backend is chosen at call time with a
+</span><span id="__span-12-30"><a id="__codelineno-12-30" name="__codelineno-12-30" href="#__codelineno-12-30"></a>Perplexity→Gemini→DDG fallback, so its egress set is the UNION of all of
+</span><span id="__span-12-31"><a id="__codelineno-12-31" name="__codelineno-12-31" href="#__codelineno-12-31"></a>them; the run must allowlist EVERY one or web_search is denied — it can&#39;t
+</span><span id="__span-12-32"><a id="__codelineno-12-32" name="__codelineno-12-32" href="#__codelineno-12-32"></a>reach an unallowlisted backend by taking a branch we didn&#39;t predict. Same
+</span><span id="__span-12-33"><a id="__codelineno-12-33" name="__codelineno-12-33" href="#__codelineno-12-33"></a>for get_weather&#39;s https→http fallback (the http branch is denied under the
+</span><span id="__span-12-34"><a id="__codelineno-12-34" name="__codelineno-12-34" href="#__codelineno-12-34"></a>MVP https-only rule, so wttr.in alone can&#39;t authorize get_weather).
+</span></code></pre></div>
+<h2 id="increment-6-budgets-cancel-conditional-resume-checkpoint">Increment 6 — budgets + cancel + conditional-resume checkpoint<a class="headerlink" href="#increment-6-budgets-cancel-conditional-resume-checkpoint" title="Permanent link">&para;</a></h2>
+<p>Added/changed: <code>engine/agent_runs.py</code> (RunControl + RunStopped hierarchy +
+cancel_run/get_control + status mapping), <code>routes/agent_v1.py</code> (BudgetSpec,
+budget wiring, POST …/cancel). Execution model: cooperative stop — the run
+is NOT task.cancel()'d; it stops at the next tool-loop checkpoint.</p>
+<h3 id="control-lifecycle-registry-engineagent_runspy">control lifecycle (registry)  [engine/agent_runs.py]<a class="headerlink" href="#control-lifecycle-registry-engineagent_runspy" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>run_in_background(meta, runner):
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>  meta.status = running
+</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>  control = RunControl(run_id, budget=meta.budget, started_at=monotonic())
+</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>  self._controls[run_id] = control      ← findable by cancel_run
+</span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>  self._run_tasks[run_id] = task
+</span><span id="__span-13-6"><a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>  _drive():
+</span><span id="__span-13-7"><a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a>    try: body = await runner(meta) → finish_run(completed)
+</span><span id="__span-13-8"><a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a>    except RunStopped as s:               ← RunCancelled | RunBudgetExceeded
+</span><span id="__span-13-9"><a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a>        finish_run(status=s.status, error=s.reason, resumable=s.resumable)
+</span><span id="__span-13-10"><a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a>        emit agent_run_&lt;status&gt; (lifecycle, warning)
+</span><span id="__span-13-11"><a id="__codelineno-13-11" name="__codelineno-13-11" href="#__codelineno-13-11"></a>    except Exception: finish_run(failed)
+</span><span id="__span-13-12"><a id="__codelineno-13-12" name="__codelineno-13-12" href="#__codelineno-13-12"></a>    finally: pop control + task
+</span><span id="__span-13-13"><a id="__codelineno-13-13" name="__codelineno-13-13" href="#__codelineno-13-13"></a>
+</span><span id="__span-13-14"><a id="__codelineno-13-14" name="__codelineno-13-14" href="#__codelineno-13-14"></a>cancel_run(run_id):  → _cancel_run_cascade(run_id, seen=set())
+</span><span id="__span-13-15"><a id="__codelineno-13-15" name="__codelineno-13-15" href="#__codelineno-13-15"></a>  control = self._controls.get(run_id)    ← None if not in flight → False
+</span><span id="__span-13-16"><a id="__codelineno-13-16" name="__codelineno-13-16" href="#__codelineno-13-16"></a>  control.cancel_requested = True
+</span><span id="__span-13-17"><a id="__codelineno-13-17" name="__codelineno-13-17" href="#__codelineno-13-17"></a>  meta.status = cancelling; emit agent_run_cancelling; _notify_change()
+</span><span id="__span-13-18"><a id="__codelineno-13-18" name="__codelineno-13-18" href="#__codelineno-13-18"></a>  CASCADE: for each in-flight run with parent_run_id == run_id →
+</span><span id="__span-13-19"><a id="__codelineno-13-19" name="__codelineno-13-19" href="#__codelineno-13-19"></a>     _cancel_run_cascade(child)   ← cancelling a parent never orphans a
+</span><span id="__span-13-20"><a id="__codelineno-13-20" name="__codelineno-13-20" href="#__codelineno-13-20"></a>     sub-agent (recursion-safe via `seen`, cycle-guarded). [post-Inc-9 §E]
+</span></code></pre></div>
+<h3 id="post-v1agenttask-budgetcancel-polling-delta-over-inc-5">POST /v1/agent/task — budget/cancel polling (delta over Inc 5)<a class="headerlink" href="#post-v1agenttask-budgetcancel-polling-delta-over-inc-5" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>start_run(..., budget=_budget_dict(req.budget))  → RunMeta.budget persisted
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>_runner(m):
+</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>  control = registry.get_control(m.run_id)
+</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>  async for ev in engine.chat(task):
+</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>    ev == TOOL_CALL:
+</span><span id="__span-14-6"><a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a>       control.check(now=monotonic())   ← raises RunCancelled/RunBudgetExceeded
+</span><span id="__span-14-7"><a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a>          cancel_requested              → RunCancelled  (status cancelled)
+</span><span id="__span-14-8"><a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a>          iterations &gt;= budget.iterations → RunBudgetExceeded (interrupted)
+</span><span id="__span-14-9"><a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a>          elapsed   &gt;= budget.time_s    → RunBudgetExceeded
+</span><span id="__span-14-10"><a id="__codelineno-14-10" name="__codelineno-14-10" href="#__codelineno-14-10"></a>          tokens    &gt;= budget.tokens    → RunBudgetExceeded
+</span><span id="__span-14-11"><a id="__codelineno-14-11" name="__codelineno-14-11" href="#__codelineno-14-11"></a>       control.iterations += 1          ← count AFTER check (allow N, stop N+1)
+</span></code></pre></div>
+<h3 id="post-v1agentrunscancel">POST /v1/agent/runs/<id>/cancel<a class="headerlink" href="#post-v1agentrunscancel" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>cancel_agent_run(run_id):
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>  meta = get_run(run_id)               none → 404
+</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>  registry.cancel_run(run_id)          in-flight → flip flag, 200 cancelling
+</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a>                                       terminal  → 409 not cancellable
+</span></code></pre></div>
+<h2 id="increment-7-spawn_subagent-n1-sub-agent">Increment 7 — spawn_subagent (N=1 sub-agent)<a class="headerlink" href="#increment-7-spawn_subagent-n1-sub-agent" title="Permanent link">&para;</a></h2>
+<p>Added: <code>engine/tools/agent_spawn.py</code>. Changed: <code>routes/agent_v1.py</code>
+(extracted <code>build_task_runner</code>, shared by /task + child runs; registers the
+spawn tool for top-level granted runs). Execution model: a parent run's tool
+call mints + runs ONE child run (own run_id, linked by parent_run_id) and
+blocks on it.</p>
+<h3 id="tool-registration-depth-gate-routesagent_v1py-build_task_runner">tool registration (depth gate)  [routes/agent_v1.py build_task_runner]<a class="headerlink" href="#tool-registration-depth-gate-routesagent_v1py-build_task_runner" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>build_task_runner(registry, ..., tools, allow_outbound, allow_spawn):
+</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>  _runner(m):
+</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>    engine.enable_tools()
+</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a>    if allow_spawn AND &quot;spawn_subagent&quot; in tools:      ← only top-level + granted
+</span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a>        engine.tool_manager.register_tool(SpawnSubagentTool(
+</span><span id="__span-16-6"><a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a>            registry, parent_run_id=m.run_id,
+</span><span id="__span-16-7"><a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a>            parent_owner=m.owner,                       ← child inherits owner (8b)
+</span><span id="__span-16-8"><a id="__codelineno-16-8" name="__codelineno-16-8" href="#__codelineno-16-8"></a>            parent_tools=tools, parent_allow_outbound=allow_outbound,
+</span><span id="__span-16-9"><a id="__codelineno-16-9" name="__codelineno-16-9" href="#__codelineno-16-9"></a>            parent_provider, parent_model, request_consent, consent_policy))
+</span><span id="__span-16-10"><a id="__codelineno-16-10" name="__codelineno-16-10" href="#__codelineno-16-10"></a>    engine.tool_manager = ScopedToolManager(...)        ← AC-1/AC-2 wrap as usual
+</span><span id="__span-16-11"><a id="__codelineno-16-11" name="__codelineno-16-11" href="#__codelineno-16-11"></a>  # child runs are built allow_spawn=False -&gt; tool NEVER registered -&gt; depth=1
+</span></code></pre></div>
+<h3 id="spawnsubagenttoolexecute-enginetoolsagent_spawnpy">SpawnSubagentTool.execute  [engine/tools/agent_spawn.py]<a class="headerlink" href="#spawnsubagenttoolexecute-enginetoolsagent_spawnpy" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>execute(task, tools=[], allow_outbound=[]):
+</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>  1. _check_grant_subset(child_tools):
+</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>       shell in child            → _deny(grant)   (AC-2)
+</span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a>       child_tools ⊄ parent_tools→ _deny(grant)   (no escalation)
+</span><span id="__span-17-5"><a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a>  2. _check_egress_subset(child_allow):
+</span><span id="__span-17-6"><a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a>       any child (host,path) not Allow under parent_policy → _deny(egress)
+</span><span id="__span-17-7"><a id="__codelineno-17-7" name="__codelineno-17-7" href="#__codelineno-17-7"></a>  3. consent gate (policy = tools.agent.spawn_consent):
+</span><span id="__span-17-8"><a id="__codelineno-17-8" name="__codelineno-17-8" href="#__codelineno-17-8"></a>       &quot;auto&quot;            → skip prompt (subset rules ARE the boundary)
+</span><span id="__span-17-9"><a id="__codelineno-17-9" name="__codelineno-17-9" href="#__codelineno-17-9"></a>       &quot;deny&quot; + no chan  → _deny(consent)   ← server context, no human to ask
+</span><span id="__span-17-10"><a id="__codelineno-17-10" name="__codelineno-17-10" href="#__codelineno-17-10"></a>       &quot;deny&quot; + channel  → request_consent(summary) False → _deny(consent)
+</span><span id="__span-17-11"><a id="__codelineno-17-11" name="__codelineno-17-11" href="#__codelineno-17-11"></a>  4. child = registry.start_run(task, tools=child_tools,
+</span><span id="__span-17-12"><a id="__codelineno-17-12" name="__codelineno-17-12" href="#__codelineno-17-12"></a>              network=child_allow, parent_run_id=parent_run_id,
+</span><span id="__span-17-13"><a id="__codelineno-17-13" name="__codelineno-17-13" href="#__codelineno-17-13"></a>              owner=parent_owner)              ← own run_id; inherits owner (8b)
+</span><span id="__span-17-14"><a id="__codelineno-17-14" name="__codelineno-17-14" href="#__codelineno-17-14"></a>     emit subagent_spawned (parent stream, lifecycle)
+</span><span id="__span-17-15"><a id="__codelineno-17-15" name="__codelineno-17-15" href="#__codelineno-17-15"></a>  5. runner = build_task_runner(..., allow_spawn=False)   ← child can&#39;t spawn
+</span><span id="__span-17-16"><a id="__codelineno-17-16" name="__codelineno-17-16" href="#__codelineno-17-16"></a>     registry.run_in_background(child, runner)
+</span><span id="__span-17-17"><a id="__codelineno-17-17" name="__codelineno-17-17" href="#__codelineno-17-17"></a>  6. status,body,err = await _await_child(child.run_id, child.budget)
+</span><span id="__span-17-18"><a id="__codelineno-17-18" name="__codelineno-17-18" href="#__codelineno-17-18"></a>        awaits registry.get_run_task(child) directly (no disk-poll);  ← N=1
+</span><span id="__span-17-19"><a id="__codelineno-17-19" name="__codelineno-17-19" href="#__codelineno-17-19"></a>        ALSO polls parent_control.cancel_requested on a ~100ms tick → if the
+</span><span id="__span-17-20"><a id="__codelineno-17-20" name="__codelineno-17-20" href="#__codelineno-17-20"></a>        PARENT is cancelled while awaiting, cancels the child promptly
+</span><span id="__span-17-21"><a id="__codelineno-17-21" name="__codelineno-17-21" href="#__codelineno-17-21"></a>        (not after wait_cap). [post-Inc-9 §E]
+</span><span id="__span-17-22"><a id="__codelineno-17-22" name="__codelineno-17-22" href="#__codelineno-17-22"></a>        wait cap = child time_s + margin, else 300s; on timeout CANCELS
+</span><span id="__span-17-23"><a id="__codelineno-17-23" name="__codelineno-17-23" href="#__codelineno-17-23"></a>        the child (never orphaned)
+</span><span id="__span-17-24"><a id="__codelineno-17-24" name="__codelineno-17-24" href="#__codelineno-17-24"></a>     emit subagent_finished (parent stream, result)
+</span><span id="__span-17-25"><a id="__codelineno-17-25" name="__codelineno-17-25" href="#__codelineno-17-25"></a>     return &quot;[sub-agent &lt;id&gt; completed]\n&lt;body&gt;&quot;  (or ended:&lt;status&gt;)
+</span><span id="__span-17-26"><a id="__codelineno-17-26" name="__codelineno-17-26" href="#__codelineno-17-26"></a>
+</span><span id="__span-17-27"><a id="__codelineno-17-27" name="__codelineno-17-27" href="#__codelineno-17-27"></a>_deny(reason, kind): emits spawn_denied event (consent kind → category
+</span><span id="__span-17-28"><a id="__codelineno-17-28" name="__codelineno-17-28" href="#__codelineno-17-28"></a>  consent, else lifecycle) AND returns the model-readable Error. NO refusal
+</span><span id="__span-17-29"><a id="__codelineno-17-29" name="__codelineno-17-29" href="#__codelineno-17-29"></a>  is silent — every refusal both mints NO child AND leaves a stream trace.
+</span><span id="__span-17-30"><a id="__codelineno-17-30" name="__codelineno-17-30" href="#__codelineno-17-30"></a>Consent policy default &quot;deny&quot;: over /v1/agent/task there is no interactive
+</span><span id="__span-17-31"><a id="__codelineno-17-31" name="__codelineno-17-31" href="#__codelineno-17-31"></a>  consent channel, so spawn is refused unless tools.agent.spawn_consent=&quot;auto&quot;
+</span><span id="__span-17-32"><a id="__codelineno-17-32" name="__codelineno-17-32" href="#__codelineno-17-32"></a>  (subset rules still gate). Proper AGENT_WAITING/respond flow (ADR §8)
+</span><span id="__span-17-33"><a id="__codelineno-17-33" name="__codelineno-17-33" href="#__codelineno-17-33"></a>  supersedes this later.
+</span></code></pre></div>
+<h2 id="increment-8a-pluggable-secret-source-framework-v1tokens">Increment 8a — pluggable secret-source framework (<code>/v1/tokens</code>)<a class="headerlink" href="#increment-8a-pluggable-secret-source-framework-v1tokens" title="Permanent link">&para;</a></h2>
+<p>Added: <code>server/secrets/{base,env,file,chain,__init__}.py</code>,
+<code>routes/tokens_v1.py</code>, <code>state.get_secret_provider()</code>. Changed:
+<code>server/auth.py</code> now resolves via the provider chain (was a single
+env-var compare). No execution-model change to agent runs; this is the
+credential layer that Inc 8b's per-run authz will consume.</p>
+<p>The seam (ADR 0003 §C2): one <code>SecretProvider</code> Protocol, many backends,
+consumers blind to which.</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>auth_middleware (http.py)
+</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>  -&gt; auth.check_request(request)                  # exemptions checked IN ORDER:
+</span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a>       1. not is_auth_enabled()      -&gt; proceed   # no provider enforces a token
+</span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a>            -&gt; is_auth_enabled(): a MINT-capable (file) provider enforces by
+</span><span id="__span-18-5"><a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a>               mere presence (empty store =&gt; still 401, not open); env enforces
+</span><span id="__span-18-6"><a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a>               only when its var is set. [post-Inc-9 §H]
+</span><span id="__span-18-7"><a id="__codelineno-18-7" name="__codelineno-18-7" href="#__codelineno-18-7"></a>       2. method == OPTIONS          -&gt; proceed   # CORS preflight (no auth hdr)
+</span><span id="__span-18-8"><a id="__codelineno-18-8" name="__codelineno-18-8" href="#__codelineno-18-8"></a>       3. loopback POST /v1/tokens w/ mutable store -&gt; proceed  # bootstrap mint
+</span><span id="__span-18-9"><a id="__codelineno-18-9" name="__codelineno-18-9" href="#__codelineno-18-9"></a>            (NOT gated on the store being empty — repeat local mints deliberate)
+</span><span id="__span-18-10"><a id="__codelineno-18-10" name="__codelineno-18-10" href="#__codelineno-18-10"></a>       4. loopback UI/static/chat    -&gt; proceed   # local browser carries no
+</span><span id="__span-18-11"><a id="__codelineno-18-11" name="__codelineno-18-11" href="#__codelineno-18-11"></a>            bearer; EXEMPT iff path NOT under (/v1/agent, /v1/tokens) — the
+</span><span id="__span-18-12"><a id="__codelineno-18-12" name="__codelineno-18-12" href="#__codelineno-18-12"></a>            sensitive API stays protected even from loopback. Remote NEVER
+</span><span id="__span-18-13"><a id="__codelineno-18-13" name="__codelineno-18-13" href="#__codelineno-18-13"></a>            exempt. [post-Inc-9 §H]
+</span><span id="__span-18-14"><a id="__codelineno-18-14" name="__codelineno-18-14" href="#__codelineno-18-14"></a>       5. chain.resolve(bearer)                   # first provider to match wins
+</span><span id="__span-18-15"><a id="__codelineno-18-15" name="__codelineno-18-15" href="#__codelineno-18-15"></a>            -&gt; EnvSecretProvider.resolve()        #   PPXAI_API_TOKEN compare (read-only)
+</span><span id="__span-18-16"><a id="__codelineno-18-16" name="__codelineno-18-16" href="#__codelineno-18-16"></a>            -&gt; FileSecretProvider.resolve()       #   salted-SHA256 verify vs tokens.json
+</span><span id="__span-18-17"><a id="__codelineno-18-17" name="__codelineno-18-17" href="#__codelineno-18-17"></a>          None  -&gt; 401 JSONResponse
+</span><span id="__span-18-18"><a id="__codelineno-18-18" name="__codelineno-18-18" href="#__codelineno-18-18"></a>          match -&gt; request.state.principal = TokenRecord  # owner stashed (8b) -&gt; proceed
+</span></code></pre></div>
+<h3 id="get-v1tokens-list-token-metadata-never-material"><code>GET /v1/tokens</code> — list token metadata (never material)<a class="headerlink" href="#get-v1tokens-list-token-metadata-never-material" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>list_tokens()
+</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>  -&gt; get_secret_provider().list()               # concatenate list-capable providers
+</span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>       (CapabilityError =&gt; 405)                  # read-only-only chain (env/k8s)
+</span><span id="__span-19-4"><a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a>  -&gt; [TokenMeta(...)]                            # token_id/owner/roles/expires_at/revoked/source
+</span></code></pre></div>
+<h3 id="post-v1tokens-mint-material-returned-once"><code>POST /v1/tokens</code> — mint (material returned ONCE)<a class="headerlink" href="#post-v1tokens-mint-material-returned-once" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>mint_token(MintTokenRequest{owner, roles, ttl_s})
+</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>  -&gt; get_secret_provider().mint(owner, roles, ttl_s)
+</span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a>       -&gt; _first_with(CAP_MINT)                  # routes to file; env/k8s lack it
+</span><span id="__span-20-4"><a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a>            -&gt; FileSecretProvider.mint()         # 256-bit material; store salted hash
+</span><span id="__span-20-5"><a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a>       (CapabilityError =&gt; 405 | ValueError =&gt; 422)
+</span><span id="__span-20-6"><a id="__codelineno-20-6" name="__codelineno-20-6" href="#__codelineno-20-6"></a>  -&gt; MintTokenResponse{token=material, meta}     # material echoed once, never logged/persisted raw
+</span></code></pre></div>
+<h3 id="delete-v1tokenstoken_id-revoke"><code>DELETE /v1/tokens/{token_id}</code> — revoke<a class="headerlink" href="#delete-v1tokenstoken_id-revoke" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>revoke_token(token_id)
+</span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a>  -&gt; get_secret_provider().revoke(token_id)      # every revoke-capable provider
+</span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a>       (CapabilityError =&gt; 405)
+</span><span id="__span-21-4"><a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a>       (False =&gt; 404)
+</span><span id="__span-21-5"><a id="__codelineno-21-5" name="__codelineno-21-5" href="#__codelineno-21-5"></a>  -&gt; {ok, token_id, revoked}
+</span></code></pre></div>
+<p>Config: <code>server.secrets.providers</code> (omit =&gt; single env provider =
+legacy behavior). Backward-compat: <code>test_auth_middleware.py</code> unchanged
+and green; no <code>server.secrets</code> block behaves exactly as v1.18.3.</p>
+<h2 id="increment-8b-per-run-authorization-owner-scoped">Increment 8b — per-run authorization (owner-scoped)<a class="headerlink" href="#increment-8b-per-run-authorization-owner-scoped" title="Permanent link">&para;</a></h2>
+<p>Added: <code>RunMeta.owner</code> (additive field), <code>start_run(owner=)</code>,
+<code>agent_v1._caller_owner()</code> / <code>_authorize_run_access()</code>. Changed: the four
+per-run routes enforce ownership. No execution-model change.</p>
+<p>Rule: auth disabled =&gt; no scoping (runs unowned, all reads allowed,
+loopback UX). Auth enabled =&gt; run stamped with creator's owner; a read is
+allowed iff <code>caller.owner == run.owner</code>; an unowned run (pre-8b /
+sub-agent) is readable by any authenticated caller.</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a># create — stamp owner from the middleware-set principal
+</span><span id="__span-22-2"><a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a>POST /v1/agent/run  | /v1/agent/task
+</span><span id="__span-22-3"><a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a>  -&gt; _caller_owner(request)               # request.state.principal.owner (or None)
+</span><span id="__span-22-4"><a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a>  -&gt; registry.start_run(..., owner=&lt;owner&gt;)   # RunMeta.owner persisted
+</span><span id="__span-22-5"><a id="__codelineno-22-5" name="__codelineno-22-5" href="#__codelineno-22-5"></a>
+</span><span id="__span-22-6"><a id="__codelineno-22-6" name="__codelineno-22-6" href="#__codelineno-22-6"></a># read/cancel — enforce owner
+</span><span id="__span-22-7"><a id="__codelineno-22-7" name="__codelineno-22-7" href="#__codelineno-22-7"></a>GET  /v1/agent/runs/&lt;id&gt;                   \
+</span><span id="__span-22-8"><a id="__codelineno-22-8" name="__codelineno-22-8" href="#__codelineno-22-8"></a>GET  /v1/agent/runs/&lt;id&gt;/events             &gt;  -&gt; registry.get_run(id) (404 if none)
+</span><span id="__span-22-9"><a id="__codelineno-22-9" name="__codelineno-22-9" href="#__codelineno-22-9"></a>POST /v1/agent/runs/&lt;id&gt;/cancel            /      -&gt; _authorize_run_access(request, meta)
+</span><span id="__span-22-10"><a id="__codelineno-22-10" name="__codelineno-22-10" href="#__codelineno-22-10"></a>                                                       caller=None            -&gt; allow (auth off)
+</span><span id="__span-22-11"><a id="__codelineno-22-11" name="__codelineno-22-11" href="#__codelineno-22-11"></a>                                                       meta.owner=None        -&gt; allow (unowned)
+</span><span id="__span-22-12"><a id="__codelineno-22-12" name="__codelineno-22-12" href="#__codelineno-22-12"></a>                                                       meta.owner==caller     -&gt; allow
+</span><span id="__span-22-13"><a id="__codelineno-22-13" name="__codelineno-22-13" href="#__codelineno-22-13"></a>                                                       else                   -&gt; 403
+</span><span id="__span-22-14"><a id="__codelineno-22-14" name="__codelineno-22-14" href="#__codelineno-22-14"></a>
+</span><span id="__span-22-15"><a id="__codelineno-22-15" name="__codelineno-22-15" href="#__codelineno-22-15"></a># list — filter to caller
+</span><span id="__span-22-16"><a id="__codelineno-22-16" name="__codelineno-22-16" href="#__codelineno-22-16"></a>GET  /v1/agent/runs
+</span><span id="__span-22-17"><a id="__codelineno-22-17" name="__codelineno-22-17" href="#__codelineno-22-17"></a>  -&gt; registry.list_runs()
+</span><span id="__span-22-18"><a id="__codelineno-22-18" name="__codelineno-22-18" href="#__codelineno-22-18"></a>  -&gt; if caller: keep m where m.owner in (None, caller)   # no cross-owner enumeration
+</span></code></pre></div>
+<p>Tests: <code>test_agent_run_authz.py</code> (owner stamping, 403 on foreign token for
+meta/events/cancel, 401 missing, 404 unknown, unowned-readable, list
+scoping, auth-disabled no-scoping).</p>
+<h2 id="increment-9-appstate-background_agents-mirror">Increment 9 — AppState <code>background_agents</code> mirror<a class="headerlink" href="#increment-9-appstate-background_agents-mirror" title="Permanent link">&para;</a></h2>
+<p>Added: schema field <code>background_agents</code> (array), <code>SSE_SYNC_FIELDS</code> entry,
+<code>AgentRunRegistry.active_summary()</code> / <code>on_change()</code> / <code>_notify_change()</code>,
+<code>SessionManager.broadcast_background_agents()</code>. Changed: registry fires the
+hook on run start / terminal / cancelling; <code>state.get_agent_run_registry()</code>
+registers the AppState-mirror hook; <code>GET /state</code> recomputes the field live.
+No execution-model change. The server-global registry is per-session
+AppState's source for the badge.</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a># push on change (run start / finish / cancelling)
+</span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a>registry._notify_change()
+</span><span id="__span-23-3"><a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a>  -&gt; mirror hook (registered in get_agent_run_registry)
+</span><span id="__span-23-4"><a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a>       -&gt; SessionManager.broadcast_background_agents(registry.active_summary())
+</span><span id="__span-23-5"><a id="__codelineno-23-5" name="__codelineno-23-5" href="#__codelineno-23-5"></a>            -&gt; for each engine (default + sessions):
+</span><span id="__span-23-6"><a id="__codelineno-23-6" name="__codelineno-23-6" href="#__codelineno-23-6"></a>                 engine.state.set(&quot;background_agents&quot;, summary)   # AppState
+</span><span id="__span-23-7"><a id="__codelineno-23-7" name="__codelineno-23-7" href="#__codelineno-23-7"></a>                   -&gt; existing state_sync SSE -&gt; connected clients
+</span><span id="__span-23-8"><a id="__codelineno-23-8" name="__codelineno-23-8" href="#__codelineno-23-8"></a>
+</span><span id="__span-23-9"><a id="__codelineno-23-9" name="__codelineno-23-9" href="#__codelineno-23-9"></a># reconnect (authoritative, survives a missed push)
+</span><span id="__span-23-10"><a id="__codelineno-23-10" name="__codelineno-23-10" href="#__codelineno-23-10"></a>GET /state
+</span><span id="__span-23-11"><a id="__codelineno-23-11" name="__codelineno-23-11" href="#__codelineno-23-11"></a>  -&gt; snapshot of SSE_SYNC_FIELDS
+</span><span id="__span-23-12"><a id="__codelineno-23-12" name="__codelineno-23-12" href="#__codelineno-23-12"></a>  -&gt; payload[&quot;background_agents&quot;] = registry.active_summary()  # live recompute
+</span><span id="__span-23-13"><a id="__codelineno-23-13" name="__codelineno-23-13" href="#__codelineno-23-13"></a>
+</span><span id="__span-23-14"><a id="__codelineno-23-14" name="__codelineno-23-14" href="#__codelineno-23-14"></a>active_summary(): list_runs() (newest-first) minus terminal statuses,
+</span><span id="__span-23-15"><a id="__codelineno-23-15" name="__codelineno-23-15" href="#__codelineno-23-15"></a>projected to {run_id, status, task, owner} — never result/error/events.
+</span></code></pre></div>
+<p>Clients are schema-driven (web via window.APP_STATE_SCHEMA, VSCode via the
+bundled copy synced by scripts/sync-schema.js), so they pick up the field
+with no hand-edits; a badge widget is a thin client-side follow-up.</p>
+<p>Tests: test_background_agents_mirror.py (active_summary filtering/projection/
+ordering, on_change fire + bad-listener isolation, schema+SSE membership).
+Sentinels bumped: AppState fields 21→22, schema fields 21→22, SSE_SYNC
+12→13.</p>
+<h2 id="post-inc-9-hardening-review-benchmark-fixes-2026-06-16">Post-Inc-9 hardening (review + benchmark fixes, 2026-06-16)<a class="headerlink" href="#post-inc-9-hardening-review-benchmark-fixes-2026-06-16" title="Permanent link">&para;</a></h2>
+<p>Fixes that landed AFTER Inc 9, from review rounds + the agent-behavior
+benchmark. The inline <code>[post-Inc-9 §X]</code> tags above point here. These change
+call flow without adding endpoints; debt Item 37 a–j tracks the residue.</p>
+<p><strong>§A — v1 tier is provider-agnostic.</strong> <code>_v1_provider_or_400</code> is now just
+<code>_build_provider</code> (400 only on unknown/no-key). The old
+<code>isinstance(provider, OpenAICompatibleProvider)</code> guard on <code>/run</code> + <code>/task</code> +
+<code>/v1/oneshot</code> is gone. <code>oneshot()</code> is now <code>@abstractmethod</code> on <code>BaseProvider</code>,
+implemented on all 4 providers (native ones compose their existing
+<code>chat_sync_simple</code> + per-vendor usage parser). <code>/task</code> uses <code>engine.chat</code>
+(abstract on all); <code>/run</code> + <code>/v1/oneshot</code> use <code>oneshot</code>. Any configured
+provider works. (commits 18373e31←removed, cbb8c536)</p>
+<p><strong>§B — agent system-prompt framing.</strong> <code>EngineClient.system_prompt_override</code>
+(per-engine, D1-isolated) is read by chat.py's prompt-based AND native
+assembly paths, REPLACING the provider's chat <code>system_prompt</code> when set.
+<code>/task</code> sets it to <code>compose_agent_system_prompt(req.system)</code> =
+<code>DEFAULT_AGENT_SYSTEM_PROMPT</code> ("use ONLY granted tools; no native fallback")
++ caller's <code>system</code> (e.g. ppxai-sre's rendered AGENT.md). Also: the
+"you have native web search, you do NOT need a tool" block in
+<code>_build_prompt_based_messages</code> is SUPPRESSED when the override is active (it
+caused the Perplexity substitution). Persona/AGENT.md ownership stays with
+the consumer; ppxai provides the seam + default. Live-verified across all 4
+providers (benchmarks/agent-behavior). (commit b7ddd424)</p>
+<p><strong>§C — non-streaming provider call off-loaded.</strong> Every provider's <code>chat</code>
+non-streaming branch (+ openai responses API) wrapped its SYNCHRONOUS SDK
+call in <code>await asyncio.to_thread(...)</code>. <code>/task</code> uses <code>stream=False</code>, so
+before this one agent run starved the asyncio event loop (server
+unresponsive to ALL requests until the LLM call returned). LLM calls are
+I/O-bound → to_thread releases the GIL during the socket wait → concurrent
+runs interleave. Proven: independent request returns 0.46s mid-run (was:
+timeout). Streaming <code>/chat</code> path NOT changed (small-burst starvation,
+deferred). <code>oneshot</code> is already offloaded at its <code>/run</code> call site.
+(commit baacfef0)</p>
+<p><strong>§D — shell-wrapper prompt gated at source.</strong> <code>ToolManager.get_tools_prompt</code>
+takes <code>include_wrapper_context</code>; <code>ScopedToolManager</code> passes <code>has_shell_grant</code>,
+so the "## Shell wrapper context" block is never EMITTED for a no-shell
+grant — replacing the old <code>_strip_section</code> substring-parse (which coupled the
+AC-1 filter to markdown formatting). <code>_strip_section</code> deleted. (commit a8e7247d)</p>
+<p><strong>§E — cancel cascades + prompt parent-cancel.</strong> <code>cancel_run</code> →
+<code>_cancel_run_cascade</code>: cancelling a run also cancels any in-flight run with
+<code>parent_run_id == it</code> (recursion-safe, cycle-guarded) — a parent cancel
+never orphans a sub-agent. Plus <code>_await_child</code> polls the parent's
+<code>cancel_requested</code> on a ~100ms tick so a parent cancel propagates to the
+awaited child promptly (not after the 300s wait cap). Deferred: cancel
+DURING a provider HTTP call still waits for it to return (→ tier-d).
+(commits 4b1459bb, e0f725c2)</p>
+<p><strong>§F — egress SSRF guard + scheme tightening.</strong> <code>check()</code> rejects bare/empty
+scheme (https-only) and denies an allowlisted host that resolves to a
+loopback/private/link-local/reserved IP (<code>_host_resolves_to_blocked_ip</code>,
+incl. the 169.254.169.254 metadata endpoint). DNS lookup runs only after the
+host+path match; resolution failure does not block. Does NOT cover
+DNS-rebinding TOCTOU — that needs network-layer enforcement (tier-d).
+(commit a8e7247d)</p>
+<p><strong>§G — full egress audit targets.</strong> <code>ToolDecision.approved_targets</code> carries
+ALL allowlisted hosts (the superset), surfaced in <code>network_policy_allowed</code>,
+so a multi-backend tool's audit shows every approved host, not just the
+first. <code>target_host</code>/<code>target_path</code> keep the first for back-compat (additive
+key). (commit e0f725c2)</p>
+<p><strong>Sub-agent owner inheritance (Inc 8b completion).</strong> <code>SpawnSubagentTool</code>
+takes <code>parent_owner</code> and passes <code>owner=parent_owner</code> to <code>start_run</code>, so a
+child run inherits the parent's owner (not <code>owner=None</code> = world-readable).
+This also fixed a latent crash: <code>build_task_runner</code> was already passing
+<code>parent_owner=</code> to a constructor that didn't accept it. (commit 71022ad5)</p>
+<p><strong>§H — loopback UI auth exemption (surfaced live, web app 401'd).</strong> With a
+file token store configured, auth is enforced — but the browser web/desktop
+client carries NO bearer, so opening <code>127.0.0.1:54320</code> returned 401 and the
+UI couldn't even load. <code>check_request</code> now exempts loopback requests to the
+UI/static/chat surface (allowlist-by-exclusion: loopback AND path NOT under
+<code>/v1/agent</code> or <code>/v1/tokens</code>). Same trust basis as the loopback mint
+exemption — a local browser is physically on the host. The sensitive v1
+surface (agent run monitor channels — owner-scoped; token mgmt) stays
+protected EVEN from loopback; remote requests are never exempt. Also
+clarifies the empty-store policy: a mint-capable provider enforces auth by
+its mere presence (an empty store is 401, not open). Verified on the
+installed binary: <code>/</code> + <code>/state</code> → 200, <code>/v1/agent/runs</code> + <code>/v1/tokens</code>
+GET → 401, remote UI → 401. (commit aa989cef)</p>
+<p><strong>§I — oneshot native web search (Option A, opt-in).</strong> <code>_build_provider</code>
+(the shared construction site for <code>/v1/oneshot</code> AND <code>/v1/agent/run</code>) now reads
+<code>tools.web_search.oneshot_grounding</code> (default OFF) and, when on, switches a
+SEARCH-CAPABLE provider into the PROVIDER'S OWN web search before return
+(<code>_apply_oneshot_grounding</code>). Option A, not B: retrieval stays INSIDE the
+provider API call — no <code>web_search</code>/<code>fetch_url</code> tool is exposed to the model,
+so the egress perimeter is unchanged and <code>NetworkPolicy</code> (the <code>/task</code>-only
+firewall) is NOT involved. Capability-gated: no-op for OpenAI/NVIDIA
+(<code>web_search:false</code>). Both tool-free tiers pick it up from one site
+(<code>agent_v1._v1_provider_or_400</code> delegates to <code>_build_provider</code>).</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a>POST /v1/oneshot | POST /v1/agent/run
+</span><span id="__span-24-2"><a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a>  -&gt; _build_provider(name)                         [routes/oneshot.py]
+</span><span id="__span-24-3"><a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a>       -&gt; create_provider(...)                     # unchanged
+</span><span id="__span-24-4"><a id="__codelineno-24-4" name="__codelineno-24-4" href="#__codelineno-24-4"></a>       -&gt; if _oneshot_grounding_enabled():         # tools.web_search.oneshot_grounding
+</span><span id="__span-24-5"><a id="__codelineno-24-5" name="__codelineno-24-5" href="#__codelineno-24-5"></a>            _apply_oneshot_grounding(provider, name)
+</span><span id="__span-24-6"><a id="__codelineno-24-6" name="__codelineno-24-6" href="#__codelineno-24-6"></a>              -&gt; get_provider_config(name).capabilities.web_search ? continue : return  # gate
+</span><span id="__span-24-7"><a id="__codelineno-24-7" name="__codelineno-24-7" href="#__codelineno-24-7"></a>              -&gt; if hasattr(provider,&quot;enable_grounding&quot;): provider.enable_grounding=True # Gemini
+</span><span id="__span-24-8"><a id="__codelineno-24-8" name="__codelineno-24-8" href="#__codelineno-24-8"></a>                 # Perplexity: sonar* searches intrinsically — nothing to flip
+</span><span id="__span-24-9"><a id="__codelineno-24-9" name="__codelineno-24-9" href="#__codelineno-24-9"></a>  -&gt; provider.oneshot(...)                          # grounded call, citations in content
+</span></code></pre></div>
+<p>Tests: <code>test_oneshot_grounding.py</code> (flag plumbing, capability gate, build
+wiring, + an AST perimeter-lock test that fails if a web-tool symbol is ever
+referenced in oneshot CODE — drift fence against Option B). Docs:
+<code>docs/api-gateway.md</code> Notes, <code>docs/plan-oneshot-grounding.md</code>.</p>
+<p><strong>§J — <code>/v1/agent/run</code> loopback carve-out (refines §H).</strong> §H protected the
+WHOLE <code>/v1/agent</code> prefix on loopback, which broke the web <code>/agentrun</code> command
+(its only agent verb POSTs <code>/v1/agent/run</code> — the tool-free oneshot tier — and
+the browser carries no bearer). Fix: two scoped, fail-closed loopback
+exemptions UNDER the protected prefix, so the safe tier works while the
+dangerous/observability surface stays bearer-gated even locally:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a>check_request (auth enforced, loopback)
+</span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a>  -&gt; _is_loopback_ui_request:
+</span><span id="__span-25-3"><a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a>       path == &quot;/v1/agent/run&quot;                          -&gt; EXEMPT  (tool-free oneshot tier)
+</span><span id="__span-25-4"><a id="__codelineno-25-4" name="__codelineno-25-4" href="#__codelineno-25-4"></a>       GET /v1/agent/runs/&lt;id&gt;[/events] AND run UNOWNED -&gt; EXEMPT  (_is_loopback_unowned_run_read)
+</span><span id="__span-25-5"><a id="__codelineno-25-5" name="__codelineno-25-5" href="#__codelineno-25-5"></a>                                                                    # owner==None ⇒ a run the
+</span><span id="__span-25-6"><a id="__codelineno-25-6" name="__codelineno-25-6" href="#__codelineno-25-6"></a>                                                                    # token-less browser created
+</span><span id="__span-25-7"><a id="__codelineno-25-7" name="__codelineno-25-7" href="#__codelineno-25-7"></a>       else under /v1/agent or /v1/tokens               -&gt; PROTECTED (401 without bearer)
+</span></code></pre></div>
+<p>Why scoped reads: the web <code>/agentrun</code> tails <code>…/events</code> and reads <code>…/&lt;id&gt;</code>.
+Those are exempt ONLY for an UNOWNED run (the kind a token-less local client
+creates via the exempt POST). An OWNED run — every <code>/task</code> run, every run
+created WITH a bearer — stays protected, so a local process can never read
+another owner's (or a tool-capable) run's transcript+tool-output. <code>/task</code>,
+list, cancel, and unknown-run reads all still 401. Remote never exempt.
+Verified live (rebuilt server): web launch→tail→read all succeed token-less;
+<code>/task</code>+<code>/runs</code>+<code>/cancel</code>+ghost-read all 401. Tests: 14 new in
+<code>test_tokens_v1_route.py::TestLoopbackUIExemption</code>.</p>
+<p><strong>§K — web <code>/agentrun</code> fire-and-forget (web client only).</strong> <code>/agentrun</code>
+previously AWAITED its own SSE tail inline, blocking the chat prompt until the
+run completed — defeating the background run registry. <code>_dispatchAgentRun</code> now
+launches, prints <code>🤖 run_xxx — running… (chat stays usable…)</code>, and RETURNS
+immediately; the tail+result-post runs detached in <code>_watchAgentRunDetached</code>
+(not awaited). Result appends out-of-band when the run finishes; the
+background_agents badge (§Inc 9) shows it running meanwhile.</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a>chat input &quot;/agentrun &lt;task&gt;&quot;               [web/shared/command-dispatcher.js]
+</span><span id="__span-26-2"><a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a>  -&gt; _dispatchAgentRun(task)
+</span><span id="__span-26-3"><a id="__codelineno-26-3" name="__codelineno-26-3" href="#__codelineno-26-3"></a>       -&gt; apiClient.post(&quot;/v1/agent/run&quot;,{task,tools:[]})  -&gt; {run_id}
+</span><span id="__span-26-4"><a id="__codelineno-26-4" name="__codelineno-26-4" href="#__codelineno-26-4"></a>       -&gt; showSystemMessage(&quot;🤖 … running…&quot;)
+</span><span id="__span-26-5"><a id="__codelineno-26-5" name="__codelineno-26-5" href="#__codelineno-26-5"></a>       -&gt; this._watchAgentRunDetached(runId)   # FIRE-AND-FORGET (no await) → prompt freed
+</span><span id="__span-26-6"><a id="__codelineno-26-6" name="__codelineno-26-6" href="#__codelineno-26-6"></a>  (detached) _watchAgentRunDetached(runId)
+</span><span id="__span-26-7"><a id="__codelineno-26-7" name="__codelineno-26-7" href="#__codelineno-26-7"></a>       -&gt; for await ev of _tailRunEvents(runId): break on agent_run_(complete|error)
+</span><span id="__span-26-8"><a id="__codelineno-26-8" name="__codelineno-26-8" href="#__codelineno-26-8"></a>       -&gt; get /v1/agent/runs/&lt;id&gt; → append result as assistant message
+</span></code></pre></div>
+<p>NO server change (server already backgrounds runs). DEPLOYMENT NOTE: web JS is
+bundled into the <code>ppxai-desktop</code> binary (<code>ppxai-desktop.spec</code> datas
+<code>('ppxai/web','ppxai/web')</code>) and the launcher RESTORES it to <code>~/.ppxai/web/</code> on
+every start — so a web-asset change requires rebuilding <code>ppxai-desktop</code>, not
+just copying into <code>~/.ppxai/web/</code> (that gets reverted on next launch). Tests:
+<code>test_web_command_dispatcher_v18_1.py::TestAgentRunFireAndForget</code> (drift fences:
+no inline <code>for await</code>; watcher started un-awaited) + size fence 300→340 with
+documented reason. Verified live: prompt usable mid-run (<code>ls</code>/<code>/pwd</code> ran while
+a run was active; <code>✅ completed</code> posted out-of-band).</p>
+<p><strong>§L — Gemini review fixes (2026-06-17).</strong> Four issues from an external review,
+all verified against the code first (one proposed fix was empirically worse and
+replaced):</p>
+<ul>
+<li><strong>#4 loopback exemption ignored a provided bearer (regression from §J).</strong>
+  <code>check_request</code> returned early on a loopback exemption WITHOUT resolving an
+  Authorization header if present — so a local script that authenticated had its
+  token dropped and its run stamped <code>owner=None</code> (lost isolation/traceability).
+  Fix: compute <code>has_bearer</code> up front; apply the bootstrap-mint + loopback-UI
+  exemptions ONLY when no bearer was presented. A present-but-invalid bearer
+  falls through to 401 (never silently exempted). Tests:
+  <code>TestLoopbackHonorsProvidedBearer</code>.</li>
+<li><strong>#1 sync DNS on the event loop (SSRF guard).</strong> <code>_host_resolves_to_blocked_ip</code>
+  calls <code>socket.getaddrinfo</code>; it ran inline in <code>ScopedToolManager._check_network</code>
+  on every network tool call. The obvious fix (offload via <code>asyncio.to_thread</code> /
+  <code>loop.getaddrinfo</code>) was MEASURED to be ~4× slower here (2.4s vs ~ms) and wedged
+  the egress test past its poll timeout — so instead the lookup is MEMOIZED with
+  a 30s TTL (<code>_resolve_cache</code> in network_policy): repeated checks for the same
+  host do zero DNS, amortizing the loop-block concern to near-nothing while
+  staying fast. Failures aren't cached (retry next call). Tests:
+  <code>TestSsrfGuard::test_resolution_memoized_within_ttl</code> + failure/literal cases.</li>
+<li><strong>#2 <code>active_summary()</code> O(N) disk scan per lifecycle event.</strong> It called
+  <code>list_runs()</code> (read+parse meta.json for EVERY historical run) on every run
+  start/finish/cancel — growing unboundedly. Fix: an in-memory <code>_active</code> index
+  <code>{run_id: summary}</code> maintained at each state transition (pending/running/
+  cancelling → upsert; terminal → remove); <code>active_summary()</code> reads it,
+  O(active), zero disk. Tests: <code>test_no_disk_read</code>, <code>test_cancelling_stays_active</code>.</li>
+<li><strong>#3 <code>_await_child</code> time drift.</strong> The timeout loop summed <code>waited += tick</code>,
+  which under-counts real elapsed when the loop is busy (each <code>wait_for(tick)</code>
+  can take &gt;tick), so a wedged child could be cancelled far past <code>wait_cap</code>. Fix:
+  <code>time.monotonic()</code> measures actual elapsed. (covered by existing
+  <code>test_wait_timeout_cancels_child_not_orphan</code>.)</li>
+</ul>
+<p>Second review round (2026-06-17, two more):</p>
+<ul>
+<li><strong>cancel cascade did a per-child disk read.</strong> <code>_cancel_run_cascade</code> called
+  <code>store.load_meta(child_id)</code> for every in-flight control to read its
+  <code>parent_run_id</code> — O(C·D) disk reads on the event loop during a cancel. Now
+  <code>parent_run_id</code> is carried in the in-memory <code>_active</code> index (added for #2) and
+  the cascade reads it from there — zero disk. <code>active_summary()</code> still projects
+  to badge fields only (parent_run_id not surfaced). Test:
+  <code>test_cancel_cascade_does_no_disk_read_for_children</code>.</li>
+<li><strong>fixed-name temp file on persist (defense-in-depth).</strong> <code>persist_meta</code>
+  (<code>meta.json.tmp</code>) and the token store <code>_save</code> (<code>tokens.json.tmp</code>) wrote to a
+  HARDCODED temp name. Not a live bug in our single-process async model (per-run
+  slot dirs make meta tmps distinct; no <code>await</code> between write and replace), but
+  two writers WOULD race under <code>uvicorn --workers N</code>. Switched both to
+  <code>tempfile.mkstemp</code> (unique name) + <code>os.replace</code>, with temp-cleanup on failure.
+  Tests: <code>test_persist_meta_leaves_no_tmp_and_is_valid</code>,
+  <code>test_persist_meta_cleans_tmp_on_failure</code>.</li>
+</ul>
+<p><strong>§M — T5/T7 live-trial fixes (2026-07-12).</strong> Three defects surfaced by the
+consent-expiration + interrupted-resume trials, all diagnosed from the
+persisted <code>events.jsonl</code> (the run's event stream is the observation channel;
+<code>server-debug.log</code> only carries client echoes):</p>
+<ul>
+<li><strong>Stale replayed terminal event detached a resumed tail (web + VSCode).</strong>
+  <code>GET /runs/{id}/events?live=1</code> replays the persisted backlog before tailing,
+  so a resumed run's watcher saw the HISTORICAL <code>agent_run_interrupted</code> from
+  before the resume and broke on it — the fresh tail went silent (no live
+  events, no consent card; the park could only expire). Both clients now
+  confirm against the run record (source of truth) before breaking: terminal
+  event → status GET → break only if the run is REALLY terminal. Web
+  <code>_runWatch</code> + VSCode <code>runWatch</code>; parity sentinel
+  <code>test_terminal_event_break_confirms_run_status_in_both_clients</code>, behavior
+  scenario 12 in <code>test_agent_run_controller_behavior.py</code>.</li>
+<li><strong>Silent empty-result exits in <code>chat_with_tools</code>.</strong> The zombie
+  circuit-breaker and the max-iterations fall-through ended the generator
+  WITHOUT a <code>STREAM_END</code>; the <code>/v1/agent</code> task runner collects result text
+  ONLY from <code>STREAM_END</code>, so runs through those exits finished
+  <code>completed_pending_ack</code> with <code>result=""</code> (<code>chars=0</code>). Contract now pinned:
+  EVERY exit yields a final non-empty <code>STREAM_END</code> (zombie/ceiling exits
+  synthesize the explanatory text and record it on the session transcript).
+  Tests: <code>TestEveryExitYieldsStreamEnd</code> in <code>test_agent_beat_zombie.py</code>.</li>
+<li><strong>Deny path fed the breaker + Gemini prefix burned an iteration.</strong> A spawn
+  refusal returned an <code>"Error:"</code>-prefixed string, so <code>_compute_tool_success</code>
+  classified the POLICY denial as a tool malfunction — incrementing
+  <code>consecutive_failures</code> and switching the model to failure-recovery framing
+  (the deny path's head start toward the silent exits above). Denials now
+  return <code>"Denied: …"</code> (<code>TestDenialClassification</code>). Separately, Gemini echoes
+  its <code>default_api.</code> function-namespace into tool-name DATA
+  (<code>['default_api:read_file']</code> vs grant <code>['read_file']</code>) — the spawn tool now
+  strips exactly that prefix before the subset check
+  (<code>_strip_provider_tool_prefix</code>, sibling of the §gemini schema sanitizer;
+  <code>TestProviderToolPrefix</code>). The structural driver — Gemini tool loops run
+  text-flattened with no <code>tool_call_id</code> threading — is debt Item 41.</li>
+</ul>
+<p><strong>§N — workdir alignment (2026-07-12).</strong> A <code>/task</code> run's cwd was
+<code>os.getcwd()</code> of the SERVER PROCESS: the per-run <code>EngineClient()</code> bypasses
+the SessionManager (which applies <code>server.working_dir</code> → home to every UI
+session), so "summarize README.md" worked or failed depending on where the
+operator launched the server (caught live: VSCode trial run failed from a
+home-launched server; earlier web successes were a repo-launched-server
+coincidence — client semantics were always identical). Now deterministic
+per-run intent, uniform across <code>/task</code>, resume, and spawned children:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-27-1"><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a>&quot;/task run &quot;…&quot; [--work-dir &lt;p&gt;]&quot;        [web task-controller.js / VSCode taskController.ts]
+</span><span id="__span-27-2"><a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a>  -&gt; body.workdir = --work-dir | session workingDir (appState)   # like provider/model
+</span><span id="__span-27-3"><a id="__codelineno-27-3" name="__codelineno-27-3" href="#__codelineno-27-3"></a>  -&gt; POST /v1/agent/task {…, workdir}
+</span><span id="__span-27-4"><a id="__codelineno-27-4" name="__codelineno-27-4" href="#__codelineno-27-4"></a>       -&gt; seal ON  -&gt; ignore + respond {workdir_ignored:true}    # jail always wins
+</span><span id="__span-27-5"><a id="__codelineno-27-5" name="__codelineno-27-5" href="#__codelineno-27-5"></a>                       client renders &quot;⚠️ sandbox seal active …&quot; # warn-don&#39;t-fail
+</span><span id="__span-27-6"><a id="__codelineno-27-6" name="__codelineno-27-6" href="#__codelineno-27-6"></a>       -&gt; seal OFF -&gt; 400 unless isdir; meta.workdir = abspath   # fail at launch, not mid-run
+</span><span id="__span-27-7"><a id="__codelineno-27-7" name="__codelineno-27-7" href="#__codelineno-27-7"></a>  _runner (build_task_runner(workdir=…))
+</span><span id="__span-27-8"><a id="__codelineno-27-8" name="__codelineno-27-8" href="#__codelineno-27-8"></a>       -&gt; sealed:   engine.set_working_dir(&lt;jail&gt;/work)          # unchanged (T2)
+</span><span id="__span-27-9"><a id="__codelineno-27-9" name="__codelineno-27-9" href="#__codelineno-27-9"></a>       -&gt; unsealed: engine.set_working_dir(workdir | get_default_working_dir())
+</span><span id="__span-27-10"><a id="__codelineno-27-10" name="__codelineno-27-10" href="#__codelineno-27-10"></a>                    # session_manager module fn: server.working_dir → home; NEVER getcwd
+</span><span id="__span-27-11"><a id="__codelineno-27-11" name="__codelineno-27-11" href="#__codelineno-27-11"></a>                    # vanished recorded dir (resume case) falls back to the default
+</span><span id="__span-27-12"><a id="__codelineno-27-12" name="__codelineno-27-12" href="#__codelineno-27-12"></a>  resume: build_task_runner(workdir=meta.workdir)                # persisted intent
+</span><span id="__span-27-13"><a id="__codelineno-27-13" name="__codelineno-27-13" href="#__codelineno-27-13"></a>  spawn_subagent: parent_workdir threads to child start_run + runner
+</span></code></pre></div>
+<p>The tool-free <code>/v1/agent/run</code> tier gets NO workdir (it executes no tools —
+dead plumbing). NO per-run unseal: the seal is operator posture per
+deployment (desktop OFF / coder-pod OFF / embedded-agents ON — profile
+table in api-gateway.md §"Run working directory"); in-jail relaxation is
+skill read-root mounts (T4). Meta/wire: <code>RunMeta.workdir</code> (additive, old
+metas load as None) + <code>RunMetaResponse.workdir</code> (VSCode <code>/task show</code> prints
+<code>wd:</code>). Tests: <code>TestWorkdirAlignment</code> (route/runner/resume/default),
+<code>TestWorkdirParity</code> sentinel (flag + threading + warning in both clients),
+spawn ctor-contract updated.</p>
+<h2 id="build-plan-t1-task-command-family-web-client-surface">Build plan T1 — <code>/task</code> command family (web client surface)<a class="headerlink" href="#build-plan-t1-task-command-family-web-client-surface" title="Permanent link">&para;</a></h2>
+<p>Added: <code>web/shared/task-controller.js</code> (<code>TaskController extends AgentRunController</code>),
+<code>web/components/views/task-run-view.js</code> (<code>TaskRunView extends AgentRunView</code>).
+Changed: <code>command-dispatcher.js</code> (route <code>/task</code>), <code>commands.js</code> + <code>app.js</code> (catalog),
+<code>index.html</code> (script includes), <code>styles/right-panel-frame.css</code>. <strong>No new endpoints</strong> —
+the tool-capable tier's client, entirely over the Inc-4→9 <code>/v1/agent/*</code> routes.
+(build plan: <code>plan-task-command-sequencing.md</code>.)</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-28-1"><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a>chat input &quot;/task &lt;verb&gt; …&quot;                     [command-dispatcher.js dispatch]
+</span><span id="__span-28-2"><a id="__codelineno-28-2" name="__codelineno-28-2" href="#__codelineno-28-2"></a>└─ cmd === &quot;/task&quot; → tasks.handle(args)          [TaskController]
+</span><span id="__span-28-3"><a id="__codelineno-28-3" name="__codelineno-28-3" href="#__codelineno-28-3"></a>   ├─ run &quot;&lt;desc&gt;&quot; --tools … --allow … --budget … --provider … --model … --system …
+</span><span id="__span-28-4"><a id="__codelineno-28-4" name="__codelineno-28-4" href="#__codelineno-28-4"></a>   │   └─ run(argline)
+</span><span id="__span-28-5"><a id="__codelineno-28-5" name="__codelineno-28-5" href="#__codelineno-28-5"></a>   │      ├─ parseTaskArgs(argline) → {task, tools[], provider, model, system,
+</span><span id="__span-28-6"><a id="__codelineno-28-6" name="__codelineno-28-6" href="#__codelineno-28-6"></a>   │      │                            network.allow_outbound[], budget{}, errors[]}
+</span><span id="__span-28-7"><a id="__codelineno-28-7" name="__codelineno-28-7" href="#__codelineno-28-7"></a>   │      ├─ guards: errors → abort; no task → usage; no tools → &quot;needs a grant&quot;
+</span><span id="__span-28-8"><a id="__codelineno-28-8" name="__codelineno-28-8" href="#__codelineno-28-8"></a>   │      ├─ provider/model fall back to app.state.current{Provider,Model}
+</span><span id="__span-28-9"><a id="__codelineno-28-9" name="__codelineno-28-9" href="#__codelineno-28-9"></a>   │      ├─ apiClient.post(&quot;/v1/agent/task&quot;, body)          → {run_id, status}
+</span><span id="__span-28-10"><a id="__codelineno-28-10" name="__codelineno-28-10" href="#__codelineno-28-10"></a>   │      │     403 tier-off / 400 shell|no-provider → showSystemMessage(e.message)  [verbatim]
+</span><span id="__span-28-11"><a id="__codelineno-28-11" name="__codelineno-28-11" href="#__codelineno-28-11"></a>   │      ├─ _openPane(run_id, task, {tools,network,budget,provider,model,status})
+</span><span id="__span-28-12"><a id="__codelineno-28-12" name="__codelineno-28-12" href="#__codelineno-28-12"></a>   │      │     → new TaskRunView(...)   [chips: model · grant · ↗egress · ⏲budget]
+</span><span id="__span-28-13"><a id="__codelineno-28-13" name="__codelineno-28-13" href="#__codelineno-28-13"></a>   │      ├─ _breadcrumb(run_id, …)      [clickable &quot;open ▸&quot; in chat]
+</span><span id="__span-28-14"><a id="__codelineno-28-14" name="__codelineno-28-14" href="#__codelineno-28-14"></a>   │      └─ _watchDetached(run_id) ── inherited ───────────────────────┐
+</span><span id="__span-28-15"><a id="__codelineno-28-15" name="__codelineno-28-15" href="#__codelineno-28-15"></a>   ├─ ls | list          → list()   → GET /v1/agent/runs → clickable rows → focus()
+</span><span id="__span-28-16"><a id="__codelineno-28-16" name="__codelineno-28-16" href="#__codelineno-28-16"></a>   ├─ show | open | watch &lt;id&gt; → show(id) → focus(id)  [GET /runs/{id}, setMeta, re-tail]
+</span><span id="__span-28-17"><a id="__codelineno-28-17" name="__codelineno-28-17" href="#__codelineno-28-17"></a>   ├─ cancel &lt;id&gt;        → cancel(id) → POST /v1/agent/runs/&lt;id&gt;/cancel → pane.setStatus(&quot;cancelling&quot;)
+</span><span id="__span-28-18"><a id="__codelineno-28-18" name="__codelineno-28-18" href="#__codelineno-28-18"></a>   └─ &quot;&quot; | help          → help()
+</span><span id="__span-28-19"><a id="__codelineno-28-19" name="__codelineno-28-19" href="#__codelineno-28-19"></a>                                                                        │
+</span><span id="__span-28-20"><a id="__codelineno-28-20" name="__codelineno-28-20" href="#__codelineno-28-20"></a>   inherited watcher (AgentRunController, reused unchanged): ◄──────────┘
+</span><span id="__span-28-21"><a id="__codelineno-28-21" name="__codelineno-28-21" href="#__codelineno-28-21"></a>   _watchDetached → _runWatch:
+</span><span id="__span-28-22"><a id="__codelineno-28-22" name="__codelineno-28-22" href="#__codelineno-28-22"></a>     for await ev of _tailEvents(&lt;id&gt;?live=1):               [SSE `data:` lines]
+</span><span id="__span-28-23"><a id="__codelineno-28-23" name="__codelineno-28-23" href="#__codelineno-28-23"></a>        live = getViewByPath(&quot;agent://run/&lt;id&gt;&quot;)
+</span><span id="__span-28-24"><a id="__codelineno-28-24" name="__codelineno-28-24" href="#__codelineno-28-24"></a>        live.appendEvent(ev)   ── TaskRunView live log: tool_call / tool_denied /
+</span><span id="__span-28-25"><a id="__codelineno-28-25" name="__codelineno-28-25" href="#__codelineno-28-25"></a>                                  network_policy_allowed|denied / spawn_denied /
+</span><span id="__span-28-26"><a id="__codelineno-28-26" name="__codelineno-28-26" href="#__codelineno-28-26"></a>                                  subagent_spawned|finished  (else raw type string)
+</span><span id="__span-28-27"><a id="__codelineno-28-27" name="__codelineno-28-27" href="#__codelineno-28-27"></a>        break on agent_run_{complete,error,cancelled,interrupted}
+</span><span id="__span-28-28"><a id="__codelineno-28-28" name="__codelineno-28-28" href="#__codelineno-28-28"></a>     _pollUntilTerminal(&lt;id&gt;)  [degraded fallback if the SSE drops; no run-duration ceiling]
+</span><span id="__span-28-29"><a id="__codelineno-28-29" name="__codelineno-28-29" href="#__codelineno-28-29"></a>     _renderTerminal → pane.setResult(result) | setError(error)   [mirror to chat if no pane]
+</span></code></pre></div>
+<p><strong>Reuse seam</strong> (why <code>TaskController</code> is ~200 lines, not ~400): the base controller
+was made view-class-agnostic (<code>_viewClass</code>) and grew duck-typed hooks the oneshot
+pane ignores — <code>setMeta</code> (hydrate chips from <code>GET /runs/{id}</code>), <code>appendEvent</code> (live
+log), <code>setOnCancel</code> (Cancel button) — plus a shared <code>cancel()</code>. <code>/agentrun</code> behavior
+is unchanged (its Node behavioral test still passes). Emitted event types the log
+maps come from <code>build_task_runner</code> (<code>tool_call</code>, <code>tool_denied</code>,
+<code>network_policy_*</code>) and <code>agent_spawn</code> (<code>spawn_denied</code>, <code>subagent_*</code>).</p>
+<p><strong>Trialing from source (<code>uv run</code>):</strong> the web UI is served from <code>~/.ppxai/web</code> by
+default, so a plain <code>uv run ppxai-server</code> shows the INSTALLED bundle, not your
+edits. Prefix <code>PPXAI_WEB_DIR=$PWD/ppxai/web</code> to serve the checkout live; enable the
+tier (<code>tools.agent.task_tier_enabled=true</code>); and avoid CWD config/<code>.env</code> shadowing
+(<code>PPXAI_CONFIG_FILE=~/.ppxai/ppxai-config.json</code>, <code>set -a; . ~/.ppxai/.env; set +a</code>).
+Live-verified: launch → tool loop → <code>completed</code>; <code>cancel</code> → <code>cancelling</code>.</p>
+<hr />
+<h2 id="build-plan-t2-filesystem-seal-toolsagentsandbox-in-process-jail">Build plan T2 — filesystem seal (<code>tools.agent.sandbox</code>, in-process jail)<a class="headerlink" href="#build-plan-t2-filesystem-seal-toolsagentsandbox-in-process-jail" title="Permanent link">&para;</a></h2>
+<p>Added: <code>engine/tools/filesystem_policy.py</code> (<code>FilesystemPolicy</code>, mirror of
+<code>NetworkPolicy</code>). Changed: <code>config/tools.py</code> (parse <code>sandbox</code>),
+<code>agent_scoped_tools.py</code> (path chokepoint), <code>agent_v1.build_task_runner</code>
+(per-run workdir + policy wiring), <code>task-run-view.js</code> (<code>path_denied</code> in the log).
+<strong>Off by default</strong> — the jail engages only on <code>enforcement:"in_process"</code>, so an
+unconfigured tool-capable run reads/writes as before (non-breaking).</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-29-1"><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a>build_task_runner._runner(m):                         [routes/agent_v1.py]
+</span><span id="__span-29-2"><a id="__codelineno-29-2" name="__codelineno-29-2" href="#__codelineno-29-2"></a>  sandbox = get_agent_config()[&quot;sandbox&quot;]
+</span><span id="__span-29-3"><a id="__codelineno-29-3" name="__codelineno-29-3" href="#__codelineno-29-3"></a>  if sandbox.enforcement == &quot;in_process&quot;:
+</span><span id="__span-29-4"><a id="__codelineno-29-4" name="__codelineno-29-4" href="#__codelineno-29-4"></a>     workdir = &lt;sandbox.workdir.root&gt;/&lt;run_id&gt;/work    (mkdir)
+</span><span id="__span-29-5"><a id="__codelineno-29-5" name="__codelineno-29-5" href="#__codelineno-29-5"></a>     engine.set_working_dir(workdir)                   ← relative tool paths resolve here
+</span><span id="__span-29-6"><a id="__codelineno-29-6" name="__codelineno-29-6" href="#__codelineno-29-6"></a>     fs_policy = build_filesystem_policy(sandbox, workdir)
+</span><span id="__span-29-7"><a id="__codelineno-29-7" name="__codelineno-29-7" href="#__codelineno-29-7"></a>                   read_roots = read_paths.allow + skills_dir + specs_dir + workdir
+</span><span id="__span-29-8"><a id="__codelineno-29-8" name="__codelineno-29-8" href="#__codelineno-29-8"></a>                   workdir     = the ONLY write root
+</span><span id="__span-29-9"><a id="__codelineno-29-9" name="__codelineno-29-9" href="#__codelineno-29-9"></a>     _on_path(allowed, payload): if not allowed → emit_event(&quot;path_denied&quot;, category=&quot;filesystem&quot;)
+</span><span id="__span-29-10"><a id="__codelineno-29-10" name="__codelineno-29-10" href="#__codelineno-29-10"></a>  engine.tool_manager = ScopedToolManager(..., filesystem_policy=fs_policy, on_path=_on_path)
+</span><span id="__span-29-11"><a id="__codelineno-29-11" name="__codelineno-29-11" href="#__codelineno-29-11"></a>
+</span><span id="__span-29-12"><a id="__codelineno-29-12" name="__codelineno-29-12" href="#__codelineno-29-12"></a>ScopedToolManager.execute_tool(name, **kwargs):        [engine/agent_scoped_tools.py]
+</span><span id="__span-29-13"><a id="__codelineno-29-13" name="__codelineno-29-13" href="#__codelineno-29-13"></a>  grant check → shell check → network check →
+</span><span id="__span-29-14"><a id="__codelineno-29-14" name="__codelineno-29-14" href="#__codelineno-29-14"></a>  if filesystem_policy and is_path_tool(name):         [filesystem_policy._PATH_TOOLS]
+</span><span id="__span-29-15"><a id="__codelineno-29-15" name="__codelineno-29-15" href="#__codelineno-29-15"></a>     d = filesystem_policy.authorize(name, kwargs)
+</span><span id="__span-29-16"><a id="__codelineno-29-16" name="__codelineno-29-16" href="#__codelineno-29-16"></a>         mode, kwarg = _PATH_TOOLS[name]   # read_file→filepath(read), write_file→file_path(write), …
+</span><span id="__span-29-17"><a id="__codelineno-29-17" name="__codelineno-29-17" href="#__codelineno-29-17"></a>         target = resolve(raw)             # expanduser; relative→workdir; realpath unless follow_symlinks
+</span><span id="__span-29-18"><a id="__codelineno-29-18" name="__codelineno-29-18" href="#__codelineno-29-18"></a>         check(mode, target):
+</span><span id="__span-29-19"><a id="__codelineno-29-19" name="__codelineno-29-19" href="#__codelineno-29-19"></a>            deny-glob match → Deny (deny wins)
+</span><span id="__span-29-20"><a id="__codelineno-29-20" name="__codelineno-29-20" href="#__codelineno-29-20"></a>            write → within(workdir) ? Allow : Deny
+</span><span id="__span-29-21"><a id="__codelineno-29-21" name="__codelineno-29-21" href="#__codelineno-29-21"></a>            read  → any within(read_root) ? Allow : Deny   [boundary-anchored via commonpath]
+</span><span id="__span-29-22"><a id="__codelineno-29-22" name="__codelineno-29-22" href="#__codelineno-29-22"></a>     if not d.allowed:
+</span><span id="__span-29-23"><a id="__codelineno-29-23" name="__codelineno-29-23" href="#__codelineno-29-23"></a>        _on_path(False, {tool, mode, target_path, reason})   → path_denied event
+</span><span id="__span-29-24"><a id="__codelineno-29-24" name="__codelineno-29-24" href="#__codelineno-29-24"></a>        return &quot;Error: filesystem access denied …&quot;           # tool NEVER runs
+</span><span id="__span-29-25"><a id="__codelineno-29-25" name="__codelineno-29-25" href="#__codelineno-29-25"></a>  → base.execute_tool(name, **kwargs)
+</span></code></pre></div>
+<p>Best-effort under threat model A (a path-prefix jail, not an OS boundary).
+<code>enforcement:"container"</code> (tier-d, T9) realizes the SAME <code>sandbox</code> fields as
+real mounts: read-only rootfs, workdir <code>emptyDir</code>, skills/specs read-only
+ConfigMap mounts, egress a k8s NetworkPolicy. Trial: set
+<code>read_paths.allow</code>, then a <code>/task</code> read outside it returns the sandbox denial.</p>
+<hr />
+<h2 id="build-plan-t5-interactive-consent-waiting-park-post-respond">Build plan T5 — interactive consent: <code>waiting</code> park + <code>POST /respond</code><a class="headerlink" href="#build-plan-t5-interactive-consent-waiting-park-post-respond" title="Permanent link">&para;</a></h2>
+<p>Added: <code>POST /v1/agent/runs/&lt;id&gt;/respond</code> (route), <code>AgentRunRegistry.park_run</code> /
+<code>respond_run</code>, <code>AgentRunStore.persist_state</code>/<code>load_state</code> → <strong><code>state.json</code></strong>
+(the Inspection Triplet's third file — debt (r) first write), consent card in
+<code>TaskRunView</code>, <code>/task respond</code> verb. Changed: <code>build_task_runner</code>'s spawn-consent
+adapter (was: engine shell-consent, auto-denied over HTTP → now: registry park),
+<code>config/tools.py</code> (<code>consent_ttl_s</code>, default 300 s). New run status: <strong><code>waiting</code></strong>
+(non-terminal — stays in the AppState <code>background_agents</code> mirror).</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-30-1"><a id="__codelineno-30-1" name="__codelineno-30-1" href="#__codelineno-30-1"></a>spawn_subagent.execute (consent_policy=&quot;deny&quot;)        [engine/tools/agent_spawn.py]
+</span><span id="__span-30-2"><a id="__codelineno-30-2" name="__codelineno-30-2" href="#__codelineno-30-2"></a>└─ await request_consent(summary) ──► _spawn_consent(summary)   [build_task_runner]
+</span><span id="__span-30-3"><a id="__codelineno-30-3" name="__codelineno-30-3" href="#__codelineno-30-3"></a>   └─ await registry.park_run(m, kind=&quot;consent&quot;, prompt=summary,
+</span><span id="__span-30-4"><a id="__codelineno-30-4" name="__codelineno-30-4" href="#__codelineno-30-4"></a>                              ttl_s=config.consent_ttl_s)       [agent_runs.py]
+</span><span id="__span-30-5"><a id="__codelineno-30-5" name="__codelineno-30-5" href="#__codelineno-30-5"></a>      ├─ (cancel already pending? → return {approved:False, via:&quot;cancelled&quot;}, no park)
+</span><span id="__span-30-6"><a id="__codelineno-30-6" name="__codelineno-30-6" href="#__codelineno-30-6"></a>      ├─ token = secrets.token_hex(8)
+</span><span id="__span-30-7"><a id="__codelineno-30-7" name="__codelineno-30-7" href="#__codelineno-30-7"></a>      ├─ meta.status=&quot;waiting&quot;; meta.waiting={kind,prompt,token,since,expires_at,ttl_s}
+</span><span id="__span-30-8"><a id="__codelineno-30-8" name="__codelineno-30-8" href="#__codelineno-30-8"></a>      │    persist_meta · _index_active · _notify_change    [badge shows ✋ waiting]
+</span><span id="__span-30-9"><a id="__codelineno-30-9" name="__codelineno-30-9" href="#__codelineno-30-9"></a>      ├─ persist_state(run_id, {schema:1, status:&quot;waiting&quot;, waiting{…}})   ← state.json
+</span><span id="__span-30-10"><a id="__codelineno-30-10" name="__codelineno-30-10" href="#__codelineno-30-10"></a>      ├─ emit_event(&quot;agent_waiting&quot;, category=&quot;consent&quot;, data={…,token})   ← SSE tail
+</span><span id="__span-30-11"><a id="__codelineno-30-11" name="__codelineno-30-11" href="#__codelineno-30-11"></a>      ├─ await wait_for(future, ttl_s)
+</span><span id="__span-30-12"><a id="__codelineno-30-12" name="__codelineno-30-12" href="#__codelineno-30-12"></a>      │    ├─ respond_run resolves        → {approved, text, via:&quot;respond&quot;}
+</span><span id="__span-30-13"><a id="__codelineno-30-13" name="__codelineno-30-13" href="#__codelineno-30-13"></a>      │    ├─ TTL expires                 → {approved:False, via:&quot;timeout&quot;}   [fail-closed]
+</span><span id="__span-30-14"><a id="__codelineno-30-14" name="__codelineno-30-14" href="#__codelineno-30-14"></a>      │    └─ cancel_run resolves waiter  → {approved:False, via:&quot;cancelled&quot;} [no TTL idle]
+</span><span id="__span-30-15"><a id="__codelineno-30-15" name="__codelineno-30-15" href="#__codelineno-30-15"></a>      └─ meta.status=&quot;running&quot;; waiting=None; persist_meta + persist_state(last_response)
+</span><span id="__span-30-16"><a id="__codelineno-30-16" name="__codelineno-30-16" href="#__codelineno-30-16"></a>           emit_event(&quot;agent_resumed&quot;, category=&quot;consent&quot;, {kind,approved,via})
+</span><span id="__span-30-17"><a id="__codelineno-30-17" name="__codelineno-30-17" href="#__codelineno-30-17"></a>
+</span><span id="__span-30-18"><a id="__codelineno-30-18" name="__codelineno-30-18" href="#__codelineno-30-18"></a>POST /v1/agent/runs/{id}/respond {token, approved?|text?}   [routes/agent_v1.py]
+</span><span id="__span-30-19"><a id="__codelineno-30-19" name="__codelineno-30-19" href="#__codelineno-30-19"></a>├─ 404 unknown · 403 not owner (Inc 8b) · 422 answer-less body
+</span><span id="__span-30-20"><a id="__codelineno-30-20" name="__codelineno-30-20" href="#__codelineno-30-20"></a>├─ registry.respond_run(id, token, approved, text)
+</span><span id="__span-30-21"><a id="__codelineno-30-21" name="__codelineno-30-21" href="#__codelineno-30-21"></a>│    not parked/restarted → (False,…) → 409 · token mismatch → 409 · done → 409
+</span><span id="__span-30-22"><a id="__codelineno-30-22" name="__codelineno-30-22" href="#__codelineno-30-22"></a>│    ok → future.set_result({approved, text, via:&quot;respond&quot;})
+</span><span id="__span-30-23"><a id="__codelineno-30-23" name="__codelineno-30-23" href="#__codelineno-30-23"></a>└─ {ok:true, run_id, status:&quot;running&quot;}
+</span><span id="__span-30-24"><a id="__codelineno-30-24" name="__codelineno-30-24" href="#__codelineno-30-24"></a>
+</span><span id="__span-30-25"><a id="__codelineno-30-25" name="__codelineno-30-25" href="#__codelineno-30-25"></a>client (web):
+</span><span id="__span-30-26"><a id="__codelineno-30-26" name="__codelineno-30-26" href="#__codelineno-30-26"></a>  agent_waiting on the SSE tail → TaskRunView consent card (prompt + note field
+</span><span id="__span-30-27"><a id="__codelineno-30-27" name="__codelineno-30-27" href="#__codelineno-30-27"></a>    + Approve/Deny; token from event data) → setOnRespond → controller.respond()
+</span><span id="__span-30-28"><a id="__codelineno-30-28" name="__codelineno-30-28" href="#__codelineno-30-28"></a>  /task respond &lt;id&gt; approve|deny|&quot;&lt;text&gt;&quot; → GET /runs/{id} → waiting.token →
+</span><span id="__span-30-29"><a id="__codelineno-30-29" name="__codelineno-30-29" href="#__codelineno-30-29"></a>    POST …/respond   (text-only answer to a consent park = deny-with-note)
+</span><span id="__span-30-30"><a id="__codelineno-30-30" name="__codelineno-30-30" href="#__codelineno-30-30"></a>  agent_resumed | setStatus(≠waiting) → card cleared
+</span></code></pre></div>
+<p>Restart semantics (deliberate, T5 scope): the park's future is in-memory — a
+parked run does NOT survive a restart <em>in flight</em>; its <code>state.json</code> checkpoint
+does (respond after restart → 409 "server restarted"; T7 <code>/resume</code> is the
+consumer). <code>spawn_consent:"auto"</code> still skips the park entirely.</p>
+<hr />
+<h2 id="build-plan-t6-two-phase-termination-completed_pending_ack-post-ack">Build plan T6 — two-phase termination: <code>completed_pending_ack</code> + <code>POST /ack</code><a class="headerlink" href="#build-plan-t6-two-phase-termination-completed_pending_ack-post-ack" title="Permanent link">&para;</a></h2>
+<p>Added: <code>POST /v1/agent/runs/&lt;id&gt;/ack</code> (route), <code>AgentRunRegistry.ack_run</code> /
+<code>_finalize</code> / <code>maybe_reap_hold</code>, <code>RunMeta.hold_result</code>/<code>acked_at</code>, Collect
+button + <code>/task ack</code> (client). Changed: <code>run_in_background._drive</code> success
+branch (hold split), GET read paths (lazy reap), <code>config/tools.py</code>
+(<code>result_retention_s</code>, default 3600 s). New statuses: <strong><code>completed_pending_ack</code></strong>
+(run exited, result HELD) and <strong><code>finalized</code></strong> (collected / GC-eligible) — both
+out of the AppState badge set (the run consumes nothing).</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-31-1"><a id="__codelineno-31-1" name="__codelineno-31-1" href="#__codelineno-31-1"></a>run_in_background._drive success:                     [engine/agent_runs.py]
+</span><span id="__span-31-2"><a id="__codelineno-31-2" name="__codelineno-31-2" href="#__codelineno-31-2"></a>  body = await runner(meta)
+</span><span id="__span-31-3"><a id="__codelineno-31-3" name="__codelineno-31-3" href="#__codelineno-31-3"></a>  ├─ meta.hold_result (top-level /task run — the route sets it)
+</span><span id="__span-31-4"><a id="__codelineno-31-4" name="__codelineno-31-4" href="#__codelineno-31-4"></a>  │    finish_run(status=&quot;completed_pending_ack&quot;, result=body)   ← record persists
+</span><span id="__span-31-5"><a id="__codelineno-31-5" name="__codelineno-31-5" href="#__codelineno-31-5"></a>  │    persist_state({status, result_ready_at, result_chars})    ← state.json
+</span><span id="__span-31-6"><a id="__codelineno-31-6" name="__codelineno-31-6" href="#__codelineno-31-6"></a>  │    emit_event(&quot;agent_result_ready&quot;, category=&quot;result&quot;)       ← INSTEAD of agent_run_complete
+</span><span id="__span-31-7"><a id="__codelineno-31-7" name="__codelineno-31-7" href="#__codelineno-31-7"></a>  └─ else (tool-free /run tier · spawn children — collected inline)
+</span><span id="__span-31-8"><a id="__codelineno-31-8" name="__codelineno-31-8" href="#__codelineno-31-8"></a>       finish_run(status=&quot;completed&quot;) + emit &quot;agent_run_complete&quot;   (unchanged)
+</span><span id="__span-31-9"><a id="__codelineno-31-9" name="__codelineno-31-9" href="#__codelineno-31-9"></a>
+</span><span id="__span-31-10"><a id="__codelineno-31-10" name="__codelineno-31-10" href="#__codelineno-31-10"></a>POST /v1/agent/runs/{id}/ack                          [routes/agent_v1.py]
+</span><span id="__span-31-11"><a id="__codelineno-31-11" name="__codelineno-31-11" href="#__codelineno-31-11"></a>├─ 404 unknown · 403 not owner (Inc 8b)
+</span><span id="__span-31-12"><a id="__codelineno-31-12" name="__codelineno-31-12" href="#__codelineno-31-12"></a>├─ registry.ack_run(id)
+</span><span id="__span-31-13"><a id="__codelineno-31-13" name="__codelineno-31-13" href="#__codelineno-31-13"></a>│    finalized already → (True, &quot;already&quot;)  → 200 (idempotent, no dup event)
+</span><span id="__span-31-14"><a id="__codelineno-31-14" name="__codelineno-31-14" href="#__codelineno-31-14"></a>│    not completed_pending_ack → (False, …) → 409 (nothing held)
+</span><span id="__span-31-15"><a id="__codelineno-31-15" name="__codelineno-31-15" href="#__codelineno-31-15"></a>│    else _finalize(via=&quot;ack&quot;): status=&quot;finalized&quot;; acked_at; persist_meta;
+</span><span id="__span-31-16"><a id="__codelineno-31-16" name="__codelineno-31-16" href="#__codelineno-31-16"></a>│         persist_state({status:&quot;finalized&quot;, via, acked_at});
+</span><span id="__span-31-17"><a id="__codelineno-31-17" name="__codelineno-31-17" href="#__codelineno-31-17"></a>│         emit &quot;agent_run_finalized&quot; {via}
+</span><span id="__span-31-18"><a id="__codelineno-31-18" name="__codelineno-31-18" href="#__codelineno-31-18"></a>└─ {ok:true, run_id, status:&quot;finalized&quot;}
+</span><span id="__span-31-19"><a id="__codelineno-31-19" name="__codelineno-31-19" href="#__codelineno-31-19"></a>
+</span><span id="__span-31-20"><a id="__codelineno-31-20" name="__codelineno-31-20" href="#__codelineno-31-20"></a>GET /runs · GET /runs/{id}  (lazy retention backstop — no timer task)
+</span><span id="__span-31-21"><a id="__codelineno-31-21" name="__codelineno-31-21" href="#__codelineno-31-21"></a>└─ registry.maybe_reap_hold(meta, config.result_retention_s)
+</span><span id="__span-31-22"><a id="__codelineno-31-22" name="__codelineno-31-22" href="#__codelineno-31-22"></a>     held AND finished_at + retention elapsed → _finalize(via=&quot;retention&quot;)
+</span><span id="__span-31-23"><a id="__codelineno-31-23" name="__codelineno-31-23" href="#__codelineno-31-23"></a>     (0/None disables; finalize marks GC-eligible, deletes NOTHING)
+</span><span id="__span-31-24"><a id="__codelineno-31-24" name="__codelineno-31-24" href="#__codelineno-31-24"></a>
+</span><span id="__span-31-25"><a id="__codelineno-31-25" name="__codelineno-31-25" href="#__codelineno-31-25"></a>client (web):
+</span><span id="__span-31-26"><a id="__codelineno-31-26" name="__codelineno-31-26" href="#__codelineno-31-26"></a>  agent_result_ready on the tail → watcher breaks → pane renders the held
+</span><span id="__span-31-27"><a id="__codelineno-31-27" name="__codelineno-31-27" href="#__codelineno-31-27"></a>    result, status chip 📬 result ready, Collect button visible
+</span><span id="__span-31-28"><a id="__codelineno-31-28" name="__codelineno-31-28" href="#__codelineno-31-28"></a>  Collect button | /task ack &lt;id&gt; → POST …/ack → chip ✅ collected
+</span><span id="__span-31-29"><a id="__codelineno-31-29" name="__codelineno-31-29" href="#__codelineno-31-29"></a>  reopen via /task ls (📬 icon) → focus() GET → result re-rendered from meta
+</span></code></pre></div>
+<p>Design choice: <strong>explicit collect</strong> (button + verb), not silent auto-ack-on-view
+— the user issues the receipt, which is what makes the disconnect-then-collect
+trial observable. Children never hold (<code>hold_result</code> unset): the awaiting
+parent IS their collector, so <code>spawn_subagent._await_child</code> still sees a
+<code>completed</code> child (its terminal tuple includes the new statuses defensively).</p>
+<hr />
+<h2 id="build-plan-t7-interrupted-resume-post-resume-restart-orphan-sweep">Build plan T7 — interrupted resume: <code>POST /resume</code> + restart-orphan sweep<a class="headerlink" href="#build-plan-t7-interrupted-resume-post-resume-restart-orphan-sweep" title="Permanent link">&para;</a></h2>
+<p>Added: <code>POST /v1/agent/runs/&lt;id&gt;/resume</code> (route), <code>resume_refusal()</code> (the
+conditional-resume decision matrix, ADR #5), <code>AgentRunRegistry.sweep_orphans</code> /
+<code>resume_run</code>, <code>RunMeta.system</code>/<code>read_roots</code> (the remaining runner inputs,
+persisted by the /task route so the rebuild is faithful), Resume button +
+<code>/task resume</code> (client). Changed: <code>server/state.py</code> (sweep at registry
+construction), <code>_drive</code>'s RunStopped path (writes a <code>state.json</code> stop
+checkpoint). Debt (r) is <strong>retired</strong>: the Triplet's <code>state.json</code> now has
+producers (T5 park, T6 hold/finalize, T7 stop/sweep/resume) AND its consumer.</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-32-1"><a id="__codelineno-32-1" name="__codelineno-32-1" href="#__codelineno-32-1"></a>server start → get_agent_run_registry() → registry.sweep_orphans()   [state.py]
+</span><span id="__span-32-2"><a id="__codelineno-32-2" name="__codelineno-32-2" href="#__codelineno-32-2"></a>  for meta in list_meta() where status ∈ {pending,running,waiting,cancelling}
+</span><span id="__span-32-3"><a id="__codelineno-32-3" name="__codelineno-32-3" href="#__codelineno-32-3"></a>                            and run_id not in _run_tasks:
+</span><span id="__span-32-4"><a id="__codelineno-32-4" name="__codelineno-32-4" href="#__codelineno-32-4"></a>     status=&quot;interrupted&quot;; error=&quot;server restarted…&quot;; waiting=None
+</span><span id="__span-32-5"><a id="__codelineno-32-5" name="__codelineno-32-5" href="#__codelineno-32-5"></a>     resumable = hold_result AND task/tools/provider/model AND no result
+</span><span id="__span-32-6"><a id="__codelineno-32-6" name="__codelineno-32-6" href="#__codelineno-32-6"></a>     persist_meta · persist_state({via:&quot;restart_sweep&quot;}) · emit agent_run_interrupted
+</span><span id="__span-32-7"><a id="__codelineno-32-7" name="__codelineno-32-7" href="#__codelineno-32-7"></a>
+</span><span id="__span-32-8"><a id="__codelineno-32-8" name="__codelineno-32-8" href="#__codelineno-32-8"></a>POST /v1/agent/runs/{id}/resume                       [routes/agent_v1.py]
+</span><span id="__span-32-9"><a id="__codelineno-32-9" name="__codelineno-32-9" href="#__codelineno-32-9"></a>├─ 403 tier off (resume re-enters the tool tier) · 404 unknown · 403 not owner
+</span><span id="__span-32-10"><a id="__codelineno-32-10" name="__codelineno-32-10" href="#__codelineno-32-10"></a>├─ resume_refusal(meta, in_flight=get_run_task(id) is not None) → 409 {reason}:
+</span><span id="__span-32-11"><a id="__codelineno-32-11" name="__codelineno-32-11" href="#__codelineno-32-11"></a>│    in flight · status ∉ {interrupted,cancelled} · not resumable ·
+</span><span id="__span-32-12"><a id="__codelineno-32-12" name="__codelineno-32-12" href="#__codelineno-32-12"></a>│    not hold_result (tool-free /run tier + spawn children refused) ·
+</span><span id="__span-32-13"><a id="__codelineno-32-13" name="__codelineno-32-13" href="#__codelineno-32-13"></a>│    result already recorded · missing task/tools/provider/model
+</span><span id="__span-32-14"><a id="__codelineno-32-14" name="__codelineno-32-14" href="#__codelineno-32-14"></a>├─ _validate_provider_or_400(meta.provider)      [fail fast, run unchanged]
+</span><span id="__span-32-15"><a id="__codelineno-32-15" name="__codelineno-32-15" href="#__codelineno-32-15"></a>├─ runner = build_task_runner(provider/model/task/tools/network from meta,
+</span><span id="__span-32-16"><a id="__codelineno-32-16" name="__codelineno-32-16" href="#__codelineno-32-16"></a>│             system=meta.system, extra_read_paths=meta.read_roots,
+</span><span id="__span-32-17"><a id="__codelineno-32-17" name="__codelineno-32-17" href="#__codelineno-32-17"></a>│             allow_spawn=True)                  [IDENTICAL AC-1/AC-2 sandbox]
+</span><span id="__span-32-18"><a id="__codelineno-32-18" name="__codelineno-32-18" href="#__codelineno-32-18"></a>└─ registry.resume_run(meta, runner)
+</span><span id="__span-32-19"><a id="__codelineno-32-19" name="__codelineno-32-19" href="#__codelineno-32-19"></a>     clear error/finished_at/resumable/waiting
+</span><span id="__span-32-20"><a id="__codelineno-32-20" name="__codelineno-32-20" href="#__codelineno-32-20"></a>     persist_state({status:&quot;running&quot;, resumed_from}) · emit &quot;agent_run_resume&quot;
+</span><span id="__span-32-21"><a id="__codelineno-32-21" name="__codelineno-32-21" href="#__codelineno-32-21"></a>     run_in_background(meta, runner)   → fresh budget window, SAME run_id,
+</span><span id="__span-32-22"><a id="__codelineno-32-22" name="__codelineno-32-22" href="#__codelineno-32-22"></a>                                         events APPEND to the same log (seq
+</span><span id="__span-32-23"><a id="__codelineno-32-23" name="__codelineno-32-23" href="#__codelineno-32-23"></a>                                         continues); a T6 hold applies to the
+</span><span id="__span-32-24"><a id="__codelineno-32-24" name="__codelineno-32-24" href="#__codelineno-32-24"></a>                                         resumed leg (hold_result persisted)
+</span><span id="__span-32-25"><a id="__codelineno-32-25" name="__codelineno-32-25" href="#__codelineno-32-25"></a>
+</span><span id="__span-32-26"><a id="__codelineno-32-26" name="__codelineno-32-26" href="#__codelineno-32-26"></a>client (web):
+</span><span id="__span-32-27"><a id="__codelineno-32-27" name="__codelineno-32-27" href="#__codelineno-32-27"></a>  Resume button visible only when meta.resumable AND status interrupted|cancelled
+</span><span id="__span-32-28"><a id="__codelineno-32-28" name="__codelineno-32-28" href="#__codelineno-32-28"></a>  /task resume &lt;id&gt; | button → POST …/resume
+</span><span id="__span-32-29"><a id="__codelineno-32-29" name="__codelineno-32-29" href="#__codelineno-32-29"></a>     409 → refusal reason verbatim; 200 → chip running, pane re-pinned,
+</span><span id="__span-32-30"><a id="__codelineno-32-30" name="__codelineno-32-30" href="#__codelineno-32-30"></a>     detached watcher restarted (the old one broke at the interrupt)
+</span></code></pre></div>
+<p>Resume semantics (deliberate): a resume <strong>re-executes the bounded task from its
+start</strong> under the same run identity — the dead leg's conversation state is not
+replayed (the run record, not the chat transcript, is the durable unit). The
+stop checkpoint (<code>state.json</code>) is what makes the decision and the audit trail
+inspectable, not a mid-conversation snapshot.</p>
+<hr />
+<h2 id="build-plan-t8a-vscode-port-of-the-task-family">Build plan T8a — VSCode port of the <code>/task</code> family<a class="headerlink" href="#build-plan-t8a-vscode-port-of-the-task-family" title="Permanent link">&para;</a></h2>
+<p>Added: <code>vscode-extension/src/taskController.ts</code> (IoC controller, VSCode-free),
+<code>/v1/agent/*</code> typed slice in <code>httpClient.ts</code>, <code>/task</code> route + UI adapter in
+<code>chatPanel.ts</code>, <code>/task</code> in the completion catalog. <strong>No server changes</strong> — the
+whole increment is a second client over the T1–T7 surface. T8b (TUI) is split
+out pending the transport decision (in-process registry = debt (t) vs HTTP
+client in the TUIs) — see the plan doc §T8.</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-33-1"><a id="__codelineno-33-1" name="__codelineno-33-1" href="#__codelineno-33-1"></a>webview input &quot;/task &lt;verb&gt; …&quot;                    [chatPanel.handleSlashCommand]
+</span><span id="__span-33-2"><a id="__codelineno-33-2" name="__codelineno-33-2" href="#__codelineno-33-2"></a>└─ command === &#39;task&#39; → getTaskController().handle(argsText)   [BEFORE factory
+</span><span id="__span-33-3"><a id="__codelineno-33-3" name="__codelineno-33-3" href="#__codelineno-33-3"></a>   │                                                    dispatch — factory has no /task]
+</span><span id="__span-33-4"><a id="__codelineno-33-4" name="__codelineno-33-4" href="#__codelineno-33-4"></a>   ├─ run    → parseTaskArgs (same grammar as web) → backend.agentTask(body)
+</span><span id="__span-33-5"><a id="__codelineno-33-5" name="__codelineno-33-5" href="#__codelineno-33-5"></a>   │            403/400 detail verbatim · session provider/model fallback
+</span><span id="__span-33-6"><a id="__codelineno-33-6" name="__codelineno-33-6" href="#__codelineno-33-6"></a>   │            → systemMessage launch line → watchDetached(run_id)
+</span><span id="__span-33-7"><a id="__codelineno-33-7" name="__codelineno-33-7" href="#__codelineno-33-7"></a>   ├─ ls     → agentRuns() → icon rows into the transcript
+</span><span id="__span-33-8"><a id="__codelineno-33-8" name="__codelineno-33-8" href="#__codelineno-33-8"></a>   ├─ show|watch &lt;id&gt; → agentRun(id) → renderRun (+ re-watch if live)
+</span><span id="__span-33-9"><a id="__codelineno-33-9" name="__codelineno-33-9" href="#__codelineno-33-9"></a>   ├─ respond &lt;id&gt; … → agentRun(id).waiting.token → agentRunRespond
+</span><span id="__span-33-10"><a id="__codelineno-33-10" name="__codelineno-33-10" href="#__codelineno-33-10"></a>   ├─ ack &lt;id&gt; / resume &lt;id&gt; / cancel &lt;id&gt; → POST; 409 reasons verbatim
+</span><span id="__span-33-11"><a id="__codelineno-33-11" name="__codelineno-33-11" href="#__codelineno-33-11"></a>   └─ help
+</span><span id="__span-33-12"><a id="__codelineno-33-12" name="__codelineno-33-12" href="#__codelineno-33-12"></a>
+</span><span id="__span-33-13"><a id="__codelineno-33-13" name="__codelineno-33-13" href="#__codelineno-33-13"></a>watchDetached(id)  [poll; web degraded-path contract: backoff 1.5s→30s,
+</span><span id="__span-33-14"><a id="__codelineno-33-14" name="__codelineno-33-14" href="#__codelineno-33-14"></a>                    no run-duration ceiling, give up only on consecutive fails]
+</span><span id="__span-33-15"><a id="__codelineno-33-15" name="__codelineno-33-15" href="#__codelineno-33-15"></a>└─ loop agentRun(id):
+</span><span id="__span-33-16"><a id="__codelineno-33-16" name="__codelineno-33-16" href="#__codelineno-33-16"></a>   ├─ status waiting + unseen token → vscode QuickPick (✋ Approve/Deny —
+</span><span id="__span-33-17"><a id="__codelineno-33-17" name="__codelineno-33-17" href="#__codelineno-33-17"></a>   │     same idiom as shell/file consent) → agentRunRespond({token, approved})
+</span><span id="__span-33-18"><a id="__codelineno-33-18" name="__codelineno-33-18" href="#__codelineno-33-18"></a>   │     dismissed → hint line; the T5 TTL is the fail-closed backstop
+</span><span id="__span-33-19"><a id="__codelineno-33-19" name="__codelineno-33-19" href="#__codelineno-33-19"></a>   └─ terminal → renderRun:
+</span><span id="__span-33-20"><a id="__codelineno-33-20" name="__codelineno-33-20" href="#__codelineno-33-20"></a>        completed_pending_ack → fullResponse(result) + &quot;/task ack&quot; hint (T6)
+</span><span id="__span-33-21"><a id="__codelineno-33-21" name="__codelineno-33-21" href="#__codelineno-33-21"></a>        interrupted|cancelled + resumable → &quot;/task resume&quot; hint (T7)
+</span></code></pre></div>
+<p>Parity is TESTED, not assumed (<code>tests/test_vscode_task_controller.py</code>): the
+verb set, the <code>/v1/agent/*</code> endpoint set, and the terminal/success status sets
+are regex-extracted from BOTH clients and compared — a verb/endpoint/status
+added to one client fails the sentinel until the other grows it too.</p>
+<hr />
+<!-- Inc 10+ sections appended here as they land. Template:
+## Increment N — <title>
+Added/changed: <files>. Execution model change: <if any>.
+### <METHOD /path> — <what>
+``` ...graph... ```
+-->
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/rcconsult/ppxai" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

@@ -460,14 +460,42 @@
   
   
     <li class="md-nav__item">
-      <a href="../agent-mode-guide/" class="md-nav__link">
+      <a href="../task-agent-guide/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Agent Mode
+    Task Agent Platform
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../session-agent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Session Agent Mode
   
 
     
@@ -1151,6 +1179,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#web-ui-development-ppxai_web_dir" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Web UI development (PPXAI_WEB_DIR)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#windows-store-python-uvvenv-recovery-critical" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1296,40 +1335,51 @@
 </span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>cp<span class="w"> </span>.env.example<span class="w"> </span>.env
 </span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>python<span class="w"> </span>ppxai.py
 </span></code></pre></div></p>
+<h2 id="web-ui-development-ppxai_web_dir">Web UI development (<code>PPXAI_WEB_DIR</code>)<a class="headerlink" href="#web-ui-development-ppxai_web_dir" title="Permanent link">&para;</a></h2>
+<p>The web clients (<code>ppxai-server</code>, <code>ppxai-desktop</code>) serve the web UI from
+<code>~/.ppxai/web</code> by default — <strong>not</strong> the source tree — so editing
+<code>ppxai/web/...</code> has no effect until that dir is synced. While iterating, set
+<code>PPXAI_WEB_DIR</code> to serve a checkout directly and skip the sync:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nv">PPXAI_WEB_DIR</span><span class="o">=</span><span class="nv">$PWD</span>/ppxai/web<span class="w"> </span><span class="nv">$UV</span><span class="w"> </span>run<span class="w"> </span>ppxai-server<span class="w">   </span><span class="c1"># serves live source; hard-refresh the browser</span>
+</span></code></pre></div>
+<p>The override (<code>ppxai/server/routes/static.py::_resolve_web_ui_dir</code>) takes
+precedence over <code>~/.ppxai/web</code>. See
+<a href="../lessons/web-assets-served-from-ppxai-home/">lessons/web-assets-served-from-ppxai-home.md</a>
+for the full hazard (incl. the <code>.app</code> wrinkle).</p>
 <h2 id="windows-store-python-uvvenv-recovery-critical">Windows Store Python + uv/venv recovery (CRITICAL)<a class="headerlink" href="#windows-store-python-uvvenv-recovery-critical" title="Permanent link">&para;</a></h2>
 <p><strong>Problem:</strong> Windows Store Python prevents uv from creating temporary virtualenvs (Error 1920: "The file cannot be accessed by the system").</p>
 <h3 id="use-existing-venv-with-uv-run">Use existing venv with <code>$UV run</code><a class="headerlink" href="#use-existing-venv-with-uv-run" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># Use --no-sync to skip package rebuild</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="nv">$UV</span><span class="w"> </span>run<span class="w"> </span>--no-sync<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>&lt;command&gt;
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="c1"># Without --no-sync triggers temp virtualenv creation (fails on Windows Store Python)</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Use --no-sync to skip package rebuild</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="nv">$UV</span><span class="w"> </span>run<span class="w"> </span>--no-sync<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>&lt;command&gt;
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="c1"># Without --no-sync triggers temp virtualenv creation (fails on Windows Store Python)</span>
 </span></code></pre></div>
 <h3 id="check-venv-lock-status">Check venv / lock status<a class="headerlink" href="#check-venv-lock-status" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nv">$UV</span><span class="w"> </span>lock<span class="w"> </span>--check<span class="w">                                           </span><span class="c1"># is lock fresh?</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="nv">$UV</span><span class="w"> </span>pip<span class="w"> </span>list<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>ppxai<span class="w">                                  </span><span class="c1"># installed version</span>
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>.venv/Scripts/python.exe<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;import ppxai; print(ppxai.__version__)&quot;</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nv">$UV</span><span class="w"> </span>lock<span class="w"> </span>--check<span class="w">                                           </span><span class="c1"># is lock fresh?</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="nv">$UV</span><span class="w"> </span>pip<span class="w"> </span>list<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>ppxai<span class="w">                                  </span><span class="c1"># installed version</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>.venv/Scripts/python.exe<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;import ppxai; print(ppxai.__version__)&quot;</span>
 </span></code></pre></div>
 <h3 id="corporate-proxy-tls">Corporate proxy / TLS<a class="headerlink" href="#corporate-proxy-tls" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># Use UV_NATIVE_TLS=true to use Windows native TLS (SChannel) — trusts system cert store</span>
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="nb">set</span><span class="w"> </span><span class="nv">UV_NATIVE_TLS</span><span class="o">=</span><span class="nb">true</span><span class="w">            </span><span class="c1"># cmd</span>
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="nv">$env</span>:UV_NATIVE_TLS<span class="o">=</span><span class="s2">&quot;true&quot;</span><span class="w">         </span><span class="c1"># PowerShell</span>
-</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>
-</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="nv">$UV</span><span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>PyInstaller<span class="w"> </span>ppxai.spec<span class="w"> </span>--noconfirm
-</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="nv">$UV</span><span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>hatchling<span class="w"> </span>editables
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># Use UV_NATIVE_TLS=true to use Windows native TLS (SChannel) — trusts system cert store</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="nb">set</span><span class="w"> </span><span class="nv">UV_NATIVE_TLS</span><span class="o">=</span><span class="nb">true</span><span class="w">            </span><span class="c1"># cmd</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="nv">$env</span>:UV_NATIVE_TLS<span class="o">=</span><span class="s2">&quot;true&quot;</span><span class="w">         </span><span class="c1"># PowerShell</span>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="nv">$UV</span><span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>PyInstaller<span class="w"> </span>ppxai.spec<span class="w"> </span>--noconfirm
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="nv">$UV</span><span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>hatchling<span class="w"> </span>editables
 </span></code></pre></div>
 <p><code>UV_NATIVE_TLS=true</code> tells uv to use the OS native TLS stack instead of bundled rustls. This trusts certificates from the Windows certificate store (including corporate proxy CAs). No need for <code>SSL_CERT_FILE</code>.</p>
 <h3 id="refresh-package-metadata-after-version-bump">Refresh package metadata after version bump<a class="headerlink" href="#refresh-package-metadata-after-version-bump" title="Permanent link">&para;</a></h3>
 <p>When version numbers change in source but venv metadata is stale:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nv">$UV</span><span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>hatchling<span class="w"> </span>editables
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="nv">$UV</span><span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--no-build-isolation<span class="w"> </span>--reinstall<span class="w"> </span>--no-deps<span class="w"> </span>-e<span class="w"> </span>.
-</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="nv">$UV</span><span class="w"> </span>pip<span class="w"> </span>list<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>ppxai
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nv">$UV</span><span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>hatchling<span class="w"> </span>editables
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="nv">$UV</span><span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--no-build-isolation<span class="w"> </span>--reinstall<span class="w"> </span>--no-deps<span class="w"> </span>-e<span class="w"> </span>.
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="nv">$UV</span><span class="w"> </span>pip<span class="w"> </span>list<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>ppxai
 </span></code></pre></div>
 <h3 id="build-binaries-with-pyinstaller">Build binaries with PyInstaller<a class="headerlink" href="#build-binaries-with-pyinstaller" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># Preferred: UV_NATIVE_TLS for corporate proxy environments</span>
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="nb">set</span><span class="w"> </span><span class="nv">UV_NATIVE_TLS</span><span class="o">=</span><span class="nb">true</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>%UV%<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>PyInstaller<span class="w"> </span>ppxai.spec<span class="w"> </span>--noconfirm
-</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
-</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="c1"># Alternative: venv&#39;s Python directly</span>
-</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>.venv/Scripts/python.exe<span class="w"> </span>-m<span class="w"> </span>PyInstaller<span class="w"> </span>ppxai.spec<span class="w"> </span>--noconfirm
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># Preferred: UV_NATIVE_TLS for corporate proxy environments</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="nb">set</span><span class="w"> </span><span class="nv">UV_NATIVE_TLS</span><span class="o">=</span><span class="nb">true</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>%UV%<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>PyInstaller<span class="w"> </span>ppxai.spec<span class="w"> </span>--noconfirm
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="c1"># Alternative: venv&#39;s Python directly</span>
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>.venv/Scripts/python.exe<span class="w"> </span>-m<span class="w"> </span>PyInstaller<span class="w"> </span>ppxai.spec<span class="w"> </span>--noconfirm
 </span></code></pre></div>
 <h3 id="key-insights">Key insights<a class="headerlink" href="#key-insights" title="Permanent link">&para;</a></h3>
 <ul>

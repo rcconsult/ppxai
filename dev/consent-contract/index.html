@@ -460,14 +460,42 @@
   
   
     <li class="md-nav__item">
-      <a href="../agent-mode-guide/" class="md-nav__link">
+      <a href="../task-agent-guide/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Agent Mode
+    Task Agent Platform
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../session-agent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Session Agent Mode
   
 
     
@@ -1262,6 +1290,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#agent-platform-consent-v1190-task-v1agent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Agent-platform consent (v1.19.0 /task / /v1/agent/*)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#whats-not-covered-by-the-consent-layer" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1580,6 +1619,47 @@ boundary is the OS-level read permission of the ppxai process.</p>
 <p>The document parsers are the OS-level read; corruption or
 malformed-input crashes (e.g., a malicious PDF) are tested per-tool
 in <code>test_pdf_tools.py</code>, <code>test_csv_tools.py</code>, <code>test_excel_pptx_tools.py</code>.</p>
+<h2 id="agent-platform-consent-v1190-task-v1agent">Agent-platform consent (v1.19.0 <code>/task</code> / <code>/v1/agent/*</code>)<a class="headerlink" href="#agent-platform-consent-v1190-task-v1agent" title="Permanent link">&para;</a></h2>
+<p>Two distinct gates, separate from the file-edit/shell contract above:</p>
+<table>
+<thead>
+<tr>
+<th>Operation</th>
+<th>Triggers consent?</th>
+<th>Default</th>
+<th>Config key</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>spawn_subagent</code> tool call</td>
+<td>YES (server context)</td>
+<td><strong>Deny</strong> (fail-closed)</td>
+<td><code>tools.agent.spawn_consent: deny\|auto</code></td>
+</tr>
+<tr>
+<td>Mid-run interactive park (T5)</td>
+<td>YES — run parks as <code>waiting{kind:"consent"}</code></td>
+<td><strong>Deny on TTL expiry</strong> (fail-closed)</td>
+<td><code>tools.agent.consent_ttl_s</code> (default 300s)</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong><code>spawn_subagent</code>:</strong> with <code>spawn_consent: "deny"</code> (default), any
+  <code>spawn_subagent</code> call in a server-context run is refused outright — no
+  callback, no park. Setting <code>auto</code> approves without a human in the loop
+  (delegated trust, not an unattended default).</li>
+<li><strong>T5 run park:</strong> a run needing a human decision emits <code>AGENT_WAITING</code>
+  (<code>resume_token</code>, <code>ttl_s</code>) and halts at <code>status=waiting</code>. The human answers
+  via <code>POST /v1/agent/runs/{id}/respond</code> (<code>RespondRequest{token, approved?,
+  text?}</code>); a consent park requires <code>approved: true</code> to proceed — a
+  text-only answer is a denial. If the TTL lapses before a response, the
+  park resolves to denial, same fail-closed posture as shell consent.</li>
+<li>See <a href="../agent-task-lifecycle.html">docs/agent-task-lifecycle.html</a> for the
+  full run-state machine and <a href="../decisions/0003-agent-platform-architecture/">ADR 0003 §8</a>
+  for the design rationale.</li>
+</ul>
 <h2 id="whats-not-covered-by-the-consent-layer">What's NOT covered by the consent layer<a class="headerlink" href="#whats-not-covered-by-the-consent-layer" title="Permanent link">&para;</a></h2>
 <p>These categories are <strong>out of scope</strong> for this doc and need
 separate review/hardening:</p>

@@ -460,14 +460,42 @@
   
   
     <li class="md-nav__item">
-      <a href="../agent-mode-guide/" class="md-nav__link">
+      <a href="../task-agent-guide/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Agent Mode
+    Task Agent Platform
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../session-agent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Session Agent Mode
   
 
     
@@ -1163,10 +1191,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#how-to-verify-a-fix-before-upgrading" class="md-nav__link">
+  <a href="#how-to-verify-before-upgrading-benchmark-gate-the-only-gate" class="md-nav__link">
     <span class="md-ellipsis">
       
-        How to verify a fix before upgrading
+        How to verify before upgrading (benchmark gate — the ONLY gate)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#upstream-review-log" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Upstream review log
       
     </span>
   </a>
@@ -1214,10 +1253,10 @@
 Each entry includes root cause, workaround status, and upgrade/resolution criteria.</p>
 <hr />
 <h2 id="ki-001-google-genai-sdk-1570-code-editing-regression">[KI-001] google-genai SDK ≥1.57.0 — Code Editing Regression<a class="headerlink" href="#ki-001-google-genai-sdk-1570-code-editing-regression" title="Permanent link">&para;</a></h2>
-<p><strong>Status:</strong> Open (unresolved upstream) — SDK pinned to <code>&lt;1.57.0</code>
+<p><strong>Status:</strong> RESOLVED BY UPGRADE (2026-07-11) — SDK raised to 2.11.0, ceiling-pinned <code>&lt;2.12.0</code>
 <strong>Detected:</strong> February 8, 2026
-<strong>Affected versions:</strong> google-genai 1.57.0 through 1.65.0 (latest as of Feb 27, 2026)
-<strong>Upstream issues:</strong> <a href="https://github.com/googleapis/python-genai/issues/1789">#1789</a>, <a href="https://github.com/googleapis/python-genai/issues/1818">#1818</a></p>
+<strong>Affected versions:</strong> google-genai 1.57.0 through at least 1.65.0 (observed Feb 2026). <strong>Not reproducible on 2.11.0</strong>: the 2026-07-11 benchmark gate ran 3× on gemini-2.5-flash — code editing <strong>100% in all three runs</strong> (was 0% on 1.62.0), overall 70.2–74.4% vs 68.6% for the prior same-suite run on 1.56.0. The upstream v1.57.0 change was never reverted (full changelog sweep to 2.11.0), so the healing happened elsewhere in the SDK/stack — treat the regression as version-specific, keep the ceiling pin and the benchmark gate for every future raise.
+<strong>Upstream tracking:</strong> <strong>none.</strong> Upstream shipped the behavior deliberately as a fix ("keep the history in chat when the API yields such a part", commit <a href="https://github.com/googleapis/python-genai/commit/215c8524659c0b2ca945b6cd7887b3501db61be4"><code>215c852</code></a>); no upstream issue tracks this regression. <a href="https://github.com/googleapis/python-genai/issues/1789">#1789</a> (empty finish message on MALFORMED_FUNCTION_CALL — still open) and <a href="https://github.com/googleapis/python-genai/issues/1818">#1818</a> (AFC config persistence — closed as not planned) are <strong>related-but-different</strong> bugs from the original v1.15.3 analysis; an earlier revision of this entry wrongly promoted them to the upgrade gate. Waiting on them can never signal a fix — the only valid gate is our own benchmark (below).</p>
 <h3 id="what-broke">What broke<a class="headerlink" href="#what-broke" title="Permanent link">&para;</a></h3>
 <p>Upgrading from SDK 1.56.0 → 1.62.0 caused a <strong>-12.5% overall benchmark regression</strong> on gemini-2.5-flash, with code editing dropping from <strong>57.1% → 0%</strong> — a complete failure.</p>
 <table>
@@ -1263,22 +1302,67 @@ Each entry includes root cause, workaround status, and upgrade/resolution criter
 </blockquote>
 <p>This change lets incomplete responses (empty or whitespace-only text parts) pass through unchecked, causing the model's actual code output to be silently swallowed.</p>
 <h3 id="workarounds-in-place">Workarounds in place<a class="headerlink" href="#workarounds-in-place" title="Permanent link">&para;</a></h3>
-<p><strong>1. Version pin</strong> — <code>pyproject.toml</code> constrains both optional and dev dependencies:
-<div class="language-toml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="s2">&quot;google-genai&gt;=1.0.0,&lt;1.57.0&quot;</span>
+<p><strong>1. Version pin (ceiling)</strong> — <code>pyproject.toml</code> constrains both optional and
+dev dependencies to the last benchmark-verified version:
+<div class="language-toml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="s2">&quot;google-genai&gt;=1.0.0,&lt;2.12.0&quot;</span>
 </span></code></pre></div></p>
-<p><strong>2. Defensive filter</strong> — <code>_filter_empty_parts()</code> in <code>ppxai/engine/providers/gemini.py</code>
-strips empty text parts from all three response paths (streaming, non-streaming, sync).
-This remains active even with the pin as a safety net if the pin is ever relaxed.</p>
-<h3 id="how-to-verify-a-fix-before-upgrading">How to verify a fix before upgrading<a class="headerlink" href="#how-to-verify-a-fix-before-upgrading" title="Permanent link">&para;</a></h3>
+<p><strong>2. ~~Defensive filter~~ — dead code, DELETED (2026-07-12).</strong>
+<code>_filter_empty_parts()</code> in <code>ppxai/engine/providers/gemini.py</code> was believed to
+strip empty text parts from the response paths as a safety net. A source
+sweep found it had <strong>zero call sites</strong> — the v1.15.3 call sites were lost in
+a later refactor, so no filter was active for any of the verdicts above.
+(This also means the 2.11.0 benchmark pass was achieved with NO mitigation in
+the path — stronger evidence for the SDK itself.) Resolved via
+<a href="../debt-inventory/">debt Item 41</a>: the function is deleted (the response
+parse loops skip empty text parts inherently), a sentinel test in
+<code>tests/test_gemini_native_tool_loop.py</code> pins the deletion, and the same
+change wired Gemini's native function_call/function_response transcript
+threading. Post-change gate 3× gemini-2.5-flash on 2.11.0: code editing
+100/100/100, overall 80.7/72.6/73.8.</p>
+<h3 id="how-to-verify-before-upgrading-benchmark-gate-the-only-gate">How to verify before upgrading (benchmark gate — the ONLY gate)<a class="headerlink" href="#how-to-verify-before-upgrading-benchmark-gate-the-only-gate" title="Permanent link">&para;</a></h3>
+<p>There is no upstream signal to wait for (see <strong>Upstream tracking</strong>), and no
+code-side mitigation is active (see #2 above) — only the benchmark can prove
+a candidate version:</p>
 <ol>
-<li>Check upstream issues <a href="https://github.com/googleapis/python-genai/issues/1789">#1789</a> and <a href="https://github.com/googleapis/python-genai/issues/1818">#1818</a> are closed.</li>
-<li>Bump the pin in <code>pyproject.toml</code> to the candidate version and run <code>uv lock</code>.</li>
-<li>Run the benchmark suite against gemini-2.5-flash (or gemini-3-flash-preview):
-   <div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>python<span class="w"> </span>benchmarks/llm-eval/run_benchmarks.py<span class="w"> </span>--model<span class="w"> </span>gemini-2.5-flash<span class="w"> </span>--runs<span class="w"> </span><span class="m">3</span>
-</span></code></pre></div></li>
+<li>Bump the pin in <code>pyproject.toml</code> (both the <code>gemini</code> extra and the main
+   deps carry it) to the candidate version and run <code>uv lock</code> + <code>uv sync --all-extras</code>.</li>
+<li>Run the Gemini unit suites first (cheap gate):
+   <code>pytest tests/test_gemini_tool_schema.py tests/test_gemini_null_parts.py tests/test_gemini_extras.py</code>.</li>
+<li>Run the benchmark suite (3 separate invocations — there is no <code>--runs</code>
+   flag) against gemini-2.5-flash (or gemini-3-flash-preview):
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nb">cd</span><span class="w"> </span>benchmarks/llm-eval<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>python<span class="w"> </span>benchmark.py<span class="w"> </span>--provider<span class="w"> </span>gemini<span class="w"> </span>--model<span class="w"> </span>gemini-2.5-flash
+</span></code></pre></div>
+   Beware free-tier rate-limit contamination — throttled runs read as fake
+   quality regressions.</li>
 <li>Verify code editing score ≥50% and overall score ≥75%.</li>
-<li>If passing, remove the <code>&lt;1.57.0</code> upper bound and update this entry.</li>
+<li>If passing, raise the ceiling to the verified version (e.g. <code>&lt;2.12.0</code>) —
+   do NOT remove the upper bound entirely; this SDK has regressed us before,
+   so every ceiling raise goes through this gate.</li>
 </ol>
+<h3 id="upstream-review-log">Upstream review log<a class="headerlink" href="#upstream-review-log" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>2026-07-11 (verdict)</strong>: pin raised to <code>&lt;2.12.0</code>, locked at 2.11.0.
+  Benchmark gate 3× gemini-2.5-flash: code editing 100/100/100%, overall
+  74.4/70.2/74.4% (prior same-suite run on 1.56.0: 68.6%; the ≥75% figure in
+  the gate was calibrated to the old 26-test suite — today's suite has 36
+  tests incl. agentic_tool_loops + efficiency). Gemini unit suites 34/34.
+  Note: the Feb rollback log shows <code>_filter_empty_parts()</code> did NOT fix the
+  0% on 1.62.0 (only the rollback did). Corrected 2026-07-12: the filter is
+  not even defense-in-depth — it has zero call sites (dead code since a
+  post-v1.15.3 refactor; debt Item 41) — so it cannot be the reason 2.11.0
+  passes. Later the same day it was deleted outright (Item 41 resolution)
+  and the gate re-run 3× post-deletion + native tool-transcript threading:
+  code editing 100/100/100, overall 80.7/72.6/73.8 — the pin verdict holds.</li>
+<li><strong>2026-07-11</strong> (SDK at 2.11.0, released 2026-07-09): change not reverted;
+  no GenerateContent-surface breaking changes in 1.57.0→2.11.0 (all breaking
+  entries scoped to the Interactions/Agent-Platform surface; v2.0.0 notes
+  explicitly disclaim GenerateContent impact). AFC breaking change announced
+  in 2.8.0 docs — ppxai does not use automatic function calling. Classic
+  <code>Schema</code> still rejects <code>oneOf</code> (only Agent-Platform <code>JSONSchema</code> gained
+  <code>one_of</code> in 1.74.0) — the <code>_sanitize_schema_for_gemini()</code> downgrade in
+  <code>gemini.py</code> stays required at any version;
+  <code>tests/test_gemini_tool_schema.py</code> pins both directions.</li>
+</ul>
 <h3 id="archive">Archive<a class="headerlink" href="#archive" title="Permanent link">&para;</a></h3>
 <p>Full analysis, workaround implementation notes, and rollback log:
 - <code>docs/archive/v1.15.3/GEMINI-SDK-REGRESSION-ANALYSIS.md</code>

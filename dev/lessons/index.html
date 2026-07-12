@@ -460,14 +460,42 @@
   
   
     <li class="md-nav__item">
-      <a href="../agent-mode-guide/" class="md-nav__link">
+      <a href="../task-agent-guide/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Agent Mode
+    Task Agent Platform
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../session-agent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Session Agent Mode
   
 
     
@@ -1282,6 +1310,22 @@ discoverable later.</p>
 <li><a href="mcp-not-yet-integrated/">mcp-not-yet-integrated.md</a> — ppxai
   has filename-level MCP breadcrumbs but zero integration; v1.20.x
   plan at <code>docs/MCP-INTEGRATION-PLAN.md</code></li>
+<li><a href="config-source-resolution/">config-source-resolution.md</a> —
+  <code>PPXAI_CONFIG_FILE</code> (often set via repo-root <code>.env</code>) overrides
+  <code>./ppxai-config.json</code>; editing the obvious project config can
+  silently have no effect on the server</li>
+<li><a href="loopback-ui-auth-exemption/">loopback-ui-auth-exemption.md</a> —
+  with auth on, loopback <code>/chat</code> + <code>/files/read</code> are bearer-EXEMPT by
+  source-IP alone (any local process, not just the operator's browser);
+  deliberate desktop-UX choice, not a bug — don't drive-by "fix" it</li>
+<li><a href="testclient-per-request-event-loop/">testclient-per-request-event-loop.md</a> —
+  non-context <code>TestClient(app)</code> gives every request its own event loop;
+  a background task that must live ACROSS requests (T5 consent park)
+  silently dies — use <code>with TestClient(app) as c:</code> (<code>ctx_client</code> fixture)</li>
+<li><a href="stale-server-invalidates-acceptance/">stale-server-invalidates-acceptance.md</a> —
+  ppxai-server binds a FIXED port (54320); a stale server makes a freshly
+  spawned binary die silently, so acceptance tests the OLD process — free
+  the port first (<code>gateway-smoke.py</code> now guards this)</li>
 </ul>
 
 

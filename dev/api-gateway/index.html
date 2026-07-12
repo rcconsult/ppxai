@@ -460,14 +460,42 @@
   
   
     <li class="md-nav__item">
-      <a href="../agent-mode-guide/" class="md-nav__link">
+      <a href="../task-agent-guide/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Agent Mode
+    Task Agent Platform
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../session-agent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Session Agent Mode
   
 
     
@@ -1141,6 +1169,34 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#v1agent-in-development-not-yet-sealed-v1190" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        /v1/agent/* — in development, NOT yet sealed (v1.19.0)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="/v1/agent/* — in development, NOT yet sealed (v1.19.0)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#run-working-directory-v119x-workdir-alignment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Run working directory (v1.19.x workdir-alignment)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#whats-not-in-the-gateway-tier" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1202,6 +1258,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#transport-perimeter-cors-host-validation-v119x" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Transport perimeter: CORS + Host validation (v1.19.x)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#what-auth-doesnt-replace" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1213,10 +1280,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#limitations-of-v1" class="md-nav__link">
+  <a href="#limitations-of-the-env-only-env-provider" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Limitations of v1
+        Limitations of the env-only (env) provider
       
     </span>
   </a>
@@ -1224,10 +1291,32 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#future-directions" class="md-nav__link">
+  <a href="#the-token-registry-file-provider-v1tokens-shipped-v1190" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Future directions
+        The token registry (file provider, /v1/tokens) — shipped v1.19.0
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#whats-still-not-in-v1190" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What's still not in v1.19.0
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-changed-v1183-v1190" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What changed: v1.18.3 → v1.19.0
       
     </span>
   </a>
@@ -1415,6 +1504,77 @@ external consumers should not depend on them.</p>
 <li><strong>Error message text</strong> — the structured fields (<code>detail</code>) are stable
   in shape; the prose inside may change for clarity.</li>
 </ul>
+<h3 id="v1agent-in-development-not-yet-sealed-v1190"><code>/v1/agent/*</code> — in development, NOT yet sealed (v1.19.0)<a class="headerlink" href="#v1agent-in-development-not-yet-sealed-v1190" title="Permanent link">&para;</a></h3>
+<blockquote>
+<p>⚠️ <strong>Exception to the guarantees above.</strong> The agent platform endpoints —
+<code>POST /v1/agent/run</code>, <code>POST /v1/agent/task</code>, <code>GET /v1/agent/runs[/&lt;id&gt;]</code>,
+<code>/v1/agent/runs/&lt;id&gt;/{events,cancel,respond,ack,resume}</code>, the run-event / monitor-SSE
+event schema, and <code>POST /v1/tokens</code> — are <strong>in development and NOT covered
+by the v1 stability contract</strong>, despite living under <code>/v1/</code>. Their request,
+response, and event shapes WILL change.</p>
+<p>They become the agent consumer contract only once the agents API is
+<strong>designed, tested, validated, and explicitly sealed</strong> — at which point this
+exemption is removed and the guarantees above apply. Until then, do not build
+against them as stable. (The blanket "every <code>/v1/</code> endpoint is stable" rule
+above does <strong>not</strong> apply to this set while this notice stands.)</p>
+<p>The tool-capable <code>POST /v1/agent/task</code> tier additionally ships <strong>default-off</strong>
+(<code>tools.agent.task_tier_enabled</code>) and is sandboxed in-process only — safe for
+<strong>trusted operators</strong> (the task/grant is operator-authored), not for untrusted
+input. See <a href="../decisions/0003-agent-platform-architecture/">decisions/0003-agent-platform-architecture.md</a>.</p>
+</blockquote>
+<h4 id="run-working-directory-v119x-workdir-alignment">Run working directory (v1.19.x workdir-alignment)<a class="headerlink" href="#run-working-directory-v119x-workdir-alignment" title="Permanent link">&para;</a></h4>
+<p>A <code>/v1/agent/task</code> run's relative tool paths resolve deterministically —
+never against the server process launch dir:</p>
+<ol>
+<li><code>workdir</code> in the request body — per-run intent like <code>provider</code>/<code>model</code>.
+   The ppxai clients thread their <strong>session working dir</strong> automatically
+   (<code>--work-dir</code> on <code>/task run</code> overrides), so "summarize README.md" means
+   the same thing in chat and in a task run. Must exist (400 otherwise).</li>
+<li>Absent: the <strong>server default</strong> — <code>server.working_dir</code> config, else the
+   user's home (the same default every new UI session gets).</li>
+<li>Filesystem seal ON (<code>tools.agent.sandbox.enforcement: "in_process"</code>):
+   the per-run jail <strong>always wins</strong>; a requested <code>workdir</code> is ignored and
+   the launch response carries <code>workdir_ignored: true</code> (clients render a
+   warning). Warn-don't-fail keeps the same invocation portable across
+   sealed and unsealed hosts.</li>
+</ol>
+<p>The effective workdir is recorded on the run meta (<code>workdir</code>, <code>null</code> =
+default/jail), returned by <code>GET /v1/agent/runs/&lt;id&gt;</code>, reused verbatim by
+<code>POST .../resume</code>, and inherited by <code>spawn_subagent</code> children. The
+tool-free <code>/v1/agent/run</code> tier has no <code>workdir</code> — it executes no tools,
+so there is nothing to resolve paths against.</p>
+<p><strong>Sandbox posture profiles.</strong> The seal is <em>operator posture per
+deployment</em>, never a wire flag — there is deliberately no per-run
+"unseal" (any bearer holder could otherwise escape the operator's
+config):</p>
+<table>
+<thead>
+<tr>
+<th>Profile</th>
+<th>Seal</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Desktop / IDE assistant</td>
+<td>OFF (default)</td>
+<td>The user is the trust boundary; runs work on the user's own project via the session workdir; T5 consent gates risky actions.</td>
+</tr>
+<tr>
+<td>Coder pod (k8s)</td>
+<td>OFF</td>
+<td>The pod + NetworkPolicies + app-layer bearer are the real walls; the in-process seal would add friction, not protection. Per-run egress allowlists (AC-2) still apply.</td>
+</tr>
+<tr>
+<td>Embedded agents (e.g. ppxai-sre)</td>
+<td>ON</td>
+<td>Unattended runs over untrusted input (prompt-injection surface) get least-privilege reads: the jail plus skill-mounted read roots. Relaxation = mount more roots via <code>--skill</code>, not unsealing.</td>
+</tr>
+</tbody>
+</table>
+<p>For genuinely hostile workloads the answer is OS isolation (ADR 0003
+tier-d container), not a stronger in-process jail.</p>
 <h3 id="whats-not-in-the-gateway-tier">What's not in the gateway tier<a class="headerlink" href="#whats-not-in-the-gateway-tier" title="Permanent link">&para;</a></h3>
 <p>These endpoints are <strong>internal</strong> and may change at any time:</p>
 <ul>
@@ -1433,7 +1593,12 @@ of these, file an issue: either the <code>/v1/</code> surface needs to grow, or
 your use case is internal-client-shaped and we should talk about it.</p>
 <hr />
 <h2 id="authentication">Authentication<a class="headerlink" href="#authentication" title="Permanent link">&para;</a></h2>
-<p><strong>v1.18.3 status: optional bearer-token auth (opt-in, default off).</strong></p>
+<p><strong>v1.19.0 status: optional bearer-token auth, backed by a pluggable
+provider chain (opt-in; default is still unauthenticated on an unset
+<code>PPXAI_API_TOKEN</code>).</strong> A <code>file</code> provider can additionally be configured
+to enforce auth unconditionally and to unlock a self-service token
+registry at <code>/v1/tokens</code>. See "What changed" below for the delta from
+the v1.18.3 single-token model.</p>
 <h3 id="threat-model">Threat model<a class="headerlink" href="#threat-model" title="Permanent link">&para;</a></h3>
 <p>ppxai-server is an LLM proxy with API-key-spending power. Any client
 that reaches its HTTP port can spend tokens on your provider accounts,
@@ -1467,34 +1632,152 @@ on your behalf."</p>
 </tbody>
 </table>
 <h3 id="enabling-auth">Enabling auth<a class="headerlink" href="#enabling-auth" title="Permanent link">&para;</a></h3>
-<p>Set the <code>PPXAI_API_TOKEN</code> environment variable to the token clients
-must present. Empty / whitespace-only values are treated as "auth
-disabled" so a stray empty config entry doesn't lock everyone out.</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">PPXAI_API_TOKEN</span><span class="o">=</span><span class="s2">&quot;</span><span class="k">$(</span>openssl<span class="w"> </span>rand<span class="w"> </span>-hex<span class="w"> </span><span class="m">32</span><span class="k">)</span><span class="s2">&quot;</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>ppxai-server
+<p>Auth enforcement is decided by a <strong>provider chain</strong>, configured under
+<code>server.secrets.providers</code> in <code>ppxai-config.json</code>. Each entry is
+<code>{"type": "env", "var": "..."}</code> or <code>{"type": "file", "path": "..."}</code>.
+Omit the whole <code>server.secrets</code> block (or leave <code>providers</code> empty) and
+the server falls back to a single <code>env</code> provider on <code>PPXAI_API_TOKEN</code> —
+byte-identical to the v1.18.3 behavior.</p>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">&quot;server&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">&quot;secrets&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="nt">&quot;providers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">      </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;file&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;path&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;~/.ppxai/tokens.json&quot;</span><span class="w"> </span><span class="p">},</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">      </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;env&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;var&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;PPXAI_API_TOKEN&quot;</span><span class="w"> </span><span class="p">}</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">    </span><span class="p">]</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">  </span><span class="p">}</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="p">}</span>
 </span></code></pre></div>
+<p>The simplest opt-in — no config file changes — is still the env var:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">PPXAI_API_TOKEN</span><span class="o">=</span><span class="s2">&quot;</span><span class="k">$(</span>openssl<span class="w"> </span>rand<span class="w"> </span>-hex<span class="w"> </span><span class="m">32</span><span class="k">)</span><span class="s2">&quot;</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>ppxai-server
+</span></code></pre></div>
+<p>Empty / whitespace-only values of <code>PPXAI_API_TOKEN</code> are treated as
+"this provider doesn't enforce" so a stray empty config entry doesn't
+lock everyone out.</p>
 <p>Clients send the token via the standard <code>Authorization: Bearer …</code>
 header (case-insensitive scheme per RFC 7235):</p>
-<div class="language-http highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="err">POST /v1/oneshot</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="err">Authorization: Bearer &lt;token&gt;</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="err">Content-Type: application/json</span>
+<div class="language-http highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="err">POST /v1/oneshot</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="err">Authorization: Bearer &lt;token&gt;</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="err">Content-Type: application/json</span>
 </span></code></pre></div>
 <h3 id="behavior">Behavior<a class="headerlink" href="#behavior" title="Permanent link">&para;</a></h3>
+<p>Whether auth is enforced is a per-provider decision, evaluated across
+the whole chain (<code>ppxai/server/auth.py::_provider_enforces_auth</code>):</p>
 <ul>
-<li><strong>Auth disabled (default):</strong> all routes serve as before. Localhost
-  desktop UX unchanged.</li>
-<li><strong>Auth enabled:</strong> every request needs the right <code>Authorization</code>
-  header or it gets <code>401 Unauthorized</code> with <code>WWW-Authenticate: Bearer
-  realm="ppxai"</code>.</li>
+<li><strong><code>env</code> provider</strong> enforces only while its var is set and non-empty
+  — unset means "this provider is inactive," matching the v1.18.3
+  loopback desktop UX.</li>
+<li><strong>A mint-capable provider (<code>file</code>) enforces by mere presence</strong>, even
+  with zero tokens minted. An empty token store means "no one gets in"
+  (401), not "everyone gets in" — this closes the footgun where
+  revoking the last token would otherwise silently open the server.</li>
+<li><strong>A read-only provider whose capabilities can't be introspected</strong>
+  (a future non-<code>env</code> backend) fails closed and is assumed to enforce.</li>
+<li><strong>No providers configured at all</strong> → auth disabled, all routes serve
+  as before.</li>
+</ul>
+<p>When auth is enforced:</p>
+<ul>
+<li>Every request needs a valid <code>Authorization: Bearer &lt;token&gt;</code> header,
+  or it gets <code>401 Unauthorized</code> with <code>WWW-Authenticate: Bearer
+  realm="ppxai"</code>. <strong>A presented bearer is always validated</strong> — even on
+  a route that would otherwise be loopback-exempt (see below) — so an
+  invalid or expired token on an exempt route still 401s instead of
+  being silently ignored.</li>
 <li><strong>CORS preflight (OPTIONS) is exempted</strong> — browsers don't send
   <code>Authorization</code> on preflight by spec; the actual request that
   follows is auth-checked normally.</li>
-<li><strong>The token is read from the env var on every request.</strong> Operators
-  can rotate / disable / re-enable by updating the variable without a
-  server restart (e.g. via k8s ConfigMap reload, though the pod still
-  needs to see the new value — env-var reload depends on your
-  deployment mechanism).</li>
+<li><strong>Loopback exemptions</strong> apply only when the caller presents <strong>no</strong>
+  bearer at all (a genuine local browser has none to send). "Loopback"
+  means the peer IP is <code>127.0.0.1</code> / <code>::1</code> / <code>localhost</code> <strong>and</strong> the
+  request carries no proxy-forwarding header (<code>X-Forwarded-For</code> etc.)
+  — a request that passed through a reverse proxy is never treated as
+  loopback, even if the rewritten IP looks local. The exemptions:</li>
+<li>Unauthenticated loopback <code>POST /v1/tokens</code>, whenever a mint-capable
+    (<code>file</code>) provider is configured — not gated on the store being
+    empty; repeat local mints are deliberate (this is how an operator
+    bootstraps and re-provisions a file-backed deployment).</li>
+<li>The loopback UI/static/<code>/chat</code> surface — the local desktop/web
+    client carries no bearer by default.</li>
+<li>The exact path <code>POST /v1/agent/run</code> (the tool-free oneshot run
+    tier) — behaviorally identical to <code>/v1/oneshot</code>, so it's exempted
+    the same way; the tool-capable <code>/v1/agent/task</code> tier and
+    <code>/runs/{id}/cancel</code> stay protected.</li>
+<li>Loopback <code>GET</code> of an <strong>unowned</strong> run's metadata or event stream
+    (<code>/v1/agent/runs/{id}</code> and <code>/v1/agent/runs/{id}/events</code>) — i.e. a
+    run the token-less local browser itself created via the exempt
+    <code>POST /v1/agent/run</code>. A run created with a bearer (any <code>/task</code> run,
+    or any run minted by an authenticated caller) is <strong>not</strong> exempt.</li>
+<li>CORS preflight (<code>OPTIONS</code>).</li>
+<li><strong>Everything else under <code>/v1/agent</code> and <code>/v1/tokens</code> stays
+  bearer-protected even from loopback</strong> — a local browser being
+  trusted to load the UI does not extend to reading another owner's
+  run transcripts or administering tokens.</li>
+<li><strong>The env provider's var is read live on every request.</strong> Operators
+  can rotate / disable / re-enable that provider by updating the
+  variable without a server restart (e.g. via k8s ConfigMap reload,
+  though the pod still needs to see the new value — env-var reload
+  depends on your deployment mechanism). A <code>file</code> provider's store is
+  likewise re-read per request (no server restart needed to mint,
+  revoke, or pick up a manually edited <code>tokens.json</code>).</li>
 </ul>
+<h3 id="transport-perimeter-cors-host-validation-v119x">Transport perimeter: CORS + Host validation (v1.19.x)<a class="headerlink" href="#transport-perimeter-cors-host-validation-v119x" title="Permanent link">&para;</a></h3>
+<p>Independent of bearer auth, the server hardens its <strong>local transport</strong> against
+a malicious website (or a DNS-rebinding attacker) driving the engine over
+loopback. Two controls, both <strong>bind-conditional</strong> and secure-by-default for the
+desktop, overridable for a gateway/coder deployment:</p>
+<ul>
+<li><strong>CORS</strong> defaults to the app's own <strong>loopback origins</strong> (regex
+  <code>^https?://(127\.0\.0\.1|localhost)(:\d+)?$</code>), not <code>*</code>. The old
+  <code>allow_origins=["*"] + allow_credentials=True</code> made Starlette <em>reflect</em> any
+  Origin (it can't legally send <code>*</code> with credentials), i.e. trust every website
+  the user visited. The desktop web UI is same-origin with the server, so CORS
+  never blocks it; a third-party site is refused. A gateway with a genuinely
+  cross-origin browser client sets <strong><code>PPXAI_ALLOWED_ORIGINS</code></strong> (comma-separated).</li>
+<li><strong>Host-header validation</strong> rejects a request whose <code>Host</code> isn't a loopback
+  name with <code>400 {"error":"invalid_host"}</code> — anti-DNS-rebinding. Exempts
+  <code>/health</code>+<code>/healthz</code> (kubelet probes send <code>Host=&lt;pod IP&gt;</code>) and CORS preflight
+  (<code>OPTIONS</code>).</li>
+</ul>
+<p><strong>Bind-conditional behavior</strong> (the server knows its bind host):</p>
+<table>
+<thead>
+<tr>
+<th>Bind</th>
+<th><code>PPXAI_TRUSTED_HOSTS</code></th>
+<th>Host validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>loopback (<code>127.0.0.1</code>, desktop default)</td>
+<td>unset</td>
+<td>strict — loopback only</td>
+</tr>
+<tr>
+<td>wide (<code>0.0.0.0</code>, gateway/coder)</td>
+<td>set to your host(s)</td>
+<td>loopback + those hosts</td>
+</tr>
+<tr>
+<td>wide (<code>0.0.0.0</code>)</td>
+<td>unset</td>
+<td><strong>permissive + one-time warn</strong> (non-breaking fallback)</td>
+</tr>
+<tr>
+<td>any</td>
+<td><code>*</code></td>
+<td>disabled</td>
+</tr>
+</tbody>
+</table>
+<p>The wide-bind-permissive fallback means upgrading the server image alone never
+starts 400ing an existing gateway before its env is set — but you <strong>should</strong> set
+<code>PPXAI_TRUSTED_HOSTS</code> to your ingress host to actually enable the protection.
+The k8s coder deployment does this automatically: the session-manager threads
+<code>PPXAI_TRUSTED_HOSTS</code> + <code>PPXAI_ALLOWED_ORIGINS</code> from <code>INGRESS_HOST</code> into every
+per-user pod (see <code>deploy/</code>). This is defense-in-depth atop the ingress
+NetworkPolicy — not a replacement for it.</p>
 <h3 id="what-auth-doesnt-replace">What auth doesn't replace<a class="headerlink" href="#what-auth-doesnt-replace" title="Permanent link">&para;</a></h3>
 <ul>
 <li><strong>NetworkPolicy / mTLS / firewall rules</strong> are still your floor.
@@ -1506,60 +1789,110 @@ header (case-insensitive scheme per RFC 7235):</p>
 <li><strong>Prompt-injection defenses</strong> are not auth's job. A malicious prompt
   body still works regardless of the caller's identity.</li>
 </ul>
-<h3 id="limitations-of-v1">Limitations of v1<a class="headerlink" href="#limitations-of-v1" title="Permanent link">&para;</a></h3>
-<p>The v1.18.3 model is <strong>single shared token</strong>. Deliberately scoped to
-unblock the loopback-leaving deployments without committing to a
-larger design. Specifically NOT in v1:</p>
+<h3 id="limitations-of-the-env-only-env-provider">Limitations of the env-only (<code>env</code>) provider<a class="headerlink" href="#limitations-of-the-env-only-env-provider" title="Permanent link">&para;</a></h3>
+<p>The <strong>single-shared-token</strong> model — an <code>env</code> provider with no <code>file</code>
+provider alongside it — is still the default and is deliberately
+minimal. It does NOT give you:</p>
 <ul>
 <li>Multiple per-agent tokens (everyone uses the same secret).</li>
-<li>Per-token attribution in logs (the audit trail says "authenticated
-  caller," not "outlook-monitor").</li>
+<li>Per-token attribution (the audit trail says "authenticated caller,"
+  not "outlook-monitor").</li>
 <li>Token rotation / expiry (you rotate by changing the env var; no
   graceful handover window).</li>
 <li>Scoped tokens (a token that can call <code>/v1/oneshot</code> but not <code>/chat</code>).</li>
 <li>Rate-limiting per token.</li>
 <li>OAuth/OIDC integration (no JWT validation; no corporate IdP).</li>
 </ul>
-<p>If your use case needs any of these, see "Future directions" below
-and either file an issue or write the ADR.</p>
-<h3 id="future-directions">Future directions<a class="headerlink" href="#future-directions" title="Permanent link">&para;</a></h3>
-<p>The natural next step is a <strong>token registry</strong> managed via gateway
-endpoints — closer to GitHub PATs than to a login flow:</p>
+<p>Everything except OAuth/OIDC and per-token rate-limiting is available
+today by adding a <code>file</code> provider to the chain — see below.</p>
+<h3 id="the-token-registry-file-provider-v1tokens-shipped-v1190">The token registry (<code>file</code> provider, <code>/v1/tokens</code>) — shipped v1.19.0<a class="headerlink" href="#the-token-registry-file-provider-v1tokens-shipped-v1190" title="Permanent link">&para;</a></h3>
+<p>Configuring a <code>file</code> provider (<code>{"type": "file", "path":
+"~/.ppxai/tokens.json"}</code>) under <code>server.secrets.providers</code> turns on a
+multi-token registry, managed via three gateway endpoints
+(<code>ppxai/server/routes/tokens_v1.py</code>). <strong>Shipped ≠ sealed:</strong> these
+endpoints work as documented here, but their request/response shapes
+remain under the <code>/v1/agent/*</code> in-development exemption above — don't
+build against them as a frozen contract until that notice is removed.</p>
 <ul>
-<li><code>POST /v1/tokens</code> — create a new token with a name and optional
-  scopes. Returns <code>{token_id, token_value}</code>. The full value is shown
-  exactly once (like GitHub).</li>
-<li><code>GET /v1/tokens</code> — list tokens (without values) — <code>[{id, name,
-  scopes, created_at, last_used_at}]</code>.</li>
-<li><code>DELETE /v1/tokens/{id}</code> — revoke a token.</li>
-<li><code>POST /v1/tokens/{id}/rotate</code> — generate a new value, invalidate
-  the old, return the new value.</li>
+<li><code>POST /v1/tokens</code> — mint a token. Body: <code>{"owner": "&lt;principal&gt;",
+  "roles": ["..."], "ttl_s": &lt;optional seconds&gt;}</code>. Returns
+  <code>{"token": "&lt;raw material&gt;", "meta": {token_id, owner, roles,
+  expires_at, revoked, source}}</code>. <strong>The raw <code>token</code> value is returned
+  exactly once</strong> (GitHub-PAT style) — it is never persisted and never
+  logged; only a salted SHA-256 hash (<code>sha256:&lt;salt&gt;:&lt;digest&gt;</code>) is
+  written to <code>~/.ppxai/tokens.json</code>, one random salt per token, so a
+  stolen store file can't be replayed into a working token.</li>
+<li><code>GET /v1/tokens</code> — list token <strong>metadata only</strong>, never material:
+  <code>[{token_id, owner, roles, expires_at, revoked, source}]</code>.</li>
+<li><code>DELETE /v1/tokens/{token_id}</code> — revoke a token. Revocation is
+  one-way; a second revoke of the same id 404s (indistinguishable from
+  an unknown id, see owner-scoping below).</li>
 </ul>
-<p>This would supersede the env-var token (kept as a bootstrap mechanism
-for the first token). Each token can carry:</p>
+<p>There is no rotate endpoint — rotation is mint-a-new-token +
+revoke-the-old-one.</p>
+<p><strong>Owner-scoping.</strong> An authenticated remote caller may only list its own
+<code>owner</code>'s tokens (others are filtered out of the <code>GET</code> response) and
+mint only under its own <code>owner</code> (minting for a different owner is
+<code>403</code>). Revoking a token owned by someone else 404s — the same status
+as revoking an unknown id — so ownership can't be probed via status
+code. The <strong>unscoped operator</strong> — no bearer presented, either because
+auth is disabled or because the request qualifies for a loopback
+exemption — may administer tokens for any owner; this is how an
+operator bootstraps or re-provisions a deployment from the local
+machine.</p>
+<p><strong>Mixed chains.</strong> A chain can run <code>file</code> alongside <code>env</code> (see the
+config example above) so an existing <code>PPXAI_API_TOKEN</code> deployment keeps
+working unchanged while individual per-agent tokens are minted
+incrementally. Mutating operations always route to the first
+capable provider in the chain; against an <code>env</code>-only (read-only) chain,
+<code>POST</code>/<code>DELETE /v1/tokens</code> return <code>405</code> — configure a <code>file</code> provider
+to unlock them.</p>
+<p><strong>Roles.</strong> The <code>roles</code> field is accepted and stored today for future
+routing/authz use; the current auth/authz gate does not yet branch on
+role content — it's a forward-compatible label, not yet an enforcement
+axis.</p>
+<h3 id="whats-still-not-in-v1190">What's still not in v1.19.0<a class="headerlink" href="#whats-still-not-in-v1190" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong><code>name</code></strong> for audit attribution ("outlook-monitor", "incident-responder").</li>
-<li><strong><code>scopes</code></strong> like <code>["oneshot:invoke", "chat:read"]</code> so a classifier
-  agent can call <code>/v1/oneshot</code> but can't <code>/chat</code> with tools.</li>
-<li><strong><code>expires_at</code></strong> for time-bounded rotation.</li>
-<li><strong><code>last_used_at</code></strong> for stale-token detection.</li>
+<li>Scoped/least-privilege tokens (a <code>roles</code> label exists, but no gate
+  currently restricts a token to a subset of endpoints).</li>
+<li>Rate-limiting per token.</li>
+<li>OAuth/OIDC integration (no JWT validation; no corporate IdP). If your
+  use case needs this, file an issue or write an ADR — the design
+  space (validate JWTs from a configured issuer, e.g. Auth0/Okta/Azure
+  AD/k8s ServiceAccount tokens, with identity from <code>sub</code>/<code>aud</code>/custom
+  claims) is still open and unclaimed by any code; a future OIDC surface
+  would live under <code>/v1/auth/...</code> precisely because <code>/v1/tokens</code> is
+  already spoken for by the shipped PAT-style registry above.</li>
 </ul>
-<p>For corporate environments, a third direction is <strong>OIDC / JWT
-validation</strong>: drop the local token registry, validate JWTs from a
-configured issuer (Auth0, Okta, Azure AD, k8s ServiceAccount tokens).
-Each call's identity comes from the JWT's <code>sub</code> / <code>aud</code> / custom
-claims; ppxai-server doesn't store any secrets. This is the
-production-grade option and ships as <code>/v1/auth/jwt</code> config plus an
-optional path-based verification policy. Defer until there's actual
-demand.</p>
-<p><strong>Naming note:</strong> the future endpoints are named <code>/v1/tokens</code> (CRUD on
-API tokens, modeled after GitHub PATs) rather than <code>/v1/auth</code> (which
-typically means OAuth-style login flows). <code>/v1/auth/...</code> is reserved
-for the OIDC/JWT direction if that lands.</p>
-<p>These are speculative — no commitment until an ADR pins the design.
-The v1.18.3 single-token model intentionally has no migration cost
-to the registry version (env-var bootstrap stays valid; registry
-becomes the production path).</p>
+<h3 id="what-changed-v1183-v1190">What changed: v1.18.3 → v1.19.0<a class="headerlink" href="#what-changed-v1183-v1190" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>v1.18.3:</strong> a single optional bearer via <code>PPXAI_API_TOKEN</code>, checked
+  directly in <code>server/auth.py</code>. No <code>/v1/tokens</code>. No loopback carve-outs
+  beyond CORS preflight.</li>
+<li><strong>v1.19.0 (Inc 8a/8b):</strong> auth delegates to a pluggable
+  <code>ProviderChain</code> (<code>ppxai/server/secrets/</code>). With no <code>server.secrets</code>
+  config, behavior is byte-identical to v1.18.3 (a single <code>env</code>
+  provider is synthesized as the default). Adding a <code>file</code> provider
+  unlocks the <code>/v1/tokens</code> registry, owner-scoped multi-token
+  management, and per-run authorization (a run created with a bearer
+  is owned by that bearer's principal; loopback reads of <em>unowned</em> runs
+  stay exempt, owned runs do not). This is additive and non-breaking:
+  the env-var bootstrap keeps working standalone or alongside a <code>file</code>
+  provider.</li>
+<li><strong>Client consequence.</strong> Because a presented bearer is always
+  validated — including on loopback-exempt routes — ppxai's own web and
+  VSCode clients (v1.19.0) attach the stored bearer <strong>only to <code>/v1/*</code>
+  paths</strong>, never globally: a stale or wrong token would otherwise 401
+  the whole desktop UI instead of just the <code>/v1/agent</code> and <code>/v1/tokens</code>
+  calls. Both clients expose the same in-chat <code>/token
+  status|set|mint|clear</code> family (mint uses the loopback bootstrap
+  exemption above; a 401 from <code>/task</code> points at it). Storage differs
+  per client: web keeps the token in <code>localStorage</code> (mint owner
+  <code>web-local</code>); VSCode keeps it in <code>SecretStorage</code> (mint owner
+  <code>vscode-local</code>), shared with the <strong>"ppxai: Set API Token"</strong> command
+  palette entry — which is also what a bare <code>/token set</code> opens there,
+  so the raw value never transits the webview transcript.</li>
+</ul>
 <hr />
 <h2 id="endpoints">Endpoints<a class="headerlink" href="#endpoints" title="Permanent link">&para;</a></h2>
 <h3 id="post-v1oneshot-stateless-completion"><code>POST /v1/oneshot</code> — stateless completion<a class="headerlink" href="#post-v1oneshot-stateless-completion" title="Permanent link">&para;</a></h3>
@@ -1568,36 +1901,36 @@ becomes the production path).</p>
 Designed for classifiers, routers, and any "given this prompt, return
 one response" workload.</p>
 <h4 id="request">Request<a class="headerlink" href="#request" title="Permanent link">&para;</a></h4>
-<div class="language-http highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="err">POST /v1/oneshot</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="err">Content-Type: application/json</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="err">{</span>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="err">  &quot;prompt&quot;: &quot;Classify this email...&quot;,          // required, non-empty</span>
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="err">  &quot;provider&quot;: &quot;nvidia&quot;,                         // optional; default = server&#39;s default_provider</span>
-</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="err">  &quot;model&quot;: &quot;qwen/qwen3.5-122b-a10b&quot;,            // optional; default = provider&#39;s default_model</span>
-</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="err">  &quot;system&quot;: &quot;You are a classifier...&quot;,          // optional system message</span>
-</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="err">  &quot;response_format&quot;: {                          // optional OpenAI-shape</span>
-</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="err">    &quot;type&quot;: &quot;json_object&quot;                       //   or &quot;json_schema&quot; with json_schema field</span>
-</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="err">  },</span>
-</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="err">  &quot;max_tokens&quot;: 512,                            // optional, &gt; 0</span>
-</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="err">  &quot;temperature&quot;: 0.0                            // optional, 0.0–2.0</span>
-</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="err">}</span>
+<div class="language-http highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="err">POST /v1/oneshot</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="err">Content-Type: application/json</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="err">{</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="err">  &quot;prompt&quot;: &quot;Classify this email...&quot;,          // required, non-empty</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="err">  &quot;provider&quot;: &quot;nvidia&quot;,                         // optional; default = server&#39;s default_provider</span>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="err">  &quot;model&quot;: &quot;qwen/qwen3.5-122b-a10b&quot;,            // optional; default = provider&#39;s default_model</span>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="err">  &quot;system&quot;: &quot;You are a classifier...&quot;,          // optional system message</span>
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="err">  &quot;response_format&quot;: {                          // optional OpenAI-shape</span>
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="err">    &quot;type&quot;: &quot;json_object&quot;                       //   or &quot;json_schema&quot; with json_schema field</span>
+</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="err">  },</span>
+</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="err">  &quot;max_tokens&quot;: 512,                            // optional, &gt; 0</span>
+</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="err">  &quot;temperature&quot;: 0.0                            // optional, 0.0–2.0</span>
+</span><span id="__span-3-14"><a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="err">}</span>
 </span></code></pre></div>
 <h4 id="response">Response<a class="headerlink" href="#response" title="Permanent link">&para;</a></h4>
-<div class="language-http highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">200</span> <span class="ne">OK</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="na">Content-Type</span><span class="o">:</span> <span class="l">application/json</span>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="p">{</span>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span><span class="nt">&quot;content&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;...&quot;</span><span class="p">,</span><span class="w">                  </span><span class="c1">// model&#39;s response text (always present, may be &quot;&quot;)</span>
-</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">  </span><span class="nt">&quot;finish_reason&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;stop&quot;</span><span class="p">,</span><span class="w">           </span><span class="c1">// &quot;stop&quot; | &quot;length&quot; | &quot;content_filter&quot; | &quot;tool_calls&quot; | null</span>
-</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">  </span><span class="nt">&quot;model&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;qwen/qwen3.5-122b-a10b&quot;</span><span class="p">,</span><span class="w"> </span><span class="c1">// resolved model (provider may echo a different ID)</span>
-</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">  </span><span class="nt">&quot;provider&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;nvidia&quot;</span><span class="p">,</span><span class="w">              </span><span class="c1">// resolved provider</span>
-</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">  </span><span class="nt">&quot;usage&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">                         </span><span class="c1">// null if the provider didn&#39;t return usage</span>
-</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">    </span><span class="nt">&quot;prompt_tokens&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">423</span><span class="p">,</span>
-</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="w">    </span><span class="nt">&quot;completion_tokens&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">87</span><span class="p">,</span>
-</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="w">    </span><span class="nt">&quot;total_tokens&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">510</span>
-</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="w">  </span><span class="p">}</span>
-</span><span id="__span-3-14"><a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="p">}</span>
+<div class="language-http highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">200</span> <span class="ne">OK</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="na">Content-Type</span><span class="o">:</span> <span class="l">application/json</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="p">{</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">  </span><span class="nt">&quot;content&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;...&quot;</span><span class="p">,</span><span class="w">                  </span><span class="c1">// model&#39;s response text (always present, may be &quot;&quot;)</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">  </span><span class="nt">&quot;finish_reason&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;stop&quot;</span><span class="p">,</span><span class="w">           </span><span class="c1">// &quot;stop&quot; | &quot;length&quot; | &quot;content_filter&quot; | &quot;tool_calls&quot; | null</span>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">  </span><span class="nt">&quot;model&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;qwen/qwen3.5-122b-a10b&quot;</span><span class="p">,</span><span class="w"> </span><span class="c1">// resolved model (provider may echo a different ID)</span>
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">  </span><span class="nt">&quot;provider&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;nvidia&quot;</span><span class="p">,</span><span class="w">              </span><span class="c1">// resolved provider</span>
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">  </span><span class="nt">&quot;usage&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">                         </span><span class="c1">// null if the provider didn&#39;t return usage</span>
+</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="w">    </span><span class="nt">&quot;prompt_tokens&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">423</span><span class="p">,</span>
+</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="w">    </span><span class="nt">&quot;completion_tokens&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">87</span><span class="p">,</span>
+</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="w">    </span><span class="nt">&quot;total_tokens&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">510</span>
+</span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="w">  </span><span class="p">}</span>
+</span><span id="__span-4-14"><a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a><span class="p">}</span>
 </span></code></pre></div>
 <h4 id="errors">Errors<a class="headerlink" href="#errors" title="Permanent link">&para;</a></h4>
 <table>
@@ -1626,11 +1959,12 @@ one response" workload.</p>
 <ul>
 <li><strong>Stateless.</strong> No session is created or mutated. Safe for high-frequency
   short-lived calls (rate-limited by the upstream provider, not by ppxai).</li>
-<li><strong>Provider support.</strong> v1 supports OpenAI-compatible providers, which
-  covers <code>local</code>, <code>custom</code>, and any deployment routed through
-  <code>OpenAICompatibleProvider</code> (NIM, vLLM, Ollama, OpenRouter, ...). Native
-  OpenAI / Perplexity / Gemini providers grow oneshot support in
-  subsequent releases; until then they return 400 with a clear message.</li>
+<li><strong>Provider support.</strong> v1.19.x: <strong>all configured providers</strong> are
+  supported. <code>oneshot()</code> is part of the <code>BaseProvider</code> contract, so
+  <code>local</code>/<code>custom</code>/NIM/vLLM/Ollama/OpenRouter <strong>and</strong> native
+  OpenAI/Perplexity/Gemini all work. The only 400 is an <em>unbuildable</em>
+  provider (unknown name / missing API key). (Pre-1.19.x this endpoint
+  rejected native providers by class — that restriction is removed.)</li>
 <li><strong><code>response_format</code>.</strong> Forwarded to the provider as-is. NVIDIA NIM,
   vLLM, and modern OpenAI-compat endpoints accept the OpenAI shape.
   Older endpoints may return 400 — that surfaces to the client as 502
@@ -1639,28 +1973,49 @@ one response" workload.</p>
   This means vendor knobs (NIM <code>chat_template_kwargs.enable_thinking</code>,
   Qwen3 <code>enable_thinking</code>, etc.) carry through without the caller
   having to know about them.</li>
+<li><strong>Native web search (opt-in, provider-side).</strong> Set
+  <code>tools.web_search.oneshot_grounding: true</code> in <code>ppxai-config.json</code> to let
+  oneshot augment a completion with the <strong>provider's own</strong> web search —
+  Gemini Google-Search grounding, Perplexity Sonar. This is <strong>Option A</strong>:
+  retrieval happens <em>inside the provider's API call</em>, so the egress
+  perimeter is unchanged (same provider host the call already reaches) and
+  <strong>no <code>web_search</code>/<code>fetch_url</code> tool is ever exposed to the model</strong> — there
+  is no prompt-injection exfiltration vector and no <code>NetworkPolicy</code>
+  involvement (that stays the <code>/v1/agent/task</code>-only egress firewall).</li>
+<li><strong>Default off.</strong> When off, behavior is byte-identical to pre-1.19.x —
+    existing consumers see no change.</li>
+<li><strong>Capability-gated.</strong> Only providers with <code>capabilities.web_search:
+    true</code> are affected (Gemini, Perplexity). For OpenAI / NVIDIA it's a
+    no-op — the flag can never reach for a tool a provider doesn't have.</li>
+<li>Gemini already grounds when <code>provider.gemini.options.enable_grounding</code>
+    is set; Perplexity sonar* models search intrinsically. This flag is the
+    single, explicit, deterministic switch so a gateway consumer can opt in
+    without depending on per-provider config.</li>
+<li>For tool-<em>using</em> agent work (granted <code>web_search</code>/<code>fetch_url</code> with an
+    egress allowlist), use <code>POST /v1/agent/task</code>, not oneshot — that's the
+    sandboxed tier where <code>NetworkPolicy</code> applies.</li>
 </ul>
 <h4 id="example-classification-with-structured-output">Example: classification with structured output<a class="headerlink" href="#example-classification-with-structured-output" title="Permanent link">&para;</a></h4>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">httpx</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="n">resp</span> <span class="o">=</span> <span class="n">httpx</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>    <span class="s2">&quot;http://ppxai-server.internal:54320/v1/oneshot&quot;</span><span class="p">,</span>
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>    <span class="n">json</span><span class="o">=</span><span class="p">{</span>
-</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>        <span class="s2">&quot;prompt&quot;</span><span class="p">:</span> <span class="p">(</span>
-</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>            <span class="s2">&quot;Classify this email&#39;s intent. Reply with JSON: &quot;</span>
-</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>            <span class="s2">&quot;{intent, confidence, reasoning}.</span><span class="se">\n\n</span><span class="s2">&quot;</span>
-</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>            <span class="sa">f</span><span class="s2">&quot;Email:</span><span class="se">\n</span><span class="si">{</span><span class="n">email_body</span><span class="si">}</span><span class="s2">&quot;</span>
-</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>        <span class="p">),</span>
-</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>        <span class="s2">&quot;system&quot;</span><span class="p">:</span> <span class="s2">&quot;You are a classifier. Reply only with JSON.&quot;</span><span class="p">,</span>
-</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>        <span class="s2">&quot;response_format&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;json_object&quot;</span><span class="p">},</span>
-</span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a>        <span class="s2">&quot;max_tokens&quot;</span><span class="p">:</span> <span class="mi">256</span><span class="p">,</span>
-</span><span id="__span-4-14"><a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a>        <span class="s2">&quot;temperature&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>
-</span><span id="__span-4-15"><a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a>    <span class="p">},</span>
-</span><span id="__span-4-16"><a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a>    <span class="n">timeout</span><span class="o">=</span><span class="mf">30.0</span><span class="p">,</span>
-</span><span id="__span-4-17"><a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a><span class="p">)</span>
-</span><span id="__span-4-18"><a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a><span class="n">resp</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
-</span><span id="__span-4-19"><a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a><span class="n">result</span> <span class="o">=</span> <span class="n">resp</span><span class="o">.</span><span class="n">json</span><span class="p">()[</span><span class="s2">&quot;content&quot;</span><span class="p">]</span>  <span class="c1"># JSON string per response_format</span>
-</span><span id="__span-4-20"><a id="__codelineno-4-20" name="__codelineno-4-20" href="#__codelineno-4-20"></a><span class="n">parsed</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">httpx</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="n">resp</span> <span class="o">=</span> <span class="n">httpx</span><span class="o">.</span><span class="n">post</span><span class="p">(</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>    <span class="s2">&quot;http://ppxai-server.internal:54320/v1/oneshot&quot;</span><span class="p">,</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>    <span class="n">json</span><span class="o">=</span><span class="p">{</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>        <span class="s2">&quot;prompt&quot;</span><span class="p">:</span> <span class="p">(</span>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>            <span class="s2">&quot;Classify this email&#39;s intent. Reply with JSON: &quot;</span>
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>            <span class="s2">&quot;{intent, confidence, reasoning}.</span><span class="se">\n\n</span><span class="s2">&quot;</span>
+</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>            <span class="sa">f</span><span class="s2">&quot;Email:</span><span class="se">\n</span><span class="si">{</span><span class="n">email_body</span><span class="si">}</span><span class="s2">&quot;</span>
+</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>        <span class="p">),</span>
+</span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>        <span class="s2">&quot;system&quot;</span><span class="p">:</span> <span class="s2">&quot;You are a classifier. Reply only with JSON.&quot;</span><span class="p">,</span>
+</span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a>        <span class="s2">&quot;response_format&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;json_object&quot;</span><span class="p">},</span>
+</span><span id="__span-5-13"><a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a>        <span class="s2">&quot;max_tokens&quot;</span><span class="p">:</span> <span class="mi">256</span><span class="p">,</span>
+</span><span id="__span-5-14"><a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a>        <span class="s2">&quot;temperature&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>
+</span><span id="__span-5-15"><a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a>    <span class="p">},</span>
+</span><span id="__span-5-16"><a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a>    <span class="n">timeout</span><span class="o">=</span><span class="mf">30.0</span><span class="p">,</span>
+</span><span id="__span-5-17"><a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a><span class="p">)</span>
+</span><span id="__span-5-18"><a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a><span class="n">resp</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
+</span><span id="__span-5-19"><a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a><span class="n">result</span> <span class="o">=</span> <span class="n">resp</span><span class="o">.</span><span class="n">json</span><span class="p">()[</span><span class="s2">&quot;content&quot;</span><span class="p">]</span>  <span class="c1"># JSON string per response_format</span>
+</span><span id="__span-5-20"><a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a><span class="n">parsed</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
 </span></code></pre></div>
 <hr />
 <h2 id="adding-new-gateway-endpoints">Adding new gateway endpoints<a class="headerlink" href="#adding-new-gateway-endpoints" title="Permanent link">&para;</a></h2>

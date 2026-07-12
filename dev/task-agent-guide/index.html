@@ -10,9 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://rcconsult.github.io/ppxai/dev/plan-v1.18.8-files-parity/">
+        <link rel="canonical" href="https://rcconsult.github.io/ppxai/dev/task-agent-guide/">
       
       
+        <link rel="prev" href="../provider-setup/">
+      
+      
+        <link rel="next" href="../session-agent-guide/">
       
       
         
@@ -23,7 +27,7 @@
     
     
       
-        <title>v1.18.8 Plan — /files/* parity + post-release code-review fixes - ppxai Documentation</title>
+        <title>Task Agent Platform - ppxai Documentation</title>
       
     
     
@@ -74,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#v1188-plan-files-parity-post-release-code-review-fixes" class="md-skip">
+        <a href="#task-agent-user-guide-task" class="md-skip">
           Skip to content
         </a>
       
@@ -114,7 +118,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              v1.18.8 Plan — /files/* parity + post-release code-review fixes
+              Task Agent Platform
             
           </span>
         </div>
@@ -403,8 +407,10 @@
       
   
   
+    
   
   
+  
     
     
     
@@ -415,13 +421,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
         
           
           <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
@@ -442,7 +446,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             
@@ -457,17 +461,230 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../agent-mode-guide/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Task Agent Platform
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
   <span class="md-ellipsis">
     
   
-    Agent Mode
+    Task Agent Platform
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-enable-the-tier" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Enable the tier
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-first-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. First run
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-command-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Command reference
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Command reference">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#flags-for-task-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Flags for /task run
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-auth-the-token-command" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Auth: the /token command
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-lifecycle-consent-hold-resume" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Lifecycle: consent → hold → resume
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-spec-files-spec" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Spec files (--spec)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-skills-skill" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Skills (--skill)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-working-directory-semantics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Working directory semantics
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-the-sandbox-seal-operator-posture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. The sandbox seal (operator posture)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#10-troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. Troubleshooting
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#11-http-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11. HTTP API
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../session-agent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Session Agent Mode
   
 
     
@@ -1118,10 +1335,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#why" class="md-nav__link">
+  <a href="#1-enable-the-tier" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Why
+        1. Enable the tier
       
     </span>
   </a>
@@ -1129,10 +1346,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#the-v1-gateway-is-out-of-scope" class="md-nav__link">
+  <a href="#2-first-run" class="md-nav__link">
     <span class="md-ellipsis">
       
-        The v1 gateway is out of scope
+        2. First run
       
     </span>
   </a>
@@ -1140,66 +1357,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#consolidated-execution-order-full-v1188-scope" class="md-nav__link">
+  <a href="#3-command-reference" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Consolidated execution order (full v1.18.8 scope)
+        3. Command reference
       
     </span>
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#extended-scope-work-detail-phases-b-c-d-e-debt-2932" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Extended-scope work detail (Phases B, C, D, E — debt 29–32)
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Extended-scope work detail (Phases B, C, D, E — debt 29–32)">
+    <nav class="md-nav" aria-label="3. Command reference">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#phase-b-item-32-envelope-cant-carry-raw-objects-landed" class="md-nav__link">
+  <a href="#flags-for-task-run" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Phase B — Item 32: envelope can't carry raw objects ✅ landed
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#phase-c-item-31-session-mutation-hygiene-landed" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Phase C — Item 31: session-mutation hygiene ✅ landed
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#phase-d-item-29-decouple-completion-from-commands-internals-seed-review-gate-done-adr-0007" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Phase D — Item 29: decouple completion from commands internals (seed; review gate done → ADR 0007)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#phase-e-item-30-coding-command-output-lost-cross-client-landed" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Phase E — Item 30: coding-command output lost cross-client ✅ landed
+        Flags for /task run
       
     </span>
   </a>
@@ -1212,10 +1385,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#files-work-detail-phases-a-f-wave-1" class="md-nav__link">
+  <a href="#4-auth-the-token-command" class="md-nav__link">
     <span class="md-ellipsis">
       
-        /files/* work detail (Phases A &amp; F — Wave 1)
+        4. Auth: the /token command
       
     </span>
   </a>
@@ -1223,71 +1396,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#order-of-work-security-first-then-contract-then-robustness" class="md-nav__link">
+  <a href="#5-lifecycle-consent-hold-resume" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Order of work (security first, then contract, then robustness)
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Order of work (security first, then contract, then robustness)">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#phase-0-item-27-filesimage-confinement-quick-security" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Phase 0 — Item 27: /files/image/ confinement (quick, security)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#phase-1-item-25-stabilize-the-filesread-contract-landed" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Phase 1 — Item 25: stabilize the /files/read contract ✅ landed
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#phase-2-item-26-unify-filespreview-landed" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Phase 2 — Item 26: unify /files/preview ✅ landed
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#phase-3-item-28-officefileview-blob-url-revoke-race-landed" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Phase 3 — Item 28: OfficeFileView blob-URL revoke race ✅ landed
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#cross-client-verification-acceptance" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Cross-client verification (acceptance)
+        5. Lifecycle: consent → hold → resume
       
     </span>
   </a>
@@ -1295,10 +1407,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#out-of-scope-defer-roadmap" class="md-nav__link">
+  <a href="#6-spec-files-spec" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Out of scope (defer / roadmap)
+        6. Spec files (--spec)
       
     </span>
   </a>
@@ -1306,10 +1418,54 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#test-count-note" class="md-nav__link">
+  <a href="#7-skills-skill" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Test-count note
+        7. Skills (--skill)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-working-directory-semantics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Working directory semantics
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-the-sandbox-seal-operator-posture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. The sandbox seal (operator posture)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#10-troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. Troubleshooting
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#11-http-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11. HTTP API
       
     </span>
   </a>
@@ -1336,295 +1492,281 @@
   
 
 
-<h1 id="v1188-plan-files-parity-post-release-code-review-fixes">v1.18.8 Plan — <code>/files/*</code> parity + post-release code-review fixes<a class="headerlink" href="#v1188-plan-files-parity-post-release-code-review-fixes" title="Permanent link">&para;</a></h1>
-<p><strong>Branch:</strong> <code>bugfix/v1.18.8</code> (off master @ v1.18.7).
-<strong>Class:</strong> bugfix / post-release regression follow-up. No new features.
-<strong>Source:</strong> post-v1.18.7 code review. Two waves:
-- <strong>Wave 1 — <code>/files/*</code> cross-client parity</strong> (original branch charter):
-  debt items <a href="../debt-inventory/">25</a>, 26, 27, 28.
-- <strong>Wave 2 — broader code-review findings</strong> (scope extension, owner-directed):
-  debt items <a href="../debt-inventory/">29</a>, 30, 31, 32. Architectural-leaning
-  findings scoped to their <strong>bugfix-grade minimum</strong> so the branch stays
-  bugfix-class; the maximal refactors are split out / deferred per item.</p>
-<h2 id="why">Why<a class="headerlink" href="#why" title="Permanent link">&para;</a></h2>
-<p>v1.18.7 added a workspace file-browser feature set (office preview, upload,
-download, spreadsheet rendering) to the <strong>web client + server</strong>, but changed
-the semantics of <strong>shared</strong> <code>/files/*</code> endpoints and propagated the changes
-into only one client path. ppxai's design intent is that the <strong>VSCode
-extension delegates to VSCode-native UI while consuming the same server
-endpoints with identical semantics</strong> — so a divergent or type-unstable
-contract is a latent user-facing break, not just a cosmetic gap. v1.18.7 also
-left one security fix (<code>09eae96e</code>) applied inconsistently across the file
-routes.</p>
-<p><strong>Guiding invariant for this branch:</strong> every <code>/files/*</code> endpoint has <strong>one
-response contract with one set of semantics</strong>, regardless of which client
-calls it. Clients may render differently (web in-page, VSCode native, TUI
-local), but the bytes/shape/status they receive must be identical and stable.</p>
-<h2 id="the-v1-gateway-is-out-of-scope">The v1 gateway is out of scope<a class="headerlink" href="#the-v1-gateway-is-out-of-scope" title="Permanent link">&para;</a></h2>
-<p><code>POST /v1/oneshot</code> + bearer auth stay <strong>byte-identical</strong> (ppxai-sre consumer).
-None of the changes below touch the v1 gateway tier. The <code>/command/*</code>
-envelope shape also stays stable (ppxai-sre reuses ppxai source).</p>
-<h2 id="consolidated-execution-order-full-v1188-scope">Consolidated execution order (full v1.18.8 scope)<a class="headerlink" href="#consolidated-execution-order-full-v1188-scope" title="Permanent link">&para;</a></h2>
-<p>Phases are lettered to match the debt items. Detail for the <code>/files/*</code>
-phases (A, F) is under "<code>/files/*</code> work detail" below; detail for the
-code-review phases (B, C, D, E) is under "Extended-scope work detail".</p>
+<h1 id="task-agent-user-guide-task">Task Agent User Guide (<code>/task</code>)<a class="headerlink" href="#task-agent-user-guide-task" title="Permanent link">&para;</a></h1>
+<p><strong>Applies to</strong>: v1.19.0+ · <strong>Clients</strong>: Web + VSCode (TUIs: not yet — the
+in-process TUIs have no channel to the run registry; their autocomplete
+deliberately does not offer <code>/task</code>)
+<strong>Status</strong>: Shipped (T1–T8a), live-trial-verified · API surface under the
+<code>/v1/agent/*</code> in-development exemption — see
+<a href="../api-gateway/">api-gateway.md</a></p>
+<p><code>/task</code> launches <strong>tool-capable, sandboxed, durable background agent runs</strong>.
+Unlike the in-session <a href="../session-agent-guide/"><code>/agent</code> mode</a> (which drives
+tools inside your current chat) and the tool-free <code>/agentrun</code> one-off, a
+<code>/task</code> run executes on the server with an explicit <strong>capability grant</strong>,
+survives client disconnects and server restarts, and has a full lifecycle:
+consent parks, held results, and resume.</p>
 <table>
 <thead>
 <tr>
-<th style="text-align: right;">Order</th>
-<th>Phase</th>
-<th>Item</th>
-<th>What</th>
-<th>Risk</th>
+<th>Surface</th>
+<th>Tools</th>
+<th>Where it runs</th>
+<th>Guide</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td style="text-align: right;">1</td>
-<td><strong>A</strong></td>
-<td>27</td>
-<td><code>serve_image</code> → <code>_within_tree</code> (security)</td>
-<td>trivial</td>
+<td><code>/agent</code> session mode</td>
+<td>session's tools</td>
+<td>inside your chat session</td>
+<td><a href="../session-agent-guide/">session-agent-guide.md</a></td>
 </tr>
 <tr>
-<td style="text-align: right;">2</td>
-<td><strong>B</strong></td>
-<td>32</td>
-<td>drop raw <code>Message</code> from <code>/load</code>; recursive envelope-serialization guard test</td>
-<td>low</td>
+<td><code>/agentrun</code> one-off</td>
+<td>none (tool-free)</td>
+<td>background, fire-and-forget</td>
+<td><a href="../api-gateway/">api-gateway.md</a></td>
 </tr>
 <tr>
-<td style="text-align: right;">3</td>
-<td><strong>C</strong></td>
-<td>31</td>
-<td><code>SessionManager</code> mutation helpers; replace direct <code>messages.pop()/append()</code></td>
-<td>medium (hot path)</td>
-</tr>
-<tr>
-<td style="text-align: right;">4</td>
-<td><strong>E</strong></td>
-<td>30</td>
-<td>route <code>coding.py</code> user-facing output through events/result</td>
-<td>low</td>
-</tr>
-<tr>
-<td style="text-align: right;">5</td>
-<td><strong>F</strong></td>
-<td>25/26/28</td>
-<td><code>/files/read</code> typing + <code>/files/preview</code> unify + OfficeFileView race</td>
-<td>medium (bulk)</td>
-</tr>
-<tr>
-<td style="text-align: right;">6</td>
-<td>🔒 gate</td>
-<td>—</td>
-<td>in-depth review of Item 29 — <strong>done 2026-06-14</strong> → ADR 0007</td>
-<td>—</td>
-</tr>
-<tr>
-<td style="text-align: right;">7</td>
-<td><strong>D</strong></td>
-<td>29</td>
-<td><strong>seed only</strong> (option a): <code>iter_completion_specs()</code>, stop reading privates. Full first-class service → v1.19.x</td>
-<td>low</td>
+<td><strong><code>/task</code> (this guide)</strong></td>
+<td><strong>explicit grant</strong></td>
+<td><strong>background, durable, sandboxed</strong></td>
+<td>here</td>
 </tr>
 </tbody>
 </table>
-<p>A and B land first. C, E, F are mutually independent and can land in any
-order after B. <strong>D's review gate is done</strong> — outcome in
-<a href="../decisions/0007-completion-first-class-service/">ADR 0007</a>: land the
-accessor seed on this branch, defer the first-class <code>CompletionService</code> +
-AppState roster to v1.19.x.
-Item 6 / debt 22 (<code>PpxaiApp</code> decomposition) is <strong>not triggered</strong>: Phase F
-edits a few <code>app.js</code> methods in place; no decomposition required.</p>
-<h2 id="extended-scope-work-detail-phases-b-c-d-e-debt-2932">Extended-scope work detail (Phases B, C, D, E — debt 29–32)<a class="headerlink" href="#extended-scope-work-detail-phases-b-c-d-e-debt-2932" title="Permanent link">&para;</a></h2>
-<h3 id="phase-b-item-32-envelope-cant-carry-raw-objects-landed">Phase B — Item 32: envelope can't carry raw objects ✅ landed<a class="headerlink" href="#phase-b-item-32-envelope-cant-carry-raw-objects-landed" title="Permanent link">&para;</a></h3>
+<hr />
+<h2 id="1-enable-the-tier">1. Enable the tier<a class="headerlink" href="#1-enable-the-tier" title="Permanent link">&para;</a></h2>
+<p>The tool-capable tier ships <strong>default-off</strong> (trusted-operator opt-in). In
+<code>~/.ppxai/ppxai-config.json</code>:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>{
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>  &quot;tools&quot;: {
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    &quot;agent&quot;: {
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>      &quot;task_tier_enabled&quot;: true,
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>      &quot;default_subagent&quot;: { &quot;provider&quot;: &quot;gemini&quot;, &quot;model&quot;: &quot;gemini-3.1-pro-preview&quot; }
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    }
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>  }
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>}
+</span></code></pre></div>
+<p><code>default_subagent</code> is the fallback provider/model when neither the request
+nor a spec names one (pick any tool-calling model you have configured).
+Without <code>task_tier_enabled</code>, <code>POST /v1/agent/task</code> returns 403 with an
+enable hint.</p>
+<h2 id="2-first-run">2. First run<a class="headerlink" href="#2-first-run" title="Permanent link">&para;</a></h2>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>/task run &quot;summarize README.md&quot; --tools read_file
+</span></code></pre></div>
 <ul>
-<li><strong>Audit correction:</strong> the <code>/load</code> <code>details["messages"]</code> key is <strong>not</strong>
-  consumer-free — the in-process Textual renderer
-  (<code>rendering/textual_renderer.py::render_confirmation</code>) reads it as live
-  <code>Message</code> objects. So it can't be dropped; sanitize at the wire boundary
-  instead.</li>
-<li><strong>Done:</strong> <code>ConfirmationResult.to_dict()</code> runs <code>details</code> through a recursive
-  <code>_jsonsafe()</code> (dataclass→<code>to_dict()</code>/<code>asdict</code>, bytes→marker, unknown→<code>str</code>)
-  so the envelope is always <code>json.dumps</code>-able; in-process callers still read
-  raw objects from <code>result.details</code> (never call <code>to_dict()</code>).</li>
-<li><strong>Tests:</strong> <code>tests/test_command_envelope_serialization.py</code> (the <code>/load</code>
-  Message regression + <code>_jsonsafe</code> unit coverage) + a parametrized
-  <code>test_to_dict_is_json_serializable</code> over <strong>every</strong> <code>CommandResult</code> subclass
-  in <code>tests/test_command_result_serialization.py</code>.</li>
+<li>The run id (<code>run_xxxxxxxxxxxx</code>) prints immediately; the chat stays usable.</li>
+<li>A live watcher tails the run's events into the transcript (web: a
+  right-panel pane; VSCode: transcript lines like <code>→ read_file</code>).</li>
+<li>Relative paths resolve against <strong>your session's working directory</strong> by
+  default (v1.19.0 workdir alignment) — the same place <code>/pwd</code> shows.</li>
+<li>When it finishes, the result is <strong>held</strong> (<code>completed_pending_ack</code>) until
+  you collect it: <code>/task ack &lt;id&gt;</code> (or the Collect button).</li>
 </ul>
-<h3 id="phase-c-item-31-session-mutation-hygiene-landed">Phase C — Item 31: session-mutation hygiene ✅ landed<a class="headerlink" href="#phase-c-item-31-session-mutation-hygiene-landed" title="Permanent link">&para;</a></h3>
+<h2 id="3-command-reference">3. Command reference<a class="headerlink" href="#3-command-reference" title="Permanent link">&para;</a></h2>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>/task run &quot;&lt;desc&gt;&quot; --tools a,b,c [flags]   launch a run
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>/task ls | list                            list runs, newest first
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>/task show &lt;id&gt; | open | watch             print meta/result + (re)watch
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>/task respond &lt;id&gt; approve|deny|&quot;&lt;text&gt;&quot;   answer a waiting (consent) park
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>/task ack &lt;id&gt;                             collect a held result → finalized
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>/task resume &lt;id&gt;                          continue an interrupted run
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>/task cancel &lt;id&gt;                          cooperative cancel
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>/task help                                 this summary
+</span></code></pre></div>
+<h3 id="flags-for-task-run">Flags for <code>/task run</code><a class="headerlink" href="#flags-for-task-run" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--tools a,b,c</code></td>
+<td><strong>Capability grant</strong> — the ONLY tools the run may call. Required unless a <code>--spec</code>/<code>--skill</code> supplies it. <code>execute_shell_command</code> is always rejected (it would bypass the egress allowlist).</td>
+</tr>
+<tr>
+<td><code>--spec &lt;name&gt;</code></td>
+<td>Load a spec file from <code>tools.agent.sandbox.specs_dir</code> (name only, no paths). Spec fields fill anything you didn't pass; explicit flags win.</td>
+</tr>
+<tr>
+<td><code>--skill &lt;name&gt;</code></td>
+<td>Mount a skill from <code>tools.agent.sandbox.skills_dir</code>: its <code>SKILL.md</code> acts as a spec and its directory (incl. <code>references/</code>) is mounted into the run's read scope. Repeatable / comma-separated; skills compose.</td>
+</tr>
+<tr>
+<td><code>--allow host[/prefix]</code></td>
+<td>Per-run egress allowlist entry (comma-separated). Network tools are <strong>deny-by-default</strong>: no <code>--allow</code>, no outbound. HTTPS-only, private/loopback IPs blocked.</td>
+</tr>
+<tr>
+<td><code>--provider p</code> / <code>--model m</code></td>
+<td>Per-run intent. Precedence: flag &gt; spec &gt; skill &gt; <code>default_subagent</code>.</td>
+</tr>
+<tr>
+<td><code>--budget iters=20,time=300,tokens=100k</code></td>
+<td>Resource caps (any subset). A capped run stops at a clean checkpoint as <code>interrupted</code> (resumable), not <code>failed</code>.</td>
+</tr>
+<tr>
+<td><code>--system "…"</code></td>
+<td>Extra agent framing appended to the run's system prompt.</td>
+</tr>
+<tr>
+<td><code>--work-dir &lt;path&gt;</code></td>
+<td>Working directory for relative tool paths. Default: <strong>your session's working dir</strong> rides along automatically. Must exist (400 otherwise). With the sandbox seal ON the per-run jail wins and you get a warning instead.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="4-auth-the-token-command">4. Auth: the <code>/token</code> command<a class="headerlink" href="#4-auth-the-token-command" title="Permanent link">&para;</a></h2>
+<p>On hosts with a token store configured (<code>server.secrets.providers</code> includes
+<code>{"type": "file", ...}</code>), the whole <code>/v1/agent/*</code> surface requires a bearer —
+even from localhost. Both clients manage it in-chat:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>/token status    show whether a token is attached (masked)
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>/token mint      self-provision via the loopback bootstrap (local server)
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>/token set       paste one (masked prompt; VSCode opens the palette input)
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>/token clear     detach
+</span></code></pre></div>
+<p>A 401 from any <code>/task</code> verb tells you exactly this ("run <code>/token mint</code> …").
+Web stores the token in <code>localStorage</code>; VSCode in <code>SecretStorage</code> (shared
+with the <strong>"ppxai: Set API Token"</strong> palette entry). Minting remotely isn't
+possible — ask the operator for a token and use <code>/token set</code>.</p>
+<h2 id="5-lifecycle-consent-hold-resume">5. Lifecycle: consent → hold → resume<a class="headerlink" href="#5-lifecycle-consent-hold-resume" title="Permanent link">&para;</a></h2>
+<p><strong>Waiting (consent parks, T5).</strong> A run that needs a human decision — e.g. a
+<code>spawn_subagent</code> under <code>tools.agent.spawn_consent: "deny"</code> (the default) —
+parks as <code>waiting</code>, and the watcher raises a consent card (web) or QuickPick
+(VSCode). Answer inline or with <code>/task respond &lt;id&gt; approve|deny|"note"</code>.
+An unanswered park <strong>denies when its TTL expires</strong>
+(<code>tools.agent.consent_ttl_s</code>, default 300 s — fail-closed), and the run
+continues without the action.</p>
+<p><strong>Held results (T6).</strong> A successful top-level run lands in
+<code>completed_pending_ack</code>: the run has exited (budget freed, sandbox torn
+down) but the result is held until <code>/task ack &lt;id&gt;</code> collects it →
+<code>finalized</code>. A disconnected UI never loses a result. Uncollected holds are
+finalized by a lazy reaper after <code>tools.agent.result_retention_s</code> (default
+3600 s; <code>0</code> = hold until explicit ack; data is never deleted, only marked
+collected).</p>
+<p><strong>Resume (T7).</strong> <code>interrupted</code> / <code>cancelled</code> runs whose checkpoint is
+conclusive can continue under the same run id: <code>/task resume &lt;id&gt;</code> (or the
+Resume button). The runner is rebuilt from the run's persisted inputs —
+grant, egress, budget, system, skill mounts, <strong>workdir</strong> — and events append
+to the same log. Inconclusive checkpoints are refused with a 409 and the
+reason. Runs orphaned by a server restart are swept to <code>interrupted</code>
+(resumable) at startup.</p>
+<h2 id="6-spec-files-spec">6. Spec files (<code>--spec</code>)<a class="headerlink" href="#6-spec-files-spec" title="Permanent link">&para;</a></h2>
+<p>A spec is an operator-authored file declaring a run shape — grant,
+provider/model, budget, egress, system prompt — resolved by name under
+<code>tools.agent.sandbox.specs_dir</code>. See
+<a href="../examples/task-specs/README.md"><code>examples/task-specs/</code></a> for ready-to-use
+<code>.md</code> (front-matter + body-as-system) and <code>.json</code> examples.</p>
 <ul>
-<li>Added <code>SessionManager.pop_orphan_trailing_users()</code> (replaces the
-  <code>streaming.py</code> orphan-cleanup loop — now fires the AppState callback,
-  previously fired none) and a <code>preserve_trailing_user()</code> context manager
-  (wraps the <code>chat.py</code> preflight detach/restore).</li>
-<li>Replaced direct <code>session.messages.pop()/append()</code>: chat.py preflights (×2)
-  → <code>preserve_trailing_user()</code>; chat.py post-tool prompt removal →
-  <code>remove_last_message()</code> (existing helper — also fixes a latent multimodal
-  cache miss); streaming.py → <code>pop_orphan_trailing_users()</code>.</li>
-<li><strong>Tests:</strong> <code>TestMessageMutationHelpers</code> in <code>test_session_persistence.py</code>
-  (callback fires on orphan cleanup; preflight nets identical history +
-  no spurious notify + restores on exception). Behaviour preserved — the
-  real fix was <code>streaming.py</code> (no notify before); <code>chat.py:273</code> already
-  netted to a no-op.</li>
+<li>Precedence: explicit flag &gt; spec &gt; skill &gt; <code>default_subagent</code>.</li>
+<li>The merged result faces the same ceiling as a direct request: no shell
+  tool, <code>task_tier_enabled</code> still required — a spec cannot widen what the
+  operator allows.</li>
 </ul>
-<h3 id="phase-d-item-29-decouple-completion-from-commands-internals-seed-review-gate-done-adr-0007">Phase D — Item 29: decouple <code>completion</code> from <code>commands</code> internals (seed; review gate done → ADR 0007)<a class="headerlink" href="#phase-d-item-29-decouple-completion-from-commands-internals-seed-review-gate-done-adr-0007" title="Permanent link">&para;</a></h3>
-<ul>
-<li><strong>Gate outcome (2026-06-14):</strong> completion reframed as a capability over
-  <code>(command-space × live-context)</code> — see
-  <a href="../decisions/0007-completion-first-class-service/">ADR 0007</a>. Land the
-  <strong>accessor seed (option a)</strong> here; the first-class <code>CompletionService</code> +
-  AppState roster are v1.19.x.</li>
-<li><strong>Seed (this branch):</strong> added <code>CommandFactory.iter_completion_specs()</code> +
-  <code>CompletionCommandInfo</code> (public, narrow shape — no handler/internal
-  storage); <code>engine.completion._complete_commands</code> consumes that snapshot
-  instead of <code>_registry</code>/<code>_aliases</code>. The <code>engine → commands</code> import stays
-  (its removal is the v1.19.x service work). Behaviour byte-identical.</li>
-<li>Tests: 61 existing completion tests unchanged + 3 new accessor tests in
-  <code>test_tui_command_factory.py</code> (registry/alias coverage, alias→canonical,
-  narrow-shape contract).</li>
-</ul>
-<h3 id="phase-e-item-30-coding-command-output-lost-cross-client-landed">Phase E — Item 30: coding-command output lost cross-client ✅ landed<a class="headerlink" href="#phase-e-item-30-coding-command-output-lost-cross-client-landed" title="Permanent link">&para;</a></h3>
-<ul>
-<li><strong>Finding:</strong> of the 5 <code>console.print</code> sites in <code>_execute_ai_task</code>, only the
-  <strong>auto-route notice</strong> was lost <em>information</em> server-side. The stream chunks,
-  error echo, and trailing newline are live-TUI UX or already in the returned
-  result; the initial-message banner is a pre-stream progress indicator, not
-  result data.</li>
-<li><strong>Channel choice:</strong> web/VSCode render <code>AIResponseResult.content</code> and only
-  fall back to <code>message</code> when content is empty — so the notice rides in
-  <strong><code>content</code></strong> (prepended as a markdown note), not <code>message</code>. Code-block
-  extraction runs on the raw output first, so the notice can't be mistaken
-  for a fence. Removed the <code>console.print</code> (renderers own UI now); the notice
-  shows once on every client.</li>
-<li><strong>Defer</strong> the broad console-purity sweep (<code>agent.py</code> ~43, <code>utility.py</code> ~39,
-  <code>handler.py</code> ~29 — interactive TUI-only <code>input()</code> flows) to v1.19.x.</li>
-<li><strong>Tests:</strong> <code>tests/test_coding_autoroute.py</code> — notice rides in <code>content</code>
-  when routed; absent when auto-route off or already on the coding model;
-  code blocks stay clean.</li>
-</ul>
-<h2 id="files-work-detail-phases-a-f-wave-1"><code>/files/*</code> work detail (Phases A &amp; F — Wave 1)<a class="headerlink" href="#files-work-detail-phases-a-f-wave-1" title="Permanent link">&para;</a></h2>
-<p>Phase 0 below = <strong>Phase A</strong>; Phases 1–3 below = <strong>Phase F</strong>.</p>
-<h2 id="order-of-work-security-first-then-contract-then-robustness">Order of work (security first, then contract, then robustness)<a class="headerlink" href="#order-of-work-security-first-then-contract-then-robustness" title="Permanent link">&para;</a></h2>
-<h3 id="phase-0-item-27-filesimage-confinement-quick-security">Phase 0 — Item 27: <code>/files/image/</code> confinement (quick, security)<a class="headerlink" href="#phase-0-item-27-filesimage-confinement-quick-security" title="Permanent link">&para;</a></h3>
-<ul>
-<li>Swap <code>serve_image</code>'s <code>str(path).startswith(str(home_dir))</code> for
-  <code>_within_tree(path, home_dir)</code>, mirroring <code>read_file</code>/<code>write_file</code>.</li>
-<li>Add a regression test: a sibling-prefix path (<code>/home/userEVIL/...</code>) must
-  return 403 via <code>/files/image/</code>.</li>
-<li>One-line change + one test. Land first; it's the only security item.</li>
-</ul>
-<h3 id="phase-1-item-25-stabilize-the-filesread-contract-landed">Phase 1 — Item 25: stabilize the <code>/files/read</code> contract ✅ landed<a class="headerlink" href="#phase-1-item-25-stabilize-the-filesread-contract-landed" title="Permanent link">&para;</a></h3>
-<ul>
-<li><strong>Decision: option (b)</strong> — keep the typed server contract (the SheetJS
-  spreadsheet view depends on it); fix every consumer to branch on <code>type</code>.</li>
-<li><strong>Server:</strong> unchanged (typed contract is the source of truth).</li>
-<li><strong>Web (app.js + code-editor-view.js):</strong></li>
-<li><code>CodeEditorView</code> now refuses <strong>any</strong> non-<code>text</code> type (was: only
-    <code>image</code>/<code>pdf</code>) on both initial load and <code>reload()</code> — <code>office_spreadsheet</code>
-    base64 can no longer render as editor text / corrupt on Save. Office
-    files are routed to <code>OfficeFileView</code> by <code>displayFileFromEvent</code>; this is
-    the defense for direct-edit (<code>onFileEdit</code>) paths.</li>
-<li><code>_saveRpfStack</code>/<code>_restoreRpfStack</code>: added the <code>office</code> viewType so a
-    reopened office file round-trips to <code>OfficeFileView</code> (was restored as
-    <code>CodeEditorView</code> → base64-as-text).</li>
-<li>Dropped the <code>typeof OfficeFileView !== 'undefined'</code> guard — a missing
-    script now errors visibly instead of silently downgrading to base64.</li>
-<li><strong>VSCode (<code>httpClient.ts</code>):</strong> <code>readFile</code> return type is now the real
-  <code>ReadFileResponse</code> union (<code>type</code> discriminator + <code>content</code> is base64 for
-  non-text) with a branch-on-<code>type</code> warning comment, so a future delegation
-  can't write base64 into a buffer. (Still zero callers — contract-only.)</li>
-<li><strong>Tests:</strong> <code>TestReadOfficeTypeContract</code> in <code>test_files_route.py</code> pins the
-  server contract (csv/xlsx → <code>office_spreadsheet</code> base64; txt → text+lines;
-  pptx/docx → 400 + <code>/files/preview</code> hint). Web view changes are
-  syntax-checked (<code>node --check</code>) + TS-typechecked (<code>tsc --noEmit</code>); DOM
-  behaviour is manual-smoke (no web JS harness exists — consistent with the
-  app.js norm).</li>
-</ul>
-<h3 id="phase-2-item-26-unify-filespreview-landed">Phase 2 — Item 26: unify <code>/files/preview</code> ✅ landed<a class="headerlink" href="#phase-2-item-26-unify-filespreview-landed" title="Permanent link">&para;</a></h3>
-<ul>
-<li>Extracted <code>files.py::render_office_preview(file_path, name, ext, cache_dir, *,
-  slide, total)</code> — the single renderer both routes delegate to. The two route
-  wrappers just resolve their <em>source</em> (<code>_resolve_safe_path</code> for the path
-  route; <code>file_store.get_metadata</code> for the id route) then call it. <code>file_serve.py</code>
-  imports the helper from <code>.files</code> (one-directional, no cycle).</li>
-<li><strong>One JSON shape</strong> for both: <code>total</code>/metadata responses always include
-  <code>type</code>, <code>kind</code>, <code>libreoffice_available</code>, <code>total</code>, <code>name</code> (the id route used
-  to return bare <code>{total, name}</code> / <code>{total, name, type}</code>; <code>libreoffice_available</code>
-  was previously present only in fallback branches).</li>
-<li><strong>One LibreOffice-missing semantics</strong>: always <code>200 + text_fallback</code> — the id
-  route's hard <code>503 "LibreOffice not installed"</code> is gone, so the chat-bubble
-  attachment path degrades to text like the file-tree path.</li>
-<li><strong>Legacy <code>.ppt</code>/<code>.doc</code></strong> without LibreOffice return a typed text_fallback
-  "needs LibreOffice" message instead of a python-pptx/docx 500.</li>
-<li><strong>Source-extension reliability:</strong> <code>meta.path</code> is content-addressed and may
-  lack an extension, so the id route derives <code>ext</code> from <code>meta.name</code> /
-  <code>is_word_document(meta)</code> before handing off (the helper keys office type off
-  <code>ext</code>, reads bytes from <code>file_path</code>).</li>
-<li><strong>Tests:</strong> <code>TestUnifiedPreviewContract</code> in <code>test_files_preview_download.py</code>
-  (legacy <code>.ppt</code>/<code>.doc</code> → 200 text_fallback not 503/500; unified key set always
-  present; unsupported ext → 400) — runs without office libs by mocking the
-  LibreOffice probe. Existing path-based PPTX/Word + id-based (image_session_query)
-  suites still green (70 passed / 5 office-lib-skipped).</li>
-</ul>
-<h3 id="phase-3-item-28-officefileview-blob-url-revoke-race-landed">Phase 3 — Item 28: OfficeFileView blob-URL revoke race ✅ landed<a class="headerlink" href="#phase-3-item-28-officefileview-blob-url-revoke-race-landed" title="Permanent link">&para;</a></h3>
-<ul>
-<li><strong>Revoke race:</strong> both <code>_renderPresentationAttachment</code> / <code>_renderWordAttachment</code>
-  (app.js) gained an <code>unmounted</code> flag; the async <code>.then()</code> returns early if the
-  view unmounted before the fetch resolved (no blob URL created into a detached
-  container), and any handle created in the same tick is revoked immediately.
-  <code>unmount()</code> sets the flag + revokes.</li>
-<li><strong>content-key assertion:</strong> the attachment text fetch and the two
-  <code>OfficeFileView</code> text-fallback sites now require a string <code>content</code> and
-  surface a <code>missing "content" key</code> error instead of rendering <code>'(empty)'</code>.</li>
-<li><strong>Item-26 follow-through (necessary, found here):</strong> item 26 made the id route
-  return a 200 <code>text_fallback</code> (was 503) when LibreOffice is missing, but the
-  attachment renderers called <code>renderSlideNavInto</code>/<code>renderDocxPdfInto</code> blindly —
-  they'd render JSON as a slide image / PDF. Added a <code>libreoffice_available ===
-  false || type === 'text_fallback'</code> branch (PPTX) and a content-type branch
-  (Word) that degrade to extracted text via a new shared
-  <code>OfficeFileView.renderTextFallbackInto()</code> static — so chat-bubble attachments
-  degrade identically to the file-tree path.</li>
-<li><strong>Verification:</strong> <code>node --check</code> on both files; web-only, so DOM behaviour is
-  manual-smoke (no web JS harness — consistent with the app.js norm).</li>
-<li><strong>Post-review follow-up (<code>84ee33c2</code>):</strong></li>
-<li><code>renderSlideNavInto</code> had a residual leak — it created the object URL
-    <em>after</em> <code>await fetchSlideBlob</code>, so an unmount mid-fetch leaked the
-    post-await URL (revoke ran over an empty list). Added a <code>disposed</code> flag
-    (set by <code>revoke()</code>); the post-await path skips URL creation when disposed.
-    Fixes both attachment and <strong>file-tree</strong> PPT previews.</li>
-<li><strong>VSCode</strong> (<code>chatPanel.ts</code>) had the same JSON-as-binary bug item 26
-    introduced: it wrote every ok <code>/files/preview</code> response to <code>.png</code>/<code>.pdf</code>,
-    so a 200 text_fallback became a garbage image/PDF. Now branches on
-    <code>meta.libreoffice_available</code>/<code>type</code> (PPTX) + response content-type (PPTX
-    slides, DOCX) and falls back to the raw file. <code>tsc --noEmit</code> clean.</li>
-</ul>
-<h2 id="cross-client-verification-acceptance">Cross-client verification (acceptance)<a class="headerlink" href="#cross-client-verification-acceptance" title="Permanent link">&para;</a></h2>
-<p>For each of <code>.csv</code>, <code>.xlsx</code>, <code>.docx</code>, <code>.pptx</code>, <code>.ppt</code>, and a text file:
-1. <strong>Server contract test</strong> — <code>/files/read</code> and <code>/files/preview</code> return the
-   documented, stable shape (pinned in <code>tests/</code>).
-2. <strong>Web</strong> — single-click, double-click, and reload all render correctly
-   (no base64-in-editor, no silent downgrade).
-3. <strong>VSCode</strong> — the endpoints it calls (<code>/files/list</code>, <code>/files/tree</code>,
-   <code>/files/preview/{id}</code>, and <code>readFile</code> if/when wired) parse without error
-   and degrade identically to web when LibreOffice is absent.
-4. <strong>TUI</strong> — unaffected (reads locally via <code>read_file_content</code>); confirm no
-   regression in <code>/tree</code>/<code>/ls</code>.</p>
-<h2 id="out-of-scope-defer-roadmap">Out of scope (defer / roadmap)<a class="headerlink" href="#out-of-scope-defer-roadmap" title="Permanent link">&para;</a></h2>
-<ul>
-<li>Adding office-preview/upload/download <strong>UI</strong> to VSCode or TUI — that's
-  feature parity, not contract parity, and belongs on the roadmap. This
-  branch only guarantees the <strong>endpoints</strong> are compatible so that delegation
-  <em>can</em> land cleanly later.</li>
-<li>Web <code>app.js</code> decomposition (debt Item 22).</li>
-</ul>
-<h2 id="test-count-note">Test-count note<a class="headerlink" href="#test-count-note" title="Permanent link">&para;</a></h2>
-<p>v1.18.7 canonical = 3907 passed / 3 skipped (<code>--all-extras</code>). New tests here
-add to that; pin the final count at v1.18.8 pre-tag from a canonical
-<code>uv sync --all-extras</code> run (the release script's own count is env-dependent —
-see the v1.18.7 README-badge-vs-docs discrepancy).</p>
+<h2 id="7-skills-skill">7. Skills (<code>--skill</code>)<a class="headerlink" href="#7-skills-skill" title="Permanent link">&para;</a></h2>
+<p>A skill is a directory under <code>tools.agent.sandbox.skills_dir</code> containing a
+<code>SKILL.md</code> (a spec, T3 loader) plus reference material. Granting a skill
+mounts its directory into the run's <strong>read scope</strong> (when the seal is on),
+so the agent can read <code>references/…</code>. Multiple skills compose: tool grants
+union, read roots union. Skills with <code>scripts/</code> are refused unless
+<code>allow_skill_scripts: true</code> (scripts stay inert until the container tier).
+Examples: <a href="../examples/task-skills/README.md"><code>examples/task-skills/</code></a>.</p>
+<h2 id="8-working-directory-semantics">8. Working directory semantics<a class="headerlink" href="#8-working-directory-semantics" title="Permanent link">&para;</a></h2>
+<p>Deterministic, never "wherever the server happened to start":</p>
+<ol>
+<li><code>--work-dir &lt;path&gt;</code> — explicit per-run intent (400 if it doesn't exist).</li>
+<li>Otherwise your <strong>session working dir</strong> is threaded automatically — so
+   <code>"summarize README.md"</code> means the same thing in chat and in a task run.</li>
+<li>Otherwise the server default: <code>server.working_dir</code> config, else home.</li>
+<li><strong>Seal ON</strong>: the per-run jail always wins; a requested workdir is
+   ignored with a "⚠️ sandbox seal active" warning (warn-don't-fail, so the
+   same command works across sealed and unsealed hosts).</li>
+</ol>
+<p><code>/task show &lt;id&gt;</code> prints the effective <code>wd:</code>; resume reuses it; spawned
+children inherit it.</p>
+<h2 id="9-the-sandbox-seal-operator-posture">9. The sandbox seal (operator posture)<a class="headerlink" href="#9-the-sandbox-seal-operator-posture" title="Permanent link">&para;</a></h2>
+<p>The filesystem jail is <strong>per-deployment operator posture</strong>, not a per-run
+flag (there is deliberately no "unseal this run"):</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>&quot;sandbox&quot;: {
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>  &quot;enforcement&quot;: &quot;in_process&quot;,          // &quot;off&quot; (default) | &quot;in_process&quot;
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>  &quot;workdir&quot;:   { &quot;root&quot;: &quot;~/.ppxai/runs&quot;, &quot;writable&quot;: true, &quot;cleanup&quot;: &quot;keep&quot; },
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>  &quot;read_paths&quot;: { &quot;allow&quot;: [&quot;~/projects&quot;], &quot;deny&quot;: [], &quot;follow_symlinks&quot;: false },
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>  &quot;specs_dir&quot;: &quot;/path/to/task-specs&quot;,
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>  &quot;skills_dir&quot;: &quot;/path/to/task-skills&quot;,
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>  &quot;allow_skill_scripts&quot;: false
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>}
+</span></code></pre></div>
+<p>Sealed runs get an empty per-run <code>work/</code> dir as their only writable root;
+reads are confined to <code>read_paths.allow</code> + skill mounts; denials surface as
+<code>path_denied</code> events. Typical postures: <strong>desktop = seal off</strong> (you are the
+trust boundary; the assistant works your repo), <strong>k8s coder pod = seal off</strong>
+(the pod is the boundary), <strong>embedded unattended agents = seal on</strong>
+(least-privilege over untrusted input). Details + rationale:
+<a href="../api-gateway/">api-gateway.md</a> §"Run working directory".</p>
+<h2 id="10-troubleshooting">10. Troubleshooting<a class="headerlink" href="#10-troubleshooting" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Cause → fix</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>403 … task_tier_enabled</code></td>
+<td>Tier is default-off → enable it in config (§1).</td>
+</tr>
+<tr>
+<td><code>401 Missing or malformed Authorization</code></td>
+<td>Token store enforces auth → <code>/token mint</code> (local) or <code>/token set</code>.</td>
+</tr>
+<tr>
+<td><code>422 tools is required</code> / <code>400 Empty tool grant</code></td>
+<td>No grant and no spec/skill supplying one → pass <code>--tools</code>.</td>
+</tr>
+<tr>
+<td><code>400 execute_shell_command is not permitted</code></td>
+<td>By design — shell escapes the egress allowlist; grant specific tools instead.</td>
+</tr>
+<tr>
+<td><code>400 workdir does not exist</code></td>
+<td><code>--work-dir</code> points at a missing directory.</td>
+</tr>
+<tr>
+<td><code>⚠️ sandbox seal active — --work-dir ignored</code></td>
+<td>Expected on sealed hosts; the jail wins.</td>
+</tr>
+<tr>
+<td>Agent says a file "does not exist"</td>
+<td>Check <code>wd:</code> in <code>/task show</code> — pass <code>--work-dir</code> or an absolute path.</td>
+</tr>
+<tr>
+<td>Run stuck <code>waiting</code></td>
+<td>Answer the card / <code>/task respond &lt;id&gt; …</code>, or let the TTL deny it.</td>
+</tr>
+<tr>
+<td>Result seems missing after finish</td>
+<td>It's held — <code>/task ack &lt;id&gt;</code>.</td>
+</tr>
+<tr>
+<td><code>409 cannot be resumed: …</code></td>
+<td>The refusal reason is verbatim (not resumable, in flight, tier off…).</td>
+</tr>
+<tr>
+<td><code>⛔ egress denied host/…</code></td>
+<td>Host/path not in <code>--allow</code> — egress is deny-by-default.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="11-http-api">11. HTTP API<a class="headerlink" href="#11-http-api" title="Permanent link">&para;</a></h2>
+<p>Everything above is a thin client over <code>POST /v1/agent/task</code>,
+<code>GET /v1/agent/runs[/&lt;id&gt;]</code>, <code>…/events?live=1</code>, and
+<code>POST …/{respond,ack,resume,cancel}</code> — see
+<a href="../api-gateway/">api-gateway.md</a> (note the <code>/v1/agent/*</code> stability
+exemption) and
+<a href="../agent-platform-call-graphs/">agent-platform-call-graphs.md</a> for
+route→event call graphs.</p>
 
 
 

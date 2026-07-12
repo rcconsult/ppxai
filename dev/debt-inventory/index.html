@@ -460,14 +460,42 @@
   
   
     <li class="md-nav__item">
-      <a href="../agent-mode-guide/" class="md-nav__link">
+      <a href="../task-agent-guide/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Agent Mode
+    Task Agent Platform
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../session-agent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Session Agent Mode
   
 
     
@@ -1185,10 +1213,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#item-24-vl-sidecar-auto_caption-fallback-silently-no-ops-on-non-vision-models" class="md-nav__link">
+  <a href="#item-24-non-vision-image-attach-silently-degraded-to-a-hallucination-feeding-placeholder-resolved-v1190" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Item 24 — VL sidecar auto_caption fallback silently no-ops on non-vision models
+        Item 24 — Non-vision image attach silently degraded to a hallucination-feeding placeholder ✅ RESOLVED (v1.19.0)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#item-24-historical-vl-sidecar-auto_caption-fallback-silently-no-ops-on-non-vision-models" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Item 24 (historical) — VL sidecar auto_caption fallback silently no-ops on non-vision models
       
     </span>
   </a>
@@ -1239,6 +1278,50 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#item-38-model-catalog-watch-list-verified-live-2026-07-11" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Item 38 — model-catalog watch list (verified live 2026-07-11)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#item-39-rtk-discover-false-negatives-under-hook-rewriting-rtk-gain-is-ground-truth-tooling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Item 39 — rtk discover false-negatives under hook rewriting; rtk gain is ground truth [tooling]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#item-40-web-vscode-clients-cannot-present-a-bearer-token-task-unusable-on-auth-enforcing-hosts-agent-platform-clients-fixed-2026-07-11-web-live-trialed-2026-07-12-under-an-enforcing-file-store-bearer-less-task-ls-401-token-mint-stored-task-lsshow-work-incl-status-aware-run-id-completion-vscode-set-api-token-path-unit-covered-not-yet-live-trialed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Item 40 — web + VSCode clients cannot present a bearer token; /task unusable on auth-enforcing hosts [agent platform / clients] — ✅ FIXED (2026-07-11; web live-trialed 2026-07-12 under an enforcing file store: bearer-less /task ls → 401, /token mint → stored, /task ls/show work incl. status-aware run-id completion. VSCode "Set API Token" path unit-covered, not yet live-trialed)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#item-41-gemini-provider-tool-loop-fidelity-no-tool_call_id-threading-_filter_empty_parts-is-dead-code-providers-gemini-resolved-2026-07-12-same-day" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Item 41 — Gemini provider tool-loop fidelity: no tool_call_id threading; _filter_empty_parts is dead code [providers / gemini] — ✅ RESOLVED (2026-07-12, same-day)
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1252,6 +1335,34 @@
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Recently moved out of debt scope">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#item-36-per-session-sub-agent-config-subagent-command-persisted-in-checkpoint-agent-platform" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Item 36 — per-session sub-agent config + /subagent command, persisted in checkpoint [agent platform]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#item-37-agent-platform-v1190-watchlist-agent-platform" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Item 37 — agent-platform (v1.19.0) watchlist [agent platform]
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1342,10 +1453,19 @@ ppxai installs (the mainline use case). Only deployers running the
 Helm chart in a multi-tenant K8s cluster touch this code.</p>
 <p><strong>Planned:</strong> trigger-deferred — no version target. Open until at least
 one of the three triggers fires.</p>
-<p><strong>Branch when ready:</strong> <code>feat/k8s-session-manager-tests</code>.</p>
+<p><strong>Branch when ready:</strong> <code>feat/k8s-session-manager-tests</code> (quick-pass
+already landed there + merged; 29 tests in <code>tests/test_session_manager_auth.py</code>).</p>
+<p><strong>Status (2026-06-15):</strong> quick-pass DONE. <strong>Full suite POSTPONED — do
+after agent-platform Stage 2 is in place.</strong> Rationale: the full suite's
+real value is validating the sub-agent-in-a-pod k8s security boundary
+end-to-end, which doesn't exist to test against until Stage 2 ships the
+sub-agent + pod-sandbox tool-execution path. Writing 30-50 mocked tests
+now would test the session-manager in isolation, not the thing we
+actually need confidence in. Revisit once Stage 2 Phase 1-4 lands.</p>
 <p><strong>Trigger to revisit:</strong> when a third-party deploys ppxai multi-tenant,
 OR when a security audit demands LDAP/RBAC test coverage, OR when CVE
-disclosure procedures need this code to have minimum test coverage.</p>
+disclosure procedures need this code to have minimum test coverage,
+OR when agent-platform Stage 2 sub-agent pod sandbox lands (validate together).</p>
 <p><strong>Effort:</strong>
 - Quick pass (~1 hour): 10 unit tests around <code>_hash_password</code>
   (timing-safe), <code>authenticate</code> (denial fail-closed), naming validation.
@@ -1375,6 +1495,12 @@ machine), with a per-stage test sweep before any code moves.</p>
 agent-platform Stage 2 work (ADR 0003) since <code>chat_with_tools</code> is
 where the run-namespace, budget enforcement, and sub-agent spawn all
 intersect.</p>
+<p><strong>Status (2026-06-15): POSTPONED for the <code>feature/v1.19.0</code> iteration.</strong>
+Not in this iteration's active set. The decomposition is best done
+<em>alongside or after</em> Stage 2 lands its run-state machine — Stage 2 will
+add run-namespace / budget / sub-agent code into this exact function, so
+decomposing first would just be re-touched. Let Stage 2 settle the shape,
+then split. See <a href="../plan-v1.19.0-sequencing/">docs/plan-v1.19.0-sequencing.md</a>.</p>
 <p><strong>Branch when ready:</strong> <code>feat/chat-with-tools-decomp</code> (ADR + tests
 first commit; code split as a follow-on).</p>
 <p><strong>Trigger to revisit:</strong> when ADR 0003 Stage 2 implementation opens
@@ -1453,7 +1579,60 @@ schema_version: 3 is proposed (the migration block becomes a natural
 extract at that point).</p>
 <p><strong>Surfaced by:</strong> CRG analysis on bugfix/v1.18.7.</p>
 <hr />
-<h3 id="item-24-vl-sidecar-auto_caption-fallback-silently-no-ops-on-non-vision-models">Item 24 — VL sidecar <code>auto_caption</code> fallback silently no-ops on non-vision models<a class="headerlink" href="#item-24-vl-sidecar-auto_caption-fallback-silently-no-ops-on-non-vision-models" title="Permanent link">&para;</a></h3>
+<h3 id="item-24-non-vision-image-attach-silently-degraded-to-a-hallucination-feeding-placeholder-resolved-v1190">Item 24 — Non-vision image attach silently degraded to a hallucination-feeding placeholder  ✅ RESOLVED (v1.19.0)<a class="headerlink" href="#item-24-non-vision-image-attach-silently-degraded-to-a-hallucination-feeding-placeholder-resolved-v1190" title="Permanent link">&para;</a></h3>
+<blockquote>
+<p><strong>Resolution (2026-06-23, <code>feature/v1.19.0</code>):</strong> both halves landed.</p>
+<p><strong>(1) Detection — already fixed earlier this cycle.</strong>
+<code>model_profiles.py</code> now carries <code>supports_vision=True</code> globs for
+<code>Qwen/Qwen3.[56]-27B-FP8*</code> (and <code>Qwen3.6-35B-A3B-FP8*</code>); this session
+also pinned the <code>-agent</code> suffix variant the codeai cluster serves
+(<code>Qwen/Qwen3.6-27B-FP8-agent</code>) in <code>test_model_profiles.py</code>. The
+originally-reported diagram now routes as a real <code>image_url</code> block.</p>
+<p><strong>(2) Fail-loud + tool route — this session.</strong> The secondary "fallback
+wired but doesn't run" class is closed by removing the silent
+placeholder entirely. <code>_preprocess_image</code> (<code>file_preprocessing.py</code>) now
+routes an image by a 4-way gate:
+  1. native vision (<code>supports_vision</code>) → <code>image_url</code> block;
+  2. VL sidecar caption (<code>vl_captioner</code>) → text caption;
+  3. <strong>NEW</strong> shell-CLI route — when the session has the shell tool
+     enabled (<code>EngineClient.can_shell_process_images()</code> →
+     <code>multimodal_ops.session_can_shell_process_images</code>), surface the
+     persisted on-disk path so the model can OCR/convert via a system
+     utility (ImageMagick/tesseract). No upfront utility probe — if none
+     is installed the model's shell call fails with a real, reportable
+     error (user decision: "permit + surface the path");
+  4. <strong>else → <code>ok=False</code> fail-loud</strong> with an actionable error (switch to
+     a vision model / restart with a reachable sidecar / enable the shell
+     tool). The bytes are still persisted and the <code>file_id</code> is surfaced on
+     the failure result so a retry can reach the same asset.</p>
+<p>Consumers: the server chat route (<code>server/routes/chat.py</code>) blocks the
+send on <code>ok=False</code> and emits a structured <code>vision_unsupported</code>
+(severity <strong>error</strong>) warning; on indirect success it emits
+<code>vision_via_tool</code> (shell route) or <code>vision_via_caption</code> (sidecar),
+distinguished by the route marker in <code>PreprocessResult.warnings</code> so the
+user notice matches the route actually taken. <code>commands/attach.py</code>
+(Rich/Textual <code>/attach</code>) surfaces the failure inline as
+<code>[Attachment error: …]</code> and never emits an <code>image_url</code>. Stale
+"sent as a text placeholder" copy removed from <code>web/app.js</code> (attach-time
+notice) and the VSCode <code>stream.ts</code> comment. All four call sites
+(<code>chat.py</code>, <code>attach.py</code>, <code>tui/app.py</code>, <code>rich/main.py</code>) compute and thread
+<code>shell_image_route</code>.</p>
+<p><strong>Tests:</strong> <code>test_file_preprocessing.py</code> (<code>TestImageTextOnlyFailLoud</code>,
+<code>TestImageShellRoute</code>, captioner-empty → fail-loud / shell-route),
+<code>test_vision_sidecar.py</code> (<code>TestCanShellProcessImages</code>,
+fail-loud + shell-route when sidecar unavailable),
+<code>test_attach_vision_warning.py</code> (severity escalated warning→error).
+319 passing across the vision/attach/multimodal suites; VSCode <code>tsc</code>
+clean.</p>
+<p><strong>Not addressed (intentional):</strong> the dead <code>tools.vision_model.auto_caption</code>
+config flag (read but never consulted) — superseded by the explicit
+<code>vl_captioner</code>-wired-when-<code>has_vision_sidecar()</code> path; filed separately if
+it ever needs removal. The original root-cause diagnosis (why the sidecar
+didn't fire on coder.trad.int) is moot now that there is no silent
+placeholder to fall into.</p>
+</blockquote>
+<hr />
+<h3 id="item-24-historical-vl-sidecar-auto_caption-fallback-silently-no-ops-on-non-vision-models">Item 24 (historical) — VL sidecar <code>auto_caption</code> fallback silently no-ops on non-vision models<a class="headerlink" href="#item-24-historical-vl-sidecar-auto_caption-fallback-silently-no-ops-on-non-vision-models" title="Permanent link">&para;</a></h3>
 <p><strong>Affected files:</strong> <code>ppxai/engine/multimodal_ops.py</code> (<code>auto_caption_image</code> and the
 <code>get_vision_model_config()</code> consumers around L575–640), <code>ppxai/engine/file_preprocessing.py</code>
 (L235–290, the <code>supports_vision(model)</code> routing branch), the chat-attachment path that
@@ -1704,6 +1883,219 @@ vector backends are separate, larger, dependency-bearing add-ons.</p>
 resolving ADR 0003 — the registry's hardcoded filesystem layout made the
 missing abstraction visible).</p>
 <hr />
+<h3 id="item-38-model-catalog-watch-list-verified-live-2026-07-11">Item 38 — model-catalog watch list (verified live 2026-07-11)<a class="headerlink" href="#item-38-model-catalog-watch-list-verified-live-2026-07-11" title="Permanent link">&para;</a></h3>
+<p>Full live sweep 2026-07-11 (method: <code>set -a; . ~/.ppxai/.env; set +a</code> + curl
+each provider's <code>/models</code> with bearer; Perplexity has no <code>/models</code> — verified
+via docs + changelog). <strong>Result: every configured model on all four providers
+is still live — no dead models, no config change required now.</strong> OpenAI 7/7
+(incl. <code>gpt-5.3-codex</code>, still the newest codex line), Gemini 5/5 (incl. both
+<code>gemma-4-*</code>), NVIDIA 9/9 (unusually, zero NIM retirements this round),
+Perplexity 4/4 Sonar models unchanged. <code>model_deprecations.py</code> verification
+date bumped to 2026-07-11; no new table entries needed.</p>
+<p><strong>Watch items (act on trigger, not now):</strong></p>
+<ol>
+<li>
+<p><strong>OpenAI gpt-5.6 "Sol / Terra / Luna"</strong> — announced 2026-07-09, limited
+   preview (~20 orgs), GA "in the coming weeks". New naming: number =
+   generation, Sol/Terra/Luna = durable capability tiers. Pricing per MTok:
+   Sol $5/$30, Terra $2.50/$15, Luna $1/$6. <strong>Terra ≈ GPT-5.5 performance at
+   HALF the price</strong> → on GA, our configured <code>gpt-5.5</code> ($5/$30) becomes poor
+   value (candidate for our own deprecation table), and <code>gpt-5.4-mini</code>
+   ($0.75/$4.50, benchmark champion 97.5%) must be re-benchmarked against
+   Luna before any default switch. The three ids already appear in live
+   <code>/models</code> (2026-07-11) but are preview-gated. <strong>Trigger:</strong> gpt-5.6 GA →
+   add family, run <code>benchmarks/llm-eval</code>, re-pick default + flagship.</p>
+</li>
+<li>
+<p><strong>Perplexity Agent API (the "search/coding API" addition)</strong> — a NEW
+   surface beside Sonar chat completions and the Search API. Changelog
+   2026-05→07: exposes third-party + coding-focused models
+   (<code>openai/gpt-5.6-{sol,terra,luna}</code>, <code>anthropic/claude-sonnet-5</code>,
+   <code>anthropic/claude-opus-4-8</code>, <code>xai/grok-4.5</code> "flagship coding and agentic",
+   <code>perplexity/kimi-k2.7-code</code> "coding and agentic", <code>perplexity/glm-5.2</code>,
+   <code>nvidia/nemotron-3-super-120b-a12b</code>) plus a <code>finance_search</code> tool. Docs
+   are being restructured (the overview path 404s); endpoint shape /
+   OpenAI-compatibility / pricing unverified. <strong>Trigger:</strong> evaluate when docs
+   stabilize — could be (a) a second Perplexity provider entry if
+   OpenAI-compatible, (b) a web_search backend alternative (Search API), or
+   (c) out of scope. Note <code>anthropic/*</code> via this API would intersect the
+   roadmap's native Anthropic-provider item.</p>
+</li>
+<li>
+<p><strong><code>gemini-3.1-pro-preview</code> succession</strong> — still live, no announced
+   shutdown, but it is the only <em>preview</em>-class model left in our catalog and
+   Google retires previews on ~2–3-month cycles once a successor lands
+   (precedents: <code>gemini-3-pro-preview</code> → shutdown 2026-03-09,
+   <code>gemini-3.1-flash-lite-preview</code> → shutdown 2026-05-25, both bit us before).
+   <strong>Trigger:</strong> a GA <code>gemini-3.1-pro</code>/<code>gemini-3.5-pro</code> appears → migrate + add
+   the preview to the deprecations table. New Gemini families seen 2026-07-11
+   worth a look at next refresh: <code>gemini-omni-flash-preview</code>,
+   <code>deep-research-*</code>, <code>antigravity-preview-05-2026</code>.</p>
+</li>
+<li>
+<p><strong>NVIDIA next-refresh candidates</strong> (no action now): <code>z-ai/glm-5.2</code>,
+   <code>minimaxai/minimax-m3</code>, <code>mistralai/mistral-small-4-119b-2603</code>,
+   <code>mistralai/mistral-medium-3.5-128b</code>, <code>google/gemma-4-31b-it</code>,
+   <code>moonshotai/kimi-k2.6</code> (already configured). NVIDIA publishes no
+   deprecation calendar — the live-catalog diff IS the check; re-run the
+   sweep at the next release prep.</p>
+</li>
+</ol>
+<p><strong>Trigger:</strong> gpt-5.6 GA announcement, Perplexity Agent API docs stabilizing,
+or the next release prep — whichever comes first.</p>
+<hr />
+<h3 id="item-39-rtk-discover-false-negatives-under-hook-rewriting-rtk-gain-is-ground-truth-tooling">Item 39 — <code>rtk discover</code> false-negatives under hook rewriting; <code>rtk gain</code> is ground truth [tooling]<a class="headerlink" href="#item-39-rtk-discover-false-negatives-under-hook-rewriting-rtk-gain-is-ground-truth-tooling" title="Permanent link">&para;</a></h3>
+<p><strong>What's wrong:</strong> the 2026-07-11 <code>rtk discover</code> run reported "2.2% rtk
+adoption, 489 commands / ~118K tokens of missed savings" — a false alarm.
+<code>discover</code> scans Claude Code transcripts, which record the <strong>model-emitted</strong>
+command; the global <code>rtk hook claude</code> PreToolUse[Bash] hook rewrites eligible
+commands via <code>updatedInput</code> <em>after</em> the transcript records them, so every
+hook-rewritten execution is miscounted as "missed". Verified live 2026-07-11:
+a plain <code>grep -c</code> incremented <code>rtk gain</code>'s executed-command counter
+(2517→2518) while <code>rtk gain</code> itself does not self-count; <code>gain</code> shows 1.1M
+tokens actually saved (50.1% of 2.2M input) — an order of magnitude above
+discover's claimed 118K "missed". Cross-check: discover claims 238 missed
+<code>grep -n</code>; gain shows 266 executed <code>rtk grep</code>.</p>
+<p><strong>What's real in the discover output:</strong> the "TOP UNHANDLED" list ($UV run
+35×, jq 26×, stat 7×, git rev-parse 5×) — rtk has no handlers for these.
+Upstream feature-request material (github.com/rtk-ai/rtk/issues), not ppxai
+debt. The residual genuine miss rate inside the "missed savings" table is
+unknown but small (some entries may predate the 2026-05-10 hook install or
+be compound/piped forms the hook skips).</p>
+<p><strong>Why recorded here:</strong> <code>rtk discover</code> is in the standing toolkit
+(<code>~/.claude/RTK.md</code> → "Analyze Claude Code history for missed
+opportunities"); without this note, the next discover run re-triggers a
+false "the hook is broken" investigation.</p>
+<p><strong>Planned:</strong> no action. Use <code>rtk gain</code> / <code>rtk gain --history</code> as the
+adoption ground truth; ignore discover's "missed savings" percentages on
+hook-enabled hosts.</p>
+<p><strong>Trigger to revisit:</strong> an rtk release notes fix for discover counting
+hook-rewritten commands, OR <code>rtk gain</code> totals plateau across sessions
+(would indicate the hook actually stopped rewriting).</p>
+<p><strong>Effort:</strong> none (documentation-only entry).</p>
+<hr />
+<h3 id="item-40-web-vscode-clients-cannot-present-a-bearer-token-task-unusable-on-auth-enforcing-hosts-agent-platform-clients-fixed-2026-07-11-web-live-trialed-2026-07-12-under-an-enforcing-file-store-bearer-less-task-ls-401-token-mint-stored-task-lsshow-work-incl-status-aware-run-id-completion-vscode-set-api-token-path-unit-covered-not-yet-live-trialed">Item 40 — web + VSCode clients cannot present a bearer token; <code>/task</code> unusable on auth-enforcing hosts [agent platform / clients] — ✅ FIXED (2026-07-11; web live-trialed 2026-07-12 under an enforcing file store: bearer-less <code>/task ls</code> → 401, <code>/token mint</code> → stored, <code>/task ls</code>/<code>show</code> work incl. status-aware run-id completion. VSCode "Set API Token" path unit-covered, not yet live-trialed)<a class="headerlink" href="#item-40-web-vscode-clients-cannot-present-a-bearer-token-task-unusable-on-auth-enforcing-hosts-agent-platform-clients-fixed-2026-07-11-web-live-trialed-2026-07-12-under-an-enforcing-file-store-bearer-less-task-ls-401-token-mint-stored-task-lsshow-work-incl-status-aware-run-id-completion-vscode-set-api-token-path-unit-covered-not-yet-live-trialed" title="Permanent link">&para;</a></h3>
+<p><strong>Build (landed):</strong> both clients grew a /v1-scoped bearer seam — scoped to
+<code>/v1/*</code> ONLY because <code>server/auth.py</code> validates any presented bearer even on
+loopback-exempt UI routes (a stale token attached everywhere would 401 the
+whole client, not just the agent API).</p>
+<ul>
+<li><strong>web:</strong> <code>ApiClient.setApiToken()</code> + <code>headersFor(endpoint)</code> (get/post +
+  the <code>_tailEvents</code> live stream); token persisted in
+  <code>localStorage['ppxai-api-token']</code>, restored on app init. New client-side
+  <strong><code>/token status|set|mint|clear</code></strong> command (command-dispatcher):
+  <code>set</code> takes the value via <code>window.prompt()</code> — NEVER inline, every
+  dispatched command line is echoed into the server debug log; <code>mint</code>
+  self-provisions via the loopback bootstrap (<code>POST /v1/tokens</code>, sent
+  bare — a stale stored bearer would be validated and rejected even on
+  the exempt mint). <code>/token</code> registered in both web catalogs + the
+  engine completion builtins (<code>_TOKEN_SUBCOMMANDS</code>).</li>
+<li><strong>VSCode:</strong> <code>HttpClient.setApiToken()</code> + <code>v1Headers()</code> used by all 8
+  agent-slice call sites (task/runs/run/events/cancel/respond/ack/resume);
+  token in <code>SecretStorage</code> (<code>ppxai.apiToken</code>) — never settings.json (sync +
+  dotfile leak) — via the new <code>ppxai.setApiToken</code> command (masked input;
+  empty submit clears).</li>
+<li><strong>Follow-up (2026-07-12, from the VSCode trial leg):</strong> the palette-only
+  VSCode flow was undiscoverable — server-driven autocomplete offered
+  <code>/token</code> (engine builtin), dispatch answered "Unknown command", and the
+  <code>/task</code> 401 never named the fix. Landed: (1) the same in-chat
+  <strong><code>/token status|set|mint|clear</code></strong> family in VSCode (<code>chatPanel.ts</code>,
+  same SecretStorage key as the palette entry; bare <code>set</code> opens the
+  palette's masked input; <code>mint</code> self-provisions via
+  <code>HttpClient.mintApiToken('vscode-local')</code>, sent bare like web);
+  (2) per-client completion gating — <code>complete(..., client=)</code> +
+  <code>_CLIENT_GATES</code> in <code>engine/completion.py</code> hide client-side commands
+  (<code>/task</code>, <code>/token</code>, <code>/agentrun</code>, <code>/agentruns</code>) from clients that don't
+  implement them (TUIs now see none of them; fail-open for legacy
+  callers); (3) a 401 from any <code>/task</code>/<code>/agentrun</code> verb now appends
+  "run <code>/token mint</code> … or <code>/token set</code>" in BOTH clients
+  (<code>taskController.errText</code> / <code>agent-run-controller._errText</code>).
+  Fences: <code>TestTokenCommandParity</code> + <code>TestClientGating</code>.</li>
+<li><strong>Tests:</strong> <code>tests/test_api_client_auth_behavior.py</code> (Node harness — bearer
+  on /v1 GET+POST, absent on UI routes, headersFor seam, clear);
+  <code>tests/test_vscode_task_controller.py::TestBearerParity</code> (6 sentinels —
+  both seams exist, every VSCode agent call site uses <code>v1Headers</code>, secret
+  sources are the safe ones). Server side unchanged — already covered by
+  <code>test_auth_middleware.py</code> + <code>test_tokens_v1_route.py</code>.</li>
+</ul>
+<p><strong>Trial recipe:</strong> restore the file token store
+(<code>cp ~/.ppxai/ppxai-config.json.backup.tasktrials ~/.ppxai/ppxai-config.json</code>),
+restart the server, web UI: <code>/task ls</code> → expect 401 error; <code>/token mint</code> →
+minted+stored; <code>/task ls</code> again → works; <code>/task run …</code> full T5 flow under
+auth. VSCode: <code>/task ls</code> → expect 401 <strong>with the <code>/token</code> hint</strong> →
+<code>/token mint</code> → <code>/task ls</code> works (or: palette "ppxai: Set API Token" /
+<code>/token set</code> to paste one — both write the same SecretStorage key).</p>
+<p><strong>Original entry (for context):</strong> neither shipped client can authenticate to the v1 agent
+API. <code>ppxai/web/</code> has zero <code>Authorization</code> handling and so does
+<code>vscode-extension/src/</code> (verified by grep 2026-07-11). Meanwhile
+<code>/v1/agent/*</code> stays bearer-protected <strong>even from loopback</strong> (Inc 8b:
+<code>_LOOPBACK_PROTECTED_PREFIXES</code> in <code>server/auth.py</code>; only the tool-free
+<code>/v1/agent/run</code> + unowned-run reads are carved out), and auth is enforced
+whenever a mint-capable store is configured (<code>server.secrets.providers</code>
+containing <code>file</code> — presence ⇒ enforce, even with zero tokens). Net effect:
+on any host with a file token store, the ENTIRE <code>/task</code> family 401s from
+both shipped UIs. Caught live in the 2026-07-11 T5 trial on this host
+(file store left over from the Inc 8 <code>/v1/tokens</code> trial); worked around by
+temporarily removing the file provider from the user config.</p>
+<p><strong>Why it wasn't caught earlier:</strong> every T1–T8a live trial ran on auth-off
+hosts (no mint-capable store configured), which is the fresh-install
+default — the trial recipes never mention tokens because they never needed
+one.</p>
+<p><strong>What's needed:</strong> per-client token plumbing, not a server change:
+- <strong>web:</strong> a settings affordance to store a token (localStorage) +
+  <code>Authorization: Bearer</code> injection in <code>apiClient</code> and the SSE/event-tail
+  fetches; the loopback-exempt <code>POST /v1/tokens</code> bootstrap mint (Inc 8a)
+  already gives a local browser a way to acquire one.
+- <strong>VSCode:</strong> <code>ppxai.apiToken</code> via <code>SecretStorage</code> (not settings.json) +
+  the same header in <code>httpClient.ts</code> (incl. <code>agentRunEvents</code>).
+- Parity sentinels: extend <code>tests/test_vscode_task_controller.py</code> so the
+  header wiring can't drift between the two clients.</p>
+<p><strong>Release consideration:</strong> v1.19.0 ships <code>/task</code> in web + VSCode as a
+headline feature — "unusable the moment an operator configures the token
+store" is a real deployment cliff. Either land this before tagging or
+document the auth-off requirement loudly in the release notes.</p>
+<p><strong>Effort:</strong> ~half a day both clients + sentinels.</p>
+<hr />
+<h3 id="item-41-gemini-provider-tool-loop-fidelity-no-tool_call_id-threading-_filter_empty_parts-is-dead-code-providers-gemini-resolved-2026-07-12-same-day">Item 41 — Gemini provider tool-loop fidelity: no <code>tool_call_id</code> threading; <code>_filter_empty_parts</code> is dead code [providers / gemini] — ✅ RESOLVED (2026-07-12, same-day)<a class="headerlink" href="#item-41-gemini-provider-tool-loop-fidelity-no-tool_call_id-threading-_filter_empty_parts-is-dead-code-providers-gemini-resolved-2026-07-12-same-day" title="Permanent link">&para;</a></h3>
+<p>Found while diagnosing the deny-path empty-result bug (T5/T7 trials; the
+symptom fixes landed with §M — see
+<a href="../agent-platform-call-graphs/">agent-platform-call-graphs.md</a>). Two
+structural gaps, both verified by source read + grep, both fixed same day:</p>
+<ol>
+<li><strong><code>_convert_messages</code> (gemini.py) never threaded <code>Message.tool_calls</code> /
+   <code>tool_call_id</code></strong> (unlike <code>openai_native.py</code>), and <code>_parse_function_call</code>
+   never emitted a <code>tool_call_id</code> — so <code>engine/chat.py</code>'s native
+   tool-result pairing branch was <strong>dead for Gemini</strong>: every tool
+   round-trip flattened through the synthetic assistant/user text path,
+   an off-label transcript shape that plausibly drove the model quirks
+   observed live (the <code>default_api:</code> prefix echo, atypical continuations
+   after a denial). <strong>Fixed:</strong> <code>_parse_function_call</code> threads the SDK's
+   <code>FunctionCall.id</code>, synthesizing <code>gemini-fc-&lt;uuid12&gt;</code> when absent (the
+   engine's pairing branch requires an id per call; the id never goes
+   back on the Gemini wire), both TOOL_CALL emission sites carry it, and
+   <code>_convert_messages</code> maps the engine's native transcript shape onto
+   Gemini's wire format — assistant <code>tool_calls</code> → model <code>function_call</code>
+   parts, tool-role messages → user <code>function_response</code> parts paired by
+   function NAME via an id→name map built from the preceding model turn
+   (Gemini pairs responses by name, not id). Unpaired tool results
+   degrade to plain user text turns.</li>
+<li><strong><code>_filter_empty_parts</code> had zero call sites</strong> (the v1.15.3 call sites
+   were lost in a later refactor). <strong>Deleted</strong> — the response parse loops
+   already skip empty text parts inherently, and SDK 2.11.0 passed the
+   KI-001 gate with no filter in the path. A sentinel test pins the
+   deletion.</li>
+</ol>
+<p><strong>Verification (2026-07-12):</strong> <code>tests/test_gemini_native_tool_loop.py</code>
+(18 tests: id threading, TOOL_CALL event shape in both response modes,
+native transcript conversion incl. parallel calls / unpaired results /
+malformed args, deletion sentinel); full suite 4560 passed / 0 failed;
+benchmark gate 3× gemini-2.5-flash on SDK 2.11.0: overall
+80.7 / 72.6 / 73.8%, code editing 100/100/100 — at or above the
+pre-change 2.11.0 baseline (74.4/70.2/74.4), so the native transcript
+shape is benchmark-neutral-to-positive. <strong>Live-trial follow-up:</strong> watch
+whether the <code>default_api:</code> prefix echo and post-denial continuation
+quirks disappear in the next <code>/task</code> Gemini trials.</p>
+<hr />
 <h2 id="recently-moved-out-of-debt-scope">Recently moved out of debt scope<a class="headerlink" href="#recently-moved-out-of-debt-scope" title="Permanent link">&para;</a></h2>
 <p>These items left the debt inventory because they're not bug-fix-class
 follow-up — they're feature work belonging on the roadmap, or they
@@ -1716,10 +2108,617 @@ shipped already.</p>
   for full design rationale (TOS warning text, OAuth fallback caveats).</li>
 </ul>
 <hr />
+<h3 id="item-36-per-session-sub-agent-config-subagent-command-persisted-in-checkpoint-agent-platform">Item 36 — per-session sub-agent config + <code>/subagent</code> command, persisted in checkpoint [agent platform]<a class="headerlink" href="#item-36-per-session-sub-agent-config-subagent-command-persisted-in-checkpoint-agent-platform" title="Permanent link">&para;</a></h3>
+<p><strong>Context:</strong> v1.19.0 Inc 2 fixed sub-agent provider/model resolution to
+be <strong>per-run injected intent</strong> (ADR 0003 §9), NOT inherited from the
+interactive chat session. Resolution today: request value →
+<code>tools.agent.default_subagent</code> (global JSON config) → 400. The
+interactive session's <em>active chat provider</em> is deliberately not consulted
+(that was the bug: <code>/agentrun</code> resolved a stale global default and ignored
+the run's intended model).</p>
+<p><strong>What's missing (the middle layer):</strong> a <strong>per-session sub-agent default</strong>
+between the request and the global JSON config. User decision 2026-06-15:</p>
+<ul>
+<li>A <code>/subagent</code> slash command to configure, per session, the default
+  provider/model (and later budget/tool-grant) for sub-agents spawned
+  from that session — e.g. "in this session, sub-agents default to a
+  cheap fast model."</li>
+<li><strong>Persist it in the session checkpoint/status file</strong> so a session
+  restart revives the per-session sub-agent config (and it can be
+  re-adjusted live).</li>
+</ul>
+<p><strong>Target resolution chain once this lands:</strong>
+<code>request value → per-session sub-agent config → tools.agent.default_subagent (global) → 400</code>.</p>
+<p><strong>Why deferred (not Inc 2):</strong> touches the session checkpoint format + a new
+slash command surface across clients — too big for the Inc 2 provider-fix.
+Natural fit alongside the session/spawn machinery (≈ Inc 6-7, when
+checkpoint state and <code>spawn_subagent</code> land). The Inc 2 fix already
+established the correct <em>contract</em> (per-run intent, never chat-session
+inheritance); this adds the convenience layer.</p>
+<p><strong>Branch when ready:</strong> part of <code>feat/agent-platform-stage-2</code> (Inc 6/7) or
+its own <code>feat/subagent-session-config</code>.</p>
+<hr />
+<h3 id="item-37-agent-platform-v1190-watchlist-agent-platform">Item 37 — agent-platform (v1.19.0) watchlist [agent platform]<a class="headerlink" href="#item-37-agent-platform-v1190-watchlist-agent-platform" title="Permanent link">&para;</a></h3>
+<p>Low-severity, correctness-neutral items from the Inc 5–7 codex/copilot
+reviews. None block the MVP; grouped here so they're discoverable when the
+relevant follow-on work is scheduled.</p>
+<p><strong>a. sub-agent wait: disk-poll fallback.</strong> <code>SpawnSubagentTool._await_child</code>
+awaits the child's background <code>asyncio.Task</code> directly via
+<code>registry.get_run_task(run_id)</code> (no 20×/sec <code>meta.json</code> polling on the happy
+path; on wait-cap timeout it CANCELS the child, not orphan; cap = child
+<code>time_s</code> budget else <code>_DEFAULT_CHILD_WAIT_S=300</code>). A <strong>bounded disk-poll
+fallback</strong> remains for the no-task-handle case (child already finished, or a
+test seam bypassing <code>run_in_background</code>). Unify once every spawn path
+guarantees a task handle.</p>
+<p><strong>b. N=1 concurrency only.</strong> Parent awaits one child to terminal before its
+tool call returns (ADR 0003 <code>max_concurrent_subagents=1</code>). N&gt;1 fan-out + the
+backpressure cap is deliberately out of MVP scope.</p>
+<p><strong>c. <code>tool_targets()</code> fixed backend list (copilot 2026-06-16) — MITIGATED.</strong>
+The egress target enumeration for <code>web_search</code>/<code>get_weather</code> in
+<code>engine/tools/network_policy.py::_NETWORK_TOOLS</code> is a hard-coded list of every
+backend host a tool could reach (the AC-2 superset-rule fix). <strong>Maintenance
+hazard:</strong> if a new <code>web_search</code> backend is added and <code>_NETWORK_TOOLS</code> is NOT
+updated, a run could reach an un-allowlisted host with no
+<code>network_policy_denied</code> event — a silent AC-2 regression. <strong>Mitigation
+landed:</strong> <code>tests/test_network_policy.py::TestBackendCoverage</code> (commit
+<code>a8e7247d</code>, Item 37 g/c/f wave) source-scans the web tool modules for URL
+literals and fails on any host missing from <code>_NETWORK_TOOLS</code>, plus pins the
+known backends against deletion. Extended 2026-07-12: the scan now also
+covers <code>web.py</code> (free-tier search/weather) and catches f-string scheme
+placeholders (<code>f"{scheme}://wttr.in/…"</code>) that a bare <code>https?://</code> regex
+misses. Residual (acceptable): a backend whose host arrives purely from
+config/data (no source literal) would still evade the scan — deriving the
+set from a single source remains the structural fix if one is ever added.</p>
+<p><strong>d. <code>_ppxai_overflowed</code> private queue flag (copilot 2026-06-16).</strong> The Inc 3
+SSE slow-consumer self-heal sets a private attribute on the asyncio.Queue to
+signal "resync from disk." Works, but it's a brittle convention (relies on an
+ad-hoc attribute). Acceptable for MVP; consider a typed wrapper if the event
+fan-out grows.</p>
+<p><strong>e. Cancel latency: cooperative polling vs blocking calls (secondary review
+2026-06-16).</strong> <code>RunControl.check()</code> is evaluated only at <code>chat_with_tools</code>
+tool-loop boundaries, so a <code>POST /runs/&lt;id&gt;/cancel</code> issued while the engine is
+inside a long blocking call does NOT halt the run until that call returns. Two
+such calls: <code>provider.oneshot</code> / the LLM HTTP request (bounded by the provider
+timeout), and <code>SpawnSubagentTool._await_child</code> (up to the child <code>time_s</code> budget
+else <code>_DEFAULT_CHILD_WAIT_S=300</code>). <strong>Verified:</strong> cancel is <em>safe</em> (stops at a
+clean checkpoint, never mid-tool-call → no truncated <code>events.jsonl</code>/artifacts)
+but <em>not immediate</em>. <code>cancelling → cancelled</code> can lag by the in-flight call's
+duration. Acceptable for MVP; a future increment could race <code>check()</code> against
+the blocking await (e.g. <code>asyncio.wait</code> with a cancel event) for snappier
+cancellation. Document the latency in the API guide; no code change for MVP.</p>
+<p><strong>f. Egress is application-layer; no DNS-rebinding / private-IP defense
+(secondary review 2026-06-16).</strong> <code>NetworkPolicy.check()</code>
+(<code>engine/tools/network_policy.py:222</code>) matches <code>urlparse(url).hostname</code> against
+the allowlist <em>strings</em> — an application-layer check performed before
+<code>urllib</code>/<code>httpx</code> opens the TCP connection. <strong>Gaps verified in code:</strong> (1) an
+allowlisted host whose DNS an attacker controls can rebind to <code>127.0.0.1</code>/a
+link-local address between the check and the connect → SSRF against localhost
+services (classic TOCTOU/DNS-rebinding); (2) no rejection of allowlist entries
+that <em>themselves</em> resolve to private/loopback/link-local IPs; (3) <code>scheme ""</code>
+is accepted (line 228) alongside <code>https</code>. For the MVP — read-only tools, no
+shell, trusted operator-authored allowlists — string-matching is standard and
+sufficient. <strong>For an untrusted-code production tier</strong>, egress needs
+network-layer enforcement (egress proxy, <code>iptables</code>/NetworkPolicy, or a custom
+resolver that rejects private/loopback IPs and pins the resolved address
+through to connect). This aligns with — and should land alongside — the
+deferred <strong>tier-d OS-isolation</strong> work (ADR 0003 §3), which the shell-tool
+rejection already defers to. Until then, treat <code>allow_outbound</code> as "trusted
+operator input," not "safe against a hostile agent."</p>
+<p><strong>g. <code>_strip_section</code> couples the AC-1 prompt filter to markdown formatting
+(secondary review 2026-06-16).</strong> <code>agent_scoped_tools.py:42</code> strips off-grant
+shell guidance by locating the section end via <code>prompt.find("\n## ", ...)</code> and
+matching the literal header <code>"## Shell wrapper context"</code> (line 220). <strong>Verified
+brittleness:</strong> if the base prompt renderer later changes that section's
+heading level (<code>###</code>), wraps it in XML/<code>&lt;details&gt;</code>, or renames it, the strip
+silently no-ops and shell instructions leak into the prompt of a run with NO
+shell grant. <strong>Severity: token-waste, not a security breach</strong> — the
+<code>ScopedToolManager.execute_tool</code> chokepoint still hard-denies the shell call
+(AC-1 holds); the LLM just wastes tokens attempting it. <strong>Better design:</strong> the
+prompt generator should build the shell block conditionally from a
+<code>has_shell_grant</code> flag passed down, rather than always-concatenating and
+parsing it back out by substring slicing. Worth a covering test now (assert no
+shell guidance survives <code>_strip_section</code> for a no-shell grant) even before the
+modular-prompt refactor.</p>
+<p><strong>Status (updated 2026-06-16, commits <code>a8e7247d</code> g/c/f + the e follow-up):</strong></p>
+<ul>
+<li><strong>(c) DONE</strong> — <code>tests/test_network_policy.py::TestBackendCoverage</code> asserts
+  every https host literal in <code>web_premium.py</code> is covered by <code>_NETWORK_TOOLS</code>,
+  plus a pin on the five known backends. Drift now fails CI.</li>
+<li><strong>(g) DONE</strong> — the shell-wrapper block is gated at the source via
+  <code>ToolManager.get_tools_prompt(include_wrapper_context=)</code>;
+  <code>_strip_section</code> deleted. No more markdown-format coupling.</li>
+<li><strong>(f) PARTIAL</strong> — <code>NetworkPolicy.check</code> now denies an allowlisted host that
+  resolves to a loopback/private/link-local/reserved IP, and rejects
+  bare/empty scheme. <strong>Still deferred:</strong> DNS-rebinding (TOCTOU between check
+  and connect) needs network-layer enforcement (pinned-IP connect / egress
+  proxy) and lands with <strong>tier-d OS-isolation</strong>. Must NOT ship to an
+  untrusted-code tier on the app-layer check alone.</li>
+<li><strong>(e) PARTIAL</strong> — two layers now stop an awaited child when its parent is
+  cancelled: (1) <code>AgentRunRegistry.cancel_run</code> CASCADES — it cancels any
+  in-flight run whose <code>parent_run_id == run_id</code> (recursion-safe, cycle-guarded)
+  so a parent cancel never orphans a sub-agent regardless of who's polling;
+  (2) <code>_await_child</code> polls the parent's cancel flag on a ~100ms tick for prompt
+  latency (was: up to the 300s wait cap). <strong>Still deferred:</strong> a cancel issued
+  <em>during the provider HTTP call</em> (<code>engine.chat</code> → <code>provider.oneshot</code>) still
+  waits for that call to return — racing <code>control</code> against the provider await
+  is a deep change to the core chat path with real regression risk, out of
+  MVP scope.</li>
+<li><strong>(h) DONE — audit fidelity for multi-backend tools (secondary review
+  2026-06-16).</strong> <code>NetworkPolicy.authorize</code> previously reported only
+  <code>targets[0]</code> in the <code>network_policy_allowed</code> event, so a <code>web_search</code> that
+  actually hit Perplexity would log DuckDuckGo. <code>ToolDecision</code> now carries
+  <code>approved_targets</code> (the full superset of allowlisted hosts), surfaced in the
+  audit payload (<code>approved_targets</code>). <code>target_host</code>/<code>target_path</code> keep the
+  first target for back-compat; the new key is additive. Tests:
+  <code>test_approved_targets_lists_all_backends_not_just_first</code> /
+  <code>_empty_on_deny</code>.</li>
+<li>
+<p><strong>(i) MOSTLY DONE — agent-tier system-prompt framing (root-cause fix for
+  the Perplexity substitution; review 2026-06-16).</strong> Original framing was
+  "weak tool-caller → just warn the operator." Re-examination found the real
+  cause: <code>/v1/agent/task</code> sent the provider's CHAT <code>system_prompt</code> (which for
+  Perplexity actively encourages native web search) with NO agent framing,
+  AND <code>chat.py</code> appended a "you have native search, you do NOT need a tool"
+  block. So the substitution was a PROMPT problem, not a model ceiling.
+  <strong>Fixed:</strong> (1) per-engine <code>system_prompt_override</code> (honored by both
+  prompt-based + native assembly paths in <code>chat.py</code>); (2) <code>/v1/agent/task</code>
+  sets it to <code>compose_agent_system_prompt(req.system)</code> =
+  <code>DEFAULT_AGENT_SYSTEM_PROMPT</code> ("use ONLY granted tools, no native
+  fallback") + the caller's <code>system</code> (e.g. ppxai-sre's rendered AGENT.md);
+  (3) the native-search-encouragement block is SUPPRESSED when an agent
+  override is active. Ownership boundary preserved: the SOUL.md/AGENT.md
+  persona artifact stays in the CONSUMER (ppxai-sre); ppxai provides the
+  seam (<code>system</code> field, already on the request model) + a sane default.
+  Tests: <code>test_agent_system_prompt.py</code>. <strong>VERIFIED LIVE (2026-06-16):</strong> the
+  <code>benchmarks/agent-behavior/</code> cross-provider run confirms all four
+  providers (perplexity/sonar-pro, gemini-3.1-pro-preview, gpt-5.4-mini,
+  nvidia/qwen3.5) use the granted tool with correct results under the
+  framing — Perplexity included, no native-search substitution. So 37i is
+  <strong>DONE</strong>. <strong>Still optional (low value now):</strong> a <code>weak_tool_calling</code>
+  warning event when a <code>/task</code> targets <code>native_tool_calling:false</code> — the
+  framing fix addresses the actual behavior, so this is just SRE audit
+  nicety; leave unbuilt unless asked.</p>
+</li>
+<li>
+<p><strong>(j) DONE — non-streaming provider call blocked the event loop
+  (surfaced by the agent-behavior benchmark, 2026-06-16).</strong> Every
+  provider's <code>chat</code> non-streaming branch (+ openai responses API) called
+  the SYNCHRONOUS SDK inside <code>async def</code> with no offload; <code>/v1/agent/task</code>
+  uses <code>stream=False</code>, so one agent run starved the whole asyncio loop
+  (server unresponsive to all other requests until the LLM call returned).
+  This is the concurrency half of the branch-start "threading/subprocess
+  for sub-agents" question. <strong>Fixed:</strong> wrapped the non-streaming calls in
+  <code>asyncio.to_thread</code> (openai_compat / openai_native completions+responses
+  / gemini / perplexity); LLM calls are I/O-bound so the GIL is released
+  during the socket wait → real interleaving. PROVEN: independent request
+  returns in 0.46s while an agent run is in flight (was: timeout).
+  <strong>Deferred (separate axis):</strong> the streaming <code>/chat</code> path still starves
+  the loop in small bursts (sync chunk iterator); offloading a generator
+  is bigger — track if interactive concurrency becomes a problem.
+  Subprocess/OS-isolation (tier-d) remains the CPU/security-isolation
+  answer, NOT needed for I/O concurrency.</p>
+</li>
+<li><strong>(k) DONE — opt-in native web search for the tool-free oneshot tiers
+  (Option A, 2026-06-17).</strong> <code>/v1/oneshot</code> + <code>/v1/agent/run</code> answer from model
+  weights only, which made search-native providers (Perplexity, Gemini) near
+  useless on those tiers. Resolution: a single config flag
+  <code>tools.web_search.oneshot_grounding</code> (default <strong>off</strong>) that, when on, switches
+  <em>search-capable</em> providers into the PROVIDER'S OWN web search at construction
+  (Gemini <code>enable_grounding=True</code>; Perplexity sonar<em> searches intrinsically).
+  </em><em>Option A, not B:</em><em> retrieval stays inside the provider API call — no
+  <code>web_search</code>/<code>fetch_url</code> tool is exposed to the model, so the egress perimeter
+  is unchanged and <code>NetworkPolicy</code> (the <code>/task</code>-only egress firewall) is NOT
+  involved. Capability-gated: no-op for OpenAI/NVIDIA (<code>web_search:false</code>), so
+  the flag can never reach for a tool a provider lacks. Wired once in
+  <code>routes/oneshot.py::_build_provider</code> (the shared construction site —
+  <code>agent_v1._v1_provider_or_400</code> delegates here, so both oneshot tiers pick it
+  up). Tests: <code>test_oneshot_grounding.py</code> (flag plumbing, capability gate,
+  build-wiring, + a </em><em>perimeter-lock AST test</em><em> that fails if a web-tool symbol
+  is ever referenced in oneshot CODE — guards against drift to Option B). Docs:
+  <code>docs/api-gateway.md</code> Notes, <code>docs/plan-oneshot-grounding.md</code>. </em><em>Deferred
+  (out of scope, low value):</em>* Perplexity model-substitution when a non-sonar
+  model is requested under the flag — risks downgrading a deliberately chosen
+  reasoning model, so left to the caller to pass a sonar model.</li>
+<li><strong>(l) DONE — <code>/v1/agent/run</code> loopback carve-out (refines §H, 2026-06-17).</strong>
+  §H (commit aa989cef) protected the WHOLE <code>/v1/agent</code> prefix on loopback,
+  which broke the web <code>/agentrun</code> command: its only agent verb POSTs the
+  tool-free <code>/v1/agent/run</code> and the browser carries no bearer → 401 under a
+  file token store. Fix: two scoped, fail-closed loopback exemptions UNDER the
+  protected prefix — (1) exact path <code>/v1/agent/run</code> (tool-free oneshot tier,
+  same class as the already-exempt <code>/v1/oneshot</code>); (2) <code>GET /v1/agent/runs/&lt;id&gt;</code></li>
+<li><code>/events</code> ONLY when the run is UNOWNED (<code>owner=None</code> — the kind a token-less
+  local client creates), via <code>_is_loopback_unowned_run_read</code>. OWNED runs (every
+  <code>/task</code> run, every bearer-created run), list, cancel, and unknown-run reads
+  stay 401 even on loopback; remote never exempt. Closes the confidentiality
+  gap a naive "exempt all of /v1/agent on loopback" would open (other owners'
+  transcripts + tool output). Tests: 14 in <code>test_tokens_v1_route.py</code>. Verified
+  live on the rebuilt server (web launch→tail→read token-less OK; protected
+  surface 401).</li>
+<li><strong>(m) DONE — web <code>/agentrun</code> fire-and-forget (2026-06-17).</strong> <code>/agentrun</code>
+  AWAITED its own SSE tail inline, blocking the chat prompt until the run
+  finished — defeating the background run registry the whole platform is built
+  on. <code>_dispatchAgentRun</code> now launches, frees the prompt, and tails+posts the
+  result detached (<code>_watchAgentRunDetached</code>, not awaited); the result appends
+  out-of-band and the Inc-9 background_agents badge shows it running meanwhile.
+  Web-client-only. <strong>Deployment lesson (cost a debugging round):</strong> web JS is
+  bundled into the <code>ppxai-desktop</code> binary and the launcher RESTORES it to
+  <code>~/.ppxai/web/</code> on every start, so a web-asset change needs a <code>ppxai-desktop</code>
+  REBUILD — copying into <code>~/.ppxai/web/</code> is reverted on next launch. Tests:
+  <code>test_web_command_dispatcher_v18_1.py::TestAgentRunFireAndForget</code> + size fence
+  300→340 (documented). Verified live: <code>ls</code>/<code>/pwd</code> ran while a run was active;
+  <code>✅ completed</code> posted out-of-band. <strong>Deferred (design iteration, not started):</strong>
+  the full interactive sub-agent UX (tool-capable <code>/task</code> launch surface,
+  monitor/cancel controls, reattach) across web + VSCode — <code>/agentrun</code> only
+  covers the tool-free tier today.</li>
+<li><strong>(n) DONE — Gemini review fixes (2026-06-17).</strong> Four issues, each verified
+  against the code before fixing (one proposed fix was empirically worse and
+  replaced). <strong>#4 (regression from §J):</strong> the loopback auth exemptions returned
+  early without resolving a PRESENT bearer, stamping authenticated local runs
+  <code>owner=None</code> — fixed by gating the exemptions on <code>has_bearer</code> (present-but-
+  invalid → 401, never silently exempted). <strong>#1:</strong> the SSRF-guard sync DNS ran
+  inline on the event loop per network tool call; the obvious offload was
+  measured ~4× slower (2.4s vs ms) and broke the egress test, so replaced with a
+  30s TTL memo (<code>_resolve_cache</code>) — repeated checks do zero DNS. <strong>#2:</strong>
+  <code>active_summary()</code> scanned <code>list_runs()</code> (disk) on every lifecycle event;
+  replaced with an in-memory <code>_active</code> index maintained at each transition
+  (O(active), no disk). <strong>#3:</strong> <code>_await_child</code> summed <code>waited += tick</code> (drifts
+  under load); switched to <code>time.monotonic()</code>. Tests: +3 in test_tokens_v1_route
+  (<code>TestLoopbackHonorsProvidedBearer</code>), +4 in test_network_policy (cache), +2 in
+  test_background_agents_mirror (no-disk / cancelling). Call-graph §L. <strong>Lesson:</strong>
+  the theoretically-correct async-DNS fix was empirically slower in this env —
+  verified-then-replaced rather than shipped on plausibility.</li>
+<li><strong>(o) DONE — second review round (2026-06-17).</strong> Two more, both verified
+  against the committed tree first. <strong>Cancel-cascade disk reads:</strong>
+  <code>_cancel_run_cascade</code> did <code>store.load_meta(child_id)</code> per in-flight control to
+  read <code>parent_run_id</code> (O(C·D) disk on the loop during cancel); now carried in
+  the in-memory <code>_active</code> index and read from memory (zero disk).
+  <code>active_summary()</code> still projects badge fields only. <strong>Fixed-name temp files
+  (defense-in-depth, NOT a live bug):</strong> <code>persist_meta</code> + token-store <code>_save</code>
+  wrote to hardcoded <code>*.tmp</code> names; harmless in our single-process async model
+  (per-run slot dirs make meta tmps distinct; no await between write+replace),
+  but a multi-worker <code>uvicorn --workers N</code> deployment WOULD race — switched both
+  to <code>tempfile.mkstemp</code> + temp-cleanup-on-failure. Tests: +1 cascade-no-disk,
+  +2 persist tmp. Call-graph §L. <strong>Severity honesty:</strong> the temp-file race was
+  filed/fixed as future-proofing with the model caveat stated, not dressed up as
+  a current corruption bug.</li>
+<li><strong>(p) — external review round (Gemini/antigravity + Codex, 2026-07-02/03).</strong>
+  Two independent reviews of the branch (during the <code>/task</code> T1–T2 work).
+  <strong>Fixed + tested:</strong> (1) loopback <code>X-Forwarded-For</code> spoofing — <code>_is_loopback</code>
+  now rejects any request carrying a forwarding header, AND uvicorn defaults
+  <code>forwarded_allow_ips=""</code> (trust no proxy) via <code>_forwarded_allow_ips()</code>,
+  overridable with <code>PPXAI_FORWARDED_ALLOW_IPS</code>; (2) filesystem-seal deny globs
+  now match a bare name anywhere (<code>.env</code>/<code>secrets</code>, not only <code>**/.env</code>);
+  (3) <strong>HIGH — filesystem-seal bypass via arg aliases</strong> — <code>ScopedToolManager</code>
+  now normalizes aliases (<code>file</code>→<code>filepath</code>, <code>path</code>→<code>directory</code>) BEFORE the
+  egress/filesystem checks, so <code>read_file(file=…)</code>/<code>search_files(path=…)</code> can't
+  slip the jail via the base manager's <em>post</em>-check normalization; (4) <strong>HIGH —
+  spawn wildcard egress subset</strong> — <code>_check_egress_subset</code> probes TWO unguessable
+  labels, so a child <code>*.suffix</code> glob is approved only if the parent holds a
+  covering glob, not one exact subdomain. Commits <code>ccf9c1fc</code> (1,2), <code>5b987fd0</code>
+  (3,4). <strong>Still open (deferred):</strong><ul>
+<li><strong>Sync DNS in the SSRF guard blocks the loop on a COLD lookup</strong> (Gemini).
+  Distinct from (f)'s rebinding gap: <code>_host_resolves_to_blocked_ip</code> calls
+  <code>socket.getaddrinfo</code> synchronously — TTL-cached (one block per host per
+  window) and only on the opt-in tool-capable tier, but a slow/timing-out
+  DNS stalls the loop. The async fix needs the whole <code>execute_tool</code>
+  chokepoint to go async (event-emit callback must stay on the loop thread).
+  <strong>Planned:</strong> with tier-d / an egress-proxy rework.</li>
+<li><strong>O(N) token verification</strong> (Gemini). <code>secrets/file.py</code> hashes every stored
+  token per auth (no public id prefix). SHA-256 is µs-fast and the file
+  store holds small operator token sets → low DoS risk, but poor scaling.
+  <strong>Planned:</strong> <code>token_id.material</code> bearer format → O(1) lookup + one compare.
+  Land with Inc 8b RBAC.</li>
+<li><strong>No role-subset check on mint</strong> (Gemini). <code>tokens_v1.mint_token</code> lets a
+  scoped caller request arbitrary <code>roles</code>. Inert today — roles are NOT authz
+  gates (owner is; the F6 owner-scoping was chosen precisely to avoid a
+  mint-your-own-role escalation) — but a seam once RBAC lands. <strong>Planned:</strong>
+  require <code>roles ⊆ caller.roles</code> with Inc 8b RBAC.</li>
+<li><strong><code>get_weather</code> http fallback un-allowlistable</strong> (Codex). Its plain-http
+  target is always denied under the https-only policy — already documented
+  at <code>network_policy.py:143-144</code>; drop the http target (or the tool) when
+  convenient. Relates to (c).</li>
+<li><strong>Filesystem-jail alias completeness — ✅ DONE</strong> (commit <code>15534784</code>). The
+  alias fix already caught every alias the tool CONSUMES; this closes the
+  remaining completeness gap where a cross-group name the tool does NOT accept
+  (e.g. <code>read_file(path=…)</code>) reached the base past the jail before erroring
+  (not a leak — the tool failed on the missing required arg — but a gap).
+  <code>_PATH_TOOLS</code> now carries <code>path_required</code>; <code>FilesystemPolicy.authorize</code>
+  fails CLOSED for a required-path tool (and any write) whose canonical kwarg
+  is absent after normalization. <code>list_directory</code>/<code>search_files</code> keep the
+  workdir "." default. Tests: <code>test_filesystem_policy.py</code> (required-missing
+  denied, optional-missing allowed, unrecognized-alias denied at jail).
+  <strong>Confirmed duplicates (still-known, not re-filed):</strong> Gemini's "50ms disk-poll
+  fallback" = (a); "100ms cancel poll" ≈ (e). <strong>Meta:</strong> the alias-normalization
+  ordering bug is a general class — any kwarg-inspecting policy must run AFTER
+  normalization; the fix hoists it before all checks. Lesson
+  <code>docs/lessons/loopback-ui-auth-exemption.md</code> corrected (the earlier "gate
+  ignores forwarded headers" note was imprecise — uvicorn DOES rewrite
+  <code>client.host</code>).</li>
+</ul>
+</li>
+<li><strong>(a)/(b)</strong> unchanged — promote with the N&gt;1 sub-agent work.</li>
+<li><strong>(d)</strong> unchanged — only matters if the SSE layer is reworked.</li>
+</ul>
+<p><strong>ppxai-sre integration gaps (filed 2026-06-24 from the code-verified
+reconciliation — see <a href="../research/2026-06-24-ppxai-sre-integration-reconciliation/">docs/research/2026-06-24-ppxai-sre-integration-reconciliation.md</a>
+and <a href="../research/2026-06-24-ppxai-sdk-mutation-tools-for-sre-agents/">docs/research/2026-06-24-ppxai-sdk-mutation-tools-for-sre-agents.md</a>;
+contract of record is <code>ppxai-sre/docs/PPXAI-INTEGRATION-V1.19.md</code>). The written
+contract C1–C4 + A3 is effectively MET on <code>feature/v1.19.0</code>; these are the
+genuine open set. (Lettered q–t; upstream owns p = external review round.)</strong></p>
+<ul>
+<li>
+<p><strong>(q) OPEN — C5 agent-served services routing (entirely unbuilt).</strong> No
+  <code>services</code> field on <code>POST /v1/agent/run</code>, no reverse-proxy route
+  <code>…/services/&lt;name&gt;/...</code> → bound port, no <code>EventType.AGENT_SERVICE_DOWN</code>, no
+  inbound network policy (<code>allow_inbound</code>), no restart_policy/drain/terminate
+  API, no <code>X-Forwarded-Prefix</code> semantics (C5.0–C5.5 all absent — verified). <strong>Not
+  a regression:</strong> C5 post-dates the <code>42ed8f00</code> written agreement and was never
+  folded upstream; outlook-monitor ships the documented workaround (FastAPI
+  binds ports directly). <strong>Entangled with (b)/(a) and the <code>agent_n</code> decision:</strong>
+  C5's bound-service inspection path is <code>runs/&lt;run_id&gt;/agent-&lt;n&gt;/services/&lt;name&gt;/</code>,
+  which needs a REAL multi-slot <code>agent_n</code> (today always 0 — sub-agents are
+  sibling top-level runs linked by <code>parent_run_id</code>, never <code>agent-1/</code>). The proper
+  <code>/task</code> design IS the C5 + <code>agent_n</code>-nesting design — they cannot be decided
+  separately. <strong>Planned:</strong> v1.19.x <code>/task</code> design iteration (debt 37m follow-on)
+  or v1.20.x. <strong>Trigger to revisit:</strong> when <code>/task</code> proper design opens, or when a
+  long-lived ppxai-sre service agent (incident-responder / cost-optimizer /
+  cert-monitor / log-analyst) needs bound-port routing.</p>
+</li>
+<li>
+<p><strong>(r) RETIRED (2026-07-07, landed across T5–T7) — <code>state.json</code> now persisted
+  (Inspection Triplet complete on the flat <code>agent-0/</code> slot).</strong>
+  <code>AgentRunStore.persist_state/load_state</code> + the <code>FilesystemAgentRunStore</code>
+  implementation landed with T5; producers: T5 <code>waiting</code> park (+ resume
+  <code>last_response</code>), T6 <code>completed_pending_ack</code> hold + <code>finalized</code>
+  (<code>result_ready_at</code>/<code>result_chars</code>, <code>via</code>/<code>acked_at</code>), T7 resumable-stop
+  checkpoint, restart-sweep (<code>via:"restart_sweep"</code>), and resume
+  (<code>resumed_from</code>). Consumer: T7 <code>POST /runs/{id}/resume</code> + the
+  <code>resume_refusal</code> decision matrix. Original context: the run slot wrote <code>meta.json</code> + <code>events.jsonl</code>
+  but NOT <code>state.json</code> (<code>agent_runs.py</code> comments said "Inc 2-3"); a consumer
+  expecting the full ADR-0005 Triplet (e.g. ppxai-sre <code>heartbeat.py</code> reconstructing
+  <code>AgentBeatState</code>) found no file. <strong>No longer a standalone item</strong> — folded into the
+  <code>/task</code> lifecycle plan (<a href="../plan-task-command-sequencing/">plan-task-command-sequencing.md</a>);
+  each piece lands with the increment that uses it (vertical-slice contract).
+  Stays flat <code>agent-0/</code>; the multi-slot/service-state Triplet is still (q)/<code>agent_n</code>
+  nesting.</p>
+</li>
+<li>
+<p><strong>(s) OPEN — A3 <code>run_id</code>/<code>parent_run_id</code> form-vs-substance.</strong> The info A3 needs
+  is fully available — <code>run_id</code> is the event partition key + <code>GET /v1/agent/runs/&lt;id&gt;</code>,
+  <code>parent_run_id</code> is on <code>RunMetaResponse</code> — but NOT literally inside the
+  <code>AGENT_RUN_START.data</code> dict as the doc's "additive fields on the event" wording
+  implies. <strong>Resolution is a coin-flip:</strong> either fold the two fields into the
+  event payload for literal compliance, or amend the integration doc to state the
+  structural form. <strong>Severity: cosmetic/contract-wording</strong>; no consumer is blocked
+  (read from the meta projection). <strong>Planned:</strong> resolve during the
+  <code>MIGRATION-V1.19.md</code> rewrite. <strong>Trigger to revisit:</strong> migration-doc pass.</p>
+</li>
+<li>
+<p><strong>(t) OPEN — embeddable sandboxed-run SDK API (<code>build_task_runner</code> welded to the
+  HTTP route).</strong> For the SDK model (ppxai-sre embeds ppxai; its long-running
+  agents spawn ppxai sub-agent runs as the safe execution unit for AGENT.md-steered
+  MUTATION tools), the run-assembly — <code>ScopedToolManager</code> + <code>NetworkPolicy</code> +
+  budget/cancel + spawn + AGENT.md framing onto an <code>EngineClient</code> — currently lives
+  at <code>server/routes/agent_v1.py::build_task_runner</code>, importing route/FastAPI state.
+  A library consumer must import a server-route module or re-implement the security
+  wiring. <strong>Ask:</strong> lift it into the engine as a FastAPI-free <code>build_sandboxed_run(...)</code>
+  API; the HTTP route becomes a thin caller. <strong>Structural precondition</strong> for
+  ppxai-sre mutation tools. Pairs with promoting integration asks <strong>A2</strong>
+  (deterministic pre-mutation policy hook — the real write-tool unblocker) and
+  <strong>A1</strong> (policy-decision audit events) from v1.20.x. See
+  <a href="../research/2026-06-24-ppxai-sdk-mutation-tools-for-sre-agents/">docs/research/2026-06-24-ppxai-sdk-mutation-tools-for-sre-agents.md</a>.
+  <strong>NOTE — partially overtaken by upstream <code>/task</code> T1–T2 (2026-07-02/03):</strong> the
+  filesystem-seal (<code>tools.agent.sandbox</code>, <code>filesystem_policy.py</code>) + alias-normalization
+  hardening landed after this was filed; re-verify (t) against the current tree
+  before acting — the sandbox surface has moved. <strong>Planned:</strong> v1.19.x <code>/task</code>
+  design iteration or v1.20.x.</p>
+</li>
+<li>
+<p><strong>(u) FIXED (2026-07-06) — CORS wildcard + no Host-header validation on the HTTP
+  server [SECURITY].</strong> <strong>STATUS:</strong> shipped + tested (16 tests in
+  <code>tests/test_host_cors_security.py</code>; auth/tokens suites still green). Implemented
+  in <code>server/http.py</code>: (1) CORS default is now a <strong>loopback-origin regex</strong>
+  (<code>^https?://(127\.0\.0\.1|localhost)(:\d+)?$</code>) instead of <code>["*"]</code>, overridable via
+  <code>PPXAI_ALLOWED_ORIGINS</code>; (2) a <strong>Host-validation middleware</strong> (outermost) rejects a
+  non-loopback <code>Host</code> with 400 <code>invalid_host</code>, exempting <code>/health</code>+<code>/healthz</code> (kubelet
+  probes send Host=<pod IP>) and OPTIONS (let CORS decide). <strong>Bind-conditional +
+  non-breaking:</strong> <code>_BIND_HOST</code> set by <code>run_server</code>/<code>run_desktop</code>; loopback bind →
+  strict loopback allowlist (desktop default, no env); wide bind + <code>PPXAI_TRUSTED_HOSTS</code>
+  → loopback + those hosts (gateway/coder); wide bind + no env → permissive + one-time
+  warn (so a server-image-only upgrade never 400s an existing gateway). k8s wiring:
+  <code>deploy/images/session-manager/main.py</code> threads <code>PPXAI_TRUSTED_HOSTS</code>/
+  <code>PPXAI_ALLOWED_ORIGINS</code> from <code>INGRESS_HOST</code> into each per-user pod;
+  <code>deploy/examples/microk8s/session-manager-deployment.yaml</code> documents it. <strong>Verified
+  via TestClient (full ASGI stack)</strong>; live-socket subprocess suite (<code>test_server_smoke_e2e</code>)
+  is environmentally skipped on this Windows host (pre-existing, CI-Linux/macOS only) —
+  NOT run here. <strong>Original analysis retained below.</strong></p>
+</li>
+</ul>
+<p>Full analysis:
+  <a href="../research/2026-07-05-http-server-attack-surface-and-transport-options/">docs/research/2026-07-05-http-server-attack-surface-and-transport-options.md</a>
+  §"Point 1". <strong>The bug (verified <code>6add04f6</code>):</strong> <code>server/http.py:194-201</code> sets
+  <code>CORSMiddleware(allow_origins=["*"], allow_credentials=True, allow_methods=["*"],
+  allow_headers=["*"])</code>. Starlette's CORS, given <code>*</code> + credentials, <strong>reflects the
+  request Origin</strong> back with <code>Allow-Credentials:true</code> (it can't legally send literal
+  <code>*</code> with credentials) — so it behaves as "trust EVERY specific origin, with
+  credentials." Combined with <strong>default-OFF auth</strong> (<code>auth.py:4-8</code>,
+  <code>PPXAI_API_TOKEN</code> unset ⇒ unauthenticated) this means <strong>any website the user
+  visits can script credentialed requests to <code>127.0.0.1:54320</code></strong> — spend the user's
+  provider $, read <code>/sessions</code>, drive <code>/v1/agent/task</code> if the tier is on, hit
+  <code>/v1/tokens</code>. Zero user interaction. Also <strong>no <code>Host</code>-header validation</strong>, so
+  <strong>DNS-rebinding</strong> (rebind <code>evil.com</code>→<code>127.0.0.1</code>) bypasses CORS entirely (browser
+  sees same-origin; TCP lands on ppxai).</p>
+<p><strong>The fix (two parts, ~15 LoC, no architecture change):</strong>
+  1. Replace wildcard CORS with an explicit loopback-origin allowlist. Because the
+     port may become random (see A.2 in the research doc) prefer
+     <code>allow_origin_regex=r"^http://(127\.0\.0\.1|localhost):\d+$"</code> so any loopback
+     port passes, no external host does. <strong>Also add the VSCode webview origin</strong> if
+     the extension's browser context (not the extension host) makes the call —
+     verify which; extension-host <code>httpx</code>/<code>fetch</code> is not subject to CORS.
+  2. Add <code>TrustedHostMiddleware(allowed_hosts=[loopback names])</code> as the OUTERMOST
+     middleware (add it LAST — Starlette runs last-added first) so a rebinding
+     request with <code>Host: evil.com</code> is 400'd before any route. Order target:
+     <code>TrustedHost → CORS → auth → activity → routes</code>.</p>
+<p><strong>⚠️ DO NOT ship a hardcoded loopback-only <code>allowed_hosts</code> — it breaks the k8s
+  coder/gateway deployment.</strong> VERIFIED: <code>deploy/images/session-manager/main.py:428</code>
+  spawns per-user server pods with <code>python -m ppxai.server.http --host 0.0.0.0
+  --port 54320</code> (bound WIDE, not loopback), fronted by ingress-nginx with a signed
+  <strong>cookie</strong> session (<code>coder_session</code>, LDAP <code>auth_request</code> — NOT the
+  <code>PPXAI_API_TOKEN</code> bearer; <code>COOKIE_NAME</code>/<code>AUTH_MODE</code> in the same file). A
+  loopback-only Host check would 400 every ingress-forwarded request (Host =
+  <code>ppxai.local</code>). <strong>So Host-validation + CORS-origin allowlist MUST be conditional
+  on bind address / an explicit <code>PPXAI_TRUSTED_HOSTS</code> + <code>PPXAI_ALLOWED_ORIGINS</code>
+  env override</strong>: loopback-only when bound to <code>127.0.0.1</code> (desktop default);
+  operator-supplied host(s) when bound <code>0.0.0.0</code> (gateway/coder). This is the exact
+  "local transport locked to loopback; gateway transport is the explicit
+  authenticated exception" thesis of the research doc — the fix ENCODES it.</p>
+<p><strong>Trap for the resume:</strong> CORS/Host changes break clients SILENTLY. Before
+  shipping, exercise EACH client against the patched server — (a) web app loads +
+  SSE streams, (b) <code>X-Session-Id</code> round-trips, (c) VSCode extension works, (d) a
+  cross-origin <code>fetch</code> from a foreign origin is now BLOCKED (positive test), (e)
+  a <code>helm</code>-deployed coder pod behind ingress still serves (Host=ingress host
+  passes). TUIs are <code>httpx</code>/<code>urllib</code>, NOT browsers — unaffected by CORS, but still
+  hit by TrustedHost, so include them in the loopback allowlist. <strong>Planned:</strong>
+  actionable now, independent of the transport-model decision (Options A–D in the
+  research doc). <strong>Trigger:</strong> do the CORS+Host fix immediately; the random-port /
+  loopback-token / UDS follow-ons (A.2–A.4) can wait.</p>
+<ul>
+<li><strong>(v) NETWORK-LAYER FIXED (2026-07-06) — cross-tenant pod reachability: per-user
+  coder pods are <code>0.0.0.0</code>-bound + app-layer-unauthenticated, with NO ingress
+  NetworkPolicy [SECURITY, multi-tenant isolation; HIGHER severity than (u);
+  distinct layer].</strong> <strong>(u) does NOT resolve this</strong> — (u) is browser-layer
+  (CORS/Host) defense-in-depth; this is network/app-layer tenant isolation. Filed
+  separately on purpose.</li>
+</ul>
+<p><strong>STATUS 2026-07-06:</strong> the <strong>network-layer fix (ingress NetworkPolicy) is shipped
+  + live-verified.</strong> The per-user egress policy gained <code>policyTypes:[Ingress]</code> with
+  inbound restricted to exactly (1) the ingress-controller namespace
+  (<code>namespaceSelector</code>) and (2) the node/kubelet-probe source CIDR (<code>ipBlock</code> — the
+  probe comes from the NODE, not a pod; omitting it silently breaks readiness).
+  Live-verified END TO END: the cross-tenant exploit that returned HTTP 200 on
+  <code>/status,/sessions,/state,/v1/agent/runs</code> now <strong>times out</strong> from a neighbour pod;
+  a real pod still reaches <code>Ready</code> (probe path intact, 0 restarts); ingress-nginx →
+  pod still HTTP 200 (north-south intact). Live site config
+  <code>deploy/microk8s/networkpolicy.yaml</code> + a generic opt-in
+  <code>networkPolicy.ingressIsolation</code> in the Helm chart (<code>ingressNamespace</code> +
+  <code>probeSourceCIDRs</code>; <code>fail</code>s if enabled with empty CIDRs). <strong>STILL DEFERRED
+  (defense-in-depth):</strong> the app-layer per-session <code>PPXAI_API_TOKEN</code> between ingress
+  and pod (fix option 2) — the NetworkPolicy is the correct primary layer and
+  closes the exploit; the bearer is belt-and-suspenders for a CNI-less deployment
+  or a same-namespace-but-authorized caller. Track with Item 3.</p>
+<p><strong>VERIFIED (<code>6add04f6</code>):</strong>
+  - Per-user server pods bind <code>--host 0.0.0.0 --port 54320</code>
+    (<code>deploy/images/session-manager/main.py:428</code>).
+  - App-layer auth is OFF on those pods; the ONLY gate is the north-south ingress
+    path (ingress-nginx <code>auth_request</code> → LDAP → signed <code>coder_session</code> cookie).
+  - <code>deploy/helm/ppxai/templates/networkpolicy.yaml</code> declares <code>policyTypes:
+    [Egress]</code> ONLY (H2 egress hardening — stops a COMPROMISED pod calling out) and
+    is <strong><code>networkPolicy.enabled: false</code> by default</strong> (<code>values.yaml:92</code>) + needs a
+    policy-enforcing CNI (Calico/Cilium). <strong>There is NO ingress NetworkPolicy
+    anywhere in the chart.</strong></p>
+<p><strong>The gap:</strong> nothing at the network layer restricts WHO may open a TCP connection
+  to <code>:54320</code> on a per-user pod. So any pod in the namespace (a neighbor user's
+  pod, a benchmark job, a compromised sidecar) — or anyone with <code>kubectl
+  port-forward</code> — can hit <code>http://&lt;other-user-pod-ip&gt;:54320</code> directly and drive
+  that user's engine, <strong>bypassing the ingress, LDAP, and the cookie entirely.</strong>
+  Cross-tenant, unauthenticated, east-west. The ingress-cookie model protects
+  north-south only.</p>
+<p><strong>Why (u) doesn't cover it:</strong> CORS is browser-enforced — a non-browser client
+  (<code>curl</code>/<code>httpx</code>) ignores it. Host validation only helps if the attacker doesn't
+  spoof <code>Host</code>, which is trivial on a raw request. So a deliberate in-cluster
+  attacker sending <code>Host: &lt;ingress-host&gt;</code> + the right path still reaches an
+  unauthenticated engine after (u) lands.</p>
+<p><strong>Fix (any of, best = both):</strong>
+  1. <strong>Ingress NetworkPolicy (the missing half of H2).</strong> Add <code>policyTypes:
+     [Ingress]</code> on the per-user pods: <code>ingress.from</code> = only the ingress-nginx
+     pod/namespace (+ probe source). Correct layer for tenant isolation; pods
+     physically can't reach each other. Same CNI dependency + default-off caveat as
+     the egress sibling.
+  2. <strong>App-layer bearer between ingress and pod.</strong> Session-manager mints a
+     per-user/per-session <code>PPXAI_API_TOKEN</code>, ingress-nginx injects it; a direct
+     pod-to-pod call then 401s. CNI-independent; closes the gap even with no
+     NetworkPolicy. Cost: token mint + inject plumbing in the session-manager.
+  3. <strong>Both</strong> — proper multi-tenant posture (network isolation + defense-in-depth).</p>
+<p><strong>Ties to Item 3</strong> (k8s session-manager security tests, still open) — same
+  subsystem; "cross-tenant pod reachability" belongs in that hardening scope + its
+  test suite. <strong>Planned:</strong> with Item 3 / a coder-deployment hardening pass.
+  <strong>Trigger:</strong> before any real multi-tenant coder deployment; higher priority than
+  (u) if coder is shipping to more than one user.</p>
+<ul>
+<li><strong>(w) CLOSED (2026-07-11) — external review round (Antigravity, of T3–T8a).</strong>
+  8 findings on the agent architecture; each verified against the code before
+  acting (verify-don't-assume). <strong>Fixed + tested (landed with this entry):</strong>
+  (1) CORS: a literal <code>*</code> in <code>PPXAI_ALLOWED_ORIGINS</code> is dropped with a warning
+  instead of reaching Starlette next to <code>allow_credentials=True</code>
+  (<code>http.py::_cors_kwargs</code>; wildcard-with-credentials would reflect ANY origin);
+  (2) VSCode <code>/task</code> black-box UX: <code>httpClient.agentRunEvents()</code> now tails
+  <code>GET /runs/{id}/events?live=1</code> (same wire parsing as web <code>_tailEvents</code>) and
+  <code>taskController.runWatch</code> is tail→poll (web <code>_runWatch</code> parity) — action
+  events render as one-line transcript entries, heartbeat/lifecycle filtered;
+  (3) unbounded watcher fetches: all 7 agent REST calls carry
+  <code>AbortSignal.timeout(15s)</code> so a hung connection counts as a poll failure and
+  the <code>pollMaxFailures</code> tripwire actually fires (the long-lived events stream
+  is exempt by design); (4) consent-park latency: an <code>agent_waiting</code> stream
+  event raises the QuickPick immediately (shared, token-deduped
+  <code>maybeAskConsent</code> across tail + poll paths) instead of waiting out a poll
+  backoff of up to 30s against <code>consent_ttl</code>. Sentinels extended:
+  <code>/events?live=1</code> endpoint parity, <code>agentRunEvents</code> in the backend-interface
+  check, new <code>TERMINAL_EVENTS</code> set-parity test. <strong>Reviewed + REJECTED (the
+  reviewer's updated pass re-asserts these without new evidence — recorded here
+  so future rounds don't re-litigate):</strong><ul>
+<li><em>"Brittle IPv6 Host parsing / <code>[evil.com]</code> bypass or ValueError"</em> — false.
+  <code>http.py</code> guards <code>.index("]")</code> with <code>and "]" in host</code> (no ValueError
+  path), <code>[evil.com]</code> extracts <code>evil.com</code> which still hits the allowlist
+  (rejected), and every malformed shape (unclosed bracket, multi-colon)
+  falls through to the allowlist check — all paths fail closed. <code>urlsplit</code>
+  would be cosmetic (and raises on invalid ports, needing its own guard).</li>
+<li><em>"sweep_orphans() in get_agent_run_registry() risks concurrent races"</em> —
+  false in this process model. Every caller is an <code>async def</code>
+  route/middleware (verified: all 9 agent_v1 routes, <code>/state</code>, auth
+  helper); the getter has no <code>await</code> between check and set, so it cannot
+  interleave on the event loop. Separate uvicorn workers each sweeping once
+  is the CORRECT T7 semantic (fresh process = orphaned futures). A lifespan
+  hook would lose the laziness (touch <code>~/.ppxai/runs/</code> even with the agent
+  tier off). Invariant now pinned in a comment at the getter — add a lock
+  IF a sync-def/threadpool caller ever appears.</li>
+<li><em>"<code>task = req.task or spec.task</code> is dead code"</em> — deliberate; the inline
+  comment at the site already documents it as forward-compat for relaxing
+  <code>AgentTaskRequest.task</code> to optional.</li>
+<li><em>"naive quote-strip in respondCmd"</em> — byte-identical to the web client's
+  strip (verb-for-verb parity is the T8a contract); an escaped quote in a
+  consent free-text answer rides harmlessly as literal text.</li>
+</ul>
+</li>
+</ul>
+<p><strong>Branch when ready:</strong> (f)-rebinding + (e)-provider-call + (p)-sync-DNS land with
+tier-d OS-isolation; (p)-token-O(N)/role-mint with Inc 8b RBAC; (a)/(b)/(q) with
+N&gt;1 sub-agents + the <code>agent_n</code>-nesting / <code>/task</code> design; <strong>(r) RETIRED
+(landed across <code>/task</code> T5–T7, 2026-07-07)</strong>; (s) with the
+v1.19.x→migration-doc rewrite; (t) with the <code>/task</code> SDK-embedding design (re-verify
+vs T1–T2 first) — <strong>T8b (TUI port) is now a second forcing function</strong>: the TUIs are
+in-process, so their <code>/task</code> port either embeds the runner (retires (t)) or grows an
+HTTP client (see plan-task-command-sequencing.md §T8); <strong>(u) DONE</strong> (CORS+Host fix, bind-conditional, shipped <code>b1e5b3a4</code>); <strong>(v) ingress
+NetworkPolicy + optional app-layer bearer for cross-tenant coder isolation, with
+Item 3</strong>; (d) with an SSE rework; (i) with a per-model capability-hint pass (cheap,
+anytime).</p>
+<hr />
 <h2 id="closed-recent">Closed (recent)<a class="headerlink" href="#closed-recent" title="Permanent link">&para;</a></h2>
 <p>For full closed-item rationale with commit references, see the per-version
 archived snapshots:</p>
 <ul>
+<li>
+<p><strong>Item 24 — non-vision image attach fail-loud + shell-CLI route (closed 2026-06-23, <code>feature/v1.19.0</code>):</strong>
+  removed the silent "text placeholder" that fed model hallucination on
+  text-only models. Detection fixed earlier this cycle (<code>Qwen3.[56]-27B-FP8*</code>
+  vision globs + <code>-agent</code> variant pinned); this session added the shell-CLI
+  consumption route (<code>can_shell_process_images()</code> → on-disk path surfaced for
+  OCR/convert) and made the no-path case fail loud (<code>ok=False</code>, send blocked,
+  actionable error). Structured warnings disambiguate route taken
+  (<code>vision_via_tool</code> / <code>vision_via_caption</code> / <code>vision_unsupported</code>@error).
+  319 vision/attach/multimodal tests green; VSCode <code>tsc</code> clean. Full
+  resolution detail still inline under the RESOLVED Item 24 entry above
+  (kept with its evidence trail until the next archive sweep).</p>
+</li>
 <li>
 <p><strong>Post-files-parity v1.18.8 review fixes (closed 2026-06-14):</strong> beyond the
   <code>/files/*</code> items (25–28, 30–32), two parallel reviews + live desktop testing
@@ -1824,7 +2823,7 @@ archived snapshots:</p>
   (it migrated <code>read_file</code>/<code>write_file</code> only). <code>TestServeImageConfinement</code>
   added (sibling-prefix path → 403 via <code>/files/image/</code>, verified to fail
   404 against the old check; in-tree image → 200). v1.18.8 Phase A — see
-  <a href="../plan-v1.18.8-files-parity/">plan-v1.18.8-files-parity.md</a>.</p>
+  <a href="../archive/plan-v1.18.8-files-parity/">archive/plan-v1.18.8-files-parity.md</a>.</p>
 </li>
 <li>
 <p><strong>Item 20 — v1.19.x alignment paperwork (closed 2026-05-24):</strong> merged to

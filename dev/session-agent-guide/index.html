@@ -10,10 +10,10 @@
       
       
       
-        <link rel="canonical" href="https://rcconsult.github.io/ppxai/dev/agent-mode-guide/">
+        <link rel="canonical" href="https://rcconsult.github.io/ppxai/dev/session-agent-guide/">
       
       
-        <link rel="prev" href="../provider-setup/">
+        <link rel="prev" href="../task-agent-guide/">
       
       
         <link rel="next" href="../bootstrap-context-guide/">
@@ -27,7 +27,7 @@
     
     
       
-        <title>Agent Mode - ppxai Documentation</title>
+        <title>Session Agent Mode - ppxai Documentation</title>
       
     
     
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#agent-mode-user-guide" class="md-skip">
+        <a href="#session-agent-mode-user-guide-agent" class="md-skip">
           Skip to content
         </a>
       
@@ -118,7 +118,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Agent Mode
+              Session Agent Mode
             
           </span>
         </div>
@@ -461,6 +461,34 @@
                 
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../task-agent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Task Agent Platform
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
     
   
   
@@ -480,7 +508,7 @@
   <span class="md-ellipsis">
     
   
-    Agent Mode
+    Session Agent Mode
   
 
     
@@ -498,7 +526,7 @@
   <span class="md-ellipsis">
     
   
-    Agent Mode
+    Session Agent Mode
   
 
     
@@ -2320,10 +2348,41 @@
   
 
 
-<h1 id="agent-mode-user-guide">Agent Mode User Guide<a class="headerlink" href="#agent-mode-user-guide" title="Permanent link">&para;</a></h1>
+<h1 id="session-agent-mode-user-guide-agent">Session Agent Mode User Guide (<code>/agent</code>)<a class="headerlink" href="#session-agent-mode-user-guide-agent" title="Permanent link">&para;</a></h1>
 <p><strong>Applies to</strong>: v1.14.2+ (agent mode introduced v1.13.0; this guide tracks the v1.14.2+ shape)
 <strong>Status</strong>: Production Ready
-<strong>Last verified against</strong>: v1.18.8</p>
+<strong>Last verified against</strong>: v1.19.0 (guide content unchanged; renamed + disambiguation banner added)
+<strong>Renamed</strong> from <code>agent-mode-guide.md</code> (v1.19.0) to disambiguate the three agent surfaces.</p>
+<blockquote>
+<p><strong>⚠️ Three different "agents" — this guide covers only the first:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Surface</th>
+<th>What it is</th>
+<th>Where documented</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong><code>/agent</code> session mode</strong> (this guide)</td>
+<td>The IN-SESSION iterative loop: your current chat session plans + executes tools turn by turn, inside the session's context and working dir.</td>
+<td>here</td>
+</tr>
+<tr>
+<td><strong><code>/agentrun</code> one-off runs</strong></td>
+<td>Tool-FREE background runs (<code>POST /v1/agent/run</code>): a single prompt answered by a per-run provider/model, no tools, fire-and-forget with a result pane. Web client only.</td>
+<td><a href="../api-gateway/">api-gateway.md</a> §<code>/v1/agent/*</code></td>
+</tr>
+<tr>
+<td><strong><code>/task</code> sub-agent platform</strong> (v1.19.0)</td>
+<td>Tool-CAPABLE, sandboxed, durable background runs (<code>POST /v1/agent/task</code>): capability grants (<code>--tools</code>), spec/skill files, egress allowlists, budgets, consent parks, held results, resume. Web + VSCode.</td>
+<td><a href="../agent-task-command-design.html">agent-task-command-design.html</a>, <a href="../api-gateway/">api-gateway.md</a></td>
+</tr>
+</tbody>
+</table>
+<p>If you want a background agent that reads/edits files under a grant, you want <strong><code>/task</code></strong>, not this mode.</p>
+</blockquote>
 <p>This guide explains how to use autonomous agent mode for multi-step task execution. Agent mode works with both <strong>ppxai</strong> (Rich TUI) and <strong>ppxaide</strong> (Textual TUI).</p>
 <hr />
 <h2 id="table-of-contents">Table of Contents<a class="headerlink" href="#table-of-contents" title="Permanent link">&para;</a></h2>

@@ -1,0 +1,1571 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Multi-LLM Interface for Developers - Terminal & VSCode">
+      
+      
+      
+        <link rel="canonical" href="https://rcconsult.github.io/ppxai/dev/research/2026-06-24-ppxai-sdk-mutation-tools-for-sre-agents/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>ppxai-as-SDK: what's still needed to enable mutation tools in ppxai-sre long-running agents - ppxai Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#ppxai-as-sdk-whats-still-needed-to-enable-mutation-tools-in-ppxai-sre-long-running-agents" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="ppxai Documentation" class="md-header__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ppxai Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              ppxai-as-SDK: what's still needed to enable mutation tools in ppxai-sre long-running agents
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="blue" data-md-color-accent="cyan"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="ppxai Documentation" class="md-nav__button md-logo" aria-label="ppxai Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ppxai Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/rcconsult/ppxai" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rcconsult/ppxai
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../provider-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Provider Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../task-agent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Task Agent Platform
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../session-agent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Session Agent Mode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../bootstrap-context-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bootstrap Context
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../context-injection/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Context Injection
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../checkpoint-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Checkpoint & Undo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../file-editing-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    File Editing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../shell-consent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shell Consent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../custom-tool-development-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../custom-command-development-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ollama-limitations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ollama Limitations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../vllm-tool-calling-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    vLLM Tool Calling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../container-tools-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Container Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../autorouter-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autorouter Config
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release Notes
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Release Notes
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../RELEASE-NOTES-v1.16.1.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../RELEASE-NOTES-v1.16.0.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.16.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../RELEASE-NOTES-v1.15.6.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v1.15.6
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#the-architecture-being-designed-for-the-reframe" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The architecture being designed for (the reframe)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#verified-what-already-exists-build-on-these-today" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verified: what already exists (build on these today)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-gap-list-ranked" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The gap list (ranked)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The gap list (ranked)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#gap-1-build_task_runner-is-welded-to-the-http-route-not-the-engine-blocking-structural" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Gap 1 — build_task_runner is welded to the HTTP route, not the engine [BLOCKING — structural]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gap-2-deterministic-pre-mutation-policy-hook-integration-ask-a2-blocking-the-actual-write-tool-unblocker" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Gap 2 — Deterministic pre-mutation policy hook (integration ask A2) [BLOCKING — the actual write-tool unblocker]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gap-3-policyconsent-decision-audit-events-integration-ask-a1-needed-for-the-acceptance-corpus-gate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Gap 3 — Policy/consent decision audit events (integration ask A1) [needed for the acceptance-corpus gate]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gap-4-long-run-bounded-run-lifecycle-boundary-design-light-code" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Gap 4 — Long-run ↔ bounded-run lifecycle boundary [design, light code]
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gap-5-agent_n-nesting-only-if-a-ppxai-run-itself-fans-out-deferred-correctly" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Gap 5 — agent_n nesting — only if a ppxai run itself fans out [deferred, correctly]
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-premise-corrected" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The premise, corrected
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#critical-path-the-answer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Critical path (the answer)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#recommended-next-artifacts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recommended next artifacts
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="ppxai-as-sdk-whats-still-needed-to-enable-mutation-tools-in-ppxai-sre-long-running-agents">ppxai-as-SDK: what's still needed to enable mutation tools in ppxai-sre long-running agents<a class="headerlink" href="#ppxai-as-sdk-whats-still-needed-to-enable-mutation-tools-in-ppxai-sre-long-running-agents" title="Permanent link">&para;</a></h1>
+<p><strong>Date:</strong> 2026-06-24
+<strong>Branch context:</strong> <code>feature/v1.19.0</code> @ <code>690d8db4</code> (not yet released)
+<strong>Related:</strong>
+- <a href="../2026-06-24-ppxai-sre-integration-reconciliation/">2026-06-24-ppxai-sre-integration-reconciliation.md</a> — the C/A gap reconciliation this builds on
+- <a href="../../debt-inventory/">docs/debt-inventory.md</a> Item 37 (agent-platform watchlist), 37p (C5 + <code>agent_n</code>), 37q (<code>state.json</code>)
+- ppxai-sre <code>docs/PPXAI-INTEGRATION-V1.19.md</code> (asks <strong>A1</strong>, <strong>A2</strong>), <code>docs/DESIGN-outlook-agent.md</code> (the fit-test agent)
+- <a href="../../decisions/0003-agent-platform-architecture/">docs/decisions/0003-agent-platform-architecture.md</a></p>
+<h2 id="the-architecture-being-designed-for-the-reframe">The architecture being designed for (the reframe)<a class="headerlink" href="#the-architecture-being-designed-for-the-reframe" title="Permanent link">&para;</a></h2>
+<p><strong>ppxai is the SDK/library for building ppxai-sre agents</strong> — that was always the
+intent. The shape:</p>
+<ul>
+<li>A ppxai-sre <strong>long-running agent</strong> (the <code>serve()</code> daemon — scheduler, mailbox
+  poller, <code>AGENT.md</code> loader, <code>PolicyEngine</code>, <code>AuditLogger</code>) is the <strong>outer loop</strong>
+  and lives in the <strong>ppxai-sre pod</strong>. The survey/poll loop is ppxai-sre's
+  (<code>SREHeartbeat</code> / APScheduler — the integration doc deliberately keeps cron
+  scheduling in ppxai-sre, not ppxai).</li>
+<li>When the outer loop decides an inbound event needs action, it <strong>spawns a ppxai
+  sub-agent run</strong> — a bounded, sandboxed, tool-capable execution unit — and <em>that</em>
+  run is where <strong>mutation tools</strong> (<code>reply</code>, <code>move</code>, <code>forward</code>, <code>delete</code>) execute,
+  steered by the rendered <code>AGENT.md</code> and governed by ppxai's sandbox.</li>
+<li>The mutation tools are <strong>ppxai-sre's own code</strong>, registered into the ppxai run
+  as <code>FunctionTool</code>s (via <code>ppxai_sre_core.tools_adapter</code>).</li>
+</ul>
+<p>This is <strong>embedded sub-agent runtime</strong>, NOT remote <code>/task</code> HTTP hosting. The
+current outlook-monitor MCP server is a <strong>POC</strong> to exercise the mailbox plumbing
+(auth, sync, store, read tools) against real services — it is not the target
+architecture for mutations.</p>
+<p><strong>Why this framing matters:</strong> it removes the heavy items from the critical path.
+ppxai hosting outlook-monitor as a remote <code>/task</code> run would require MCP-client
+tool integration, C5 services routing, a remote tool-callback protocol, and
+tier-d OS isolation. The SDK/embedded model needs <strong>none of those</strong> — the run
+executes in ppxai-sre's pod with ppxai-sre's creds and ppxai-sre's tool code.</p>
+<h2 id="verified-what-already-exists-build-on-these-today">Verified: what already exists (build on these today)<a class="headerlink" href="#verified-what-already-exists-build-on-these-today" title="Permanent link">&para;</a></h2>
+<p>Confirmed by reading the v1.19.0 tree, not docstrings:</p>
+<table>
+<thead>
+<tr>
+<th>Capability</th>
+<th>Status</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Custom tool registration (the mutation tools)</td>
+<td>✅ <code>FunctionTool(name, description, parameters, handler)</code> wraps arbitrary sync/async Python; <code>tools_adapter</code> already uses it</td>
+<td><a href="../../ppxai/engine/tools/base.py"><code>engine/tools/base.py:76-123</code></a></td>
+</tr>
+<tr>
+<td>AC-1 capability sandbox</td>
+<td>✅ <code>ScopedToolManager</code> — model sees only granted tools; off-grant <code>execute_tool</code> hard-denied</td>
+<td><a href="../../ppxai/engine/agent_scoped_tools.py"><code>engine/agent_scoped_tools.py:46</code></a></td>
+</tr>
+<tr>
+<td>AC-2 egress firewall</td>
+<td>✅ <code>NetworkPolicy</code> — deny-by-default, typed <code>NETWORK_POLICY_*</code> events</td>
+<td><a href="../../ppxai/engine/tools/network_policy.py"><code>engine/tools/network_policy.py:266</code></a></td>
+</tr>
+<tr>
+<td>Durable run registry + lifecycle</td>
+<td>✅ <code>AgentRunRegistry.start_run</code> / events.jsonl / cancel / budget</td>
+<td><a href="../../ppxai/engine/agent_runs.py"><code>engine/agent_runs.py:349,451</code></a></td>
+</tr>
+<tr>
+<td>AGENT.md steering into the run</td>
+<td>✅ <code>compose_agent_system_prompt(caller_system)</code> composes caller's rendered AGENT.md on top of the bounded-agent framing</td>
+<td><a href="../../ppxai/server/routes/agent_v1.py"><code>server/routes/agent_v1.py:123</code></a></td>
+</tr>
+<tr>
+<td>Spawn one sandboxed child from a run</td>
+<td>✅ <code>spawn_subagent</code> — child grant ⊆ parent, egress ⊆ parent, depth=1, consent-gated</td>
+<td><a href="../../ppxai/engine/tools/agent_spawn.py"><code>engine/tools/agent_spawn.py</code></a></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Conclusion: the sandbox is real and trial-verified, and the mutation tools can
+already be registered.</strong> The blockers are NOT "build the sandbox" — they are
+"make the sandbox embeddable" and "make mutation-gating deterministic."</p>
+<h2 id="the-gap-list-ranked">The gap list (ranked)<a class="headerlink" href="#the-gap-list-ranked" title="Permanent link">&para;</a></h2>
+<h3 id="gap-1-build_task_runner-is-welded-to-the-http-route-not-the-engine-blocking-structural">Gap 1 — <code>build_task_runner</code> is welded to the HTTP route, not the engine <strong>[BLOCKING — structural]</strong><a class="headerlink" href="#gap-1-build_task_runner-is-welded-to-the-http-route-not-the-engine-blocking-structural" title="Permanent link">&para;</a></h3>
+<p>The function that <em>assembles</em> a sandboxed run (wires <code>ScopedToolManager</code> +
+<code>NetworkPolicy</code> + budget/cancel + spawn + AGENT.md framing onto an <code>EngineClient</code>
+and drives <code>chat()</code>) lives at <a href="../../ppxai/server/routes/agent_v1.py"><code>server/routes/agent_v1.py:530</code></a>,
+importing from <code>.oneshot</code> and <code>..state</code> (FastAPI route state). The <em>primitives</em>
+(<code>ScopedToolManager</code>, <code>NetworkPolicy</code>) are engine-level and importable; the
+<em>assembly</em> is not.</p>
+<p>An SDK consumer embedding ppxai would have to import a server-route module
+(dragging FastAPI/route state) or <strong>re-implement the security wiring</strong> — exactly
+the thing ppxai should own and test once.</p>
+<p><strong>What ppxai must provide:</strong> lift the runner-assembly into the engine as a stable,
+FastAPI-free API, e.g.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># ppxai/engine/agent_runtime.py  (proposed)</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="k">def</span><span class="w"> </span><span class="nf">build_sandboxed_run</span><span class="p">(</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">registry</span><span class="p">:</span> <span class="n">AgentRunRegistry</span><span class="p">,</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="o">*</span><span class="p">,</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">provider</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">model</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">task</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">tools</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">BaseTool</span><span class="p">],</span>              <span class="c1"># incl. consumer FunctionTools (mutations)</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">allow_outbound</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="n">system</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>          <span class="c1"># rendered AGENT.md</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    <span class="n">budget</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>         <span class="c1"># {iterations, time_s, tokens}</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    <span class="n">allow_spawn</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>    <span class="n">policy_hook</span><span class="p">:</span> <span class="n">PolicyHook</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>   <span class="c1"># Gap 2</span>
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Runner</span><span class="p">:</span> <span class="o">...</span>
+</span></code></pre></div>
+<p>The HTTP route (<code>/v1/agent/task</code>) becomes a thin caller of this; ppxai-sre becomes
+another caller. <strong>Without this, "ppxai is the SDK for the sandboxed run" is not
+true — only "ppxai is the SDK for the HTTP server" is.</strong> Single most important
+deliverable.</p>
+<h3 id="gap-2-deterministic-pre-mutation-policy-hook-integration-ask-a2-blocking-the-actual-write-tool-unblocker">Gap 2 — Deterministic pre-mutation policy hook (integration ask <strong>A2</strong>) <strong>[BLOCKING — the actual write-tool unblocker]</strong><a class="headerlink" href="#gap-2-deterministic-pre-mutation-policy-hook-integration-ask-a2-blocking-the-actual-write-tool-unblocker" title="Permanent link">&para;</a></h3>
+<p>The outlook design's load-bearing safety property is <em>classification (LLM,
+fallible) separated from action-gating (PolicyEngine, deterministic,
+un-bypassable)</em>. For a mutation tool to be safe, ppxai-sre's <code>PolicyEngine</code> must
+run <strong>before</strong> each mutating call and be able to allow / deny / escalate, keyed on
+<code>tool + args</code> per the 3-tier model.</p>
+<p>Today ppxai's per-tool gate is coarse: the AC-1 allowlist decides <em>whether a tool
+exists in the grant</em>, not <em>whether this specific call is permitted</em>. Per-tool
+consent is interactive-or-refuse (<code>spawn_consent</code> deny/auto). There is <strong>no seam
+for a registered, args-aware policy callable</strong>. So today every granted mutation
+tool is callable by the model once in the grant.</p>
+<p><strong>What ppxai must provide:</strong> A2 option (b) — a pre-tool-call policy callable on the
+run / tool-manager:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">PolicyHook</span> <span class="o">=</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">],</span> <span class="n">Awaitable</span><span class="p">[</span><span class="n">PolicyVerdict</span><span class="p">]]</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="c1"># PolicyVerdict ∈ {ALLOW, DENY(reason), ESCALATE(reason)}</span>
+</span></code></pre></div>
+<p>ppxai-sre registers its <code>PolicyEngine</code> here. This is what makes <code>forward</code>
+Tier-3-gated, <code>forward_external</code> denied without approval, <code>delete</code> blocked —
+deterministically, with the LLM having no influence. <strong>Promote A2 from v1.20.x to
+the write-tools milestone.</strong></p>
+<h3 id="gap-3-policyconsent-decision-audit-events-integration-ask-a1-needed-for-the-acceptance-corpus-gate">Gap 3 — Policy/consent decision audit events (integration ask <strong>A1</strong>) <strong>[needed for the acceptance-corpus gate]</strong><a class="headerlink" href="#gap-3-policyconsent-decision-audit-events-integration-ask-a1-needed-for-the-acceptance-corpus-gate" title="Permanent link">&para;</a></h3>
+<p>The outlook design gates write-tool <em>shipping</em> on a red-team corpus proving "no
+unapproved Tier-2/3 verb ever fired," asserted via the JSONL audit trail. That
+needs a stable event per policy decision.</p>
+<p><strong>What ppxai must provide:</strong> A1 — <code>EventType.CONSENT_DECISION</code> (or
+<code>POLICY_DECISION</code>) <code>{tool, args_hash, decision, reason, source, run_id}</code>, emitted
+from the same chokepoint as Gap 2's hook. Co-lands with A2. Without it,
+<code>AuditLogger</code> taps internals and the corpus gate isn't cleanly testable.</p>
+<h3 id="gap-4-long-run-bounded-run-lifecycle-boundary-design-light-code">Gap 4 — Long-run ↔ bounded-run lifecycle boundary <strong>[design, light code]</strong><a class="headerlink" href="#gap-4-long-run-bounded-run-lifecycle-boundary-design-light-code" title="Permanent link">&para;</a></h3>
+<p>"Survey the mailbox forever" is NOT one ppxai run. The survey loop stays in
+ppxai-sre (<code>SREHeartbeat</code>/APScheduler); it spawns <strong>one bounded ppxai sub-agent
+run per message/decision</strong>. So ppxai needs no new "infinite run" concept. Pin two
+things:</p>
+<ul>
+<li><strong>Continuity/idempotency boundary:</strong> the outer loop owns dedup (sqlite, outlook
+  Phase 5); each sub-agent run is stateless-per-message. Context the run needs
+  (thread history, prior decisions) is injected by the outer loop into
+  <code>task</code>/<code>system</code> — it is the outer loop's job, not ppxai's. Document this seam.</li>
+<li><strong><code>state.json</code> (debt 37q):</strong> if ppxai-sre's heartbeat wants to reconstruct an
+  interrupted run from disk, the Inspection Triplet must be complete. Close 37q.</li>
+</ul>
+<h3 id="gap-5-agent_n-nesting-only-if-a-ppxai-run-itself-fans-out-deferred-correctly">Gap 5 — <code>agent_n</code> nesting — only if a ppxai run <em>itself</em> fans out <strong>[deferred, correctly]</strong><a class="headerlink" href="#gap-5-agent_n-nesting-only-if-a-ppxai-run-itself-fans-out-deferred-correctly" title="Permanent link">&para;</a></h3>
+<p>In this model the <strong>outer loop</strong> does any fan-out (it spawns N bounded ppxai
+runs), so each is a top-level run and <strong>flat siblings + <code>parent_run_id</code> suffice</strong>.
+Nested <code>agent_n</code> slots become load-bearing only if you want <em>a single ppxai run</em>
+to fan out internally (N&gt;1 inside one run) or to host C5 bound-service inspection
+assets under a child slot. <strong>Not on this critical path. Keep <code>agent_n</code>; do not
+build nesting yet.</strong> (See debt 37p for the C5/nesting entanglement when it does
+return.)</p>
+<h2 id="the-premise-corrected">The premise, corrected<a class="headerlink" href="#the-premise-corrected" title="Permanent link">&para;</a></h2>
+<p>The stated blocker — <em>"ppxai does not offer a full secure sandbox"</em> (read as OS
+isolation / tier-d) — is <strong>not the binding constraint for this model.</strong> The run
+executes ppxai-sre's <em>own</em> mutation code in ppxai-sre's <em>own</em> pod. The threat is
+<strong>"trusted operator code + untrusted email prompt,"</strong> which the <strong>in-process</strong>
+AC-1/AC-2 sandbox + a deterministic A2 policy gate is precisely designed for.
+tier-d OS-isolation matters when ppxai executes <em>untrusted</em> code — it does <strong>not</strong>
+here.</p>
+<p>So the real write-tool blocker resolves to:</p>
+<blockquote>
+<p><strong>an embeddable runner (Gap 1) + the deterministic policy hook (A2) + policy
+audit events (A1).</strong> Not OS isolation. Not MCP integration. Not C5. Not nesting.</p>
+</blockquote>
+<h2 id="critical-path-the-answer">Critical path (the answer)<a class="headerlink" href="#critical-path-the-answer" title="Permanent link">&para;</a></h2>
+<p><strong>To enable ppxai-sre long-running agents to provide mutation tools via ppxai
+sub-agents, ppxai needs three things on the critical path:</strong></p>
+<ol>
+<li><strong>Lift <code>build_task_runner</code> into the engine as a FastAPI-free, embeddable SDK
+   API</strong> (Gap 1). <em>Structural blocker.</em></li>
+<li><strong>Ship the pre-mutation policy hook (A2)</strong> (Gap 2). <em>The real write-tool
+   unblocker.</em> Promote from v1.20.x.</li>
+<li><strong>Ship policy-decision audit events (A1)</strong> (Gap 3). Co-lands with #2.</li>
+</ol>
+<p><strong>Supporting (not blocking the first write tool):</strong> close <code>state.json</code> (debt
+37q); document the long-loop-in-sre / bounded-run-in-ppxai boundary (Gap 4).</p>
+<p><strong>Explicitly NOT needed for this model:</strong> MCP-client integration, C5
+agent-served-services routing, tier-d OS isolation, nested <code>agent_n</code>.</p>
+<h2 id="recommended-next-artifacts">Recommended next artifacts<a class="headerlink" href="#recommended-next-artifacts" title="Permanent link">&para;</a></h2>
+<ul>
+<li>A concrete deliverable spec: the <code>build_sandboxed_run</code> engine API signature, the
+  A2 <code>pre_execute</code> hook protocol, and the A1 event shape — as a <code>docs/decisions/</code>
+  ADR amendment (extends ADR 0003) or a dedicated design doc.</li>
+<li>Update the integration doc's <strong>A1 / A2</strong> rows from "v1.20.x deferred (no
+  consumer-side blocker)" to <strong>"required for ppxai-sre mutation tools"</strong> — the
+  reframe makes them critical-path, not hygiene.</li>
+<li>File Gap 1 (embeddable runner) as a new debt item — it is the structural
+  precondition the integration doc never named because the doc predates the
+  SDK-embedding framing.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/rcconsult/ppxai" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

@@ -464,14 +464,42 @@
   
   
     <li class="md-nav__item">
-      <a href="../agent-mode-guide/" class="md-nav__link">
+      <a href="../task-agent-guide/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Agent Mode
+    Task Agent Platform
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../session-agent-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Session Agent Mode
   
 
     
@@ -3371,10 +3399,11 @@ automatically:</p>
   on the next <code>npm run compile</code></li>
 <li>VSCode <code>AppState</code> reads the bundled copy</li>
 </ul>
-<p>The v1.18.x schema-generator work in <code>docs/TODO-appstate-codegen.md</code>
-builds on this: runtime loading is the architecture; codegen adds
-compile-time type generation for TypeScript so the <code>AppStateFields</code>
-interface becomes an artifact instead of hand-maintained.</p>
+<p>The schema-generator work proposed in <code>docs/archive/TODO-appstate-codegen.md</code>
+would have built on this (runtime loading is the architecture; codegen would
+add compile-time type generation for TypeScript so the <code>AppStateFields</code>
+interface becomes an artifact instead of hand-maintained), but it was never
+pursued — see that doc's Status line (archived 2026-07-12, superseded).</p>
 <h2 id="agent-heartbeat-primitives-v1180">Agent Heartbeat Primitives (v1.18.0)<a class="headerlink" href="#agent-heartbeat-primitives-v1180" title="Permanent link">&para;</a></h2>
 <p>Before v1.18.0 the agent tool loop had no structured progress signal
 of its own. Every client scraped <code>TOOL_CALL</code> / <code>TOOL_RESULT</code> / <code>ERROR</code>
