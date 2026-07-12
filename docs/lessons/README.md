@@ -110,3 +110,7 @@ discoverable later.
   non-context `TestClient(app)` gives every request its own event loop;
   a background task that must live ACROSS requests (T5 consent park)
   silently dies — use `with TestClient(app) as c:` (`ctx_client` fixture)
+- [stale-server-invalidates-acceptance.md](stale-server-invalidates-acceptance.md) —
+  ppxai-server binds a FIXED port (54320); a stale server makes a freshly
+  spawned binary die silently, so acceptance tests the OLD process — free
+  the port first (`gateway-smoke.py` now guards this)

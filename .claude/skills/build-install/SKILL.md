@@ -528,6 +528,16 @@ server's working dir or the home tree, or the request 403s
 ("path outside allowed directories") — that's the guard working, not a
 build defect. Drop the test file under `~/.ppxai/` and clean up after.
 
+**Before running this block, confirm port 54320 is free**
+(`pkill -f ppxai-server` if unsure). ppxai-server binds a fixed port; a
+stale server makes your freshly-spawned binary die silently on
+`address already in use`, and the curl then hits the OLD process —
+turning a real regression (or a real pass) into a ghost. Caught live
+2026-07-12 (a stale server returned a 500 that looked like a `[data]`
+regression in the new build). The gateway-smoke step below self-guards
+against this; this hand-run curl block does not. See
+[docs/lessons/stale-server-invalidates-acceptance.md](../../../docs/lessons/stale-server-invalidates-acceptance.md).
+
 #### Gateway smoke (v1 surface acceptance on the installed binary)
 
 The llm-eval benchmark drives models in-process, so nothing else

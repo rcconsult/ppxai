@@ -33,6 +33,7 @@ Exit code 0 = every non-skipped step passed.
 import argparse
 import json
 import os
+import socket
 import subprocess
 import sys
 import time
@@ -93,6 +94,22 @@ class Gateway:
         )
 
 
+def port_in_use(host: str, port: int) -> bool:
+    """True if something is already listening on host:port.
+
+    Critical guard: if we spawn a fresh binary while a stale ppxai-server
+    still holds the port, the new process dies on `address already in use`
+    and every request silently hits the OLD binary — the acceptance run
+    then "passes" against exactly the build we were trying to replace.
+    Caught live 2026-07-12 (a stale server made a new build's PPTX preview
+    return a 500 from the old process). See
+    docs/lessons/stale-server-invalidates-acceptance.md.
+    """
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.settimeout(1)
+        return sock.connect_ex((host, port)) == 0
+
+
 def wait_for_server(gw: Gateway) -> bool:
     deadline = time.monotonic() + STARTUP_WAIT_S
     while time.monotonic() < deadline:
@@ -132,6 +149,19 @@ def main() -> int:
 
     try:
         if not args.base_url:
+            # Guard: refuse to spawn if the port is already held. Otherwise a
+            # stale server would absorb the bind failure and we'd test the OLD
+            # binary while believing we tested the fresh one (see port_in_use).
+            if port_in_use("127.0.0.1", args.port):
+                print(
+                    f"port {args.port} already in use — a stale ppxai-server is "
+                    f"holding it. A freshly spawned binary would die silently and "
+                    f"this run would test the OLD server. Free it first "
+                    f"(pkill -f ppxai-server) or target it explicitly with "
+                    f"--base-url http://127.0.0.1:{args.port}.",
+                    file=sys.stderr,
+                )
+                return 2
             server = args.server or installed_server_path()
             if not server.exists():
                 print(f"server binary not found: {server}", file=sys.stderr)
