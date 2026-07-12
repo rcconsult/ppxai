@@ -385,21 +385,28 @@ class TestBackendCoverage:
         return hosts
 
     def test_web_premium_hosts_are_all_allowlisted(self):
-        """Every https?:// host literal in web_premium.py must be covered by
-        _NETWORK_TOOLS (the AC-2 superset source). Adding a backend without
-        updating the allowlist fails here."""
+        """Every URL-literal host in web_premium.py AND web.py must be covered
+        by _NETWORK_TOOLS (the AC-2 superset source). Adding a backend without
+        updating the allowlist fails here. web.py is scanned too because the
+        free-tier search/weather tools name their own hosts, and the weather
+        handler builds its URL as f"{scheme}://wttr.in/..." — the placeholder
+        alternative in the regex catches scheme-variable f-strings that a bare
+        https?:// pattern would miss."""
         import re
         from pathlib import Path
 
-        src = (
+        builtin_dir = (
             Path(__file__).resolve().parent.parent
-            / "ppxai" / "engine" / "tools" / "builtin" / "web_premium.py"
-        ).read_text(encoding="utf-8")
+            / "ppxai" / "engine" / "tools" / "builtin"
+        )
 
-        # Pull host out of every literal http(s) URL in the source.
+        # Pull host out of every literal http(s) URL in the sources, including
+        # f-string scheme placeholders like {scheme}://host.
         found = set()
-        for m in re.finditer(r"https?://([A-Za-z0-9.\-]+)", src):
-            found.add(m.group(1).lower())
+        for fname in ("web_premium.py", "web.py"):
+            src = (builtin_dir / fname).read_text(encoding="utf-8")
+            for m in re.finditer(r"(?:https?|\{[A-Za-z_]+\})://([A-Za-z0-9.\-]+)", src):
+                found.add(m.group(1).lower())
 
         # DuckDuckGo is reached via the `ddgs` package (no URL literal in our
         # source), so it won't appear in `found`; that's expected. We assert
@@ -415,7 +422,7 @@ class TestBackendCoverage:
         }
         uncovered = {h for h in found if h not in allow and h not in IGNORE}
         assert not uncovered, (
-            f"web_premium.py names egress host(s) not in _NETWORK_TOOLS: "
+            f"web_premium.py / web.py name egress host(s) not in _NETWORK_TOOLS: "
             f"{sorted(uncovered)}. Add them to the relevant tool's target list "
             f"in network_policy.py (AC-2 superset rule) or to this test's "
             f"IGNORE set if they are genuinely not egress targets."

@@ -765,32 +765,46 @@ document the auth-off requirement loudly in the release notes.
 
 ---
 
-### Item 41 — Gemini provider tool-loop fidelity: no `tool_call_id` threading; `_filter_empty_parts` is dead code [providers / gemini] — OPEN (filed 2026-07-12)
+### Item 41 — Gemini provider tool-loop fidelity: no `tool_call_id` threading; `_filter_empty_parts` is dead code [providers / gemini] — ✅ RESOLVED (2026-07-12, same-day)
 
 Found while diagnosing the deny-path empty-result bug (T5/T7 trials; the
 symptom fixes landed with §M — see
 [agent-platform-call-graphs.md](agent-platform-call-graphs.md)). Two
-structural gaps remain, both verified by source read + grep:
+structural gaps, both verified by source read + grep, both fixed same day:
 
-1. **`_convert_messages` (gemini.py) never threads `Message.tool_calls` /
-   `tool_call_id`** (unlike `openai_native.py`, which does), and
-   `_parse_function_call` never emits a `tool_call_id` — so
-   `engine/chat.py`'s native tool-result pairing branch is **dead for
-   Gemini**. Every Gemini tool round-trip flattens through the generic
-   assistant/user text path: an off-label transcript shape that plausibly
-   drives the model quirks observed live (the `default_api:` prefix echo,
-   atypical continuations after a denial). Fixing = wiring Gemini's
-   function-call/-response parts the way the SDK intends; real test surface
-   of its own, deliberately NOT bundled into the §M fix.
-2. **`_filter_empty_parts` (gemini.py:234) has zero call sites** — the
-   v1.15.3 call sites were lost in a later refactor, so the "defensive
-   filter" is dead code. Either re-wire it where responses are parsed or
-   delete it; today it only misleads readers (docs/known-issues.md cited it
-   as an active mitigation until 2026-07-12 — now corrected).
+1. **`_convert_messages` (gemini.py) never threaded `Message.tool_calls` /
+   `tool_call_id`** (unlike `openai_native.py`), and `_parse_function_call`
+   never emitted a `tool_call_id` — so `engine/chat.py`'s native
+   tool-result pairing branch was **dead for Gemini**: every tool
+   round-trip flattened through the synthetic assistant/user text path,
+   an off-label transcript shape that plausibly drove the model quirks
+   observed live (the `default_api:` prefix echo, atypical continuations
+   after a denial). **Fixed:** `_parse_function_call` threads the SDK's
+   `FunctionCall.id`, synthesizing `gemini-fc-<uuid12>` when absent (the
+   engine's pairing branch requires an id per call; the id never goes
+   back on the Gemini wire), both TOOL_CALL emission sites carry it, and
+   `_convert_messages` maps the engine's native transcript shape onto
+   Gemini's wire format — assistant `tool_calls` → model `function_call`
+   parts, tool-role messages → user `function_response` parts paired by
+   function NAME via an id→name map built from the preceding model turn
+   (Gemini pairs responses by name, not id). Unpaired tool results
+   degrade to plain user text turns.
+2. **`_filter_empty_parts` had zero call sites** (the v1.15.3 call sites
+   were lost in a later refactor). **Deleted** — the response parse loops
+   already skip empty text parts inherently, and SDK 2.11.0 passed the
+   KI-001 gate with no filter in the path. A sentinel test pins the
+   deletion.
 
-**Effort:** ~1 day incl. a mock-SDK test pass; benchmark gate afterwards
-(same `benchmarks/llm-eval` recipe as the KI-001 unfreeze) since it changes
-what Gemini sees on every tool loop.
+**Verification (2026-07-12):** `tests/test_gemini_native_tool_loop.py`
+(18 tests: id threading, TOOL_CALL event shape in both response modes,
+native transcript conversion incl. parallel calls / unpaired results /
+malformed args, deletion sentinel); full suite 4560 passed / 0 failed;
+benchmark gate 3× gemini-2.5-flash on SDK 2.11.0: overall
+80.7 / 72.6 / 73.8%, code editing 100/100/100 — at or above the
+pre-change 2.11.0 baseline (74.4/70.2/74.4), so the native transcript
+shape is benchmark-neutral-to-positive. **Live-trial follow-up:** watch
+whether the `default_api:` prefix echo and post-denial continuation
+quirks disappear in the next `/task` Gemini trials.
 
 ---
 
@@ -863,15 +877,22 @@ guarantees a task handle.
 tool call returns (ADR 0003 `max_concurrent_subagents=1`). N>1 fan-out + the
 backpressure cap is deliberately out of MVP scope.
 
-**c. `tool_targets()` fixed backend list (copilot 2026-06-16).** The egress
-target enumeration for `web_search`/`get_weather` in
+**c. `tool_targets()` fixed backend list (copilot 2026-06-16) — MITIGATED.**
+The egress target enumeration for `web_search`/`get_weather` in
 `engine/tools/network_policy.py::_NETWORK_TOOLS` is a hard-coded list of every
 backend host a tool could reach (the AC-2 superset-rule fix). **Maintenance
-hazard:** if a new `web_search` backend is added to `web_premium.py` and
-`_NETWORK_TOOLS` is NOT updated, a run could reach an un-allowlisted host with
-no `network_policy_denied` event — a silent AC-2 regression. Mitigation idea:
-derive the backend set from the provider config / a single source, or add a
-test that asserts `_NETWORK_TOOLS` covers every premium backend.
+hazard:** if a new `web_search` backend is added and `_NETWORK_TOOLS` is NOT
+updated, a run could reach an un-allowlisted host with no
+`network_policy_denied` event — a silent AC-2 regression. **Mitigation
+landed:** `tests/test_network_policy.py::TestBackendCoverage` (commit
+`a8e7247d`, Item 37 g/c/f wave) source-scans the web tool modules for URL
+literals and fails on any host missing from `_NETWORK_TOOLS`, plus pins the
+known backends against deletion. Extended 2026-07-12: the scan now also
+covers `web.py` (free-tier search/weather) and catches f-string scheme
+placeholders (`f"{scheme}://wttr.in/…"`) that a bare `https?://` regex
+misses. Residual (acceptable): a backend whose host arrives purely from
+config/data (no source literal) would still evade the scan — deriving the
+set from a single source remains the structural fix if one is ever added.
 
 **d. `_ppxai_overflowed` private queue flag (copilot 2026-06-16).** The Inc 3
 SSE slow-consumer self-heal sets a private attribute on the asyncio.Queue to

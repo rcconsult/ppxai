@@ -39,14 +39,19 @@ dev dependencies to the last benchmark-verified version:
 "google-genai>=1.0.0,<2.12.0"
 ```
 
-**2. ~~Defensive filter~~ — dead code (corrected 2026-07-12).**
+**2. ~~Defensive filter~~ — dead code, DELETED (2026-07-12).**
 `_filter_empty_parts()` in `ppxai/engine/providers/gemini.py` was believed to
 strip empty text parts from the response paths as a safety net. A source
-sweep found it has **zero call sites** — the v1.15.3 call sites were lost in
-a later refactor, so no filter has been active for any of the verdicts above.
+sweep found it had **zero call sites** — the v1.15.3 call sites were lost in
+a later refactor, so no filter was active for any of the verdicts above.
 (This also means the 2.11.0 benchmark pass was achieved with NO mitigation in
-the path — stronger evidence for the SDK itself.) Re-wire or delete:
-[debt Item 41](debt-inventory.md).
+the path — stronger evidence for the SDK itself.) Resolved via
+[debt Item 41](debt-inventory.md): the function is deleted (the response
+parse loops skip empty text parts inherently), a sentinel test in
+`tests/test_gemini_native_tool_loop.py` pins the deletion, and the same
+change wired Gemini's native function_call/function_response transcript
+threading. Post-change gate 3× gemini-2.5-flash on 2.11.0: code editing
+100/100/100, overall 80.7/72.6/73.8.
 
 ### How to verify before upgrading (benchmark gate — the ONLY gate)
 
@@ -81,7 +86,9 @@ a candidate version:
   0% on 1.62.0 (only the rollback did). Corrected 2026-07-12: the filter is
   not even defense-in-depth — it has zero call sites (dead code since a
   post-v1.15.3 refactor; debt Item 41) — so it cannot be the reason 2.11.0
-  passes.
+  passes. Later the same day it was deleted outright (Item 41 resolution)
+  and the gate re-run 3× post-deletion + native tool-transcript threading:
+  code editing 100/100/100, overall 80.7/72.6/73.8 — the pin verdict holds.
 - **2026-07-11** (SDK at 2.11.0, released 2026-07-09): change not reverted;
   no GenerateContent-surface breaking changes in 1.57.0→2.11.0 (all breaking
   entries scoped to the Interactions/Agent-Platform surface; v2.0.0 notes

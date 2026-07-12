@@ -23,6 +23,7 @@ import json
 import logging
 import os
 import traceback
+import uuid
 from typing import List, AsyncIterator, Optional, Dict, Any
 
 import httpx
@@ -231,78 +232,6 @@ class GeminiProvider(BaseProvider):
             http_options=http_options
         )
 
-    def _filter_empty_parts(self, parts: List[Any], context: str = "") -> List[Any]:
-        """Filter out empty parts to work around SDK v1.57.0+ regression.
-
-        SDK is pinned to <1.57.0 in pyproject.toml. This workaround is kept as
-        a defensive layer in case the pin is ever relaxed. See docs/known-issues.md
-        for full context, affected versions, and upgrade verification steps.
-
-        Issue: https://github.com/googleapis/python-genai/issues/1789
-        SDK versions 1.57.0+ removed validation on empty text parts, causing
-        incomplete responses (e.g., patches missing imports) to pass through.
-
-        Args:
-            parts: List of response parts from Gemini API
-            context: Context string for logging (e.g., "streaming", "non-streaming")
-
-        Returns:
-            Filtered list with only non-empty parts
-        """
-        if not parts:
-            return parts
-
-        # Enhanced debug logging
-        logger.debug(f"[{context}] Processing {len(parts)} parts")
-
-        filtered_parts = []
-        empty_count = 0
-
-        for i, part in enumerate(parts):
-            # Keep function call parts always
-            if hasattr(part, 'function_call') and part.function_call:
-                logger.debug(f"[{context}] Part {i}: function_call (kept)")
-                filtered_parts.append(part)
-                continue
-
-            # Check text parts
-            if hasattr(part, 'text'):
-                text = part.text
-                text_len = len(text) if text else 0
-                has_strip = text.strip() if text else ""
-                strip_len = len(has_strip)
-
-                if text and has_strip:
-                    # Keep non-empty text
-                    logger.debug(
-                        f"[{context}] Part {i}: text len={text_len}, "
-                        f"stripped={strip_len}, preview='{text[:50]}...' (kept)"
-                    )
-                    filtered_parts.append(part)
-                else:
-                    # Filter empty/whitespace text
-                    empty_count += 1
-                    logger.warning(
-                        f"[{context}] Part {i}: text len={text_len}, "
-                        f"stripped={strip_len}, content='{text}' (FILTERED)"
-                    )
-            else:
-                # Part has no text or function_call
-                empty_count += 1
-                logger.warning(
-                    f"[{context}] Part {i}: unknown type, "
-                    f"has_text={hasattr(part, 'text')}, "
-                    f"has_function_call={hasattr(part, 'function_call')} (FILTERED)"
-                )
-
-        if empty_count > 0:
-            logger.warning(
-                f"Gemini SDK workaround: Filtered {empty_count}/{len(parts)} empty parts "
-                f"from {context} response (Issue #1789)"
-            )
-
-        return filtered_parts
-
     async def chat(
         self,
         messages: List[Message],
@@ -403,6 +332,7 @@ class GeminiProvider(BaseProvider):
                     yield Event(EventType.TOOL_CALL, {
                         "tool": tc["name"],
                         "arguments": tc["arguments"],
+                        "tool_call_id": tc["tool_call_id"],
                         "native": True,  # Mark as native tool call
                     })
 
@@ -469,6 +399,7 @@ class GeminiProvider(BaseProvider):
                     yield Event(EventType.TOOL_CALL, {
                         "tool": tc["name"],
                         "arguments": tc["arguments"],
+                        "tool_call_id": tc["tool_call_id"],
                         "native": True,
                     })
 
@@ -618,6 +549,16 @@ class GeminiProvider(BaseProvider):
         - 'user' and 'model' roles (not 'assistant')
         - 'parts' array instead of 'content' string
         - System messages become system_instruction in config
+        - Native tool round-trips use function_call / function_response
+          parts instead of OpenAI's tool_calls / tool-role messages
+
+        The engine's native pairing branch (engine/chat.py) records tool
+        round-trips as an assistant message carrying `tool_calls` followed
+        by tool-role messages carrying `tool_call_id`. Gemini's wire format
+        has no id field on function responses — pairing is by function
+        NAME — so the id→name mapping is resolved here from the preceding
+        assistant turn. A tool result whose id can't be resolved falls back
+        to a plain user text turn rather than an invalid function_response.
 
         Args:
             messages: List of Message objects
@@ -627,6 +568,7 @@ class GeminiProvider(BaseProvider):
         """
         contents = []
         system_parts = []
+        call_id_to_name: Dict[str, str] = {}
 
         if not messages:
             return contents, None
@@ -637,6 +579,42 @@ class GeminiProvider(BaseProvider):
                 # system_instruction is text-only, so flatten any multimodal
                 # content to its text representation.
                 system_parts.append(m.text_content())
+            elif m.role == "assistant" and m.tool_calls:
+                parts: List[Dict[str, Any]] = []
+                text = m.text_content()
+                if text and text.strip():
+                    parts.append({"text": text})
+                for tc in m.tool_calls:
+                    func = (tc.get("function") or {}) if isinstance(tc, dict) else {}
+                    name = func.get("name", "")
+                    if not name:
+                        continue
+                    args = self._parse_tool_call_arguments(func.get("arguments"))
+                    call_id = tc.get("id")
+                    if call_id:
+                        call_id_to_name[call_id] = name
+                    parts.append({"function_call": {"name": name, "args": args}})
+                if parts:
+                    contents.append({"role": "model", "parts": parts})
+            elif m.role == "tool":
+                name = call_id_to_name.get(m.tool_call_id or "")
+                if name:
+                    contents.append({
+                        "role": "user",
+                        "parts": [{
+                            "function_response": {
+                                "name": name,
+                                "response": {"result": m.text_content()},
+                            }
+                        }],
+                    })
+                else:
+                    # Unpaired tool result (e.g. restored session that lost
+                    # the assistant turn) — degrade to a plain user turn.
+                    contents.append({
+                        "role": "user",
+                        "parts": self._content_to_gemini_parts(m.content),
+                    })
             else:
                 role = "model" if m.role == "assistant" else "user"
                 contents.append({
@@ -647,6 +625,25 @@ class GeminiProvider(BaseProvider):
         # Combine all system messages into one instruction
         system_instruction = "\n\n".join(system_parts) if system_parts else None
         return contents, system_instruction
+
+    @staticmethod
+    def _parse_tool_call_arguments(raw: Any) -> Dict[str, Any]:
+        """Normalize a recorded tool-call `arguments` value to a dict.
+
+        The engine stores arguments as a JSON string (OpenAI wire shape);
+        Gemini's function_call part wants the structured dict. Malformed
+        JSON degrades to {} — the call was already executed, the replayed
+        part only needs to exist for transcript coherence.
+        """
+        if isinstance(raw, dict):
+            return raw
+        if isinstance(raw, str) and raw:
+            try:
+                parsed = json.loads(raw)
+                return parsed if isinstance(parsed, dict) else {}
+            except json.JSONDecodeError:
+                return {}
+        return {}
 
     @staticmethod
     def _content_to_gemini_parts(content: Any) -> List[Dict[str, Any]]:
@@ -846,7 +843,12 @@ class GeminiProvider(BaseProvider):
             function_call: Gemini FunctionCall object with name and args
 
         Returns:
-            Dict with 'name' and 'arguments', or None if invalid
+            Dict with 'name', 'arguments', and 'tool_call_id', or None if
+            invalid. Gemini only populates FunctionCall.id in some API
+            configurations, so a missing id is synthesized — the engine's
+            native pairing branch requires every call to carry one, and the
+            id never goes back on the wire (Gemini pairs responses by
+            function name; see _convert_messages).
         """
         if not function_call:
             return None
@@ -869,7 +871,8 @@ class GeminiProvider(BaseProvider):
             except json.JSONDecodeError:
                 args = {}
 
-        return {"name": name, "arguments": args}
+        call_id = getattr(function_call, 'id', None) or f"gemini-fc-{uuid.uuid4().hex[:12]}"
+        return {"name": name, "arguments": args, "tool_call_id": call_id}
 
     def _parse_grounding(self, grounding_metadata) -> List[Dict[str, str]]:
         """Parse grounding metadata to extract citations.

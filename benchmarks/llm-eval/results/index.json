@@ -338,6 +338,24 @@
         "timestamp": "2026-07-11T20:23:11.977066",
         "overall_score": 74.35643564356435,
         "agents_md_mode": "with"
+      },
+      {
+        "filename": "gemini_gemini-2.5-flash_2026-07-12_10ac04a7.json",
+        "timestamp": "2026-07-12T19:28:48.388193",
+        "overall_score": 80.69306930693071,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "gemini_gemini-2.5-flash_2026-07-12_f2abd86e.json",
+        "timestamp": "2026-07-12T19:33:33.783017",
+        "overall_score": 72.57425742574259,
+        "agents_md_mode": "with"
+      },
+      {
+        "filename": "gemini_gemini-2.5-flash_2026-07-12_ec68c955.json",
+        "timestamp": "2026-07-12T19:37:55.822066",
+        "overall_score": 73.76237623762376,
+        "agents_md_mode": "with"
       }
     ],
     "gemini/gemini-2.5-pro": [
@@ -3170,6 +3188,27 @@
       "filename": "gemini_gemini-2.5-flash_2026-07-11_62513f1d.json",
       "timestamp": "2026-07-11T20:23:11.977066",
       "overall_score": 74.35643564356435,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "gemini/gemini-2.5-flash",
+      "filename": "gemini_gemini-2.5-flash_2026-07-12_10ac04a7.json",
+      "timestamp": "2026-07-12T19:28:48.388193",
+      "overall_score": 80.69306930693071,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "gemini/gemini-2.5-flash",
+      "filename": "gemini_gemini-2.5-flash_2026-07-12_f2abd86e.json",
+      "timestamp": "2026-07-12T19:33:33.783017",
+      "overall_score": 72.57425742574259,
+      "agents_md_mode": "with"
+    },
+    {
+      "pair": "gemini/gemini-2.5-flash",
+      "filename": "gemini_gemini-2.5-flash_2026-07-12_ec68c955.json",
+      "timestamp": "2026-07-12T19:37:55.822066",
+      "overall_score": 73.76237623762376,
       "agents_md_mode": "with"
     }
   ]
