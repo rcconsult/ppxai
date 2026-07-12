@@ -523,6 +523,36 @@ Expect `200 image/png` and a real PNG. If you instead get a JSON
 'ppxai[data]'`", the build is missing `[data]` (rebuild after
 `uv sync --all-extras`) OR LibreOffice isn't installed/discoverable.
 
+Note the `/files/preview` path guard: the PPTX must live under the
+server's working dir or the home tree, or the request 403s
+("path outside allowed directories") — that's the guard working, not a
+build defect. Drop the test file under `~/.ppxai/` and clean up after.
+
+#### Gateway smoke (v1 surface acceptance on the installed binary)
+
+The llm-eval benchmark drives models in-process, so nothing else
+exercises the *installed binary's* HTTP surface end-to-end. Run the
+smoke script against the freshly installed server — it spawns the
+binary, walks `/status`, the run registry, `POST /v1/oneshot` (the
+surface ppxai-sre consumes), the tool-free `/v1/agent/run` lifecycle to
+`completed`, and the sandboxed `/v1/agent/task` lifecycle through
+`completed_pending_ack` → ack → `finalized`, then kills the server:
+
+```bash
+# stdlib-only — no venv needed. Spawns the INSTALLED server by default
+# (~/.local/bin/ppxai-server, or ~/.ppxai/bin/ppxai-server.exe on Windows).
+python3 scripts/gateway-smoke.py
+# Free variant (no LLM calls): perimeter checks only
+python3 scripts/gateway-smoke.py --skip-llm
+# A not-yet-installed build: --server dist/ppxai-server
+# Auth-enforcing host: --token <bearer> (mint via /v1/tokens)
+```
+
+Expect exit 0 with 5 PASS (or task-tier SKIP when
+`tools.agent.task_tier_enabled` is false — that gate defaults off, so
+the SKIP is correct behavior, not a failure). Steps 3–5 each cost one
+trivial LLM call on the default provider; `--skip-llm` if that matters.
+
 ## Don't
 
 - Don't sign the DMG / .app from this skill — code signing is a
