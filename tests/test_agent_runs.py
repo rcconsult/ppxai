@@ -796,6 +796,14 @@ class TestAgentRunRoutes:
         class _AnyProvider:  # NOT an OpenAICompatibleProvider — must still pass
             pass
         monkeypatch.setattr(agent_v1, "_build_provider", lambda name: _AnyProvider())
+        # Isolate the CLASS-acceptance decision from ambient config: the route
+        # fail-fasts via `_validate_provider_or_400` (unknown-provider / no-key
+        # → 400) BEFORE building. That check reads the host's configured
+        # providers + keys, so leaving it live makes the test non-hermetic — it
+        # passed on a dev box with `openai` configured but 400'd in CI's clean
+        # env (no openai provider/key). Stub it: this test is about provider
+        # CLASS, not config validation (covered separately).
+        monkeypatch.setattr(agent_v1, "_validate_provider_or_400", lambda name: None)
 
         # Make the background runner a no-op so we isolate the route's accept
         # decision (no real EngineClient needed).
