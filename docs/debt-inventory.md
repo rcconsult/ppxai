@@ -808,6 +808,59 @@ quirks disappear in the next `/task` Gemini trials.
 
 ---
 
+### Item 42 — orphan `assistant.tool_calls` ate user prompts + reached strict providers [session / chat] — ✅ FIXED (2026-07-13, `bugfix/v1.19.1` `46599e8f`)
+
+Surfaced by a live VSCode tools-enabled trial (2026-07-12; logs
+`~/.ppxai/logs/chat-debug.log` 21:58–22:01 + `session-debug.log`). Two
+defects, both reproduced deterministically before fixing:
+
+1. **Data loss.** `SessionManager.validate_and_fix_alternation` stripping a
+   tail orphan `assistant.tool_calls` (its `tool` replies missing — a
+   cancelled/interrupted tool) exposed a trailing user, which the
+   trailing-user drop then deleted as an "unsent draft" — the recurring
+   `DROPPED UNSENT USER PROMPT … 'What is the capital of France?'` (len=30)
+   log line was eating **real** prompts (the model had begun answering via
+   the removed `tool_calls`). **Fixed:** `orphan_exposed_trailing_user`
+   guard keeps it; a genuine mid-turn draft is still dropped.
+2. **Orphan on the wire mid-turn.** The pre-flight runs once before the
+   `chat_with_tools` loop; iterations 2+ (and the empty-after-tools retry)
+   sent `get_messages()` raw, so a mid-turn orphan reached a strict provider
+   and 400'd (`"… tool_call_ids did not have response"`, observed live on
+   OpenAI `gpt-5.4-mini`). **Fixed:** orphan-strip extracted to module-level
+   pure `strip_orphan_tool_calls()`; applied to the **outbound** copy before
+   each in-loop send (session state untouched).
+
+**Verification:** `tests/test_orphan_toolcalls_regression.py` (5). Regression
+sweep clean (307 across R15/agent-runs/session-schema/gemini-native-tool-loop;
+180 across session/streaming/tool/multimodal). Lesson:
+`docs/lessons/perplexity-alternation-retired-orphan-toolcalls-is-real.md`.
+
+### Item 43 — Perplexity `/task` mis-grounding: web-search substitutes for tool output [providers / perplexity / agent platform]
+
+**Planned:** `v1.19.x` (trigger: next Perplexity `/task` trial). In the
+2026-07-12 VSCode trial, `/task` run `run_07c2f15936d3` ("summarize
+docs/README.md", perplexity/sonar-pro) **finalized OK but mis-grounded** —
+the result cited `https://www.paxerp.com/docs/paxy-ai/paxy-ai-overview` (an
+unrelated product) instead of the actual local `docs/README.md`. Sonar
+substituted its intrinsic web search for the `read_file` tool output. Not an
+error (no 400); a correctness/grounding gap specific to search-native
+providers in the tool-capable tier. Likely wants provider-side grounding
+suppressed (or a system-prompt guard) when a sandboxed `/task` run supplies
+its own tool results. Related to Item 37's `oneshot_grounding` Option-A work.
+
+### Item 44 — interactive empty-response retry persists an empty-content assistant → Perplexity 400 [chat / providers]
+
+**Planned:** `v1.19.x`. `chat_simple` (`engine/chat.py:~349`) and
+`chat_with_tools` (`~1101`) add a `Message("user", "Please proceed…")` on an
+empty response, and when retries exhaust, `add_message(Message("assistant",
+full_response))` persists an **empty-content** assistant message. On the next
+turn that empty assistant is resent; current Perplexity Sonar rejects it with
+`{'message':'Message content was empty','type':'invalid_message'}` (verified
+live 2026-07-13). Distinct from Item 42's orphan case. Fix candidate: don't
+persist an empty-content assistant turn (or coalesce/skip it before send).
+
+---
+
 ## Recently moved out of debt scope
 
 These items left the debt inventory because they're not bug-fix-class

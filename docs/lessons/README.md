@@ -114,3 +114,8 @@ discoverable later.
   ppxai-server binds a FIXED port (54320); a stale server makes a freshly
   spawned binary die silently, so acceptance tests the OLD process — free
   the port first (`gateway-smoke.py` now guards this)
+- [perplexity-alternation-retired-orphan-toolcalls-is-real.md](perplexity-alternation-retired-orphan-toolcalls-is-real.md) —
+  Perplexity Sonar relaxed the old "messages must alternate" rule (verified
+  live); the recurring tools-chat 400 is the provider-agnostic orphan
+  `assistant.tool_calls` case — check the actual wire error before adding
+  another alternation patch

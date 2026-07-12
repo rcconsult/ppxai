@@ -5,6 +5,20 @@ All notable changes to ppxai will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.19.1] - unreleased
+
+Branch: `bugfix/v1.19.1`. Theme: **tool-loop transcript integrity** — stop orphan `assistant.tool_calls` from eating user prompts and from reaching strict providers. Surfaced by a live VSCode tools-enabled trial (2026-07-12) whose chats 400'd repeatedly and whose prompts then silently vanished.
+
+### Fixed
+
+- **Orphan `assistant.tool_calls` no longer deletes the user's prompt (data loss).** When `SessionManager.validate_and_fix_alternation` strips a tail orphan `assistant.tool_calls` (its `tool` replies missing, e.g. a cancelled/interrupted tool), the now-trailing user was being dropped as an "unsent draft" — the recurring `DROPPED UNSENT USER PROMPT … 'What is the capital of France?'` log line was eating **real** prompts (the model had begun answering them via the removed `tool_calls`). The trailing-user drop now keeps an orphan-exposed user so the next turn re-answers it; a genuine mid-turn-saved draft is still dropped. (`engine/session.py`)
+- **Orphan `assistant.tool_calls` no longer reaches strict providers mid-turn.** The alternation pre-flight runs once before the `chat_with_tools` loop, so an orphan created mid-turn could reach a strict provider on iterations 2+ and 400 with `"An assistant message with 'tool_calls' must be followed by tool messages … tool_call_ids did not have response"` (observed live on OpenAI `gpt-5.4-mini`). The orphan-strip pass is extracted to a module-level pure helper (`strip_orphan_tool_calls`) and applied to the **outbound** message copy before each in-loop provider call; session state is untouched so an in-flight tool round-trip is never destroyed. (`engine/session.py`, `engine/chat.py`)
+
+### Notes
+
+- **Perplexity Sonar has relaxed the historical "messages must alternate" rule.** Verified live across all four Sonar models (2026-07-13): consecutive same-role, assistant-first, tool round-trips, and double-system are all accepted (200). The real recurring tools-chat 400 is the provider-agnostic orphan-`tool_calls` case above, not alternation. See `docs/lessons/perplexity-alternation-retired-orphan-toolcalls-is-real.md`.
+- Tests: `tests/test_orphan_toolcalls_regression.py` (5) — prompt-preservation, genuine-draft-still-dropped, pure-helper, and mid-loop-guard integration.
+
 ## [1.19.0] - 2026-07-12
 
 Branch: `feature/v1.19.0`. Theme: **agent platform Stage 2 (ADR 0003)** — a durable, addressable `/v1/agent/*` background-run registry with a tool-capable sandboxed tier, plus the **`/task` command family** in web + VSCode, client bearer auth, and the surrounding hardening.
