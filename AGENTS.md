@@ -522,14 +522,20 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 - `ppxai/engine/` - Core business logic (no UI dependencies)
 - `ppxai/engine/providers/` - Provider implementations:
   - `openai_native.py` - Native OpenAI (GPT-5.x, o-series, Codex via Responses API)
-  - `gemini.py` - Native Gemini (google-genai SDK)
+  - `gemini.py` - Native Gemini (google-genai SDK; native function_call/function_response tool threading)
   - `openai_compat.py` - OpenAI-compatible (Perplexity, local/vLLM, custom)
 - `ppxai/engine/model_profiles.py` - Per-model behavioral profiles (tool calling, API routing)
 - `ppxai/engine/tools/` - Tool system with builtins + brace-counting JSON parser
+  - `network_policy.py` - AC-2 egress allowlist (fail-closed, https-only, SSRF guard)
+  - `filesystem_policy.py` - filesystem seal (per-run read/write jail; `tools.agent.sandbox`)
+  - `agent_scoped_tools.py` - AC-1 per-run tool allowlist (`ScopedToolManager` chokepoint)
+- `ppxai/engine/agent_runs.py` - agent-platform run registry (`AgentRunRegistry`: lifecycle, events.jsonl, budgets, consent/ack/resume)
+- `ppxai/engine/agent_spec.py` / `agent_skill.py` - `--spec` / `--skill` loaders for the `/task` tier
 - `ppxai/server/` - HTTP/SSE server for IDE integration
+  - `routes/agent_v1.py` - `/v1/agent/{run,task,runs,...}` (agent platform); `routes/oneshot.py` - `/v1/oneshot` gateway
 - `ppxai/commands/` - Slash command handlers
 - `ppxai/config/` - Configuration system
-- `vscode-extension/` - TypeScript VSCode extension
+- `vscode-extension/` - TypeScript VSCode extension (bundled via esbuild; `taskController.ts` for the `/task` family)
 
 ### Testing
 
@@ -574,4 +580,3 @@ The web tools (`get_weather`, `fetch_url`, `web_search`) support corporate proxy
 
 See [latest release](https://github.com/rcconsult/ppxai/releases/latest) (`pyproject.toml` is the single source of truth).
 `CLAUDE.md` carries the authoritative release/branch state; per-version details live in `CHANGELOG.md` and `docs/release-notes-v*.md`. Do not maintain a per-version feature list here — it goes stale.
-- **NEW:** `BaseProvider` ABC — all providers inherit shared interface
