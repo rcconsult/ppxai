@@ -15,7 +15,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, Optional
 
-__version__ = "1.19.0"
+__version__ = "1.19.1"
 
 
 def _build_info() -> Optional[Dict[str, str]]:
