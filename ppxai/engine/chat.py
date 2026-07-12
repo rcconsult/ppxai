@@ -1001,6 +1001,19 @@ async def chat_with_tools(
                         f"consecutive failures on tool {beat.last_tool!r}."
                     ),
                 })
+                # Contract: EVERY chat_with_tools exit yields a final
+                # STREAM_END carrying the best available text. Consumers
+                # that only collect STREAM_END (the /v1/agent task runner)
+                # otherwise see a clean generator end and record an EMPTY
+                # result for a run that looked completed (live 2026-07-12:
+                # deny-path /task runs finished with chars=0).
+                zombie_text = (
+                    f"[Agent stopped: circuit breaker tripped at "
+                    f"{zombie_threshold} consecutive failures on tool "
+                    f"{beat.last_tool!r}.]"
+                )
+                ctx.session.add_message(Message("assistant", zombie_text))
+                yield Event(EventType.STREAM_END, zombie_text)
                 return
 
             continue
@@ -1248,3 +1261,10 @@ async def chat_with_tools(
         "assistant",
         "[Tool iterations limit reached. Please try again with a simpler query.]"
     ))
+    # Contract: EVERY chat_with_tools exit yields a final STREAM_END (see the
+    # zombie exit above). Without this, a run that burned its iteration budget
+    # ended with an EMPTY result instead of saying why.
+    yield Event(
+        EventType.STREAM_END,
+        "[Tool iterations limit reached. Please try again with a simpler query.]",
+    )

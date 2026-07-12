@@ -576,7 +576,18 @@ export class TaskController {
                     try { parked = await this.backend.agentRun(runId); } catch { parked = null; }
                     if (parked) { await this.maybeAskConsent(runId, parked); }
                 }
-                if (ev && TERMINAL_EVENTS.has(ev.type)) { break; }
+                if (ev && TERMINAL_EVENTS.has(ev.type)) {
+                    // The stream replays the persisted backlog first, so a
+                    // RESUMED run's tail sees the historical
+                    // agent_run_interrupted/_cancelled from before the resume —
+                    // breaking on that stale replay detaches the fresh tail
+                    // (T7 live-trial bug, parity with the web fix). The run
+                    // record is the source of truth: break only when the run
+                    // is REALLY terminal right now.
+                    let now: AgentRunMeta | null = null;
+                    try { now = await this.backend.agentRun(runId); } catch { now = null; }
+                    if (!now || TERMINAL_STATUSES.has(now.status)) { break; }
+                }
             }
         } catch {
             // Live stream unavailable — degrade silently to the poll path.

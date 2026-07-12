@@ -351,7 +351,22 @@ class AgentRunController {
                 // run-event (complete/error AND cancelled/interrupted, emitted as
                 // `agent_run_<status>`), otherwise a cancelled/interrupted run
                 // parks the tail on an open stream forever.
-                if (AgentRunController._TERMINAL_EVENTS.has(ev.type)) break;
+                //
+                // BUT the stream replays the persisted backlog first, so a
+                // RESUMED run's tail sees the historical agent_run_interrupted
+                // / _cancelled from before the resume — breaking on that stale
+                // replay silently detaches the fresh tail (no live events, no
+                // consent card; T7 live-trial bug). The run record is the
+                // source of truth: break only when the run is REALLY terminal
+                // right now. An unreachable server also breaks — the poll
+                // fallback below owns that case.
+                if (AgentRunController._TERMINAL_EVENTS.has(ev.type)) {
+                    let now = null;
+                    try {
+                        now = await this.app.apiClient.get(`/v1/agent/runs/${runId}`);
+                    } catch (e) { /* unreachable → fall through to poll */ }
+                    if (!now || AgentRunController._TERMINAL.has(now.status)) break;
+                }
             }
         } catch (e) {
             this.app.showSystemMessage(

@@ -675,7 +675,7 @@ hook-rewritten commands, OR `rtk gain` totals plateau across sessions
 
 ---
 
-### Item 40 — web + VSCode clients cannot present a bearer token; `/task` unusable on auth-enforcing hosts [agent platform / clients] — ✅ FIXED (2026-07-11, pending live trial)
+### Item 40 — web + VSCode clients cannot present a bearer token; `/task` unusable on auth-enforcing hosts [agent platform / clients] — ✅ FIXED (2026-07-11; web live-trialed 2026-07-12 under an enforcing file store: bearer-less `/task ls` → 401, `/token mint` → stored, `/task ls`/`show` work incl. status-aware run-id completion. VSCode "Set API Token" path unit-covered, not yet live-trialed)
 
 **Build (landed):** both clients grew a /v1-scoped bearer seam — scoped to
 `/v1/*` ONLY because `server/auth.py` validates any presented bearer even on
@@ -745,6 +745,35 @@ store" is a real deployment cliff. Either land this before tagging or
 document the auth-off requirement loudly in the release notes.
 
 **Effort:** ~half a day both clients + sentinels.
+
+---
+
+### Item 41 — Gemini provider tool-loop fidelity: no `tool_call_id` threading; `_filter_empty_parts` is dead code [providers / gemini] — OPEN (filed 2026-07-12)
+
+Found while diagnosing the deny-path empty-result bug (T5/T7 trials; the
+symptom fixes landed with §M — see
+[agent-platform-call-graphs.md](agent-platform-call-graphs.md)). Two
+structural gaps remain, both verified by source read + grep:
+
+1. **`_convert_messages` (gemini.py) never threads `Message.tool_calls` /
+   `tool_call_id`** (unlike `openai_native.py`, which does), and
+   `_parse_function_call` never emits a `tool_call_id` — so
+   `engine/chat.py`'s native tool-result pairing branch is **dead for
+   Gemini**. Every Gemini tool round-trip flattens through the generic
+   assistant/user text path: an off-label transcript shape that plausibly
+   drives the model quirks observed live (the `default_api:` prefix echo,
+   atypical continuations after a denial). Fixing = wiring Gemini's
+   function-call/-response parts the way the SDK intends; real test surface
+   of its own, deliberately NOT bundled into the §M fix.
+2. **`_filter_empty_parts` (gemini.py:234) has zero call sites** — the
+   v1.15.3 call sites were lost in a later refactor, so the "defensive
+   filter" is dead code. Either re-wire it where responses are parsed or
+   delete it; today it only misleads readers (docs/known-issues.md cited it
+   as an active mitigation until 2026-07-12 — now corrected).
+
+**Effort:** ~1 day incl. a mock-SDK test pass; benchmark gate afterwards
+(same `benchmarks/llm-eval` recipe as the KI-001 unfreeze) since it changes
+what Gemini sees on every tool loop.
 
 ---
 

@@ -116,6 +116,72 @@ class TestGrantSubset:
 
 
 # ---------------------------------------------------------------------------
+# Provider tool-name prefix normalization (Gemini `default_api.` artifact)
+# ---------------------------------------------------------------------------
+
+
+class TestProviderToolPrefix:
+    """Gemini's function-calling runtime namespaces tools as
+    `default_api.<name>` and the model echoes that prefix into tool-name DATA
+    it passes as arguments (live 2026-07-12: a spawn requested child tools
+    ['default_api:read_file'] against a parent grant of ['read_file'] and was
+    refused, burning an iteration until the model self-corrected). The prefix
+    is a provider artifact, never a real ppxai tool name — strip it, and ONLY
+    it, before the subset check. Sibling of the schema sanitizer in
+    providers/gemini.py."""
+
+    def test_strips_colon_and_dot_variants(self):
+        from ppxai.engine.tools.agent_spawn import _strip_provider_tool_prefix
+        assert _strip_provider_tool_prefix(
+            ["default_api:read_file", "default_api.web_search", "fetch_url"]
+        ) == ["read_file", "web_search", "fetch_url"]
+
+    def test_non_prefixed_and_odd_entries_untouched(self):
+        from ppxai.engine.tools.agent_spawn import _strip_provider_tool_prefix
+        # A name merely CONTAINING the marker (not as a prefix) is untouched,
+        # and non-string entries pass through for the subset check to refuse.
+        assert _strip_provider_tool_prefix(["my_default_api.tool", 42]) == [
+            "my_default_api.tool", 42,
+        ]
+
+    @pytest.mark.asyncio
+    async def test_prefixed_child_tools_pass_subset_and_spawn_normalized(
+        self, registry
+    ):
+        # The live repro end-to-end: prefixed child tools must clear the
+        # subset gate, and the child must be minted with the NORMALIZED grant
+        # (a child granted the literal 'default_api:read_file' string could
+        # execute nothing).
+        captured = {}
+
+        async def fake_runner(meta):
+            return "child ok"
+
+        def fake_builder(reg, **kw):
+            captured.update(kw)
+            return fake_runner
+
+        t = _tool(registry, parent_tools=["read_file"], parent_allow=[],
+                  consent=None, consent_policy="auto",
+                  runner_builder=fake_builder)
+        out = await t.execute(task="summarize", tools=["default_api:read_file"])
+        assert "child ok" in out
+        assert captured.get("tools") == ["read_file"]
+        runs = registry.list_runs()
+        assert len(runs) == 1 and runs[0].tools == ["read_file"]
+
+    def test_still_refuses_real_escalation_after_normalization(self, registry):
+        # Normalization must not soften the gate: a prefixed name whose BASE
+        # is off-grant still refuses.
+        t = _tool(registry, parent_tools=["read_file"], parent_allow=[])
+        from ppxai.engine.tools.agent_spawn import _strip_provider_tool_prefix
+        err = t._check_grant_subset(
+            _strip_provider_tool_prefix(["default_api:write_file"])
+        )
+        assert err and "write_file" in err
+
+
+# ---------------------------------------------------------------------------
 # Egress subset (AC-2 transitive)
 # ---------------------------------------------------------------------------
 
@@ -207,7 +273,7 @@ class TestExecuteRefusals:
         # child can do no work, so spawn refuses up front and mints nothing.
         t = _tool(registry, parent_tools=["read_file"], parent_allow=[])
         out = await t.execute(task="x", tools=[])
-        assert out.startswith("Error: cannot spawn sub-agent")
+        assert out.startswith("Denied: cannot spawn sub-agent")
         assert "non-empty" in out
         assert registry.list_runs() == []
 
@@ -215,14 +281,14 @@ class TestExecuteRefusals:
     async def test_escalation_refused_no_run_minted(self, registry):
         t = _tool(registry, parent_tools=["read_file"], parent_allow=[])
         out = await t.execute(task="x", tools=["write_file"])
-        assert out.startswith("Error: cannot spawn sub-agent")
+        assert out.startswith("Denied: cannot spawn sub-agent")
         assert registry.list_runs() == []  # nothing created
 
     @pytest.mark.asyncio
     async def test_egress_widen_refused_no_run_minted(self, registry):
         t = _tool(registry, parent_tools=["fetch_url"], parent_allow=["api.github.com"])
         out = await t.execute(task="x", tools=["fetch_url"], allow_outbound=["evil.com"])
-        assert out.startswith("Error: cannot spawn sub-agent")
+        assert out.startswith("Denied: cannot spawn sub-agent")
         assert registry.list_runs() == []
 
     @pytest.mark.asyncio
@@ -418,3 +484,36 @@ class TestExecuteSpawns:
         child = registry.list_runs()[0]
         assert child.status in ("cancelled", "interrupted", "failed")
         assert "completed" not in out
+
+# ---------------------------------------------------------------------------
+# Denial classification (deny != malfunction)
+# ---------------------------------------------------------------------------
+
+
+class TestDenialClassification:
+    """A spawn refusal is the tool WORKING as designed (policy said no), not a
+    malfunction. The old "Error:"-prefixed denial string made
+    `_compute_tool_success` (engine/chat.py) count every denial toward the
+    zombie circuit-breaker and reframe the model's next turn with
+    failure-recovery prompting — the deny path's head start toward the silent
+    empty-result exits (live 2026-07-12, /task runs finishing with chars=0).
+    """
+
+    def test_denial_not_classified_as_tool_failure(self, registry):
+        from ppxai.engine.chat import _compute_tool_success
+        t = _tool(registry, parent_tools=["read_file"], parent_allow=[])
+        out = t._deny(
+            "spawn not approved (denied, or the consent request expired "
+            "unanswered)",
+            "consent",
+        )
+        assert out.startswith("Denied:")
+        assert _compute_tool_success("spawn_subagent", out) is True
+
+    def test_real_spawn_malfunction_still_classified_as_failure(self):
+        # The non-policy failure path (runner couldn't start) keeps its
+        # "Error:" prefix and keeps counting toward the breaker.
+        from ppxai.engine.chat import _compute_tool_success
+        assert _compute_tool_success(
+            "spawn_subagent", "Error: failed to start sub-agent: boom"
+        ) is False

@@ -296,6 +296,37 @@ function assert(cond, msg) {{ if (!cond) throw new Error("FAIL: " + msg); }}
     assert(view.error && /unreachable|Monitoring stopped/.test(view.error), "pane shows no error body on give-up (got " + view.error + ")");
   }}
 
+  // --- Scenario 12: stale REPLAYED terminal event must not detach the tail (T7) ---
+  // The SSE replays the persisted backlog first, so a RESUMED run's tail sees
+  // the historical agent_run_interrupted from before the resume. Old behavior
+  // broke there — live events (incl. the consent card's agent_waiting) never
+  // reached the pane and the run could only time out (live-trial bug,
+  // 2026-07-12). The tail must confirm against the run record (source of
+  // truth) and keep tailing; it breaks only on the REAL terminal.
+  {{
+    const view = makeView();
+    view.events = [];
+    view.appendEvent = function (ev) {{ this.events.push(ev.type); }};
+    const app = makeApp(
+      [ {{status: "running"}}, {{status: "completed_pending_ack", result: "R12"}} ],
+      () => view,
+    );
+    const c = new AgentRunController(app);
+    c._pollIntervalMs = 1;
+    c._tailEvents = async function* () {{
+      yield {{type: "agent_run_interrupted"}};   // stale replay from before the resume
+      yield {{type: "agent_run_resume"}};
+      yield {{type: "tool_call", data: {{tool: "spawn_subagent"}}}};
+      yield {{type: "agent_waiting", data: {{kind: "consent"}}}};
+      yield {{type: "agent_result_ready"}};      // REAL terminal
+    }};
+    await c._watchDetached("run_12");
+    assert(view.events.includes("agent_waiting"),
+      "stale replayed terminal detached the tail — consent park never reached the pane (events=" + view.events.join(",") + ")");
+    assert(view.result === "R12", "resumed run's result not rendered (got " + view.result + ")");
+    assert(app._getCalls >= 2, "expected confirm-GETs on terminal events (getCalls=" + app._getCalls + ")");
+  }}
+
   console.log("ALL OK");
 }})().catch((e) => {{ console.error(e.message || e); process.exit(1); }});
 """

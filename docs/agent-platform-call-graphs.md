@@ -897,6 +897,42 @@ Second review round (2026-06-17, two more):
   Tests: `test_persist_meta_leaves_no_tmp_and_is_valid`,
   `test_persist_meta_cleans_tmp_on_failure`.
 
+**§M — T5/T7 live-trial fixes (2026-07-12).** Three defects surfaced by the
+consent-expiration + interrupted-resume trials, all diagnosed from the
+persisted `events.jsonl` (the run's event stream is the observation channel;
+`server-debug.log` only carries client echoes):
+
+- **Stale replayed terminal event detached a resumed tail (web + VSCode).**
+  `GET /runs/{id}/events?live=1` replays the persisted backlog before tailing,
+  so a resumed run's watcher saw the HISTORICAL `agent_run_interrupted` from
+  before the resume and broke on it — the fresh tail went silent (no live
+  events, no consent card; the park could only expire). Both clients now
+  confirm against the run record (source of truth) before breaking: terminal
+  event → status GET → break only if the run is REALLY terminal. Web
+  `_runWatch` + VSCode `runWatch`; parity sentinel
+  `test_terminal_event_break_confirms_run_status_in_both_clients`, behavior
+  scenario 12 in `test_agent_run_controller_behavior.py`.
+- **Silent empty-result exits in `chat_with_tools`.** The zombie
+  circuit-breaker and the max-iterations fall-through ended the generator
+  WITHOUT a `STREAM_END`; the `/v1/agent` task runner collects result text
+  ONLY from `STREAM_END`, so runs through those exits finished
+  `completed_pending_ack` with `result=""` (`chars=0`). Contract now pinned:
+  EVERY exit yields a final non-empty `STREAM_END` (zombie/ceiling exits
+  synthesize the explanatory text and record it on the session transcript).
+  Tests: `TestEveryExitYieldsStreamEnd` in `test_agent_beat_zombie.py`.
+- **Deny path fed the breaker + Gemini prefix burned an iteration.** A spawn
+  refusal returned an `"Error:"`-prefixed string, so `_compute_tool_success`
+  classified the POLICY denial as a tool malfunction — incrementing
+  `consecutive_failures` and switching the model to failure-recovery framing
+  (the deny path's head start toward the silent exits above). Denials now
+  return `"Denied: …"` (`TestDenialClassification`). Separately, Gemini echoes
+  its `default_api.` function-namespace into tool-name DATA
+  (`['default_api:read_file']` vs grant `['read_file']`) — the spawn tool now
+  strips exactly that prefix before the subset check
+  (`_strip_provider_tool_prefix`, sibling of the §gemini schema sanitizer;
+  `TestProviderToolPrefix`). The structural driver — Gemini tool loops run
+  text-flattened with no `tool_call_id` threading — is debt Item 41.
+
 ## Build plan T1 — `/task` command family (web client surface)
 
 Added: `web/shared/task-controller.js` (`TaskController extends AgentRunController`),

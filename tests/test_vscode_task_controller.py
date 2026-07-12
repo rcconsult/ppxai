@@ -126,6 +126,33 @@ class TestStatusParity:
         # the run ends — a mismatch parks one client's tail forever).
         assert self._ts_set("TERMINAL_EVENTS") == self._web_set("_TERMINAL_EVENTS")
 
+    def test_terminal_event_break_confirms_run_status_in_both_clients(self):
+        # T7 live-trial bug (2026-07-12): the SSE replays the persisted
+        # backlog first, so a RESUMED run's tail sees the historical
+        # agent_run_interrupted from before the resume. Breaking on that
+        # stale replay silently detaches the fresh tail (no live events, no
+        # consent card — the park can only time out). Both clients must
+        # confirm against the run record (source of truth) before breaking:
+        # a terminal-event match followed by a status GET + terminal-set
+        # check, never a bare `break`.
+        web = _read(WEB_BASE)
+        assert re.search(
+            r"_TERMINAL_EVENTS\.has\(ev\.type\)\)\s*\{[^}]*apiClient\.get\("
+            r"`/v1/agent/runs/\$\{runId\}`\)",
+            web, re.S,
+        ), "web tail must confirm run status before breaking on a terminal event"
+        assert "._TERMINAL.has(now.status)) break" in web.replace("AgentRunController", "."), \
+            "web tail must gate the break on the CURRENT run status"
+        ts = _read(TS_CONTROLLER)
+        assert re.search(
+            r"TERMINAL_EVENTS\.has\(ev\.type\)\)\s*\{[^}]*agentRun\(runId\)",
+            ts, re.S,
+        ), "TS tail must confirm run status before breaking on a terminal event"
+        assert re.search(
+            r"TERMINAL_STATUSES\.has\(now\.status\)\)\s*\{\s*break;\s*\}",
+            ts,
+        ), "TS tail must gate the break on the CURRENT run status"
+
 
 class TestChatPanelWiring:
     def test_task_routed_before_factory_dispatch(self):

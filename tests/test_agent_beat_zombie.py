@@ -413,3 +413,71 @@ class TestAgentConfigIncludesZombieThreshold:
             assert get_agent_config()["zombie_threshold"] == 0
         finally:
             store.set_for_testing(original_config)
+
+# ---------------------------------------------------------------------------
+# Exit contract: EVERY chat_with_tools exit yields a final STREAM_END
+# ---------------------------------------------------------------------------
+
+
+class TestEveryExitYieldsStreamEnd:
+    """The /v1/agent task runner (server/routes/agent_v1.py) collects a run's
+    result ONLY from STREAM_END events. The zombie circuit-breaker and the
+    max-iterations fall-through used to end the generator without one, so a
+    run through either exit finished `completed_pending_ack` with result=""
+    (live 2026-07-12: deny-path /task runs, chars=0). Pin the contract: every
+    exit path yields a final non-empty STREAM_END carrying the best available
+    text.
+    """
+
+    @pytest.mark.asyncio
+    async def test_zombie_exit_yields_final_stream_end(self):
+        provider = MockProvider(scripted=[
+            _fail_response("fails", "c1"),
+            _fail_response("fails", "c2"),
+            _fail_response("fails", "c3"),
+            [Event(EventType.STREAM_END, "unreachable")],
+        ])
+        tm = MockToolManager(tools={"fails": _failing_tool})
+        ctx = MockChatContext(provider=provider, tool_manager=tm)
+        ctx.session.add_message(Message("user", "retry"))
+
+        with patch("ppxai.engine.chat.get_profile") as mock_profile, \
+             patch("ppxai.engine.chat._get_zombie_threshold") as mock_threshold:
+            mock_profile.return_value = ModelProfile(
+                tool_calling=ToolCallingProfile(mode="native"),
+            )
+            mock_threshold.return_value = 3
+            events = await _collect(ctx)
+
+        ends = [e for e in events if e.type == EventType.STREAM_END and e.data]
+        assert ends, "zombie exit ended the stream with NO final STREAM_END"
+        assert "circuit breaker" in str(ends[-1].data).lower()
+        # The final text is also recorded on the session transcript.
+        assert ctx.session.messages[-1].content.startswith("[Agent stopped:")
+
+    @pytest.mark.asyncio
+    async def test_max_iterations_exit_yields_final_stream_end(self):
+        # Ceiling of 2 with three scripted tool-turns: the loop must exit at
+        # the ceiling and still say so via STREAM_END (tools all succeed, so
+        # the zombie breaker never fires).
+        provider = MockProvider(scripted=[
+            _ok_response("ok", "c1"),
+            _ok_response("ok", "c2"),
+            _ok_response("ok", "c3"),
+        ])
+        tm = MockToolManager(tools={"ok": _ok_tool})
+        tm.max_iterations = 2
+        ctx = MockChatContext(provider=provider, tool_manager=tm)
+        ctx.session.add_message(Message("user", "loop"))
+
+        with patch("ppxai.engine.chat.get_profile") as mock_profile, \
+             patch("ppxai.engine.chat._get_zombie_threshold") as mock_threshold:
+            mock_profile.return_value = ModelProfile(
+                tool_calling=ToolCallingProfile(mode="native"),
+            )
+            mock_threshold.return_value = 0
+            events = await _collect(ctx)
+
+        ends = [e for e in events if e.type == EventType.STREAM_END and e.data]
+        assert ends, "max-iterations exit ended the stream with NO final STREAM_END"
+        assert "iterations limit reached" in str(ends[-1].data).lower()

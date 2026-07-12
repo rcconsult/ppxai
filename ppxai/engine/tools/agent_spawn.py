@@ -52,6 +52,28 @@ _DEFAULT_CHILD_WAIT_S = 300.0
 # one exact subdomain (Codex review: AC-2 transitive subset must be exhaustive).
 _WILDCARD_SUBSET_PROBES = ("z9x8c7v6b5a4-subset-probe", "q1w2e3r4t5y6-subset-probe")
 
+# Gemini's function-calling runtime namespaces tools as `default_api.<name>`
+# and the model sometimes echoes that prefix into tool-name DATA it passes as
+# arguments (observed live 2026-07-12: a spawn requested child tools
+# ['default_api:read_file'] against a parent grant of ['read_file'] and was
+# refused, costing an iteration until the model self-corrected). The prefix is
+# a provider artifact, never a real ppxai tool name, so strip it — and ONLY
+# it — before the subset check. Sibling of the Gemini schema sanitizer in
+# providers/gemini.py; any other name mismatch still refuses as before.
+_PROVIDER_TOOL_PREFIXES = ("default_api.", "default_api:")
+
+
+def _strip_provider_tool_prefix(names: List[str]) -> List[str]:
+    """Strip a known provider namespace prefix from each tool name."""
+    out = []
+    for name in names:
+        for prefix in _PROVIDER_TOOL_PREFIXES:
+            if isinstance(name, str) and name.startswith(prefix):
+                name = name[len(prefix):]
+                break
+        out.append(name)
+    return out
+
 
 class SpawnSubagentTool(BaseTool):
     """Spawn one child agent run, scoped to a subset of this run's caps."""
@@ -216,16 +238,23 @@ class SpawnSubagentTool(BaseTool):
 
     def _deny(self, reason: str, kind: str) -> str:
         """Emit a visible spawn_denied event on the parent stream AND return a
-        model-readable error. No refusal is silent — an operator watching the
+        model-readable refusal. No refusal is silent — an operator watching the
         run sees WHY a spawn didn't happen (the prior gap: a refused spawn only
-        sent a string back to the model, leaving no trace on the event log)."""
+        sent a string back to the model, leaving no trace on the event log).
+
+        The string deliberately does NOT start with "Error:": a policy denial
+        is the tool working as designed, not a malfunction. The "Error:" prefix
+        made `_compute_tool_success` (engine/chat.py) count each denial toward
+        the zombie circuit-breaker and reframe the model's next turn with
+        failure-recovery prompting — the deny path's head start toward the
+        silent empty-result exits (live 2026-07-12)."""
         logger.warning(f"spawn_subagent denied ({kind}): {reason}")
         self._registry.emit_event(
             self._parent_run_id, "spawn_denied", level="warning",
             category="consent" if kind == "consent" else "lifecycle",
             data={"kind": kind, "reason": reason},
         )
-        return f"Error: cannot spawn sub-agent — {reason}."
+        return f"Denied: cannot spawn sub-agent — {reason}."
 
     async def execute(
         self,
@@ -234,7 +263,7 @@ class SpawnSubagentTool(BaseTool):
         allow_outbound: Optional[list] = None,
         **kwargs,
     ) -> str:
-        child_tools = list(tools or [])
+        child_tools = _strip_provider_tool_prefix(list(tools or []))
         child_allow = list(allow_outbound or [])
 
         # 0. Non-empty grant — same rule as /v1/agent/task (tools required,
