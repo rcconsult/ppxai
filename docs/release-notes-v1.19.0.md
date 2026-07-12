@@ -89,6 +89,19 @@ auth carve-outs. Existing bearer clients are unaffected. The `/v1/agent/*` +
 - **Gemini:** google-genai unfrozen 1.56.0 → **2.11.0** (`<2.12.0`), KI-001
   resolved; tool-schema sanitizer (oneOf→anyOf etc.) fixes spawn-tool
   validation crashes.
+- **Gemini native tool loop (Item 41):** `_parse_function_call` threads a
+  `tool_call_id` (synthesized when the SDK omits it) and `_convert_messages`
+  maps the engine's native transcript onto Gemini's
+  `function_call`/`function_response` parts (paired by function name) —
+  activating the native tool-pairing branch for Gemini instead of the
+  synthetic "I'll use the X tool" text flattening. Dead `_filter_empty_parts`
+  deleted. Benchmark gate 3× gemini-2.5-flash on 2.11.0: code editing
+  100/100/100, overall 80.7/72.6/73.8.
+- **`gateway-smoke.py`** (`scripts/gateway-smoke.py`) — stdlib-only v1-surface
+  acceptance for an installed binary (`/status`, `/v1/agent/runs`,
+  `POST /v1/oneshot` shape, the `/v1/agent/run`→`completed` and
+  `/v1/agent/task`→ack→`finalized` lifecycles); refuses to spawn over a held
+  port. Wired into the build-install skill's step-8 acceptance.
 - **Oneshot grounding** (opt-in, `tools.web_search.oneshot_grounding`,
   default off).
 - **Desktop:** the web-UI installer is version-gated (`.installed-by` marker) —
@@ -129,8 +142,8 @@ safe to ship silently:
    deferred. `/agentrun` remains web-only.
 
 Tracked in [docs/debt-inventory.md](debt-inventory.md) Item 37 (agent-platform
-watchlist), Item 21 (`chat_with_tools` decomposition), and Item 41 (Gemini
-text-flattened tool loops).
+watchlist) and Item 21 (`chat_with_tools` decomposition). (Item 41 — Gemini
+text-flattened tool loops — is **resolved** in this release; see Providers.)
 
 ## Tests
 
