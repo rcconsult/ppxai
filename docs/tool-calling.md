@@ -106,7 +106,21 @@ ppxai uses **prompt-based tool calling** for Perplexity:
 3. ppxai's parser extracts tool calls from response text
 4. Tools execute and results are added to conversation
 
-**This works reliably** and is transparent to users.
+**This works reliably** for interactive chat and is transparent to users.
+
+> ⚠️ **Prompt-based tool calling is NOT reliable for the `/task` agent tier.**
+> A 2026-07-13 web-app trial (8 runs, same task `summarize docs/README.md`)
+> found that under a `/task` run, `sonar-pro` **never produced a real
+> tool call in 6 attempts** (no `tool_call` event, no validator
+> `Recorded tool call` line). It nondeterministically **refused**,
+> **confabulated** a summary, or ran an **intrinsic web search** and
+> summarized an *unrelated external repo* while citing its URL
+> (`github.com/steipete/summarize`) — never reading the granted local file.
+> The same task on native-tool providers (`nvidia/deepseek-v4-pro`) worked
+> correctly. Do not grant tool-capable `/task` runs to Perplexity until this
+> is gated/routed. See **Item 43** in
+> [debt-inventory.md](debt-inventory.md) and
+> [task-agent-guide.md §10](task-agent-guide.md) for the wire evidence.
 
 ---
 
@@ -123,6 +137,17 @@ Gemini models (2.5+) support native function calling via:
 - ✅ Structured function arguments
 - ✅ Reliable tool selection
 - ✅ Works with ppxai without modification
+
+> ⚠️ **Gemini 3.x (`gemini-3.1-pro-preview`) tool round-trips currently 400.**
+> A 2026-07-13 `/task` trial confirmed the model enters native mode and emits
+> a real `read_file` call, then the follow-up turn fails with
+> `400 INVALID_ARGUMENT — Function call is missing a thought_signature in
+> functionCall parts`. Gemini 3.x requires each returned `functionCall` part
+> to carry an opaque `thought_signature` that the client must echo back on
+> the tool-response turn; ppxai's Gemini provider does not yet preserve or
+> replay it (`grep -ri thought_signature ppxai/` → empty). Blocks all
+> native-tool `/task` runs on Gemini 3.x models. Gemini 2.5 is unaffected.
+> See **Item 45** in [debt-inventory.md](debt-inventory.md).
 
 ### Configuration
 

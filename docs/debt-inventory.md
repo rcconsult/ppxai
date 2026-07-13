@@ -835,29 +835,247 @@ sweep clean (307 across R15/agent-runs/session-schema/gemini-native-tool-loop;
 180 across session/streaming/tool/multimodal). Lesson:
 `docs/lessons/perplexity-alternation-retired-orphan-toolcalls-is-real.md`.
 
-### Item 43 — Perplexity `/task` mis-grounding: web-search substitutes for tool output [providers / perplexity / agent platform]
+### Item 43 — Perplexity `/task` never calls granted tools (prompt-based avoidance) → refusal / confabulation / external mis-grounding [providers / perplexity / agent platform] — ✅ CONFIRMED (2026-07-13, 8-run web-app trial)
 
-**Planned:** `v1.19.x` (trigger: next Perplexity `/task` trial). In the
-2026-07-12 VSCode trial, `/task` run `run_07c2f15936d3` ("summarize
-docs/README.md", perplexity/sonar-pro) **finalized OK but mis-grounded** —
-the result cited `https://www.paxerp.com/docs/paxy-ai/paxy-ai-overview` (an
-unrelated product) instead of the actual local `docs/README.md`. Sonar
-substituted its intrinsic web search for the `read_file` tool output. Not an
-error (no 400); a correctness/grounding gap specific to search-native
-providers in the tool-capable tier. Likely wants provider-side grounding
-suppressed (or a system-prompt guard) when a sandboxed `/task` run supplies
-its own tool results. Related to Item 37's `oneshot_grounding` Option-A work.
+**Planned:** `v1.19.x`. Originally filed 2026-07-12 from one run
+(`run_07c2f15936d3`, "summarize docs/README.md", perplexity/sonar-pro) that
+cited `https://www.paxerp.com/...` instead of the local file. A **2026-07-13
+web-app trial (8 runs across 3 providers, same task)** confirmed and
+widened the root cause — the wire evidence lives in `~/.ppxai/runs/<id>/agent-0/`
+(`meta.json` = finalized `result`, `events.jsonl` = tool-call trace) and
+`~/.ppxai/logs/{chat,engine,validator}-debug.log`.
 
-### Item 44 — interactive empty-response retry persists an empty-content assistant → Perplexity 400 [chat / providers]
+**Root cause (wire-verified).** Perplexity config has
+`capabilities.native_tool_calling: false`, so every `/task` sonar-pro run
+resolves to `profile.mode=prompt_based, use_native=False` (chat-debug.log).
+sonar-pro **does not honor the injected prompt-based tool contract** —
+across **6 perplexity runs, zero produced a real `read_file` call**
+(no `tool_call` event in `events.jsonl`, no `Recorded tool call` in
+validator-debug.log, ~2–4s wall). The failure is **nondeterministic** —
+same task, three different wrong outcomes:
+- **Refusal** — "I do not have direct filesystem access… I cannot
+  summarize its contents" (the exact output `manager.py:457` instructs
+  against). Runs `run_315575932bc0`, `run_63374fabab34`.
+- **Confabulation** — "A child agent has been spawned, it read
+  docs/README.md…" then a *hallucinated* summary (release notes / roadmap /
+  debt-inventory — none of which are in the real file, a docs index).
+  Run `run_7984ebf09bba`.
+- **External mis-grounding (the original Item 43 symptom)** — a native
+  web search substitutes for the file, summarizing the unrelated
+  `github.com/steipete/summarize` repo (Chrome extension, cache/daemon)
+  and **citing that external URL**. Reproduced twice: `run_5ecb1da71dfb`,
+  `run_7c0fd9a357dd`.
 
-**Planned:** `v1.19.x`. `chat_simple` (`engine/chat.py:~349`) and
-`chat_with_tools` (`~1101`) add a `Message("user", "Please proceed…")` on an
-empty response, and when retries exhaust, `add_message(Message("assistant",
-full_response))` persists an **empty-content** assistant message. On the next
-turn that empty assistant is resent; current Perplexity Sonar rejects it with
+**Provider-isolation control (same task, native-tool providers).** The bug
+is specific to Perplexity's prompt-based path, not the `/task` platform:
+- `nvidia/deepseek-ai/deepseek-v4-pro` → `profile.mode=native`, real
+  `tool_call read_file` (`Recorded tool call: read_file success=True`),
+  **faithful** summary of the actual file. Direct (`run_76f07756de42`) AND
+  full subagent chain (parent `run_f07d4f8c3209` → child `run_055a6b79d51e`)
+  both correct.
+- `gemini-3.1-pro-preview` → native, real tool call — but 400s (see Item 45).
+
+**The existing guard is insufficient.** `chat.py:455–467` already suppresses
+the "Native Web Search Capability" prompt block when a `/task`
+`system_prompt_override` is active (and it *is* active — `agent_v1.py:915`
+sets `compose_agent_system_prompt`). sonar-pro web-searches anyway.
+
+**Fix direction (not yet built).** This is a model-capability limitation of
+sonar-pro under prompt-based tools, not a ppxai logic bug. Options: (a) gate
+at run creation — warn/reject a tool-capable `/task` targeting a
+`native_tool_calling:false` provider; (b) auto-route tool-capable `/task` to
+a native-tool provider (deepseek/nvidia proven; Gemini once Item 45 lands);
+(c) stronger system-prompt guard (low confidence — `manager.py:457` already
+emphatically forbids the observed refusal and was ignored). Related to
+Item 37's `oneshot_grounding` Option-A work.
+
+**Caveat.** "No tool call" is inferred from validator/event **absence** +
+duration (consistent across all 6 perplexity runs), not a captured HTTP
+response body. The native-provider tool executions ARE directly evidenced
+(both a `tool_call` event and a `Recorded tool call … success=True` line).
+
+### Item 45 — Gemini 3.x native tool round-trip 400s: `thought_signature` never preserved/replayed [providers / gemini / agent platform]
+
+**Planned:** `v1.19.x` — **higher priority than Item 43: this breaks the
+*working* native-tool path.** Surfaced in the 2026-07-13 web-app trial. A
+`/task` "summarize docs/README.md" (`--tools read_file`) on
+`gemini-3.1-pro-preview` correctly enters native mode and emits a **real**
+`read_file` call (`events.jsonl` `tool_call read_file`; validator
+`Recorded tool call: read_file success=True`), then the follow-up turn 400s:
+
+```
+Gemini error (ClientError): 400 INVALID_ARGUMENT — Function call is missing a
+thought_signature in functionCall parts. … function call `default_api:read_file`,
+position 2. https://ai.google.dev/gemini-api/docs/thought-signatures
+```
+
+Reproduced twice: `run_b06fa96cf44f`, `run_1650174cfe2d`. **Root cause
+(source-verified):** `thought_signature` / `thoughtSignature` appears
+**nowhere** in the codebase (`grep -ri thought_signature ppxai/` → empty).
+Gemini 3.x requires each returned `functionCall` part to carry an opaque
+`thought_signature` that the client must **echo back** on the tool-response
+turn; our Gemini provider drops it. Blocks **all** native-tool `/task` runs
+on Gemini 3.x models.
+
+**Relationship to Item 41 (RESOLVED 2026-07-12).** Item 41 fixed
+`tool_call_id` threading + native transcript conversion for the SDK's
+`FunctionCall.id`. It did **not** touch `thought_signature` (a distinct
+Gemini-3.x field) — that path was never exercised on a 3.x model in the
+Item 41 trials, so this is new, not a regression of that fix.
+
+**Fix direction (not yet built):** in the Gemini provider, capture
+`part.thought_signature` from each returned `function_call` part into the
+engine's tool-call record, and re-attach it on the corresponding
+`function_response` part in `_convert_messages`. Mirrors the id→name pairing
+Item 41 added, but for the signature blob. `tests/test_gemini_native_tool_loop.py`
+is the natural home for the sentinel.
+
+### Item 46 — `/task` `read_file` (and non-`spawn_subagent` tools) are consent-free AND path-unconfined by default [agent platform / security posture]
+
+**Planned:** `v1.19.x` (posture decision, not a spec violation). Surfaced by
+the 2026-07-13 trial observation that the nvidia/deepseek direct run read the
+file with **no consent prompt**. Confirmed by source + live config:
+
+- The `/task` interactive consent gate is wired **only** for `spawn_subagent`
+  (`agent_v1.py:923–952`, `consent_policy = spawn_consent or "deny"`,
+  deny-by-default → parks `waiting{consent}` + card). Proven live: subagent
+  run `run_f07d4f8c3209` fired `agent_waiting kind=consent` → `agent_resumed
+  approved:true`.
+- **`read_file` and every non-spawn tool have no consent tier** — they are
+  gated *solely* by the `--tools` allowlist. Granting the tool IS the consent.
+- The **T2 filesystem seal** (path jail) is the intended confinement, but it
+  is **off by default** (`tools.agent.sandbox` engages only when
+  `enforcement == "in_process"`; live config has `sandbox: null`). With it
+  off, a `/task … --tools read_file` can silently read **any file the process
+  can reach** (e.g. `~/.ppxai/.env`), unconfined and unprompted.
+
+**Why it matters (defense-in-depth).** Combined with Item 43's mis-grounding
+class, a `/task` run can silently read arbitrary local files and fold them
+into a result with no prompt and no jail. Not a spec violation — the
+confinement mechanism exists and ships intentionally-off — but the default
+posture is worth an explicit decision.
+
+**Fix direction (posture, not yet decided):** either default the T2 seal on
+for tool-capable runs, add a read-consent tier for filesystem tools outside
+the workdir, or document the posture prominently so operators opt into the
+seal. Owner decision required before code.
+
+### Item 47 — VSCode `/task` lacks the web split-pane; run/sub-agent dynamics collapse into flat chat lines [agent platform / clients / vscode / UX]
+
+**Planned:** `v1.19.x` (UX parity follow-up to T8a). Observed live 2026-07-13:
+in the VSCode client a `/task` run is far less legible than in the web app —
+the user misses the "major part of the dynamics" (per-tool progress, meta,
+sub-agent activity).
+
+**What web has that VSCode doesn't (source-verified).** The web client renders
+a run into a **stateful `RightPanelFrame` split-pane** —
+`ppxai/web/components/views/task-run-view.js` (`TaskRunView`, 378 LoC) atop
+`agent-run-view.js` + `shared/task-controller.js`. Per its own header it shows,
+**live**: a meta bar (provider/model, tool-grant chips, egress chips, budget),
+a **scoped events log** (`tool_call` / `tool_denied` / `network_*` /
+`spawn_*`), a Cancel button, and an inline consent card — all held on the
+instance and rebuilt on re-mount.
+
+**What VSCode does instead (by deliberate T8a design).**
+`vscode-extension/src/taskController.ts` header line ~21: *"No right-panel pane
+stack: runs render into the chat transcript (ui.system lines + ui.result)."*
+Its watcher (`runWatch`, ~L598) **does tail the same SSE stream**
+(`agentRunEvents`) — so it is not blind to events — but renders each as **one
+throwaway line** `this.ui.system("  " + eventText(ev))` (L602), interleaved
+with the user's commands and any concurrent run's events. Consequences:
+no persistent per-run surface, no live meta bar, no scoped events log,
+result body competes with chat, and **sub-agent dynamics collapse** — a
+parent→child spawn (e.g. `run_f07d4f8c3209` → `run_055a6b79d51e`) shows as two
+`subagent_spawned`/`subagent_finished` lines with no tree and no way to watch
+the child's own tool activity.
+
+**Feasibility (not a rewrite).** The extension already has the needed
+infrastructure: `previewPanel.ts` uses `vscode.window.createWebviewPanel(…,
+vscode.ViewColumn.Beside)` — the idiomatic VSCode analog of the web split-pane.
+A "Task Run" Beside-panel webview reusing the events `runWatch` already tails,
+mirroring `TaskRunView`'s meta+events+result regions (and rendering the
+sub-agent tree), is a bounded feature. The consent QuickPick idiom stays.
+
+**Design decision (owner steer, 2026-07-13): reuse VSCode-native surfaces to
+the maximum; a "reveal/preview to the side" mechanism is acceptable; a bespoke
+webview is the last resort.** Prefer delegating to a built-in or already-present
+extension preview over hand-building/maintaining a webview UI.
+
+**Precedent already in the codebase — the exact ladder to follow.**
+`previewPanel.ts` already implements a "native-first, webview-fallback" chain
+for HTML preview:
+  1. `vscode.commands.executeCommand('livePreview.start.preview.atFile', Uri.file(path))`
+     — delegate to MS **Live Preview** (its own side preview). (~L104)
+  2. `extension.liveServer.goOnline` — delegate to **Live Server** if present. (~L125)
+  3. `openWebviewFallback` → `createWebviewPanel(…, ViewColumn.Beside)` — our
+     own webview only when neither delegate exists. (~L148)
+The Task-Run pane should mirror this preference order.
+
+**MIME / preview-plugin-selection caveat (the open question, now scoped).**
+Auto-selecting a preview plugin by MIME type is **not a clean hook here**: those
+`livePreview`/`liveServer` delegations trigger off a **real file** (`Uri.file(path)`),
+and VSCode picks the renderer by file/language *association*, not by an
+in-memory MIME type. A `/task` run's live SSE event stream is not a file, so
+there is no MIME to hand a preview plugin. To reuse a native side-preview you
+would have to **materialize** the run as a file — write a live-updating
+HTML/markdown artifact to a temp path (reusing the `previewPanel.ts` file
+watcher, which already re-renders on saved-file change) and point Live Preview
+at it. That's the reuse-max path; whether the refresh cadence/flicker is
+acceptable for a fast event stream is unverified and is the thing to prototype
+first.
+
+**Fix direction (not yet built), in reuse-preference order:**
+  1. **Reuse-max:** materialize the run as a live-updated HTML/MD file under a
+     temp dir and drive it through the existing `previewPanel.ts`
+     Live-Preview→Live-Server→webview ladder. Native rendering, minimal new UI
+     code; risk = refresh cadence for streaming events (prototype to confirm).
+  2. **Fallback:** a dedicated Task-Run `createWebviewPanel(ViewColumn.Beside)`
+     fed directly by the SSE tail `runWatch` already consumes — full control
+     over the meta bar / events log / sub-agent tree, but bespoke UI to
+     maintain.
+Keep the chat-line rendering as the no-panel fallback either way. Verb/status
+parity sentinel (`tests/test_vscode_task_controller.py`) is unaffected — this
+is presentation, not protocol.
+
+### Item 44 — interactive empty-response retry persists an empty-content assistant → Perplexity 400 [chat / providers] — ✅ FIXED (2026-07-13, `bugfix/v1.19.1`)
+
+`chat_simple` and `chat_with_tools` add a synthetic `Message("user", "Please
+proceed…")` on an empty response and retry. When retries exhausted, the loops
+fell through to `add_message(Message("assistant", full_response))` with
+`full_response == ""`, persisting an **empty-content** assistant AND leaving
+the synthetic nudge in history. On the next turn the empty assistant was
+resent; current Perplexity Sonar rejects it with
 `{'message':'Message content was empty','type':'invalid_message'}` (verified
-live 2026-07-13). Distinct from Item 42's orphan case. Fix candidate: don't
-persist an empty-content assistant turn (or coalesce/skip it before send).
+live 2026-07-13). Distinct from Item 42's orphan case. Root cause: nudge
+retries were treated as valid conversation turns instead of transient repair.
+
+**Fixed structurally (Option D — producer root-fix + outbound guard, mirroring
+Item 42's two-role pattern):**
+
+1. **Producer.** `finalize_empty_response()` (module-level in `engine/chat.py`)
+   rolls back the transient `EMPTY_RESPONSE_NUDGE` user turn (via
+   `remove_last_message`, guarded on exact text) and coalesces empty content to
+   the `EMPTY_RESPONSE_SENTINEL` (`"[No response generated]"`). Applied on every
+   empty-exhaustion path in both loops, unifying them with the already-correct
+   `chat_with_tools` iteration>1 path (which rolled back its own prompt +
+   coalesced to `"[Tool execution completed…]"`). The nudge text is now a single
+   `EMPTY_RESPONSE_NUDGE` constant, not open-coded in three places.
+2. **Repair-on-load.** Pure `strip_empty_assistant()` in `engine/session.py`
+   (drops assistant turns with no `tool_calls` and no text; preserves native
+   tool-calling turns), wired into `validate_and_fix_alternation` right after
+   the orphan pass — heals sessions saved by ppxai ≤ 1.19.0 that already carry
+   an empty turn. The Bug-A `orphan_exposed_trailing_user` guard was widened to
+   also cover an empty-strip that exposes a genuinely-answered trailing user.
+3. **Outbound guard.** New composed `sanitize_outbound()` chains
+   `strip_orphan_tool_calls` + `strip_empty_assistant` into one call, replacing
+   the two raw orphan-strip sites in the tool loop — so both malformations are
+   cleaned from the wire copy at a single entry point (session state untouched).
+
+**Verification:** `tests/test_orphan_toolcalls_regression.py` (+8 → 13 total):
+pure strips + composition, self-heal on load, empty-strip-exposed trailing-user
+preservation, producer nudge-rollback + sentinel + narrow-guard. Session
+persistence/restore/migration sweep clean (121 pass / 6 Windows-symlink skips);
+chat-loop suites clean (74).
 
 ---
 

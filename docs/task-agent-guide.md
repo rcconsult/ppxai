@@ -111,6 +111,14 @@ An unanswered park **denies when its TTL expires**
 (`tools.agent.consent_ttl_s`, default 300 s — fail-closed), and the run
 continues without the action.
 
+> **Consent gates `spawn_subagent` only.** Interactive consent applies to the
+> spawn capability, not to filesystem or other granted tools. A run granted
+> `--tools read_file` reads **silently** — the `--tools` allowlist *is* the
+> consent. Where those reads may go is a separate question, governed by the
+> sandbox seal (§9), which ships **off by default**. So a `/task … --tools
+> read_file` on an unsealed host can read any file the process can reach with
+> no prompt. See **Item 46** in [debt-inventory.md](debt-inventory.md).
+
 **Held results (T6).** A successful top-level run lands in
 `completed_pending_ack`: the run has exited (budget freed, sandbox torn
 down) but the result is held until `/task ack <id>` collects it →
@@ -200,6 +208,8 @@ trust boundary; the assistant works your repo), **k8s coder pod = seal off**
 | `400 workdir does not exist` | `--work-dir` points at a missing directory. |
 | `⚠️ sandbox seal active — --work-dir ignored` | Expected on sealed hosts; the jail wins. |
 | Agent says a file "does not exist" | Check `wd:` in `/task show` — pass `--work-dir` or an absolute path. |
+| Perplexity `/task` refuses, confabulates, or summarizes an *external* URL | `sonar-pro` is prompt-based and does not reliably call granted tools on `/task` (**Item 43**). Use a native-tool provider (e.g. `nvidia/deepseek-v4-pro`) for tool-capable runs. |
+| Gemini 3.x `/task` fails with `400 … missing a thought_signature` | Known gap (**Item 45**): ppxai doesn't yet replay Gemini 3.x `thought_signature`. Use Gemini 2.5 or another native-tool provider for now. |
 | Run stuck `waiting` | Answer the card / `/task respond <id> …`, or let the TTL deny it. |
 | Result seems missing after finish | It's held — `/task ack <id>`. |
 | `409 cannot be resumed: …` | The refusal reason is verbatim (not resumable, in flight, tier off…). |
