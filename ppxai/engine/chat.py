@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import AsyncIterator, Dict, Any, List, Optional, Protocol, Callable
 
 from .types import AgentBeatState, Event, EventType, Message, UsageStats
-from .session import SessionManager, strip_orphan_tool_calls
+from .session import SessionManager, sanitize_outbound
 from .tools.manager import ToolManager
 from .tools.builtin import web_premium
 from .tools.parser import parse_tool_call, detect_truncated_tool_call, strip_tool_json_from_text
@@ -29,6 +29,62 @@ from ..config import get_system_prompt, get_system_prompt_mode, calculate_cost, 
 from ..common.logger import get_logger
 
 logger = get_logger("chat")
+
+
+# Empty-response repair (Item 44, v1.19.1).
+#
+# When a provider streams back nothing, the chat loops nudge the model with a
+# synthetic user turn and retry. Two invariants must hold when that nudge is
+# involved, or history is corrupted for the NEXT turn:
+#   1. The synthetic nudge is transient — it is repair machinery, not something
+#      the user said. It must be rolled back once we stop retrying, exactly as
+#      the tool-loop's iteration>1 empty path already does. Leaving it persisted
+#      silently rewrites the conversation.
+#   2. We never persist an empty-content assistant turn. Current Perplexity Sonar
+#      rejects a resent empty assistant with invalid_message 400, and it carries
+#      no value regardless. Coalesce to a visible sentinel so history stays
+#      strictly alternating and always sendable.
+# `finalize_empty_response` centralizes both so every empty-exhaustion path
+# behaves identically instead of each open-coding (and drifting from) the rule.
+EMPTY_RESPONSE_NUDGE = (
+    "Please proceed with the task. If you need more information, ask. "
+    "If you can help, please respond."
+)
+
+EMPTY_RESPONSE_SENTINEL = "[No response generated]"
+
+
+def finalize_empty_response(ctx: "ChatContext", full_response: str) -> str:
+    """Roll back a transient empty-response nudge and coalesce empty content.
+
+    Called on the terminal (non-retrying) branch of an empty-response path.
+
+    * If ``full_response`` has real content, returns it unchanged and touches
+      nothing — the normal case.
+    * If it is empty, the immediately-preceding turn is the synthetic
+      ``EMPTY_RESPONSE_NUDGE`` this loop appended before its last retry. That
+      nudge is repair machinery, not user input, so it is removed via
+      ``remove_last_message`` (which keeps message-count, multimodal cache, and
+      the AppState callback consistent — never pop ``messages`` directly). The
+      returned text is coalesced to ``EMPTY_RESPONSE_SENTINEL`` so the caller
+      persists a visible, sendable assistant turn instead of empty content.
+
+    Returns the text the caller should persist as the assistant message.
+    """
+    if full_response.strip():
+        return full_response
+
+    # Roll back the transient nudge if it is the current tail. Guard on the
+    # exact nudge text so we never remove a genuine trailing user turn.
+    tail = ctx.session.messages[-1] if ctx.session.messages else None
+    if (
+        tail is not None
+        and tail.role == "user"
+        and tail.text_content().strip() == EMPTY_RESPONSE_NUDGE
+    ):
+        ctx.session.remove_last_message()
+
+    return EMPTY_RESPONSE_SENTINEL
 
 
 class ChatContext(Protocol):
@@ -346,12 +402,13 @@ async def chat_simple(
         if not full_response.strip() and retry_count < max_retries and max_retries > 0:
             retry_count += 1
             yield Event(EventType.INFO, f"Empty response, retrying... ({retry_count}/{max_retries})")
-            ctx.session.add_message(Message(
-                "user",
-                "Please proceed with the task. If you need more information, ask. "
-                "If you can help, please respond."
-            ))
+            ctx.session.add_message(Message("user", EMPTY_RESPONSE_NUDGE))
             continue  # Retry
+
+        # Retries exhausted (or disabled). If still empty, roll back the
+        # transient nudge and coalesce to a sentinel so we never persist an
+        # unsendable empty assistant turn (Item 44, v1.19.1).
+        full_response = finalize_empty_response(ctx, full_response)
 
         # Add assistant message BEFORE yielding STREAM_END
         ctx.session.add_message(Message("assistant", full_response))
@@ -721,13 +778,14 @@ async def chat_with_tools(
         # created mid-turn — a tool cancelled/interrupted, or the loop-detect
         # user injection below — would otherwise reach a strict provider on
         # iterations 2+ and 400 with "tool_call_ids did not have response".
-        # Strip orphans from the OUTBOUND copy only; session state is untouched
-        # so an in-flight tool round-trip is never destroyed mid-turn.
-        messages, _outbound_orphans = strip_orphan_tool_calls(messages)
-        if _outbound_orphans:
+        # Sanitize the OUTBOUND copy only (orphan tool_calls + empty-content
+        # assistant); session state is untouched so an in-flight tool
+        # round-trip is never destroyed mid-turn.
+        messages, _outbound_stripped = sanitize_outbound(messages)
+        if _outbound_stripped:
             logger.info(
-                f"Outbound orphan tool_calls stripped before provider call "
-                f"(iteration {iteration}): removed {_outbound_orphans} message(s)"
+                f"Outbound sanitize stripped malformed messages before provider "
+                f"call (iteration {iteration}): removed {_outbound_stripped} message(s)"
             )
 
         # Get response from provider
@@ -1103,11 +1161,7 @@ async def chat_with_tools(
                         EventType.INFO,
                         f"Empty response, retrying... ({empty_retry_count}/{ctx.tool_manager.auto_retry_empty})"
                     )
-                    ctx.session.add_message(Message(
-                        "user",
-                        "Please proceed with the task. If you need more information, ask. "
-                        "If you can help, please respond."
-                    ))
+                    ctx.session.add_message(Message("user", EMPTY_RESPONSE_NUDGE))
                     continue
 
             # Handle empty response after tool iterations
@@ -1118,8 +1172,8 @@ async def chat_with_tools(
                     "Do not call any more tools - just synthesize the information."
                 ))
 
-                # Bug B (v1.19.1): outbound orphan guard (see primary send).
-                _retry_messages, _ = strip_orphan_tool_calls(ctx.session.get_messages())
+                # Bug B (v1.19.1): outbound sanitize guard (see primary send).
+                _retry_messages, _ = sanitize_outbound(ctx.session.get_messages())
                 async for event in ctx.provider.chat(
                     _retry_messages, ctx.model, stream=False, tools=None
                 ):
@@ -1142,6 +1196,14 @@ async def chat_with_tools(
                 # and AppState callback stay consistent).
                 if ctx.session.messages and ctx.session.messages[-1].role == "user":
                     ctx.session.remove_last_message()
+
+            # iteration==1 exhausted-nudge path (Item 44, v1.19.1): if we fell
+            # through still empty, roll back the transient nudge and coalesce to
+            # a sentinel so we never persist an unsendable empty assistant. A
+            # no-op when full_response already has content (normal turns and the
+            # iteration>1 path above, which coalesced + rolled back its own
+            # prompt already).
+            full_response = finalize_empty_response(ctx, full_response)
 
             ctx.session.add_message(Message("assistant", full_response))
 

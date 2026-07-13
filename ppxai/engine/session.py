@@ -75,6 +75,71 @@ def strip_orphan_tool_calls(messages: List[Message]) -> tuple[List[Message], int
     return cleaned, removed
 
 
+def strip_empty_assistant(messages: List[Message]) -> tuple[List[Message], int]:
+    """Single pass of empty-content ``assistant`` cleanup.
+
+    An assistant message with neither ``tool_calls`` nor any non-whitespace
+    text is *unsendable*: current Perplexity Sonar rejects the request with
+    ``{'message':'Message content was empty','type':'invalid_message'}`` (400),
+    and it carries no conversational value regardless. Such turns are persisted
+    by the empty-response retry paths in ``chat.py`` when the auto-retry budget
+    is exhausted and ``full_response`` is still ``""``.
+
+    An assistant message that carries ``tool_calls`` but empty text is NOT
+    empty — native tool-calling turns legitimately have no prose. Those are
+    left untouched here (and are the orphan pass's concern, not this one).
+
+    Returns ``(cleaned, removed_count)``. Pure — does not mutate the input.
+
+    Mirrors :func:`strip_orphan_tool_calls`: same two-role contract —
+    persistent history repair inside ``validate_and_fix_alternation`` (heals
+    sessions saved by ppxai <= 1.19.0 that already carry an empty turn) and an
+    outbound-only guard in the chat tool-loop, so an empty assistant never
+    reaches a strict provider even if one slips past the producer-side rollback.
+    """
+    cleaned: List[Message] = []
+    removed = 0
+    for msg in messages:
+        if (
+            msg.role == "assistant"
+            and not msg.tool_calls
+            and not msg.text_content().strip()
+        ):
+            removed += 1
+            logger.warning(
+                "Empty-content assistant stripped: dropped assistant message "
+                "with no tool_calls and no text (unsendable — strict providers "
+                "reject it with invalid_message 400)."
+            )
+            continue
+        cleaned.append(msg)
+    return cleaned, removed
+
+
+def sanitize_outbound(messages: List[Message]) -> tuple[List[Message], int]:
+    """Run every outbound-message hygiene pass in one place.
+
+    The chat tool-loop must not hand a strict provider (OpenAI, Perplexity
+    Sonar) a malformed history. Two independent malformations can appear
+    *mid-turn*, after the once-per-turn pre-flight ``validate_and_fix_alternation``
+    has already run:
+
+    * orphan ``assistant.tool_calls`` — :func:`strip_orphan_tool_calls`
+    * empty-content ``assistant`` — :func:`strip_empty_assistant`
+
+    Both share the "sanitize the OUTBOUND copy, never mutate session state"
+    contract so an in-flight tool round-trip is never destroyed. This composes
+    them into a single guard so callers add one call site, not two that could
+    drift. Order: orphan pass first (it can drop a whole assistant+tool block),
+    then empty pass on the result.
+
+    Returns ``(cleaned, total_removed)``. Pure — does not mutate the input.
+    """
+    cleaned, orphan_removed = strip_orphan_tool_calls(messages)
+    cleaned, empty_removed = strip_empty_assistant(cleaned)
+    return cleaned, orphan_removed + empty_removed
+
+
 # Session state file location
 SESSION_STATE_FILE = Path.home() / ".ppxai" / "session-state.json"
 
@@ -873,15 +938,28 @@ class SessionManager:
         fixed_messages, _orphan_removed = strip_orphan_tool_calls(fixed_messages)
         removed_count += _orphan_removed
 
-        # Bug A (v1.19.1): stripping a tail orphan can expose a trailing user
-        # that the model had ALREADY begun answering (it responded with the
-        # now-removed tool_calls). That user prompt was sent — it is NOT an
-        # unsent draft — so the trailing-user drop below must not delete it,
-        # or the user's question silently vanishes on the next turn (observed
-        # as the recurring "DROPPED UNSENT USER PROMPT" log line eating real
-        # prompts). Guard the drop when an orphan just exposed the tail user.
+        # Item 44 (v1.19.1): empty-content assistant cleanup. Same defect
+        # class as the orphan pass above — a malformed assistant turn that a
+        # strict provider (Perplexity Sonar: invalid_message 400) rejects.
+        # Persisted by chat.py's empty-response retry paths when the auto-retry
+        # budget exhausts with no content. Heals sessions saved by
+        # ppxai <= 1.19.0 that already carry one. Runs after the orphan pass so
+        # a native tool-calling assistant (empty text but tool_calls present)
+        # is preserved by both.
+        fixed_messages, _empty_removed = strip_empty_assistant(fixed_messages)
+        removed_count += _empty_removed
+
+        # Bug A (v1.19.1): stripping a tail orphan OR a tail empty-assistant can
+        # expose a trailing user that the model had ALREADY begun answering
+        # (it responded with the now-removed tool_calls, or it responded with
+        # nothing and the empty turn was stripped). Either way that user prompt
+        # was SENT — it is NOT an unsent draft — so the trailing-user drop below
+        # must not delete it, or the user's question silently vanishes on the
+        # next turn (observed as the recurring "DROPPED UNSENT USER PROMPT" log
+        # line eating real prompts). Both malformed-assistant strips share the
+        # same guard because both leave a genuinely-answered trailing user.
         orphan_exposed_trailing_user = (
-            _orphan_removed > 0
+            (_orphan_removed > 0 or _empty_removed > 0)
             and bool(fixed_messages)
             and fixed_messages[-1].role == "user"
         )
@@ -923,8 +1001,9 @@ class SessionManager:
         if orphan_exposed_trailing_user:
             logger.info(
                 "Session alternation fix: kept trailing user prompt exposed by "
-                "orphan tool_calls removal (it was answered-in-progress, not an "
-                "unsent draft) — the next turn will re-answer it."
+                "orphan tool_calls or empty-assistant removal (it was "
+                "answered-in-progress, not an unsent draft) — the next turn "
+                "will re-answer it."
             )
 
         # Trailing tool: only strip if it's truly orphan (no parent

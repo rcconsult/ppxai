@@ -26,7 +26,17 @@ from unittest.mock import patch
 
 import pytest
 
-from ppxai.engine.session import SessionManager, strip_orphan_tool_calls
+from ppxai.engine.session import (
+    SessionManager,
+    strip_orphan_tool_calls,
+    strip_empty_assistant,
+    sanitize_outbound,
+)
+from ppxai.engine.chat import (
+    finalize_empty_response,
+    EMPTY_RESPONSE_NUDGE,
+    EMPTY_RESPONSE_SENTINEL,
+)
 from ppxai.engine.types import Message, Event, EventType, ProviderCapabilities
 from ppxai.engine.model_profiles import ModelProfile, ToolCallingProfile
 
@@ -168,3 +178,126 @@ class TestBugB_OutboundOrphanGuard:
         assert _orphans(sent) == [], (
             f"orphan reached the provider on the wire: {_orphans(sent)}"
         )
+
+
+# ---------------------------------------------------------------------------
+# Item 44 — empty-content assistant never persisted, never sent, self-heals
+# ---------------------------------------------------------------------------
+
+def _empty_assistants(messages):
+    """Indices of assistant messages with no tool_calls and no text — the
+    Perplexity invalid_message 400 shape."""
+    return [
+        i for i, m in enumerate(messages)
+        if m.role == "assistant" and not m.tool_calls and not m.text_content().strip()
+    ]
+
+
+class _MinimalCtx:
+    """Just enough context for finalize_empty_response — it only touches
+    ctx.session (message history + remove_last_message)."""
+
+    def __init__(self, messages):
+        self.session = _new_mgr(messages)
+
+
+class TestItem44_PureStrips:
+    """The pure passes and their composition."""
+
+    def test_strip_empty_assistant_drops_only_empty_content_turns(self):
+        msgs = [
+            Message("user", "q"),
+            Message("assistant", ""),          # empty — drop
+            Message("user", "q2"),
+            Message("assistant", "  \n "),     # whitespace-only — drop
+        ]
+        cleaned, removed = strip_empty_assistant(msgs)
+        assert removed == 2
+        assert _empty_assistants(cleaned) == []
+        assert len(msgs) == 4                  # input not mutated
+
+    def test_strip_empty_assistant_preserves_native_toolcall_turn(self):
+        """An assistant with tool_calls but empty text is a legitimate native
+        tool-calling turn — it must NOT be treated as empty-content."""
+        msgs = [Message("user", "q"), _a_tc("call_A")]   # empty text + tool_calls
+        cleaned, removed = strip_empty_assistant(msgs)
+        assert removed == 0
+        assert cleaned == msgs
+
+    def test_sanitize_outbound_composes_both_passes(self):
+        """One call strips an orphan AND an empty assistant."""
+        msgs = [
+            Message("user", "q"),
+            _a_tc("call_orphan"),              # orphan tool_calls
+            Message("user", "q2"),
+            Message("assistant", ""),          # empty content
+        ]
+        cleaned, removed = sanitize_outbound(msgs)
+        assert removed == 2
+        assert _orphans(cleaned) == []
+        assert _empty_assistants(cleaned) == []
+        assert len(msgs) == 4                  # input not mutated
+
+
+class TestItem44_SelfHealOnLoad:
+    """validate_and_fix_alternation repairs sessions saved by ppxai <= 1.19.0
+    that already carry a persisted empty assistant."""
+
+    def test_persisted_empty_assistant_is_stripped(self):
+        mgr = _new_mgr([
+            Message("user", "q1"),
+            Message("assistant", "a1"),
+            Message("user", "q2"),
+            Message("assistant", ""),          # poisoned turn from an old session
+        ])
+        mgr.validate_and_fix_alternation()
+        assert _empty_assistants(mgr.messages) == []
+        assert [m.role for m in mgr.messages] == ["user", "assistant", "user"]
+
+    def test_empty_strip_exposing_trailing_user_preserves_it(self):
+        """[user(sent), assistant("")] — the empty turn means the user's prompt
+        WAS sent (model returned nothing). Stripping it exposes a trailing user
+        that must NOT be dropped as an unsent draft (same guard as Bug A)."""
+        mgr = _new_mgr([
+            Message("user", "What is the capital of France?"),
+            Message("assistant", ""),
+        ])
+        mgr.validate_and_fix_alternation()
+        assert [m.role for m in mgr.messages] == ["user"], "sent prompt was lost"
+        assert mgr.messages[0].content == "What is the capital of France?"
+
+
+class TestItem44_ProducerRollback:
+    """finalize_empty_response rolls back the transient nudge and coalesces to
+    a sentinel, so an empty-exhaustion turn is never persisted empty."""
+
+    def test_nudge_rolled_back_and_sentinel_returned_on_empty(self):
+        ctx = _MinimalCtx([
+            Message("user", "real question"),
+            Message("user", EMPTY_RESPONSE_NUDGE),   # transient retry nudge
+        ])
+        out = finalize_empty_response(ctx, "")
+        assert out == EMPTY_RESPONSE_SENTINEL
+        # nudge removed; the real user prompt remains as the tail
+        assert [m.role for m in ctx.session.messages] == ["user"]
+        assert ctx.session.messages[-1].content == "real question"
+
+    def test_real_content_passes_through_untouched(self):
+        ctx = _MinimalCtx([
+            Message("user", "q"),
+            Message("user", EMPTY_RESPONSE_NUDGE),
+        ])
+        out = finalize_empty_response(ctx, "Actual answer.")
+        assert out == "Actual answer."
+        # non-empty response: nothing rolled back
+        assert len(ctx.session.messages) == 2
+
+    def test_non_nudge_trailing_user_not_removed(self):
+        """Guard is narrow: only the exact nudge text is rolled back, never a
+        genuine trailing user turn."""
+        ctx = _MinimalCtx([
+            Message("user", "a genuine trailing user turn"),
+        ])
+        out = finalize_empty_response(ctx, "")
+        assert out == EMPTY_RESPONSE_SENTINEL
+        assert len(ctx.session.messages) == 1   # not removed
