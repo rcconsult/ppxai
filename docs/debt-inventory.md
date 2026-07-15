@@ -1037,7 +1037,17 @@ Keep the chat-line rendering as the no-panel fallback either way. Verb/status
 parity sentinel (`tests/test_vscode_task_controller.py`) is unaffected — this
 is presentation, not protocol.
 
-### Item 48 — `/clear` leaves the status-bar `Ctx:` percentage stale (AppState `context_percentage` never refreshed) [tui / rich / appstate]
+### Item 48 — `/clear` leaves the status-bar `Ctx:` percentage stale (AppState `context_percentage` never refreshed) [tui / rich / appstate] — ⏳ STEP 1/N FIXED (2026-07-15, `bugfix/v1.19.1` `e7b8f273`: engine + Rich)
+
+**Status:** Rich live bug FIXED. Structural fix = register `context_percentage`
+in the `_on_messages_changed` fan-out (`EngineClient._refresh_context_percentage`),
+so `/clear`/`/compact`/load/rollback auto-refresh; `handle_clear` unchanged;
+Rich re-renders each REPL loop. **Owner-locked follow-ups (not yet done):** add
+a live `Ctx` badge to **all 4 clients** — Textual (`StatusBar`, in-process),
+then Web + VSCode (field mirrored but unrendered; needs STREAM_END-piggyback
+SSE push — NOT added to `SSE_SYNC_FIELDS`, to avoid per-message spam — plus a
+render site). `↓/↑` token counter stays session-lifetime (no change, by
+decision). Tests: `tests/test_context_percentage_state.py` (8) + 171 regression.
 
 **Planned:** `v1.19.x` (small fix). Observed live 2026-07-15 (Rich TUI,
 Qwen3.6 agent): after `/clear` wiped 26 messages, the `/context` command
@@ -1076,6 +1086,49 @@ DID wrap the command (`engine-debug.log`: `Wrapper rtk: 'git status' -> 'rtk
 git status'`, cross-platform v1.18.5 framework, not the bash hook) — but the
 supporting quote was fabricated. Same "right-ish answer, invented evidence"
 class as Item 43's confabulation mode; tracked there, noted here for the trail.
+
+### Item 49 — cross-tier cost + shared-resource accounting: `/cost` under-reports true provider spend; KV-cache contention unmodeled [engine / gateway / agent platform / cost] → ADR 0008
+
+**Planned:** `v1.19.x`+ (**needs an architecture decision, not a patch** —
+design in [decisions/0008-cross-tier-cost-and-resource-accounting.md](decisions/0008-cross-tier-cost-and-resource-accounting.md),
+Status: Proposed). Surfaced 2026-07-15 while reviewing Item 48's engine
+isolation.
+
+**Gap #1 (verified) — local cost view under-reports true spend.**
+`save_usage_to_persistent_storage` (sole writer of `usage.json`, backing
+`/cost`) is called **only from interactive paths** (`commands/handler.py:441`,
+`rich/main.py:623`, `tui/stream_handler.py:310`, `server/session_manager.py`,
+`server/streaming.py`). **Neither `oneshot.py` nor `agent_v1.py` calls it.**
+So for a user running chat + `/v1/oneshot` + `/v1/agent/task` on the **same
+provider account**: the provider bills for all three, but `/cost`/`usage.json`
+reflect **only the interactive session**. Oneshot usage is returned then
+dropped (stateless, no `EngineClient` by ADR 0004); task usage lives in the
+run's own per-run engine (ADR 0003 D1 isolation) and never aggregates.
+`/cost` silently under-reports whenever background runs are active. (Distinct
+from Item 48's `Ctx:` badge, which is *correctly* per-engine display-scoping —
+this is about the shared **money**.)
+
+**Gap #2 (verified absent) — no model of shared KV-cache contention.** On a
+self-hosted vLLM/NIM endpoint the KV cache is a finite GPU resource shared
+across all concurrent requests (client-side `EngineClient` isolation has no
+effect — the cache is server-side). The three tiers send different system
+prompts → no prefix-cache reuse, only contention → preemption/recompute raises
+cost + latency for all three incl. interactive chat. ppxai models none of it
+(no cache-occupancy metric anywhere — correct, since hosted cache is invisible,
+but the cost model should at least acknowledge it for self-hosted users).
+
+**What exists:** per-run task token budget caps an *individual* run
+(`agent_v1.py` ~L1045, `control.tokens_used = session.live_run_tokens`) — NOT
+account-wide, NOT fed into `usage.json`.
+
+**Fix direction:** owner-signoff on ADR 0008. Recommended = Option A (a
+usage-recording sink keyed by `(provider, model, tier, owner)`; `/cost` becomes
+a tier/provider-filterable query over an append log — one truth without
+un-isolating the tiers; composes with Item 35). Naive "one global counter" is
+wrong: different providers = different pricing, cross-process concurrency, and
+legitimately separate per-tenant vs. operator views. KV-cache = acknowledge in
+docs (+ optional vLLM `/metrics` operator read), don't try to account
+per-request. **Until decided, disclose:** `/cost` = interactive session only.
 
 ### Item 44 — interactive empty-response retry persists an empty-content assistant → Perplexity 400 [chat / providers] — ✅ FIXED (2026-07-13, `bugfix/v1.19.1`)
 
