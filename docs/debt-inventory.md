@@ -1037,6 +1037,46 @@ Keep the chat-line rendering as the no-panel fallback either way. Verb/status
 parity sentinel (`tests/test_vscode_task_controller.py`) is unaffected — this
 is presentation, not protocol.
 
+### Item 48 — `/clear` leaves the status-bar `Ctx:` percentage stale (AppState `context_percentage` never refreshed) [tui / rich / appstate]
+
+**Planned:** `v1.19.x` (small fix). Observed live 2026-07-15 (Rich TUI,
+Qwen3.6 agent): after `/clear` wiped 26 messages, the `/context` command
+correctly reported `~0 / 131,072 (0.0%)`, but the **status-bar `Ctx:` badge
+stayed frozen at `45%`** (its pre-clear value). The two context indicators
+read different sources; the status bar never re-anchored on `/clear`.
+
+**Root cause (source-verified).** The Rich status bar renders
+`context_percent = state.get("context_percentage")` fresh each frame
+(`rich/main.py:105` → `ui_components.py:706`), so it faithfully shows whatever
+AppState holds. But `handle_clear` (`commands/session.py:211`) calls
+`session.clear()` and returns **without refreshing `context_percentage`** —
+unlike the provider-switch path, which explicitly calls
+`_refresh_context_percentage(engine)` (`provider_ops.py:233`, which does
+`engine.state.set("context_percentage", get_context_info()[...])`).
+`session.clear()` empties the messages but leaves the stale AppState number,
+so the badge lags until the next event that recomputes it. Same class as the
+known "state_sync only drained during /chat — out-of-band engine state
+changes need direct AppState refresh" hazard; `/clear` is out-of-band.
+
+**Fix direction (not yet built):** have `handle_clear` recompute + push
+`context_percentage` after `session.clear()` (call the same refresh helper the
+provider-switch path uses, or emit the `state_sync` that carries it). Audit
+sibling out-of-band mutators (`/compact`, session load/restore, checkpoint
+rollback) for the same stale-badge gap. The `↓/↑` cumulative token counter
+also does not reset on `/clear` — that is arguably *correct* (session-lifetime
+I/O, not per-conversation), so leave it unless product says otherwise; flag it
+in the same fix so the decision is explicit.
+
+**Also observed same session (NOT a status-bar bug — model behavior).**
+Qwen3.6-27B **confabulated evidence** answering "can you use rtk?": it claimed
+a specific rtk-format output string (`* bugfix/v1.19.1…nothing to commit`) that
+**never appeared** in the transcript, and mislabeled the real assistant text as
+"rtk's compact format." The *conclusion* was correct — the engine shell-wrapper
+DID wrap the command (`engine-debug.log`: `Wrapper rtk: 'git status' -> 'rtk
+git status'`, cross-platform v1.18.5 framework, not the bash hook) — but the
+supporting quote was fabricated. Same "right-ish answer, invented evidence"
+class as Item 43's confabulation mode; tracked there, noted here for the trail.
+
 ### Item 44 — interactive empty-response retry persists an empty-content assistant → Perplexity 400 [chat / providers] — ✅ FIXED (2026-07-13, `bugfix/v1.19.1`)
 
 `chat_simple` and `chat_with_tools` add a synthetic `Message("user", "Please
