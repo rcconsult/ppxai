@@ -365,6 +365,7 @@ class EngineClient:
         list themselves. Currently:
           - `context_attachments` (multimodal attachment summary)
           - `last_message_role` (for interrupt / alternation checks)
+          - `context_percentage` (context-window utilization; v1.19.1 Item 48)
 
         Adding a new derived field: write `_refresh_<field>` and call it
         from this method. Do NOT reach directly into `session.messages`
@@ -372,6 +373,7 @@ class EngineClient:
         """
         self._refresh_context_attachments()
         self._refresh_last_message_role()
+        self._refresh_context_percentage()
 
     def _refresh_context_attachments(self) -> None:
         """Recompute the `context_attachments` AppState field from session history.
@@ -407,6 +409,33 @@ class EngineClient:
         else:
             role = ""
         self.state.set("last_message_role", role)
+
+    def _refresh_context_percentage(self) -> None:
+        """Recompute `context_percentage` AppState from session history.
+
+        v1.19.1 Item 48: `context_percentage` is derived from
+        `session.messages`, so it must refresh on every message-list
+        mutation like the other derived fields — not only after a chat
+        turn or a provider switch. Registering it here fixes the stale
+        `Ctx:` badge after out-of-band mutations (`/clear`, `/compact`,
+        session load, checkpoint rollback): `session.clear()` fires
+        `_notify_messages_changed()` → this callback → the badge re-reads
+        AppState and sees the reset value.
+
+        Write sites for `context_percentage`: this method (the mutation
+        fan-out + the provider-switch shim in `provider_ops`, which
+        delegates here) and `update_usage()`, which sets it inline
+        alongside the per-turn token/cost batch. Both compute it the same
+        way (`get_context_info().usage_percent`); the fan-out is what
+        makes out-of-band mutations correct, which `update_usage` (per
+        chat turn only) never covered.
+        """
+        try:
+            info = self.get_context_info()
+            self.state.set("context_percentage", info.get("usage_percent", 0.0))
+        except Exception:
+            # Never let a status-badge refresh break a message mutation.
+            pass
 
     def get_context_attachments(self) -> List[Dict[str, Any]]:
         """Return the current multimodal attachments in conversation context.

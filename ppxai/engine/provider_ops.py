@@ -235,11 +235,15 @@ def _apply_model_switch(engine, model_id: str, reset_context: bool) -> bool:
 
 
 def _refresh_context_percentage(engine) -> None:
-    try:
-        info = engine.get_context_info()
-        engine.state.set("context_percentage", info.get("usage_percent", 0.0))
-    except Exception:
-        pass
+    """Refresh the context-percentage badge after a provider/model switch.
+
+    v1.19.1 Item 48: delegates to the single producer on EngineClient so
+    there is one source of truth for the `context_percentage` AppState
+    field. Kept as a thin shim because the provider-switch path calls it
+    explicitly (a model switch changes `context_limit`, so the percentage
+    must refresh even when the message list did not change).
+    """
+    engine._refresh_context_percentage()
 
 
 def _log_model_hints_transition(engine, model_id: str) -> None:
