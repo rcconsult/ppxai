@@ -9,6 +9,7 @@
 - `ppxai/server/routes/agent_v1.py::_with_task_default_allow` (L758-768) — the ONLY config-driven egress-baseline mechanism today; wired for `web_search` only
 - `ppxai/engine/tools/network_policy.py` — the AC-2 egress superset; `get_weather` targets are a hardcoded literal (Item 52)
 - Debt inventory: **Item 52** (get_weather config-parity gap — subsumed by this ADR) and **Item 53** (this ADR's tracking entry)
+- `../ppxai-sre/docs/PPXAI-INTEGRATION-V1.19.md` — primary Stage-2 consumer; §"Consumer alignment" below verifies this ADR respects its ownership boundaries (SRE owns dynamic tier policy A2; ppxai owns the primitives)
 
 ---
 
@@ -163,6 +164,50 @@ compete.
 
 ---
 
+## Consumer alignment — ppxai-sre (verified 2026-07-23)
+
+Checked against `../ppxai-sre/docs/PPXAI-INTEGRATION-V1.19.md` (§"What stays in
+this repo", caveats C1–C5, asks A1–A3). ppxai-sre is the primary Stage-2
+consumer, so this ADR must not contradict its ownership boundaries.
+
+**Aligned — profiles are a config convenience OVER the primitive, and SRE
+doesn't consume them.** ppxai-sre drives runs through the **wire** (`POST
+/v1/agent/run` + tools, C4) with an explicit per-run grant it computes itself;
+it does not select ppxai config profiles. A profile is resolved to the same
+`AgentSpec`/`tools`/`network` a request already carries, so the wire surface SRE
+depends on is **unchanged** — profiles add a naming/default layer local operators
+opt into, and the `request > spec > profile > default` precedence keeps an
+explicit wire grant authoritative (request wins). Nothing here alters
+`/v1/agent/run`, its `tools` field, or the run namespace.
+
+**The one tension — do NOT let profiles become a policy/tier engine.** SRE's
+philosophy is explicit and load-bearing: the **3-tier classification
+(Autonomous / Notify-and-Act / Require-Approval) is SRE-shaped, "not
+generalizable"** (§5.2), and A2 asks for a **registered policy callable** that
+decides tiering *dynamically at call time* — "ppxai's dialog only fires when the
+callable returns 'ask user.'" ppxai provides the **primitives** (per-tool consent
+contract, Phase-5 network-policy, egress allowlist); SRE owns the **policy**.
+
+Therefore this ADR's scope is deliberately bounded:
+- Profiles are **static grant + egress composition** (which tools, which egress
+  baseline), NOT dynamic per-call authorization. `enrichment: true` is a
+  *grant-time* default (adds `web_search` + its egress to the run's allowlist),
+  not a *call-time* decision — it never pre-empts or replaces the consent
+  contract / A2 policy callable.
+- The `enrichment` opt-in and per-profile egress ceiling (open question 3) must
+  compose UNDER a deployment policy hook, not above it: a profile may not widen
+  egress beyond what an SRE-registered policy (A2) or a deployment ceiling
+  permits. Profiles propose a grant; policy disposes.
+- Per-tool `task_default_allow` emits the SAME `NETWORK_POLICY_ALLOWED/DENIED`
+  events (C1) already committed — profiles change what's in the allowlist, not
+  how enforcement or audit is surfaced. No new event type, no internal tap.
+
+**Net:** ADR 0009 is a local-operator ergonomics + config-parity layer on the
+grant side. It stays clear of the run wire shape (C3/C4), the audit event
+contract (C1/A1), and the dynamic tier-classification hook (A2) that ppxai-sre
+owns. If any future revision moves profiles toward *call-time* policy, that is a
+conflict with A2 and must be re-litigated with the SRE boundary in view.
+
 ## Open questions for sign-off
 
 1. **Precedence** — is `request > spec > profile > default_subagent` the right
@@ -171,9 +216,12 @@ compete.
 2. **`enrichment` scope** — does it grant only `web_search`, or also
    `fetch_url`/citations? Does it imply a provider preference (route to a
    search-native provider when available)?
-3. **Egress trust** — `task_default_allow` is operator-trusted config. Should a
-   profile's `network` be capped by a deployment-level ceiling so a profile
-   can't widen egress beyond what the operator globally permits?
+3. **Egress trust / ceiling** — `task_default_allow` is operator-trusted config.
+   A profile's `network` MUST be capped by a deployment-level ceiling (and,
+   where present, an SRE-registered policy per A2) so a profile can't widen
+   egress beyond what the deployment globally permits — profiles propose, policy
+   disposes (see §"Consumer alignment"). What is the ceiling's shape — a
+   `tools.agent.egress_ceiling` allowlist the profile union is intersected with?
 4. **`/v1/oneshot`** — oneshot is stateless (no tools today). Does the
    enrichment idea extend to it (provider-native grounding toggle), or is this
    `/task`-only?
