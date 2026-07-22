@@ -12,6 +12,7 @@ import asyncio
 import os
 import platform
 import struct
+import time
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
@@ -98,11 +99,29 @@ class PtyProcess:
             return False
 
     def kill(self) -> None:
-        """Kill the child process."""
+        """Kill the child process and reap it with a bounded wait.
+
+        Interactive shells ignore SIGTERM (POSIX job control), so SIGTERM +
+        a blocking ``waitpid(pid, 0)`` can hang forever once the shell has
+        finished initializing. SIGHUP is what a closing terminal sends and
+        interactive shells DO exit on it; SIGKILL is the backstop after a
+        short WNOHANG grace loop.
+        """
         if self.child_pid is not None:
             try:
+                os.kill(self.child_pid, signal.SIGHUP)
                 os.kill(self.child_pid, signal.SIGTERM)
-                os.waitpid(self.child_pid, 0)
+                reaped = False
+                deadline = time.monotonic() + 2.0
+                while time.monotonic() < deadline:
+                    pid, _ = os.waitpid(self.child_pid, os.WNOHANG)
+                    if pid != 0:
+                        reaped = True
+                        break
+                    time.sleep(0.05)
+                if not reaped:
+                    os.kill(self.child_pid, signal.SIGKILL)
+                    os.waitpid(self.child_pid, 0)
             except (ProcessLookupError, ChildProcessError):
                 pass
             self.child_pid = None
@@ -207,5 +226,7 @@ async def websocket_terminal(websocket: WebSocket):
         logger.debug(f"Terminal WebSocket error: {e}")
     finally:
         reader_task.cancel()
-        proc.kill()
+        # kill() waits up to ~2s for the shell to die — off the event loop,
+        # so a stubborn child can never freeze the whole server again.
+        await asyncio.to_thread(proc.kill)
         logger.info(f"Terminal: closed (session={session_id})")
