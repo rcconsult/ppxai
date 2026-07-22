@@ -894,7 +894,19 @@ duration (consistent across all 6 perplexity runs), not a captured HTTP
 response body. The native-provider tool executions ARE directly evidenced
 (both a `tool_call` event and a `Recorded tool call … success=True` line).
 
-### Item 45 — Gemini 3.x native tool round-trip 400s: `thought_signature` never preserved/replayed [providers / gemini / agent platform]
+### Item 45 — Gemini 3.x native tool round-trip 400s: `thought_signature` never preserved/replayed [providers / gemini / agent platform] — ✅ FIXED (2026-07-22, `bugfix/v1.19.1` `edb74500`)
+
+**Fixed:** the signature is threaded along the full path it must survive —
+response part → `_parse_function_call(fc, part)` → `TOOL_CALL` event →
+session `tool_calls` entry (`chat.py`) → outbound `functionCall` part
+(`_convert_messages`). `_thought_signature_of()` reads the PART (documented
+location), probes the FunctionCall defensively, and base64-encodes bytes so
+the value survives the JSON round-trip through the session store. Gemini 2.5
+never sends the field → key absent → that path byte-identical to before.
+Tests: `tests/test_gemini_thought_signature.py` (11).
+**Third reproduction before the fix (2026-07-22, desktop web):** same 400 on
+`web_search` rather than `read_file`, confirming the bug was **tool-agnostic**
+— it broke *every* native tool round-trip on 3.x.
 
 **Planned:** `v1.19.x` — **higher priority than Item 43: this breaks the
 *working* native-tool path.** Surfaced in the 2026-07-13 web-app trial. A
@@ -1129,6 +1141,47 @@ wrong: different providers = different pricing, cross-process concurrency, and
 legitimately separate per-tenant vs. operator views. KV-cache = acknowledge in
 docs (+ optional vLLM `/metrics` operator read), don't try to account
 per-request. **Until decided, disclose:** `/cost` = interactive session only.
+
+### Item 50 — `/task` accepted a grant naming a nonexistent tool [agent platform / validation] — ✅ FIXED (2026-07-22, `bugfix/v1.19.1` `edb74500`)
+
+Observed live 2026-07-22 (desktop web): `/task run … --tools "weather,
+web_search"` was **accepted and started** although the tool is `get_weather`.
+The `ScopedToolManager` is only built inside the runner, so an unknown name
+sailed through run creation, the model was silently offered fewer tools than
+the caller believed it granted, and the run burned an LLM call before failing
+for a reason invisible to the caller.
+
+**Fixed** with `ScopedToolManager.unresolved_grant()` /
+`unresolved_grant_message()` — that object already holds **both** halves of
+the question (the grant, and the base manager with every tool registered for
+the run), so no parallel registry is introduced. The message suggests the
+near-miss (`'weather' (did you mean 'get_weather'?)`) via difflib plus a
+substring fallback difflib's ratio misses on short needles.
+
+**Placement is load-bearing, not incidental.** editor/shell/container/display
+tools register **only when an engine is present**, so a registry rebuilt
+without one reports a misleading subset — a first attempt at route-level
+validation saw **9 of 44** tools and **falsely rejected `apply_patch`**. The
+check also degrades to a no-op when the base manager cannot enumerate tools
+(minimal/duck-typed managers in tests and embedders): grant *hygiene* must
+never be the reason a run fails to start; AC-1 *enforcement* is untouched.
+Tests: `tests/test_scoped_grant_validation.py` (9).
+
+### Item 51 — Gemini `oneshot()` returned the model's reasoning as the answer [providers / gemini] — ✅ FIXED (2026-07-22, `bugfix/v1.19.1` `edb74500`)
+
+Observed live 2026-07-22: an `/agentrun` weather query on
+`gemini-3.1-pro-preview` returned *"**My Thought Process: Weather Inquiry for
+Castelfranco Veneto** — Okay, the user wants weather information… I'll need to
+clean up that typo…"* as the **result**.
+
+Root cause: `chat()` has always split thinking parts out (`part.thought` →
+`REASONING_CHUNK`, kept out of `full_response`), but `oneshot()` concatenated
+**every** text part with no `thought` check — and `/agentrun` drives `oneshot`.
+**Fixed** by applying the same thought/answer rule in `oneshot()`, exposing the
+monologue additively as `result["reasoning"]` (callers reading only `content`
+are unaffected), and falling back to the reasoning text only when the model
+produced nothing else — so a thought-only response never looks like an empty
+completion. Tests: `tests/test_gemini_thought_signature.py::TestOneshotThoughtSplit` (4).
 
 ### Item 44 — interactive empty-response retry persists an empty-content assistant → Perplexity 400 [chat / providers] — ✅ FIXED (2026-07-13, `bugfix/v1.19.1`)
 
