@@ -1183,6 +1183,72 @@ are unaffected), and falling back to the reasoning text only when the model
 produced nothing else — so a thought-only response never looks like an empty
 completion. Tests: `tests/test_gemini_thought_signature.py::TestOneshotThoughtSplit` (4).
 
+### Item 52 — the LOCAL in-process sealed `/task` egress gate denies a fallback-chain tool wholesale (does NOT affect the k8s/coder tier); `get_weather` unallowlistable locally [agent platform / egress / tools]
+
+**Scope (important — corrected 2026-07-23):** this is a defect of the
+**app-layer `ScopedToolManager` superset gate** used by the LOCAL in-process
+sealed `/task` tier ONLY. The **k8s coder deployment is NOT affected** and the
+Open-Meteo/weather fix that shipped there (`fd2d28eb` + the
+`deploy/examples/microk8s/networkpolicy.yaml` weather egress block, port 443 to
+wttr.in + both Open-Meteo IPs) **works correctly** — because egress there is
+enforced by **Calico/pod NetworkPolicy at connection time** (https succeeds, the
+tool's https-first chain flows), and the coder path runs the interactive
+server/chat tools, not the sealed `ScopedToolManager` superset (no
+`sandbox`/`enforcement` config exists anywhere under `deploy/`). Two enforcement
+layers, only the app-layer one has this bug.
+
+**Planned:** `v1.19.x`. Observed live 2026-07-23 on the **local desktop** `/task`
+tier (two runs, `gemini-3.1-pro-preview`, grant `get_weather,web_search`, runs
+`run_107ef9b2bc82` / `run_f398e0b86fb7`): both **completed gracefully**
+(confirming Item 45 — no `thought_signature` 400), but **neither could answer**,
+and the tool's documented fallbacks never fired. Three symptoms, one root
+cause + one poison entry.
+
+**Root cause — AC-2 all-or-nothing superset vs. internal fallback chains.**
+`ScopedToolManager._check_network` authorizes a tool by the **superset rule**
+(`network_policy.py:29,123`: allowed ⟺ **every** candidate URL passes) and, on
+denial, returns the model-readable string **before the tool runs**
+(`agent_scoped_tools.py:~160`). So `get_weather`'s in-tool three-tier chain
+(wttr.in → Open-Meteo → premium, `web_premium.get_weather_premium`) and
+`web_search`'s premium/Gemini-grounding branch live **downstream of the block**
+and never execute. This is why the same tools work in interactive chat (no
+ScopedToolManager, no superset gate) but fail sealed. Explains all three live
+observations: no wttr→Open-Meteo fallback, no Open-Meteo despite it being in
+the superset, and no Gemini grounded search.
+
+**Poison entry — `get_weather` is unallowlistable.** Its superset
+(`tool_targets`) includes **`http://wttr.in/`** (the handler's real
+https-then-http fallback loop, `web.py:23`), which the https-only policy
+**always** denies. Under all-or-nothing, that one always-denied URL blocks the
+whole tool for **any** allowlist. Verified: `--allow
+wttr.in,api.open-meteo.com,geocoding-api.open-meteo.com` → still
+`denied: scheme 'http' not allowed (https only)`. There is **no** operator
+allowlist that makes weather work on `/task` today.
+
+**Fix direction (two parts):**
+1. **Bug — drop always-denied schemes from the gating superset.** A candidate
+   URL the policy categorically rejects (http under https-only) should not gate
+   the tool; the handler's http fallback simply won't fire sealed (https works,
+   or the chain advances to Open-Meteo). Then `--allow wttr.in` (or the
+   Open-Meteo hosts) actually permits the tool.
+2. **Design tension (owner call) — fallback tools vs. confused-deputy rule.**
+   All-or-nothing is correct for `web_search` (don't let it exfil via an
+   unpredicted backend), but wrong for a pure graceful-fallback tool whose
+   "branches" are equivalent public weather APIs. Options: (a) auto-include the
+   key-free public weather hosts (Open-Meteo — no exfil surface, always
+   reachable) in `get_weather`'s baseline allow so a granted weather tool works
+   out of the box; or (b) an "any-of" egress mode for declared fallback tools,
+   distinct from the "all-of" rule. Touches the AC-2 model — decide before
+   coding part 2.
+
+**Not a regression, and NOT the k8s fix being broken.** Item 45 is confirmed
+FIXED by these very runs (both reached `completed_pending_ack`). The
+Linux/k8s weather work is fine (see Scope above). This is a pre-existing gap in
+the **local app-layer** superset gate that the now-working Gemini path merely
+made visible — the two layers gate differently: Calico authorizes the *actual
+runtime connection* (https ok), the local superset authorizes the *declared
+target set* up front (and that set carries the always-denied `http://wttr.in`).
+
 ### Item 44 — interactive empty-response retry persists an empty-content assistant → Perplexity 400 [chat / providers] — ✅ FIXED (2026-07-13, `bugfix/v1.19.1`)
 
 `chat_simple` and `chat_with_tools` add a synthetic `Message("user", "Please
