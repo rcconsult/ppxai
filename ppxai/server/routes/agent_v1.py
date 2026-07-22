@@ -96,7 +96,7 @@ from pydantic import BaseModel, Field, model_validator
 
 from ...common.logger import get_logger
 from ...config import get_default_model
-from ...config.tools import get_agent_config
+from ...config.tools import get_agent_config, get_tool_config
 from ...engine.agent_runs import RunMeta, resume_refusal
 from ...engine.agent_skill import AgentSkillError, LoadedSkill, load_skill
 from ...engine.agent_spec import AgentSpec, AgentSpecError, load_spec_file
@@ -740,6 +740,44 @@ def _merge_task_fields(req: AgentTaskRequest) -> dict:
     }
 
 
+def _web_search_banned(tools: list) -> bool:
+    """True when the grant includes web_search but the operator disabled it.
+
+    `tools.web_search.enabled=false` is a config kill-switch for the task tier
+    — e.g. a locked-down coder pod that must never let a sandboxed run search
+    the web. Absent/true → allowed (backward compatible)."""
+    if "web_search" not in tools:
+        return False
+    try:
+        return get_tool_config("web_search").get("enabled", True) is False
+    except Exception:
+        return False
+
+
+def _with_task_default_allow(network: list) -> list:
+    """Merge operator-configured default egress hosts into a task run's allowlist.
+
+    `tools.web_search.task_default_allow` (list of host strings) is trusted
+    operator input — the same trust level as a per-run `--allow` — so the
+    operator can pre-authorize the egress web_search needs (e.g.
+    ["api.perplexity.ai"] on a perplexity-pinned coder pod) and users don't
+    retype it on every run. Dedups against existing entries; string hosts only.
+    """
+    try:
+        defaults = get_tool_config("web_search").get("task_default_allow", []) or []
+    except Exception:
+        defaults = []
+    if not defaults:
+        return network
+    merged = list(network)
+    existing = {e for e in merged if isinstance(e, str)}
+    for host in defaults:
+        if isinstance(host, str) and host and host not in existing:
+            merged.append(host)
+            existing.add(host)
+    return merged
+
+
 @router.post("/task", response_model=AgentRunResponse)
 async def create_agent_task(req: AgentTaskRequest, request: Request) -> AgentRunResponse:
     """Tool-capable, sandboxed agent run (ADR 0003 §4 / AC-1).
@@ -807,6 +845,19 @@ async def create_agent_task(req: AgentTaskRequest, request: Request) -> AgentRun
             ),
         )
 
+    # Operator kill-switch (AC-2 policy surface): web_search can be banned for
+    # the task tier via tools.web_search.enabled=false — e.g. a locked-down
+    # coder pod. Checked on the MERGED grant so a spec/skill can't smuggle it in.
+    if _web_search_banned(tools):
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                "web_search is disabled for the tool-capable tier by operator "
+                "config (tools.web_search.enabled=false). Remove it from the "
+                "grant, or enable it in ppxai-config.json."
+            ),
+        )
+
     provider_name = eff["provider"]
     model = eff["model"]
     if not provider_name or not model:
@@ -848,6 +899,11 @@ async def create_agent_task(req: AgentTaskRequest, request: Request) -> AgentRun
                     ),
                 )
             workdir = wd
+
+    # Operator-configured default egress (trusted input) — merged AFTER the
+    # ceiling guards so it only ever WIDENS a run's own allowlist toward hosts
+    # the operator already blessed; it can't relax any grant/shell/provider check.
+    eff["network"] = _with_task_default_allow(eff["network"])
 
     meta = registry.start_run(
         task=eff["task"], tools=tools, provider=provider_name, model=model,

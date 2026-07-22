@@ -49,6 +49,7 @@ unpredictable backend safe.
 from __future__ import annotations
 
 import ipaddress
+import os
 import socket
 import time
 from dataclasses import dataclass
@@ -163,19 +164,63 @@ def grant_has_shell(grant) -> bool:
     return bool(set(grant or []) & SHELL_TOOL_NAMES)
 
 
+# web_search picks a backend at CALL time (web_premium.web_search_premium).
+# In the default "auto" mode it may hit ANY of these, so the superset must be
+# granted (the confused-deputy defense). But when the operator PINS a backend
+# via `tools.web_search.preferred`, web_premium is held to that one backend with
+# NO cross-backend fallback (see `web_premium.web_search_premium`), so the honest
+# egress set narrows to just that backend's host(s). `pinned_web_search_backend`
+# is the single source of truth both modules consult.
+_WEB_SEARCH_BACKEND_HOSTS: Dict[str, List[str]] = {
+    "perplexity": ["https://api.perplexity.ai/"],
+    "gemini": ["https://generativelanguage.googleapis.com/"],
+    "duckduckgo": ["https://duckduckgo.com/", "https://html.duckduckgo.com/"],
+}
+# Env key that must be present for a pinned premium backend to actually be
+# usable; duckduckgo needs none. A backend pinned without its key falls back to
+# the full "auto" superset (fail-safe: never narrow egress on a config that
+# can't take effect).
+_WEB_SEARCH_BACKEND_ENV: Dict[str, Optional[str]] = {
+    "perplexity": "PERPLEXITY_API_KEY",
+    "gemini": "GEMINI_API_KEY",
+    "duckduckgo": None,
+}
+_WEB_SEARCH_ALL_HOSTS: List[str] = [
+    "https://duckduckgo.com/",
+    "https://html.duckduckgo.com/",
+    "https://api.perplexity.ai/",
+    "https://generativelanguage.googleapis.com/",
+]
+
 _NETWORK_TOOLS: Dict[str, Tuple[str, Any]] = {
     "fetch_url": ("kwarg", "url"),
-    "web_search": ("fixed", [
-        "https://duckduckgo.com/",
-        "https://html.duckduckgo.com/",
-        "https://api.perplexity.ai/",
-        "https://generativelanguage.googleapis.com/",
-    ]),
+    "web_search": ("fixed", _WEB_SEARCH_ALL_HOSTS),
     "get_weather": ("fixed", [
         "https://wttr.in/",
         "http://wttr.in/",  # handler's plain-http fallback — denied under MVP
     ]),
 }
+
+
+def pinned_web_search_backend() -> Optional[str]:
+    """The single backend web_search is HARD-pinned to, or None for auto.
+
+    Pinned iff `tools.web_search.preferred` names a known backend AND (for a
+    premium backend) its API key is present. When pinned, web_premium must not
+    fall back to another backend, so the egress set narrows to that backend's
+    host(s). "auto" (or a keyless pin) → None → the full multi-backend superset.
+    """
+    try:
+        from ...config.tools import get_tool_config  # local: avoid load-order cycle
+        preferred = (get_tool_config("web_search") or {}).get("preferred", "auto")
+    except Exception:
+        return None
+    if preferred not in _WEB_SEARCH_BACKEND_HOSTS:
+        return None
+    env_key = _WEB_SEARCH_BACKEND_ENV.get(preferred)
+    if env_key and not os.getenv(env_key):
+        return None  # pinned to a keyless premium backend → fall back to auto
+    return preferred
 
 
 @dataclass(frozen=True)
@@ -263,6 +308,13 @@ def tool_targets(name: str, kwargs: dict) -> List[str]:
         return []
     kind, ref = spec
     if kind == "fixed":
+        # web_search: narrow the egress set to the pinned backend's host(s) when
+        # the operator has pinned one (web_premium then forbids cross-backend
+        # fallback, keeping this honest). Otherwise the full auto superset.
+        if name == "web_search":
+            backend = pinned_web_search_backend()
+            if backend:
+                return list(_WEB_SEARCH_BACKEND_HOSTS[backend])
         return list(ref)
     # kind == "kwarg": the URL is whatever the model passed (single target)
     raw = kwargs.get(ref)

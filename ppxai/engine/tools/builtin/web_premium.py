@@ -267,6 +267,16 @@ async def web_search_premium(query: str, num_results: int = 5, _provider_name: O
 
     provider = get_premium_search_provider(_provider_name)
 
+    # When the operator PINS a backend via tools.web_search.preferred, the
+    # egress policy narrows web_search's allowlisted target set to that one
+    # backend (network_policy.pinned_web_search_backend). Cross-backend
+    # fallback would then try to reach a host the run never allowlisted (e.g.
+    # a pinned-perplexity failure silently hitting DuckDuckGo), so it is
+    # forbidden here: a pinned backend either succeeds on its own host or
+    # returns an error. "auto" (unpinned) keeps the full fallback chain.
+    from ..network_policy import pinned_web_search_backend
+    pinned = pinned_web_search_backend()
+
     try:
         if provider == "perplexity":
             content, citations, usage = await web_search_perplexity(query, num_results)
@@ -286,10 +296,19 @@ async def web_search_premium(query: str, num_results: int = 5, _provider_name: O
         return result
 
     except Exception as e:
-        # Fall back chain: Perplexity -> Gemini -> DuckDuckGo (v1.15.2)
         logger = logging.getLogger(__name__)
         logger.warning(f"Premium search failed ({provider}): {e}")
 
+        # Pinned backend: no cross-backend fallback (see note above) — the
+        # egress allowlist only covers the pinned host.
+        if pinned:
+            return (
+                f"[web_search error] The configured search backend "
+                f"'{pinned}' failed and cross-backend fallback is disabled "
+                f"(tools.web_search.preferred={pinned}): {e}"
+            )
+
+        # Auto mode fall-back chain: Perplexity -> Gemini -> DuckDuckGo (v1.15.2)
         # If Perplexity failed, try Gemini as fallback before DuckDuckGo
         if provider == "perplexity" and os.getenv("GEMINI_API_KEY"):
             try:
