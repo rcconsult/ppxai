@@ -89,7 +89,7 @@ class TestGetFileTreeIgnoreDirs:
         # and the loader would silently drop it on the floor. The
         # other unit tests in this file all patched store.config in
         # memory, bypassing the loader entirely, so the bug stayed
-        # hidden until coder.trad.int dogfooding caught it.
+        # hidden until coder.internal dogfooding caught it.
         #
         # This test runs the loader on a real JSON file with the
         # override set and asserts the file_tree key survives.

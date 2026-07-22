@@ -270,7 +270,7 @@ extract at that point).
 > config flag (read but never consulted) — superseded by the explicit
 > `vl_captioner`-wired-when-`has_vision_sidecar()` path; filed separately if
 > it ever needs removal. The original root-cause diagnosis (why the sidecar
-> didn't fire on coder.trad.int) is moot now that there is no silent
+> didn't fire on coder.internal) is moot now that there is no silent
 > placeholder to fall into.
 
 ---
@@ -288,7 +288,7 @@ gateway" pattern used by the coder cluster — `Qwen/Qwen3-VL-8B-Instruct` at
 `vllm-qwen3-vl-8b-fp8-lmcache-mig.vllm.svc`), the image-attach pipeline is
 **expected** to call the sidecar, get a caption back, and inline it into the user
 message so the text-only model receives describable content. Dogfooded on
-coder.trad.int 2026-06-08 with the Qwen/Qwen3.5-27B-FP8 vllm-qwen35 provider: an
+coder.internal 2026-06-08 with the Qwen/Qwen3.5-27B-FP8 vllm-qwen35 provider: an
 attached `.drawio.png` network diagram surfaced the `vision_unsupported` warning
 ("sent as a text placeholder") and the model then **hallucinated a fully
 fabricated description of "empty 35mm film reels"** — the worst of both worlds.
@@ -336,7 +336,7 @@ adds a new modality (audio/video) — same pattern likely lurks for those too.
 - Integration test (~1 hour): mock active=text-only model + mock vision_model
   endpoint; assert caption inlined into user message.
 
-**Surfaced by:** coder.trad.int dogfooding 2026-06-08, drawio.png attach to
+**Surfaced by:** coder.internal dogfooding 2026-06-08, drawio.png attach to
 the vllm-qwen35 provider.
 
 > **Update 2026-06-08 (same day):** the user pushed back that they're sure
@@ -346,7 +346,7 @@ the vllm-qwen35 provider.
 > 1. `/home/itadmin/ai/git/trad-ai-chat/scripts/test-vl-capabilities.sh`
 >    (commit `916772c`, 2026-04-23) — 9-test VL probe (Test 0 image accept,
 >    Test 1 OCR, Test 2 tables, Test 3 charts). Baseline run against
->    `https://codeai.trad.int/qwen35/v1` model `Qwen/Qwen3.5-27B-FP8`
+>    `https://codeai.internal/qwen35/v1` model `Qwen/Qwen3.5-27B-FP8`
 >    scored **8/9 PASS**. The one fail (Test 2b) was arithmetic-over-OCR'd-data
 >    reasoning — NOT vision.
 > 2. `/home/itadmin/ai/git/trad-ai-chat/doc/research/qwen35-vs-qwen36-27b-comparison.md`

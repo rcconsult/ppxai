@@ -992,7 +992,7 @@ async def download_file(
 
 # Per-request upload size cap. Larger than the multi-modal-attach
 # limits because workspace uploads can be entire datasets or project
-# bundles being seeded into an empty /workspace (the coder.trad.int
+# bundles being seeded into an empty /workspace (the coder.internal
 # use case where pods start with nothing on disk). 100 MB matches
 # the nginx ingress proxy-body-size on the coder ingress.
 UPLOAD_MAX_BYTES = 100 * 1024 * 1024  # 100 MB
@@ -1012,7 +1012,7 @@ async def upload_file(
     files into conversation context) — this writes the bytes to disk
     under ``<path>/<file.filename>`` so the agent can subsequently
     ``read_file``, ``edit_file``, etc. against them like any
-    workspace file. Closes the gap in k8s deployments (coder.trad.int)
+    workspace file. Closes the gap in k8s deployments (coder.internal)
     where pods start with empty /workspace and users have no
     other way to populate it (not everyone uses git; many users are
     not software developers).

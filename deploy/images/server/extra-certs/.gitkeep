@@ -2,7 +2,7 @@
 # coder-server image. They get installed into the image's trust store
 # (update-ca-certificates → /etc/ssl/certs/ca-certificates.crt) so httpx
 # / openai-sdk / curl trust enterprise-CA-signed endpoints like
-# dgx-cluster.trad.int.
+# dgx-cluster.internal.
 #
 # .crt files here are gitignored — they're org infrastructure, not source.
 # The Dockerfile COPYs this whole directory at build time; an empty

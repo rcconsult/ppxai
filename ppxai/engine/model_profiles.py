@@ -483,7 +483,7 @@ BUILTIN_PROFILES: Dict[str, ModelProfile] = {
     # Confirmed 2026-06-08 via:
     #   1. Sister-session VL probe `trad-ai-chat/scripts/test-vl-capabilities.sh`
     #      (commit 916772c, 2026-04-23) → 8/9 PASS on Qwen3.5-27B-FP8.
-    #   2. ai.trad.int (prod blue) OpenWebUI handed Qwen3.5-27B a wrong
+    #   2. ai.internal (prod blue) OpenWebUI handed Qwen3.5-27B a wrong
     #      pre-processed image description ("metal gears" for a network
     #      diagram); model produced a correct detailed description that
     #      cited exact host/switch IDs only visible in the image —
@@ -514,7 +514,7 @@ BUILTIN_PROFILES: Dict[str, ModelProfile] = {
     # inherits parallel_tool_calls=True + max_tool_iterations=20.
     #
     # Empirically VL-capable, verified 2026-06-09 against
-    # http://gx10-93a7.trad.int:8000/v1: 256x128 PNG containing
+    # http://dgx-spark.internal:8000/v1: 256x128 PNG containing
     # 'VL TEST 8472' + the prompt "What number is in this image?"
     # returned '8472' with finish_reason=stop in BOTH default settings
     # (91 completion tokens) AND chat_template_kwargs.enable_thinking=False

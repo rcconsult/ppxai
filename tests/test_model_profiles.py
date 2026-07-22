@@ -323,7 +323,7 @@ class TestBuiltinProfiles:
 
     def test_minimax_m27_profile_2026_06_09_dgx_cluster_swap(self):
         """MiniMax-M2.7 (dgx-cluster MoE, 230B/10B-active) profile.
-        Verified 2026-06-09 against https://dgx-cluster.trad.int/vllm/v1:
+        Verified 2026-06-09 against https://dgx-cluster.internal/vllm/v1:
         text round-trip OK on OpenAI-compat shape; image_url is REJECTED
         by vllm with HTTP 400 'minimax-m2.7 is not a multimodal model';
         reasoning emitted inline as <think>...</think> in content
@@ -341,7 +341,7 @@ class TestBuiltinProfiles:
 
     def test_qwen_36_35b_a3b_fp8_supports_vision(self):
         """Qwen3.6-35B-A3B-FP8 (DGX Spark MoE) is empirically VL-capable.
-        Verified 2026-06-09 against http://gx10-93a7.trad.int:8000/v1 with the
+        Verified 2026-06-09 against http://dgx-spark.internal:8000/v1 with the
         same probe used for the 27B variants. Behaves cleaner than 27B: even
         without chat_template_kwargs.enable_thinking=False, the default call
         emits content directly. Tier S — 83.2% on the 36-test in-cluster

@@ -174,7 +174,7 @@ class FileTreeComponent {
         // anywhere in the sidebar background — both land at working_dir
         // root. Per-directory drop happens on the row itself (wired in
         // _attachListeners). Same UI ships to ppxai-desktop and the
-        // coder.trad.int per-user pod — the latter is the use case that
+        // coder.internal per-user pod — the latter is the use case that
         // actually motivated this (pods start with empty /workspace, and
         // not every user is comfortable using git from the terminal).
         this.container.innerHTML = `

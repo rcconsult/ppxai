@@ -69,8 +69,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Corporate / org CA certificates — install into the image's trust store so
 # httpx + openai-sdk + curl can verify TLS to enterprise-CA-signed endpoints
-# (e.g. dgx-cluster.trad.int presents a cert chain from CN=CA Compagnie
-# Financiere Tradition; default debian trust doesn't include it, so without
+# (e.g. dgx-cluster.internal presents a cert chain from an internal
+# enterprise CA; default debian trust doesn't include it, so without
 # this every call fails with "unable to get local issuer certificate").
 #
 # The extra-certs/ directory is gitignored except for .gitkeep. Operators

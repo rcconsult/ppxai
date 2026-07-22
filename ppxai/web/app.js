@@ -3254,7 +3254,7 @@ class PpxaiApp {
      * read_file / edit_file / list_directory against them like any
      * other workspace content.
      *
-     * Closes the design gap that surfaced once coder.trad.int went
+     * Closes the design gap that surfaced once coder.internal went
      * live — pods spawn with empty /workspace and not every user is
      * comfortable cloning a repo from the terminal. The same UI ships
      * to ppxai-desktop too (where filesystem access is direct, so the

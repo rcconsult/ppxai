@@ -39,7 +39,7 @@ generates 3 fixture images inline via Pillow and POSTs OpenAI-style
 |---|---|
 | Script | `trad-ai-chat/scripts/test-vl-capabilities.sh` |
 | Commit | `916772c` (2026-04-23) |
-| Baseline | `https://codeai.trad.int/qwen35/v1` model `Qwen/Qwen3.5-27B-FP8` |
+| Baseline | `https://codeai.internal/qwen35/v1` model `Qwen/Qwen3.5-27B-FP8` |
 | Score | **8/9 PASS** |
 | One fail | Test 2b — arithmetic-over-OCR'd-data reasoning, NOT a vision failure (OCR was correct per Test 2a) |
 | Use as | Gate A for the Qwen3-VL-8B-Instruct decommission (CR-v4.0.0 Part 2 Phase 6) |
@@ -62,7 +62,7 @@ wrong for how the model behaves through vLLM.
 export API_KEY=$(/snap/kubectl/current/kubectl get secret vllm-qwen35-api-key \
     -n vllm -o jsonpath='{.data.api-key}' | base64 -d)
 
-# Then point at whichever endpoint you want to probe. For coder.trad.int:
+# Then point at whichever endpoint you want to probe. For coder.internal:
 cd /home/itadmin/ai/git/trad-ai-chat
 ./scripts/test-vl-capabilities.sh \
     http://vllm-qwen35-27b-fp8-worker.vllm.svc.cluster.local/v1 \

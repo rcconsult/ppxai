@@ -67,7 +67,7 @@ cover this case.
 Three concurrent pressures surfaced the entanglement on 2026-05-14:
 
 1. **A user attached a screenshot to gpt-5.5 on the corporate
-   `codeai.trad.int` OpenAI-compat endpoint.** The endpoint's strict
+   `codeai.internal` OpenAI-compat endpoint.** The endpoint's strict
    validator returned `"Invalid chat format. Unexpected keys in a
    message content image dict."` The attachment was silently
    dropped — the model never saw it.

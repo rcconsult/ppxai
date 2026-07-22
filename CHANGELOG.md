@@ -215,7 +215,7 @@ Branch: `bugfix/v1.18.6`. Theme: **foundation release** — ADR 0006 content-blo
 
 - **Multi-resolution ICO favicon** (`ppxai/web/favicon.ico`, 110 KB, 6 sizes up to 256×256). `/favicon.ico` serves the .ico directly instead of redirecting to PNG; `index.html` keeps both `<link rel="icon">` entries for fallback. Commit `1507e5ca`.
 
-- **`dgx-cluster` provider in coder cluster ConfigMap.** New PP=2 Qwen3.5-122B-A10B-NVFP4 at `dgx-cluster.trad.int/vllm/v1`. Native tool calling (qwen3_coder parser), prefix-caching, 128K max-model-len. Benchmark 2026-05-12 (native, no AGENTS.md): 76.2% (26/36) — +9pp over the prompt_based baseline (67.2%), with +34pp on `agentic_tool_loops` specifically. Side-by-side results in `benchmarks/llm-eval/results/dgx-cluster_*`. Commits `68624251`, `c7a35b01`.
+- **`dgx-cluster` provider in coder cluster ConfigMap.** New PP=2 Qwen3.5-122B-A10B-NVFP4 at `dgx-cluster.internal/vllm/v1`. Native tool calling (qwen3_coder parser), prefix-caching, 128K max-model-len. Benchmark 2026-05-12 (native, no AGENTS.md): 76.2% (26/36) — +9pp over the prompt_based baseline (67.2%), with +34pp on `agentic_tool_loops` specifically. Side-by-side results in `benchmarks/llm-eval/results/dgx-cluster_*`. Commits `68624251`, `c7a35b01`.
 
 - **Coder image rebuild + utility-tools expansion** (shipped 2026-05-13; see [docs/TODO-v1.18.6-coder-image-tools.md](docs/TODO-v1.18.6-coder-image-tools.md)). Stage-2 of `deploy/images/server/Dockerfile` now bundles `git jq yq curl wget ripgrep fd-find tree less unzip zip vim-tiny nano rtk` (~83 MB). Registry digest `sha256:80bed068...ab0cec`. `rtk hook check git status` returns the expected rewrite; wrapper-registry probe reports `is_available=True, is_active=True`. `gh`, `pwsh`, `kubectl`, `node`/`npm` deferred — install-on-demand snippets in the doc. Commits `e2737da4`, `9a9343ef`, `fe190b41`.
 
@@ -251,7 +251,7 @@ Branch: `bugfix/v1.18.6`. Theme: **foundation release** — ADR 0006 content-blo
 
 - **build-install skill: Windows `code.cmd` resolution.** The skill assumed `code` on PATH resolves to the CLI shim; on machines where it points to `Code.exe` (the GUI), `--install-extension` fails. Fixed to resolve `$env:LOCALAPPDATA\Programs\Microsoft VS Code\bin\code.cmd` directly. Skill commit `114d16f3`. Companion `adc3ce7f` version-pins the VSIX install to avoid multi-VSIX glob hazards.
 
-- **Coder image TLS + rtk install.** Corporate `trad.int` TLS handshakes failed because the runtime stage had no CA bundle; `certifi`'s store also needed extending so the Python TLS stack could verify. Fix: install corporate CAs into `/usr/local/share/ca-certificates/`, run `update-ca-certificates`, append to `certifi`, set `SSL_CERT_FILE`. rtk install switched from `.deb` (glibc 2.36 incompatible with the base image's 2.39) to the musl static tarball. Commits `2206e212`, `117e2d56`, `9a9343ef`.
+- **Coder image TLS + rtk install.** Corporate internal-domain TLS handshakes failed because the runtime stage had no CA bundle; `certifi`'s store also needed extending so the Python TLS stack could verify. Fix: install corporate CAs into `/usr/local/share/ca-certificates/`, run `update-ca-certificates`, append to `certifi`, set `SSL_CERT_FILE`. rtk install switched from `.deb` (glibc 2.36 incompatible with the base image's 2.39) to the musl static tarball. Commits `2206e212`, `117e2d56`, `9a9343ef`.
 
 ### Tests
 
