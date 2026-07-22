@@ -94,6 +94,11 @@ tests/e2e/node_modules/
 tests/e2e/playwright-report/
 tests/e2e/test-results/
 
+# Stray run logs. A committed test-results.log once leaked a developer's
+# Windows home path (and real name) into this public repo -- logs are
+# regenerable, never source.
+*.log
+
 # Benchmark debug logs (regenerable with --debug flag)
 benchmarks/llm-eval/debug/
 

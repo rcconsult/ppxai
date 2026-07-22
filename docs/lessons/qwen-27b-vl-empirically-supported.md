@@ -45,7 +45,7 @@ generates 3 fixture images inline via Pillow and POSTs OpenAI-style
 | Use as | Gate A for the Qwen3-VL-8B-Instruct decommission (CR-v4.0.0 Part 2 Phase 6) |
 
 Per-test result table is captured in the sister-session memory at
-`~/.claude/projects/-home-itadmin-ai-git-trad-ai-chat/memory/project_vllm_vl_capabilities_test.md`.
+`~/.claude/projects/<trad-ai-chat-slug>/memory/project_vllm_vl_capabilities_test.md`.
 
 The architecture-comparison doc at
 `trad-ai-chat/doc/research/qwen35-vs-qwen36-27b-comparison.md` (2026-04-30)
@@ -63,7 +63,7 @@ export API_KEY=$(/snap/kubectl/current/kubectl get secret vllm-qwen35-api-key \
     -n vllm -o jsonpath='{.data.api-key}' | base64 -d)
 
 # Then point at whichever endpoint you want to probe. For coder.internal:
-cd /home/itadmin/ai/git/trad-ai-chat
+cd /path/to/trad-ai-chat
 ./scripts/test-vl-capabilities.sh \
     http://vllm-qwen35-27b-fp8-worker.vllm.svc.cluster.local/v1 \
     Qwen/Qwen3.5-27B-FP8

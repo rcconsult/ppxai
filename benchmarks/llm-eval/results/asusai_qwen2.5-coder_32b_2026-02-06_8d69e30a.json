@@ -193,7 +193,7 @@
       "passed": false,
       "details": {
         "error": "Contains explanation: 'this function'",
-        "content_preview": "The Python function `add` has been successfully created in the file `add_function.py` located at `/home/rado/git-local/ppxai/benchmarks/llm-eval/add_function.py`. The contents of the file are:\n\n```pyt"
+        "content_preview": "The Python function `add` has been successfully created in the file `add_function.py` located at `/path/to/ppxai/benchmarks/llm-eval/add_function.py`. The contents of the file are:\n\n```pyt"
       },
       "weight": 1.0
     },

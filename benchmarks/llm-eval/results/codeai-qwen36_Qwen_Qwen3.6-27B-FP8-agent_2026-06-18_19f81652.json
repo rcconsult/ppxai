@@ -295,7 +295,7 @@
       "score": 1.0,
       "details": {
         "first_action": "run tests",
-        "command": "cd /home/itadmin/tools/ppxai && uv run pytest tests/ -v 2>&1 | head -200"
+        "command": "cd /path/to/ppxai && uv run pytest tests/ -v 2>&1 | head -200"
       },
       "weight": 1.0
     },

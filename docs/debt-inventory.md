@@ -343,13 +343,13 @@ the vllm-qwen35 provider.
 > they tested these 27B models and they support VL. Cross-repo search found
 > two artifacts that prove the user was right and reframe this item:
 >
-> 1. `/home/itadmin/ai/git/trad-ai-chat/scripts/test-vl-capabilities.sh`
+> 1. `/path/to/trad-ai-chat/scripts/test-vl-capabilities.sh`
 >    (commit `916772c`, 2026-04-23) — 9-test VL probe (Test 0 image accept,
 >    Test 1 OCR, Test 2 tables, Test 3 charts). Baseline run against
 >    `https://codeai.internal/qwen35/v1` model `Qwen/Qwen3.5-27B-FP8`
 >    scored **8/9 PASS**. The one fail (Test 2b) was arithmetic-over-OCR'd-data
 >    reasoning — NOT vision.
-> 2. `/home/itadmin/ai/git/trad-ai-chat/doc/research/qwen35-vs-qwen36-27b-comparison.md`
+> 2. `/path/to/trad-ai-chat/doc/research/qwen35-vs-qwen36-27b-comparison.md`
 >    (2026-04-30) — confirms Qwen3.6-27B-FP8 has an **explicit vision
 >    encoder** added in the architecture ("Text + image + video"); Qwen3.5
 >    is labeled "Text-only" on the HF card but empirically handles

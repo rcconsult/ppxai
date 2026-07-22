@@ -18,7 +18,7 @@ The rest of this doc preserves the design rationale for future audits + the inst
 
 The current `localhost:32000/coder-server:latest` (`sha256:de680b6d`) was built on **2026-05-06** from the previous `bugfix/v1.18.4` branch with the four context-indicator commits (`a4002844`, `1507e5ca`, `f5c84b7e`, `70a0457f`). Master has since released v1.18.4 and v1.18.5 (master tip = `f1e0579f`). The current `bugfix/v1.18.6` branch is v1.18.5 + the same four cherry-picked fixes (`a4002844`, `1507e5ca`, `f5c84b7e`, `70a0457f`) + two benchmark commits (`68624251`, `c7a35b01`).
 
-**Action:** rerun `deploy/microk8s/build.sh server` from `bugfix/v1.18.6`. Kaniko mounts `/home/itadmin/tools/ppxai` directly, so no further setup needed.
+**Action:** rerun `deploy/microk8s/build.sh server` from `bugfix/v1.18.6`. Kaniko mounts `/path/to/ppxai` directly, so no further setup needed.
 
 ### 2. Add utility tools to the runtime stage
 
@@ -151,5 +151,5 @@ microk8s kubectl exec -n coder coder-server-<user> -- rtk gain --help | head -3
 
 - Dockerfile current state: [deploy/images/server/Dockerfile](../deploy/images/server/Dockerfile)
 - Build script: [deploy/microk8s/build.sh](../deploy/microk8s/build.sh) (`./build.sh server`)
-- Kaniko job: [deploy/microk8s/kaniko-server-job.yaml](../deploy/microk8s/kaniko-server-job.yaml) — mounts `/home/itadmin/tools/ppxai` as build context, so the current working-tree commit IS the build source
+- Kaniko job: [deploy/microk8s/kaniko-server-job.yaml](../deploy/microk8s/kaniko-server-job.yaml) — mounts `/path/to/ppxai` as build context, so the current working-tree commit IS the build source
 - Live registry: `localhost:32000/coder-server:latest` (`sha256:de680b6d`, 2026-05-06; needs refresh)
