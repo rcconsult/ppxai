@@ -213,7 +213,7 @@ class TestAgentRunFireAndForget:
         awaiting it, and contains no `for await` of its own."""
         src = _read_controller()
         m = re.search(
-            r"async start\(task\)\s*\{(.*?)\n    \}",
+            r"async start\(\w+\)\s*\{(.*?)\n    \}",
             src, re.DOTALL,
         )
         assert m, "could not locate AgentRunController.start body"
