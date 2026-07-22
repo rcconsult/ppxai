@@ -315,6 +315,18 @@ def tool_targets(name: str, kwargs: dict) -> List[str]:
             backend = pinned_web_search_backend()
             if backend:
                 return list(_WEB_SEARCH_BACKEND_HOSTS[backend])
+        # get_weather (v1.19.1): wttr.in is ALWAYS tried first (it stays the
+        # preferred weather source — search backends give unreliable weather), so
+        # its egress set is wttr.in PLUS the premium hosts it may fall back to when
+        # a key is present (honest superset). Not narrowed by `preferred` — that
+        # knob governs SEARCH, not weather.
+        elif name == "get_weather":
+            targets = list(ref)  # wttr.in https + http
+            if os.getenv("PERPLEXITY_API_KEY"):
+                targets.append("https://api.perplexity.ai/")
+            if os.getenv("GEMINI_API_KEY"):
+                targets.append("https://generativelanguage.googleapis.com/")
+            return targets
         return list(ref)
     # kind == "kwarg": the URL is whatever the model passed (single target)
     raw = kwargs.get(ref)

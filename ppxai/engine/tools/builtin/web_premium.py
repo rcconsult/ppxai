@@ -329,6 +329,38 @@ async def web_search_premium(query: str, num_results: int = 5, _provider_name: O
         return web.web_search(query, num_results)
 
 
+async def get_weather_premium(
+    location: str, format: str = "short", _provider_name: Optional[str] = None
+) -> str:
+    """Weather with a premium FALLBACK — but wttr.in stays preferred.
+
+    web_premium historically upgraded `web_search` to a premium provider but left
+    `get_weather` on wttr.in with no fallback, so on a locked-egress host that
+    blocks wttr.in, weather failed hard. This adds the missing fallback WITHOUT
+    demoting wttr.in: wttr.in is a purpose-built real-time weather source, whereas
+    a general web-search backend (perplexity/gemini) scrapes arbitrary pages and
+    returns unreliable temperatures (observed live: stale 9-18°C for a 30°C day).
+    So the premium provider is a LAST resort, never preferred — even when
+    `tools.web_search.preferred` pins one for SEARCH.
+
+    Try wttr.in first; fall back to the premium provider only when wttr.in is
+    unreachable AND a premium key exists. Where wttr.in is reachable (incl. a host
+    that allowlists it in egress), behavior is unchanged.
+    """
+    result = web.get_weather(location, format)
+    # web.get_weather returns an 'Error: ...' string on failure (never raises).
+    if result.lstrip().startswith("Error") and is_available():
+        logging.getLogger(__name__).info(
+            "wttr.in weather failed; falling back to premium search (less accurate)"
+        )
+        query = (
+            f"What is the current weather and today's forecast for {location}? "
+            f"Give temperature, conditions, wind, and precipitation."
+        )
+        return await web_search_premium(query, 5, _provider_name=_provider_name)
+    return result
+
+
 def get_last_tool_usage() -> Optional[ToolUsage]:
     """Get usage from last premium search call.
 
@@ -403,11 +435,15 @@ def register_tools(manager, provider=None):
         provider_excluded=["perplexity"]
     )
 
-    # Also register get_weather and fetch_url from web.py (v1.15.2)
-    # These use free services (wttr.in, direct fetch) and should always be available
+    # get_weather via the premium-aware wrapper (v1.19.1): wttr.in when reachable,
+    # premium provider (perplexity/gemini) as fallback or when pinned — so weather
+    # works wherever web_search does (matches the search backend policy).
+    async def get_weather_with_provider(location: str, format: str = "short") -> str:
+        return await get_weather_premium(location, format, _provider_name=provider)
+
     manager.register_function(
         name="get_weather",
-        description="Get current weather and forecast for a location. Uses wttr.in service (no API key needed)",
+        description="Get current weather and forecast for a location",
         parameters={
             "type": "object",
             "properties": {
@@ -423,7 +459,7 @@ def register_tools(manager, provider=None):
             },
             "required": ["location"]
         },
-        handler=web.get_weather,
+        handler=get_weather_with_provider,
         provider_excluded=["perplexity"]  # Perplexity has native weather via grounding
     )
 

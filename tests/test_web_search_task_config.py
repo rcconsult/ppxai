@@ -131,3 +131,90 @@ def test_pinned_backend_does_not_fall_back(tools_cfg, monkeypatch):
     out = asyncio.run(web_premium.web_search_premium("q"))
     assert "web_search error" in out
     assert "perplexity" in out
+
+
+# --- get_weather premium backend policy (v1.19.1) -------------------------
+
+def test_get_weather_targets_auto_no_key(tools_cfg):
+    tools_cfg["web_search"] = {"preferred": "auto"}
+    assert np.tool_targets("get_weather", {}) == [
+        "https://wttr.in/", "http://wttr.in/"
+    ]
+
+
+def test_get_weather_targets_auto_with_perplexity_key(tools_cfg, monkeypatch):
+    # Auto mode can fall back to premium, so its egress superset must include it.
+    tools_cfg["web_search"] = {"preferred": "auto"}
+    monkeypatch.setenv("PERPLEXITY_API_KEY", "k")
+    assert np.tool_targets("get_weather", {}) == [
+        "https://wttr.in/", "http://wttr.in/", "https://api.perplexity.ai/"
+    ]
+
+
+def test_get_weather_pinning_does_not_divert_weather(tools_cfg, monkeypatch):
+    # `preferred` governs SEARCH, not weather — wttr.in stays the preferred
+    # (accurate) weather source, so its target set is NOT narrowed by pinning.
+    tools_cfg["web_search"] = {"preferred": "perplexity"}
+    monkeypatch.setenv("PERPLEXITY_API_KEY", "k")
+    assert np.tool_targets("get_weather", {}) == [
+        "https://wttr.in/", "http://wttr.in/", "https://api.perplexity.ai/"
+    ]
+
+
+def test_get_weather_tries_wttr_first_even_when_pinned(tools_cfg, monkeypatch):
+    # Even with a premium backend pinned for search, weather tries wttr.in FIRST
+    # (accuracy) — premium is only a fallback if wttr.in fails.
+    import asyncio
+
+    from ppxai.engine.tools.builtin import web_premium, web
+
+    tools_cfg["web_search"] = {"preferred": "perplexity"}
+    monkeypatch.setenv("PERPLEXITY_API_KEY", "k")
+
+    def _premium_must_not_run(*a, **k):
+        raise AssertionError("premium must NOT run when wttr.in succeeds")
+
+    monkeypatch.setattr(web_premium, "web_search_premium", _premium_must_not_run)
+    monkeypatch.setattr(web, "get_weather", lambda loc, fmt="short": "Weather for Ornex:\n+30C")
+
+    out = asyncio.run(web_premium.get_weather_premium("Ornex"))
+    assert "Weather for Ornex" in out
+
+
+def test_get_weather_auto_falls_back_when_wttr_unreachable(tools_cfg, monkeypatch):
+    import asyncio
+
+    from ppxai.engine.tools.builtin import web_premium, web
+
+    tools_cfg["web_search"] = {"preferred": "auto"}
+    monkeypatch.setenv("PERPLEXITY_API_KEY", "k")
+
+    async def _fake_search(query, num=5, _provider_name=None):
+        return "[via perplexity]\n\nSunny 25C"
+
+    monkeypatch.setattr(web_premium, "web_search_premium", _fake_search)
+    monkeypatch.setattr(
+        web, "get_weather",
+        lambda loc, fmt="short": "Error: Could not connect to weather service. timed out",
+    )
+
+    out = asyncio.run(web_premium.get_weather_premium("Ornex"))
+    assert "perplexity" in out
+
+
+def test_get_weather_auto_uses_wttr_when_reachable(tools_cfg, monkeypatch):
+    import asyncio
+
+    from ppxai.engine.tools.builtin import web_premium, web
+
+    tools_cfg["web_search"] = {"preferred": "auto"}
+    monkeypatch.setenv("PERPLEXITY_API_KEY", "k")
+
+    def _premium_must_not_run(*a, **k):
+        raise AssertionError("premium must NOT run when wttr.in succeeds")
+
+    monkeypatch.setattr(web_premium, "web_search_premium", _premium_must_not_run)
+    monkeypatch.setattr(web, "get_weather", lambda loc, fmt="short": "Weather for Ornex:\n+18C")
+
+    out = asyncio.run(web_premium.get_weather_premium("Ornex"))
+    assert "Weather for Ornex" in out
