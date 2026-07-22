@@ -1197,19 +1197,33 @@ server/chat tools, not the sealed `ScopedToolManager` superset (no
 `sandbox`/`enforcement` config exists anywhere under `deploy/`). Two enforcement
 layers, only the app-layer one has this bug.
 
-**The local superset is HARDCODED and config-blind (verified 2026-07-23).**
-`get_weather`'s target set is a Python literal in `_NETWORK_TOOLS`
-(`network_policy.py:206-209`: `https://wttr.in/`, `http://wttr.in/`, +
-`_WEATHER_OPENMETEO_HOSTS`) — `tool_targets()` returns it verbatim and reads
-**no** JSON. The only config the egress module touches is
-`tools.web_search.preferred` (via `get_tool_config`, line 222-223), and only to
-*narrow* web_search to a pinned backend — never to source weather hosts. So the
-coder `server-config.yaml` provider/capability edits are **not considered by the
-local `/task` egress path at all**; the two layers derive their weather hosts
-from unlinked sources (Python literal vs. `networkpolicy.yaml` CIDRs).
+**This is a REGRESSIVE / INCOMPLETE follow-through of the config-driven egress
+design, not "two layers working as intended" (corrected 2026-07-23 on user
+feedback).** The intended pattern — established by `27ea00d9` "operator config
+for task-tier web_search" — is **operator config knobs, read by the engine,
+honored by the `/task` tier across the board.** `web_search` got the full
+treatment: `preferred` (narrows the superset), `enabled` (kill-switch), and
+**`task_default_allow`** — a config-driven baseline allowlist merged into EVERY
+`/task` run's egress by `_with_task_default_allow` (`agent_v1.py:758-768`,
+applied at :907). `get_weather` was **left behind on a hardcoded literal**
+(`_NETWORK_TOOLS`, `network_policy.py:206-209`) with **no** equivalent config
+read — no `tools.get_weather.task_default_allow`, no weather-host config. So the
+coder JSON-schema expansion fixed `web_search` everywhere but **does not cover
+weather**, and the local `/task` weather egress reads no JSON at all
+(`tool_targets` sources only the literal; `get_tool_config` is read only for
+`web_search`). The http gap was even **already flagged in-code** —
+`network_policy.py:145`: *"get_weather is effectively un-allowlistable until the
+http fallback is…"* — and left as a comment instead of the global fix.
 Consequences: (a) the `http://wttr.in` poison entry is a **code** fix, not
-config; (b) the layers can silently **drift** (a host added in one is stale in
-the other — a latent maintenance hazard).
+config; (b) weather egress and the k8s `networkpolicy.yaml` CIDRs are unlinked
+hand-maintained truths that can silently **drift**.
+
+**Corrected fix framing:** the right fix is to bring `get_weather` up to the
+SAME config-driven, global mechanism `web_search` already has — a weather
+`task_default_allow` (or fold the always-reachable key-free hosts into the
+tier's baseline) read by the engine — so a single engine change works across
+local `/task`, coder, and any future tier, matching the design intent. Plus the
+contained `http://wttr.in` scheme-poison removal.
 
 **Planned:** `v1.19.x`. Observed live 2026-07-23 on the **local desktop** `/task`
 tier (two runs, `gemini-3.1-pro-preview`, grant `get_weather,web_search`, runs
