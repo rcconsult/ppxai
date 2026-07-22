@@ -127,7 +127,13 @@ RUN set -eux \
 # Web UI files — served by the HTTP server from ~/.ppxai/web/
 COPY --from=builder /build/ppxai/web/ /root/.ppxai/web/
 
-# Agent instructions — loaded by bootstrap as global AGENTS.md
+# Agent instructions — loaded by bootstrap as global AGENTS.md.
+# This baked copy is the FALLBACK/default (used by Helm and any deploy
+# that does not mount its own AGENTS.md). On the coder deployment the
+# session-manager subPath-mounts an AGENTS.md from the
+# coder-server-config ConfigMap at this exact path, which OVERRIDES
+# this baked file at runtime — letting the coder model hints change via
+# `kubectl apply` + pod restart, with no image rebuild.
 COPY AGENTS.md /root/.ppxai/AGENTS.md
 
 # Per-session environment — overridden at pod creation time by session manager

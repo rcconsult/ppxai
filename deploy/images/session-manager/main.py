@@ -408,23 +408,30 @@ def _create_server_pod(username: str, workspace_pvc: str, temp_pvc: str) -> str:
                     # v1.18.7: HOME=/workspace makes Path.home()/.ppxai
                     # resolve to the workspace PVC for user state
                     # (sessions, logs, usage). The image bundles
-                    # ~/.ppxai/web/ + ~/.ppxai/AGENTS.md at /root/.ppxai/
-                    # because BUILDER's HOME was /root — those are
-                    # image-versioned static assets, not user state.
-                    # We symlink them in on every container start so
-                    # the server (which looks at Path.home()/.ppxai/web)
-                    # finds them. Symlinks regenerate on each start, so
-                    # an image upgrade transparently delivers a new web
-                    # UI without touching the PVC. The symlink is
-                    # idempotent: ln -sfn replaces an existing symlink
-                    # but won't clobber a real directory if a user ever
-                    # creates one at that path.
+                    # ~/.ppxai/web/ at /root/.ppxai/ because BUILDER's HOME
+                    # was /root — that is an image-versioned static asset,
+                    # not user state. We symlink it in on every container
+                    # start so the server (which looks at
+                    # Path.home()/.ppxai/web) finds it. The symlink
+                    # regenerates on each start, so an image upgrade
+                    # transparently delivers a new web UI without touching
+                    # the PVC. ln -sfn is idempotent: it replaces an existing
+                    # symlink but won't clobber a real directory if a user
+                    # ever creates one at that path.
+                    # v1.19.1: AGENTS.md is NO LONGER symlinked from the image
+                    # — it is subPath-mounted from the coder-server-config
+                    # ConfigMap (key: AGENTS.md) at /workspace/.ppxai/AGENTS.md,
+                    # so the global agent hints are editable via ConfigMap.
                     command=["bash", "-c"],
                     args=[
                         "set -e; "
                         "mkdir -p /workspace/.ppxai; "
                         "ln -sfn /root/.ppxai/web /workspace/.ppxai/web; "
-                        "ln -sfn /root/.ppxai/AGENTS.md /workspace/.ppxai/AGENTS.md; "
+                        # AGENTS.md is no longer symlinked from the baked image —
+                        # it is subPath-mounted from the coder-server-config
+                        # ConfigMap (see volume_mounts below). This lets the
+                        # global agent hints change with a ConfigMap apply + pod
+                        # restart, no image rebuild.
                         "exec python -m ppxai.server.http --host 0.0.0.0 --port 54320"
                     ],
                     ports=[k8s.V1ContainerPort(container_port=54320)],
@@ -476,6 +483,17 @@ def _create_server_pod(username: str, workspace_pvc: str, temp_pvc: str) -> str:
                             name="server-config",
                             mount_path="/workspace/.ppxai/ppxai-config.json",
                             sub_path="ppxai-config.json",
+                        ),
+                        # v1.19.1: AGENTS.md is now ConfigMap-delivered (2nd key
+                        # in coder-server-config), same subPath pattern as the
+                        # config. Replaces the image-baked COPY + symlink, so the
+                        # global agent hints can be updated with `kubectl apply` +
+                        # pod restart — no image rebuild. HOME=/workspace, so the
+                        # bootstrap's ~/.ppxai/AGENTS.md resolves here.
+                        k8s.V1VolumeMount(
+                            name="server-config",
+                            mount_path="/workspace/.ppxai/AGENTS.md",
+                            sub_path="AGENTS.md",
                         ),
                     ],
                     resources=k8s.V1ResourceRequirements(
