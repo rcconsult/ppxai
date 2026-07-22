@@ -237,10 +237,18 @@ data:
 
             if (res.status === 201 || res.status === 200) {
               const data = await res.json();
-              showInfo('Session starting \u2014 waiting for route\u2026');
-              await waitForRoute(data.path);
-              showInfo('Session ready \u2014 redirecting\u2026');
-              window.location.href = data.path;
+              showBusy('Starting your workspace\u2026');
+              const ready = await waitForRoute(data.path, function (elapsed) {
+                if (elapsed >= 15) showBusy('Still starting \u2014 first login can take up to a minute\u2026');
+              });
+              if (ready) {
+                showBusy('Session ready \u2014 redirecting\u2026');
+                window.location.href = data.path;
+              } else {
+                showError('Your workspace is still starting. This can take a moment on first login \u2014 click Retry.');
+                btn.disabled = false;
+                btn.textContent = 'Retry';
+              }
               return;
             }
 
@@ -262,16 +270,23 @@ data:
           btn.textContent = 'Sign In';
         }
 
-        async function waitForRoute(path) {
-          const maxAttempts = 20;
-          const delay = 500;
+        async function waitForRoute(path, onTick) {
+          // Budget must cover a cold start: image pull, PVC mount, uvicorn boot,
+          // plus the pod readiness probe (initial_delay 5s + 10s period). The
+          // old 10s budget expired mid-start and the caller redirected anyway,
+          // landing the user on a raw nginx 503. Poll up to ~120s and REPORT
+          // readiness so the caller can offer Retry instead of a blind redirect.
+          const maxAttempts = 120;
+          const delay = 1000;
           for (let i = 0; i < maxAttempts; i++) {
             try {
               const r = await fetch(path + 'health', { method: 'GET', credentials: 'same-origin' });
-              if (r.ok) return;
+              if (r.ok) return true;
             } catch (e) { /* route not ready yet */ }
+            if (onTick) onTick(i);
             await new Promise(resolve => setTimeout(resolve, delay));
           }
+          return false;
         }
 
         function showError(msg) {
@@ -284,6 +299,12 @@ data:
           const el = document.getElementById('status');
           el.className = 'status info';
           el.textContent = msg;
+        }
+
+        function showBusy(msg) {
+          const el = document.getElementById('status');
+          el.className = 'status info';
+          el.innerHTML = '<span class="spinner"></span>' + msg;
         }
       </script>
     </body>

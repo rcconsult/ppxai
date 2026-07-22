@@ -130,10 +130,16 @@ data:
 
             if (res.status === 201 || res.status === 200) {
               var data = await res.json();
-              showInfo('Session starting \u2014 waiting for route\u2026');
-              await waitForRoute(data.path);
-              showInfo('Session ready \u2014 redirecting\u2026');
-              window.location.href = data.path;
+              showBusy('Starting your workspace\u2026');
+              var ready = await waitForRoute(data.path);
+              if (ready) {
+                showBusy('Session ready \u2014 redirecting\u2026');
+                window.location.href = data.path;
+              } else {
+                showError('Your workspace is still starting. This can take a moment on first login \u2014 click Retry.');
+                btn.disabled = false;
+                btn.textContent = 'Retry';
+              }
               return;
             }
 
@@ -150,16 +156,21 @@ data:
         }
 
         async function waitForRoute(path) {
-          for (var i = 0; i < 60; i++) {
-            try { var r = await fetch(path + 'health'); if (r.ok) return; } catch (e) {}
-            if (i === 5) showInfo('Starting container\u2026');
-            else if (i === 15) showInfo('Almost ready\u2026');
+          // ~120s budget so a cold start (image pull, PVC mount, uvicorn boot,
+          // readiness probe) doesn't expire mid-start; return readiness so the
+          // caller offers Retry instead of a blind redirect into a 503.
+          for (var i = 0; i < 120; i++) {
+            try { var r = await fetch(path + 'health'); if (r.ok) return true; } catch (e) {}
+            if (i === 5) showBusy('Starting container\u2026');
+            else if (i === 15) showBusy('Still starting \u2014 first login can take up to a minute\u2026');
             await new Promise(function(resolve) { setTimeout(resolve, 1000); });
           }
+          return false;
         }
 
         function showError(msg) { var el = document.getElementById('status'); el.className = 'status error'; el.textContent = msg; }
         function showInfo(msg) { var el = document.getElementById('status'); el.className = 'status info'; el.textContent = msg; }
+        function showBusy(msg) { var el = document.getElementById('status'); el.className = 'status info'; el.innerHTML = '<span class="spinner"></span>' + msg; }
       </script>
     </body>
     </html>
