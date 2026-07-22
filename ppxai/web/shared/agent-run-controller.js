@@ -137,7 +137,15 @@ class AgentRunController {
         // inherit the UI's current selection. (Server falls back to
         // tools.agent.default_subagent if neither is present.)
         const provider = parsed.provider || this.app.state.currentProvider;
-        const model = parsed.model || this.app.state.currentModel;
+        // Model: an explicit --model always wins. Otherwise inherit the UI model
+        // ONLY when the run uses the UI's provider — a UI model belongs to the
+        // UI provider and is INVALID on a different --provider (e.g. a Qwen model
+        // id sent to Perplexity → 400). When --provider overrides without --model,
+        // send no model and let the server resolve that provider's default_model.
+        let model = parsed.model;
+        if (!model && (!parsed.provider || parsed.provider === this.app.state.currentProvider)) {
+            model = this.app.state.currentModel;
+        }
         const body = { task, tools: [] };
         if (provider) body.provider = provider;
         if (model) body.model = model;
