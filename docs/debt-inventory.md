@@ -1183,7 +1183,15 @@ are unaffected), and falling back to the reasoning text only when the model
 produced nothing else — so a thought-only response never looks like an empty
 completion. Tests: `tests/test_gemini_thought_signature.py::TestOneshotThoughtSplit` (4).
 
-### Item 52 — the LOCAL in-process sealed `/task` egress gate denies a fallback-chain tool wholesale (does NOT affect the k8s/coder tier); `get_weather` unallowlistable locally [agent platform / egress / tools]
+### Item 52 — the LOCAL in-process sealed `/task` egress gate denies a fallback-chain tool wholesale (does NOT affect the k8s/coder tier); `get_weather` unallowlistable locally [agent platform / egress / tools] — ⏸️ HELD pending ADR 0009
+
+**Resolution path (owner decision 2026-07-23):** NOT spot-fixed. `get_weather`'s
+config-parity is **subsumed by ADR 0009** (task execution profiles), which
+generalizes the `web_search`-only `task_default_allow` mechanism to per-tool
+egress baselines read by the engine — one config-driven change working across
+local `/task`, coder, and future tiers, instead of a weather-specific patch. The
+contained `http://wttr.in` scheme-poison removal lands as part of that work. See
+**Item 53** / [decisions/0009-task-execution-profiles.md](decisions/0009-task-execution-profiles.md).
 
 **Scope (important — corrected 2026-07-23):** this is a defect of the
 **app-layer `ScopedToolManager` superset gate** used by the LOCAL in-process
@@ -1276,6 +1284,37 @@ the **local app-layer** superset gate that the now-working Gemini path merely
 made visible — the two layers gate differently: Calico authorizes the *actual
 runtime connection* (https ok), the local superset authorizes the *declared
 target set* up front (and that set carries the always-denied `http://wttr.in`).
+
+### Item 53 — task execution profiles: config-driven named grants + web_search as first-class enrichment [agent platform / config / egress] → ADR 0009
+
+**Planned:** `v1.19.x`+ (**needs an architecture decision, not a patch** —
+design in [decisions/0009-task-execution-profiles.md](decisions/0009-task-execution-profiles.md),
+Status: Proposed). Filed 2026-07-23 from the Item 52 root-cause discussion.
+
+**Three gaps the design addresses:**
+1. **Config-driven egress is one-tool-wide.** `27ea00d9` gave `web_search`
+   `preferred`/`enabled`/`task_default_allow` (a config baseline egress merged
+   into every run by `_with_task_default_allow`, `agent_v1.py:758-768`). No
+   other tool got it — `get_weather` is stranded on a hardcoded literal (Item
+   52). Generalize `task_default_allow` to **per-tool**.
+2. **No reusable named grant.** `AgentSpec` (`agent_spec.py`) is a real task-
+   profile primitive but is a per-run `--spec` FILE. There is no
+   `tools.agent.profiles.{name}` in `ppxai-config.json` a run selects by name;
+   operators hand-wire the same `{tools, network}` every task.
+3. **`web_search` is context enrichment, not just a tool.** A local/self-hosted
+   LLM is **closed-book** on `/task` / `/v1/oneshot` unless `web_search` is
+   granted AND its egress allowed — no grounding, no current facts. Hosted
+   providers (Perplexity/Gemini) have native search; local vLLM has none. Make
+   "enable enrichment" a first-class, **opt-in** profile property
+   (`enrichment: true`) rather than a tool operators must remember to grant.
+
+**Fix direction:** named `profiles` in config reusing `spec_from_mapping`
+(request > spec > profile > default precedence); per-tool
+`task_default_allow`; `enrichment: true` auto-grants `web_search` + its egress
+baseline per-profile (opt-in, so a locked-down tenant profile stays no-egress —
+preserves AC-2 confused-deputy protection). **Subsumes Item 52.** 4 open
+sign-off questions in the ADR (precedence, enrichment scope, egress ceiling,
+oneshot applicability).
 
 ### Item 44 — interactive empty-response retry persists an empty-content assistant → Perplexity 400 [chat / providers] — ✅ FIXED (2026-07-13, `bugfix/v1.19.1`)
 
