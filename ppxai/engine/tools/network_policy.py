@@ -192,13 +192,21 @@ _WEB_SEARCH_ALL_HOSTS: List[str] = [
     "https://generativelanguage.googleapis.com/",
 ]
 
+# get_weather's key-free direct backends. wttr.in is tried first; Open-Meteo
+# (v1.19.1) is the reliable fallback tier tried BEFORE any premium web search.
+# Both are always in the egress superset since neither needs a key.
+_WEATHER_OPENMETEO_HOSTS: List[str] = [
+    "https://api.open-meteo.com/",
+    "https://geocoding-api.open-meteo.com/",
+]
+
 _NETWORK_TOOLS: Dict[str, Tuple[str, Any]] = {
     "fetch_url": ("kwarg", "url"),
     "web_search": ("fixed", _WEB_SEARCH_ALL_HOSTS),
     "get_weather": ("fixed", [
         "https://wttr.in/",
         "http://wttr.in/",  # handler's plain-http fallback — denied under MVP
-    ]),
+    ] + _WEATHER_OPENMETEO_HOSTS),
 }
 
 
@@ -315,13 +323,14 @@ def tool_targets(name: str, kwargs: dict) -> List[str]:
             backend = pinned_web_search_backend()
             if backend:
                 return list(_WEB_SEARCH_BACKEND_HOSTS[backend])
-        # get_weather (v1.19.1): wttr.in is ALWAYS tried first (it stays the
-        # preferred weather source — search backends give unreliable weather), so
-        # its egress set is wttr.in PLUS the premium hosts it may fall back to when
-        # a key is present (honest superset). Not narrowed by `preferred` — that
-        # knob governs SEARCH, not weather.
+        # get_weather (v1.19.1): the chain is wttr.in → Open-Meteo → premium
+        # search. wttr.in is tried first, Open-Meteo (key-free) is the reliable
+        # fallback, and a premium web-search backend is the LAST resort when a
+        # key is present. The honest egress superset is therefore wttr.in +
+        # Open-Meteo (always) + the premium hosts (when keyed). Not narrowed by
+        # `preferred` — that knob governs SEARCH, not weather.
         elif name == "get_weather":
-            targets = list(ref)  # wttr.in https + http
+            targets = list(ref)  # wttr.in https+http + Open-Meteo (static list)
             if os.getenv("PERPLEXITY_API_KEY"):
                 targets.append("https://api.perplexity.ai/")
             if os.getenv("GEMINI_API_KEY"):

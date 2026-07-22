@@ -5,6 +5,7 @@ These tools are provider-aware - providers with native web capabilities
 (like Perplexity) won't have these registered.
 """
 
+import json
 import os
 import re
 import ssl
@@ -98,6 +99,162 @@ def get_weather(location: str, format: str = "short") -> str:
             break
 
     return last_error or "Error getting weather: unknown error"
+
+
+# WMO weather-interpretation codes (Open-Meteo `weather_code`) → (label, emoji).
+# Open-Meteo returns a structured numeric code, not human text, so map it here.
+_WMO_CODES = {
+    0: ("Clear sky", "☀️"),
+    1: ("Mainly clear", "🌤️"),
+    2: ("Partly cloudy", "⛅"),
+    3: ("Overcast", "☁️"),
+    45: ("Fog", "🌫️"),
+    48: ("Depositing rime fog", "🌫️"),
+    51: ("Light drizzle", "🌦️"),
+    53: ("Moderate drizzle", "🌦️"),
+    55: ("Dense drizzle", "🌦️"),
+    56: ("Light freezing drizzle", "🌧️"),
+    57: ("Dense freezing drizzle", "🌧️"),
+    61: ("Slight rain", "🌧️"),
+    63: ("Moderate rain", "🌧️"),
+    65: ("Heavy rain", "🌧️"),
+    66: ("Light freezing rain", "🌧️"),
+    67: ("Heavy freezing rain", "🌧️"),
+    71: ("Slight snow", "🌨️"),
+    73: ("Moderate snow", "🌨️"),
+    75: ("Heavy snow", "❄️"),
+    77: ("Snow grains", "🌨️"),
+    80: ("Slight rain showers", "🌦️"),
+    81: ("Moderate rain showers", "🌦️"),
+    82: ("Violent rain showers", "⛈️"),
+    85: ("Slight snow showers", "🌨️"),
+    86: ("Heavy snow showers", "❄️"),
+    95: ("Thunderstorm", "⛈️"),
+    96: ("Thunderstorm with slight hail", "⛈️"),
+    99: ("Thunderstorm with heavy hail", "⛈️"),
+}
+
+
+def _openmeteo_get(base: str, params: dict, timeout: int) -> dict:
+    """GET an Open-Meteo JSON endpoint (respects SSL_VERIFY/SSL_CERT_FILE)."""
+    url = base + "?" + urllib.parse.urlencode(params)
+    req = urllib.request.Request(url, headers={"User-Agent": "ppxai-weather/1.0"})
+    with urllib.request.urlopen(
+        req, timeout=timeout, context=_create_ssl_context()
+    ) as response:
+        return json.loads(response.read().decode("utf-8"))
+
+
+def _format_openmeteo(label: str, data: dict, format: str) -> str:
+    """Render an Open-Meteo forecast payload into human-readable text."""
+    cur = data.get("current", {})
+    try:
+        code = int(cur.get("weather_code", -1))
+    except (TypeError, ValueError):
+        code = -1
+    cond, emoji = _WMO_CODES.get(code, ("Unknown conditions", ""))
+    temp = cur.get("temperature_2m")
+    feels = cur.get("apparent_temperature")
+    hum = cur.get("relative_humidity_2m")
+    wind = cur.get("wind_speed_10m")
+
+    lines = [f"Weather for {label} (via open-meteo):"]
+    head = f"{emoji} {cond}".strip()
+    if temp is not None:
+        head += f", {temp}°C"
+        if feels is not None:
+            head += f" (feels {feels}°C)"
+    lines.append(head)
+    detail = []
+    if hum is not None:
+        detail.append(f"humidity {hum}%")
+    if wind is not None:
+        detail.append(f"wind {wind} km/h")
+    if detail:
+        lines.append(", ".join(detail))
+
+    if format == "forecast":
+        daily = data.get("daily", {})
+        days = daily.get("time", []) or []
+        codes = daily.get("weather_code", []) or []
+        tmax = daily.get("temperature_2m_max", []) or []
+        tmin = daily.get("temperature_2m_min", []) or []
+        pops = daily.get("precipitation_probability_max", []) or []
+        for i, day in enumerate(days):
+            try:
+                dcode = int(codes[i])
+            except (IndexError, TypeError, ValueError):
+                dcode = -1
+            dcond, demoji = _WMO_CODES.get(dcode, ("Unknown", ""))
+            lo = tmin[i] if i < len(tmin) else None
+            hi = tmax[i] if i < len(tmax) else None
+            pop = pops[i] if i < len(pops) else None
+            pop_s = f", precip {pop}%" if pop is not None else ""
+            lines.append(f"  {day}: {demoji} {dcond}, {lo}–{hi}°C{pop_s}".strip())
+
+    return "\n".join(lines)
+
+
+def get_weather_openmeteo(location: str, format: str = "short") -> str:
+    """Weather via Open-Meteo — a reliable, key-free fallback for flaky wttr.in.
+
+    wttr.in is a community single-server service that intermittently goes down;
+    Open-Meteo is a professional-grade free API (no key) with accurate data and
+    global coverage, so it's the right tier to try before resorting to a general
+    web-search backend (which scrapes arbitrary pages and returns unreliable
+    temperatures). Two calls: geocode the name → lat/lon, then the forecast API.
+
+    Returns a human-readable string, or an 'Error: ...' string on failure (never
+    raises), so callers can chain fallbacks uniformly with `get_weather`.
+    """
+    timeout = _get_web_timeout("get_weather", default=15)
+    try:
+        geo = _openmeteo_get(
+            "https://geocoding-api.open-meteo.com/v1/search",
+            {"name": location, "count": 1, "language": "en", "format": "json"},
+            timeout,
+        )
+        results = geo.get("results") or []
+        if not results:
+            return (
+                f"Error: Location '{location}' not found via open-meteo. "
+                f"Try a different city name."
+            )
+        loc = results[0]
+        lat, lon = loc.get("latitude"), loc.get("longitude")
+        label = ", ".join(
+            x for x in (loc.get("name"), loc.get("admin1"), loc.get("country")) if x
+        ) or location
+
+        params = {
+            "latitude": lat,
+            "longitude": lon,
+            "current": (
+                "temperature_2m,apparent_temperature,relative_humidity_2m,"
+                "weather_code,wind_speed_10m"
+            ),
+            "wind_speed_unit": "kmh",
+            "timezone": "auto",
+        }
+        if format == "forecast":
+            params["daily"] = (
+                "weather_code,temperature_2m_max,temperature_2m_min,"
+                "precipitation_probability_max"
+            )
+            params["forecast_days"] = 3
+        data = _openmeteo_get(
+            "https://api.open-meteo.com/v1/forecast", params, timeout
+        )
+        return _format_openmeteo(label, data, format)
+    except urllib.error.HTTPError as e:
+        return f"Error fetching weather (open-meteo): HTTP {e.code}"
+    except (urllib.error.URLError, ssl.SSLError, OSError) as e:
+        return (
+            f"Error: Could not connect to open-meteo. "
+            f"{str(getattr(e, 'reason', e))}"
+        )
+    except Exception as e:
+        return f"Error getting weather (open-meteo): {str(e)}"
 
 
 # Try to import ddgs package (optional dependency, v1.12.4+)

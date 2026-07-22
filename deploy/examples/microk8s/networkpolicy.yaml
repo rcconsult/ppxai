@@ -106,4 +106,23 @@ spec:
       ports:
         - protocol: TCP
           port: 443
+    # get_weather backends — public weather APIs the get_weather tool reaches
+    # directly: wttr.in (primary), then Open-Meteo (reliable, key-free fallback)
+    # before the perplexity web-search last resort. These are PUBLIC global
+    # services, so the real IPs are shown as an example (not site secrets); Calico
+    # is IP-based, so resolve current IPs with `dig +short <host>` and update if
+    # they rotate. Omit this block if your egress firewall already reaches them.
+    #   wttr.in                       -> 5.9.243.187    (Hetzner, single host)
+    #   api.open-meteo.com            -> 94.130.142.35  (Hetzner)
+    #   geocoding-api.open-meteo.com  -> 202.61.206.6   (netcup)
+    - to:
+        - ipBlock:
+            cidr: 5.9.243.187/32
+        - ipBlock:
+            cidr: 94.130.142.35/32
+        - ipBlock:
+            cidr: 202.61.206.6/32
+      ports:
+        - protocol: TCP
+          port: 443
   # Everything else: DENIED (no further egress rules = implicit deny).

@@ -332,33 +332,53 @@ async def web_search_premium(query: str, num_results: int = 5, _provider_name: O
 async def get_weather_premium(
     location: str, format: str = "short", _provider_name: Optional[str] = None
 ) -> str:
-    """Weather with a premium FALLBACK — but wttr.in stays preferred.
+    """Weather via a three-tier chain: wttr.in → Open-Meteo → premium search.
 
     web_premium historically upgraded `web_search` to a premium provider but left
-    `get_weather` on wttr.in with no fallback, so on a locked-egress host that
-    blocks wttr.in, weather failed hard. This adds the missing fallback WITHOUT
-    demoting wttr.in: wttr.in is a purpose-built real-time weather source, whereas
-    a general web-search backend (perplexity/gemini) scrapes arbitrary pages and
-    returns unreliable temperatures (observed live: stale 9-18°C for a 30°C day).
-    So the premium provider is a LAST resort, never preferred — even when
-    `tools.web_search.preferred` pins one for SEARCH.
+    `get_weather` on wttr.in with no fallback, so on a locked-egress host (or when
+    wttr.in — a flaky community single-server service — is down) weather failed
+    hard. The chain, in order of decreasing accuracy/preference:
 
-    Try wttr.in first; fall back to the premium provider only when wttr.in is
-    unreachable AND a premium key exists. Where wttr.in is reachable (incl. a host
-    that allowlists it in egress), behavior is unchanged.
+      1. wttr.in         — purpose-built real-time weather, pretty one-line output.
+      2. Open-Meteo      — professional-grade, key-free, accurate, global; the
+                           right tier BEFORE a general web search (added v1.19.1).
+      3. premium search  — perplexity/gemini scrape arbitrary pages and return
+                           unreliable temperatures (observed live: stale 9-18°C on
+                           a 30°C day), so this is the LAST resort, never preferred
+                           — even when `tools.web_search.preferred` pins one for
+                           SEARCH.
+
+    Each direct source returns an 'Error: ...' string (never raises) on failure,
+    so we advance to the next tier only when the current one errors. Where wttr.in
+    is reachable, behavior is unchanged.
     """
+    logger = logging.getLogger(__name__)
+
     result = web.get_weather(location, format)
     # web.get_weather returns an 'Error: ...' string on failure (never raises).
-    if result.lstrip().startswith("Error") and is_available():
-        logging.getLogger(__name__).info(
-            "wttr.in weather failed; falling back to premium search (less accurate)"
+    if not result.lstrip().startswith("Error"):
+        return result
+
+    # Tier 2: Open-Meteo (reliable, key-free, accurate) before any web search.
+    logger.info("wttr.in weather failed; trying open-meteo (reliable fallback)")
+    om = web.get_weather_openmeteo(location, format)
+    if not om.lstrip().startswith("Error"):
+        return om
+
+    # Tier 3: premium web search — last resort, only if a premium key exists.
+    if is_available():
+        logger.info(
+            "wttr.in + open-meteo both failed; falling back to premium search "
+            "(less accurate)"
         )
         query = (
             f"What is the current weather and today's forecast for {location}? "
             f"Give temperature, conditions, wind, and precipitation."
         )
         return await web_search_premium(query, 5, _provider_name=_provider_name)
-    return result
+
+    # No premium key: surface the open-meteo error (more informative than wttr.in's).
+    return om
 
 
 def get_last_tool_usage() -> Optional[ToolUsage]:
