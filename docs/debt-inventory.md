@@ -1197,6 +1197,20 @@ server/chat tools, not the sealed `ScopedToolManager` superset (no
 `sandbox`/`enforcement` config exists anywhere under `deploy/`). Two enforcement
 layers, only the app-layer one has this bug.
 
+**The local superset is HARDCODED and config-blind (verified 2026-07-23).**
+`get_weather`'s target set is a Python literal in `_NETWORK_TOOLS`
+(`network_policy.py:206-209`: `https://wttr.in/`, `http://wttr.in/`, +
+`_WEATHER_OPENMETEO_HOSTS`) — `tool_targets()` returns it verbatim and reads
+**no** JSON. The only config the egress module touches is
+`tools.web_search.preferred` (via `get_tool_config`, line 222-223), and only to
+*narrow* web_search to a pinned backend — never to source weather hosts. So the
+coder `server-config.yaml` provider/capability edits are **not considered by the
+local `/task` egress path at all**; the two layers derive their weather hosts
+from unlinked sources (Python literal vs. `networkpolicy.yaml` CIDRs).
+Consequences: (a) the `http://wttr.in` poison entry is a **code** fix, not
+config; (b) the layers can silently **drift** (a host added in one is stale in
+the other — a latent maintenance hazard).
+
 **Planned:** `v1.19.x`. Observed live 2026-07-23 on the **local desktop** `/task`
 tier (two runs, `gemini-3.1-pro-preview`, grant `get_weather,web_search`, runs
 `run_107ef9b2bc82` / `run_f398e0b86fb7`): both **completed gracefully**
