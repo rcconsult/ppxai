@@ -867,11 +867,20 @@ async def chat_with_tools(
                 tool_args = tc.get("arguments", {})
                 if isinstance(tool_args, dict) and "tool" in tool_args and "arguments" in tool_args:
                     tool_args = tool_args["arguments"]
-                parsed_calls.append({
+                entry = {
                     "tool": tc["tool"],
                     "arguments": tool_args,
                     "tool_call_id": tc.get("tool_call_id"),
-                })
+                }
+                # Item 45: carry provider-opaque per-call metadata across this
+                # rebuild. Gemini 3.x's `thought_signature` must reach the
+                # session transcript (and from there the next outbound turn) or
+                # the follow-up request 400s. Dropping unknown keys here was
+                # why the first fix looked correct at both ends yet still
+                # failed live — the value never survived the middle hop.
+                if tc.get("thought_signature"):
+                    entry["thought_signature"] = tc["thought_signature"]
+                parsed_calls.append(entry)
 
             # Limit to first call unless parallel_tool_calls enabled
             if not tc_profile.parallel_tool_calls:

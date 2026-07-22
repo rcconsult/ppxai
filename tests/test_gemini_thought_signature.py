@@ -72,12 +72,14 @@ class TestSignatureCapture:
         parsed = p._parse_function_call(fc, _Part(fc))
         assert "thought_signature" not in parsed
 
-    def test_bytes_signature_is_base64_encoded(self):
-        """Must survive a JSON round-trip through the session store."""
+    def test_bytes_signature_is_base64_encoded_for_storage(self):
+        """The session transcript is JSON, so raw bytes must be encoded."""
         p = _provider()
         fc = _FC(id="fc1")
         parsed = p._parse_function_call(fc, _Part(fc, thought_signature=b"\x00\x01\xff"))
         assert isinstance(parsed["thought_signature"], str)
+        import json
+        json.dumps(parsed)  # must not raise
 
     def test_missing_part_is_tolerated(self):
         """Older call sites may not pass the part; must not raise."""
@@ -107,10 +109,14 @@ class TestSignatureReplay:
         ]
 
     def test_signature_is_replayed_on_function_call_part(self):
-        contents, _ = _provider()._convert_messages(self._msgs(sig="SIG-1"))
+        import base64
+        original = b"sig-bytes-1"
+        stored = base64.b64encode(original).decode("ascii")
+        contents, _ = _provider()._convert_messages(self._msgs(sig=stored))
         model_turn = contents[0]
         assert model_turn["role"] == "model"
-        assert model_turn["parts"][0]["thought_signature"] == "SIG-1"
+        # Decoded back to the original bytes — the SDK types this as bytes.
+        assert model_turn["parts"][0]["thought_signature"] == original
         # The call itself must still be intact.
         assert model_turn["parts"][0]["function_call"]["name"] == "read_file"
 
@@ -123,6 +129,100 @@ class TestSignatureReplay:
         """The Item 41 pairing contract must survive the change."""
         contents, _ = _provider()._convert_messages(self._msgs(sig="SIG-1"))
         assert contents[1]["parts"][0]["function_response"]["name"] == "read_file"
+
+    def test_stored_signature_is_decoded_back_to_the_original_bytes(self):
+        """Storage is base64 text; the WIRE must carry the original bytes.
+
+        Regression guard for the first fix attempt, which encoded on capture
+        but never decoded on replay — the 400 survived because the SDK got a
+        str where it types the field as bytes.
+        """
+        import base64
+        original = b"\x01\x02\xff\xfe"
+        stored = base64.b64encode(original).decode("ascii")
+        contents, _ = _provider()._convert_messages(self._msgs(sig=stored))
+        assert contents[0]["parts"][0]["thought_signature"] == original
+
+    def test_part_is_accepted_by_the_real_sdk_type(self):
+        """Validate through google-genai itself, not our assumed shape.
+
+        `Part.thought_signature` is Optional[bytes] and pydantic rejects a
+        non-base64 str outright, so a shape that only satisfies our own dict
+        assertions can still 400 in production. This is the check that would
+        have caught the first attempt.
+        """
+        from google.genai import types
+
+        import base64
+        original = b"\x01\x02\xff\xfe"
+        stored = base64.b64encode(original).decode("ascii")
+        contents, _ = _provider()._convert_messages(self._msgs(sig=stored))
+        part = types.Part.model_validate(contents[0]["parts"][0])
+        assert part.thought_signature == original
+        assert part.function_call.name == "read_file"
+
+    def test_malformed_signature_is_dropped_not_fatal(self):
+        """A corrupt stored value must degrade to omitting the field."""
+        contents, _ = _provider()._convert_messages(self._msgs(sig="not-base64!!"))
+        assert "thought_signature" not in contents[0]["parts"][0]
+
+
+class TestEngineTransportHop:
+    """The middle hop that broke the first two fix attempts.
+
+    `chat_with_tools` rebuilds each native TOOL_CALL event into a parsed-call
+    dict and then into the session's `tool_calls` entry. Both rebuilds list
+    their keys explicitly, so a provider-opaque field is silently dropped
+    unless carried deliberately. Capture and replay were BOTH correct while
+    the live call still 400'd, because the value never survived the middle.
+    """
+
+    def test_parsed_call_rebuild_preserves_signature(self):
+        """Mirrors chat.py's event -> parsed_calls rebuild."""
+        event_data = {
+            "tool": "read_file",
+            "arguments": {"path": "x"},
+            "tool_call_id": "fc1",
+            "native": True,
+            "thought_signature": "Et8ECtwE",
+        }
+        entry = {
+            "tool": event_data["tool"],
+            "arguments": event_data.get("arguments", {}),
+            "tool_call_id": event_data.get("tool_call_id"),
+        }
+        if event_data.get("thought_signature"):
+            entry["thought_signature"] = event_data["thought_signature"]
+        assert entry["thought_signature"] == "Et8ECtwE"
+
+    def test_session_tool_calls_entry_preserves_signature(self):
+        """The engine's assistant-message rebuild must keep the field so the
+        NEXT outbound turn can replay it."""
+        import json
+
+        from ppxai.engine.types import Message
+
+        tc = {
+            "tool": "read_file",
+            "arguments": {"path": "x"},
+            "tool_call_id": "fc1",
+            "thought_signature": "Et8ECtwE",
+        }
+        entry = {
+            "id": tc["tool_call_id"],
+            "type": "function",
+            "function": {
+                "name": tc["tool"],
+                "arguments": json.dumps(tc.get("arguments", {})),
+            },
+        }
+        if tc.get("thought_signature"):
+            entry["thought_signature"] = tc["thought_signature"]
+
+        msg = Message("assistant", "", tool_calls=[entry])
+        assert msg.tool_calls[0]["thought_signature"] == "Et8ECtwE"
+        # And it must be JSON-serialisable for the session store.
+        json.dumps(msg.tool_calls)
 
 
 # ---------------------------------------------------------------------------

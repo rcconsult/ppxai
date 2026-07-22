@@ -638,7 +638,9 @@ class GeminiProvider(BaseProvider):
                     # whole request 400s ("missing a thought_signature in
                     # functionCall parts"). 2.5 never sets it → key absent →
                     # unchanged behaviour there.
-                    sig = tc.get("thought_signature") if isinstance(tc, dict) else None
+                    sig = self._decode_thought_signature(
+                        tc.get("thought_signature") if isinstance(tc, dict) else None
+                    )
                     if sig:
                         fc_part["thought_signature"] = sig
                     parts.append(fc_part)
@@ -945,10 +947,15 @@ class GeminiProvider(BaseProvider):
         which made EVERY native tool round-trip fail on 3.x. Gemini 2.5 does
         not send the field, so absence is normal there and must stay silent.
 
-        The field lives on the PART in the documented shape; we also probe the
-        FunctionCall as a defensive fallback in case the SDK relocates it, and
-        normalise bytes → str so the value survives JSON round-trips through
-        the engine's session store.
+        The field is `Optional[bytes]` on the PART (verified against
+        google-genai `types.Part.model_fields`). It is stored base64-encoded
+        because the engine's session transcript is JSON and raw bytes are not
+        serialisable — `_decode_thought_signature` reverses that on the way
+        back out, so the SDK receives the EXACT original bytes. Encoding
+        without decoding was the first fix attempt's bug: the wire then
+        carried a str where the SDK wanted bytes and the 400 persisted.
+        The FunctionCall is probed as a defensive fallback in case a future
+        SDK relocates the field.
         """
         for holder in (part, function_call):
             if holder is None:
@@ -964,6 +971,26 @@ class GeminiProvider(BaseProvider):
                         return None
                 return str(sig)
         return None
+
+    @staticmethod
+    def _decode_thought_signature(sig):
+        """Reverse `_thought_signature_of` for the outbound wire.
+
+        The SDK types `Part.thought_signature` as `Optional[bytes]` and
+        pydantic rejects a non-base64 str outright, so the value we stored
+        (base64 text, for JSON-safety in the session transcript) must be
+        decoded back to the ORIGINAL bytes before it goes out. Returns None
+        when the value cannot be decoded, so a malformed signature degrades to
+        "omit the field" rather than poisoning the whole request.
+        """
+        if not sig:
+            return None
+        if isinstance(sig, bytes):
+            return sig
+        try:
+            return base64.b64decode(sig, validate=True)
+        except Exception:
+            return None
 
     def _parse_grounding(self, grounding_metadata) -> List[Dict[str, str]]:
         """Parse grounding metadata to extract citations.
