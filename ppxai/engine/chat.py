@@ -973,16 +973,33 @@ async def chat_with_tools(
             if use_native_tools and all(tc.get("tool_call_id") for tc in tool_calls_list if tc in [r[0] for r in results]):
                 # One assistant message with ALL tool_calls
                 executed_calls = [r[0] for r in results]
-                ctx.session.add_message(Message(
-                    "assistant", "",
-                    tool_calls=[{
+
+                def _native_tool_call(tc: dict) -> dict:
+                    """OpenAI-shaped tool_call entry, plus provider extras.
+
+                    v1.19.1 Item 45: Gemini 3.x returns an opaque
+                    `thought_signature` per function call and REJECTS the
+                    follow-up turn unless it is echoed back. It has to survive
+                    this hop — the session transcript is what the next
+                    outbound request is rebuilt from — so it rides alongside
+                    the standard fields. Providers that never set it are
+                    unaffected (the key is simply absent).
+                    """
+                    entry = {
                         "id": tc["tool_call_id"],
                         "type": "function",
                         "function": {
                             "name": tc["tool"],
                             "arguments": json.dumps(tc.get("arguments", {}))
                         }
-                    } for tc in executed_calls]
+                    }
+                    if tc.get("thought_signature"):
+                        entry["thought_signature"] = tc["thought_signature"]
+                    return entry
+
+                ctx.session.add_message(Message(
+                    "assistant", "",
+                    tool_calls=[_native_tool_call(tc) for tc in executed_calls]
                 ))
                 # N tool result messages
                 for tc, result, success in results:

@@ -19,6 +19,7 @@ Requires: pip install ppxai[gemini]
 """
 
 import asyncio
+import base64
 import json
 import logging
 import os
@@ -315,7 +316,7 @@ class GeminiProvider(BaseProvider):
                                 # Handle function call parts (v1.15.2)
                                 if hasattr(part, 'function_call') and part.function_call:
                                     fc = part.function_call
-                                    tool_call = self._parse_function_call(fc)
+                                    tool_call = self._parse_function_call(fc, part)
                                     if tool_call:
                                         tool_calls.append(tool_call)
 
@@ -329,12 +330,17 @@ class GeminiProvider(BaseProvider):
 
                 # Emit TOOL_CALL events for any function calls (v1.15.2)
                 for tc in tool_calls:
-                    yield Event(EventType.TOOL_CALL, {
+                    payload = {
                         "tool": tc["name"],
                         "arguments": tc["arguments"],
                         "tool_call_id": tc["tool_call_id"],
                         "native": True,  # Mark as native tool call
-                    })
+                    }
+                    # Item 45: carry Gemini 3.x's opaque signature so the
+                    # engine can echo it back on the follow-up turn.
+                    if tc.get("thought_signature"):
+                        payload["thought_signature"] = tc["thought_signature"]
+                    yield Event(EventType.TOOL_CALL, payload)
 
                 final_content = "".join(full_response)
                 final_reasoning = "".join(reasoning_response)
@@ -383,7 +389,7 @@ class GeminiProvider(BaseProvider):
                         # Handle function call parts (v1.15.2)
                         if hasattr(part, 'function_call') and part.function_call:
                             fc = part.function_call
-                            tool_call = self._parse_function_call(fc)
+                            tool_call = self._parse_function_call(fc, part)
                             if tool_call:
                                 tool_calls.append(tool_call)
 
@@ -396,12 +402,16 @@ class GeminiProvider(BaseProvider):
 
                 # Emit TOOL_CALL events for any function calls (v1.15.2)
                 for tc in tool_calls:
-                    yield Event(EventType.TOOL_CALL, {
+                    payload = {
                         "tool": tc["name"],
                         "arguments": tc["arguments"],
                         "tool_call_id": tc["tool_call_id"],
                         "native": True,
-                    })
+                    }
+                    # Item 45: see the streaming branch above.
+                    if tc.get("thought_signature"):
+                        payload["thought_signature"] = tc["thought_signature"]
+                    yield Event(EventType.TOOL_CALL, payload)
 
                 # Inject citation URLs
                 if citations:
@@ -518,11 +528,23 @@ class GeminiProvider(BaseProvider):
         )
 
         content = ""
+        reasoning = ""
         finish_reason = None
         if response.candidates and response.candidates[0].content and response.candidates[0].content.parts:
             for part in response.candidates[0].content.parts:
                 if hasattr(part, "text") and part.text:
-                    content += part.text
+                    # v1.19.1 Item 51: a thinking model returns its internal
+                    # monologue as parts flagged `thought=True`. The streaming
+                    # chat() path has always split these out (REASONING_CHUNK
+                    # vs STREAM_CHUNK); oneshot concatenated everything, so the
+                    # caller got "My Thought Process: … Okay, the user wants …"
+                    # as the ANSWER (observed live 2026-07-22 via /agentrun,
+                    # which drives oneshot, on gemini-3.1-pro-preview).
+                    # Same rule in both paths: thoughts are not the answer.
+                    if getattr(part, "thought", False):
+                        reasoning += part.text
+                    else:
+                        content += part.text
             finish_reason = getattr(response.candidates[0], "finish_reason", None)
             if finish_reason is not None:
                 finish_reason = str(finish_reason)
@@ -535,12 +557,27 @@ class GeminiProvider(BaseProvider):
                 "completion_tokens": usage_stats.completion_tokens,
                 "total_tokens": usage_stats.total_tokens,
             }
-        return {
+        # Degenerate case: the model emitted ONLY thought parts (no answer).
+        # Returning "" would look like an empty completion and hide the cause,
+        # so fall back to the reasoning text rather than losing the response.
+        if not content and reasoning:
+            logger.debug(
+                f"Gemini oneshot returned only thought parts "
+                f"({len(reasoning)} chars); falling back to reasoning as content."
+            )
+            content = reasoning
+
+        result = {
             "content": content,
             "finish_reason": finish_reason,
             "model": model,
             "usage": usage_dict,
         }
+        # Additive: callers that want the monologue can read it; the ones that
+        # only read `content` are unaffected (Item 51).
+        if reasoning:
+            result["reasoning"] = reasoning
+        return result
 
     def _convert_messages(self, messages: List[Message]) -> tuple:
         """Convert Message objects to Gemini format.
@@ -593,7 +630,18 @@ class GeminiProvider(BaseProvider):
                     call_id = tc.get("id")
                     if call_id:
                         call_id_to_name[call_id] = name
-                    parts.append({"function_call": {"name": name, "args": args}})
+                    fc_part: Dict[str, Any] = {
+                        "function_call": {"name": name, "args": args}
+                    }
+                    # Item 45: Gemini 3.x REQUIRES the signature it issued with
+                    # this call to come back on the functionCall part, or the
+                    # whole request 400s ("missing a thought_signature in
+                    # functionCall parts"). 2.5 never sets it → key absent →
+                    # unchanged behaviour there.
+                    sig = tc.get("thought_signature") if isinstance(tc, dict) else None
+                    if sig:
+                        fc_part["thought_signature"] = sig
+                    parts.append(fc_part)
                 if parts:
                     contents.append({"role": "model", "parts": parts})
             elif m.role == "tool":
@@ -836,19 +884,23 @@ class GeminiProvider(BaseProvider):
                 declarations.append(declaration)
         return declarations
 
-    def _parse_function_call(self, function_call) -> Optional[Dict[str, Any]]:
+    def _parse_function_call(self, function_call, part=None) -> Optional[Dict[str, Any]]:
         """Parse a Gemini function_call part into tool call dict.
 
         Args:
             function_call: Gemini FunctionCall object with name and args
+            part: the enclosing Part, when available. Gemini 3.x carries
+                `thought_signature` on the PART (not on the FunctionCall), and
+                requires it to be echoed back on the follow-up turn — see
+                `_thought_signature_of` and `_convert_messages`.
 
         Returns:
-            Dict with 'name', 'arguments', and 'tool_call_id', or None if
-            invalid. Gemini only populates FunctionCall.id in some API
-            configurations, so a missing id is synthesized — the engine's
-            native pairing branch requires every call to carry one, and the
-            id never goes back on the wire (Gemini pairs responses by
-            function name; see _convert_messages).
+            Dict with 'name', 'arguments', 'tool_call_id' and (when present)
+            'thought_signature', or None if invalid. Gemini only populates
+            FunctionCall.id in some API configurations, so a missing id is
+            synthesized — the engine's native pairing branch requires every
+            call to carry one, and the id never goes back on the wire (Gemini
+            pairs responses by function name; see _convert_messages).
         """
         if not function_call:
             return None
@@ -872,7 +924,46 @@ class GeminiProvider(BaseProvider):
                 args = {}
 
         call_id = getattr(function_call, 'id', None) or f"gemini-fc-{uuid.uuid4().hex[:12]}"
-        return {"name": name, "arguments": args, "tool_call_id": call_id}
+        parsed = {"name": name, "arguments": args, "tool_call_id": call_id}
+        sig = self._thought_signature_of(part, function_call)
+        if sig:
+            parsed["thought_signature"] = sig
+        return parsed
+
+    @staticmethod
+    def _thought_signature_of(part, function_call=None) -> Optional[str]:
+        """Extract Gemini 3.x `thought_signature` from a response part.
+
+        v1.19.1 Item 45: Gemini 3.x models return an opaque `thought_signature`
+        alongside each `function_call` and **reject the follow-up turn** unless
+        the client echoes it back on the corresponding functionCall part:
+
+            400 INVALID_ARGUMENT — Function call is missing a thought_signature
+            in functionCall parts … `default_api:<tool>`, position N
+
+        Reproduced live 3x on `gemini-3.1-pro-preview` (read_file, web_search),
+        which made EVERY native tool round-trip fail on 3.x. Gemini 2.5 does
+        not send the field, so absence is normal there and must stay silent.
+
+        The field lives on the PART in the documented shape; we also probe the
+        FunctionCall as a defensive fallback in case the SDK relocates it, and
+        normalise bytes → str so the value survives JSON round-trips through
+        the engine's session store.
+        """
+        for holder in (part, function_call):
+            if holder is None:
+                continue
+            for attr in ("thought_signature", "thoughtSignature"):
+                sig = getattr(holder, attr, None)
+                if not sig:
+                    continue
+                if isinstance(sig, bytes):
+                    try:
+                        return base64.b64encode(sig).decode("ascii")
+                    except Exception:
+                        return None
+                return str(sig)
+        return None
 
     def _parse_grounding(self, grounding_metadata) -> List[Dict[str, str]]:
         """Parse grounding metadata to extract citations.

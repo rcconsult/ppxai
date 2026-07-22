@@ -220,6 +220,7 @@ def _v1_provider_or_400(provider_name: str):
     missing key."""
     return _build_provider(provider_name)
 
+
 router = APIRouter(prefix="/v1/agent")
 
 
@@ -1089,6 +1090,22 @@ def build_task_runner(
             network_policy=net_policy, on_network=_on_network,
             filesystem_policy=fs_policy, on_path=_on_path,
         )
+
+        # Item 50: a grant naming a tool that does not exist is always a caller
+        # mistake — the model is silently offered fewer tools than intended and
+        # the run fails later for an invisible reason. This is checked HERE
+        # (not at request validation) because only now is the fully-registered
+        # base manager available: editor/shell/container/display tools register
+        # solely when an engine exists, so a registry rebuilt without one would
+        # report a misleading subset and falsely reject valid names.
+        unresolved_msg = engine.tool_manager.unresolved_grant_message()
+        if unresolved_msg:
+            registry.emit_event(
+                m.run_id, "grant_unresolved", level="warning", category="tool",
+                data={"unresolved": engine.tool_manager.unresolved_grant(),
+                      "grant": list(tools)},
+            )
+            raise ValueError(unresolved_msg)
 
         # Inc 6: cooperative budget/cancel control. Polled at each tool-loop
         # boundary (on TOOL_CALL) so a cap or cancel stops the run at a clean

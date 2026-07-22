@@ -21,6 +21,7 @@ treats it exactly like a normal manager — it just sees a smaller toolset.
 
 from __future__ import annotations
 
+import difflib
 from typing import Any, Callable, Dict, List, Optional
 
 from .tools.filesystem_policy import FilesystemPolicy, is_path_tool
@@ -224,6 +225,67 @@ class ScopedToolManager:
         return (
             f"Error: network access denied for {name!r}: {d.reason}. "
             f"This run's egress allowlist did not permit that target."
+        )
+
+    # --- grant hygiene ---------------------------------------------------
+
+    def unresolved_grant(self) -> List[str]:
+        """Granted names that no tool in the BASE registry provides.
+
+        v1.19.1 Item 50. A grant entry that matches nothing is always a
+        caller mistake — the run starts, the model is offered fewer tools
+        than the caller believes it granted, and the failure surfaces much
+        later as a refusal or a wrong answer (observed live 2026-07-22:
+        `--tools "weather, web_search"`, where the tool is `get_weather`).
+
+        This lives here rather than in the route because THIS object already
+        holds both halves of the question: the grant, and the base manager
+        with every tool actually registered for the run (editor/shell/
+        container/display tools only register when an engine is present, so
+        any registry rebuilt without one reports a misleading subset).
+        Sorted + deduped for a stable message.
+
+        Returns [] when the base manager cannot enumerate its tools (a
+        minimal/duck-typed manager, as used in tests and embedders). Grant
+        HYGIENE must never be the reason a run fails to start — enforcement
+        is `_granted()`'s job and is unaffected.
+        """
+        registered = self._registered_names()
+        if registered is None:
+            return []
+        return sorted({n for n in self._grant if n not in registered})
+
+    def _registered_names(self) -> Optional[set]:
+        """Names in the base registry, or None if it cannot be enumerated."""
+        getter = getattr(self._base, "get_available_tools", None)
+        if not callable(getter):
+            return None
+        try:
+            return {t.name for t in getter()}
+        except Exception:
+            return None
+
+    def unresolved_grant_message(self) -> Optional[str]:
+        """Human-facing explanation of `unresolved_grant()`, or None if clean.
+
+        Includes a near-miss suggestion per bad name: difflib first, then a
+        substring pass so a short needle like `weather` still points at
+        `get_weather` (difflib's ratio alone misses that).
+        """
+        unknown = self.unresolved_grant()
+        if not unknown:
+            return None
+        registered = sorted(self._registered_names() or ())
+        bits = []
+        for name in unknown:
+            close = difflib.get_close_matches(name, registered, n=1, cutoff=0.6)
+            if not close:
+                close = [k for k in registered if name and name in k][:1]
+            bits.append(f"{name!r}" + (f" (did you mean {close[0]!r}?)" if close else ""))
+        return (
+            "Unknown tool(s) in the grant: " + ", ".join(bits) + ". "
+            "Every granted tool must exist, or the run is offered fewer tools "
+            "than intended."
         )
 
     # --- filtered OFFERED set (model never sees off-grant tools) ---------
