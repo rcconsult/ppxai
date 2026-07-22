@@ -46,6 +46,30 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+def _force_utf8_console() -> None:
+    """Make stdout/stderr able to carry this script's non-ASCII output.
+
+    The progress lines use `—`, `→` and `…`. On Windows the default console
+    encoding is the legacy ANSI codepage (cp1252 under the Windows Store
+    Python), so printing any of them raises UnicodeEncodeError and aborts the
+    run *mid-acceptance* — and because that happens after the server is
+    spawned, it also orphans the server on the port, poisoning the next run
+    (see _signal_tree / stale-server-invalidates-acceptance.md).
+
+    Reconfiguring here fixes every print site at once — including future ones —
+    instead of ASCII-ifying individual strings and hoping nobody adds an arrow
+    back. `errors="replace"` is the belt-and-braces fallback for a stream that
+    still cannot represent a character after the switch.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError, OSError):
+            # Non-reconfigurable stream (redirected/wrapped). Printing may
+            # still fail on exotic characters, but never abort the import.
+            pass
+
+
 DEFAULT_PORT = 54320
 STARTUP_WAIT_S = 20
 RUN_POLL_TIMEOUT_S = 180
@@ -72,7 +96,22 @@ def _signal_tree(proc, how: str):
     if proc is None:
         return
     if os.name == "nt":
-        (proc.kill if how == "kill" else proc.terminate)()
+        # `taskkill /T` is the Windows analogue of killpg: it walks the child
+        # tree. Without /T we kill only the PyInstaller bootloader parent and
+        # the real server CHILD survives holding the port — the exact orphan
+        # this function's docstring warns about (observed live 2026-07-15).
+        # /F is required to take down the child; the graceful path is tried
+        # first via terminate() so a well-behaved server can still exit clean.
+        if how != "kill":
+            proc.terminate()
+        try:
+            subprocess.run(
+                ["taskkill", "/F", "/T", "/PID", str(proc.pid)],
+                capture_output=True, timeout=15, check=False,
+            )
+        except (OSError, subprocess.SubprocessError):
+            # taskkill missing/blocked — fall back to the parent-only kill.
+            (proc.kill if how == "kill" else proc.terminate)()
         return
     import signal
     sig = signal.SIGKILL if how == "kill" else signal.SIGTERM
@@ -153,6 +192,66 @@ def port_in_use(host: str, port: int) -> bool:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         sock.settimeout(1)
         return sock.connect_ex((host, port)) == 0
+
+
+def reap_port_listener(host: str, port: int, timeout_s: float = 8.0) -> bool:
+    """Last-resort cleanup: kill whatever still LISTENs on host:port.
+
+    Signalling the spawned process is not sufficient on Windows. The
+    installed server is a PyInstaller onefile — a bootloader PARENT plus the
+    real server CHILD. When the bootloader exits first the child is
+    reparented and escapes `taskkill /T` (which walks the tree of a PID that
+    no longer exists), so it survives holding the port. Observed live
+    2026-07-15: parent 27464 gone, child 44632 still LISTENING on 54320.
+
+    Killing by *port ownership* rather than by parentage closes that hole —
+    it is the same thing a human does with netstat + taskkill, and it is what
+    makes the next run's port_in_use guard trustworthy.
+
+    Returns True when the port ends up free.
+    """
+    deadline = time.time() + timeout_s
+    while time.time() < deadline:
+        if not port_in_use(host, port):
+            return True
+        pids = _pids_listening_on(port)
+        if not pids:
+            # Held by something we can't identify (or a lingering socket in
+            # TIME_WAIT, which does not accept connections anyway).
+            break
+        for pid in pids:
+            try:
+                if os.name == "nt":
+                    subprocess.run(["taskkill", "/F", "/PID", str(pid)],
+                                   capture_output=True, timeout=10, check=False)
+                else:
+                    os.kill(pid, 9)
+            except (OSError, subprocess.SubprocessError):
+                pass
+        time.sleep(0.5)
+    return not port_in_use(host, port)
+
+
+def _pids_listening_on(port: int) -> list:
+    """PIDs LISTENing on `port`, via netstat (stdlib-only, both platforms)."""
+    flags = ["-ano"] if os.name == "nt" else ["-tlnp"]
+    try:
+        out = subprocess.run(["netstat", *flags], capture_output=True,
+                             text=True, timeout=10, check=False).stdout
+    except (OSError, subprocess.SubprocessError):
+        return []
+    pids = set()
+    for line in out.splitlines():
+        if f":{port} " not in line and not line.rstrip().endswith(f":{port}"):
+            continue
+        if "LISTEN" not in line.upper():
+            continue
+        token = line.split()[-1]
+        # Windows: trailing PID column. POSIX -tlnp: trailing "PID/name".
+        pid_str = token.split("/")[0] if "/" in token else token
+        if pid_str.isdigit():
+            pids.add(int(pid_str))
+    return sorted(pids)
 
 
 def wait_for_server(gw: Gateway) -> bool:
@@ -315,6 +414,14 @@ def main() -> int:
                 proc.wait(timeout=10)
             except subprocess.TimeoutExpired:
                 _signal_tree(proc, "kill")
+            # Signalling the spawned PID is not proof the port was released —
+            # a reparented PyInstaller child survives it (see
+            # reap_port_listener). Verify, and reap by port ownership if the
+            # listener is still up, so the NEXT run's port_in_use guard isn't
+            # tripped by our own leftovers.
+            if not args.base_url and not reap_port_listener("127.0.0.1", args.port):
+                print(f"warning: port {args.port} still held after cleanup — "
+                      f"free it before the next run", file=sys.stderr)
 
     failed = [r for r in results if r[1] == FAIL]
     print(f"\ngateway-smoke: {len([r for r in results if r[1] == PASS])} passed, "
@@ -323,4 +430,5 @@ def main() -> int:
 
 
 if __name__ == "__main__":
+    _force_utf8_console()
     sys.exit(main())
