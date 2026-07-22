@@ -95,6 +95,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field, model_validator
 
 from ...common.logger import get_logger
+from ...config import get_default_model
 from ...config.tools import get_agent_config
 from ...engine.agent_runs import RunMeta, resume_refusal
 from ...engine.agent_skill import AgentSkillError, LoadedSkill, load_skill
@@ -346,7 +347,16 @@ async def create_agent_run(req: AgentRunRequest, request: Request) -> AgentRunRe
     # they will slot in as a layer between request and global config here.
     sub_defaults = get_agent_config().get("default_subagent", {}) or {}
     provider_name = req.provider or sub_defaults.get("provider")
-    model = req.model or sub_defaults.get("model")
+    model = req.model
+    if not model:
+        # default_subagent.model belongs to default_subagent.provider —
+        # cross-pairing it with a DIFFERENT explicit provider 400s at the API
+        # (e.g. perplexity handed a Qwen model id). For any other provider,
+        # fall back to its own default_model, mirroring /v1/oneshot.
+        if provider_name == sub_defaults.get("provider"):
+            model = sub_defaults.get("model")
+        if not model and provider_name:
+            model = get_default_model(provider_name) or None
     if not provider_name:
         raise HTTPException(
             status_code=400,
@@ -701,7 +711,15 @@ def _merge_task_fields(req: AgentTaskRequest) -> dict:
             if t not in tools:
                 tools.append(t)
     provider = req.provider or spec.provider or _skill_scalar("provider") or sub_defaults.get("provider")
-    model = req.model or spec.model or _skill_scalar("model") or sub_defaults.get("model")
+    model = req.model or spec.model or _skill_scalar("model")
+    if not model:
+        # Same cross-pairing guard as /run: the subagent default model only
+        # pairs with the subagent default provider; otherwise the chosen
+        # provider's own default_model.
+        if provider == sub_defaults.get("provider"):
+            model = sub_defaults.get("model")
+        if not model and provider:
+            model = get_default_model(provider) or None
     system = req.system if req.system is not None else (spec.system if spec.system is not None else _skill_scalar("system"))
     budget = _budget_dict(req.budget) or dict(spec.budget or {}) or dict(_skill_scalar("budget") or {})
     network = (

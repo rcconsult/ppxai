@@ -692,6 +692,30 @@ class TestAgentRunRoutes:
         assert one["status"] == "completed"
         assert one["provider"] == "cfgprov" and one["model"] == "cfgmodel"
 
+    def test_explicit_provider_gets_its_own_default_model(self, client, monkeypatch):
+        # Explicit provider WITHOUT model: default_subagent.model belongs to
+        # default_subagent.provider — cross-pairing them 400s at the real API
+        # (e.g. perplexity handed a Qwen model id). The chosen provider's own
+        # default_model must win instead (mirrors /v1/oneshot).
+        c, reg = client
+        from ppxai.server.routes import agent_v1
+
+        monkeypatch.setattr(
+            agent_v1, "get_agent_config",
+            lambda: {"default_subagent": {"provider": "cfgprov", "model": "cfgmodel"}},
+        )
+        monkeypatch.setattr(
+            agent_v1, "get_default_model",
+            lambda name=None: "otherprov-default" if name == "otherprov" else "",
+        )
+        monkeypatch.setattr(agent_v1, "_build_provider", lambda name: self._fake_provider())
+
+        resp = c.post("/v1/agent/run", json={"task": "ping", "provider": "otherprov"})
+        assert resp.status_code == 200
+        one = self._poll_terminal(c, resp.json()["run_id"])
+        assert one["provider"] == "otherprov"
+        assert one["model"] == "otherprov-default"  # NOT cfgmodel
+
     def test_provider_failure_marks_run_failed(self, client, monkeypatch):
         # If the background LLM call raises, the run ends 'failed' (not lost).
         c, reg = client
