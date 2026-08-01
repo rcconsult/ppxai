@@ -24,8 +24,9 @@ produced the patchwork feel:
 `tools.web_search` carries: `preferred` / `perplexity_model` / `gemini_model`
 (tool behavior), `enabled` (tool availability), `task_default_allow` (egress
 baseline **for the /task tier**), `oneshot_grounding` (native-search switch
-**for the oneshot tier**), and — per ADR 0009 — `oneshot_enrichment`
-(model-triggered search **for the oneshot tier**). Three of these answer
+**for the oneshot tier**) — and ADR 0009's enrichment switch would have been
+next (it instead lands directly at `execution.oneshot.enrichment`, per this
+ADR and 0009 §6). Three of these answer
 questions about *tiers*, not about the search tool. Every future tier would add
 another key here; the block is a timeline of code paths, not a description of a
 tool.
@@ -56,7 +57,7 @@ Also observed, lower stakes: root-level strays (`file_tree.*` from a v1.18.7
 constant migration; `visualization.*` read from `config/tools.py`), and legacy
 compat keys (`tools.shell.use_rtk` superseded by the wrapper framework).
 
-## Decision (proposed)
+## Decision
 
 Organize the config around **three axes**, matching the questions an operator
 actually asks:
@@ -157,9 +158,12 @@ actually asks:
 - **Remove legacy reads** the following minor release.
 - `tools.shell.use_rtk` / `use_rtk_prompt_hint` (already superseded by the
   wrapper framework) ride the same deprecation train.
-- The v1 gateway (`/v1/*`) is config-consuming, not config-shaped: no wire
-  change. ppxai-sre's k8s config templates need the rename in the same window —
-  coordinate per the consumer-alignment practice of ADR 0009.
+- **The config-shape migration itself changes no wire contract** — `/v1/*` is
+  config-consuming, not config-shaped, so renaming keys alters no request or
+  response. (Wire changes decided elsewhere are unaffected by this statement:
+  ADR 0009 §4 adds the optional `grounding` response field on its own
+  authority.) ppxai-sre's k8s config templates need the rename in the same
+  window — coordinate per the consumer-alignment practice of ADR 0009.
 
 ## Consequences
 

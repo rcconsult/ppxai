@@ -123,19 +123,29 @@ first-class `web_search` enrichment property.
 
 ### 1. Named profiles in config, reusing `AgentSpec`
 
+Key locations below are the **ADR 0010 final names** (`execution.*`,
+`tools.<tool>.egress`) — both ADRs were accepted 2026-08-01, so new keys land
+in their final home on day one; legacy names (`tools.agent.*`,
+`task_default_allow`) appear only when describing today's code or the dual-read
+migration.
+
 ```jsonc
-"tools": { "agent": { "profiles": {
+"execution": { "profiles": {
   "research": {
     "tools": ["web_search", "fetch_url", "read_file"],
-    "enrichment": true,            // auto-grant web_search + its egress baseline
+    "enrichment": true,            // auto-grant web_search + the SEARCH egress
+                                   // baseline (backend superset) — derived per
+                                   // §5, NOT listed in "network" below
     "network": { "allow_outbound": ["api.open-meteo.com", "wttr.in"] },
+                                   // ADDITIONAL egress beyond enrichment's:
+                                   // here, hosts for get_weather-style calls
     "budget": { "iterations": 20 }
   },
   "coding": {
     "tools": ["read_file", "search_files", "apply_patch", "write_file"],
     "enrichment": false            // closed-book by intent; no egress widening
   }
-}}}
+}}
 ```
 
 A run selects one by name — `--profile research` (client) / `"profile": "..."`
@@ -144,15 +154,16 @@ A run selects one by name — `--profile research` (client) / `"profile": "..."`
 **request > spec > profile > `default_subagent` > built-in default**. Zero new
 schema shape — a profile *is* an `AgentSpec` mapping in a config location.
 
-### 2. Per-tool egress baselines (generalize `task_default_allow`)
+### 2. Per-tool egress baselines (generalize `task_default_allow` → `tools.<tool>.egress`)
 
-`task_default_allow` becomes per-tool, not `web_search`-only:
-`tools.<tool>.task_default_allow`. `_with_task_default_allow` reads the union
-across the run's granted tools. This **subsumes Item 52**: `get_weather`'s
-key-free hosts (Open-Meteo, https wttr.in) become
-`tools.get_weather.task_default_allow` (or a profile's `network`), read by the
-engine — one config-driven mechanism, working across local `/task`, coder, and
-future tiers, exactly as `web_search` already does. (The contained
+The egress baseline becomes per-tool, not `web_search`-only, under the ADR 0010
+final name **`tools.<tool>.egress`** (today's `tools.web_search.
+task_default_allow` is the legacy spelling, honored during the dual-read
+window). `_with_task_default_allow` reads the union across the run's granted
+tools. This **subsumes Item 52**: `get_weather`'s key-free hosts (Open-Meteo,
+https wttr.in) become `tools.get_weather.egress` (or a profile's `network`),
+read by the engine — one config-driven mechanism, working across local `/task`,
+coder, and future tiers, exactly as `web_search` already does. (The contained
 `http://wttr.in` scheme-poison removal still lands as part of the fix — an
 always-denied scheme must never gate a tool.)
 
@@ -248,13 +259,15 @@ attacker-influencable destination. The tier stays stateless (no run registry
 entry, no durable state); "oneshot" means one request/one response, not
 one model call.
 
-**Its config key is `tools.web_search.oneshot_enrichment`, default off — a new
-key, deliberately NOT a reuse of `oneshot_grounding`.** The existing
-`tools.web_search.oneshot_grounding` (`oneshot.py` L130-146) turns on the
-**provider's own** native search; this one exposes the **`web_search` fallback
-chain to the model**. Different mechanism, cost, and egress profile — an
-operator reading one key name must not have to guess which they enabled. (§6
-below sets the target config shape so this does not extend the patchwork.)
+**Its config key is `execution.oneshot.enrichment`, default off — a new key,
+deliberately NOT a reuse of the grounding switch.** (ADR 0010 final name; the
+native-search switch shipped as `tools.web_search.oneshot_grounding`,
+`oneshot.py` L130-146, and migrates to `execution.oneshot.grounding` in the
+same window.) The grounding key turns on the **provider's own** native search;
+this one exposes the **`web_search` fallback chain to the model**. Different
+mechanism, cost, and egress profile — an operator reading one key name must not
+have to guess which they enabled, which is why both live side by side under
+`execution.oneshot.*` rather than on the tool block.
 
 **Gating — decided per request on EFFECTIVE native grounding, not provider
 capability alone.** A provider "takes the native path" only when native
@@ -300,13 +313,31 @@ enrichment is off (existing consumers see byte-identical responses):
 
 **Accounting.** The loop's extra model round-trips are real prompt/completion
 tokens and land in the existing `usage` field — no schema change there.
-Premium-search cost is tracked by the existing `web_premium` machinery
-(`calculate_tool_cost` / `get_last_tool_usage`) and reported in
-`grounding.search_cost`; it also feeds the cross-tier accounting ADR 0008
-defines, so enriched-oneshot spend is not invisible to `/cost`. Search-backend
-errors do not fail the request: the loop surfaces the tool error to the model,
-which answers with what it has — `searched: true` with the failure noted in
-the audit log.
+Premium-search cost is computed by the existing `calculate_tool_cost`, but it
+must be **returned with the individual search invocation (or attached to the
+request context), NOT read via `get_last_tool_usage()`** — that accessor is a
+process-global with reset-on-read semantics (`web_premium.py` L22, L384-396:
+`_last_tool_usage = None` after extraction), which under two concurrent
+enriched requests silently attributes one request's search cost to the other.
+Fine for the single-session interactive path it was built for; disqualifying as
+a per-request accounting contract. The per-invocation usage feeds
+`grounding.search_cost` and the cross-tier accounting ADR 0008 defines, so
+enriched-oneshot spend is not invisible to `/cost`. Search-backend errors do
+not fail the request: the loop surfaces the tool error to the model, which
+answers with what it has — `searched: true` with the failure noted in the
+audit sink.
+
+**Audit sink — decided, because this tier has no run registry and no event
+stream to inherit.** The enriched-oneshot loop runs in an **ephemeral,
+in-memory context** (built per request, discarded after — the tier stays
+stateless; no `~/.ppxai/runs/` entry, no SSE channel). Its audit trail is
+therefore two-channel: **caller-facing**, the `grounding` response field (the
+authoritative record of what was searched); **operator-facing**, the tool-call
+and `NETWORK_POLICY_ALLOWED/DENIED` decisions written to the standard server
+log (debug-log honoring `tui.debug_log` semantics), tagged with the request's
+correlation id. No new event type, no registry coupling — an operator who
+needs durable per-run audit uses the `/task` tier, which exists for exactly
+that.
 
 **Other observable changes warranting a consumer heads-up:** latency and search
 cost when (and only when) the model searches; **prompt contents** (retrieved
@@ -374,30 +405,28 @@ answer to "does a narrower `tools` list re-add `web_search`?":
 
 The config has grown organically, key-by-key, tracking code execution paths:
 each new tier taught `tools.web_search` a new switch (`task_default_allow`,
-`oneshot_grounding`, now `oneshot_enrichment`), and the whole execution tier
+`oneshot_grounding` — and this ADR's enrichment switch would have been the
+third, had ADR 0010 not landed first), and the whole execution tier
 lives under `tools.agent.*` because it historically grew out of the
 `spawn_subagent` tool. Operator-visible result: three keys on one tool block
 that answer three different questions ("which backend?", "what egress on
 /task?", "may oneshot ground?"), and an "agent" that is not a tool configured
-as one. The full reorganization is **ADR 0010** (config-shape review, separate
-sign-off); this section only pins where THIS ADR's new keys land so they don't
-deepen the problem while 0010 is pending:
+as one. The full reorganization is **ADR 0010** (config-shape review) —
+**accepted the same day as this ADR**, so this ADR's new keys land directly in
+their 0010-final homes on day one, with no second migration:
 
-- **Tool-intrinsic keys stay on the tool block:** `tools.web_search.preferred`
-  + `strict` (the Q5 scoped tuple — how the tool picks backends, regardless of
-  tier), backend model choices, and per-tool `task_default_allow` (§2 — the
-  hosts a *tool* needs are a property of the tool). **`task_default_allow` is
-  the provisional name:** ADR 0010 renames it `tools.<tool>.egress` (same
-  semantics, honest name — the hosts are not task-tier-specific), via 0010's
-  dual-read window. New code should be written so the rename is a key-string
-  change, not a logic change.
-- **Execution-tier keys land under the agent/execution block, not on tools:**
-  `profiles.*` (§1), `egress_ceiling` (Q3), and the oneshot enrichment switch —
-  which is a *tier* behavior ("may this tier expose search to the model"), not
-  a search-tool property. Named `tools.web_search.oneshot_enrichment` in §4 for
-  discoverability next to `oneshot_grounding` today; **if ADR 0010 lands before
-  implementation, both keys move to the tier block together** and §4's name is
-  read as provisional.
+- **Tool-intrinsic keys on the tool block:** `tools.web_search.preferred` +
+  `strict` (the Q5 scoped tuple — how the tool picks backends, regardless of
+  tier), backend model choices, and per-tool **`tools.<tool>.egress`** (§2 —
+  the hosts a *tool* needs are a property of the tool; today's
+  `task_default_allow` is the legacy spelling, honored only through 0010's
+  one-release dual-read window).
+- **Execution-tier keys under `execution.*`, not on tools:**
+  `execution.profiles` (§1), `execution.egress_ceiling` (Q3),
+  `execution.default_subagent`, and the oneshot switches
+  `execution.oneshot.{grounding, enrichment}` (§4) — tier behaviors ("may this
+  tier expose search to the model"), not search-tool properties. The shipped
+  `tools.web_search.oneshot_grounding` migrates alongside via dual-read.
 - **Override axes follow the Q5 rule everywhere:** where a key is overridable
   per provider/model, the override is a **scoped tuple** (scope chosen once,
   related fields read together), never independent per-field fallback.
@@ -456,8 +485,9 @@ compete.
 - Enables: named reusable grants; one config-driven egress mechanism for ALL
   tools (retires Item 52's weather-specific path); enrichment solved by
   construction for local LLMs; per-profile security posture.
-- Requires: a `profiles` config block + `--profile` selector; per-tool
-  `task_default_allow` read in `_with_task_default_allow`; precedence rules
+- Requires: the `execution.profiles` config block + `--profile` selector;
+  per-tool `tools.<tool>.egress` (legacy `task_default_allow` via dual-read)
+  read in `_with_task_default_allow`; precedence rules
   (request > spec > profile > default) documented + sentinel-tested; the
   `http://wttr.in` scheme-poison removal.
 - Requires (from Problem 4 / Q5): a single shared backend resolver (leaf module,
@@ -497,7 +527,7 @@ compete.
   resolution, not per layer, plus grant-time errors for the two contradiction
   cases — an explicit `tools` list omitting `web_search` under effective
   `enrichment: true`, and Q3's ceiling leaving an enriched run backend-less.
-- Requires (from Q3): a `tools.agent.egress_ceiling` config key; intersection
+- Requires (from Q3): a `execution.egress_ceiling` config key; intersection
   applied where the run's effective allowlist is assembled; unset = no cap; and a
   **grant-time hard failure** when the intersection leaves an `enrichment: true`
   profile without the backend superset, with an error naming the stripped hosts.
@@ -562,7 +592,7 @@ Therefore this ADR's scope is deliberately bounded:
   not a *call-time* decision — it never pre-empts or replaces the consent
   contract / A2 policy callable.
 - The `enrichment` opt-in and the deployment egress ceiling
-  (`tools.agent.egress_ceiling`, Q3) must compose UNDER a deployment policy hook,
+  (`execution.egress_ceiling`, Q3) must compose UNDER a deployment policy hook,
   not above it: a profile may not widen egress beyond what an SRE-registered
   policy (A2) or the ceiling permits. Profiles propose a grant; policy disposes.
   The ceiling is config-only and intersective, so it cannot be raised by a run —
@@ -582,7 +612,7 @@ Therefore this ADR's scope is deliberately bounded:
   run's only backend should surface as the existing
   `NETWORK_POLICY_DENIED` event (C1) — no new contract — so the operator can tell
   a policy denial from a misconfiguration.
-- Per-tool `task_default_allow` emits the SAME `NETWORK_POLICY_ALLOWED/DENIED`
+- Per-tool `tools.<tool>.egress` emits the SAME `NETWORK_POLICY_ALLOWED/DENIED`
   events (C1) already committed — profiles change what's in the allowlist, not
   how enforcement or audit is surfaced. No new event type, no internal tap.
 
@@ -613,7 +643,7 @@ conflict with A2 and must be re-litigated with the SRE boundary in view.
    provider preference: provider/model are already selectable per run and by
    config, and coupling them to an egress grant would let a tool grant silently
    change which model answers.
-3. **Egress trust / ceiling** — **`tools.agent.egress_ceiling`, config-only,
+3. **Egress trust / ceiling** — **`execution.egress_ceiling`, config-only,
    intersective.**
    - **Config-only, never per-run** — a run that could state its own ceiling
      could raise it, which is not a ceiling.
