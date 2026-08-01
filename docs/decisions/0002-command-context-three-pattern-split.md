@@ -1,7 +1,7 @@
 # ADR 0002 — CommandContext three-pattern split
 
 **Date:** 2026-04-29
-**Status:** Accepted
+**Status:** Accepted — implemented (Pattern A `rich/context.py` proxy, Textual inline on `app.py`, Pattern B `server/context.py` explicit delegation)
 **Related:**
 - `ppxai/commands/context.py`
 - `ppxai/commands/protocol.py`

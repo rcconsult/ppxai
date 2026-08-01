@@ -1,7 +1,7 @@
 # ADR 0007 — Completion as a first-class service; command roster via AppState
 
 **Date:** 2026-06-14
-**Status:** Proposed (target v1.19.x)
+**Status:** Proposed — step 1 shipped v1.18.8 (`CommandFactory.iter_completion_specs`, `commands/factory.py`); step 2 (extract `ppxai/completion/` package) open, target v1.19.x
 **Related:**
 - `ppxai/engine/completion.py` — current home of `complete()`
 - `ppxai/commands/factory.py` — `CommandFactory`, `CompletionCommandInfo`, `iter_completion_specs()`

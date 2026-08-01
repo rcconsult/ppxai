@@ -1,7 +1,7 @@
 # ADR 0008 — Cross-tier cost and shared-resource accounting
 
 **Date:** 2026-07-15
-**Status:** Proposed (living draft — may be revised in place until Accepted)
+**Status:** Proposed (living draft — may be revised in place until Accepted) — not implemented (Debt Item 49: `/v1/oneshot` and `/v1/agent/task` spend absent from `usage.json`; ADR 0009 §4 accounting for enriched oneshot depends on this sink)
 **Related:**
 - [`0004-llm-gateway-features.md`](0004-llm-gateway-features.md) — established the stateless `/v1/oneshot` tier that bypasses `EngineClient` (the origin of gap #1 below)
 - [`0003-agent-platform-architecture.md`](0003-agent-platform-architecture.md) — established the per-run `EngineClient` (D1 isolation) for `/v1/agent/task`

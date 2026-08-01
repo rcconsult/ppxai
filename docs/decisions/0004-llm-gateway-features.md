@@ -1,7 +1,7 @@
 # ADR 0004 — LLM gateway features (v1.18.3)
 
 **Date:** 2026-05-03
-**Status:** Accepted
+**Status:** Accepted — implemented (`server/routes/oneshot.py`, `server/routes/auth.py`; §4 of ADR 0009 revises the "no tool loop in oneshot" property for enriched requests, perimeter preserved)
 **Related:**
 - [`docs/api-gateway.md`](../api-gateway.md) — user-facing spec for the v1 gateway
 - `ppxai/server/routes/oneshot.py` — first gateway endpoint

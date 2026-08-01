@@ -1,7 +1,7 @@
 # ADR 0001 — `/keys` cross-client behavior in v1.18.1
 
 **Date:** 2026-04-25
-**Status:** Accepted
+**Status:** Accepted — implemented (`commands/system.py::handle_keys`: universal Markdown + `vscode_delegate` on HTTP contexts, rich key table on TUI)
 **Related:** `docs/archive/TODO-v1.18.1-command-unification.md` Phase 2 step 1f
 
 ## Context

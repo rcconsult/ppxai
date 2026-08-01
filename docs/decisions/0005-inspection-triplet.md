@@ -1,7 +1,7 @@
 # ADR 0005 — Inspection Triplet pattern for runtime observability
 
 **Date:** 2026-05-10
-**Status:** Proposed (formalizing a pattern already half-implemented)
+**Status:** Accepted (status reconciled 2026-08-01 — the pattern shipped and is load-bearing) — implemented: agent runs (`engine/agent_runs.py`: `meta.json` + `state.json` atomic temp-then-rename + `events.jsonl`, producers T5/T6/T7) and preview backend (`engine/preview_backend.py`)
 **Related:**
 - [ADR 0003](0003-agent-platform-architecture.md) — Agent platform architecture; Stage 2's `runs/<run_id>/agent-<n>/` namespace IS this pattern, scoped to agent runs only
 - [`docs/research/2026-05-10-openshell-coordination-patterns.md`](../research/2026-05-10-openshell-coordination-patterns.md) — prior art (NVIDIA OpenShell `runs/<run_id>/` namespace)

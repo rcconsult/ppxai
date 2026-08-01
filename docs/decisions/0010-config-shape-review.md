@@ -2,7 +2,7 @@
 
 **Date:** 2026-08-01
 **Accepted:** 2026-08-01 — all four sign-off questions settled (see §"Sign-off").
-**Status:** Accepted
+**Status:** Accepted — implementation pending (dual-read helper + direct-read sweep + `/doctor` migration; ADR 0009's new keys land in final locations from the start)
 **Related:**
 - [`0009-task-execution-profiles.md`](0009-task-execution-profiles.md) — §6 pins where 0009's new keys land pending this ADR; the Q5 scoped-tuple rule is generalized here
 - [`0003-agent-platform-architecture.md`](0003-agent-platform-architecture.md) — the execution tiers this config surface must describe

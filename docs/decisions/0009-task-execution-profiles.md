@@ -5,7 +5,7 @@
 **Revised:** 2026-08-01 (review pass) — Q1/Q3/Q5/Q6 written in; added §5 (grant resolution order — where `enrichment` derives), the `preferred`/`strict` scoped tuple, `oneshot_enrichment` as a key distinct from `oneshot_grounding`, and the static-vs-call-time scope of grant-time validation.
 **Revised:** 2026-08-01 (design pass) — §4 oneshot enrichment changed from server-side preflight to **model-triggered search reusing the task-tier tool loop** (`chat_with_tools` + `ScopedToolManager`, `{web_search}`-only grant, bounded iterations); Q6's query-origin cluster dissolved by it. §6 added: target config shape (operator-review outcome — config must stop growing as per-code-path patchwork).
 **Accepted:** 2026-08-01 — all six sign-off questions settled (see §"Sign-off"); implementation may proceed.
-**Status:** Accepted
+**Status:** Accepted — implementation pending (agreed build order: ① oneshot search loop, ② per-tool `tools.<tool>.egress`, ③ `execution.profiles` + `enrichment` in `AgentSpec`, ④ shared backend resolver)
 **Related:**
 - [`0003-agent-platform-architecture.md`](0003-agent-platform-architecture.md) — the `/v1/agent/task` tier + per-run `ScopedToolManager` grant enforcement this builds on
 - [`0004-llm-gateway-features.md`](0004-llm-gateway-features.md) — the stateless `/v1/oneshot` tier that shares the "context-blind local LLM" problem
