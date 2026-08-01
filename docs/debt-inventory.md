@@ -590,16 +590,11 @@ date bumped to 2026-07-11; no new table entries needed.
 
 **Watch items (act on trigger, not now):**
 
-1. **OpenAI gpt-5.6 "Sol / Terra / Luna"** — announced 2026-07-09, limited
-   preview (~20 orgs), GA "in the coming weeks". New naming: number =
-   generation, Sol/Terra/Luna = durable capability tiers. Pricing per MTok:
-   Sol $5/$30, Terra $2.50/$15, Luna $1/$6. **Terra ≈ GPT-5.5 performance at
-   HALF the price** → on GA, our configured `gpt-5.5` ($5/$30) becomes poor
-   value (candidate for our own deprecation table), and `gpt-5.4-mini`
-   ($0.75/$4.50, benchmark champion 97.5%) must be re-benchmarked against
-   Luna before any default switch. The three ids already appear in live
-   `/models` (2026-07-11) but are preview-gated. **Trigger:** gpt-5.6 GA →
-   add family, run `benchmarks/llm-eval`, re-pick default + flagship.
+1. **OpenAI gpt-5.6 "Sol / Terra / Luna"** — ⚠️ **TRIGGER FIRED 2026-08-01:
+   GA, plus 2026-07-30 price cuts (Luna −80% to $0.20/$1.20, Terra −20% to
+   $2/$12 — the $2.50/$15 / $1/$6 figures below-generation are stale).
+   Superseded by Item 55**, which carries the verified pricing/benchmark/
+   hazard detail and the fix order.
 
 2. **Perplexity Agent API (the "search/coding API" addition)** — a NEW
    surface beside Sonar chat completions and the Search API. Changelog
@@ -1183,15 +1178,17 @@ are unaffected), and falling back to the reasoning text only when the model
 produced nothing else — so a thought-only response never looks like an empty
 completion. Tests: `tests/test_gemini_thought_signature.py::TestOneshotThoughtSplit` (4).
 
-### Item 52 — the LOCAL in-process sealed `/task` egress gate denies a fallback-chain tool wholesale (does NOT affect the k8s/coder tier); `get_weather` unallowlistable locally [agent platform / egress / tools] — ⏸️ HELD pending ADR 0009
+### Item 52 — the LOCAL in-process sealed `/task` egress gate denies a fallback-chain tool wholesale (does NOT affect the k8s/coder tier); `get_weather` unallowlistable locally [agent platform / egress / tools] — ✅ UNBLOCKED (ADR 0009 Accepted 2026-08-01)
 
-**Resolution path (owner decision 2026-07-23):** NOT spot-fixed. `get_weather`'s
-config-parity is **subsumed by ADR 0009** (task execution profiles), which
-generalizes the `web_search`-only `task_default_allow` mechanism to per-tool
-egress baselines read by the engine — one config-driven change working across
-local `/task`, coder, and future tiers, instead of a weather-specific patch. The
-contained `http://wttr.in` scheme-poison removal lands as part of that work. See
-**Item 53** / [decisions/0009-task-execution-profiles.md](decisions/0009-task-execution-profiles.md).
+**Resolution path:** NOT spot-fixed. `get_weather`'s config-parity is
+**subsumed by ADR 0009** (task execution profiles, **Accepted 2026-08-01**),
+which generalizes the `web_search`-only `task_default_allow` mechanism to
+per-tool egress baselines (`tools.<tool>.egress`, ADR 0010 final name) read by
+the engine — one config-driven change working across local `/task`, coder, and
+future tiers, instead of a weather-specific patch. This is **step 2 of the
+agreed ADR 0009 build order**. The contained `http://wttr.in` scheme-poison
+removal lands as part of that work. See **Item 53** /
+[decisions/0009-task-execution-profiles.md](decisions/0009-task-execution-profiles.md).
 
 **Scope (important — corrected 2026-07-23):** this is a defect of the
 **app-layer `ScopedToolManager` superset gate** used by the LOCAL in-process
@@ -1285,11 +1282,17 @@ made visible — the two layers gate differently: Calico authorizes the *actual
 runtime connection* (https ok), the local superset authorizes the *declared
 target set* up front (and that set carries the always-denied `http://wttr.in`).
 
-### Item 53 — task execution profiles: config-driven named grants + web_search as first-class enrichment [agent platform / config / egress] → ADR 0009
+### Item 53 — task execution profiles: config-driven named grants + web_search as first-class enrichment [agent platform / config / egress] → ADR 0009 ✅ ACCEPTED, implementation pending
 
-**Planned:** `v1.19.x`+ (**needs an architecture decision, not a patch** —
-design in [decisions/0009-task-execution-profiles.md](decisions/0009-task-execution-profiles.md),
-Status: Proposed). Filed 2026-07-23 from the Item 52 root-cause discussion.
+**Planned:** `v1.19.x` — **ADR 0009 Accepted 2026-08-01** (all six sign-off
+questions settled; ADR 0010 config-shape review Accepted same day — new keys
+land at `execution.*` / `tools.<tool>.egress` from the start). Agreed build
+order: ① oneshot model-triggered search loop, ② per-tool egress (retires Item
+52), ③ `execution.profiles` + `enrichment` in `AgentSpec` (`_SPEC_FIELDS`
+blocker), ④ shared backend resolver. Filed 2026-07-23 from the Item 52
+root-cause discussion; design details below reflect the original filing — the
+ADR supersedes where they differ (notably: oneshot enrichment is
+model-triggered via the task-tier loop, NOT a server-side preflight).
 
 **Three gaps the design addresses:**
 1. **Config-driven egress is one-tool-wide.** `27ea00d9` gave `web_search`
@@ -1312,9 +1315,10 @@ Status: Proposed). Filed 2026-07-23 from the Item 52 root-cause discussion.
 (request > spec > profile > default precedence); per-tool
 `task_default_allow`; `enrichment: true` auto-grants `web_search` + its egress
 baseline per-profile (opt-in, so a locked-down tenant profile stays no-egress —
-preserves AC-2 confused-deputy protection). **Subsumes Item 52.** 4 open
-sign-off questions in the ADR (precedence, enrichment scope, egress ceiling,
-oneshot applicability).
+preserves AC-2 confused-deputy protection). **Subsumes Item 52.** All six
+sign-off questions (precedence, enrichment scope, egress ceiling, oneshot
+applicability, preferred-pin-vs-ordering, oneshot query origin) settled
+2026-08-01 — see the ADR's §"Sign-off".
 
 ### Item 44 — interactive empty-response retry persists an empty-content assistant → Perplexity 400 [chat / providers] — ✅ FIXED (2026-07-13, `bugfix/v1.19.1`)
 
@@ -1355,6 +1359,83 @@ pure strips + composition, self-heal on load, empty-strip-exposed trailing-user
 preservation, producer nudge-rollback + sentinel + narrow-guard. Session
 persistence/restore/migration sweep clean (121 pass / 6 Windows-symlink skips);
 chat-loop suites clean (74).
+
+---
+
+### Item 54 — Gemini fleet migration: 2.5-line sunset (earliest 2026-10-16), google-genai SDK behind, Gemini-3 `thought_signature` chain rules untested [providers / gemini / SDK]
+
+**Planned:** `v1.19.x` — deadline-driven, the only fleet item with a date on
+it. Filed 2026-08-01 from the provider-fleet web sweep (official
+[deprecations page](https://ai.google.dev/gemini-api/docs/deprecations)).
+
+**Facts (verified on ai.google.dev 2026-08-01):**
+1. **2.5-line shutdown, earliest 2026-10-16:** `gemini-2.5-flash` →
+   `gemini-3.6-flash` ($1.50/$7.50, **GA**); `gemini-2.5-pro` →
+   `gemini-3.1-pro-preview` ($2/$12 ≤200K, $4/$18 above — replacement still
+   **preview**, see Item 38 watch 3); `gemini-2.5-flash-lite` →
+   `gemini-3.1-flash-lite` (itself already sunset-dated 2027-05-07 →
+   `gemini-3.5-flash-lite` $0.30/$2.50). Dates are "earliest possible" with
+   ≥6-months notice promised after Gemini 3 GA, BUT a forum report of
+   2.5-flash going unavailable *early* for some users argues against waiting.
+2. **Not just user config — code defaults:** `tools.web_search.gemini_model`
+   defaults to `"gemini-2.5-flash"` (`web_premium.py:206`) → the web_search
+   fallback-chain backend itself dies on sunset. `model_deprecations.py`
+   needs the four 2.5→3.x rows (that table is the `/doctor` shipping vehicle).
+3. **SDK:** pinned `google-genai==2.11.0`; latest 2.16.0 (2026-07-30;
+   2.12–2.16 all landed 07-16→07-30). Changelog delta NOT reviewed — do not
+   bump blind. Google says pin `<3.0.0` (breaking major announced).
+4. **Gemini 3 makes `thought_signature` MANDATORY on function-call turns**
+   (400 on missing), with rules our Items-45/50/51 round-trip has not been
+   tested against: every call in a *sequential* chain needs its own
+   signature; in a *parallel* batch only the FIRST part does. Extend
+   `test_gemini_thought_signature.py` with both cases before pointing the
+   native loop (Item 41 work) at any 3.x model.
+5. `gemini-3.1-pro-preview-customtools` (benched 81.5% per AGENTS hints) is a
+   separate model id biasing toward registered tools over shell — relevant to
+   Item 43's class of problem; pricing parity with the base preview is
+   aggregator-claimed, not officially confirmed.
+
+**Fix order:** (a) `/doctor` deprecation rows + `web_premium.py` default bump
+→ ships independently, small; (b) SDK changelog review → bump + full Gemini
+suite; (c) signature chain tests; (d) bench `gemini-3.6-flash` vs 2.5-flash
+(+ 3.1-pro-preview vs 2.5-pro) per AGENTS.md before config/model_hints move.
+**Trigger to act NOW is (a);** (b)–(d) before the October window closes.
+Effort: (a) ~1h; (b)+(c) ~half day; (d) benchmark session.
+
+### Item 55 — OpenAI fleet refresh: gpt-5.6 Sol/Terra/Luna GA + price cuts obsolete configured 5.5/5.5-pro; chat-completions tool+reasoning hazard unverified [providers / openai]
+
+**Planned:** benchmark session (cost-driven, no deadline — no confirmed
+sunset for `gpt-5.5`/`gpt-5.5-pro`/`gpt-5.4-mini`; legacy dated `gpt-5-*`
+snapshots shut down 2026-12-11, none configured). Filed 2026-08-01 from the
+provider-fleet web sweep (developers.openai.com model pages fetched directly).
+Supersedes Item 38 watch 1 (trigger FIRED).
+
+**Facts (verified 2026-08-01, post the 2026-07-30 price cuts — Luna −80%,
+Terra −20%; Item 38's Terra $2.50/$15 figure is stale):**
+| Model | $/M in/out | Context | Cutoff | vs configured |
+|---|---|---|---|---|
+| `gpt-5.6-sol` | $5/$30 | 1.05M/128K | 2026-02-16 | = `gpt-5.5` price, beats it (SWE-Pro 64.6 vs 59.4); makes `gpt-5.5-pro` ($30/$180) look like poor value outside its Responses-only/multi-minute niche |
+| `gpt-5.6-terra` | $2/$12 | 1.05M/128K | 2026-02-16 | beats `gpt-5.5` at 40% of its price — clearest swap |
+| `gpt-5.6-luna` | $0.20/$1.20 | 1.05M/128K | 2026-02-16 | vs champion `gpt-5.4-mini` $0.75/$4.50 400K: 73% cheaper, 2.6× context, **BUT MRCR long-context recall 41.3%** (Sol/Terra ~90) — cheap context it can't reliably recall over |
+
+**Hazards to clear before any switch:**
+1. **Community-reported (NOT officially confirmed):** `gpt-5.6-sol` rejects
+   function tools combined with `reasoning_effort` on `/v1/chat/completions`
+   — and ppxai is chat-completions-shaped for ALL providers. Probe
+   empirically; mitigation fits existing per-model `tool_calling` /
+   `extra_body` config; worst case pin `reasoning_effort: none` for sol.
+2. New reasoning surface (7-level `effort`, `mode: standard|pro`,
+   `context: all_turns`) is Responses-API-centric — catalog note only, no
+   client work identified.
+3. Bare `gpt-5.6` id aliases to sol — don't configure the alias.
+4. Cache-write billing reportedly 1.25× input for 5.6+ (secondary source,
+   unconfirmed — official pricing page 403s scrapers).
+
+**Fix order:** (a) sol tool+reasoning probe (one live curl session); (b)
+benchmark Luna vs `gpt-5.4-mini` + Terra vs `gpt-5.5` per AGENTS.md
+(model_hints locked to bench — standing rule); (c) config + our own
+deprecation-table rows for 5.5/5.5-pro if bench confirms. Effort: (a) ~30min;
+(b) benchmark session; (c) ~1h.
 
 ---
 
