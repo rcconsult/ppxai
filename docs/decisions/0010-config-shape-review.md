@@ -1,7 +1,8 @@
 # ADR 0010 — Config shape review: three axes instead of per-code-path patchwork
 
 **Date:** 2026-08-01
-**Status:** Proposed
+**Accepted:** 2026-08-01 — all four sign-off questions settled (see §"Sign-off").
+**Status:** Accepted
 **Related:**
 - [`0009-task-execution-profiles.md`](0009-task-execution-profiles.md) — §6 pins where 0009's new keys land pending this ADR; the Q5 scoped-tuple rule is generalized here
 - [`0003-agent-platform-architecture.md`](0003-agent-platform-architecture.md) — the execution tiers this config surface must describe
@@ -89,7 +90,18 @@ actually asks:
   },
 
   "execution": {
-    "session":  { /* interactive tier defaults, future */ },
+    "session": {
+      // RESERVED (sign-off Q4) — present so the interactive tier's shape is
+      // reviewable early. Candidate keys, NON-NORMATIVE, each lands only via
+      // its own reviewed change:
+      //   "consent":   { /* default tool-consent posture; today spread over
+      //                    tools.shell.require_consent, tools.container.
+      //                    require_consent, per-tool flags */ }
+      //   "loop":      { /* interactive tool-loop caps; today under
+      //                    tools.agent.max_iterations + providers.<id>.
+      //                    tool_calling.max_tool_iterations */ }
+      //   "bootstrap": { /* context bootstrap; today top-level bootstrap.* */ }
+    },
     "task": {
       "enabled": false,           // was tools.agent.task_tier_enabled
       "sandbox":  { /* was tools.agent.sandbox */ },
@@ -159,13 +171,24 @@ actually asks:
   and one release of "where did my key go" support noise. ~15 keys move; the
   provider axis (~40 keys) does not move at all.
 
-## Sign-off (open)
+## Sign-off
 
-1. Top-level name: `execution` vs `agent` vs `tiers`.
-2. Does `tools.<tool>.egress` (renamed `task_default_allow`) stay tool-intrinsic,
-   or belong under `execution` as a grant fragment? (0009 §2/§6 argue
-   tool-intrinsic; the counterargument is that egress is only *consumed* by
-   sealed tiers.)
-3. Dual-read window: one minor release or two?
-4. Does `session` (interactive tier) get an `execution.session` block now
-   (empty, reserved) or only when it first needs a key?
+### Settled (2026-08-01)
+
+1. **Top-level name: `execution`.** `agent` would repeat the current confusion
+   (the block is not a tool, and "agent" already names the spawned LLM);
+   `tiers` doesn't cover `profiles` / `egress_ceiling` /
+   `default_subagent`, which span tiers.
+2. **`tools.<tool>.egress` stays tool-intrinsic.** The hosts a tool needs are a
+   property of the tool wherever it runs (0009 §2); which tiers *enforce* the
+   list is the tier's business. Moving it under `execution` would recreate
+   growth pattern 1 in reverse — tool facts scattered into tier blocks.
+3. **Dual-read window: one minor release.** The direct-read sweep is part of
+   the migration itself and `/doctor --fix` rewrites configs; a second release
+   of dual-read is a second release with both names live in docs and support.
+4. **`execution.session` is reserved NOW**, so the interactive tier's place in
+   the shape is reviewable early, before a key needs it in a hurry. The block
+   ships empty-but-present in the target sketch with **non-normative candidate
+   keys as comments** (see sketch) — candidates, not commitments; each lands
+   only through its own change with its own review, and reshaping the block
+   before first use costs nothing.
