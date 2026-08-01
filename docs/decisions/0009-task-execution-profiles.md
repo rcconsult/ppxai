@@ -1,13 +1,19 @@
 # ADR 0009 — Task execution profiles (config-driven grants + web_search as first-class enrichment)
 
 **Date:** 2026-07-23
-**Status:** Proposed (living draft — may be revised in place until Accepted)
+**Revised:** 2026-08-01 — field evidence from the Windows `/task` trials; Q2/Q4 settled; new Q5 (`preferred` pin-vs-ordering) and Q6 (one-shot preflight query origin).
+**Revised:** 2026-08-01 (review pass) — Q1/Q3/Q5/Q6 written in; added §5 (grant resolution order — where `enrichment` derives), the `preferred`/`strict` scoped tuple, `oneshot_enrichment` as a key distinct from `oneshot_grounding`, and the static-vs-call-time scope of grant-time validation.
+**Revised:** 2026-08-01 (design pass) — §4 oneshot enrichment changed from server-side preflight to **model-triggered search reusing the task-tier tool loop** (`chat_with_tools` + `ScopedToolManager`, `{web_search}`-only grant, bounded iterations); Q6's query-origin cluster dissolved by it. §6 added: target config shape (operator-review outcome — config must stop growing as per-code-path patchwork).
+**Accepted:** 2026-08-01 — all six sign-off questions settled (see §"Sign-off"); implementation may proceed.
+**Status:** Accepted
 **Related:**
 - [`0003-agent-platform-architecture.md`](0003-agent-platform-architecture.md) — the `/v1/agent/task` tier + per-run `ScopedToolManager` grant enforcement this builds on
 - [`0004-llm-gateway-features.md`](0004-llm-gateway-features.md) — the stateless `/v1/oneshot` tier that shares the "context-blind local LLM" problem
 - `ppxai/engine/agent_spec.py::AgentSpec` — the existing per-run profile primitive (`{task, system, tools, provider, model, budget, network, read_paths}`), loaded from `sandbox.specs_dir`, merged `request > spec > default`
 - `ppxai/server/routes/agent_v1.py::_with_task_default_allow` (L758-768) — the ONLY config-driven egress-baseline mechanism today; wired for `web_search` only
 - `ppxai/engine/tools/network_policy.py` — the AC-2 egress superset; `get_weather` targets are a hardcoded literal (Item 52)
+- `ppxai/engine/tools/builtin/web_premium.py::get_premium_search_provider` (L34) — the **provider-aware** backend resolver used at call time
+- `ppxai/engine/tools/network_policy.py::pinned_web_search_backend` (L213) — the **global-only** resolver the egress set is narrowed by; the disagreement between the two is Problem 4
 - Debt inventory: **Item 52** (get_weather config-parity gap — subsumed by this ADR) and **Item 53** (this ADR's tracking entry)
 - `../ppxai-sre/docs/PPXAI-INTEGRATION-V1.19.md` — primary Stage-2 consumer; §"Consumer alignment" below verifies this ADR respects its ownership boundaries (SRE owns dynamic tier policy A2; ppxai owns the primitives)
 
@@ -56,9 +62,60 @@ earned the config surface `get_weather` never got — and why a profile system
 should treat "enable enrichment" as a first-class, opt-in profile property, not
 a tool an operator must remember to hand-grant every time.
 
+### Problem 4 — `preferred` is a hard pin, not an ordering, and two resolvers disagree about it
+
+`tools.web_search.preferred` reads like "try this backend first, then fall back."
+It is implemented as **use only this backend, never fall back**: when a pin is
+active, `web_search_premium` forbids cross-backend fallback and returns an error
+instead (`web_premium.py` L270-278, L304-309). So setting `preferred` to any
+concrete backend kills the perplexity→gemini→DDG chain **in the live interactive
+session too**, not merely under a sandbox. The session-parity baseline this ADR
+treats as the reference behavior therefore holds only while `preferred` is
+`"auto"` — the default. That name/behavior mismatch is the user-facing half of
+the problem.
+
+The mechanical half: the two resolvers do not agree on what the pin is.
+`get_premium_search_provider(provider_name)` (`web_premium.py` L34) resolves
+**provider-aware** — per-provider override, then global, then auto-detect.
+`pinned_web_search_backend()` (`network_policy.py` L213) takes **no provider
+argument** and reads only the global key. A per-provider override therefore
+selects one backend while the egress set is narrowed to a different one
+(`network_policy.py` L322-325).
+
+That divergence is security-relevant, not merely cosmetic, because
+`NetworkPolicy.authorize` pre-checks the **static** target set from
+`tool_targets()` and never inspects the URL actually requested
+(`network_policy.py` L430-435). Under a divergent pin, both directions are live
+depending on the run's `allow_outbound`:
+
+- the run allowlists the **pinned** host, `authorize` passes, and the request
+  goes to the **other** backend's host — the run's egress allowlist is bypassed,
+  which is precisely the confused-deputy case the superset rule exists to
+  prevent; or
+- the run allowlists the host actually needed but not the pinned one, and a
+  legitimate call takes a false `network_policy_denied`.
+
+Neither fires today: global `preferred` is `"auto"` → no pin → full superset.
+A per-provider override is already present in real configs
+(`providers.openai.web_search.preferred`), so a single global-config change arms
+it. There is a fail-safe precedent to build on: a backend pinned *without its
+API key* is already treated as no pin at all — "never narrow egress on a config
+that can't take effect" (`network_policy.py` L179-187). A pin contradicted by a
+per-provider override is the same class of dead config.
+
+**Sign-off Q5 settles the pin's semantics, and the divergence fix follows from
+it:** `preferred` becomes an **ordering**, with narrowing available only via an
+explicit `strict: true`. The alternative — making `pinned_web_search_backend()
+provider-aware while *preserving* hard-pin semantics — would have made the two
+resolvers agree, but by ratifying the "only, never fall back" reading that is the
+opposite of the session parity Problems 1-3 ask for. Under the settled ordering
+semantics the divergence largely dissolves by construction: with no `strict`
+flag there is no narrowing to disagree about, and the shared resolver (see
+"Requires", below) is what keeps the two call sites in agreement when there is.
+
 ---
 
-## Decision (PROPOSED)
+## Decision
 
 Introduce **task execution profiles**: named, config-driven, reusable grants
 that reuse the `AgentSpec` shape, with per-tool egress baselines and a
@@ -106,7 +163,244 @@ egress baseline, so the context-blind-local-LLM case is solved *by construction*
 for that profile. Crucially it is **per-profile and opt-in**: a locked-down
 tenant profile sets `enrichment: false` and gets no egress widening. This keeps
 the AC-2 confused-deputy protection intact — enrichment is a deliberate
-declaration, not a global on-switch.
+declaration, not a global on-switch. Opt-in is at the **profile** level, so a
+config-designated default profile still spares the operator from re-declaring it
+per run; that is the ergonomic ask, and it does not require a global switch.
+
+**Scope is `web_search` only — explicitly NOT `fetch_url`.** `web_search`'s
+egress is a fixed, known host set (Perplexity / Gemini / DuckDuckGo); the model
+chooses the *query*, never the *target*. `fetch_url` takes an
+attacker-influencable arbitrary host and would forfeit that property, along with
+the safety argument for §4 below. Enrichment also carries **no provider
+routing**: it does not steer a run toward a search-native provider. Provider and
+model are already independently selectable per run (`--provider` / `--model`) and
+by config (`tools.agent.default_subagent.{provider,model}`), and conflating the
+two would make an egress grant silently change which model answers.
+
+**The enrichment egress baseline is the full backend superset, not one backend
+— unless `strict: true`.** Session parity *is* the fallback chain, so the honest
+egress set for an enriched run is every host the chain can reach — the same
+superset `tool_targets()` returns in `"auto"` mode. Narrowing it to a single
+backend does not harden the run; it disables the chain (Problem 4).
+
+The one sanctioned narrowing is Q5's `strict: true`, and it composes rather than
+conflicts: **`strict: true` narrows the enrichment baseline to the pinned
+backend's hosts, and enrichment remains satisfied so long as that backend is
+usable.** An operator setting `strict` has already accepted "this backend or
+nothing"; enrichment does not override that choice, it inherits it. Two
+consequences must be documented rather than discovered: the run loses the
+fallback chain, so a single backend outage returns it to closed-book; and the
+existing "a backend pinned without its API key is no pin at all" fail-safe
+(`network_policy.py` L179-187) is what keeps a dead `strict` pin from silently
+starving enrichment. `/doctor` should warn on `strict: true` + `enrichment:
+true` for exactly that reason. `strict` is therefore **compatible** with
+enrichment — it is not a grant-time error.
+
+### 4. `/v1/oneshot` enrichment — model-triggered search via a scoped slice of the task-tier loop
+
+Oneshot is where the closed-book problem bites hardest: a custom or local model
+with a fixed cutoff, no tools and no grounding produces confidently wrong
+answers, which makes the tier near-useless as a sub-agent for fact-dependent
+work.
+
+**One-shot enrichment is model-triggered search: `web_search` — and ONLY
+`web_search` — is exposed to the model through the SAME bounded tool loop the
+`/task` tier already runs, with a low iteration cap.** The model decides, per
+prompt and mid-inference, whether it lacks the information to answer — exactly
+the semantics of Perplexity Sonar and Gemini grounding, where the provider's
+LLM triggers search when the request needs it. A prompt that doesn't need facts
+takes a single round-trip with zero tool calls, indistinguishable from today; a
+prompt that semantically asks for more than the model knows triggers a
+model-formulated search, then the answer.
+
+An earlier draft of this section specified a **server-side preflight** (search
+before the model call, inject results into the prompt). Rejected on review: the
+server cannot know whether a given prompt needs search — only the model can —
+so a preflight is structurally either always-search (paying latency, cost and
+disclosure on prompts that never needed it) or a server-side heuristic guessing
+at the model's knowledge gaps. It also spawned its own question cluster (query
+origin, verbatim-prompt disclosure guards, always-vs-conditional) that the
+model-triggered design dissolves: **the model writes its own search query**, so
+no caller `query` field, no verbatim-prompt fallback, no disclosure of anything
+but the model-chosen query, and no search-trigger heuristic. The request schema
+needs nothing added; the response gains one optional field (see "Wire
+contract" below).
+
+**Structural reuse, not new machinery.** The `/task` tier already executes runs
+via `chat_with_tools` through a per-run `ScopedToolManager` (`agent_v1.py`
+L787) — a bounded tool loop with grant enforcement (AC-1), egress enforcement
+(AC-2, `NetworkPolicy`), and budgets, running server-side outside any
+interactive session (`agent_runs.py` is the construction precedent). Enriched
+oneshot is that same loop with a grant of exactly `{web_search}`, egress = the
+§3 enrichment baseline, and a small iteration cap — a scoped slice of existing
+gears, not a second tool-execution path. When the first oneshot implementation
+shipped (ADR 0004), this machinery did not exist; now that it does, reusing it
+is the structural choice, and the search calls run under the same
+`NetworkPolicy.authorize` and emit the same audit events as every other tool
+call.
+
+This does mean ADR 0004's "no tool loop in oneshot" purity is **explicitly
+revised** rather than preserved. What is preserved is the property that
+mattered underneath it: **the perimeter.** Only `web_search` is callable — a
+tool whose egress is a fixed, known host set where the model chooses the
+*query*, never the *target* (§3) — no filesystem, no shell, no
+attacker-influencable destination. The tier stays stateless (no run registry
+entry, no durable state); "oneshot" means one request/one response, not
+one model call.
+
+**Its config key is `tools.web_search.oneshot_enrichment`, default off — a new
+key, deliberately NOT a reuse of `oneshot_grounding`.** The existing
+`tools.web_search.oneshot_grounding` (`oneshot.py` L130-146) turns on the
+**provider's own** native search; this one exposes the **`web_search` fallback
+chain to the model**. Different mechanism, cost, and egress profile — an
+operator reading one key name must not have to guess which they enabled. (§6
+below sets the target config shape so this does not extend the patchwork.)
+
+**Gating — decided per request on EFFECTIVE native grounding, not provider
+capability alone.** A provider "takes the native path" only when native
+grounding is actually on (`oneshot_grounding: true` AND the provider is
+search-capable) — capability with the switch off is not grounding, and today's
+code deliberately disables Gemini chat-grounding in that case (`oneshot.py`
+L261-268, the default-OFF guarantee). The full truth table:
+
+| `oneshot_grounding` | `oneshot_enrichment` | native-capable | tool-calling | Result |
+|---|---|---|---|---|
+| on | any | yes | any | **native grounding** (loop never runs — never both) |
+| on | off | no | any | closed-book (grounding key can't help a non-native provider) |
+| off | on | any | yes | **search loop** — including a native-capable provider whose operator left native off: enrichment is an explicit opt-in and does not silently re-enable the path the operator declined |
+| off | on | any | no | closed-book, **reported** (see below) |
+| off | off | any | any | closed-book — today's behavior, byte-identical |
+
+- **Tool-calling capable** means the model can emit tool calls (local vLLM with
+  hermes/harmony parsers qualifies — the primary closed-book case this exists
+  for). A model that qualifies for no row's search path stays closed-book
+  *honestly* — that is a model limitation, not a harness gap, and silently
+  degrading to a server-guessed preflight would reintroduce everything this
+  design rejected. `/doctor` reports the effective grounding path per
+  configured model, since "which grounding am I getting" must not require
+  reading code.
+
+**Wire contract — request unchanged; response gains ONE optional field.**
+`OneshotResponse` today is `{content, finish_reason, model, provider, usage}`
+(`oneshot.py` L117-122) — there is no metadata channel, no event stream, and no
+run-registry entry on this tier, so "surface it in events" is not implementable
+here and a log-only sink would make grounded and ungrounded answers
+indistinguishable to the caller. The contract is therefore an **optional
+`grounding` response field**, additive and semver-minor, absent whenever
+enrichment is off (existing consumers see byte-identical responses):
+
+```jsonc
+"grounding": {                    // present only on enriched requests
+  "searched": true,               // false = model chose not to search
+  "queries": ["..."],             // model-formulated queries actually sent
+  "backend": "perplexity",        // chain backend that answered
+  "search_cost": 0.005            // premium-search cost, USD (0 for DDG)
+}
+```
+
+**Accounting.** The loop's extra model round-trips are real prompt/completion
+tokens and land in the existing `usage` field — no schema change there.
+Premium-search cost is tracked by the existing `web_premium` machinery
+(`calculate_tool_cost` / `get_last_tool_usage`) and reported in
+`grounding.search_cost`; it also feeds the cross-tier accounting ADR 0008
+defines, so enriched-oneshot spend is not invisible to `/cost`. Search-backend
+errors do not fail the request: the loop surfaces the tool error to the model,
+which answers with what it has — `searched: true` with the failure noted in
+the audit log.
+
+**Other observable changes warranting a consumer heads-up:** latency and search
+cost when (and only when) the model searches; **prompt contents** (retrieved
+text enters the context the model answers from); **disclosure** limited to the
+model-formulated query leaving to the search backend.
+
+**What "safe" means here, precisely.** Host- and filesystem-safe, **not**
+injection-proof. A prompt injection cannot modify the host, touch a file, or
+steer egress to an attacker-chosen destination — the only callable capability
+has a fixed target set. It can still (a) influence the answer text, since
+retrieved content enters the context, and (b) influence what the model puts in
+its search query. Both are inherent to grounding of any kind, including the
+native path already shipped, and both argue for default-off rather than against
+the capability.
+
+### 5. Grant resolution order — where `enrichment` derives
+
+`enrichment` is a **derived** grant: it adds `web_search` and its egress rather
+than being written out by the operator. The draft never said *when* in
+resolution that derivation happens, and two settled answers contradict each
+other until it does — Q1 guarantees a narrower layer can remove a tool, while §3
+auto-grants one. The resolution order is therefore normative:
+
+1. **Resolve every declared field through the precedence chain** (request > spec
+   > profile > `default_subagent` > built-in default), with list-valued fields
+   replacing per Q1. `enrichment` resolves here too, as an ordinary **scalar**
+   field — exactly like `provider` and `model`.
+2. **Then derive, once, from the resolved values.** If effective `enrichment` is
+   true, add `web_search` and its egress baseline (superset, or the pinned
+   backend's hosts under `strict`) to the effective grant.
+3. **Then apply the Q3 ceiling intersection**, and fail fast per Q3 if it leaves
+   an enriched run without a usable backend.
+
+**When "grant time" is, precisely — two validation stages, matching the task
+lifecycle as built.** The route today starts the run and validates the grant
+inside the background execution (`agent_v1.py` L1094 — deliberately, per
+Item 50: tool *existence* is only checkable once a live engine has registered
+its tools). So "fail fast" splits:
+
+- **Pre-start (HTTP 4xx, no run created):** everything resolvable from config
+  and the request alone — unknown profile name, the §5 contradiction cases, the
+  Q3 ceiling-vs-enrichment check. These need no tool registry, so deferring
+  them to an async run failure would be gratuitous.
+- **Pre-execution (run created, fails before any model call):** checks that
+  need the live registry — tool existence (Item 50) stays where it is. This is
+  "fail before execution", not an HTTP error, and the run's failure event names
+  the cause.
+
+Derivation after resolution, never per layer. Two rules follow, and they are the
+answer to "does a narrower `tools` list re-add `web_search`?":
+
+- **To narrow enrichment, set `enrichment: false`** — that is the field designed
+  for it. A spec composing over an enriched profile disables the derived grant
+  by saying so, which keeps Q1's "a narrower layer can remove a tool" property
+  intact *through the field that expresses it*, not by omission.
+- **Omission is not denial, but contradiction is an error.** If a layer at or
+  more specific than the one declaring `enrichment: true` states an explicit
+  `tools` list that omits `web_search`, the two fields disagree about the same
+  run. **Fail fast at grant time**, naming both layers — do not silently pick a
+  winner. This is the Q3 rule applied to a second unsatisfiable configuration:
+  an operator who wrote both meant one of them, and guessing reproduces the
+  silent-closed-book failure in a new place.
+
+### 6. Config placement — this ADR's keys must not extend the patchwork
+
+The config has grown organically, key-by-key, tracking code execution paths:
+each new tier taught `tools.web_search` a new switch (`task_default_allow`,
+`oneshot_grounding`, now `oneshot_enrichment`), and the whole execution tier
+lives under `tools.agent.*` because it historically grew out of the
+`spawn_subagent` tool. Operator-visible result: three keys on one tool block
+that answer three different questions ("which backend?", "what egress on
+/task?", "may oneshot ground?"), and an "agent" that is not a tool configured
+as one. The full reorganization is **ADR 0010** (config-shape review, separate
+sign-off); this section only pins where THIS ADR's new keys land so they don't
+deepen the problem while 0010 is pending:
+
+- **Tool-intrinsic keys stay on the tool block:** `tools.web_search.preferred`
+  + `strict` (the Q5 scoped tuple — how the tool picks backends, regardless of
+  tier), backend model choices, and per-tool `task_default_allow` (§2 — the
+  hosts a *tool* needs are a property of the tool). **`task_default_allow` is
+  the provisional name:** ADR 0010 renames it `tools.<tool>.egress` (same
+  semantics, honest name — the hosts are not task-tier-specific), via 0010's
+  dual-read window. New code should be written so the rename is a key-string
+  change, not a logic change.
+- **Execution-tier keys land under the agent/execution block, not on tools:**
+  `profiles.*` (§1), `egress_ceiling` (Q3), and the oneshot enrichment switch —
+  which is a *tier* behavior ("may this tier expose search to the model"), not
+  a search-tool property. Named `tools.web_search.oneshot_enrichment` in §4 for
+  discoverability next to `oneshot_grounding` today; **if ADR 0010 lands before
+  implementation, both keys move to the tier block together** and §4's name is
+  read as provisional.
+- **Override axes follow the Q5 rule everywhere:** where a key is overridable
+  per provider/model, the override is a **scoped tuple** (scope chosen once,
+  related fields read together), never independent per-field fallback.
 
 ### Options considered
 
@@ -141,12 +435,24 @@ compete.
   reusable-grant gap).
 - A tenant needs a locked-down, no-egress task profile (the opt-in-enrichment
   requirement).
+- **FIRED (Windows `/task` trials, 2026-07):** a local-LLM `/task` run, denied
+  search, **produced a `execute_shell_command` + `curl` request for network
+  access**. It failed closed as designed (`SHELL_TOOL_NAMES` is refused at grant
+  time and again whenever an egress policy is active). The behavior is the
+  finding: an under-granted local model does not degrade quietly, it reaches for
+  the boundary under prompt pressure. **This is evidence of capability starvation,
+  NOT an argument for granting shell.** The correct response is legitimate
+  `web_search` enrichment plus continued, unambiguous denial of shell — widening
+  the grant to shell would trade a correctness problem for a containment
+  failure. (Recorded from the operator's report; whether the model emitted a
+  refused tool call or only proposed `curl` in text is not established from the
+  trial transcript, and the evidence does not depend on which.)
 
 ---
 
 ## Consequences
 
-**If Option A is chosen:**
+**Implementation requirements (Option A, accepted):**
 - Enables: named reusable grants; one config-driven egress mechanism for ALL
   tools (retires Item 52's weather-specific path); enrichment solved by
   construction for local LLMs; per-profile security posture.
@@ -154,8 +460,69 @@ compete.
   `task_default_allow` read in `_with_task_default_allow`; precedence rules
   (request > spec > profile > default) documented + sentinel-tested; the
   `http://wttr.in` scheme-poison removal.
+- Requires (from Problem 4 / Q5): a single shared backend resolver (leaf module,
+  imported at top level by both `web_premium` and `network_policy`) returning a
+  **structured result**: the **scope the answer came from** (which provider
+  block, or global — the field that makes the Q5 tuple auditable), the **ordered
+  backend candidates**, the **effective strictness**, and the **effective egress
+  host set**. Both consumers read one answer instead of each inspecting global
+  config and environment independently — which is what lets a reviewer or a
+  `/doctor` check see *why* a backend was chosen, and is the structural reason
+  the global-vs-provider divergence cannot quietly return. This also retires the
+  undocumented function-local import at `web_premium.py` L277.
+- Requires: provider/tier context threaded into egress resolution —
+  `tool_targets()`, `NetworkPolicy.authorize()` and `ScopedToolManager.__init__`
+  all gain it (verified: the manager has no provider today,
+  `agent_scoped_tools.py` L69-77; the constructing route does, `agent_v1.py`
+  L349-374 / L1088-1092).
+- Requires: tests for the currently-missing case that exposes the bug — **global
+  preference plus a conflicting per-provider override**, asserting the enumerated
+  egress set and the host actually contacted agree. Extends
+  `tests/test_web_search_task_config.py`.
+- Requires (from Q1): **replace-not-union** semantics for `tools` and
+  `network.allow_outbound` in `spec_from_mapping`'s layer merge, with a sentinel
+  test asserting a narrower layer can actually *remove* a tool and a host —
+  the property that silently inverts if anyone "fixes" the merge to union later.
+- Requires (**blocker**, from §3/§5): **`enrichment` must be added to the
+  `AgentSpec` shape.** It is not there today — `_SPEC_FIELDS` is a frozenset of
+  exactly `{task, system, tools, provider, model, budget, network, read_paths}`
+  (`agent_spec.py` L38-39), and `spec_from_mapping` **drops unknown keys with a
+  warning** (`agent_spec.py` L110-112). So a profile written per §1 today
+  resolves to a grant with no `web_search` and an `ignored unknown spec keys:
+  ['enrichment']` line buried in `spec.warnings` — the silent closed-book failure
+  of Problem 3, arriving through the very feature meant to fix it. The field must
+  land in `_SPEC_FIELDS`, in normalization (scalar, tri-state:
+  true / false / absent-means-inherit), and in the §5 resolution order.
+- Requires (from §5): the derivation step implemented **after** precedence
+  resolution, not per layer, plus grant-time errors for the two contradiction
+  cases — an explicit `tools` list omitting `web_search` under effective
+  `enrichment: true`, and Q3's ceiling leaving an enriched run backend-less.
+- Requires (from Q3): a `tools.agent.egress_ceiling` config key; intersection
+  applied where the run's effective allowlist is assembled; unset = no cap; and a
+  **grant-time hard failure** when the intersection leaves an `enrichment: true`
+  profile without the backend superset, with an error naming the stripped hosts.
+- Requires (from Q5): a `tools.web_search.strict` key resolved as a **scoped
+  tuple with `preferred`** (scope selected once, both fields read from it;
+  defaults `"auto"` / `false`), never by independent per-field fallback; a
+  precedence-matrix test over provider / global / mixed / neither; `/doctor`
+  checks for (a) a concrete `preferred` without `strict` — the upgrade behavior
+  change, (b) a per-provider `strict` with no per-provider `preferred` — a dead
+  key, and (c) `strict: true` together with `enrichment: true` — legal, but it
+  costs the fallback chain; and a release-note callout for the
+  egress-widens-on-upgrade change.
+- Requires (from §4/Q6): the enriched-oneshot execution path — reuse
+  `chat_with_tools` + a `ScopedToolManager` granting exactly `{web_search}`
+  (construction pattern per `agent_runs.py`), small iteration cap, egress = the
+  §3 enrichment baseline, enforced by the same `NetworkPolicy`; **request
+  unchanged, response gains the optional `grounding` field** (§4 "Wire
+  contract") carrying searched/queries/backend/search_cost; loop tokens land in
+  the existing `usage`; search cost feeds ADR 0008 accounting. Gated per the §4
+  truth table on **effective** native grounding (not capability) AND per-model
+  tool-calling; a single request never takes both grounding paths. A `/doctor`
+  line reports the effective grounding path per configured model; sentinel
+  tests cover every truth-table row.
 
-**Until decided (current state):**
+**Current pre-implementation state (what ships today, until the above lands):**
 - `web_search` is the only tool with config-driven egress; `get_weather` is
   unallowlistable on sealed local `/task` (Item 52 held pending this design).
 - No named reusable profiles; grants are hand-assembled per run.
@@ -194,10 +561,27 @@ Therefore this ADR's scope is deliberately bounded:
   *grant-time* default (adds `web_search` + its egress to the run's allowlist),
   not a *call-time* decision — it never pre-empts or replaces the consent
   contract / A2 policy callable.
-- The `enrichment` opt-in and per-profile egress ceiling (open question 3) must
-  compose UNDER a deployment policy hook, not above it: a profile may not widen
-  egress beyond what an SRE-registered policy (A2) or a deployment ceiling
-  permits. Profiles propose a grant; policy disposes.
+- The `enrichment` opt-in and the deployment egress ceiling
+  (`tools.agent.egress_ceiling`, Q3) must compose UNDER a deployment policy hook,
+  not above it: a profile may not widen egress beyond what an SRE-registered
+  policy (A2) or the ceiling permits. Profiles propose a grant; policy disposes.
+  The ceiling is config-only and intersective, so it cannot be raised by a run —
+  which is what makes "propose, don't dispose" mechanical rather than a
+  convention.
+- **The Q3/§5 grant-time fail-fast is scoped to STATIC configuration, and does
+  not claim call-time authority.** It validates the resolved grant against
+  config the server can see before the run starts — the ceiling, the profile,
+  the spec. It cannot pre-validate an A2 policy callable, which decides *per
+  call* and may legitimately deny a backend the grant allowed. So the guarantee
+  is precisely: **a run never starts half-enriched because of static
+  configuration.** A run may still lose enrichment mid-flight to a policy denial,
+  and that is correct — policy retains final say, and a grant-time check that
+  tried to pre-empt it would be the call-time policy engine this ADR promises not
+  to become. The two mechanisms are ordered, not competing: static validation
+  first, dynamic policy always after. A mid-run policy denial of an enriched
+  run's only backend should surface as the existing
+  `NETWORK_POLICY_DENIED` event (C1) — no new contract — so the operator can tell
+  a policy denial from a misconfiguration.
 - Per-tool `task_default_allow` emits the SAME `NETWORK_POLICY_ALLOWED/DENIED`
   events (C1) already committed — profiles change what's in the allowlist, not
   how enforcement or audit is surfaced. No new event type, no internal tap.
@@ -208,20 +592,116 @@ contract (C1/A1), and the dynamic tier-classification hook (A2) that ppxai-sre
 owns. If any future revision moves profiles toward *call-time* policy, that is a
 conflict with A2 and must be re-litigated with the SRE boundary in view.
 
-## Open questions for sign-off
+## Sign-off
 
-1. **Precedence** — is `request > spec > profile > default_subagent` the right
-   order? (Should an explicit `--profile` override a `--spec`, or compose under
-   it?)
-2. **`enrichment` scope** — does it grant only `web_search`, or also
-   `fetch_url`/citations? Does it imply a provider preference (route to a
-   search-native provider when available)?
-3. **Egress trust / ceiling** — `task_default_allow` is operator-trusted config.
-   A profile's `network` MUST be capped by a deployment-level ceiling (and,
-   where present, an SRE-registered policy per A2) so a profile can't widen
-   egress beyond what the deployment globally permits — profiles propose, policy
-   disposes (see §"Consumer alignment"). What is the ceiling's shape — a
-   `tools.agent.egress_ceiling` allowlist the profile union is intersected with?
-4. **`/v1/oneshot`** — oneshot is stateless (no tools today). Does the
-   enrichment idea extend to it (provider-native grounding toggle), or is this
-   `/task`-only?
+### Settled (2026-08-01)
+
+1. **Precedence** — **the draft order stands: `request > spec > profile >
+   default_subagent > built-in default`.** A `--spec` file is authored for one
+   run; a profile is a standing, curated grant — so the spec is the more specific
+   layer and correctly outranks the profile.
+
+   **Merge semantics for list-valued fields (the part the draft left unstated):
+   `tools` and `network.allow_outbound` REPLACE, they do not union.** A more
+   specific layer that supplies the field supplies all of it. If lists unioned, a
+   grant could only ever grow and **narrowing would be inexpressible** — a spec
+   could never take a tool or a host away from the profile it composes over. That
+   is the wrong default for a security surface. (Layers that omit a field inherit
+   it unchanged; replacement applies only where a layer states the field.)
+2. **`enrichment` scope** — `web_search` **only**; not `fetch_url` (arbitrary
+   host forfeits the fixed-target property §3/§4 rest on), and **no** implied
+   provider preference: provider/model are already selectable per run and by
+   config, and coupling them to an egress grant would let a tool grant silently
+   change which model answers.
+3. **Egress trust / ceiling** — **`tools.agent.egress_ceiling`, config-only,
+   intersective.**
+   - **Config-only, never per-run** — a run that could state its own ceiling
+     could raise it, which is not a ceiling.
+   - **Effective allowlist = intersection** of the resolved profile/spec/request
+     egress union with the ceiling.
+   - **Unset = no cap**, for back-compat with every deployment that has no
+     ceiling today.
+
+   **The sharp edge — what happens when the intersection strips a host an
+   `enrichment: true` profile needs: fail fast at grant time with an explicit
+   error** — pre-start, HTTP 4xx, no run created; this check is
+   config-resolvable, unlike the registry-dependent checks §5's two-stage
+   validation keeps pre-execution. Do not start the run half-enriched. A degraded-but-running enriched
+   profile reproduces precisely the closed-book failure this ADR exists to fix
+   (Problem 3), except now silent and harder to diagnose — the operator declared
+   enrichment, the run reports success, and the answer is unknowingly
+   ungrounded. An unsatisfiable enrichment grant is a **configuration error**,
+   and it should read as one. This also discharges the §3 floor-vs-ceiling note:
+   the floor is not quietly lowered to fit the ceiling; the conflict surfaces.
+4. **`/v1/oneshot`** — **yes**, enrichment extends to oneshot: `web_search` only,
+   model-triggered through a scoped slice of the task-tier tool loop (revised
+   from the earlier preflight draft — see §4), its own config key, default off.
+   See §4 for the perimeter argument and the observable-behavior cost.
+5. **`preferred` — pin or ordering?** — **(b): ordering, plus explicit
+   strictness.** `preferred` becomes first-choice-then-fall-back;
+   `tools.web_search.strict: true` preserves today's narrowing for operators who
+   want it. Chosen over a separate `backend_lock` key because a second key naming
+   a second backend can contradict `preferred` and would need a third precedence
+   rule; a boolean modifier cannot.
+
+   **`preferred` and `strict` resolve together, as one scoped tuple — never as
+   two independently-inherited fields.** Resolution selects a *scope* first, then
+   reads both fields from it:
+
+   - if the provider block states `preferred`, the scope is **that provider
+     block** — `strict` is read from it too, defaulting to `false` when absent;
+   - otherwise the scope is the **global** `tools.web_search` block, and both
+     fields are read from there;
+   - defaults when neither states them: `preferred: "auto"`, `strict: false`.
+
+   The failure this forecloses: a per-provider `preferred` inheriting a global
+   `strict: true` it was never meant to be locked by — Problem 4 reproduced one
+   layer up, with the same divergence between what the resolver picks and what
+   egress is narrowed to. Independent per-field fallback is what creates it, so
+   the tuple is the fix, not a convention. **A per-provider `strict` without a
+   per-provider `preferred` is a dead key** — it is out of scope by construction,
+   and `/doctor` should flag it rather than let it look effective.
+
+   Requires a **precedence-matrix test** over provider-level / global-level /
+   mixed / neither, asserting the selected backend, the strictness actually
+   applied, and the enumerated egress set all come from the same scope.
+
+   Rejected: **(a) ordering with no strictness at all** — same divergence fix,
+   but operators lose the ability to narrow `web_search` egress to one backend
+   entirely. **(c) keep the hard pin, make it provider-aware** — minimal change
+   and it does fix the AC-2 divergence, but it ratifies `preferred` meaning
+   "only", leaving the session-parity semantics broken, which is the complaint
+   that prompted this revision.
+
+   **Migration note:** a deployment that today sets `preferred` to a concrete
+   backend gets hard-pin narrowing as a side effect. Under (b) that behavior now
+   requires adding `strict: true`; without it, **egress widens to the superset on
+   upgrade**. This is a behavior change for existing configs and needs a
+   release-note callout and a `/doctor` check.
+6. **One-shot enrichment — who decides to search, and where does the query come
+   from?** — **the model, in both cases** (§4, revised from the preflight
+   design).
+
+   The question as originally posed — caller `query` field vs. verbatim prompt
+   vs. extraction call — belonged to the rejected preflight, where the server
+   had to guess. Under model-triggered search the model decides *whether* to
+   search per prompt (native-grounding parity: search-free prompts stay a
+   single round-trip) and *formulates its own query* — the same as every
+   interactive-session search today. That dissolves the sub-questions rather
+   than answering them: no wire addition, no verbatim-prompt disclosure (only
+   the model-chosen query leaves the host), no length-cap/redaction machinery,
+   no always-vs-conditional heuristic to own.
+
+   What replaces them is one implementation-owned obligation:
+   - **Observability:** the optional `grounding` response field (§4 "Wire
+     contract") — searched-or-not, the model's queries, backend, and search
+     cost — so a caller can tell a grounded answer from an ungrounded one.
+     Additive/semver-minor; absent when enrichment is off. Documented in
+     `docs/api-gateway.md`.
+   - The **iteration cap** for the search loop is an implementation constant
+     (small; it bounds cost, not capability — one or two searches answer a
+     fact-dependent prompt).
+
+### Open
+
+None — all six settled 2026-08-01. Implementation may proceed.
