@@ -395,6 +395,13 @@ def load_config() -> Dict[str, Any]:
             # override; ConfigStore.config['file_tree'] was None because
             # load_config returned a dict without that key.
             "file_tree": json_config.get("file_tree", {}),
+            # ADR 0010/0011 third config axis (v1.19.1 F2/F3). Same trap as
+            # file_tree above: this return dict is a WHITELIST — a new
+            # top-level JSON key that isn't plumbed through here is silently
+            # invisible to every reader. Caught live-trialing F3: the
+            # execution.run block parsed fine but get_config() never saw it,
+            # and the dual-read fallback masked the drop.
+            "execution": json_config.get("execution", {}),
         }
 
     else:

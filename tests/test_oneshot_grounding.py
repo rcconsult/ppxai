@@ -99,6 +99,28 @@ class TestExecutionRunConfig:
                 "web_search": False, "grounding": False,
             }
 
+    def test_loader_passes_execution_block_through(self, tmp_path, monkeypatch):
+        """REGRESSION (caught live in the F3 trial): load_config()'s return
+        dict is a top-level WHITELIST. The execution block parsed fine in the
+        JSON but never reached get_config() — and the grounding dual-read
+        fallback masked the drop, so only a loader-level test can catch it.
+        Same trap as file_tree (v1.18.7) and the get_agent_config whitelist
+        (spawn_consent). No get_config mocking here — the real loader runs."""
+        import json as _json
+
+        from ppxai.config.loader import load_config
+
+        cfg_file = tmp_path / "cfg.json"
+        cfg_file.write_text(_json.dumps({
+            "providers": {},
+            "execution": {"run": {"web_search": True, "grounding": False}},
+        }), encoding="utf-8")
+        monkeypatch.setenv("PPXAI_CONFIG_FILE", str(cfg_file))
+        loaded = load_config()
+        assert loaded["execution"] == {
+            "run": {"web_search": True, "grounding": False}
+        }
+
 
 class TestEffectivePath:
     """The ADR 0009 §4 gating truth table (F2: computed + logged only)."""

@@ -45,7 +45,7 @@ Implementation notes:
 import asyncio
 from typing import Any, Dict, Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from ...common.logger import get_logger
@@ -115,12 +115,28 @@ class OneshotUsage(BaseModel):
     total_tokens: int = 0
 
 
+class OneshotGrounding(BaseModel):
+    """Present ONLY when the request was served by the enriched search-loop
+    path (ADR 0009 §4, F3 facade). Absent → byte-identical legacy response.
+
+    `run_id` is the debug handle: the enriched oneshot executed as a real
+    `kind=oneshot` registry run, so `~/.ppxai/runs/<run_id>/` holds its meta
+    + event log and the run inspection surfaces work on it. F4 adds
+    `queries`/`backend`/`search_cost`."""
+
+    searched: bool = False
+    run_id: Optional[str] = None
+
+
 class OneshotResponse(BaseModel):
     content: str
     finish_reason: Optional[str] = None
     model: str
     provider: str
     usage: Optional[OneshotUsage] = None
+    # ADR 0009 §4 wire contract: optional, additive — absent when the
+    # enrichment path is off (the shipped consumers see no change).
+    grounding: Optional[OneshotGrounding] = None
 
 
 # ---------------------------------------------------------------------------
@@ -215,6 +231,136 @@ def _oneshot_effective_path(provider_name: str, model: str) -> str:
     if _oneshot_enrichment_enabled() and _tool_calling_capable(provider_name, model):
         return "search-loop"
     return "closed-book"
+
+
+# ---------------------------------------------------------------------------
+# Enriched oneshot — the F3 facade over the run tier (ADR 0009 step ①)
+# ---------------------------------------------------------------------------
+
+# Small §4 iteration cap: enough for search → answer, not an agent budget.
+ONESHOT_SEARCH_ITERATIONS = 2
+# Bound the synchronous wait; on expiry the run is cooperatively cancelled
+# and the 504 carries the run id (the run record keeps whatever happened).
+ONESHOT_SEARCH_TIMEOUT_S = 180.0
+
+
+def _web_search_egress_hosts() -> list:
+    """The bare HOSTNAMES of web_search's backend superset, for the run's
+    allowlist. `_WEB_SEARCH_ALL_HOSTS` entries are URLs (that's the shape
+    `tool_targets` compares against), but `NetworkPolicy` allowlist rules
+    take bare hosts — passing the URLs verbatim silently matches nothing
+    (fail-closed deny; caught live in the F3 trial via the run's own
+    network_policy_denied event). Step ② swaps the source to
+    `tools.web_search.egress` with the same host shape."""
+    from urllib.parse import urlparse
+
+    from ...engine.tools.network_policy import _WEB_SEARCH_ALL_HOSTS
+
+    return sorted({
+        urlparse(u).netloc for u in _WEB_SEARCH_ALL_HOSTS if urlparse(u).netloc
+    })
+
+
+def _run_used_web_search(registry, run_id: str) -> bool:
+    """Did the run actually invoke web_search? Read from the run's own event
+    log (category=tool) — no side channel, the audit trail IS the source."""
+    try:
+        events = registry.read_events(run_id)
+        return any(
+            getattr(e, "category", "") == "tool"
+            and "web_search" in str(getattr(e, "data", {}))
+            for e in events
+        )
+    except Exception:
+        return False
+
+
+async def _oneshot_via_search_loop(
+    req: OneshotRequest, provider_name: str, model: str, owner: Optional[str]
+) -> OneshotResponse:
+    """Serve an enriched oneshot as a REAL `kind=oneshot` registry run.
+
+    ADR 0011: oneshot is a facade verb over unmodified task-tier gears —
+    same registry, same `build_task_runner` sandbox (ScopedToolManager grant
+    + NetworkPolicy egress + budget control), same event log. The only
+    oneshot-shaped differences: the grant is hardwired to `{web_search}`
+    (no flag can widen it), the HTTP request awaits the terminal state
+    (spawn_subagent's parent-await pattern, `get_run_task`), and
+    `hold_result=False` lands the run straight in `completed` (no T6 hold).
+    The run record in `~/.ppxai/runs/<id>/` is the debug surface.
+    """
+    # Lazy: agent_v1 top-imports from this module (provider construction);
+    # importing it at module level would be circular.
+    from ..state import get_agent_run_registry
+    from .agent_v1 import build_task_runner
+
+    egress_hosts = _web_search_egress_hosts()  # step ② swaps the source
+    registry = get_agent_run_registry()
+    meta = registry.start_run(
+        task=req.prompt,
+        kind="oneshot",
+        tools=["web_search"],  # the ONLY grant — ADR 0011 "no tools by design"
+        provider=provider_name,
+        model=model,
+        network=list(egress_hosts),
+        budget={"iterations": ONESHOT_SEARCH_ITERATIONS},
+        owner=owner,
+        hold_result=False,  # oneshot semantics: the response IS the collect
+        system=req.system,
+    )
+    runner = build_task_runner(
+        registry,
+        provider_name=provider_name,
+        model=model,
+        task=req.prompt,
+        tools=["web_search"],
+        allow_outbound=list(egress_hosts),
+        allow_spawn=False,  # consent/park path structurally unreachable
+        system=req.system,
+    )
+    registry.run_in_background(meta, runner)
+    run_task = registry.get_run_task(meta.run_id)
+    try:
+        if run_task is not None:
+            # shield: on timeout we cancel COOPERATIVELY (clean checkpoint)
+            # instead of ripping the task out mid-tool-call.
+            await asyncio.wait_for(
+                asyncio.shield(run_task), timeout=ONESHOT_SEARCH_TIMEOUT_S
+            )
+    except asyncio.TimeoutError:
+        registry.cancel_run(meta.run_id)
+        raise HTTPException(
+            status_code=504,
+            detail=(
+                f"Enriched oneshot timed out after {ONESHOT_SEARCH_TIMEOUT_S:.0f}s; "
+                f"run {meta.run_id} was cancelled — its record remains inspectable."
+            ),
+        )
+    except asyncio.CancelledError:
+        # Client disconnect / server shutdown: never leave a headless spender.
+        registry.cancel_run(meta.run_id)
+        raise
+
+    final = registry.get_run(meta.run_id) or meta
+    if final.status != "completed":
+        raise HTTPException(
+            status_code=502,
+            detail=(
+                f"Enriched oneshot run {meta.run_id} ended "
+                f"{final.status!r}: {final.error or 'no result'}"
+            ),
+        )
+    return OneshotResponse(
+        content=final.result or "",
+        finish_reason="stop",
+        model=model,
+        provider=provider_name,
+        usage=None,  # F4: model tokens + search cost accounting
+        grounding=OneshotGrounding(
+            searched=_run_used_web_search(registry, meta.run_id),
+            run_id=meta.run_id,
+        ),
+    )
 
 
 def _apply_oneshot_grounding(provider, provider_name: str) -> None:
@@ -343,8 +489,13 @@ def _build_provider(provider_name: str):
 # ---------------------------------------------------------------------------
 
 
-@router.post("/oneshot", response_model=OneshotResponse)
-async def oneshot(req: OneshotRequest) -> OneshotResponse:
+# response_model_exclude_unset: the legacy paths set every field explicitly,
+# so their wire shape is byte-identical to the shipped contract; `grounding`
+# is set ONLY by the enriched facade — absent (not null) everywhere else.
+@router.post(
+    "/oneshot", response_model=OneshotResponse, response_model_exclude_unset=True
+)
+async def oneshot(req: OneshotRequest, request: Request) -> OneshotResponse:
     """Stateless single-turn completion. See module docstring."""
     provider_name = req.provider or get_default_provider()
     if not provider_name:
@@ -361,17 +512,25 @@ async def oneshot(req: OneshotRequest) -> OneshotResponse:
             f"provider {provider_name!r}.",
         )
 
-    # F2 (ADR 0009 §4 / ADR 0011): gating truth table — resolved and LOGGED
-    # per request; execution is unchanged until the F3 facade wires the
-    # search-loop path. Both keys default off → byte-identical wire.
+    # ADR 0009 §4 gating: resolve + log the effective path per request.
+    # Both keys default off → byte-identical wire for existing consumers.
     effective_path = _oneshot_effective_path(provider_name, model)
     logger.debug(
         f"/v1/oneshot gating: provider={provider_name} model={model} "
         f"grounding_on={_oneshot_grounding_enabled()} "
         f"enrichment_on={_oneshot_enrichment_enabled()} -> {effective_path}"
-        + (" (F3 pending — executing closed-book)"
-           if effective_path == "search-loop" else "")
     )
+
+    if effective_path == "search-loop":
+        # F3: the enriched path executes as a real kind=oneshot registry run.
+        owner = None
+        try:
+            from .agent_v1 import _caller_owner  # lazy — see facade docstring
+
+            owner = _caller_owner(request)
+        except Exception:
+            owner = None
+        return await _oneshot_via_search_loop(req, provider_name, model, owner)
 
     provider = _build_provider(provider_name)
 
