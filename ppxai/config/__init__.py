@@ -80,6 +80,12 @@ from .providers import (
     get_tool_calling_config,
 )
 
+# Execution surfaces (ADR 0010 third axis; ADR 0011 one-off tier)
+from .execution import (
+    get_execution_config,
+    get_execution_run_config,
+)
+
 # Tool, shell, agent, visualization, container
 from .tools import (
     get_tool_config,
@@ -270,6 +276,8 @@ __all__ = [
     "get_default_model",
     "validate_config",
     # Tool functions
+    "get_execution_config",
+    "get_execution_run_config",
     "get_tool_config",
     "get_tool_description_overrides",
     "get_shell_config",

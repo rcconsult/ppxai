@@ -29,30 +29,125 @@ from ppxai.server.routes import oneshot as oneshot_mod
 
 
 class TestGroundingFlag:
+    """F2 (ADR 0011 Q5): the flag now reads `execution.run.grounding` via
+    get_execution_run_config (which itself dual-reads the legacy key —
+    covered in TestExecutionRunConfig below)."""
+
     def test_default_off(self):
         """No config => grounding disabled (byte-identical legacy behavior)."""
-        with patch.object(oneshot_mod, "get_tool_config", return_value={}):
+        with patch.object(
+            oneshot_mod, "get_execution_run_config",
+            return_value={"web_search": False, "grounding": False},
+        ):
             assert oneshot_mod._oneshot_grounding_enabled() is False
 
     def test_explicit_on(self):
         with patch.object(
-            oneshot_mod, "get_tool_config",
-            return_value={"oneshot_grounding": True},
+            oneshot_mod, "get_execution_run_config",
+            return_value={"web_search": False, "grounding": True},
         ):
             assert oneshot_mod._oneshot_grounding_enabled() is True
 
-    def test_explicit_off(self):
+    def test_config_error_fails_to_off(self):
         with patch.object(
-            oneshot_mod, "get_tool_config",
-            return_value={"oneshot_grounding": False},
+            oneshot_mod, "get_execution_run_config",
+            side_effect=RuntimeError("boom"),
         ):
             assert oneshot_mod._oneshot_grounding_enabled() is False
 
-    def test_config_error_fails_to_off(self):
+
+class TestExecutionRunConfig:
+    """The `execution.run.*` reader (config axis, ADR 0010/0011) — defaults,
+    explicit values, and the grounding dual-read from the legacy key."""
+
+    @staticmethod
+    def _read(config: dict, legacy_tool_cfg: dict | None = None):
+        from ppxai.config import execution as exec_mod
+        from ppxai.config import tools as tools_cfg
+
+        with patch.object(exec_mod, "get_config", return_value=config), \
+             patch.object(
+                 tools_cfg, "get_tool_config",
+                 return_value=legacy_tool_cfg or {},
+             ):
+            return exec_mod.get_execution_run_config()
+
+    def test_defaults_both_off(self):
+        assert self._read({}) == {"web_search": False, "grounding": False}
+
+    def test_web_search_explicit_on(self):
+        cfg = {"execution": {"run": {"web_search": True}}}
+        assert self._read(cfg)["web_search"] is True
+
+    def test_grounding_dual_reads_legacy_key(self):
+        # No execution.run.grounding → the shipped v1.19.0 key still works.
+        got = self._read({}, legacy_tool_cfg={"oneshot_grounding": True})
+        assert got["grounding"] is True
+
+    def test_explicit_grounding_wins_over_legacy(self):
+        cfg = {"execution": {"run": {"grounding": False}}}
+        got = self._read(cfg, legacy_tool_cfg={"oneshot_grounding": True})
+        assert got["grounding"] is False
+
+    def test_config_error_fails_to_defaults(self):
+        from ppxai.config import execution as exec_mod
+
         with patch.object(
-            oneshot_mod, "get_tool_config", side_effect=RuntimeError("boom")
+            exec_mod, "get_config", side_effect=RuntimeError("boom")
         ):
-            assert oneshot_mod._oneshot_grounding_enabled() is False
+            assert exec_mod.get_execution_run_config() == {
+                "web_search": False, "grounding": False,
+            }
+
+
+class TestEffectivePath:
+    """The ADR 0009 §4 gating truth table (F2: computed + logged only)."""
+
+    @staticmethod
+    def _path(*, grounding=False, enrichment=False, web_capable=False,
+              native_tools=False, tc_mode=None):
+        with patch.object(
+            oneshot_mod, "get_execution_run_config",
+            return_value={"web_search": enrichment, "grounding": grounding},
+        ), patch.object(
+            oneshot_mod, "get_provider_config",
+            return_value={"capabilities": {
+                "web_search": web_capable,
+                "native_tool_calling": native_tools,
+            }},
+        ), patch.object(
+            oneshot_mod, "get_tool_calling_config",
+            return_value={"mode": tc_mode} if tc_mode else {},
+        ):
+            return oneshot_mod._oneshot_effective_path("p", "m")
+
+    def test_both_off_is_closed_book(self):
+        assert self._path() == "closed-book"
+
+    def test_grounding_on_capable_is_native(self):
+        assert self._path(grounding=True, web_capable=True) == "native"
+
+    def test_grounding_on_incapable_falls_closed_book(self):
+        assert self._path(grounding=True, web_capable=False) == "closed-book"
+
+    def test_enrichment_on_tool_capable_is_search_loop(self):
+        assert self._path(enrichment=True, native_tools=True) == "search-loop"
+
+    def test_enrichment_on_tool_incapable_is_closed_book(self):
+        assert self._path(enrichment=True) == "closed-book"
+
+    def test_native_beats_search_loop_xor(self):
+        # Enrichment XOR native — never both; native wins when effective.
+        assert self._path(
+            grounding=True, enrichment=True,
+            web_capable=True, native_tools=True,
+        ) == "native"
+
+    def test_prompt_based_tool_calling_counts_as_capable(self):
+        assert self._path(enrichment=True, tc_mode="prompt") == "search-loop"
+
+    def test_tc_mode_none_is_incapable(self):
+        assert self._path(enrichment=True, tc_mode="none") == "closed-book"
 
 
 # ---------------------------------------------------------------------------
@@ -139,7 +234,8 @@ class TestBuildProviderWiring:
         provider.enable_grounding = False
         _patch_construction(monkeypatch, provider)
         monkeypatch.setattr(
-            oneshot_mod, "get_tool_config", lambda name: {}
+            oneshot_mod, "get_execution_run_config",
+            lambda: {"web_search": False, "grounding": False},
         )
         oneshot_mod._build_provider("gemini")
         assert provider.enable_grounding is False
@@ -152,7 +248,10 @@ class TestBuildProviderWiring:
         provider = MagicMock()
         provider.enable_grounding = True
         _patch_construction(monkeypatch, provider)
-        monkeypatch.setattr(oneshot_mod, "get_tool_config", lambda name: {})
+        monkeypatch.setattr(
+            oneshot_mod, "get_execution_run_config",
+            lambda: {"web_search": False, "grounding": False},
+        )
         oneshot_mod._build_provider("gemini")
         assert provider.enable_grounding is False
 
@@ -161,8 +260,8 @@ class TestBuildProviderWiring:
         provider.enable_grounding = False
         _patch_construction(monkeypatch, provider)
         monkeypatch.setattr(
-            oneshot_mod, "get_tool_config",
-            lambda name: {"oneshot_grounding": True},
+            oneshot_mod, "get_execution_run_config",
+            lambda: {"web_search": False, "grounding": True},
         )
         oneshot_mod._build_provider("gemini")
         assert provider.enable_grounding is True

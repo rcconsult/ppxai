@@ -572,6 +572,13 @@
       }
     }
   },
+  "execution": {
+    "__comment": "ADR 0010/0011 third config axis: how each execution surface runs. execution.run.* governs the one-off tier (/run family + /v1/oneshot facade). web_search: expose the web_search tool loop to oneshot (ADR 0009 enrichment, default off). grounding: provider-NATIVE search on oneshot (supersedes tools.web_search.oneshot_grounding; dual-read keeps the legacy key working).",
+    "run": {
+      "web_search": false,
+      "grounding": false
+    }
+  },
   "tools": {
     "overrides": {
       "search_files": "Find files by glob pattern (*.py, test*, *config*) - use when searching for files by NAME",

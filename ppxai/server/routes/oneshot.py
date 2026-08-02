@@ -55,8 +55,9 @@ from ...config import (
     get_base_url,
     get_default_model,
     get_default_provider,
+    get_execution_run_config,
     get_provider_config,
-    get_tool_config,
+    get_tool_calling_config,
 )
 from ...engine.providers import create_provider
 from ...engine.providers.openai_compat import OpenAICompatibleProvider
@@ -140,12 +141,80 @@ def _oneshot_grounding_enabled() -> bool:
 
     Default OFF — when off, oneshot behaves exactly as before (ppxai-sre's
     `/v1/oneshot` consumers see no change). Read from
-    `tools.web_search.oneshot_grounding`.
+    `execution.run.grounding` (ADR 0011 Q5), which dual-reads the legacy
+    `tools.web_search.oneshot_grounding` key until it is retired.
     """
     try:
-        return bool(get_tool_config("web_search").get("oneshot_grounding", False))
+        return bool(get_execution_run_config().get("grounding", False))
     except Exception:
         return False
+
+
+def _oneshot_enrichment_enabled() -> bool:
+    """True when the operator opted the one-off tier into the ADR 0009 §4
+    enrichment loop: the `web_search` fallback chain exposed to the model,
+    driven through the run tier by the oneshot facade (F3 — until it lands
+    this flag only steers the gating log below).
+
+    Default OFF. Read from `execution.run.web_search` (ADR 0011: the ONLY
+    tool the one-off tier can ever grant)."""
+    try:
+        return bool(get_execution_run_config().get("web_search", False))
+    except Exception:
+        return False
+
+
+def _provider_web_search_capable(provider_name: str) -> bool:
+    """Does this provider advertise NATIVE web search (capabilities axis)?"""
+    try:
+        return bool(
+            get_provider_config(provider_name)
+            .get("capabilities", {})
+            .get("web_search", False)
+        )
+    except Exception:
+        return False
+
+
+def _tool_calling_capable(provider_name: str, model: str) -> bool:
+    """Can this provider/model drive the §4 web_search tool loop?
+
+    True on native function calling (capabilities.native_tool_calling) or an
+    explicit per-provider/per-model `tool_calling` config block (the
+    prompt-based path — docs/prompt-based-tool-calling.md). Conservative
+    default: neither signal → not capable → the gating table lands on
+    closed-book rather than handing tools to a model that can't call them."""
+    try:
+        caps = get_provider_config(provider_name).get("capabilities", {})
+        if caps.get("native_tool_calling", False):
+            return True
+        mode = (get_tool_calling_config(provider_name, model) or {}).get("mode")
+        return bool(mode) and mode != "none"
+    except Exception:
+        return False
+
+
+def _oneshot_effective_path(provider_name: str, model: str) -> str:
+    """The ADR 0009 §4 gating truth table, resolved per request.
+
+    `native` (provider's own search) beats `search-loop` (enrichment) —
+    enrichment XOR native, never both; anything else is `closed-book`:
+
+        grounding_on AND capable(web_search)            → native
+        elif enrichment_on AND tool_calling_capable     → search-loop
+        else                                            → closed-book
+
+    F2: computed + logged only (the search-loop execution path arrives with
+    the F3 facade); with both keys at their defaults the request is
+    byte-identical to the shipped behavior."""
+    native_effective = _oneshot_grounding_enabled() and _provider_web_search_capable(
+        provider_name
+    )
+    if native_effective:
+        return "native"
+    if _oneshot_enrichment_enabled() and _tool_calling_capable(provider_name, model):
+        return "search-loop"
+    return "closed-book"
 
 
 def _apply_oneshot_grounding(provider, provider_name: str) -> None:
@@ -291,6 +360,18 @@ async def oneshot(req: OneshotRequest) -> OneshotResponse:
             detail=f"No model specified and no default_model for "
             f"provider {provider_name!r}.",
         )
+
+    # F2 (ADR 0009 §4 / ADR 0011): gating truth table — resolved and LOGGED
+    # per request; execution is unchanged until the F3 facade wires the
+    # search-loop path. Both keys default off → byte-identical wire.
+    effective_path = _oneshot_effective_path(provider_name, model)
+    logger.debug(
+        f"/v1/oneshot gating: provider={provider_name} model={model} "
+        f"grounding_on={_oneshot_grounding_enabled()} "
+        f"enrichment_on={_oneshot_enrichment_enabled()} -> {effective_path}"
+        + (" (F3 pending — executing closed-book)"
+           if effective_path == "search-loop" else "")
+    )
 
     provider = _build_provider(provider_name)
 
