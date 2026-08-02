@@ -47,7 +47,7 @@ class TestValidateAgentTaskEmitsPromptText:
         assert len(result.side_effects) == 1
         se = result.side_effects[0]
         assert se.kind == "prompt_text"
-        assert se.payload["command_to_resume"] == "agent"
+        assert se.payload["command_to_resume"] == "auto"
         assert se.payload["original_args"] == "fix"
         assert "question" in se.payload
         assert se.payload["question"]  # non-empty
@@ -64,7 +64,7 @@ class TestValidateAgentTaskEmitsPromptText:
         assert result is not None
         assert len(result.side_effects) == 1
         se = result.side_effects[0]
-        assert se.payload["command_to_resume"] == "agent"
+        assert se.payload["command_to_resume"] == "auto"
         assert se.payload["original_args"] == ""
 
     def test_metadata_unchanged_for_backward_compat(self):

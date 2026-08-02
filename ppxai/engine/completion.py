@@ -138,7 +138,7 @@ _TOOLS_SUBCOMMANDS: List[Tuple[str, str]] = [
     ("help",    "Show help for a tool"),
     ("set",     "Configure tool settings"),
     ("config",  "Show tool configuration"),
-    ("agent",   "Enable/disable agent mode"),
+    ("auto",    "Enable/disable agent (auto) mode"),
 ]
 
 _USAGE_SUBCOMMANDS: List[Tuple[str, str]] = [

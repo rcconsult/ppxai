@@ -11,7 +11,7 @@
  *
  * v1.18.1 unifies dispatch:
  *   - Streaming commands (chat-message-shaped) keep using POST /chat.
- *   - The /agent toggle still goes to dedicated REST.
+ *   - The /auto toggle (was /agent pre-v1.19.1) still goes to dedicated REST.
  *   - Every other command flows through `apiClient.executeCommand(name, args)`.
  *     The server returns the v1 envelope:
  *         {ok, result, side_effects, events, version}
@@ -58,8 +58,8 @@ class CommandDispatcher {
      *
      * - Streaming commands → POST /chat (no envelope; the SSE
      *   stream IS the response).
-     * - /agent <task>      → also chat-shaped (autonomous task).
-     * - /agent on|off      → toggleAgent() (existing REST path).
+     * - /auto <task>       → also chat-shaped (autonomous task; was /agent).
+     * - /auto on|off       → toggleAgent() (existing REST path).
      * - Everything else    → POST /command/<name> via the v1
      *   envelope.
      *
@@ -84,13 +84,13 @@ class CommandDispatcher {
                 return;
             }
 
-            if (cmd === '/agent') {
+            if (cmd === '/auto') {
                 await this._dispatchAgent(args, input);
                 return;
             }
 
             // Agent platform (v1.19.0 /v1/agent/* run registry — distinct from
-            // the engine-side /agent above). Delegated to AgentRunController:
+            // the engine-side /auto above). Delegated to AgentRunController:
             // /agentrun starts a background run (rendered in a right-panel pane);
             // /agentruns lists recent runs as clickable rows that focus panes.
             if (cmd === '/agentrun') {
@@ -222,10 +222,10 @@ class CommandDispatcher {
     }
 
     /**
-     * /agent has three shapes:
-     *   /agent           → status query (no mutation)
-     *   /agent on|off    → toggle (REST path; existing toggleAgent)
-     *   /agent <task>    → autonomous task (chat-shaped, /chat path)
+     * /auto has three shapes (renamed from /agent in v1.19.1, ADR 0011):
+     *   /auto            → status query (no mutation)
+     *   /auto on|off     → toggle (REST path; existing toggleAgent)
+     *   /auto <task>     → autonomous task (chat-shaped, /chat path)
      *
      * The toggle path stays bespoke because it has UI state coupling
      * (the agent badge animation). The other two go through the
@@ -243,7 +243,7 @@ class CommandDispatcher {
         if (args) {
             // Autonomous task — feed the whole thing to /chat
             this.app.addMessage('user', input);
-            await this.app.streamChat(`/agent ${args}`);
+            await this.app.streamChat(`/auto ${args}`);
             return;
         }
         // No args — show status via factory

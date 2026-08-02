@@ -323,25 +323,26 @@ async def chat(
             }
         )
 
-    # v1.18.1 safety gate: when the chat message is `/agent <task>`,
+    # v1.18.1 safety gate (renamed /auto in v1.19.1): when the chat
+    # message is `/auto <task>`,
     # apply the same min-words validation the factory's handle_agent
-    # uses. Pre-v1.18.1, web's streamChat shipped /agent <task>
+    # uses. Pre-v1.18.1, web's streamChat shipped the task
     # straight to /chat which had no awareness — letting users run
-    # `/agent fix` and the LLM-with-tools just go. Now we intercept
+    # `/auto fix` and the LLM-with-tools just go. Now we intercept
     # before the lock acquisition / streaming setup. The message
     # the user sees is the same friendly nudge across TUI / web /
     # VSCode (single source: validate_agent_task in commands/agent.py).
     msg_text = (request.message or "").strip()
-    if msg_text.startswith("/agent ") or msg_text.startswith("/agent\t"):
+    if msg_text.startswith("/auto ") or msg_text.startswith("/auto\t"):
         from ...commands.agent import validate_agent_task
-        # Strip the /agent prefix to get just the task body
+        # Strip the /auto prefix to get just the task body
         task = msg_text.split(None, 1)[1] if " " in msg_text or "\t" in msg_text else ""
         agent_config = s.engine.get_agent_config()
         min_words = agent_config.get("min_task_words", 3)
         rejection = validate_agent_task(task.strip(), min_words)
         if rejection is not None:
             logger.info(
-                f"/agent rejected for session {s.id}: "
+                f"/auto rejected for session {s.id}: "
                 f"task too brief ({len(task.split())} word(s))"
             )
 

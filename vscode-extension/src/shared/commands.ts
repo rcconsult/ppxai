@@ -83,13 +83,13 @@ export const SLASH_COMMANDS: Record<string, CommandDefinition> = {
     // === Tools & Agent ===
     '/tools': {
         description: 'Manage AI tools',
-        usage: '/tools [enable|disable|status|list|config|set|agent|help]',
+        usage: '/tools [enable|disable|status|list|config|set|auto|help]',
         category: CommandCategory.TOOLS,
-        subcommands: ['enable', 'disable', 'status', 'list', 'config', 'set', 'agent', 'help']
+        subcommands: ['enable', 'disable', 'status', 'list', 'config', 'set', 'auto', 'help']
     },
-    '/agent': {
-        description: 'Run autonomous agent task',
-        usage: '/agent [on|off|<task description>]',
+    '/auto': {
+        description: 'Run autonomous in-session task (was /agent)',
+        usage: '/auto [on|off|<task description>]',
         category: CommandCategory.TOOLS,
         subcommands: ['on', 'off']
     },

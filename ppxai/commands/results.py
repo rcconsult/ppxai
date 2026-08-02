@@ -236,7 +236,7 @@ class SideEffect:
       - "prompt_text"        payload: {title, question, command_to_resume,
                                        original_args?, placeholder?}
             Engine needs a free-text follow-up before the command
-            can complete (e.g. /agent rejected for being too vague).
+            can complete (e.g. /auto rejected for being too vague).
             Web → input field rendered in chat. VSCode →
             window.showInputBox({prompt: question}). On submit,
             the client re-issues POST /command/<command_to_resume>

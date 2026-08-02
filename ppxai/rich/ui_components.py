@@ -772,9 +772,9 @@ Welcome to the AI terminal interface!
 - `/tools disable` - Disable AI tools
 - `/tools list` - Show available tools
 
-## Agent Mode
-- `/agent <task>` - Execute autonomous agent task
-- `/undo` - Revert last agent task
+## Auto Mode
+- `/auto <task>` - Execute autonomous in-session task (was /agent)
+- `/undo` - Revert last auto task
 """
     return Panel(
         Markdown(welcome_text),

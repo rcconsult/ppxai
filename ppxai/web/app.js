@@ -205,7 +205,7 @@ class PpxaiApp {
                 '/model': { description: 'Switch model or list models', usage: '/model [model_id|list]' },
                 '/provider': { description: 'Switch provider or list providers', usage: '/provider [provider_id|list]' },
                 '/tools': { description: 'Manage AI tools', usage: '/tools [enable|disable|status|list|config|set|agent|help]' },
-                '/agent': { description: 'Run autonomous agent task', usage: '/agent [on|off|<task description>]' },
+                '/auto': { description: 'Run autonomous in-session task (was /agent)', usage: '/auto [on|off|<task description>]' },
                 '/agentrun': { description: 'Start a background agent run (v1 platform)', usage: '/agentrun <task>' },
                 '/agentruns': { description: 'List recent agent runs', usage: '/agentruns' },
                 '/task': { description: 'Tool-capable background runs (run|ls|show|watch|cancel)', usage: '/task run "<desc>" --tools a,b,c' },

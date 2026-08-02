@@ -174,12 +174,12 @@ If more work is needed, explain what you're doing next and use the appropriate t
 #
 # Used by:
 #   - handle_agent (TUI in-process path)
-#   - server-side /chat hook (web /agent <task> safety gate)
+#   - server-side /chat hook (web /auto <task> safety gate)
 #   - VSCode chatPanel.ts via the factory dispatch (5b.2)
 #
 # Centralising here closes the safety gap where web users could
-# previously run `/agent fix` without any min-words check (web's
-# streamChat hits /chat which had no /agent awareness).
+# previously run `/auto fix` (pre-v1.19.1: `/agent fix`) without any
+# min-words check (web's streamChat hits /chat which had no awareness).
 
 
 def validate_agent_task(
@@ -190,7 +190,7 @@ def validate_agent_task(
 
     The non-None return is a friendly nudge framed as a question
     (not an ErrorResult) — same content the user sees when they
-    type `/agent fix` in any client. Concrete examples included so
+    type `/auto fix` in any client. Concrete examples included so
     they know what level of detail is expected. Per the v1.18.1 UX
     decision: ask for more context, don't just bounce them.
 
@@ -213,9 +213,9 @@ def validate_agent_task(
         f"  • **Where**? (which file, function, or area)\n"
         f"  • **How** will I know it's done? (acceptance criteria, optional)\n\n"
         f"Examples:\n"
-        f"  `/agent Fix the off-by-one in src/parser.py:line_count()`\n"
-        f"  `/agent Review @git changes and suggest improvements`\n"
-        f"  `/agent Investigate why login.test.js times out and fix the cause`\n"
+        f"  `/auto Fix the off-by-one in src/parser.py:line_count()`\n"
+        f"  `/auto Review @git changes and suggest improvements`\n"
+        f"  `/auto Investigate why login.test.js times out and fix the cause`\n"
     )
     result = NotificationResult(
         status=ResultStatus.WARNING,
@@ -231,7 +231,7 @@ def validate_agent_task(
     # the elaboration via showInputBox / inline form. Per ADR Q3 (b),
     # the args carry the resume — no server-side continuation state.
     # TUI clients ignore unknown kinds (open-enum invariant) and the
-    # user retypes /agent themselves; the notification text above is
+    # user retypes /auto themselves; the notification text above is
     # the user-visible nudge in that fallback path.
     result.add_side_effect(
         SideEffectKind.PROMPT_TEXT,
@@ -240,7 +240,7 @@ def validate_agent_task(
             "What file or area should I work on? "
             "Add any acceptance criteria you have."
         ),
-        command_to_resume="agent",
+        command_to_resume="auto",
         original_args=task,
         placeholder="e.g. Fix the off-by-one in src/parser.py:line_count()",
     )
@@ -281,7 +281,7 @@ def handle_undo(context: CommandContext, args: str) -> CommandResult:
         return ErrorResult(
             status=ResultStatus.ERROR,
             message="No checkpoint to undo",
-            suggestions=["Run an /agent task first to create a checkpoint"]
+            suggestions=["Run an /auto task first to create a checkpoint"]
         )
 
     # Check if checkpoint is still valid (not stale)
@@ -444,7 +444,7 @@ def _checkpoint_list(context: CommandContext) -> CommandResult:
         return ErrorResult(
             status=ResultStatus.ERROR,
             message="No checkpoints found",
-            suggestions=["Run an /agent task to create checkpoints"]
+            suggestions=["Run an /auto task to create checkpoints"]
         )
 
     # Build table
@@ -580,7 +580,9 @@ def _checkpoint_info(context: CommandContext, checkpoint_id: Optional[str]) -> C
 
 
 def handle_agent(context: CommandContext, args: str) -> CommandResult:
-    """Handle /agent command for autonomous task execution.
+    """Handle /auto command for autonomous task execution (renamed from
+    /agent in v1.19.1 — ADR 0011: the in-session sync loop is AUTOnomy in
+    your context; "agent" now names only the /v1/agent/* run platform).
 
     The agent loop runs autonomously until:
     - Task completes (AI signals TASK_COMPLETE)
@@ -599,11 +601,11 @@ def handle_agent(context: CommandContext, args: str) -> CommandResult:
     if not args.strip():
         return ErrorResult(
             status=ResultStatus.ERROR,
-            message="Usage: /agent <task description>",
+            message="Usage: /auto <task description>",
             suggestions=[
-                "/agent on|off - Toggle agent mode",
-                "Example: /agent Fix the bug in auth.py",
-                "Example: /agent Review @git changes and fix issues"
+                "/auto on|off - Toggle agent mode",
+                "Example: /auto Fix the bug in auth.py",
+                "Example: /auto Review @git changes and fix issues"
             ]
         )
 
@@ -621,7 +623,7 @@ def handle_agent(context: CommandContext, args: str) -> CommandResult:
             return ConfirmationResult(
                 status=ResultStatus.SUCCESS,
                 message="Agent mode enabled",
-                details={"note": "Tools auto-enabled. Use '/agent <task>' to start autonomous execution."}
+                details={"note": "Tools auto-enabled. Use '/auto <task>' to start autonomous execution."}
             )
         else:  # off/disable
             if not context.engine_client:
@@ -651,7 +653,7 @@ def handle_agent(context: CommandContext, args: str) -> CommandResult:
 
     # v1.18.1: shared validation. Same nudge text across TUI / web /
     # VSCode — closes the previous safety gap where web could
-    # bypass min-words by sending `/agent <task>` to /chat.
+    # bypass min-words by sending `/auto <task>` to /chat.
     validation = validate_agent_task(task, min_words)
     if validation is not None:
         return validation
@@ -765,11 +767,11 @@ def handle_agent(context: CommandContext, args: str) -> CommandResult:
 # =============================================================================
 
 CommandFactory.register(CommandSpec(
-    name="agent",
+    name="auto",
     description="Run autonomous agent task",
     handler=handle_agent,
     category="agent",
-    usage="/agent <task> | /agent on|off"
+    usage="/auto <task> | /auto on|off"
 ))
 
 CommandFactory.register(CommandSpec(

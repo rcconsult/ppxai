@@ -89,7 +89,7 @@ function formatToolHelp(data) {
  */
 function formatAgentStatus(data) {
     const status = data.agent_mode ? 'ON' : 'OFF';
-    return `**Agent Mode:** ${status}\n\nUsage: \`/tools agent on|off\`\nOr use \`/agent <task>\` to run an autonomous task.`;
+    return `**Agent Mode:** ${status}\n\nUsage: \`/tools auto on|off\`\nOr use \`/auto <task>\` to run an autonomous task.`;
 }
 
 /**

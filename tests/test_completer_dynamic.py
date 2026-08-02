@@ -43,7 +43,7 @@ class TestCompletionIntegration:
     def test_a_prefix_includes_attach_and_agent(self, completer):
         results = self._completions_for(completer, "/a")
         assert "/attach" in results
-        assert "/agent" in results
+        assert "/auto" in results
         assert "/att" in results
 
     def test_quit_prefix_completes_builtin(self, completer):

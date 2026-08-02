@@ -1079,7 +1079,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
      *   - Chat-shaped (LLM-streamed) commands keep using
      *     `_backend.codingTask` so the active editor's language +
      *     filename ride along (VSCode-only context advantage).
-     *   - `/agent <task>` keeps its iteration loop here pending
+     *   - `/auto <task>` (was /agent) keeps its iteration loop here pending
      *     loop unification (see docs/TODO-v1.18.2-agent-loop-unification.md).
      *   - `/preview` keeps its own webview panel (VSCode-specific).
      *   - `/help` augments factory output with VSCode keyboard shortcuts.
@@ -1122,10 +1122,10 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                 return;
             }
 
-            // /agent: iteration loop runs client-side. Server gate
-            // (added in 5b.1) validates min-words; we no longer
-            // duplicate the check here.
-            if (command === 'agent') {
+            // /auto (renamed from /agent in v1.19.1, ADR 0011): iteration
+            // loop runs client-side. Server gate (added in 5b.1) validates
+            // min-words; we no longer duplicate the check here.
+            if (command === 'auto') {
                 await this.handleAgentCommand(argsArr);
                 return;
             }
@@ -1322,7 +1322,8 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     }
 
     /**
-     * Handle /agent command for autonomous task execution (v1.11.9)
+     * Handle /auto command for autonomous task execution (v1.11.9;
+     * renamed from /agent in v1.19.1 - ADR 0011)
      * Matches TUI behavior with iterative agent loop
      */
     private async handleAgentCommand(args: string[]) {
@@ -1330,12 +1331,12 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
 
         const task = args.join(' ').trim();
 
-        // Handle /agent on|off as toggle commands (v1.11.9)
+        // Handle /auto on|off as toggle commands (v1.11.9)
         if (task.toLowerCase() === 'on' || task.toLowerCase() === 'enable') {
             await this._backend.enableAgentMode();
             this._view.webview.postMessage({
                 type: 'systemMessage',
-                content: '✓ Agent mode enabled\n*Tools auto-enabled. Use `/agent <task>` to start autonomous execution.*'
+                content: '✓ Agent mode enabled\n*Tools auto-enabled. Use `/auto <task>` to start autonomous execution.*'
             });
             await this.updateAgentStatus();
             await this.updateStatus();
@@ -1355,10 +1356,10 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         if (!task) {
             this._view.webview.postMessage({
                 type: 'error',
-                content: `Usage: /agent <task description>
-       /agent on|off - Toggle agent mode
-Example: /agent Fix the bug in auth.py
-         /agent Review @git changes and fix issues`
+                content: `Usage: /auto <task description>
+       /auto on|off - Toggle agent mode
+Example: /auto Fix the bug in auth.py
+         /auto Review @git changes and fix issues`
             });
             return;
         }
@@ -1368,7 +1369,7 @@ Example: /agent Fix the bug in auth.py
         // ppxai.commands.agent.validate_agent_task — applied by both
         // the /chat route (gate) and the factory's handle_agent. The
         // duplicate client-side check that lived here is gone; if
-        // /agent <task> reaches us with an under-threshold task the
+        // /auto <task> reaches us with an under-threshold task the
         // server rejects it with a friendly NotificationResult before
         // the iteration loop ever starts.
         const agentConfig = await this._backend.getAgentConfig();

@@ -74,14 +74,14 @@ def handle_tools(context: CommandContext, args: str) -> CommandResult:
         return _tools_config(context, subargs)
     elif subcommand == "set":
         return _tools_set(context, subargs)
-    elif subcommand == "agent":
+    elif subcommand == "auto":
         return _tools_agent(context, subargs)
     else:
         return ErrorResult(
             status=ResultStatus.ERROR,
             message=f"Unknown subcommand: {subcommand}",
             suggestions=[
-                "Available subcommands: on, off, list, status, config, set, agent"
+                "Available subcommands: on, off, list, status, config, set, auto"
             ]
         )
 
@@ -370,7 +370,7 @@ def _tools_agent(context: CommandContext, args: List[str]) -> CommandResult:
             message="Agent Mode - Use /tools agent on|off",
             pairs={
                 "Status": status,
-                "Usage": "'/agent <task>' to run autonomous task"
+                "Usage": "'/auto <task>' to run autonomous task"
             }
         )
 
@@ -379,7 +379,7 @@ def _tools_agent(context: CommandContext, args: List[str]) -> CommandResult:
         context.engine_client.enable_agent_mode()
         return ConfirmationResult(
             status=ResultStatus.SUCCESS,
-            message="Agent mode enabled. Tools auto-enabled. Use '/agent <task>' to start autonomous execution.",
+            message="Agent mode enabled. Tools auto-enabled. Use '/auto <task>' to start autonomous execution.",
             details={"agent_mode": True}
         )
     elif action in ["off", "disable"]:

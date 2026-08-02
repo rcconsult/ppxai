@@ -1,13 +1,13 @@
 """Cross-client agent task validation tests (v1.18.1 step 5b.1).
 
 Pre-v1.18.1, only the TUI factory path (handle_agent) enforced
-min_task_words. Web users running `/agent fix` via streamChat
+min_task_words. Web users running `/auto fix` via streamChat
 hit /chat directly and the LLM-with-tools just went — a real
 safety gap.
 
 v1.18.1 closes the gap by:
   1. Centralising validation in ppxai.commands.agent.validate_agent_task
-  2. Calling it from the /chat route when message starts with /agent
+  2. Calling it from the /chat route when message starts with /auto
   3. Calling it from handle_agent (factory in-process path)
   4. Returning a friendlier NotificationResult (was ErrorResult)
      framed as a question with concrete examples — per the v1.18.1
@@ -19,8 +19,8 @@ Tests:
   - The rejection message asks for more context (question framing)
   - The rejection includes concrete examples
   - The rejection metadata carries reason + min/actual word counts
-  - /chat route rejects `/agent <vague>` before LLM streaming
-  - /chat route lets `/agent <good>` through to the streaming path
+  - /chat route rejects `/auto <vague>` before LLM streaming
+  - /chat route lets `/auto <good>` through to the streaming path
   - factory handle_agent uses the same helper (one source of truth)
 """
 
@@ -91,8 +91,8 @@ class TestValidateAgentTask:
     def test_rejection_includes_concrete_examples(self):
         result = validate_agent_task("fix", 3)
         assert result is not None
-        # At least one /agent example
-        assert "/agent" in result.message
+        # At least one /auto example
+        assert "/auto" in result.message
         # Examples should reference filenames or paths to model
         # what good detail looks like
         assert "py" in result.message or ":" in result.message
@@ -140,11 +140,11 @@ def _read_sse_first_payload(content: bytes) -> dict:
 
 class TestChatRouteAgentGate:
     def test_vague_agent_task_short_circuits(self, http_client):
-        """Web's /agent fix used to flow through /chat untouched.
+        """Web's /auto fix used to flow through /chat untouched.
         v1.18.1 gates it server-side."""
         resp = http_client.post(
             "/chat",
-            json={"message": "/agent fix"},
+            json={"message": "/auto fix"},
             headers=_new_session_headers("vague"),
         )
         assert resp.status_code == 200
@@ -162,7 +162,7 @@ class TestChatRouteAgentGate:
         resp = http_client.post(
             "/chat",
             json={
-                "message": "/agent Fix the off-by-one in parser.py line_count function",
+                "message": "/auto Fix the off-by-one in parser.py line_count function",
             },
             headers=_new_session_headers("good"),
         )
@@ -178,11 +178,11 @@ class TestChatRouteAgentGate:
         )
 
     def test_bare_agent_command_not_gated(self, http_client):
-        """`/agent` (no args) is the toggle/status form — not a
+        """`/auto` (no args) is the toggle/status form — not a
         task. Should not hit the validation."""
         resp = http_client.post(
             "/chat",
-            json={"message": "/agent"},
+            json={"message": "/auto"},
             headers=_new_session_headers("bare"),
         )
         # Either empty-message rejection OR LLM error, but NOT the
@@ -193,15 +193,15 @@ class TestChatRouteAgentGate:
         assert rejection_marker not in body_text
 
     def test_agent_with_only_whitespace_args_rejected(self, http_client):
-        """`/agent    ` (just whitespace) reaches the gate with an
+        """`/auto    ` (just whitespace) reaches the gate with an
         empty task — should be rejected the same way."""
         resp = http_client.post(
             "/chat",
-            json={"message": "/agent    "},
+            json={"message": "/auto    "},
             headers=_new_session_headers("ws"),
         )
         # The exact behavior: gate is hit because message starts
-        # with "/agent " (with space). Empty task → rejection.
+        # with "/auto " (with space). Empty task → rejection.
         # (Or — depending on `is_empty_or_context_only` — this
         # might short-circuit at the empty-message check earlier.
         # Either rejection is fine; both stop the LLM.)
@@ -225,7 +225,7 @@ class TestFactoryUsesSharedValidator:
         engine.agent_mode = False
         ctx = ServerCommandContext(engine)
         # Drive the registered factory handler
-        result = CommandFactory.get("agent").handler(ctx, "fix")
+        result = CommandFactory.get("auto").handler(ctx, "fix")
         assert isinstance(result, NotificationResult)
         # Same nudge text the validator produces
         assert "more" in result.message.lower()
@@ -246,7 +246,7 @@ class TestFactoryUsesSharedValidator:
         ctx = ServerCommandContext(engine)
         # Use a long-enough task that validation passes
         try:
-            CommandFactory.get("agent").handler(
+            CommandFactory.get("auto").handler(
                 ctx, "Fix the off-by-one in parser.py line_count"
             )
         except RuntimeError as e:

@@ -112,15 +112,16 @@ Available settings:
             }
             break;
 
-        case 'agent':
-            // v1.11.9: Add /tools agent on|off (matches TUI)
+        case 'auto':
+            // v1.11.9: /tools auto on|off (renamed from `tools agent` in
+            // v1.19.1 — ADR 0011; matches TUI)
             if (args.length >= 2) {
                 const action = args[1]?.toLowerCase();
                 if (['on', 'enable'].includes(action)) {
                     await ctx.backend.enableAgentMode();
                     ctx.postMessage({
                         type: 'systemMessage',
-                        content: '✓ Agent mode enabled\n*Tools auto-enabled. Use `/agent <task>` to start autonomous execution.*'
+                        content: '✓ Agent mode enabled\n*Tools auto-enabled. Use `/auto <task>` to start autonomous execution.*'
                     });
                     await ctx.updateAgentStatus();
                     await ctx.updateStatus();
@@ -134,7 +135,7 @@ Available settings:
                 } else {
                     ctx.postMessage({
                         type: 'error',
-                        content: `Unknown action: ${action}\nUsage: /tools agent on|off`
+                        content: `Unknown action: ${action}\nUsage: /tools auto on|off`
                     });
                 }
             } else {
@@ -144,8 +145,8 @@ Available settings:
                     type: 'systemMessage',
                     content: `**Agent Mode:** ${agentStatus.agent_mode ? 'ON' : 'OFF'}
 
-Usage: \`/tools agent on|off\`
-       \`/agent <task>\` - Run autonomous task`
+Usage: \`/tools auto on|off\`
+       \`/auto <task>\` - Run autonomous task`
                 });
             }
             break;
@@ -380,7 +381,7 @@ export async function handleCheckpointCommand(ctx: HandlerContext, args: string[
                 if (result.checkpoints.length === 0) {
                     ctx.postMessage({
                         type: 'systemMessage',
-                        content: 'No checkpoints found.\nRun an `/agent` task to create checkpoints.'
+                        content: 'No checkpoints found.\nRun an `/auto` task to create checkpoints.'
                     });
                 } else {
                     let listMsg = '**Recent Checkpoints**\n';

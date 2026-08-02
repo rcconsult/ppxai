@@ -156,7 +156,7 @@ def test_all_commands_registered():
     critical_commands = [
         "help", "status", "provider", "model", "tools",
         "save", "load", "sessions", "clear", "export",
-        "cd", "pwd", "show", "agent", "undo",
+        "cd", "pwd", "show", "auto", "undo",
     ]
 
     for cmd in critical_commands:
@@ -478,8 +478,8 @@ def test_show_command_no_args(mock_context):
 # =============================================================================
 
 def test_agent_command_status(mock_context):
-    """Test /agent shows current agent status."""
-    spec = CommandFactory.get("agent")
+    """Test /auto (renamed from /agent in v1.19.1) shows agent status."""
+    spec = CommandFactory.get("auto")
     assert spec is not None
 
     from ppxai.commands.results import AIResponseResult

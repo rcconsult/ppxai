@@ -54,7 +54,7 @@ class TestCommandDefinitions:
     REQUIRED_COMMANDS = [
         "/help", "/clear", "/save", "/export", "/load", "/sessions",
         "/provider", "/model",
-        "/tools", "/agent",
+        "/tools", "/auto",
         "/checkpoint",
         "/usage", "/status",
         "/show", "/cat",
@@ -64,10 +64,10 @@ class TestCommandDefinitions:
 
     # Commands with subcommands
     COMMANDS_WITH_SUBCOMMANDS = {
-        "/tools": ["enable", "disable", "status", "list", "config", "set", "agent", "help"],
+        "/tools": ["enable", "disable", "status", "list", "config", "set", "auto", "help"],
         "/checkpoint": ["status", "list", "undo", "backend", "clear", "info"],
         "/usage": ["24h", "week", "month", "year", "all", "show", "reset"],
-        "/agent": ["on", "off"],
+        "/auto": ["on", "off"],
     }
 
     def test_required_commands_in_js(self):

@@ -76,18 +76,18 @@ const SLASH_COMMANDS = {
     // === Tools & Agent ===
     '/tools': {
         description: 'Manage AI tools',
-        usage: '/tools [enable|disable|status|list|config|set|agent|help]',
+        usage: '/tools [enable|disable|status|list|config|set|auto|help]',
         category: CommandCategory.TOOLS,
-        subcommands: ['enable', 'disable', 'status', 'list', 'config', 'set', 'agent', 'help']
+        subcommands: ['enable', 'disable', 'status', 'list', 'config', 'set', 'auto', 'help']
     },
-    '/agent': {
-        description: 'Run autonomous agent task',
-        usage: '/agent [on|off|<task description>]',
+    '/auto': {
+        description: 'Run autonomous in-session task (was /agent)',
+        usage: '/auto [on|off|<task description>]',
         category: CommandCategory.TOOLS,
         subcommands: ['on', 'off']
     },
     // v1.19.0 agent platform (web-client-only, experimental). Distinct from
-    // /agent above: these drive the /v1/agent/* background run registry.
+    // /auto above: these drive the /v1/agent/* background run registry.
     '/agentrun': {
         description: 'Start a background agent run (v1 platform, experimental)',
         usage: '/agentrun <task>',

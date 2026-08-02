@@ -39,7 +39,7 @@ class TestCommandCompletion:
         items = complete("/a")
         texts = [i["text"] for i in items]
         assert "/attach" in texts
-        assert "/agent" in texts
+        assert "/auto" in texts
 
     def test_slash_att_includes_alias(self):
         items = complete("/att")

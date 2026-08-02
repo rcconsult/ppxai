@@ -151,7 +151,7 @@ export function formatToolHelp(data: ToolHelpData): string {
  */
 export function formatAgentStatus(agentMode: boolean): string {
     const status = agentMode ? 'ON' : 'OFF';
-    return `**Agent Mode:** ${status}\n\nUsage: \`/tools agent on|off\`\nOr use \`/agent <task>\` to run an autonomous task.`;
+    return `**Agent Mode:** ${status}\n\nUsage: \`/tools auto on|off\`\nOr use \`/auto <task>\` to run an autonomous task.`;
 }
 
 /**
