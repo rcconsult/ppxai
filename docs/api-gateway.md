@@ -447,9 +447,22 @@ Content-Type: application/json
     "prompt_tokens": 423,
     "completion_tokens": 87,
     "total_tokens": 510
+  },
+  "grounding": {                     // v1.19.1, ADDITIVE: present ONLY when the
+    "searched": true,                //   search-loop enrichment served the request
+    "run_id": "run_c02a3cbac2f0",    //   (absent — not null — otherwise, so existing
+    "queries": ["..."],              //   consumers see a byte-identical envelope)
+    "backend": "perplexity",         // premium backend, or "duckduckgo" (free)
+    "search_cost": 0.0000568         // premium-search USD cost of THIS request
   }
 }
 ```
+
+`grounding.run_id` is the debug handle: the enriched request executed as a
+real `kind=oneshot` run, so `~/.ppxai/runs/<run_id>/` holds its meta + event
+log (queries, egress allow/deny audit, usage) and the run-inspection
+surfaces work on it. All grounding fields derive from that run's own audit
+trail — concurrent requests cannot cross-attribute cost.
 
 #### Errors
 
@@ -457,7 +470,8 @@ Content-Type: application/json
 |---|---|
 | 400 | Unknown provider, missing model with no default, no API key for provider, provider doesn't support oneshot in v1 |
 | 422 | Request body fails validation (empty prompt, negative max_tokens, temperature out of range, etc.) |
-| 502 | Provider call raised — wraps the upstream error as `{"detail": "Provider call failed: <message>"}` |
+| 502 | Provider call raised — wraps the upstream error as `{"detail": "Provider call failed: <message>"}`; on the enrichment path, a failed/cancelled run — the detail carries the `run_id` for post-mortem |
+| 504 | Enrichment-path run exceeded the request timeout — the run is cooperatively cancelled and the detail carries its `run_id` (the record stays inspectable) |
 
 #### Notes
 
@@ -477,27 +491,40 @@ Content-Type: application/json
   This means vendor knobs (NIM `chat_template_kwargs.enable_thinking`,
   Qwen3 `enable_thinking`, etc.) carry through without the caller
   having to know about them.
-- **Native web search (opt-in, provider-side).** Set
-  `tools.web_search.oneshot_grounding: true` in `ppxai-config.json` to let
-  oneshot augment a completion with the **provider's own** web search —
-  Gemini Google-Search grounding, Perplexity Sonar. This is **Option A**:
-  retrieval happens *inside the provider's API call*, so the egress
-  perimeter is unchanged (same provider host the call already reaches) and
-  **no `web_search`/`fetch_url` tool is ever exposed to the model** — there
-  is no prompt-injection exfiltration vector and no `NetworkPolicy`
-  involvement (that stays the `/v1/agent/task`-only egress firewall).
-  - **Default off.** When off, behavior is byte-identical to pre-1.19.x —
-    existing consumers see no change.
-  - **Capability-gated.** Only providers with `capabilities.web_search:
-    true` are affected (Gemini, Perplexity). For OpenAI / NVIDIA it's a
-    no-op — the flag can never reach for a tool a provider doesn't have.
-  - Gemini already grounds when `provider.gemini.options.enable_grounding`
-    is set; Perplexity sonar* models search intrinsically. This flag is the
-    single, explicit, deterministic switch so a gateway consumer can opt in
-    without depending on per-provider config.
-  - For tool-*using* agent work (granted `web_search`/`fetch_url` with an
-    egress allowlist), use `POST /v1/agent/task`, not oneshot — that's the
-    sandboxed tier where `NetworkPolicy` applies.
+- **Grounding (opt-in, v1.19.1 — two independent switches under
+  `execution.run.*`).** Both default **off**; with both off the endpoint is
+  a **pure closed-book LLM call** — no context enrichment, no egress beyond
+  the provider API itself (with a local provider this is fully
+  air-gap-safe). The decision is made **per request** per the ADR 0009 §4
+  gating table, logged to the server debug log, and reported per configured
+  model by `/doctor`:
+
+  | `execution.run.web_search` | `execution.run.grounding` | Behavior |
+  |---|---|---|
+  | off | off | **Closed-book** (default): training-data answer only. |
+  | off | on | **Native**: the provider's own search (Gemini grounding, Perplexity Sonar) retrieves *inside the provider's API call*. No new egress, no tool exposed, no run record. Non-search providers degrade gracefully to closed-book. |
+  | on | off | **Search-loop**: the model gets exactly one tool, `web_search`, and the request executes as an auditable `kind=oneshot` run (the `grounding` response field appears). Exists so **local models get context enrichment** they otherwise never have. Non-tool-capable models degrade to closed-book; a failed search degrades to answering with what the model has. |
+  | on | on | **Best available per provider**: native wins when the provider has it (never both — retrieval is never done or billed twice); the search loop is the fallback for providers without native search. |
+
+  - **No combination errors out** — the switches only change where the
+    answer's knowledge comes from, and every unmet precondition degrades
+    gracefully toward closed-book.
+  - **Search-loop perimeter.** The run's grant is hardwired to
+    `{web_search}` (nothing can widen it); `NetworkPolicy` clamps egress to
+    the search-backend hosts; a small iteration budget bounds the loop.
+    Host/filesystem-safe, not injection-proof: retrieved text can influence
+    the answer — inherent to grounding, including the native path.
+  - **ADR 0004 revision.** v1 originally promised "no tool loop in
+    oneshot". That purity claim is revised (ADR 0009 §4 / ADR 0011): the
+    search-loop path drives the *same* sandboxed run tier as
+    `/v1/agent/task` — a facade, not a second tool-execution path — and it
+    is opt-in, default-off, with the wire byte-identical when off.
+  - **Legacy key.** `tools.web_search.oneshot_grounding` (v1.19.0) is
+    dual-read as `execution.run.grounding`; an explicit `execution.run.*`
+    value wins. New configs should use the `execution.run` block.
+  - For general tool-using agent work (custom grants, egress allowlists,
+    specs/skills), use `POST /v1/agent/task` — oneshot's search-loop is the
+    single-tool special case of that tier.
 
 #### Example: classification with structured output
 

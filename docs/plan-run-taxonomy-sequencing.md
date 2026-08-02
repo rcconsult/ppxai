@@ -20,6 +20,17 @@ the command surface on top of the proven facade. The follow-up unification
 
 ## Phase F — enriched `/v1/oneshot` facade (ADR 0009 step ①)
 
+> **STATUS (2026-08-02): Phase F COMPLETE.** F1 `abf83868` · F2 `8bcd8109`
+> · F3 `26c26a19` · F4 `16b6091d` · F5 `01554919` + docs. Live-verified:
+> full 2×2 config matrix (search-loop / native / closed-book / XOR
+> native-wins), grounded answer with real per-request accounting
+> (`queries`, `backend=perplexity`, `search_cost`, token usage) derived
+> from the run's own audit trail; gateway-smoke 6/6 byte-identical at
+> defaults. Two live-trial catches fixed en route: the loader's top-level
+> whitelist dropped the `execution` block, and URL-vs-bare-host allowlist
+> entries made the facade's egress deny everything. Next: Phase U (or
+> ADR 0009 steps ②/③ — see "Dependencies" below).
+
 ### F1 — `RunMeta.kind` discriminator (additive, inert)
 
 The taxonomy's data seam lands FIRST so the facade never pollutes the task
