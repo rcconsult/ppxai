@@ -57,8 +57,8 @@ from ...config import (
     get_default_provider,
     get_execution_run_config,
     get_provider_config,
-    get_tool_calling_config,
 )
+from ...config.execution import get_effective_oneshot_path
 from ...engine.providers import create_provider
 from ...engine.providers.openai_compat import OpenAICompatibleProvider
 from ...engine.types import ProviderCapabilities
@@ -189,57 +189,12 @@ def _oneshot_enrichment_enabled() -> bool:
         return False
 
 
-def _provider_web_search_capable(provider_name: str) -> bool:
-    """Does this provider advertise NATIVE web search (capabilities axis)?"""
-    try:
-        return bool(
-            get_provider_config(provider_name)
-            .get("capabilities", {})
-            .get("web_search", False)
-        )
-    except Exception:
-        return False
-
-
-def _tool_calling_capable(provider_name: str, model: str) -> bool:
-    """Can this provider/model drive the §4 web_search tool loop?
-
-    True on native function calling (capabilities.native_tool_calling) or an
-    explicit per-provider/per-model `tool_calling` config block (the
-    prompt-based path — docs/prompt-based-tool-calling.md). Conservative
-    default: neither signal → not capable → the gating table lands on
-    closed-book rather than handing tools to a model that can't call them."""
-    try:
-        caps = get_provider_config(provider_name).get("capabilities", {})
-        if caps.get("native_tool_calling", False):
-            return True
-        mode = (get_tool_calling_config(provider_name, model) or {}).get("mode")
-        return bool(mode) and mode != "none"
-    except Exception:
-        return False
-
-
 def _oneshot_effective_path(provider_name: str, model: str) -> str:
-    """The ADR 0009 §4 gating truth table, resolved per request.
-
-    `native` (provider's own search) beats `search-loop` (enrichment) —
-    enrichment XOR native, never both; anything else is `closed-book`:
-
-        grounding_on AND capable(web_search)            → native
-        elif enrichment_on AND tool_calling_capable     → search-loop
-        else                                            → closed-book
-
-    F2: computed + logged only (the search-loop execution path arrives with
-    the F3 facade); with both keys at their defaults the request is
-    byte-identical to the shipped behavior."""
-    native_effective = _oneshot_grounding_enabled() and _provider_web_search_capable(
-        provider_name
-    )
-    if native_effective:
-        return "native"
-    if _oneshot_enrichment_enabled() and _tool_calling_capable(provider_name, model):
-        return "search-loop"
-    return "closed-book"
+    """The ADR 0009 §4 gating truth table, resolved per request. Thin
+    delegate — the logic lives on the config axis
+    (`config.execution.get_effective_oneshot_path`) so `/doctor` reports
+    the same decision without importing server routes (F5)."""
+    return get_effective_oneshot_path(provider_name, model)
 
 
 # ---------------------------------------------------------------------------

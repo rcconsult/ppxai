@@ -53,3 +53,43 @@ def get_execution_run_config() -> Dict[str, Any]:
         except Exception:
             out["grounding"] = False
     return out
+
+
+def get_effective_oneshot_path(provider: str, model: str) -> str:
+    """The ADR 0009 §4 gating truth table, resolved from config alone.
+
+    `native` (the provider's own search) beats `search-loop` (the web_search
+    tool via the run tier) — enrichment XOR native, never both; anything
+    else is `closed-book` (pure LLM, no context enrichment):
+
+        grounding on AND capabilities.web_search          → "native"
+        elif web_search on AND tool-calling capable       → "search-loop"
+        else                                              → "closed-book"
+
+    Tool-calling capable = native function calling OR an explicit
+    per-provider/model `tool_calling` config block (the prompt-based path);
+    neither signal → conservative closed-book.
+
+    Lives on the CONFIG axis (not the oneshot route) so the commands layer
+    (`/doctor`) can report the effective path per configured model without
+    importing server routes — fastapi is an optional dependency there.
+    """
+    from .providers import get_provider_config, get_tool_calling_config
+
+    run_cfg = get_execution_run_config()
+    try:
+        caps = get_provider_config(provider).get("capabilities", {}) or {}
+    except Exception:
+        caps = {}
+    if run_cfg.get("grounding") and caps.get("web_search", False):
+        return "native"
+    tool_capable = bool(caps.get("native_tool_calling", False))
+    if not tool_capable:
+        try:
+            mode = (get_tool_calling_config(provider, model) or {}).get("mode")
+            tool_capable = bool(mode) and mode != "none"
+        except Exception:
+            tool_capable = False
+    if run_cfg.get("web_search") and tool_capable:
+        return "search-loop"
+    return "closed-book"

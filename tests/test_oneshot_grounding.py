@@ -168,22 +168,27 @@ class TestUsageCaptureChannel:
 
 
 class TestEffectivePath:
-    """The ADR 0009 §4 gating truth table (F2: computed + logged only)."""
+    """The ADR 0009 §4 gating truth table. F5: the logic lives on the config
+    axis (config.execution.get_effective_oneshot_path) so /doctor shares the
+    exact decision the route makes — patches target the config layer."""
 
     @staticmethod
     def _path(*, grounding=False, enrichment=False, web_capable=False,
               native_tools=False, tc_mode=None):
+        from ppxai.config import execution as exec_mod
+        from ppxai.config import providers as providers_mod
+
         with patch.object(
-            oneshot_mod, "get_execution_run_config",
+            exec_mod, "get_execution_run_config",
             return_value={"web_search": enrichment, "grounding": grounding},
         ), patch.object(
-            oneshot_mod, "get_provider_config",
+            providers_mod, "get_provider_config",
             return_value={"capabilities": {
                 "web_search": web_capable,
                 "native_tool_calling": native_tools,
             }},
         ), patch.object(
-            oneshot_mod, "get_tool_calling_config",
+            providers_mod, "get_tool_calling_config",
             return_value={"mode": tc_mode} if tc_mode else {},
         ):
             return oneshot_mod._oneshot_effective_path("p", "m")

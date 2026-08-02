@@ -490,6 +490,58 @@ def _format_probe_section(
     return lines
 
 
+def _format_grounding_section() -> List[str]:
+    """Oneshot grounding path per configured provider (F5, ADR 0009 §4).
+
+    Offline — resolved from config alone via the SAME function the
+    /v1/oneshot route uses (`config.execution.get_effective_oneshot_path`),
+    so what /doctor prints is what a request will actually do:
+    native (provider-side search) / search-loop (web_search tool via the
+    run tier) / closed-book (pure LLM, no context enrichment).
+    """
+    from ..config import get_available_providers, get_default_model
+    from ..config.execution import (
+        get_effective_oneshot_path,
+        get_execution_run_config,
+    )
+
+    lines: List[str] = []
+    lines.append("Oneshot grounding (execution.run):")
+    try:
+        run_cfg = get_execution_run_config()
+    except Exception:
+        run_cfg = {"web_search": False, "grounding": False}
+    lines.append(
+        f"   web_search={'on' if run_cfg.get('web_search') else 'off'}"
+        f"  grounding={'on' if run_cfg.get('grounding') else 'off'}"
+        f"  (both off = pure LLM, air-gap-safe)"
+    )
+    try:
+        providers = get_available_providers()
+    except Exception:
+        providers = []
+    if not providers:
+        lines.append("   (no providers configured)")
+        return lines
+    labels = {
+        "native": "native — provider-side search, no new egress",
+        "search-loop": "search-loop — web_search tool via the run tier "
+                       "(auditable kind=oneshot run)",
+        "closed-book": "closed-book — pure LLM, no enrichment",
+    }
+    for p in providers:
+        try:
+            model = get_default_model(p)
+        except Exception:
+            model = None
+        try:
+            path = get_effective_oneshot_path(p, model or "")
+        except Exception:
+            path = "closed-book"
+        lines.append(f"   {p} ({model or 'no default model'}): {labels[path]}")
+    return lines
+
+
 def handle_doctor(context: CommandContext, args: str) -> CommandResult:
     """Handle /doctor command — scan config and report deprecated models.
 
@@ -509,6 +561,9 @@ def handle_doctor(context: CommandContext, args: str) -> CommandResult:
         )
 
     report = _format_audit_report(audit)
+    # F5 (ADR 0009 §4): per-provider effective grounding path — offline,
+    # always shown, same decision function the /v1/oneshot route uses.
+    report = report + "\n\n" + "\n".join(_format_grounding_section())
     probe_results: Dict[str, Dict[str, Any]] = {}
     drift: List[Dict[str, Any]] = []
 
