@@ -760,16 +760,32 @@ legitimately separate per-tenant vs. operator views. KV-cache = acknowledge in
 docs (+ optional vLLM `/metrics` operator read), don't try to account
 per-request. **Until decided, disclose:** `/cost` = interactive session only.
 
-### Item 52 — the LOCAL in-process sealed `/task` egress gate denies a fallback-chain tool wholesale (does NOT affect the k8s/coder tier); `get_weather` unallowlistable locally [agent platform / egress / tools] — ✅ UNBLOCKED (ADR 0009 Accepted 2026-08-01)
+### Item 52 — the LOCAL in-process sealed `/task` egress gate denies a fallback-chain tool wholesale (does NOT affect the k8s/coder tier); `get_weather` unallowlistable locally [agent platform / egress / tools] — ✅ FIXED (2026-08-02, ADR 0009 step ②)
 
-**Resolution path:** NOT spot-fixed. `get_weather`'s config-parity is
-**subsumed by ADR 0009** (task execution profiles, **Accepted 2026-08-01**),
-which generalizes the `web_search`-only `task_default_allow` mechanism to
-per-tool egress baselines (`tools.<tool>.egress`, ADR 0010 final name) read by
-the engine — one config-driven change working across local `/task`, coder, and
-future tiers, instead of a weather-specific patch. This is **step 2 of the
-agreed ADR 0009 build order**. The contained `http://wttr.in` scheme-poison
-removal lands as part of that work. See **Item 53** /
+**FIXED 2026-08-02** by ADR 0009 step ② exactly as planned — no
+weather-specific patch:
+- `_with_tool_egress_defaults` (agent_v1) generalizes the old
+  web_search-only `task_default_allow` to per-tool **`tools.<tool>.egress`**
+  baselines, unioned across a run's granted tools (legacy key dual-read);
+  shared by `/v1/agent/task` AND the oneshot facade.
+- `get_weather` is **https-only** (handler + `_NETWORK_TOOLS`): the
+  `http://wttr.in` scheme poison that made the tool un-allowlistable under
+  the all-or-nothing rule is removed; reliability fallback is Open-Meteo in
+  the tool chain, not a scheme downgrade.
+- Config templates (repo + this host's user config) ship
+  `tools.get_weather.egress` + `tools.web_search.egress` defaults.
+- **Live-verified:** local `/task` run granting `get_weather` with NO
+  `--allow` → allowlist auto-populated from config →
+  `network_policy_allowed` (wttr.in) → real Geneva weather answer
+  (`run_2bd9c64b939c`). 309 tests green.
+
+**Original resolution path (for the record):** NOT spot-fixed. `get_weather`'s
+config-parity was **subsumed by ADR 0009** (task execution profiles,
+**Accepted 2026-08-01**), which generalizes the `web_search`-only
+`task_default_allow` mechanism to per-tool egress baselines
+(`tools.<tool>.egress`, ADR 0010 final name) read by the engine — one
+config-driven change working across local `/task`, coder, and future tiers.
+See **Item 53** /
 [decisions/0009-task-execution-profiles.md](decisions/0009-task-execution-profiles.md).
 
 **Scope (important — corrected 2026-07-23):** this is a defect of the

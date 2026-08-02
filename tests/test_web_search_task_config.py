@@ -6,8 +6,9 @@ Three config knobs under `tools.web_search`, all read by the /task tier:
     that backend's host(s) (web_premium is held to it with no cross-backend
     fallback), so a perplexity-pinned pod authorizes web_search with only
     api.perplexity.ai in the allowlist.
-  * `task_default_allow` pre-authorizes egress hosts so users don't retype
-    `--allow` every run.
+  * `tools.<tool>.egress` (ADR 0009 §2, step ② — generalizes the legacy
+    web_search-only `task_default_allow`, dual-read) pre-authorizes egress
+    hosts per GRANTED tool so users don't retype `--allow` every run.
   * `enabled=false` bans web_search from the tool-capable tier.
 """
 
@@ -95,18 +96,63 @@ def test_web_search_enabled_default_true(tools_cfg):
     assert agent_v1._web_search_banned(["web_search"]) is False
 
 
-def test_task_default_allow_merges_and_dedups(tools_cfg):
+def test_tool_egress_merges_and_dedups(tools_cfg):
+    # ADR 0009 §2 (step ②): per-tool egress baseline under the final key.
+    tools_cfg["web_search"] = {"egress": ["api.perplexity.ai"]}
+    assert agent_v1._with_tool_egress_defaults([], ["web_search"]) == [
+        "api.perplexity.ai"
+    ]
+    assert agent_v1._with_tool_egress_defaults(
+        ["api.perplexity.ai", "x.com"], ["web_search"]
+    ) == ["api.perplexity.ai", "x.com"]
+
+
+def test_tool_egress_empty_is_noop(tools_cfg):
+    tools_cfg["web_search"] = {}
+    net = [{"host": "example.com"}]
+    assert agent_v1._with_tool_egress_defaults(net, ["web_search"]) == net
+
+
+def test_tool_egress_unions_across_granted_tools(tools_cfg):
+    # The union across the run's GRANTED tools — and only the granted ones.
+    tools_cfg["web_search"] = {"egress": ["duckduckgo.com"]}
+    tools_cfg["get_weather"] = {"egress": ["wttr.in", "api.open-meteo.com"]}
+    got = agent_v1._with_tool_egress_defaults(
+        [], ["web_search", "get_weather", "read_file"]
+    )
+    assert got == ["duckduckgo.com", "wttr.in", "api.open-meteo.com"]
+    # An ungranted tool's baseline must NOT leak in.
+    assert agent_v1._with_tool_egress_defaults([], ["read_file"]) == []
+
+
+def test_tool_egress_dual_reads_legacy_task_default_allow(tools_cfg):
+    # Legacy spelling (web_search only) honored when no `egress` key…
     tools_cfg["web_search"] = {"task_default_allow": ["api.perplexity.ai"]}
-    assert agent_v1._with_task_default_allow([]) == ["api.perplexity.ai"]
-    assert agent_v1._with_task_default_allow(["api.perplexity.ai", "x.com"]) == [
-        "api.perplexity.ai", "x.com"
+    assert agent_v1._with_tool_egress_defaults([], ["web_search"]) == [
+        "api.perplexity.ai"
+    ]
+    # …and an explicit `egress` WINS over it (even an empty one).
+    tools_cfg["web_search"] = {
+        "egress": ["duckduckgo.com"],
+        "task_default_allow": ["api.perplexity.ai"],
+    }
+    assert agent_v1._with_tool_egress_defaults([], ["web_search"]) == [
+        "duckduckgo.com"
     ]
 
 
-def test_task_default_allow_empty_is_noop(tools_cfg):
-    tools_cfg["web_search"] = {}
-    net = [{"host": "example.com"}]
-    assert agent_v1._with_task_default_allow(net) == net
+def test_get_weather_egress_baseline_authorizes_policy(tools_cfg, monkeypatch):
+    # Item 52 end-to-end (keyless env): a run granting get_weather with the
+    # operator's config baseline merged must pass the all-or-nothing rule.
+    monkeypatch.delenv("PERPLEXITY_API_KEY", raising=False)
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    tools_cfg["get_weather"] = {"egress": [
+        "wttr.in", "api.open-meteo.com", "geocoding-api.open-meteo.com",
+    ]}
+    allow = agent_v1._with_tool_egress_defaults([], ["get_weather"])
+    policy = np.NetworkPolicy(allow)
+    for url in np.tool_targets("get_weather", {"location": "Geneva"}):
+        assert isinstance(policy.check(url), np.Allow), url
 
 
 # --- no cross-backend fallback when pinned (web_premium) --------------------
@@ -137,9 +183,10 @@ def test_pinned_backend_does_not_fall_back(tools_cfg, monkeypatch):
 
 def test_get_weather_targets_auto_no_key(tools_cfg):
     tools_cfg["web_search"] = {"preferred": "auto"}
-    # wttr.in + Open-Meteo (both key-free) are always in the superset.
+    # wttr.in (https-only since v1.19.1 — the Item 52 scheme-poison fix) +
+    # Open-Meteo (key-free) are always in the superset.
     assert np.tool_targets("get_weather", {}) == [
-        "https://wttr.in/", "http://wttr.in/",
+        "https://wttr.in/",
         "https://api.open-meteo.com/", "https://geocoding-api.open-meteo.com/",
     ]
 
@@ -149,7 +196,7 @@ def test_get_weather_targets_auto_with_perplexity_key(tools_cfg, monkeypatch):
     tools_cfg["web_search"] = {"preferred": "auto"}
     monkeypatch.setenv("PERPLEXITY_API_KEY", "k")
     assert np.tool_targets("get_weather", {}) == [
-        "https://wttr.in/", "http://wttr.in/",
+        "https://wttr.in/",
         "https://api.open-meteo.com/", "https://geocoding-api.open-meteo.com/",
         "https://api.perplexity.ai/",
     ]
@@ -161,7 +208,7 @@ def test_get_weather_pinning_does_not_divert_weather(tools_cfg, monkeypatch):
     tools_cfg["web_search"] = {"preferred": "perplexity"}
     monkeypatch.setenv("PERPLEXITY_API_KEY", "k")
     assert np.tool_targets("get_weather", {}) == [
-        "https://wttr.in/", "http://wttr.in/",
+        "https://wttr.in/",
         "https://api.open-meteo.com/", "https://geocoding-api.open-meteo.com/",
         "https://api.perplexity.ai/",
     ]

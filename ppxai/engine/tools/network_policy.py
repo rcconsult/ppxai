@@ -140,10 +140,11 @@ def _host_resolves_to_blocked_ip(host: str) -> bool:
 # must allowlist every one to be permitted web_search (superset rule), else
 # it could exfiltrate through an unallowlisted backend.
 #
-# get_weather tries https then falls back to plain http on wttr.in
-# (web.get_weather) — both schemes are possible. Since the MVP denies http,
-# get_weather is effectively un-allowlistable until the http fallback is
-# removed; that's the honest, fail-closed outcome.
+# get_weather is https-only as of v1.19.1 (ADR 0009 §2 / Item 52): the old
+# plain-http wttr.in fallback made the tool un-allowlistable under the
+# all-or-nothing rule, so it was removed from the handler AND this map.
+# Reliability fallback is Open-Meteo in the tool chain, not a scheme
+# downgrade.
 #
 # A tool NOT in this map is non-network: the policy ignores it. A tool here
 # whose targets can't be resolved → empty set → denied (fail-closed).
@@ -203,10 +204,9 @@ _WEATHER_OPENMETEO_HOSTS: List[str] = [
 _NETWORK_TOOLS: Dict[str, Tuple[str, Any]] = {
     "fetch_url": ("kwarg", "url"),
     "web_search": ("fixed", _WEB_SEARCH_ALL_HOSTS),
-    "get_weather": ("fixed", [
-        "https://wttr.in/",
-        "http://wttr.in/",  # handler's plain-http fallback — denied under MVP
-    ] + _WEATHER_OPENMETEO_HOSTS),
+    # v1.19.1 (ADR 0009 §2 / Item 52): https-only — the handler's plain-http
+    # fallback was removed (an always-denied scheme must never gate a tool).
+    "get_weather": ("fixed", ["https://wttr.in/"] + _WEATHER_OPENMETEO_HOSTS),
 }
 
 

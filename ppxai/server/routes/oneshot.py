@@ -214,8 +214,11 @@ def _web_search_egress_hosts() -> list:
     `tool_targets` compares against), but `NetworkPolicy` allowlist rules
     take bare hosts — passing the URLs verbatim silently matches nothing
     (fail-closed deny; caught live in the F3 trial via the run's own
-    network_policy_denied event). Step ② swaps the source to
-    `tools.web_search.egress` with the same host shape."""
+    network_policy_denied event).
+
+    Step ② (ADR 0009 §2): the operator's `tools.web_search.egress` baseline
+    is merged on top via `_with_tool_egress_defaults` at the call site —
+    the same mechanism `/v1/agent/task` uses."""
     from urllib.parse import urlparse
 
     from ...engine.tools.network_policy import _WEB_SEARCH_ALL_HOSTS
@@ -293,9 +296,13 @@ async def _oneshot_via_search_loop(
     # Lazy: agent_v1 top-imports from this module (provider construction);
     # importing it at module level would be circular.
     from ..state import get_agent_run_registry
-    from .agent_v1 import build_task_runner
+    from .agent_v1 import _with_tool_egress_defaults, build_task_runner
 
-    egress_hosts = _web_search_egress_hosts()  # step ② swaps the source
+    # Built-in backend superset + the operator's tools.web_search.egress
+    # baseline (step ②) — one mechanism shared with /v1/agent/task.
+    egress_hosts = _with_tool_egress_defaults(
+        _web_search_egress_hosts(), ["web_search"]
+    )
     registry = get_agent_run_registry()
     meta = registry.start_run(
         task=req.prompt,

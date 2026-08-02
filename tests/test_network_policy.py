@@ -163,12 +163,13 @@ class TestToolTargets:
         assert "api.perplexity.ai" in hosts
         assert "generativelanguage.googleapis.com" in hosts
 
-    def test_get_weather_includes_http_fallback(self):
-        # the Medium-finding fix: get_weather falls back https->http, so both
-        # schemes are possible targets (the http one will be denied under MVP).
+    def test_get_weather_is_https_only(self):
+        # v1.19.1 (ADR 0009 §2 / Item 52): the handler's plain-http fallback
+        # was removed — an always-denied scheme must never gate a tool. The
+        # superset must not contain the poison entry anymore.
         targets = tool_targets("get_weather", {"location": "Geneva"})
         assert "https://wttr.in/" in targets
-        assert "http://wttr.in/" in targets
+        assert "http://wttr.in/" not in targets
 
     def test_fetch_url_missing_kwarg_unresolvable(self):
         # network-capable but no URL -> empty -> caller fail-closes
@@ -226,12 +227,26 @@ class TestAuthorizeSupersetRule:
         assert d.allowed is False
         assert d.approved_targets == ()
 
-    def test_get_weather_denied_by_http_fallback_branch(self):
-        # THE Medium-finding outcome: even allowlisting wttr.in, get_weather is
-        # denied because its http fallback target fails the https-only rule.
+    def test_get_weather_partial_allowlist_still_denied(self):
+        # v1.19.1 (ADR 0009 §2 / Item 52): the http-scheme poison is GONE —
+        # get_weather is https-only and allowlistable. The all-or-nothing
+        # rule still holds: wttr.in alone is not enough, because the chain
+        # can also reach Open-Meteo. Denied for the honest reason now.
         d = NetworkPolicy(["wttr.in"]).authorize("get_weather", {"location": "x"})
         assert d.allowed is False
-        assert "https only" in d.reason
+        assert "open-meteo" in d.reason
+
+    def test_get_weather_full_baseline_allowed(self, monkeypatch):
+        # And with the full key-free superset allowlisted (what the
+        # tools.get_weather.egress config baseline provides), it authorizes.
+        # Keyless env: with premium keys present the superset widens and the
+        # baseline must include those hosts too (config template does).
+        monkeypatch.delenv("PERPLEXITY_API_KEY", raising=False)
+        monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+        d = NetworkPolicy([
+            "wttr.in", "api.open-meteo.com", "geocoding-api.open-meteo.com",
+        ]).authorize("get_weather", {"location": "x"})
+        assert d.allowed is True
 
     def test_fetch_url_single_target_allowed(self):
         d = NetworkPolicy(["api.github.com"]).authorize(

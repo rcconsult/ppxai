@@ -718,6 +718,13 @@
       "preferred": "auto",
       "perplexity_model": "sonar",
       "gemini_model": "gemini-2.5-flash",
+      "__comment_egress": "ADR 0009 §2 per-tool egress baseline: hosts merged into any run that GRANTS this tool (task tier + oneshot facade). Supersedes task_default_allow (legacy, dual-read).",
+      "egress": [
+        "duckduckgo.com",
+        "html.duckduckgo.com",
+        "api.perplexity.ai",
+        "generativelanguage.googleapis.com"
+      ],
       "pricing": {
         "perplexity": {
           "input": 1,
@@ -729,6 +736,16 @@
           "model": "per_query"
         }
       }
+    },
+    "get_weather": {
+      "__comment_egress": "ADR 0009 §2 (retires Item 52): the weather chain's full superset — wttr.in + Open-Meteo (key-free) + premium search hosts (used only when keyed). Config-driven so granted weather runs work on every tier.",
+      "egress": [
+        "wttr.in",
+        "api.open-meteo.com",
+        "geocoding-api.open-meteo.com",
+        "api.perplexity.ai",
+        "generativelanguage.googleapis.com"
+      ]
     },
     "display_limits": {
       "default": 2000,

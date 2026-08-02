@@ -760,27 +760,41 @@ def _web_search_banned(tools: list) -> bool:
         return False
 
 
-def _with_task_default_allow(network: list) -> list:
-    """Merge operator-configured default egress hosts into a task run's allowlist.
+def _with_tool_egress_defaults(network: list, tools: list) -> list:
+    """Merge per-tool operator egress baselines into a run's allowlist.
 
-    `tools.web_search.task_default_allow` (list of host strings) is trusted
-    operator input — the same trust level as a per-run `--allow` — so the
-    operator can pre-authorize the egress web_search needs (e.g.
-    ["api.perplexity.ai"] on a perplexity-pinned coder pod) and users don't
-    retype it on every run. Dedups against existing entries; string hosts only.
+    ADR 0009 §2 (step ②, generalizes the old web_search-only
+    `task_default_allow`): **`tools.<tool>.egress`** — a list of host
+    strings per tool — is trusted operator input, the same trust level as a
+    per-run `--allow`. The union across the run's GRANTED tools is merged
+    in, so an operator declares once what each tool needs (e.g.
+    `tools.get_weather.egress` = wttr.in + Open-Meteo + premium hosts) and
+    a run granting that tool just works — one config-driven mechanism
+    across local `/task`, coder pods, and the oneshot facade. This retires
+    Item 52's hardcoded, config-blind weather path.
+
+    Dual-read: for `web_search`, the legacy
+    `tools.web_search.task_default_allow` spelling is honored when no
+    `egress` key is present; an explicit `egress` wins. Dedups against
+    existing entries; string hosts only.
     """
-    try:
-        defaults = get_tool_config("web_search").get("task_default_allow", []) or []
-    except Exception:
-        defaults = []
-    if not defaults:
-        return network
     merged = list(network)
     existing = {e for e in merged if isinstance(e, str)}
-    for host in defaults:
-        if isinstance(host, str) and host and host not in existing:
-            merged.append(host)
-            existing.add(host)
+    for tool in tools or []:
+        try:
+            cfg = get_tool_config(tool) or {}
+        except Exception:
+            continue
+        if "egress" in cfg:
+            hosts = cfg.get("egress") or []
+        elif tool == "web_search":
+            hosts = cfg.get("task_default_allow", []) or []  # legacy dual-read
+        else:
+            hosts = []
+        for host in hosts:
+            if isinstance(host, str) and host and host not in existing:
+                merged.append(host)
+                existing.add(host)
     return merged
 
 
@@ -906,10 +920,12 @@ async def create_agent_task(req: AgentTaskRequest, request: Request) -> AgentRun
                 )
             workdir = wd
 
-    # Operator-configured default egress (trusted input) — merged AFTER the
-    # ceiling guards so it only ever WIDENS a run's own allowlist toward hosts
-    # the operator already blessed; it can't relax any grant/shell/provider check.
-    eff["network"] = _with_task_default_allow(eff["network"])
+    # Operator-configured per-tool egress baselines (trusted input) — merged
+    # AFTER the ceiling guards so they only ever WIDEN a run's own allowlist
+    # toward hosts the operator already blessed; they can't relax any
+    # grant/shell/provider check. Union across the run's granted tools
+    # (ADR 0009 §2, tools.<tool>.egress).
+    eff["network"] = _with_tool_egress_defaults(eff["network"], tools)
 
     meta = registry.start_run(
         task=eff["task"], kind="task", tools=tools,

@@ -66,39 +66,35 @@ def get_weather(location: str, format: str = "short") -> str:
     else:
         path = f"{urllib.parse.quote(location)}?2&m"
 
-    # Try HTTPS first, fall back to HTTP (wttr.in supports both).
-    # Corporate proxies with SSL inspection can stall HTTPS handshakes.
-    last_error = None
-    for scheme in ("https", "http"):
-        try:
-            url = f"{scheme}://wttr.in/{path}"
-            ctx = _create_ssl_context() if scheme == "https" else None
-            req = urllib.request.Request(
-                url,
-                headers={"User-Agent": "curl/7.68.0"}
-            )
+    # HTTPS-only (v1.19.1, ADR 0009 §2 — the Item 52 scheme-poison fix).
+    # The old https→plain-http fallback put an always-denied scheme into
+    # get_weather's egress superset, making the tool un-allowlistable under
+    # the per-run NetworkPolicy (all-or-nothing rule). Reliability fallback
+    # is Open-Meteo in the tool chain (get_weather_openmeteo), not a scheme
+    # downgrade — a stalled corporate-proxy HTTPS handshake lands there too.
+    try:
+        url = f"https://wttr.in/{path}"
+        ctx = _create_ssl_context()
+        req = urllib.request.Request(
+            url,
+            headers={"User-Agent": "curl/7.68.0"}
+        )
 
-            with urllib.request.urlopen(req, timeout=timeout, context=ctx) as response:
-                result = response.read().decode('utf-8')
+        with urllib.request.urlopen(req, timeout=timeout, context=ctx) as response:
+            result = response.read().decode('utf-8')
 
-            # Clean up ANSI codes
-            result = re.sub(r'\x1b\[[0-9;]*m', '', result)
-            return f"Weather for {location}:\n{result}"
+        # Clean up ANSI codes
+        result = re.sub(r'\x1b\[[0-9;]*m', '', result)
+        return f"Weather for {location}:\n{result}"
 
-        except urllib.error.HTTPError as e:
-            if e.code == 404:
-                return f"Error: Location '{location}' not found. Try a different city name or format like 'Geneva,Switzerland'"
-            last_error = f"Error fetching weather: HTTP {e.code}"
-            break  # HTTP errors won't be fixed by switching scheme
-        except (urllib.error.URLError, ssl.SSLError, OSError) as e:
-            last_error = f"Error: Could not connect to weather service. {str(getattr(e, 'reason', e))}"
-            if scheme == "https":
-                continue  # Fall back to HTTP
-        except Exception as e:
-            last_error = f"Error getting weather: {str(e)}"
-            break
-
-    return last_error or "Error getting weather: unknown error"
+    except urllib.error.HTTPError as e:
+        if e.code == 404:
+            return f"Error: Location '{location}' not found. Try a different city name or format like 'Geneva,Switzerland'"
+        return f"Error fetching weather: HTTP {e.code}"
+    except (urllib.error.URLError, ssl.SSLError, OSError) as e:
+        return f"Error: Could not connect to weather service. {str(getattr(e, 'reason', e))}"
+    except Exception as e:
+        return f"Error getting weather: {str(e)}"
 
 
 # WMO weather-interpretation codes (Open-Meteo `weather_code`) → (label, emoji).
