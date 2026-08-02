@@ -68,6 +68,34 @@ class TestRunMeta:
         assert RunMeta.from_dict(m.to_dict()) == m
 
 
+class TestRunKind:
+    """ADR 0011 (F1): the `kind` run discriminator — additive, legacy-safe."""
+
+    def test_default_is_task(self):
+        assert RunMeta(run_id="r", task="t").kind == "task"
+
+    def test_legacy_meta_without_kind_reads_as_task(self):
+        # A pre-F1 meta.json has no `kind` key — it must load as "task".
+        assert RunMeta.from_dict({"run_id": "r", "task": "t"}).kind == "task"
+
+    def test_kind_roundtrips(self):
+        m = RunMeta(run_id="r", task="t", kind="oneshot")
+        assert RunMeta.from_dict(m.to_dict()) == m
+
+    def test_start_run_defaults_task_and_persists(self, registry, tmp_path):
+        m = registry.start_run("plain")
+        assert m.kind == "task"
+        on_disk = json.loads(
+            (tmp_path / "runs" / m.run_id / "agent-0" / "meta.json").read_text()
+        )
+        assert on_disk["kind"] == "task"
+
+    def test_start_run_stamps_oneshot(self, registry):
+        m = registry.start_run("one-off", kind="oneshot")
+        assert m.kind == "oneshot"
+        assert registry.get_run(m.run_id).kind == "oneshot"
+
+
 # ---------------------------------------------------------------------------
 # RunControl — cooperative budget/cancel (Inc 6)
 # ---------------------------------------------------------------------------
@@ -608,6 +636,30 @@ class TestAgentRunRoutes:
         one = c.get(f"/v1/agent/runs/{m.run_id}").json()
         assert one["status"] == "completed"
         assert one["result"] == "hi"
+
+    def test_kind_surfaces_on_wire_and_filters(self, client):
+        # ADR 0011 (F1): `kind` is on the projection, and ?kind= partitions
+        # the listing so each command family sees only its own runs.
+        c, reg = client
+        t = reg.start_run("managed", tools=["read_file"], provider="p", model="m")
+        o = reg.start_run("one-off", kind="oneshot", provider="p", model="m")
+        for m in (t, o):
+            reg.finish_run(m, status="completed", result="ok")
+
+        allruns = c.get("/v1/agent/runs").json()["runs"]
+        assert {r["run_id"]: r["kind"] for r in allruns} == {
+            t.run_id: "task", o.run_id: "oneshot",
+        }
+        tasks = c.get("/v1/agent/runs?kind=task").json()["runs"]
+        assert [r["run_id"] for r in tasks] == [t.run_id]
+        ones = c.get("/v1/agent/runs?kind=oneshot").json()["runs"]
+        assert [r["run_id"] for r in ones] == [o.run_id]
+
+    def test_kind_filter_rejects_unknown_value(self, client):
+        c, _ = client
+        r = c.get("/v1/agent/runs?kind=bogus")
+        assert r.status_code == 400
+        assert "oneshot" in r.json()["detail"]
 
     @staticmethod
     def _fake_provider():

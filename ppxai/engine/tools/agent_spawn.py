@@ -323,6 +323,7 @@ class SpawnSubagentTool(BaseTool):
         #    child unfindable by the default-agent_n lookup.)
         child = self._registry.start_run(
             task=task,
+            kind="task",  # ADR 0011 F1: children keep the task tier's kind
             tools=child_tools,
             provider=self._provider,
             model=self._model,

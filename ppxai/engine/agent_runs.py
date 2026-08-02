@@ -70,6 +70,12 @@ class RunMeta:
     # run exited, result HELD until POST /ack collects it → finalized)
     status: str = "pending"
     agent_n: int = 0  # slot index; 0 = top-level run, >0 = sub-agents (Inc 7)
+    # ADR 0011 (F1): run-kind discriminator — "task" (managed lifecycle,
+    # /task family) | "oneshot" (one-off: /run family + the /v1/oneshot
+    # facade). Legacy metas without the field read as "task" (dataclass
+    # default via from_dict). Listing surfaces filter on it; sub-agent
+    # children stay distinguished by parent_run_id, not kind.
+    kind: str = "task"
     parent_run_id: Optional[str] = None  # set for sub-agents (Inc 7)
     owner: Optional[str] = None  # Inc 8b: principal that created the run; per-run authz scopes reads to it. None = unowned (created while auth disabled, or a sub-agent) — readable by any authenticated caller.
     provider: Optional[str] = None
@@ -571,6 +577,7 @@ class AgentRunRegistry:
         self,
         task: str,
         *,
+        kind: str = "task",
         tools: Optional[list[str]] = None,
         provider: Optional[str] = None,
         model: Optional[str] = None,
@@ -595,6 +602,7 @@ class AgentRunRegistry:
             run_id=self._new_run_id(),
             task=task,
             status="pending",
+            kind=kind,
             tools=list(tools or []),
             network=list(network or []),
             budget=dict(budget or {}),

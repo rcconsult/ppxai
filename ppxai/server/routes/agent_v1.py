@@ -256,6 +256,9 @@ class RunMetaResponse(BaseModel):
     run_id: str
     task: str
     status: str
+    # ADR 0011 (F1): "task" | "oneshot" run-kind discriminator. Additive —
+    # legacy metas surface as "task".
+    kind: str = "task"
     parent_run_id: Optional[str] = None
     owner: Optional[str] = None  # Inc 8b: principal that owns the run
     provider: Optional[str] = None
@@ -288,6 +291,7 @@ class RunMetaResponse(BaseModel):
             run_id=m.run_id,
             task=m.task,
             status=m.status,
+            kind=getattr(m, "kind", "task") or "task",
             parent_run_id=m.parent_run_id,
             owner=getattr(m, "owner", None),
             provider=m.provider,
@@ -382,7 +386,8 @@ async def create_agent_run(req: AgentRunRequest, request: Request) -> AgentRunRe
     provider = _v1_provider_or_400(provider_name)
 
     meta = registry.start_run(
-        task=req.task, tools=req.tools, provider=provider_name, model=model,
+        task=req.task, kind="task", tools=req.tools,
+        provider=provider_name, model=model,
         owner=_caller_owner(request),
     )
 
@@ -907,7 +912,8 @@ async def create_agent_task(req: AgentTaskRequest, request: Request) -> AgentRun
     eff["network"] = _with_task_default_allow(eff["network"])
 
     meta = registry.start_run(
-        task=eff["task"], tools=tools, provider=provider_name, model=model,
+        task=eff["task"], kind="task", tools=tools,
+        provider=provider_name, model=model,
         network=eff["network"],
         budget=eff["budget"],
         owner=_caller_owner(request),
@@ -1167,13 +1173,23 @@ def build_task_runner(
 
 
 @router.get("/runs", response_model=RunListResponse)
-async def list_agent_runs(request: Request) -> RunListResponse:
+async def list_agent_runs(
+    request: Request, kind: Optional[str] = None
+) -> RunListResponse:
     """List agent runs, newest first.
 
     Owner-scoped (Inc 8b): when auth is enabled, only the caller's own runs
     (plus unowned runs) are returned — a bearer holder must not enumerate
     another owner's runs. When auth is disabled the full list is returned
-    (loopback UX)."""
+    (loopback UX).
+
+    ADR 0011 (F1): optional `?kind=task|oneshot` filter — each command
+    family lists only its own runs (legacy metas count as "task")."""
+    if kind is not None and kind not in ("task", "oneshot"):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unknown kind {kind!r} — expected 'task' or 'oneshot'.",
+        )
     registry = get_agent_run_registry()
     caller = _caller_owner(request)
     # T6: lazy retention backstop — an expired completed_pending_ack hold is
@@ -1182,6 +1198,8 @@ async def list_agent_runs(request: Request) -> RunListResponse:
     runs = [registry.maybe_reap_hold(m, retention) for m in registry.list_runs()]
     if caller is not None:
         runs = [m for m in runs if m.owner is None or m.owner == caller]
+    if kind is not None:
+        runs = [m for m in runs if (getattr(m, "kind", "task") or "task") == kind]
     return RunListResponse(
         runs=[RunMetaResponse.from_meta(m) for m in runs]
     )
