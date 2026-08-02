@@ -269,6 +269,21 @@ mechanism, cost, and egress profile — an operator reading one key name must no
 have to guess which they enabled, which is why both live side by side under
 `execution.oneshot.*` rather than on the tool block.
 
+> **Amendment (2026-08-02, owner-approved — ADR 0011):** two details of this
+> section are superseded by the command-taxonomy streamline
+> ([0011](0011-command-taxonomy-streamline.md)), decided before any of it was
+> implemented (no migration):
+> 1. **Key location:** the pair lives under **`execution.run.*`**
+>    (`execution.run.web_search`, `execution.run.grounding`) — the surface is
+>    now the `/run` command family, and the key literally enables/disables
+>    `web_search` for `kind=oneshot` runs (UX `/run` + API `/v1/oneshot`
+>    facade share one brain). The side-by-side principle above is unchanged.
+> 2. **"No run registry entry":** enriched oneshot executes as a real
+>    registry run (`kind=oneshot`) — the facade over unmodified task gears
+>    ([plan](../plan-adr0009-step1-oneshot-enrichment.md)). "Stateless" keeps
+>    its ADR 0004 meaning (no *session* side-effects); the run record is the
+>    audit + debug surface, and the sync HTTP response is unchanged.
+
 **Gating — decided per request on EFFECTIVE native grounding, not provider
 capability alone.** A provider "takes the native path" only when native
 grounding is actually on (`oneshot_grounding: true` AND the provider is
