@@ -520,6 +520,15 @@ async def _execute_single_tool(
     """
     events = []
     try:
+        # v1.19.1 F4: per-call usage capture for premium web search. The
+        # holder MUST be installed in THIS (parent) context before the tool
+        # task is created — the task inherits a context copy, but the holder
+        # list is the same object, so the handler's usage lands here and
+        # nowhere else. Fixes the concurrent-run misattribution of the old
+        # global get_last_tool_usage() reset-on-read channel.
+        usage_holder = (
+            web_premium.begin_usage_capture() if tool_name == "web_search" else None
+        )
         tool_task = asyncio.create_task(
             ctx.tool_manager.execute_tool(tool_name, **tool_args)
         )
@@ -554,11 +563,11 @@ async def _execute_single_tool(
             iteration=iteration
         )
 
-        # Track tool usage for premium search
-        if tool_name == "web_search":
+        # Track tool usage for premium search — read from THIS call's holder
+        # (race-free), not the legacy process-global (v1.19.1 F4).
+        if tool_name == "web_search" and usage_holder:
             try:
-                tool_usage = web_premium.get_last_tool_usage()
-                if tool_usage:
+                for tool_usage in usage_holder:
                     ctx.track_tool_usage(tool_name, tool_usage)
             except Exception as e:
                 logger.debug(f"Tool usage tracking failed: {e}")

@@ -1146,9 +1146,17 @@ def build_task_runner(
                     control.iterations += 1
                 d = event.data or {}
                 name = d.get("tool", "") if isinstance(d, dict) else ""
+                # F4: carry a truncated args snapshot on the audit event —
+                # what the model actually asked the tool to do (e.g. the
+                # web_search query). Values clamped so a large file-write
+                # arg can't bloat events.jsonl.
+                raw_args = d.get("arguments") if isinstance(d, dict) else None
+                args_snapshot = {
+                    str(k): str(v)[:200] for k, v in raw_args.items()
+                } if isinstance(raw_args, dict) else None
                 registry.emit_event(
                     m.run_id, "tool_call", level="debug", category="tool",
-                    data={"tool": name},
+                    data={"tool": name, "arguments": args_snapshot},
                 )
             elif event.type in (EventType.ERROR, EventType.PROVIDER_THROTTLED):
                 # The engine reports provider/config failures as EVENTS, not
@@ -1167,6 +1175,29 @@ def build_task_runner(
                 text = d.get("content", "") if isinstance(d, dict) else str(d)
                 if text:
                     final_text.append(text)
+
+        # F4: persist the run's OWN usage on its audit trail. This engine is
+        # run-local (D1), so session.usage is per-run attribution by
+        # construction — the seam ADR 0008's cross-tier sink will read.
+        try:
+            u = engine.session.usage
+            ws = (u.tool_calls or {}).get("web_search")
+            registry.emit_event(
+                m.run_id, "run_usage", level="debug", category="result",
+                data={
+                    "prompt_tokens": u.prompt_tokens,
+                    "completion_tokens": u.completion_tokens,
+                    "total_tokens": u.total_tokens,
+                    "estimated_cost": u.estimated_cost,
+                    "web_search": {
+                        "call_count": ws.call_count,
+                        "estimated_cost": ws.estimated_cost,
+                        "backend": ws.provider,
+                    } if ws else None,
+                },
+            )
+        except Exception:  # noqa: BLE001 — usage audit must never fail a run
+            pass
         return "\n".join(final_text)
 
     return _runner

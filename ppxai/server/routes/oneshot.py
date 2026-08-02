@@ -117,15 +117,24 @@ class OneshotUsage(BaseModel):
 
 class OneshotGrounding(BaseModel):
     """Present ONLY when the request was served by the enriched search-loop
-    path (ADR 0009 §4, F3 facade). Absent → byte-identical legacy response.
+    path (ADR 0009 §4, F3/F4 facade). Absent → byte-identical legacy
+    response.
 
     `run_id` is the debug handle: the enriched oneshot executed as a real
     `kind=oneshot` registry run, so `~/.ppxai/runs/<run_id>/` holds its meta
-    + event log and the run inspection surfaces work on it. F4 adds
-    `queries`/`backend`/`search_cost`."""
+    + event log and the run inspection surfaces work on it. All fields are
+    derived from THAT run's own audit trail (F4) — never from any
+    process-global — so concurrent requests can't cross-attribute."""
 
     searched: bool = False
     run_id: Optional[str] = None
+    # F4: the query strings the model actually searched (from the run's
+    # tool_call events), the premium backend that served them (from the
+    # run's usage record; "duckduckgo" inferred for the costless path), and
+    # the premium-search cost in USD for THIS request.
+    queries: list = Field(default_factory=list)
+    backend: Optional[str] = None
+    search_cost: float = 0.0
 
 
 class OneshotResponse(BaseModel):
@@ -261,18 +270,55 @@ def _web_search_egress_hosts() -> list:
     })
 
 
-def _run_used_web_search(registry, run_id: str) -> bool:
-    """Did the run actually invoke web_search? Read from the run's own event
-    log (category=tool) — no side channel, the audit trail IS the source."""
+def _grounding_from_events(
+    registry, run_id: str
+) -> tuple[OneshotGrounding, Optional[OneshotUsage]]:
+    """Derive the grounding record + model usage from the run's OWN audit
+    trail (F4). No side channel, no process-global: the tool_call events
+    carry the queries, the run_usage event carries tokens + the premium
+    backend/cost — all keyed by this run_id, so concurrent requests are
+    structurally unable to cross-attribute."""
+    # Collect into locals and construct the model ONCE with every field
+    # explicit: the route serializes with response_model_exclude_unset, and
+    # in-place mutation (e.g. list.append) never marks a field as set — a
+    # mutated-in field would silently vanish from the wire.
+    searched = False
+    queries: list = []
+    backend: Optional[str] = None
+    search_cost = 0.0
+    usage: Optional[OneshotUsage] = None
     try:
-        events = registry.read_events(run_id)
-        return any(
-            getattr(e, "category", "") == "tool"
-            and "web_search" in str(getattr(e, "data", {}))
-            for e in events
-        )
+        for e in registry.read_events(run_id):
+            etype = getattr(e, "type", "")
+            data = getattr(e, "data", {}) or {}
+            if etype == "tool_call" and data.get("tool") == "web_search":
+                searched = True
+                q = (data.get("arguments") or {}).get("query")
+                if q:
+                    queries.append(str(q))
+            elif etype == "run_usage":
+                usage = OneshotUsage(
+                    prompt_tokens=int(data.get("prompt_tokens") or 0),
+                    completion_tokens=int(data.get("completion_tokens") or 0),
+                    total_tokens=int(data.get("total_tokens") or 0),
+                )
+                ws = data.get("web_search") or {}
+                backend = ws.get("backend") or backend
+                search_cost = float(ws.get("estimated_cost") or 0.0)
     except Exception:
-        return False
+        pass
+    if searched and backend is None:
+        # Only the free path records no premium ToolUsage — a search that
+        # cost nothing went through DuckDuckGo (the sole costless backend).
+        backend = "duckduckgo"
+    grounding = OneshotGrounding(
+        searched=searched,
+        run_id=run_id,
+        queries=queries,
+        backend=backend,
+        search_cost=search_cost,
+    )
+    return grounding, usage
 
 
 async def _oneshot_via_search_loop(
@@ -350,16 +396,14 @@ async def _oneshot_via_search_loop(
                 f"{final.status!r}: {final.error or 'no result'}"
             ),
         )
+    grounding, usage = _grounding_from_events(registry, meta.run_id)
     return OneshotResponse(
         content=final.result or "",
         finish_reason="stop",
         model=model,
         provider=provider_name,
-        usage=None,  # F4: model tokens + search cost accounting
-        grounding=OneshotGrounding(
-            searched=_run_used_web_search(registry, meta.run_id),
-            run_id=meta.run_id,
-        ),
+        usage=usage,
+        grounding=grounding,
     )
 
 

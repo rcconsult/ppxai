@@ -390,3 +390,141 @@ class TestEnrichedOneshotFacade:
         )
         assert r.status_code == 200
         assert "grounding" not in r.json()
+
+
+class TestEnrichedOneshotAccounting:
+    """F4: grounding {queries, backend, search_cost} + usage derive from the
+    run's OWN audit trail (tool_call + run_usage events keyed by run_id) —
+    never a process-global — so concurrent requests cannot cross-attribute."""
+
+    reg = TestEnrichedOneshotFacade.reg
+    search_loop = TestEnrichedOneshotFacade.search_loop
+
+    @staticmethod
+    def _emitting_runner(reg, query, backend, cost, answer):
+        async def runner(m):
+            reg.emit_event(
+                m.run_id, "tool_call", level="debug", category="tool",
+                data={"tool": "web_search", "arguments": {"query": query}},
+            )
+            reg.emit_event(
+                m.run_id, "run_usage", level="debug", category="result",
+                data={
+                    "prompt_tokens": 100, "completion_tokens": 40,
+                    "total_tokens": 140, "estimated_cost": 0.01,
+                    "web_search": {
+                        "call_count": 1, "estimated_cost": cost,
+                        "backend": backend,
+                    },
+                },
+            )
+            return answer
+
+        return runner
+
+    def test_full_grounding_shape_from_run_events(
+        self, http_client, reg, search_loop, monkeypatch
+    ):
+        from ppxai.server.routes import agent_v1
+
+        runner = self._emitting_runner(
+            reg, "solar flares today", "perplexity", 0.005, "the sun is busy"
+        )
+        monkeypatch.setattr(agent_v1, "build_task_runner", lambda *a, **k: runner)
+        r = http_client.post(
+            "/v1/oneshot",
+            json={"prompt": "solar?", "provider": "p", "model": "m"},
+        )
+        assert r.status_code == 200
+        body = r.json()
+        g = body["grounding"]
+        assert g["searched"] is True
+        assert g["queries"] == ["solar flares today"]
+        assert g["backend"] == "perplexity"
+        assert g["search_cost"] == 0.005
+        assert body["usage"] == {
+            "prompt_tokens": 100, "completion_tokens": 40, "total_tokens": 140,
+        }
+
+    def test_costless_search_infers_duckduckgo(
+        self, http_client, reg, search_loop, monkeypatch
+    ):
+        from ppxai.server.routes import agent_v1
+
+        async def runner(m):
+            reg.emit_event(
+                m.run_id, "tool_call", level="debug", category="tool",
+                data={"tool": "web_search", "arguments": {"query": "q"}},
+            )
+            reg.emit_event(
+                m.run_id, "run_usage", level="debug", category="result",
+                data={"prompt_tokens": 5, "completion_tokens": 5,
+                      "total_tokens": 10, "web_search": None},
+            )
+            return "free answer"
+
+        monkeypatch.setattr(agent_v1, "build_task_runner", lambda *a, **k: runner)
+        r = http_client.post(
+            "/v1/oneshot", json={"prompt": "q", "provider": "p", "model": "m"}
+        )
+        g = r.json()["grounding"]
+        assert g["backend"] == "duckduckgo"  # only the free path is costless
+        assert g["search_cost"] == 0.0
+
+    def test_concurrent_requests_attribute_to_own_run(
+        self, reg, search_loop, monkeypatch
+    ):
+        # Coroutine-level concurrency on the facade itself: the SLOWER
+        # request must not absorb the faster one's queries/cost — the old
+        # get_last_tool_usage global failed exactly this shape.
+        import asyncio
+
+        from ppxai.server.routes import agent_v1
+        from ppxai.server.routes import oneshot as oneshot_mod
+
+        def make_runner(registry, **kw):
+            tag = kw["task"]  # the facade passes task=req.prompt
+            delay = 0.05 if tag == "A" else 0.001
+
+            async def runner(m):
+                await asyncio.sleep(delay)
+                reg.emit_event(
+                    m.run_id, "tool_call", level="debug", category="tool",
+                    data={"tool": "web_search", "arguments": {"query": f"q-{tag}"}},
+                )
+                reg.emit_event(
+                    m.run_id, "run_usage", level="debug", category="result",
+                    data={"prompt_tokens": 1, "completion_tokens": 1,
+                          "total_tokens": 2,
+                          "web_search": {"call_count": 1,
+                                         "estimated_cost": 1.0 if tag == "A" else 2.0,
+                                         "backend": f"backend-{tag}"}},
+                )
+                return f"answer-{tag}"
+
+            return runner
+
+        monkeypatch.setattr(agent_v1, "build_task_runner", make_runner)
+
+        async def main():
+            from ppxai.server.routes.oneshot import OneshotRequest
+
+            return await asyncio.gather(
+                oneshot_mod._oneshot_via_search_loop(
+                    OneshotRequest(prompt="A"), "p", "m", None
+                ),
+                oneshot_mod._oneshot_via_search_loop(
+                    OneshotRequest(prompt="B"), "p", "m", None
+                ),
+            )
+
+        ra, rb = asyncio.run(main())
+        assert ra.content == "answer-A"
+        assert ra.grounding.queries == ["q-A"]
+        assert ra.grounding.backend == "backend-A"
+        assert ra.grounding.search_cost == 1.0
+        assert rb.content == "answer-B"
+        assert rb.grounding.queries == ["q-B"]
+        assert rb.grounding.backend == "backend-B"
+        assert rb.grounding.search_cost == 2.0
+        assert ra.grounding.run_id != rb.grounding.run_id

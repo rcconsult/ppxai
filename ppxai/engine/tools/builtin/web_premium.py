@@ -7,6 +7,7 @@ with graceful fallback to free DuckDuckGo if premium providers are unavailable.
 v1.13.4: Initial implementation
 """
 
+import contextvars
 import logging
 import os
 from typing import Optional, Tuple, List, Dict, Any
@@ -18,8 +19,43 @@ from ppxai.config import get_tool_config, get_tool_pricing, get_provider_config
 from ...types import ToolUsage
 from . import web
 
-# Global to store usage from last tool execution
+# Global to store usage from last tool execution (LEGACY channel — see
+# _record_usage). Kept maintained for back-compat readers; new code uses
+# the per-call ContextVar holder below.
 _last_tool_usage: Optional[ToolUsage] = None
+
+# Per-call usage channel (v1.19.1 F4 — fixes ADR 0009 §4's named bug).
+# The module global above is a process-wide reset-on-read handoff: with two
+# CONCURRENT runs, run A's tool task can finish, then run B's task finishes
+# and overwrites the global before A's chat loop resumes to read it — A gets
+# B's cost, B gets None. The fix: the CALLER (chat loop) installs a holder
+# list via begin_usage_capture() BEFORE creating the tool task; the task
+# inherits a context COPY, but the holder LIST is the same object, so the
+# handler's usage lands in exactly that caller's holder — per-run by
+# construction, no shared mutable slot.
+_tool_usage_holder: contextvars.ContextVar[Optional[list]] = contextvars.ContextVar(
+    "web_search_usage_holder", default=None
+)
+
+
+def begin_usage_capture() -> list:
+    """Install (and return) a fresh per-call usage holder on the current
+    context. Call from the tool-loop BEFORE spawning the tool task; every
+    premium-search usage recorded during that call appends here."""
+    holder: list = []
+    _tool_usage_holder.set(holder)
+    return holder
+
+
+def _record_usage(usage: ToolUsage) -> None:
+    """Record one premium-search invocation's usage. Appends to the caller's
+    ContextVar holder (race-free channel) AND sets the legacy global (kept
+    for any out-of-tree reader of get_last_tool_usage)."""
+    holder = _tool_usage_holder.get()
+    if holder is not None:
+        holder.append(usage)
+    global _last_tool_usage
+    _last_tool_usage = usage
 
 
 def is_available() -> bool:
@@ -263,8 +299,6 @@ async def web_search_premium(query: str, num_results: int = 5, _provider_name: O
     Returns:
         Formatted search result with sources
     """
-    global _last_tool_usage
-
     provider = get_premium_search_provider(_provider_name)
 
     # When the operator PINS a backend via tools.web_search.preferred, the
@@ -280,10 +314,10 @@ async def web_search_premium(query: str, num_results: int = 5, _provider_name: O
     try:
         if provider == "perplexity":
             content, citations, usage = await web_search_perplexity(query, num_results)
-            _last_tool_usage = usage
+            _record_usage(usage)
         elif provider == "gemini":
             content, citations, usage = await web_search_gemini(query, num_results)
-            _last_tool_usage = usage
+            _record_usage(usage)
         else:
             # Fall back to free DuckDuckGo
             return web.web_search(query, num_results)
@@ -314,7 +348,7 @@ async def web_search_premium(query: str, num_results: int = 5, _provider_name: O
             try:
                 logger.info("Trying Gemini grounding as fallback")
                 content, citations, usage = await web_search_gemini(query, num_results)
-                _last_tool_usage = usage
+                _record_usage(usage)
                 # v1.15.3: Tag at beginning for visibility (not truncated)
                 tag = "[via gemini (fallback)]"
                 result = f"{tag}\n\n{content.lstrip()}\n\nSources:\n"
@@ -384,7 +418,10 @@ async def get_weather_premium(
 def get_last_tool_usage() -> Optional[ToolUsage]:
     """Get usage from last premium search call.
 
-    Called by EngineClient to extract usage metrics for tracking.
+    LEGACY channel (v1.19.1 F4): process-global, reset-on-read — racy under
+    concurrent runs (one caller can consume another's usage). The chat loop
+    now uses begin_usage_capture()'s per-call holder instead; this remains
+    only for back-compat readers.
 
     Returns:
         ToolUsage object or None if no premium search executed

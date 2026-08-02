@@ -122,6 +122,51 @@ class TestExecutionRunConfig:
         }
 
 
+class TestUsageCaptureChannel:
+    """F4: the per-call ContextVar holder replaces the process-global
+    reset-on-read handoff (ADR 0009 §4's named concurrency bug)."""
+
+    def test_concurrent_captures_do_not_cross_attribute(self):
+        import asyncio
+
+        from ppxai.engine.tools.builtin import web_premium
+        from ppxai.engine.types import ToolUsage
+
+        async def one_call(tag: str, record_delay: float, linger: float):
+            holder = web_premium.begin_usage_capture()
+
+            async def tool():
+                await asyncio.sleep(record_delay)
+                web_premium._record_usage(ToolUsage(call_count=1, provider=tag))
+
+            task = asyncio.create_task(tool())
+            await task
+            # Linger so the OTHER call records (and overwrites the legacy
+            # global) before this call inspects its holder — the exact
+            # interleaving that misattributed under the old channel.
+            await asyncio.sleep(linger)
+            return holder
+
+        async def main():
+            return await asyncio.gather(
+                one_call("A", 0.001, 0.05), one_call("B", 0.02, 0.0)
+            )
+
+        a, b = asyncio.run(main())
+        assert [u.provider for u in a] == ["A"]
+        assert [u.provider for u in b] == ["B"]
+
+    def test_legacy_global_still_maintained(self):
+        from ppxai.engine.tools.builtin import web_premium
+        from ppxai.engine.types import ToolUsage
+
+        web_premium.begin_usage_capture()
+        web_premium._record_usage(ToolUsage(call_count=1, provider="x"))
+        got = web_premium.get_last_tool_usage()
+        assert got is not None and got.provider == "x"
+        assert web_premium.get_last_tool_usage() is None  # reset-on-read
+
+
 class TestEffectivePath:
     """The ADR 0009 §4 gating truth table (F2: computed + logged only)."""
 
