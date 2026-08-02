@@ -588,3 +588,42 @@ class TestDeprecationTableInvariants:
             + "\nRemove them from the example config OR remove them "
             "from model_deprecations.py if they've been un-deprecated."
         )
+
+
+class TestGroundingSection:
+    """F5 (ADR 0009 §4): /doctor reports the effective oneshot grounding
+    path per provider, using the SAME config-axis decision function the
+    /v1/oneshot route uses."""
+
+    def test_reports_path_per_provider(self, monkeypatch):
+        import ppxai.config as config_pkg
+        from ppxai.commands import doctor as doctor_mod
+        from ppxai.config import execution as exec_mod
+
+        monkeypatch.setattr(
+            config_pkg, "get_available_providers", lambda: ["gem", "local"]
+        )
+        monkeypatch.setattr(
+            config_pkg, "get_default_model",
+            lambda p: {"gem": "g1", "local": "q1"}[p],
+        )
+        monkeypatch.setattr(
+            exec_mod, "get_execution_run_config",
+            lambda: {"web_search": True, "grounding": True},
+        )
+        monkeypatch.setattr(
+            exec_mod, "get_effective_oneshot_path",
+            lambda p, m: {"gem": "native", "local": "search-loop"}[p],
+        )
+        text = "\n".join(doctor_mod._format_grounding_section())
+        assert "web_search=on" in text and "grounding=on" in text
+        assert "gem (g1): native" in text
+        assert "local (q1): search-loop" in text
+
+    def test_no_providers_is_graceful(self, monkeypatch):
+        import ppxai.config as config_pkg
+        from ppxai.commands import doctor as doctor_mod
+
+        monkeypatch.setattr(config_pkg, "get_available_providers", lambda: [])
+        text = "\n".join(doctor_mod._format_grounding_section())
+        assert "(no providers configured)" in text
