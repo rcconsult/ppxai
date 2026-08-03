@@ -117,6 +117,46 @@ a run selects one with `--profile <name>` (web + VSCode `/task`) or
   the stripped hosts, per Q3); a malformed ceiling is a loud 400, never a
   silent no-cap.
 
+## Changed: `tools.web_search.preferred` is now an ORDERING (ADR 0009 step ④, Q5)
+
+⚠ **Behavior change for existing configs.** A concrete `preferred`
+(`"perplexity"` / `"gemini"` / `"duckduckgo"`) used to be a hard pin: no
+cross-backend fallback, egress narrowed to that backend. It now means
+**first-choice-then-fall-back** — the chain stays live and the egress set
+is the full backend superset, i.e. **egress widens on upgrade**. To keep
+the old pin, add **`strict: true`** in the *same scope* as `preferred`:
+
+```jsonc
+"tools": { "web_search": { "preferred": "perplexity", "strict": true } }
+```
+
+- `preferred` + `strict` resolve **together, as one scoped tuple**: the
+  provider block (`providers.<name>.web_search`) owns both fields iff it
+  states `preferred`; otherwise the global block does. A per-provider
+  `strict` without a per-provider `preferred` is a dead key. `/doctor` now
+  reports the resolved tuple per scope and flags: a concrete `preferred`
+  without `strict` (the upgrade change), a dead per-provider `strict`, and
+  `strict` combined with enrichment (legal, but one backend outage returns
+  the run to closed-book).
+- One shared resolver now feeds **both** the call-time search chain and the
+  AC-2 egress enumeration (they previously read config differently — a
+  per-provider override could select one backend while egress narrowed to
+  another). Provider context is threaded through `NetworkPolicy` into
+  `tool_targets`, so per-provider tuples resolve identically at both sites.
+- Fallback ordering is honest now: a failed `preferred=gemini` tries
+  perplexity before DuckDuckGo (previously it skipped straight to DDG).
+- Q3 ceiling check refined: enrichment survival is **all-of** over the
+  effective egress set (the egress chokepoint enforces all-of, so a
+  partially-surviving allowlist made the tool un-callable at run time while
+  passing grant time). A narrow ceiling composes with a `strict` pin — the
+  pinned backend's hosts are the whole effective set.
+- **Fixed en route:** the config loader's per-provider whitelist silently
+  dropped the `providers.<name>.web_search` block, so the per-provider
+  `preferred` override (documented since v1.13.4) was **dead config** for
+  every file-loaded provider. It now survives the load — if your config
+  carries such a block, it takes effect from this release (as an ordering;
+  add `strict: true` for a pin). `/doctor` reports the resolved tuple.
+
 ## New: per-tool egress baselines (ADR 0009 step ②)
 
 `tools.<tool>.egress` — operator-declared hosts merged into any run that

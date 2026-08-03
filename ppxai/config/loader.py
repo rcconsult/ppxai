@@ -356,6 +356,14 @@ def load_config() -> Dict[str, Any]:
                 "pricing": provider_config.get("pricing", {}),
                 "capabilities": {**DEFAULT_CAPABILITIES, **provider_config.get("capabilities", {})},
             }
+            # ADR 0009 step ④ (Q5): the per-provider web_search tuple
+            # (`preferred`/`strict`) must survive the load. This whitelist
+            # silently dropped the block, so the per-provider override
+            # documented since v1.13.4 was DEAD CONFIG for every file-loaded
+            # provider — same hazard class as the top-level `execution`
+            # whitelist gap fixed in F2 (caught live, step-④ trial).
+            if isinstance(provider_config.get("web_search"), dict):
+                processed["web_search"] = dict(provider_config["web_search"])
 
             if not processed["default_model"] and processed["models"]:
                 first_model = processed["models"].get("1", {})

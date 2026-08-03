@@ -421,10 +421,11 @@ async def create_agent_run(req: AgentRunRequest, request: Request) -> AgentRunRe
     # merges on "auto"; "no" offers no merge path at all).
     hold = _collect_holds()
     if web_search_on:
-        # Step ③: superset + operator baseline, capped by the Q3 ceiling
-        # (400 pre-start when the cap strips every backend — never a
-        # half-enriched run).
-        egress_hosts = _enriched_oneshot_egress_or_400()
+        # Step ③/④: effective backend set + operator baseline, capped by the
+        # Q3 ceiling (400 pre-start when the cap breaks the set — never a
+        # half-enriched run). Provider context threads into the resolver so a
+        # per-provider strict pin narrows this run's baseline consistently.
+        egress_hosts = _enriched_oneshot_egress_or_400(provider_name)
         meta = registry.start_run(
             task=req.task, kind="oneshot", tools=["web_search"],
             provider=provider_name, model=model,
@@ -1019,33 +1020,47 @@ def _apply_ceiling_or_400(network: list) -> tuple[list, list]:
         raise HTTPException(status_code=400, detail=str(exc))
 
 
-def _enrichment_survives_ceiling(kept: list) -> bool:
-    """Q3 check: does at least one web_search backend host survive the cap?
+def _enrichment_survives_ceiling(
+    kept: list, provider_name: Optional[str] = None
+) -> bool:
+    """Q3 check: does the EFFECTIVE web_search egress set survive the cap
+    in full?
 
-    Step ③ approximation: ANY surviving baseline host counts (a partial
-    chain still searches); step ④'s shared backend resolver refines this to
-    whole-backend host groups."""
-    baseline = set(_web_search_egress_hosts())
-    return bool(baseline & {e for e in kept if isinstance(e, str)})
+    Step ④ refinement (replaces step ③'s any-surviving-host approximation):
+    `NetworkPolicy.authorize` enforces ALL-OF over the tool's target set, so
+    a partially-surviving baseline passes grant time but the tool is
+    un-callable at run time — exactly the half-enriched failure Q3 exists
+    to prevent. The effective set comes from the shared resolver: the full
+    superset in auto/ordering mode, the pinned backend's host(s) under
+    `strict` — so an operator who wants a narrow ceiling pins with
+    `strict: true` and the two configs compose instead of colliding."""
+    baseline = set(_web_search_egress_hosts(provider_name))
+    return baseline <= {e for e in kept if isinstance(e, str)}
 
 
-def _enriched_oneshot_egress_or_400() -> list:
+def _enriched_oneshot_egress_or_400(provider_name: Optional[str] = None) -> list:
     """The one-off tier's enrichment allowlist (shared by the /v1/agent/run
-    grant branch and the /v1/oneshot facade): backend superset + operator
+    grant branch and the /v1/oneshot facade): effective backend egress set
+    (resolver: superset, or the strict-pinned backend) + operator
     `tools.web_search.egress` baseline, capped by `execution.egress_ceiling`
-    — with the Q3 fail-fast when the cap strips every backend (pre-start
-    4xx, no half-enriched run)."""
-    hosts = _with_tool_egress_defaults(_web_search_egress_hosts(), ["web_search"])
+    — with the Q3 fail-fast when the cap breaks the set (pre-start 4xx, no
+    half-enriched run)."""
+    hosts = _with_tool_egress_defaults(
+        _web_search_egress_hosts(provider_name), ["web_search"]
+    )
     kept, stripped = _apply_ceiling_or_400(hosts)
-    if not _enrichment_survives_ceiling(kept):
+    if not _enrichment_survives_ceiling(kept, provider_name):
         raise HTTPException(
             status_code=400,
             detail=(
                 "execution.run.web_search is on, but execution.egress_ceiling "
-                "strips every web_search backend host "
-                f"({', '.join(sorted(str(s) for s in stripped))}). An enriched "
-                "run must not start half-enriched (ADR 0009 Q3) — widen the "
-                "ceiling or turn execution.run.web_search off."
+                "strips part of web_search's effective egress set "
+                f"(stripped: {', '.join(sorted(str(s) for s in stripped))}). "
+                "The egress check is all-of over the whole set, so a partial "
+                "allowlist makes the tool un-callable — never a half-enriched "
+                "run (ADR 0009 Q3). Widen the ceiling, pin one backend with "
+                "tools.web_search.{preferred,strict:true}, or turn "
+                "execution.run.web_search off."
             ),
         )
     return kept
@@ -1175,11 +1190,12 @@ async def create_agent_task(req: AgentTaskRequest, request: Request) -> AgentRun
             workdir = wd
 
     # Step ③ (§5 step 2, egress half): effective enrichment merges the
-    # web_search backend superset into the allowlist — the enrichment egress
-    # baseline is the FULL chain (session parity), not one backend (§3).
+    # web_search effective egress set into the allowlist — the FULL chain in
+    # auto/ordering mode (session parity, §3), or the pinned backend's
+    # host(s) under a strict pin (step ④, the §3-sanctioned narrowing).
     if eff["enrichment"]:
         existing = {e for e in eff["network"] if isinstance(e, str)}
-        for host in _web_search_egress_hosts():
+        for host in _web_search_egress_hosts(provider_name):
             if host not in existing:
                 eff["network"].append(host)
                 existing.add(host)
@@ -1197,16 +1213,20 @@ async def create_agent_task(req: AgentTaskRequest, request: Request) -> AgentRun
     # start half-enriched (a silently closed-book "enriched" run is the exact
     # failure this ADR exists to fix).
     kept, stripped = _apply_ceiling_or_400(eff["network"])
-    if eff["enrichment"] and not _enrichment_survives_ceiling(kept):
+    if eff["enrichment"] and not _enrichment_survives_ceiling(kept, provider_name):
         raise HTTPException(
             status_code=400,
             detail=(
                 "This run resolves enrichment:true "
                 f"(declared at the {eff['enrichment_layer']} layer), but "
-                "execution.egress_ceiling strips every web_search backend "
-                f"host ({', '.join(sorted(str(s) for s in stripped))}). An "
-                "enriched run must not start half-enriched (ADR 0009 Q3) — "
-                "widen the ceiling or set enrichment:false."
+                "execution.egress_ceiling strips part of web_search's "
+                "effective egress set (stripped: "
+                f"{', '.join(sorted(str(s) for s in stripped))}). The egress "
+                "check is all-of over the whole set, so a partial allowlist "
+                "makes the tool un-callable — never a half-enriched run "
+                "(ADR 0009 Q3). Widen the ceiling, pin one backend with "
+                "tools.web_search.{preferred,strict:true}, or set "
+                "enrichment:false."
             ),
         )
     eff["network"] = kept
@@ -1344,7 +1364,10 @@ def build_task_runner(
         # AC-2: per-run egress allowlist. Always installed for a tool-capable
         # run — even with no `network` spec, so a granted network tool is
         # deny-by-default (fail-closed). on_network emits the typed audit event.
-        net_policy = NetworkPolicy(allow_outbound)
+        # Step ④: the run's provider context rides on the policy so the
+        # egress chokepoint resolves per-provider backend tuples with the
+        # SAME answer the call-time chain uses.
+        net_policy = NetworkPolicy(allow_outbound, provider_name=provider_name)
 
         def _on_network(allowed: bool, payload: dict) -> None:
             payload = {**payload, "run_id": m.run_id}

@@ -410,18 +410,44 @@ class TestCeilingAtLaunch:
         assert _baseline_hosts()[0] in detail  # names the stripped hosts
         assert reg.list_runs() == []           # pre-start: no run record
 
-    def test_enriched_run_with_one_surviving_backend_starts(
+    def test_enriched_run_partial_ceiling_400_all_of(
         self, task_client, monkeypatch
     ):
+        # Step ④ Q3 refinement: authorize() is ALL-OF over the effective
+        # egress set, so a partially-surviving baseline would pass grant time
+        # while the tool is un-callable at run time — that must 400 too.
+        c, _reg, _cap, _ov = task_client
+        _pin_profiles(monkeypatch, {
+            "enriched": {"enrichment": True, "provider": "p", "model": "m"},
+        })
+        _pin_ceiling(monkeypatch, [_baseline_hosts()[0]])  # one of four
+        r = c.post("/v1/agent/task", json={"task": "t", "profile": "enriched"})
+        assert r.status_code == 400
+        assert "all-of" in r.json()["detail"]
+
+    def test_enriched_strict_pin_with_matching_ceiling_starts(
+        self, task_client, monkeypatch
+    ):
+        # The sanctioned narrow-ceiling shape: a strict pin shrinks the
+        # effective egress set to the pinned backend, so a ceiling keeping
+        # exactly that backend composes instead of colliding (ADR 0009 §3).
+        import ppxai.config as config_pkg
         c, _reg, cap, _ov = task_client
         _pin_profiles(monkeypatch, {
             "enriched": {"enrichment": True, "provider": "p", "model": "m"},
         })
-        keep = _baseline_hosts()[0]
-        _pin_ceiling(monkeypatch, [keep])
+        monkeypatch.setenv("PERPLEXITY_API_KEY", "k")
+        real_get_tool_config = config_pkg.get_tool_config
+        monkeypatch.setattr(
+            config_pkg, "get_tool_config",
+            lambda tool: ({"preferred": "perplexity", "strict": True}
+                          if tool == "web_search"
+                          else real_get_tool_config(tool)),
+        )
+        _pin_ceiling(monkeypatch, ["api.perplexity.ai"])
         r = c.post("/v1/agent/task", json={"task": "t", "profile": "enriched"})
         assert r.status_code == 200, r.text
-        assert cap["allow_outbound"] == [keep]
+        assert cap["allow_outbound"] == ["api.perplexity.ai"]
 
     def test_malformed_ceiling_400_not_silent_no_cap(
         self, task_client, monkeypatch

@@ -166,32 +166,19 @@ def grant_has_shell(grant) -> bool:
 
 
 # web_search picks a backend at CALL time (web_premium.web_search_premium).
-# In the default "auto" mode it may hit ANY of these, so the superset must be
-# granted (the confused-deputy defense). But when the operator PINS a backend
-# via `tools.web_search.preferred`, web_premium is held to that one backend with
-# NO cross-backend fallback (see `web_premium.web_search_premium`), so the honest
-# egress set narrows to just that backend's host(s). `pinned_web_search_backend`
-# is the single source of truth both modules consult.
-_WEB_SEARCH_BACKEND_HOSTS: Dict[str, List[str]] = {
-    "perplexity": ["https://api.perplexity.ai/"],
-    "gemini": ["https://generativelanguage.googleapis.com/"],
-    "duckduckgo": ["https://duckduckgo.com/", "https://html.duckduckgo.com/"],
-}
-# Env key that must be present for a pinned premium backend to actually be
-# usable; duckduckgo needs none. A backend pinned without its key falls back to
-# the full "auto" superset (fail-safe: never narrow egress on a config that
-# can't take effect).
-_WEB_SEARCH_BACKEND_ENV: Dict[str, Optional[str]] = {
-    "perplexity": "PERPLEXITY_API_KEY",
-    "gemini": "GEMINI_API_KEY",
-    "duckduckgo": None,
-}
-_WEB_SEARCH_ALL_HOSTS: List[str] = [
-    "https://duckduckgo.com/",
-    "https://html.duckduckgo.com/",
-    "https://api.perplexity.ai/",
-    "https://generativelanguage.googleapis.com/",
-]
+# The backend catalog + the ONE resolver both modules consult live in the
+# `search_backends` leaf module (ADR 0009 step ④): the historical names below
+# are re-exports so existing readers/tests keep working. Q5 semantics: in
+# "auto" AND in plain-`preferred` (ordering) mode the chain may hit ANY
+# backend, so the superset must be granted (confused-deputy defense); only an
+# explicit `strict: true` pins the chain to one backend and narrows the
+# egress set to its host(s).
+from .search_backends import (  # noqa: E402  (leaf module, no cycle)
+    ALL_HOSTS as _WEB_SEARCH_ALL_HOSTS,
+    BACKEND_ENV as _WEB_SEARCH_BACKEND_ENV,
+    BACKEND_HOSTS as _WEB_SEARCH_BACKEND_HOSTS,
+    resolve_web_search_backend,
+)
 
 # get_weather's key-free direct backends. wttr.in is tried first; Open-Meteo
 # (v1.19.1) is the reliable fallback tier tried BEFORE any premium web search.
@@ -210,25 +197,18 @@ _NETWORK_TOOLS: Dict[str, Tuple[str, Any]] = {
 }
 
 
-def pinned_web_search_backend() -> Optional[str]:
-    """The single backend web_search is HARD-pinned to, or None for auto.
+def pinned_web_search_backend(provider_name: Optional[str] = None) -> Optional[str]:
+    """The single backend web_search is HARD-pinned to, or None.
 
-    Pinned iff `tools.web_search.preferred` names a known backend AND (for a
-    premium backend) its API key is present. When pinned, web_premium must not
-    fall back to another backend, so the egress set narrows to that backend's
-    host(s). "auto" (or a keyless pin) → None → the full multi-backend superset.
+    ADR 0009 step ④ / Q5: delegates to the shared resolver. A pin now exists
+    ONLY under an effective `strict: true` in the resolved scope — a plain
+    concrete `preferred` is an ORDERING (fallback chain intact, full egress
+    superset), which is the Q5 behavior change release-noted for v1.19.1.
+    The keyless fail-safe lives in the resolver (a preferred backend without
+    its API key is no preference at all).
     """
-    try:
-        from ...config.tools import get_tool_config  # local: avoid load-order cycle
-        preferred = (get_tool_config("web_search") or {}).get("preferred", "auto")
-    except Exception:
-        return None
-    if preferred not in _WEB_SEARCH_BACKEND_HOSTS:
-        return None
-    env_key = _WEB_SEARCH_BACKEND_ENV.get(preferred)
-    if env_key and not os.getenv(env_key):
-        return None  # pinned to a keyless premium backend → fall back to auto
-    return preferred
+    res = resolve_web_search_backend(provider_name)
+    return res.preferred if res.strict else None
 
 
 @dataclass(frozen=True)
@@ -303,26 +283,34 @@ def is_network_tool(name: str) -> bool:
     return name in _NETWORK_TOOLS
 
 
-def tool_targets(name: str, kwargs: dict) -> List[str]:
+def tool_targets(
+    name: str, kwargs: dict, provider_name: Optional[str] = None
+) -> List[str]:
     """Every URL a network-capable tool call could reach (its egress set).
 
     Returns a list of candidate URLs. Empty list = the tool is
     network-capable but its target(s) can't be resolved → the caller must
     fail-closed (deny). For non-network tools, callers should not call this
     (guard with is_network_tool).
+
+    `provider_name` (step ④): the run's provider context, threaded from the
+    constructing route via `NetworkPolicy` — a per-provider
+    `web_search.preferred`/`strict` tuple resolves HERE with the same answer
+    the call-time chain uses, so the enumerated egress set and the host
+    actually contacted can no longer diverge.
     """
     spec = _NETWORK_TOOLS.get(name)
     if spec is None:
         return []
     kind, ref = spec
     if kind == "fixed":
-        # web_search: narrow the egress set to the pinned backend's host(s) when
-        # the operator has pinned one (web_premium then forbids cross-backend
-        # fallback, keeping this honest). Otherwise the full auto superset.
+        # web_search: the shared resolver's effective egress set — the full
+        # superset in auto/ordering mode, the pinned backend's host(s) only
+        # under an effective `strict` pin (web_premium consults the SAME
+        # resolver and forbids cross-backend fallback when strict, keeping
+        # this honest).
         if name == "web_search":
-            backend = pinned_web_search_backend()
-            if backend:
-                return list(_WEB_SEARCH_BACKEND_HOSTS[backend])
+            return list(resolve_web_search_backend(provider_name).egress_hosts)
         # get_weather (v1.19.1): the chain is wttr.in → Open-Meteo → premium
         # search. wttr.in is tried first, Open-Meteo (key-free) is the reliable
         # fallback, and a premium web-search backend is the LAST resort when a
@@ -355,7 +343,15 @@ class NetworkPolicy:
     network-capable tool, before the request fires.
     """
 
-    def __init__(self, allow_outbound: Optional[List] = None) -> None:
+    def __init__(
+        self,
+        allow_outbound: Optional[List] = None,
+        provider_name: Optional[str] = None,
+    ) -> None:
+        # Step ④: the run's provider context — threaded into tool_targets()
+        # by authorize() so per-provider backend tuples resolve consistently
+        # at the egress chokepoint. None = global scope (the pre-④ behavior).
+        self.provider_name = provider_name
         self._rules: List[_Rule] = []
         for i, entry in enumerate(allow_outbound or []):
             if isinstance(entry, str):
@@ -438,7 +434,7 @@ class NetworkPolicy:
         target host/path/rule used for the audit event. On deny, the host/
         path reported is the FIRST disallowed target (the reason it failed).
         """
-        targets = tool_targets(name, kwargs)
+        targets = tool_targets(name, kwargs, provider_name=self.provider_name)
         if not targets:
             return ToolDecision(False, "", "", None, "no resolvable target host")
         first_allow_rule: Optional[str] = None

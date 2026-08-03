@@ -196,8 +196,12 @@ the standing set an operator curates. They compose, not compete.
   enrichment fails pre-start (400 naming both layers).
 - **`execution.egress_ceiling`** (optional) caps every run's assembled
   allowlist intersectively — config-only, a run can never raise it. An
-  enriched run stripped of **every** search backend refuses to start
-  (half-enriched = the silent closed-book failure this exists to prevent).
+  enriched run whose ceiling breaks the **effective** search egress set
+  refuses to start — the check is all-of, because the egress chokepoint
+  enforces all-of (half-enriched = the silent closed-book failure this
+  exists to prevent). Want a narrow ceiling? Pin one backend with
+  `tools.web_search.{preferred, strict: true}` — the pinned backend's
+  hosts become the whole effective set, so the two configs compose.
 
 ## 7. Skills (`--skill`)
 

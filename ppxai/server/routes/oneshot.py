@@ -208,24 +208,26 @@ ONESHOT_SEARCH_ITERATIONS = 2
 ONESHOT_SEARCH_TIMEOUT_S = 180.0
 
 
-def _web_search_egress_hosts() -> list:
-    """The bare HOSTNAMES of web_search's backend superset, for the run's
-    allowlist. `_WEB_SEARCH_ALL_HOSTS` entries are URLs (that's the shape
-    `tool_targets` compares against), but `NetworkPolicy` allowlist rules
-    take bare hosts — passing the URLs verbatim silently matches nothing
-    (fail-closed deny; caught live in the F3 trial via the run's own
-    network_policy_denied event).
+def _web_search_egress_hosts(provider_name: Optional[str] = None) -> list:
+    """The bare HOSTNAMES of web_search's EFFECTIVE egress set, for the run's
+    allowlist. Resolver entries are URLs (the shape `tool_targets` compares
+    against), but `NetworkPolicy` allowlist rules take bare hosts — passing
+    the URLs verbatim silently matches nothing (fail-closed deny; caught
+    live in the F3 trial via the run's own network_policy_denied event).
 
-    Step ② (ADR 0009 §2): the operator's `tools.web_search.egress` baseline
-    is merged on top via `_with_tool_egress_defaults` at the call site —
+    Step ④ (ADR 0009 Q5): reads the shared backend resolver, so under an
+    effective `strict` pin the enrichment baseline narrows to the pinned
+    backend's host(s) — the §3-sanctioned narrowing — and in auto/ordering
+    mode it is the full superset (session parity = the fallback chain).
+    Step ② composes on top: the operator's `tools.web_search.egress`
+    baseline is merged via `_with_tool_egress_defaults` at the call site —
     the same mechanism `/v1/agent/task` uses."""
     from urllib.parse import urlparse
 
-    from ...engine.tools.network_policy import _WEB_SEARCH_ALL_HOSTS
+    from ...engine.tools.search_backends import resolve_web_search_backend
 
-    return sorted({
-        urlparse(u).netloc for u in _WEB_SEARCH_ALL_HOSTS if urlparse(u).netloc
-    })
+    hosts = resolve_web_search_backend(provider_name).egress_hosts
+    return sorted({urlparse(u).netloc for u in hosts if urlparse(u).netloc})
 
 
 def _grounding_from_events(
@@ -298,11 +300,12 @@ async def _oneshot_via_search_loop(
     from ..state import get_agent_run_registry
     from .agent_v1 import _enriched_oneshot_egress_or_400, build_task_runner
 
-    # Built-in backend superset + the operator's tools.web_search.egress
-    # baseline (step ②), capped by execution.egress_ceiling (step ③ Q3 —
-    # 400 pre-start when the cap strips every backend, never a
-    # half-enriched request) — one mechanism shared with /v1/agent/run.
-    egress_hosts = _enriched_oneshot_egress_or_400()
+    # Effective backend egress set (resolver; step ④) + the operator's
+    # tools.web_search.egress baseline (step ②), capped by
+    # execution.egress_ceiling (step ③ Q3 — 400 pre-start when the cap
+    # breaks the set, never a half-enriched request) — one mechanism shared
+    # with /v1/agent/run.
+    egress_hosts = _enriched_oneshot_egress_or_400(provider_name)
     registry = get_agent_run_registry()
     meta = registry.start_run(
         task=req.prompt,

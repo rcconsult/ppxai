@@ -2,10 +2,12 @@
 
 Three config knobs under `tools.web_search`, all read by the /task tier:
 
-  * `preferred` pins the search backend AND narrows the AC-2 egress superset to
+  * `preferred` ORDERS the backend chain (first-choice-then-fallback) since
+    v1.19.1 (ADR 0009 step 4, Q5); adding `strict: true` in the SAME scope
+    restores the hard pin, which also narrows the AC-2 egress superset to
     that backend's host(s) (web_premium is held to it with no cross-backend
-    fallback), so a perplexity-pinned pod authorizes web_search with only
-    api.perplexity.ai in the allowlist.
+    fallback), so a strict perplexity-pinned pod authorizes web_search with
+    only api.perplexity.ai in the allowlist.
   * `tools.<tool>.egress` (ADR 0009 §2, step ② — generalizes the legacy
     web_search-only `task_default_allow`, dual-read) pre-authorizes egress
     hosts per GRANTED tool so users don't retype `--allow` every run.
@@ -47,11 +49,22 @@ def test_auto_keeps_full_superset(tools_cfg):
     assert np.tool_targets("web_search", {}) == np._WEB_SEARCH_ALL_HOSTS
 
 
-def test_perplexity_pin_narrows_to_perplexity(tools_cfg, monkeypatch):
-    tools_cfg["web_search"] = {"preferred": "perplexity"}
+def test_perplexity_strict_pin_narrows_to_perplexity(tools_cfg, monkeypatch):
+    # Q5: narrowing requires the EXPLICIT strict flag in the same scope.
+    tools_cfg["web_search"] = {"preferred": "perplexity", "strict": True}
     monkeypatch.setenv("PERPLEXITY_API_KEY", "k")
     assert np.pinned_web_search_backend() == "perplexity"
     assert np.tool_targets("web_search", {}) == ["https://api.perplexity.ai/"]
+
+
+def test_preferred_without_strict_is_ordering_not_pin(tools_cfg, monkeypatch):
+    # THE Q5 upgrade behavior change (release-noted): a concrete preferred
+    # alone no longer pins — the chain stays live and egress is the full
+    # superset (wider than the pre-v1.19.1 hard pin). /doctor flags it.
+    tools_cfg["web_search"] = {"preferred": "perplexity"}
+    monkeypatch.setenv("PERPLEXITY_API_KEY", "k")
+    assert np.pinned_web_search_backend() is None
+    assert np.tool_targets("web_search", {}) == np._WEB_SEARCH_ALL_HOSTS
 
 
 def test_pin_without_key_falls_back_to_superset(tools_cfg):
@@ -62,7 +75,7 @@ def test_pin_without_key_falls_back_to_superset(tools_cfg):
 
 
 def test_duckduckgo_pin_needs_no_key(tools_cfg):
-    tools_cfg["web_search"] = {"preferred": "duckduckgo"}
+    tools_cfg["web_search"] = {"preferred": "duckduckgo", "strict": True}
     assert np.pinned_web_search_backend() == "duckduckgo"
     assert np.tool_targets("web_search", {}) == [
         "https://duckduckgo.com/", "https://html.duckduckgo.com/"
@@ -70,7 +83,7 @@ def test_duckduckgo_pin_needs_no_key(tools_cfg):
 
 
 def test_authorize_perplexity_pin_allows_single_host_grant(tools_cfg, monkeypatch):
-    tools_cfg["web_search"] = {"preferred": "perplexity"}
+    tools_cfg["web_search"] = {"preferred": "perplexity", "strict": True}
     monkeypatch.setenv("PERPLEXITY_API_KEY", "k")
     d = np.NetworkPolicy(["api.perplexity.ai"]).authorize("web_search", {})
     assert d.allowed is True
@@ -162,7 +175,7 @@ def test_pinned_backend_does_not_fall_back(tools_cfg, monkeypatch):
 
     from ppxai.engine.tools.builtin import web_premium, web
 
-    tools_cfg["web_search"] = {"preferred": "perplexity"}
+    tools_cfg["web_search"] = {"preferred": "perplexity", "strict": True}
     monkeypatch.setenv("PERPLEXITY_API_KEY", "k")
 
     async def _boom(*a, **k):
@@ -405,3 +418,33 @@ def test_get_weather_auto_uses_wttr_when_reachable(tools_cfg, monkeypatch):
 
     out = asyncio.run(web_premium.get_weather_premium("Ornex"))
     assert "Weather for Ornex" in out
+
+
+def test_ordering_falls_back_along_the_resolved_chain(tools_cfg, monkeypatch):
+    # Q5 ordering: preferred=perplexity (no strict) fails -> gemini is tried
+    # BEFORE DuckDuckGo. (Pre-step-4 a failed preferred=gemini skipped
+    # perplexity entirely; the resolver chain fixes the asymmetry.)
+    import asyncio
+
+    from ppxai.engine.tools.builtin import web_premium, web
+
+    tools_cfg["web_search"] = {"preferred": "perplexity"}
+    monkeypatch.setenv("PERPLEXITY_API_KEY", "k")
+    monkeypatch.setenv("GEMINI_API_KEY", "k")
+
+    async def _boom(*a, **k):
+        raise RuntimeError("perplexity down")
+
+    async def _gemini_ok(*a, **k):
+        from ppxai.engine.types import ToolUsage
+        return "answer", ["https://x"], ToolUsage(call_count=1, provider="gemini")
+
+    def _ddg_must_not_run(*a, **k):
+        raise AssertionError("chain must stop at gemini")
+
+    monkeypatch.setattr(web_premium, "web_search_perplexity", _boom)
+    monkeypatch.setattr(web_premium, "web_search_gemini", _gemini_ok)
+    monkeypatch.setattr(web, "web_search", _ddg_must_not_run)
+
+    out = asyncio.run(web_premium.web_search_premium("q"))
+    assert "[via gemini (fallback)]" in out

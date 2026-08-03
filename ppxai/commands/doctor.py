@@ -542,6 +542,111 @@ def _format_grounding_section() -> List[str]:
     return lines
 
 
+def _format_web_search_backend_section() -> List[str]:
+    """web_search backend tuple report + the three Q5 config checks
+    (ADR 0009 step ④). Offline — reads the SAME shared resolver the search
+    chain and the egress enumeration use, so what /doctor prints is what a
+    call will actually do.
+
+    Checks:
+    (a) a concrete `preferred` WITHOUT `strict` — since v1.19.1 this is an
+        ordering, not a pin: the fallback chain stays live and egress is the
+        full superset (WIDER than pre-upgrade). Operators who wanted the old
+        hard pin must add `strict: true`.
+    (b) a per-provider `strict` without a per-provider `preferred` in the
+        same block — a dead key by construction (the Q5 tuple resolves scope
+        first; `strict` is only read from the scope that owns `preferred`).
+    (c) `strict: true` while enrichment is in play (an execution profile
+        with `enrichment: true`, or `execution.run.web_search` on) — legal,
+        but the run loses the fallback chain: one backend outage returns it
+        to closed-book.
+    """
+    from ..config import get_available_providers, get_provider_config, get_tool_config
+    from ..engine.tools.search_backends import resolve_web_search_backend
+
+    lines: List[str] = []
+    lines.append("web_search backend (tools.web_search preferred/strict — Q5 tuple):")
+
+    res = resolve_web_search_backend(None)
+    lines.append(
+        f"   global: preferred={res.preferred} strict={str(res.strict).lower()} "
+        f"→ chain: {' → '.join(res.candidates) or '(none usable)'}"
+    )
+    warnings: List[str] = list(res.warnings)
+
+    try:
+        g = get_tool_config("web_search") or {}
+    except Exception:
+        g = {}
+    if g.get("preferred") and g.get("preferred") != "auto" and not g.get("strict"):
+        warnings.append(
+            f"global preferred={g['preferred']!r} without strict — since "
+            "v1.19.1 this ORDERS the chain (fallback live, egress = full "
+            "superset, WIDER than the old hard pin). Add "
+            "tools.web_search.strict:true to keep the pin."
+        )
+
+    try:
+        providers = get_available_providers()
+    except Exception:
+        providers = []
+    for p in providers:
+        try:
+            block = (get_provider_config(p) or {}).get("web_search", {}) or {}
+        except Exception:
+            block = {}
+        if not block:
+            continue
+        pres = resolve_web_search_backend(p)
+        if pres.scope.startswith("provider:"):
+            lines.append(
+                f"   {p}: preferred={pres.preferred} "
+                f"strict={str(pres.strict).lower()} → chain: "
+                f"{' → '.join(pres.candidates) or '(none usable)'}"
+            )
+        warnings.extend(w for w in pres.warnings if w not in warnings)
+        if (block.get("preferred") and block.get("preferred") != "auto"
+                and not block.get("strict")):
+            warnings.append(
+                f"providers.{p}.web_search.preferred={block['preferred']!r} "
+                "without strict — ordering, not a pin (see the global note)."
+            )
+
+    # (c) strict pin while enrichment is in play — legal, chain-costing.
+    strict_anywhere = res.strict or any(
+        resolve_web_search_backend(p).strict for p in providers
+    )
+    if strict_anywhere:
+        enrichment_live: List[str] = []
+        try:
+            from ..config.execution import (
+                get_execution_profiles,
+                get_execution_run_config,
+            )
+            if get_execution_run_config().get("web_search"):
+                enrichment_live.append("execution.run.web_search")
+            enrichment_live.extend(
+                f"execution.profiles.{name}"
+                for name, prof in (get_execution_profiles() or {}).items()
+                if isinstance(prof, dict) and prof.get("enrichment") is True
+            )
+        except Exception:
+            pass
+        if enrichment_live:
+            warnings.append(
+                "strict:true + enrichment "
+                f"({', '.join(enrichment_live)}) — legal, but the enriched "
+                "run is pinned to ONE backend: a single outage returns it to "
+                "closed-book (no fallback chain)."
+            )
+
+    for w in warnings:
+        lines.append(f"   ⚠ {w}")
+    if not warnings:
+        lines.append("   ✓ no preferred/strict config hazards")
+    return lines
+
+
 def handle_doctor(context: CommandContext, args: str) -> CommandResult:
     """Handle /doctor command — scan config and report deprecated models.
 
@@ -564,6 +669,10 @@ def handle_doctor(context: CommandContext, args: str) -> CommandResult:
     # F5 (ADR 0009 §4): per-provider effective grounding path — offline,
     # always shown, same decision function the /v1/oneshot route uses.
     report = report + "\n\n" + "\n".join(_format_grounding_section())
+    # Step ④ (ADR 0009 Q5): web_search backend tuple + the three config
+    # checks (ordering-not-pin upgrade note, dead per-provider strict,
+    # strict-while-enriched) — offline, same resolver the chain uses.
+    report = report + "\n\n" + "\n".join(_format_web_search_backend_section())
     probe_results: Dict[str, Dict[str, Any]] = {}
     drift: List[Dict[str, Any]] = []
 

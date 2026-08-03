@@ -15,8 +15,12 @@ from typing import Optional, Tuple, List, Dict, Any
 import httpx
 from openai import AsyncOpenAI
 
-from ppxai.config import get_tool_config, get_tool_pricing, get_provider_config
+from ppxai.config import get_tool_config, get_tool_pricing
 from ...types import ToolUsage
+# ADR 0009 step ④: the ONE shared backend resolver (leaf module, top-level
+# import — retires the function-local `network_policy` import this module
+# used to reach the pin through).
+from ..search_backends import resolve_web_search_backend
 from . import web
 
 # Global to store usage from last tool execution (LEGACY channel — see
@@ -68,61 +72,17 @@ def is_available() -> bool:
 
 
 def get_premium_search_provider(provider_name: Optional[str] = None) -> Optional[str]:
-    """Determine which premium search provider to use.
+    """The FIRST backend the search chain will try, via the shared resolver.
 
-    Priority:
-    1. Per-provider config override (if specified in provider config)
-    2. Global tools.web_search.preferred setting
-    3. Auto-detect: Perplexity > Gemini > None
-
-    Args:
-        provider_name: Current provider name (to check for provider-specific config)
-
-    Returns:
-        "perplexity", "gemini", or None if no premium provider available
+    ADR 0009 step ④: delegates to `resolve_web_search_backend` — the same
+    scoped `preferred`/`strict` tuple the egress enumeration reads, so the
+    backend contacted and the host set allowlisted can never diverge.
+    Preserved contract: returns "perplexity"/"gemini", or None when the
+    first choice is DuckDuckGo (free search) or nothing is usable.
     """
-    # Check for per-provider override
-    if provider_name:
-        try:
-            provider_config = get_provider_config(provider_name)
-            provider_web_search = provider_config.get("web_search", {})
-            preferred = provider_web_search.get("preferred")
-
-            if preferred and preferred != "auto":
-                # Explicit provider specified for this provider
-                if preferred == "perplexity" and os.getenv("PERPLEXITY_API_KEY"):
-                    return "perplexity"
-                elif preferred == "gemini" and os.getenv("GEMINI_API_KEY"):
-                    return "gemini"
-                elif preferred == "duckduckgo":
-                    return None  # Use free search
-                # If specified provider key not available, fall through to auto-detect
-        except Exception:
-            pass  # Fall through to global config
-
-    # Check global tools.web_search.preferred setting
-    try:
-        tool_config = get_tool_config("web_search")
-        preferred = tool_config.get("preferred", "auto")
-
-        if preferred != "auto":
-            # Explicit provider specified globally
-            if preferred == "perplexity" and os.getenv("PERPLEXITY_API_KEY"):
-                return "perplexity"
-            elif preferred == "gemini" and os.getenv("GEMINI_API_KEY"):
-                return "gemini"
-            elif preferred == "duckduckgo":
-                return None  # Use free search
-            # If specified provider key not available, fall through to auto-detect
-    except Exception:
-        pass  # Fall through to auto-detect
-
-    # Auto-detect: Perplexity > Gemini > None
-    if os.getenv("PERPLEXITY_API_KEY"):
-        return "perplexity"
-    elif os.getenv("GEMINI_API_KEY"):
-        return "gemini"
-    return None
+    candidates = resolve_web_search_backend(provider_name).candidates
+    first = candidates[0] if candidates else None
+    return first if first in ("perplexity", "gemini") else None
 
 
 def calculate_tool_cost(provider: str, tokens_in: int = 0, tokens_out: int = 0, query_count: int = 0) -> float:
@@ -285,11 +245,29 @@ async def web_search_gemini(query: str, num_results: int = 5) -> Tuple[str, List
         raise ValueError(f"Failed to parse Gemini response: {e}")
 
 
-async def web_search_premium(query: str, num_results: int = 5, _provider_name: Optional[str] = None) -> str:
-    """Search web using best available premium provider.
+def _format_search_result(
+    backend: str, content: str, citations: List[str], fallback: bool = False
+) -> str:
+    """Provider tag at the beginning for visibility (v1.15.3 — not truncated)."""
+    tag = f"[via {backend} (fallback)]" if fallback else f"[via {backend}]"
+    result = f"{tag}\n\n{content.lstrip()}\n\nSources:\n"
+    for url in citations:
+        result += f"- {url}\n"
+    return result
 
-    Auto-detects premium provider (Perplexity > Gemini), falls back to DuckDuckGo.
-    Supports per-provider configuration overrides.
+
+async def web_search_premium(query: str, num_results: int = 5, _provider_name: Optional[str] = None) -> str:
+    """Search the web through the resolver's ordered backend chain.
+
+    ADR 0009 step ④ / Q5: the chain IS `resolve_web_search_backend(...)`
+    .candidates — first choice, then fallback, in the resolved order. A
+    concrete `preferred` without `strict` orders the chain (e.g. gemini →
+    perplexity → duckduckgo); under `strict: true` the tuple pins a single
+    candidate and a failure returns an error instead of falling back — the
+    egress allowlist only covers the pinned host, so cross-backend fallback
+    would reach a host the run never allowlisted. (Pre-④, a failed
+    preferred=gemini skipped perplexity entirely and dropped straight to
+    DuckDuckGo — the resolver's ordering fixes that asymmetry too.)
 
     Args:
         query: Search query
@@ -299,68 +277,39 @@ async def web_search_premium(query: str, num_results: int = 5, _provider_name: O
     Returns:
         Formatted search result with sources
     """
-    provider = get_premium_search_provider(_provider_name)
+    logger = logging.getLogger(__name__)
+    resolution = resolve_web_search_backend(_provider_name)
+    last_error: Optional[Exception] = None
 
-    # When the operator PINS a backend via tools.web_search.preferred, the
-    # egress policy narrows web_search's allowlisted target set to that one
-    # backend (network_policy.pinned_web_search_backend). Cross-backend
-    # fallback would then try to reach a host the run never allowlisted (e.g.
-    # a pinned-perplexity failure silently hitting DuckDuckGo), so it is
-    # forbidden here: a pinned backend either succeeds on its own host or
-    # returns an error. "auto" (unpinned) keeps the full fallback chain.
-    from ..network_policy import pinned_web_search_backend
-    pinned = pinned_web_search_backend()
-
-    try:
-        if provider == "perplexity":
-            content, citations, usage = await web_search_perplexity(query, num_results)
-            _record_usage(usage)
-        elif provider == "gemini":
-            content, citations, usage = await web_search_gemini(query, num_results)
-            _record_usage(usage)
-        else:
-            # Fall back to free DuckDuckGo
-            return web.web_search(query, num_results)
-
-        # Format result with provider tag at the beginning for visibility
-        tag = f"[via {provider}]"
-        result = f"{tag}\n\n{content.lstrip()}\n\nSources:\n"
-        for url in citations:
-            result += f"- {url}\n"
-        return result
-
-    except Exception as e:
-        logger = logging.getLogger(__name__)
-        logger.warning(f"Premium search failed ({provider}): {e}")
-
-        # Pinned backend: no cross-backend fallback (see note above) — the
-        # egress allowlist only covers the pinned host.
-        if pinned:
-            return (
-                f"[web_search error] The configured search backend "
-                f"'{pinned}' failed and cross-backend fallback is disabled "
-                f"(tools.web_search.preferred={pinned}): {e}"
-            )
-
-        # Auto mode fall-back chain: Perplexity -> Gemini -> DuckDuckGo (v1.15.2)
-        # If Perplexity failed, try Gemini as fallback before DuckDuckGo
-        if provider == "perplexity" and os.getenv("GEMINI_API_KEY"):
-            try:
-                logger.info("Trying Gemini grounding as fallback")
+    for i, backend in enumerate(resolution.candidates):
+        try:
+            if backend == "perplexity":
+                content, citations, usage = await web_search_perplexity(query, num_results)
+                _record_usage(usage)
+            elif backend == "gemini":
                 content, citations, usage = await web_search_gemini(query, num_results)
                 _record_usage(usage)
-                # v1.15.3: Tag at beginning for visibility (not truncated)
-                tag = "[via gemini (fallback)]"
-                result = f"{tag}\n\n{content.lstrip()}\n\nSources:\n"
-                for url in citations:
-                    result += f"- {url}\n"
-                return result
-            except Exception as gemini_error:
-                logger.warning(f"Gemini fallback also failed: {gemini_error}")
+            else:  # duckduckgo — free search, formats its own output
+                return web.web_search(query, num_results)
+            return _format_search_result(backend, content, citations, fallback=i > 0)
+        except Exception as e:
+            last_error = e
+            logger.warning(f"web_search backend failed ({backend}): {e}")
+            if resolution.strict:
+                # Q5: an operator setting `strict` accepted "this backend or
+                # nothing"; the egress set covers only this backend's host.
+                return (
+                    f"[web_search error] The configured search backend "
+                    f"'{backend}' failed and cross-backend fallback is "
+                    f"disabled (tools.web_search strict pin, scope "
+                    f"{resolution.scope}): {e}"
+                )
+            logger.info("Trying next backend in the resolved chain")
 
-        # Final fallback to DuckDuckGo
-        logger.info("Falling back to DuckDuckGo")
-        return web.web_search(query, num_results)
+    # No candidate succeeded (or none usable at all).
+    if last_error is not None:
+        return f"[web_search error] Every configured backend failed: {last_error}"
+    return web.web_search(query, num_results)
 
 
 async def get_weather_premium(

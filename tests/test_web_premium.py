@@ -71,7 +71,7 @@ class TestProviderDetection:
     def test_detect_with_global_config_auto(self):
         """Test auto-detect with global config set to auto."""
         with patch.dict(os.environ, {"PERPLEXITY_API_KEY": "test-key"}):
-            with patch("ppxai.engine.tools.builtin.web_premium.get_tool_config") as mock_config:
+            with patch("ppxai.config.get_tool_config") as mock_config:
                 mock_config.return_value = {"preferred": "auto"}
                 result = web_premium.get_premium_search_provider()
                 assert result == "perplexity"
@@ -82,7 +82,7 @@ class TestProviderDetection:
             "PERPLEXITY_API_KEY": "test-key",
             "GEMINI_API_KEY": "test-key"
         }):
-            with patch("ppxai.engine.tools.builtin.web_premium.get_tool_config") as mock_config:
+            with patch("ppxai.config.get_tool_config") as mock_config:
                 mock_config.return_value = {"preferred": "perplexity"}
                 result = web_premium.get_premium_search_provider()
                 assert result == "perplexity"
@@ -93,7 +93,7 @@ class TestProviderDetection:
             "PERPLEXITY_API_KEY": "test-key",
             "GEMINI_API_KEY": "test-key"
         }):
-            with patch("ppxai.engine.tools.builtin.web_premium.get_tool_config") as mock_config:
+            with patch("ppxai.config.get_tool_config") as mock_config:
                 mock_config.return_value = {"preferred": "gemini"}
                 result = web_premium.get_premium_search_provider()
                 assert result == "gemini"
@@ -104,7 +104,7 @@ class TestProviderDetection:
             "PERPLEXITY_API_KEY": "test-key",
             "GEMINI_API_KEY": "test-key"
         }):
-            with patch("ppxai.engine.tools.builtin.web_premium.get_tool_config") as mock_config:
+            with patch("ppxai.config.get_tool_config") as mock_config:
                 mock_config.return_value = {"preferred": "duckduckgo"}
                 result = web_premium.get_premium_search_provider()
                 assert result is None  # None means use DuckDuckGo
@@ -115,8 +115,8 @@ class TestProviderDetection:
             "PERPLEXITY_API_KEY": "test-key",
             "GEMINI_API_KEY": "test-key"
         }):
-            with patch("ppxai.engine.tools.builtin.web_premium.get_provider_config") as mock_prov:
-                with patch("ppxai.engine.tools.builtin.web_premium.get_tool_config") as mock_tool:
+            with patch("ppxai.config.get_provider_config") as mock_prov:
+                with patch("ppxai.config.get_tool_config") as mock_tool:
                     # Per-provider config says use Gemini
                     mock_prov.return_value = {"web_search": {"preferred": "gemini"}}
                     # Global config says use Perplexity
@@ -129,8 +129,8 @@ class TestProviderDetection:
     def test_detect_per_provider_fallback_to_global(self):
         """Test per-provider fallback to global config if key missing."""
         with patch.dict(os.environ, {"GEMINI_API_KEY": "test-key"}, clear=True):
-            with patch("ppxai.engine.tools.builtin.web_premium.get_provider_config") as mock_prov:
-                with patch("ppxai.engine.tools.builtin.web_premium.get_tool_config") as mock_tool:
+            with patch("ppxai.config.get_provider_config") as mock_prov:
+                with patch("ppxai.config.get_tool_config") as mock_tool:
                     # Per-provider config wants Perplexity but key not set
                     mock_prov.return_value = {"web_search": {"preferred": "perplexity"}}
                     # Global config has auto
