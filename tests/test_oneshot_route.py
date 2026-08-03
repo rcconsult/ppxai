@@ -25,6 +25,21 @@ from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
 
 
+@pytest.fixture(autouse=True)
+def _isolate_run_registry(tmp_path, monkeypatch):
+    """FU: the plain /v1/oneshot path executes as a registry run, so EVERY
+    route test now mints run records — pin the registry to tmp_path or they
+    land in the real ~/.ppxai/runs (caught live: nine polluted records from
+    one suite run)."""
+    import ppxai.server.state as state
+    from ppxai.engine.agent_runs import AgentRunRegistry, FilesystemAgentRunStore
+
+    monkeypatch.setattr(
+        state, "_agent_run_registry",
+        AgentRunRegistry(FilesystemAgentRunStore(tmp_path / "runs")),
+    )
+
+
 @pytest.fixture
 def http_client():
     import ppxai.server.http as http_module
@@ -528,3 +543,63 @@ class TestEnrichedOneshotAccounting:
         assert rb.grounding.backend == "backend-B"
         assert rb.grounding.search_cost == 2.0
         assert ra.grounding.run_id != rb.grounding.run_id
+
+
+class TestPlainPathIsARegistryRun:
+    """FU (ADR 0009 follow-up unification): the plain path executes as a real
+    kind=oneshot registry run — the direct non-registry branch is deleted, so
+    the whole one-off tier has ONE execution path and every oneshot is
+    auditable. The wire envelope must stay byte-identical to the pre-FU
+    direct path (the smoke-tested ppxai-sre contract)."""
+
+    def _post(self, http_client, payload):
+        with patch(
+            "ppxai.server.routes.oneshot.get_default_provider", return_value="custom"
+        ), patch(
+            "ppxai.server.routes.oneshot.get_default_model", return_value="qwen3"
+        ):
+            return http_client.post("/v1/oneshot", json=payload)
+
+    def test_plain_oneshot_mints_a_closed_book_run(self, http_client, stub_provider):
+        import ppxai.server.state as state
+
+        r = self._post(http_client, {"prompt": "audit me"})
+        assert r.status_code == 200
+        runs = state.get_agent_run_registry().list_runs()
+        assert len(runs) == 1
+        m = runs[0]
+        assert m.kind == "oneshot"
+        assert m.task == "audit me"
+        assert list(m.tools or []) == []          # closed-book: no grant
+        assert list(getattr(m, "network", []) or []) == []  # no egress
+        assert m.status == "completed"            # hold_result=False, no T6 hold
+        assert m.result == "stub-response"
+
+    def test_envelope_fields_come_from_the_provider_not_the_run(
+        self, http_client, stub_provider
+    ):
+        # The registry keeps only the result STRING; finish_reason/model/usage
+        # must ride the provider's envelope verbatim (byte-parity).
+        r = self._post(http_client, {"prompt": "hi"})
+        body = r.json()
+        assert body["content"] == "stub-response"
+        assert body["finish_reason"] == "stop"
+        assert body["model"] == "stub-model"
+        assert body["usage"] == {
+            "prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15,
+        }
+        assert "grounding" not in body  # plain path: absent, not null
+
+    def test_provider_failure_is_502_and_a_failed_run(
+        self, http_client, stub_provider
+    ):
+        import ppxai.server.state as state
+
+        stub_provider.oneshot.side_effect = RuntimeError("boom")
+        r = self._post(http_client, {"prompt": "hi"})
+        assert r.status_code == 502
+        # Same error contract as the pre-FU direct path.
+        assert r.json()["detail"] == "Provider call failed: boom"
+        runs = state.get_agent_run_registry().list_runs()
+        assert len(runs) == 1 and runs[0].status == "failed"
+        assert runs[0].error == "boom"

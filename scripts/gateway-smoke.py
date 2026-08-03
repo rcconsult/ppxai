@@ -368,7 +368,11 @@ def main() -> int:
                 record("POST /v1/oneshot", PASS if ok else FAIL,
                        f"http {code}, model={isinstance(body, dict) and body.get('model')}")
 
-            # 4. tool-free run tier: create → background exec → completed.
+            # 4. tool-free run tier: create → background exec → terminal.
+            #    U4 (ADR 0011): under execution.collect="yes" (the default)
+            #    a /run result is HELD (completed_pending_ack) until
+            #    collected — ack it to finalized, like the task tier below.
+            #    "auto"/"no" land straight in completed.
             code, body = gw.request(
                 "POST", "/v1/agent/run",
                 {"task": "Reply with exactly: ok", **overrides}, timeout=60,
@@ -376,10 +380,25 @@ def main() -> int:
             if code != 200 or not isinstance(body, dict) or not body.get("run_id"):
                 record("POST /v1/agent/run lifecycle", FAIL, f"create → http {code}")
             else:
-                meta = gw.poll_run(body["run_id"], {"completed", "failed"})
-                ok = meta.get("status") == "completed"
-                record("POST /v1/agent/run lifecycle", PASS if ok else FAIL,
-                       f"{body['run_id']} → {meta.get('status')}")
+                run_id = body["run_id"]
+                meta = gw.poll_run(
+                    run_id, {"completed", "completed_pending_ack", "failed"}
+                )
+                status = meta.get("status")
+                if status == "completed_pending_ack":
+                    ack_code, _ = gw.request(
+                        "POST", f"/v1/agent/runs/{run_id}/ack"
+                    )
+                    _, meta = gw.request("GET", f"/v1/agent/runs/{run_id}")
+                    ok = (ack_code == 200
+                          and (meta or {}).get("status") == "finalized")
+                    record("POST /v1/agent/run lifecycle", PASS if ok else FAIL,
+                           f"{run_id} → held → ack http {ack_code} → "
+                           f"{(meta or {}).get('status')}")
+                else:
+                    ok = status == "completed"
+                    record("POST /v1/agent/run lifecycle", PASS if ok else FAIL,
+                           f"{run_id} → {status}")
 
             # 5. sandboxed task tier: gated default-off, so 403 = expected SKIP.
             #    A granted-but-unused tool keeps the run trivial; a top-level
@@ -396,10 +415,18 @@ def main() -> int:
                 record("POST /v1/agent/task lifecycle", FAIL, f"create → http {code}")
             else:
                 run_id = body["run_id"]
-                meta = gw.poll_run(run_id, {"completed_pending_ack", "failed"})
-                if meta.get("status") != "completed_pending_ack":
+                # U4: collect="yes" (default) → held → ack; "auto"/"no" →
+                # straight to completed (both are the healthy lifecycle).
+                meta = gw.poll_run(
+                    run_id, {"completed", "completed_pending_ack", "failed"}
+                )
+                status = meta.get("status")
+                if status == "completed":
+                    record("POST /v1/agent/task lifecycle", PASS,
+                           f"{run_id} → completed (collect=auto/no — no hold)")
+                elif status != "completed_pending_ack":
                     record("POST /v1/agent/task lifecycle", FAIL,
-                           f"{run_id} → {meta.get('status')}")
+                           f"{run_id} → {status}")
                 else:
                     code, _ = gw.request("POST", f"/v1/agent/runs/{run_id}/ack")
                     _, meta = gw.request("GET", f"/v1/agent/runs/{run_id}")

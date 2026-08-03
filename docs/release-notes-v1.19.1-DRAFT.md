@@ -117,6 +117,31 @@ a run selects one with `--profile <name>` (web + VSCode `/task`) or
   the stripped hosts, per Q3); a malformed ceiling is a loud 400, never a
   silent no-cap.
 
+## Changed: every `/v1/oneshot` is now a registry run (FU — one-off tier unification)
+
+The plain (non-enriched) `/v1/oneshot` path now executes as a real
+`kind=oneshot` registry run, exactly like the enriched facade and
+`/v1/agent/run` — the direct non-registry code path is **deleted**, so the
+whole one-off tier has one execution path. **The wire contract is
+unchanged** (same request, same response envelope byte-for-byte, same 502
+error contract on provider failure — gateway-smoke 6/6 against the live
+server). What's new around it:
+
+- Every oneshot call leaves an auditable record in `~/.ppxai/runs/<id>/`
+  and appears in `/run ls` (status `completed` — a plain oneshot never
+  holds; the HTTP response *is* the collect). Records are subject to the
+  standard retention reaper.
+- A client disconnect now cancels the run cooperatively instead of
+  abandoning the provider call.
+- Native grounding rides along by construction: the run's provider is
+  built through the same construction site that applies
+  `execution.run.grounding`, so grounded and closed-book calls share the
+  gears.
+- `scripts/gateway-smoke.py` updated to the U4 collect contract it had
+  missed: under `execution.collect: "yes"` (default) a `/v1/agent/run`
+  result is held (`completed_pending_ack`) — the smoke now acks it to
+  `finalized` (and accepts straight-`completed` under `auto`/`no`).
+
 ## Changed: `tools.web_search.preferred` is now an ORDERING (ADR 0009 step ④, Q5)
 
 ⚠ **Behavior change for existing configs.** A concrete `preferred`

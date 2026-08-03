@@ -205,6 +205,25 @@ new: `/auto`, `/run`, direct-launch `/task`, `get`, `collect`,
 
 ## FU — follow-up unification (gated, not scheduled)
 
+> **STATUS (2026-08-03): FU DONE** (built + gate passed, same session as
+> ADR 0009 step ④). Plain `/v1/oneshot` executes as a real `kind=oneshot`
+> registry run (tools=[], hold_result=False — the response IS the collect);
+> the direct non-registry branch in `oneshot.py` is **deleted**. The wire
+> envelope is byte-identical (a closure holder carries the provider's
+> finish_reason/model/usage past the registry, whose record keeps only the
+> result string; 502 error contract preserved verbatim). Prerequisite
+> satisfied by construction: the runner closes over the provider from
+> `_build_provider`, which already applies `execution.run.grounding`.
+> **Gate: gateway-smoke 6/6** against a live source server (two reruns ate
+> gemini-3-flash 503 "high demand" — provider capacity, verified from the
+> failed runs' own meta). Catches en route: (1) the smoke script had never
+> been updated to U4's collect contract — a held `/v1/agent/run`
+> (`completed_pending_ack` under collect="yes") timed out its poll; the
+> smoke now acks held runs on both steps 4+5 and accepts
+> straight-`completed` under auto/no; (2) the route tests began minting
+> REAL records in `~/.ppxai/runs` (nine polluted, deleted) — an autouse
+> tmp-registry fixture now isolates them.
+
 Route **plain** oneshot through the run tier too and **delete** the direct
 `provider.oneshot()` path ("remove more code than change").
 

@@ -413,6 +413,12 @@ Single-turn LLM call with no session, no history, no streaming.
 Designed for classifiers, routers, and any "given this prompt, return
 one response" workload.
 
+> **Since v1.19.1 (FU):** every oneshot executes as a `kind=oneshot`
+> registry run under the hood — the wire contract is unchanged, but each
+> call leaves an auditable record in `~/.ppxai/runs/<id>/` (visible to
+> `/run ls`, reaped by the standard retention policy). "Stateless" keeps
+> its meaning: no *session* side effects, the response is the collect.
+
 #### Request
 
 ```http

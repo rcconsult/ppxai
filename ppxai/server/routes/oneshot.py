@@ -543,15 +543,50 @@ async def oneshot(req: OneshotRequest, request: Request) -> OneshotResponse:
 
     provider = _build_provider(provider_name)
 
-    # v1.19.x: oneshot() is now part of the BaseProvider contract (implemented
-    # on every provider), so /v1/oneshot is provider-agnostic — no
-    # isinstance-by-class guard. _build_provider already 400s on unknown
-    # provider / missing key.
+    # FU (ADR 0009 follow-up unification): the plain path ALSO executes as a
+    # real `kind=oneshot` registry run — the direct non-registry branch that
+    # used to live here is DELETED, so the whole one-off tier has exactly one
+    # execution path (the run registry) and every oneshot is auditable in
+    # `~/.ppxai/runs/<id>/` and visible to `/run ls`. The native-grounding
+    # prerequisite is satisfied by construction: the runner closes over the
+    # provider `_build_provider` returned, which already carries the
+    # effective grounding switch — grounded and closed-book calls ride the
+    # same gears.
+    #
+    # v1.19.x: oneshot() is part of the BaseProvider contract (implemented on
+    # every provider), so this is provider-agnostic — no isinstance guard.
+    # _build_provider already 400s on unknown provider / missing key.
+    owner = None
     try:
+        from .agent_v1 import _caller_owner  # lazy — circular at module level
+
+        owner = _caller_owner(request)
+    except Exception:
+        owner = None
+    from ..state import get_agent_run_registry
+
+    registry = get_agent_run_registry()
+    meta = registry.start_run(
+        task=req.prompt,
+        kind="oneshot",
+        tools=[],  # closed-book: no grant, no egress, no budget
+        provider=provider_name,
+        model=model,
+        owner=owner,
+        hold_result=False,  # oneshot semantics: the response IS the collect
+        system=req.system,
+    )
+
+    # The run registry keeps only the result STRING; the wire contract needs
+    # the provider's full envelope (finish_reason / model / usage) byte-
+    # identical to the pre-FU direct path — the awaiting handler holds this
+    # closure, so the envelope never touches shared state.
+    envelope: Dict[str, Any] = {}
+
+    async def _runner(m) -> str:
         # provider.oneshot is blocking I/O (SDK round-trip). Offload it so a
         # slow provider (e.g. Gemini preview, multi-second reasoning) doesn't
-        # starve the single event loop and stall every other request. The
-        # agent-run tier (agent_v1._runner) already offloads the same call.
+        # starve the single event loop and stall every other request.
         result = await asyncio.to_thread(
             lambda: provider.oneshot(
                 prompt=req.prompt,
@@ -562,25 +597,43 @@ async def oneshot(req: OneshotRequest, request: Request) -> OneshotResponse:
                 temperature=req.temperature,
             )
         )
-    except HTTPException:
+        envelope.update(result or {})
+        return (result or {}).get("content", "")
+
+    registry.run_in_background(meta, _runner)
+    run_task = registry.get_run_task(meta.run_id)
+    try:
+        if run_task is not None:
+            # shield: a client disconnect cancels the RUN cooperatively
+            # (never a headless spender) instead of ripping the provider
+            # call out mid-flight. No timeout here — parity with the
+            # pre-FU direct path, which waited as long as the provider did.
+            await asyncio.shield(run_task)
+    except asyncio.CancelledError:
+        registry.cancel_run(meta.run_id)
         raise
-    except Exception as e:
+
+    final = registry.get_run(meta.run_id) or meta
+    if final.status != "completed":
+        # Same error contract as the pre-FU direct path (502, provider
+        # message verbatim) — plus the run id as the debug handle.
         logger.warning(
-            f"/v1/oneshot provider call failed: {provider_name}/{model}: {e}"
+            f"/v1/oneshot provider call failed: {provider_name}/{model}: "
+            f"{final.error} (run {meta.run_id})"
         )
         raise HTTPException(
             status_code=502,
-            detail=f"Provider call failed: {e}",
+            detail=f"Provider call failed: {final.error}",
         )
 
     usage = None
-    if result.get("usage") is not None:
-        usage = OneshotUsage(**result["usage"])
+    if envelope.get("usage") is not None:
+        usage = OneshotUsage(**envelope["usage"])
 
     return OneshotResponse(
-        content=result.get("content", ""),
-        finish_reason=result.get("finish_reason"),
-        model=result.get("model", model),
+        content=envelope.get("content", ""),
+        finish_reason=envelope.get("finish_reason"),
+        model=envelope.get("model", model),
         provider=provider_name,
         usage=usage,
     )
