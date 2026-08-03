@@ -181,6 +181,8 @@ class TaskController extends _AgentRunControllerBase {
         if (typeof TaskRunView !== 'undefined') this._viewClass = TaskRunView;
         this._emptyHint = 'No task runs yet — start one with /task "<desc>" --tools <a,b,c>';
         this._reopenHint = '/task ls';
+        // U3: /task ls lists only kind=task runs (oneshots live on /run ls).
+        this._kind = 'task';
     }
 
     /**
@@ -210,7 +212,7 @@ class TaskController extends _AgentRunControllerBase {
             if (TASK_VERBS.has(verb) && RUN_ID_ISH_RE.test(firstTok)) {
                 // Near-miss id after a verb: fail loud, never launch.
                 this.app.showSystemMessage(
-                    `❌ \`${firstTok}\` looks like a run id but isn't one (run_ + 12 hex). Check the id with \`/task ls\`.`
+                    `❌ \`${firstTok}\` looks like a run id but isn't one (run_ + 12 hex). Check the id with \`${this._cmd} ls\`.`
                 );
                 return undefined;
             }
@@ -251,15 +253,9 @@ class TaskController extends _AgentRunControllerBase {
             return;
         }
         const hasResolvedSource = Boolean(spec.spec) || spec.skills.length > 0;
-        if (!spec.tools.length && !hasResolvedSource) {
-            // A grant is required — but a --spec or --skill may supply it (T3/T4).
-            // The server clamps the merged grant (no-shell, ceiling); we only
-            // guard the "no grant source at all" case here to fail fast.
-            this.app.showSystemMessage(
-                '❌ /task needs a tool grant (--tools a,b,c), a --spec, or a --skill that supplies one. A tool-free run belongs on /agentrun.'
-            );
-            return;
-        }
+        // U3 (ADR 0011): no client-side tool-free guard anymore — the server
+        // owns the grant rule (400 with its own message when no grant source
+        // exists), and tool-free one-offs are /run's job now.
 
         // With a --spec or --skill, provider/model/grant may come from the file;
         // don't force the session's current provider/model onto the request
@@ -343,7 +339,7 @@ class TaskController extends _AgentRunControllerBase {
         const runId = sp === -1 ? trimmed : trimmed.slice(0, sp);
         let answer = sp === -1 ? '' : trimmed.slice(sp + 1).trim();
         if (!runId || !answer) {
-            this.app.showSystemMessage('Usage: `/task respond <id> approve|deny|"<text>"`');
+            this.app.showSystemMessage(`Usage: \`${this._cmd} respond <id> approve|deny|"<text>"\``);
             return;
         }
         // Strip one layer of quotes off a quoted free-text answer.
@@ -375,7 +371,7 @@ class TaskController extends _AgentRunControllerBase {
     /** /task get|watch <id> — focus (and live-tail) a run's pane. */
     get(runId) {
         const id = (runId || '').trim();
-        if (!id) { this.app.showSystemMessage('Usage: `/task get <id>`'); return undefined; }
+        if (!id) { this.app.showSystemMessage(`Usage: \`${this._cmd} get <id>\``); return undefined; }
         return this.focus(id, '');
     }
 

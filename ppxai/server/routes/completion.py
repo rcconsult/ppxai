@@ -25,7 +25,7 @@ class CompleteRequest(BaseModel):
     buffer: str
     cursor: int = -1  # -1 = end of buffer
     # Which client is asking ("web" | "vscode"). Client-side-only
-    # commands (/task, /token, /agentrun…) are surfaced only to clients
+    # commands (/task, /run, /token) are surfaced only to clients
     # that implement them; None (legacy caller) = no filtering.
     client: Optional[str] = None
 
@@ -63,18 +63,21 @@ async def complete_endpoint(
             except Exception:
                 tool_names = []
 
-    # Agent-run snapshot for `/task <verb> <id>` completion (v1.19.x).
+    # Agent-run snapshot for `/task|/run <verb> <id>` completion (v1.19.x).
     # The registry is server-side state, so this endpoint is the only
     # place the completion engine can learn live run ids. list_runs()
     # is an in-memory read, newest-first. Cheap enough per keystroke.
+    # U3: `kind` rides along so each family only offers its own ids.
     agent_runs: List[Dict[str, Any]] = []
-    if request.buffer.lstrip().startswith("/task"):
+    stripped = request.buffer.lstrip()
+    if stripped.startswith("/task") or stripped.startswith("/run"):
         try:
             agent_runs = [
                 {
                     "id": m.run_id,
                     "status": m.status,
                     "task": m.task,
+                    "kind": getattr(m, "kind", "task") or "task",
                     "resumable": bool(getattr(m, "resumable", False)),
                 }
                 for m in get_agent_run_registry().list_runs()

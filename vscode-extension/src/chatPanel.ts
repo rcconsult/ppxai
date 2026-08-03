@@ -24,7 +24,7 @@ import { generateHelpText } from './shared/commands';
 import { AppState } from './appState';
 
 // v1.19.x T8a: the /task command family (tool-capable /v1/agent/task tier).
-import { TaskController, ConsentAnswer } from './taskController';
+import { TaskController, RunController, ConsentAnswer } from './taskController';
 
 // v1.18.1 envelope dispatch: factory result + side-effects rendering.
 import { CommandRenderer, RendererHost } from './commandRenderer';
@@ -209,6 +209,8 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
 
     // v1.19.x T8a: /task family controller (lazy — needs _view for output).
     private _taskController?: TaskController;
+    // U3 (ADR 0011): /run one-off family controller (same lazy wiring).
+    private _runController?: RunController;
 
     constructor(
         context: vscode.ExtensionContext,
@@ -250,43 +252,61 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
      * (systemMessage / fullResponse) and the native QuickPick for the T5
      * consent park — same dialog idiom as the shell/file consent handlers.
      */
+    /** Shared TaskUi wiring for the /task and /run controllers. */
+    private buildTaskUi() {
+        return {
+            system: (text: string) => {
+                this._view?.webview.postMessage({ type: 'systemMessage', content: text });
+            },
+            result: (text: string) => {
+                this._view?.webview.postMessage({ type: 'fullResponse', content: text });
+            },
+            askConsent: async (runId: string, kind: string, prompt: string): Promise<ConsentAnswer | undefined> => {
+                const selected = await vscode.window.showQuickPick(
+                    [
+                        { label: '$(check) Approve', detail: 'Let the run proceed (POST /respond approved)', value: 'approve' },
+                        { label: '$(x) Deny', detail: 'Refuse — the run continues without the action', value: 'deny' },
+                    ],
+                    {
+                        placeHolder: prompt.length > 80 ? prompt.slice(0, 80) + '…' : prompt,
+                        title: `✋ Agent run ${runId} needs ${kind}`,
+                        ignoreFocusOut: true,
+                    }
+                );
+                if (!selected) { return undefined; }  // dismissed → TTL backstop
+                return { approved: selected.value === 'approve' };
+            },
+        };
+    }
+
+    /** Shared session defaults (per-run intent) for both run families. */
+    private buildTaskDefaults() {
+        return () => ({
+            provider: this._appState.get('currentProvider') || null,
+            model: this._appState.get('currentModel') || null,
+            // v1.19.x workdir-alignment: the session's working dir rides
+            // on a /task launch as per-run intent (--work-dir overrides).
+            workingDir: this._appState.get('workingDir') || null,
+        });
+    }
+
     private getTaskController(): TaskController {
         if (!this._taskController) {
             this._taskController = new TaskController(
-                this._backend,
-                {
-                    system: (text) => {
-                        this._view?.webview.postMessage({ type: 'systemMessage', content: text });
-                    },
-                    result: (text) => {
-                        this._view?.webview.postMessage({ type: 'fullResponse', content: text });
-                    },
-                    askConsent: async (runId, kind, prompt): Promise<ConsentAnswer | undefined> => {
-                        const selected = await vscode.window.showQuickPick(
-                            [
-                                { label: '$(check) Approve', detail: 'Let the run proceed (POST /respond approved)', value: 'approve' },
-                                { label: '$(x) Deny', detail: 'Refuse — the run continues without the action', value: 'deny' },
-                            ],
-                            {
-                                placeHolder: prompt.length > 80 ? prompt.slice(0, 80) + '…' : prompt,
-                                title: `✋ Agent run ${runId} needs ${kind}`,
-                                ignoreFocusOut: true,
-                            }
-                        );
-                        if (!selected) { return undefined; }  // dismissed → TTL backstop
-                        return { approved: selected.value === 'approve' };
-                    },
-                },
-                () => ({
-                    provider: this._appState.get('currentProvider') || null,
-                    model: this._appState.get('currentModel') || null,
-                    // v1.19.x workdir-alignment: the session's working dir
-                    // rides on /task run as per-run intent (--work-dir overrides).
-                    workingDir: this._appState.get('workingDir') || null,
-                })
+                this._backend, this.buildTaskUi(), this.buildTaskDefaults()
             );
         }
         return this._taskController;
+    }
+
+    /** U3: the /run controller — same wiring, one-off family. */
+    private getRunController(): RunController {
+        if (!this._runController) {
+            this._runController = new RunController(
+                this._backend, this.buildTaskUi(), this.buildTaskDefaults()
+            );
+        }
+        return this._runController;
     }
 
     /**
@@ -1145,6 +1165,13 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                 return;
             }
 
+            // /run (U3, ADR 0011): the one-off family — kind=oneshot runs
+            // on the same gears; grant is server-config-decided.
+            if (command === 'run') {
+                await this.getRunController().handle(argsText);
+                return;
+            }
+
             // Item 40: /token — manage the /v1 bearer in-chat (verb parity
             // with the web dispatcher's _handleTokenCommand; persistence is
             // SecretStorage, not localStorage). Must run BEFORE factory
@@ -1842,6 +1869,7 @@ Review your previous actions and continue. If the task is complete, respond with
         // dispatcher's _appendExperimentalHelp).
         helpText += '\n**Agent platform (client-side, experimental):**\n';
         helpText += '- `/task` - Tool-capable background agent runs — direct launch (ls·get·watch·respond·collect·resume·cancel)\n';
+        helpText += '- `/run` - One-off background run — direct launch, no flags (ls·get·watch·collect·cancel)\n';
         helpText += '- `/token` - Manage the /v1 API bearer token (status·set·mint·clear)\n';
 
         // Add VSCode-specific keyboard shortcuts

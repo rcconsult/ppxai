@@ -77,7 +77,9 @@ export interface AgentRunMeta {
 /** The httpClient slice this controller drives (see httpClient.ts). */
 export interface TaskBackend {
     agentTask(body: Record<string, any>): Promise<{ run_id: string; status: string; workdir_ignored?: boolean }>;
-    agentRuns(): Promise<{ runs: AgentRunMeta[] }>;
+    /** U3: one-off launch — POST /v1/agent/run (grant is server-config-decided). */
+    agentRunCreate(body: Record<string, any>): Promise<{ run_id: string; status: string }>;
+    agentRuns(kind?: string): Promise<{ runs: AgentRunMeta[] }>;
     agentRun(runId: string): Promise<AgentRunMeta>;
     agentRunEvents(runId: string): AsyncIterable<any>;
     agentRunCancel(runId: string): Promise<any>;
@@ -303,9 +305,13 @@ const STATUS_ICONS: Record<string, string> = {
 };
 
 export class TaskController {
-    private backend: TaskBackend;
-    private ui: TaskUi;
-    private getDefaults: () => TaskDefaults;
+    protected backend: TaskBackend;
+    protected ui: TaskUi;
+    protected getDefaults: () => TaskDefaults;
+    // U3 (ADR 0011): command-family surface knobs — the slash command named
+    // in usage/hint strings and the ls kind filter. RunController overrides.
+    protected cmd = '/task';
+    protected kind: string | undefined = 'task';
     // Poll cadence for the watcher (overridable in tests). Same contract as
     // the web degraded path: back off, no run-duration ceiling, give up only
     // after consecutive GET failures.
@@ -345,7 +351,7 @@ export class TaskController {
             if (TASK_VERBS.has(verb) && RUN_ID_ISH_RE.test(firstTok)) {
                 // Near-miss id after a verb: fail loud, never launch.
                 this.ui.system(
-                    `❌ \`${firstTok}\` looks like a run id but isn't one (run_ + 12 hex). Check the id with /task ls.`
+                    `❌ \`${firstTok}\` looks like a run id but isn't one (run_ + 12 hex). Check the id with ${this.cmd} ls.`
                 );
                 return;
             }
@@ -373,7 +379,7 @@ export class TaskController {
      * only relaying the bare FastAPI detail (Item 40 VSCode trial
      * feedback: the raw 401 gave no clue that `/token` exists).
      */
-    private errText(e: any): string {
+    protected errText(e: any): string {
         const msg = e?.message ?? String(e);
         if (e?.status === 401) {
             return `${msg} — 💡 no /v1 API token attached: run \`/token mint\` (local server) or \`/token set\` (paste one).`;
@@ -395,12 +401,9 @@ export class TaskController {
             return;
         }
         const hasResolvedSource = Boolean(spec.spec) || spec.skills.length > 0;
-        if (!spec.tools.length && !hasResolvedSource) {
-            this.ui.system(
-                '❌ /task needs a tool grant (--tools a,b,c), a --spec, or a --skill that supplies one.'
-            );
-            return;
-        }
+        // U3 (ADR 0011): no client-side tool-free guard — the server owns the
+        // grant rule (400 with its own message when no grant source exists);
+        // tool-free one-offs are /run's job now.
 
         // Same fallback rule as the web client: without a --spec/--skill the
         // session's provider/model ride along as explicit per-run intent.
@@ -433,22 +436,22 @@ export class TaskController {
         if (started.workdir_ignored) {
             this.ui.system('⚠️ sandbox seal active — --work-dir ignored; the run stays in its per-run jail.');
         }
-        this.ui.system(`🛠️ ${started.run_id} — task ${started.status} (watching; /task get ${started.run_id})`);
+        this.ui.system(`🛠️ ${started.run_id} — task ${started.status} (watching; ${this.cmd} get ${started.run_id})`);
         void this.watchDetached(started.run_id);
     }
 
-    /** /task ls — list runs, newest first. */
+    /** ls — list this family's runs (kind-filtered, U3), newest first. */
     async list(): Promise<void> {
         let data: { runs: AgentRunMeta[] };
         try {
-            data = await this.backend.agentRuns();
+            data = await this.backend.agentRuns(this.kind);
         } catch (e: any) {
             this.ui.system(`❌ Could not list runs: ${this.errText(e)}`);
             return;
         }
         const runs = data.runs || [];
         if (!runs.length) {
-            this.ui.system('No task runs yet — start one with /task "<desc>" --tools <a,b,c>');
+            this.ui.system(this.emptyHint());
             return;
         }
         const lines = runs.slice(0, 20).map((r) => {
@@ -458,9 +461,14 @@ export class TaskController {
         this.ui.system(['Agent runs (newest first):', ...lines].join('\n'));
     }
 
-    /** /task get|watch <id> — print the run's state (+ result) and re-watch. */
+    /** Empty-list hint — overridden by RunController for its own launch shape. */
+    protected emptyHint(): string {
+        return 'No task runs yet — start one with /task "<desc>" --tools <a,b,c>';
+    }
+
+    /** get|watch <id> — print the run's state (+ result) and re-watch. */
     async get(runId: string): Promise<void> {
-        if (!runId) { this.ui.system('Usage: `/task get <id>`'); return; }
+        if (!runId) { this.ui.system(`Usage: \`${this.cmd} get <id>\``); return; }
         let run: AgentRunMeta;
         try {
             run = await this.backend.agentRun(runId);
@@ -474,9 +482,9 @@ export class TaskController {
         }
     }
 
-    /** /task cancel <id> — cooperative cancel. */
+    /** cancel <id> — cooperative cancel. */
     async cancel(runId: string): Promise<void> {
-        if (!runId) { this.ui.system('Usage: `/task cancel <id>`'); return; }
+        if (!runId) { this.ui.system(`Usage: \`${this.cmd} cancel <id>\``); return; }
         try {
             await this.backend.agentRunCancel(runId);
         } catch (e: any) {
@@ -498,7 +506,7 @@ export class TaskController {
         const runId = sp === -1 ? trimmed : trimmed.slice(0, sp);
         let answer = sp === -1 ? '' : trimmed.slice(sp + 1).trim();
         if (!runId || !answer) {
-            this.ui.system('Usage: `/task respond <id> approve|deny|"<text>"`');
+            this.ui.system(`Usage: \`${this.cmd} respond <id> approve|deny|"<text>"\``);
             return;
         }
         const q = answer[0];
@@ -538,9 +546,9 @@ export class TaskController {
         return true;
     }
 
-    /** /task collect <id> — collect a held result (T6; `ack` stays as alias). */
+    /** collect <id> — collect a held result (T6; `ack` stays as alias). */
     async ack(runId: string): Promise<boolean> {
-        if (!runId) { this.ui.system('Usage: `/task collect <id>`'); return false; }
+        if (!runId) { this.ui.system(`Usage: \`${this.cmd} collect <id>\``); return false; }
         try {
             await this.backend.agentRunAck(runId);
         } catch (e: any) {
@@ -551,9 +559,9 @@ export class TaskController {
         return true;
     }
 
-    /** /task resume <id> — conditionally continue an interrupted run (T7). */
+    /** resume <id> — conditionally continue an interrupted run (T7). */
     async resume(runId: string): Promise<boolean> {
-        if (!runId) { this.ui.system('Usage: `/task resume <id>`'); return false; }
+        if (!runId) { this.ui.system(`Usage: \`${this.cmd} resume <id>\``); return false; }
         try {
             await this.backend.agentRunResume(runId);
         } catch (e: any) {
@@ -596,18 +604,18 @@ export class TaskController {
         if (SUCCESS_STATUSES.has(run.status) && run.result) {
             this.ui.result(run.result);
             if (run.status === 'completed_pending_ack') {
-                this.ui.system(`📬 result held — collect with /task collect ${run.run_id}`);
+                this.ui.system(`📬 result held — collect with ${this.cmd} collect ${run.run_id}`);
             }
         } else if (run.error) {
             this.ui.system(`   ${run.error}`);
             if (run.resumable && (run.status === 'interrupted' || run.status === 'cancelled')) {
-                this.ui.system(`▶️ resumable — /task resume ${run.run_id}`);
+                this.ui.system(`▶️ resumable — ${this.cmd} resume ${run.run_id}`);
             }
         }
     }
 
     /** Deduped detached poll watcher (parity with the web watcher contract). */
-    private async watchDetached(runId: string): Promise<void> {
+    protected async watchDetached(runId: string): Promise<void> {
         if (this.watching.has(runId)) { return; }
         this.watching.add(runId);
         try {
@@ -661,7 +669,7 @@ export class TaskController {
         }
         const run = await this.pollUntilTerminal(runId);
         if (!run) {
-            this.ui.system(`⚠️ ${runId} — lost contact with the server; /task get ${runId} to retry.`);
+            this.ui.system(`⚠️ ${runId} — lost contact with the server; ${this.cmd} get ${runId} to retry.`);
             return;
         }
         this.renderRun(run);
@@ -718,8 +726,80 @@ export class TaskController {
             await this.respond(runId, payload);
         } else {
             this.ui.system(
-                `✋ ${runId} is waiting — answer with /task respond ${runId} approve|deny`
+                `✋ ${runId} is waiting — answer with ${this.cmd} respond ${runId} approve|deny`
             );
         }
+    }
+}
+
+
+/**
+ * RunController — the `/run` one-off family (U3, ADR 0011; web parity with
+ * `ppxai/web/shared/run-controller.js`).
+ *
+ * A `kind=oneshot` registry run on the same gears as /task: shared U2
+ * grammar + lifecycle verbs (ls is kind-filtered), but the launch takes NO
+ * flags — the effective grant is SERVER-config-decided
+ * (`execution.run.web_search` on → {web_search}, off → closed-book) and
+ * provider/model ride from the session defaults. Replaces the retired
+ * /agentrun + /agentruns (web-only predecessors; hard removal).
+ */
+export class RunController extends TaskController {
+    protected override cmd = '/run';
+    protected override kind: string | undefined = 'oneshot';
+
+    protected override emptyHint(): string {
+        return 'No runs yet — start one with /run <prompt>';
+    }
+
+    /** Launch a one-off run: the whole line is the prompt. No flags. */
+    override async run(argline: string): Promise<void> {
+        let prompt = (argline || '').trim();
+        if (!prompt) {
+            this.ui.system('Usage: `/run <prompt>`');
+            return;
+        }
+        // No flags by design — reject rather than silently feed `--tools x`
+        // into the prompt text (the grant is config-decided server-side).
+        if (/(^|\s)--\w/.test(prompt)) {
+            this.ui.system(
+                '❌ /run takes no flags — the grant is decided by server config (execution.run.web_search). For explicit tool grants use /task.'
+            );
+            return;
+        }
+        // Strip one layer of outer quotes (quoting allowed, never required).
+        const q = prompt[0];
+        if ((q === '"' || q === "'") && prompt.endsWith(q) && prompt.length > 1) {
+            prompt = prompt.slice(1, -1).trim();
+        }
+        // Same per-run-intent rule as a /task launch without a spec: session
+        // provider/model ride along; the server falls back to
+        // tools.agent.default_subagent when the session has none.
+        const defaults = this.getDefaults() || {};
+        const body: Record<string, any> = { task: prompt };
+        if (defaults.provider) { body.provider = defaults.provider; }
+        if (defaults.model) { body.model = defaults.model; }
+        let started: { run_id: string; status: string };
+        try {
+            started = await this.backend.agentRunCreate(body);
+        } catch (e: any) {
+            this.ui.system(`❌ Run rejected: ${this.errText(e)}`);
+            return;
+        }
+        this.ui.system(`🤖 ${started.run_id} — run ${started.status} (watching; /run get ${started.run_id})`);
+        void this.watchDetached(started.run_id);
+    }
+
+    override help(): void {
+        this.ui.system([
+            '/run — one-off background runs (async, non-blocking). Launches directly:',
+            '  /run <prompt>           no flags; grant is server-config-decided (execution.run.web_search on → web_search only, off → closed-book)',
+            '  /run ls                 list one-off runs',
+            '  /run get <id>           print a run (re-watches if still live)',
+            '  /run watch <id>         alias of get',
+            '  /run collect <id>       collect a held result (📬 → finalized)',
+            '  /run cancel <id>        cancel a run',
+            '  A first token that is a verb only counts as one when followed by a run id (or nothing) — anything else launches.',
+        ].join('\n'));
     }
 }

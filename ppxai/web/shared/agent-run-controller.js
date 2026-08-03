@@ -76,11 +76,16 @@ class AgentRunController {
         this._viewClass = (typeof AgentRunView !== 'undefined') ? AgentRunView : null;
         // Empty-list hint — overridden by the /task subclass to point at its
         // own launch verb.
-        this._emptyHint = 'No agent runs yet. Start one with /agentrun <task>.';
+        this._emptyHint = 'No agent runs yet. Start one with /task "<desc>" --tools … or /run "<prompt>".';
         // The command that reopens a run's pane (used in recovery hints) — the
         // /task subclass overrides it, so a task run's "how to retry" message
         // names the right verb.
-        this._reopenHint = '/agentruns';
+        this._reopenHint = '/task ls';
+        // U3 (ADR 0011): command-family surface knobs. `_cmd` names the slash
+        // command in usage/hint strings; `_kind` filters ls to this family's
+        // runs (null = unfiltered). Subclasses override both.
+        this._cmd = '/task';
+        this._kind = null;
     }
 
     /**
@@ -168,11 +173,13 @@ class AgentRunController {
         this._watchDetached(runId);
     }
 
-    /** /agentruns — list recent runs as clickable rows that focus their panes. */
+    /** ls — list recent runs (kind-filtered per family) as clickable rows. */
     async list() {
         let data;
         try {
-            data = await this.app.apiClient.get('/v1/agent/runs');
+            const url = this._kind
+                ? `/v1/agent/runs?kind=${this._kind}` : '/v1/agent/runs';
+            data = await this.app.apiClient.get(url);
         } catch (e) {
             this.app.showSystemMessage(`❌ Could not list runs: ${this._errText(e)}`);
             return;
@@ -273,7 +280,7 @@ class AgentRunController {
      * the /task pane wires its Cancel button here via _wireView.
      */
     async cancel(runId) {
-        if (!runId) { this.app.showSystemMessage('Usage: `/task cancel <id>`'); return; }
+        if (!runId) { this.app.showSystemMessage(`Usage: \`${this._cmd} cancel <id>\``); return; }
         try {
             await this.app.apiClient.post(`/v1/agent/runs/${runId}/cancel`, {});
         } catch (e) {
@@ -318,7 +325,7 @@ class AgentRunController {
      * (U2 rename; `ack` stays as alias).
      */
     async ack(runId) {
-        if (!runId) { this.app.showSystemMessage('Usage: `/task collect <id>`'); return false; }
+        if (!runId) { this.app.showSystemMessage(`Usage: \`${this._cmd} collect <id>\``); return false; }
         try {
             await this.app.apiClient.post(`/v1/agent/runs/${runId}/ack`, {});
         } catch (e) {
@@ -339,7 +346,7 @@ class AgentRunController {
      * detached watcher (the old one broke at the interrupt).
      */
     async resume(runId) {
-        if (!runId) { this.app.showSystemMessage('Usage: `/task resume <id>`'); return false; }
+        if (!runId) { this.app.showSystemMessage(`Usage: \`${this._cmd} resume <id>\``); return false; }
         try {
             await this.app.apiClient.post(`/v1/agent/runs/${runId}/resume`, {});
         } catch (e) {

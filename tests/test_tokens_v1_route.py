@@ -329,14 +329,25 @@ class TestLoopbackUIExemption:
             self._request(path="/v1/agent/runs", header=f"Bearer {material}")
         ) is None
 
-    # ---- /v1/agent/run carve-out (tool-free oneshot tier) -----------------
-    # POST /v1/agent/run is behaviorally identical to /v1/oneshot (no tools,
-    # no egress) and is the web client's /agentrun target, so it is exempt on
-    # loopback — but ONLY that exact path. Everything else under /v1/agent
+    # ---- /v1/agent/run carve-out (closed-book oneshot tier) ---------------
+    # POST /v1/agent/run is exempt on loopback ONLY while it is behaviorally
+    # identical to /v1/oneshot (no tools, no egress) — i.e. while
+    # execution.run.web_search is OFF. U3 (ADR 0011): with the config ON the
+    # endpoint launches a web_search-granted run, which is a capability, so
+    # the carve-out closes. Everything else under /v1/agent
     # (launch-with-tools, run records, monitor channels) stays protected.
+
+    @staticmethod
+    def _pin_run_web_search(monkeypatch, on: bool):
+        from ppxai.config import execution as exec_mod
+        monkeypatch.setattr(
+            exec_mod, "get_execution_run_config",
+            lambda: {"web_search": on, "grounding": False},
+        )
 
     def test_loopback_v1_agent_RUN_exempt(self, monkeypatch, tmp_path):
         self._enforced_file_chain(monkeypatch, tmp_path)
+        self._pin_run_web_search(monkeypatch, False)
         assert check_request(
             self._request(method="POST", path="/v1/agent/run")
         ) is None
@@ -344,9 +355,19 @@ class TestLoopbackUIExemption:
     def test_loopback_v1_agent_run_trailing_slash_exempt(self, monkeypatch, tmp_path):
         # rstrip-normalized so /v1/agent/run/ matches the carve-out too.
         self._enforced_file_chain(monkeypatch, tmp_path)
+        self._pin_run_web_search(monkeypatch, False)
         assert check_request(
             self._request(method="POST", path="/v1/agent/run/")
         ) is None
+
+    def test_loopback_v1_agent_run_protected_when_web_search_on(
+        self, monkeypatch, tmp_path
+    ):
+        # U3: the granted state is a capability — no token-less launch.
+        self._enforced_file_chain(monkeypatch, tmp_path)
+        self._pin_run_web_search(monkeypatch, True)
+        r = check_request(self._request(method="POST", path="/v1/agent/run"))
+        assert r is not None and r.status_code == 401
 
     def test_loopback_v1_agent_TASK_still_protected(self, monkeypatch, tmp_path):
         # The tool-capable tier is NEVER exempt — even on loopback.

@@ -9,7 +9,8 @@ deliberately does not offer `/task`)
 
 `/task` launches **tool-capable, sandboxed, durable background agent runs**.
 Unlike the in-session [`/agent` mode](session-agent-guide.md) (which drives
-tools inside your current chat) and the tool-free `/agentrun` one-off, a
+tools inside your current chat) and the `/run` one-off (config-decided
+grant), a
 `/task` run executes on the server with an explicit **capability grant**,
 survives client disconnects and server restarts, and has a full lifecycle:
 consent parks, held results, and resume.
@@ -17,7 +18,7 @@ consent parks, held results, and resume.
 | Surface | Tools | Where it runs | Guide |
 |---|---|---|---|
 | `/agent` session mode | session's tools | inside your chat session | [session-agent-guide.md](session-agent-guide.md) |
-| `/agentrun` one-off | none (tool-free) | background, fire-and-forget | [api-gateway.md](api-gateway.md) |
+| `/run` one-off | config-decided: none or `web_search` (`execution.run.web_search`) | background, held result | [api-gateway.md](api-gateway.md) |
 | **`/task` (this guide)** | **explicit grant** | **background, durable, sandboxed** | here |
 
 ---

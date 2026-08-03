@@ -42,14 +42,14 @@ class CommandDispatcher {
         this.app = app;
         this.renderer = new ResultRenderer(app);
         this.sideEffects = new SideEffectsHandler(app);
-        // v1.19.0: agent-platform run commands (/agentrun, /agentruns) live in
-        // their own controller so this dispatcher stays a thin router.
-        this.agentRuns = (typeof AgentRunController !== 'undefined')
-            ? new AgentRunController(app)
-            : null;
         // v1.19.x (T1): the tool-capable /task tier + sub-commands.
         this.tasks = (typeof TaskController !== 'undefined')
             ? new TaskController(app)
+            : null;
+        // U3 (ADR 0011): the /run one-off family — kind=oneshot runs on the
+        // same gears; replaces the retired /agentrun + /agentruns.
+        this.runs = (typeof RunController !== 'undefined')
+            ? new RunController(app)
             : null;
     }
 
@@ -89,16 +89,11 @@ class CommandDispatcher {
                 return;
             }
 
-            // Agent platform (v1.19.0 /v1/agent/* run registry — distinct from
-            // the engine-side /auto above). Delegated to AgentRunController:
-            // /agentrun starts a background run (rendered in a right-panel pane);
-            // /agentruns lists recent runs as clickable rows that focus panes.
-            if (cmd === '/agentrun') {
-                await this.agentRuns?.start(args);
-                return;
-            }
-            if (cmd === '/agentruns') {
-                await this.agentRuns?.list();
+            // One-off tier (U3, ADR 0011): `/run …` — direct launch (grant
+            // decided by server config) + kind-filtered lifecycle verbs.
+            // Replaces the retired /agentrun + /agentruns (hard removal).
+            if (cmd === '/run') {
+                await this.runs?.handle(args);
                 return;
             }
 
@@ -258,7 +253,7 @@ class CommandDispatcher {
      */
     _appendExperimentalHelp() {
         const cat = this.app.slashCommands || {};
-        const lines = ['/agentrun', '/agentruns', '/task', '/token']
+        const lines = ['/run', '/task', '/token']
             .filter((c) => cat[c])
             .map((c) => `  ${c} — ${cat[c].description}  (usage: ${cat[c].usage})`);
         if (lines.length) {

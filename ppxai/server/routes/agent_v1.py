@@ -110,7 +110,12 @@ from ..session_manager import get_default_working_dir
 from ..state import get_agent_run_registry
 # Reuse oneshot's provider construction so Inc 1 has zero provider-wiring
 # duplication; the synchronous run IS a oneshot call under the hood.
-from .oneshot import _build_provider, _validate_provider_or_400
+from .oneshot import (
+    ONESHOT_SEARCH_ITERATIONS,
+    _build_provider,
+    _validate_provider_or_400,
+    _web_search_egress_hosts,
+)
 
 logger = get_logger("server")
 
@@ -236,9 +241,11 @@ class AgentRunRequest(BaseModel):
     tools: list[str] = Field(
         default_factory=list,
         description=(
-            "Recorded on the run for provenance. /v1/agent/run is the "
-            "TOOL-FREE tier (oneshot) — tools here are NOT executed. For a "
-            "tool-capable, allowlist-enforced run, use POST /v1/agent/task."
+            "Recorded on the run for provenance only — NEVER executed and "
+            "NEVER widens the grant. /v1/agent/run's effective grant is "
+            "config-decided (U3, ADR 0011): {} by default, {web_search} when "
+            "execution.run.web_search is on. For an explicit tool grant, use "
+            "POST /v1/agent/task."
         ),
     )
     provider: Optional[str] = Field(
@@ -333,12 +340,20 @@ class RunListResponse(BaseModel):
 
 @router.post("/run", response_model=AgentRunResponse)
 async def create_agent_run(req: AgentRunRequest, request: Request) -> AgentRunResponse:
-    """Create a run and execute it in the background (Inc 2).
+    """Create a `kind=oneshot` run and execute it in the background.
+
+    U3 (ADR 0011): this is the `/run` UX launch. Grant rule — one brain
+    with the /v1/oneshot facade: `{}` by default, `{web_search}` when
+    `execution.run.web_search` is on (same egress baseline, same small
+    iteration budget). The request CANNOT widen the grant: `req.tools`
+    stays provenance-only and is never executed.
 
     Validation + provider build happen synchronously (so a bad provider
     still gets a 400 up front), then the run is fired into a background
     task and the POST returns immediately with status='running'. Poll
-    GET /v1/agent/runs/<id> to watch it flip to completed/failed.
+    GET /v1/agent/runs/<id> to watch it flip. A successful run HOLDS its
+    result (T6, `completed_pending_ack`) until collected — same UX
+    contract as /task; U4 maps `execution.collect` onto this.
     """
     registry = get_agent_run_registry()
 
@@ -385,10 +400,44 @@ async def create_agent_run(req: AgentRunRequest, request: Request) -> AgentRunRe
     # not class — see _v1_provider_or_400).
     provider = _v1_provider_or_400(provider_name)
 
+    # U3 grant rule (config-decided, never request-decided): web_search on
+    # → the run goes through the FULL task-tier sandbox with the hardwired
+    # {web_search} grant + built-in backend hosts + the operator's
+    # tools.web_search.egress baseline; off → plain closed-book LLM call.
+    from ...config.execution import get_execution_run_config
+
+    web_search_on = bool(get_execution_run_config().get("web_search"))
+    if web_search_on:
+        egress_hosts = _with_tool_egress_defaults(
+            _web_search_egress_hosts(), ["web_search"]
+        )
+        meta = registry.start_run(
+            task=req.task, kind="oneshot", tools=["web_search"],
+            provider=provider_name, model=model,
+            network=list(egress_hosts),
+            budget={"iterations": ONESHOT_SEARCH_ITERATIONS},
+            owner=_caller_owner(request),
+            hold_result=True,  # T6 hold — the pane/`collect` verb finalizes
+            system=req.system,
+        )
+        runner = build_task_runner(
+            registry,
+            provider_name=provider_name,
+            model=model,
+            task=req.task,
+            tools=["web_search"],
+            allow_outbound=list(egress_hosts),
+            allow_spawn=False,  # consent/park path structurally unreachable
+            system=req.system,
+        )
+        registry.run_in_background(meta, runner)
+        return AgentRunResponse(run_id=meta.run_id, status=meta.status)
+
     meta = registry.start_run(
-        task=req.task, kind="task", tools=req.tools,
+        task=req.task, kind="oneshot", tools=req.tools,
         provider=provider_name, model=model,
         owner=_caller_owner(request),
+        hold_result=True,  # T6 hold — same collect contract as the grant path
     )
 
     async def _runner(m) -> str:

@@ -247,6 +247,18 @@ def _is_loopback_ui_request(request: Request) -> bool:
     # is what makes the tool-free oneshot run reachable from the local browser
     # while everything else under /v1/agent stays bearer-protected.
     if path in _LOOPBACK_EXEMPT_AGENT_PATHS:
+        # U3 (ADR 0011): the carve-out's whole justification is "no tools,
+        # no egress". With execution.run.web_search ON, POST /v1/agent/run
+        # launches a web_search-granted run — that's a capability, so the
+        # exemption closes and the bearer rule applies. Config-read errors
+        # fail CLOSED (protected).
+        try:
+            from ..config.execution import get_execution_run_config
+
+            if get_execution_run_config().get("web_search"):
+                return False
+        except Exception:
+            return False
         return True
     # Reading an UNOWNED run's meta / event stream is exempt on loopback so the
     # web /agentrun command can tail + show its own (token-less) run's result.

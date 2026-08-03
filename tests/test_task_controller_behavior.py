@@ -147,14 +147,16 @@ function makeApp(opts) {{
     assert(watched === "run_x", "watcher not started for the new run (got " + watched + ")");
   }}
 
-  // --- Scenario 5: run() refuses a tool-free grant (no POST) ---
+  // --- Scenario 5: tool-free launch POSTs — the SERVER owns the grant rule
+  // (U3: the client guard is gone; the server's 400 surfaces via Scenario 6's
+  // rejection path; tool-free one-offs belong on /run).
   {{
     const app = makeApp({{}});
     const c = new TaskController(app);
-    c._watchDetached = async () => {{ throw new Error("should not watch"); }};
+    c._watchDetached = async () => {{}};
     await c.run('"just text"');
-    assert(app._posts.length === 0, "must NOT POST without a tool grant");
-    assert(app._msgs.some((m) => /needs a tool grant/.test(m)), "no grant hint shown");
+    assert(app._posts.length === 1, "tool-free launch must reach the server");
+    assert(app._posts[0][0] === "/v1/agent/task", "url: " + app._posts[0][0]);
   }}
 
   // --- Scenario 6: run() surfaces a server rejection verbatim; no watch ---

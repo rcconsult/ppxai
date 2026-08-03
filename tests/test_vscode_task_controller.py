@@ -28,6 +28,10 @@ TS_CHAT_PANEL = ROOT / "vscode-extension" / "src" / "chatPanel.ts"
 TS_HTTP_CLIENT = ROOT / "vscode-extension" / "src" / "httpClient.ts"
 WEB_TASK = ROOT / "ppxai" / "web" / "shared" / "task-controller.js"
 WEB_BASE = ROOT / "ppxai" / "web" / "shared" / "agent-run-controller.js"
+WEB_RUN = ROOT / "ppxai" / "web" / "shared" / "run-controller.js"
+WEB_DISPATCHER = ROOT / "ppxai" / "web" / "shared" / "command-dispatcher.js"
+WEB_COMMANDS = ROOT / "ppxai" / "web" / "shared" / "commands.js"
+ENGINE_COMPLETION = ROOT / "ppxai" / "engine" / "completion.py"
 
 
 def _read(p: Path) -> str:
@@ -92,15 +96,59 @@ class TestEndpointParity:
         client = _read(TS_HTTP_CLIENT)
         methods = re.findall(r"^\s{4}(agent\w+)\(", controller, re.M)
         assert set(methods) >= {
-            "agentTask", "agentRuns", "agentRun", "agentRunEvents",
-            "agentRunCancel", "agentRunRespond", "agentRunAck",
-            "agentRunResume",
+            "agentTask", "agentRunCreate", "agentRuns", "agentRun",
+            "agentRunEvents", "agentRunCancel", "agentRunRespond",
+            "agentRunAck", "agentRunResume",
         }
         for m in methods:
             # `async *name(` — the events tail is an async generator.
             assert re.search(rf"async \*?{m}\(", client), (
                 f"httpClient.ts lacks async {m}() required by TaskBackend"
             )
+
+    def test_run_launch_endpoint_in_both_clients(self):
+        # U3: POST /v1/agent/run (the one-off launch). Substring-ambiguous
+        # with /v1/agent/runs, so match the string terminator on each side.
+        assert "/v1/agent/run'" in _read(WEB_RUN)
+        assert "/v1/agent/run`" in _read(TS_HTTP_CLIENT)
+
+
+class TestRunFamilyParity:
+    """U3 (ADR 0011): the /run one-off family — cross-client sentinels."""
+
+    def test_run_controller_extends_task_controller_in_both_clients(self):
+        assert "extends _TaskControllerBase" in _read(WEB_RUN)
+        assert "class RunController extends TaskController" in _read(TS_CONTROLLER)
+
+    def test_kind_filter_drives_ls_in_both_clients(self):
+        # /run ls shows only oneshots, /task ls only tasks — both clients
+        # must pass the kind through to GET /v1/agent/runs.
+        assert "kind=${this._kind}" in _read(WEB_BASE)
+        assert "this.backend.agentRuns(this.kind)" in _read(TS_CONTROLLER)
+        assert "_kind = 'oneshot'" in _read(WEB_RUN)
+        assert "_kind = 'task'" in _read(WEB_TASK)
+        assert "kind: string | undefined = 'oneshot'" in _read(TS_CONTROLLER)
+        assert "kind: string | undefined = 'task'" in _read(TS_CONTROLLER)
+
+    def test_no_flags_guard_in_both_clients(self):
+        # /run takes no flags — the grant is config-decided; a --flag must
+        # be rejected, not silently folded into the prompt.
+        for src in (_read(WEB_RUN), _read(TS_CONTROLLER)):
+            assert "takes no flags" in src
+
+    def test_run_routed_before_factory_dispatch_in_vscode(self):
+        assert "getRunController().handle(argsText)" in _read(TS_CHAT_PANEL)
+
+    def test_agentrun_family_retired(self):
+        # Hard removal (no aliases): the dispatcher no longer routes the
+        # old commands, the catalogs no longer list them, and completion
+        # no longer offers them.
+        assert "cmd === '/agentrun'" not in _read(WEB_DISPATCHER)
+        assert "cmd === '/agentruns'" not in _read(WEB_DISPATCHER)
+        assert "'/agentrun':" not in _read(WEB_COMMANDS)
+        assert "'/agentruns':" not in _read(WEB_COMMANDS)
+        assert '"/agentrun"' not in _read(ENGINE_COMPLETION)
+        assert "'/run':" in _read(WEB_COMMANDS)
 
 
 class TestStatusParity:
@@ -170,13 +218,16 @@ class TestChatPanelWiring:
         assert "getTaskController().handle(argsText)" in src
 
     def test_controller_constructed_with_backend_ui_defaults(self):
+        # U3 refactor: both controllers share buildTaskUi()/buildTaskDefaults()
+        # — the wiring (webview transcript + session defaults) lives there.
         src = _read(TS_CHAT_PANEL)
-        m = re.search(r"new TaskController\((.*?)\n\s{8}\);", src, re.S)
-        assert m, "TaskController construction not found"
-        ctor = m.group(0)
-        assert "this._backend" in ctor
-        assert "systemMessage" in ctor and "fullResponse" in ctor
-        assert "currentProvider" in ctor and "currentModel" in ctor
+        for ctor in ("new TaskController(", "new RunController("):
+            m = re.search(
+                re.escape(ctor) + r"\s*\n\s+this\._backend, "
+                r"this\.buildTaskUi\(\), this\.buildTaskDefaults\(\)", src)
+            assert m, f"{ctor} not wired via the shared builders"
+        assert "systemMessage" in src and "fullResponse" in src
+        assert "currentProvider" in src and "currentModel" in src
 
     def test_consent_quickpick_answers_with_approved_flag(self):
         # The T5 park answer path: QuickPick → {approved: bool}; a dismissed
@@ -253,8 +304,9 @@ class TestBearerParity:
             "an agent-slice call site regressed to plain getHeaders() — "
             "it would 401 on auth-enforcing hosts"
         )
-        # All 8 endpoints: task, runs, run, events, cancel, respond, ack, resume.
-        assert agent_slice.count("this.v1Headers(") == 8
+        # All 9 endpoints: task, run-create (U3), runs, run, events, cancel,
+        # respond, ack, resume.
+        assert agent_slice.count("this.v1Headers(") == 9
 
     def test_vscode_token_comes_from_secret_storage(self):
         src = _read(self.TS_EXTENSION)

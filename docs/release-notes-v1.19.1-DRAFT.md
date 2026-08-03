@@ -19,9 +19,18 @@ memory changes.
 | `/task run "<desc>" …` | **`/task "<desc>" …`** — direct launch; a first token counts as a verb only when followed by a run id (`run_` + 12 hex) or nothing | U2 |
 | `task show` (canonical) | **`task get`** (`show`/`open` still accepted as aliases) | U2 |
 | `task ack` (canonical) | **`task collect`** (`ack` still accepted as alias; merge semantics land with `execution.collect`) | U2 |
+| `/agentrun <task>` | **`/run <prompt>`** — same async one-off, now `kind=oneshot` on the full run gears with the U2 grammar; **no flags** (the grant is config-decided: `execution.run.web_search` on → `{web_search}`, off → closed-book) | U3 |
+| `/agentruns` | **`/run ls`** — kind-filtered (`/task ls` now shows only task runs too) | U3 |
 
-*(U3–U4 entries land here as those stages commit: `/run` family +
-`/agentrun` retirement, `execution.collect`.)*
+*(U4's `execution.collect` entry lands here when that stage commits.)*
+
+U3 behavior changes on `POST /v1/agent/run` (in-development `/v1/agent/*`
+surface — not the frozen `/v1/oneshot`): runs are stamped `kind=oneshot`;
+a successful run now **holds** its result (`completed_pending_ack`) until
+collected, like `/task`; and the loopback auth exemption applies **only
+while `execution.run.web_search` is off** — once the config grants
+web_search, the endpoint is a capability and requires a bearer even from
+localhost.
 
 U2 safety net: after a lifecycle verb, a `run_…`-ish token that is not a
 full run id (truncated paste, typo) errors instead of silently launching a

@@ -77,12 +77,10 @@ _BUILTIN_SPECIAL_COMMANDS: List[Dict[str, Any]] = [
     # unfiltered list taught users to type commands that answered
     # "Unknown command" everywhere else (Item 40 VSCode trial, 2026-07-12).
     # Entries without a `clients` key are universal.
-    {"text": "/agentrun", "display": "/agentrun",
-     "description": "Start a background agent run (v1 platform, experimental)",
-     "kind": "command", "clients": {"web"}},
-    {"text": "/agentruns", "display": "/agentruns",
-     "description": "List recent agent runs (experimental)",
-     "kind": "command", "clients": {"web"}},
+    # U3 (ADR 0011): /run replaced the retired /agentrun + /agentruns.
+    {"text": "/run", "display": "/run",
+     "description": "One-off background run — direct launch, no flags (ls·get·watch·collect·cancel)",
+     "kind": "command", "clients": {"web", "vscode"}},
     # v1.19.x /task — the tool-capable sandboxed tier (web T1+, VSCode T8a;
     # the in-process TUIs have no channel to the registry — T8b parked).
     {"text": "/task", "display": "/task",
@@ -241,6 +239,18 @@ _TASK_RESPOND_ANSWERS: List[Tuple[str, str]] = [
     ("deny",    "Deny the parked request"),
 ]
 
+# /run verbs (U3, ADR 0011): the one-off family shares the /task lifecycle
+# dispatch but launches with no flags and never parks (respond/resume are
+# omitted here as noise — they exist but no-op/refuse for oneshot runs).
+_RUN_SUBCOMMANDS: List[Tuple[str, str]] = [
+    ("ls",      "List one-off runs"),
+    ("get",     "Open a run pane"),
+    ("watch",   "Open + live-tail a run"),
+    ("collect", "Collect a held result (📬 → finalized)"),
+    ("cancel",  "Cancel a run"),
+    ("help",    "Show /run help"),
+]
+
 _TOKEN_SUBCOMMANDS: List[Tuple[str, str]] = [
     ("status", "Show whether a /v1 bearer token is stored (masked)"),
     ("set",    "Store a token — prompts for the value; never type it inline"),
@@ -277,14 +287,14 @@ def complete(
                     by `/tools help <tool>` completion. Server and Rich
                     pass `engine_client.tool_manager.list_tools()`.
         agent_runs: Optional snapshot of agent runs for `/task <verb> <id>`
-                    completion — dicts with {id, status, task, resumable},
-                    newest-first. Only the server can supply this (the
-                    AgentRunRegistry is server-side state; the in-process
-                    TUIs have no channel to it — T8b parked), so callers
-                    without it simply get no run-id suggestions.
+                    completion — dicts with {id, status, task, kind,
+                    resumable}, newest-first. Only the server can supply
+                    this (the AgentRunRegistry is server-side state; the
+                    in-process TUIs have no channel to it — T8b parked),
+                    so callers without it simply get no run-id suggestions.
         client: Which client is asking — "web", "vscode", "rich",
-                "textual". Client-side-only commands (/task, /token,
-                /agentrun…) are surfaced only to the clients that
+                "textual". Client-side-only commands (/task, /run,
+                /token) are surfaced only to the clients that
                 implement them. None (legacy/unknown caller) fails open:
                 no filtering.
 
@@ -422,6 +432,14 @@ def _complete_slash_args(
         if not _client_allows("task", client):
             return []
         return _complete_task(args_region, agent_runs)
+    if canonical == "run":
+        # U3: same machinery, one-off verb table, oneshot-kind ids only.
+        if not _client_allows("run", client):
+            return []
+        return _complete_task(
+            args_region, agent_runs,
+            table=_RUN_SUBCOMMANDS, kind="oneshot",
+        )
     if canonical == "token":
         if not _client_allows("token", client):
             return []
@@ -510,6 +528,9 @@ def _complete_tools(
 def _complete_task(
     args_region: str,
     agent_runs: List[Dict[str, Any]],
+    *,
+    table: Optional[List[Tuple[str, str]]] = None,
+    kind: str = "task",
 ) -> List[Dict[str, Any]]:
     """`/task <verb>` + status-aware `/task <verb> <run_id>` completion.
 
@@ -525,7 +546,10 @@ def _complete_task(
     completed, token = _split_args(args_region)
 
     if not completed:
-        return _filter_table(token, _TASK_SUBCOMMANDS, "subcommand")
+        return _filter_table(
+            token, table if table is not None else _TASK_SUBCOMMANDS,
+            "subcommand",
+        )
 
     verb = completed[0].lower()
 
@@ -543,6 +567,10 @@ def _complete_task(
         run_id = str(run.get("id", ""))
         status = str(run.get("status", ""))
         if not run_id:
+            continue
+        # U3: each family only offers its own kind's ids (legacy snapshots
+        # without a kind read as "task").
+        if (run.get("kind") or "task") != kind:
             continue
         if statuses is not None and status not in statuses:
             continue

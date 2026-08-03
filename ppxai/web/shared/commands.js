@@ -86,17 +86,14 @@ const SLASH_COMMANDS = {
         category: CommandCategory.TOOLS,
         subcommands: ['on', 'off']
     },
-    // v1.19.0 agent platform (web-client-only, experimental). Distinct from
-    // /auto above: these drive the /v1/agent/* background run registry.
-    '/agentrun': {
-        description: 'Start a background agent run (v1 platform, experimental)',
-        usage: '/agentrun <task>',
-        category: CommandCategory.TOOLS
-    },
-    '/agentruns': {
-        description: 'List recent agent runs (experimental)',
-        usage: '/agentruns',
-        category: CommandCategory.TOOLS
+    // v1.19.x agent platform (web-client-only). Distinct from /auto above:
+    // these drive the /v1/agent/* background run registry. U3 (ADR 0011):
+    // /run replaced the retired /agentrun + /agentruns (hard removal).
+    '/run': {
+        description: 'One-off background run — direct launch, no flags; ls|get|watch|collect|cancel',
+        usage: '/run <prompt>',
+        category: CommandCategory.TOOLS,
+        subcommands: ['ls', 'get', 'watch', 'collect', 'cancel', 'help']
     },
     '/task': {
         description: 'Tool-capable background runs — direct launch; ls|get|watch|respond|collect|resume|cancel (default-off tier)',

@@ -1650,9 +1650,33 @@ export class HttpClient {
         return response.json() as Promise<{ run_id: string; status: string }>;
     }
 
-    /** GET /v1/agent/runs — list runs (newest first, owner-scoped). */
-    async agentRuns(): Promise<{ runs: any[] }> {
-        const response = await fetch(`${this.baseUrl}/v1/agent/runs`, {
+    /**
+     * POST /v1/agent/run — launch a one-off `kind=oneshot` run (U3, ADR
+     * 0011). The grant is SERVER-config-decided (execution.run.web_search);
+     * the body carries only task + optional provider/model intent.
+     */
+    async agentRunCreate(body: Record<string, any>): Promise<{ run_id: string; status: string }> {
+        const response = await fetch(`${this.baseUrl}/v1/agent/run`, {
+            method: 'POST',
+            headers: this.v1Headers(true),
+            body: JSON.stringify(body),
+            signal: AbortSignal.timeout(this.agentTimeoutMs)
+        });
+        if (!response.ok) {
+            throw await this.agentError(response, 'Run launch failed');
+        }
+        return response.json() as Promise<{ run_id: string; status: string }>;
+    }
+
+    /**
+     * GET /v1/agent/runs[?kind=task|oneshot] — list runs (newest first,
+     * owner-scoped). U3: `kind` partitions the listing per command family.
+     */
+    async agentRuns(kind?: string): Promise<{ runs: any[] }> {
+        const url = kind
+            ? `${this.baseUrl}/v1/agent/runs?kind=${encodeURIComponent(kind)}`
+            : `${this.baseUrl}/v1/agent/runs`;
+        const response = await fetch(url, {
             headers: this.v1Headers(),
             signal: AbortSignal.timeout(this.agentTimeoutMs)
         });

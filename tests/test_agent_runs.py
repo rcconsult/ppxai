@@ -540,6 +540,19 @@ def _enable_task_tier(monkeypatch):
     )
 
 
+@pytest.fixture(autouse=True)
+def _pin_execution_run_config(monkeypatch):
+    """U3: POST /v1/agent/run reads execution.run.web_search from the REAL
+    config (the host's ppxai-config.json), which would make these tests'
+    launch path depend on the machine they run on. Pin the default (off);
+    tests of the grant path re-patch to {'web_search': True} themselves."""
+    from ppxai.config import execution as exec_mod
+    monkeypatch.setattr(
+        exec_mod, "get_execution_run_config",
+        lambda: {"web_search": False, "grounding": False},
+    )
+
+
 class TestTaskTierGate:
     """/v1/agent/task is default-OFF; only an explicit opt-in
     (tools.agent.task_tier_enabled) makes the tool-capable tier reachable
@@ -720,9 +733,12 @@ class TestAgentRunRoutes:
         assert resp.status_code == 200
         assert resp.json()["status"] == "running"
         one = self._poll_terminal(c, resp.json()["run_id"])
-        assert one["status"] == "completed"
+        # U3: /run rides the T6 hold like /task — success parks the result
+        # until collected; the meta carries kind=oneshot.
+        assert one["status"] == "completed_pending_ack"
+        assert one["kind"] == "oneshot"
         assert one["result"] == "echo: ping"
-        assert one["tools"] == ["read_file"]
+        assert one["tools"] == ["read_file"]  # provenance only, never executed
         assert one["provider"] == "fakeprov" and one["model"] == "fakemodel"
         assert one["started_at"] is not None
 
@@ -741,7 +757,7 @@ class TestAgentRunRoutes:
         resp = c.post("/v1/agent/run", json={"task": "ping"})
         assert resp.status_code == 200
         one = self._poll_terminal(c, resp.json()["run_id"])
-        assert one["status"] == "completed"
+        assert one["status"] == "completed_pending_ack"  # U3: held (T6)
         assert one["provider"] == "cfgprov" and one["model"] == "cfgmodel"
 
     def test_explicit_provider_gets_its_own_default_model(self, client, monkeypatch):
@@ -810,6 +826,70 @@ class TestAgentRunRoutes:
         })
         assert resp.status_code == 400
         assert reg.list_runs() == []  # no orphan run
+
+    def test_run_closed_book_is_oneshot_kind_no_egress_no_budget(
+        self, client, monkeypatch
+    ):
+        # U3 (ADR 0011): every /v1/agent/run launch is kind=oneshot. With
+        # execution.run.web_search OFF (the pinned default) the run is
+        # closed-book: no egress baseline, no tool budget.
+        c, reg = client
+        from ppxai.server.routes import agent_v1
+        monkeypatch.setattr(
+            agent_v1, "_build_provider", lambda name: self._fake_provider()
+        )
+        resp = c.post("/v1/agent/run", json={
+            "task": "ping", "provider": "fakeprov", "model": "fakemodel",
+        })
+        one = self._poll_terminal(c, resp.json()["run_id"])
+        assert one["kind"] == "oneshot"
+        assert one["network"] == []
+        assert one["budget"] == {}
+
+    def test_run_web_search_on_grants_exactly_web_search(
+        self, client, monkeypatch
+    ):
+        # U3 grant clamp: config ON routes the launch through the task-tier
+        # runner with the hardwired {web_search} grant, the backend egress
+        # baseline, and the small oneshot budget — and the REQUEST cannot
+        # widen it (its tools field is ignored for execution).
+        c, reg = client
+        from ppxai.config import execution as exec_mod
+        from ppxai.server.routes import agent_v1
+
+        monkeypatch.setattr(
+            exec_mod, "get_execution_run_config",
+            lambda: {"web_search": True, "grounding": False},
+        )
+        monkeypatch.setattr(
+            agent_v1, "_build_provider", lambda name: self._fake_provider()
+        )
+        captured = {}
+
+        def _stub_runner(registry, **kw):
+            captured.update(kw)
+
+            async def _r(m):
+                return "grounded answer"
+            return _r
+
+        monkeypatch.setattr(agent_v1, "build_task_runner", _stub_runner)
+
+        resp = c.post("/v1/agent/run", json={
+            "task": "what happened today", "provider": "fakeprov",
+            "model": "fakemodel",
+            "tools": ["execute_shell_command", "read_file"],  # widening attempt
+        })
+        assert resp.status_code == 200
+        one = self._poll_terminal(c, resp.json()["run_id"])
+        assert one["kind"] == "oneshot"
+        assert one["tools"] == ["web_search"]
+        assert captured["tools"] == ["web_search"]
+        assert captured["allow_spawn"] is False
+        assert one["budget"] == {"iterations": agent_v1.ONESHOT_SEARCH_ITERATIONS}
+        assert one["network"] != []  # backend egress baseline rides along
+        assert one["status"] == "completed_pending_ack"  # held (T6)
+        assert one["result"] == "grounded answer"
 
     def test_events_endpoint_replay_and_filters(self, client):
         # Inc 3: GET .../events (non-live JSON) replays persisted events,

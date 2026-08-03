@@ -223,7 +223,7 @@ Enable with `/agent on` or click the Agent button in VSCode:
 
 See [docs/session-agent-guide.md](docs/session-agent-guide.md) for details.
 Distinct from the background **`/task` sub-agent platform** and one-off
-`/agentrun` runs (v1.19.0) — see the disambiguation table at the top of
+`/run` runs (v1.19.x) — see the disambiguation table at the top of
 that guide.
 
 ### Background Agent Platform (`/task`, v1.19.0)

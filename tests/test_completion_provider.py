@@ -372,6 +372,41 @@ class TestTaskCompletion:
         assert complete("/task summarize ", agent_runs=self._RUNS) == []
 
 
+class TestRunCompletion:
+    """U3 (ADR 0011): the /run family shares the /task completion machinery
+    with its own verb table and oneshot-kind id filtering."""
+
+    _RUNS = [
+        {"id": "run_task0000001", "status": "completed_pending_ack",
+         "task": "a task-tier run", "kind": "task", "resumable": False},
+        {"id": "run_one00000001", "status": "completed_pending_ack",
+         "task": "a one-off run", "kind": "oneshot", "resumable": False},
+    ]
+
+    def test_run_verbs_complete(self):
+        texts = [i["text"] for i in complete("/run ")]
+        for verb in ("ls", "get", "watch", "collect", "cancel", "help"):
+            assert verb in texts
+        # respond/resume exist but are noise for oneshots — not offered.
+        assert "respond" not in texts
+        assert "resume" not in texts
+
+    def test_run_ids_filtered_to_oneshot_kind(self):
+        items = complete("/run collect ", agent_runs=self._RUNS)
+        assert [i["text"] for i in items] == ["run_one00000001"]
+
+    def test_task_ids_filtered_to_task_kind(self):
+        items = complete("/task collect ", agent_runs=self._RUNS)
+        assert [i["text"] for i in items] == ["run_task0000001"]
+
+    def test_legacy_snapshot_without_kind_reads_as_task(self):
+        runs = [{"id": "run_legacy00001", "status": "completed_pending_ack",
+                 "task": "pre-U3 run", "resumable": False}]
+        assert complete("/run collect ", agent_runs=runs) == []
+        assert [i["text"] for i in complete("/task collect ", agent_runs=runs)] \
+            == ["run_legacy00001"]
+
+
 class TestTaskCompletionRoute:
     """POST /complete supplies the agent-run snapshot (server-side glue).
 
@@ -426,46 +461,46 @@ class TestClientGating:
     """Client-side commands are surfaced only to clients that implement
     them (Item 40 follow-up, 2026-07-12).
 
-    /agentrun + /agentruns are web-only; /task + /token are web+VSCode;
-    the in-process TUIs (rich/textual) implement none of them. Before
-    gating, autocomplete taught TUI/VSCode users to type commands that
-    answered "Unknown command".
+    U3 (ADR 0011): /agentrun + /agentruns are RETIRED (hard removal);
+    /task + /run + /token are web+VSCode; the in-process TUIs
+    (rich/textual) implement none of them. Before gating, autocomplete
+    taught TUI/VSCode users to type commands that answered
+    "Unknown command".
     """
 
-    _GATED_WEB_ONLY = {"/agentrun", "/agentruns"}
-    _GATED_WEB_VSCODE = {"/task", "/token"}
+    _RETIRED = {"/agentrun", "/agentruns"}
+    _GATED_WEB_VSCODE = {"/task", "/run", "/token"}
 
     def _names(self, prefix, client):
         return {i["text"] for i in complete(prefix, client=client)}
 
     def test_web_sees_all_client_side_commands(self):
         names = self._names("/", "web")
-        assert self._GATED_WEB_ONLY <= names
         assert self._GATED_WEB_VSCODE <= names
+        assert not (self._RETIRED & names)
 
-    def test_vscode_sees_task_and_token_but_not_agentrun(self):
+    def test_vscode_sees_the_same_client_side_commands(self):
         names = self._names("/", "vscode")
         assert self._GATED_WEB_VSCODE <= names
-        assert not (self._GATED_WEB_ONLY & names)
+        assert not (self._RETIRED & names)
 
     def test_tuis_see_no_client_side_commands(self):
         for client in ("rich", "textual"):
             names = self._names("/", client)
-            assert not ((self._GATED_WEB_ONLY | self._GATED_WEB_VSCODE)
-                        & names), client
+            assert not (self._GATED_WEB_VSCODE & names), client
             # Universal builtins + factory commands stay visible.
             assert "/quit" in names
 
     def test_none_client_fails_open(self):
-        # Legacy callers (no client declared) keep the full catalog.
+        # Legacy callers (no client declared) keep the full catalog —
+        # which after U3 no longer contains the retired names either.
         names = self._names("/", None)
-        assert self._GATED_WEB_ONLY <= names
         assert self._GATED_WEB_VSCODE <= names
+        assert not (self._RETIRED & names)
 
     def test_unknown_client_gets_only_universal(self):
         names = self._names("/", "some-future-client")
-        assert not ((self._GATED_WEB_ONLY | self._GATED_WEB_VSCODE)
-                    & names)
+        assert not (self._GATED_WEB_VSCODE & names)
 
     def test_clients_tag_never_leaks_into_items(self):
         # The internal `clients` set is not part of the JSON item schema
