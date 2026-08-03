@@ -55,6 +55,46 @@ def get_execution_run_config() -> Dict[str, Any]:
     return out
 
 
+def get_execution_profiles() -> Dict[str, Any]:
+    """`execution.profiles` — named, reusable task grants (ADR 0009 §1).
+
+    A profile is an `AgentSpec`-shaped mapping in config (same fields, same
+    normalizer as a `--spec` file): `{tools?, network?, budget?, provider?,
+    model?, system?, enrichment?}`. A run selects one by name
+    (`--profile <name>` / `"profile"` on the wire); precedence is
+    request > spec > profile > default_subagent > built-in default, with
+    list fields (tools, network) REPLACING — not unioning — so a more
+    specific layer can narrow (sign-off Q1).
+
+    Returns the raw name → mapping dict (absent → {}); validation happens
+    at resolve time in the route, where a bad profile is a 400.
+    """
+    profiles = get_execution_config().get("profiles", {})
+    return dict(profiles) if isinstance(profiles, dict) else {}
+
+
+def get_execution_egress_ceiling() -> Any:
+    """`execution.egress_ceiling` — the deployment-wide egress cap (Q3).
+
+    Config-only and intersective: a run's effective allowlist is the
+    intersection of whatever it resolved (request/spec/profile/tool
+    baselines) with this list. **Unset → None → no cap** (back-compat).
+    A run can never state or raise it.
+
+    Malformed (non-list) values raise ValueError rather than silently
+    meaning "no cap" — a security ceiling must fail loud, not open.
+    """
+    ceiling = get_execution_config().get("egress_ceiling")
+    if ceiling is None:
+        return None
+    if not isinstance(ceiling, list):
+        raise ValueError(
+            "execution.egress_ceiling must be a list of allowlist entries "
+            f"(host strings or {{host, paths}}), got {type(ceiling).__name__}"
+        )
+    return list(ceiling)
+
+
 def get_execution_collect() -> str:
     """`execution.collect` — how run results reach the active session (U4,
     ADR 0011). One global key covering the `/run` + `/task` families:

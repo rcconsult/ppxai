@@ -88,6 +88,8 @@ verbs `task run`, and `show`/`ack` as *canonical* names, are retired
 | `--tools a,b,c` | **Capability grant** — the ONLY tools the run may call. Required unless a `--spec`/`--skill` supplies it. `execute_shell_command` is always rejected (it would bypass the egress allowlist). |
 | `--spec <name>` | Load a spec file from `tools.agent.sandbox.specs_dir` (name only, no paths). Spec fields fill anything you didn't pass; explicit flags win. |
 | `--skill <name>` | Mount a skill from `tools.agent.sandbox.skills_dir`: its `SKILL.md` acts as a spec and its directory (incl. `references/`) is mounted into the run's read scope. Repeatable / comma-separated; skills compose. |
+| `--profile <name>` | Use a named execution profile from `execution.profiles` in `ppxai-config.json` — a standing, reusable grant with the same fields as a spec file (ADR 0009). Precedence: request > spec > skills > profile > `default_subagent`; `tools`/`--allow` lists **replace** the profile's (narrowing works). |
+| `--enrichment on\|off` | Context enrichment (ADR 0009 §3): `on` derives `web_search` + the full search-backend egress baseline for the run — the fix for closed-book local models. Tri-state: omitted = inherit from spec/skill/profile. An explicit `--tools` list omitting `web_search` together with effective enrichment is a contradiction → 400 naming both layers. |
 | `--allow host[/prefix]` | Per-run egress allowlist entry (comma-separated). Network tools are **deny-by-default**: no `--allow`, no outbound. HTTPS-only, private/loopback IPs blocked. |
 | `--provider p` / `--model m` | Per-run intent. Precedence: flag > spec > skill > `default_subagent`. |
 | `--budget iters=20,time=300,tokens=100k` | Resource caps (any subset). A capped run stops at a clean checkpoint as `interrupted` (resumable), not `failed`. |
@@ -161,10 +163,41 @@ provider/model, budget, egress, system prompt — resolved by name under
 [`examples/task-specs/`](../examples/task-specs/README.md) for ready-to-use
 `.md` (front-matter + body-as-system) and `.json` examples.
 
-- Precedence: explicit flag > spec > skill > `default_subagent`.
+- Precedence: explicit flag > spec > skill > profile > `default_subagent`.
 - The merged result faces the same ceiling as a direct request: no shell
   tool, `task_tier_enabled` still required — a spec cannot widen what the
   operator allows.
+
+### Named profiles (`--profile`) and enrichment (ADR 0009 step ③)
+
+A **profile** is the config-native, reusable layer over the same primitive:
+`execution.profiles.<name>` in `ppxai-config.json` is a spec-shaped mapping
+a run selects by name — specs stay for one-off/authored runs, profiles for
+the standing set an operator curates. They compose, not compete.
+
+```jsonc
+"execution": {
+  "profiles": {
+    "research": { "tools": ["web_search", "read_file"], "enrichment": true },
+    "coding":   { "tools": ["read_file", "apply_patch"], "enrichment": false }
+  },
+  "egress_ceiling": ["api.perplexity.ai", "*.googleapis.com"]  // optional cap
+}
+```
+
+- **List fields replace, never union**: a more specific layer that states
+  `tools` or egress supplies *all* of it, so narrowing is expressible
+  (skills are the deliberate exception — they union capability in).
+- **`enrichment: true`** derives `web_search` + the full backend-superset
+  egress once, after precedence resolution — closed-book local models get
+  grounding by construction for that profile. Disable with
+  `enrichment: false` (the designed field), not by omitting the tool: an
+  explicit more-specific `tools` list omitting `web_search` under effective
+  enrichment fails pre-start (400 naming both layers).
+- **`execution.egress_ceiling`** (optional) caps every run's assembled
+  allowlist intersectively — config-only, a run can never raise it. An
+  enriched run stripped of **every** search backend refuses to start
+  (half-enriched = the silent closed-book failure this exists to prevent).
 
 ## 7. Skills (`--skill`)
 

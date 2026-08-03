@@ -376,6 +376,17 @@ class NetworkPolicy:
     def is_empty(self) -> bool:
         return not self._rules
 
+    def allows_host(self, host: str) -> bool:
+        """Pure host-level check (no scheme/path/DNS): does any rule match?
+
+        Used by the ADR 0009 Q3 ceiling intersection, which compares
+        allowlist ENTRIES against a ceiling — there is no URL yet, so the
+        https-only and SSRF guards in `check()` don't apply here (they still
+        run at the execute chokepoint on the surviving entries).
+        """
+        h = (host or "").lower()
+        return bool(h) and any(rule.matches_host(h) for rule in self._rules)
+
     def check(self, url: Optional[str]) -> Decision:
         """Allow only if the URL matches a rule. Fail-closed otherwise."""
         if not url:
@@ -466,3 +477,50 @@ class NetworkPolicy:
             ),
             approved_targets=approved_hosts,
         )
+
+
+def apply_egress_ceiling(network: List) -> Tuple[List, List]:
+    """Intersect a run's assembled allowlist with `execution.egress_ceiling`
+    (ADR 0009 sign-off Q3 — step ③).
+
+    Returns `(kept, stripped)`. The ceiling is config-only and intersective:
+    unset → no cap (`(network, [])` unchanged); set → every entry of the
+    run's list survives only if the ceiling permits its host. A run can
+    never widen past it, and this runs at allowlist-ASSEMBLY time (every
+    launch site), so a stripped host is visible before the run starts —
+    the Q3 enrichment fail-fast is the caller's job, since only the caller
+    knows whether the run is enriched.
+
+    Matching: a string entry (or `{host, paths}` dict) survives if its host
+    matches any ceiling rule (exact or the ceiling's own `*.suffix` glob). A
+    GLOB entry in the run's list survives only when the ceiling states the
+    identical entry — a ceiling cannot safely subsume a wider glob, so the
+    conservative (fail-closed) reading strips it.
+
+    Raises ValueError on a malformed ceiling (a security cap must fail
+    loud, never open) — callers at the trust boundary map it to a 4xx.
+    """
+    from ...config.execution import get_execution_egress_ceiling
+
+    ceiling = get_execution_egress_ceiling()  # ValueError on malformed
+    if ceiling is None:
+        return list(network or []), []
+    policy = NetworkPolicy(ceiling)
+    literal = {e for e in ceiling if isinstance(e, str)}
+    kept: List = []
+    stripped: List = []
+    for entry in network or []:
+        if isinstance(entry, str):
+            ok = entry in literal or (
+                not entry.startswith("*.") and policy.allows_host(entry)
+            )
+        elif isinstance(entry, dict):
+            host = str(entry.get("host") or "")
+            ok = bool(host) and (
+                host in literal
+                or (not host.startswith("*.") and policy.allows_host(host))
+            )
+        else:
+            ok = False  # malformed entries never survive a cap
+        (kept if ok else stripped).append(entry)
+    return kept, stripped

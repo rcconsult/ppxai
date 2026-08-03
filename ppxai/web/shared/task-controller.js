@@ -4,6 +4,7 @@
  * The `/task` command family (v1.19.x; U2 direct-launch grammar, ADR 0011):
  *   /task "<desc>" --tools a,b,c [--allow host] [--provider p] [--model m]
  *                      [--budget iters=,time=,tokens=] [--system "…"] [--spec <name>]
+ *                      [--profile <name>] [--enrichment on|off]
  *                      [--work-dir <path>]  (default: the session's working dir)
  *                  Launches directly — there is no `run` subcommand (removed
  *                  in v1.19.1, ADR 0011). Disambiguation: the first token is a
@@ -120,6 +121,7 @@ function parseTaskArgs(argline) {
     const out = {
         task: '', tools: [], provider: null, model: null, system: null,
         network: { allow_outbound: [] }, budget: {}, spec: null, skills: [],
+        profile: null, enrichment: null,
         workdir: null,
         errors: [],
     };
@@ -154,6 +156,16 @@ function parseTaskArgs(argline) {
             case '--system':   v = value('--system');   if (v) out.system = v;   break;
             case '--budget':   v = value('--budget');   if (v) _parseBudget(v, out); break;
             case '--spec':     v = value('--spec');     if (v) out.spec = v;     break;
+            // ADR 0009 step ③: named execution profile (execution.profiles).
+            case '--profile':  v = value('--profile');  if (v) out.profile = v; break;
+            // ADR 0009 §3: tri-state enrichment intent (on|off). Effective
+            // true derives web_search + its egress baseline server-side.
+            case '--enrichment':
+                v = value('--enrichment');
+                if (v === 'on' || v === 'true') out.enrichment = true;
+                else if (v === 'off' || v === 'false') out.enrichment = false;
+                else if (v !== null) out.errors.push('--enrichment takes on|off');
+                break;
             // v1.19.x workdir-alignment: explicit per-run working dir. Without
             // it the session's working dir rides along (see run()).
             case '--work-dir': v = value('--work-dir'); if (v) out.workdir = v; break;
@@ -248,11 +260,12 @@ class TaskController extends _AgentRunControllerBase {
             // placeholder parses as an HTML tag and silently vanishes
             // (caught live 2026-07-11); code spans render entities escaped.
             this.app.showSystemMessage(
-                'Usage: `/task "<desc>" --tools <a,b,c> [--spec <name>] [--skill <name>] [--allow host] [--budget iters=,time=,tokens=] [--system "…"]`'
+                'Usage: `/task "<desc>" --tools <a,b,c> [--spec <name>] [--skill <name>] [--profile <name>] [--enrichment on|off] [--allow host] [--budget iters=,time=,tokens=] [--system "…"]`'
             );
             return;
         }
-        const hasResolvedSource = Boolean(spec.spec) || spec.skills.length > 0;
+        const hasResolvedSource = Boolean(spec.spec) || spec.skills.length > 0
+            || Boolean(spec.profile);
         // U3 (ADR 0011): no client-side tool-free guard anymore — the server
         // owns the grant rule (400 with its own message when no grant source
         // exists), and tool-free one-offs are /run's job now.
@@ -266,6 +279,9 @@ class TaskController extends _AgentRunControllerBase {
         const body = { task: spec.task, tools: spec.tools };
         if (spec.spec) body.spec = spec.spec;
         if (spec.skills.length) body.skills = spec.skills;
+        // ADR 0009 step ③: named profile + tri-state enrichment intent.
+        if (spec.profile) body.profile = spec.profile;
+        if (spec.enrichment !== null) body.enrichment = spec.enrichment;
         if (provider) body.provider = provider;
         if (model) body.model = model;
         if (spec.system) body.system = spec.system;
@@ -382,6 +398,8 @@ class TaskController extends _AgentRunControllerBase {
             '/task — tool-capable background runs (sandboxed tier; default-off). Launches directly:',
             '  `/task "<desc>" --tools a,b,c [--allow host] [--provider p] [--model m] [--budget iters=,time=,tokens=] [--system "…"] [--work-dir <path>]`',
             '  `/task "<desc>" --spec <name>` — configure from a spec file (specs_dir); flags override the file',
+            '  `/task "<desc>" --profile <name>` — use a named execution profile (execution.profiles in config); request/spec fields override it',
+            '  `/task "<desc>" --enrichment on|off` — context enrichment: on derives web_search + its egress baseline (ADR 0009)',
             '  `/task "<desc>" --skill <name>` — mount a skill (skills_dir): SKILL.md grant + references/ into read-scope; repeatable',
             '  `/task ls` — list runs',
             '  `/task get <id>` — open a run pane',

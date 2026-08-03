@@ -85,6 +85,38 @@ behavior table in [api-gateway.md](api-gateway.md); `/doctor` reports the
 effective path per configured model. Revises ADR 0004's "no tool loop in
 oneshot" (opt-in, perimeter preserved).
 
+## New: execution profiles + `enrichment` (ADR 0009 step ③)
+
+Named, reusable task grants in config — `execution.profiles.<name>` is an
+AgentSpec-shaped mapping (same fields and normalizer as a `--spec` file), and
+a run selects one with `--profile <name>` (web + VSCode `/task`) or
+`"profile"` on `POST /v1/agent/task`:
+
+```jsonc
+"execution": { "profiles": {
+  "research": { "tools": ["web_search", "read_file"], "enrichment": true,
+                "network": ["api.open-meteo.com"] },
+  "coding":   { "tools": ["read_file", "apply_patch"], "enrichment": false }
+}}
+```
+
+- **Precedence** `request > spec > skills > profile > default_subagent`;
+  list fields (`tools`, `network`) **replace, never union** — a more
+  specific layer can actually narrow a grant (skills still union theirs in;
+  mounting capability is their purpose).
+- **`enrichment: true|false`** — first-class, tri-state (absent = inherit).
+  Effective true derives `web_search` + the full backend-superset egress
+  baseline once, after resolution. A more specific explicit `tools` list
+  omitting `web_search` under effective enrichment is a pre-start **400
+  naming both layers** — never a silent closed-book "enriched" run.
+  `--enrichment on|off` is also a per-run flag on `/task`.
+- **`execution.egress_ceiling`** — deployment-wide egress cap, config-only,
+  intersective, unset = no cap. Applied where every run's allowlist is
+  assembled (`/task`, `/run`, the `/v1/oneshot` facade). An enriched run
+  whose ceiling strips **every** search backend fails pre-start (400 naming
+  the stripped hosts, per Q3); a malformed ceiling is a loud 400, never a
+  silent no-cap.
+
 ## New: per-tool egress baselines (ADR 0009 step ②)
 
 `tools.<tool>.egress` — operator-declared hosts merged into any run that

@@ -296,13 +296,13 @@ async def _oneshot_via_search_loop(
     # Lazy: agent_v1 top-imports from this module (provider construction);
     # importing it at module level would be circular.
     from ..state import get_agent_run_registry
-    from .agent_v1 import _with_tool_egress_defaults, build_task_runner
+    from .agent_v1 import _enriched_oneshot_egress_or_400, build_task_runner
 
     # Built-in backend superset + the operator's tools.web_search.egress
-    # baseline (step ②) — one mechanism shared with /v1/agent/task.
-    egress_hosts = _with_tool_egress_defaults(
-        _web_search_egress_hosts(), ["web_search"]
-    )
+    # baseline (step ②), capped by execution.egress_ceiling (step ③ Q3 —
+    # 400 pre-start when the cap strips every backend, never a
+    # half-enriched request) — one mechanism shared with /v1/agent/run.
+    egress_hosts = _enriched_oneshot_egress_or_400()
     registry = get_agent_run_registry()
     meta = registry.start_run(
         task=req.prompt,

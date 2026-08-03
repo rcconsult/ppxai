@@ -36,7 +36,8 @@ MAX_SPEC_BYTES = 256 * 1024
 
 # The fields a spec may carry. Unknown keys are ignored (forward-compatible).
 _SPEC_FIELDS = frozenset(
-    {"task", "system", "tools", "provider", "model", "budget", "network", "read_paths"}
+    {"task", "system", "tools", "provider", "model", "budget", "network",
+     "read_paths", "enrichment"}
 )
 
 _FRONT_MATTER_RE = re.compile(r"^---[ \t]*\r?\n(.*?)\r?\n---[ \t]*\r?\n?(.*)$", re.DOTALL)
@@ -60,6 +61,11 @@ class AgentSpec:
     budget: Optional[dict] = None        # {iterations?, time_s?, tokens?}
     network: Optional[list] = None       # allow_outbound entries
     read_paths: Optional[dict] = None    # {allow?, deny?} — parsed for T4; inert in T3
+    # ADR 0009 §3/§5 (step ③): tri-state — True/False when the layer states
+    # it, None = absent-means-inherit through the precedence chain. Effective
+    # True derives web_search + its egress baseline AFTER resolution (§5),
+    # never per layer.
+    enrichment: Optional[bool] = None
     warnings: list = field(default_factory=list)
 
 
@@ -122,6 +128,15 @@ def spec_from_mapping(data: Any) -> AgentSpec:
         spec.model = str(data["model"])
     spec.budget = _coerce_budget(data.get("budget"))
     spec.network = _coerce_network(data.get("network"))
+    if data.get("enrichment") is not None:
+        # A scalar the author must mean: truthy strings like "no" silently
+        # reading as True would invert a security intent, so only booleans.
+        if not isinstance(data["enrichment"], bool):
+            raise AgentSpecError(
+                "`enrichment` must be a boolean (true/false), got "
+                f"{data['enrichment']!r}"
+            )
+        spec.enrichment = data["enrichment"]
     rp = data.get("read_paths")
     if rp is not None:
         if not isinstance(rp, dict):

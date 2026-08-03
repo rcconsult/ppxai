@@ -415,6 +415,22 @@ class TestTokenCommandParity:
             assert "workdir_ignored" in src, f"{name} ignores the seal flag"
             assert "sandbox seal active" in src, f"{name} lacks the seal warning"
 
+    def test_profile_and_enrichment_flag_parity(self):
+        # ADR 0009 step ③: both clients parse --profile (named execution
+        # profile) and --enrichment on|off (tri-state — absent must NOT be
+        # sent, so the server can distinguish inherit from false), and both
+        # thread them into the launch body.
+        web, ts = _read(WEB_TASK), _read(TS_CONTROLLER)
+        for src, name in ((web, "web"), (ts, "vscode")):
+            assert "'--profile'" in src, f"{name} parser lacks --profile"
+            assert "'--enrichment'" in src, f"{name} parser lacks --enrichment"
+            assert "body.profile = spec.profile" in src, (
+                f"{name} launch does not thread profile"
+            )
+            assert "spec.enrichment !== null" in src, (
+                f"{name} must send enrichment ONLY when stated (tri-state)"
+            )
+
     def test_401_hint_parity(self):
         # Both task controllers must point a 401 at the in-chat fix.
         hint = "/token mint"

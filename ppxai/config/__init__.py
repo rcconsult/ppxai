@@ -84,6 +84,8 @@ from .providers import (
 from .execution import (
     get_execution_collect,
     get_execution_config,
+    get_execution_egress_ceiling,
+    get_execution_profiles,
     get_execution_run_config,
 )
 
@@ -279,6 +281,8 @@ __all__ = [
     # Tool functions
     "get_execution_collect",
     "get_execution_config",
+    "get_execution_egress_ceiling",
+    "get_execution_profiles",
     "get_execution_run_config",
     "get_tool_config",
     "get_tool_description_overrides",
