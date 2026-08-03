@@ -99,9 +99,10 @@ const SLASH_COMMANDS = {
         category: CommandCategory.TOOLS
     },
     '/task': {
-        description: 'Tool-capable background runs: run|ls|show|watch|cancel (experimental, default-off tier)',
-        usage: '/task run "<desc>" --tools a,b,c [--allow host] [--budget iters=,time=,tokens=]',
-        category: CommandCategory.TOOLS
+        description: 'Tool-capable background runs — direct launch; ls|get|watch|respond|collect|resume|cancel (default-off tier)',
+        usage: '/task "<desc>" --tools a,b,c [--allow host] [--budget iters=,time=,tokens=]',
+        category: CommandCategory.TOOLS,
+        subcommands: ['ls', 'get', 'watch', 'respond', 'collect', 'resume', 'cancel', 'help']
     },
     '/token': {
         description: 'Manage the bearer token attached to /v1 API calls (status|set|mint|clear)',

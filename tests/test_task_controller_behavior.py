@@ -1,8 +1,11 @@
-"""Behavioral tests for TaskController + parseTaskArgs (v1.19.x build plan T1).
+"""Behavioral tests for TaskController + parseTaskArgs (v1.19.x; U2 grammar).
 
 Exercises the actual runtime via Node (like test_agent_run_controller_behavior.py):
-the flag parser, the /task run launch body (grant/egress/budget + provider/model
-fallback), server-rejection surfacing, cancel, and sub-command routing.
+the flag parser, the direct-launch body (grant/egress/budget + provider/model
+fallback), server-rejection surfacing, cancel, and the U2 (ADR 0011)
+direct-launch grammar: verb + run-id (or empty) → lifecycle op, anything
+else launches; `run` subcommand removed; get/collect canonical with
+show/open/ack as aliases.
 
 TaskController extends AgentRunController; the harness requires task-controller.js,
 which in turn requires agent-run-controller.js from the same directory.
@@ -173,51 +176,76 @@ function makeApp(opts) {{
     assert(app._posts.some(([u]) => u === "/v1/agent/runs/run_9/cancel"), "cancel did not POST the right url");
   }}
 
-  // --- Scenario 8: handle() routes verbs to the right method ---
+  // --- Scenario 8: handle() — U2 direct-launch grammar (ADR 0011) ---
+  // Lifecycle op iff first token is a verb AND the remainder is empty or
+  // starts with a run id (run_ + 12 hex); anything else launches.
   {{
     const app = makeApp({{}});
     const c = new TaskController(app);
     const calls = [];
     c.run = async (a) => calls.push(["run", a]);
     c.list = async () => calls.push(["list"]);
-    c.show = (id) => calls.push(["show", id]);
+    c.get = (id) => calls.push(["get", id]);
     c.cancel = async (id) => calls.push(["cancel", id]);
     c.help = () => calls.push(["help"]);
-    await c.handle('run "x" --tools a');
-    await c.handle('ls');
-    await c.handle('show run_1');
-    await c.handle('watch run_2');
-    await c.handle('cancel run_3');
-    await c.handle('');
-    assert(calls[0][0] === "run" && calls[0][1] === '"x" --tools a', "run route");
+    const A = "run_aaaaaaaaaaaa", B = "run_bbbbbbbbbbbb";
+    await c.handle('get ' + A);                       // verb + id → lifecycle
+    await c.handle('ls');                             // verb + empty → lifecycle
+    await c.handle('watch ' + B);                     // watch → get
+    await c.handle('cancel ' + A);
+    await c.handle('show ' + B);                      // alias of get
+    await c.handle('');                               // empty → help
+    await c.handle('"x" --tools a');                  // bare prompt → launch
+    await c.handle('get the weather in Geneva --tools web_search'); // verb + prose → launch
+    await c.handle('run "x" --tools a');              // `run` is no verb → launch (whole line)
+    assert(calls[0][0] === "get" && calls[0][1] === A, "get route");
     assert(calls[1][0] === "list", "ls route");
-    assert(calls[2][0] === "show" && calls[2][1] === "run_1", "show route");
-    assert(calls[3][0] === "show" && calls[3][1] === "run_2", "watch route -> show");
-    assert(calls[4][0] === "cancel" && calls[4][1] === "run_3", "cancel route");
+    assert(calls[2][0] === "get" && calls[2][1] === B, "watch route -> get");
+    assert(calls[3][0] === "cancel" && calls[3][1] === A, "cancel route");
+    assert(calls[4][0] === "get" && calls[4][1] === B, "show alias -> get");
     assert(calls[5][0] === "help", "empty -> help");
+    assert(calls[6][0] === "run" && calls[6][1] === '"x" --tools a', "bare prompt launches");
+    assert(calls[7][0] === "run" && calls[7][1] === 'get the weather in Geneva --tools web_search',
+      "verb + prose launches (the plan's edge case)");
+    assert(calls[8][0] === "run" && calls[8][1] === 'run "x" --tools a',
+      "removed `run` subcommand falls through to launch");
+  }}
+
+  // --- Scenario 8a: near-miss run id after a verb fails loud, never launches ---
+  {{
+    const app = makeApp({{}});
+    const c = new TaskController(app);
+    let launched = false;
+    c.run = async () => {{ launched = true; }};
+    await c.handle('get run_123');           // run_-ish but not 12 hex
+    await c.handle('collect run_aaaaaaaaaaa'); // 11 hex — truncated paste
+    assert(!launched, "a near-miss id must never launch a task");
+    assert(app._msgs.filter((m) => /looks like a run id/.test(m)).length === 2,
+      "near-miss hint shown for both");
   }}
 
   // --- Scenario 8b: id verbs trim a pasted blob to the first token ---
-  // A multi-line paste of several `/task ack <id>` commands arrives as one
-  // argline; the id-taking verbs must act on the FIRST id instead of
+  // A multi-line paste of several `/task collect <id>` commands arrives as
+  // one argline; the id-taking verbs must act on the FIRST id instead of
   // sending the whole blob as one bogus id (live-trial stumble 2026-07-11).
   {{
     const app = makeApp({{}});
     const c = new TaskController(app);
     const calls = [];
-    c.show = (id) => calls.push(["show", id]);
+    c.get = (id) => calls.push(["get", id]);
     c.cancel = async (id) => calls.push(["cancel", id]);
     c.ack = async (id) => calls.push(["ack", id]);
     c.resume = async (id) => calls.push(["resume", id]);
-    await c.handle('ack run_1 /task ack run_2 /task ack run_3');
-    await c.handle('show run_4 trailing junk');
-    await c.handle('cancel run_5	/task cancel run_6');
-    await c.handle('resume run_7 run_8');
-    assert(calls[0][0] === "ack" && calls[0][1] === "run_1",
-      "pasted ack blob trims to first id: " + JSON.stringify(calls[0]));
-    assert(calls[1][1] === "run_4", "show trims trailing junk");
-    assert(calls[2][1] === "run_5", "cancel trims at tab");
-    assert(calls[3][1] === "run_7", "resume trims to first id");
+    const I = (ch) => "run_" + ch.repeat(12);
+    await c.handle('collect ' + I("1") + ' /task collect ' + I("2"));
+    await c.handle('get ' + I("4") + ' trailing junk');
+    await c.handle('cancel ' + I("5") + '\t/task cancel ' + I("6"));
+    await c.handle('resume ' + I("7") + ' ' + I("8"));
+    assert(calls[0][0] === "ack" && calls[0][1] === I("1"),
+      "pasted collect blob trims to first id: " + JSON.stringify(calls[0]));
+    assert(calls[1][1] === I("4"), "get trims trailing junk");
+    assert(calls[2][1] === I("5"), "cancel trims at tab");
+    assert(calls[3][1] === I("7"), "resume trims to first id");
   }}
 
   // --- Scenario 9 (T5): respondCmd — token fetch + answer mapping ---
@@ -252,11 +280,11 @@ function makeApp(opts) {{
     assert(app._msgs.some((m) => /Usage: `\/task respond/.test(m)), "usage shown");
     const calls = [];
     c.respondCmd = async (rest) => calls.push(rest);
-    await c.handle('respond run_1 approve');
-    assert(calls[0] === "run_1 approve", "respond route: " + calls[0]);
+    await c.handle('respond run_111111111111 approve');
+    assert(calls[0] === "run_111111111111 approve", "respond route: " + calls[0]);
   }}
 
-  // --- Scenario 10 (T6): ack — POST + verb routing ---
+  // --- Scenario 10 (T6): collect (ack alias) — POST + verb routing ---
   {{
     const app = makeApp({{}});
     const c = new TaskController(app);
@@ -265,11 +293,13 @@ function makeApp(opts) {{
       "ack did not POST the ack endpoint");
     assert(app._msgs.some((m) => /collected/.test(m)), "collect confirmation shown");
     await c.ack("");
-    assert(app._msgs.some((m) => /Usage: `\/task ack/.test(m)), "ack usage shown");
+    assert(app._msgs.some((m) => /Usage: `\/task collect/.test(m)), "collect usage shown");
     const calls = [];
     c.ack = async (id) => calls.push(id);
-    await c.handle('ack run_8');
-    assert(calls[0] === "run_8", "ack route: " + calls[0]);
+    await c.handle('collect run_888888888888');   // canonical U2 verb
+    await c.handle('ack run_999999999999');       // alias kept
+    assert(calls[0] === "run_888888888888", "collect route: " + calls[0]);
+    assert(calls[1] === "run_999999999999", "ack alias route: " + calls[1]);
   }}
 
   // --- Scenario 11 (T7): resume — POST, watcher restart, routing, refusal ---
@@ -285,8 +315,8 @@ function makeApp(opts) {{
     assert(watched === "run_5", "resume must restart the detached watcher");
     const calls = [];
     c.resume = async (id) => calls.push(id);
-    await c.handle('resume run_6');
-    assert(calls[0] === "run_6", "resume route: " + calls[0]);
+    await c.handle('resume run_666666666666');
+    assert(calls[0] === "run_666666666666", "resume route: " + calls[0]);
   }}
   {{
     const app = makeApp({{ postThrows: "409: cannot be resumed: work already captured" }});

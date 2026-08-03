@@ -228,8 +228,8 @@ that guide.
 
 ### Background Agent Platform (`/task`, v1.19.0)
 Durable, addressable background runs with per-run tool grants and a sandboxed workdir:
-- `/task run "…" --tools read_file [--spec name] [--skill name] [--allow host] [--budget …] [--work-dir path]`
-- Lifecycle: `/task ls|show|watch|cancel`, plus `respond` (interactive consent), `ack` (collect a held result), and `resume` (recover an interrupted run)
+- `/task "…" --tools read_file [--spec name] [--skill name] [--allow host] [--budget …] [--work-dir path]` — direct launch (v1.19.1)
+- Lifecycle: `/task ls|get|watch|cancel`, plus `respond` (interactive consent), `collect` (a held result), and `resume` (recover an interrupted run)
 - Spec files (`--spec`) and skills (`--skill`) grant reusable tool/read-scope bundles
 - Egress allowlists and budgets bound what a run can reach and spend
 - Ships in **Web** and **VSCode**; default-off via `tools.agent.task_tier_enabled`

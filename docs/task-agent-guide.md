@@ -46,31 +46,41 @@ enable hint.
 ## 2. First run
 
 ```
-/task run "summarize README.md" --tools read_file
+/task "summarize README.md" --tools read_file
 ```
 
+- **Direct launch** (v1.19.1, ADR 0011): there is no `run` subcommand —
+  the prompt (+ flags) IS the launch. Quoting the prompt is recommended,
+  never required.
 - The run id (`run_xxxxxxxxxxxx`) prints immediately; the chat stays usable.
 - A live watcher tails the run's events into the transcript (web: a
   right-panel pane; VSCode: transcript lines like `→ read_file`).
 - Relative paths resolve against **your session's working directory** by
   default (v1.19.0 workdir alignment) — the same place `/pwd` shows.
 - When it finishes, the result is **held** (`completed_pending_ack`) until
-  you collect it: `/task ack <id>` (or the Collect button).
+  you collect it: `/task collect <id>` (or the Collect button).
 
 ## 3. Command reference
 
 ```
-/task run "<desc>" --tools a,b,c [flags]   launch a run
+/task "<desc>" --tools a,b,c [flags]       launch a run (direct — no verb)
 /task ls | list                            list runs, newest first
-/task show <id> | open | watch             print meta/result + (re)watch
+/task get <id> | watch                     print meta/result + (re)watch
 /task respond <id> approve|deny|"<text>"   answer a waiting (consent) park
-/task ack <id>                             collect a held result → finalized
+/task collect <id>                         collect a held result → finalized
 /task resume <id>                          continue an interrupted run
 /task cancel <id>                          cooperative cancel
 /task help                                 this summary
 ```
 
-### Flags for `/task run`
+Disambiguation: a first token that is a lifecycle verb counts as one only
+when followed by a run id (`run_` + 12 hex) or nothing — anything else
+launches (`/task get the weather --tools web_search` launches). `show`,
+`open` and `ack` still work as aliases of `get`/`collect`; the v1.19.0
+verbs `task run`, and `show`/`ack` as *canonical* names, are retired
+(v1.19.1 breaking change).
+
+### Launch flags
 
 | Flag | Meaning |
 |---|---|
@@ -121,7 +131,7 @@ continues without the action.
 
 **Held results (T6).** A successful top-level run lands in
 `completed_pending_ack`: the run has exited (budget freed, sandbox torn
-down) but the result is held until `/task ack <id>` collects it →
+down) but the result is held until `/task collect <id>` collects it →
 `finalized`. A disconnected UI never loses a result. Uncollected holds are
 finalized by a lazy reaper after `tools.agent.result_retention_s` (default
 3600 s; `0` = hold until explicit ack; data is never deleted, only marked
@@ -170,7 +180,7 @@ Deterministic, never "wherever the server happened to start":
    ignored with a "⚠️ sandbox seal active" warning (warn-don't-fail, so the
    same command works across sealed and unsealed hosts).
 
-`/task show <id>` prints the effective `wd:`; resume reuses it; spawned
+`/task get <id>` prints the effective `wd:`; resume reuses it; spawned
 children inherit it.
 
 ## 9. The sandbox seal (operator posture)
@@ -207,11 +217,11 @@ trust boundary; the assistant works your repo), **k8s coder pod = seal off**
 | `400 execute_shell_command is not permitted` | By design — shell escapes the egress allowlist; grant specific tools instead. |
 | `400 workdir does not exist` | `--work-dir` points at a missing directory. |
 | `⚠️ sandbox seal active — --work-dir ignored` | Expected on sealed hosts; the jail wins. |
-| Agent says a file "does not exist" | Check `wd:` in `/task show` — pass `--work-dir` or an absolute path. |
+| Agent says a file "does not exist" | Check `wd:` in `/task get` — pass `--work-dir` or an absolute path. |
 | Perplexity `/task` refuses, confabulates, or summarizes an *external* URL | `sonar-pro` is prompt-based and does not reliably call granted tools on `/task` (**Item 43**). Use a native-tool provider (e.g. `nvidia/deepseek-v4-pro`) for tool-capable runs. |
 | Gemini 3.x `/task` fails with `400 … missing a thought_signature` | Known gap (**Item 45**): ppxai doesn't yet replay Gemini 3.x `thought_signature`. Use Gemini 2.5 or another native-tool provider for now. |
 | Run stuck `waiting` | Answer the card / `/task respond <id> …`, or let the TTL deny it. |
-| Result seems missing after finish | It's held — `/task ack <id>`. |
+| Result seems missing after finish | It's held — `/task collect <id>`. |
 | `409 cannot be resumed: …` | The refusal reason is verbatim (not resumable, in flight, tier off…). |
 | `⛔ egress denied host/…` | Host/path not in `--allow` — egress is deny-by-default. |
 

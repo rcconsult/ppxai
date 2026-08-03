@@ -68,7 +68,7 @@ never against the server process launch dir:
 
 1. `workdir` in the request body — per-run intent like `provider`/`model`.
    The ppxai clients thread their **session working dir** automatically
-   (`--work-dir` on `/task run` overrides), so "summarize README.md" means
+   (`--work-dir` on a `/task` launch overrides), so "summarize README.md" means
    the same thing in chat and in a task run. Must exist (400 otherwise).
 2. Absent: the **server default** — `server.working_dir` config, else the
    user's home (the same default every new UI session gets).

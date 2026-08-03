@@ -39,10 +39,12 @@ def _case_verbs(src: str) -> set[str]:
     # Scope to the handle() routing switch: both files put it in a method
     # whose cases are single-word verbs; filter out non-verb switches
     # (event-type switches use snake_case/longer names).
+    # U2 (ADR 0011): no `run` case label — launch is the grammar fallthrough;
+    # get/collect are canonical, show/open/ack stay as alias labels.
     verbs = set(re.findall(r"case '([a-z]+)':", src))
     return {v for v in verbs if v in {
-        "run", "ls", "list", "show", "open", "watch",
-        "cancel", "respond", "ack", "resume", "help",
+        "ls", "list", "get", "show", "open", "watch",
+        "cancel", "respond", "collect", "ack", "resume", "help",
     }}
 
 

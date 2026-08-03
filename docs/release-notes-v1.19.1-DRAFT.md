@@ -16,10 +16,16 @@ memory changes.
 |---|---|---|
 | `/agent <task>`, `/agent on\|off` | **`/auto`** — same in-session autonomous loop, checkpoint/undo intact | U1 |
 | `/tools agent` | **`/tools auto`** | U1 |
+| `/task run "<desc>" …` | **`/task "<desc>" …`** — direct launch; a first token counts as a verb only when followed by a run id (`run_` + 12 hex) or nothing | U2 |
+| `task show` (canonical) | **`task get`** (`show`/`open` still accepted as aliases) | U2 |
+| `task ack` (canonical) | **`task collect`** (`ack` still accepted as alias; merge semantics land with `execution.collect`) | U2 |
 
-*(U2–U4 entries land here as those stages commit: `/task` direct-launch
-grammar + `get`/`collect` verbs, `/run` family + `/agentrun` retirement,
-`execution.collect`.)*
+*(U3–U4 entries land here as those stages commit: `/run` family +
+`/agentrun` retirement, `execution.collect`.)*
+
+U2 safety net: after a lifecycle verb, a `run_…`-ish token that is not a
+full run id (truncated paste, typo) errors instead of silently launching a
+task whose prompt is the mangled command.
 
 Why: "agent" meant three different things (in-session loop, tool-free
 background run, sandboxed task tier). After ADR 0011, **`/auto`** is

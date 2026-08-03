@@ -355,7 +355,7 @@ class TaskRunView extends AgentRunView {
             case 'spawn_denied':      return `⛔ spawn denied: ${TaskRunView._short(d.reason, 80)}`;
             case 'agent_waiting':     return `✋ waiting (${d.kind || 'consent'}): ${TaskRunView._short(d.prompt, 80)}`;
             case 'agent_resumed':     return `▶ resumed — ${d.approved ? 'approved' : 'denied'}${d.via === 'timeout' ? ' (timed out)' : ''}`;
-            case 'agent_result_ready':   return `📬 result ready (${d.chars || 0} chars) — collect via the button or /task ack`;
+            case 'agent_result_ready':   return `📬 result ready (${d.chars || 0} chars) — collect via the button or /task collect`;
             case 'agent_run_finalized':  return `✅ collected${d.via === 'retention' ? ' (retention expired)' : ''}`;
             case 'agent_run_resume':     return `▶️ resumed (was ${d.from || 'interrupted'})`;
             case 'subagent_spawned':  return `⑂ sub-agent ${d.child_run_id || ''}`;

@@ -314,10 +314,11 @@ class AgentRunController {
      * Collect a held result (T6): POST /runs/{id}/ack — the receipt that
      * flips completed_pending_ack → finalized. The result body stays on the
      * run record (ack only marks it collected / GC-eligible). Shared by the
-     * pane's Collect button (via _wireView) and the `/task ack` verb.
+     * pane's Collect button (via _wireView) and the `/task collect` verb
+     * (U2 rename; `ack` stays as alias).
      */
     async ack(runId) {
-        if (!runId) { this.app.showSystemMessage('Usage: `/task ack <id>`'); return false; }
+        if (!runId) { this.app.showSystemMessage('Usage: `/task collect <id>`'); return false; }
         try {
             await this.app.apiClient.post(`/v1/agent/runs/${runId}/ack`, {});
         } catch (e) {
@@ -491,7 +492,7 @@ class AgentRunController {
         if (AgentRunController._SUCCESS.has(run.status)) {
             // completed / completed_pending_ack / finalized — all carry the
             // result body. A held run (T6) renders it too; collecting is the
-            // pane's explicit Collect button / `/task ack`, never a silent
+            // pane's explicit Collect button / `/task collect`, never a silent
             // auto-ack (the user decides when the receipt is issued).
             if (view) view.setResult(run.result || '');
             else this.app.addMessage('assistant', run.result || '(empty result)');

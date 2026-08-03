@@ -6,14 +6,20 @@
  * `agent-run-controller.js` (the parity sentinel in
  * tests/test_vscode_task_controller.py enforces it):
  *
- *   /task run "<desc>" --tools a,b,c [--allow host] [--provider p] [--model m]
+ *   /task "<desc>" --tools a,b,c [--allow host] [--provider p] [--model m]
  *                      [--budget iters=,time=,tokens=] [--system "…"]
  *                      [--spec <name>] [--skill <name>]
  *                      [--work-dir <path>]  (default: the session's working dir)
+ *                  Direct launch (U2, ADR 0011) — the `run` subcommand is
+ *                  gone. First token = lifecycle verb AND remainder empty or
+ *                  starting with a run id (run_ + 12 hex) → lifecycle op;
+ *                  anything else launches. Quoting the prompt forces a launch.
  *   /task ls | list          list runs
- *   /task show <id> | watch <id>   print a run's meta/result + (re)watch it
+ *   /task get <id> | watch <id>    print a run's meta/result + (re)watch it
+ *                            (`get` = U2 rename of `show`; show/open aliases)
  *   /task respond <id> approve|deny|"<text>"   answer a waiting{consent} park
- *   /task ack <id>           collect a held result (completed_pending_ack)
+ *   /task collect <id>       collect a held result (completed_pending_ack)
+ *                            (`collect` = U2 rename of `ack`; alias kept)
  *   /task resume <id>        continue an interrupted/cancelled run
  *   /task cancel <id>        cooperative cancel
  *
@@ -163,8 +169,9 @@ function tokenize(s: string): string[] {
 }
 
 /**
- * Parse a `/task run` argument line into an AgentTaskRequest-shaped object.
- * Grammar-identical to the web parser; a non-empty `errors` means don't send.
+ * Parse a `/task` launch argument line into an AgentTaskRequest-shaped
+ * object. Grammar-identical to the web parser; a non-empty `errors` means
+ * don't send.
  */
 export function parseTaskArgs(argline: string): ParsedTaskArgs {
     const toks = tokenize((argline || '').trim());
@@ -227,6 +234,18 @@ export function parseTaskArgs(argline: string): ParsedTaskArgs {
 // ============================================================================
 // Controller
 // ============================================================================
+
+// U2 (ADR 0011) direct-launch grammar pieces (parity with the web
+// controller): a registry run id is exactly `run_` + token_hex(6).
+const RUN_ID_RE = /^run_[0-9a-f]{12}$/;
+// A `run_…`-ish token that ISN'T a full id is a near-miss (truncated paste,
+// typo) — fail loud on the lifecycle path instead of silently launching a
+// garbage task whose prompt is the mangled command.
+const RUN_ID_ISH_RE = /^run_\S*$/;
+const TASK_VERBS = new Set([
+    'help', 'ls', 'list', 'get', 'show', 'open', 'watch',
+    'cancel', 'respond', 'collect', 'ack', 'resume',
+]);
 
 /** Statuses that end the poll watcher (parity with the web _TERMINAL set). */
 export const TERMINAL_STATUSES = new Set([
@@ -304,7 +323,12 @@ export class TaskController {
         this.getDefaults = getDefaults || (() => ({}));
     }
 
-    /** Route `/task <verb> <rest>` to a handler (verb parity with web). */
+    /**
+     * Route `/task …` — U2 direct-launch grammar (ADR 0011, web parity).
+     * Lifecycle op iff the first token is a verb AND the remainder is empty
+     * or starts with a run id (`run_` + 12 hex); anything else launches a
+     * run with the whole line as the prompt (+ flags).
+     */
     async handle(argline: string): Promise<void> {
         const trimmed = (argline || '').trim();
         const sp = trimmed.search(/\s/);
@@ -314,21 +338,32 @@ export class TaskController {
         // first token so a multi-line paste degrades to acting on the first
         // id instead of sending the whole blob as one bogus id (web parity).
         const firstTok = (rest.split(/\s/, 1)[0]) || '';
+        if (trimmed === '') { return this.help(); }
+        const lifecycle = TASK_VERBS.has(verb)
+            && (rest === '' || RUN_ID_RE.test(firstTok));
+        if (!lifecycle) {
+            if (TASK_VERBS.has(verb) && RUN_ID_ISH_RE.test(firstTok)) {
+                // Near-miss id after a verb: fail loud, never launch.
+                this.ui.system(
+                    `❌ \`${firstTok}\` looks like a run id but isn't one (run_ + 12 hex). Check the id with /task ls.`
+                );
+                return;
+            }
+            return this.run(trimmed);
+        }
         switch (verb) {
-            case '':
             case 'help':    return this.help();
-            case 'run':     return this.run(rest);
             case 'ls':
             case 'list':    return this.list();
+            case 'get':
             case 'show':
             case 'open':
-            case 'watch':   return this.show(firstTok);
+            case 'watch':   return this.get(firstTok);
             case 'cancel':  return this.cancel(firstTok);
             case 'respond': return this.respondCmd(rest);
+            case 'collect':
             case 'ack':     return void await this.ack(firstTok);
             case 'resume':  return void await this.resume(firstTok);
-            default:
-                this.ui.system(`Unknown /task subcommand: ${verb}. Try /task help.`);
         }
     }
 
@@ -346,23 +381,23 @@ export class TaskController {
         return msg;
     }
 
-    /** /task run — launch a tool-capable sandboxed run. */
+    /** Launch a tool-capable sandboxed run (U2: direct — no `run` verb). */
     async run(argline: string): Promise<void> {
         const spec = parseTaskArgs(argline);
         if (spec.errors.length) {
-            this.ui.system(`❌ /task run: ${spec.errors.join('; ')}`);
+            this.ui.system(`❌ /task: ${spec.errors.join('; ')}`);
             return;
         }
         if (!spec.task) {
             this.ui.system(
-                'Usage: `/task run "<desc>" --tools <a,b,c> [--spec <name>] [--skill <name>] [--allow host] [--budget iters=,time=,tokens=] [--system "…"] [--work-dir <path>]`'
+                'Usage: `/task "<desc>" --tools <a,b,c> [--spec <name>] [--skill <name>] [--allow host] [--budget iters=,time=,tokens=] [--system "…"] [--work-dir <path>]`'
             );
             return;
         }
         const hasResolvedSource = Boolean(spec.spec) || spec.skills.length > 0;
         if (!spec.tools.length && !hasResolvedSource) {
             this.ui.system(
-                '❌ /task run needs a tool grant (--tools a,b,c), a --spec, or a --skill that supplies one.'
+                '❌ /task needs a tool grant (--tools a,b,c), a --spec, or a --skill that supplies one.'
             );
             return;
         }
@@ -398,7 +433,7 @@ export class TaskController {
         if (started.workdir_ignored) {
             this.ui.system('⚠️ sandbox seal active — --work-dir ignored; the run stays in its per-run jail.');
         }
-        this.ui.system(`🛠️ ${started.run_id} — task ${started.status} (watching; /task show ${started.run_id})`);
+        this.ui.system(`🛠️ ${started.run_id} — task ${started.status} (watching; /task get ${started.run_id})`);
         void this.watchDetached(started.run_id);
     }
 
@@ -413,7 +448,7 @@ export class TaskController {
         }
         const runs = data.runs || [];
         if (!runs.length) {
-            this.ui.system('No task runs yet — start one with /task run "<desc>" --tools <a,b,c>');
+            this.ui.system('No task runs yet — start one with /task "<desc>" --tools <a,b,c>');
             return;
         }
         const lines = runs.slice(0, 20).map((r) => {
@@ -423,9 +458,9 @@ export class TaskController {
         this.ui.system(['Agent runs (newest first):', ...lines].join('\n'));
     }
 
-    /** /task show|watch <id> — print the run's state (+ result) and re-watch. */
-    async show(runId: string): Promise<void> {
-        if (!runId) { this.ui.system('Usage: `/task show <id>`'); return; }
+    /** /task get|watch <id> — print the run's state (+ result) and re-watch. */
+    async get(runId: string): Promise<void> {
+        if (!runId) { this.ui.system('Usage: `/task get <id>`'); return; }
         let run: AgentRunMeta;
         try {
             run = await this.backend.agentRun(runId);
@@ -503,9 +538,9 @@ export class TaskController {
         return true;
     }
 
-    /** /task ack <id> — collect a held result (T6). */
+    /** /task collect <id> — collect a held result (T6; `ack` stays as alias). */
     async ack(runId: string): Promise<boolean> {
-        if (!runId) { this.ui.system('Usage: `/task ack <id>`'); return false; }
+        if (!runId) { this.ui.system('Usage: `/task collect <id>`'); return false; }
         try {
             await this.backend.agentRunAck(runId);
         } catch (e: any) {
@@ -533,17 +568,18 @@ export class TaskController {
 
     help(): void {
         this.ui.system([
-            '/task — tool-capable background runs (sandboxed tier; default-off):',
-            '  /task run "<desc>" --tools a,b,c [--allow host] [--provider p] [--model m] [--budget iters=,time=,tokens=] [--system "…"] [--work-dir <path>]',
-            '  /task run "<desc>" --spec <name>   configure from a spec file (specs_dir)',
-            '  /task run "<desc>" --skill <name>  mount a skill (skills_dir); repeatable',
+            '/task — tool-capable background runs (sandboxed tier; default-off). Launches directly:',
+            '  /task "<desc>" --tools a,b,c [--allow host] [--provider p] [--model m] [--budget iters=,time=,tokens=] [--system "…"] [--work-dir <path>]',
+            '  /task "<desc>" --spec <name>   configure from a spec file (specs_dir)',
+            '  /task "<desc>" --skill <name>  mount a skill (skills_dir); repeatable',
             '  /task ls                list runs',
-            '  /task show <id>         print a run (re-watches if still live)',
-            '  /task watch <id>        alias of show',
+            '  /task get <id>          print a run (re-watches if still live)',
+            '  /task watch <id>        alias of get',
             '  /task respond <id> approve|deny|"<text>"  answer a run parked in waiting (a QuickPick also pops automatically)',
-            '  /task ack <id>          collect a held result (📬 completed_pending_ack → finalized)',
+            '  /task collect <id>      collect a held result (📬 completed_pending_ack → finalized)',
             '  /task resume <id>       continue an interrupted/cancelled run from its checkpoint',
             '  /task cancel <id>       cancel a run',
+            '  A first token that is a verb only counts as one when followed by a run id (or nothing) — anything else launches.',
         ].join('\n'));
     }
 
@@ -560,7 +596,7 @@ export class TaskController {
         if (SUCCESS_STATUSES.has(run.status) && run.result) {
             this.ui.result(run.result);
             if (run.status === 'completed_pending_ack') {
-                this.ui.system(`📬 result held — collect with /task ack ${run.run_id}`);
+                this.ui.system(`📬 result held — collect with /task collect ${run.run_id}`);
             }
         } else if (run.error) {
             this.ui.system(`   ${run.error}`);
@@ -625,7 +661,7 @@ export class TaskController {
         }
         const run = await this.pollUntilTerminal(runId);
         if (!run) {
-            this.ui.system(`⚠️ ${runId} — lost contact with the server; /task show ${runId} to retry.`);
+            this.ui.system(`⚠️ ${runId} — lost contact with the server; /task get ${runId} to retry.`);
             return;
         }
         this.renderRun(run);

@@ -302,24 +302,34 @@ class TestTaskCompletion:
     ]
 
     def test_task_verbs_complete(self):
+        # U2 (ADR 0011): canonical verbs only — no `run` (direct launch),
+        # `get`/`collect` replace `show`/`ack` in the suggestion table.
         items = complete("/task ")
         texts = [i["text"] for i in items]
-        for verb in ("run", "ls", "show", "watch", "respond",
-                     "ack", "resume", "cancel", "help"):
+        for verb in ("ls", "get", "watch", "respond",
+                     "collect", "resume", "cancel", "help"):
             assert verb in texts
+        assert "run" not in texts
+        assert "show" not in texts
+        assert "ack" not in texts
 
     def test_task_verb_prefix_filter(self):
         texts = [i["text"] for i in complete("/task re")]
         assert "respond" in texts
         assert "resume" in texts
-        assert "run" not in texts
+        assert "collect" not in texts
 
-    def test_ack_offers_only_held_results(self):
-        items = complete("/task ack ", agent_runs=self._RUNS)
+    def test_collect_offers_only_held_results(self):
+        items = complete("/task collect ", agent_runs=self._RUNS)
         assert [i["text"] for i in items] == ["run_aaa111"]
         assert items[0]["kind"] == "run"
         assert "completed_pending_ack" in items[0]["description"]
         assert "summarize docs/README.md" in items[0]["description"]
+
+    def test_ack_alias_still_offers_held_results(self):
+        # Muscle-memory alias: same id surface as `collect`.
+        items = complete("/task ack ", agent_runs=self._RUNS)
+        assert [i["text"] for i in items] == ["run_aaa111"]
 
     def test_respond_offers_only_waiting(self):
         items = complete("/task respond ", agent_runs=self._RUNS)
@@ -339,22 +349,27 @@ class TestTaskCompletion:
                  complete("/task cancel ", agent_runs=self._RUNS)]
         assert set(texts) == {"run_bbb222", "run_eee555"}
 
-    def test_show_offers_everything(self):
+    def test_get_offers_everything(self):
+        texts = [i["text"] for i in
+                 complete("/task get ", agent_runs=self._RUNS)]
+        assert len(texts) == len(self._RUNS)
+
+    def test_show_alias_offers_everything(self):
         texts = [i["text"] for i in
                  complete("/task show ", agent_runs=self._RUNS)]
         assert len(texts) == len(self._RUNS)
 
     def test_id_prefix_filter_and_replace_start(self):
-        items = complete("/task show run_a", agent_runs=self._RUNS)
+        items = complete("/task get run_a", agent_runs=self._RUNS)
         assert [i["text"] for i in items] == ["run_aaa111"]
         assert items[0]["replace_start"] == -len("run_a")
 
     def test_no_snapshot_degrades_to_empty_ids(self):
-        assert complete("/task ack ") == []
+        assert complete("/task collect ") == []
 
-    def test_run_verb_gets_no_id_completion(self):
-        # `/task run` takes a quoted description, not an id.
-        assert complete("/task run ", agent_runs=self._RUNS) == []
+    def test_launch_prompt_gets_no_id_completion(self):
+        # U2: a non-verb first token is a direct-launch prompt, not an id slot.
+        assert complete("/task summarize ", agent_runs=self._RUNS) == []
 
 
 class TestTaskCompletionRoute:
@@ -394,7 +409,7 @@ class TestTaskCompletionRoute:
 
     def test_task_ack_offers_held_run(self, tmp_path, monkeypatch):
         client = self._client(tmp_path, monkeypatch)
-        r = client.post("/complete", json={"buffer": "/task ack "})
+        r = client.post("/complete", json={"buffer": "/task collect "})
         assert r.status_code == 200
         items = r.json()["items"]
         assert [i["text"] for i in items] == ["run_held1"]
@@ -465,7 +480,7 @@ class TestClientGating:
         assert complete("/token ", client="rich") == []
         # …same for /task verbs.
         assert complete("/task ", client="textual") == []
-        assert any(i["text"] == "run"
+        assert any(i["text"] == "get"
                    for i in complete("/task ", client="vscode"))
 
     def test_route_passes_client_through(self, tmp_path, monkeypatch):
@@ -478,6 +493,6 @@ class TestClientGating:
         assert "/token" in [i["text"] for i in r.json()["items"]]
         # A TUI-declared caller gets no run-id items even with a held run.
         r = client.post("/complete",
-                        json={"buffer": "/task ack ", "client": "rich"})
+                        json={"buffer": "/task collect ", "client": "rich"})
         assert r.status_code == 200
         assert r.json()["items"] == []

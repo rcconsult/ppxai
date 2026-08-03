@@ -1,14 +1,19 @@
 /**
  * TaskController — web driver for the tool-capable /v1/agent/task tier.
  *
- * The `/task` command family (v1.19.x, build plan T1):
- *   /task run "<desc>" --tools a,b,c [--allow host] [--provider p] [--model m]
+ * The `/task` command family (v1.19.x; U2 direct-launch grammar, ADR 0011):
+ *   /task "<desc>" --tools a,b,c [--allow host] [--provider p] [--model m]
  *                      [--budget iters=,time=,tokens=] [--system "…"] [--spec <name>]
  *                      [--work-dir <path>]  (default: the session's working dir)
- *   /task run "<desc>" --spec <name>   (T3) configure from a spec file under
+ *                  Launches directly — there is no `run` subcommand (removed
+ *                  in v1.19.1, ADR 0011). Disambiguation: the first token is a
+ *                  lifecycle verb AND the remainder is empty or starts with a
+ *                  run id (run_ + 12 hex) → lifecycle op; anything else is a
+ *                  launch prompt. Quoting the prompt always forces a launch.
+ *   /task "<desc>" --spec <name>   (T3) configure from a spec file under
  *                      tools.agent.sandbox.specs_dir; explicit flags override
  *                      the file. The server resolves the name + clamps the grant.
- *   /task run "<desc>" --skill <name>  (T4) mount a skill dir under
+ *   /task "<desc>" --skill <name>  (T4) mount a skill dir under
  *                      tools.agent.sandbox.skills_dir: SKILL.md is a spec and the
  *                      skill's references/ join the run read-scope. Repeatable /
  *                      comma-separated; grants union, still ⊆ the operator ceiling.
@@ -16,15 +21,19 @@
  *                      `waiting{consent}` — the pane's consent card is the
  *                      clickable equivalent. Free text rides along as a note
  *                      (a text-only answer to a consent park is a deny).
- *   /task ack <id>     (T6) collect a held result — a finished top-level task
- *                      run parks its result in `completed_pending_ack` (📬)
- *                      until acked (the pane's Collect button is equivalent);
- *                      the retention TTL is the GC backstop.
+ *   /task collect <id> (T6; U2 rename of `ack`, alias kept) collect a held
+ *                      result — a finished top-level task run parks its result
+ *                      in `completed_pending_ack` (📬) until collected (the
+ *                      pane's Collect button is equivalent); the retention TTL
+ *                      is the GC backstop.
  *   /task resume <id>  (T7) conditionally continue an interrupted/cancelled
  *                      run from its checkpoint (the pane's Resume button is
  *                      equivalent); the server refuses with a reason when the
  *                      checkpoint is inconclusive.
- *   /task ls | show <id> | watch <id> | cancel <id> | help
+ *   /task ls | get <id> | watch <id> | cancel <id> | help
+ *                      (`get` is the U2 rename of `show`; show/open stay as
+ *                      aliases — verb aliases are NOT the deprecation aliases
+ *                      ADR 0011 forbids for command names.)
  *
  * Extends AgentRunController: the run registry endpoints (list, show, live SSE
  * tail, poll-to-terminal, cancel) are IDENTICAL to the tool-free tier, so this
@@ -88,11 +97,23 @@ function _tokenize(s) {
     return toks;
 }
 
+// U2 (ADR 0011) direct-launch grammar pieces, shared by handle():
+// a registry run id is exactly `run_` + token_hex(6) (agent_runs.py).
+const RUN_ID_RE = /^run_[0-9a-f]{12}$/;
+// A `run_…`-ish token that ISN'T a full id is a near-miss (truncated
+// paste, typo) — fail loud on the lifecycle path instead of silently
+// launching a garbage task whose prompt is the mangled command.
+const RUN_ID_ISH_RE = /^run_\S*$/;
+const TASK_VERBS = new Set([
+    'help', 'ls', 'list', 'get', 'show', 'open', 'watch',
+    'cancel', 'respond', 'collect', 'ack', 'resume',
+]);
+
 /**
- * Parse a `/task run` argument line into an AgentTaskRequest-shaped object.
- * The description is the leading run of tokens before the first `--flag`
- * (quoted or bare). Returns `{task, tools, provider, model, system, network,
- * budget, errors}`; a non-empty `errors` means don't send.
+ * Parse a `/task` launch argument line into an AgentTaskRequest-shaped
+ * object. The description is the leading run of tokens before the first
+ * `--flag` (quoted or bare). Returns `{task, tools, provider, model, system,
+ * network, budget, errors}`; a non-empty `errors` means don't send.
  */
 function parseTaskArgs(argline) {
     const toks = _tokenize((argline || '').trim());
@@ -158,11 +179,20 @@ class TaskController extends _AgentRunControllerBase {
     constructor(app) {
         super(app);
         if (typeof TaskRunView !== 'undefined') this._viewClass = TaskRunView;
-        this._emptyHint = 'No task runs yet — start one with /task run "<desc>" --tools <a,b,c>';
+        this._emptyHint = 'No task runs yet — start one with /task "<desc>" --tools <a,b,c>';
         this._reopenHint = '/task ls';
     }
 
-    /** Route `/task <verb> <rest>` to a handler. */
+    /**
+     * Route `/task …` — U2 direct-launch grammar (ADR 0011).
+     *
+     * Lifecycle op iff the first token is a verb AND the remainder is empty
+     * or starts with a run id (`run_` + 12 hex); ANYTHING else launches a
+     * run with the whole line as the prompt (+ flags). So `/task get
+     * run_ab12…` is a lifecycle get, `/task get the weather in Geneva
+     * --tools web_search` launches. The old `run` subcommand is gone —
+     * `/task "<desc>" --tools …` launches directly.
+     */
     async handle(argline) {
         const trimmed = (argline || '').trim();
         const sp = trimmed.search(/\s/);
@@ -173,30 +203,41 @@ class TaskController extends _AgentRunControllerBase {
         // id instead of sending the whole blob as one bogus id (live-trial
         // stumble, 2026-07-11).
         const firstTok = ((rest.split(/\s/, 1)[0]) || '');
+        if (trimmed === '') return this.help();
+        const lifecycle = TASK_VERBS.has(verb)
+            && (rest === '' || RUN_ID_RE.test(firstTok));
+        if (!lifecycle) {
+            if (TASK_VERBS.has(verb) && RUN_ID_ISH_RE.test(firstTok)) {
+                // Near-miss id after a verb: fail loud, never launch.
+                this.app.showSystemMessage(
+                    `❌ \`${firstTok}\` looks like a run id but isn't one (run_ + 12 hex). Check the id with \`/task ls\`.`
+                );
+                return undefined;
+            }
+            return this.run(trimmed);
+        }
         switch (verb) {
-            case '':
             case 'help':   return this.help();
-            case 'run':    return this.run(rest);
             case 'ls':
             case 'list':   return this.list();
+            case 'get':
             case 'show':
-            case 'open':   return this.show(firstTok);
-            case 'watch':  return this.show(firstTok);
+            case 'open':   return this.get(firstTok);
+            case 'watch':  return this.get(firstTok);
             case 'cancel': return this.cancel(firstTok);
             case 'respond': return this.respondCmd(rest);
+            case 'collect':
             case 'ack': return this.ack(firstTok);
             case 'resume': return this.resume(firstTok);
-            default:
-                this.app.showSystemMessage(`Unknown /task subcommand: ${verb}. Try /task help.`);
-                return undefined;
         }
+        return undefined;
     }
 
-    /** /task run — launch a tool-capable sandboxed run. */
+    /** Launch a tool-capable sandboxed run (U2: direct — no `run` verb). */
     async run(argline) {
         const spec = parseTaskArgs(argline);
         if (spec.errors.length) {
-            this.app.showSystemMessage(`❌ /task run: ${spec.errors.join('; ')}`);
+            this.app.showSystemMessage(`❌ /task: ${spec.errors.join('; ')}`);
             return;
         }
         if (!spec.task) {
@@ -205,7 +246,7 @@ class TaskController extends _AgentRunControllerBase {
             // placeholder parses as an HTML tag and silently vanishes
             // (caught live 2026-07-11); code spans render entities escaped.
             this.app.showSystemMessage(
-                'Usage: `/task run "<desc>" --tools <a,b,c> [--spec <name>] [--skill <name>] [--allow host] [--budget iters=,time=,tokens=] [--system "…"]`'
+                'Usage: `/task "<desc>" --tools <a,b,c> [--spec <name>] [--skill <name>] [--allow host] [--budget iters=,time=,tokens=] [--system "…"]`'
             );
             return;
         }
@@ -215,7 +256,7 @@ class TaskController extends _AgentRunControllerBase {
             // The server clamps the merged grant (no-shell, ceiling); we only
             // guard the "no grant source at all" case here to fail fast.
             this.app.showSystemMessage(
-                '❌ /task run needs a tool grant (--tools a,b,c), a --spec, or a --skill that supplies one. A tool-free run belongs on /agentrun.'
+                '❌ /task needs a tool grant (--tools a,b,c), a --spec, or a --skill that supplies one. A tool-free run belongs on /agentrun.'
             );
             return;
         }
@@ -236,7 +277,7 @@ class TaskController extends _AgentRunControllerBase {
         if (Object.keys(spec.budget).length) body.budget = spec.budget;
         // v1.19.x workdir-alignment: the session's working dir rides along as
         // per-run intent (like provider/model) so "summarize README.md" means
-        // the same thing in chat and in /task run; --work-dir overrides.
+        // the same thing in chat and in a /task launch; --work-dir overrides.
         const workdir = spec.workdir || this.app.state.workingDir || null;
         if (workdir) body.workdir = workdir;
 
@@ -331,10 +372,10 @@ class TaskController extends _AgentRunControllerBase {
         return this.respond(runId, payload);
     }
 
-    /** /task show|open|watch <id> — focus (and live-tail) a run's pane. */
-    show(runId) {
+    /** /task get|watch <id> — focus (and live-tail) a run's pane. */
+    get(runId) {
         const id = (runId || '').trim();
-        if (!id) { this.app.showSystemMessage('Usage: `/task show <id>`'); return undefined; }
+        if (!id) { this.app.showSystemMessage('Usage: `/task get <id>`'); return undefined; }
         return this.focus(id, '');
     }
 
@@ -342,17 +383,18 @@ class TaskController extends _AgentRunControllerBase {
         // Syntax in code spans (see the run() usage note): the markdown
         // renderer would otherwise eat every <placeholder> as an HTML tag.
         this.app.showSystemMessage([
-            '/task — tool-capable background runs (sandboxed tier; default-off):',
-            '  `/task run "<desc>" --tools a,b,c [--allow host] [--provider p] [--model m] [--budget iters=,time=,tokens=] [--system "…"] [--work-dir <path>]`',
-            '  `/task run "<desc>" --spec <name>` — configure from a spec file (specs_dir); flags override the file',
-            '  `/task run "<desc>" --skill <name>` — mount a skill (skills_dir): SKILL.md grant + references/ into read-scope; repeatable',
+            '/task — tool-capable background runs (sandboxed tier; default-off). Launches directly:',
+            '  `/task "<desc>" --tools a,b,c [--allow host] [--provider p] [--model m] [--budget iters=,time=,tokens=] [--system "…"] [--work-dir <path>]`',
+            '  `/task "<desc>" --spec <name>` — configure from a spec file (specs_dir); flags override the file',
+            '  `/task "<desc>" --skill <name>` — mount a skill (skills_dir): SKILL.md grant + references/ into read-scope; repeatable',
             '  `/task ls` — list runs',
-            '  `/task show <id>` — open a run pane',
+            '  `/task get <id>` — open a run pane',
             '  `/task watch <id>` — open + live-tail a run',
             '  `/task respond <id> approve|deny|"<text>"` — answer a run parked in waiting (consent card)',
-            '  `/task ack <id>` — collect a held result (📬 completed_pending_ack → finalized)',
+            '  `/task collect <id>` — collect a held result (📬 completed_pending_ack → finalized)',
             '  `/task resume <id>` — continue an interrupted/cancelled run from its checkpoint',
             '  `/task cancel <id>` — cancel a run',
+            '  A first token that is a verb only counts as one when followed by a run id (or nothing) — anything else launches.',
         ].join('\n'));
     }
 }

@@ -1841,7 +1841,7 @@ Review your previous actions and continue. If the task is complete, respond with
         // catalog doesn't know about these shims (mirrors the web
         // dispatcher's _appendExperimentalHelp).
         helpText += '\n**Agent platform (client-side, experimental):**\n';
-        helpText += '- `/task` - Tool-capable background agent runs (run·ls·show·respond·ack·resume·cancel)\n';
+        helpText += '- `/task` - Tool-capable background agent runs — direct launch (ls·get·watch·respond·collect·resume·cancel)\n';
         helpText += '- `/token` - Manage the /v1 API bearer token (status·set·mint·clear)\n';
 
         // Add VSCode-specific keyboard shortcuts

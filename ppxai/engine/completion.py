@@ -86,7 +86,7 @@ _BUILTIN_SPECIAL_COMMANDS: List[Dict[str, Any]] = [
     # v1.19.x /task — the tool-capable sandboxed tier (web T1+, VSCode T8a;
     # the in-process TUIs have no channel to the registry — T8b parked).
     {"text": "/task", "display": "/task",
-     "description": "Tool-capable background agent runs (run·ls·show·respond·ack·resume·cancel)",
+     "description": "Tool-capable background agent runs — direct launch (ls·get·watch·respond·collect·resume·cancel)",
      "kind": "command", "clients": {"web", "vscode"}},
     # Item 40: /v1 bearer management (web command-dispatcher.js + VSCode
     # chatPanel.ts; VSCode additionally has the ppxai.setApiToken
@@ -204,17 +204,18 @@ _EMOJI_OPTIONS: List[Tuple[str, str]] = [
     ("off", "Convert to text symbols"),
 ]
 
-# /task verbs (v1.19.x tool-capable tier). Mirrors the client dispatchers
-# (web task-controller.js handle(), VSCode taskController.ts) — the parity
-# sentinel in tests/test_vscode_task_controller.py pins THAT pair; this
-# table lists the canonical verbs (aliases `list`/`open` omitted as noise).
+# /task verbs (v1.19.x tool-capable tier; U2 ADR 0011 direct-launch grammar).
+# Mirrors the client dispatchers (web task-controller.js handle(), VSCode
+# taskController.ts) — the parity sentinel in
+# tests/test_vscode_task_controller.py pins THAT pair; this table lists the
+# canonical verbs (aliases `list`/`show`/`open`/`ack` omitted as noise).
+# There is no `run` verb: `/task "<desc>" --tools a,b,c` launches directly.
 _TASK_SUBCOMMANDS: List[Tuple[str, str]] = [
-    ("run",     'Launch a run: /task run "<desc>" --tools a,b,c'),
     ("ls",      "List runs"),
-    ("show",    "Open a run pane"),
+    ("get",     "Open a run pane"),
     ("watch",   "Open + live-tail a run"),
     ("respond", "Answer a run parked in waiting (approve|deny|text)"),
-    ("ack",     "Collect a held result (📬 → finalized)"),
+    ("collect", "Collect a held result (📬 → finalized)"),
     ("resume",  "Continue an interrupted/cancelled run"),
     ("cancel",  "Cancel a run"),
     ("help",    "Show /task help"),
@@ -222,11 +223,14 @@ _TASK_SUBCOMMANDS: List[Tuple[str, str]] = [
 
 # Which run statuses make sense as the <id> argument of each /task verb.
 # None = any run (inspection verbs work on everything, incl. finalized).
+# Aliases (show/open/ack) complete ids too — typed by muscle memory.
 _TASK_ID_VERB_STATUSES: Dict[str, Optional[frozenset]] = {
     "respond": frozenset({"waiting"}),
+    "collect": frozenset({"completed_pending_ack"}),
     "ack":     frozenset({"completed_pending_ack"}),
     "resume":  frozenset({"interrupted", "cancelled"}),
     "cancel":  frozenset({"pending", "running", "waiting", "cancelling"}),
+    "get":     None,
     "show":    None,
     "open":    None,
     "watch":   None,
@@ -510,11 +514,13 @@ def _complete_task(
     """`/task <verb>` + status-aware `/task <verb> <run_id>` completion.
 
     The verb determines which runs make sense as its id argument
-    (`_TASK_ID_VERB_STATUSES`): `ack` only offers 📬 held results,
-    `respond` only ✋ parked runs, `resume` only interrupted/cancelled
-    (and resumable) ones, `cancel` only in-flight ones; the inspection
-    verbs (show/watch/open) offer everything. Suggestions carry the
-    run's task text so users pick by meaning, not by hex id.
+    (`_TASK_ID_VERB_STATUSES`): `collect` (alias `ack`) only offers 📬
+    held results, `respond` only ✋ parked runs, `resume` only
+    interrupted/cancelled (and resumable) ones, `cancel` only in-flight
+    ones; the inspection verbs (get/watch + show/open aliases) offer
+    everything. Suggestions carry the run's task text so users pick by
+    meaning, not by hex id. A non-verb first token is a direct-launch
+    prompt (U2) — no completion offered there.
     """
     completed, token = _split_args(args_region)
 

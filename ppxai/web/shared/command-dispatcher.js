@@ -102,7 +102,8 @@ class CommandDispatcher {
                 return;
             }
 
-            // Tool-capable tier (T1): `/task <verb> …` — run/ls/show/watch/cancel.
+            // Tool-capable tier: `/task …` — U2 direct launch + ls/get/watch/
+            // respond/collect/resume/cancel (grammar lives in the controller).
             // The whole arg string (verb + rest, incl. quoted desc + flags) is
             // handed to the controller, which parses it.
             if (cmd === '/task') {
