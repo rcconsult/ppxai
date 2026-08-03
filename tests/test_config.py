@@ -53,20 +53,37 @@ from ppxai.config.loader import (
 )
 
 
+@pytest.fixture(autouse=True)
+def _config_store_hermetic():
+    """Snapshot + restore the GLOBAL ConfigStore around EVERY test here.
+
+    Several tests in this module call reload_config() while
+    PPXAI_CONFIG_FILE points at a temp file; the opt-in restore_config
+    fixture wasn't applied everywhere (and its disk re-reload restores
+    whatever find_config_file() resolves, not the pre-test state), so the
+    leaked store poisoned LATER suites — observed: running test_config.py
+    before test_oneshot_grounding.py flipped that suite's dual-read of
+    tools.web_search.oneshot_grounding to a temp config's value (one
+    order-dependent failure on clean HEAD, 2026-08-03). An in-memory
+    snapshot restores the exact prior state without touching disk."""
+    import copy
+
+    store = ConfigStore.get_instance()
+    snapshot = copy.deepcopy(store.config)
+    yield
+    # `config` is a read-only property returning the live dict — restore by
+    # mutating it in place.
+    live = store.config
+    live.clear()
+    live.update(snapshot)
+
+
 @pytest.fixture
 def restore_config():
-    """Fixture that restores config state after tests that call reload_config.
-
-    Use this fixture for any test that calls reload_config() to ensure
-    test isolation and prevent state leakage between tests.
-    """
-    # Store the current config state
-    store = ConfigStore.get_instance()
-
+    """Legacy opt-in restore — superseded by the autouse
+    `_config_store_hermetic` snapshot above; kept so existing test
+    signatures keep working."""
     yield
-
-    # Force reload from disk to restore original state
-    store.reload()
 
 
 class TestConfig:
