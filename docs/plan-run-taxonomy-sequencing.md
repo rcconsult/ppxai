@@ -115,19 +115,25 @@ contract byte-identical with enrichment off.
 
 ## Phase U — taxonomy sweep (ADR 0011; breaking, release-noted, NO aliases)
 
-> **STATUS (2026-08-03): U1–U4 built.** U1 `/auto` `3fa55f3b` · U2 `/task`
-> direct-launch + get/collect `e2690636` · U3 `/run` family + retirement
-> `89d5c95c` (each live-trialed in web before commit; U2 caught the
-> pane-hint string, U3 caught the URL-vs-`/v1/agent/runs` substring trap in
-> the endpoint sentinel and closed the loopback carve-out when config
-> grants web_search). U4 (execution.collect + plain merge) built +
-> live-trialed: the merge ships as a **user(task) → assistant(result)
-> PAIR** — the trial caught that a lone merged message of either role is
+> **STATUS (2026-08-03): Phase U COMPLETE.** U1 `/auto` `3fa55f3b` · U2
+> `/task` direct-launch + get/collect `e2690636` · U3 `/run` family +
+> retirement `89d5c95c` · U4 `execution.collect` + pair-merge `8867bc5c`
+> (each live-trialed in web before commit; U2 caught the pane-hint
+> string, U3 caught the URL-vs-`/v1/agent/runs` substring trap in the
+> endpoint sentinel and closed the loopback carve-out when config grants
+> web_search). U4 live-trial catch: the merge ships as a **user(task) →
+> assistant(result) PAIR** — a lone merged message of either role is
 > silently dropped/collapsed by `validate_and_fix_alternation` before the
 > provider ever sees it (the model answered "no passphrase appeared" over
 > a merge that looked successful). ADR deviation worth knowing: after a
 > lifecycle verb, a `run_…`-ish near-miss token (truncated id) FAILS LOUD
 > instead of launching — strict ADR reading would launch a garbage task.
+> Exit check passed: the release-note Breaking-changes table covers every
+> removal (`/agent`, `/tools agent`, `/task run`, `task show`, `task
+> ack`, `/agentrun`, `/agentruns`) and every addition (`/auto`, `/run`,
+> direct-launch `/task`, `get`, `collect`, `execution.run.*`,
+> `execution.collect`). Next: ADR 0009 step ③ (or FU when its gate
+> clears).
 
 Each stage is a hard rename scoped small enough to trial in one sitting;
 T8a **parity sentinels** + completion data + help text move in the same
