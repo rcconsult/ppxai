@@ -121,6 +121,16 @@ export function processStreamEvent(event: StreamEvent, eventBus: ChatEventBus): 
             if (usage && typeof usage === 'object') {
                 eventBus.emit('stream:usage', usage);
             }
+            // v1.19.1 Item 48 step 3: STREAM_END also carries the fresh
+            // context_percentage (stamped by the engine facade after the
+            // assistant message is committed). Route it through the same
+            // state:sync channel the envelope drain uses, so ONE chatPanel
+            // branch renders the Ctx badge for both push paths — no
+            // GET /context round-trip.
+            const ctxPct = event.metadata?.context_percentage;
+            if (typeof ctxPct === 'number') {
+                eventBus.emit('state:sync', { context_percentage: ctxPct });
+            }
             eventBus.emit('stream:done', event.content);
             break;
     }

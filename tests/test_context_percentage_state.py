@@ -227,3 +227,131 @@ class TestTextualCtxBadgeWiring:
                / "ppxai" / "tui" / "app.py").read_text(encoding="utf-8")
         assert '"context_percentage",' in src
         assert "_on_context_percentage_changed," in src
+
+
+# -----------------------------------------------------------------------------
+# Web/VSCode leg (Item 48 step 3): push channels for remote clients.
+#
+# The field is deliberately NOT in SSE_SYNC_FIELDS (the messages-changed
+# fan-out fires per message — each tool result would spam a state_sync).
+# Two push paths instead:
+#   - discrete: value changes OUTSIDE a chat stream (/clear, /compact,
+#     session load, rollback) → ONE state_sync into the event queue,
+#     drained by the command envelope / any open SSE.
+#   - piggyback: during a chat turn, the terminal STREAM_END metadata
+#     carries the fresh value (assistant message is committed before the
+#     event reaches the facade, so the fan-out already refreshed it).
+# -----------------------------------------------------------------------------
+
+
+def _ctx_pct_syncs(engine):
+    from ppxai.engine.types import EventType
+
+    return [
+        e for e in engine.drain_events()
+        if e.type == EventType.STATE_SYNC
+        and isinstance(e.data, dict)
+        and "context_percentage" in e.data
+    ]
+
+
+class TestDiscreteOutOfBandPush:
+    def test_out_of_band_change_enqueues_one_state_sync(self, engine):
+        engine.drain_events()  # discard constructor-time events
+        engine.session.add_message(_big("user"))
+        events = _ctx_pct_syncs(engine)
+        assert len(events) == 1
+        assert events[0].data["context_percentage"] == engine.state.get(
+            "context_percentage"
+        )
+
+    def test_clear_pushes_the_reset(self, engine):
+        """The /clear staleness class, remote-client edition: the reset
+        must reach web/VSCode through the envelope event drain."""
+        engine.session.add_message(_big("user"))
+        engine.session.add_message(_big("assistant"))
+        engine.drain_events()
+        engine.session.clear()
+        events = _ctx_pct_syncs(engine)
+        assert len(events) == 1
+        assert events[0].data["context_percentage"] == 0.0
+
+    def test_no_change_stays_silent(self, engine):
+        engine.session.add_message(_big("user"))
+        engine.drain_events()
+        engine._refresh_context_percentage()  # same messages, same value
+        assert _ctx_pct_syncs(engine) == []
+
+    def test_streaming_suppresses_the_discrete_push(self, engine):
+        """Mid-stream message mutations (each tool result adds one) must
+        NOT emit per-message state_syncs — the terminal STREAM_END
+        metadata carries the final value instead."""
+        engine.drain_events()
+        engine.state.set("is_streaming", True)
+        engine.session.add_message(_big("user"))
+        assert _ctx_pct_syncs(engine) == []
+
+
+class TestStreamEndPiggyback:
+    def test_stamp_adds_percentage_and_preserves_metadata(self, engine):
+        from ppxai.engine.types import Event, EventType
+
+        engine.state.set("context_percentage", 33.3)
+        ev = Event(EventType.STREAM_END, "hi", {"usage": {"total_tokens": 7}})
+        out = engine._stamp_context_percentage(ev)
+        assert out.metadata["context_percentage"] == 33.3
+        assert out.metadata["usage"] == {"total_tokens": 7}
+
+    def test_stamp_creates_metadata_when_none(self, engine):
+        from ppxai.engine.types import Event, EventType
+
+        engine.state.set("context_percentage", 12.0)
+        out = engine._stamp_context_percentage(Event(EventType.STREAM_END, "x"))
+        assert out.metadata == {"context_percentage": 12.0}
+
+    def test_non_terminal_events_pass_untouched(self, engine):
+        from ppxai.engine.types import Event, EventType
+
+        out = engine._stamp_context_percentage(Event(EventType.STREAM_CHUNK, "t"))
+        assert out.metadata is None
+
+    def test_chat_facade_stamps_both_branches(self):
+        """Wiring sentinel: chat() must stamp on the tools and no-tools
+        yield loops — a raw `yield event` regression silently drops the
+        piggyback for one mode only."""
+        from pathlib import Path
+
+        src = (Path(__file__).parent.parent
+               / "ppxai" / "engine" / "client.py").read_text(encoding="utf-8")
+        assert src.count("yield self._stamp_context_percentage(event)") == 2
+
+
+class TestWebAndVSCodeRenderWiring:
+    """Source sentinels for the remote render sites — same rationale as
+    the Textual wiring sentinel above: the push is invisible until a
+    client branch consumes it, and nothing else fails if one is lost."""
+
+    @staticmethod
+    def _read(*parts):
+        from pathlib import Path
+
+        return Path(__file__).parent.parent.joinpath(*parts).read_text(
+            encoding="utf-8"
+        )
+
+    def test_web_state_sync_branch_triggers_the_render_site(self):
+        src = self._read("ppxai", "web", "app.js")
+        assert "pyKey === 'context_percentage'" in src
+        branch = src.split("pyKey === 'context_percentage'", 1)[1][:800]
+        assert "updateContextInfo" in branch
+
+    def test_vscode_stream_end_forwards_the_stamp(self):
+        src = self._read("vscode-extension", "src", "handlers", "stream.ts")
+        assert "context_percentage" in src
+        stamped = src.split("context_percentage", 1)[1][:800]
+        assert "state:sync" in stamped
+
+    def test_vscode_chatpanel_renders_from_the_push(self):
+        src = self._read("vscode-extension", "src", "chatPanel.ts")
+        assert "'context_percentage' in changes" in src
+        assert "postContextBadge" in src

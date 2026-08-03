@@ -670,6 +670,15 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             if ('provider' in changes || 'model' in changes) {
                 this.updateStatus();
             }
+            // v1.19.1 Item 48 step 3: Ctx badge renders straight from the
+            // pushed value — no GET /context round-trip. Fed by both push
+            // paths: STREAM_END metadata (per chat turn, via stream.ts)
+            // and the discrete out-of-band state_sync the engine enqueues
+            // when /clear, /compact, session load or checkpoint rollback
+            // changes the value (drained from the command envelope).
+            if ('context_percentage' in changes) {
+                this.postContextBadge(Number(changes['context_percentage']) || 0);
+            }
         });
 
         // UI events
@@ -772,6 +781,11 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             clear: async () => {
                 await this._backend.clearHistory();
                 this._view?.webview.postMessage({ type: 'cleared' });
+                // v1.19.1 Item 48 step 3: the clear button bypasses the
+                // command envelope (a typed /clear gets the discrete
+                // state_sync via _drainEnvelopeEvents), so refresh the
+                // Ctx badge explicitly here.
+                await this.updateContextBadge();
             },
             save: async () => {
                 vscode.commands.executeCommand('ppxai.saveSession');
@@ -2068,30 +2082,39 @@ Review your previous actions and continue. If the task is complete, respond with
     /**
      * Update context badge with current usage (v1.13.9)
      */
+    /**
+     * Render the Ctx badge from a known percent — shared by the push
+     * path (state:sync `context_percentage`, v1.19.1 Item 48 step 3)
+     * and the poll path (`updateContextBadge`). Thresholds mirror the
+     * Rich/Textual clients: `~` warning at ≥80%, `!` critical at ≥100%.
+     */
+    private postContextBadge(percent: number) {
+        if (!this._view) { return; }
+
+        let badgeClass = '';
+        let suffix = '';
+        if (percent >= 100) {
+            badgeClass = 'critical';
+            suffix = '!';
+        } else if (percent >= 80) {
+            badgeClass = 'warning';
+            suffix = '~';
+        }
+
+        this._view.webview.postMessage({
+            type: 'updateContext',
+            percent: percent,
+            badgeClass: badgeClass,
+            suffix: suffix
+        });
+    }
+
     private async updateContextBadge() {
         if (!this._view) { return; }
 
         try {
             const info = await this._backend.getContextInfo();
-            const percent = info.usage_percent || 0;
-
-            // Determine badge state
-            let badgeClass = '';
-            let suffix = '';
-            if (percent >= 100) {
-                badgeClass = 'critical';
-                suffix = '!';
-            } else if (percent >= 80) {
-                badgeClass = 'warning';
-                suffix = '~';
-            }
-
-            this._view.webview.postMessage({
-                type: 'updateContext',
-                percent: percent,
-                badgeClass: badgeClass,
-                suffix: suffix
-            });
+            this.postContextBadge(info.usage_percent || 0);
         } catch (error) {
             // Silently ignore errors
         }

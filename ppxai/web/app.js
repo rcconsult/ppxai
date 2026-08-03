@@ -1081,6 +1081,18 @@ class PpxaiApp {
                 // mirrors the active /v1/agent/* run set into AppState;
                 // an empty list hides the badge.
                 this.updateBackgroundAgentsBadge();
+            } else if (pyKey === 'context_percentage') {
+                // v1.19.1 Item 48 step 3: out-of-band mutations
+                // (/clear, /compact, session load, checkpoint
+                // rollback) — the engine enqueues ONE discrete
+                // state_sync when the value changes outside a chat
+                // stream (deliberately NOT in _SSE_SYNC_FIELDS; the
+                // messages-changed fan-out would spam one per
+                // message). The push is the trigger; re-poll
+                // GET /context because the badge text also shows
+                // token counts, which the pushed percent alone
+                // can't render.
+                this.updateContextInfo();
             }
         }
     }
@@ -2996,6 +3008,12 @@ class PpxaiApp {
             this._renderPendingBadges();
             this.state.contextAttachments = [];
             this.updateAttachmentBadge();
+            // v1.19.1 Item 48 step 3: the Clear button bypasses the
+            // command envelope (typed /clear gets the state_sync push
+            // via the dispatcher's event drain), so refresh the Ctx
+            // badge directly here — same reasoning as the attachment
+            // state above.
+            this.updateContextInfo();
             // Quick command handlers use event delegation, no need to re-attach
             this.showSystemMessage('Conversation cleared');
         } catch (error) {

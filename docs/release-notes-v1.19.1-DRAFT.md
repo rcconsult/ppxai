@@ -192,12 +192,17 @@ is removed — debt Item 52 retired).
 
 ## Fixed
 
-- `/clear` left the status-bar `Ctx:` badge stale (Item 48):
-  `context_percentage` is now refreshed by the engine's messages-changed
-  fan-out, so `/clear`, `/compact`, session load and rollback all update
-  it (step 1: engine + Rich). **ppxaide now has the live `Ctx` badge
-  too** (step 2): same thresholds as Rich (`~` at ≥80%, `!` at ≥100%),
-  hidden on an empty session. Web/VSCode render site still pending.
+- `/clear` left the status-bar `Ctx:` badge stale (Item 48) — fixed in
+  **all four clients**. `context_percentage` is refreshed by the engine's
+  messages-changed fan-out, so `/clear`, `/compact`, session load and
+  rollback all update it (engine + Rich). **ppxaide** gains the live `Ctx`
+  badge (same thresholds as Rich: `~` at ≥80%, `!` at ≥100%, hidden on an
+  empty session). **Web + VSCode** now receive the value as a push: the
+  terminal `stream_end` SSE event carries `context_percentage` in its
+  metadata (additive — alongside the existing `usage`), and out-of-band
+  changes (`/clear`, `/compact`, load) emit one discrete `state_sync`
+  through the command envelope. The field is deliberately NOT in the
+  `state_sync` whitelist — no per-message push traffic.
 - Concurrent-run web_search cost misattribution: the process-global
   reset-on-read usage channel replaced by a per-call ContextVar holder
   (affected interactive chat too).

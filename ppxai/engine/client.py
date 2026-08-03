@@ -429,10 +429,27 @@ class EngineClient:
         way (`get_context_info().usage_percent`); the fan-out is what
         makes out-of-band mutations correct, which `update_usage` (per
         chat turn only) never covered.
+
+        Web/VSCode push (Item 48 step 3): the field is deliberately NOT
+        in `SSE_SYNC_FIELDS` — this fan-out fires on every message-list
+        mutation (each tool result adds a message mid-turn), so the
+        whitelist subscription would spam a state_sync per message.
+        Instead, when the value changes OUTSIDE a chat stream (`/clear`,
+        `/compact`, session load, checkpoint rollback), enqueue ONE
+        discrete state_sync — the envelope command routes drain it into
+        `envelope.events` (REST piggyback) and any open SSE forwards it.
+        During a stream the terminal STREAM_END metadata carries the
+        fresh value instead (see `_stamp_context_percentage`).
         """
         try:
             info = self.get_context_info()
-            self.state.set("context_percentage", info.get("usage_percent", 0.0))
+            pct = info.get("usage_percent", 0.0)
+            changed = self.state.set("context_percentage", pct)
+            if changed and not self.state.get("is_streaming"):
+                self.enqueue_event(Event(
+                    type=EventType.STATE_SYNC,
+                    data={"context_percentage": pct},
+                ))
         except Exception:
             # Never let a status-badge refresh break a message mutation.
             pass
@@ -1053,12 +1070,32 @@ class EngineClient:
         try:
             if self.tools_enabled:
                 async for event in self._chat_with_tools(stream):
-                    yield event
+                    yield self._stamp_context_percentage(event)
             else:
                 async for event in self._chat_simple(stream):
-                    yield event
+                    yield self._stamp_context_percentage(event)
         finally:
             self.state.update(is_streaming=False, cancel_requested=False)
+
+    def _stamp_context_percentage(self, event: Event) -> Event:
+        """Piggyback the fresh `context_percentage` onto terminal STREAM_END.
+
+        Item 48 step 3: web/VSCode read low-frequency usage data from
+        STREAM_END metadata rather than state_sync (the field is excluded
+        from `SSE_SYNC_FIELDS` — see `_refresh_context_percentage`). The
+        chat handlers add the assistant message BEFORE yielding STREAM_END,
+        so the messages-changed fan-out has already recomputed the field by
+        the time the event passes this facade — the stamped value reflects
+        the completed turn. Only the terminal STREAM_END reaches this loop
+        (provider-level STREAM_ENDs are consumed inside chat.py), so the
+        stamp happens exactly once per turn.
+        """
+        if event.type == EventType.STREAM_END:
+            event.metadata = {
+                **(event.metadata or {}),
+                "context_percentage": self.state.get("context_percentage"),
+            }
+        return event
 
     async def _chat_simple(self, stream: bool) -> AsyncIterator[Event]:
         """Simple chat without tools.
