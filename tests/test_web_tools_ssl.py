@@ -119,11 +119,23 @@ class TestGetWebTimeout:
             assert _get_web_timeout("fetch_url", default=20) == 20
 
 
-class TestGetWeatherHTTPFallback:
-    """Tests for get_weather HTTP fallback when HTTPS fails."""
+class TestGetWeatherHTTPSOnly:
+    """`get_weather` is HTTPS-only (v1.19.1, ADR 0009 §2 — debt Item 52).
 
-    def test_https_success_no_fallback(self):
-        """When HTTPS works, HTTP fallback is not attempted."""
+    These tests previously asserted the OPPOSITE: an https→plain-http retry
+    added for corporate proxies. That fallback put an always-denied scheme
+    into the tool's egress superset, and the per-run NetworkPolicy grants
+    all-or-nothing — so `get_weather` could never be allowlisted for a
+    sandboxed run. The scheme downgrade was removed; reliability fallback is
+    now a *different host over https* (`get_weather_openmeteo`) selected by
+    the tool chain, which the allowlist can express.
+
+    A stalled corporate-proxy handshake therefore surfaces as an error string
+    from this tool and the chain moves on — it must never silently retry in
+    cleartext.
+    """
+
+    def test_https_success_makes_exactly_one_request(self):
         mock_response = MagicMock()
         mock_response.read.return_value = b"Lausanne: +5C"
         mock_response.__enter__ = MagicMock(return_value=mock_response)
@@ -133,53 +145,56 @@ class TestGetWeatherHTTPFallback:
              patch("ppxai.engine.tools.builtin.web._get_web_timeout", return_value=15):
             result = get_weather("Lausanne")
             assert "Lausanne" in result
-            # Should have been called once (HTTPS only)
             assert mock_open.call_count == 1
-            call_args = mock_open.call_args
-            req = call_args[0][0]
+            req = mock_open.call_args[0][0]
             assert req.full_url.startswith("https://")
 
-    def test_https_timeout_falls_back_to_http(self):
-        """When HTTPS times out, falls back to HTTP."""
-        mock_response = MagicMock()
-        mock_response.read.return_value = b"Lausanne: +5C"
-        mock_response.__enter__ = MagicMock(return_value=mock_response)
-        mock_response.__exit__ = MagicMock(return_value=False)
-
-        call_count = 0
+    def test_timeout_errors_out_without_a_cleartext_retry(self):
+        """The Item 52 contract: a failed HTTPS call is the END of this tool."""
+        schemes = []
 
         def mock_urlopen(req, timeout=None, context=None):
-            nonlocal call_count
-            call_count += 1
-            if req.full_url.startswith("https://"):
-                raise urllib.error.URLError("timed out")
-            return mock_response
+            schemes.append(req.full_url.split(":", 1)[0])
+            raise urllib.error.URLError("timed out")
 
         with patch("ppxai.engine.tools.builtin.web.urllib.request.urlopen", side_effect=mock_urlopen), \
              patch("ppxai.engine.tools.builtin.web._get_web_timeout", return_value=15):
             result = get_weather("Lausanne")
-            assert "Lausanne" in result
-            assert call_count == 2  # HTTPS failed, HTTP succeeded
+            assert schemes == ["https"]
+            assert "Error" in result and "timed out" in result
 
-    def test_https_ssl_error_falls_back_to_http(self):
-        """When HTTPS has SSL error, falls back to HTTP."""
-        mock_response = MagicMock()
-        mock_response.read.return_value = b"Geneva: +3C"
-        mock_response.__enter__ = MagicMock(return_value=mock_response)
-        mock_response.__exit__ = MagicMock(return_value=False)
+    def test_ssl_error_errors_out_without_a_cleartext_retry(self):
+        """An SSL failure is exactly the case the old fallback downgraded on —
+        the strongest signal that a proxy is intercepting. Never retry."""
+        schemes = []
 
         def mock_urlopen(req, timeout=None, context=None):
-            if req.full_url.startswith("https://"):
-                raise ssl.SSLError("certificate verify failed")
-            return mock_response
+            schemes.append(req.full_url.split(":", 1)[0])
+            raise ssl.SSLError("certificate verify failed")
 
         with patch("ppxai.engine.tools.builtin.web.urllib.request.urlopen", side_effect=mock_urlopen), \
              patch("ppxai.engine.tools.builtin.web._get_web_timeout", return_value=15):
             result = get_weather("Geneva")
-            assert "Geneva" in result
+            assert schemes == ["https"]
+            assert "Error" in result
 
-    def test_both_schemes_fail_returns_error(self):
-        """When both HTTPS and HTTP fail, returns error."""
+    def test_every_request_carries_an_ssl_context(self):
+        """No code path may pass context=None — that was the plain-http leg."""
+        contexts = []
+
+        def mock_urlopen(req, timeout=None, context=None):
+            contexts.append(context)
+            raise urllib.error.URLError("timed out")
+
+        with patch("ppxai.engine.tools.builtin.web.urllib.request.urlopen", side_effect=mock_urlopen), \
+             patch("ppxai.engine.tools.builtin.web._get_web_timeout", return_value=15):
+            get_weather("Test")
+            assert len(contexts) == 1
+            assert contexts[0] is not None
+
+    def test_connection_failure_returns_error_string_never_raises(self):
+        """Chainable contract: callers fall through to the next weather
+        backend on an 'Error: ...' string, so this must not raise."""
         def mock_urlopen(req, timeout=None, context=None):
             raise urllib.error.URLError("connection refused")
 
@@ -188,8 +203,7 @@ class TestGetWeatherHTTPFallback:
             result = get_weather("Nowhere")
             assert "Error" in result
 
-    def test_http_404_does_not_retry(self):
-        """HTTP 404 is not a connection issue — don't fall back."""
+    def test_http_404_reports_location_not_found(self):
         def mock_urlopen(req, timeout=None, context=None):
             raise urllib.error.HTTPError(
                 req.full_url, 404, "Not Found", {}, None
@@ -200,23 +214,12 @@ class TestGetWeatherHTTPFallback:
             result = get_weather("InvalidCity123")
             assert "not found" in result.lower()
 
-    def test_http_context_is_none_for_plain_http(self):
-        """HTTP fallback passes context=None (no SSL for plain HTTP)."""
-        call_contexts = []
+    def test_source_carries_no_plain_http_url(self):
+        """Sentinel: the egress superset for this tool is https-only, so a
+        reintroduced `http://wttr.in` would silently make the tool
+        un-allowlistable again (the failure mode Item 52 documented)."""
+        from pathlib import Path
 
-        def mock_urlopen(req, timeout=None, context=None):
-            call_contexts.append(context)
-            if req.full_url.startswith("https://"):
-                raise urllib.error.URLError("timed out")
-            mock_resp = MagicMock()
-            mock_resp.read.return_value = b"Test: +1C"
-            mock_resp.__enter__ = MagicMock(return_value=mock_resp)
-            mock_resp.__exit__ = MagicMock(return_value=False)
-            return mock_resp
-
-        with patch("ppxai.engine.tools.builtin.web.urllib.request.urlopen", side_effect=mock_urlopen), \
-             patch("ppxai.engine.tools.builtin.web._get_web_timeout", return_value=15):
-            get_weather("Test")
-            assert len(call_contexts) == 2
-            assert call_contexts[0] is not None  # HTTPS has SSL context
-            assert call_contexts[1] is None  # HTTP has no SSL context
+        src = (Path(__file__).parent.parent / "ppxai" / "engine" / "tools"
+               / "builtin" / "web.py").read_text(encoding="utf-8")
+        assert "http://wttr.in" not in src

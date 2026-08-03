@@ -269,9 +269,14 @@ class TestSymlinkedDestination:
         workdir = tmp_path / "work"
         workdir.mkdir()
         # Attacker plants a symlink inside the (allowed) working dir that
-        # points at a file outside it.
+        # points at a file outside it. Creating one needs Developer Mode or
+        # elevation on Windows (WinError 1314) — the handler's rule is
+        # host-independent, but this exercise of it isn't.
         link = workdir / "report.txt"
-        link.symlink_to(secret)
+        try:
+            link.symlink_to(secret)
+        except (OSError, NotImplementedError) as exc:
+            pytest.skip(f"host cannot create symlinks: {exc}")
 
         headers = _session("symlink")
         _anchor_to(http_client, headers, workdir)

@@ -36,12 +36,21 @@ DISPATCHER = (
     / "ppxai" / "web" / "shared" / "command-dispatcher.js"
 )
 
-# v1.19.0 Increment B: the /agentrun + /agentruns behavior was extracted from
-# the dispatcher into a dedicated controller so the dispatcher stays a thin
-# router. The fire-and-forget fences below target this file.
+# v1.19.0 Increment B: the background-run behavior was extracted from the
+# dispatcher into a dedicated controller so the dispatcher stays a thin
+# router. v1.19.1 U3 renamed the VERBS (/agentrun → /run) and gave them their
+# own thin driver; this file keeps the shared machinery (`_watchDetached`,
+# terminal-status sets) that RunController and TaskController both extend.
 CONTROLLER = (
     Path(__file__).resolve().parents[1]
     / "ppxai" / "web" / "shared" / "agent-run-controller.js"
+)
+
+# v1.19.1 U3 (ADR 0011): the `/run` family's driver — the launch path the
+# fire-and-forget fences below check.
+RUN_CONTROLLER = (
+    Path(__file__).resolve().parents[1]
+    / "ppxai" / "web" / "shared" / "run-controller.js"
 )
 
 
@@ -51,6 +60,10 @@ def _read() -> str:
 
 def _read_controller() -> str:
     return CONTROLLER.read_text(encoding="utf-8")
+
+
+def _read_run_controller() -> str:
+    return RUN_CONTROLLER.read_text(encoding="utf-8")
 
 
 # ---------------------------------------------------------------------------
@@ -157,9 +170,10 @@ class TestNoBespokeBranches:
           - back to <300 at v1.19.0 (Increment B): the whole /agentrun +
             /agentruns feature was EXTRACTED into agent-run-controller.js, so
             the dispatcher is a thin router again (~228 lines). The fence
-            tightens with the extraction — agent-run growth now lands in the
-            controller, not here. (Its own fences live in TestAgentRunFireAndForget,
-            which read CONTROLLER.)
+            tightens with the extraction — background-run growth now lands in
+            the controller, not here. (Its own fences live in
+            TestOneOffRunFireAndForget, which read CONTROLLER +
+            RUN_CONTROLLER. v1.19.1 U3 renamed the verbs to /run + /run ls.)
           - <340 after Item 40 (v1.19.0): _handleTokenCommand grew inline
             (~70 lines, 334 total) — cohesive + security-commented, so it
             stayed. If /token grows further, extract it into a
@@ -177,60 +191,69 @@ class TestNoBespokeBranches:
 # /agentrun fire-and-forget (v1.19.0)
 # ---------------------------------------------------------------------------
 
-class TestAgentRunFireAndForget:
-    """/agentrun must NOT block the chat prompt on run completion. The run
-    lives in the server's background registry; the client launches it, frees
-    the prompt, and posts the result out-of-band when it lands.
+class TestOneOffRunFireAndForget:
+    """The one-off launch verb must NOT block the chat prompt on run
+    completion. The run lives in the server's background registry; the client
+    launches it, frees the prompt, and posts the result out-of-band when it
+    lands.
 
     These are drift fences: if someone re-inlines the tail into the awaited
-    handler (the pre-v1.19.0 blocking shape), these fail. v1.19.0 Increment B
-    moved the logic to agent-run-controller.js — these read CONTROLLER.
+    handler (the pre-v1.19.0 blocking shape), these fail.
+
+    Surface history — the guarded property never changed, the names did:
+    v1.19.0 Increment B extracted the logic from the dispatcher into
+    `agent-run-controller.js`; v1.19.1 U3 (ADR 0011) then retired the
+    `/agentrun` + `/agentruns` VERBS in favor of `/run` + `/run ls`, whose
+    driver is `run-controller.js`. `AgentRunController` survives as the base
+    class both `RunController` and `TaskController` build on (it owns
+    `_watchDetached`), so these fences read BOTH files: the launch path in
+    RUN_CONTROLLER, the watcher machinery in CONTROLLER.
     """
 
     def test_dispatcher_delegates_to_controller(self):
         """The dispatcher must stay a thin router: it constructs the
-        AgentRunController and delegates /agentrun + /agentruns to it,
-        rather than inlining the handlers."""
+        controllers and delegates the run/task families to them, rather
+        than inlining the handlers."""
         src = _read()
-        assert "new AgentRunController" in src, (
-            "dispatcher no longer constructs AgentRunController"
+        assert "new RunController" in src, (
+            "dispatcher no longer constructs RunController"
         )
-        assert "this.agentRuns?.start(" in src and "this.agentRuns?.list(" in src, (
-            "dispatcher does not delegate /agentrun + /agentruns to the controller"
+        assert "this.runs?.handle(" in src, (
+            "dispatcher does not delegate the /run family to RunController"
         )
 
     def test_has_detached_watcher(self):
         src = _read_controller()
         assert "_watchDetached" in src, (
-            "the detached run watcher is gone — /agentrun is probably "
-            "blocking the prompt on completion again"
+            "the detached run watcher is gone — the one-off launch verb is "
+            "probably blocking the prompt on completion again"
         )
 
-    def test_start_does_not_await_the_tail(self):
-        """`AgentRunController.start` must delegate to the detached watcher
-        and NOT `await` the SSE tail / final-read inline (that's what blocked
-        the prompt). We check the handler body calls the watcher WITHOUT
-        awaiting it, and contains no `for await` of its own."""
-        src = _read_controller()
+    def test_launch_does_not_await_the_tail(self):
+        """`RunController.run` must delegate to the detached watcher and NOT
+        `await` the SSE tail / final-read inline (that's what blocked the
+        prompt). We check the handler body calls the watcher WITHOUT awaiting
+        it, and contains no `for await` of its own."""
+        src = _read_run_controller()
         m = re.search(
-            r"async start\(\w+\)\s*\{(.*?)\n    \}",
+            r"async run\(\w+\)\s*\{(.*?)\n    \}",
             src, re.DOTALL,
         )
-        assert m, "could not locate AgentRunController.start body"
+        assert m, "could not locate RunController.run body"
         body = m.group(1)
         # The tail loop must have moved OUT of the launch handler.
         assert "for await" not in body, (
-            "start() still contains a `for await` tail loop — it is blocking "
+            "run() still contains a `for await` tail loop — it is blocking "
             "the prompt. Move the tail to the detached watcher."
         )
         # It must kick off the watcher fire-and-forget (not awaited). The watcher
-        # takes only runId now (it resolves the run's pane by run_id at render
+        # takes only runId (it resolves the run's pane by run_id at render
         # time, not a captured instance) — see scenario 5 in the behavioral test.
         assert re.search(r"this\._watchDetached\(runId\)", body), (
-            "start() does not start the detached watcher"
+            "run() does not start the detached watcher"
         )
         assert "await this._watchDetached" not in body, (
-            "start() AWAITS the detached watcher — that re-blocks the prompt. "
+            "run() AWAITS the detached watcher — that re-blocks the prompt. "
             "It must be fire-and-forget."
         )
 

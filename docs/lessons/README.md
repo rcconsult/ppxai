@@ -119,3 +119,7 @@ discoverable later.
   live); the recurring tools-chat 400 is the provider-agnostic orphan
   `assistant.tool_calls` case — check the actual wire error before adding
   another alternation patch
+- [stale-tests-outlive-deleted-behavior.md](stale-tests-outlive-deleted-behavior.md) —
+  removing a behavior leaves its tests behind; they fail as assumed-
+  environmental noise or keep passing against a renamed surface while
+  guarding nothing. Invert, retarget, or delete — and mutation-test the fence

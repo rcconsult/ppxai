@@ -42,6 +42,24 @@ def _pol(dirs, **kw):
     )
 
 
+def _require_symlinks(tmp_path):
+    """Skip when the host can't create symlinks.
+
+    Windows needs Developer Mode or an elevated process (`os.symlink` raises
+    WinError 1314, "A required privilege is not held by the client"). Same
+    convention as `TestSessionSymlinkBehavior` in test_session_persistence.py
+    — the seal's symlink-escape rule is host-independent, but exercising it
+    requires a privilege the CI/dev Windows host may not grant.
+    """
+    probe = tmp_path / "_symlink_probe"
+    try:
+        os.symlink(str(tmp_path), str(probe))
+    except (OSError, NotImplementedError, AttributeError):
+        pytest.skip("host cannot create symlinks (Windows needs Developer Mode)")
+    else:
+        probe.unlink()
+
+
 # ── read scope ────────────────────────────────────────────────────────────────
 
 class TestReadScope:
@@ -131,6 +149,7 @@ class TestDenyAndSymlinks:
     def test_symlink_inside_root_pointing_out_is_denied(self, dirs):
         # default follow_symlinks=False → the REAL target is checked, so a link
         # inside the allowed root that points outside is refused.
+        _require_symlinks(dirs["root"])
         target = dirs["outside"] / "secret.txt"
         target.write_text("s")
         link = dirs["allowed"] / "link"
@@ -139,6 +158,7 @@ class TestDenyAndSymlinks:
 
     def test_follow_symlinks_true_allows_logical_path(self, dirs):
         # documents the less-safe mode: the logical path within allow is accepted
+        _require_symlinks(dirs["root"])
         target = dirs["outside"] / "secret.txt"
         target.write_text("s")
         link = dirs["allowed"] / "link2"

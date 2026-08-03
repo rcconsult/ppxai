@@ -203,6 +203,15 @@ is removed — debt Item 52 retired).
   changes (`/clear`, `/compact`, load) emit one discrete `state_sync`
   through the command envelope. The field is deliberately NOT in the
   `state_sync` whitelist — no per-message push traffic.
+- **Config-error fail-safe was incomplete for `execution.run.grounding`.**
+  When the config source itself could not be read, `get_execution_run_config()`
+  still consulted the *legacy* `tools.web_search.oneshot_grounding` key —
+  a second, still-readable source — so a box whose config failed to load
+  could keep provider-native search ON while every other `execution.*`
+  knob correctly fell back to off. Both keys now resolve to `false` when
+  the config is unreadable (an absent `execution` block is still normal
+  and resolves defaults as before). A capability must not survive the
+  failure of the config that governs it.
 - Concurrent-run web_search cost misattribution: the process-global
   reset-on-read usage channel replaced by a per-call ContextVar holder
   (affected interactive chat too).

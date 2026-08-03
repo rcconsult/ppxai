@@ -99,6 +99,34 @@ class TestExecutionRunConfig:
                 "web_search": False, "grounding": False,
             }
 
+    def test_config_error_defeats_the_legacy_grounding_dual_read(self):
+        """An unreadable config must not leave `grounding` enabled via the
+        LEGACY key.
+
+        `get_execution_run_config` reads two sources: the `execution` block
+        and — only when `execution.run.grounding` is absent — the legacy
+        `tools.web_search.oneshot_grounding`. Patching the first still left
+        the second readable, so a box whose config failed to load kept
+        native search ON. This test pins the fail-safe by making the legacy
+        key TRUE while the config source is broken; the old code returned
+        `grounding: True` here.
+
+        (It also made `test_config_error_fails_to_defaults` order-dependent:
+        it passed only while no earlier test had left the legacy key set in
+        the shared ConfigStore.)
+        """
+        from ppxai.config import execution as exec_mod
+
+        with patch.object(
+            exec_mod, "get_config", side_effect=RuntimeError("boom")
+        ), patch(
+            "ppxai.config.tools.get_tool_config",
+            return_value={"oneshot_grounding": True},
+        ):
+            assert exec_mod.get_execution_run_config() == {
+                "web_search": False, "grounding": False,
+            }
+
     def test_loader_passes_execution_block_through(self, tmp_path, monkeypatch):
         """REGRESSION (caught live in the F3 trial): load_config()'s return
         dict is a top-level WHITELIST. The execution block parsed fine in the

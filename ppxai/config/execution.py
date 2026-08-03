@@ -15,11 +15,31 @@ from typing import Any, Dict
 from .store import get_config
 
 
-def get_execution_config() -> Dict[str, Any]:
-    """The raw top-level `execution` block (absent → {})."""
+class _ConfigUnavailable(Exception):
+    """Raised internally when the config source itself failed to load.
+
+    Distinguishes "config says nothing about execution" (an absent block —
+    normal, resolve defaults) from "config could not be read at all" (a
+    hard error — every `execution.*` reader must fail SAFE, and no reader
+    may fall back to a second, still-readable source; see
+    `get_execution_run_config`'s dual-read).
+    """
+
+
+def _read_execution_block() -> Dict[str, Any]:
+    """The raw top-level `execution` block, or raise `_ConfigUnavailable`."""
     try:
-        return dict((get_config() or {}).get("execution", {}) or {})
-    except Exception:
+        cfg = get_config() or {}
+    except Exception as exc:  # config source unreadable — not just absent
+        raise _ConfigUnavailable(str(exc)) from exc
+    return dict(cfg.get("execution", {}) or {})
+
+
+def get_execution_config() -> Dict[str, Any]:
+    """The raw top-level `execution` block (absent OR unreadable → {})."""
+    try:
+        return _read_execution_block()
+    except _ConfigUnavailable:
         return {}
 
 
@@ -38,8 +58,18 @@ def get_execution_run_config() -> Dict[str, Any]:
       Dual-read: falls back to the legacy `tools.web_search
       .oneshot_grounding` key (shipped v1.19.0) until that key is retired;
       an explicit `execution.run.grounding` wins over the legacy key.
+
+    Fail-safe: if the config source itself is unreadable, BOTH keys resolve
+    to False — including `grounding`, whose legacy dual-read would otherwise
+    reach a second, still-readable source (`tools.web_search
+    .oneshot_grounding`) and silently enable native search on a box whose
+    config failed to load. A capability must never survive the failure of
+    the config that governs it.
     """
-    run = dict(get_execution_config().get("run", {}) or {})
+    try:
+        run = dict(_read_execution_block().get("run", {}) or {})
+    except _ConfigUnavailable:
+        return {"web_search": False, "grounding": False}
     out: Dict[str, Any] = {"web_search": bool(run.get("web_search", False))}
     if "grounding" in run:
         out["grounding"] = bool(run["grounding"])

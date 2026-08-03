@@ -70,8 +70,12 @@ class TestFindLibreOffice:
         assert lo.libreoffice_available() is False
 
     def test_macos_well_known_includes_app_bundle(self, monkeypatch):
+        # Compare with as_posix(): `str(Path(...))` renders with the HOST
+        # separator, so a hardcoded "/"-joined needle never matches when this
+        # suite runs on Windows (the branch itself is platform-independent —
+        # it reads sys.platform, which is patched here).
         monkeypatch.setattr(lo.sys, "platform", "darwin")
-        paths = [str(p) for p in lo._well_known_paths()]
+        paths = [p.as_posix() for p in lo._well_known_paths()]
         assert any("LibreOffice.app/Contents/MacOS/soffice" in p for p in paths)
 
     # NB: the Windows branch isn't exercised here — monkeypatching os.name
