@@ -194,6 +194,18 @@ async def get_config_path():
     return {"path": str(config_path) if config_path else None}
 
 
+@router.get("/config/execution")
+async def get_execution_settings():
+    """U4 (ADR 0011): the `execution.*` knobs the clients render UX from.
+
+    `collect` drives the Collect affordances (auto = watcher auto-merges,
+    yes = Collect button/verb, no = button disabled + verb warns).
+    """
+    from ...config.execution import get_execution_collect
+
+    return {"collect": get_execution_collect()}
+
+
 @router.post("/config/reload")
 async def reload_config_endpoint():
     """Reload configuration from file without restarting server.

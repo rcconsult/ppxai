@@ -551,6 +551,9 @@ def _pin_execution_run_config(monkeypatch):
         exec_mod, "get_execution_run_config",
         lambda: {"web_search": False, "grounding": False},
     )
+    # U4: same determinism for execution.collect — the T6 hold expectations
+    # here assume the shipped default ("yes" → hold).
+    monkeypatch.setattr(exec_mod, "get_execution_collect", lambda: "yes")
 
 
 class TestTaskTierGate:

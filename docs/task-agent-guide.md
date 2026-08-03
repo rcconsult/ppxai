@@ -130,13 +130,20 @@ continues without the action.
 > read_file` on an unsealed host can read any file the process can reach with
 > no prompt. See **Item 46** in [debt-inventory.md](debt-inventory.md).
 
-**Held results (T6).** A successful top-level run lands in
+**Held results (T6) + `execution.collect` (U4, v1.19.1).** Under the
+default `execution.collect: "yes"`, a successful top-level run lands in
 `completed_pending_ack`: the run has exited (budget freed, sandbox torn
-down) but the result is held until `/task collect <id>` collects it →
-`finalized`. A disconnected UI never loses a result. Uncollected holds are
-finalized by a lazy reaper after `tools.agent.result_retention_s` (default
-3600 s; `0` = hold until explicit ack; data is never deleted, only marked
-collected).
+down) but the result is held until `/task collect <id>` (or the Collect
+button) collects it → `finalized` **and plain-merges the result text into
+your active session** — the model sees it on your next turn. A
+disconnected UI never loses a result. Uncollected holds are finalized by a
+lazy reaper after `tools.agent.result_retention_s` (default 3600 s; `0` =
+hold until explicit ack; data is never deleted, only marked collected).
+Other `execution.collect` values: `"auto"` — runs auto-finalize and the
+watching client merges the result automatically on completion; `"no"` —
+collect is impossible (button disabled, verb warns with the enable hint;
+the result stays on the run record only). One global key covering `/run`
+and `/task`.
 
 **Resume (T7).** `interrupted` / `cancelled` runs whose checkpoint is
 conclusive can continue under the same run id: `/task resume <id>` (or the

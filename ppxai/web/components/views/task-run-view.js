@@ -38,6 +38,7 @@ class TaskRunView extends AgentRunView {
         this._consentEl = null;
         this._cancelBtn = null;
         this._ackBtn = null;
+        this._ackDisabledHint = null;  // U4: execution.collect="no" affordance
         this._resumeBtn = null;
         if (meta) this._absorbMeta(meta);
         if (meta && meta.status) this._status = meta.status;
@@ -130,6 +131,16 @@ class TaskRunView extends AgentRunView {
 
     /** Wire the Collect button (T6: ack a held result) to the controller. */
     setOnAck(fn) { this._onAck = fn; }
+
+    /**
+     * U4 (execution.collect="no"): render Collect visibly DISABLED with the
+     * enable hint instead of hiding it — the user should see the affordance
+     * exists and is switched off.
+     */
+    setAckDisabled(hint) {
+        this._ackDisabledHint = hint || 'Collect is disabled (execution.collect="no")';
+        this._syncAckBtn();
+    }
 
     /** Wire the Resume button (T7: continue from checkpoint) to the controller. */
     setOnResume(fn) { this._onResume = fn; }
@@ -240,9 +251,20 @@ class TaskRunView extends AgentRunView {
         this._cancelBtn.style.display = done ? 'none' : '';
     }
 
-    /** Collect is visible ONLY while a result is held (T6). */
+    /** Collect is visible ONLY while a result is held (T6) — except under
+     * execution.collect="no" (U4), where it shows DISABLED on any finished
+     * success state so the switched-off affordance stays discoverable. */
     _syncAckBtn() {
         if (!this._ackBtn) return;
+        if (this._ackDisabledHint) {
+            const success = ['completed', 'completed_pending_ack', 'finalized']
+                .includes(this._status);
+            this._ackBtn.style.display = success ? '' : 'none';
+            this._ackBtn.disabled = true;
+            this._ackBtn.title = this._ackDisabledHint;
+            return;
+        }
+        this._ackBtn.disabled = false;
         this._ackBtn.style.display =
             this._status === 'completed_pending_ack' ? '' : 'none';
     }

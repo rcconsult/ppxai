@@ -55,6 +55,27 @@ def get_execution_run_config() -> Dict[str, Any]:
     return out
 
 
+def get_execution_collect() -> str:
+    """`execution.collect` — how run results reach the active session (U4,
+    ADR 0011). One global key covering the `/run` + `/task` families:
+
+    - `"auto"` — a finished run always auto-merges its result into the
+      active session; no user step (hold_result=False at launch, the
+      watching client merges on completion).
+    - `"yes"` (default — the shipped T6 behavior) — the run HOLDS its
+      result (`completed_pending_ack`) and the user collects explicitly
+      (Collect button / `collect` verb), which finalizes AND merges.
+    - `"no"` — collect impossible: runs auto-finalize, the GUI renders the
+      Collect button disabled, the `collect` verb warns with the enable
+      hint, and no merge path is offered. The result stays on the run
+      record only.
+
+    Unknown values normalize to `"yes"` (fail toward the shipped default).
+    """
+    raw = str(get_execution_config().get("collect", "yes") or "yes").lower()
+    return raw if raw in ("auto", "yes", "no") else "yes"
+
+
 def get_effective_oneshot_path(provider: str, model: str) -> str:
     """The ADR 0009 §4 gating truth table, resolved from config alone.
 

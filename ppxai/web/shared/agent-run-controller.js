@@ -86,6 +86,61 @@ class AgentRunController {
         // runs (null = unfiltered). Subclasses override both.
         this._cmd = '/task';
         this._kind = null;
+        // U4: execution.collect mode cache (fetched once per controller) and
+        // the run ids this client already merged (idempotence guard — the
+        // auto path and a manual collect must not double-merge).
+        this._collectCfg = null;
+        this._merged = new Set();
+    }
+
+    /** U4: cached execution.collect mode ('auto'|'yes'|'no'; default 'yes'). */
+    async _collectMode() {
+        if (this._collectCfg) return this._collectCfg;
+        try {
+            const cfg = await this.app.apiClient.get('/config/execution');
+            this._collectCfg = ['auto', 'yes', 'no'].includes(cfg && cfg.collect)
+                ? cfg.collect : 'yes';
+        } catch (e) {
+            this._collectCfg = 'yes';
+        }
+        return this._collectCfg;
+    }
+
+    /**
+     * U4: plain-merge a run's result into the active session (owner decision
+     * Q3 — the text enters the conversation as-is; the model sees exactly
+     * what the run answered on the next turn). Deduped per run id.
+     */
+    async _mergeRun(runId) {
+        if (this._merged.has(runId)) {
+            this.app.showSystemMessage(`ℹ️ ${runId} — already merged into this session.`);
+            return true;
+        }
+        let res;
+        try {
+            res = await this.app.apiClient.post('/sessions/merge-run-result', { run_id: runId });
+        } catch (e) {
+            this.app.showSystemMessage(`❌ Could not merge ${runId}: ${this._errText(e)}`);
+            return false;
+        }
+        this._merged.add(runId);
+        this.app.showSystemMessage(
+            `📥 ${runId} — result merged into the active session (${(res && res.chars) || 0} chars).`
+        );
+        return true;
+    }
+
+    /** U4 "auto": merge on watcher-observed completion, once per run. */
+    async _autoMergeIfConfigured(runId) {
+        if ((await this._collectMode()) === 'auto') await this._mergeRun(runId);
+    }
+
+    /** U4 "no": disable the pane's Collect button with the enable hint. */
+    async _applyCollectAffordance(view) {
+        if ((await this._collectMode()) === 'no'
+            && view && typeof view.setAckDisabled === 'function') {
+            view.setAckDisabled('Collect is disabled (execution.collect="no") — set it to "yes" or "auto" in ppxai-config.json.');
+        }
     }
 
     /**
@@ -112,6 +167,9 @@ class AgentRunController {
         if (view && typeof view.setOnResume === 'function') {
             view.setOnResume(() => this.resume(runId));
         }
+        // U4: under execution.collect="no" the Collect button renders
+        // disabled with the enable hint (async — config fetch is cached).
+        void this._applyCollectAffordance(view);
     }
 
     /**
@@ -318,24 +376,33 @@ class AgentRunController {
     }
 
     /**
-     * Collect a held result (T6): POST /runs/{id}/ack — the receipt that
-     * flips completed_pending_ack → finalized. The result body stays on the
-     * run record (ack only marks it collected / GC-eligible). Shared by the
-     * pane's Collect button (via _wireView) and the `/task collect` verb
-     * (U2 rename; `ack` stays as alias).
+     * Collect (T6 + U4): finalize a held result AND plain-merge it into the
+     * active session. Shared by the pane's Collect button (via _wireView)
+     * and the `collect` verb (`ack` stays as alias).
+     *
+     * execution.collect: "no" → refused with the enable hint (the button is
+     * also disabled); "yes"/"auto" → the /ack receipt is issued when the
+     * run is actually held (a run that already auto-finalized refuses the
+     * ack — that's fine, the merge is still the point of collect).
      */
     async ack(runId) {
         if (!runId) { this.app.showSystemMessage(`Usage: \`${this._cmd} collect <id>\``); return false; }
-        try {
-            await this.app.apiClient.post(`/v1/agent/runs/${runId}/ack`, {});
-        } catch (e) {
-            this.app.showSystemMessage(`❌ Could not ack ${runId}: ${this._errText(e)}`);
+        const mode = await this._collectMode();
+        if (mode === 'no') {
+            this.app.showSystemMessage(
+                '🚫 Collect is disabled (execution.collect="no") — set it to "yes" or "auto" in ppxai-config.json to enable it.'
+            );
             return false;
         }
-        this.app.showSystemMessage(`📬 ${runId} — result collected (finalized)`);
-        const view = this._liveView(runId);
-        if (view) view.setStatus('finalized');
-        return true;
+        try {
+            await this.app.apiClient.post(`/v1/agent/runs/${runId}/ack`, {});
+            this.app.showSystemMessage(`📬 ${runId} — result collected (finalized)`);
+            const view = this._liveView(runId);
+            if (view) view.setStatus('finalized');
+        } catch (e) {
+            // Not held (already finalized / auto mode) — soft; merge decides.
+        }
+        return this._mergeRun(runId);
     }
 
     /**
@@ -499,10 +566,15 @@ class AgentRunController {
         if (AgentRunController._SUCCESS.has(run.status)) {
             // completed / completed_pending_ack / finalized — all carry the
             // result body. A held run (T6) renders it too; collecting is the
-            // pane's explicit Collect button / `/task collect`, never a silent
-            // auto-ack (the user decides when the receipt is issued).
+            // pane's explicit Collect button / `collect` verb, never a silent
+            // auto-ack (the user decides when the receipt is issued) — EXCEPT
+            // under execution.collect="auto" (U4), where a just-finished run
+            // auto-merges into the active session (announce=true = the
+            // watcher observed the completion; focus() refreshes pass false
+            // so reopening an old run never re-merges).
             if (view) view.setResult(run.result || '');
             else this.app.addMessage('assistant', run.result || '(empty result)');
+            if (announce && run.result) void this._autoMergeIfConfigured(runId);
         } else {
             // failed / cancelled / interrupted
             const msg = run.error || `Run ${run.status}`;

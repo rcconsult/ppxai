@@ -139,6 +139,32 @@ class TestRunFamilyParity:
     def test_run_routed_before_factory_dispatch_in_vscode(self):
         assert "getRunController().handle(argsText)" in _read(TS_CHAT_PANEL)
 
+    def test_collect_semantics_parity(self):
+        # U4 (ADR 0011): both clients drive the same collect machinery —
+        # the config fetch, the merge endpoint, the "no" refusal hint, and
+        # the auto-merge-on-watcher-completion hook.
+        web = _read(WEB_BASE)
+        ts = _read(TS_CONTROLLER)
+        ts_http = _read(TS_HTTP_CLIENT)
+        for src in (web, ts):
+            assert "Collect is disabled" in src, "no-mode hint missing"
+        assert "'/config/execution'" in web
+        assert "/config/execution" in ts_http
+        assert "'/sessions/merge-run-result'" in web
+        assert "/sessions/merge-run-result" in ts_http
+        assert "_autoMergeIfConfigured" in web
+        assert "autoMergeIfConfigured" in ts
+        # The auto merge fires only on the watcher's terminal render.
+        assert "this.renderRun(run, true)" in ts
+
+    def test_collect_no_disables_the_button_web(self):
+        # The pane renders Collect DISABLED (not hidden) under "no".
+        view = _read(ROOT / "ppxai" / "web" / "components" / "views"
+                     / "task-run-view.js")
+        assert "setAckDisabled" in view
+        assert "_ackDisabledHint" in view
+        assert "setAckDisabled" in _read(WEB_BASE)  # controller applies it
+
     def test_agentrun_family_retired(self):
         # Hard removal (no aliases): the dispatcher no longer routes the
         # old commands, the catalogs no longer list them, and completion

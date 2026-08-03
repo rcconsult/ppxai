@@ -1,5 +1,5 @@
 """
-Session management endpoints (save, load, clear, restore).
+Session management endpoints (save, load, clear, restore, merge).
 """
 
 from pathlib import Path
@@ -11,6 +11,72 @@ from ...engine.session import SessionManager as EngineSessionManager
 from ..state import Session, get_session, with_drained_events
 
 router = APIRouter()
+
+
+@router.post("/sessions/merge-run-result")
+async def merge_run_result(
+    request: Request,
+    run_id: str = Body(..., embed=True),
+    s: Session = Depends(get_session),
+):
+    """U4 (ADR 0011): plain-merge a run's result into the active session.
+
+    The run enters the conversation as a plain user(task) → assistant
+    (result) exchange — exactly the texts the run ran on and answered
+    with, no provenance tagging, no special block type (owner decision
+    Q3). The PAIR shape is load-bearing: `validate_and_fix_alternation`
+    drops leading assistant messages and collapses same-role neighbors,
+    so a lone merged message of either role can silently vanish from the
+    next provider request (caught live in the U4 trial — the model
+    answered "no passphrase appeared" while the merge sat dropped). A
+    user→assistant pair survives the fixer anywhere in the history.
+    Driven by the Collect button / `collect` verb (execution.collect=
+    "yes") or automatically by the watching client ("auto"); refused
+    entirely under "no" (403 with the enable hint).
+
+    Lives on the SESSION surface (it appends to the caller's active
+    session), which is loopback-exempt UI — so an OWNED run's result is
+    guarded here: a remote caller must be the run's owner (the auth layer
+    already validated their bearer to get this far); loopback keeps the
+    same physically-on-the-host trust basis as the UI exemption itself
+    (the browser deliberately scopes its bearer to /v1/* and cannot
+    present it here).
+    """
+    from ...config.execution import get_execution_collect
+    from ...engine.types import Message
+    from ..auth import _is_loopback
+    from ..state import get_agent_run_registry
+    from .agent_v1 import _caller_owner
+
+    if get_execution_collect() == "no":
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                "Collect is disabled (execution.collect=\"no\"). Set "
+                "execution.collect to \"yes\" or \"auto\" in "
+                "ppxai-config.json to enable merging run results."
+            ),
+        )
+    meta = get_agent_run_registry().get_run(run_id)
+    if meta is None:
+        raise HTTPException(status_code=404, detail=f"Unknown run: {run_id}")
+    run_owner = getattr(meta, "owner", None)
+    if run_owner is not None and not _is_loopback(request):
+        if _caller_owner(request) != run_owner:
+            raise HTTPException(
+                status_code=403,
+                detail=f"Not authorized for run {run_id}.",
+            )
+    result = getattr(meta, "result", None)
+    if not result:
+        raise HTTPException(
+            status_code=409, detail=f"Run {run_id} has no result to merge."
+        )
+    s.engine.session.add_message(Message(role="user", content=meta.task))
+    s.engine.session.add_message(Message(role="assistant", content=result))
+    return with_drained_events(
+        {"merged": True, "run_id": run_id, "chars": len(result)}, s.engine
+    )
 
 
 @router.get("/sessions")

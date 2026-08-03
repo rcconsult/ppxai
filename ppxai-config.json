@@ -573,11 +573,12 @@
     }
   },
   "execution": {
-    "__comment": "ADR 0010/0011 third config axis: how each execution surface runs. execution.run.* governs the one-off tier (/run family + /v1/oneshot facade). web_search: expose the web_search tool loop to oneshot (ADR 0009 enrichment, default off). grounding: provider-NATIVE search on oneshot (supersedes tools.web_search.oneshot_grounding; dual-read keeps the legacy key working).",
+    "__comment": "ADR 0010/0011 third config axis: how each execution surface runs. execution.run.* governs the one-off tier (/run family + /v1/oneshot facade). web_search: expose the web_search tool loop to oneshot (ADR 0009 enrichment, default off). grounding: provider-NATIVE search on oneshot (supersedes tools.web_search.oneshot_grounding; dual-read keeps the legacy key working). collect (U4): how /run + /task results reach the active session — auto (always auto-merge on completion) | yes (held until the Collect button/verb finalizes+merges; default) | no (collect disabled: button greyed, verb warns, result stays on the run record).",
     "run": {
       "web_search": false,
       "grounding": false
-    }
+    },
+    "collect": "yes"
   },
   "tools": {
     "overrides": {

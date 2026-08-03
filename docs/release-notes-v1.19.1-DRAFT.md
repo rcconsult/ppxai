@@ -22,7 +22,31 @@ memory changes.
 | `/agentrun <task>` | **`/run <prompt>`** — same async one-off, now `kind=oneshot` on the full run gears with the U2 grammar; **no flags** (the grant is config-decided: `execution.run.web_search` on → `{web_search}`, off → closed-book) | U3 |
 | `/agentruns` | **`/run ls`** — kind-filtered (`/task ls` now shows only task runs too) | U3 |
 
-*(U4's `execution.collect` entry lands here when that stage commits.)*
+## New: `execution.collect` — run results into your session (U4)
+
+One global key for the `/run` + `/task` families (default **`yes`** — the
+shipped T6 behavior):
+
+- **`auto`** — a finished run merges its result into the active session
+  automatically (runs auto-finalize; the watching client merges once, on
+  completion — reopening an old run never re-merges).
+- **`yes`** — the run holds its result (📬) until you collect it; **collect
+  now = finalize + merge**: the Collect button / `collect` verb appends the
+  result to the active session, so the model sees it on your next turn.
+- **`no`** — collect impossible: the GUI renders the Collect button
+  **disabled** with the enable hint, the `collect` verb warns, and no merge
+  path exists. The result stays on the run record only.
+
+Merge is **plain** (owner decision Q3): the run enters the conversation
+as an ordinary user(task) → assistant(result) exchange — exactly the
+texts the run ran on and answered with, no provenance tagging. (The pair
+shape is deliberate: session alternation-fixing silently drops a lone
+leading assistant message and collapses same-role neighbors, so a
+single-message merge could vanish from the next provider request —
+caught in the live trial.) New wiring: `GET /config/execution` (clients
+read the mode) and `POST /sessions/merge-run-result` (owner-guarded for
+remote callers; loopback keeps the UI exemption's on-the-host trust
+basis).
 
 U3 behavior changes on `POST /v1/agent/run` (in-development `/v1/agent/*`
 surface — not the frozen `/v1/oneshot`): runs are stamped `kind=oneshot`;

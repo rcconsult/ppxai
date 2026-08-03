@@ -82,6 +82,7 @@ from .providers import (
 
 # Execution surfaces (ADR 0010 third axis; ADR 0011 one-off tier)
 from .execution import (
+    get_execution_collect,
     get_execution_config,
     get_execution_run_config,
 )
@@ -276,6 +277,7 @@ __all__ = [
     "get_default_model",
     "validate_config",
     # Tool functions
+    "get_execution_collect",
     "get_execution_config",
     "get_execution_run_config",
     "get_tool_config",

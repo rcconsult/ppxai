@@ -407,6 +407,10 @@ async def create_agent_run(req: AgentRunRequest, request: Request) -> AgentRunRe
     from ...config.execution import get_execution_run_config
 
     web_search_on = bool(get_execution_run_config().get("web_search"))
+    # U4 (ADR 0011): execution.collect drives the T6 hold. "yes" → hold
+    # until collected; "auto"/"no" → auto-finalize (the watching client
+    # merges on "auto"; "no" offers no merge path at all).
+    hold = _collect_holds()
     if web_search_on:
         egress_hosts = _with_tool_egress_defaults(
             _web_search_egress_hosts(), ["web_search"]
@@ -417,7 +421,7 @@ async def create_agent_run(req: AgentRunRequest, request: Request) -> AgentRunRe
             network=list(egress_hosts),
             budget={"iterations": ONESHOT_SEARCH_ITERATIONS},
             owner=_caller_owner(request),
-            hold_result=True,  # T6 hold — the pane/`collect` verb finalizes
+            hold_result=hold,
             system=req.system,
         )
         runner = build_task_runner(
@@ -437,7 +441,7 @@ async def create_agent_run(req: AgentRunRequest, request: Request) -> AgentRunRe
         task=req.task, kind="oneshot", tools=req.tools,
         provider=provider_name, model=model,
         owner=_caller_owner(request),
-        hold_result=True,  # T6 hold — same collect contract as the grant path
+        hold_result=hold,  # same execution.collect contract as the grant path
     )
 
     async def _runner(m) -> str:
@@ -795,6 +799,21 @@ def _merge_task_fields(req: AgentTaskRequest) -> dict:
     }
 
 
+def _collect_holds() -> bool:
+    """U4 (ADR 0011): does execution.collect map to a T6 hold at launch?
+
+    "yes" → hold_result=True (held until collected); "auto"/"no" →
+    hold_result=False (auto-finalize — on "auto" the watching client
+    merges, on "no" no merge path exists). Config errors fall back to the
+    shipped default ("yes" — hold)."""
+    from ...config.execution import get_execution_collect
+
+    try:
+        return get_execution_collect() == "yes"
+    except Exception:
+        return True
+
+
 def _web_search_banned(tools: list) -> bool:
     """True when the grant includes web_search but the operator disabled it.
 
@@ -985,8 +1004,9 @@ async def create_agent_task(req: AgentTaskRequest, request: Request) -> AgentRun
         # T6 two-phase termination: a top-level /task run HOLDS its result
         # (completed_pending_ack) until POST .../ack collects it, so a
         # disconnected UI never loses it. Sub-agent children don't hold —
-        # the awaiting parent is their collector.
-        hold_result=True,
+        # the awaiting parent is their collector. U4: execution.collect
+        # maps onto the hold ("yes" → hold; "auto"/"no" → auto-finalize).
+        hold_result=_collect_holds(),
         # T7: persist the remaining runner inputs so POST .../resume can
         # rebuild the scoped runner faithfully after an interrupt/restart.
         system=eff["system"],

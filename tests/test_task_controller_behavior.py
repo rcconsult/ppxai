@@ -50,7 +50,11 @@ function makeApp(opts) {{
         if (opts.postThrows) throw new Error(opts.postThrows);
         return opts.postReturn || {{run_id: "run_x", status: "running"}};
       }},
-      get: async (_url) => {{ app._gets++; return opts.getReturn || {{runs: []}}; }},
+      get: async (url) => {{
+        app._gets++;
+        if (opts.getByUrl && url in opts.getByUrl) return opts.getByUrl[url];
+        return opts.getReturn || {{runs: []}};
+      }},
     }},
     rightPanelFrame: {{ getViewByPath: () => null, push: () => {{}} }},
   }};
@@ -327,6 +331,55 @@ function makeApp(opts) {{
     await c.resume("run_5");
     assert(app._msgs.some((m) => /work already captured/.test(m)),
       "server refusal reason not surfaced verbatim");
+  }}
+
+  // --- Scenario 12 (U4): collect under execution.collect="no" refuses ---
+  {{
+    const app = makeApp({{ getByUrl: {{ '/config/execution': {{ collect: 'no' }} }} }});
+    const c = new TaskController(app);
+    const ok = await c.ack('run_7');
+    assert(ok === false, "collect must refuse under no");
+    assert(app._posts.length === 0, "no POSTs under collect=no");
+    assert(app._msgs.some((m) => /Collect is disabled/.test(m)), "disable hint shown");
+  }}
+
+  // --- Scenario 13 (U4): collect = ack + merge; merge deduped per run ---
+  {{
+    const app = makeApp({{
+      getByUrl: {{ '/config/execution': {{ collect: 'yes' }} }},
+      postReturn: {{ merged: true, chars: 5 }},
+    }});
+    const c = new TaskController(app);
+    await c.ack('run_7');
+    const ackPosts = () => app._posts.filter(([u]) => u === "/v1/agent/runs/run_7/ack").length;
+    const mergePosts = () => app._posts.filter(([u]) => u === "/sessions/merge-run-result").length;
+    assert(ackPosts() === 1, "ack POSTed");
+    assert(mergePosts() === 1, "merge POSTed");
+    assert(app._posts.some(([u, b]) => u === "/sessions/merge-run-result" && b.run_id === "run_7"),
+      "merge body carries the run id");
+    await c.ack('run_7');   // second collect: ack retried (soft), merge deduped
+    assert(mergePosts() === 1, "merge must dedupe per run id");
+    assert(app._msgs.some((m) => /already merged/.test(m)), "dedupe note shown");
+  }}
+
+  // --- Scenario 14 (U4): auto-merge fires ONLY on the watcher's terminal
+  // render (announce=true); a focus() refresh (announce=false) never merges.
+  {{
+    const app = makeApp({{
+      getByUrl: {{ '/config/execution': {{ collect: 'auto' }} }},
+      postReturn: {{ merged: true, chars: 1 }},
+    }});
+    const c = new TaskController(app);
+    const mergePosts = () => app._posts.filter(([u]) => u === "/sessions/merge-run-result").length;
+    c._renderTerminal('run_8', {{ status: 'completed', result: 'x' }}, false);
+    await new Promise((r) => setTimeout(r, 0));
+    await new Promise((r) => setTimeout(r, 0));
+    assert(mergePosts() === 0, "focus refresh must not auto-merge");
+    c._renderTerminal('run_8', {{ status: 'completed', result: 'x' }}, true);
+    await new Promise((r) => setTimeout(r, 0));
+    await new Promise((r) => setTimeout(r, 0));
+    await new Promise((r) => setTimeout(r, 0));
+    assert(mergePosts() === 1, "watcher completion must auto-merge under auto");
   }}
 
   console.log("ALL OK");

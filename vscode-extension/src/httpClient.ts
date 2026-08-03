@@ -373,6 +373,41 @@ export class HttpClient {
     }
 
     /**
+     * U4 (ADR 0011): GET /config/execution — the execution.collect mode
+     * the collect UX renders from (auto | yes | no).
+     */
+    async configExecution(): Promise<{ collect: string }> {
+        const response = await fetch(`${this.baseUrl}/config/execution`, {
+            headers: this.getHeaders()
+        });
+        if (!response.ok) {
+            throw new Error(`Failed to read execution config: ${response.statusText}`);
+        }
+        return response.json() as Promise<{ collect: string }>;
+    }
+
+    /**
+     * U4 (ADR 0011): POST /sessions/merge-run-result — plain-merge a run's
+     * result text into the active session (the model sees it next turn).
+     */
+    async mergeRunResult(runId: string): Promise<{ merged: boolean; chars: number }> {
+        const response = await fetch(`${this.baseUrl}/sessions/merge-run-result`, {
+            method: 'POST',
+            headers: this.getHeaders(true),
+            body: JSON.stringify({ run_id: runId })
+        });
+        if (!response.ok) {
+            let detail = response.statusText;
+            try {
+                const body = await response.json() as any;
+                if (body?.detail) { detail = body.detail; }
+            } catch { /* keep statusText */ }
+            throw new Error(detail);
+        }
+        return response.json() as Promise<{ merged: boolean; chars: number }>;
+    }
+
+    /**
      * Reload configuration from file without restarting server
      */
     async reloadConfig(): Promise<{ success: boolean; message: string; config_path: string | null }> {

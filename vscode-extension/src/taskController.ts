@@ -86,6 +86,10 @@ export interface TaskBackend {
     agentRunRespond(runId: string, body: Record<string, any>): Promise<any>;
     agentRunAck(runId: string): Promise<any>;
     agentRunResume(runId: string): Promise<any>;
+    /** U4: GET /config/execution — the collect mode the UX renders from. */
+    configExecution(): Promise<{ collect: string }>;
+    /** U4: POST /sessions/merge-run-result — plain-merge into the session. */
+    mergeRunResult(runId: string): Promise<{ merged: boolean; chars: number }>;
 }
 
 /** Consent answer from the QuickPick adapter; undefined = dismissed (deny). */
@@ -312,6 +316,10 @@ export class TaskController {
     // in usage/hint strings and the ls kind filter. RunController overrides.
     protected cmd = '/task';
     protected kind: string | undefined = 'task';
+    // U4: execution.collect mode cache + run ids already merged (idempotence
+    // guard — the auto path and a manual collect must not double-merge).
+    protected collectCfg: string | null = null;
+    protected merged = new Set<string>();
     // Poll cadence for the watcher (overridable in tests). Same contract as
     // the web degraded path: back off, no run-duration ceiling, give up only
     // after consecutive GET failures.
@@ -546,17 +554,60 @@ export class TaskController {
         return true;
     }
 
-    /** collect <id> — collect a held result (T6; `ack` stays as alias). */
-    async ack(runId: string): Promise<boolean> {
-        if (!runId) { this.ui.system(`Usage: \`${this.cmd} collect <id>\``); return false; }
+    /** U4: cached execution.collect mode ('auto'|'yes'|'no'; default 'yes'). */
+    protected async collectMode(): Promise<string> {
+        if (this.collectCfg) { return this.collectCfg; }
         try {
-            await this.backend.agentRunAck(runId);
+            const cfg = await this.backend.configExecution();
+            this.collectCfg = ['auto', 'yes', 'no'].includes(cfg?.collect)
+                ? cfg.collect : 'yes';
+        } catch {
+            this.collectCfg = 'yes';
+        }
+        return this.collectCfg;
+    }
+
+    /** U4: plain-merge a run's result into the active session (Q3), deduped. */
+    protected async mergeRun(runId: string): Promise<boolean> {
+        if (this.merged.has(runId)) {
+            this.ui.system(`ℹ️ ${runId} — already merged into this session.`);
+            return true;
+        }
+        let res: { merged: boolean; chars: number };
+        try {
+            res = await this.backend.mergeRunResult(runId);
         } catch (e: any) {
-            this.ui.system(`❌ Could not ack ${runId}: ${this.errText(e)}`);
+            this.ui.system(`❌ Could not merge ${runId}: ${this.errText(e)}`);
             return false;
         }
-        this.ui.system(`📬 ${runId} — result collected (finalized)`);
+        this.merged.add(runId);
+        this.ui.system(`📥 ${runId} — result merged into the active session (${res?.chars ?? 0} chars).`);
         return true;
+    }
+
+    /**
+     * collect <id> — finalize a held result AND merge it into the active
+     * session (T6 + U4; `ack` stays as alias). execution.collect: "no" →
+     * refused with the enable hint; "yes"/"auto" → the /ack receipt is
+     * issued when the run is actually held (an already-finalized run
+     * refuses the ack — soft; the merge is still the point of collect).
+     */
+    async ack(runId: string): Promise<boolean> {
+        if (!runId) { this.ui.system(`Usage: \`${this.cmd} collect <id>\``); return false; }
+        const mode = await this.collectMode();
+        if (mode === 'no') {
+            this.ui.system(
+                '🚫 Collect is disabled (execution.collect="no") — set it to "yes" or "auto" in ppxai-config.json to enable it.'
+            );
+            return false;
+        }
+        try {
+            await this.backend.agentRunAck(runId);
+            this.ui.system(`📬 ${runId} — result collected (finalized)`);
+        } catch {
+            // Not held (already finalized / auto mode) — soft; merge decides.
+        }
+        return this.mergeRun(runId);
     }
 
     /** resume <id> — conditionally continue an interrupted run (T7). */
@@ -593,8 +644,13 @@ export class TaskController {
 
     // ── Internals ─────────────────────────────────────────────────────────
 
-    /** Render a run's current state into the transcript. */
-    private renderRun(run: AgentRunMeta): void {
+    /**
+     * Render a run's current state into the transcript. `justFinished` is
+     * true only on the watcher's terminal render (U4: that — and only that —
+     * triggers the execution.collect="auto" merge; a re-`get` of an old run
+     * never re-merges).
+     */
+    protected renderRun(run: AgentRunMeta, justFinished = false): void {
         const icon = STATUS_ICONS[run.status] || 'ℹ️';
         const bits = [`${icon} ${run.run_id} — ${run.status}`];
         if (run.provider || run.model) { bits.push(`${run.provider || ''} · ${run.model || ''}`); }
@@ -606,12 +662,20 @@ export class TaskController {
             if (run.status === 'completed_pending_ack') {
                 this.ui.system(`📬 result held — collect with ${this.cmd} collect ${run.run_id}`);
             }
+            if (justFinished) {
+                void this.autoMergeIfConfigured(run.run_id);
+            }
         } else if (run.error) {
             this.ui.system(`   ${run.error}`);
             if (run.resumable && (run.status === 'interrupted' || run.status === 'cancelled')) {
                 this.ui.system(`▶️ resumable — ${this.cmd} resume ${run.run_id}`);
             }
         }
+    }
+
+    /** U4 "auto": merge on watcher-observed completion, once per run. */
+    protected async autoMergeIfConfigured(runId: string): Promise<void> {
+        if ((await this.collectMode()) === 'auto') { await this.mergeRun(runId); }
     }
 
     /** Deduped detached poll watcher (parity with the web watcher contract). */
@@ -672,7 +736,7 @@ export class TaskController {
             this.ui.system(`⚠️ ${runId} — lost contact with the server; ${this.cmd} get ${runId} to retry.`);
             return;
         }
-        this.renderRun(run);
+        this.renderRun(run, true);
     }
 
     /**
