@@ -667,17 +667,25 @@ Keep the chat-line rendering as the no-panel fallback either way. Verb/status
 parity sentinel (`tests/test_vscode_task_controller.py`) is unaffected — this
 is presentation, not protocol.
 
-### Item 48 — `/clear` leaves the status-bar `Ctx:` percentage stale (AppState `context_percentage` never refreshed) [tui / rich / appstate] — ⏳ STEP 1/N FIXED (2026-07-15, `bugfix/v1.19.1` `e7b8f273`: engine + Rich)
+### Item 48 — `/clear` leaves the status-bar `Ctx:` percentage stale (AppState `context_percentage` never refreshed) [tui / rich / appstate] — ⏳ STEPS 1+2/N FIXED (step 1 `e7b8f273` engine+Rich; step 2 2026-08-03 Textual)
 
-**Status:** Rich live bug FIXED. Structural fix = register `context_percentage`
-in the `_on_messages_changed` fan-out (`EngineClient._refresh_context_percentage`),
+**Status:** Rich live bug FIXED (step 1: register `context_percentage`
+in the `_on_messages_changed` fan-out, `EngineClient._refresh_context_percentage`,
 so `/clear`/`/compact`/load/rollback auto-refresh; `handle_clear` unchanged;
-Rich re-renders each REPL loop. **Owner-locked follow-ups (not yet done):** add
-a live `Ctx` badge to **all 4 clients** — Textual (`StatusBar`, in-process),
-then Web + VSCode (field mirrored but unrendered; needs STREAM_END-piggyback
-SSE push — NOT added to `SSE_SYNC_FIELDS`, to avoid per-message spam — plus a
-render site). `↓/↑` token counter stays session-lifetime (no change, by
-decision). Tests: `tests/test_context_percentage_state.py` (8) + 171 regression.
+Rich re-renders each REPL loop). **Step 2 (Textual) DONE:** ppxaide's
+`StatusBar` gains a live `Ctx` badge — `on_mount` subscribes
+`_on_context_percentage_changed` to the AppState field (same in-process
+listener pattern as `context_attachments`/`agent_beat`), rendering `NN%`
+with Rich-parity thresholds (`~` yellow ≥80, `!` red ≥100) and hiding at
+0%. Badge id is `ctx` (the `context` id was taken by the bootstrap-scopes
+badge; the widget's pre-existing `context_tokens` reactives were dead
+plumbing — nothing ever set them). Verified via a full-app headless pilot
+(subscribe → render 42% → clear at 0). **Owner-locked follow-up (not yet
+done):** Web + VSCode (field mirrored but unrendered; needs
+STREAM_END-piggyback SSE push — NOT added to `SSE_SYNC_FIELDS`, to avoid
+per-message spam — plus a render site). `↓/↑` token counter stays
+session-lifetime (no change, by decision). Tests:
+`tests/test_context_percentage_state.py` (16) + TUI regression 292.
 
 **Planned:** `v1.19.x` (small fix). Observed live 2026-07-15 (Rich TUI,
 Qwen3.6 agent): after `/clear` wiped 26 messages, the `/context` command

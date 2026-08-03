@@ -116,3 +116,114 @@ class TestSingleProducer:
         monkeypatch.setattr(engine, "_refresh_context_percentage", spy)
         provider_ops._refresh_context_percentage(engine)
         assert called["n"] == 1
+
+
+# -----------------------------------------------------------------------------
+# Textual leg (Item 48 step 2): the `Ctx` badge in ppxaide's StatusBar
+# -----------------------------------------------------------------------------
+
+
+class _FakeStatusBar:
+    """Records the badge calls the callback makes — no Textual loop."""
+
+    def __init__(self):
+        self.added = []      # (badge_id, label, value)
+        self.removed = []
+
+    def add_badge(self, badge_id, label, value, variant="default"):
+        self.added.append((badge_id, label, value))
+
+    def remove_badge(self, badge_id):
+        self.removed.append(badge_id)
+
+
+class TestTextualCtxBadgeCallback:
+    """The pure callback logic, exercised without mounting an app."""
+
+    def _call(self, bar, pct):
+        pytest.importorskip("textual")
+        from ppxai.tui.app import PPXAIDEApp
+
+        fake_self = type("S", (), {"_status_bar": bar})()
+        PPXAIDEApp._on_context_percentage_changed(fake_self, pct)
+
+    def test_zero_removes_the_badge(self):
+        bar = _FakeStatusBar()
+        self._call(bar, 0.0)
+        assert bar.removed == ["ctx"] and bar.added == []
+
+    def test_normal_value_renders_plain_percent(self):
+        bar = _FakeStatusBar()
+        self._call(bar, 45.3)
+        assert bar.added == [("ctx", "Ctx", "45%")]
+
+    def test_80_percent_gets_the_yellow_tilde(self):
+        bar = _FakeStatusBar()
+        self._call(bar, 85.0)
+        (bid, label, value), = bar.added
+        assert bid == "ctx" and "~" in value and "yellow" in value
+
+    def test_100_percent_gets_the_red_bang(self):
+        bar = _FakeStatusBar()
+        self._call(bar, 100.0)
+        (bid, label, value), = bar.added
+        assert "!" in value and "red" in value
+
+    def test_non_numeric_degrades_to_removed(self):
+        bar = _FakeStatusBar()
+        self._call(bar, "not-a-number")
+        assert bar.removed == ["ctx"]
+
+    def test_no_status_bar_is_a_noop(self):
+        # Early startup: callback may fire before on_mount caches the bar.
+        self._call(None, 50.0)
+
+
+class TestTextualCtxBadgeWidget:
+    """The real StatusBar path — add, update-in-place, remove."""
+
+    def test_badge_lifecycle_on_a_mounted_status_bar(self):
+        pytest.importorskip("textual")
+        import asyncio
+
+        from textual.app import App
+
+        from ppxai.tui.app import PPXAIDEApp
+        from ppxai.tui.widgets.status_bar import StatusBar
+
+        class TestApp(App):
+            def compose(self):
+                yield StatusBar()
+
+        app = TestApp()
+
+        async def run_test():
+            async with app.run_test():
+                bar = app.query_one(StatusBar)
+                fake_self = type("S", (), {"_status_bar": bar})()
+                # Appear...
+                PPXAIDEApp._on_context_percentage_changed(fake_self, 42.0)
+                assert bar.has_badge("ctx")
+                assert bar._badges["ctx"]._value == "42%"
+                # ...update in place (add_badge updates when it exists)...
+                PPXAIDEApp._on_context_percentage_changed(fake_self, 87.0)
+                assert "87%" in bar._badges["ctx"]._value
+                # ...and vanish at zero (the /clear staleness class).
+                PPXAIDEApp._on_context_percentage_changed(fake_self, 0.0)
+                assert not bar.has_badge("ctx")
+
+        asyncio.run(run_test())
+
+
+class TestTextualCtxBadgeWiring:
+    def test_app_subscribes_to_context_percentage(self):
+        """Wiring sentinel: on_mount must subscribe the callback to the
+        AppState field — without this line the badge silently never
+        renders (the exact dead-plumbing state the pre-existing
+        context_tokens reactives were in)."""
+        from pathlib import Path
+
+        src = (Path(__file__).parent.parent
+               / "ppxai" / "tui" / "app.py").read_text(encoding="utf-8")
+        assert '"context_percentage",' in src
+        assert "_on_context_percentage_changed," in src

@@ -257,6 +257,19 @@ class PPXAIDEApp(App):
                 "background_agents",
                 self._on_background_agents_changed,
             )
+            # Item 48 step 2 (v1.19.1, Textual leg): live `Ctx` badge.
+            # context_percentage is the engine-owned, messages-derived
+            # AppState field — since the step-1 fix it is refreshed by the
+            # `_on_messages_changed` fan-out, so /clear, /compact, session
+            # load and rollback all update this badge with no client-side
+            # hook (the exact staleness class Item 48 was filed for).
+            self._engine_client.state.on(
+                "context_percentage",
+                self._on_context_percentage_changed,
+            )
+            initial_pct = self._engine_client.state.get("context_percentage")
+            if initial_pct:
+                self._on_context_percentage_changed(initial_pct)
 
         # Add optional status bar badges based on config (Phase 1.2)
         tui_config = get_tui_config()
@@ -609,6 +622,35 @@ class PPXAIDEApp(App):
         self._status_bar.add_badge(
             "attachments", "\U0001F4CE", f"{count}: {label}", variant="warning"
         )
+
+    def _on_context_percentage_changed(self, pct) -> None:
+        """Callback from AppState — live `Ctx` badge (Item 48 step 2).
+
+        `context_percentage` is refreshed by the engine's
+        `_on_messages_changed` fan-out (step 1), so every mutation of
+        session.messages — chat turns, /clear, /compact, session load,
+        rollback — lands here without any per-command client hook. Mirrors
+        the Rich TUI's rendering: `Ctx: NN%`, `~` at ≥80 (yellow), `!` at
+        ≥100 (red). 0% hides the badge (empty session), matching Rich's
+        badge-absent-at-zero look.
+        """
+        if not self._status_bar:
+            return
+        try:
+            value = float(pct or 0.0)
+        except (TypeError, ValueError):
+            value = 0.0
+        if value <= 0:
+            self._status_bar.remove_badge("ctx")
+            return
+        if value >= 100:
+            text = f"[white on red]{value:.0f}%![/]"
+        elif value >= 80:
+            text = f"[black on yellow]{value:.0f}%~[/]"
+        else:
+            text = f"{value:.0f}%"
+        # add_badge updates in place when the badge already exists.
+        self._status_bar.add_badge("ctx", "Ctx", text)
 
     def _on_agent_beat_changed(self, beat) -> None:
         """Callback from AppState — update the agent heartbeat badge (P0 v1.18.0).
