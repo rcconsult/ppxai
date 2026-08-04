@@ -306,6 +306,47 @@ def handle_config(context: CommandContext, args: str) -> CommandResult:
         )
 
 
+def handle_reload(context: CommandContext, args: str) -> CommandResult:
+    """Handle /reload command - re-import user commands from ~/.ppxai/commands/.
+
+    `CommandFactory.reload_user_commands()` has existed since the custom-command
+    feature landed but had no caller, leaving `~/.ppxai/commands/*.py` unreachable
+    from any client. This is that caller.
+
+    Args:
+        context: Command context (unused; reload is process-global)
+        args: Ignored — reload takes no arguments
+
+    Returns:
+        ConfirmationResult with the module count, or ErrorResult on failure
+    """
+    try:
+        count = CommandFactory.reload_user_commands()
+    except Exception as e:
+        return ErrorResult(
+            status=ResultStatus.ERROR,
+            message=f"Failed to reload user commands: {e}",
+            error_details=str(e)
+        )
+
+    user_commands_dir = Path.home() / ".ppxai" / "commands"
+    if not user_commands_dir.exists():
+        return ConfirmationResult(
+            status=ResultStatus.INFO,
+            message=(
+                f"No user commands directory at {user_commands_dir} — "
+                "create it and drop .py files there to add custom commands."
+            ),
+            details={"modules_loaded": 0, "directory_exists": False}
+        )
+
+    return ConfirmationResult(
+        status=ResultStatus.SUCCESS,
+        message=f"User commands reloaded ({count} modules).",
+        details={"modules_loaded": count, "directory_exists": True}
+    )
+
+
 def handle_debug_log(context: CommandContext, args: str) -> CommandResult:
     """Handle /debug-log command - enable/disable debug logging.
 
@@ -852,6 +893,14 @@ CommandFactory.register(CommandSpec(
     handler=handle_config,
     category="utility",
     usage="/config [reload|path]"
+))
+
+CommandFactory.register(CommandSpec(
+    name="reload",
+    description="Reload custom commands from ~/.ppxai/commands/",
+    handler=handle_reload,
+    category="utility",
+    usage="/reload"
 ))
 
 CommandFactory.register(CommandSpec(
