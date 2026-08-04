@@ -203,6 +203,25 @@ is removed — debt Item 52 retired).
   changes (`/clear`, `/compact`, load) emit one discrete `state_sync`
   through the command envelope. The field is deliberately NOT in the
   `state_sync` whitelist — no per-message push traffic.
+- **New: live web-app E2E suite** (`tests/e2e/live-app.spec.ts`). Every other
+  spec in that directory drives a static `file://` harness; this one runs the
+  REAL web UI against a REAL `ppxai-server`, covering the wiring harnesses
+  can't see — command-envelope round-trips, SSE, and the AppState-driven
+  badges. Opt-in via `npm run test:live` (starts the working-tree server, not
+  the installed binary); `PPXAI_E2E_PROVIDER=<name>` enables the LLM-dependent
+  steps, which otherwise skip. Includes a regression fence for the Clear
+  bypass below: it asserts the button hits `POST /command/clear` and never the
+  bespoke `POST /sessions/clear`.
+- **Clear buttons bypassed the command envelope.** The web Clear button, the
+  VSCode Clear button, and the `ppxai.clearHistory` palette command called
+  `POST /sessions/clear` directly, while a typed `/clear` went through
+  `POST /command/clear`. The bespoke call discards the response body — which
+  is where the envelope's `events[]` live — so server-pushed AppState had to
+  be re-fetched by hand at each call site, and a missed one meant a stale
+  badge (this is what kept Item 48's staleness alive in the buttons after
+  the typed command was fixed). All three now dispatch `/clear` through the
+  envelope, so pushed state updates itself. VSCode gained a single
+  `clearConversation()` path shared by both of its entry points.
 - **Config-error fail-safe was incomplete for `execution.run.grounding`.**
   When the config source itself could not be read, `get_execution_run_config()`
   still consulted the *legacy* `tools.web_search.oneshot_grounding` key —

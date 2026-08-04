@@ -314,7 +314,12 @@ def main() -> int:
             popen_kwargs = {"stdout": subprocess.DEVNULL, "stderr": subprocess.DEVNULL}
             if os.name != "nt":
                 popen_kwargs["start_new_session"] = True  # own group → kill the whole tree
-            proc = subprocess.Popen([str(server)], **popen_kwargs)
+            # Pass --port through: without it the spawned server binds its own
+            # default while we probe args.port, so any non-default --port died
+            # with a confusing "did not answer /status" instead of running.
+            proc = subprocess.Popen(
+                [str(server), "--port", str(args.port)], **popen_kwargs
+            )
         if not wait_for_server(gw):
             print(f"server did not answer /status within {STARTUP_WAIT_S}s", file=sys.stderr)
             return 2
