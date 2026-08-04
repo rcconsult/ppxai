@@ -93,6 +93,11 @@ nul
 tests/e2e/node_modules/
 tests/e2e/playwright-report/
 tests/e2e/test-results/
+# Playwright MCP browser scratch (console logs + page snapshots), written to
+# the repo root by agent-driven browser sessions. Same leak class as the
+# stray run logs below: snapshots capture live page state, incl. the working
+# dir shown in the app header (a developer's home path).
+.playwright-mcp/
 
 # Stray run logs. A committed test-results.log once leaked a developer's
 # Windows home path (and real name) into this public repo -- logs are
