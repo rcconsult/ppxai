@@ -72,6 +72,33 @@ precedence over `~/.ppxai/web`. See
 [lessons/web-assets-served-from-ppxai-home.md](lessons/web-assets-served-from-ppxai-home.md)
 for the full hazard (incl. the `.app` wrinkle).
 
+## Browser E2E (Playwright)
+
+Two suites live in `tests/e2e/`, and the difference matters:
+
+```bash
+cd tests/e2e && npm install          # first time only
+
+npm test                              # widget specs — file:// harnesses, no server
+npm run test:live                     # the REAL web app against a REAL server
+PPXAI_E2E_PROVIDER=<provider> npm run test:live   # + live LLM steps
+npm run test:live:headed              # same, with a visible browser
+```
+
+- **Default (`npm test`)** loads a static `*-harness.html` per spec and
+  exercises one widget's logic in isolation. Fast, no server, no credentials.
+- **Live (`npm run test:live`)** boots `.venv/…/ppxai-server` with
+  `PPXAI_WEB_DIR` pointed at the checkout, so it tests THIS working tree
+  rather than the installed binary or `~/.ppxai/web`. It covers what the
+  harnesses structurally cannot: command-envelope round-trips, SSE, and the
+  AppState-driven header badges. LLM-dependent assertions skip unless
+  `PPXAI_E2E_PROVIDER` names a configured provider, so the suite stays green
+  on a box with no credentials.
+
+Playwright runs **headless** by default — no browser window appears even
+though real Chromium is driving the page. Use the `:headed` variants (or
+`npx playwright test --ui`) to watch it.
+
 ## Windows Store Python + uv/venv recovery (CRITICAL)
 
 **Problem:** Windows Store Python prevents uv from creating temporary virtualenvs (Error 1920: "The file cannot be accessed by the system").

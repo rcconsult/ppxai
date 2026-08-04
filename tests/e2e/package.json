@@ -6,7 +6,9 @@
     "test": "npx playwright test",
     "test:ui": "npx playwright test --ui",
     "test:headed": "npx playwright test --headed",
-    "test:debug": "npx playwright test --debug"
+    "test:debug": "npx playwright test --debug",
+    "test:live": "node run-live.js",
+    "test:live:headed": "node run-live.js --headed"
   },
   "devDependencies": {
     "@playwright/test": "^1.40.0"
