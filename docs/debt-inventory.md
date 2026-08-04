@@ -903,7 +903,17 @@ made visible — the two layers gate differently: Calico authorizes the *actual
 runtime connection* (https ok), the local superset authorizes the *declared
 target set* up front (and that set carries the always-denied `http://wttr.in`).
 
-### Item 53 — task execution profiles: config-driven named grants + web_search as first-class enrichment [agent platform / config / egress] → ADR 0009 ✅ ACCEPTED, implementation pending
+### Item 53 — task execution profiles: config-driven named grants + web_search as first-class enrichment [agent platform / config / egress] → ADR 0009 ✅ ACCEPTED — ✅ FIXED (all four steps implemented 2026-08-02/03)
+
+**Status:** CLOSED. All four build-order steps shipped and live-verified —
+① oneshot search loop as the F1–F5 facade (`ad8edd8b` lineage), ② per-tool
+`tools.<tool>.egress` (retired Item 52), ③ `execution.profiles` +
+`enrichment` + `execution.egress_ceiling` (`ad8edd8b`), ④ shared backend
+resolver `engine/tools/search_backends.py` with the Q5 scoped tuple
+(`82dc7d34`). See ADR 0009's status line for the per-step detail. Remaining
+related work is tracked separately: ADR 0010's config-shape migration
+(dual-read helper + direct-read sweep + `/doctor` mapping) and Item 49 /
+ADR 0008 cost accounting.
 
 **Planned:** `v1.19.x` — **ADR 0009 Accepted 2026-08-01** (all six sign-off
 questions settled; ADR 0010 config-shape review Accepted same day — new keys
