@@ -86,7 +86,8 @@ ppxai supports two distinct approaches:
 When `native_tool_calling: false`, ppxai injects tool definitions into the system prompt:
 
 ```python
-# From ppxai/engine/tools/manager.py (lines 290-359)
+# From ppxai/engine/tools/manager.py — see the `get_tools_prompt` method
+# (line numbers drift; search for the symbol name rather than citing a range)
 
 def get_tools_prompt(self) -> str:
     prompt = "# IMPORTANT: You Have Access to Tools\n\n"
@@ -105,7 +106,8 @@ def get_tools_prompt(self) -> str:
 ppxai parses tool calls from text using multiple strategies (in order):
 
 ```python
-# From ppxai/engine/tools/parser.py (lines 212-308)
+# From ppxai/engine/tools/parser.py — see the `parse_tool_call` function
+# (line numbers drift; search for the symbol name rather than citing a range)
 
 def parse_tool_call(text: str, get_tool: ToolLookupFunc) -> Optional[Dict[str, Any]]:
     """
@@ -201,7 +203,9 @@ if isinstance(args, dict) and "tool" in args and "arguments" in args:
 Different models use different parameter names. ppxai normalizes them:
 
 ```python
-# From ppxai/engine/tools/manager.py (lines 179-203)
+# From ppxai/engine/tools/manager.py — see the `PARAM_ALIAS_GROUPS` class
+# attribute (line numbers drift; search for the symbol name rather than
+# citing a range)
 
 PARAM_ALIAS_GROUPS = [
     {"filepath", "file_path", "filePath", "file"},
@@ -390,10 +394,10 @@ async def chat_with_tools(client, messages, tools, max_iterations=10):
 
 | File | Purpose |
 |------|---------|
-| [ppxai/engine/tools/parser.py](../ppxai/engine/tools/parser.py) | Multi-strategy tool call parsing (309 lines) |
+| [ppxai/engine/tools/parser.py](../ppxai/engine/tools/parser.py) | Multi-strategy tool call parsing (536 lines as of v1.19.1; grows over time — check file for current count) |
 | [ppxai/engine/tools/manager.py](../ppxai/engine/tools/manager.py) | Tool registration, prompt generation, parameter normalization |
 | [ppxai/engine/chat.py](../ppxai/engine/chat.py) | Chat loop with tool iteration |
-| [tests/test_engine_tool_parsing.py](../tests/test_engine_tool_parsing.py) | Comprehensive test suite (896 lines) |
+| [tests/test_engine_tool_parsing.py](../tests/test_engine_tool_parsing.py) | Comprehensive test suite (1294 lines as of v1.19.1; grows over time — check file for current count) |
 
 ---
 

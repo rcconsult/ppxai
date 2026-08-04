@@ -51,9 +51,9 @@ gaps, and an explicit request flag overrides.)
 ```bash
 PPXAI_WEB_DIR=$PWD/ppxai/web uv run ppxai-server
 # then in the web UI:
-/task run "the CI job is red" --skill ci-triage
-/task run "audit this repo for secrets" --skill secrets-scan --skill ci-triage   # grants union
-/task run "x" --skill needs-scripts        # → ❌ refused: scripts/ (400) unless allow_skill_scripts
+/task "the CI job is red" --skill ci-triage
+/task "audit this repo for secrets" --skill secrets-scan --skill ci-triage   # grants union
+/task "x" --skill needs-scripts        # → ❌ refused: scripts/ (400) unless allow_skill_scripts
 ```
 
 **Acceptance signal (the T4 point):** with the seal on, confirm the agent can

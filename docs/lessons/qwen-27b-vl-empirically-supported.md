@@ -1,35 +1,52 @@
-# Qwen3.5-27B-FP8 and Qwen3.6-27B-FP8 empirically accept image_url content
+# Qwen3.5-27B-FP8 and Qwen3.6-27B-FP8 empirically accept image_url content — FIXED 2026-06-08
 
-**Hazard:** `ppxai/engine/model_profiles.py` has no entry for either
-`Qwen/Qwen3.5-27B-FP8` or `Qwen/Qwen3.6-27B-FP8`. Both fall through to the
-default `supports_vision=False`. That makes the chat-attach pipeline send a
-text placeholder for image attachments, and the downstream model (which CAN
-in fact see images via vLLM) is left without input and tends to hallucinate
-a description that looks confident but is fabricated.
+**TL;DR:** `ppxai/engine/model_profiles.py` had no entry for either
+`Qwen/Qwen3.5-27B-FP8` or `Qwen/Qwen3.6-27B-FP8`, so both fell through to
+the default `supports_vision=False` even though the models genuinely accept
+`image_url` content through vLLM. **Fixed 2026-06-08** — see
+`model_profiles.py:481-505` for the glob entry and the resolved evidence
+trail below.
 
-**Verifies in code:**
+**Verify with:**
 
 ```bash
-# In ppxai repo:
-grep -E "Qwen.*3\.[56]-27B|Qwen3\.[56]-27B" ppxai/engine/model_profiles.py
-# Expected output as of this commit: NO MATCH
-# When fixed: a glob like "Qwen/Qwen3.[56]-27B-FP8*" with supports_vision=True
+# In ppxai repo — the entry exists as a single glob covering both models:
+grep -n "Qwen/Qwen3.\[56\]-27B-FP8" ppxai/engine/model_profiles.py
+# Expected: model_profiles.py:481:    "Qwen/Qwen3.[56]-27B-FP8*": ModelProfile(
+#           ...with supports_vision=True at the entry (~line 505)
 ```
 
 ```python
-# Confirms current (wrong) ppxai detection:
+# Confirms current (fixed) ppxai detection — verified by execution:
 from ppxai.engine.model_profiles import supports_vision
-assert supports_vision("Qwen/Qwen3.5-27B-FP8") is False  # ← bug
-assert supports_vision("Qwen/Qwen3.6-27B-FP8") is False  # ← bug
+assert supports_vision("Qwen/Qwen3.5-27B-FP8") is True
+assert supports_vision("Qwen/Qwen3.6-27B-FP8") is True
 ```
 
-**Why it matters:** the user's first reaction to a wrong description is "ppxai
-lied about VL support." The chat warning DOES say "sent as a text placeholder"
-but the model's confident hallucination on top of that is the failure mode
-that gets reported. The fix is a one-glob `ModelProfile` entry in
-`model_profiles.py` — backed by the empirical evidence below.
+## Why this tripped people up
 
-## Empirical evidence (cross-repo)
+Before the fix, the chat-attach pipeline sent a text placeholder for image
+attachments on these models, and the downstream model (which CAN in fact see
+images via vLLM) was left without input and tended to hallucinate a
+confident-looking but fabricated description. The HuggingFace card for 3.5
+says "Text-only" — that label was (and remains) empirically wrong for how
+the model behaves through vLLM, which is exactly the trap: the obvious
+source of truth (the model card) disagreed with observed behavior, and
+`model_profiles.py`'s default (`supports_vision=False`) silently sided with
+the card.
+
+The user's first reaction to a wrong description was "ppxai lied about VL
+support." The chat warning did say "sent as a text placeholder," but the
+model's confident hallucination on top of that was the failure mode that
+got reported.
+
+## What's actually true (fix + evidence)
+
+The fix is the one-glob `ModelProfile` entry at
+`ppxai/engine/model_profiles.py:481-505` — `"Qwen/Qwen3.[56]-27B-FP8*"`
+with `supports_vision=True` — backed by the empirical evidence below.
+
+### Empirical evidence (cross-repo)
 
 The sister `trad-ai-chat` repo has a self-contained 9-test VL probe that
 generates 3 fixture images inline via Pillow and POSTs OpenAI-style
@@ -50,12 +67,15 @@ Per-test result table is captured in the sister-session memory at
 The architecture-comparison doc at
 `trad-ai-chat/doc/research/qwen35-vs-qwen36-27b-comparison.md` (2026-04-30)
 states Qwen3.6-27B-FP8 has an **explicit vision encoder** in the
-architecture ("Text + image + video") and recommends running the same
-`test-vl-capabilities.sh` script to confirm 3.6 passes natively. The
-HuggingFace card for 3.5 says "Text-only" — that label is empirically
-wrong for how the model behaves through vLLM.
+architecture ("Text + image + video"). The fix comment block in
+`model_profiles.py` (immediately above the entry) records a third,
+in-cluster confirmation on 2026-06-08: a 256x128 PNG containing
+"VL TEST 8472" returned the correct `"8472"` from both endpoints
+(`chat_template_kwargs={"enable_thinking": False}`, finish_reason=stop) —
+closing the "rerun 3.6 against current cluster" gap this lesson originally
+flagged as open.
 
-## How to reproduce on this cluster
+### How to reproduce on this cluster
 
 ```bash
 # Pull the API key the same way the sister script does:
@@ -76,20 +96,14 @@ The script needs `curl`, `python3`, and Pillow (auto-detected from
 `<repo>/.venv` per the script). No external network. No
 sudo. Fixtures generated inline.
 
-## Open: rerun 3.6 against current cluster
-
-The 2026-04-23 baseline is on 3.5. The qwen36-27b-fp8-mig deployment is
-newer; nobody has run `test-vl-capabilities.sh` against it yet. The
-empirically-derived `supports_vision=True` entry SHOULD be added to
-ppxai for 3.6 anyway based on the architecture claim, but rerunning the
-script before adding the profile entry is the conservative path.
-
 ## Related
 
-- Debt: [Item 24 in docs/debt-inventory.md](../debt-inventory.md) — the
-  ppxai-side fix path. Item 24 also covers the secondary
-  `auto_caption` VL-sidecar fallback bug that's worth a separate
-  diagnose pass.
+- Debt: [Item 24 in docs/debt-inventory.md](../debt-inventory.md) — closed;
+  full resolution detail (including the secondary `auto_caption` VL-sidecar
+  fallback fix) archived in
+  [docs/archive/DEBT-INVENTORY-CLOSED.md](../archive/DEBT-INVENTORY-CLOSED.md).
 - [Two-tier memory rule](README.md) — this lesson belongs here in
   `docs/lessons/` (cross-host, grep-verifiable) rather than per-host
-  memory because the evidence trail spans two repos.
+  memory because the evidence trail spans two repos, even though the bug
+  itself is now resolved — the trail is what future re-derivation risk
+  needs.

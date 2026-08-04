@@ -22,7 +22,7 @@
 === "Linux/macOS"
 
     ```bash
-    curl -sSL https://raw.githubusercontent.com/rcconsult/ppxai/master/scripts/install.sh | bash
+    curl -sSL https://raw.githubusercontent.com/rcconsult/ppxai/master/install.sh | bash
     ```
 
 === "Windows"
@@ -75,7 +75,7 @@ ppxai-desktop      # Desktop web app
 | Agent mode | ✅ | ✅ | ✅ | ✅ |
 | Checkpoint/undo | ✅ | ✅ | ✅ | ✅ |
 | Markdown in chat | Limited | ✅ Full rendering | ✅ | ✅ |
-| Themes | 6 themes | 17+ themes | N/A | N/A |
+| Themes | 4 themes | 17+ themes | N/A | N/A |
 | Tab completion | ✅ | ✅ | N/A | N/A |
 
 ### Agent Mode
@@ -83,7 +83,7 @@ ppxai-desktop      # Desktop web app
 Enable autonomous multi-step task execution:
 
 ```
-/agent on
+/auto on
 ```
 
 The AI can chain tool calls, edit files, run commands - all with your consent.
@@ -122,7 +122,7 @@ Python 3.11+, pytest for testing.
 
     ---
 
-    Background `/task` agent platform + in-session `/agent` mode
+    Background `/task` agent platform + in-session `/auto` mode
 
     [:octicons-arrow-right-24: Task Agent Guide](task-agent-guide.md) ·
     [Session Agent Guide](session-agent-guide.md)

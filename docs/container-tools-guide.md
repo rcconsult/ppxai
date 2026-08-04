@@ -22,7 +22,7 @@ This guide covers ppxai's built-in tools for managing Docker, Podman, and Kubern
 
 ## Overview
 
-Both **ppxai** (Rich TUI) and **ppxaide** (Textual TUI) provide 14 container management tools that allow AI models to inspect and manage containers and Kubernetes resources on your behalf. These tools:
+Both **ppxai** (Rich TUI) and **ppxaide** (Textual TUI) provide 16 container management tools that allow AI models to inspect and manage containers and Kubernetes resources on your behalf. These tools:
 
 - Use CLI wrappers (no external SDKs required)
 - Work with Docker, Podman, and kubectl
@@ -138,39 +138,32 @@ Both **ppxai** (Rich TUI) and **ppxaide** (Textual TUI) provide 14 container man
 
 ## Configuration
 
-### Enable Container Tools
+### Container Tools Are Not Currently Configurable
 
-Container tools are enabled by default. To configure:
+Container tools are always enabled (registration is automatic when a runtime
+is detected) and are **not** configurable via `ppxai-config.json` today:
 
-```json
-// ppxai-config.json
-{
-  "tools": {
-    "container": {
-      "enabled": true,
-      "require_consent": true,
-      "default_runtime": "auto",
-      "timeout": 60
-    }
-  }
-}
-```
+- **Runtime selection** is always auto-detected: `detect_container_runtime()`
+  (`ppxai/engine/tools/builtin/container.py`) checks for `docker` in PATH
+  first, then falls back to `podman`. There is no way to force one or the
+  other.
+- **Timeouts are fixed per-tool** in code (e.g. 30s for list/inspect
+  operations, 60s for logs) and cannot be overridden from config.
+- **Consent is always required** for destructive operations (start, stop,
+  restart, exec, `kubectl apply`, `pod_exec`) — it cannot be disabled.
 
-### Configuration Options
-
-| Option | Default | Description |
-|--------|---------|-------------|
-| `enabled` | `true` | Enable/disable all container tools |
-| `require_consent` | `true` | Require user approval for destructive operations |
-| `default_runtime` | `"auto"` | Container runtime: `"auto"`, `"docker"`, `"podman"` |
-| `timeout` | `60` | Command timeout in seconds |
+`ppxai-config.json` does accept a `tools.container` block with `enabled`,
+`require_consent`, `default_runtime`, and `timeout` keys, but these are
+**reserved and not yet wired up** — `get_container_config()`
+(`ppxai/config/tools.py`) parses them, but nothing in
+`ppxai/engine/tools/builtin/container.py` reads the parsed result. Setting
+any of these keys today has **zero effect**.
 
 ### Runtime Auto-Detection
 
-When `default_runtime` is `"auto"`:
 1. Checks for `docker` in PATH first
 2. Falls back to `podman` if Docker not found
-3. Tools disabled if neither found
+3. Tools are not registered if neither is found
 
 ### Tool Description Overrides
 
@@ -533,19 +526,13 @@ The following tools modify state and require explicit user approval:
 3. User can: **Allow**, **Deny**, **Always Allow**, or **Never Allow**
 4. Session-level preferences are remembered
 
-### Disabling Consent (Not Recommended)
+### Disabling Consent
 
-```json
-{
-  "tools": {
-    "container": {
-      "require_consent": false
-    }
-  }
-}
-```
-
-**Warning:** Disabling consent allows the AI to execute destructive operations without confirmation.
+Not currently possible. Consent for destructive operations
+(`container_start`, `container_stop`, `container_restart`, `container_exec`,
+`kubectl_apply`, `pod_exec`) is unconditional in code — the
+`tools.container.require_consent` config key is reserved but not read by
+`ppxai/engine/tools/builtin/container.py`. See [Configuration](#configuration).
 
 ---
 
@@ -619,18 +606,12 @@ kubectl cluster-info
 
 ### Timeout Errors
 
-**Cause:** Command taking longer than default timeout.
+**Cause:** Command taking longer than the fixed per-tool timeout (e.g. 30s
+for list/inspect, 60s for logs — see [Configuration](#configuration)).
 
-**Solution:**
-```json
-{
-  "tools": {
-    "container": {
-      "timeout": 120
-    }
-  }
-}
-```
+**Solution:** Timeouts are not currently configurable. Reduce the scope of
+the command (e.g. `tail` fewer log lines) or run it directly via the shell
+CLI wrapper instead.
 
 ---
 

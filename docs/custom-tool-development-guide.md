@@ -95,8 +95,7 @@ uv run ppxai
 
 # Enable tools and test
 /tools enable
-/tools list   # Should show greet_user
-/tools help greet_user   # Shows tool details
+/tools list   # Should show greet_user, with its description
 
 # Ask AI to use it
 You: Greet John formally
@@ -707,14 +706,14 @@ def my_tool_function(param: str) -> str:
 ppxai logs to `~/.ppxai/logs/`. To see debug output:
 
 ```bash
-# Enable debug logging
-export PPXAI_LOG_LEVEL=DEBUG
+# Enable debug logging (boolean: 1/true/yes/on)
+export PPXAI_DEBUG=1
 
 # Run ppxai
 uv run ppxai
 
-# Or view logs directly
-tail -f ~/.ppxai/logs/ppxai.log
+# Or view logs directly (TUI writes here; the server writes server-debug.log)
+tail -f ~/.ppxai/logs/tui-debug.log
 ```
 
 ### Log Levels
@@ -778,44 +777,36 @@ parameters = {
 }
 ```
 
-### Using `/tools help <tool-name>`
+### Using `/tools list`
 
-ppxai provides per-tool help (v1.11.7+):
+`/tools` has no per-tool `help` subcommand — the accepted subcommands are
+`on`/`enable`, `off`/`disable`, `list`, `status`, `config`, `set`, `auto`
+(`ppxai/commands/tools.py`). `/tools list` shows every registered tool with
+its description in one table:
 
 ```bash
-/tools help greet_user
+/tools list
 
 # Output:
-# ┌─ Tool: greet_user ─────────────────────────────────────────┐
-# │ Description: Generate a personalized greeting for a user  │
-# │                                                            │
-# │ Parameters:                                                │
-# │   name (string, required)                                  │
-# │     The user's name                                        │
-# │                                                            │
-# │   formal (boolean, optional)                               │
-# │     Use formal greeting style (default: false)             │
-# │                                                            │
-# │ Example:                                                   │
-# │   Ask: "Greet John formally"                               │
-# │   AI calls: greet_user(name="John", formal=true)           │
-# └────────────────────────────────────────────────────────────┘
+# ┌──────────────┬───────────────────────────────────────┬────────┐
+# │ Tool         │ Description                            │ Source │
+# ├──────────────┼───────────────────────────────────────┼────────┤
+# │ greet_user   │ Generate a personalized greeting for a │ engine │
+# │              │ user                                    │        │
+# └──────────────┴───────────────────────────────────────┴────────┘
 ```
 
 ### Autocomplete Support
 
-The TUI provides autocomplete for `/tools` commands (v1.11.7+):
+The TUI provides autocomplete for `/tools` subcommands:
 
 | Input | Tab Shows |
 |-------|-----------|
-| `/tools <tab>` | enable, disable, list, status, help, set, config |
-| `/tools help <tab>` | All available tool names with descriptions |
-| `/tools help calc<tab>` | Completes to `calculator` |
+| `/tools <tab>` | on, off, list, status, config, set, auto |
 
 **Tips:**
-- Autocomplete works even before tools are enabled (shows common built-in tools)
-- Once tools are enabled, shows actual registered tools from `ToolManager`
-- Tool descriptions appear as hints next to tool names
+- Autocomplete works even before tools are enabled (shows the fixed subcommand list)
+- `/tools list` shows actual registered tools from `ToolManager`, one row per tool with its description
 
 ---
 
@@ -851,7 +842,17 @@ manager.register_function(
 
 ### Consent-Based Tools
 
-For tools that modify files or execute commands, implement consent:
+`EngineClient` has no generic `request_consent()` API — only two concrete
+methods, both async and both returning a plain `bool` (see
+`ppxai/engine/client.py`):
+
+- `request_file_edit_consent(file_path: str) -> bool` — for tools that
+  create/edit/delete a file (this is what `apply_patch`, `write_file`,
+  `replace_block`, etc. call)
+- `request_shell_consent(command: str, working_dir: str = ".") -> bool` —
+  for tools that run a shell command
+
+For tools that modify files, implement consent with the real method:
 
 ```python
 from ..base import BaseTool
@@ -867,19 +868,18 @@ class MyDangerousTool(BaseTool):
         self.engine = engine
 
     async def execute(self, target: str, **kwargs) -> str:
-        # Request consent before proceeding
-        consent = await self.engine.request_consent(
-            operation="dangerous_operation",
-            target=target,
-            description=f"This will modify {target}"
-        )
-
-        if not consent:
-            return f"Error: User denied permission for {target}"
+        # Request consent before proceeding (target is a file path here)
+        if not await self.engine.request_file_edit_consent(target):
+            return f"Error: User denied permission to edit {target}"
 
         # Proceed with operation
         return do_dangerous_thing(target)
 ```
+
+If your tool shells out instead of touching a file, call
+`request_shell_consent(command, working_dir)` in the same way. There is no
+consent hook for other kinds of operations — model tools that need approval
+as either a file edit or a shell command.
 
 ### Async Operations
 
@@ -1109,7 +1109,7 @@ def my_tool(required_param: str, optional_param: str = None) -> str:
 
 **Debug:**
 1. Enable verbose mode: `/tools set verbose on`
-2. Check logs: `tail -f ~/.ppxai/logs/ppxai.log`
+2. Check logs: `tail -f ~/.ppxai/logs/tui-debug.log` (or `server-debug.log` for `ppxai-server`)
 3. Test function directly:
 
 ```python

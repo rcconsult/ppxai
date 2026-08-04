@@ -141,7 +141,7 @@ ppxai/
 **Ignored Patterns:**
 - `.git`, `__pycache__`, `node_modules`, `.venv`, `venv`
 - `.pytest_cache`, `.mypy_cache`, `dist`, `build`
-- Hidden files (except `.gitignore`, `.env.example`, `.dockerignore`)
+- Hidden files (except `.gitignore`, `.env.example`, `.env`, `.dockerignore`)
 
 **Configuration:**
 ```python
@@ -173,7 +173,7 @@ Convert this JSON @clipboard to YAML
 - Shows as code block with appropriate syntax highlighting
 
 **Limits:**
-- Maximum 50KB of clipboard content (truncated if larger)
+- Maximum 100KB of clipboard content (truncated if larger) - same limit as `@file`, `@url`, and `@tree`
 - Text only - binary clipboard data not supported
 - UI shows "(truncated)" indicator when content was cut
 
@@ -217,9 +217,10 @@ Explain the API in @https://api.example.com/docs/endpoints.md
 - Requires network access
 
 **Error Handling:**
-- 404 errors: Shows "URL not found" message
-- Timeout: Shows "Request timed out" message
-- SSL errors: Shows certificate error details
+- Fetch failures (404, timeout, SSL, connection errors, etc.) all return the
+  same shape: `Error fetching URL: {exception text}`, using httpx's own
+  exception message — there is no distinct "URL not found" or "Request timed
+  out" wording.
 
 ## Combined Usage
 
@@ -457,6 +458,7 @@ class InjectedContext:
     language: str        # Language for syntax highlighting ("diff", "text", "python", etc.)
     truncated: bool      # Whether content was truncated
     size: int            # Original size in bytes
+    hash: str = ""       # Content hash, used for dedup
 ```
 
 ## Related Documentation

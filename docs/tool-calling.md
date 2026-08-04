@@ -1,7 +1,15 @@
 # Tool Calling in ppxai
 
-**Version:** v1.15.6
-**Updated:** 2026-02-20
+**Version:** v1.19.1
+**Updated:** 2026-08-04
+
+> **Note (v1.19.x):** Web search backend selection now goes through
+> `resolve_web_search_backend()` (`ppxai/engine/tools/search_backends.py`).
+> `tools.web_search.preferred` (global) or `providers.<name>.web_search.preferred`
+> is an **ordering** — first choice, then the rest of the usable fallback
+> chain — not a hard pin. Add `strict: true` in the same scope to make it a
+> hard pin (no fallback, egress narrowed to just that backend). See
+> [provider-setup.md](provider-setup.md#web-search-backend-ordering-v1191).
 
 ---
 
@@ -116,7 +124,7 @@ ppxai uses **prompt-based tool calling** for Perplexity:
 > **confabulated** a summary, or ran an **intrinsic web search** and
 > summarized an *unrelated external repo* while citing its URL
 > (`github.com/steipete/summarize`) — never reading the granted local file.
-> The same task on native-tool providers (`nvidia/deepseek-v4-pro`) worked
+> The same task on native-tool providers (`deepseek-ai/deepseek-v4-pro` on the `nvidia` provider) worked
 > correctly. Do not grant tool-capable `/task` runs to Perplexity until this
 > is gated/routed. See **Item 43** in
 > [debt-inventory.md](debt-inventory.md) and
@@ -231,9 +239,11 @@ Tool calling method affects benchmark scores:
 |-------|--------|-------|-------|
 | gemini-2.5-pro | Native | 81.3% | Clean native, no workarounds |
 | Qwen3-Coder-30B FP8 | Native | 81.3% | Hermes parser, stable |
-| gpt-5.2 | Native | 70.3% | OpenAI flagship (100% halluc. resist) |
+| gpt-5.2 [^retired] | Native | 70.3% | OpenAI flagship (100% halluc. resist) |
 | sonar | Prompt-Based | 75.0% | Excellent with AGENTS.md hints |
 | gpt-4.1-mini | Prompt-Based | 71.9% | Better prompt-based than native (60.9%) |
+
+[^retired]: `gpt-5.2` is no longer a shipped model — superseded by `gpt-5.4`/`gpt-5.5`. Row retained as historical benchmark data only; do not use as a current model reference.
 
 The gap is due to:
 1. Parsing reliability
@@ -367,7 +377,9 @@ get_weather("Geneva", format="forecast")
 
 ### Implementation
 
-Display limits are applied in [chat.py:412-417](../ppxai/engine/chat.py#L412-L417):
+Display limits are applied where `get_tool_display_limit()` is called in
+[`ppxai/engine/chat.py`](../ppxai/engine/chat.py) (line numbers drift; search
+for `display_limit` rather than citing a fixed range):
 
 ```python
 # Get tool-specific limit

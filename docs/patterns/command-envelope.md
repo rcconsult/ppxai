@@ -48,9 +48,9 @@ For free-text follow-ups (where the answer isn't from a finite set), engine emit
 
 - **Web** — renders an inline form below the notification; on submit, dispatches `/<command_to_resume> <args>`.
 - **VSCode** — `vscode.window.showInputBox({prompt: question, placeHolder})`; on non-empty reply, dispatches via `dispatchCommandFromSideEffect`.
-- **TUI** — ignores the kind (open-enum invariant). The notification message that accompanies the side-effect serves as the user-visible nudge; the user retypes `/agent` themselves with more detail.
+- **TUI** — ignores the kind (open-enum invariant). The notification message that accompanies the side-effect serves as the user-visible nudge; the user retypes `/auto` themselves with more detail.
 
-First user: `validate_agent_task` rejection. `/agent fix` → engine returns `NotificationResult(WARNING)` + `prompt_text` side-effect → web/VSCode auto-resume the elaboration without the user retyping the slash command.
+First user: `validate_agent_task` rejection. `/auto fix` → engine returns `NotificationResult(WARNING)` + `prompt_text` side-effect → web/VSCode auto-resume the elaboration without the user retyping the slash command.
 
 ## Buttons are command call sites too (v1.19.1)
 

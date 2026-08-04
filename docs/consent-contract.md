@@ -27,7 +27,7 @@ The contract is enforced by:
 
 | Operation | Triggers consent? | Default if no callback | Persistence |
 |---|---|---|---|
-| `apply_patch` / `replace_block` / `insert_text` / `delete_lines` | YES | **Allow** (back-compat) | Per-file in session.allowed_files; mode YES/ALWAYS/NEVER session-wide |
+| `apply_patch` / `replace_block` / `insert_text` / `delete_lines` / `write_file` | YES | **Allow** (back-compat) | Per-file in session.allowed_files; mode YES/ALWAYS/NEVER session-wide |
 | `read_file` / `list_directory` / `search_files` | NO | n/a | n/a — read-only |
 | `shell_execute` (NEVER pattern) | NO — blocked | n/a | n/a |
 | `shell_execute` (SAFE pattern) | NO — bypasses | n/a | n/a |

@@ -123,3 +123,11 @@ discoverable later.
   removing a behavior leaves its tests behind; they fail as assumed-
   environmental noise or keep passing against a renamed surface while
   guarding nothing. Invert, retarget, or delete — and mutation-test the fence
+- [qwen-27b-vl-empirically-supported.md](qwen-27b-vl-empirically-supported.md) —
+  Qwen3.5/3.6-27B-FP8 empirically accept `image_url` content via vLLM;
+  ppxai's `model_profiles.py` lacked `supports_vision=True` entries for them
+  (fixed 2026-06-08, `model_profiles.py:481-505`)
+- [web-assets-served-from-ppxai-home.md](web-assets-served-from-ppxai-home.md) —
+  clients serve the web UI from `~/.ppxai/web`, not the repo source tree;
+  editing `web/` in-repo has no effect on a running server without
+  `PPXAI_WEB_DIR` pointed at the checkout

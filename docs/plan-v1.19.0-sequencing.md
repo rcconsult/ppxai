@@ -1,5 +1,11 @@
 # v1.19.0 iteration — sequencing plan
 
+> **CLOSED — v1.19.0 released 2026-07-12 with all 9 increments landed.**
+> The "Next:" pointer below (the `/task` command family) is also complete:
+> T1–T7 + T8a are committed and live-trial-verified, T8b is parked, T9 is
+> deferred. This doc is kept as the iteration's historical sequencing
+> record.
+
 **Branch:** `feature/v1.19.0` (off `master` @ a1a8cc35, post-v1.18.8)
 **Created:** 2026-06-15
 **Status:** Active — iteration tracker. This is the source of truth for

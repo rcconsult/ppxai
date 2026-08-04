@@ -27,7 +27,7 @@ The AI can now autonomously edit files during conversations! It can:
 
 **All with your explicit consent before any changes.**
 
-### 4 File Editing Tools
+### 5 File Editing Tools
 
 | Tool | Purpose | Use Case |
 |------|---------|----------|
@@ -35,6 +35,7 @@ The AI can now autonomously edit files during conversations! It can:
 | `replace_block` | Find and replace text blocks | Refactoring, bug fixes |
 | `insert_text` | Add lines at specific positions | Adding features, imports |
 | `delete_lines` | Remove line ranges | Cleanup, removing code |
+| `write_file` | Write full file content (creates if missing) | New files, whole-file rewrites (v1.18.7+) |
 
 ---
 
@@ -90,7 +91,7 @@ File editing tools are included when you enable AI tools:
 /tools enable
 ```
 
-> **Tip:** Use Tab for autocomplete: `/tools <tab>` shows all subcommands, `/tools help <tab>` shows tool names.
+> **Tip:** Use Tab for autocomplete: `/tools <tab>` shows all subcommands. `/tools list` shows every tool with its description (there is no per-tool `/tools help <name>`).
 
 **VSCode:**
 Enable tools in settings or via the tools toggle button in chat panel.
@@ -101,14 +102,14 @@ Enable tools in settings or via the tools toggle button in chat panel.
 ```bash
 /tools status
 
-# Get help for a specific editing tool
-/tools help apply_patch
+# List every tool, with descriptions
+/tools list
 ```
 
 Output:
 ```
 ✓ Tools enabled (12 tools available)
-✓ File editing tools enabled (4 editing tools)
+✓ File editing tools enabled (5 editing tools)
 Consent mode: ask
 ```
 
@@ -384,6 +385,32 @@ delete_lines(
     end_line=15     # 1-indexed, inclusive
 )
 ```
+
+---
+
+### 5. write_file
+
+**Purpose:** Write full content to a file, creating it if it doesn't exist (v1.18.7+)
+
+**Use Cases:**
+- Creating new files
+- Whole-file rewrites where a patch/replace isn't a good fit
+- Overwriting generated or scaffold files
+
+**Example Prompts:**
+- "Create a new config.py with these defaults"
+- "Rewrite utils.py to use the new logging API throughout"
+
+**Tool Parameters:**
+```python
+write_file(
+    file_path="/path/to/file.py",
+    content="full file contents here\n",
+    overwrite=True  # default: true. Set false to error instead of overwriting an existing file.
+)
+```
+
+**Important:** Same consent flow as the other four tools — you'll get a File Edit Request prompt before anything is written. Unlike `replace_block`/`insert_text`/`delete_lines`, it replaces the **entire** file content, so review the consent prompt's file path carefully on existing files.
 
 ---
 

@@ -1,6 +1,6 @@
 # ppxai - Multi-LLM Interface for Developers
 
-![Version](https://img.shields.io/badge/version-1.19.1-blue) ![Tests](https://img.shields.io/badge/tests-4560%20passing-green) ![License](https://img.shields.io/badge/license-MIT-brightgreen) [![Docs](https://img.shields.io/badge/docs-rcconsult.github.io%2Fppxai-blue)](https://rcconsult.github.io/ppxai/)
+![Version](https://img.shields.io/badge/version-1.19.1-blue) ![Tests](https://img.shields.io/badge/tests-4796%20passing-green) ![License](https://img.shields.io/badge/license-MIT-brightgreen) [![Docs](https://img.shields.io/badge/docs-rcconsult.github.io%2Fppxai-blue)](https://rcconsult.github.io/ppxai/)
 
 **Open-source AI assistant with zero vendor lock-in.** Use your favorite LLM provider in the terminal or VSCode—switch models mid-session, run locally, pay only for what you need.
 
@@ -161,8 +161,8 @@ Asset cache busting (`?_t=<mtime>`) ensures CSS/JS/JSON changes are immediately 
 
 ### Multi-Provider Support
 - **Perplexity AI** - Real-time search with citations
-- **Google Gemini** - 2.5 Flash (default), 2.5 Pro, 3-Flash/Pro Preview, 3.1 Pro Preview with 1M context, Google Search Grounding
-- **OpenAI** - GPT-5 Mini (default), GPT-5.x, GPT-5.1-codex, o-series (dedicated `OpenAINativeProvider` with profile-driven routing)
+- **Google Gemini** - 3.5 Flash (default), 2.5 Pro, 3-Flash/Pro Preview, 3.1 Pro Preview with 1M context, Google Search Grounding
+- **OpenAI** - GPT-5.4 (default), GPT-5.4-mini/nano/pro, GPT-5.1-codex, o-series (dedicated `OpenAINativeProvider` with profile-driven routing)
 - **OpenRouter** - Claude, Llama, 100+ models
 - **Local** - Ollama, vLLM, llama.cpp
 
@@ -184,7 +184,7 @@ Switch providers anytime: `/provider gemini` or `/model gemini-2.5-pro`
 - **Type-based renderer architecture** - All commands return structured result objects (21 types), enabling mechanical UI dispatch without conditionals
 - **Markdown in chat bubbles** - Full markdown rendering with clickable URLs, headers, code blocks, and citations
 - **Modern async architecture** with real-time streaming and thinking indicators
-- **17+ themes** (vs 6 in Rich TUI) - cycle with Ctrl+T or Ctrl+P for palette
+- **17+ themes** (vs 4 in Rich TUI) - Ctrl+T cycles the 8-entry quick set, Ctrl+P opens the palette for the full 17+
 - **Advanced file viewers** with tree/table/image support via typed results
 - **Real-time token/cost tracking** in status bar with smart formatting
 - **Tool execution display** with verbose mode (`/tools set verbose on/off`)
@@ -201,7 +201,7 @@ Switch providers anytime: `/provider gemini` or `/model gemini-2.5-pro`
 - **Context Management** - `/context` shows usage vs model limit, `/context show` displays bootstrap hierarchy, `/context clear` removes injected files. Context badge shows percentage in TUI status line and VSCode header.
 - **Cost Control** - Use Perplexity for research, Gemini for long context, local models for sensitive code—all in one session
 - **Real-time Usage Tracking** - Token counts and cost estimates in status line (`1.2K↓/0.5K↑ $0.0045`)
-- **Themed TUI Panels** - Rich TUI: 6 themes; Textual TUI (ppxaide): 17+ themes (`/theme` to cycle or Ctrl+T)
+- **Themed TUI Panels** - Rich TUI: 4 themes; Textual TUI (ppxaide): 17+ themes (`/theme` to cycle or Ctrl+T)
 
 ### File Upload & Data Analysis (v1.17.4)
 Attach files to conversations across all four clients:
@@ -214,8 +214,8 @@ Attach files to conversations across all four clients:
 
 **How to attach:** `/attach <path>` (TUI), drag-drop or paperclip button (Web/VSCode), `a` key in file tree (ppxaide)
 
-### Session Agent Mode (`/agent`)
-Enable with `/agent on` or click the Agent button in VSCode:
+### Session Agent Mode (`/auto`)
+Enable with `/auto on` or click the Agent button in VSCode:
 - Iterative tool execution with automatic re-prompting
 - AI decides when to use tools and chains multiple calls
 - Consent-based safety for file edits and shell commands
@@ -294,6 +294,7 @@ Enable with `/tools enable` (or use Agent Mode):
 /debug      Analyze errors
 /convert    Translate between languages
 /preview    Live-reloading HTML preview (v1.15.4)
+/implement  Implement a feature from a description (alias: /impl)
 ```
 
 ### Session Management
@@ -379,7 +380,7 @@ No telemetry. No tracking. Data only goes to the LLM provider you choose.
 | [Linux Desktop Integration](desktop/README.md) | One-click app launcher integration (v1.15.5) |
 | [Linux Terminal Setup](docs/linux-terminal-setup.md) | Ghostty/Kitty for Ctrl+Enter support (v1.15.5) |
 | [VSCode Extension](vscode-extension/README.md) | Installation and usage |
-| [Session Agent Mode](docs/session-agent-guide.md) | In-session iterative tool execution (`/agent`) |
+| [Session Agent Mode](docs/session-agent-guide.md) | In-session iterative tool execution (`/auto`) |
 | [Task Agent Guide](docs/task-agent-guide.md) | Background /task agent platform (v1.19.0) |
 | [Checkpoint & Undo](docs/checkpoint-guide.md) | Atomic rollback for agent tasks |
 | [Provider Setup](docs/provider-setup.md) | Configure any OpenAI-compatible API |
@@ -408,8 +409,7 @@ ppxai/
 │   │   │   ├── code_editor.py  # Syntax-highlighted code editor
 │   │   │   └── status_bar.py   # Provider/model/tools status
 │   │   ├── themes/             # 17+ themes with layout.tcss
-│   │   ├── screens/            # Modal screens (command palette, etc.)
-│   │   └── renderer.py         # TextualRenderer - type-based dispatch
+│   │   └── screens/            # Modal screens (command palette, etc.)
 │   ├── engine/                 # Core business logic (no UI dependencies)
 │   │   ├── client.py           # EngineClient facade
 │   │   ├── session.py          # Session management
@@ -417,29 +417,32 @@ ppxai/
 │   │   ├── providers/          # AI provider implementations
 │   │   │   ├── base.py         # BaseProvider abstract class
 │   │   │   ├── perplexity.py   # Perplexity AI (native search)
-│   │   │   ├── openai_compat.py# OpenAI-compatible (Gemini, OpenRouter, local)
+│   │   │   ├── gemini.py       # GeminiProvider (native Google Search Grounding)
+│   │   │   ├── openai_compat.py# OpenAI-compatible fallback (OpenRouter, local)
 │   │   │   └── openai_native.py# OpenAI dedicated (GPT-5.x, Codex, o-series)
 │   │   └── tools/              # AI tools system
 │   │       ├── manager.py      # ToolManager with provider filtering
 │   │       ├── base.py         # BaseTool abstract class
-│   │       └── builtin/        # 10+ built-in tools
+│   │       └── builtin/        # 24+ built-in tools
 │   ├── commands/               # UI-agnostic command implementations — see /help
 │   │   ├── results.py          # 21 CommandResult types
 │   │   ├── context.py          # CommandContext protocol
 │   │   ├── factory.py          # CommandFactory (registry pattern)
 │   │   └── [show|tools|model|provider|...].py  # Individual commands
-│   ├── rendering/              # Renderer implementations
-│   │   ├── base.py             # BaseRenderer interface
-│   │   └── rich_renderer.py    # RichRenderer for legacy TUI
+│   ├── rendering/               # Renderer implementations
+│   │   ├── base.py              # BaseRenderer interface
+│   │   ├── rich_renderer.py     # RichRenderer for legacy TUI
+│   │   └── textual_renderer.py  # TextualRenderer - type-based dispatch (ppxaide)
 │   ├── server/                 # HTTP + JSON-RPC servers
-│   │   ├── http.py             # FastAPI HTTP + SSE server (for VSCode/Web), 21 route modules
+│   │   ├── http.py             # FastAPI HTTP + SSE server (for VSCode/Web/Desktop), 21 route modules
 │   │   └── jsonrpc.py          # JSON-RPC server over stdio (deprecated)
-│   ├── web/                    # Desktop Web App (ppxai-desktop)
-│   │   ├── server.py           # FastAPI server with SSE streaming
+│   ├── web/                    # Desktop Web App frontend assets (served by server/http.py)
 │   │   └── [styles|components|lib|shared]/  # React-like frontend
+│   ├── rich/                   # Rich TUI (legacy ppxai) internals
+│   │   ├── event_handler.py    # Event system for streaming
+│   │   └── ...
 │   ├── common/                 # Shared utilities
 │   │   ├── logger.py           # Logging system
-│   │   ├── event_handler.py    # Event system for streaming
 │   │   ├── consent.py          # File/shell consent system
 │   │   └── preview.py          # HTML preview helpers
 │   ├── config/                 # Configuration system
@@ -463,26 +466,26 @@ ppxai/
 ├── scripts/                    # Build, release, install scripts
 │   ├── bootstrap.py            # Auto-downloads uv, sets up project
 │   ├── release.py              # Automated release script
-│   ├── install.sh              # One-line installer (Linux/macOS)
 │   └── install.ps1             # One-line installer (Windows)
+├── install.sh                  # One-line installer (Linux/macOS), repo root
 ├── resources/                  # Icons and assets
 │   ├── ppxai.png               # ppxai icon (CLI)
 │   ├── ppxaide-nobg.png        # ppxaide icon (TUI)
 │   └── [.ico|.icns files]      # Platform-specific icons
-├── tests/                      # 3,900+ tests
-│   ├── test_tui.py             # Textual TUI tests (180+ tests)
+├── tests/                      # 4,796+ tests
+│   ├── test_tui.py             # Textual TUI tests (270+ tests)
 │   ├── test_engine.py          # Engine layer tests
 │   ├── test_commands.py        # Command tests
 │   └── test_*.py               # Provider, tool, config tests
 ├── docs/                       # Documentation
-│   ├── session-agent-guide.md  # In-session /agent mode guide
+│   ├── session-agent-guide.md  # In-session /auto mode guide
 │   ├── checkpoint-guide.md     # Atomic rollback guide
 │   ├── linux-terminal-setup.md # Ghostty/Kitty setup for Ctrl+Enter
 │   ├── provider-setup.md       # Multi-provider configuration
 │   ├── architecture.md         # Type-based renderer design
 │   └── RELEASE-NOTES-*.md      # Version release notes
 ├── benchmarks/                 # LLM performance benchmarks
-└── kubernetes/                 # K8s deployment configs
+└── deploy/                     # Deployment configs (deploy/k8s, deploy/helm, deploy/compose)
 ```
 
 ## Contributing

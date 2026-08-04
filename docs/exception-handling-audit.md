@@ -1,5 +1,19 @@
 # Exception Handling Audit — v1.17.1
 
+> ⚠️ **HISTORICAL SNAPSHOT — NOT CURRENT.** This audit is dated 2026-03-22
+> and scoped to v1.17.1. The codebase has moved on substantially since:
+> file:line citations below **no longer resolve** against current code
+> (e.g. `ppxai/engine/session.py` was 2468 lines as of v1.19.1 — the line
+> numbers cited here point at unrelated code today). At least one finding
+> listed below as open is **already fixed**: the "session load swallows ALL
+> errors" item (category D, `engine/session.py:593`) — the current code
+> (`engine/session.py` around line 1791) reads
+> `except Exception as e: logger.warning(f"Session load failed for '{name}': {e}")`,
+> i.e. it already logs the real error. Do not treat any finding here as
+> confirmed-open without re-verifying against current source. This document
+> has **not** been re-run; do not re-run it either — if a fresh audit is
+> needed, do it as a new, separately dated document.
+
 **Date:** 2026-03-22
 **Scope:** ppxai/ core (engine, commands, server, config, common, rich, tui/app.py)
 **Total findings:** 40 swallowed exceptions

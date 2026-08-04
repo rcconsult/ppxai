@@ -1,6 +1,9 @@
 # ADR 0009 Step ① — Enriched `/v1/oneshot` (oneshot facade over the run tier)
 
-**Status:** Planned, not started. Implements ADR 0009 §4 + Sign-off Q4/Q6.
+**Status:** ✅ SHIPPED as Phase F (2026-08-02/03) — F1 `abf83868`, F2
+`8bcd8109`, F3 `26c26a19`, F4 `16b6091d`, F5 `01554919`+`a9db5eb9`.
+Implements ADR 0009 §4 + Sign-off Q4/Q6. Doc kept as design record; trial
+recipe below is historical.
 **Build order:** step ① of ④ (① oneshot facade → ② per-tool `tools.<tool>.egress`
 → ③ `execution.profiles` + `enrichment` → ④ shared backend resolver).
 
@@ -93,6 +96,9 @@ byte-identical for the ppxai-sre consumer), not part of step ①.
 ---
 
 ## TODO
+
+Retained as a historical record — every item below landed as part of the
+Phase F shipment (see Status above).
 
 ### A. Config (new keys, default off; ADR 0011 Q5 final locations + dual-read)
 - [ ] `execution.run.web_search` reader (mirror `_oneshot_grounding_enabled`,

@@ -1,6 +1,10 @@
 # Specification Guidelines for Code Generation
 
-> ⚠️ **Aspirational document.** The `/spec` and `/implement` commands described here were never implemented (no such commands exist in ppxai/commands/). Use these templates as manual prompt-writing patterns. Kept for reference; a command-ified version has no current target.
+> Both commands described here are **implemented and live**: `/spec [api|cli|lib|algo|ui]`
+> (`ppxai/commands/system.py::handle_spec`) renders these guidelines and templates in
+> every client, and `/implement` (alias `/impl`, `ppxai/commands/coding.py::handle_implement`)
+> runs the coding task — also exposed as the `ppxai.implement` VSCode command.
+> A previous revision of this file claimed neither existed; that was wrong.
 
 This guide helps you write effective specifications for the `/implement` command in ppxai. Well-structured specifications lead to better, more accurate code implementations.
 

@@ -197,7 +197,7 @@ ppxai provides:
 - Global: `system_prompt` at root level
 - Per-provider: `providers.<name>.system_prompt`
 - Modes: `system_prompt_mode` = "prepend" | "append" | "replace"
-- Location: `ppxai/config.py:get_system_prompt()`, `ppxai/engine/client.py:1171-1186`
+- Location: `ppxai/config/prompts.py:get_system_prompt()`, `ppxai/engine/client.py`
 
 ### v1.14.0 - AGENTS.md Support with Provider Hints ✅
 
@@ -658,7 +658,7 @@ ppxai/tui/                     # New module (Textual-based)
 | **Client log forwarding** | Web/VSCode forward client logs to server debug log | ✅ Done |
 | **Web heartbeat watchdog** | Detect disconnects, auto-reconnect SSE | ✅ Done |
 | **Deploy structure** | `deploy/{compose,docker,images,k8s}/` + shared configs | ✅ Done |
-| **AppState architecture docs** | `docs/TODO-appstate-{0..5}.md` + refactoring tracker | ✅ Done |
+| **AppState architecture docs** | [TODO-appstate-codegen.md](docs/archive/TODO-appstate-codegen.md) + refactoring tracker | ✅ Done |
 
 ### v1.17.1 - AppState Wiring + EngineClient Decomposition ✅
 
@@ -699,7 +699,7 @@ ppxai/tui/                     # New module (Textual-based)
 
 **Status:** All phases complete + coder deployed + PPTX visual preview, ready for release
 **Branch:** `feat/file-upload`
-**Plan:** [docs/TODO-file-upload.md](docs/TODO-file-upload.md)
+**Plan:** [docs/archive/TODO-file-upload.md](docs/archive/TODO-file-upload.md)
 
 | Feature | Description | Status |
 |---------|-------------|--------|
@@ -723,15 +723,15 @@ ppxai/tui/                     # New module (Textual-based)
 
 ## Shipped: v1.18.0 – v1.18.7 (historical detail below)
 
-> **Current status (2026-06-13):** **v1.18.0 through v1.18.7 have all shipped.**
-> Latest release: **v1.18.7** (2026-06-13). Active branch: **`bugfix/v1.18.8`**
-> — cross-client `/files/*` parity fixes (post-v1.18.7 review); see
-> [docs/archive/plan-v1.18.8-files-parity.md](docs/archive/plan-v1.18.8-files-parity.md) and
-> debt items 25–28 in [docs/debt-inventory.md](docs/debt-inventory.md). For
-> per-release detail see [CHANGELOG.md](CHANGELOG.md) and
-> `docs/release-notes-v1.18.*.md`. **Not-yet-shipped** items in the tables
-> below (notably multi-model routing — `RoutingRole`/`ModelRouter` are still
-> unimplemented) remain forward-looking plans, not landed work.
+> **This section is a historical record of the v1.18.x line** — v1.18.0
+> through v1.18.8 all shipped, and v1.19.0 shipped after them (2026-07-12).
+> For current release state see [CHANGELOG.md](CHANGELOG.md); for the active
+> branch see [CLAUDE.md](CLAUDE.md). Per-release detail lives in
+> `docs/release-notes-v1.18.*.md` and
+> [docs/archive/plan-v1.18.8-files-parity.md](docs/archive/plan-v1.18.8-files-parity.md).
+> **Not-yet-shipped** items in the tables below (notably multi-model routing —
+> `RoutingRole`/`ModelRouter` are still unimplemented) remain forward-looking
+> plans, not landed work.
 >
 > The tables in this section are retained as the historical record of what
 > each v1.18.x release contained.
@@ -916,7 +916,7 @@ option in the routing layer is one of the listed motivations.
 
 **Why this matters:** Claude is currently the strongest coding model in the
 v4.x generation; first-class support unlocks `/explain`, `/test`, `/docs`,
-`/agent` against Claude with the same UX as the other providers.
+`/auto` against Claude with the same UX as the other providers.
 
 **Caveats pinned so they don't get re-litigated:**
 - The project does NOT endorse / guarantee / take legal responsibility for
@@ -934,7 +934,12 @@ the TOS-warning UX needs review independently.
 
 ---
 
-### v1.19.x - Agent platform Stage 2 + v1 gateway extensions for ppxai-sre (planned)
+### v1.19.x - Agent platform Stage 2 + v1 gateway extensions for ppxai-sre ✅
+
+**Status:** ✅ Shipped in v1.19.0 (2026-07-12) — all 9 increments (Phases
+1-7 below) landed and live-trial-verified. See
+[docs/plan-v1.19.0-sequencing.md](docs/plan-v1.19.0-sequencing.md) for the
+increment-by-increment build record.
 
 Bundles the ppxai-side work required to support [ppxai-sre](https://github.com/rcconsult/ppxai-sre)'s
 planned features (heartbeat scheduler, multi-agent routing,
@@ -960,20 +965,20 @@ rows below carry the load-bearing wire-shape commitments inline.
 
 #### Must-have for v1.19.x (blocks ppxai-sre planned features)
 
-| Phase | Description | Effort |
-|---|---|---|
-| **Phase 1: ADR 0003 Stage 2 — agent platform primitives** | `runs/<run_id>/agent-<n>/` artifact namespace per the OpenShell research note. New endpoints: `POST /v1/agent/run → {run_id}` (with mandatory `tools` field per ADR 0003 §6 / caveat C4 + optional `services` map per ADR 0003 §13 / caveat C5 for long-lived service agents — routing key `(port, path)`, `auth: bearer\|none`, `token_source`, `restart_policy`, `network.allow_inbound`), `GET /v1/agent/runs`, `GET /v1/agent/runs/<id>`, `GET /v1/agent/runs/<id>/events` as SSE channel for live updates (per ADR 0003 §7 / caveat C3 — polling stays as status-snapshot path), `POST /v1/agent/runs/<id>/cancel`, `POST /v1/agent/runs/<id>/terminate` (clean-exit drain per C5.4). Response from `/v1/agent/run` carries a `services: {name → URL}` map of externally-reachable reverse-proxy URLs at `…/v1/agent/runs/<id>/services/<name>/`; ppxai injects `X-Forwarded-Prefix` per C5.5. `services` is optional/empty for CronJob runs. `EventType.AGENT_RUN_START` payload extended with additive `{run_id, parent_run_id}` fields (per ADR 0003 §10 / ask A3) — no new event type. New `EventType.AGENT_SERVICE_DOWN` (per ADR 0003 §13, symmetric with `AGENT_ZOMBIE`) emitted when a bound service exits or stops responding. Adds 4 of the 7 ADR 0003 "what's missing" items in one shape: run identity, persistence, parent/child relationship, scoped budgets. | ~7-9 days |
-| **Phase 2: Sub-agent primitive** | New `spawn_subagent` tool gated by the consent contract. Parent reads `agent-N/output.md` from each spawned slot; map-reduce shape from the OpenShell research note is the canonical example. Required for the manager-executor pattern listed as a planned ppxai-sre feature. | ~3-4 days |
-| **Phase 3: Run persistence + recovery** | Checkpoint to `state.json` per agent slot. Engine restart recovers in-flight runs by re-reading slots. Required for long-lived SRE agents (cert-monitor: hourly; incident-responder: on-call). | ~2-3 days |
-| **Phase 4: Resource budgets** | `meta.json` carrying `{token_budget, time_budget, iteration_budget, started_at, status}`. Runtime enforcement at `chat_with_tools` boundary. Autonomous agents without budgets are how cloud bills explode. | ~2 days |
-| **Phase 5: Network policy enforcement** | Per-run egress allowlist (host + path globs), fail-closed default, audit logging on deny. New middleware in `ppxai/engine/tools/network_policy.py` hooks the outbound-HTTP path of network-touching tools. Emits typed `EventType.NETWORK_POLICY_DENIED` and `EventType.NETWORK_POLICY_ALLOWED` events with `{tool, target_host, target_path, reason, allowlist_rule_id, run_id}` payload (per ADR 0003 §8 / caveat C1 — analogous to existing `EventType.PROVIDER_THROTTLED`) so consumer audit loggers consume them as data, not by tapping internals. Load-bearing for ppxai-sre's policy engine planned feature; per-tool consent (today's primitive) is the wrong shape for unattended agents. | ~4-6 days |
-| **Phase 6: k8s session-manager hardening** (promoted from [debt-inventory.md](docs/debt-inventory.md) Item 3) | 30-50 tests around the 8 named functions in `deploy/images/session-manager/main.py`: `_list_sessions`, `_teardown_session`, `create_session`, `delete_session`, `heartbeat`, `startup`, `LDAPAuthenticator._hash_password`, `authenticate`. Quick pass (~half day) is the v1.19.x release-readiness gate; full pass is the should-have. ppxai-sre IS the k8s context, so Item 3 stops being trigger-deferred. | ~half day to ~1 day |
+| Phase | Description | Effort | Status |
+|---|---|---|---|
+| **Phase 1: ADR 0003 Stage 2 — agent platform primitives** | `runs/<run_id>/agent-<n>/` artifact namespace per the OpenShell research note. New endpoints: `POST /v1/agent/run → {run_id}` (with mandatory `tools` field per ADR 0003 §6 / caveat C4 + optional `services` map per ADR 0003 §13 / caveat C5 for long-lived service agents — routing key `(port, path)`, `auth: bearer\|none`, `token_source`, `restart_policy`, `network.allow_inbound`), `GET /v1/agent/runs`, `GET /v1/agent/runs/<id>`, `GET /v1/agent/runs/<id>/events` as SSE channel for live updates (per ADR 0003 §7 / caveat C3 — polling stays as status-snapshot path), `POST /v1/agent/runs/<id>/cancel`, `POST /v1/agent/runs/<id>/terminate` (clean-exit drain per C5.4). Response from `/v1/agent/run` carries a `services: {name → URL}` map of externally-reachable reverse-proxy URLs at `…/v1/agent/runs/<id>/services/<name>/`; ppxai injects `X-Forwarded-Prefix` per C5.5. `services` is optional/empty for CronJob runs. `EventType.AGENT_RUN_START` payload extended with additive `{run_id, parent_run_id}` fields (per ADR 0003 §10 / ask A3) — no new event type. New `EventType.AGENT_SERVICE_DOWN` (per ADR 0003 §13, symmetric with `AGENT_ZOMBIE`) emitted when a bound service exits or stops responding. Adds 4 of the 7 ADR 0003 "what's missing" items in one shape: run identity, persistence, parent/child relationship, scoped budgets. | ~7-9 days | ✅ Landed |
+| **Phase 2: Sub-agent primitive** | New `spawn_subagent` tool gated by the consent contract. Parent reads `agent-N/output.md` from each spawned slot; map-reduce shape from the OpenShell research note is the canonical example. Required for the manager-executor pattern listed as a planned ppxai-sre feature. | ~3-4 days | ✅ Landed |
+| **Phase 3: Run persistence + recovery** | Checkpoint to `state.json` per agent slot. Engine restart recovers in-flight runs by re-reading slots. Required for long-lived SRE agents (cert-monitor: hourly; incident-responder: on-call). | ~2-3 days | ✅ Landed |
+| **Phase 4: Resource budgets** | `meta.json` carrying `{token_budget, time_budget, iteration_budget, started_at, status}`. Runtime enforcement at `chat_with_tools` boundary. Autonomous agents without budgets are how cloud bills explode. | ~2 days | ✅ Landed |
+| **Phase 5: Network policy enforcement** | Per-run egress allowlist (host + path globs), fail-closed default, audit logging on deny. New middleware in `ppxai/engine/tools/network_policy.py` hooks the outbound-HTTP path of network-touching tools. Emits typed `EventType.NETWORK_POLICY_DENIED` and `EventType.NETWORK_POLICY_ALLOWED` events with `{tool, target_host, target_path, reason, allowlist_rule_id, run_id}` payload (per ADR 0003 §8 / caveat C1 — analogous to existing `EventType.PROVIDER_THROTTLED`) so consumer audit loggers consume them as data, not by tapping internals. Load-bearing for ppxai-sre's policy engine planned feature; per-tool consent (today's primitive) is the wrong shape for unattended agents. | ~4-6 days | ✅ Landed |
+| **Phase 6: k8s session-manager hardening** (promoted from [debt-inventory.md](docs/debt-inventory.md) Item 3) | 30-50 tests around the 8 named functions in `deploy/images/session-manager/main.py`: `_list_sessions`, `_teardown_session`, `create_session`, `delete_session`, `heartbeat`, `startup`, `LDAPAuthenticator._hash_password`, `authenticate`. Quick pass (~half day) is the v1.19.x release-readiness gate; full pass is the should-have. ppxai-sre IS the k8s context, so Item 3 stops being trigger-deferred. | ~half day to ~1 day | ✅ Landed |
 
 #### Should-have for v1.19.x (operationally important)
 
-| Phase | Description | Effort |
-|---|---|---|
-| **Phase 7: `/v1/tokens` multi-agent registry** | Per-agent identity for workload attribution: `POST /v1/tokens`, `GET /v1/tokens`, `DELETE /v1/tokens/<id>`. **Pluggable resolver protocol from day one** (per ADR 0003 §9 / caveat C2): same code path supports `~/.ppxai/tokens.json` (single-machine), k8s secret (cluster), and v1.20.x credential broker (Vault / AWS Secrets Manager) without re-shaping the wire surface. Becomes urgent the moment ppxai-sre ships agent #2; safe to ship in v1.19.x even if agent #2 is downstream. Per [ADR 0004](docs/decisions/0004-llm-gateway-features.md) "Triggers to revisit" row "Multiple agents need per-call attribution". | ~4-6 days |
+| Phase | Description | Effort | Status |
+|---|---|---|---|
+| **Phase 7: `/v1/tokens` multi-agent registry** | Per-agent identity for workload attribution: `POST /v1/tokens`, `GET /v1/tokens`, `DELETE /v1/tokens/<id>`. **Pluggable resolver protocol from day one** (per ADR 0003 §9 / caveat C2): same code path supports `~/.ppxai/tokens.json` (single-machine), k8s secret (cluster), and v1.20.x credential broker (Vault / AWS Secrets Manager) without re-shaping the wire surface. Becomes urgent the moment ppxai-sre ships agent #2; safe to ship in v1.19.x even if agent #2 is downstream. Per [ADR 0004](docs/decisions/0004-llm-gateway-features.md) "Triggers to revisit" row "Multiple agents need per-call attribution". | ~4-6 days | ✅ Landed |
 
 #### Deferred to v1.20.x (operational maturity, not v1.19.x blockers)
 
@@ -1128,7 +1133,7 @@ These are tracked but not prioritized:
 - ~~**Per-provider cost rates**~~ - ✅ Implemented in `config.py` (pricing per model)
 - ~~**Standardized error handling**~~ - ✅ All providers now have detailed traceback logging
 - **`/rewind` browser** - Interactive checkpoint history viewer
-- **`/agent --dry-run`** - Preview changes without applying
+- **`/auto --dry-run`** - Preview changes without applying
 - **Cross-session search** - Semantic search over `~/.ppxai/sessions/`. Watch: [microsoft/typeagent-py](https://github.com/microsoft/typeagent-py) (MIT, v0.4.0-dev) — Structured RAG with 6 parallel indexes (semantic, property, temporal, thread-scoped). Interesting architecture but too heavy today (azure-identity, numpy, pydantic-ai, Python 3.12+). Revisit when ppxai needs session search or typeagent reaches 1.0 with lighter deps
 
 ### Multi-Model Orchestration (Research)

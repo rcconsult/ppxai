@@ -8,7 +8,7 @@ deliberately does not offer `/task`)
 [api-gateway.md](api-gateway.md)
 
 `/task` launches **tool-capable, sandboxed, durable background agent runs**.
-Unlike the in-session [`/agent` mode](session-agent-guide.md) (which drives
+Unlike the in-session [`/auto` mode](session-agent-guide.md) (which drives
 tools inside your current chat) and the `/run` one-off (config-decided
 grant), a
 `/task` run executes on the server with an explicit **capability grant**,
@@ -17,7 +17,7 @@ consent parks, held results, and resume.
 
 | Surface | Tools | Where it runs | Guide |
 |---|---|---|---|
-| `/agent` session mode | session's tools | inside your chat session | [session-agent-guide.md](session-agent-guide.md) |
+| `/auto` session mode | session's tools | inside your chat session | [session-agent-guide.md](session-agent-guide.md) |
 | `/run` one-off | config-decided: none or `web_search` (`execution.run.web_search`) | background, held result | [api-gateway.md](api-gateway.md) |
 | **`/task` (this guide)** | **explicit grant** | **background, durable, sandboxed** | here |
 

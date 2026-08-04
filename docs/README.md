@@ -21,7 +21,7 @@
 | [Autorouter Config](autorouter-config.md) | Automatic model routing for coding tasks |
 | [Custom Tool Development](custom-tool-development-guide.md) | Create your own tools for ppxai |
 | [Task Agent Guide](task-agent-guide.md) | Background `/task` agent platform: grants, specs, skills, lifecycle (v1.19.0) |
-| [Session Agent Guide](session-agent-guide.md) | In-session `/agent` iterative tool execution |
+| [Session Agent Guide](session-agent-guide.md) | In-session `/auto` iterative tool execution |
 | [Checkpoint Guide](checkpoint-guide.md) | Undo and rollback agent operations |
 | [Ollama Limitations](ollama-limitations.md) | Local model constraints and workarounds |
 | [Tool Calling](tool-calling.md) | Native vs prompt-based tool calling (v1.15.3+) |
@@ -37,7 +37,9 @@
 | [DGX Spark Setup](dgx-spark-setup.md) | vLLM + Ollama on NVIDIA DGX Spark |
 | [vLLM Tool Calling](vllm-tool-calling-guide.md) | Hermes vs Harmony, native vs prompt-based |
 | [Prompt-Based Tool Calling](prompt-based-tool-calling.md) | Developer guide for non-native tool calling |
-| [Release Notes v1.18.7](release-notes-v1.18.7.md) | **Latest release** (2026-06-13) — C1 cross-user pod-takeover auth fix + H2 hardening, workspace file upload, office-doc preview, model-catalog refresh. Earlier v1.18.x notes are archived under [archive/release-notes/](archive/release-notes/). |
+| [Release Notes v1.19.0](release-notes-v1.19.0.md) | **Latest release** (2026-07-12) — agent platform (ADR 0003 Stage 2) durable `/v1/agent/*` run registry with tool-capable sandboxed tier, `/task` command family T1–T4. |
+| [Release Notes v1.18.8](release-notes-v1.18.8.md) | (2026-06-14) |
+| [Release Notes v1.18.7](release-notes-v1.18.7.md) | (2026-06-13) — C1 cross-user pod-takeover auth fix + H2 hardening, workspace file upload, office-doc preview, model-catalog refresh. Earlier v1.18.x notes are archived under [archive/release-notes/](archive/release-notes/). |
 | [Stabilization v1.18.0](archive/STABILIZATION-v1.18.0.md) | **Landed** — five-phase cleanup pass: `GET /state` reconnect endpoint, AppState `last_message_role`, `format_tokens`/`format_usage_badge` cross-language helpers, `AutosaveFailureGuard`, public-API promotion of 8 helpers, removed `has_vision_model` alias |
 | [Release Notes v1.17.7](archive/release-notes/RELEASE-NOTES-v1.17.7.md) | `ppxai-desktop --version` stale-fallback fix |
 | [Release Notes v1.17.6](archive/release-notes/RELEASE-NOTES-v1.17.6.md) | R5 first-class `uploaded_file` content type, R19 multimodal rendering gap |
@@ -198,16 +200,14 @@ async for event in engine.chat("Explore this project"):
 ```
 ppxai/
 ├── ppxai/                                # Main package
-│   ├── main.py                           # CLI entry point
-│   ├── commands.py                       # Slash command handlers
+│   ├── rich/main.py                      # CLI entry point (ppxai = ppxai.rich.main:main)
+│   ├── commands/                         # Slash command handlers (16-file package)
 │   └── engine/                           # Core engine
 │       ├── client.py                     # EngineClient (primary interface)
 │       ├── providers/                    # Provider implementations
 │       └── tools/                        # Tool system
 │           ├── manager.py                # ToolManager
 │           └── builtin/                  # Built-in tools
-├── demo/
-│   └── demo_tools_working.py             # Working demo
 ├── tests/
 │   ├── test_engine_tool_parsing.py       # Tool parsing tests
 │   ├── test_file_editing_tools.py        # File editing tests
@@ -239,7 +239,7 @@ A: Type `@filename`, `@git`, or `@tree` in your messages. See [Context Injection
 
 - **GitHub Issues**: [github.com/rcconsult/ppxai/issues](https://github.com/rcconsult/ppxai/issues)
 - **Documentation**: This folder
-- **Examples**: `demo/` directory
+- **Examples**: [Custom Tool Development Guide](custom-tool-development-guide.md)
 
 ---
 

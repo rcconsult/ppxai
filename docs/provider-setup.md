@@ -545,7 +545,28 @@ PERPLEXITY_API_KEY=pplx-xxxxx  # Uses Perplexity Sonar API
 GEMINI_API_KEY=AIza-xxxxx      # Uses Gemini with Google Search Grounding
 ```
 
-Priority: Perplexity > Gemini > DuckDuckGo (free fallback)
+Priority (default auto-detect order): Perplexity > Gemini > DuckDuckGo (free fallback)
+
+### Web Search Backend Ordering (v1.19.1)
+
+The Perplexity > Gemini > DuckDuckGo priority above is the **default**
+auto-detect chain (`AUTO_ORDER` in `ppxai/engine/tools/search_backends.py`).
+As of v1.19.1 it can be overridden per-scope via `resolve_web_search_backend()`:
+
+- `tools.web_search.preferred` (global) or
+  `providers.<name>.web_search.preferred` (per-provider, takes priority when
+  set) selects a preferred backend, but it is an **ordering**, not a hard
+  pin — that backend is tried first, then the rest of the usable fallback
+  chain follows. The full backend superset stays in the egress allowlist.
+- Add `strict: true` in the **same scope** as `preferred` to make it a hard
+  pin: only that backend is tried (no fallback), and the egress allowlist
+  narrows to just that backend's host. A `strict` key without a
+  `preferred` in the same scope is a dead key (flagged by `/doctor`).
+- A preferred backend whose API key is missing is treated as no preference
+  at all (fail-safe) — it never narrows egress or blocks the fallback chain.
+
+See [task-agent-guide.md](task-agent-guide.md) for how this interacts with
+`/task` tier egress.
 
 ### SSL Verification
 

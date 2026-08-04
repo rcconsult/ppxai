@@ -1,15 +1,15 @@
-# Session Agent Mode User Guide (`/agent`)
+# Session Agent Mode User Guide (`/auto`)
 
 **Applies to**: v1.14.2+ (agent mode introduced v1.13.0; this guide tracks the v1.14.2+ shape)
 **Status**: Production Ready
-**Last verified against**: v1.19.0 (guide content unchanged; renamed + disambiguation banner added)
+**Last verified against**: v1.19.1 (command renamed `/agent` → `/auto` per ADR 0011 — **no alias**; behavior unchanged)
 **Renamed** from `agent-mode-guide.md` (v1.19.0) to disambiguate the three agent surfaces.
 
 > **⚠️ Three different "agents" — this guide covers only the first:**
 >
 > | Surface | What it is | Where documented |
 > |---|---|---|
-> | **`/agent` session mode** (this guide) | The IN-SESSION iterative loop: your current chat session plans + executes tools turn by turn, inside the session's context and working dir. | here |
+> | **`/auto` session mode** (this guide) | The IN-SESSION iterative loop: your current chat session plans + executes tools turn by turn, inside the session's context and working dir. | here |
 > | **`/run` one-off runs** | One-off background runs (`POST /v1/agent/run`, `kind=oneshot`): a single prompt answered by a per-run provider/model; grant is config-decided (`execution.run.web_search` on → web_search only, off → closed-book); held result. Web + VSCode. | [api-gateway.md](api-gateway.md) §`/v1/agent/*` |
 > | **`/task` sub-agent platform** (v1.19.0) | Tool-CAPABLE, sandboxed, durable background runs (`POST /v1/agent/task`): capability grants (`--tools`), spec/skill files, egress allowlists, budgets, consent parks, held results, resume. Web + VSCode. | [agent-task-command-design.html](agent-task-command-design.html), [api-gateway.md](api-gateway.md) |
 >
@@ -45,7 +45,7 @@ Agent mode transforms the TUI from a turn-based chat assistant into an autonomou
 
 ![Agent Flow Diagram](archive/future-agentic-flow.png)
 
-1. You issue an `/agent <task>` command
+1. You issue an `/auto <task>` command
 2. The agent enters an autonomous loop (max 10 iterations by default)
 3. Each iteration: Plan → Execute tools → Check completion
 4. Loop continues until:
@@ -77,11 +77,11 @@ Agent mode transforms the TUI from a turn-based chat assistant into an autonomou
 # Start ppxai (Rich TUI) or ppxaide (Textual TUI)
 ppxai    # or ppxaide
 
-# Enable agent mode (optional - auto-enabled when using /agent)
-/tools agent on
+# Enable agent mode (optional - auto-enabled when using /auto)
+/tools auto on
 
 # Run an autonomous task
-/agent Fix the failing test in test_auth.py
+/auto Fix the failing test in test_auth.py
 ```
 
 ### Your First Agent Task
@@ -89,7 +89,7 @@ ppxai    # or ppxaide
 Try this simple task to see agent mode in action:
 
 ```bash
-/agent Create a hello.py file that prints "Hello, Agent Mode!"
+/auto Create a hello.py file that prints "Hello, Agent Mode!"
 ```
 
 The agent will:
@@ -101,41 +101,41 @@ The agent will:
 
 ## Commands Reference
 
-### `/agent <task>` - Run Autonomous Task
+### `/auto <task>` - Run Autonomous Task
 
 The main command for agent mode. Runs an autonomous loop until the task is complete.
 
 **Syntax:**
 ```bash
-/agent <task description>
+/auto <task description>
 ```
 
 **Examples:**
 ```bash
 # Simple file creation
-/agent Create a Python script that calculates fibonacci numbers
+/auto Create a Python script that calculates fibonacci numbers
 
 # Bug fixing
-/agent Fix the TypeError in utils.py line 42
+/auto Fix the TypeError in utils.py line 42
 
 # Code review with context
-/agent Review @git changes and fix any issues
+/auto Review @git changes and fix any issues
 
 # Refactoring with structure awareness
-/agent Reorganize the API module based on @tree
+/auto Reorganize the API module based on @tree
 ```
 
 **Interrupt:** Press `Ctrl-C` at any time to stop the agent loop.
 
-### `/tools agent` - Manage Agent Mode
+### `/tools auto` - Manage Agent Mode
 
 Enable, disable, or check agent mode status.
 
 **Syntax:**
 ```bash
-/tools agent          # Show current status
-/tools agent on       # Enable agent mode
-/tools agent off      # Disable agent mode
+/tools auto          # Show current status
+/tools auto on       # Enable agent mode
+/tools auto off      # Disable agent mode
 ```
 
 **Notes:**
@@ -148,21 +148,21 @@ Agent mode works seamlessly with context providers:
 
 | Provider | Description | Example |
 |----------|-------------|---------|
-| `@file` | Include file contents | `/agent Refactor @auth.py` |
-| `@git` | Include git diff | `/agent Review @git and fix issues` |
-| `@tree` | Include project structure | `/agent Suggest improvements for @tree` |
-| `@clipboard` | Include clipboard text (v1.14.2+) | `/agent Debug this error @clipboard` |
-| `@url` | Fetch web content (v1.14.2+) | `/agent Summarize @https://docs.example.com` |
+| `@file` | Include file contents | `/auto Refactor @auth.py` |
+| `@git` | Include git diff | `/auto Review @git and fix issues` |
+| `@tree` | Include project structure | `/auto Suggest improvements for @tree` |
+| `@clipboard` | Include clipboard text (v1.14.2+) | `/auto Debug this error @clipboard` |
+| `@url` | Fetch web content (v1.14.2+) | `/auto Summarize @https://docs.example.com` |
 
 **Combined usage:**
 ```bash
-/agent Review my changes @git in the context of @tree and fix any bugs
+/auto Review my changes @git in the context of @tree and fix any bugs
 
 # Debug an error from clipboard
-/agent Analyze this stack trace @clipboard and suggest fixes
+/auto Analyze this stack trace @clipboard and suggest fixes
 
 # Implement based on documentation
-/agent Implement the API from @https://api.example.com/spec.json
+/auto Implement the API from @https://api.example.com/spec.json
 ```
 
 ---
@@ -175,33 +175,33 @@ Agent mode excels at research and analysis tasks that require multiple steps.
 
 ```bash
 # Find and explain a pattern
-/agent Find all uses of the Observer pattern in this codebase and explain how they work
+/auto Find all uses of the Observer pattern in this codebase and explain how they work
 
 # Security audit
-/agent Analyze @tree for potential security issues and list them
+/auto Analyze @tree for potential security issues and list them
 
 # Dependency analysis
-/agent Review the imports in @main.py and identify any unused or deprecated dependencies
+/auto Review the imports in @main.py and identify any unused or deprecated dependencies
 ```
 
 ### Code Review Workflow
 
 ```bash
 # Review staged changes
-/agent Review @git changes for bugs, security issues, and style problems
+/auto Review @git changes for bugs, security issues, and style problems
 
 # Compare with design doc
-/agent Compare my implementation @git against the spec in DESIGN.md
+/auto Compare my implementation @git against the spec in DESIGN.md
 ```
 
 ### Documentation Research
 
 ```bash
 # Generate documentation
-/agent Read @utils.py and generate comprehensive docstrings for all functions
+/auto Read @utils.py and generate comprehensive docstrings for all functions
 
 # Update outdated docs
-/agent Compare @README.md with the current @tree structure and update outdated sections
+/auto Compare @README.md with the current @tree structure and update outdated sections
 ```
 
 ---
@@ -214,52 +214,52 @@ Agent mode is powerful for development tasks that span multiple files.
 
 ```bash
 # Single file fix
-/agent Fix the failing test in test_auth.py
+/auto Fix the failing test in test_auth.py
 
 # Multi-file fix
-/agent The login fails with 401 - find the cause in auth.py and fix it
+/auto The login fails with 401 - find the cause in auth.py and fix it
 
 # With test verification
-/agent Fix the bug in parser.py and verify the tests pass
+/auto Fix the bug in parser.py and verify the tests pass
 ```
 
 ### Feature Implementation
 
 ```bash
 # Simple feature
-/agent Add a --verbose flag to the CLI
+/auto Add a --verbose flag to the CLI
 
 # Multi-step feature
-/agent Implement user session management with tests
+/auto Implement user session management with tests
 
 # With context
-/agent Based on @tree, add a caching layer in the appropriate location
+/auto Based on @tree, add a caching layer in the appropriate location
 ```
 
 ### Refactoring
 
 ```bash
 # Rename across files
-/agent Rename the class 'OldName' to 'NewName' in all files
+/auto Rename the class 'OldName' to 'NewName' in all files
 
 # Extract function
-/agent Extract the validation logic from auth.py into a separate validator.py
+/auto Extract the validation logic from auth.py into a separate validator.py
 
 # Restructure
-/agent Based on @tree, move utility functions from main.py to utils.py
+/auto Based on @tree, move utility functions from main.py to utils.py
 ```
 
 ### Test Development
 
 ```bash
 # Generate tests
-/agent Generate unit tests for @calculator.py
+/auto Generate unit tests for @calculator.py
 
 # Fix failing tests
-/agent Fix all failing tests in tests/test_api.py
+/auto Fix all failing tests in tests/test_api.py
 
 # Add test coverage
-/agent Add edge case tests for the parse_date function in utils.py
+/auto Add edge case tests for the parse_date function in utils.py
 ```
 
 ---
@@ -309,28 +309,28 @@ curl -X POST http://127.0.0.1:54320/agent/disable
 **Be specific:**
 ```bash
 # Good - specific target and action
-/agent Fix the TypeError on line 42 of utils.py
+/auto Fix the TypeError on line 42 of utils.py
 
 # Less effective - vague
-/agent Fix bugs
+/auto Fix bugs
 ```
 
 **Include context:**
 ```bash
 # Good - context provided
-/agent Review @git changes for security issues in the auth module
+/auto Review @git changes for security issues in the auth module
 
 # Less effective - missing context
-/agent Check for security issues
+/auto Check for security issues
 ```
 
 **Define success criteria:**
 ```bash
 # Good - clear completion criteria
-/agent Implement user validation and ensure all tests pass
+/auto Implement user validation and ensure all tests pass
 
 # Less effective - unclear when done
-/agent Add validation
+/auto Add validation
 ```
 
 ### Managing Consent
@@ -359,7 +359,7 @@ The default max is 10 iterations (configurable via `tools.agent.max_iterations`)
 
 1. Let the agent complete its iterations
 2. Review the output
-3. Run `/agent continue` or issue a follow-up task
+3. Run `/auto continue` or issue a follow-up task
 
 ---
 
@@ -445,7 +445,7 @@ See [Bootstrap Context Guide](bootstrap-context-guide.md) for full documentation
 - **Higher values (3000-5000)**: Better context retention, but more expensive
 - **Warning**: Very high limits (>5000) may cause context overflow in some models
 
-**`min_task_words`**: Safety feature that rejects vague single-word tasks. This prevents accidental dangerous actions from ambiguous commands like `/agent on` or `/agent delete`.
+**`min_task_words`**: Safety feature that rejects vague single-word tasks. This prevents accidental dangerous actions from ambiguous commands like `/auto on` or `/auto delete`.
 
 - **Default (3)**: Requires descriptive tasks like "Fix the bug in auth.py"
 - **Lower values (1-2)**: Less safe, allows vague tasks
@@ -470,9 +470,9 @@ You can customize these in `ppxai-config.json`:
 {
   "tools": {
     "shell": {
-      "safe_patterns": ["^ls\\s*", "^cat\\s+"],
-      "dangerous_patterns": ["^rm\\s+", "^kill\\s+"],
-      "never_allow_patterns": ["^rm\\s+-rf\\s+/"]
+      "allowed_commands": ["^ls\\s*", "^cat\\s+"],
+      "dangerous_commands": ["^rm\\s+", "^kill\\s+"],
+      "never_allow": ["^rm\\s+-rf\\s+/"]
     }
   }
 }
@@ -486,7 +486,7 @@ See [Shell Consent Guide](shell-consent-guide.md) for complete documentation.
 
 ### Agent Not Starting
 
-**Problem:** `/agent` command shows error
+**Problem:** `/auto` command shows error
 
 **Solutions:**
 1. Ensure engine client is available: Check if ppxai started correctly
@@ -516,7 +516,7 @@ See [Shell Consent Guide](shell-consent-guide.md) for complete documentation.
 
 **Solutions:**
 1. Review the agent's progress
-2. Run a follow-up `/agent` command with updated context
+2. Run a follow-up `/auto` command with updated context
 3. Consider if the task should be split into smaller parts
 
 ### Tool Errors
@@ -536,10 +536,10 @@ See [Shell Consent Guide](shell-consent-guide.md) for complete documentation.
 
 ```bash
 # Start agent mode
-/tools agent on
+/tools auto on
 
 # Run autonomous debugging
-/agent The tests in test_parser.py are failing. Find the bug and fix it.
+/auto The tests in test_parser.py are failing. Find the bug and fix it.
 
 # Agent output:
 # ━━━ Iteration 1/5 ━━━
@@ -566,7 +566,7 @@ See [Shell Consent Guide](shell-consent-guide.md) for complete documentation.
 
 ```bash
 # Review git changes
-/agent Review @git changes for bugs and security issues
+/auto Review @git changes for bugs and security issues
 
 # Agent output:
 # ━━━ Iteration 1/5 ━━━
@@ -594,7 +594,7 @@ See [Shell Consent Guide](shell-consent-guide.md) for complete documentation.
 
 ```bash
 # Implement a feature
-/agent Add a --dry-run flag to the CLI that shows what would happen without making changes
+/auto Add a --dry-run flag to the CLI that shows what would happen without making changes
 
 # Agent iterates through:
 # 1. Reading CLI entry point
@@ -618,4 +618,3 @@ See [Shell Consent Guide](shell-consent-guide.md) for complete documentation.
 ---
 
 **Agent mode introduced:** v1.13.0
-**Last verified against:** v1.18.8 (2026-06-15)

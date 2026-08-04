@@ -26,10 +26,10 @@ Each provider has a pre-configured coding model optimized for development tasks:
 | Provider | Default Coding Model | Why This Model? |
 |----------|---------------------|-----------------|
 | **Perplexity** | `sonar-pro` | Advanced reasoning for complex coding tasks |
-| **Gemini** | `gemini-2.5-pro` | Most capable model for complex reasoning |
-| **OpenAI** | `gpt-5.2` | Flagship model with best native tool calling (70.3% benchmark) |
+| **Gemini** | `gemini-3.5-flash` | Fast model, current default in the shipped config |
+| **OpenAI** | `gpt-5.4-mini` | Balanced cost/performance, current default in the shipped config |
 | **Custom** | (user-configured) | Configure any OpenAI-compatible endpoint (OpenRouter, etc.) |
-| **Ollama** | `codellama` | Specialized local coding model |
+| **Ollama** | `qwen2.5-coder:3b` | Specialized local coding model |
 
 ## Customizing Coding Models
 
@@ -119,8 +119,8 @@ When autorouting is disabled, all commands use your currently selected model.
 {
   "providers": {
     "gemini": {
-      "default_model": "gemini-2.5-flash-lite",  // $0.075/$0.30 per million tokens
-      "coding_model": "gemini-2.5-pro"            // $1.25/$5.00 per million tokens
+      "default_model": "gemini-3.1-flash-lite",   // $0.10/$0.40 per million tokens
+      "coding_model": "gemini-3.1-pro-preview"    // $2.00/$12.00 per million tokens
     }
   }
 }
@@ -156,8 +156,8 @@ Then disable autorouting:
 {
   "providers": {
     "ollama": {
-      "default_model": "llama3.2",      // General chat
-      "coding_model": "codellama"        // Specialized for code
+      "default_model": "llama3.2",         // General chat
+      "coding_model": "qwen2.5-coder:3b"    // Specialized for code
     }
   }
 }
@@ -174,17 +174,21 @@ ppxai searches for configuration in this order:
 
 ## Built-in Provider Defaults
 
-If you don't create a `ppxai-config.json`, these defaults are used:
+There is no hardcoded fallback config in code — `load_config()`
+(`ppxai/config/loader.py`) returns an empty `providers: {}` if no config
+file is found at all. In practice, first-run seeding copies the bundled
+[`ppxai-config.example.json`](../ppxai-config.example.json) to
+`~/.ppxai/ppxai-config.json`, which currently ships:
 
 ```json
 {
   "perplexity": {
-    "default_model": "sonar",
+    "default_model": "sonar-pro",
     "coding_model": "sonar-pro"
   },
   "gemini": {
-    "default_model": "gemini-2.5-flash",
-    "coding_model": "gemini-2.5-flash"
+    "default_model": "gemini-3.5-flash",
+    "coding_model": "gemini-3.5-flash"
   }
 }
 ```
@@ -210,7 +214,7 @@ If on an older version, the autorouter would use the global `MODEL_PROVIDER` ins
 
 # Output shows:
 # Auto-routing is currently: enabled
-# Auto-routing uses gemini-2.5-pro for coding commands
+# Auto-routing uses gemini-3.5-flash for coding commands
 # Use /autoroute on or /autoroute off to change
 ```
 

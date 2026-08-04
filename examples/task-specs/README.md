@@ -42,9 +42,9 @@ Run the web client against live source and launch by spec name:
 ```bash
 PPXAI_WEB_DIR=$PWD/ppxai/web uv run ppxai-server
 # then in the web UI:
-/task run "the CI job is red" --spec triage
-/task run "explain docs/README.md" --spec summarize
-/task run "x" --spec rejected-shell        # → ❌ rejected: shell grant (400)
+/task "the CI job is red" --spec triage
+/task "explain docs/README.md" --spec summarize
+/task "x" --spec rejected-shell        # → ❌ rejected: shell grant (400)
 ```
 
 Confirm the run pane shows the **grant + budget from the file** (not the flag

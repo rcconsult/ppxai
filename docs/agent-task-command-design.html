@@ -130,12 +130,12 @@
   <header>
     <p class="eyebrow">ppxai agent platform · design proposal</p>
     <h1>A <code>/task</code> command family that mirrors the run lifecycle</h1>
-    <p class="lede">One verb per state transition. Every change to a run is reachable <b>three ways that hit the same endpoint</b> — a <code>/task</code> sub-command, a control in the run pane, and (for automation) the raw <code>POST</code>. Tool-free work stays on <code>/agentrun</code>; <code>/task</code> is the tool-capable, sandboxed tier.</p>
+    <p class="lede">One verb per state transition. Every change to a run is reachable <b>three ways that hit the same endpoint</b> — a <code>/task</code> sub-command, a control in the run pane, and (for automation) the raw <code>POST</code>. Tool-free work stays on <code>/run</code>; <code>/task</code> is the tool-capable, sandboxed tier.</p>
   </header>
 
-  <div class="term" role="img" aria-label="Terminal session showing /task run, ls, respond, and ack commands">
+  <div class="term" role="img" aria-label="Terminal session showing /task direct launch, ls, respond, and collect commands">
     <div class="bar" aria-hidden="true"><i></i><i></i><i></i></div>
-<pre><span class="p">&gt;</span> /task run <span>"triage the failing CI job"</span> <span class="flag">--tools</span> read_file,grep,fetch_url <span class="flag">--allow</span> api.github.com <span class="flag">--budget</span> iters=20,time=300
+<pre><span class="p">&gt;</span> /task <span>"triage the failing CI job"</span> <span class="flag">--tools</span> read_file,grep,fetch_url <span class="flag">--allow</span> api.github.com <span class="flag">--budget</span> iters=20,time=300
   <span class="g-run">⟳</span> <span class="rid">r_7fq2</span>  <span class="dim">pending → running</span>   <span class="dim">gpt-5.4-mini · read_file grep fetch_url · ↗ api.github.com</span>
 
 <span class="p">&gt;</span> /task ls
@@ -146,10 +146,10 @@
 <span class="p">&gt;</span> /task respond <span class="rid">r_5kd8</span> approve
   <span class="g-run">▸</span> <span class="rid">r_5kd8</span>  <span class="dim">waiting → running</span>   <span class="dim">approved: write_file ./config.py</span>
 
-<span class="p">&gt;</span> /task ack <span class="rid">r_2ab1</span>
+<span class="p">&gt;</span> /task collect <span class="rid">r_2ab1</span>
   <span class="g-ok">✓</span> <span class="rid">r_2ab1</span>  <span class="dim">completed_pending_ack → finalized</span>   <span class="dim">result collected</span></pre>
   </div>
-  <div class="note"><b>Status today:</b> the <code>/task</code> command family is <b>built and live</b> in web + VSCode as of v1.19.0 (T1–T8a) — <code>run</code>, <code>ls</code>, <code>show</code>, <code>watch</code>, <code>cancel</code>, <code>respond</code>, <code>ack</code> and <code>resume</code> all ship, backed by the full <code>waiting</code> / <code>completed_pending_ack</code> / <code>finalized</code> lifecycle. The TUI port (T8b) is parked pending a transport decision; the container tier (T9) stays deferred.</div>
+  <div class="note"><b>Status today:</b> the <code>/task</code> command family is <b>built and live</b> in web + VSCode as of v1.19.0 (T1–T8a) — direct launch plus <code>ls</code>, <code>get</code>, <code>watch</code>, <code>cancel</code>, <code>respond</code>, <code>collect</code> and <code>resume</code> all ship, backed by the full <code>waiting</code> / <code>completed_pending_ack</code> / <code>finalized</code> lifecycle. The TUI port (T8b) is parked pending a transport decision; the container tier (T9) stays deferred.</div>
 
   <h2><span class="n">01</span> Sub-commands</h2>
   <p class="sub">Verb-first, git-shaped. Read verbs observe; lifecycle verbs drive a transition. <code style="font-family:var(--mono)">{id}</code> accepts a run-id prefix.</p>
@@ -157,13 +157,13 @@
     <table>
       <thead><tr><th>Verb</th><th>Syntax</th><th>Endpoint</th><th>Transition</th><th>Endpoint&nbsp;status</th></tr></thead>
       <tbody>
-        <tr><td><code>run</code></td><td><code>/task run "&lt;desc&gt;"</code> <span class="desc">+ flags →</span></td><td><code>POST /v1/agent/task</code></td><td class="trans">— <span class="to">→ pending → running</span></td><td><span class="pill built">built</span></td></tr>
+        <tr><td><span class="desc">(direct)</span></td><td><code>/task "&lt;desc&gt;"</code> <span class="desc">+ flags →</span></td><td><code>POST /v1/agent/task</code></td><td class="trans">— <span class="to">→ pending → running</span></td><td><span class="pill built">built</span></td></tr>
         <tr><td><code>ls</code></td><td><code>/task ls</code> <span class="desc">(alias <code>list</code>)</span></td><td><code>GET /v1/agent/runs</code></td><td class="trans">read</td><td><span class="pill built">built</span></td></tr>
-        <tr><td><code>show</code></td><td><code>/task show &lt;id&gt;</code> <span class="desc">(alias <code>open</code>)</span></td><td><code>GET …/runs/{id}</code></td><td class="trans">read · opens pane</td><td><span class="pill built">built</span></td></tr>
+        <tr><td><code>get</code></td><td><code>/task get &lt;id&gt;</code> <span class="desc">(aliases <code>show</code>, <code>open</code>)</span></td><td><code>GET …/runs/{id}</code></td><td class="trans">read · opens pane</td><td><span class="pill built">built</span></td></tr>
         <tr><td><code>watch</code></td><td><code>/task watch &lt;id&gt;</code></td><td><code>GET …/runs/{id}/events</code></td><td class="trans">read · live SSE tail</td><td><span class="pill built">built</span></td></tr>
         <tr><td><code>cancel</code></td><td><code>/task cancel &lt;id&gt;</code></td><td><code>POST …/runs/{id}/cancel</code></td><td class="trans">running|waiting <span class="to">→ cancelled</span></td><td><span class="pill built">built</span></td></tr>
         <tr><td><code>respond</code></td><td><code>/task respond &lt;id&gt; approve|deny|"&lt;text&gt;"</code></td><td><code>POST …/runs/{id}/respond</code></td><td class="trans">waiting <span class="to">→ running</span></td><td><span class="pill built">built</span></td></tr>
-        <tr><td><code>ack</code></td><td><code>/task ack &lt;id&gt;</code></td><td><code>POST …/runs/{id}/ack</code></td><td class="trans">completed_pending_ack <span class="to">→ finalized</span></td><td><span class="pill built">built</span></td></tr>
+        <tr><td><code>collect</code></td><td><code>/task collect &lt;id&gt;</code> <span class="desc">(alias <code>ack</code>)</span></td><td><code>POST …/runs/{id}/ack</code></td><td class="trans">completed_pending_ack <span class="to">→ finalized</span></td><td><span class="pill built">built</span></td></tr>
         <tr><td><code>resume</code></td><td><code>/task resume &lt;id&gt;</code></td><td><code>POST …/runs/{id}/resume</code></td><td class="trans">interrupted <span class="to">→ running</span> <span class="desc">(conditional)</span></td><td><span class="pill built">built</span></td></tr>
       </tbody>
     </table>
@@ -186,7 +186,7 @@
     </div>
     <div class="triad ok">
       <p class="st">✓ completed_pending_ack</p>
-      <div class="row"><span class="lbl">command</span><span class="val">/task ack r_2ab1</span></div>
+      <div class="row"><span class="lbl">command</span><span class="val">/task collect r_2ab1</span></div>
       <div class="row"><span class="lbl">pane</span><span class="btn neutral">Collect result</span><span class="desc" style="font-size:11px;color:var(--ink-2)">or auto-ack on view</span></div>
       <div class="row"><span class="lbl">endpoint</span><span class="arrow">→</span><span class="val">POST …/ack</span></div>
     </div>
@@ -204,7 +204,7 @@
     </div>
     <div class="triad act">
       <p class="st">↳ launch</p>
-      <div class="row"><span class="lbl">command</span><span class="val">/task run "…" --tools …</span></div>
+      <div class="row"><span class="lbl">command</span><span class="val">/task "…" --tools …</span></div>
       <div class="row"><span class="lbl">pane</span><span class="btn neutral">New task…</span><span class="desc" style="font-size:11px;color:var(--ink-2)">grant + budget form</span></div>
       <div class="row"><span class="lbl">endpoint</span><span class="arrow">→</span><span class="val">POST /v1/agent/task</span></div>
     </div>
@@ -213,9 +213,9 @@
   <h2><span class="n">03</span> Launch flags &amp; guardrails</h2>
   <div class="grid2">
     <div>
-      <p class="sub" style="margin-bottom:8px">Flags on <code style="font-family:var(--mono)">/task run</code> map 1:1 to the request body.</p>
+      <p class="sub" style="margin-bottom:8px">Flags on <code style="font-family:var(--mono)">/task</code> map 1:1 to the request body.</p>
       <ul class="clean">
-        <li><code>--tools a,b,c</code> — <b>capability grant</b> (required; a tool-free run belongs on <code>/agentrun</code>). Include <code>spawn_subagent</code> to permit one child.</li>
+        <li><code>--tools a,b,c</code> — <b>capability grant</b> (required; a tool-free run belongs on <code>/run</code>). Include <code>spawn_subagent</code> to permit one child.</li>
         <li><code>--allow host[/path],…</code> → <code>network.allow_outbound</code>. Empty = no egress (fail-closed).</li>
         <li><code>--provider</code> / <code>--model</code> — per-run intent; default from <code>tools.agent.default_subagent</code>.</li>
         <li><code>--budget iters=,time=,tokens=</code> → <code>BudgetSpec</code> (cooperative caps at loop boundaries).</li>
@@ -228,7 +228,7 @@
       <ul class="clean guard">
         <li><b>Default-off.</b> <code>task_tier_enabled=false</code> → <code>run</code> returns <b>403</b> with the enable hint; the tool-free tier stays available.</li>
         <li><b>No shell grant.</b> <code>--tools …,execute_shell_command</code> → <b>400</b> (escapes the egress allowlist; needs tier-d).</li>
-        <li><b>Auth required — even on loopback.</b> Unlike <code>/agentrun</code>, <code>/task</code> is not loopback-exempt; the local client needs a token.</li>
+        <li><b>Auth required — even on loopback.</b> <code>/task</code> is never loopback-exempt; the local client needs a token. <code>/run</code> keeps the exemption only while <code>execution.run.web_search</code> is off — once the config grants web_search the endpoint is a capability and requires a bearer even from localhost.</li>
         <li><b>Owner-scoped.</b> a run is readable/cancellable only by its owner; <code>ls</code>/<code>show</code> scope to you.</li>
         <li><b>Depth = 1, N = 1.</b> a child can't spawn; a parent drives one child at a time.</li>
       </ul>
@@ -244,7 +244,7 @@
         <li><code>POST /v1/agent/task</code> — sandboxed run (ScopedToolManager · NetworkPolicy · budgets · spawn N=1)</li>
         <li><code>GET /runs</code>, <code>GET /runs/{id}</code>, <code>GET /runs/{id}/events</code>, <code>POST /runs/{id}/cancel</code></li>
         <li>Owner-scoped authz; default-off gate; no-shell rejection</li>
-        <li>Web right-panel + <code>AgentRunView</code> pane (from the <code>/agentrun</code> tier — reusable)</li>
+        <li>Web right-panel + <code>AgentRunView</code> pane (from the <code>/run</code> tier — reusable)</li>
       </ul>
     </div>
     <div class="col have">

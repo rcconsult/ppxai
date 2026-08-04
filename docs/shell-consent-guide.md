@@ -171,7 +171,6 @@ ppxai includes sensible defaults in `ppxai-config.json`:
 {
   "tools": {
     "shell": {
-      "require_consent": true,
       "dangerous_commands": [
         "^rm\\s+",
         "^mv\\s+",
@@ -209,6 +208,8 @@ ppxai includes sensible defaults in `ppxai-config.json`:
   }
 }
 ```
+
+**Note:** `tools.shell.require_consent` is not a real toggle. It is parsed by `get_shell_config()` (`ppxai/config/tools.py`) but never read by the consent decision path (`ppxai/common/consent.py`, `ppxai/engine/consent_ops.py`) — setting it has no effect. Shell command consent cannot currently be disabled; see the [FAQ](#q-can-i-disable-shell-consent-entirely) below.
 
 ### Customizing Command Patterns
 
@@ -371,20 +372,25 @@ Create test commands to verify patterns work correctly:
 
 ```python
 # Test script: test_patterns.py
-from ppxai.engine.consent_manager import ConsentManager
+from ppxai.common.consent import classify_shell_command
 
-manager = ConsentManager()
-manager.load_shell_config(config)
+config = {
+    "allowed_commands": ["^ls\\s+"],
+    "dangerous_commands": ["^rm\\s+"],
+    "never_allow": ["rm\\s+-rf\\s+/"],
+}
 
 # Test safe command
-assert manager.classify_shell_command("ls -la") == "SAFE"
+assert classify_shell_command("ls -la", config) == "safe"
 
 # Test dangerous command
-assert manager.classify_shell_command("rm -f file.txt") == "DANGEROUS"
+assert classify_shell_command("rm -f file.txt", config) == "dangerous"
 
 # Test never-allow command
-assert manager.classify_shell_command("rm -rf /") == "NEVER"
+assert classify_shell_command("rm -rf /", config) == "never"
 ```
+
+`classify_shell_command(command, config)` is a module-level function in `ppxai/common/consent.py` (not a `ConsentManager` method) — pass it the same `shell_config` dict `get_shell_config()` builds. The `ConsentManager` class itself lives in `ppxai/common/consent.py` and takes `shell_config` as an `__init__` argument; there is no `load_shell_config()` method.
 
 ### 4. Monitor Consent Decisions
 
@@ -395,7 +401,7 @@ Enable debug logging to track consent requests:
 /debug-log on
 
 # VSCode: Check server logs
-tail -f ~/.ppxai/logs/server.log
+tail -f ~/.ppxai/logs/server-debug.log
 ```
 
 ### 5. Use Git for Auditing
@@ -452,12 +458,11 @@ Document your organization's shell command policy:
 
 **Problem:** AI executes dangerous commands without asking.
 
-**Solution:** Verify consent is enabled:
+**Solution:** Consent is always required for `dangerous`/unknown-risk commands — it cannot be turned off. If a command is slipping through unprompted, it's almost always because it matches an `allowed_commands` pattern too broadly. Check which pattern matched:
 
 ```bash
-# Check configuration
-cat ppxai-config.json | jq '.tools.shell.require_consent'
-# Should output: true
+# Inspect your allowed_commands patterns for over-broad matches
+cat ppxai-config.json | jq '.tools.shell.allowed_commands'
 ```
 
 ### Pattern Regex Errors
@@ -497,29 +502,44 @@ except re.error as e:
 
 ### Custom Consent Handlers
 
+`EngineClient(shell_consent_callback=...)` takes a plain async function, not a
+request/response object pair. The real signature (see
+`ppxai/engine/client.py`):
+
+```python
+async def shell_consent_callback(command: str, working_dir: str, risk_level: str) -> tuple[bool, str]:
+    """
+    Args:
+        command: The shell command the AI wants to run
+        working_dir: Working directory for the command
+        risk_level: "safe", "dangerous", or "never" (ShellRiskLevel)
+
+    Returns:
+        (approved, response) where response is one of "y", "n", "always", "never"
+        (ConsentResponse) — "always"/"never" are remembered for the rest of
+        the session, "y"/"n" apply to this command only.
+    """
+```
+
 Implement custom consent logic for programmatic control:
 
 ```python
 from ppxai.engine import EngineClient
-from ppxai.engine.types import ConsentRequest, ConsentDecision
 
-async def custom_shell_consent(request: ConsentRequest) -> ConsentDecision:
+async def custom_shell_consent(command: str, working_dir: str, risk_level: str) -> tuple[bool, str]:
     """Custom consent handler with logging and policy enforcement."""
 
     # Log request
-    print(f"🔔 Consent requested: {request.command}")
+    print(f"🔔 Consent requested: {command} (risk={risk_level})")
 
     # Apply custom policy
-    if "production" in request.working_dir:
+    if "production" in working_dir:
         # Never allow shell commands in production
-        return ConsentDecision(
-            approved=False,
-            remember="always",
-            reason="Shell commands forbidden in production"
-        )
+        return (False, "never")
 
-    # Use default UI prompt for dev environments
-    return await default_consent_handler(request)
+    # Fall back to your own UI prompt for dev environments
+    approved = await my_ui_prompt(command, working_dir, risk_level)
+    return (approved, "y" if approved else "n")
 
 # Use custom handler
 engine = EngineClient(shell_consent_callback=custom_shell_consent)
@@ -530,22 +550,20 @@ engine = EngineClient(shell_consent_callback=custom_shell_consent)
 Connect to enterprise approval workflows:
 
 ```python
-async def enterprise_consent(request: ConsentRequest) -> ConsentDecision:
+import os
+
+async def enterprise_consent(command: str, working_dir: str, risk_level: str) -> tuple[bool, str]:
     """Request approval from external system."""
 
     # Call approval API
     response = await approval_api.request_approval(
         user=os.getenv("USER"),
-        command=request.command,
-        directory=request.working_dir,
-        justification=request.context
+        command=command,
+        directory=working_dir,
+        risk_level=risk_level,
     )
 
-    return ConsentDecision(
-        approved=response.approved,
-        remember="session",
-        reason=response.reason
-    )
+    return (response.approved, "y" if response.approved else "n")
 ```
 
 ### Command Whitelisting by Directory
@@ -553,36 +571,34 @@ async def enterprise_consent(request: ConsentRequest) -> ConsentDecision:
 Allow different commands in different directories:
 
 ```python
-async def directory_based_consent(request: ConsentRequest) -> ConsentDecision:
+async def directory_based_consent(command: str, working_dir: str, risk_level: str) -> tuple[bool, str]:
     """Different rules for different directories."""
 
-    # Allow destructive commands in /tmp
-    if request.working_dir.startswith("/tmp"):
-        return ConsentDecision(approved=True, remember="always")
+    # Allow destructive commands in /tmp for the rest of the session
+    if working_dir.startswith("/tmp"):
+        return (True, "always")
 
-    # Deny all writes in /etc
-    if request.working_dir.startswith("/etc"):
-        return ConsentDecision(approved=False, remember="always")
+    # Deny all writes in /etc for the rest of the session
+    if working_dir.startswith("/etc"):
+        return (False, "never")
 
-    # Use default for other directories
-    return await default_consent_handler(request)
+    # Fall back to your own UI prompt for other directories
+    approved = await my_ui_prompt(command, working_dir, risk_level)
+    return (approved, "y" if approved else "n")
 ```
+
+**Note:** `ConsentRequest` (`ppxai/common/consent.py`) is an internal dataclass
+used by `ConsentManager`/`SyncConsentManager` to bundle prompt data for the
+built-in TUI/VSCode/web callbacks — it is not what your callback receives, and
+`ConsentDecision` (`ppxai/constants.py`) is a plain `str, Enum` of
+`"yes"|"no"|"always"|"never"`, not a constructible response object. Don't call
+`ConsentDecision(approved=..., ...)`; it raises `TypeError`.
 
 ## Frequently Asked Questions
 
 ### Q: Can I disable shell consent entirely?
 
-**A:** Yes, but **not recommended** for security:
-
-```json
-{
-  "tools": {
-    "shell": {
-      "require_consent": false
-    }
-  }
-}
-```
+**A:** No. Shell command consent cannot currently be disabled. `tools.shell.require_consent` is parsed by config loading but never read by the consent decision path, so setting it to `false` has no effect — dangerous/unknown-risk commands always prompt. The closest you can get is broadening `allowed_commands` so more commands auto-approve, or supplying a `shell_consent_callback` that always approves (see [Custom Consent Handlers](#custom-consent-handlers)) — the latter still runs on every request, it just doesn't prompt a human.
 
 ### Q: How do I allow all git commands?
 

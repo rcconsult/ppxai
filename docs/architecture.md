@@ -17,7 +17,7 @@ This document describes the high-level architecture and import patterns used in 
          ▼                  ▼                    ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │  ppxai/server/http.py   (FastAPI, REST + SSE)                   │
-│  POST /chat  GET /stream  GET /files/list  POST /command  …     │
+│  POST /chat (SSE)  GET /files/list  POST /command/<name>  …     │
 └────────────────────────────┬────────────────────────────────────┘
                              │
                              ▼
@@ -39,10 +39,13 @@ This document describes the high-level architecture and import patterns used in 
 
 ```
 ppxai/
-├── config.py          # LEAF: No ppxai imports (safe to import anywhere)
-├── themes.py          # LEAF: No ppxai imports
+├── config/            # LEAF pkg: No ppxai imports (safe to import anywhere)
+│   ├── loader.py      # Config file discovery + load
+│   ├── store.py       # ConfigStore, get_config, reload
+│   ├── execution.py   # execution.* axis readers (ADR 0010/0011)
+│   └── …              # paths, providers, tools, features, prompts, context, defaults
+├── constants.py       # LEAF: Enums and constants
 ├── prompts.py         # LEAF: No ppxai imports
-├── utils.py           # LEAF: No ppxai imports
 ├── common/            # Low-level utilities — every file here is a LEAF
 │   ├── logger.py      # No ppxai imports (enable_all/disable_all v1.15.4)
 │   ├── preview.py     # Preview utilities (v1.15.4)
@@ -60,7 +63,7 @@ ppxai/
 │   ├── providers/     # Provider implementations
 │   ├── tools/         # Tool system
 │   │   ├── manager.py # Uses types only
-│   │   └── builtin/   # Built-in tools (TYPE_CHECKING pattern)
+│   │   └── builtin/   # Built-in tools (Protocol-based imports)
 │   └── client.py      # Facade (uses bootstrap.py)
 ├── server/            # HTTP server
 │   └── http.py        # Uses engine, config
@@ -68,44 +71,55 @@ ppxai/
 │   ├── protocol.py    # CommandContext protocol (interface)
 │   ├── factory.py     # CommandFactory + CommandSpec registry
 │   ├── context.py     # Adapters: RichCommandContext (Pattern A proxy), ServerCommandContext (Pattern B explicit). Textual uses no adapter — see ADR 0002.
-│   ├── results.py     # 17 CommandResult types (v1.15.0)
+│   ├── results.py     # 21 CommandResult types
 │   ├── system.py      # /help, /status, /theme
 │   ├── provider.py    # /provider, /model
-│   ├── agent.py       # /agent (agent loop)
+│   ├── agent.py       # /auto (agent loop)
 │   └── utility.py     # /context, /debug-log
-└── main.py            # Entry point
+└── rich/main.py       # Rich TUI entry point (see pyproject [project.scripts])
 ```
 
 ## Import Patterns
 
-### 1. TYPE_CHECKING Pattern (Static Analysis Only)
+### 1. Protocol-Based Dependency Inversion
 
-Used in builtin tools to avoid circular imports with manager.py and client.py.
+Circular imports between builtin tools and `manager.py`/`client.py` are broken by
+depending on a **Protocol declared in a leaf module**, not on the concrete class.
+Imports stay at the top of the file and are real at runtime.
 
 ```python
-from typing import TYPE_CHECKING
+# ppxai/engine/tools/builtin/editor.py
+from ...types import ToolEngineProtocol, ToolManagerProtocol
+from ..base import BaseTool
 
-if TYPE_CHECKING:
-    from ..manager import ToolManager
-    from ...client import EngineClient
 
-def register_tools(manager: 'ToolManager', engine: 'EngineClient'):
+def register_tools(manager: ToolManagerProtocol, engine: ToolEngineProtocol):
     ...
 ```
 
-**Why**: Type hints are evaluated lazily (as strings) at runtime, so the imports
-inside TYPE_CHECKING block are only needed for static type checkers like mypy.
+**Why**: `ppxai/engine/types.py` is a leaf — it imports nothing from ppxai — so
+anything may import it. The tool depends on the *interface* it actually needs
+rather than on `EngineClient`, which would close an import cycle. The concrete
+class satisfies the Protocol structurally; nothing needs to inherit from it.
 
-**Files using this pattern**:
-- `ppxai/engine/tools/builtin/*.py` (all builtin tools)
-- `ppxai/server/session_manager.py`
+**Protocols defined in `ppxai/engine/types.py`**: `ToolEngineProtocol`,
+`ToolManagerProtocol`, `EngineClientProtocol`, `ArtifactRef`,
+`MarshallableArtifact`.
+
+> **Do not use `if TYPE_CHECKING:` or function-local imports to break cycles.**
+> This codebase deliberately does not use either — a cycle that needs hiding is a
+> layering bug, and the fix is a Protocol in a leaf module. There are zero
+> `TYPE_CHECKING` blocks in `engine/tools/builtin/` or `server/session_manager.py`
+> (both of which an earlier revision of this document incorrectly cited as
+> examples of the pattern). See
+> [patterns/protocol-dependency-inversion.md](patterns/protocol-dependency-inversion.md).
 
 ### 2. DAG Import Structure
 
 The codebase follows a Directed Acyclic Graph (DAG) for imports:
 
 ```
-config.py, types.py, logger.py  (leaf modules - no ppxai imports)
+config/, engine/types.py, common/logger.py  (leaf modules - no ppxai imports)
            ↓
 engine/providers/, engine/tools/manager.py
            ↓
@@ -115,24 +129,37 @@ commands/  (protocol, factory, handlers, adapters)
            ↓
 rich/, tui/, server/  (client layer)
            ↓
-main.py (entry points)
+entry points (rich/main.py, tui/__init__.py, server/http.py)
 ```
 
 **Rule**: Each module only imports from modules "below" it in the hierarchy.
-No circular dependencies exist. The `commands/` layer uses `TYPE_CHECKING`
-for forward references to client types (CommandHandler, PPXAIDEApp).
+No circular dependencies exist. The `commands/` layer types against
+`EngineClientProtocol` rather than importing the concrete `EngineClient`.
+
+Entry points are declared in `pyproject.toml`:
+
+| Script | Target |
+|--------|--------|
+| `ppxai` | `ppxai.rich.main:main` |
+| `ppxaide` | `ppxai.tui:main` |
+| `ppxai-server` | `ppxai.server.http:run_server` |
+| `ppxai-desktop` | `ppxai.server.http:run_desktop` |
 
 ### 3. Clean Leaf Modules
 
 Modules that have no ppxai imports and can be imported by anything.
 
-- `ppxai/config.py` - Configuration loading and defaults
-- `ppxai/themes.py` - Theme definitions
+- `ppxai/config/` - Configuration package (`loader`, `store`, `paths`, `providers`,
+  `tools`, `execution`, `features`, `prompts`, `context`, `defaults`)
+- `ppxai/engine/types.py` - Protocols and shared type definitions
+- `ppxai/constants.py` - Enums and constants
 - `ppxai/prompts.py` - Prompt templates
-- `ppxai/utils.py` - Utility functions
-- `ppxai/engine/types.py` - Type definitions (Message, Event, etc.)
+- `ppxai/common/logger.py` - Logging
 - `ppxai/engine/bootstrap.py` - Bootstrap context parsing (v1.14.0)
-- `ppxai/common/logger.py` - Logging setup
+
+Theme definitions live with their client (`ppxai/rich/themes.py`,
+`ppxai/tui/themes/themes.py`), and helpers in `ppxai/rich/utils.py` — none of
+these is a top-level leaf module.
 
 These form the "bottom" of the import hierarchy.
 
@@ -753,8 +780,9 @@ app.js                (PpxaiApp — orchestrates all modules)
 | `/files/image/{path}` | GET | Serve image binary for inline display |
 | `/files/serve/{file_id}` | GET | Serve uploaded file by content-addressed ID |
 | `/files/preview/{file_id}` | GET | Preview rendering (PPTX slides, DOCX→PDF) |
-| `/command` | POST | CommandFactory server pattern (unified `/usage`, `/status`, etc.) |
-| `/set_working_dir` | POST | Change working directory (REST, no SSE emitted) |
+| `/command/{name}` | POST | CommandFactory server pattern (unified `/usage`, `/status`, etc.) |
+| `/context/working_dir` | GET | Read the current working directory |
+| `/context/working_dir` | POST | Change working directory (REST, no SSE emitted) |
 | `/interrupt` | POST | Abort current streaming response |
 | `/checkpoint/undo` | POST | Undo last agent operation |
 
@@ -843,7 +871,7 @@ is a one-file change in `engine/completion.py`. The web client picks
 it up for free (no recompile needed, just a server restart). VSCode
 picks it up on the next extension reload. Rich and Textual get it
 immediately because they call the engine in-process. Tests live next
-to the engine logic in `tests/test_completion_provider.py` (39 tests
+to the engine logic in `tests/test_completion_provider.py` (66 tests
 covering every source).
 
 ## Schema-Driven AppState DTO (v1.17.4)

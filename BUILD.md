@@ -8,7 +8,7 @@ This guide explains how to build:
 ## Prerequisites
 
 ### TUI Executable
-- Python 3.8 or higher
+- Python 3.10 or higher
 - pip (Python package installer)
 - Git (optional, for cloning the repository)
 
@@ -256,9 +256,9 @@ PERPLEXITY_API_KEY=your_api_key_here
 
 ### Executable is very large
 This is normal. It includes the entire Python runtime and all dependencies. Typical sizes:
-- macOS: 15-25 MB
-- Linux: 15-25 MB
-- Windows: 10-20 MB
+- macOS: 45-60 MB
+- Linux: 45-60 MB
+- Windows: 35-50 MB
 
 ### TUI Support
 
@@ -391,12 +391,12 @@ npm run compile
 npx vsce package --allow-missing-repository
 ```
 
-This creates a `.vsix` file (e.g., `ppxai-0.1.0.vsix`) in the `vscode-extension` directory.
+This creates a `.vsix` file (e.g., `ppxai-<version>.vsix`) in the `vscode-extension` directory.
 
 ### Install Locally
 
 ```bash
-code --install-extension ppxai-0.1.0.vsix
+code --install-extension ppxai-<version>.vsix
 ```
 
 Or in VS Code: Extensions view → `...` menu → "Install from VSIX..."
@@ -467,7 +467,7 @@ npm run compile
 Check Output panel → "ppxai" for backend logs.
 
 #### Python backend not found
-Ensure `python3` is in PATH or configure `ppxai.pythonPath` in VS Code settings.
+Check `ppxai.serverUrl` in VS Code settings and make sure `ppxai-server` is running — the extension talks to it over HTTP and has no `pythonPath` setting.
 
 ### Extension Support
 

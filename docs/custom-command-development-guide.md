@@ -466,10 +466,11 @@ logger.exception("Error with stack trace (use in except blocks)")
 
 ```bash
 # Logs are stored in ~/.ppxai/logs/
-tail -f ~/.ppxai/logs/ppxai.log
+tail -f ~/.ppxai/logs/tui-debug.log
 
-# Or use /debug_log command in ppxai
-> /debug_log tail 50
+# Or use /debug-log in ppxai to enable logging, then show it
+> /debug-log on
+> /debug-log show
 ```
 
 ### Debug Mode
@@ -820,7 +821,7 @@ CommandFactory.register(CommandSpec(
 1. Check file is in `~/.ppxai/commands/`
 2. Check file has `.py` extension
 3. Check for syntax errors: `python ~/.ppxai/commands/myfile.py`
-4. Check logs: `/debug_log tail 20`
+4. Check logs: `/debug-log show`
 
 ### Import Errors
 
@@ -837,7 +838,7 @@ from ppxai.commands import CommandFactory, CommandSpec
 ```python
 # Check registration
 from ppxai.commands import CommandFactory
-print(CommandFactory.list_commands())
+print(CommandFactory.list_all())
 print(CommandFactory.get("mycommand"))
 ```
 

@@ -19,7 +19,7 @@ The checkpoint system provides **atomic multi-file rollback** for agent mode tas
 
 1. **Enable agent mode** (checkpoints enabled automatically):
    ```
-   /agent refactor the authentication module to use JWT
+   /auto refactor the authentication module to use JWT
    ```
 
 2. **Check status** (see checkpoint backend in status line):
@@ -89,7 +89,7 @@ When git is not available, ppxai uses **file-based snapshots**:
 - ⚠️ Not atomic (individual file restores)
 - ⚠️ Old checkpoints must be manually cleaned
 
-**Note:** File backend checkpoints are automatically cleaned up, keeping the last 10 by default.
+**Note:** File backend checkpoints are **not** automatically cleaned up — they accumulate indefinitely until you act. `cleanup_old_checkpoints(keep_last=10)` (`ppxai/checkpoint.py`) exists in code but is only reachable through the explicit `/checkpoint clear` command, and that command calls it with `keep_last=0` — i.e. `/checkpoint clear` deletes **all** file-based checkpoint snapshots, not "keep the last 10". See [`/checkpoint clear`](#checkpoint-clear) below.
 
 ---
 
@@ -97,18 +97,22 @@ When git is not available, ppxai uses **file-based snapshots**:
 
 ### Backend Selection
 
-Edit `ppxai-config.json` to customize checkpoint behavior:
+Edit `ppxai-config.json` (nested under `tools.agent`) to customize checkpoint
+backend selection:
 
 ```json
 {
   "tools": {
     "agent": {
-      "checkpoint_backend": "auto",
-      "checkpoint_message": "ppxai checkpoint: {task}"
+      "checkpoint_backend": "auto"
     }
   }
 }
 ```
+
+**Note:** `ppxai-config.json` also ships a `checkpoint_message` key under
+`tools.agent`, but it has **zero effect** — nothing in `ppxai/` reads it. The
+commit message format is hardcoded; see [How It Works → Git Backend](#git-backend-preferred).
 
 **Backend Options:**
 
@@ -119,29 +123,30 @@ Edit `ppxai-config.json` to customize checkpoint behavior:
 | `"file"` | Force file backend even if git is available |
 | `"none"` | Disable checkpoints entirely |
 
-**Examples:**
+**Examples** (nested under `tools.agent` — these are abbreviated for
+brevity, not a valid top-level snippet):
 
 ```json
 // Force git-only (fail if no git)
-{"checkpoint_backend": "git"}
+{"tools": {"agent": {"checkpoint_backend": "git"}}}
 
 // Always use file snapshots
-{"checkpoint_backend": "file"}
+{"tools": {"agent": {"checkpoint_backend": "file"}}}
 
 // Disable checkpoints
-{"checkpoint_backend": "none"}
+{"tools": {"agent": {"checkpoint_backend": "none"}}}
 ```
 
 ---
 
 ## Commands
 
-### `/agent <task>` - Execute Agent Task
+### `/auto <task>` - Execute Agent Task
 
 Runs an autonomous agent loop with automatic checkpointing:
 
 ```
-/agent refactor the auth module to use JWT tokens
+/auto refactor the auth module to use JWT tokens
 ```
 
 **What happens:**
@@ -288,7 +293,9 @@ Change checkpoint backend for the current session:
 
 #### `/checkpoint clear`
 
-Clear old file-based checkpoint snapshots:
+Delete **all** file-based checkpoint snapshots (not a "keep recent N" prune —
+it calls `cleanup_old_checkpoints(keep_last=0)`, which removes every
+snapshot):
 
 ```
 /checkpoint clear
@@ -299,7 +306,9 @@ Clear old file-based checkpoint snapshots:
 🗑️  Cleared 8 old checkpoint snapshots
 ```
 
-**Note:** This only affects file-based checkpoints. Git checkpoints are managed by git history.
+**Note:** This only affects file-based checkpoints and deletes them all —
+there is no partial/automatic cleanup. Git checkpoints are managed by git
+history and are unaffected.
 
 ---
 
@@ -351,7 +360,7 @@ This is equivalent to running `/undo` directly.
 [Perplexity | sonar-pro | Tools: ON | Agent: ON | Checkpoints: git]
 
 # Run agent task
-You: /agent add user registration endpoint
+You: /auto add user registration endpoint
 
 🔒 Agent Mode enabled with Git checkpoints
    • Changes will be auto-committed before each task
@@ -387,7 +396,7 @@ Confirm undo? (y/n): y
 [Perplexity | sonar-pro | Tools: ON | Agent: ON | Checkpoints: file]
 
 # Run agent task
-You: /agent refactor config.py to use environment variables
+You: /auto refactor config.py to use environment variables
 
 ⚠️  Agent Mode enabled with File checkpoints
    • Snapshots will be saved to ~/.ppxai/checkpoints
@@ -416,7 +425,7 @@ You: /undo
 [Perplexity | sonar-pro | Tools: ON | Agent: ON | Checkpoints: OFF]
 
 # Warning shown when running agent
-You: /agent update dependencies
+You: /auto update dependencies
 
 ⚠️  Agent Mode enabled WITHOUT checkpoints
    • Changes CANNOT be undone
@@ -436,7 +445,7 @@ You: /undo
 
 ```
 # Agent task in progress
-You: /agent refactor authentication module
+You: /auto refactor authentication module
 
 ✓ Checkpoint created: d4b8f2a1 (refactor authentication module)
 
@@ -480,7 +489,7 @@ Running git reset --hard...
 Removing untracked files...
 ✓ All changes removed
 
-# All clean! Back to state before /agent command
+# All clean! Back to state before /auto command
 ```
 
 **File Backend (Non-Git):**
@@ -546,11 +555,13 @@ Rolling back changes...
 3. **Checkpoints for agent mode only**
    - Regular chat doesn't create checkpoints
    - File editing tools don't auto-checkpoint (yet)
-   - Use `/agent` for checkpoint protection
+   - Use `/auto` for checkpoint protection
 
 4. **Disk space (file backend)**
-   - Old snapshots consume disk space
-   - Auto-cleanup keeps last 10 by default
+   - Old snapshots consume disk space and accumulate indefinitely — there is
+     **no** automatic cleanup
+   - `/checkpoint clear` deletes **all** file-based snapshots (not a
+     keep-last-10 prune)
    - Manual cleanup: `rm -rf ~/.ppxai/checkpoints/*`
 
 ---
@@ -575,11 +586,11 @@ git add .
 git commit -m "Initial commit"
 
 # Option 2: Enable file backend
-# Edit ppxai-config.json:
-{"checkpoint_backend": "file"}
+# Edit ppxai-config.json (nested under tools.agent):
+{"tools": {"agent": {"checkpoint_backend": "file"}}}
 
 # Option 3: Use auto-detection
-{"checkpoint_backend": "auto"}
+{"tools": {"agent": {"checkpoint_backend": "auto"}}}
 ```
 
 ---
@@ -689,34 +700,19 @@ git rebase -i HEAD~5  # Mark checkpoint commits as 'fixup'
 
 ---
 
-### Custom Checkpoint Messages
+### Checkpoint Commit Message Format
 
-Edit `ppxai-config.json` to customize commit messages:
+The git checkpoint commit message is **not customizable** — it is hardcoded
+in `ppxai/checkpoint.py`:
 
-```json
-{
-  "tools": {
-    "agent": {
-      "checkpoint_message": "[AGENT] {task}"
-    }
-  }
-}
+```python
+commit_message = f"ppxai checkpoint: {description}\n\n[{timestamp}]"
 ```
 
-**Variables:**
-- `{task}` - First 100 characters of agent task description
-
-**Examples:**
-```json
-// Prefix with project name
-{"checkpoint_message": "[MyApp] Agent checkpoint: {task}"}
-
-// Include timestamp
-{"checkpoint_message": "🤖 {task} [automated]"}
-
-// Conventional commits style
-{"checkpoint_message": "chore(agent): {task}"}
-```
+`ppxai-config.json` ships a `tools.agent.checkpoint_message` key
+(`"ppxai checkpoint: {task}"` by default), but it has **zero effect** —
+nothing in `ppxai/` reads it. Setting it to any other value does not change
+the commit message that gets created.
 
 ---
 
@@ -741,7 +737,7 @@ See [docs/VSCODE-CHECKPOINT-UI-SPEC.md](archive/v1.15.2-completed/VSCODE-CHECKPO
 ## FAQ
 
 **Q: Do checkpoints work with file editing tools?**
-A: Currently, checkpoints are only created for `/agent` tasks. File editing tools (apply_patch, etc.) require manual consent but don't auto-checkpoint. This may change in future versions.
+A: Currently, checkpoints are only created for `/auto` tasks. File editing tools (apply_patch, etc.) require manual consent but don't auto-checkpoint. This may change in future versions.
 
 **Q: Can I undo multiple tasks?**
 A: No, `/undo` only reverts the last checkpoint. Use git commands directly for multiple undos:
@@ -754,7 +750,9 @@ git revert <commit1> <commit2> <commit3>  # Revert multiple
 A: Checkpoint commits are normal git commits. They can be pushed, merged, and shared like any commit. Team members will see them in git history.
 
 **Q: How do I clean up old file backend snapshots?**
-A: ppxai auto-cleans, keeping the last 10 checkpoints. Manual cleanup:
+A: ppxai does **not** auto-clean — file-based checkpoints accumulate
+indefinitely until you act. Run `/checkpoint clear` (deletes **all**
+file-based snapshots, not just old ones), or manually:
 ```bash
 rm -rf ~/.ppxai/checkpoints/*
 ```

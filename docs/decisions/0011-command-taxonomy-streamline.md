@@ -4,7 +4,11 @@
 **Status:** **Accepted** (2026-08-02 — semantics converged and all five
 sign-off questions answered by the owner in the same design session; the
 "no cutting until crystal clear" gate is now open. Amends ADR 0009's config
-key location — amendment note added there.)
+key location — amendment note added there.) **Implemented 2026-08-02/03** —
+Phase F (oneshot facade): F1 `abf83868`, F2 `8bcd8109`, F3 `26c26a19`, F4
+`16b6091d`. Phase U (command surface rename): U1 `3fa55f3b`, U2 `e2690636`,
+U3 `89d5c95c`, U4 `8867bc5c`. Phase FU (follow-up): `0c997df8`. All landed
+on `bugfix/v1.19.1`.
 **Related:**
 - [`0003-agent-platform-architecture.md`](0003-agent-platform-architecture.md) — the run registry + `start_run` contract verb this taxonomy surfaces
 - [`0009-task-execution-profiles.md`](0009-task-execution-profiles.md) §4 — enriched oneshot; step ① makes oneshot a facade over the run tier, which is what makes this streamline possible
