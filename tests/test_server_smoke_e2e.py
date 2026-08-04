@@ -46,6 +46,8 @@ import pytest
 pytest.importorskip("httpx")
 import httpx
 
+from tests.conftest import pin_server_working_dir
+
 
 # ---------------------------------------------------------------------------
 # Endpoint catalog. Each tuple is (method, path, body|None).
@@ -353,6 +355,10 @@ def server(tmp_path_factory) -> Iterator[Tuple[str, subprocess.Popen]]:
             f"--- BEGIN SERVER OUTPUT ---\n{log}\n--- END SERVER OUTPUT ---",
             pytrace=False,
         )
+
+    # Never inherit the host's working directory -- see pin_server_working_dir's
+    # docstring for the measurements and the failure it prevents.
+    pin_server_working_dir(base_url, repo_root)
 
     try:
         yield base_url, proc

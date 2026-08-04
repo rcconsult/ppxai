@@ -75,6 +75,54 @@ def _auth_off_by_default(monkeypatch):
         pass
 
 
+@pytest.fixture
+def isolated_working_dir(tmp_path):
+    """A scratch working directory for tests that must not inherit the host's.
+
+    Use with `pin_server_working_dir()` for tests that spawn a real server.
+    """
+    wd = tmp_path / "workdir"
+    wd.mkdir(exist_ok=True)
+    return wd
+
+
+def pin_server_working_dir(base_url: str, path, timeout: float = 10.0) -> bool:
+    """Pin a spawned server's working directory. Returns True on success.
+
+    WHY THIS EXISTS -- a spawned `ppxai-server` shares the developer's real
+    `~/.ppxai/`, so it restores the most recent session, and sessions persist
+    `working_dir` (EngineClient.set_working_dir writes it via
+    session.set_working_dir). On a dev host that is routinely `$HOME`. Any
+    endpoint that walks the working directory then walks the developer's home:
+    `/files/tree` at depth 3 measured 12,523 dirs / 30,598 files / 2.7s warm
+    against 0.06s for the repo -- enough to blow the smoke test's timeout under
+    suite load, while passing on CI where HOME is empty. That produced two
+    "flaky" failures whose real cause was inherited host state.
+
+    This is the third time host-state inheritance has bitten this suite (see
+    also the v1.19.0 retag: the release gate inherited ~/.ppxai provider config
+    and diverged local-vs-CI). Pin it explicitly rather than hoping.
+
+    Goes through POST /context/working_dir -> EngineClient.set_working_dir,
+    the canonical choke point that also updates AppState, the session, the
+    checkpoint manager, and emits WORKING_DIR_CHANGED -- so the server ends up
+    in the same state a real client would produce.
+    """
+    import httpx
+
+    try:
+        r = httpx.post(
+            f"{base_url}/context/working_dir",
+            json={"path": str(path)},
+            timeout=timeout,
+        )
+        return r.status_code < 400
+    except Exception:
+        # Non-fatal: the caller's assertions still hold, they are just
+        # exposed to whatever directory the host handed the server.
+        return False
+
+
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_makereport(item, call):
     outcome = yield
