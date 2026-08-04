@@ -2,6 +2,7 @@
 File operations endpoints (search, list, tree, read, write, image).
 """
 
+import asyncio
 import base64
 import hashlib
 import os
@@ -472,7 +473,13 @@ async def get_file_tree(
 
         return {"label": directory.name + "/", "children": children}
 
-    tree = build_tree(target, 0)
+    # Offload the walk: build_tree is fully synchronous filesystem I/O, and a
+    # large working_dir makes it long. Run on the event loop it stalls EVERY
+    # other request for its whole duration -- a user whose working_dir is their
+    # home directory freezes the server for every connected client, not just
+    # the one that asked for the tree. Same rationale as the v1.19.0 provider-call
+    # offload in oneshot.py / agent_v1.py.
+    tree = await asyncio.to_thread(build_tree, target, 0)
     tree["label"] = str(target) + "/"
 
     return {
