@@ -276,6 +276,22 @@ class ApiClient {
         return this.post(`/sessions/load/${encodeURIComponent(name)}`);
     }
 
+    /**
+     * @deprecated v1.19.1 — do not call for clearing the conversation.
+     *
+     * Clearing a session is command logic, so it goes through the command
+     * envelope: `commandDispatcher._dispatchToFactory('clear', '')` →
+     * `POST /command/clear` → `CommandFactory` → `handle_clear`. That path
+     * returns `events[]`, which the dispatcher drains into `handleStateSync`
+     * so server-pushed AppState (context_percentage, context_attachments, …)
+     * updates itself. This bespoke endpoint discards the response body, so
+     * every pushed field needs a manual refresh at the call site — the
+     * staleness bug debt Item 48 was filed for.
+     *
+     * Kept only because `POST /sessions/clear` remains a public HTTP surface
+     * external callers may script against. See
+     * docs/patterns/command-envelope.md rule 1.
+     */
     async clearSession() {
         return this.post('/sessions/clear');
     }

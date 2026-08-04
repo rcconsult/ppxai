@@ -355,3 +355,61 @@ class TestWebAndVSCodeRenderWiring:
         src = self._read("vscode-extension", "src", "chatPanel.ts")
         assert "'context_percentage' in changes" in src
         assert "postContextBadge" in src
+
+
+class TestClearGoesThroughTheCommandEnvelope:
+    """Every clear entry point must dispatch `/clear` through the command
+    envelope — never a bespoke REST endpoint.
+
+    Rule 1 of docs/patterns/command-envelope.md. The envelope's `events[]`
+    is how server-pushed AppState reaches web/VSCode; a bypassing call site
+    discards it, so every pushed field needs a manual refresh there and a
+    missed one is a silently stale badge (debt Item 48's failure mode —
+    the buttons kept the bug alive after the typed command was fixed).
+
+    Source sentinels because the bypass FAILS SILENTLY: the UI still
+    clears, nothing errors, only the derived state goes stale.
+    """
+
+    @staticmethod
+    def _read(*parts):
+        from pathlib import Path
+
+        return Path(__file__).parent.parent.joinpath(*parts).read_text(
+            encoding="utf-8"
+        )
+
+    def test_web_clear_button_dispatches_the_command(self):
+        src = self._read("ppxai", "web", "app.js")
+        body = src.split("async clearConversation()", 1)[1][:1200]
+        assert "_dispatchToFactory('clear'" in body, (
+            "the web Clear button no longer dispatches /clear through the "
+            "command envelope — pushed AppState will go stale"
+        )
+        assert "apiClient.clearSession()" not in body, (
+            "the web Clear button calls the bespoke POST /sessions/clear again"
+        )
+
+    def test_vscode_has_one_clear_path_through_the_envelope(self):
+        src = self._read("vscode-extension", "src", "chatPanel.ts")
+        body = src.split("public async clearConversation()", 1)[1][:1200]
+        assert "dispatchFactoryCommand('clear'" in body, (
+            "VSCode's clear path no longer goes through the command envelope"
+        )
+
+    def test_vscode_entry_points_share_that_one_path(self):
+        """The webview button AND the ppxai.clearHistory palette command."""
+        panel = self._read("vscode-extension", "src", "chatPanel.ts")
+        ext = self._read("vscode-extension", "src", "extension.ts")
+        assert "clear: async () => { await this.clearConversation(); }" in panel, (
+            "the webview clear message stopped delegating to clearConversation"
+        )
+        palette = ext.split("'ppxai.clearHistory'", 1)[1][:600]
+        assert "chatViewProvider.clearConversation()" in palette, (
+            "the palette clear command bypasses the panel's single clear path"
+        )
+        # `await backend.clearHistory()` = the bypass; a bare mention in a
+        # comment explaining why we no longer call it is fine.
+        assert "await backend.clearHistory()" not in palette, (
+            "the palette clear command calls the bespoke REST endpoint again"
+        )

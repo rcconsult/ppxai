@@ -52,9 +52,37 @@ For free-text follow-ups (where the answer isn't from a finite set), engine emit
 
 First user: `validate_agent_task` rejection. `/agent fix` → engine returns `NotificationResult(WARNING)` + `prompt_text` side-effect → web/VSCode auto-resume the elaboration without the user retyping the slash command.
 
+## Buttons are command call sites too (v1.19.1)
+
+Rule 1 below is usually read as "don't add new endpoints." The other half is
+easier to miss: **a UI affordance that performs a command must dispatch that
+command**, not call a bespoke endpoint that happens to do the same thing
+server-side.
+
+Until v1.19.1 the web Clear button, the VSCode webview Clear button, and the
+`ppxai.clearHistory` palette command all called `POST /sessions/clear`
+directly while a typed `/clear` went through the envelope. Same server-side
+effect, but the bespoke call **discards the response body** — and the body is
+where `events[]` lives. So every AppState field the handler pushed had to be
+re-fetched by hand at each call site, and a missed site was a silently stale
+badge (debt Item 48: the buttons kept the staleness bug alive after the typed
+command was fixed).
+
+This fails silently by construction: the UI still clears, nothing errors,
+only derived state drifts. Guard it with source sentinels —
+`tests/test_context_percentage_state.py::TestClearGoesThroughTheCommandEnvelope`
+pins all three entry points onto the one dispatch path.
+
+The shape to copy: give the client ONE method that dispatches the command
+(`PpxaiApp.clearConversation`, `ChatViewProvider.clearConversation`); every
+entry point calls it; only genuinely client-side state (staged files, a local
+history mirror) is reset by hand next to it, with a comment saying why no
+server event can do it.
+
 ## Rules
 
-1. **Never add a bespoke REST endpoint for command logic.** Routes like `/sessions`, `/checkpoint/list` exist for non-command UI (dropdowns, file-tree widget); they MUST NOT duplicate handler logic that lives in the factory.
+1. **Never add a bespoke REST endpoint for command logic**, and never call
+   one from a UI affordance that is performing a command (see above). Routes like `/sessions`, `/checkpoint/list` exist for non-command UI (dropdowns, file-tree widget); they MUST NOT duplicate handler logic that lives in the factory.
 2. **`SideEffectKind` constants over bare strings.** Use `result.add_side_effect(SideEffectKind.OPEN_EDITOR, filepath=p)` so a typo is `AttributeError`, not silently-ignored. The taxonomy sentinel test (`tests/test_command_envelope.py::TestSideEffectKindTaxonomy`) pins the exact set of v1.18.1 kinds; add a new kind in BOTH the constants class AND the `SideEffect` docstring AND the sentinel's `EXPECTED_KINDS_V1` set.
 3. **Test the envelope shape, not just the result type.** The envelope contract (`{ok, result, side_effects, version}`) is what web/VSCode read. `tests/test_command_envelope.py` pins it.
 4. **Per-command behavior tests live next to the handler.** Each handler gets a `tests/test_<command>_handler.py` with branches for: existing-arg, missing-arg, malformed-arg, server-side capability mismatch.

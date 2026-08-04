@@ -2981,9 +2981,31 @@ class PpxaiApp {
 
     // === Session Management ===
 
+    /**
+     * Clear the conversation — the BUTTON path.
+     *
+     * Routes through the command envelope (`POST /command/clear` →
+     * `CommandFactory` → `handle_clear`), NOT the bespoke
+     * `POST /sessions/clear` endpoint it used pre-v1.19.1. Per the
+     * command-envelope pattern (docs/patterns/command-envelope.md, rule 1:
+     * "never add a bespoke REST endpoint for command logic"), clearing a
+     * session IS command logic — a button and a typed `/clear` must reach
+     * the same handler and get the same envelope back.
+     *
+     * Why it matters beyond tidiness: the envelope carries `events[]`, and
+     * `_dispatchToFactory` drains them through `handleStateSync`. That is
+     * how server-side AppState changes (context_percentage, and anything
+     * added later) reach this client. The old bespoke call discarded the
+     * response body, so every pushed field had to be re-fetched by hand
+     * here — a list that silently grew stale with each new field.
+     *
+     * `_dispatchToFactory` is used rather than `dispatch()` because the
+     * latter echoes `> /clear` as a system message, which is right for a
+     * typed command and noise for a button press.
+     */
     async clearConversation() {
         try {
-            await this.apiClient.clearSession();
+            await this.commandDispatcher._dispatchToFactory('clear', '');
             this.elements.messagesContainer.innerHTML = `
                 <div class="welcome-message">
                     <h2>Welcome to ppxai</h2>
@@ -3000,22 +3022,22 @@ class PpxaiApp {
             this._scrollSpacer.style.height = '0';
             this.elements.messagesContainer.prepend(this._scrollSpacer);
             this._domMessageCount = 0;
-            // Clear pending (staged) files and context attachment badge.
-            // state_sync SSE events are only drained during chat streams, so
-            // we update the client state directly here rather than waiting for
-            // the next stream to deliver the server-side AppState reset.
+            // Pending (staged) files are CLIENT-side only — no server event
+            // can reset them, so they're cleared by hand. Server-derived
+            // state (context_attachments, context_percentage, ...) is NOT
+            // touched here: the envelope's events[] drain above already
+            // pushed it through handleStateSync, which owns those badges.
             this.pendingFiles = [];
             this._renderPendingBadges();
-            this.state.contextAttachments = [];
-            this.updateAttachmentBadge();
-            // v1.19.1 Item 48 step 3: the Clear button bypasses the
-            // command envelope (typed /clear gets the state_sync push
-            // via the dispatcher's event drain), so refresh the Ctx
-            // badge directly here — same reasoning as the attachment
-            // state above.
-            this.updateContextInfo();
             // Quick command handlers use event delegation, no need to re-attach
-            this.showSystemMessage('Conversation cleared');
+            //
+            // The handler's own ConfirmationResult ("Conversation history
+            // cleared") was rendered by _dispatchToFactory and then wiped by
+            // the innerHTML reset above — the welcome screen is the point of
+            // the button. Re-show it here so both entry points report the
+            // SAME message (typed /clear shows the handler's text; a
+            // hand-written string here would drift from it).
+            this.showSystemMessage('Conversation history cleared');
         } catch (error) {
             this.showError(`Failed to clear: ${error.message}`);
         }

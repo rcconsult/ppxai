@@ -504,8 +504,12 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.commands.registerCommand('ppxai.clearHistory', async () => {
             try {
-                await backend.clearHistory();
-                chatViewProvider.refreshHistory();
+                // v1.19.1: goes through the panel's single clear path (command
+                // envelope → CommandFactory → handle_clear) rather than the
+                // bespoke backend.clearHistory() REST call. Keeps the palette
+                // command, the webview button, and a typed /clear on one
+                // handler — see ChatViewProvider.clearConversation.
+                await chatViewProvider.clearConversation();
             } catch (error) {
                 vscode.window.showErrorMessage(`Failed to clear history: ${error}`);
             }

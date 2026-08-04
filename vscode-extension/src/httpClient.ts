@@ -1347,17 +1347,19 @@ export class HttpClient {
     }
 
     /**
-     * Clear conversation history
+     * Drop the client-side conversation mirror.
+     *
+     * v1.19.1: this no longer calls `POST /sessions/clear`. Clearing a
+     * session is command logic and goes through the command envelope
+     * (`POST /command/clear` → `CommandFactory` → `handle_clear`) — see
+     * `ChatViewProvider.clearConversation`, the single clear path. What
+     * remains here is the local mirror reset, which no server event can do:
+     * `conversationHistory` is written by this client during streaming
+     * (`getHistory` reads it), so it must be dropped alongside the
+     * server-side clear or it goes stale.
      */
-    async clearHistory(): Promise<boolean> {
-        const response = await fetch(`${this.baseUrl}/sessions/clear`, {
-            method: 'POST',
-            headers: this.getHeaders()
-        });
-        if (response.ok) {
-            this.conversationHistory = [];
-        }
-        return response.ok;
+    resetHistoryMirror(): void {
+        this.conversationHistory = [];
     }
 
     /**

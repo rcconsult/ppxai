@@ -778,15 +778,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
                 // v1.17.4 Phase 6.1: webview may include files[] for multimodal
                 await this.handleChat(m.content, m.files);
             },
-            clear: async () => {
-                await this._backend.clearHistory();
-                this._view?.webview.postMessage({ type: 'cleared' });
-                // v1.19.1 Item 48 step 3: the clear button bypasses the
-                // command envelope (a typed /clear gets the discrete
-                // state_sync via _drainEnvelopeEvents), so refresh the
-                // Ctx badge explicitly here.
-                await this.updateContextBadge();
-            },
+            clear: async () => { await this.clearConversation(); },
             save: async () => {
                 vscode.commands.executeCommand('ppxai.saveSession');
             },
@@ -2080,13 +2072,10 @@ Review your previous actions and continue. If the task is complete, respond with
     }
 
     /**
-     * Update context badge with current usage (v1.13.9)
-     */
-    /**
-     * Render the Ctx badge from a known percent — shared by the push
-     * path (state:sync `context_percentage`, v1.19.1 Item 48 step 3)
-     * and the poll path (`updateContextBadge`). Thresholds mirror the
-     * Rich/Textual clients: `~` warning at ≥80%, `!` critical at ≥100%.
+     * Render the Ctx badge from a known percent — shared by the push path
+     * (state:sync `context_percentage`) and the poll path
+     * (`updateContextBadge`). Thresholds mirror Rich/Textual: `~` ≥80%,
+     * `!` ≥100%.
      */
     private postContextBadge(percent: number) {
         if (!this._view) { return; }
@@ -2855,6 +2844,22 @@ Review your previous actions and continue. If the task is complete, respond with
         } catch {
             // Hints are informational — don't block on failure
         }
+    }
+
+    /**
+     * The ONE clear path — webview button, `ppxai.clearHistory` palette
+     * command, and a typed `/clear` all land here. Dispatching (not
+     * `POST /sessions/clear`) is what delivers the envelope's `events[]`, so
+     * pushed AppState updates itself. See docs/patterns/command-envelope.md
+     * §"Buttons are command call sites".
+     */
+    public async clearConversation() {
+        await this.dispatchFactoryCommand('clear', '');
+        // Client-side mirror — no server event resets it (getHistory reads it).
+        this._backend.resetHistoryMirror();
+        // 'cleared' empties the container after the dispatch, discarding the
+        // rendered ConfirmationResult — an empty transcript is the point.
+        this._view?.webview.postMessage({ type: 'cleared' });
     }
 
     public async refreshHistory() {
