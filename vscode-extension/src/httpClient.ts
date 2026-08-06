@@ -219,6 +219,36 @@ export interface SessionInfo {
     message_count: number;
 }
 
+/**
+ * The `GET /agent/config` response — the interactive agent tool-loop knobs
+ * (server-side `tools.agent.*`, ADR 0010 axis 2).
+ *
+ * BREAKING (v1.19.1, ADR 0010): execution-tier keys no longer appear in this
+ * response; they live under the server's `execution.*` axis. Fields are
+ * optional because the server is the source of truth for its own defaults —
+ * this client only hard-codes a fallback for the transport-failure path.
+ */
+export interface AgentLoopConfig {
+    max_iterations: number;
+    context_char_limit: number;
+    min_task_words: number;
+    max_tool_iterations?: number;
+    max_same_tool_calls?: number;
+    auto_retry_empty?: boolean;
+    zombie_threshold?: number;
+}
+
+/**
+ * Fallback used ONLY when `/agent/config` is unreachable or errors. Mirrors
+ * the server's canonical defaults in `ppxai/constants.py` (`Default`); keep
+ * the two in sync — a silent drift here shows up as a wrong iteration cap.
+ */
+const AGENT_LOOP_CONFIG_DEFAULTS: AgentLoopConfig = {
+    max_iterations: 10,
+    context_char_limit: 2000,
+    min_task_words: 3,
+};
+
 type StreamCallback = (event: StreamEvent) => void;
 
 /**
@@ -1890,20 +1920,27 @@ export class HttpClient {
     }
 
     /**
-     * Get agent configuration (v1.11.9)
+     * Get the interactive agent tool-loop configuration (`tools.agent.*`).
+     *
+     * BREAKING (v1.19.1, ADR 0010): the execution-tier keys that used to
+     * ride along in this response (task_tier_enabled, sandbox,
+     * spawn_consent, consent_ttl_s, result_retention_s, default_subagent)
+     * moved to the server's `execution.*` config axis and are NOT returned
+     * here any more. This client never consumed them; the fields below are
+     * the whole surface it needs.
      */
-    async getAgentConfig(): Promise<{ max_iterations: number; context_char_limit: number; min_task_words: number }> {
+    async getAgentConfig(): Promise<AgentLoopConfig> {
         try {
             const response = await fetch(`${this.baseUrl}/agent/config`, {
                 headers: this.getHeaders()
             });
             if (!response.ok) {
                 // Return defaults if endpoint not available
-                return { max_iterations: 10, context_char_limit: 2000, min_task_words: 3 };
+                return { ...AGENT_LOOP_CONFIG_DEFAULTS };
             }
-            return response.json() as Promise<{ max_iterations: number; context_char_limit: number; min_task_words: number }>;
+            return response.json() as Promise<AgentLoopConfig>;
         } catch {
-            return { max_iterations: 10, context_char_limit: 2000, min_task_words: 3 };
+            return { ...AGENT_LOOP_CONFIG_DEFAULTS };
         }
     }
 

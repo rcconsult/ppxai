@@ -134,7 +134,7 @@ endpoints unchanged (they already read from the store; now they observe
 create_agent_run(req)                                  [routes/agent_v1.py]
 ├─ get_agent_run_registry()
 ├─ provider/model resolution (PER-RUN INTENT, ADR 0003 §9):
-│   req.provider/model  →  tools.agent.default_subagent (config)  →  400
+│   req.provider/model  →  execution.default_subagent (config)  →  400
 │   (the interactive session's chat provider is NOT consulted — a
 │    sub-agent's model is chosen for its task. Per-session sub-agent
 │    config is a middle layer, debt Item 36.)   [config/tools.py]
@@ -273,7 +273,7 @@ distinct safety tier from the safe tool-free path; the two never mix.
 ```
 create_agent_task(req)                                 [routes/agent_v1.py]
 ├─ grant required + non-empty (pydantic min_length=1 → 422 otherwise)
-├─ provider/model: request → tools.agent.default_subagent → 400
+├─ provider/model: request → execution.default_subagent → 400
 ├─ _v1_provider_or_400 = _build_provider only (400 on unknown/no-key).
 │    v1.19.x: provider-AGNOSTIC — no OpenAI-compat class guard; any
 │    BaseProvider works (engine.chat is abstract on all). [post-Inc-9 §A]
@@ -507,7 +507,7 @@ execute(task, tools=[], allow_outbound=[]):
        child_tools ⊄ parent_tools→ _deny(grant)   (no escalation)
   2. _check_egress_subset(child_allow):
        any child (host,path) not Allow under parent_policy → _deny(egress)
-  3. consent gate (policy = tools.agent.spawn_consent):
+  3. consent gate (policy = execution.task.consent.spawn_consent):
        "auto"            → skip prompt (subset rules ARE the boundary)
        "deny" + no chan  → _deny(consent)   ← server context, no human to ask
        "deny" + channel  → request_consent(summary) False → _deny(consent)
@@ -531,7 +531,8 @@ _deny(reason, kind): emits spawn_denied event (consent kind → category
   consent, else lifecycle) AND returns the model-readable Error. NO refusal
   is silent — every refusal both mints NO child AND leaves a stream trace.
 Consent policy default "deny": over /v1/agent/task there is no interactive
-  consent channel, so spawn is refused unless tools.agent.spawn_consent="auto"
+  consent channel, so spawn is refused unless
+  execution.task.consent.spawn_consent="auto"
   (subset rules still gate). Proper AGENT_WAITING/respond flow (ADR §8)
   supersedes this later.
 ```
@@ -1020,13 +1021,13 @@ maps come from `build_task_runner` (`tool_call`, `tool_denied`,
 **Trialing from source (`uv run`):** the web UI is served from `~/.ppxai/web` by
 default, so a plain `uv run ppxai-server` shows the INSTALLED bundle, not your
 edits. Prefix `PPXAI_WEB_DIR=$PWD/ppxai/web` to serve the checkout live; enable the
-tier (`tools.agent.task_tier_enabled=true`); and avoid CWD config/`.env` shadowing
+tier (`execution.task.enabled=true`); and avoid CWD config/`.env` shadowing
 (`PPXAI_CONFIG_FILE=~/.ppxai/ppxai-config.json`, `set -a; . ~/.ppxai/.env; set +a`).
 Live-verified: launch → tool loop → `completed`; `cancel` → `cancelling`.
 
 ---
 
-## Build plan T2 — filesystem seal (`tools.agent.sandbox`, in-process jail)
+## Build plan T2 — filesystem seal (`execution.task.sandbox`, in-process jail)
 
 Added: `engine/tools/filesystem_policy.py` (`FilesystemPolicy`, mirror of
 `NetworkPolicy`). Changed: `config/tools.py` (parse `sandbox`),
@@ -1037,7 +1038,7 @@ unconfigured tool-capable run reads/writes as before (non-breaking).
 
 ```
 build_task_runner._runner(m):                         [routes/agent_v1.py]
-  sandbox = get_agent_config()["sandbox"]
+  sandbox = get_execution_task_config()["sandbox"]      [config/execution.py]
   if sandbox.enforcement == "in_process":
      workdir = <sandbox.workdir.root>/<run_id>/work    (mkdir)
      engine.set_working_dir(workdir)                   ← relative tool paths resolve here
@@ -1078,14 +1079,14 @@ Added: `POST /v1/agent/runs/<id>/respond` (route), `AgentRunRegistry.park_run` /
 (the Inspection Triplet's third file — debt (r) first write), consent card in
 `TaskRunView`, `/task respond` verb. Changed: `build_task_runner`'s spawn-consent
 adapter (was: engine shell-consent, auto-denied over HTTP → now: registry park),
-`config/tools.py` (`consent_ttl_s`, default 300 s). New run status: **`waiting`**
+`config/execution.py` (`consent.consent_ttl_s`, default 300 s). New run status: **`waiting`**
 (non-terminal — stays in the AppState `background_agents` mirror).
 
 ```
 spawn_subagent.execute (consent_policy="deny")        [engine/tools/agent_spawn.py]
 └─ await request_consent(summary) ──► _spawn_consent(summary)   [build_task_runner]
    └─ await registry.park_run(m, kind="consent", prompt=summary,
-                              ttl_s=config.consent_ttl_s)       [agent_runs.py]
+                              ttl_s=config.consent.consent_ttl_s)  [agent_runs.py]
       ├─ (cancel already pending? → return {approved:False, via:"cancelled"}, no park)
       ├─ token = secrets.token_hex(8)
       ├─ meta.status="waiting"; meta.waiting={kind,prompt,token,since,expires_at,ttl_s}
@@ -1117,7 +1118,7 @@ client (web):
 Restart semantics (deliberate, T5 scope): the park's future is in-memory — a
 parked run does NOT survive a restart *in flight*; its `state.json` checkpoint
 does (respond after restart → 409 "server restarted"; T7 `/resume` is the
-consumer). `spawn_consent:"auto"` still skips the park entirely.
+consumer). `consent.spawn_consent:"auto"` still skips the park entirely.
 
 ---
 
@@ -1126,8 +1127,8 @@ consumer). `spawn_consent:"auto"` still skips the park entirely.
 Added: `POST /v1/agent/runs/<id>/ack` (route), `AgentRunRegistry.ack_run` /
 `_finalize` / `maybe_reap_hold`, `RunMeta.hold_result`/`acked_at`, Collect
 button + `/task ack` (client). Changed: `run_in_background._drive` success
-branch (hold split), GET read paths (lazy reap), `config/tools.py`
-(`result_retention_s`, default 3600 s). New statuses: **`completed_pending_ack`**
+branch (hold split), GET read paths (lazy reap), `config/execution.py`
+(`budgets.result_retention_s`, default 3600 s). New statuses: **`completed_pending_ack`**
 (run exited, result HELD) and **`finalized`** (collected / GC-eligible) — both
 out of the AppState badge set (the run consumes nothing).
 
@@ -1152,7 +1153,7 @@ POST /v1/agent/runs/{id}/ack                          [routes/agent_v1.py]
 └─ {ok:true, run_id, status:"finalized"}
 
 GET /runs · GET /runs/{id}  (lazy retention backstop — no timer task)
-└─ registry.maybe_reap_hold(meta, config.result_retention_s)
+└─ registry.maybe_reap_hold(meta, config.budgets.result_retention_s)
      held AND finished_at + retention elapsed → _finalize(via="retention")
      (0/None disables; finalize marks GC-eligible, deletes NOTHING)
 

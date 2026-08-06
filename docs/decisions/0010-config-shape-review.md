@@ -2,7 +2,12 @@
 
 **Date:** 2026-08-01
 **Accepted:** 2026-08-01 — all four sign-off questions settled (see §"Sign-off").
-**Status:** Accepted — implementation pending (dual-read helper + direct-read sweep + `/doctor` migration; ADR 0009's new keys land in final locations from the start)
+**Status:** **Implemented** (v1.19.1) — with one deviation from the migration
+plan below: the owner chose a **CLEAN BREAK over the dual-read window**
+("we use git and versioning, so we go for the new config, we document
+config breaking change"). No dual-read helper was built; the legacy
+`tools.agent.*` tier keys are gone, not deprecated. See §"Implementation
+note (v1.19.1)".
 **Related:**
 - [`0009-task-execution-profiles.md`](0009-task-execution-profiles.md) — §6 pins where 0009's new keys land pending this ADR; the Q5 scoped-tuple rule is generalized here
 - [`0003-agent-platform-architecture.md`](0003-agent-platform-architecture.md) — the execution tiers this config surface must describe
@@ -174,6 +179,63 @@ actually asks:
 - Cost: a dual-read window, a `/doctor` table entry per moved key, doc updates,
   and one release of "where did my key go" support noise. ~15 keys move; the
   provider axis (~40 keys) does not move at all.
+
+## Implementation note (v1.19.1)
+
+Built on `bugfix/v1.19.1`. **The Migration section above describes a dual-read
+window that was NOT built** — the owner elected a clean break instead, on the
+grounding that the project is versioned and the change is documented. Keep
+that in mind when reading this ADR as history: §"Migration" records the plan,
+this section records what shipped.
+
+**What moved** (no dual-read; the old locations are ignored, not deprecated):
+
+| Legacy (gone) | New |
+|---|---|
+| `tools.agent.task_tier_enabled` | `execution.task.enabled` |
+| `tools.agent.sandbox.*` | `execution.task.sandbox.*` |
+| `tools.agent.spawn_consent` | `execution.task.consent.spawn_consent` |
+| `tools.agent.consent_ttl_s` | `execution.task.consent.consent_ttl_s` |
+| `tools.agent.result_retention_s` | `execution.task.budgets.result_retention_s` |
+| `tools.agent.default_subagent` | `execution.default_subagent` |
+
+`tools.agent.*` keeps only the tool-intrinsic loop knobs (`max_iterations`,
+`max_tool_iterations`, `max_same_tool_calls`, `context_char_limit`,
+`min_task_words`, `auto_retry_empty`, `zombie_threshold`) — placement rule 1.
+
+**Consequences of the clean break, versus the planned dual-read:**
+
+- A stale `tools.agent.*` key is **silently ignored** and its setting reverts
+  to the default. This is the one real cost of dropping dual-read, and it is
+  why `/doctor` gained a `Config shape (ADR 0010)` section that scans the
+  config **file** (not the accessors — they no longer look at the old paths at
+  all, so a stale key is invisible to them by construction) and prints the
+  old→new mapping for anything still there.
+- The `GET /agent/config` response shape changed with it (it returns
+  `get_agent_config()` verbatim). Not a `/v1/*` surface, so the gateway
+  stability contract is untouched; the only consumer is the bundled VSCode
+  extension, versioned together with the server.
+- ppxai-sre's k8s config templates need the rename in the same window — no
+  grace period now exists.
+
+**Also cleaned up under "no dead code, no misaligned bits":**
+
+- Root-level `visualization.*` — deleted. Its accessor
+  `get_visualization_config()` had **zero** production callers; the block was
+  documenting a knob nothing read. Removed from the loader whitelist, the
+  accessor surface, and `ppxai-config.example.json`.
+- `ApiClient.getAgentConfig()` in `web/shared/api-client.js` — deleted; the
+  web UI never called it.
+- Duplicated literal defaults replaced with the canonical constants at four
+  sites (`commands/agent.py`, `engine/chat.py`, `server/routes/chat.py`).
+  They matched their constants at the time, so no behavior changed — but a
+  copied default silently diverges the day the constant moves.
+
+**Regression guards** (`tests/test_docs_consistency.py`,
+`TestAdr0010MigrationStaysComplete`): the tier keys must not resurface on
+`get_agent_config()`, and no active doc may instruct an operator to set a
+legacy path (annotated "was `tools.agent.X`" provenance mentions are allowed
+when the new path appears too). Both were mutation-tested.
 
 ## Sign-off
 

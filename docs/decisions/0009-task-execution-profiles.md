@@ -185,7 +185,7 @@ attacker-influencable arbitrary host and would forfeit that property, along with
 the safety argument for §4 below. Enrichment also carries **no provider
 routing**: it does not steer a run toward a search-native provider. Provider and
 model are already independently selectable per run (`--provider` / `--model`) and
-by config (`tools.agent.default_subagent.{provider,model}`), and conflating the
+by config (`execution.default_subagent.{provider,model}`), and conflating the
 two would make an egress grant silently change which model answers.
 
 **The enrichment egress baseline is the full backend superset, not one backend

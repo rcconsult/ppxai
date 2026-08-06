@@ -281,18 +281,27 @@ def _compute_tool_success(tool_name: str, result: str) -> bool:
 def _get_zombie_threshold(ctx: ChatContext) -> int:
     """Read the P0 (v1.18.0) circuit-breaker threshold from agent config.
 
-    Returns the integer zombie_threshold — default 3, override via
+    Returns the integer zombie_threshold — override via
     `tools.agent.zombie_threshold` in ppxai-config.json. 0 disables
     zombie detection entirely. Failures are swallowed and return the
     default; zombie detection is a safety net, not a hard contract —
     if config resolution breaks at runtime we fall back to the default
     rather than crashing the tool loop.
+
+    The fallback is `DEFAULT_AGENT_ZOMBIE_THRESHOLD`, not a literal: a
+    duplicated default silently diverges the day the constant changes.
     """
+    from ..config.defaults import DEFAULT_AGENT_ZOMBIE_THRESHOLD
+
     try:
         from ..config import get_agent_config
-        return int(get_agent_config().get("zombie_threshold", 3))
+        return int(
+            get_agent_config().get(
+                "zombie_threshold", DEFAULT_AGENT_ZOMBIE_THRESHOLD
+            )
+        )
     except Exception:
-        return 3
+        return DEFAULT_AGENT_ZOMBIE_THRESHOLD
 
 
 def _get_bootstrap_tool_calling(ctx: ChatContext, model: str) -> dict:

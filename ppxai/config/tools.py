@@ -1,5 +1,10 @@
 """
-Tool, shell, agent, visualization, and container configuration.
+Tool, shell, agent, and container configuration.
+
+ADR 0010 axis 2 (`tools.*`): what each tool IS, tier-independently. Keys
+describing WHERE work runs live in `execution.py` (axis 3) — see
+`get_execution_task_config()` for the tier keys that moved off
+`tools.agent.*` in v1.19.1.
 """
 
 from typing import Any, Dict, List
@@ -144,7 +149,20 @@ def _resolve_wrappers(shell_config: Dict[str, Any]) -> List[Dict[str, Any]]:
 
 
 def get_agent_config() -> Dict[str, Any]:
-    """Get agent tool configuration with defaults from defaults.py."""
+    """The `tools.agent.*` interactive tool-loop knobs (ADR 0010 axis 2).
+
+    BREAKING (v1.19.1, ADR 0010): this accessor no longer carries the
+    execution-tier keys. `task_tier_enabled`, `sandbox`, `spawn_consent`,
+    `consent_ttl_s`, `result_retention_s` and `default_subagent` describe
+    WHERE work runs, not what the agent tool is, and now live under
+    `execution.task.*` / `execution.default_subagent` — read them via
+    `config.execution.get_execution_task_config()` /
+    `get_execution_default_subagent()`. There is NO dual-read: the legacy
+    `tools.agent.*` locations are gone, and `/doctor` reports the mapping.
+
+    What remains here is genuinely tool-intrinsic: how the interactive
+    agent loop iterates and when its circuit breaker trips.
+    """
     agent_config = get_tool_config("agent")
 
     return {
@@ -158,101 +176,6 @@ def get_agent_config() -> Dict[str, Any]:
         # Override via `"tools": {"agent": {"zombie_threshold": N}}` in
         # ppxai-config.json; 0 disables zombie detection entirely.
         "zombie_threshold": agent_config.get("zombie_threshold", DEFAULT_AGENT_ZOMBIE_THRESHOLD),
-        # v1.19.0 agent platform — default provider/model (+ later budget)
-        # for spawned sub-agent runs when the spawn request doesn't specify.
-        # Resolution at the /v1/agent/run route: request value -> this ->
-        # 400. Deliberately NOT the interactive session's chat provider — a
-        # sub-agent's model is per-task intent, not inherited from the UI.
-        # Override via `"tools": {"agent": {"default_subagent":
-        # {"provider": "...", "model": "..."}}}`.
-        "default_subagent": agent_config.get("default_subagent", {}),
-        # v1.19.0 Inc 7 — server-context spawn_subagent consent policy:
-        # "deny" (default, safe) refuses a spawn that needs consent (there is
-        # no interactive consent channel over /v1/agent/task); "auto" lets
-        # API-driven spawns proceed with the capability SUBSET rules (child
-        # grant ⊆ parent, egress ⊆ parent, no-shell, depth=1) as the boundary.
-        # Override via `"tools": {"agent": {"spawn_consent": "auto"}}`.
-        # T5 UPDATE: under "deny" a /v1/agent/task spawn now PARKS the run in
-        # `waiting{consent}` (AGENT_WAITING + POST .../respond) instead of
-        # refusing outright; an unanswered park still DENIES when the TTL
-        # below expires (fail-closed), so "deny" remains the safe default.
-        "spawn_consent": agent_config.get("spawn_consent", "deny"),
-        # v1.19.x build plan T5 — how long a `waiting{consent}` park stays
-        # answerable before it resolves to a denial (seconds). Applies to the
-        # interactive consent seam (spawn_subagent today; ask-user later).
-        # Override via `"tools": {"agent": {"consent_ttl_s": 900}}`.
-        "consent_ttl_s": float(agent_config.get("consent_ttl_s", 300.0)),
-        # v1.19.x build plan T6 — how long a `completed_pending_ack` run holds
-        # its uncollected result before the lazy retention reaper finalizes it
-        # (seconds; reaped on the next read — no timer task). 0 disables the
-        # backstop (holds persist until an explicit /ack). Finalizing never
-        # deletes data — it only marks the run GC-eligible.
-        # Override via `"tools": {"agent": {"result_retention_s": 86400}}`.
-        "result_retention_s": float(agent_config.get("result_retention_s", 3600.0)),
-        # v1.19.0 — the tool-capable `/v1/agent/task` tier ships DEFAULT-OFF.
-        # The tier is sandboxed in-process only (no OS isolation; ADR 0003
-        # tier-d deferred) and is safe ONLY for trusted operators (threat model
-        # A). Requiring an explicit opt-in makes "trusted operator" a deliberate,
-        # code-enforced toggle rather than an assumption about auth config. The
-        # tool-FREE tiers (`/v1/agent/run`, `/v1/oneshot`) are unaffected.
-        # Override via `"tools": {"agent": {"task_tier_enabled": true}}`.
-        "task_tier_enabled": agent_config.get("task_tier_enabled", False),
-        # v1.19.x build plan T2 — the filesystem SEAL. Confines where a
-        # tool-capable run may read/write. The scoping fields are tier-agnostic;
-        # `enforcement` selects HOW they're realized — "in_process" (a Python
-        # path-jail in ScopedToolManager) now, "container" (read-only rootfs,
-        # workdir emptyDir, skills/specs as ConfigMap mounts) under tier-d.
-        # Default OFF: the jail engages ONLY when the operator sets
-        # enforcement="in_process" — otherwise a tool-capable run reads/writes
-        # as before (non-breaking). See docs/agent-task-command-design.html §6.
-        "sandbox": _normalize_sandbox(agent_config.get("sandbox", {})),
-    }
-
-
-def _normalize_sandbox(sb: Dict[str, Any]) -> Dict[str, Any]:
-    """Normalize the `tools.agent.sandbox` block with defaults.
-
-    `enforcement` defaults to "off" — a run is NOT confined unless the operator
-    opts in. Keys ship WITH the enforcer (never before): parsing them does
-    nothing until `enforcement == "in_process"` wires the jail in
-    build_task_runner; the `container` sub-block is defined but inert until
-    tier-d.
-    """
-    sb = sb or {}
-    wd = sb.get("workdir", {}) or {}
-    rp = sb.get("read_paths", {}) or {}
-    return {
-        "enforcement": sb.get("enforcement", "off"),  # "off" | "in_process" | "container"
-        "workdir": {
-            "root": wd.get("root", "~/.ppxai/runs"),
-            "writable": bool(wd.get("writable", True)),
-            "cleanup": wd.get("cleanup", "keep"),      # "keep" | "on_finalize"
-        },
-        "read_paths": {
-            "allow": list(rp.get("allow", []) or []),
-            "deny": list(rp.get("deny", []) or []),
-            "follow_symlinks": bool(rp.get("follow_symlinks", False)),
-        },
-        "skills_dir": sb.get("skills_dir"),
-        "specs_dir": sb.get("specs_dir"),
-        "allow_skill_scripts": bool(sb.get("allow_skill_scripts", False)),
-        "container": sb.get("container", {}) or {},    # inert until tier-d
-    }
-
-
-def get_visualization_config() -> Dict[str, Any]:
-    """Get data visualization configuration."""
-    config = ConfigStore.get_instance().config
-    viz_config = config.get("visualization", {})
-
-    return {
-        "max_rows": viz_config.get("max_rows", 10000),
-        "max_columns": viz_config.get("max_columns", 50),
-        "page_size": viz_config.get("page_size", 50),
-        "tree_depth": viz_config.get("tree_depth", 3),
-        "auto_detect": viz_config.get("auto_detect", True),
-        "csv_delimiter": viz_config.get("csv_delimiter", "auto"),
-        "theme": viz_config.get("theme", "default"),
     }
 
 

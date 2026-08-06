@@ -202,10 +202,6 @@ class ApiClient {
         return this.get('/agent/status');
     }
 
-    async getAgentConfig() {
-        return this.get('/agent/config');
-    }
-
     async enableAgent() {
         return this.post('/agent/enable');
     }

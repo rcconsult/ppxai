@@ -30,18 +30,18 @@ The tool-capable tier ships **default-off** (trusted-operator opt-in). In
 
 ```jsonc
 {
-  "tools": {
-    "agent": {
-      "task_tier_enabled": true,
-      "default_subagent": { "provider": "gemini", "model": "gemini-3.1-pro-preview" }
-    }
+  "execution": {
+    "task": {
+      "enabled": true
+    },
+    "default_subagent": { "provider": "gemini", "model": "gemini-3.1-pro-preview" }
   }
 }
 ```
 
 `default_subagent` is the fallback provider/model when neither the request
 nor a spec names one (pick any tool-calling model you have configured).
-Without `task_tier_enabled`, `POST /v1/agent/task` returns 403 with an
+Without `execution.task.enabled`, `POST /v1/agent/task` returns 403 with an
 enable hint.
 
 ## 2. First run
@@ -86,8 +86,8 @@ verbs `task run`, and `show`/`ack` as *canonical* names, are retired
 | Flag | Meaning |
 |---|---|
 | `--tools a,b,c` | **Capability grant** — the ONLY tools the run may call. Required unless a `--spec`/`--skill` supplies it. `execute_shell_command` is always rejected (it would bypass the egress allowlist). |
-| `--spec <name>` | Load a spec file from `tools.agent.sandbox.specs_dir` (name only, no paths). Spec fields fill anything you didn't pass; explicit flags win. |
-| `--skill <name>` | Mount a skill from `tools.agent.sandbox.skills_dir`: its `SKILL.md` acts as a spec and its directory (incl. `references/`) is mounted into the run's read scope. Repeatable / comma-separated; skills compose. |
+| `--spec <name>` | Load a spec file from `execution.task.sandbox.specs_dir` (name only, no paths). Spec fields fill anything you didn't pass; explicit flags win. |
+| `--skill <name>` | Mount a skill from `execution.task.sandbox.skills_dir`: its `SKILL.md` acts as a spec and its directory (incl. `references/`) is mounted into the run's read scope. Repeatable / comma-separated; skills compose. |
 | `--profile <name>` | Use a named execution profile from `execution.profiles` in `ppxai-config.json` — a standing, reusable grant with the same fields as a spec file (ADR 0009). Precedence: request > spec > skills > profile > `default_subagent`; `tools`/`--allow` lists **replace** the profile's (narrowing works). |
 | `--enrichment on\|off` | Context enrichment (ADR 0009 §3): `on` derives `web_search` + the full search-backend egress baseline for the run — the fix for closed-book local models. Tri-state: omitted = inherit from spec/skill/profile. An explicit `--tools` list omitting `web_search` together with effective enrichment is a contradiction → 400 naming both layers. |
 | `--allow host[/prefix]` | Per-run egress allowlist entry (comma-separated). Network tools are **deny-by-default**: no `--allow`, no outbound. HTTPS-only, private/loopback IPs blocked. |
@@ -117,12 +117,12 @@ possible — ask the operator for a token and use `/token set`.
 ## 5. Lifecycle: consent → hold → resume
 
 **Waiting (consent parks, T5).** A run that needs a human decision — e.g. a
-`spawn_subagent` under `tools.agent.spawn_consent: "deny"` (the default) —
-parks as `waiting`, and the watcher raises a consent card (web) or QuickPick
-(VSCode). Answer inline or with `/task respond <id> approve|deny|"note"`.
+`spawn_subagent` under `execution.task.consent.spawn_consent: "deny"` (the
+default) — parks as `waiting`, and the watcher raises a consent card (web) or
+QuickPick (VSCode). Answer inline or with `/task respond <id> approve|deny|"note"`.
 An unanswered park **denies when its TTL expires**
-(`tools.agent.consent_ttl_s`, default 300 s — fail-closed), and the run
-continues without the action.
+(`execution.task.consent.consent_ttl_s`, default 300 s — fail-closed), and the
+run continues without the action.
 
 > **Consent gates `spawn_subagent` only.** Interactive consent applies to the
 > spawn capability, not to filesystem or other granted tools. A run granted
@@ -139,8 +139,9 @@ down) but the result is held until `/task collect <id>` (or the Collect
 button) collects it → `finalized` **and plain-merges the result text into
 your active session** — the model sees it on your next turn. A
 disconnected UI never loses a result. Uncollected holds are finalized by a
-lazy reaper after `tools.agent.result_retention_s` (default 3600 s; `0` =
-hold until explicit ack; data is never deleted, only marked collected).
+lazy reaper after `execution.task.budgets.result_retention_s` (default
+3600 s; `0` = hold until explicit ack; data is never deleted, only marked
+collected).
 Other `execution.collect` values: `"auto"` — runs auto-finalize and the
 watching client merges the result automatically on completion; `"no"` —
 collect is impossible (button disabled, verb warns with the enable hint;
@@ -159,14 +160,14 @@ reason. Runs orphaned by a server restart are swept to `interrupted`
 
 A spec is an operator-authored file declaring a run shape — grant,
 provider/model, budget, egress, system prompt — resolved by name under
-`tools.agent.sandbox.specs_dir`. See
+`execution.task.sandbox.specs_dir`. See
 [`examples/task-specs/`](../examples/task-specs/README.md) for ready-to-use
 `.md` (front-matter + body-as-system) and `.json` examples.
 
 - Precedence: explicit flag > spec > skill > profile > `default_subagent`.
 - The merged result faces the same ceiling as a direct request: no shell
-  tool, `task_tier_enabled` still required — a spec cannot widen what the
-  operator allows.
+  tool, `execution.task.enabled` still required — a spec cannot widen what
+  the operator allows.
 
 ### Named profiles (`--profile`) and enrichment (ADR 0009 step ③)
 
@@ -205,7 +206,7 @@ the standing set an operator curates. They compose, not compete.
 
 ## 7. Skills (`--skill`)
 
-A skill is a directory under `tools.agent.sandbox.skills_dir` containing a
+A skill is a directory under `execution.task.sandbox.skills_dir` containing a
 `SKILL.md` (a spec, T3 loader) plus reference material. Granting a skill
 mounts its directory into the run's **read scope** (when the seal is on),
 so the agent can read `references/…`. Multiple skills compose: tool grants
@@ -221,9 +222,10 @@ Deterministic, never "wherever the server happened to start":
 2. Otherwise your **session working dir** is threaded automatically — so
    `"summarize README.md"` means the same thing in chat and in a task run.
 3. Otherwise the server default: `server.working_dir` config, else home.
-4. **Seal ON**: the per-run jail always wins; a requested workdir is
-   ignored with a "⚠️ sandbox seal active" warning (warn-don't-fail, so the
-   same command works across sealed and unsealed hosts).
+4. **Seal ON** (`execution.task.sandbox.enforcement: "in_process"`): the
+   per-run jail always wins; a requested workdir is ignored with a "⚠️
+   sandbox seal active" warning (warn-don't-fail, so the same command works
+   across sealed and unsealed hosts).
 
 `/task get <id>` prints the effective `wd:`; resume reuses it; spawned
 children inherit it.
@@ -234,14 +236,16 @@ The filesystem jail is **per-deployment operator posture**, not a per-run
 flag (there is deliberately no "unseal this run"):
 
 ```jsonc
-"sandbox": {
-  "enforcement": "in_process",          // "off" (default) | "in_process"
-  "workdir":   { "root": "~/.ppxai/runs", "writable": true, "cleanup": "keep" },
-  "read_paths": { "allow": ["~/projects"], "deny": [], "follow_symlinks": false },
-  "specs_dir": "/path/to/task-specs",
-  "skills_dir": "/path/to/task-skills",
-  "allow_skill_scripts": false
-}
+"execution": { "task": {
+  "sandbox": {
+    "enforcement": "in_process",          // "off" (default) | "in_process"
+    "workdir":   { "root": "~/.ppxai/runs", "writable": true, "cleanup": "keep" },
+    "read_paths": { "allow": ["~/projects"], "deny": [], "follow_symlinks": false },
+    "specs_dir": "/path/to/task-specs",
+    "skills_dir": "/path/to/task-skills",
+    "allow_skill_scripts": false
+  }
+} }
 ```
 
 Sealed runs get an empty per-run `work/` dir as their only writable root;
@@ -256,7 +260,7 @@ trust boundary; the assistant works your repo), **k8s coder pod = seal off**
 
 | Symptom | Cause → fix |
 |---|---|
-| `403 … task_tier_enabled` | Tier is default-off → enable it in config (§1). |
+| `403 … execution.task.enabled` | Tier is default-off → enable it in config (§1). |
 | `401 Missing or malformed Authorization` | Token store enforces auth → `/token mint` (local) or `/token set`. |
 | `422 tools is required` / `400 Empty tool grant` | No grant and no spec/skill supplying one → pass `--tools`. |
 | `400 execute_shell_command is not permitted` | By design — shell escapes the egress allowlist; grant specific tools instead. |

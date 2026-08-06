@@ -67,10 +67,10 @@ def v1_client(tmp_path, monkeypatch):
 
     reg = AgentRunRegistry(FilesystemAgentRunStore(tmp_path / "runs"))
     monkeypatch.setattr(state, "_agent_run_registry", reg)
-    real = agent_v1.get_agent_config
+    real = agent_v1.get_execution_task_config
     monkeypatch.setattr(
-        agent_v1, "get_agent_config",
-        lambda: {**real(), "task_tier_enabled": True},
+        agent_v1, "get_execution_task_config",
+        lambda: {**real(), "enabled": True},
     )
     # Pin the one-off grant rule off — these tests are about the hold.
     from ppxai.config import execution as exec_mod

@@ -933,20 +933,7 @@
       "__comment_checkpoint_backend": "Checkpoint backend: 'auto' (detect git), 'git' (git-only), 'file' (file snapshots), 'none' (disabled)",
       "checkpoint_message": "ppxai checkpoint: {task}",
       "__comment_checkpoint_message": "Git commit message template ({task} is replaced with task description)",
-      "task_tier_enabled": false,
-      "__comment_task_tier_enabled": "v1.19.0: opt-in for the tool-capable POST /v1/agent/task tier. Default false. This tier is sandboxed IN-PROCESS ONLY (no OS isolation) and is safe ONLY for trusted operators — enable deliberately. The tool-free POST /v1/agent/run tier is always available regardless.",
-      "__comment_sandbox": "v1.19.x build plan T2: filesystem SEAL for the tool-capable tier. Off by default. Set enforcement='in_process' to confine a run's reads to read_paths.allow (+ skills_dir/specs_dir + its per-run workdir) and writes to the per-run workdir only. deny globs override allow (deny wins). A bare name in deny (e.g. '.env', 'secrets') blocks that file/dir anywhere in the tree; a '/'-containing pattern (e.g. '/abs/path', '**/x') matches the full path. Best-effort under trusted-operator (a path-prefix jail, not an OS boundary); enforcement='container' (tier-d, not yet built) realizes the SAME fields as read-only mounts + ConfigMaps. To activate, set enforcement and read_paths.allow below.",
-      "sandbox": {
-        "enforcement": "off",
-        "workdir": { "root": "~/.ppxai/runs", "writable": true, "cleanup": "keep" },
-        "read_paths": { "allow": [], "deny": [".env", ".git", ".ssh", "secrets", "node_modules"], "follow_symlinks": false },
-        "skills_dir": null,
-        "__comment_skills_dir": "v1.19.0 (/task T4): a directory of agent SKILL directories. When set, `POST /v1/agent/task {\"skills\":[\"<name>\"]}` (and the web `/task run --skill <name>`) resolves <name> under this dir (NAME only — no path/traversal). Each skill is `<name>/SKILL.md` (a spec, T3 loader) + optional `references/` (mounted into the run read-scope when enforcement=in_process) + optional `scripts/` (INERT). Multiple skills compose: grants union, read-roots union, still clamped by the ceiling (no-shell, task_tier_enabled). A scripts/-bearing skill is refused unless allow_skill_scripts is true. null = skills disabled.",
-        "specs_dir": null,
-        "__comment_specs_dir": "v1.19.0 (/task T3): a directory of agent spec files. When set, `POST /v1/agent/task {\"spec\":\"<name>\"}` (and the web `/task run --spec <name>`) resolves <name> under this dir (NAME only — no path/traversal; .md front-matter, .json, .yaml). Spec fields fill any omitted request field; explicit request fields win; the merged grant is clamped by the same ceiling as a direct request (no-shell, task_tier_enabled). null = spec files disabled.",
-        "allow_skill_scripts": false,
-        "__comment_allow_skill_scripts": "v1.19.0 (/task T4): scripts/ in a skill can never execute in the in-process tier (no shell grant). Default false REFUSES a scripts/-bearing skill up front (400) rather than loading it with silently-inert scripts. Set true to acknowledge scripts stay inert and load the skill anyway; running skill scripts needs the container tier (T9)."
-      }
+      "__comment_moved_v1_19_1": "BREAKING (v1.19.1, ADR 0010): task_tier_enabled and sandbox.* are NO LONGER read here. They describe WHERE work runs, not what the agent tool is, and moved to execution.task.* (see the top-level 'execution' block below). There is no dual-read — a stale copy under tools.agent is silently ignored. Run /doctor for the old->new mapping."
     },
     "container": {
       "__comment": "Container tool configuration (v1.15.0+)",
@@ -1017,16 +1004,49 @@
       "read_file": 10000
     }
   },
-  "visualization": {
-    "__comment": "Data visualization settings for /show command (v1.15.0+)",
-    "max_rows": 10000,
-    "max_columns": 50,
-    "page_size": 50,
-    "tree_depth": 3,
-    "auto_detect": true,
-    "csv_delimiter": "auto",
-    "__comment_csv_delimiter": "CSV delimiter: 'auto', ',', ';', '\\t', '|'",
-    "theme": "default"
+  "execution": {
+    "__comment": "ADR 0010 third config axis (v1.19.1): WHERE work runs. providers.* say WHO answers, tools.* say WHAT each tool is (tier-independently), and execution.* says how each execution surface runs — tiers, their enablement, grants, sandbox, egress ceiling and consent all read top-to-bottom in this one block.",
+    "run": {
+      "__comment": "The one-off tier: the /run command family and the /v1/oneshot facade. Both keys default OFF, so shipped /v1/oneshot behavior is byte-identical until an operator opts in.",
+      "web_search": false,
+      "__comment_web_search": "Expose the web_search tool loop to oneshot runs (ADR 0009 enrichment). The ONLY tool the one-off tier can ever grant.",
+      "grounding": false,
+      "__comment_grounding": "Provider-NATIVE web search on the oneshot path (no tool exposed, perimeter unchanged). Supersedes tools.web_search.oneshot_grounding, which is still dual-read until it retires."
+    },
+    "collect": "yes",
+    "__comment_collect": "How /run + /task results reach the active session: 'auto' (always auto-merge on completion) | 'yes' (held until the Collect button/verb finalizes+merges; default) | 'no' (collect disabled: button greyed, verb warns, result stays on the run record).",
+    "task": {
+      "__comment": "The tool-capable POST /v1/agent/task tier. BREAKING (v1.19.1, ADR 0010): these keys moved wholesale from tools.agent.* with NO dual-read — enabled was task_tier_enabled, and consent/budgets were flat tools.agent keys. Run /doctor for the full old->new mapping.",
+      "enabled": false,
+      "__comment_enabled": "v1.19.0 (was tools.agent.task_tier_enabled): opt-in for the tool-capable tier. Default false. This tier is sandboxed IN-PROCESS ONLY (no OS isolation) and is safe ONLY for trusted operators — enable deliberately. The tool-free POST /v1/agent/run tier is always available regardless.",
+      "__comment_sandbox": "v1.19.x build plan T2 (was tools.agent.sandbox): filesystem SEAL for the tool-capable tier. Off by default. Set enforcement='in_process' to confine a run's reads to read_paths.allow (+ skills_dir/specs_dir + its per-run workdir) and writes to the per-run workdir only. deny globs override allow (deny wins). A bare name in deny (e.g. '.env', 'secrets') blocks that file/dir anywhere in the tree; a '/'-containing pattern (e.g. '/abs/path', '**/x') matches the full path. Best-effort under trusted-operator (a path-prefix jail, not an OS boundary); enforcement='container' (tier-d, not yet built) realizes the SAME fields as read-only mounts + ConfigMaps. To activate, set enforcement and read_paths.allow below.",
+      "sandbox": {
+        "enforcement": "off",
+        "workdir": { "root": "~/.ppxai/runs", "writable": true, "cleanup": "keep" },
+        "read_paths": { "allow": [], "deny": [".env", ".git", ".ssh", "secrets", "node_modules"], "follow_symlinks": false },
+        "skills_dir": null,
+        "__comment_skills_dir": "v1.19.0 (/task T4): a directory of agent SKILL directories. When set, `POST /v1/agent/task {\"skills\":[\"<name>\"]}` (and the web `/task run --skill <name>`) resolves <name> under this dir (NAME only — no path/traversal). Each skill is `<name>/SKILL.md` (a spec, T3 loader) + optional `references/` (mounted into the run read-scope when enforcement=in_process) + optional `scripts/` (INERT). Multiple skills compose: grants union, read-roots union, still clamped by the ceiling (no-shell, execution.task.enabled). A scripts/-bearing skill is refused unless allow_skill_scripts is true. null = skills disabled.",
+        "specs_dir": null,
+        "__comment_specs_dir": "v1.19.0 (/task T3): a directory of agent spec files. When set, `POST /v1/agent/task {\"spec\":\"<name>\"}` (and the web `/task run --spec <name>`) resolves <name> under this dir (NAME only — no path/traversal; .md front-matter, .json, .yaml). Spec fields fill any omitted request field; explicit request fields win; the merged grant is clamped by the same ceiling as a direct request (no-shell, execution.task.enabled). null = spec files disabled.",
+        "allow_skill_scripts": false,
+        "__comment_allow_skill_scripts": "v1.19.0 (/task T4): scripts/ in a skill can never execute in the in-process tier (no shell grant). Default false REFUSES a scripts/-bearing skill up front (400) rather than loading it with silently-inert scripts. Set true to acknowledge scripts stay inert and load the skill anyway; running skill scripts needs the container tier (T9)."
+      },
+      "consent": {
+        "spawn_consent": "deny",
+        "__comment_spawn_consent": "v1.19.0 Inc 7 (was tools.agent.spawn_consent): server-context spawn_subagent policy. 'deny' (default, safe) PARKS a spawn needing consent in waiting{consent} until POST .../respond answers it — an unanswered park denies on TTL expiry (fail-closed). 'auto' lets API-driven spawns proceed with the capability SUBSET rules (child grant ⊆ parent, egress ⊆ parent, no-shell, depth=1) as the boundary.",
+        "consent_ttl_s": 300.0,
+        "__comment_consent_ttl_s": "v1.19.x T5 (was tools.agent.consent_ttl_s): how long a waiting{consent} park stays answerable before resolving to a denial (seconds)."
+      },
+      "budgets": {
+        "result_retention_s": 3600.0,
+        "__comment_result_retention_s": "v1.19.x T6 (was tools.agent.result_retention_s): how long a completed_pending_ack run holds its uncollected result before the lazy reaper finalizes it (seconds; reaped on next read — no timer task). 0 disables the backstop. Finalizing never deletes data — it only marks the run GC-eligible."
+      }
+    },
+    "__comment_default_subagent": "v1.19.0 (was tools.agent.default_subagent): provider/model for spawned sub-agent runs when the spawn request doesn't specify. Resolution: request value -> this -> 400. Deliberately NOT the interactive session's chat provider — a sub-agent's model is per-task intent, not inherited from the UI. Lives at the execution root because it composes grants ACROSS tiers.",
+    "default_subagent": {},
+    "__comment_profiles": "ADR 0009 §1: named, reusable task grants. Each profile is AgentSpec-shaped ({tools?, network?, budget?, provider?, model?, system?, enrichment?}); a run selects one by name (--profile <name>). Precedence: request > spec > profile > default_subagent > built-in default, with list fields REPLACING (not unioning) so a more specific layer can narrow.",
+    "profiles": {},
+    "__comment_egress_ceiling": "ADR 0009 Q3: deployment-wide egress cap. Config-only and INTERSECTIVE — a run's effective allowlist is the intersection of whatever it resolved with this list. A run can never state or raise it. Unset/absent = no cap. A malformed (non-list) value is a hard error, never a silent 'no cap'."
   },
   "tui": {
     "__comment": "Textual TUI (ppxaide) settings (v1.15.0+)",

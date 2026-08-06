@@ -530,13 +530,16 @@ def client(tmp_path, monkeypatch):
 def _enable_task_tier(monkeypatch):
     """The tool-capable /v1/agent/task tier ships DEFAULT-OFF (v1.19.0). These
     tests exercise the tier itself, so enable it — preserving all other real
-    config keys. A test that fully replaces get_agent_config in its own body
-    (e.g. the gate tests below) overrides this."""
+    config keys. A test that fully replaces get_execution_task_config in its
+    own body (e.g. the gate tests below) overrides this.
+
+    ADR 0010 (v1.19.1): the gate moved from tools.agent.task_tier_enabled to
+    execution.task.enabled, so the patch target is the execution accessor."""
     from ppxai.server.routes import agent_v1
-    real = agent_v1.get_agent_config
+    real = agent_v1.get_execution_task_config
     monkeypatch.setattr(
-        agent_v1, "get_agent_config",
-        lambda: {**real(), "task_tier_enabled": True},
+        agent_v1, "get_execution_task_config",
+        lambda: {**real(), "enabled": True},
     )
 
 
@@ -558,77 +561,146 @@ def _pin_execution_run_config(monkeypatch):
 
 class TestTaskTierGate:
     """/v1/agent/task is default-OFF; only an explicit opt-in
-    (tools.agent.task_tier_enabled) makes the tool-capable tier reachable
+    (execution.task.enabled) makes the tool-capable tier reachable
     (threat model A — trusted operators). The tool-free /run tier is unaffected."""
 
     def test_task_disabled_returns_403(self, client, monkeypatch):
         c, _ = client
         from ppxai.server.routes import agent_v1
-        monkeypatch.setattr(agent_v1, "get_agent_config", lambda: {"task_tier_enabled": False})
+        monkeypatch.setattr(
+            agent_v1, "get_execution_task_config", lambda: {"enabled": False}
+        )
         r = c.post("/v1/agent/task", json={"task": "do a thing", "tools": ["read_file"]})
         assert r.status_code == 403
-        assert "task_tier_enabled" in r.json()["detail"]
+        # The 403 must name the NEW key path — an operator who follows a
+        # stale hint edits a key nothing reads (ADR 0010: no dual-read).
+        assert "execution.task.enabled" in r.json()["detail"]
 
     def test_run_tier_not_gated_by_task_flag(self, client, monkeypatch):
         c, _ = client
         from ppxai.server.routes import agent_v1
         monkeypatch.setattr(
-            agent_v1, "get_agent_config",
-            lambda: {"task_tier_enabled": False, "default_subagent": {}},
+            agent_v1, "get_execution_task_config", lambda: {"enabled": False}
         )
+        monkeypatch.setattr(agent_v1, "get_execution_default_subagent", lambda: {})
         # /run with no provider → 400 (reached provider resolution), NOT 403:
         # the tool-free tier is never gated by the task flag.
         r = c.post("/v1/agent/run", json={"task": "ping"})
         assert r.status_code != 403
 
 
-class TestAgentConfig:
-    """get_agent_config must SURFACE spawn_consent (Inc 7).
+class TestExecutionTaskConfig:
+    """get_execution_task_config must SURFACE every tier key.
 
-    Regression guard: get_agent_config() whitelists keys, so a new agent
-    config key that isn't added to the whitelist silently reads as None even
-    when present in ppxai-config.json — which is exactly how spawn_consent
-    was dead-on-arrival until the whitelist was updated."""
+    Regression guard: the accessor whitelists keys, so a new tier config key
+    that isn't added silently reads as None even when present in
+    ppxai-config.json — which is exactly how spawn_consent was dead-on-arrival
+    until the whitelist was updated.
+
+    ADR 0010 (v1.19.1): these keys moved off tools.agent.* to execution.task.*
+    with NO dual-read, so the patch target is the execution block, and a key
+    left behind under tools.agent is expected to have NO effect (asserted in
+    test_legacy_tools_agent_location_is_ignored)."""
 
     def test_spawn_consent_defaults_deny(self, monkeypatch):
-        from ppxai.config import tools as tools_cfg
-        monkeypatch.setattr(tools_cfg, "get_tool_config", lambda name: {})
-        assert tools_cfg.get_agent_config()["spawn_consent"] == "deny"
+        from ppxai.config import execution as exec_mod
+        monkeypatch.setattr(exec_mod, "_read_execution_block", lambda: {})
+        assert exec_mod.get_execution_task_config()["consent"]["spawn_consent"] == "deny"
 
     def test_spawn_consent_reads_auto_from_config(self, monkeypatch):
-        from ppxai.config import tools as tools_cfg
+        from ppxai.config import execution as exec_mod
         monkeypatch.setattr(
-            tools_cfg, "get_tool_config", lambda name: {"spawn_consent": "auto"}
+            exec_mod, "_read_execution_block",
+            lambda: {"task": {"consent": {"spawn_consent": "auto"}}},
         )
-        assert tools_cfg.get_agent_config()["spawn_consent"] == "auto"
+        assert exec_mod.get_execution_task_config()["consent"]["spawn_consent"] == "auto"
 
     def test_consent_ttl_defaults_300(self, monkeypatch):
         # T5: same whitelist trap — consent_ttl_s must be surfaced or the
         # park TTL silently ignores the operator's config.
-        from ppxai.config import tools as tools_cfg
-        monkeypatch.setattr(tools_cfg, "get_tool_config", lambda name: {})
-        assert tools_cfg.get_agent_config()["consent_ttl_s"] == 300.0
+        from ppxai.config import execution as exec_mod
+        monkeypatch.setattr(exec_mod, "_read_execution_block", lambda: {})
+        assert exec_mod.get_execution_task_config()["consent"]["consent_ttl_s"] == 300.0
 
     def test_consent_ttl_reads_from_config(self, monkeypatch):
-        from ppxai.config import tools as tools_cfg
+        from ppxai.config import execution as exec_mod
         monkeypatch.setattr(
-            tools_cfg, "get_tool_config", lambda name: {"consent_ttl_s": 42}
+            exec_mod, "_read_execution_block",
+            lambda: {"task": {"consent": {"consent_ttl_s": 42}}},
         )
-        assert tools_cfg.get_agent_config()["consent_ttl_s"] == 42.0
+        assert exec_mod.get_execution_task_config()["consent"]["consent_ttl_s"] == 42.0
 
     def test_result_retention_defaults_3600(self, monkeypatch):
         # T6: same whitelist trap — result_retention_s must be surfaced or the
         # retention reaper silently ignores the operator's config.
-        from ppxai.config import tools as tools_cfg
-        monkeypatch.setattr(tools_cfg, "get_tool_config", lambda name: {})
-        assert tools_cfg.get_agent_config()["result_retention_s"] == 3600.0
+        from ppxai.config import execution as exec_mod
+        monkeypatch.setattr(exec_mod, "_read_execution_block", lambda: {})
+        assert (
+            exec_mod.get_execution_task_config()["budgets"]["result_retention_s"]
+            == 3600.0
+        )
 
     def test_result_retention_reads_from_config(self, monkeypatch):
-        from ppxai.config import tools as tools_cfg
+        from ppxai.config import execution as exec_mod
         monkeypatch.setattr(
-            tools_cfg, "get_tool_config", lambda name: {"result_retention_s": 0}
+            exec_mod, "_read_execution_block",
+            lambda: {"task": {"budgets": {"result_retention_s": 0}}},
         )
-        assert tools_cfg.get_agent_config()["result_retention_s"] == 0.0
+        assert (
+            exec_mod.get_execution_task_config()["budgets"]["result_retention_s"] == 0.0
+        )
+
+    def test_task_tier_defaults_disabled(self, monkeypatch):
+        from ppxai.config import execution as exec_mod
+        monkeypatch.setattr(exec_mod, "_read_execution_block", lambda: {})
+        assert exec_mod.get_execution_task_config()["enabled"] is False
+
+    def test_legacy_tools_agent_location_is_ignored(self, monkeypatch):
+        """ADR 0010 is a CLEAN BREAK — no dual-read.
+
+        A config still carrying the pre-v1.19.1 keys under tools.agent must
+        NOT enable the tier or loosen consent. This is the whole reason
+        /doctor reports the old->new mapping: the failure is silent, so it
+        needs an explicit guard."""
+        from ppxai.config import execution as exec_mod
+        from ppxai.config import tools as tools_cfg
+
+        monkeypatch.setattr(exec_mod, "_read_execution_block", lambda: {})
+        monkeypatch.setattr(
+            tools_cfg, "get_tool_config",
+            lambda name: {
+                "task_tier_enabled": True,
+                "spawn_consent": "auto",
+                "consent_ttl_s": 999,
+                "result_retention_s": 1,
+            },
+        )
+        task_cfg = exec_mod.get_execution_task_config()
+        assert task_cfg["enabled"] is False
+        assert task_cfg["consent"]["spawn_consent"] == "deny"
+        assert task_cfg["consent"]["consent_ttl_s"] == 300.0
+        assert task_cfg["budgets"]["result_retention_s"] == 3600.0
+        # ...and the legacy keys are gone from the tools.agent surface too.
+        assert "task_tier_enabled" not in tools_cfg.get_agent_config()
+        assert "spawn_consent" not in tools_cfg.get_agent_config()
+
+    def test_unreadable_config_fails_safe(self, monkeypatch):
+        """An UNREADABLE config source must disable the tier, not default it open.
+
+        Distinct from an absent `execution` block (normal — resolve defaults):
+        here the config source itself failed. A capability must never survive
+        the failure of the config that governs it, so the tool-capable tier
+        resolves DISABLED with consent "deny" and the sandbox defaults."""
+        from ppxai.config import execution as exec_mod
+
+        def _boom():
+            raise exec_mod._ConfigUnavailable("config source unreadable")
+
+        monkeypatch.setattr(exec_mod, "_read_execution_block", _boom)
+        task_cfg = exec_mod.get_execution_task_config()
+        assert task_cfg["enabled"] is False
+        assert task_cfg["consent"]["spawn_consent"] == "deny"
+        assert task_cfg["sandbox"]["enforcement"] == "off"
 
 
 class TestAgentRunRoutes:
@@ -715,7 +787,7 @@ class TestAgentRunRoutes:
         # provider is intentionally NOT consulted.)
         c, reg = client
         from ppxai.server.routes import agent_v1
-        monkeypatch.setattr(agent_v1, "get_agent_config", lambda: {"default_subagent": {}})
+        monkeypatch.setattr(agent_v1, "get_execution_default_subagent", lambda: {})
         resp = c.post("/v1/agent/run", json={"task": "t"})
         assert resp.status_code == 400
         assert "provider" in resp.json()["detail"].lower()
@@ -752,8 +824,8 @@ class TestAgentRunRoutes:
         from ppxai.server.routes import agent_v1
 
         monkeypatch.setattr(
-            agent_v1, "get_agent_config",
-            lambda: {"default_subagent": {"provider": "cfgprov", "model": "cfgmodel"}},
+            agent_v1, "get_execution_default_subagent",
+            lambda: {"provider": "cfgprov", "model": "cfgmodel"},
         )
         monkeypatch.setattr(agent_v1, "_build_provider", lambda name: self._fake_provider())
 
@@ -772,8 +844,8 @@ class TestAgentRunRoutes:
         from ppxai.server.routes import agent_v1
 
         monkeypatch.setattr(
-            agent_v1, "get_agent_config",
-            lambda: {"default_subagent": {"provider": "cfgprov", "model": "cfgmodel"}},
+            agent_v1, "get_execution_default_subagent",
+            lambda: {"provider": "cfgprov", "model": "cfgmodel"},
         )
         monkeypatch.setattr(
             agent_v1, "get_default_model",
@@ -1475,24 +1547,34 @@ class TestTaskSpecFiles:
         specs = tmp_path / "specs"
         specs.mkdir(exist_ok=True)
         cfg = {
-            "task_tier_enabled": True,
+            "enabled": True,
             "sandbox": {"specs_dir": str(specs)},
-            "default_subagent": {},
         }
         cfg.update(extra)
         return cfg, specs
 
     def _patch_cfg(self, monkeypatch, cfg):
+        """Patch the execution.task.* accessor (ADR 0010 shape).
+
+        `cfg` uses the NEW nested shape: {"enabled": ..., "sandbox": {...}}.
+        default_subagent is a separate accessor and patched on its own.
+
+        The double is completed with the accessor's own consent/budgets
+        defaults: the real `get_execution_task_config()` ALWAYS returns those
+        sub-blocks, and the route subscripts them strictly on purpose (a
+        missing sub-block is an accessor regression that should fail loudly,
+        not silently default). A partial double must not weaken that."""
+        from ppxai.config.execution import get_execution_task_config as _real
         from ppxai.server.routes import agent_v1
-        monkeypatch.setattr(agent_v1, "get_agent_config", lambda: cfg)
+        full = {**_real(), **cfg}
+        monkeypatch.setattr(agent_v1, "get_execution_task_config", lambda: full)
+        monkeypatch.setattr(agent_v1, "get_execution_default_subagent", lambda: {})
 
     # --- rejection paths (no provider needed) --------------------------------
 
     def test_spec_given_but_specs_dir_not_configured_400(self, client, monkeypatch):
         c, _ = client
-        self._patch_cfg(monkeypatch, {
-            "task_tier_enabled": True, "sandbox": {}, "default_subagent": {},
-        })
+        self._patch_cfg(monkeypatch, {"enabled": True, "sandbox": {}})
         r = c.post("/v1/agent/task", json={"task": "t", "spec": "triage"})
         assert r.status_code == 400 and "specs_dir" in r.json()["detail"]
 
@@ -1592,16 +1674,28 @@ class TestTaskSkills:
         skills = tmp_path / "skills"
         skills.mkdir(exist_ok=True)
         cfg = {
-            "task_tier_enabled": True,
+            "enabled": True,
             "sandbox": {"skills_dir": str(skills), "allow_skill_scripts": allow_scripts},
-            "default_subagent": {},
         }
         cfg.update(extra)
         return cfg, skills
 
     def _patch_cfg(self, monkeypatch, cfg):
+        """Patch the execution.task.* accessor (ADR 0010 shape).
+
+        `cfg` uses the NEW nested shape: {"enabled": ..., "sandbox": {...}}.
+        default_subagent is a separate accessor and patched on its own.
+
+        The double is completed with the accessor's own consent/budgets
+        defaults: the real `get_execution_task_config()` ALWAYS returns those
+        sub-blocks, and the route subscripts them strictly on purpose (a
+        missing sub-block is an accessor regression that should fail loudly,
+        not silently default). A partial double must not weaken that."""
+        from ppxai.config.execution import get_execution_task_config as _real
         from ppxai.server.routes import agent_v1
-        monkeypatch.setattr(agent_v1, "get_agent_config", lambda: cfg)
+        full = {**_real(), **cfg}
+        monkeypatch.setattr(agent_v1, "get_execution_task_config", lambda: full)
+        monkeypatch.setattr(agent_v1, "get_execution_default_subagent", lambda: {})
 
     def _skill(self, skills, name, manifest, *, references=None, scripts=None):
         root = skills / name
@@ -1630,9 +1724,7 @@ class TestTaskSkills:
 
     def test_skill_given_but_skills_dir_not_configured_400(self, client, monkeypatch):
         c, _ = client
-        self._patch_cfg(monkeypatch, {
-            "task_tier_enabled": True, "sandbox": {}, "default_subagent": {},
-        })
+        self._patch_cfg(monkeypatch, {"enabled": True, "sandbox": {}})
         r = c.post("/v1/agent/task", json={"task": "t", "skills": ["ci"]})
         assert r.status_code == 400 and "skills_dir" in r.json()["detail"]
 
@@ -2101,10 +2193,10 @@ class TestConsentParkE2E:
         # Shrink the consent TTL. The autouse fixture's get_agent_config is
         # captured FIRST so this override composes on top of it.
         from ppxai.server.routes import agent_v1
-        real = agent_v1.get_agent_config
+        real = agent_v1.get_execution_task_config
         monkeypatch.setattr(
-            agent_v1, "get_agent_config",
-            lambda: {**real(), "consent_ttl_s": 0.2},
+            agent_v1, "get_execution_task_config",
+            lambda: {**real(), "consent": {**real()["consent"], "consent_ttl_s": 0.2}},
         )
         rid = self._launch(c, monkeypatch)
         self._poll_status(c, rid, ("waiting",))
@@ -2262,10 +2354,10 @@ class TestAckRoute:
     def test_get_reaps_expired_hold(self, client, monkeypatch):
         c, reg = client
         from ppxai.server.routes import agent_v1
-        real = agent_v1.get_agent_config
+        real = agent_v1.get_execution_task_config
         monkeypatch.setattr(
-            agent_v1, "get_agent_config",
-            lambda: {**real(), "result_retention_s": 50.0},
+            agent_v1, "get_execution_task_config",
+            lambda: {**real(), "budgets": {"result_retention_s": 50.0}},
         )
         stale = self._seed_held(reg, finished_ago=100.0)
         fresh = self._seed_held(reg)
@@ -2481,12 +2573,12 @@ class TestResumeRoute:
         m = self._seed_interrupted(reg)
         from ppxai.server.routes import agent_v1
         monkeypatch.setattr(
-            agent_v1, "get_agent_config",
-            lambda: {"task_tier_enabled": False, "default_subagent": {}},
+            agent_v1, "get_execution_task_config",
+            lambda: {"enabled": False},
         )
         r = c.post(f"/v1/agent/runs/{m.run_id}/resume")
         assert r.status_code == 403
-        assert "task_tier_enabled" in r.json()["detail"]
+        assert "execution.task.enabled" in r.json()["detail"]
 
     def test_unknown_run_404(self, client):
         c, _ = client
@@ -2643,9 +2735,9 @@ class TestWorkdirAlignment:
         c, reg = client
         from ppxai.server.routes import agent_v1
         captured = self._capture_build(monkeypatch)
-        real = agent_v1.get_agent_config  # already task_tier_enabled=True
+        real = agent_v1.get_execution_task_config  # already enabled=True
         monkeypatch.setattr(
-            agent_v1, "get_agent_config",
+            agent_v1, "get_execution_task_config",
             lambda: {**real(), "sandbox": {"enforcement": "in_process"}},
         )
         r = c.post("/v1/agent/task", json=self._body(workdir=str(tmp_path)))

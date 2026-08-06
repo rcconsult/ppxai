@@ -11,6 +11,8 @@ Branch: `bugfix/v1.19.1`. Opening theme: **tool-loop transcript integrity** — 
 
 > ⚠️ **Breaking: slash-command renames, no aliases** (ADR 0011). The **API surface is untouched** — `/v1/oneshot` and `/v1/agent/*` keep their exact paths and response shapes; only slash-command muscle memory changes. `/v1/oneshot` remains byte-identical for ppxai-sre and other v1 consumers.
 
+> ⚠️ **Breaking: `ppxai-config.json` tier keys moved, no dual-read** (ADR 0010). Six `tools.agent.*` keys moved to the `execution.*` axis. A config left at the old paths is **silently ignored** and those settings revert to their defaults — run **`/doctor`**, which prints the exact old→new mapping for anything still stale. `/v1/oneshot` and `/v1/agent/*` are **config-consuming, not config-shaped**: no request or response changes.
+
 ### Removed / Renamed (BREAKING — ADR 0011)
 
 Old names are **removed**, not aliased. Full rationale in [ADR 0011](docs/decisions/0011-command-taxonomy-streamline.md); migration table in `docs/release-notes-v1.19.1-DRAFT.md`.
@@ -26,6 +28,26 @@ Old names are **removed**, not aliased. Full rationale in [ADR 0011](docs/decisi
 | `/agentruns` | **`/run ls`** — kind-filtered (`/task ls` now shows only task runs too) |
 
 Why: "agent" meant three different things (in-session loop, tool-free background run, sandboxed task tier). After ADR 0011, **`/auto`** is autonomy *in your session*, **`/task`** and **`/run`** are registry runs, and "agent" names only the `/v1/agent/*` platform.
+
+### Config shape (BREAKING — ADR 0010)
+
+The execution-tier keys moved off `tools.agent.*` onto the `execution.*` axis. **There is no dual-read** — the legacy locations are gone, not deprecated, so a stale key is silently ignored and reverts to its default. `/doctor` gained a **`Config shape (ADR 0010)`** section that scans your config *file* and prints the mapping for anything still at an old path (it must read the file: nothing in the code looks at the old locations any more, so a stale key is invisible to the accessors by construction).
+
+| Legacy (ignored) | Use instead |
+|---|---|
+| `tools.agent.task_tier_enabled` | **`execution.task.enabled`** |
+| `tools.agent.sandbox.*` | **`execution.task.sandbox.*`** (sub-fields unchanged) |
+| `tools.agent.spawn_consent` | **`execution.task.consent.spawn_consent`** |
+| `tools.agent.consent_ttl_s` | **`execution.task.consent.consent_ttl_s`** |
+| `tools.agent.result_retention_s` | **`execution.task.budgets.result_retention_s`** |
+| `tools.agent.default_subagent` | **`execution.default_subagent`** |
+
+Why: a key describing *whether a tier runs* is not a property of the agent *tool*. `providers.*` say WHO answers, `tools.*` say WHAT each tool is (tier-independently), and `execution.*` says WHERE work runs — so the security surface (tier switch, sandbox, consent, egress ceiling) now reads top-to-bottom in one block instead of being a sub-key of a sub-key of `tools`. `tools.agent.*` keeps only the tool-intrinsic loop knobs (`max_iterations`, `max_tool_iterations`, `max_same_tool_calls`, `context_char_limit`, `min_task_words`, `auto_retry_empty`, `zombie_threshold`).
+
+**`GET /agent/config` changed shape with it** (it returns that config verbatim): the six tier keys are no longer in the response. This is an internal endpoint — not part of the `/v1/*` stability contract — and its only consumer is the bundled VSCode extension, which ships versioned with the server. **Deployment note:** ppxai-sre's k8s config templates need the rename in the same window; there is no grace period.
+
+- **Removed: root-level `visualization.*`.** The block was documented as configuring `/show`, but its accessor had **zero** production callers — it was a knob nothing read. Removed from the config loader, the accessor surface, and `ppxai-config.example.json`.
+- **Removed: `ApiClient.getAgentConfig()`** (`web/shared/api-client.js`) — defined but never called by the web UI.
 
 ### Added
 
@@ -57,6 +79,7 @@ Why: "agent" meant three different things (in-session loop, tool-free background
 - **Concurrent-run `web_search` cost misattribution.** The process-global, reset-on-read usage channel is replaced by a per-call `ContextVar` holder, so parallel requests no longer steal each other's search cost (affected interactive chat too).
 - **`providers.<name>.web_search` was dead config.** The config loader's per-provider whitelist silently dropped the block, so the per-provider `preferred` override (documented since v1.13.4) had no effect for every file-loaded provider. It now survives the load — if your config carries such a block, it takes effect from this release (as an ordering; add `strict: true` for a pin).
 - `load_config()` now passes the top-level `execution` block through (the whitelist silently dropped it).
+- **Duplicated default literals replaced with the canonical constants** at four call sites (`commands/agent.py`, `engine/chat.py`, `server/routes/chat.py`) — `min_task_words`, `max_iterations` and `zombie_threshold` each hard-coded a fallback (`3`, `10`, `3`) beside the accessor rather than reading `DEFAULT_AGENT_*`. The literals matched their constants, so **no behavior changed**; the point is that they would have diverged silently the day a constant moved, in exactly the paths (`/auto` gating, the zombie circuit-breaker) where a wrong default is hardest to notice.
 
 ### Notes
 

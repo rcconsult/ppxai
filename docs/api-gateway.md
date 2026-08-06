@@ -57,7 +57,7 @@ What we explicitly do *not* guarantee:
 > above does **not** apply to this set while this notice stands.)
 >
 > The tool-capable `POST /v1/agent/task` tier additionally ships **default-off**
-> (`tools.agent.task_tier_enabled`) and is sandboxed in-process only — safe for
+> (`execution.task.enabled`) and is sandboxed in-process only — safe for
 > **trusted operators** (the task/grant is operator-authored), not for untrusted
 > input. See [decisions/0003-agent-platform-architecture.md](decisions/0003-agent-platform-architecture.md).
 
@@ -72,7 +72,7 @@ never against the server process launch dir:
    the same thing in chat and in a task run. Must exist (400 otherwise).
 2. Absent: the **server default** — `server.working_dir` config, else the
    user's home (the same default every new UI session gets).
-3. Filesystem seal ON (`tools.agent.sandbox.enforcement: "in_process"`):
+3. Filesystem seal ON (`execution.task.sandbox.enforcement: "in_process"`):
    the per-run jail **always wins**; a requested `workdir` is ignored and
    the launch response carries `workdir_ignored: true` (clients render a
    warning). Warn-don't-fail keeps the same invocation portable across

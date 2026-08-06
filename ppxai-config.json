@@ -578,7 +578,14 @@
       "web_search": false,
       "grounding": false
     },
-    "collect": "yes"
+    "collect": "yes",
+    "__comment_task": "v1.19.1 BREAKING (ADR 0010): the tool-capable /v1/agent/task tier moved here wholesale from tools.agent.* — NO dual-read, the legacy keys are gone. enabled (was task_tier_enabled), sandbox (was tools.agent.sandbox), consent.spawn_consent, consent.consent_ttl_s, budgets.result_retention_s. Run /doctor for the full old->new mapping.",
+    "task": {
+      "enabled": false,
+      "consent": {
+        "spawn_consent": "deny"
+      }
+    }
   },
   "tools": {
     "overrides": {
@@ -706,8 +713,7 @@
       "min_task_words": 3,
       "checkpoint_backend": "auto",
       "checkpoint_message": "ppxai checkpoint: {task}",
-      "zombie_threshold": 2,
-      "spawn_consent": "deny"
+      "zombie_threshold": 2
     },
     "container": {
       "enabled": true,

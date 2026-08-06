@@ -217,7 +217,7 @@
       <ul class="clean">
         <li><code>--tools a,b,c</code> — <b>capability grant</b> (required; a tool-free run belongs on <code>/run</code>). Include <code>spawn_subagent</code> to permit one child.</li>
         <li><code>--allow host[/path],…</code> → <code>network.allow_outbound</code>. Empty = no egress (fail-closed).</li>
-        <li><code>--provider</code> / <code>--model</code> — per-run intent; default from <code>tools.agent.default_subagent</code>.</li>
+        <li><code>--provider</code> / <code>--model</code> — per-run intent; default from <code>execution.default_subagent</code>.</li>
         <li><code>--budget iters=,time=,tokens=</code> → <code>BudgetSpec</code> (cooperative caps at loop boundaries).</li>
         <li><code>--work-dir &lt;path&gt;</code> — working directory for the run's relative tool paths (default: the session's working dir; sealed runs keep their jail and warn).</li>
         <li><code>--persona &lt;name&gt;</code> / <code>--system "…"</code> — agent-spec / system framing layered on the bounded-agent default.</li>
@@ -226,7 +226,7 @@
     <div>
       <p class="sub" style="margin-bottom:8px">The tier's existing guardrails stay authoritative — the command just surfaces them.</p>
       <ul class="clean guard">
-        <li><b>Default-off.</b> <code>task_tier_enabled=false</code> → <code>run</code> returns <b>403</b> with the enable hint; the tool-free tier stays available.</li>
+        <li><b>Default-off.</b> <code>execution.task.enabled=false</code> → <code>run</code> returns <b>403</b> with the enable hint; the tool-free tier stays available.</li>
         <li><b>No shell grant.</b> <code>--tools …,execute_shell_command</code> → <b>400</b> (escapes the egress allowlist; needs tier-d).</li>
         <li><b>Auth required — even on loopback.</b> <code>/task</code> is never loopback-exempt; the local client needs a token. <code>/run</code> keeps the exemption only while <code>execution.run.web_search</code> is off — once the config grants web_search the endpoint is a capability and requires a bearer even from localhost.</li>
         <li><b>Owner-scoped.</b> a run is readable/cancellable only by its owner; <code>ls</code>/<code>show</code> scope to you.</li>
@@ -278,12 +278,12 @@
                    <span class="c"># body:        the triage instructions → system</span>
   references/*.md  <span class="c"># → mounted into the run READ-SCOPE (read_file/grep reach these only)</span>
   scripts/*.sh     <span class="c"># INERT — no shell grant; scripts need the container tier</span></pre></div>
-  <p class="sub" style="margin-top:12px"><b>Precedence</b> (highest wins): CLI flags → <code style="font-family:var(--mono)">--spec</code> file → <code style="font-family:var(--mono)">--skill</code> front-matter(s) → server <code style="font-family:var(--mono)">default_subagent</code> — then clamped by the operator ceiling (allowed grant · no-shell · <code style="font-family:var(--mono)">task_tier_enabled</code>). <b>Delivery:</b> local operators pass a path (server reads it); remote/web clients read + <b>inline</b> the spec and upload skill references.</p>
+  <p class="sub" style="margin-top:12px"><b>Precedence</b> (highest wins): CLI flags → <code style="font-family:var(--mono)">--spec</code> file → <code style="font-family:var(--mono)">--skill</code> front-matter(s) → server <code style="font-family:var(--mono)">default_subagent</code> — then clamped by the operator ceiling (allowed grant · no-shell · <code style="font-family:var(--mono)">execution.task.enabled</code>). <b>Delivery:</b> local operators pass a path (server reads it); remote/web clients read + <b>inline</b> the spec and upload skill references.</p>
 
-  <h2><span class="n">06</span> Filesystem sandbox config <span class="n">tools.agent.sandbox</span></h2>
+  <h2><span class="n">06</span> Filesystem sandbox config <span class="n">execution.task.sandbox</span></h2>
   <p class="sub">A new config block <b>seals</b> where a task may read and write. The scoping fields are tier-agnostic; <code style="font-family:var(--mono)">enforcement</code> selects how they're realized — a soft in-process path-jail today, real container mounts under the container tier. The same config graduates from soft to hard by flipping one field.</p>
-  <div class="codeblock"><pre><span class="k">"tools"</span>: { <span class="k">"agent"</span>: {
-  <span class="k">"task_tier_enabled"</span>: <span class="b">false</span>,
+  <div class="codeblock"><pre><span class="k">"execution"</span>: { <span class="k">"task"</span>: {
+  <span class="k">"enabled"</span>: <span class="b">false</span>,
   <span class="k">"sandbox"</span>: {
     <span class="k">"enforcement"</span>: <span class="s">"in_process"</span>,          <span class="c">// "in_process" | "container"</span>
 
@@ -335,10 +335,10 @@
       </ul>
     </div>
   </div>
-  <div class="note"><b>Ship the keys with the enforcer, never before.</b> Parsed-but-unenforced scoping is worse than none — an operator sets <code>read_paths</code> and assumes confinement that isn't there. So <code>tools.agent.sandbox</code> lands together with the in-process path-jail; the <code>container</code> block lands with tier-d. Until then this is a design contract, not live config.</div>
+  <div class="note"><b>Ship the keys with the enforcer, never before.</b> Parsed-but-unenforced scoping is worse than none — an operator sets <code>read_paths</code> and assumes confinement that isn't there. So <code>execution.task.sandbox</code> lands together with the in-process path-jail; the <code>container</code> block lands with tier-d. Until then this is a design contract, not live config.</div>
 
   <footer>
-    Companion to the <b>run-lifecycle state diagram</b>. Grounded in <code>ppxai/server/routes/agent_v1.py</code> (request shapes, routes), <code>ppxai/engine/agent_scoped_tools.py</code> (grant-only scoping — read-path scoping under <code>tools.agent.sandbox</code>), and <code>docs/decisions/0003-agent-platform-architecture.md §8–§9</code> (transitions · config inheritance). The <code>/task</code> command family (§1–§4) is built and live as of v1.19.0; the container tier (§6 "tier-d") remains deferred.
+    Companion to the <b>run-lifecycle state diagram</b>. Grounded in <code>ppxai/server/routes/agent_v1.py</code> (request shapes, routes), <code>ppxai/engine/agent_scoped_tools.py</code> (grant-only scoping — read-path scoping under <code>execution.task.sandbox</code>), and <code>docs/decisions/0003-agent-platform-architecture.md §8–§9</code> (transitions · config inheritance). The <code>/task</code> command family (§1–§4) is built and live as of v1.19.0; the container tier (§6 "tier-d") remains deferred.
   </footer>
 </div>
 </body>

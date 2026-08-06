@@ -25,7 +25,7 @@ event stream to watch it reach a terminal status (completed / failed /
 cancelled / interrupted). T6: a successful TOP-LEVEL `/task` run lands in
 `completed_pending_ack` — the run has exited but its result is HELD until
 `POST .../ack` collects it (→ `finalized`), so a disconnected UI never
-loses a result; `tools.agent.result_retention_s` is the lazy-reaped
+loses a result; `execution.task.budgets.result_retention_s` is the lazy-reaped
 GC backstop. The tool-free `/run` tier and sub-agent children still land
 `completed` (their caller/parent collects inline).
 
@@ -96,7 +96,11 @@ from pydantic import BaseModel, Field, model_validator
 
 from ...common.logger import get_logger
 from ...config import get_default_model
-from ...config.tools import get_agent_config, get_tool_config
+from ...config.execution import (
+    get_execution_default_subagent,
+    get_execution_task_config,
+)
+from ...config.tools import get_tool_config
 from ...engine.agent_runs import RunMeta, resume_refusal
 from ...engine.agent_skill import AgentSkillError, LoadedSkill, load_skill
 from ...engine.agent_spec import (
@@ -368,13 +372,13 @@ async def create_agent_run(req: AgentRunRequest, request: Request) -> AgentRunRe
 
     # Provider/model is PER-RUN INJECTED INTENT (ADR 0003 §9), not inherited
     # from the interactive chat session. Resolution: explicit request value
-    # -> tools.agent.default_subagent config -> 400. The session's active
+    # -> execution.default_subagent config -> 400. The session's active
     # chat provider is deliberately NOT consulted (a sub-agent's model is
     # chosen for its task, not for whatever the UI happens to be on).
     # NOTE: per-session sub-agent config + a /subagent slash command, both
     # persisted in the session checkpoint, are a later increment (debt-filed);
     # they will slot in as a layer between request and global config here.
-    sub_defaults = get_agent_config().get("default_subagent", {}) or {}
+    sub_defaults = get_execution_default_subagent()
     provider_name = req.provider or sub_defaults.get("provider")
     model = req.model
     if not model:
@@ -391,7 +395,7 @@ async def create_agent_run(req: AgentRunRequest, request: Request) -> AgentRunRe
             status_code=400,
             detail=(
                 "No provider for the agent run. Pass `provider` in the request, "
-                "or set tools.agent.default_subagent.provider in ppxai-config.json."
+                "or set execution.default_subagent.provider in ppxai-config.json."
             ),
         )
     if not model:
@@ -399,7 +403,7 @@ async def create_agent_run(req: AgentRunRequest, request: Request) -> AgentRunRe
             status_code=400,
             detail=(
                 f"No model for provider {provider_name!r}. Pass `model` in the "
-                f"request, or set tools.agent.default_subagent.model in config."
+                f"request, or set execution.default_subagent.model in config."
             ),
         )
 
@@ -547,7 +551,7 @@ class AgentTaskRequest(BaseModel):
             "(NAME only — no path, no traversal). Its fields fill any request "
             "field left unset; explicit request fields always win. The merged "
             "grant is clamped by the same ceiling as a direct request "
-            "(no-shell, task_tier_enabled)."
+            "(no-shell, execution.task.enabled)."
         ),
     )
     skills: list[str] = Field(
@@ -672,7 +676,7 @@ def _resolve_named_spec(name: str) -> AgentSpec:
     name-only discipline the T4 skills resolver uses. 400 on any problem: a
     bad/unknown spec is a request error, not a server fault.
     """
-    specs_dir = (get_agent_config().get("sandbox") or {}).get("specs_dir")
+    specs_dir = get_execution_task_config()["sandbox"].get("specs_dir")
     if not specs_dir:
         raise HTTPException(
             status_code=400,
@@ -714,7 +718,7 @@ def _resolve_named_skill(name: str) -> LoadedSkill:
     defence) BEFORE reading its SKILL.md. 400 on any problem — an unknown or
     malformed skill is a request error, not a server fault.
     """
-    skills_dir = (get_agent_config().get("sandbox") or {}).get("skills_dir")
+    skills_dir = get_execution_task_config()["sandbox"].get("skills_dir")
     if not skills_dir:
         raise HTTPException(
             status_code=400,
@@ -749,7 +753,9 @@ def _load_skills(names: list[str]) -> list[LoadedSkill]:
     """
     if not names:
         return []
-    allow_scripts = bool(get_agent_config().get("sandbox", {}).get("allow_skill_scripts", False))
+    allow_scripts = bool(
+        get_execution_task_config()["sandbox"].get("allow_skill_scripts", False)
+    )
     loaded: list[LoadedSkill] = []
     for name in names:
         skill = _resolve_named_skill(name)
@@ -829,7 +835,7 @@ def _merge_task_fields(req: AgentTaskRequest) -> dict:
     spec = _resolve_named_spec(req.spec) if req.spec else AgentSpec()
     skills = _load_skills(req.skills)
     profile = _resolve_named_profile(req.profile) if req.profile else AgentSpec()
-    sub_defaults = get_agent_config().get("default_subagent", {}) or {}
+    sub_defaults = get_execution_default_subagent()
 
     # A skill scalar is the first skill (in --skill order) that sets it — so
     # composition is deterministic and skill order is meaningful for scalars.
@@ -1081,13 +1087,13 @@ async def create_agent_task(req: AgentTaskRequest, request: Request) -> AgentRun
     # ONLY for trusted operators (threat model A). An operator must opt in
     # explicitly — that toggle IS the "trusted operator" gate. The tool-free
     # tiers (/v1/agent/run, /v1/oneshot) are always available.
-    if not get_agent_config().get("task_tier_enabled", False):
+    if not get_execution_task_config().get("enabled", False):
         raise HTTPException(
             status_code=403,
             detail=(
                 "The tool-capable agent tier (/v1/agent/task) is disabled. It is "
                 "sandboxed in-process only and intended for trusted operators; "
-                "enable it deliberately via tools.agent.task_tier_enabled=true in "
+                "enable it deliberately via execution.task.enabled=true in "
                 "ppxai-config.json. The tool-free tier (/v1/agent/run) is always "
                 "available."
             ),
@@ -1154,7 +1160,7 @@ async def create_agent_task(req: AgentTaskRequest, request: Request) -> AgentRun
             status_code=400,
             detail=(
                 "Agent task needs provider+model (request, spec, or "
-                "tools.agent.default_subagent config)."
+                "execution.default_subagent config)."
             ),
         )
 
@@ -1172,9 +1178,10 @@ async def create_agent_task(req: AgentTaskRequest, request: Request) -> AgentRun
     workdir: Optional[str] = None
     workdir_ignored = False
     if req.workdir:
-        sealed = (get_agent_config().get("sandbox", {}) or {}).get(
-            "enforcement"
-        ) == "in_process"
+        sealed = (
+            get_execution_task_config()["sandbox"].get("enforcement")
+            == "in_process"
+        )
         if sealed:
             workdir_ignored = True
         else:
@@ -1330,17 +1337,20 @@ def build_task_runner(
             # This replaces the pre-T5 adapter that routed to the engine's
             # shell-consent (which had no UI over HTTP and auto-denied).
             async def _spawn_consent(summary: str) -> bool:
-                ttl = float(get_agent_config().get("consent_ttl_s", 300.0))
+                ttl = float(
+                    get_execution_task_config()["consent"]["consent_ttl_s"]
+                )
                 response = await registry.park_run(
                     m, kind="consent", prompt=summary, ttl_s=ttl,
                 )
                 return response.get("approved") is True
 
-            # Server-context spawn consent policy (tools.agent.spawn_consent):
+            # Server-context spawn consent policy
+            # (execution.task.consent.spawn_consent):
             # "deny" (default, safe) — a spawn parks for interactive consent as
             # above, denying on TTL timeout; "auto" — skip the park entirely
             # (subset rules remain the boundary).
-            spawn_consent = (get_agent_config().get("spawn_consent") or "deny")
+            spawn_consent = get_execution_task_config()["consent"]["spawn_consent"]
             engine.tool_manager.register_tool(SpawnSubagentTool(
                 registry=registry,
                 parent_run_id=m.run_id,
@@ -1385,7 +1395,7 @@ def build_task_runner(
         # resolve there, and reads/writes are confined by FilesystemPolicy.
         fs_policy = None
         _on_path = None
-        sandbox = get_agent_config().get("sandbox", {}) or {}
+        sandbox = get_execution_task_config()["sandbox"]
         if sandbox.get("enforcement") == "in_process":
             jail_workdir = os.path.join(
                 os.path.expanduser(sandbox["workdir"]["root"]), m.run_id, "work"
@@ -1549,7 +1559,9 @@ async def list_agent_runs(
     caller = _caller_owner(request)
     # T6: lazy retention backstop — an expired completed_pending_ack hold is
     # finalized the next time anyone lists the runs (no timer task).
-    retention = float(get_agent_config().get("result_retention_s", 3600.0))
+    retention = float(
+    get_execution_task_config()["budgets"]["result_retention_s"]
+)
     runs = [registry.maybe_reap_hold(m, retention) for m in registry.list_runs()]
     if caller is not None:
         runs = [m for m in runs if m.owner is None or m.owner == caller]
@@ -1570,7 +1582,9 @@ async def get_agent_run(run_id: str, request: Request) -> RunMetaResponse:
         raise HTTPException(status_code=404, detail=f"Unknown run_id: {run_id!r}")
     _authorize_run_access(request, meta)
     # T6: single-run lazy reap (already-loaded meta — no extra disk read).
-    retention = float(get_agent_config().get("result_retention_s", 3600.0))
+    retention = float(
+    get_execution_task_config()["budgets"]["result_retention_s"]
+)
     meta = registry.maybe_reap_hold(meta, retention)
     return RunMetaResponse.from_meta(meta)
 
@@ -1685,16 +1699,16 @@ async def resume_agent_run(run_id: str, request: Request) -> dict:
     Refused (409, run unchanged) when `resume_refusal` says the checkpoint is
     inconclusive — see its decision matrix. 404 unknown, 403 not the owner
     (Inc 8b) or tier disabled (resume re-executes tools, so it faces the same
-    task_tier_enabled gate as POST /task)."""
+    execution.task.enabled gate as POST /task)."""
     # Same trusted-operator gate as creating a /task run — a resume re-enters
     # the tool-calling tier.
-    if not get_agent_config().get("task_tier_enabled", False):
+    if not get_execution_task_config().get("enabled", False):
         raise HTTPException(
             status_code=403,
             detail=(
                 "The tool-capable agent tier (/v1/agent/task) is disabled, so "
                 "an interrupted task run cannot be resumed. Enable it via "
-                "tools.agent.task_tier_enabled=true in ppxai-config.json."
+                "execution.task.enabled=true in ppxai-config.json."
             ),
         )
     registry = get_agent_run_registry()

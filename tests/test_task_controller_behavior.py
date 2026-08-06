@@ -165,7 +165,7 @@ function makeApp(opts) {{
 
   // --- Scenario 6: run() surfaces a server rejection verbatim; no watch ---
   {{
-    const app = makeApp({{ postThrows: "403: tier disabled — enable task_tier_enabled" }});
+    const app = makeApp({{ postThrows: "403: tier disabled — enable execution.task.enabled" }});
     const c = new TaskController(app);
     let watched = false;
     c._watchDetached = async () => {{ watched = true; }};

@@ -330,7 +330,10 @@ class TestExecuteRefusals:
                   consent=None, consent_policy="deny")
         out = await t.execute(task="x", tools=["read_file"])
         assert "cannot spawn sub-agent" in out
-        assert "spawn_consent" in out  # actionable: points at the config
+        # Actionable: points at the config, at its POST-ADR-0010 path. The
+        # bare key name would still substring-match the old path, so assert
+        # the full new location.
+        assert "execution.task.consent.spawn_consent" in out
         assert registry.list_runs() == []
         evs = [e.type for e in registry.read_events("run_parent")]
         assert "spawn_denied" in evs

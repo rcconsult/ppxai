@@ -257,7 +257,8 @@ a longer run, `POST …/cancel` → run ends `cancelled`, `resumable:true`;
     flag the model can probe).
   - *N = 1 concurrent* — the parent's tool call awaits the child to terminal
     before returning, so one parent drives at most one child.
-  - *consent-gated* — spawning is gated by `tools.agent.spawn_consent`:
+  - *consent-gated* — spawning is gated by `execution.task.consent.spawn_consent`
+    (was `tools.agent.spawn_consent`; moved in v1.19.1, ADR 0010):
     **"deny" (default, safe)** refuses a spawn that needs consent (over
     /v1/agent/task there is NO interactive channel, so deny = no spawn);
     **"auto"** lets API-driven spawns proceed with the subset rules as the
@@ -274,8 +275,9 @@ a longer run, `POST …/cancel` → run ends `cancelled`, `resumable:true`;
   refinement is later; nesting here caused a get_run slot mismatch, fixed).
 - Parent stream gets `subagent_spawned` (lifecycle) + `subagent_finished`
   (result) events.
-**Trial (thorough, after 6+7):** FIRST set `tools.agent.spawn_consent="auto"`
-in ppxai-config.json (else server spawns are denied — by design). Grant a
+**Trial (thorough, after 6+7):** FIRST set
+`execution.task.consent.spawn_consent="auto"` (v1.19.1 location; was
+`tools.agent.spawn_consent`) in ppxai-config.json (else server spawns are denied — by design). Grant a
 parent `["spawn_subagent"]` (omit read_file so the model MUST delegate);
 its task spawns a child with `tools:["read_file"]` → both runs appear in
 `/v1/agent/runs` (child has `parent_run_id`), parent result embeds child

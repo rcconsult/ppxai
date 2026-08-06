@@ -12,7 +12,7 @@ import os
 
 import pytest
 
-from ppxai.config.tools import _normalize_sandbox
+from ppxai.config.execution import _normalize_sandbox
 from ppxai.engine.agent_scoped_tools import ScopedToolManager
 from ppxai.engine.tools.filesystem_policy import (
     Allow,

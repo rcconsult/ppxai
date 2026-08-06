@@ -164,7 +164,7 @@ class SpawnSubagentTool(BaseTool):
         self._provider = parent_provider
         self._model = parent_model
         self._request_consent = request_consent
-        # Server-context consent policy (tools.agent.spawn_consent):
+        # Server-context consent policy (execution.task.consent.spawn_consent):
         #   "deny" (default, safe) — a spawn requires a human decision. Over
         #     /v1/agent/task the injected consent channel now PARKS the run
         #     (T5: waiting{consent} + AGENT_WAITING + POST .../respond) and an
@@ -299,7 +299,7 @@ class SpawnSubagentTool(BaseTool):
             if self._request_consent is None:
                 return self._deny(
                     "spawn consent required but no interactive consent channel "
-                    "in this context; set tools.agent.spawn_consent='auto' to "
+                    "in this context; set execution.task.consent.spawn_consent='auto' to "
                     "allow API-driven spawns (subset rules still apply)",
                     "consent",
                 )

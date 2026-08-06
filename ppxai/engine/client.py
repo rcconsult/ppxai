@@ -818,10 +818,20 @@ class EngineClient:
         return True
 
     def get_agent_config(self) -> dict:
-        """Get agent configuration (v1.11.9).
+        """The interactive agent tool-loop config (`tools.agent.*`).
+
+        BREAKING (v1.19.1, ADR 0010): the execution-tier keys
+        (`task_tier_enabled`, `sandbox`, `spawn_consent`, `consent_ttl_s`,
+        `result_retention_s`, `default_subagent`) are NO LONGER in this
+        dict — they moved to `execution.task.*` / `execution.default_subagent`
+        and are read via `config.execution`, not through this facade. This
+        dict is also the `GET /agent/config` response body, so its shape is
+        the wire shape.
 
         Returns:
-            Dict with max_iterations, context_char_limit, min_task_words
+            Dict with max_iterations, max_tool_iterations, max_same_tool_calls,
+            context_char_limit, min_task_words, auto_retry_empty,
+            zombie_threshold
         """
         return self._agent_config
 

@@ -9,7 +9,7 @@ Architecture:
 - loader.py: Config file discovery and parsing
 - defaults.py: Shell/agent default constants
 - providers.py: Provider, model, pricing, capabilities queries
-- tools.py: Tool, shell, agent, visualization, container queries
+- tools.py: Tool, shell, agent, container queries
 - features.py: TUI and session queries
 - paths.py: Paths, data directory, server queries
 - prompts.py: System prompts, context, bootstrap queries
@@ -84,19 +84,20 @@ from .providers import (
 from .execution import (
     get_execution_collect,
     get_execution_config,
+    get_execution_default_subagent,
     get_execution_egress_ceiling,
     get_execution_profiles,
     get_execution_run_config,
+    get_execution_task_config,
 )
 
-# Tool, shell, agent, visualization, container
+# Tool, shell, agent, container
 from .tools import (
     get_tool_config,
     get_tool_description_overrides,
     get_tool_pricing,
     get_shell_config,
     get_agent_config,
-    get_visualization_config,
     get_container_config,
     get_vision_model_config,
 )
@@ -281,13 +282,14 @@ __all__ = [
     # Tool functions
     "get_execution_collect",
     "get_execution_config",
+    "get_execution_default_subagent",
     "get_execution_egress_ceiling",
     "get_execution_profiles",
     "get_execution_run_config",
+    "get_execution_task_config",
     "get_tool_config",
     "get_tool_description_overrides",
     "get_shell_config",
-    "get_visualization_config",
     "get_container_config",
     "get_vision_model_config",
     "get_tool_pricing",

@@ -647,6 +647,62 @@ def _format_web_search_backend_section() -> List[str]:
     return lines
 
 
+# ADR 0010 (v1.19.1) config-shape migration: legacy location -> new location.
+# A CLEAN BREAK — there is NO dual-read, so a key left at its old location is
+# silently ignored and its setting reverts to the default. That silence is
+# exactly what this check exists to break: /doctor is the operator's discovery
+# path for the rename.
+ADR_0010_KEY_MOVES: List[tuple] = [
+    (("tools", "agent", "task_tier_enabled"), "execution.task.enabled"),
+    (("tools", "agent", "sandbox"), "execution.task.sandbox"),
+    (("tools", "agent", "spawn_consent"), "execution.task.consent.spawn_consent"),
+    (("tools", "agent", "consent_ttl_s"), "execution.task.consent.consent_ttl_s"),
+    (
+        ("tools", "agent", "result_retention_s"),
+        "execution.task.budgets.result_retention_s",
+    ),
+    (("tools", "agent", "default_subagent"), "execution.default_subagent"),
+]
+
+
+def _lookup_path(config_data: Dict[str, Any], path: tuple) -> Any:
+    """Walk a dotted key path, returning None when any segment is missing."""
+    node: Any = config_data
+    for segment in path:
+        if not isinstance(node, dict) or segment not in node:
+            return None
+        node = node[segment]
+    return node
+
+
+def _format_config_migration_section(config_data: Dict[str, Any]) -> List[str]:
+    """Report `ppxai-config.json` keys still at their pre-ADR-0010 location.
+
+    Reads the config FILE rather than the accessors on purpose: the accessors
+    no longer look at the legacy locations at all, so a stale key is invisible
+    to them by construction. Only a raw file scan can tell an operator that
+    the setting they wrote is being ignored.
+    """
+    lines: List[str] = ["Config shape (ADR 0010, v1.19.1):"]
+    stale = [
+        (".".join(path), new)
+        for path, new in ADR_0010_KEY_MOVES
+        if _lookup_path(config_data, path) is not None
+    ]
+    if not stale:
+        lines.append("   ✓ no keys at pre-v1.19.1 locations")
+        return lines
+
+    lines.append(
+        f"   ⚠ {len(stale)} key(s) at their OLD location — BREAKING change in "
+        "v1.19.1, no dual-read. These are being IGNORED and have reverted to "
+        "their defaults. Move them:"
+    )
+    for old, new in stale:
+        lines.append(f"      {old}  ->  {new}")
+    return lines
+
+
 def handle_doctor(context: CommandContext, args: str) -> CommandResult:
     """Handle /doctor command — scan config and report deprecated models.
 
@@ -673,6 +729,19 @@ def handle_doctor(context: CommandContext, args: str) -> CommandResult:
     # checks (ordering-not-pin upgrade note, dead per-provider strict,
     # strict-while-enriched) — offline, same resolver the chain uses.
     report = report + "\n\n" + "\n".join(_format_web_search_backend_section())
+    # ADR 0010 (v1.19.1): flag keys still at their pre-migration location.
+    # Offline and always shown — a stale key is silently ignored under the
+    # clean break, so this is the only surface that reveals it.
+    if audit.get("config_path"):
+        try:
+            with open(audit["config_path"], "r", encoding="utf-8-sig") as f:
+                raw_config = json.load(f)
+            report = report + "\n\n" + "\n".join(
+                _format_config_migration_section(raw_config)
+            )
+        except (FileNotFoundError, json.JSONDecodeError, OSError):
+            # Never fail /doctor over the migration check.
+            pass
     probe_results: Dict[str, Dict[str, Any]] = {}
     drift: List[Dict[str, Any]] = []
 

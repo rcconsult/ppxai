@@ -85,6 +85,122 @@ def get_execution_run_config() -> Dict[str, Any]:
     return out
 
 
+def _normalize_sandbox(sb: Dict[str, Any]) -> Dict[str, Any]:
+    """Normalize the `execution.task.sandbox` block with defaults.
+
+    `enforcement` defaults to "off" — a run is NOT confined unless the operator
+    opts in. Keys ship WITH the enforcer (never before): parsing them does
+    nothing until `enforcement == "in_process"` wires the jail in
+    build_task_runner; the `container` sub-block is defined but inert until
+    tier-d.
+    """
+    sb = sb or {}
+    wd = sb.get("workdir", {}) or {}
+    rp = sb.get("read_paths", {}) or {}
+    return {
+        "enforcement": sb.get("enforcement", "off"),  # "off" | "in_process" | "container"
+        "workdir": {
+            "root": wd.get("root", "~/.ppxai/runs"),
+            "writable": bool(wd.get("writable", True)),
+            "cleanup": wd.get("cleanup", "keep"),      # "keep" | "on_finalize"
+        },
+        "read_paths": {
+            "allow": list(rp.get("allow", []) or []),
+            "deny": list(rp.get("deny", []) or []),
+            "follow_symlinks": bool(rp.get("follow_symlinks", False)),
+        },
+        "skills_dir": sb.get("skills_dir"),
+        "specs_dir": sb.get("specs_dir"),
+        "allow_skill_scripts": bool(sb.get("allow_skill_scripts", False)),
+        "container": sb.get("container", {}) or {},    # inert until tier-d
+    }
+
+
+def get_execution_task_config() -> Dict[str, Any]:
+    """`execution.task.*` — the tool-capable `/v1/agent/task` tier (ADR 0010).
+
+    BREAKING (v1.19.1): these keys moved wholesale off `tools.agent.*`, with
+    NO dual-read — a tier switch is not a property of the agent tool (ADR 0010
+    placement rule 2). Nested per the ADR's target sketch so the security
+    surface reads top-to-bottom in one block:
+
+        execution.task.enabled                  (was tools.agent.task_tier_enabled)
+        execution.task.sandbox.*                (was tools.agent.sandbox.*)
+        execution.task.consent.spawn_consent    (was tools.agent.spawn_consent)
+        execution.task.consent.consent_ttl_s    (was tools.agent.consent_ttl_s)
+        execution.task.budgets.result_retention_s (was tools.agent.result_retention_s)
+
+    Fail-safe: an unreadable config source resolves the tier to DISABLED with
+    the sandbox defaults and consent "deny" — a capability must never survive
+    the failure of the config that governs it (same rule as `execution.run`).
+    """
+    try:
+        task = dict(_read_execution_block().get("task", {}) or {})
+    except _ConfigUnavailable:
+        task = {}
+    consent = dict(task.get("consent", {}) or {})
+    budgets = dict(task.get("budgets", {}) or {})
+    return {
+        # v1.19.0 — the tool-capable `/v1/agent/task` tier ships DEFAULT-OFF.
+        # The tier is sandboxed in-process only (no OS isolation; ADR 0003
+        # tier-d deferred) and is safe ONLY for trusted operators (threat model
+        # A). Requiring an explicit opt-in makes "trusted operator" a deliberate,
+        # code-enforced toggle rather than an assumption about auth config. The
+        # tool-FREE tiers (`/v1/agent/run`, `/v1/oneshot`) are unaffected.
+        "enabled": bool(task.get("enabled", False)),
+        # v1.19.x build plan T2 — the filesystem SEAL. Confines where a
+        # tool-capable run may read/write. The scoping fields are tier-agnostic;
+        # `enforcement` selects HOW they're realized — "in_process" (a Python
+        # path-jail in ScopedToolManager) now, "container" (read-only rootfs,
+        # workdir emptyDir, skills/specs as ConfigMap mounts) under tier-d.
+        # Default OFF: the jail engages ONLY when the operator sets
+        # enforcement="in_process". See docs/agent-task-command-design.html §6.
+        "sandbox": _normalize_sandbox(task.get("sandbox", {})),
+        "consent": {
+            # v1.19.0 Inc 7 — server-context spawn_subagent consent policy:
+            # "deny" (default, safe) refuses a spawn that needs consent (there
+            # is no interactive consent channel over /v1/agent/task); "auto"
+            # lets API-driven spawns proceed with the capability SUBSET rules
+            # (child grant ⊆ parent, egress ⊆ parent, no-shell, depth=1).
+            # T5 UPDATE: under "deny" a /v1/agent/task spawn now PARKS the run
+            # in `waiting{consent}` (AGENT_WAITING + POST .../respond) instead
+            # of refusing outright; an unanswered park still DENIES when the
+            # TTL below expires (fail-closed), so "deny" stays the safe default.
+            "spawn_consent": consent.get("spawn_consent", "deny") or "deny",
+            # v1.19.x build plan T5 — how long a `waiting{consent}` park stays
+            # answerable before it resolves to a denial (seconds). Applies to
+            # the interactive consent seam (spawn_subagent today; ask-user
+            # later).
+            "consent_ttl_s": float(consent.get("consent_ttl_s", 300.0)),
+        },
+        "budgets": {
+            # v1.19.x build plan T6 — how long a `completed_pending_ack` run
+            # holds its uncollected result before the lazy retention reaper
+            # finalizes it (seconds; reaped on the next read — no timer task).
+            # 0 disables the backstop (holds persist until an explicit
+            # collect). Finalizing never deletes data — it only marks the run
+            # GC-eligible.
+            "result_retention_s": float(budgets.get("result_retention_s", 3600.0)),
+        },
+    }
+
+
+def get_execution_default_subagent() -> Dict[str, Any]:
+    """`execution.default_subagent` — provider/model for spawned sub-agents.
+
+    BREAKING (v1.19.1, ADR 0010): moved from `tools.agent.default_subagent`
+    with no dual-read. It composes grants ACROSS tiers, so it belongs at the
+    `execution.*` root (ADR 0010 placement rule 3), not on a tool block.
+
+    Used when a spawn request doesn't name a provider/model. Resolution at
+    the /v1/agent/run route: request value -> this -> 400. Deliberately NOT
+    the interactive session's chat provider — a sub-agent's model is per-task
+    intent, not inherited from the UI.
+    """
+    subagent = get_execution_config().get("default_subagent", {})
+    return dict(subagent) if isinstance(subagent, dict) else {}
+
+
 def get_execution_profiles() -> Dict[str, Any]:
     """`execution.profiles` — named, reusable task grants (ADR 0009 §1).
 

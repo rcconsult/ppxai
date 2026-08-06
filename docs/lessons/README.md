@@ -131,3 +131,8 @@ discoverable later.
   clients serve the web UI from `~/.ppxai/web`, not the repo source tree;
   editing `web/` in-repo has no effect on a running server without
   `PPXAI_WEB_DIR` pointed at the checkout
+- [clean-break-config-moves-need-a-file-scan.md](clean-break-config-moves-need-a-file-scan.md) —
+  a config key moved with NO dual-read is invisible to every accessor, so a
+  stale key silently reverts to its default; only a check that reads the
+  config FILE can detect it (`/doctor`'s ADR 0010 section) — ship that scan
+  with the move, not as cleanup

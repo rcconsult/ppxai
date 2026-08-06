@@ -22,6 +22,81 @@ memory changes.
 | `/agentrun <task>` | **`/run <prompt>`** — same async one-off, now `kind=oneshot` on the full run gears with the U2 grammar; **no flags** (the grant is config-decided: `execution.run.web_search` on → `{web_search}`, off → closed-book) | U3 |
 | `/agentruns` | **`/run ls`** — kind-filtered (`/task ls` now shows only task runs too) | U3 |
 
+## ⚠ Breaking changes (ADR 0010 — config shape, hard move, NO dual-read)
+
+The execution-tier keys move off `tools.agent.*` onto the `execution.*` axis
+per [ADR 0010](decisions/0010-config-shape-review.md). **There is no dual-read
+window.** A config left at the old paths is not warned about at load time — it
+is simply **ignored**, and those settings silently revert to their defaults.
+
+**Migrate with `/doctor`.** It gained a `Config shape (ADR 0010)` section that
+reads your config *file* and prints the exact old→new mapping for anything
+still stale:
+
+```
+Config shape (ADR 0010, v1.19.1):
+   ⚠ 3 key(s) at their OLD location — BREAKING change in v1.19.1, no
+     dual-read. These are being IGNORED and have reverted to their defaults.
+     Move them:
+      tools.agent.task_tier_enabled  ->  execution.task.enabled
+      tools.agent.sandbox            ->  execution.task.sandbox
+      tools.agent.spawn_consent      ->  execution.task.consent.spawn_consent
+```
+
+| Legacy (ignored) | Use instead |
+|---|---|
+| `tools.agent.task_tier_enabled` | **`execution.task.enabled`** |
+| `tools.agent.sandbox.*` | **`execution.task.sandbox.*`** (sub-fields unchanged) |
+| `tools.agent.spawn_consent` | **`execution.task.consent.spawn_consent`** |
+| `tools.agent.consent_ttl_s` | **`execution.task.consent.consent_ttl_s`** |
+| `tools.agent.result_retention_s` | **`execution.task.budgets.result_retention_s`** |
+| `tools.agent.default_subagent` | **`execution.default_subagent`** |
+
+Before / after:
+
+```jsonc
+// BEFORE (v1.19.0)                    // AFTER (v1.19.1)
+"tools": {                             "execution": {
+  "agent": {                             "task": {
+    "task_tier_enabled": true,             "enabled": true,
+    "sandbox": { "enforcement":            "sandbox": { "enforcement":
+                 "in_process" },                        "in_process" },
+    "spawn_consent": "auto",               "consent": { "spawn_consent": "auto",
+    "consent_ttl_s": 900,                               "consent_ttl_s": 900 },
+    "result_retention_s": 86400,           "budgets": {
+    "default_subagent": {                    "result_retention_s": 86400 }
+      "provider": "gemini" },              },
+    "max_iterations": 50                   "default_subagent": {
+  }                                          "provider": "gemini" }
+}                                        },
+                                         "tools": { "agent": {
+                                           "max_iterations": 50 } }
+```
+
+Note `max_iterations` **stays** on `tools.agent` — along with
+`max_tool_iterations`, `max_same_tool_calls`, `context_char_limit`,
+`min_task_words`, `auto_retry_empty` and `zombie_threshold`. Those describe
+how the agent *tool* loops, which is tier-independent; only keys describing
+*where work runs* moved.
+
+**Why the axis exists:** `providers.*` say WHO answers, `tools.*` say WHAT
+each tool is, `execution.*` says WHERE work runs. A tier switch was a sub-key
+of a sub-key of `tools`; the security surface (tier enablement, sandbox,
+consent, egress ceiling) now reads top-to-bottom in one block.
+
+**`GET /agent/config` changed shape** with it — the six tier keys are no
+longer in its response. It is an internal endpoint (not part of the `/v1/*`
+stability contract) and its only consumer is the bundled VSCode extension,
+versioned with the server. **`/v1/oneshot` and `/v1/agent/*` are unchanged**:
+they consume config, they are not shaped by it, so no request or response
+field moves.
+
+**Deployment note:** k8s/ConfigMap templates (including ppxai-sre's) need the
+rename in the same window — there is no grace period.
+
+Also removed as dead config in this pass: the root-level **`visualization.*`**
+block (documented as configuring `/show`, but nothing ever read it).
+
 ## New: `execution.collect` — run results into your session (U4)
 
 One global key for the `/run` + `/task` families (default **`yes`** — the

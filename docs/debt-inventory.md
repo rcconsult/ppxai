@@ -574,7 +574,8 @@ file with **no consent prompt**. Confirmed by source + live config:
 - **`read_file` and every non-spawn tool have no consent tier** — they are
   gated *solely* by the `--tools` allowlist. Granting the tool IS the consent.
 - The **T2 filesystem seal** (path jail) is the intended confinement, but it
-  is **off by default** (`tools.agent.sandbox` engages only when
+  is **off by default** (`execution.task.sandbox` — moved from
+  `tools.agent.sandbox` in v1.19.1, ADR 0010 — engages only when
   `enforcement == "in_process"`; live config has `sandbox: null`). With it
   off, a `/task … --tools read_file` can silently read **any file the process
   can reach** (e.g. `~/.ppxai/.env`), unconfined and unprompted.
@@ -806,7 +807,8 @@ shipped already.
 **Context:** v1.19.0 Inc 2 fixed sub-agent provider/model resolution to
 be **per-run injected intent** (ADR 0003 §9), NOT inherited from the
 interactive chat session. Resolution today: request value →
-`tools.agent.default_subagent` (global JSON config) → 400. The
+`execution.default_subagent` (global JSON config; moved from
+`tools.agent.default_subagent` in v1.19.1, ADR 0010) → 400. The
 interactive session's *active chat provider* is deliberately not consulted
 (that was the bug: `/agentrun` resolved a stale global default and ignored
 the run's intended model).
@@ -823,7 +825,7 @@ between the request and the global JSON config. User decision 2026-06-15:
   re-adjusted live).
 
 **Target resolution chain once this lands:**
-`request value → per-session sub-agent config → tools.agent.default_subagent (global) → 400`.
+`request value → per-session sub-agent config → execution.default_subagent (global) → 400`.
 
 **Why deferred (not Inc 2):** touches the session checkpoint format + a new
 slash command surface across clients — too big for the Inc 2 provider-fix.
@@ -1207,10 +1209,11 @@ genuine open set. (Lettered q–t; upstream owns p = external review round.)**
   **A1** (policy-decision audit events) from v1.20.x. See
   [docs/research/2026-06-24-ppxai-sdk-mutation-tools-for-sre-agents.md](research/2026-06-24-ppxai-sdk-mutation-tools-for-sre-agents.md).
   **NOTE — partially overtaken by upstream `/task` T1–T2 (2026-07-02/03):** the
-  filesystem-seal (`tools.agent.sandbox`, `filesystem_policy.py`) + alias-normalization
-  hardening landed after this was filed; re-verify (t) against the current tree
-  before acting — the sandbox surface has moved. **Planned:** v1.19.x `/task`
-  design iteration or v1.20.x.
+  filesystem-seal (`tools.agent.sandbox` at the time, `filesystem_policy.py`) +
+  alias-normalization hardening landed after this was filed; re-verify (t)
+  against the current tree before acting — the sandbox surface has moved
+  again since (now `execution.task.sandbox`, v1.19.1 ADR 0010). **Planned:**
+  v1.19.x `/task` design iteration or v1.20.x.
 
 - **(u) FIXED (2026-07-06) — CORS wildcard + no Host-header validation on the HTTP
   server [SECURITY].** **STATUS:** shipped + tested (16 tests in

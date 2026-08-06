@@ -646,10 +646,17 @@ def handle_agent(context: CommandContext, args: str) -> CommandResult:
 
     task = args.strip()
 
-    # Get agent config
+    # Get agent config. Fall back to the canonical constants rather than
+    # repeating literals here — a duplicated default silently diverges the
+    # day the constant changes.
+    from ..config.defaults import (
+        DEFAULT_AGENT_MAX_ITERATIONS,
+        DEFAULT_AGENT_MIN_TASK_WORDS,
+    )
+
     agent_config = context.engine_client.get_agent_config()
-    min_words = agent_config.get("min_task_words", 3)
-    max_iterations = agent_config.get("max_iterations", 10)
+    min_words = agent_config.get("min_task_words", DEFAULT_AGENT_MIN_TASK_WORDS)
+    max_iterations = agent_config.get("max_iterations", DEFAULT_AGENT_MAX_ITERATIONS)
 
     # v1.18.1: shared validation. Same nudge text across TUI / web /
     # VSCode — closes the previous safety gap where web could

@@ -220,6 +220,81 @@ KNOWN_INERT_KEYS = {
 }
 
 
+# ADR 0010 (v1.19.1) moved these off `tools.agent.*` as a CLEAN BREAK — no
+# dual-read. Because nothing reads the old locations any more, a doc or
+# config sample left at the old path fails SILENTLY: the operator sets a key
+# that is simply ignored. These sentinels make that silence loud.
+ADR_0010_MOVED_KEYS = {
+    "task_tier_enabled": "execution.task.enabled",
+    "spawn_consent": "execution.task.consent.spawn_consent",
+    "consent_ttl_s": "execution.task.consent.consent_ttl_s",
+    "result_retention_s": "execution.task.budgets.result_retention_s",
+    "default_subagent": "execution.default_subagent",
+}
+
+
+class TestAdr0010MigrationStaysComplete:
+    """The tier keys must not drift back onto the `tools.agent.*` axis."""
+
+    def test_config_accessor_does_not_resurface_tier_keys(self):
+        """`get_agent_config()` must expose only tool-intrinsic loop knobs.
+
+        Re-adding a tier key here would silently reinstate the pre-ADR-0010
+        shape for every one of its call sites at once.
+        """
+        from ppxai.config.tools import get_agent_config
+
+        surfaced = set(get_agent_config()) & set(ADR_0010_MOVED_KEYS)
+        assert not surfaced, (
+            f"tools.agent config resurfaced tier key(s) {sorted(surfaced)}. "
+            "These belong on the execution axis (ADR 0010); see "
+            "config/execution.py::get_execution_task_config."
+        )
+
+    def test_sandbox_is_not_read_from_tools_agent(self):
+        from ppxai.config.tools import get_agent_config
+
+        assert "sandbox" not in get_agent_config(), (
+            "tools.agent.sandbox moved to execution.task.sandbox (ADR 0010)."
+        )
+
+    @pytest.mark.parametrize("old,new", sorted(ADR_0010_MOVED_KEYS.items()))
+    def test_active_docs_do_not_use_legacy_path(self, old, new):
+        """No active doc may still tell operators to set `tools.agent.<old>`."""
+        stale = []
+        for path in (PROJECT_ROOT / "docs").rglob("*"):
+            if path.suffix not in (".md", ".html") or not path.is_file():
+                continue
+            rel = path.relative_to(PROJECT_ROOT).as_posix()
+            # Frozen or necessarily-both-sided documents:
+            #  - archives and per-version release notes record what a PAST
+            #    version shipped; rewriting them would falsify history.
+            #  - the ADR itself, and any doc annotating "was X, now Y", must
+            #    be able to name the old path to describe the migration.
+            if (
+                rel.startswith("docs/archive/")
+                or rel.startswith("docs/release-notes-")
+                or "0010-config-shape-review" in rel
+            ):
+                continue
+            text = path.read_text(encoding="utf-8", errors="ignore")
+            # An ANNOTATED mention is documentation OF the move, not a stale
+            # instruction to use it: the doc names the new path and cites the
+            # old one only as provenance. Require the new path to appear too,
+            # so a bare legacy reference still fails.
+            if new in text and re.search(
+                rf"(was|moved from|shipped as|formerly)\s+`?tools\.agent\.{re.escape(old)}`?",
+                text,
+            ):
+                continue
+            if f"tools.agent.{old}" in text:
+                stale.append(rel)
+        assert not stale, (
+            f"{stale} still document `tools.agent.{old}`, which nothing reads "
+            f"since v1.19.1. Use `{new}` (ADR 0010 — clean break, no dual-read)."
+        )
+
+
 class TestInertConfigKeysStayDocumented:
     """If an inert key gets wired up, this test fails so the docs get updated."""
 

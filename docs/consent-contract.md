@@ -219,8 +219,8 @@ Two distinct gates, separate from the file-edit/shell contract above:
 
 | Operation | Triggers consent? | Default | Config key |
 |---|---|---|---|
-| `spawn_subagent` tool call | YES (server context) | **Deny** (fail-closed) | `tools.agent.spawn_consent: deny\|auto` |
-| Mid-run interactive park (T5) | YES — run parks as `waiting{kind:"consent"}` | **Deny on TTL expiry** (fail-closed) | `tools.agent.consent_ttl_s` (default 300s) |
+| `spawn_subagent` tool call | YES (server context) | **Deny** (fail-closed) | `execution.task.consent.spawn_consent: deny\|auto` |
+| Mid-run interactive park (T5) | YES — run parks as `waiting{kind:"consent"}` | **Deny on TTL expiry** (fail-closed) | `execution.task.consent.consent_ttl_s` (default 300s) |
 
 - **`spawn_subagent`:** with `spawn_consent: "deny"` (default), any
   `spawn_subagent` call in a server-context run is refused outright — no

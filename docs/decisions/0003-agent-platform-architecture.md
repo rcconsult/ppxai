@@ -368,7 +368,8 @@ agent loop), carried in `meta.json` as the run's grant:
 > boundary (tiers a–c) is adequate for the preview and **tier-d OS isolation +
 > DNS-rebinding/TOCTOU egress hardening remain deferred**. To make (A)
 > *code-enforced* rather than an assumption about auth config, `/v1/agent/task`
-> ships **default-off** behind `tools.agent.task_tier_enabled` (the tool-free
+> ships **default-off** behind `execution.task.enabled` (v1.19.1, ADR 0010;
+> shipped as `tools.agent.task_tier_enabled`) (the tool-free
 > `/v1/agent/run` tier is always on). The whole agents API is **in development
 > and unsealed** — see [docs/api-gateway.md](../api-gateway.md) — and only
 > becomes a stability-committed consumer contract once designed, tested,
@@ -587,7 +588,8 @@ any terminal → tool sandbox torn down; artifacts retained until FINALIZED/GC
   isolation lands, the spec carries a **token *reference*, not a raw
   key**, so the swap to per-agent identity (item 9) is non-breaking.
 
-**Filesystem sealing — `tools.agent.sandbox` (proposed).** The *read-path
+**Filesystem sealing — `tools.agent.sandbox` (proposed; shipped as
+`execution.task.sandbox`, v1.19.1 ADR 0010).** The *read-path
 scope* and *workdir* injected fields above are governed by a new
 `tools.agent.sandbox` config block that **seals** where a task may read and
 write. The scoping fields (`workdir`, `read_paths`, `skills_dir`, `specs_dir`)

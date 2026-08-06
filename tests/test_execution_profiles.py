@@ -162,10 +162,10 @@ def task_client(tmp_path, monkeypatch):
     reg = AgentRunRegistry(FilesystemAgentRunStore(tmp_path / "runs"))
     monkeypatch.setattr(state, "_agent_run_registry", reg)
 
-    real = agent_v1.get_agent_config
-    overrides = {"task_tier_enabled": True}
+    real = agent_v1.get_execution_task_config
+    overrides = {"enabled": True}
     monkeypatch.setattr(
-        agent_v1, "get_agent_config", lambda: {**real(), **overrides}
+        agent_v1, "get_execution_task_config", lambda: {**real(), **overrides}
     )
     monkeypatch.setattr(agent_v1, "_validate_provider_or_400", lambda name: None)
     monkeypatch.setattr(agent_v1, "get_tool_config", lambda tool: {})

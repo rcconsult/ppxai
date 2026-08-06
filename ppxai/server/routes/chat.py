@@ -337,8 +337,9 @@ async def chat(
         from ...commands.agent import validate_agent_task
         # Strip the /auto prefix to get just the task body
         task = msg_text.split(None, 1)[1] if " " in msg_text or "\t" in msg_text else ""
+        from ...config.defaults import DEFAULT_AGENT_MIN_TASK_WORDS
         agent_config = s.engine.get_agent_config()
-        min_words = agent_config.get("min_task_words", 3)
+        min_words = agent_config.get("min_task_words", DEFAULT_AGENT_MIN_TASK_WORDS)
         rejection = validate_agent_task(task.strip(), min_words)
         if rejection is not None:
             logger.info(

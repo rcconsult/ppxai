@@ -392,7 +392,6 @@ def load_config() -> Dict[str, Any]:
             "session": json_config.get("session", {}),
             "tui": json_config.get("tui", {}),
             "bootstrap": json_config.get("bootstrap", {}),
-            "visualization": json_config.get("visualization", {}),
             "paths": json_config.get("paths", {}),
             # v1.18.7 added file_tree.ignore_dirs as user-overridable but
             # forgot to plumb the key through here. Without this line the

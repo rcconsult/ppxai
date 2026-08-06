@@ -16,7 +16,7 @@ Sequencing plan for the interactive **`/task`** command family (design:
 
 **Where we start.** The tool-capable tier already exists server-side:
 `POST /v1/agent/task`, `GET /runs`, `GET /runs/{id}`, `GET /runs/{id}/events`
-(SSE), `POST /runs/{id}/cancel`, owner-scoped authz, `task_tier_enabled`
+(SSE), `POST /runs/{id}/cancel`, owner-scoped authz, `execution.task.enabled`
 default-off gate, no-shell rejection. There is **no `/task` client command in
 any client** — `/agentrun` (tool-free) is the only agent slash command shipped.
 So T1 is mostly client work over existing endpoints; new server machinery
@@ -24,10 +24,10 @@ arrives only where the lifecycle needs it (T5–T7) and where the filesystem
 seal needs it (T2).
 
 **Trial prerequisites (every increment).**
-- Enable the tier: `tools.agent.task_tier_enabled: true` in `~/.ppxai/ppxai-config.json`.
+- Enable the tier: `execution.task.enabled: true` in `~/.ppxai/ppxai-config.json`.
 - Run the web client against **live source**: `PPXAI_WEB_DIR=$PWD/ppxai/web uv run ppxai-server` (edits to `ppxai/web/` don't reach `~/.ppxai/web` otherwise — see `docs/lessons/web-assets-served-from-ppxai-home.md`).
 - Trial with **auth disabled** (default — no `server.secrets` file store, `PPXAI_API_TOKEN` unset): `/task` is loopback-reachable without a bearer (`auth.py::check_request` → `if not is_auth_enabled(): return None`). A token-carrying web client for the auth-enabled case is a follow-up, not a blocker.
-- Set a default subagent so a bare `--tools` launch has a provider/model: `tools.agent.default_subagent: {provider, model}`.
+- Set a default subagent so a bare `--tools` launch has a provider/model: `execution.default_subagent: {provider, model}`.
 
 ---
 
@@ -72,11 +72,12 @@ behavioral test mirroring `test_agent_run_controller_behavior.py`.
 
 ---
 
-## T2 — the seal: `read_paths` enforcement + `tools.agent.sandbox` (in_process) — ✅ DONE
+## T2 — the seal: `read_paths` enforcement + `execution.task.sandbox` (in_process) — ✅ DONE
 
 **Shipped:** `89b18ac0` (+ `9bd8c790` call graph). `engine/tools/filesystem_policy.py`
-(`FilesystemPolicy`), `config/tools.py` sandbox parsing (default `enforcement:"off"`
-→ non-breaking), the `ScopedToolManager` path chokepoint (`path_denied`), and the
+(`FilesystemPolicy`), `config/tools.py` sandbox parsing (as built; now
+`config/execution.py`, default `enforcement:"off"` → non-breaking), the
+`ScopedToolManager` path chokepoint (`path_denied`), and the
 per-run workdir in `build_task_runner`. Live-trialed: allowed read → ok, `/etc/hosts`
 → denied; 24 unit tests. `container` sub-block schema defined but inert (T9).
 
@@ -85,7 +86,9 @@ attempt to read outside the allowlist is denied with a `path_denied` event.
 Brought early so every later increment is trialed confined.
 
 **Build (server):**
-- Parse `tools.agent.sandbox` in `config/tools.py` (`get_agent_config`):
+- Parse `tools.agent.sandbox` in `config/tools.py` (`get_agent_config`) as
+  built (v1.19.1, ADR 0010: moved to `execution.task.sandbox`, read via
+  `config/execution.py::get_execution_task_config`):
   `workdir{root,writable,cleanup}`, `read_paths{allow,deny,follow_symlinks}`,
   `skills_dir`, `specs_dir`, `allow_skill_scripts`, `enforcement:"in_process"`.
   (Ship the `container` sub-block **schema** but leave it inert.)
@@ -118,9 +121,10 @@ vs relative/workdir write); config-parse defaults; a run-level test asserting
 
 **Shipped:** `engine/agent_spec.py` (loader: md front-matter / json / yaml /
 jsonl-batch → `AgentSpec`, size-bounded, clear errors); `/v1/agent/task` gains a
-`spec` NAME field resolved under `sandbox.specs_dir` (name-only, path-escape +
-containment guarded, 400 on any problem) with **precedence request > spec >
-default_subagent** and the ceiling clamp run on the MERGED grant (shell-in-spec
+`spec` NAME field resolved under `execution.task.sandbox.specs_dir` (name-only,
+path-escape + containment guarded, 400 on any problem) with **precedence
+request > spec > default_subagent** (`execution.default_subagent`) and the
+ceiling clamp run on the MERGED grant (shell-in-spec
 → 400; empty merged grant → 400; no-spec-no-tools still → 422 via a
 `model_validator`, preserving the invariant). Web client `--spec <name>`
 (task-controller flag + pane reflects the server-merged meta). Tests:
@@ -142,11 +146,13 @@ body), `.json`/`.yaml`, or `.jsonl` (batch fan-out).
   agent-spec schema (task, system, tools, provider, model, budget, network,
   read_paths). Reuse `bootstrap.py::_parse_yaml_front_matter` for front-matter;
   body → `system`.
-- Client: `--spec <path>` (local: server reads under `specs_dir` by **name**;
-  remote/web: client reads + **inlines** into the request), `--system-file`
-  (prose → `system`), `--batch <file.jsonl>` (one run per line).
-- Precedence: CLI flags > `--spec` > server `default_subagent`; clamped by the
-  operator ceiling (allowed grant · no-shell · `task_tier_enabled`).
+- Client: `--spec <path>` (local: server reads under
+  `execution.task.sandbox.specs_dir` by **name**; remote/web: client reads +
+  **inlines** into the request), `--system-file` (prose → `system`),
+  `--batch <file.jsonl>` (one run per line).
+- Precedence: CLI flags > `--spec` > server `default_subagent`
+  (`execution.default_subagent`); clamped by the operator ceiling (allowed
+  grant · no-shell · `execution.task.enabled`).
 
 **Trial:** author `specs/triage.md` (front-matter grant+budget, body =
 instructions); `/task run --spec triage "the CI job is red"`; confirm the
@@ -235,7 +241,8 @@ not-parked / token mismatch / already answered / parked-before-restart);
 `RunMeta.waiting` + the meta projection carry {kind, prompt, token, since,
 expires_at, ttl_s}. The **existing** spawn-consent seam (previously auto-denied
 over HTTP) now parks in `waiting{consent}` under `spawn_consent:"deny"`;
-`"auto"` still skips the park. TTL: `tools.agent.consent_ttl_s` (default 300 s).
+`"auto"` still skips the park. TTL: `execution.task.consent.consent_ttl_s`
+(default 300 s).
 **Client (landed):** consent card (prompt + Approve/Deny + optional note field,
 built with safe DOM methods — the prompt embeds model-derived text) in
 `TaskRunView`, raised by the SSE `agent_waiting` / meta `waiting`, cleared on
@@ -252,10 +259,11 @@ retires debt (r) as a standalone item.
 
 **Trial (concrete recipe):**
 
-1. Config (`~/.ppxai/ppxai-config.json` → `tools.agent`): `task_tier_enabled:
-   true`, a working `default_subagent` {provider, model}, and `spawn_consent`
-   left at its default `"deny"` (that IS the park mode now). Optionally
-   `consent_ttl_s` (default 300) — set it low (e.g. 30) to trial the timeout.
+1. Config (`~/.ppxai/ppxai-config.json` → `execution.task`): `enabled:
+   true`, a working `execution.default_subagent` {provider, model}, and
+   `consent.spawn_consent` left at its default `"deny"` (that IS the park
+   mode now). Optionally `consent.consent_ttl_s` (default 300) — set it low
+   (e.g. 30) to trial the timeout.
 2. Serve the checkout (an installed `~/.ppxai/web` bundle won't have the
    consent card): `PPXAI_WEB_DIR=$PWD/ppxai/web uv run ppxai-server`, then
    open the web UI. (Config/env shadowing gotchas: see the T1 "trialing from
@@ -317,7 +325,7 @@ the run has exited (control/sandbox torn down, out of the AppState badge set)
 but the record + result persist. `POST /runs/{id}/ack` (owner-scoped 403,
 404/409) → `AgentRunRegistry.ack_run` → **`finalized`** + `agent_run_finalized`
 (idempotent: re-acking a finalized run is 200, no duplicate event). Retention
-backstop: `tools.agent.result_retention_s` (default 3600 s, 0 disables) via
+backstop: `execution.task.budgets.result_retention_s` (default 3600 s, 0 disables) via
 `maybe_reap_hold` — a **lazy reaper on the GET read paths** (no timer task; an
 expired hold finalizes with `via:"retention"` the next time anyone looks).
 Finalizing never deletes data — it marks the run GC-eligible; `acked_at` on
@@ -349,7 +357,7 @@ uv run ppxai-server`).
 3. `/task ack <id>` (or Collect) → `✅ collected`; `GET /runs/<id>` shows
    `status:"finalized"`, `acked_at` set, result still present; a second ack
    is a no-op 200.
-4. Retention: set `tools.agent.result_retention_s` low (e.g. 30), run
+4. Retention: set `execution.task.budgets.result_retention_s` low (e.g. 30), run
    another task, wait past the TTL, then `/task ls` — the run shows
    finalized (reaped on read, `agent_run_finalized {via:"retention"}` on its
    event log).
@@ -388,7 +396,7 @@ receipt in the user's hands — revisit if the friction annoys).
 refuses with a reason if the checkpoint is inconclusive (open-decision #5).
 
 **Build (landed, server):** `POST /runs/{id}/resume` (owner-scoped 403; same
-`task_tier_enabled` 403 gate as POST /task — resume re-enters the tool tier;
+`execution.task.enabled` 403 gate as POST /task — resume re-enters the tool tier;
 404/409). The decision matrix is `resume_refusal()` (pure meta rules): only
 `interrupted`/`cancelled` + `resumable` + **top-level /task** (`hold_result`)
 runs with no recorded `result` and complete rebuild inputs; everything else is
