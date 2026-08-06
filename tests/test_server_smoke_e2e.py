@@ -401,7 +401,16 @@ class TestServerSmoke:
     # tests, so give the filesystem walkers generous headroom while keeping
     # the tight 10s budget on every other endpoint as a genuine hang guard.
     _FS_WALK_TIMEOUT = 30.0
-    _FS_WALK_ENDPOINTS = {"/files/tree", "/files/list"}
+    # Endpoints whose work is filesystem-bound, so their latency tracks disk
+    # contention rather than app logic. `/sessions` belongs here for the same
+    # reason as the two `/files/*` routes: `list_sessions()` scans BOTH the
+    # flat `<name>.json` and directory-format `<name>/session.json` layouts
+    # and opens each candidate (engine/session.py::list_sessions). Under a
+    # full-suite run it intermittently exceeded the default 10s client
+    # timeout — an httpx.ReadTimeout, never a 5xx, and it passes in ~0.4s in
+    # isolation. It was omitted from this set by oversight; the flake is the
+    # test's timeout budget, not the route.
+    _FS_WALK_ENDPOINTS = {"/files/tree", "/files/list", "/sessions"}
 
     @pytest.mark.parametrize("path", GET_ENDPOINTS)
     def test_get_endpoint_does_not_crash(self, server, path):
