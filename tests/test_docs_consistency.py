@@ -278,15 +278,25 @@ class TestAdr0010MigrationStaysComplete:
             ):
                 continue
             text = path.read_text(encoding="utf-8", errors="ignore")
-            # An ANNOTATED mention is documentation OF the move, not a stale
-            # instruction to use it: the doc names the new path and cites the
-            # old one only as provenance. Require the new path to appear too,
-            # so a bare legacy reference still fails.
-            if new in text and re.search(
-                rf"(was|moved from|shipped as|formerly)\s+`?tools\.agent\.{re.escape(old)}`?",
-                text,
-            ):
-                continue
+            # A mention that DOCUMENTS the move is fine; only a mention that
+            # still instructs an operator to use the old path is stale. Both
+            # allowed forms must also name the new path, so a bare legacy
+            # reference always fails.
+            if new in text:
+                # (a) prose provenance — "... was `tools.agent.X`"
+                if re.search(
+                    rf"(was|moved from|shipped as|formerly)\s+`?tools\.agent\.{re.escape(old)}`?",
+                    text,
+                ):
+                    continue
+                # (b) a migration table row mapping old -> new on one line,
+                #     e.g. "| `tools.agent.X` | `execution.task.Y` |" or
+                #     "tools.agent.X  ->  execution.task.Y".
+                if re.search(
+                    rf"tools\.agent\.{re.escape(old)}`?\s*(\||->|→|=>)[^\n]*{re.escape(new)}",
+                    text,
+                ):
+                    continue
             if f"tools.agent.{old}" in text:
                 stale.append(rel)
         assert not stale, (
