@@ -136,7 +136,44 @@ Two properties of that prompt are deliberate and should survive edits:
   test of whether the relay loop functions — before anything depends on
   it mid-change.
 
+## The captured baseline — where it is
+
+**Taken 2026-08-08. It is NOT in this repo**, which is why a reviewer looking
+for `*.normalized.json` under version control correctly found nothing and
+reasonably concluded it had never been captured. It had. An artifact nobody
+can locate is functionally missing, so its location is recorded here:
+
+```
+C:\tmp\ppxai-seam-baseline\        # 8 *.normalized.json + *.raw.json
+```
+
+Outside the repo on purpose — it is machine state, not source, and the raw
+bodies carry per-host run ids and a minted bearer. `C:\tmp` survives across
+sessions.
+
+| Property | Value |
+|---|---|
+| Captured with | `python scripts/gateway-smoke.py --record <dir> --port <p>` |
+| Result | 6 passed, 0 failed, 0 skipped |
+| Reproducibility | **8/8 normalized files byte-identical** across two independent captures |
+| Server under test | installed `~/.ppxai/bin/ppxai-server.exe`, built 2026-08-06 14:51:47 |
+| Currency | that build postdates `573b76ff` (last server/engine commit, 14:09:39) by 42 min, so it carries ADR 0010; the only engine commit since is the grammar port, which nothing imports |
+
+**Trap worth knowing:** without `--base-url`, `gateway-smoke.py` spawns the
+**installed binary**, not the repo tree. A baseline is therefore of whatever
+is installed — check its mtime against the last `ppxai/server` /
+`ppxai/engine` commit before trusting it, exactly as above.
+
+After `build_task_runner` moves, capture again to a fresh dir and compare:
+
+```bash
+for f in /c/tmp/ppxai-seam-baseline/*.normalized.json; do
+  cmp -s "$f" "/c/tmp/ppxai-seam-after/$(basename "$f")" || echo "DIFFERS: $(basename "$f")"
+done
+```
+
+Expect zero output. Anything listed is a seam change and stops the commit.
+
 ## Open at time of writing
 
 - The ADR 0010 grep above has **never been run** against ppxai-sre.
-- No `gateway-smoke.py` baseline has been taken in the current session.

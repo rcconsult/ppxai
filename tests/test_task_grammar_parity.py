@@ -56,6 +56,34 @@ def test_run_id_shape_matches_web_client():
     assert tg.RUN_ID_ISH_RE.pattern == js_ish.group(1)
 
 
+def test_run_id_shape_matches_the_actual_minter():
+    """Pin the literal to BEHAVIOUR, not to another literal.
+
+    RUN_ID_RE exists in three places: here, the web controller, and the thing
+    that actually mints ids (`AgentRunRegistry._new_run_id`, currently
+    `run_` + token_hex(6)). The parity test above guards two of the three — if
+    the minter changed to token_hex(8), both copies would stop recognising real
+    ids while still agreeing with each other, so that test stays green.
+
+    Not hypothetical: token_hex(8) is already live vocabulary in that same
+    module (agent_runs.py:761 mints the resume token that way). The failure
+    would be loud rather than silent — a real id falls through RUN_ID_RE into
+    the near-miss path — but every lifecycle verb breaks at once while the
+    suite reports healthy.
+
+    `_new_run_id` is a staticmethod, so this costs no registry, store or
+    filesystem.
+    """
+    from ppxai.engine.agent_runs import AgentRunRegistry
+
+    for _ in range(20):  # ids are random; one sample could pass by luck
+        minted = AgentRunRegistry._new_run_id()
+        assert tg.RUN_ID_RE.match(minted), (
+            f"minted id {minted!r} is not matched by RUN_ID_RE "
+            f"({tg.RUN_ID_RE.pattern}) — the grammar and the minter have drifted"
+        )
+
+
 def test_flag_set_matches_web_client():
     """Every `--flag` the web parser handles is handled here, and vice versa."""
     js_flags = set(re.findall(r"case '(--[a-z-]+)':", _js_source()))
