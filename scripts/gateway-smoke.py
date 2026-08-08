@@ -489,6 +489,7 @@ def main() -> int:
 
     results = []  # (step, verdict, detail)
     proc = None
+    health_version = "unknown"  # read while the server is up; see below
     base_url = args.base_url or f"http://127.0.0.1:{args.port}"
     gw = Gateway(base_url, args.token,
                  recorder=Recorder(args.record) if args.record else None)
@@ -529,6 +530,10 @@ def main() -> int:
         if not wait_for_server(gw):
             print(f"server did not answer /status within {STARTUP_WAIT_S}s", file=sys.stderr)
             return 2
+
+        # Must be read HERE: the spawned process is terminated in the finally
+        # block, before the manifest is written.
+        health_version = probe_health_version(base_url)
 
         # 1. /status
         code, _ = gw.request("GET", "/status")
@@ -748,7 +753,7 @@ def main() -> int:
         # A capture directory that can't say what it is gets mistaken for one
         # that can. Written automatically rather than by hand: a convention
         # nobody enforces decays exactly like an undocumented path does.
-        _write_manifest(args.record, args, results, base_url)
+        _write_manifest(args.record, args, results, base_url, health_version)
     print(f"\ngateway-smoke: {len([r for r in results if r[1] == PASS])} passed, "
           f"{len(failed)} failed, {len([r for r in results if r[1] == SKIP])} skipped")
     return 1 if failed else 0
@@ -766,7 +771,29 @@ def _git(*args_) -> str:
         return ""
 
 
-def _write_manifest(outdir: Path, args, results, base_url: str) -> None:
+def probe_health_version(base_url: str) -> str:
+    """The server's OWN account of its version, via /health.
+
+    Deliberately not routed through Gateway.request: that would add a tenth
+    artifact and renumber the baseline. Must be read while the server is still
+    up — the spawned process is terminated before the manifest is written.
+
+    Weak evidence (a version string, not a commit) but it is the only
+    self-identification the server offers, and it is the difference between
+    "some server on :8850" and "a server claiming 1.19.1".
+    """
+    try:
+        with urllib.request.urlopen(
+            base_url.rstrip("/") + "/health", timeout=5
+        ) as resp:
+            body = json.loads(resp.read().decode() or "{}") or {}
+        return str(body.get("version") or "unreported")
+    except (urllib.error.HTTPError, urllib.error.URLError, OSError, ValueError):
+        return "unreachable"
+
+
+def _write_manifest(outdir: Path, args, results, base_url: str,
+                    health_version: str = "unknown") -> None:
     """Describe what this capture IS, so the next reader needn't infer it.
 
     A baseline is only usable as evidence if you know which commit, which
@@ -774,7 +801,10 @@ def _write_manifest(outdir: Path, args, results, base_url: str) -> None:
     identical-looking JSON is indistinguishable from six others beside it.
     """
     if args.base_url:
-        server = f"already-running server at {args.base_url} (NOT necessarily this tree)"
+        server = (f"already-running server at {args.base_url} — the script did "
+                  f"NOT start it and cannot vouch for what it is. A baseline "
+                  f"captured this way carries weaker provenance than a spawned "
+                  f"one; prefer letting the script spawn a binary.")
     else:
         binary = args.server or installed_server_path()
         try:
@@ -809,6 +839,7 @@ def _write_manifest(outdir: Path, args, results, base_url: str) -> None:
         f"commit      : {_git('rev-parse', 'HEAD') or 'unknown'} ({dirty})",
         f"branch      : {_git('rev-parse', '--abbrev-ref', 'HEAD') or 'unknown'}",
         f"server      : {server}",
+        f"reports     : version {health_version} (self-reported via /health)",
         f"answered by : provider={provider} model={model}",
         f"result      : {len([r for r in results if r[1] == PASS])} passed, "
         f"{len([r for r in results if r[1] == FAIL])} failed, "
