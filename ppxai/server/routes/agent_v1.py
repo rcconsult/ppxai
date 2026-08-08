@@ -86,9 +86,8 @@ from __future__ import annotations
 import asyncio
 import json
 import os
-import time
 from pathlib import Path
-from typing import Any, Optional
+from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
@@ -109,17 +108,21 @@ from ...engine.agent_spec import (
     load_spec_file,
     spec_from_mapping,
 )
-from ...engine.agent_scoped_tools import ScopedToolManager
-from ...engine.client import EngineClient
-from ...engine.tools.agent_spawn import SpawnSubagentTool
-from ...engine.tools.filesystem_policy import build_filesystem_policy
 from ...engine.tools.network_policy import (
-    NetworkPolicy,
     apply_egress_ceiling,
     grant_has_shell,
 )
-from ...engine.types import EventType
-from ..session_manager import get_default_working_dir
+from ...engine import task_runner as _task_runner
+from ...engine.task_runner import (  # noqa: F401  (compat re-exports)
+    DEFAULT_AGENT_SYSTEM_PROMPT,
+    compose_agent_system_prompt,
+)
+# Import alias for source compatibility (oneshot.py and older callers do
+# `from .agent_v1 import build_task_runner`). NOT a patch point: it is a
+# second binding to the same object, so rebinding it redirects nothing.
+# Patch `ppxai.engine.task_runner.build_task_runner` instead — see that
+# module's docstring and tests/test_runner_builder_patch_point.py.
+from ...engine.task_runner import build_task_runner  # noqa: F401
 from ..state import get_agent_run_registry
 # Reuse oneshot's provider construction so Inc 1 has zero provider-wiring
 # duplication; the synchronous run IS a oneshot call under the hood.
@@ -148,29 +151,11 @@ logger = get_logger("server")
 # `compose_agent_system_prompt`, and the tool-calling mechanics block is still
 # appended by the engine. Ownership stays with the consumer (the AGENT.md /
 # persona artifact lives in ppxai-sre); ppxai provides the seam + a sane base.
-DEFAULT_AGENT_SYSTEM_PROMPT = (
-    "You are an autonomous agent executing a single bounded task. "
-    "Use ONLY the tools you have been granted to accomplish it — do not ask "
-    "the user for input, and do not fall back to any native capability "
-    "(e.g. built-in web search) when a granted tool covers the need. "
-    "When you need an action, emit a tool call in the required format rather "
-    "than describing what you would do. Work within your capability grant and "
-    "egress allowlist; if the task cannot be done with the granted tools, say "
-    "so plainly and stop. Be concise; report results, not intentions."
-)
+# MOVED to ppxai/engine/task_runner.py in v1.19.1, alongside the runner
+# that consumes it — pure string composition with no HTTP shape, and
+# leaving it here made the engine module import from the server layer.
+# Re-exported at the imports above for existing importers.
 
-
-def compose_agent_system_prompt(caller_system: Optional[str]) -> str:
-    """Build the /task engine system prompt: the bounded-agent default, plus
-    the caller-supplied `system` (rendered AGENT.md / persona) when present.
-
-    The caller's instructions come SECOND so they refine/extend the base
-    framing (identity, role, boundaries) without losing the
-    use-only-granted-tools guarantee. Returns the default alone when the
-    caller passes nothing."""
-    base = DEFAULT_AGENT_SYSTEM_PROMPT
-    extra = (caller_system or "").strip()
-    return f"{base}\n\n{extra}" if extra else base
 
 
 # ---------------------------------------------------------------------------
@@ -439,7 +424,7 @@ async def create_agent_run(req: AgentRunRequest, request: Request) -> AgentRunRe
             hold_result=hold,
             system=req.system,
         )
-        runner = build_task_runner(
+        runner = _task_runner.build_task_runner(
             registry,
             provider_name=provider_name,
             model=model,
@@ -1257,7 +1242,7 @@ async def create_agent_task(req: AgentTaskRequest, request: Request) -> AgentRun
         workdir=workdir,
     )
 
-    runner = build_task_runner(
+    runner = _task_runner.build_task_runner(
         registry,
         provider_name=provider_name,
         model=model,
@@ -1275,266 +1260,6 @@ async def create_agent_task(req: AgentTaskRequest, request: Request) -> AgentRun
     )
 
 
-def build_task_runner(
-    registry,
-    *,
-    provider_name: str,
-    model: str,
-    task: str,
-    tools: list[str],
-    allow_outbound: list,
-    allow_spawn: bool = False,
-    system: Optional[str] = None,
-    extra_read_paths: Optional[list] = None,
-    workdir: Optional[str] = None,
-):
-    """Build the async runner that drives a tool-capable run (Inc 4–7).
-
-    Shared by `/v1/agent/task` (top-level) and the `spawn_subagent` tool
-    (child run) so both go through the IDENTICAL sandbox: ScopedToolManager
-    (AC-1 grant), NetworkPolicy (AC-2 egress), and Inc 6 budget/cancel
-    control. The runner is a function of explicit params, not the request, so
-    a child run can be built with its own (subset) grant + allowlist.
-
-    allow_spawn gates depth: a top-level run gets the `spawn_subagent` tool
-    registered IF it's in the grant; a child run is always built with
-    allow_spawn=False, so it can never spawn — enforcing the N=1 / depth=1
-    rule structurally (a grandchild is impossible).
-
-    extra_read_paths (T4): additional read roots mounted into this run's
-    read-scope on TOP of the static sandbox `read_paths.allow` — the `--skill`
-    directories. Only consulted when the filesystem seal is engaged
-    (enforcement="in_process"); ignored otherwise (nothing to enforce).
-
-    workdir (v1.19.x): the run's working directory as per-run intent, applied
-    only when the seal is OFF (the sealed branch always uses the per-run
-    jail). None → the server default (server.working_dir config, else home) —
-    deliberately NEVER the process launch dir, which made a run's relative
-    paths depend on how the operator happened to start the server.
-    """
-    async def _runner(m) -> str:
-        engine = EngineClient()
-        engine.set_provider(provider_name)
-        engine.set_model(model)
-        engine.enable_tools()  # registers builtins + sets tool-loop limits
-        # v1.19.x: bounded-agent framing (+ caller's rendered AGENT.md via
-        # `system`) REPLACES the provider's chat system_prompt for this run, so
-        # the model uses granted tools instead of native fallbacks. Set on this
-        # per-run engine only (D1 isolation) — never touches other sessions.
-        engine.system_prompt_override = compose_agent_system_prompt(system)
-
-        # Inc 7: register spawn_subagent ONLY for a top-level run whose grant
-        # includes it. A child run (allow_spawn=False) never gets the tool, so
-        # depth is capped at 1 structurally — not by a runtime check the model
-        # could probe. The tool carries this run as the parent context and
-        # enforces child grant ⊆ this grant, child egress ⊆ this allowlist.
-        if allow_spawn and "spawn_subagent" in tools:
-            # T5: the interactive consent channel over /v1/agent/task. A spawn
-            # that needs consent PARKS the run (`waiting{consent}` + an
-            # AGENT_WAITING event carrying the resume token) and blocks right
-            # here until POST /v1/agent/runs/{id}/respond answers it — or the
-            # consent TTL expires, which resolves to a denial (fail-closed).
-            # This replaces the pre-T5 adapter that routed to the engine's
-            # shell-consent (which had no UI over HTTP and auto-denied).
-            async def _spawn_consent(summary: str) -> bool:
-                ttl = float(
-                    get_execution_task_config()["consent"]["consent_ttl_s"]
-                )
-                response = await registry.park_run(
-                    m, kind="consent", prompt=summary, ttl_s=ttl,
-                )
-                return response.get("approved") is True
-
-            # Server-context spawn consent policy
-            # (execution.task.consent.spawn_consent):
-            # "deny" (default, safe) — a spawn parks for interactive consent as
-            # above, denying on TTL timeout; "auto" — skip the park entirely
-            # (subset rules remain the boundary).
-            spawn_consent = get_execution_task_config()["consent"]["spawn_consent"]
-            engine.tool_manager.register_tool(SpawnSubagentTool(
-                registry=registry,
-                parent_run_id=m.run_id,
-                parent_owner=getattr(m, "owner", None),
-                parent_tools=list(tools),
-                parent_allow_outbound=list(allow_outbound),
-                parent_provider=provider_name,
-                parent_model=model,
-                parent_workdir=workdir,  # child resolves paths where the parent does
-                request_consent=_spawn_consent,
-                consent_policy=spawn_consent,
-                runner_builder=build_task_runner,
-            ))
-
-        def _on_deny(name: str) -> None:
-            registry.emit_event(
-                m.run_id, "tool_denied", level="warning", category="tool",
-                data={"tool": name, "grant": list(tools)},
-            )
-
-        # AC-2: per-run egress allowlist. Always installed for a tool-capable
-        # run — even with no `network` spec, so a granted network tool is
-        # deny-by-default (fail-closed). on_network emits the typed audit event.
-        # Step ④: the run's provider context rides on the policy so the
-        # egress chokepoint resolves per-provider backend tuples with the
-        # SAME answer the call-time chain uses.
-        net_policy = NetworkPolicy(allow_outbound, provider_name=provider_name)
-
-        def _on_network(allowed: bool, payload: dict) -> None:
-            payload = {**payload, "run_id": m.run_id}
-            registry.emit_event(
-                m.run_id,
-                "network_policy_allowed" if allowed else "network_policy_denied",
-                level="info" if allowed else "warning",
-                category="network",
-                data=payload,
-            )
-
-        # T2: filesystem SEAL (tools.agent.sandbox, enforcement="in_process").
-        # Off by default — engaged only when the operator opts in. When on, the
-        # run gets a per-run workdir (its ONLY writable root), relative paths
-        # resolve there, and reads/writes are confined by FilesystemPolicy.
-        fs_policy = None
-        _on_path = None
-        sandbox = get_execution_task_config()["sandbox"]
-        if sandbox.get("enforcement") == "in_process":
-            jail_workdir = os.path.join(
-                os.path.expanduser(sandbox["workdir"]["root"]), m.run_id, "work"
-            )
-            os.makedirs(jail_workdir, exist_ok=True)
-            engine.set_working_dir(jail_workdir)  # relative tool paths resolve here
-            fs_policy = build_filesystem_policy(
-                sandbox, jail_workdir, extra_read_paths=extra_read_paths
-            )
-
-            def _on_path(allowed: bool, payload: dict) -> None:  # noqa: F811
-                # Allowed reads are silent (they'd fire on every read); only the
-                # denial is a security-relevant event.
-                if not allowed:
-                    registry.emit_event(
-                        m.run_id, "path_denied", level="warning",
-                        category="filesystem", data={**payload, "run_id": m.run_id},
-                    )
-        else:
-            # Seal OFF: apply the per-run workdir intent, else the server
-            # default — never the process launch dir (v1.19.x
-            # workdir-alignment; a resume whose recorded workdir has since
-            # vanished falls back to the default rather than aiming tools at
-            # a dead path).
-            effective_wd = workdir
-            if effective_wd and not os.path.isdir(effective_wd):
-                effective_wd = None
-            engine.set_working_dir(effective_wd or get_default_working_dir())
-
-        engine.tool_manager = ScopedToolManager(
-            engine.tool_manager, list(tools), on_deny=_on_deny,
-            network_policy=net_policy, on_network=_on_network,
-            filesystem_policy=fs_policy, on_path=_on_path,
-        )
-
-        # Item 50: a grant naming a tool that does not exist is always a caller
-        # mistake — the model is silently offered fewer tools than intended and
-        # the run fails later for an invisible reason. This is checked HERE
-        # (not at request validation) because only now is the fully-registered
-        # base manager available: editor/shell/container/display tools register
-        # solely when an engine exists, so a registry rebuilt without one would
-        # report a misleading subset and falsely reject valid names.
-        unresolved_msg = engine.tool_manager.unresolved_grant_message()
-        if unresolved_msg:
-            registry.emit_event(
-                m.run_id, "grant_unresolved", level="warning", category="tool",
-                data={"unresolved": engine.tool_manager.unresolved_grant(),
-                      "grant": list(tools)},
-            )
-            raise ValueError(unresolved_msg)
-
-        # Inc 6: cooperative budget/cancel control. Polled at each tool-loop
-        # boundary (on TOOL_CALL) so a cap or cancel stops the run at a clean
-        # checkpoint — never mid-tool-call. control.check() raises RunCancelled
-        # / RunBudgetExceeded, which run_in_background maps to the right status.
-        control = registry.get_control(m.run_id)
-
-        final_text: list[str] = []
-        async for event in engine.chat(task, stream=False):
-            # Surface tool activity on the run's event stream. The engine's
-            # TOOL_CALL carries the name in event.data["tool"] (a dict), not
-            # in metadata; STREAM_END carries the final text as event.data,
-            # which is a plain string (sometimes a dict with "content").
-            if event.type == EventType.TOOL_CALL:
-                if control is not None:
-                    # Refresh the run's cumulative token total from the engine
-                    # before checking, so the token budget is actually enforced
-                    # (not just iterations/time). Read session.live_run_tokens —
-                    # the LIVE in-flight total chat_with_tools bumps per tool
-                    # iteration. (session.usage.total_tokens is only committed at
-                    # terminal STREAM_END, so it's stale/0 mid-run — reading it
-                    # left the token axis silently unenforced; v1.19.0 fix.) This
-                    # EngineClient is run-local (D1: one per run), so the live
-                    # total IS this run's total. check() runs BEFORE counting this
-                    # iteration: a budget of N lets N iterations run, stops at the
-                    # (N+1)th.
-                    try:
-                        control.tokens_used = engine.session.live_run_tokens
-                    except AttributeError:
-                        pass  # usage not available — leave token axis unenforced
-                    control.check(now=time.monotonic())
-                    control.iterations += 1
-                d = event.data or {}
-                name = d.get("tool", "") if isinstance(d, dict) else ""
-                # F4: carry a truncated args snapshot on the audit event —
-                # what the model actually asked the tool to do (e.g. the
-                # web_search query). Values clamped so a large file-write
-                # arg can't bloat events.jsonl.
-                raw_args = d.get("arguments") if isinstance(d, dict) else None
-                args_snapshot = {
-                    str(k): str(v)[:200] for k, v in raw_args.items()
-                } if isinstance(raw_args, dict) else None
-                registry.emit_event(
-                    m.run_id, "tool_call", level="debug", category="tool",
-                    data={"tool": name, "arguments": args_snapshot},
-                )
-            elif event.type in (EventType.ERROR, EventType.PROVIDER_THROTTLED):
-                # The engine reports provider/config failures as EVENTS, not
-                # exceptions — chat() yields ERROR ("No provider", auth, network)
-                # or PROVIDER_THROTTLED (429/403) and returns normally. If we
-                # only watched STREAM_END, run_in_background would see a clean
-                # return and mark the run COMPLETED with an empty result. Raise
-                # so the run finishes FAILED with the provider's message.
-                d = event.data
-                msg = d.get("message") if isinstance(d, dict) else str(d)
-                raise RuntimeError(
-                    f"{event.type.value}: {msg or 'provider call failed'}"
-                )
-            elif event.type == EventType.STREAM_END and event.data is not None:
-                d = event.data
-                text = d.get("content", "") if isinstance(d, dict) else str(d)
-                if text:
-                    final_text.append(text)
-
-        # F4: persist the run's OWN usage on its audit trail. This engine is
-        # run-local (D1), so session.usage is per-run attribution by
-        # construction — the seam ADR 0008's cross-tier sink will read.
-        try:
-            u = engine.session.usage
-            ws = (u.tool_calls or {}).get("web_search")
-            registry.emit_event(
-                m.run_id, "run_usage", level="debug", category="result",
-                data={
-                    "prompt_tokens": u.prompt_tokens,
-                    "completion_tokens": u.completion_tokens,
-                    "total_tokens": u.total_tokens,
-                    "estimated_cost": u.estimated_cost,
-                    "web_search": {
-                        "call_count": ws.call_count,
-                        "estimated_cost": ws.estimated_cost,
-                        "backend": ws.provider,
-                    } if ws else None,
-                },
-            )
-        except Exception:  # noqa: BLE001 — usage audit must never fail a run
-            pass
-        return "\n".join(final_text)
-
-    return _runner
 
 
 @router.get("/runs", response_model=RunListResponse)
@@ -1727,7 +1452,7 @@ async def resume_agent_run(run_id: str, request: Request) -> dict:
     # Fail fast on an unbuildable provider BEFORE mutating the run record.
     _validate_provider_or_400(meta.provider)
 
-    runner = build_task_runner(
+    runner = _task_runner.build_task_runner(
         registry,
         provider_name=meta.provider,
         model=meta.model,

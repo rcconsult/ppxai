@@ -197,10 +197,14 @@ def get_agent_run_registry():
         # one-shot sweep below run on the single event loop and cannot
         # interleave. If a sync-def endpoint or a thread ever calls this
         # getter (threadpool), add a lock here first.
-        from ..config.loader import PPXAI_HOME
-        from ..engine.agent_runs import AgentRunRegistry, FilesystemAgentRunStore
-        store = FilesystemAgentRunStore(PPXAI_HOME / "runs")
-        _agent_run_registry = AgentRunRegistry(store)
+        # The <PPXAI_HOME>/runs path is resolved in ONE place
+        # (engine.task_runner.default_run_registry). It is part of the
+        # runs/<run_id>/agent-<n>/ namespace on the ppxai-sre seam, and two
+        # independent resolutions of a load-bearing path is how it drifts.
+        # The sweep and hooks below stay here — they are lifecycle concerns of
+        # this process, not of building a registry.
+        from ..engine.task_runner import default_run_registry
+        _agent_run_registry = default_run_registry()
         # T7: a fresh registry means a fresh process — any run still marked
         # pending/running/waiting/cancelling on disk was orphaned by the last
         # shutdown (its task/control/consent future died with the process).

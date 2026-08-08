@@ -7,7 +7,10 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List
 
+from ..common.logger import get_logger
 from .store import ConfigStore
+
+logger = get_logger("config")
 
 
 def _expand_path_template(template: str) -> str:
@@ -84,3 +87,29 @@ def get_server_config() -> Dict[str, Any]:
 def get_idle_timeout() -> int:
     """Get the server idle timeout in seconds."""
     return get_server_config().get("idle_timeout", 300)
+
+
+def get_default_working_dir() -> str:
+    """The deployment-wide default working directory.
+
+    `server.working_dir` from config when set and existing, else the user's
+    home. Used for every new session engine AND as the fallback working dir of
+    an unsealed task run — so a run's relative tool paths never silently depend
+    on where the server process happened to be launched from.
+
+    Lives HERE, not in `server/session_manager.py` where it was originally
+    written, because it reads config and touches the filesystem and holds no
+    session state whatsoever. The old home made it un-importable from the
+    engine layer without inverting Engine -> Server -> Clients, which blocked
+    `engine/task_runner.py`. `server.session_manager` re-exports the name.
+    """
+    configured = get_server_config().get("working_dir")
+    if configured:
+        path = Path(configured).expanduser()
+        if path.is_dir():
+            return str(path)
+        logger.warning(
+            f"Configured working_dir '{configured}' does not exist, "
+            f"falling back to home"
+        )
+    return str(Path.home())

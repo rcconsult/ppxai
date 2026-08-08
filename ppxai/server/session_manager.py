@@ -18,30 +18,19 @@ from typing import Optional, Callable, Awaitable
 
 from ..common.logger import get_logger
 from ..config import get_available_providers, get_server_config
+from ..config.paths import get_default_working_dir
 from ..engine import EngineClient
 
 logger = get_logger("session_manager")
 
 
-def get_default_working_dir() -> str:
-    """The server-wide default working directory.
-
-    `server.working_dir` from config when set and existing, else the user's
-    home. Used for every new session engine AND (v1.19.x) as the fallback
-    working dir of an unsealed /v1/agent/task run — so a run's relative
-    tool paths never silently depend on where the server process happened
-    to be launched from.
-    """
-    configured = get_server_config().get("working_dir")
-    if configured:
-        path = Path(configured).expanduser()
-        if path.is_dir():
-            return str(path)
-        logger.warning(
-            f"Configured working_dir '{configured}' does not exist, "
-            f"falling back to home"
-        )
-    return str(Path.home())
+# Moved to ppxai/config/paths.py in v1.19.1 and re-exported here. It reads
+# config, touches the filesystem and holds no session state, so its old home
+# made it un-importable from the engine layer without inverting
+# Engine -> Server -> Clients — which blocked engine/task_runner.py. Callers
+# doing `from ..session_manager import get_default_working_dir` still work.
+__all__ = ["get_default_working_dir", "SessionManager", "Session",
+           "get_session_manager", "get_idle_timeout"]
 
 
 @dataclass

@@ -304,8 +304,9 @@ class TestEnrichedOneshotFacade:
     @staticmethod
     def _stub_runner(monkeypatch, fn):
         from ppxai.server.routes import agent_v1
+        from ppxai.engine import task_runner
 
-        monkeypatch.setattr(agent_v1, "build_task_runner", lambda *a, **k: fn)
+        monkeypatch.setattr(task_runner, "build_task_runner", lambda *a, **k: fn)
 
     def test_serves_via_kind_oneshot_run(
         self, http_client, reg, search_loop, monkeypatch
@@ -441,11 +442,12 @@ class TestEnrichedOneshotAccounting:
         self, http_client, reg, search_loop, monkeypatch
     ):
         from ppxai.server.routes import agent_v1
+        from ppxai.engine import task_runner
 
         runner = self._emitting_runner(
             reg, "solar flares today", "perplexity", 0.005, "the sun is busy"
         )
-        monkeypatch.setattr(agent_v1, "build_task_runner", lambda *a, **k: runner)
+        monkeypatch.setattr(task_runner, "build_task_runner", lambda *a, **k: runner)
         r = http_client.post(
             "/v1/oneshot",
             json={"prompt": "solar?", "provider": "p", "model": "m"},
@@ -465,6 +467,7 @@ class TestEnrichedOneshotAccounting:
         self, http_client, reg, search_loop, monkeypatch
     ):
         from ppxai.server.routes import agent_v1
+        from ppxai.engine import task_runner
 
         async def runner(m):
             reg.emit_event(
@@ -478,7 +481,7 @@ class TestEnrichedOneshotAccounting:
             )
             return "free answer"
 
-        monkeypatch.setattr(agent_v1, "build_task_runner", lambda *a, **k: runner)
+        monkeypatch.setattr(task_runner, "build_task_runner", lambda *a, **k: runner)
         r = http_client.post(
             "/v1/oneshot", json={"prompt": "q", "provider": "p", "model": "m"}
         )
@@ -495,6 +498,7 @@ class TestEnrichedOneshotAccounting:
         import asyncio
 
         from ppxai.server.routes import agent_v1
+        from ppxai.engine import task_runner
         from ppxai.server.routes import oneshot as oneshot_mod
 
         def make_runner(registry, **kw):
@@ -519,7 +523,7 @@ class TestEnrichedOneshotAccounting:
 
             return runner
 
-        monkeypatch.setattr(agent_v1, "build_task_runner", make_runner)
+        monkeypatch.setattr(task_runner, "build_task_runner", make_runner)
 
         async def main():
             from ppxai.server.routes.oneshot import OneshotRequest

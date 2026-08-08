@@ -517,6 +517,7 @@ class TestRunEvents:
 def client(tmp_path, monkeypatch):
     import ppxai.server.state as state
     from ppxai.server.routes import agent_v1
+    from ppxai.engine import task_runner
 
     reg = AgentRunRegistry(FilesystemAgentRunStore(tmp_path / "runs"))
     monkeypatch.setattr(state, "_agent_run_registry", reg)
@@ -536,6 +537,7 @@ def _enable_task_tier(monkeypatch):
     ADR 0010 (v1.19.1): the gate moved from tools.agent.task_tier_enabled to
     execution.task.enabled, so the patch target is the execution accessor."""
     from ppxai.server.routes import agent_v1
+    from ppxai.engine import task_runner
     real = agent_v1.get_execution_task_config
     monkeypatch.setattr(
         agent_v1, "get_execution_task_config",
@@ -567,6 +569,7 @@ class TestTaskTierGate:
     def test_task_disabled_returns_403(self, client, monkeypatch):
         c, _ = client
         from ppxai.server.routes import agent_v1
+        from ppxai.engine import task_runner
         monkeypatch.setattr(
             agent_v1, "get_execution_task_config", lambda: {"enabled": False}
         )
@@ -579,6 +582,7 @@ class TestTaskTierGate:
     def test_run_tier_not_gated_by_task_flag(self, client, monkeypatch):
         c, _ = client
         from ppxai.server.routes import agent_v1
+        from ppxai.engine import task_runner
         monkeypatch.setattr(
             agent_v1, "get_execution_task_config", lambda: {"enabled": False}
         )
@@ -787,6 +791,7 @@ class TestAgentRunRoutes:
         # provider is intentionally NOT consulted.)
         c, reg = client
         from ppxai.server.routes import agent_v1
+        from ppxai.engine import task_runner
         monkeypatch.setattr(agent_v1, "get_execution_default_subagent", lambda: {})
         resp = c.post("/v1/agent/run", json={"task": "t"})
         assert resp.status_code == 400
@@ -798,6 +803,7 @@ class TestAgentRunRoutes:
         # spawn_subagent always does). Completes with result + records them.
         c, reg = client
         from ppxai.server.routes import agent_v1
+        from ppxai.engine import task_runner
 
         monkeypatch.setattr(agent_v1, "_build_provider", lambda name: self._fake_provider())
 
@@ -822,6 +828,7 @@ class TestAgentRunRoutes:
         # tools.agent.default_subagent (NOT the session chat provider).
         c, reg = client
         from ppxai.server.routes import agent_v1
+        from ppxai.engine import task_runner
 
         monkeypatch.setattr(
             agent_v1, "get_execution_default_subagent",
@@ -842,6 +849,7 @@ class TestAgentRunRoutes:
         # default_model must win instead (mirrors /v1/oneshot).
         c, reg = client
         from ppxai.server.routes import agent_v1
+        from ppxai.engine import task_runner
 
         monkeypatch.setattr(
             agent_v1, "get_execution_default_subagent",
@@ -863,6 +871,7 @@ class TestAgentRunRoutes:
         # If the background LLM call raises, the run ends 'failed' (not lost).
         c, reg = client
         from ppxai.server.routes import agent_v1
+        from ppxai.engine import task_runner
         from ppxai.engine.providers.openai_compat import OpenAICompatibleProvider
 
         class _BoomProvider(OpenAICompatibleProvider):
@@ -891,6 +900,7 @@ class TestAgentRunRoutes:
         c, reg = client
         from fastapi import HTTPException
         from ppxai.server.routes import agent_v1
+        from ppxai.engine import task_runner
 
         def _raise(name):
             raise HTTPException(status_code=400, detail=f"unknown provider {name!r}")
@@ -910,6 +920,7 @@ class TestAgentRunRoutes:
         # closed-book: no egress baseline, no tool budget.
         c, reg = client
         from ppxai.server.routes import agent_v1
+        from ppxai.engine import task_runner
         monkeypatch.setattr(
             agent_v1, "_build_provider", lambda name: self._fake_provider()
         )
@@ -931,6 +942,7 @@ class TestAgentRunRoutes:
         c, reg = client
         from ppxai.config import execution as exec_mod
         from ppxai.server.routes import agent_v1
+        from ppxai.engine import task_runner
 
         monkeypatch.setattr(
             exec_mod, "get_execution_run_config",
@@ -948,7 +960,7 @@ class TestAgentRunRoutes:
                 return "grounded answer"
             return _r
 
-        monkeypatch.setattr(agent_v1, "build_task_runner", _stub_runner)
+        monkeypatch.setattr(task_runner, "build_task_runner", _stub_runner)
 
         resp = c.post("/v1/agent/run", json={
             "task": "what happened today", "provider": "fakeprov",
@@ -1023,6 +1035,7 @@ class TestAgentRunRoutes:
         # stub engine isn't real — but the POST must NOT 400 on provider class).
         c, reg = client
         from ppxai.server.routes import agent_v1
+        from ppxai.engine import task_runner
 
         class _AnyProvider:  # NOT an OpenAICompatibleProvider — must still pass
             pass
@@ -1041,7 +1054,7 @@ class TestAgentRunRoutes:
         async def _ok_runner(m):
             return "ok"
         monkeypatch.setattr(
-            agent_v1, "build_task_runner", lambda reg_, **kw: _ok_runner,
+            task_runner, "build_task_runner", lambda reg_, **kw: _ok_runner,
         )
 
         r = c.post("/v1/agent/task", json={
@@ -1058,6 +1071,7 @@ class TestAgentRunRoutes:
         # lands on the run stream, and the run still completes.
         c, reg = client
         from ppxai.server.routes import agent_v1
+        from ppxai.engine import task_runner
         from ppxai.engine.types import Event, EventType
 
         # Bypass provider build (it's OpenAI-compat-checked before backgrounding).
@@ -1096,7 +1110,7 @@ class TestAgentRunRoutes:
                 yield Event(type=EventType.STREAM_END, data="done")
 
         stub = _StubEngine()
-        monkeypatch.setattr(agent_v1, "EngineClient", lambda: stub, raising=False)
+        monkeypatch.setattr(task_runner, "EngineClient", lambda: stub, raising=False)
         # the route imports EngineClient inside _runner; patch the source module
         import ppxai.engine.client as client_mod
         monkeypatch.setattr(client_mod, "EngineClient", lambda: stub)
@@ -1104,7 +1118,7 @@ class TestAgentRunRoutes:
         # import inside _runner), so patch the binding the runner actually
         # uses — the source-module patch above no longer reaches it.
         import ppxai.server.routes.agent_v1 as _agent_v1_mod
-        monkeypatch.setattr(_agent_v1_mod, "EngineClient", lambda: stub, raising=False)
+        monkeypatch.setattr(task_runner, "EngineClient", lambda: stub, raising=False)
 
         resp = c.post("/v1/agent/task", json={
             "task": "do it", "tools": ["read_file"],  # write_file NOT granted
@@ -1135,6 +1149,7 @@ class TestAgentRunRoutes:
         # is allowed and emits network_policy_allowed.
         c, _reg = client
         from ppxai.server.routes import agent_v1
+        from ppxai.engine import task_runner
         from ppxai.engine.types import Event, EventType
         from ppxai.engine.providers.openai_compat import OpenAICompatibleProvider
         from ppxai.engine.agent_scoped_tools import ScopedToolManager
@@ -1173,7 +1188,7 @@ class TestAgentRunRoutes:
         # import inside _runner), so patch the binding the runner actually
         # uses — the source-module patch above no longer reaches it.
         import ppxai.server.routes.agent_v1 as _agent_v1_mod
-        monkeypatch.setattr(_agent_v1_mod, "EngineClient", lambda: stub, raising=False)
+        monkeypatch.setattr(task_runner, "EngineClient", lambda: stub, raising=False)
 
         resp = c.post("/v1/agent/task", json={
             "task": "research", "tools": ["fetch_url"],
@@ -1208,6 +1223,7 @@ class TestAgentRunRoutes:
         # silently mask provider outages as successful empty answers).
         c, _reg = client
         from ppxai.server.routes import agent_v1
+        from ppxai.engine import task_runner
         from ppxai.engine.types import Event, EventType
         from ppxai.engine.providers.openai_compat import OpenAICompatibleProvider
 
@@ -1242,7 +1258,7 @@ class TestAgentRunRoutes:
         # import inside _runner), so patch the binding the runner actually
         # uses — the source-module patch above no longer reaches it.
         import ppxai.server.routes.agent_v1 as _agent_v1_mod
-        monkeypatch.setattr(_agent_v1_mod, "EngineClient", lambda: stub, raising=False)
+        monkeypatch.setattr(task_runner, "EngineClient", lambda: stub, raising=False)
 
         resp = c.post("/v1/agent/task", json={
             "task": "do it", "tools": ["read_file"],
@@ -1283,6 +1299,7 @@ class TestAgentRunRoutes:
         # checkpoint with status=interrupted + resumable=True (NOT failed).
         c, _reg = client
         from ppxai.server.routes import agent_v1
+        from ppxai.engine import task_runner
         from ppxai.engine.providers.openai_compat import OpenAICompatibleProvider
 
         class _P(OpenAICompatibleProvider):
@@ -1299,7 +1316,7 @@ class TestAgentRunRoutes:
         # import inside _runner), so patch the binding the runner actually
         # uses — the source-module patch above no longer reaches it.
         import ppxai.server.routes.agent_v1 as _agent_v1_mod
-        monkeypatch.setattr(_agent_v1_mod, "EngineClient", lambda: stub, raising=False)
+        monkeypatch.setattr(task_runner, "EngineClient", lambda: stub, raising=False)
 
         resp = c.post("/v1/agent/task", json={
             "task": "loop", "tools": ["read_file"],
@@ -1323,6 +1340,7 @@ class TestAgentRunRoutes:
         # control: same stub, no budget -> all iterations run, completes.
         c, _reg = client
         from ppxai.server.routes import agent_v1
+        from ppxai.engine import task_runner
         from ppxai.engine.providers.openai_compat import OpenAICompatibleProvider
 
         class _P(OpenAICompatibleProvider):
@@ -1338,7 +1356,7 @@ class TestAgentRunRoutes:
         # import inside _runner), so patch the binding the runner actually
         # uses — the source-module patch above no longer reaches it.
         import ppxai.server.routes.agent_v1 as _agent_v1_mod
-        monkeypatch.setattr(_agent_v1_mod, "EngineClient", lambda: stub, raising=False)
+        monkeypatch.setattr(task_runner, "EngineClient", lambda: stub, raising=False)
 
         resp = c.post("/v1/agent/task", json={
             "task": "loop", "tools": ["read_file"], "provider": "p", "model": "m",
@@ -1360,6 +1378,7 @@ class TestAgentRunRoutes:
         # the cap (after iter 3: 0,40,80 ok -> 120 >= 100 stops).
         c, _reg = client
         from ppxai.server.routes import agent_v1
+        from ppxai.engine import task_runner
         from ppxai.engine.types import Event, EventType
         from ppxai.engine.providers.openai_compat import OpenAICompatibleProvider
 
@@ -1406,7 +1425,7 @@ class TestAgentRunRoutes:
         # import inside _runner), so patch the binding the runner actually
         # uses — the source-module patch above no longer reaches it.
         import ppxai.server.routes.agent_v1 as _agent_v1_mod
-        monkeypatch.setattr(_agent_v1_mod, "EngineClient", lambda: stub, raising=False)
+        monkeypatch.setattr(task_runner, "EngineClient", lambda: stub, raising=False)
 
         resp = c.post("/v1/agent/task", json={
             "task": "burn tokens", "tools": ["read_file"],
@@ -1448,6 +1467,7 @@ class TestAgentRunRoutes:
         # logic AND control disconnect deterministically.
         import asyncio
         from ppxai.server.routes import agent_v1
+        from ppxai.engine import task_runner
 
         c, reg = client
         m = reg.start_run("t", provider="p", model="m")
@@ -1566,8 +1586,13 @@ class TestTaskSpecFiles:
         not silently default). A partial double must not weaken that."""
         from ppxai.config.execution import get_execution_task_config as _real
         from ppxai.server.routes import agent_v1
+        from ppxai.engine import task_runner
         full = {**_real(), **cfg}
         monkeypatch.setattr(agent_v1, "get_execution_task_config", lambda: full)
+        # Both modules hold their own binding after the v1.19.1 split:
+        # the ROUTE validates skills/spec config, the RUNNER reads the
+        # sandbox block. Patching one leaves the other on real config.
+        monkeypatch.setattr(task_runner, "get_execution_task_config", lambda: full)
         monkeypatch.setattr(agent_v1, "get_execution_default_subagent", lambda: {})
 
     # --- rejection paths (no provider needed) --------------------------------
@@ -1628,6 +1653,7 @@ class TestTaskSpecFiles:
 
     def _mint(self, c, monkeypatch, body):
         from ppxai.server.routes import agent_v1
+        from ppxai.engine import task_runner
         monkeypatch.setattr(agent_v1, "_validate_provider_or_400", lambda name: None)
         r = c.post("/v1/agent/task", json=body)
         assert r.status_code == 200, r.text
@@ -1693,8 +1719,13 @@ class TestTaskSkills:
         not silently default). A partial double must not weaken that."""
         from ppxai.config.execution import get_execution_task_config as _real
         from ppxai.server.routes import agent_v1
+        from ppxai.engine import task_runner
         full = {**_real(), **cfg}
         monkeypatch.setattr(agent_v1, "get_execution_task_config", lambda: full)
+        # Both modules hold their own binding after the v1.19.1 split:
+        # the ROUTE validates skills/spec config, the RUNNER reads the
+        # sandbox block. Patching one leaves the other on real config.
+        monkeypatch.setattr(task_runner, "get_execution_task_config", lambda: full)
         monkeypatch.setattr(agent_v1, "get_execution_default_subagent", lambda: {})
 
     def _skill(self, skills, name, manifest, *, references=None, scripts=None):
@@ -1715,6 +1746,7 @@ class TestTaskSkills:
 
     def _mint(self, c, monkeypatch, body):
         from ppxai.server.routes import agent_v1
+        from ppxai.engine import task_runner
         monkeypatch.setattr(agent_v1, "_validate_provider_or_400", lambda name: None)
         r = c.post("/v1/agent/task", json=body)
         assert r.status_code == 200, r.text
@@ -2031,6 +2063,7 @@ def ctx_client(tmp_path, monkeypatch):
     a T5 park that must stay awaitable across the respond request."""
     import ppxai.server.state as state
     from ppxai.server.routes import agent_v1
+    from ppxai.engine import task_runner
 
     reg = AgentRunRegistry(FilesystemAgentRunStore(tmp_path / "runs"))
     monkeypatch.setattr(state, "_agent_run_registry", reg)
@@ -2054,6 +2087,7 @@ class TestConsentParkE2E:
         parent) drives one spawn_subagent call through the route-installed
         ScopedToolManager; every later engine (the child) just completes."""
         from ppxai.server.routes import agent_v1
+        from ppxai.engine import task_runner
         from ppxai.engine.types import Event, EventType
         from ppxai.engine.providers.openai_compat import OpenAICompatibleProvider
 
@@ -2114,7 +2148,7 @@ class TestConsentParkE2E:
             made.append(eng)
             return eng
 
-        monkeypatch.setattr(agent_v1, "EngineClient", factory, raising=False)
+        monkeypatch.setattr(task_runner, "EngineClient", factory, raising=False)
         return made
 
     @staticmethod
@@ -2193,11 +2227,15 @@ class TestConsentParkE2E:
         # Shrink the consent TTL. The autouse fixture's get_agent_config is
         # captured FIRST so this override composes on top of it.
         from ppxai.server.routes import agent_v1
+        from ppxai.engine import task_runner
         real = agent_v1.get_execution_task_config
-        monkeypatch.setattr(
-            agent_v1, "get_execution_task_config",
-            lambda: {**real(), "consent": {**real()["consent"], "consent_ttl_s": 0.2}},
+        _ttl_override = (
+            lambda: {**real(), "consent": {**real()["consent"], "consent_ttl_s": 0.2}}
         )
+        monkeypatch.setattr(agent_v1, "get_execution_task_config", _ttl_override)
+        # The runner holds its own binding since the v1.19.1 split and is the
+        # one that actually reads consent_ttl_s when parking.
+        monkeypatch.setattr(task_runner, "get_execution_task_config", _ttl_override)
         rid = self._launch(c, monkeypatch)
         self._poll_status(c, rid, ("waiting",))
         done = self._poll_status(c, rid, ("completed_pending_ack", "failed"))
@@ -2354,6 +2392,7 @@ class TestAckRoute:
     def test_get_reaps_expired_hold(self, client, monkeypatch):
         c, reg = client
         from ppxai.server.routes import agent_v1
+        from ppxai.engine import task_runner
         real = agent_v1.get_execution_task_config
         monkeypatch.setattr(
             agent_v1, "get_execution_task_config",
@@ -2379,6 +2418,7 @@ class TestDisconnectThenCollectE2E:
 
         c, reg = ctx_client
         from ppxai.server.routes import agent_v1
+        from ppxai.engine import task_runner
         from ppxai.engine.types import Event, EventType
         from ppxai.engine.providers.openai_compat import OpenAICompatibleProvider
 
@@ -2407,7 +2447,7 @@ class TestDisconnectThenCollectE2E:
             async def chat(self, task, stream=False):
                 yield Event(type=EventType.STREAM_END, data="the held answer")
 
-        monkeypatch.setattr(agent_v1, "EngineClient", lambda: _StubEngine(),
+        monkeypatch.setattr(task_runner, "EngineClient", lambda: _StubEngine(),
                             raising=False)
 
         r = c.post("/v1/agent/task", json={
@@ -2572,6 +2612,7 @@ class TestResumeRoute:
         c, reg = client
         m = self._seed_interrupted(reg)
         from ppxai.server.routes import agent_v1
+        from ppxai.engine import task_runner
         monkeypatch.setattr(
             agent_v1, "get_execution_task_config",
             lambda: {"enabled": False},
@@ -2610,6 +2651,7 @@ class TestResumeRoute:
 
         c, reg = ctx_client
         from ppxai.server.routes import agent_v1
+        from ppxai.engine import task_runner
         monkeypatch.setattr(agent_v1, "_validate_provider_or_400", lambda name: None)
 
         captured = {}
@@ -2621,7 +2663,7 @@ class TestResumeRoute:
                 return "resumed answer"
             return _runner
 
-        monkeypatch.setattr(agent_v1, "build_task_runner", fake_build)
+        monkeypatch.setattr(task_runner, "build_task_runner", fake_build)
 
         m = self._seed_interrupted(reg)
         r = c.post(f"/v1/agent/runs/{m.run_id}/resume")
@@ -2670,6 +2712,7 @@ class TestWorkdirAlignment:
 
     def _capture_build(self, monkeypatch):
         from ppxai.server.routes import agent_v1
+        from ppxai.engine import task_runner
         captured = {}
 
         def fake_build(reg_, **kw):
@@ -2679,7 +2722,7 @@ class TestWorkdirAlignment:
                 return "ok"
             return _ok
 
-        monkeypatch.setattr(agent_v1, "build_task_runner", fake_build)
+        monkeypatch.setattr(task_runner, "build_task_runner", fake_build)
         monkeypatch.setattr(agent_v1, "_validate_provider_or_400", lambda n: None)
         return captured
 
@@ -2734,6 +2777,7 @@ class TestWorkdirAlignment:
     ):
         c, reg = client
         from ppxai.server.routes import agent_v1
+        from ppxai.engine import task_runner
         captured = self._capture_build(monkeypatch)
         real = agent_v1.get_execution_task_config  # already enabled=True
         monkeypatch.setattr(
@@ -2766,6 +2810,7 @@ class TestWorkdirAlignment:
         import asyncio
         _c, reg = client
         from ppxai.server.routes import agent_v1
+        from ppxai.engine import task_runner
         from ppxai.engine.types import Event, EventType
 
         seen = {}
@@ -2781,10 +2826,10 @@ class TestWorkdirAlignment:
                 yield Event(type=EventType.STREAM_END, data="ok")
 
         monkeypatch.setattr(
-            agent_v1, "EngineClient", lambda: _StubEngine(), raising=False
+            task_runner, "EngineClient", lambda: _StubEngine(), raising=False
         )
         monkeypatch.setattr(
-            agent_v1, "get_default_working_dir", lambda: str(tmp_path)
+            task_runner, "get_default_working_dir", lambda: str(tmp_path)
         )
 
         def _drive(**runner_kw):
@@ -2813,14 +2858,18 @@ class TestWorkdirAlignment:
         # runs depend on where the operator launched the server).
         from pathlib import Path
         import ppxai.server.session_manager as sm
+        # The body lives in config.paths since v1.19.1 and resolves
+        # get_server_config from THAT module; patching the
+        # session_manager re-export would be inert.
+        import ppxai.config.paths as _paths
         monkeypatch.setattr(
-            sm, "get_server_config", lambda: {"working_dir": str(tmp_path)}
+            _paths, "get_server_config", lambda: {"working_dir": str(tmp_path)}
         )
         assert sm.get_default_working_dir() == str(tmp_path)
         monkeypatch.setattr(
-            sm, "get_server_config",
+            _paths, "get_server_config",
             lambda: {"working_dir": str(tmp_path / "gone")},
         )
         assert sm.get_default_working_dir() == str(Path.home())
-        monkeypatch.setattr(sm, "get_server_config", lambda: {})
+        monkeypatch.setattr(_paths, "get_server_config", lambda: {})
         assert sm.get_default_working_dir() == str(Path.home())

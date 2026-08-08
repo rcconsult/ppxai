@@ -158,6 +158,7 @@ def task_client(tmp_path, monkeypatch):
     egress assertions see exactly what the merge assembled."""
     import ppxai.server.state as state
     from ppxai.server.routes import agent_v1
+    from ppxai.engine import task_runner
 
     reg = AgentRunRegistry(FilesystemAgentRunStore(tmp_path / "runs"))
     monkeypatch.setattr(state, "_agent_run_registry", reg)
@@ -180,7 +181,7 @@ def task_client(tmp_path, monkeypatch):
 
         return _r
 
-    monkeypatch.setattr(agent_v1, "build_task_runner", _stub_runner)
+    monkeypatch.setattr(task_runner, "build_task_runner", _stub_runner)
     from ppxai.config import execution as exec_mod
     monkeypatch.setattr(exec_mod, "get_execution_collect", lambda: "yes")
 
@@ -478,6 +479,7 @@ class TestRunFamilyCeiling:
         c, reg, _cap, _ov = task_client
         from ppxai.config import execution as exec_mod
         from ppxai.server.routes import agent_v1
+        from ppxai.engine import task_runner
         monkeypatch.setattr(
             exec_mod, "get_execution_run_config",
             lambda: {"web_search": True, "grounding": False},

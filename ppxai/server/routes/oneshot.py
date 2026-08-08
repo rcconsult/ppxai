@@ -315,7 +315,11 @@ async def _oneshot_via_search_loop(
     # Lazy: agent_v1 top-imports from this module (provider construction);
     # importing it at module level would be circular.
     from ..state import get_agent_run_registry
-    from .agent_v1 import _enriched_oneshot_egress_or_400, build_task_runner
+    from .agent_v1 import _enriched_oneshot_egress_or_400
+    # Through the module, never a from-import binding: the patch point
+    # is task_runner.build_task_runner, and a bound reference captured
+    # here would not see it (see that module's docstring).
+    from ...engine import task_runner as _task_runner
 
     # Effective backend egress set (resolver; step ④) + the operator's
     # tools.web_search.egress baseline (step ②), capped by
@@ -336,7 +340,7 @@ async def _oneshot_via_search_loop(
         hold_result=False,  # oneshot semantics: the response IS the collect
         system=req.system,
     )
-    runner = build_task_runner(
+    runner = _task_runner.build_task_runner(
         registry,
         provider_name=provider_name,
         model=model,

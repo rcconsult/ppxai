@@ -41,6 +41,12 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Awaitable, Callable, Optional, Protocol
 
+# DEPENDENCY FOOTPRINT IS DELIBERATE: this module imports only the logger.
+# That is what lets RunMeta be read off disk — and the runs/<run_id>/
+# agent-<n>/ namespace be consumed — WITHOUT booting an engine or the
+# config stack. ppxai-sre depends on that property. Anything needing
+# EngineClient, tools or config belongs in engine/task_runner.py instead;
+# do not "tidy" them back in here.
 from ..common.logger import get_logger
 
 logger = get_logger("tui")
