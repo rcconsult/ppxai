@@ -144,21 +144,51 @@ reasonably concluded it had never been captured. It had. An artifact nobody
 can locate is functionally missing, so its location is recorded here:
 
 ```
-C:\tmp\ppxai-seam-baseline\        # 9 *.normalized.json + *.raw.json
-                                   #   + *.contentkeys.json (provider signal)
+C:\tmp\ppxai-seam-baseline\        # MANIFEST.txt  ← read this FIRST
+                                   # 9 *.normalized.json   (the diff target)
+                                   #   *.raw.json          (forensics)
+                                   #   *.contentkeys.json  (provider signal)
 ```
+
+**`MANIFEST.txt` is written automatically by `--record`**, not by hand — it
+carries the capture time, the commit and clean/dirty state, the branch, which
+server answered (spawned binary + build time, or a `--base-url` target), the
+provider/model that actually replied, and the per-step results. It shouts
+`NOT A USABLE BASELINE` if any step failed.
+
+This exists because the alternative was demonstrated: seven capture
+directories accumulated in `C:\tmp` during one session, all with identical
+file names, and the only way to tell them apart was mtime and content
+diffing. That is inference, not documentation — the same failure as an
+artifact nobody can find, wearing a different costume. **Only this one
+directory is authoritative; scratch captures should be deleted, not left
+beside it.**
 
 Outside the repo on purpose — it is machine state, not source, and the raw
 bodies carry per-host run ids and a minted bearer. `C:\tmp` survives across
 sessions.
 
+Authoritative values live in `MANIFEST.txt`; the table below is orientation
+only and will go stale — trust the file.
+
 | Property | Value |
 |---|---|
-| Captured with | `python scripts/gateway-smoke.py --record <dir> --port <p>` |
+| Captured with | `python scripts/gateway-smoke.py --base-url <url> --record <dir>` |
 | Result | 7 passed, 0 failed, 0 skipped |
 | Reproducibility | **9/9 normalized files byte-identical** across two independent captures |
-| Server under test | installed `~/.ppxai/bin/ppxai-server.exe`, built 2026-08-06 14:51:47 |
-| Currency | that build postdates `573b76ff` (last server/engine commit, 14:09:39) by 42 min, so it carries ADR 0010; the only engine commit since is the grammar port, which nothing imports |
+| Server under test | a `ppxai-server` run **from this tree**, not the installed binary |
+
+**Why from the tree, not the installed binary.** The installed
+`~/.ppxai/bin/ppxai-server.exe` (built 2026-08-06 14:51) predates the Gemini
+`response_format` fix, so a capture from it no longer represents HEAD. Run a
+server from the checkout and point `--base-url` at it. Note the manifest is
+honest that a `--base-url` target is "NOT necessarily this tree" — it cannot
+verify what it connected to, so the operator must.
+
+**The baseline has already moved once, silently.** Before manifests existed,
+the documented path was overwritten by a later, better capture (8 files → 9,
+after the structured step landed). Coverage improved, but a reader who had
+seen the earlier one had no way to know. That is what `MANIFEST.txt` is for.
 
 **Trap worth knowing:** without `--base-url`, `gateway-smoke.py` spawns the
 **installed binary**, not the repo tree. A baseline is therefore of whatever

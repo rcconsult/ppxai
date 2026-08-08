@@ -744,9 +744,89 @@ def main() -> int:
                       f"free it before the next run", file=sys.stderr)
 
     failed = [r for r in results if r[1] == FAIL]
+    if args.record:
+        # A capture directory that can't say what it is gets mistaken for one
+        # that can. Written automatically rather than by hand: a convention
+        # nobody enforces decays exactly like an undocumented path does.
+        _write_manifest(args.record, args, results, base_url)
     print(f"\ngateway-smoke: {len([r for r in results if r[1] == PASS])} passed, "
           f"{len(failed)} failed, {len([r for r in results if r[1] == SKIP])} skipped")
     return 1 if failed else 0
+
+
+def _git(*args_) -> str:
+    """Best-effort git query; '' when unavailable (frozen-binary hosts)."""
+    try:
+        out = subprocess.run(
+            ["git", *args_], capture_output=True, timeout=10, check=False,
+            cwd=str(Path(__file__).resolve().parent.parent),
+        )
+        return out.stdout.decode(errors="replace").strip()
+    except (OSError, subprocess.SubprocessError):
+        return ""
+
+
+def _write_manifest(outdir: Path, args, results, base_url: str) -> None:
+    """Describe what this capture IS, so the next reader needn't infer it.
+
+    A baseline is only usable as evidence if you know which commit, which
+    server build and which provider produced it — otherwise a directory of
+    identical-looking JSON is indistinguishable from six others beside it.
+    """
+    if args.base_url:
+        server = f"already-running server at {args.base_url} (NOT necessarily this tree)"
+    else:
+        binary = args.server or installed_server_path()
+        try:
+            built = time.strftime("%Y-%m-%d %H:%M:%S",
+                                  time.localtime(Path(binary).stat().st_mtime))
+        except OSError:
+            built = "unknown"
+        server = f"spawned binary {binary} (built {built})"
+
+    dirty = "dirty" if _git("status", "--porcelain") else "clean"
+    # The provider that actually answered, read back from the recording rather
+    # than from config — config says what was requested, not what replied.
+    provider = model = "unknown"
+    for name in ("04-POST-v1_oneshot", "05-POST-v1_oneshot_structured"):
+        # Try both oneshot captures: a transient provider 503 leaves the first
+        # holding an error detail with no provider/model, and a manifest that
+        # then says "unknown" is less useful than one that looks at the other.
+        try:
+            body = json.loads(
+                (outdir / f"{name}.normalized.json").read_text(encoding="utf-8")
+            ).get("body") or {}
+        except (OSError, ValueError):
+            continue
+        if body.get("model"):
+            provider, model = body.get("provider", "?"), body["model"]
+            break
+
+    lines = [
+        "gateway-smoke capture",
+        "=====================",
+        f"captured    : {time.strftime('%Y-%m-%d %H:%M:%S %z')}",
+        f"commit      : {_git('rev-parse', 'HEAD') or 'unknown'} ({dirty})",
+        f"branch      : {_git('rev-parse', '--abbrev-ref', 'HEAD') or 'unknown'}",
+        f"server      : {server}",
+        f"answered by : provider={provider} model={model}",
+        f"result      : {len([r for r in results if r[1] == PASS])} passed, "
+        f"{len([r for r in results if r[1] == FAIL])} failed, "
+        f"{len([r for r in results if r[1] == SKIP])} skipped",
+        ("" if not [r for r in results if r[1] == FAIL] else
+         "*** NOT A USABLE BASELINE — a step failed; re-capture before "
+         "diffing against this. ***"),
+        "",
+        "Diff *.normalized.json only. *.raw.json and *.contentkeys.json vary",
+        "every run by design (ids, timestamps, model output) and will report",
+        "noise. A capture is comparable only against one taken the same way —",
+        "check `server` above before trusting a clean diff.",
+        "",
+        "steps:",
+    ]
+    lines += [f"  [{verdict}] {step}" + (f" — {detail}" if detail else "")
+              for step, verdict, detail in results]
+    (outdir / "MANIFEST.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 if __name__ == "__main__":
