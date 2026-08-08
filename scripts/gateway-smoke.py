@@ -792,6 +792,45 @@ def probe_health_version(base_url: str) -> str:
         return "unreachable"
 
 
+def _provenance_warnings(binary_mtime) -> list:
+    """Is the spawned binary actually newer than the code it claims to be?
+
+    The manifest already recorded the build time faithfully — and inertly.
+    Recording a fact nobody compares to anything still needs a reader who
+    knows which commits matter, which is the "detectable if you look" state
+    this tooling exists to replace with "detected".
+
+    Compared against the last commit touching `ppxai/`, NOT against HEAD: a
+    docs-only HEAD (as when this was written) would otherwise raise a false
+    alarm on a perfectly current binary.
+
+    The concrete failure this prevents: someone reruns the default invocation
+    to "refresh the baseline", silently captures the INSTALLED binary — days
+    older than the tree — diffs it against a post-change capture, and
+    attributes the older binary's differences to their change.
+    """
+    if binary_mtime is None:
+        return ["*** WEAK PROVENANCE — binary build time unreadable. ***"]
+    out = []
+    last_src = _git("log", "-1", "--format=%ct", "--", "ppxai")
+    if last_src.isdigit():
+        if binary_mtime < int(last_src):
+            when = time.strftime("%Y-%m-%d %H:%M:%S",
+                                 time.localtime(int(last_src)))
+            out.append(
+                "*** WEAK PROVENANCE — the binary PREDATES the last commit "
+                f"touching ppxai/ ({when}). It does not contain that code. "
+                "Rebuild (pyinstaller ppxai-server.spec --noconfirm) and "
+                "re-capture before using this as a baseline. ***"
+            )
+    if _git("status", "--porcelain", "--", "ppxai"):
+        out.append(
+            "*** WEAK PROVENANCE — ppxai/ has uncommitted changes, which the "
+            "binary may or may not contain. Commit, rebuild, re-capture. ***"
+        )
+    return out
+
+
 def _write_manifest(outdir: Path, args, results, base_url: str,
                     health_version: str = "unknown") -> None:
     """Describe what this capture IS, so the next reader needn't infer it.
@@ -800,6 +839,7 @@ def _write_manifest(outdir: Path, args, results, base_url: str,
     server build and which provider produced it — otherwise a directory of
     identical-looking JSON is indistinguishable from six others beside it.
     """
+    warnings: list = []
     if args.base_url:
         server = (f"already-running server at {args.base_url} — the script did "
                   f"NOT start it and cannot vouch for what it is. A baseline "
@@ -808,11 +848,12 @@ def _write_manifest(outdir: Path, args, results, base_url: str,
     else:
         binary = args.server or installed_server_path()
         try:
-            built = time.strftime("%Y-%m-%d %H:%M:%S",
-                                  time.localtime(Path(binary).stat().st_mtime))
+            mtime = Path(binary).stat().st_mtime
+            built = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(mtime))
         except OSError:
-            built = "unknown"
+            mtime, built = None, "unknown"
         server = f"spawned binary {binary} (built {built})"
+        warnings.extend(_provenance_warnings(mtime))
 
     dirty = "dirty" if _git("status", "--porcelain") else "clean"
     # The provider that actually answered, read back from the recording rather
@@ -847,6 +888,7 @@ def _write_manifest(outdir: Path, args, results, base_url: str,
         ("" if not [r for r in results if r[1] == FAIL] else
          "*** NOT A USABLE BASELINE — a step failed; re-capture before "
          "diffing against this. ***"),
+        *warnings,
         "",
         "Diff *.normalized.json only. *.raw.json and *.contentkeys.json vary",
         "every run by design (ids, timestamps, model output) and will report",
