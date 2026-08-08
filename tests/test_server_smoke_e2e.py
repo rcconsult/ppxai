@@ -186,7 +186,17 @@ def _free_port() -> int:
     )
 
 
-def _wait_for_health(port: int, timeout: float = 30.0) -> None:
+# One budget for BOTH the capability probe and the fixture that follows it.
+# They used to differ — probe 6s, fixture 30s — so the probe could declare the
+# host incapable using a deadline the fixture would never have applied. On this
+# Windows dev host the server answers /health in ~7.4s, so the probe skipped 58
+# real server E2E tests while the server underneath worked perfectly, and the
+# skip message blamed "Windows Store Python venv". A probe must never be
+# stricter than the thing it gates.
+_STARTUP_BUDGET_S = 30.0
+
+
+def _wait_for_health(port: int, timeout: float = _STARTUP_BUDGET_S) -> None:
     """Poll /health until the server responds 200 or timeout expires."""
     deadline = time.time() + timeout
     last_err: Exception | None = None
@@ -238,7 +248,7 @@ def _can_spawn_server(repo_root: Path) -> Tuple[bool, str]:
         stdin=subprocess.DEVNULL,
     )
     try:
-        deadline = time.time() + 6.0
+        deadline = time.time() + _STARTUP_BUDGET_S
         while time.time() < deadline:
             if proc.poll() is not None:
                 return False, (
@@ -253,7 +263,11 @@ def _can_spawn_server(repo_root: Path) -> Tuple[bool, str]:
             except httpx.HTTPError:
                 pass
             time.sleep(0.25)
-        return False, "server did not respond to /health within 6s"
+        return False, (
+            f"server did not respond to /health within {_STARTUP_BUDGET_S:.0f}s "
+            f"(process still alive, so this is a slow or blocked start rather "
+            f"than the Windows Store sandbox case handled above)"
+        )
     finally:
         if proc.poll() is None:
             proc.terminate()
