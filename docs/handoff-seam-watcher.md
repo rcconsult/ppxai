@@ -173,17 +173,31 @@ only and will go stale — trust the file.
 
 | Property | Value |
 |---|---|
-| Captured with | `python scripts/gateway-smoke.py --base-url <url> --record <dir>` |
+| Captured with | `pyinstaller ppxai-server.spec --noconfirm` then `gateway-smoke.py --server dist/ppxai-server.exe --record <dir>` |
 | Result | 7 passed, 0 failed, 0 skipped |
 | Reproducibility | **9/9 normalized files byte-identical** across two independent captures |
-| Server under test | a `ppxai-server` run **from this tree**, not the installed binary |
+| Server under test | **spawned** `dist/ppxai-server.exe`, built from this tree |
 
-**Why from the tree, not the installed binary.** The installed
-`~/.ppxai/bin/ppxai-server.exe` (built 2026-08-06 14:51) predates the Gemini
-`response_format` fix, so a capture from it no longer represents HEAD. Run a
-server from the checkout and point `--base-url` at it. Note the manifest is
-honest that a `--base-url` target is "NOT necessarily this tree" — it cannot
-verify what it connected to, so the operator must.
+**Capture by spawning a binary, never via `--base-url`.** The script cannot
+identify a server it did not start, so a `--base-url` capture leaves the
+manifest with a disclaimer where the provenance should be — and this baseline
+is the trusted "before" side of the extraction diff, so a byte-identical
+claim inherits whatever provenance it has. The installed
+`~/.ppxai/bin/ppxai-server.exe` is no use either: built 2026-08-06 14:51, it
+predates the Gemini `response_format` fix. Build from the checkout.
+
+**Closing the chain without inference.** Commit first, *then* build, so the
+binary's mtime is provably later than `HEAD`:
+
+```
+commit  : 2026-08-08 21:22:40  88bf8f3d  (tree clean)
+binary  : 2026-08-08 21:25:17            (2m37s after)
+capture : 2026-08-08 21:26:21            7 passed / 0 failed
+```
+
+Earlier baselines argued currency by reasoning about which commits touched
+`ppxai/server` and `ppxai/engine` since a build. That reasoning was correct
+but it is reasoning; a build timestamp after a clean HEAD is evidence.
 
 **The baseline has already moved once, silently.** Before manifests existed,
 the documented path was overwritten by a later, better capture (8 files → 9,
