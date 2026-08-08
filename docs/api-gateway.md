@@ -489,10 +489,30 @@ trail — concurrent requests cannot cross-attribute cost.
   OpenAI/Perplexity/Gemini all work. The only 400 is an *unbuildable*
   provider (unknown name / missing API key). (Pre-1.19.x this endpoint
   rejected native providers by class — that restriction is removed.)
-- **`response_format`.** Forwarded to the provider as-is. NVIDIA NIM,
-  vLLM, and modern OpenAI-compat endpoints accept the OpenAI shape.
-  Older endpoints may return 400 — that surfaces to the client as 502
-  with the upstream message.
+- **`response_format`.** Reaches the model on every provider, but the
+  gateway **delivers it — it does not enforce it**. Read that as a hard
+  contract boundary, not a caveat:
+
+  > A `200` does **not** guarantee the response matches your schema.
+  > **Validate the returned JSON against your expected shape.** A 200 with
+  > the wrong keys is a handled failure, not a parse.
+
+  Enforcement belongs to the provider and varies by endpoint. NVIDIA NIM,
+  vLLM and modern OpenAI-compat endpoints accept the OpenAI shape and are
+  forwarded verbatim; older endpoints may return 400, surfacing as 502
+  with the upstream message. Gemini takes a different route — it has no
+  `response_format` field, so ppxai maps it onto `response_mime_type` /
+  `response_schema` (`providers/gemini.py::response_format_to_gemini`),
+  which additionally strips `additionalProperties` (the SDK's `Schema`
+  model accepts it, the REST API 400s on it) and suppresses Google Search
+  grounding for that call, since Gemini refuses the combination.
+
+  This boundary is not theoretical. Before v1.19.1 the Gemini path
+  accepted `response_format` and silently dropped it: callers pinning a
+  JSON schema got `200` with well-formed JSON whose keys the model chose,
+  and no error anywhere. That is fixed — but a client that *trusts*
+  enforcement rather than checking it would have shipped mis-typed
+  results on any provider that behaves the same way.
 - **Per-model `extra_body` from `ppxai-config.json`** still applies.
   This means vendor knobs (NIM `chat_template_kwargs.enable_thinking`,
   Qwen3 `enable_thinking`, etc.) carry through without the caller
@@ -554,7 +574,21 @@ resp = httpx.post(
 )
 resp.raise_for_status()
 result = resp.json()["content"]  # JSON string per response_format
-parsed = json.loads(result)
+
+# Validate the SHAPE, don't assume it. `response_format` is delivered to the
+# provider, not enforced by the gateway — a 200 can carry well-formed JSON
+# with keys the model chose. Treat that as a handled failure, not a parse.
+EXPECTED = {"intent", "confidence", "reasoning"}
+try:
+    parsed = json.loads(result)
+except json.JSONDecodeError as exc:
+    raise ClassifierError(f"non-JSON response: {result[:200]}") from exc
+if not isinstance(parsed, dict) or not EXPECTED <= parsed.keys():
+    # Retrying rarely helps: an unenforced schema fails the same way twice.
+    raise ClassifierError(
+        f"schema not honoured — expected {sorted(EXPECTED)}, "
+        f"got {sorted(parsed) if isinstance(parsed, dict) else type(parsed).__name__}"
+    )
 ```
 
 ---
