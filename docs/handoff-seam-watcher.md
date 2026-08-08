@@ -173,31 +173,45 @@ only and will go stale — trust the file.
 
 | Property | Value |
 |---|---|
-| Captured with | `pyinstaller ppxai-server.spec --noconfirm` then `gateway-smoke.py --server dist/ppxai-server.exe --record <dir>` |
+**The recipe is two steps: commit, then capture.**
+
+```bash
+git status --porcelain -- ppxai      # must be empty
+uv run python scripts/gateway-smoke.py --record C:\tmp\ppxai-seam-baseline
+```
+
+| Captured with | `uv run python scripts/gateway-smoke.py --record <dir>` |
 | Result | 7 passed, 0 failed, 0 skipped |
 | Reproducibility | **9/9 normalized files byte-identical** across two independent captures |
-| Server under test | **spawned** `dist/ppxai-server.exe`, built from this tree |
+| Server under test | **ran from source** — the working tree itself |
 
-**Capture by spawning a binary, never via `--base-url`.** The script cannot
-identify a server it did not start, so a `--base-url` capture leaves the
-manifest with a disclaimer where the provenance should be — and this baseline
-is the trusted "before" side of the extraction diff, so a byte-identical
-claim inherits whatever provenance it has. The installed
-`~/.ppxai/bin/ppxai-server.exe` is no use either: built 2026-08-06 14:51, it
-predates the Gemini `response_format` fix. Build from the checkout.
+**Why `uv run`, and why no build.** Under `uv run` the script can import
+`ppxai`, so when the resolved binary is stale it spawns
+`python -m ppxai.server.http` from the checkout instead. The tree *is* the
+code, so the capture's provenance is simply the commit the manifest records
+— there is no build artefact whose currency has to be argued. Under a bare
+`python` the import fails (the venv holds fastapi/dotenv), the script falls
+back to the frozen binary as designed, and the manifest says so.
 
-**Closing the chain without inference.** Commit first, *then* build, so the
-binary's mtime is provably later than `HEAD`:
+**The manifest validates this; it does not merely describe it.** A capture
+whose server predates the last commit touching `ppxai/` is stamped
+`*** WEAK PROVENANCE ***` naming that commit, and so is one taken with
+`ppxai/` dirty. Absence of the banner is the check having run, not the check
+being absent.
 
-```
-commit  : 2026-08-08 21:22:40  88bf8f3d  (tree clean)
-binary  : 2026-08-08 21:25:17            (2m37s after)
-capture : 2026-08-08 21:26:21            7 passed / 0 failed
-```
+**Do not capture via `--base-url`.** The script cannot identify a server it
+did not start and says so in place of provenance. This artifact is the
+trusted "before" side of the extraction diff, so a byte-identical claim
+inherits whatever provenance it rests on.
 
-Earlier baselines argued currency by reasoning about which commits touched
-`ppxai/server` and `ppxai/engine` since a build. That reasoning was correct
-but it is reasoning; a build timestamp after a clean HEAD is evidence.
+**Superseded recipes, for anyone reading older notes.** Earlier baselines
+argued currency by reasoning about which commits had touched `ppxai/server`
+and `ppxai/engine` since a build; a later one used commit → build → capture
+so the binary's mtime provably followed a clean HEAD. Both were sound. Both
+are now unnecessary: running from source removes the artefact being reasoned
+about. The installed `~/.ppxai/bin/ppxai-server.exe` (2026-08-06 14:51) is
+in any case unusable — it predates the Gemini `response_format` fix, and the
+default invocation used to spawn it silently.
 
 **The baseline has already moved once, silently.** Before manifests existed,
 the documented path was overwritten by a later, better capture (8 files → 9,
