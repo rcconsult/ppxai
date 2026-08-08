@@ -490,6 +490,7 @@ def main() -> int:
     results = []  # (step, verdict, detail)
     proc = None
     health_version = "unknown"  # read while the server is up; see below
+    server_mode = "binary"      # flipped to "source" when the binary is stale
     base_url = args.base_url or f"http://127.0.0.1:{args.port}"
     gw = Gateway(base_url, args.token,
                  recorder=Recorder(args.record) if args.record else None)
@@ -517,16 +518,40 @@ def main() -> int:
             if not server.exists():
                 print(f"server binary not found: {server}", file=sys.stderr)
                 return 2
-            print(f"spawning {server} …")
+
+            # A stale binary is worse than no binary: it produces a capture
+            # that LOOKS current and silently omits recent code. When the
+            # binary predates ppxai/ and this interpreter can import the
+            # package, run from source instead — the tree IS the code, which
+            # is the strongest provenance available. Warning about it and
+            # using it anyway would just document the wrong answer.
+            stale_since = _binary_stale_since(_mtime(server))
+            if stale_since and not args.server and source_runnable():
+                print(f"binary predates ppxai/ ({stale_since}) — running from "
+                      f"source instead")
+                spawn_cmd = [sys.executable, "-m", "ppxai.server.http",
+                             "--port", str(args.port)]
+                spawn_cwd = str(_repo_root())
+                server_mode = "source"
+            else:
+                if stale_since and args.server:
+                    # An explicit --server is a pin; honour it rather than
+                    # silently substituting something else, but say so.
+                    print(f"warning: --server binary predates ppxai/ "
+                          f"({stale_since}); capturing it as pinned",
+                          file=sys.stderr)
+                print(f"spawning {server} …")
+                spawn_cmd = [str(server), "--port", str(args.port)]
+                spawn_cwd = None
+                server_mode = "binary"
+
             popen_kwargs = {"stdout": subprocess.DEVNULL, "stderr": subprocess.DEVNULL}
             if os.name != "nt":
                 popen_kwargs["start_new_session"] = True  # own group → kill the whole tree
             # Pass --port through: without it the spawned server binds its own
             # default while we probe args.port, so any non-default --port died
             # with a confusing "did not answer /status" instead of running.
-            proc = subprocess.Popen(
-                [str(server), "--port", str(args.port)], **popen_kwargs
-            )
+            proc = subprocess.Popen(spawn_cmd, cwd=spawn_cwd, **popen_kwargs)
         if not wait_for_server(gw):
             print(f"server did not answer /status within {STARTUP_WAIT_S}s", file=sys.stderr)
             return 2
@@ -753,10 +778,15 @@ def main() -> int:
         # A capture directory that can't say what it is gets mistaken for one
         # that can. Written automatically rather than by hand: a convention
         # nobody enforces decays exactly like an undocumented path does.
-        _write_manifest(args.record, args, results, base_url, health_version)
+        _write_manifest(args.record, args, results, base_url, health_version,
+                        server_mode)
     print(f"\ngateway-smoke: {len([r for r in results if r[1] == PASS])} passed, "
           f"{len(failed)} failed, {len([r for r in results if r[1] == SKIP])} skipped")
     return 1 if failed else 0
+
+
+def _repo_root() -> Path:
+    return Path(__file__).resolve().parent.parent
 
 
 def _git(*args_) -> str:
@@ -764,11 +794,51 @@ def _git(*args_) -> str:
     try:
         out = subprocess.run(
             ["git", *args_], capture_output=True, timeout=10, check=False,
-            cwd=str(Path(__file__).resolve().parent.parent),
+            cwd=str(_repo_root()),
         )
         return out.stdout.decode(errors="replace").strip()
     except (OSError, subprocess.SubprocessError):
         return ""
+
+
+def _mtime(path):
+    try:
+        return Path(path).stat().st_mtime
+    except OSError:
+        return None
+
+
+def _binary_stale_since(mtime):
+    """When the binary predates ppxai/, that commit's time; else None.
+
+    Compared against the last commit touching `ppxai/`, NOT HEAD — a docs-only
+    HEAD would otherwise condemn a perfectly current binary, and a provenance
+    check that cries wolf gets ignored.
+    """
+    if mtime is None:
+        return None
+    last = _git("log", "-1", "--format=%ct", "--", "ppxai")
+    if last.isdigit() and mtime < int(last):
+        return time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(int(last)))
+    return None
+
+
+def source_runnable() -> bool:
+    """Can THIS interpreter import the package?
+
+    Tested, never assumed: a bare system python typically cannot (the repo
+    venv holds fastapi/dotenv/etc), which is exactly why this script is
+    stdlib-only and defaults to a frozen binary. Run it under `uv run` to
+    make the source path available.
+    """
+    try:
+        probe = subprocess.run(
+            [sys.executable, "-c", "import ppxai.server.http"],
+            cwd=str(_repo_root()), capture_output=True, timeout=120, check=False,
+        )
+        return probe.returncode == 0
+    except (OSError, subprocess.SubprocessError):
+        return False
 
 
 def probe_health_version(base_url: str) -> str:
@@ -790,6 +860,13 @@ def probe_health_version(base_url: str) -> str:
         return str(body.get("version") or "unreported")
     except (urllib.error.HTTPError, urllib.error.URLError, OSError, ValueError):
         return "unreachable"
+
+
+def _uncommitted_source_warning() -> list:
+    if _git("status", "--porcelain", "--", "ppxai"):
+        return ["*** WEAK PROVENANCE — ppxai/ has uncommitted changes. The "
+                "capture reflects the working tree, not any commit. ***"]
+    return []
 
 
 def _provenance_warnings(binary_mtime) -> list:
@@ -831,8 +908,15 @@ def _provenance_warnings(binary_mtime) -> list:
     return out
 
 
+def _describe_source_server() -> str:
+    return (f"ran from SOURCE ({Path(sys.executable).name} -m "
+            f"ppxai.server.http) — the working tree itself, so provenance is "
+            f"the commit above rather than a build artefact")
+
+
 def _write_manifest(outdir: Path, args, results, base_url: str,
-                    health_version: str = "unknown") -> None:
+                    health_version: str = "unknown",
+                    server_mode: str = "binary") -> None:
     """Describe what this capture IS, so the next reader needn't infer it.
 
     A baseline is only usable as evidence if you know which commit, which
@@ -845,13 +929,14 @@ def _write_manifest(outdir: Path, args, results, base_url: str,
                   f"NOT start it and cannot vouch for what it is. A baseline "
                   f"captured this way carries weaker provenance than a spawned "
                   f"one; prefer letting the script spawn a binary.")
+    elif server_mode == "source":
+        server = _describe_source_server()
+        warnings.extend(_uncommitted_source_warning())
     else:
         binary = args.server or installed_server_path()
-        try:
-            mtime = Path(binary).stat().st_mtime
-            built = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(mtime))
-        except OSError:
-            mtime, built = None, "unknown"
+        mtime = _mtime(binary)
+        built = ("unknown" if mtime is None else
+                 time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(mtime)))
         server = f"spawned binary {binary} (built {built})"
         warnings.extend(_provenance_warnings(mtime))
 
