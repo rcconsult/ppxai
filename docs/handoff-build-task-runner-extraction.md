@@ -1,5 +1,26 @@
 # Handoff — extracting `build_task_runner` to the engine layer
 
+> **STATUS: DONE — `eeb82076`.** Landed 2026-08-08 with consumer sign-off
+> ("does not break ppxai-sre — proceed"). Seam verified: a post-extraction
+> capture matched the pre-extraction baseline **9/9 normalized artifacts,
+> byte for byte**. Full suite 4859 passed / 26 skipped / 0 failed.
+>
+> **Canonical patch point: `ppxai.engine.task_runner.build_task_runner`.**
+> Every caller resolves it through the module attribute, so one patch
+> redirects top-level *and* child construction.
+> `agent_v1.build_task_runner` remains importable but **patching it is
+> inert** — `tests/test_runner_builder_patch_point.py` pins that.
+>
+> Two dependencies the FastAPI grep could not see had to move first —
+> `get_default_working_dir` (was in `server/session_manager.py`, now
+> `config/paths.py`) and `DEFAULT_AGENT_SYSTEM_PROMPT` /
+> `compose_agent_system_prompt` (were defined *in* `agent_v1.py`). An
+> import-shaped search finds imports, not names a body resolves from its
+> own module.
+>
+> The rest of this note is the original pre-build review request, kept as
+> the record of what was agreed before any code existed.
+
 **Written:** 2026-08-08, from the Windows host, at `bbba6fbc` on
 `bugfix/v1.19.1`.
 **For:** the ppxai-sre session. **This is a request for review BEFORE the
