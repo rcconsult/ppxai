@@ -148,6 +148,11 @@ _VOLATILE_KEYS = frozenset({
     # the other two ride along so a provider swap doesn't read as a break.
     # _volatile() keeps the type, so int→str would still surface.
     "total_tokens", "prompt_tokens", "completion_tokens",
+    # Model output is never a wire contract — only its type is. The structured
+    # step's content is generated JSON whose keys the model picks, so keeping
+    # the value would make that file differ on every run and destroy the
+    # baseline's reproducibility. _volatile() still catches str -> dict.
+    "content",
 })
 # Deliberately narrow. A broad `_id`/`_s` suffix would also erase
 # `allowlist_rule_id` and `consent_ttl_s` — stable values whose change is
@@ -214,6 +219,24 @@ def _volatile(value):
     return f"<VOLATILE:{type(value).__name__}>"
 
 
+def _json_content_keys(parsed):
+    """Sorted key set of a JSON-object-bearing `content`, else None.
+
+    Plain-text content (the unstructured oneshot returns "ok") yields None, so
+    the field only appears where there is a structure to compare.
+    """
+    if not isinstance(parsed, dict):
+        return None
+    content = parsed.get("content")
+    if not isinstance(content, str):
+        return None
+    try:
+        inner = json.loads(content)
+    except (ValueError, TypeError):
+        return None
+    return sorted(inner) if isinstance(inner, dict) else None
+
+
 class Recorder:
     """Writes one file per HTTP exchange into a directory."""
 
@@ -223,14 +246,19 @@ class Recorder:
         self.n = 0
         self.seen: dict = {}
 
-    def capture(self, method, path, status, headers, raw: bytes) -> None:
+    def capture(self, method, path, status, headers, raw: bytes,
+                slug_override: str = None) -> None:
         # One file per (method, endpoint), NOT per call. The run-poll loop hits
         # GET /v1/agent/runs/<id> an unpredictable number of times depending on
         # timing, so numbering per call would make the file COUNT vary run to
         # run and a diff would report spurious adds/removes. Keyed + overwritten,
         # the last write per endpoint wins — for a poll that's the terminal
         # state, which is the response actually worth comparing.
-        slug = _fs_slug(path)
+        # slug_override disambiguates two calls to the SAME endpoint that are
+        # different contracts — /v1/oneshot plain vs response_format. Without
+        # it the second overwrites the first and the baseline silently loses a
+        # surface it appears to cover.
+        slug = _fs_slug(slug_override or path)
         key = f"{method}-{slug}"
         if key not in self.seen:
             self.n += 1
@@ -242,16 +270,31 @@ class Recorder:
             parsed = None
         # Header NAMES are part of the contract; values (dates, lengths) are not.
         header_names = sorted({k.lower() for k in headers})
+        entry = {
+            "method": method,
+            "path": _scrub(path),
+            "status": status,
+            "header_names": header_names,
+            "body": _normalize(parsed),
+        }
         (self.dir / f"{stem}.normalized.json").write_text(
-            json.dumps({
-                "method": method,
-                "path": _scrub(path),
-                "status": status,
-                "header_names": header_names,
-                "body": _normalize(parsed),
-            }, indent=2, sort_keys=True) + "\n",
+            json.dumps(entry, indent=2, sort_keys=True) + "\n",
             encoding="utf-8",
         )
+        # PROVIDER BEHAVIOUR, not seam contract — hence its own file.
+        # When `content` carries JSON, its key set shows whether a
+        # response_format schema was actually honoured. It goes here rather
+        # than in the normalized artifact because it is currently UNSTABLE:
+        # Gemini ignores the schema and picks its own keys, so two identical
+        # requests differ. Mixing it into the diff target would make every
+        # future seam comparison noisy. Its instability is itself the evidence
+        # of non-enforcement — were the schema honoured, it would be constant.
+        keys = _json_content_keys(parsed)
+        if keys is not None:
+            (self.dir / f"{stem}.contentkeys.json").write_text(
+                json.dumps({"content_json_keys": keys}, indent=2) + "\n",
+                encoding="utf-8",
+            )
         (self.dir / f"{stem}.raw.json").write_text(
             json.dumps({
                 "status": status,
@@ -268,8 +311,13 @@ class Gateway:
         self.token = token
         self.recorder = recorder
 
-    def request(self, method: str, path: str, body: dict = None, timeout: float = 30):
-        """Return (status_code, parsed_json_or_None). Network errors raise."""
+    def request(self, method: str, path: str, body: dict = None, timeout: float = 30,
+                record_as: str = None):
+        """Return (status_code, parsed_json_or_None). Network errors raise.
+
+        record_as names the recording slot when one endpoint carries more than
+        one contract (see Recorder.capture).
+        """
         req = urllib.request.Request(self.base_url + path, method=method)
         req.add_header("Content-Type", "application/json")
         if self.token:
@@ -281,12 +329,14 @@ class Gateway:
                 # buffer — the stream can't be re-read after json.loads.
                 raw = resp.read()
                 if self.recorder:
-                    self.recorder.capture(method, path, resp.status, resp.headers, raw)
+                    self.recorder.capture(method, path, resp.status, resp.headers,
+                                          raw, record_as)
                 return resp.status, json.loads(raw.decode() or "null")
         except urllib.error.HTTPError as e:
             raw = e.read()
             if self.recorder:
-                self.recorder.capture(method, path, e.code, e.headers, raw)
+                self.recorder.capture(method, path, e.code, e.headers, raw,
+                                      record_as)
             try:
                 payload = json.loads(raw.decode() or "null")
             except (ValueError, UnicodeDecodeError):
@@ -528,6 +578,79 @@ def main() -> int:
                 ok = code == 200 and shape and (body.get("content") or "").strip()
                 record("POST /v1/oneshot", PASS if ok else FAIL,
                        f"http {code}, model={isinstance(body, dict) and body.get('model')}")
+
+            # 3b. oneshot WITH response_format — the structured half of the
+            #     same endpoint. Step 3 proves only that an unstructured call
+            #     returns a stable envelope; it is blind to the schema-enforced
+            #     path, which is the half ppxai-sre's Pattern A classifier is
+            #     actually built on. Its pinned shape is mirrored here so a
+            #     baseline diff would catch the plumbing changing under it.
+            #     response_format forwards to the provider as-is, and support
+            #     varies (see module docstring), so a provider that rejects
+            #     schema mode SKIPs rather than failing the run.
+            structured = {
+                "prompt": (
+                    "Classify the intent of this message and reply with JSON "
+                    'only. Message: "The server is down, please help."'
+                ),
+                "response_format": {
+                    "type": "json_schema",
+                    "json_schema": {
+                        "name": "classification",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "intent": {"type": "string"},
+                                "confidence": {"type": "number"},
+                                "suggested_action": {"type": "string"},
+                                "reasoning": {"type": "string"},
+                            },
+                            "required": [
+                                "intent", "confidence",
+                                "suggested_action", "reasoning",
+                            ],
+                            "additionalProperties": False,
+                        },
+                    },
+                },
+                **overrides,
+            }
+            code, body = gw.request(
+                "POST", "/v1/oneshot", structured, timeout=120,
+                record_as="/v1/oneshot#structured",
+            )
+            if code == 400:
+                detail = body.get("detail") if isinstance(body, dict) else body
+                record("POST /v1/oneshot (response_format)", SKIP,
+                       f"provider rejected schema mode: {str(detail)[:120]}")
+            elif code != 200 or not isinstance(body, dict):
+                record("POST /v1/oneshot (response_format)", FAIL, f"http {code}")
+            else:
+                # The envelope must be the SAME as the plain call — a
+                # structured request must not reshape the response.
+                envelope = all(
+                    k in body for k in ("content", "finish_reason", "model", "usage"))
+                try:
+                    parsed = json.loads(body.get("content") or "")
+                except (ValueError, TypeError):
+                    parsed = None
+                conformant = isinstance(parsed, dict) and set(parsed) == {
+                    "intent", "confidence", "suggested_action", "reasoning"}
+                # What the GATEWAY promises is to forward response_format to
+                # the provider as-is (oneshot.py:37) and return the usual
+                # envelope. ENFORCEMENT is the provider's, and varies: Gemini
+                # 3.1-pro-preview answers 200 with well-formed JSON whose keys
+                # it chose itself, ignoring the schema. So conformance is
+                # REPORTED, not asserted — failing here would paint a working
+                # gateway red. The recorded artifact carries the actual key
+                # set, so a baseline diff still catches enforcement changing.
+                ok = envelope and isinstance(parsed, dict)
+                record(
+                    "POST /v1/oneshot (response_format)", PASS if ok else FAIL,
+                    f"http {code}, envelope={'ok' if envelope else 'CHANGED'}, "
+                    f"json={'valid' if isinstance(parsed, dict) else 'INVALID'}, "
+                    f"schema={'enforced' if conformant else 'NOT enforced by provider'}",
+                )
 
             # 4. tool-free run tier: create → background exec → terminal.
             #    U4 (ADR 0011): under execution.collect="yes" (the default)

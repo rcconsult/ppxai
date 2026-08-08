@@ -144,7 +144,8 @@ reasonably concluded it had never been captured. It had. An artifact nobody
 can locate is functionally missing, so its location is recorded here:
 
 ```
-C:\tmp\ppxai-seam-baseline\        # 8 *.normalized.json + *.raw.json
+C:\tmp\ppxai-seam-baseline\        # 9 *.normalized.json + *.raw.json
+                                   #   + *.contentkeys.json (provider signal)
 ```
 
 Outside the repo on purpose — it is machine state, not source, and the raw
@@ -154,8 +155,8 @@ sessions.
 | Property | Value |
 |---|---|
 | Captured with | `python scripts/gateway-smoke.py --record <dir> --port <p>` |
-| Result | 6 passed, 0 failed, 0 skipped |
-| Reproducibility | **8/8 normalized files byte-identical** across two independent captures |
+| Result | 7 passed, 0 failed, 0 skipped |
+| Reproducibility | **9/9 normalized files byte-identical** across two independent captures |
 | Server under test | installed `~/.ppxai/bin/ppxai-server.exe`, built 2026-08-06 14:51:47 |
 | Currency | that build postdates `573b76ff` (last server/engine commit, 14:09:39) by 42 min, so it carries ADR 0010; the only engine commit since is the grammar port, which nothing imports |
 
@@ -173,6 +174,44 @@ done
 ```
 
 Expect zero output. Anything listed is a seam change and stops the commit.
+Compare only `*.normalized.json` — `*.raw.json` and `*.contentkeys.json` are
+expected to vary (see below).
+
+### Finding: `/v1/oneshot` forwards `response_format`, it does not enforce it
+
+Added on consumer request, because the plain call only evidences the envelope
+and ppxai-sre's Pattern A classifier depends on the schema-enforced path.
+Measured 2026-08-08 against `gemini-3.1-pro-preview`:
+
+- A `POST /v1/oneshot` carrying `response_format: {"type":"json_schema", …}`
+  with the classifier's pinned `{intent, confidence, suggested_action,
+  reasoning}` returns **200**, and the envelope is byte-identical to the
+  plain call.
+- The `content` is **well-formed JSON whose keys the model chose itself** —
+  `intent, category, urgency, entities` — not the requested schema.
+- Two identical requests returned **different key sets**
+  (`[category, entities, intent, urgency]` vs `[category, intent, urgency]`).
+
+This is the gateway working as documented: `oneshot.py:37` says
+response_format "forwards to the provider as-is". **Enforcement is the
+provider's, and this provider does not do it.** A consumer pinning a schema
+gets a 200 with plausible JSON and the wrong keys — no error anywhere.
+
+Consequences for the recording:
+
+- The smoke step **reports** conformance rather than asserting it; failing
+  would paint a working gateway red.
+- The key set lives in `*.contentkeys.json`, deliberately outside the diff
+  target, because it is unstable while unenforced. **Its instability is the
+  evidence of non-enforcement** — were the schema honoured it would be
+  constant, and the file becoming stable would itself be the signal that
+  enforcement started working.
+- `content` is volatile in the normalized artifact: model output is never a
+  wire contract, only its type is.
+
+Not verified here: whether other providers enforce it. `oneshot.py:37` names
+NVIDIA NIM and vLLM as supporting response_format, so this finding is
+"Gemini via this gateway", not "the gateway cannot do schemas".
 
 ## Open at time of writing
 
