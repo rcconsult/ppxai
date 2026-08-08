@@ -636,14 +636,23 @@ def main() -> int:
                     parsed = None
                 conformant = isinstance(parsed, dict) and set(parsed) == {
                     "intent", "confidence", "suggested_action", "reasoning"}
-                # What the GATEWAY promises is to forward response_format to
-                # the provider as-is (oneshot.py:37) and return the usual
-                # envelope. ENFORCEMENT is the provider's, and varies: Gemini
-                # 3.1-pro-preview answers 200 with well-formed JSON whose keys
-                # it chose itself, ignoring the schema. So conformance is
-                # REPORTED, not asserted — failing here would paint a working
-                # gateway red. The recorded artifact carries the actual key
-                # set, so a baseline diff still catches enforcement changing.
+                # Conformance is REPORTED, not asserted. What the gateway owes
+                # the caller is that response_format REACHES the model and the
+                # envelope is unchanged; whether the model then honours the
+                # schema is the provider's business and varies by endpoint. A
+                # non-conformant answer from a provider that merely forwards
+                # is not a gateway fault, and failing on it would paint a
+                # working gateway red.
+                #
+                # This step earned its keep on first run: it caught the Gemini
+                # path accepting response_format and DROPPING it, so a pinned
+                # schema returned 200 with unconstrained output and no error
+                # anywhere. Fixed in v1.19.1 by mapping it onto
+                # response_mime_type / response_schema — this now reports
+                # schema=enforced against gemini-3.1-pro-preview.
+                #
+                # The key set is recorded to *.contentkeys.json, outside the
+                # diff target: it is provider behaviour, not seam contract.
                 ok = envelope and isinstance(parsed, dict)
                 record(
                     "POST /v1/oneshot (response_format)", PASS if ok else FAIL,

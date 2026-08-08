@@ -13,6 +13,43 @@ Branch: `bugfix/v1.19.1`. Opening theme: **tool-loop transcript integrity** — 
 
 > ⚠️ **Breaking: `ppxai-config.json` tier keys moved, no dual-read** (ADR 0010). Six `tools.agent.*` keys moved to the `execution.*` axis. A config left at the old paths is **silently ignored** and those settings revert to their defaults — run **`/doctor`**, which prints the exact old→new mapping for anything still stale. `/v1/oneshot` and `/v1/agent/*` are **config-consuming, not config-shaped**: no request or response changes.
 
+### Fixed — `response_format` was silently ignored on Gemini
+
+`POST /v1/oneshot` accepts an OpenAI-shaped `response_format`, and every
+provider except one forwarded it. The **Gemini** provider accepted the
+parameter and dropped it: Gemini uses `generate_content`, which has no such
+field, and nothing mapped it onto the equivalent knobs. A caller pinning a
+JSON schema got **HTTP 200 with unconstrained output and no error raised
+anywhere** — the response merely failed to match the schema it had asked for.
+
+Now mapped onto Gemini's `response_mime_type` / `response_schema`:
+
+- `{"type": "json_object"}` → JSON mime type; the model picks the shape.
+- `{"type": "json_schema", "json_schema": {"schema": …}}` → JSON mime type
+  plus the schema, run through the existing tool-schema sanitizer (so
+  `oneOf`/`allOf`/list-form `type` are handled) and then stripped of
+  `additionalProperties`. That last step is required, not cosmetic, and the
+  reason is worth knowing: the google-genai SDK's `Schema` model **accepts**
+  `additionalProperties`, so nothing fails client-side, but the REST API
+  answers `400 INVALID_ARGUMENT — Unknown name "additional_properties" at
+  'generation_config.response_schema'`. It appears in virtually every
+  OpenAI-generated schema, so this is the common case.
+- **A schema suppresses Google Search grounding for that call.** Gemini
+  refuses the combination, the same way it refuses grounding alongside
+  function declarations. If you rely on grounded answers, do not pin a
+  schema on the same request.
+
+Unrecognised `response_format` shapes still degrade to previous behaviour
+rather than raising. No wire change: request and response shapes are
+untouched, and a capture from the patched tree matches the pre-change
+baseline on every `/v1/*` endpoint byte for byte.
+
+Found by a new `scripts/gateway-smoke.py` step that exercises the
+structured-output half of `/v1/oneshot`; the plain-text step could not see
+it. `--record` on that script now captures each HTTP exchange so a
+before/after comparison can evidence the "byte-identical" guarantee instead
+of asserting it.
+
 ### Removed / Renamed (BREAKING — ADR 0011)
 
 Old names are **removed**, not aliased. Full rationale in [ADR 0011](docs/decisions/0011-command-taxonomy-streamline.md); migration table in `docs/release-notes-v1.19.1-DRAFT.md`.

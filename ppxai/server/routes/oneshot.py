@@ -30,14 +30,31 @@ are not part of the gateway contract.
 Implementation notes:
 - No `EngineClient` — we build the provider directly from config so the
   call has zero session-state side effects.
-- v1 supports `OpenAICompatibleProvider` (covers `local`, `custom`,
-  `openai`-compat NIM/vLLM/Ollama deployments). Native OpenAI / Perplexity
-  / Gemini-native providers raise 400 with a clear message until they
-  grow `oneshot()`.
-- `response_format` forwards to the provider as-is. NVIDIA NIM, vLLM, and
-  modern OpenAI-compatible endpoints accept the OpenAI shape
-  (`{"type": "json_object"}` or
-  `{"type": "json_schema", "json_schema": {...}}`).
+- Every shipped provider now implements `oneshot()`: `OpenAICompatibleProvider`
+  (covers `local`, `custom`, `openai`-compat NIM/vLLM/Ollama deployments),
+  `openai_native`, `perplexity`, and `gemini`. (This bullet previously said
+  the native providers raise 400 "until they grow `oneshot()`" — they since
+  did, and the note went stale.)
+- `response_format` reaches the model on every provider, but by two different
+  routes, because only one of them is an OpenAI endpoint:
+    * openai_compat / openai_native / perplexity — forwarded verbatim in
+      `request_kwargs`. NVIDIA NIM, vLLM and modern OpenAI-compatible
+      endpoints accept `{"type": "json_object"}` and
+      `{"type": "json_schema", "json_schema": {...}}`.
+    * gemini — `generate_content` has no `response_format`, so it is MAPPED
+      onto `response_mime_type` / `response_schema` by
+      `providers/gemini.py::response_format_to_gemini`. Two consequences
+      worth knowing. First, the schema is sanitized — and beyond the shared
+      tool-schema filtering, `additionalProperties` is stripped for this key
+      specifically: the google-genai SDK's `Schema` model accepts it, but the
+      REST API answers 400 INVALID_ARGUMENT ("Unknown name
+      `additional_properties` at 'generation_config.response_schema'"), and
+      that key is in almost every OpenAI-generated schema. Second, a schema
+      suppresses Google Search grounding for that call, since Gemini refuses
+      the combination.
+  Before v1.19.1 the Gemini path accepted `response_format` and dropped it —
+  a caller pinning a schema got a 200 and unconstrained output with no error
+  raised anywhere.
 - Per-model `extra_body` from config is still applied (so e.g. NIM
   `chat_template_kwargs.enable_thinking` carries through).
 """

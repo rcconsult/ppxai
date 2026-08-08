@@ -140,6 +140,74 @@ def _sanitize_schema_for_gemini(schema):
     return out
 
 
+# ── OpenAI `response_format` → Gemini structured output ──────────────────────
+# Every other provider forwards `response_format` straight to an
+# OpenAI-compatible endpoint (openai_compat.py, openai_native.py,
+# perplexity.py). Gemini can't: it uses generate_content, whose equivalent
+# knobs are `response_mime_type` + `response_schema`. Until v1.19.1 the
+# parameter was accepted and silently dropped here, so a caller pinning a
+# JSON schema got a 200 and unconstrained prose-shaped JSON with no error
+# anywhere — see docs/handoff-seam-watcher.md.
+#
+# `response_schema` and a function declaration's `parameters` are the same
+# google-genai `Schema` model, so the structural work is shared:
+# `_sanitize_schema_for_gemini` above, reused rather than reimplemented — a
+# second whitelist would drift from the one verified against the SDK, and it
+# already handles oneOf→anyOf, allOf merging and list-form `type`.
+#
+# But the two are NOT interchangeable, and the difference is invisible
+# client-side. The SDK's pydantic Schema model ACCEPTS `additionalProperties`
+# (hence its presence in _GEMINI_SCHEMA_KEYS, and no ValidationError), while
+# the REST API rejects it under this key specifically. Observed live,
+# 2026-08-08, gemini-3.1-pro-preview:
+#
+#   400 INVALID_ARGUMENT — Unknown name "additional_properties" at
+#   'generation_config.response_schema': Cannot find field.
+#
+# `"additionalProperties": false` is emitted by virtually every
+# OpenAI-generated schema, so this is the common case, not an edge one.
+# Passing SDK validation is NOT evidence the API will accept a payload.
+_RESPONSE_SCHEMA_REJECTED_KEYS = frozenset({"additionalProperties"})
+
+
+def _strip_response_schema_rejects(node):
+    """Remove keys valid on a function declaration but not on response_schema."""
+    if isinstance(node, list):
+        return [_strip_response_schema_rejects(v) for v in node]
+    if not isinstance(node, dict):
+        return node
+    return {
+        k: _strip_response_schema_rejects(v)
+        for k, v in node.items()
+        if k not in _RESPONSE_SCHEMA_REJECTED_KEYS
+    }
+def response_format_to_gemini(response_format: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    """Map an OpenAI-shaped `response_format` onto Gemini config kwargs.
+
+    `{"type": "json_object"}`  → JSON mime type, model picks the shape.
+    `{"type": "json_schema", "json_schema": {"schema": {...}}}`
+                               → JSON mime type + a filtered schema.
+
+    Returns `{}` for anything unrecognised (including None), so an unknown
+    shape degrades to today's behaviour rather than raising.
+    """
+    if not isinstance(response_format, dict):
+        return {}
+    kind = response_format.get("type")
+    if kind == "json_object":
+        return {"response_mime_type": "application/json"}
+    if kind == "json_schema":
+        block = response_format.get("json_schema")
+        out: Dict[str, Any] = {"response_mime_type": "application/json"}
+        schema = block.get("schema") if isinstance(block, dict) else None
+        if isinstance(schema, dict):
+            out["response_schema"] = _strip_response_schema_rejects(
+                _sanitize_schema_for_gemini(schema)
+            )
+        return out
+    return {}
+
+
 class GeminiProvider(BaseProvider):
     """Native provider for Google Gemini API.
 
@@ -501,9 +569,15 @@ class GeminiProvider(BaseProvider):
         ({content, finish_reason, model, usage}). Gemini uses
         generate_content (not the OpenAI SDK), so usage is parsed from
         `usage_metadata` via the existing `_parse_usage`. `system` maps to
-        Gemini's system_instruction; response_format is not forwarded
-        (Gemini structured output uses a different config knob — out of
-        scope for this stateless path).
+        Gemini's system_instruction.
+
+        v1.19.1: `response_format` IS now honoured — mapped onto Gemini's
+        `response_mime_type` / `response_schema` by
+        `response_format_to_gemini`. It was previously accepted and dropped,
+        which meant a caller pinning a JSON schema got a 200 and
+        unconstrained output with no error raised anywhere. Note that a
+        schema suppresses Google Search grounding for that call; the two
+        cannot coexist.
         """
         messages: List[Message] = []
         if system:
@@ -521,6 +595,7 @@ class GeminiProvider(BaseProvider):
             use_grounding=self.enable_grounding,
             system_instruction=system_instruction,
             generation_params=generation_params,
+            response_format=response_format,
         )
 
         response = self.client.models.generate_content(
@@ -757,7 +832,8 @@ class GeminiProvider(BaseProvider):
         use_grounding: bool = True,
         system_instruction: Optional[str] = None,
         generation_params: Optional[Dict[str, Any]] = None,
-        tools: Optional[List] = None
+        tools: Optional[List] = None,
+        response_format: Optional[Dict[str, Any]] = None,
     ) -> "genai_types.GenerateContentConfig":
         """Build generation config with optional grounding, thinking, system instruction, tools, and generation params.
 
@@ -771,6 +847,12 @@ class GeminiProvider(BaseProvider):
             GenerateContentConfig with tools, thinking_config, generation params, and/or system_instruction
         """
         config_kwargs = {}
+
+        # Structured output is resolved FIRST because it decides whether
+        # grounding may be added at all (see below) — the same coexistence
+        # rule function declarations already follow.
+        structured = response_format_to_gemini(response_format)
+        config_kwargs.update(structured)
 
         # Add system instruction if provided (v1.13.3: enables tool prompts)
         if system_instruction:
@@ -790,8 +872,10 @@ class GeminiProvider(BaseProvider):
                 gemini_tools.append(genai_types.Tool(function_declarations=function_declarations))
 
         # Add Google Search Grounding ONLY if no function declarations
-        # (they cannot coexist in the same request)
-        if use_grounding and not gemini_tools:
+        # (they cannot coexist in the same request) and no structured-output
+        # schema — Gemini rejects grounding combined with response_schema, and
+        # a caller who pinned a schema asked for the schema, so it wins.
+        if use_grounding and not gemini_tools and not structured:
             gemini_tools.append(genai_types.Tool(google_search=genai_types.GoogleSearch()))
 
         if gemini_tools:

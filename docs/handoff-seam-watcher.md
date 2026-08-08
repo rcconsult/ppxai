@@ -177,41 +177,69 @@ Expect zero output. Anything listed is a seam change and stops the commit.
 Compare only `*.normalized.json` — `*.raw.json` and `*.contentkeys.json` are
 expected to vary (see below).
 
-### Finding: `/v1/oneshot` forwards `response_format`, it does not enforce it
+### Finding (FIXED): the Gemini path dropped `response_format` entirely
 
 Added on consumer request, because the plain call only evidences the envelope
-and ppxai-sre's Pattern A classifier depends on the schema-enforced path.
-Measured 2026-08-08 against `gemini-3.1-pro-preview`:
+and ppxai-sre's Pattern A classifier depends on the schema-enforced path. The
+step found a real defect on its first run.
 
-- A `POST /v1/oneshot` carrying `response_format: {"type":"json_schema", …}`
-  with the classifier's pinned `{intent, confidence, suggested_action,
-  reasoning}` returns **200**, and the envelope is byte-identical to the
-  plain call.
-- The `content` is **well-formed JSON whose keys the model chose itself** —
-  `intent, category, urgency, entities` — not the requested schema.
-- Two identical requests returned **different key sets**
-  (`[category, entities, intent, urgency]` vs `[category, intent, urgency]`).
+**What was wrong.** `ppxai/engine/providers/gemini.py::oneshot` accepted
+`response_format` to satisfy the `BaseProvider` contract and then never read
+it — its own docstring said so ("response_format is not forwarded … out of
+scope for this stateless path"). Gemini uses `generate_content`, which has no
+such parameter, and nothing mapped it onto the equivalent knobs. So the
+schema **never reached Google at all**.
 
-This is the gateway working as documented: `oneshot.py:37` says
-response_format "forwards to the provider as-is". **Enforcement is the
-provider's, and this provider does not do it.** A consumer pinning a schema
-gets a 200 with plausible JSON and the wrong keys — no error anywhere.
+An earlier revision of this note said "enforcement is the provider's and this
+provider does not do it". That was wrong, and wrong in a way that would have
+sent you looking at the wrong layer — Google never saw the schema. The
+measurement that produced it also had a confound: the probe prompt said
+"reply with JSON only", so the JSON came from the prompt, and the varying key
+sets were ordinary unconstrained generation.
 
-Consequences for the recording:
+Gemini was the **only** provider affected. `openai_compat.py:591`,
+`openai_native.py` and `perplexity.py` all forward `response_format` verbatim
+into `request_kwargs`; only the non-OpenAI path needed a mapping and lacked
+one. It was also the config default on this host, which is why the baseline
+caught it.
 
-- The smoke step **reports** conformance rather than asserting it; failing
-  would paint a working gateway red.
-- The key set lives in `*.contentkeys.json`, deliberately outside the diff
-  target, because it is unstable while unenforced. **Its instability is the
-  evidence of non-enforcement** — were the schema honoured it would be
-  constant, and the file becoming stable would itself be the signal that
-  enforcement started working.
+**The fix (v1.19.1).** `response_format_to_gemini()` maps the OpenAI shape
+onto `response_mime_type` / `response_schema`:
+
+- `{"type":"json_object"}` → JSON mime type, model picks the shape.
+- `{"type":"json_schema", …}` → JSON mime type + the schema, run through the
+  existing tool-schema sanitizer and then stripped of `additionalProperties`.
+  The strip is load-bearing and the mechanism is worth knowing: the
+  google-genai SDK's `Schema` model **accepts** that key — so nothing fails
+  client-side — while the REST API answers `400 INVALID_ARGUMENT — Unknown
+  name "additional_properties" at 'generation_config.response_schema'`. It is
+  in virtually every OpenAI-generated schema. **Passing SDK validation is not
+  evidence the API will accept a payload**, and only a live call surfaces the
+  gap: this one was found by a 502 after unit tests were green.
+- A schema **suppresses Google Search grounding** for that call; Gemini
+  refuses the combination, the same way it refuses grounding alongside
+  function declarations.
+
+Live-verified end to end, not just unit-tested: against
+`gemini-3.1-pro-preview` the smoke now reports `schema=enforced`, and the
+recorded key set went from the model's invention
+`[category, intent, urgency]` to exactly the pinned
+`[confidence, intent, reasoning, suggested_action]`.
+
+**No seam change.** A capture from the patched tree matches the installed
+baseline on all `/v1/*` artifacts byte for byte. The single differing file is
+`01-GET-status`, on `model`/`provider` — session selection, not contract
+(one server had `custom`/Qwen selected, the other `perplexity`/sonar-pro).
+
+Recording notes that outlive the fix:
+
+- The smoke step **reports** conformance rather than asserting it: the
+  gateway owes you that response_format reaches the model and the envelope
+  holds, not that a given provider honours it.
+- The key set lives in `*.contentkeys.json`, outside the diff target — it is
+  provider behaviour, not seam contract.
 - `content` is volatile in the normalized artifact: model output is never a
   wire contract, only its type is.
-
-Not verified here: whether other providers enforce it. `oneshot.py:37` names
-NVIDIA NIM and vLLM as supporting response_format, so this finding is
-"Gemini via this gateway", not "the gateway cannot do schemas".
 
 ## Open at time of writing
 
