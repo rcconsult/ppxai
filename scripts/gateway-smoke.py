@@ -36,8 +36,10 @@ Exit code 0 = every non-skipped step passed.
 """
 
 import argparse
+import hashlib
 import json
 import os
+import re
 import socket
 import subprocess
 import sys
@@ -121,10 +123,150 @@ def _signal_tree(proc, how: str):
         (proc.kill if how == "kill" else proc.terminate)()
 
 
+# ── response recording (--record) ────────────────────────────────────────────
+# Why this exists: the v1 seam guarantee is the word *byte-identical*, and a
+# pass/fail run cannot support that claim. Two greens only prove both runs
+# satisfied whatever assertions this script happens to make today; a
+# before/after diff of the actual responses proves the contract itself.
+# A pre-change baseline is also perishable — once a line moves, the
+# opportunity to capture it is gone permanently.
+#
+# Diff the *.normalized.json files. The raw bodies are kept for forensics but
+# will differ on every run by design (run ids, timestamps, minted tokens), so
+# diffing those reports 100% noise and hides the signal.
+
+_HEXISH = re.compile(r"[0-9a-fA-F]{8,}(?:-[0-9a-fA-F]{4,}){0,4}")
+
+# Keys whose values legitimately change run-to-run. Exact names plus suffixes.
+_VOLATILE_KEYS = frozenset({
+    "run_id", "parent_run_id", "id", "token", "resume_token", "owner",
+    "created_at", "updated_at", "started_at", "finished_at", "expires_at",
+    "pid", "session_id", "trace_id", "session_name",
+    # Model-derived counters: the contract is "usage carries these three int
+    # fields", not their magnitudes. total_tokens is genuinely nondeterministic
+    # here (Gemini thinking tokens moved it 82→93 across two identical calls);
+    # the other two ride along so a provider swap doesn't read as a break.
+    # _volatile() keeps the type, so int→str would still surface.
+    "total_tokens", "prompt_tokens", "completion_tokens",
+})
+# Deliberately narrow. A broad `_id`/`_s` suffix would also erase
+# `allowlist_rule_id` and `consent_ttl_s` — stable values whose change is
+# exactly what this diff exists to catch. Over-normalizing defeats the check
+# as thoroughly as not recording at all; add exact names above instead.
+_VOLATILE_SUFFIXES = ("_at", "_ms", "_token", "_seconds")
+
+
+def _is_volatile(key: str) -> bool:
+    return key in _VOLATILE_KEYS or key.endswith(_VOLATILE_SUFFIXES)
+
+
+def _scrub(text: str) -> str:
+    """Replace embedded ids in free text / paths so they don't drive the diff."""
+    return _HEXISH.sub("<ID>", text)
+
+
+def _fs_slug(path: str) -> str:
+    """Filesystem-safe endpoint slug. Angle brackets are illegal on Windows,
+    so this cannot reuse _scrub's `<ID>` placeholder."""
+    slug = _HEXISH.sub("ID", path.strip("/")).replace("/", "_")
+    return re.sub(r"[^A-Za-z0-9_.-]", "_", slug) or "root"
+
+
+def _normalize(value):
+    """Structure-preserving, volatility-erasing view of a response body.
+
+    Keys are sorted so dict ordering never shows up as a diff. Volatile
+    values become a placeholder — the SHAPE and every stable value survive,
+    which is exactly the part the seam guarantee is about.
+    """
+    if isinstance(value, dict):
+        return {
+            k: (_volatile(v) if _is_volatile(k) else _normalize(v))
+            for k, v in sorted(value.items())
+        }
+    if isinstance(value, list):
+        # A long homogeneous list is machine history, not contract. GET
+        # /v1/agent/runs returns every run this host ever made (160 entries /
+        # 159 KB here, growing every smoke run), so diffing the entries reports
+        # accumulation instead of contract change. Collapse to the union of
+        # entry keys: that still catches a field added to or removed from the
+        # run shape, which IS the seam question.
+        if len(value) > 2 and all(isinstance(v, dict) for v in value):
+            keys = sorted({k for d in value for k in d})
+            # The COUNT is the accumulation itself — recording it would put
+            # back exactly the noise this branch removes.
+            return [{"<elided_entries>": _volatile(len(value)),
+                     "<union_keys>": keys}]
+        return [_normalize(v) for v in value]
+    if isinstance(value, str):
+        return _scrub(value)
+    return value
+
+
+def _volatile(value):
+    """Placeholder for a volatile value that PRESERVES its type.
+
+    A bare "<VOLATILE>" would hide a field flipping int→str, which is exactly
+    the kind of silent contract break this diff exists to catch. Model-derived
+    counters (usage.total_tokens varies with Gemini thinking tokens) are
+    volatile in magnitude but not in type.
+    """
+    return f"<VOLATILE:{type(value).__name__}>"
+
+
+class Recorder:
+    """Writes one file per HTTP exchange into a directory."""
+
+    def __init__(self, outdir: Path):
+        self.dir = outdir
+        self.dir.mkdir(parents=True, exist_ok=True)
+        self.n = 0
+        self.seen: dict = {}
+
+    def capture(self, method, path, status, headers, raw: bytes) -> None:
+        # One file per (method, endpoint), NOT per call. The run-poll loop hits
+        # GET /v1/agent/runs/<id> an unpredictable number of times depending on
+        # timing, so numbering per call would make the file COUNT vary run to
+        # run and a diff would report spurious adds/removes. Keyed + overwritten,
+        # the last write per endpoint wins — for a poll that's the terminal
+        # state, which is the response actually worth comparing.
+        slug = _fs_slug(path)
+        key = f"{method}-{slug}"
+        if key not in self.seen:
+            self.n += 1
+            self.seen[key] = self.n
+        stem = f"{self.seen[key]:02d}-{key}"
+        try:
+            parsed = json.loads(raw.decode() or "null")
+        except (ValueError, UnicodeDecodeError):
+            parsed = None
+        # Header NAMES are part of the contract; values (dates, lengths) are not.
+        header_names = sorted({k.lower() for k in headers})
+        (self.dir / f"{stem}.normalized.json").write_text(
+            json.dumps({
+                "method": method,
+                "path": _scrub(path),
+                "status": status,
+                "header_names": header_names,
+                "body": _normalize(parsed),
+            }, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        (self.dir / f"{stem}.raw.json").write_text(
+            json.dumps({
+                "status": status,
+                "sha256": hashlib.sha256(raw).hexdigest(),
+                "body": raw.decode(errors="replace"),
+            }, indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+
 class Gateway:
-    def __init__(self, base_url: str, token: str = ""):
+    def __init__(self, base_url: str, token: str = "", recorder: "Recorder" = None):
         self.base_url = base_url.rstrip("/")
         self.token = token
+        self.recorder = recorder
 
     def request(self, method: str, path: str, body: dict = None, timeout: float = 30):
         """Return (status_code, parsed_json_or_None). Network errors raise."""
@@ -135,10 +277,18 @@ class Gateway:
         data = json.dumps(body).encode() if body is not None else None
         try:
             with urllib.request.urlopen(req, data=data, timeout=timeout) as resp:
-                return resp.status, json.loads(resp.read().decode() or "null")
+                # Read the bytes ONCE, record them, then parse from the same
+                # buffer — the stream can't be re-read after json.loads.
+                raw = resp.read()
+                if self.recorder:
+                    self.recorder.capture(method, path, resp.status, resp.headers, raw)
+                return resp.status, json.loads(raw.decode() or "null")
         except urllib.error.HTTPError as e:
+            raw = e.read()
+            if self.recorder:
+                self.recorder.capture(method, path, e.code, e.headers, raw)
             try:
-                payload = json.loads(e.read().decode() or "null")
+                payload = json.loads(raw.decode() or "null")
             except (ValueError, UnicodeDecodeError):
                 payload = None
             return e.code, payload
@@ -280,12 +430,18 @@ def main() -> int:
                     help="perimeter checks only — no LLM calls, no cost")
     ap.add_argument("--token", default=os.environ.get("PPXAI_API_TOKEN", ""),
                     help="bearer token for auth-enforcing hosts (env: PPXAI_API_TOKEN)")
+    ap.add_argument("--record", type=Path, default=None, metavar="DIR",
+                    help="write every HTTP exchange to DIR (one file per call). "
+                         "Take a baseline BEFORE a seam-touching change, then "
+                         "diff DIR/*.normalized.json after — pass/fail cannot "
+                         "evidence a byte-identical guarantee.")
     args = ap.parse_args()
 
     results = []  # (step, verdict, detail)
     proc = None
     base_url = args.base_url or f"http://127.0.0.1:{args.port}"
-    gw = Gateway(base_url, args.token)
+    gw = Gateway(base_url, args.token,
+                 recorder=Recorder(args.record) if args.record else None)
 
     def record(step: str, verdict: str, detail: str = ""):
         results.append((step, verdict, detail))
