@@ -160,6 +160,19 @@ class SpawnSubagentTool(BaseTool):
         self._parent_workdir = parent_workdir
         self._parent_tools = set(parent_tools or [])
         self._parent_allow_outbound = list(parent_allow_outbound or [])
+        # NOTE (v1.19.1): built from the RAW parent list, deliberately not the
+        # ceilinged one. This policy is only the yardstick for the child ⊆
+        # parent subset test; the child's ENFORCEMENT policy is constructed by
+        # build_task_runner, which applies execution.egress_ceiling itself. So
+        # a child can never exceed the ceiling even though this comparison is
+        # made against a wider set.
+        #
+        # The consequence, benign today: a child request can pass the subset
+        # test and then be narrowed by the ceiling, so its granted egress may
+        # differ from what the subset check approved (the
+        # `egress_ceiling_applied` event is the trace). This stops being
+        # merely cosmetic if spawn and caller-supplied tools ever cease to be
+        # mutually exclusive — see docs/handoff-a4-response.md.
         self._parent_policy = NetworkPolicy(self._parent_allow_outbound)
         self._provider = parent_provider
         self._model = parent_model
