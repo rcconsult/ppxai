@@ -41,7 +41,7 @@ from .agent_scoped_tools import ScopedToolManager
 from .client import EngineClient
 from .tools.agent_spawn import SpawnSubagentTool
 from .tools.filesystem_policy import build_filesystem_policy
-from .tools.network_policy import NetworkPolicy
+from .tools.network_policy import NetworkPolicy, apply_egress_ceiling
 from .types import EventType
 
 # An egress allowlist entry is either a bare host ("example.com", any path) or
@@ -242,7 +242,35 @@ def build_task_runner(
         # Step ④: the run's provider context rides on the policy so the
         # egress chokepoint resolves per-provider backend tuples with the
         # SAME answer the call-time chain uses.
-        net_policy = NetworkPolicy(allow_outbound, provider_name=provider_name)
+        #
+        # DEPLOYMENT CEILING, applied HERE and not only at the route.
+        # `execution.egress_ceiling` is intersective and un-raisable by a run,
+        # but until v1.19.1 its only caller was `agent_v1._enriched_oneshot_
+        # egress_or_400` — a ROUTE-level helper. So any in-process caller of
+        # this builder got no ceiling at all, not a weakened one. Demonstrated
+        # live 2026-08-09: with a ceiling of ["api.corp.internal"], the route
+        # path stripped "evil.example.com" while a directly-built
+        # NetworkPolicy returned Allow for it.
+        #
+        # That gap arrived with the extraction (the ceiling stayed at the
+        # route while the runner became independently callable) and went live
+        # with the T8b in-process backend, where `/task --allow <host>` from a
+        # TUI would have escaped it. Applying it at the policy's construction
+        # site makes the ceiling an ENGINE guarantee for every caller. Route
+        # callers now apply it twice, which is harmless: intersection is
+        # idempotent, and the route keeps its own pass because that is what
+        # reports the stripped entries back to the requester.
+        ceilinged, ceiling_stripped = apply_egress_ceiling(list(allow_outbound))
+        if ceiling_stripped:
+            # Never silent: an operator ceiling that quietly narrows a run is
+            # indistinguishable from a run that never asked for the host.
+            registry.emit_event(
+                m.run_id, "egress_ceiling_applied", level="warning",
+                category="network",
+                data={"stripped": [str(e) for e in ceiling_stripped],
+                      "run_id": m.run_id},
+            )
+        net_policy = NetworkPolicy(ceilinged, provider_name=provider_name)
 
         def _on_network(allowed: bool, payload: dict) -> None:
             payload = {**payload, "run_id": m.run_id}
