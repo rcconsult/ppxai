@@ -25,8 +25,11 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
+from ..common.logger import get_logger
 from .agent_runs import RunMeta, resume_refusal
 from .task_runner import build_task_runner, default_run_registry
+
+logger = get_logger("engine")
 
 
 def collect_holds() -> bool:
@@ -49,6 +52,47 @@ def collect_holds() -> bool:
 
 
 _shared: Optional["InProcessTaskBackend"] = None
+
+
+def configure_task_backend(session_provider=None, on_change=None):
+    """Layer the lifecycle concerns onto the process-wide backend.
+
+    `default_run_registry()` is deliberately bare — its docstring says the
+    sweep and the change hooks belong to "whoever owns the process".
+    `server/state.py:204-217` owns one and layers them on. T8b made the TUI
+    own one too, and layered nothing; this is that missing half.
+
+    Both steps mirror the server exactly:
+
+    * **`sweep_orphans()`** — a fresh registry means a fresh process, so any
+      run still marked pending/running/waiting on disk was orphaned by the
+      last shutdown (its task, control and consent future died with it).
+      Landing them `interrupted` is what makes `ls` tell the truth and
+      `resume` able to pick them up. Without it a run killed with the TUI
+      shows `running` forever.
+    * **`on_change`** — the hook that writes `AppState.background_agents`.
+      `tui/app.py:254` already SUBSCRIBES to that key and renders a badge;
+      its comment says "the server mirrors" it, which is true over HTTP and
+      false in-process. Without this the badge can never light.
+
+    Idempotent: called on every `/task`/`/run` dispatch, so it must not sweep
+    repeatedly or stack hooks.
+    """
+    backend = get_task_backend()
+    if session_provider is not None:
+        backend._session_provider = session_provider
+    if getattr(backend, "_lifecycle_wired", False):
+        return backend
+    backend._lifecycle_wired = True
+    try:
+        backend.registry.sweep_orphans()
+        if on_change is not None:
+            backend.registry.on_change(on_change)
+    except Exception:  # noqa: BLE001
+        # A registry that cannot sweep must not stop the command working;
+        # the run surface degrades, it does not disappear.
+        logger.debug("task backend lifecycle wiring failed", exc_info=True)
+    return backend
 
 
 def get_task_backend() -> "InProcessTaskBackend":
@@ -81,13 +125,23 @@ class InProcessTaskBackend:
     parked run is answered through `respond`.
     """
 
-    def __init__(self, registry=None):
+    def __init__(self, registry=None, session_provider=None):
         """`registry` defaults to the standard `<PPXAI_HOME>/runs/` store.
 
         Injectable so a caller (tests, ppxai-sre) can supply its own — the
         same three-method surface `TaskRunRegistry` pins.
+
+        `session_provider` is a zero-arg callable returning the client's
+        ACTIVE session. It is how a run's result reaches the conversation
+        (U4): the HTTP clients POST /sessions/merge-run-result and the route
+        appends to `s.engine.session`, but an in-process client has no
+        request to hang that off. Without it, `collect` finalizes the run and
+        the result never enters the session — which is what made every TUI
+        session message-less and left session restore with nothing to
+        restore.
         """
         self.registry = registry if registry is not None else default_run_registry()
+        self._session_provider = session_provider
 
     # ── launch ──────────────────────────────────────────────────────────────
 
@@ -193,9 +247,88 @@ class InProcessTaskBackend:
             run_id, token=token, approved=approved, text=text
         )
 
+    def merge_result(self, run_id: str) -> tuple[bool, str]:
+        """U4 (ADR 0011): plain-merge a run's result into the active session.
+
+        The in-process equivalent of `POST /sessions/merge-run-result`, and
+        deliberately the same semantics — the run enters the conversation as a
+        plain `user(task)` → `assistant(result)` exchange, no provenance
+        tagging, no special block type.
+
+        **The PAIR is load-bearing.** `validate_and_fix_alternation` drops a
+        leading assistant message and collapses same-role neighbours, so a
+        lone merged message of either role can silently vanish from the next
+        provider request — caught live in the U4 trial, where the model
+        answered "no passphrase appeared" while the merge sat dropped. Both
+        messages or neither.
+
+        Refused under `execution.collect="no"` with the same wording the
+        clients surface, so a user who disabled collect is told, rather than
+        watching a result disappear.
+        """
+        from ..config.execution import get_execution_collect
+        from .types import Message
+
+        try:
+            if get_execution_collect() == "no":
+                return False, (
+                    'Collect is disabled (execution.collect="no"). Set '
+                    'execution.collect to "yes" or "auto" in '
+                    "ppxai-config.json to enable merging run results."
+                )
+        except Exception:  # noqa: BLE001 — a config error must not eat a result
+            pass
+
+        if self._session_provider is None:
+            return False, "no session to merge into"
+        session = self._session_provider()
+        if session is None:
+            return False, "no active session"
+
+        meta = self.registry.get_run(run_id)
+        if meta is None:
+            return False, f"unknown run: {run_id}"
+        result = getattr(meta, "result", None)
+        if not result:
+            return False, f"run {run_id} has no result to merge"
+
+        session.add_message(Message(role="user", content=meta.task))
+        session.add_message(Message(role="assistant", content=result))
+        return True, f"merged {len(result)} chars"
+
     def collect(self, run_id: str) -> tuple[bool, str]:
-        """Finalize a held result (T6). `ack_run` is the registry's name."""
-        return self.registry.ack_run(run_id)
+        """Finalize a held result (T6) AND merge it into the session (U4).
+
+        Two steps, matching what both HTTP clients do —
+        `agent-run-controller.js:121` and `taskController.ts:596` each ack and
+        then merge. Doing only the first leaves the run finalized and the
+        conversation unchanged, which is the shape of the T8b regression.
+        """
+        ok, reason = self.registry.ack_run(run_id)
+        if ok:
+            merged, detail = self.merge_result(run_id)
+            if not merged:
+                # The run IS collected; only the merge failed. Say so rather
+                # than reporting success and losing the result silently.
+                return True, f"collected (not merged: {detail})"
+        return ok, reason
+
+    def auto_merge_if_configured(self, run_id: str) -> tuple[bool, str]:
+        """Merge a terminal run without an explicit `collect`, under "auto".
+
+        Mirrors the web client's `_autoMergeIfConfigured`, which fires on the
+        watcher's terminal render. Under "yes" the result is HELD and the user
+        collects it; under "auto" nothing holds it, so the watcher is the only
+        thing that can put it in the conversation.
+        """
+        from ..config.execution import get_execution_collect
+
+        try:
+            if get_execution_collect() != "auto":
+                return False, "not in auto mode"
+        except Exception:  # noqa: BLE001
+            return False, "collect mode unreadable"
+        return self.merge_result(run_id)
 
     def resume(self, run_id: str) -> tuple[bool, str]:
         """Resume an interrupted run (T7). Returns `(ok, reason)`.

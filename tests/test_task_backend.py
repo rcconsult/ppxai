@@ -239,3 +239,120 @@ def test_collect_holds_maps_execution_collect(monkeypatch):
     # A broken config must not block a launch; it falls back to holding.
     monkeypatch.setattr(execution_cfg, "get_execution_collect", _boom)
     assert collect_holds() is True
+
+
+# ── U4 merge: how a run's result reaches the conversation ───────────────────
+
+class _FakeSession:
+    def __init__(self):
+        self.messages = []
+
+    def add_message(self, m):
+        self.messages.append(m)
+
+
+@pytest.fixture
+def backend_with_session(tmp_path):
+    session = _FakeSession()
+    registry = AgentRunRegistry(FilesystemAgentRunStore(tmp_path / "runs"))
+    b = InProcessTaskBackend(registry, session_provider=lambda: session)
+    return b, session
+
+
+@pytest.mark.asyncio
+async def test_collect_merges_the_result_as_a_pair(backend_with_session, monkeypatch):
+    """THE regression: collect used to finalize and never merge.
+
+    Web and VSCode both ack THEN merge. Doing only the first leaves the run
+    finalized and the conversation unchanged — which is why every TUI session
+    was message-less and session restore had nothing to restore.
+    """
+    backend, session = backend_with_session
+    monkeypatch.setattr(task_backend, "build_task_runner", _stub_runner("the answer"))
+    monkeypatch.setattr(task_backend, "collect_holds", lambda: True)
+
+    meta = backend.launch("what is the answer", tools=[], provider="p", model="m")
+    await _poll(backend, meta.run_id, {"completed_pending_ack", "failed"})
+
+    ok, _ = backend.collect(meta.run_id)
+    assert ok
+    assert len(session.messages) == 2, (
+        "the merge must be a user->assistant PAIR — validate_and_fix_alternation "
+        "drops a lone message of either role"
+    )
+    assert session.messages[0].role == "user"
+    assert session.messages[0].content == "what is the answer"
+    assert session.messages[1].role == "assistant"
+    assert session.messages[1].content == "the answer"
+
+
+def test_merge_refused_when_collect_disabled(backend_with_session, monkeypatch):
+    """`execution.collect="no"` must SAY so, not silently drop the result."""
+    import ppxai.config.execution as execution_cfg
+
+    backend, session = backend_with_session
+    monkeypatch.setattr(execution_cfg, "get_execution_collect", lambda: "no")
+    ok, reason = backend.merge_result("run_0123456789ab")
+    assert ok is False
+    assert "Collect is disabled" in reason
+    assert session.messages == []
+
+
+def test_merge_without_a_session_provider_is_reported(tmp_path):
+    """A backend with no session (Rich today, tests) must not pretend."""
+    b = InProcessTaskBackend(AgentRunRegistry(FilesystemAgentRunStore(tmp_path / "r")))
+    ok, reason = b.merge_result("run_0123456789ab")
+    assert ok is False and "session" in reason
+
+
+@pytest.mark.asyncio
+async def test_collect_reports_when_the_merge_fails(backend_with_session, monkeypatch):
+    """The run IS collected even if the merge isn't — say both, lose neither."""
+    backend, session = backend_with_session
+    monkeypatch.setattr(task_backend, "build_task_runner", _stub_runner("x"))
+    monkeypatch.setattr(task_backend, "collect_holds", lambda: True)
+    meta = backend.launch("t", tools=[], provider="p", model="m")
+    await _poll(backend, meta.run_id, {"completed_pending_ack", "failed"})
+
+    backend._session_provider = lambda: None  # session vanished
+    ok, reason = backend.collect(meta.run_id)
+    assert ok is True and "not merged" in reason
+
+
+@pytest.mark.asyncio
+async def test_auto_merge_only_in_auto_mode(backend_with_session, monkeypatch):
+    """Under "auto" nothing holds the result, so the watcher must merge it."""
+    import ppxai.config.execution as execution_cfg
+
+    backend, session = backend_with_session
+    monkeypatch.setattr(task_backend, "build_task_runner", _stub_runner("auto result"))
+    monkeypatch.setattr(task_backend, "collect_holds", lambda: False)
+    meta = backend.launch("t", tools=[], provider="p", model="m")
+    await _poll(backend, meta.run_id, {"completed", "failed"})
+
+    monkeypatch.setattr(execution_cfg, "get_execution_collect", lambda: "yes")
+    assert backend.auto_merge_if_configured(meta.run_id)[0] is False
+    assert session.messages == [], "under 'yes' the user collects; do not auto-merge"
+
+    monkeypatch.setattr(execution_cfg, "get_execution_collect", lambda: "auto")
+    assert backend.auto_merge_if_configured(meta.run_id)[0] is True
+    assert len(session.messages) == 2
+
+
+def test_configure_is_idempotent(tmp_path, monkeypatch):
+    """Called on every /task dispatch — must not sweep twice or stack hooks."""
+    registry = AgentRunRegistry(FilesystemAgentRunStore(tmp_path / "runs"))
+    shared = InProcessTaskBackend(registry)
+    monkeypatch.setattr(task_backend, "_shared", shared)
+
+    sweeps = []
+    hooks = []
+    monkeypatch.setattr(registry, "sweep_orphans", lambda: sweeps.append(1))
+    monkeypatch.setattr(registry, "on_change", lambda cb: hooks.append(cb))
+
+    for _ in range(3):
+        task_backend.configure_task_backend(
+            session_provider=lambda: None, on_change=lambda: None
+        )
+    assert sweeps == [1], "swept more than once"
+    assert len(hooks) == 1, "stacked change hooks"

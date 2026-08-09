@@ -1080,6 +1080,7 @@ class PPXAIDEApp(App):
                 # lazily — a user who never runs /task should not have the
                 # TUI polling a run registry, or even building one.
                 if cmd in ("task", "run"):
+                    self.ensure_run_backend()
                     self.ensure_run_consent_watcher()
 
                 # AppState observers handle provider/model/tools badge sync
@@ -1846,6 +1847,42 @@ class PPXAIDEApp(App):
             # command, not something the user should see as a crash.
             return
         await self._handle_command(command)
+
+    def ensure_run_backend(self) -> None:
+        """Own the in-process run registry the way the server owns its own.
+
+        `server/state.py:204-217` sweeps orphans and mirrors the active run
+        set into `AppState.background_agents`. T8b gave the TUI its own
+        registry and neither — so a run orphaned by a TUI exit stayed
+        `running` forever, and the badge this app subscribes to at
+        `_initialize_engine` could never light.
+
+        Also hands the backend a session provider, which is how a collected
+        run's result reaches the conversation (U4). Without it every session
+        the TUI saved was message-less.
+
+        Idempotent — called after every `/task` and `/run` dispatch.
+        """
+        engine = self._engine_client
+        if engine is None:
+            return
+        from ..engine.task_backend import configure_task_backend
+
+        def _mirror(summary=None):
+            # The registry's on_change passes no args in some paths; read the
+            # live summary rather than trusting the callback signature.
+            try:
+                backend = configure_task_backend()
+                engine.state.set(
+                    "background_agents", backend.registry.active_summary()
+                )
+            except Exception:  # noqa: BLE001
+                self._log.debug("background_agents mirror failed")
+
+        configure_task_backend(
+            session_provider=lambda: engine.session,
+            on_change=_mirror,
+        )
 
     def ensure_run_consent_watcher(self) -> None:
         """Start the parked-run consent watcher once per session (T8b).

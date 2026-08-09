@@ -52,7 +52,14 @@ ALL_KEYS: list[KeyDef] = [
     KeyDef("ctrl+w", "close_panel", "Close", "app"),
     KeyDef("ctrl+s", "save_panel", "Save", "app"),
     KeyDef("f6", "toggle_focus", "Switch Pane", "app"),
-    KeyDef("ctrl+tab", "toggle_focus", "Switch Pane", "app"),
+    # NOTE: Windows Terminal binds ctrl+tab to its OWN tab switching by
+    # default, so it never reaches the app there — F6 above is the
+    # portable one. Kept for terminals that do deliver it, but F6 is what
+    # the UI advertises (reported 2026-08-09: "TAB nor Ctrl-TAB nor
+    # Alt-TAB seems working on Windows"; Alt-Tab is the OS switcher and
+    # never reaches any terminal app).
+    KeyDef("ctrl+tab", "toggle_focus", "Switch Pane (not on Windows Terminal)",
+           "app"),
     KeyDef("escape", "cancel", "Cancel", "app",
            notes="Priority: help panel > modal > file tree focus > side panel"),
     KeyDef("q", "hide_help_panel", "Close Help", "app"),

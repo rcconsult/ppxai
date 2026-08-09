@@ -122,9 +122,35 @@ async def test_launch_with_a_loop_succeeds(backend, monkeypatch):
     monkeypatch.setattr("ppxai.engine.task_backend.build_task_runner",
                         _stub_runner())
     result = task_cmd.handle_task(_Ctx(), '"do a thing" --tools read_file')
-    assert isinstance(result, NotificationResult)
-    assert "run_" in result.message
     assert len(backend.list_runs(kind="task")) == 1
+
+    # Launch returns the run TABLE, not a bare notification: the web client
+    # opens a pane per run at launch and the TUI did not, so a spawned run
+    # appeared to go nowhere (reported 2026-08-09, "no split view opens when
+    # run or task is spawned"). Deliberate change — this assertion used to
+    # expect NotificationResult.
+    assert isinstance(result, TableResult)
+    assert result.metadata["focus_panel"] is False, "must not steal the cursor"
+    assert any("run_" in str(cell) for row in result.rows for cell in row)
+
+
+def test_launch_message_names_the_next_step(backend, monkeypatch):
+    """The breadcrumb is where a user learns `collect` — it is the moment
+    they need it, and `/help` only shows the one-line description.
+
+    Reported 2026-08-09: "no idea and could not find in help how to collect
+    run". The old text pointed only at `ls`.
+    """
+    monkeypatch.setattr("ppxai.engine.task_backend.build_task_runner",
+                        _stub_runner())
+    import asyncio
+
+    async def _go():
+        return task_cmd.handle_task(_Ctx(), '"x" --tools read_file')
+
+    result = asyncio.run(_go())
+    for hint in ("get", "collect", "F6"):
+        assert hint in result.message, f"launch text never mentions {hint}"
 
 
 def test_read_verbs_work_without_a_loop(backend):

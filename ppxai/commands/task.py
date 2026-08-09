@@ -92,12 +92,45 @@ def _fmt_status(meta) -> str:
     return f"{icons.get(status, '•')} {status}"
 
 
+# A run registry is append-only and nothing prunes it — a dev host reaches
+# hundreds of runs quickly (348 oneshots in the 2026-08-09 trial). Rendering
+# all of them into a side panel is unusable, so the view is capped and says
+# so; `ls all` is the escape hatch.
+_LIST_CAP = 20
+
+
 def _rows(runs) -> list:
     return [
         [r.run_id, _fmt_status(r), (r.task or "")[:60],
          ",".join(r.tools or []) or "—"]
         for r in runs
     ]
+
+
+def _run_table(family: str, kind: str, runs: list, message: str) -> TableResult:
+    """The panel view, shared by `ls` and by launch.
+
+    Launch returns this rather than a bare notification so a spawned run is
+    VISIBLE without knowing any command — the web client opens a pane per run
+    at launch and the TUI did not, which is why a spawned run appeared to go
+    nowhere.
+    """
+    shown = runs[:_LIST_CAP]
+    if len(runs) > _LIST_CAP:
+        message = f"{message}  ·  showing {len(shown)} of {len(runs)} — `{family} ls all` for every run"
+    return TableResult(
+        status=ResultStatus.SUCCESS,
+        message=message,
+        columns=["Run", "Status", "Task", "Grant"],
+        rows=_rows(shown),
+        metadata={
+            # Do not take focus: these runs are asynchronous by design and the
+            # command's promise is that chat stays usable.
+            "focus_panel": False,
+            # Enter on a row opens that run.
+            "row_command": f"{family} get {{0}}",
+        },
+    )
 
 
 def _lifecycle(family: str, kind: str, verb: str, run_id: str,
@@ -115,23 +148,10 @@ def _lifecycle(family: str, kind: str, verb: str, run_id: str,
                 status=ResultStatus.SUCCESS,
                 message=f"No {kind} runs yet.",
             )
-        return TableResult(
-            status=ResultStatus.SUCCESS,
-            message=f"{len(runs)} {kind} run(s)",
-            columns=["Run", "Status", "Task", "Grant"],
-            rows=_rows(runs),
-            metadata={
-                # Do not take focus. These runs are asynchronous by design and
-                # the command's whole promise is that chat stays usable; a run
-                # list that grabs the cursor contradicts what it reports on.
-                "focus_panel": False,
-                # Selecting a row opens that run. Without this the table is
-                # inert — the cursor moves and Enter does nothing, which reads
-                # as a broken widget rather than a list. `{0}` is the Run
-                # column, so activation becomes `<family> get run_abc…`.
-                "row_command": f"{family} get {{0}}",
-            },
-        )
+        if "all" in args.split():
+            return _run_table(family, kind, runs,
+                              f"{len(runs)} {kind} run(s) — all")
+        return _run_table(family, kind, runs, f"{len(runs)} {kind} run(s)")
 
     if not run_id:
         return ErrorResult(
@@ -220,7 +240,9 @@ def _help(family: str) -> NotificationResult:
             "by server config (execution.run.web_search)\n"
             f"  /run {shared}\n"
             "  A first token counts as a verb only when followed by a run id "
-            "(or nothing) — anything else launches."
+            "(or nothing) — anything else launches.\n"
+            "  Runs open in the side panel; F6 switches pane, Enter on a row "
+            "opens that run. `/keys` lists every binding."
         )
     else:
         body = (
@@ -229,7 +251,9 @@ def _help(family: str) -> NotificationResult:
             "tokens=] [--provider p] [--model m] [--work-dir path]\n"
             f"  /task {shared} · respond <id> approve|deny · resume <id>\n"
             "  A first token counts as a verb only when followed by a run id "
-            "(or nothing) — anything else launches."
+            "(or nothing) — anything else launches.\n"
+            "  Runs open in the side panel; F6 switches pane, Enter on a row "
+            "opens that run. `/keys` lists every binding."
         )
     return NotificationResult(status=ResultStatus.SUCCESS, message=body)
 
@@ -305,10 +329,15 @@ def _dispatch(family: str, kind: str, context: Any, args: str) -> CommandResult:
         model=_ctx_model(context),
         **spec_kwargs,
     )
-    return NotificationResult(
-        status=ResultStatus.SUCCESS,
-        message=(f"🤖 {meta.run_id} — running in the background; "
-                 f"chat stays usable. `{family} ls` to check on it."),
+    # Open the panel on launch, like the web client does, and name the next
+    # step. The previous breadcrumb pointed only at `ls`, so a user who wanted
+    # the result had no way to learn `collect` at the moment they needed it —
+    # reported 2026-08-09: "no idea and could not find in help how to collect".
+    return _run_table(
+        family, kind, backend.list_runs(kind=kind),
+        (f"🤖 {meta.run_id} running — chat stays usable  ·  "
+         f"`{family} get {meta.run_id}` to view  ·  "
+         f"`{family} collect {meta.run_id}` when done  ·  F6 switches pane"),
     )
 
 
@@ -352,7 +381,9 @@ def handle_run(context: Any, args: str) -> CommandResult:
 
 CommandFactory.register(CommandSpec(
     name="task",
-    description="Launch/manage sandboxed tool-capable background runs",
+    description=("Sandboxed tool-capable background runs — "
+                 "ls · get · watch · collect · cancel · respond · resume "
+                 "(`/task help` for the full grammar)"),
     handler=handle_task,
     category="agent",
     usage='/task "<desc>" --tools a,b | /task ls·get·watch·cancel·collect·'
@@ -361,7 +392,9 @@ CommandFactory.register(CommandSpec(
 
 CommandFactory.register(CommandSpec(
     name="run",
-    description="Launch/manage one-off background runs (no flags)",
+    description=("One-off background runs, no flags — "
+                 "ls · get · watch · collect · cancel "
+                 "(`/run help` for the full grammar)"),
     handler=handle_run,
     category="agent",
     usage="/run <prompt> | /run ls·get·watch·cancel·collect·help",

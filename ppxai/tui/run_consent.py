@@ -33,6 +33,9 @@ logger = get_logger("tui")
 
 POLL_INTERVAL_S = 2.0
 
+# Statuses that mean the run is done and its result (if any) is final.
+_TERMINAL = {"completed", "finalized", "failed", "cancelled"}
+
 
 class RunConsentWatcher:
     """Polls for parked runs and prompts once per park."""
@@ -43,6 +46,7 @@ class RunConsentWatcher:
         self._backend = backend
         self._interval = interval
         self._prompted: set[str] = set()
+        self._merged: set[str] = set()
         self._timer = None
 
     @property
@@ -65,9 +69,17 @@ class RunConsentWatcher:
             self._timer = None
 
     def poll_once(self) -> None:
-        """Prompt for any newly-parked run. Never raises."""
+        """Prompt for newly-parked runs; auto-merge terminal ones. Never raises."""
         try:
             for meta in self.backend.list_runs():
+                # U4 "auto": nothing holds the result, so the watcher is the
+                # only thing that can put it in the conversation. Mirrors the
+                # web client's _autoMergeIfConfigured, which fires on the
+                # watcher's terminal render. Once per run.
+                if getattr(meta, "status", None) in _TERMINAL                         and meta.run_id not in self._merged:
+                    self._merged.add(meta.run_id)
+                    self.backend.auto_merge_if_configured(meta.run_id)
+
                 token = self._pending_token(meta)
                 if token is None or token in self._prompted:
                     continue
