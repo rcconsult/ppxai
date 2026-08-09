@@ -176,6 +176,36 @@ checkout away. That recoverability is a property worth knowing — but it is
 not a licence to overwrite, since it only works while the commit is reachable
 and the environment still resolves.
 
+### What 9/9 does NOT cover — the spawn path
+
+**Do not quote "9/9 byte-identical" as covering child runs.** The diff
+evidences the *recorded* surfaces, and the seven steps are `/status`, the
+token mint, `GET /v1/agent/runs`, both `/v1/oneshot` variants, and the
+`agent/run` + `agent/task` lifecycles. **None of them constructs a child
+run** — verified by grep: `spawn_subagent`, `allow_spawn`, `respond` and
+`consent` appear in `scripts/gateway-smoke.py` only inside a comment about
+normalization keys (`:158`).
+
+That gap sits exactly where the extraction changed meaning.
+`runner_builder=build_task_runner` in `engine/task_runner.py` is the line
+whose *name resolution* moved, and no captured endpoint reaches it. So the
+evidence is asymmetric and worth stating plainly:
+
+| Surface | Evidence |
+|---|---|
+| `/v1/oneshot`, `/v1/agent/*` lifecycles | **wire-level**, standing artifacts on both sides |
+| child-run construction / consent park | **unit-level** (`tests/test_runner_builder_patch_point.py`) |
+
+The unit tests are not weak — they include an anti-vacuous guard and a
+positive assertion that the `agent_v1` alias is inert — but they are a
+different class of evidence from a byte diff.
+
+**If a spawn step is ever added to the smoke, it is the highest-value
+addition remaining**, because child-run construction is where ppxai-sre
+plans to sit. It needs more machinery than the other steps: `allow_spawn`,
+a grant containing `spawn_subagent`, consent config, and a `respond`
+round-trip to clear the park.
+
 **`MANIFEST.txt` is written automatically by `--record`**, not by hand — it
 carries the capture time, the commit and clean/dirty state, the branch, which
 server answered (spawned binary + build time, or a `--base-url` target), the
