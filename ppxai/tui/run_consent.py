@@ -73,17 +73,12 @@ class RunConsentWatcher:
                     continue
                 self._prompted.add(token)
                 self._prompt(meta, token)
-        except Exception as e:  # noqa: BLE001
-            # A watcher that dies takes every future prompt with it, silently.
-            #
-            # Logged at debug, with the error in the message: this poll runs
-            # every couple of seconds, so a transient registry error must not
-            # produce a stream of error-level noise. Note that only
-            # `logger.error()` accepts `exc_info` in this project's Logger
-            # (common/logger.py:242); debug/info/warning take `msg` alone, so
-            # `exc_info=True` here would raise INSIDE the except block and
-            # convert a handled failure into an escaping one.
-            logger.debug(f"run consent poll failed: {e}")
+        except Exception:  # noqa: BLE001
+            # A watcher that dies takes every future prompt with it, silently,
+            # so the traceback matters — but at DEBUG level: this poll runs
+            # every couple of seconds and a transient registry error must not
+            # become a stream of error-level noise.
+            logger.debug("run consent poll failed", exc_info=True)
 
     @staticmethod
     def _pending_token(meta: Any) -> Optional[str]:
@@ -112,7 +107,7 @@ class RunConsentWatcher:
                 return
             try:
                 self.backend.respond(meta.run_id, token=token, approved=approved)
-            except Exception as e:  # noqa: BLE001
-                logger.debug(f"consent respond failed: {e}")
+            except Exception:  # noqa: BLE001
+                logger.debug("consent respond failed", exc_info=True)
 
         self._app.push_screen(screen, _answered)

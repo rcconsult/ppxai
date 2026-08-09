@@ -577,9 +577,9 @@ ppxai-sre the embeddable runner as the plan predicted.
 | In-process backend | ✅ `d2886958` — `engine/task_backend.py`, full lifecycle with no server |
 | U2 grammar, shared with the web client | ✅ `1615b9d1` — `engine/task_grammar.py` + parity sentinels |
 | `/task` + `/run` command handlers | ✅ `f3b42a63` — registered in `CommandFactory` |
-| Run view per TUI idiom | ⬜ **next** — `SidePanel.show_widget()` is the mount point |
-| Consent affordance (T5 park) | ⬜ — `/task respond <id> approve\|deny` works today; no prompt yet |
-| T8a-style parity sentinels vs the web verb set | ⬜ |
+| Run view per TUI idiom | ✅ `6ddc1dc0` — `TableResult` already routed to the side panel; what it needed was a focus opt-out so a run list does not steal the cursor |
+| Consent affordance (T5 park) | ✅ `2e32b02a` — `RunConsentScreen` + a single watcher, one prompt per park token, Escape defers rather than denies |
+| T8a-style parity sentinels vs the web verb set | ✅ `defc13cc` — every grammar verb is handled; chain is web JS ↔ engine grammar ↔ TUI handler |
 
 **Availability is gated per VERB on a capability, not per client.** Launch and
 resume need a live event loop; `ls`/`get`/`cancel`/`collect`/`respond` are
