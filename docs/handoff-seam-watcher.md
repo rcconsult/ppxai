@@ -143,12 +143,38 @@ for `*.normalized.json` under version control correctly found nothing and
 reasonably concluded it had never been captured. It had. An artifact nobody
 can locate is functionally missing, so its location is recorded here:
 
+**Captures are named by commit, never by role.** A fixed path like
+`…\ppxai-seam-baseline` cannot hold both sides of a before/after comparison:
+the second capture destroys the first, and a diff whose inputs no longer exist
+is a *reported result*, not evidence. That path was silently overwritten four
+times in one session — each overwrite an improvement, each destroying its
+predecessor — before the pattern was named.
+
 ```
-C:\tmp\ppxai-seam-baseline\        # MANIFEST.txt  ← read this FIRST
+C:\tmp\ppxai-seam-<shortsha>\      # MANIFEST.txt  ← read this FIRST
                                    # 9 *.normalized.json   (the diff target)
                                    #   *.raw.json          (forensics)
                                    #   *.contentkeys.json  (provider signal)
 ```
+
+`--record` now **refuses** to write into a directory that already holds a
+`MANIFEST.txt`, printing the commit-named path it should have used.
+`--force-record` overrides, for when discarding really is the intent.
+
+Standing captures for the `build_task_runner` extraction — both sides kept,
+so the byte-identical claim can be re-checked by anyone:
+
+| Path | Commit | Meaning |
+|---|---|---|
+| `C:\tmp\ppxai-seam-bb55f5ed\` | `bb55f5ed` (clean) | **pre**-extraction |
+| `C:\tmp\ppxai-seam-eeb82076\` | `eeb82076` (clean) | **post**-extraction |
+
+`9 identical, 0 differing`. The pre side was reconstructed after the fact by
+`git checkout bb55f5ed` → capture → return, which running from source makes
+cheap: the tree *is* the code, so any past commit's wire behaviour is one
+checkout away. That recoverability is a property worth knowing — but it is
+not a licence to overwrite, since it only works while the commit is reachable
+and the environment still resolves.
 
 **`MANIFEST.txt` is written automatically by `--record`**, not by hand — it
 carries the capture time, the commit and clean/dirty state, the branch, which

@@ -480,12 +480,34 @@ def main() -> int:
                     help="perimeter checks only — no LLM calls, no cost")
     ap.add_argument("--token", default=os.environ.get("PPXAI_API_TOKEN", ""),
                     help="bearer token for auth-enforcing hosts (env: PPXAI_API_TOKEN)")
+    ap.add_argument("--force-record", action="store_true",
+                    help="allow --record to overwrite an existing capture. "
+                         "Only when you mean to discard it.")
     ap.add_argument("--record", type=Path, default=None, metavar="DIR",
                     help="write every HTTP exchange to DIR (one file per call). "
                          "Take a baseline BEFORE a seam-touching change, then "
                          "diff DIR/*.normalized.json after — pass/fail cannot "
                          "evidence a byte-identical guarantee.")
     args = ap.parse_args()
+
+    # A capture directory holds ONE side of a comparison. Overwriting it
+    # destroys the other side, and a before/after diff whose inputs no longer
+    # exist is a reported result rather than evidence. This guard exists
+    # because that path was silently overwritten four times in one session —
+    # each overwrite an improvement, each destroying its predecessor.
+    if (args.record and not args.force_record
+            and (args.record / "MANIFEST.txt").exists()):
+        sha = _git("rev-parse", "--short", "HEAD") or "<sha>"
+        suggested = args.record.parent / f"ppxai-seam-{sha}"
+        print("\n".join([
+            f"refusing to overwrite the existing capture at {args.record}",
+            "  It holds one side of a before/after comparison; overwriting it",
+            "  destroys evidence that cannot be reconstructed later.",
+            "  Name captures by commit so both sides coexist:",
+            f"      --record {suggested}",
+            "  Or pass --force-record if you really mean to discard it.",
+        ]), file=sys.stderr)
+        return 2
 
     results = []  # (step, verdict, detail)
     proc = None
