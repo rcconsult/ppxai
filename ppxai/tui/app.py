@@ -1074,6 +1074,14 @@ class PPXAIDEApp(App):
                     if bus_event:
                         self._event_bus.emit(bus_event, data=result)
 
+                # T8b: once this session has touched a run surface, watch for
+                # parked runs so a spawn-consent request raises a dialog
+                # instead of waiting to be noticed in `/task ls`. Started
+                # lazily — a user who never runs /task should not have the
+                # TUI polling a run registry, or even building one.
+                if cmd in ("task", "run"):
+                    self.ensure_run_consent_watcher()
+
                 # AppState observers handle provider/model/tools badge sync
                 # automatically after session load and tools commands.
 
@@ -1814,6 +1822,20 @@ class PPXAIDEApp(App):
         """
         side_panel = self.query_one("#side-panel", SidePanel)
         await side_panel.show_file(path, content, mode, line, col, read_only)
+
+    def ensure_run_consent_watcher(self) -> None:
+        """Start the parked-run consent watcher once per session (T8b).
+
+        Idempotent: called after every `/task` or `/run` dispatch, so it must
+        not stack timers.
+        """
+        watcher = getattr(self, "_run_consent_watcher", None)
+        if watcher is None:
+            from .run_consent import RunConsentWatcher
+
+            watcher = RunConsentWatcher(self)
+            self._run_consent_watcher = watcher
+        watcher.start()
 
     async def show_widget_in_panel(self, widget, title: str = "",
                                    focus: bool = True) -> None:

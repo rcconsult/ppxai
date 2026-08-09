@@ -128,6 +128,17 @@ ALL_KEYS: list[KeyDef] = [
     KeyDef("escape", "cancel", "Cancel", "ConfirmCloseScreen", show=True,
            context="unsaved changes dialog"),
 
+    # ── RunConsentScreen (T8b) ──────────────────────────────────────────────
+    # A parked run is asking to spawn a sub-agent. Escape DENIES rather than
+    # cancelling: consent is fail-closed, and a dialog you dismissed must not
+    # leave the run waiting on a decision you think you declined.
+    KeyDef("a", "approve", "Approve", "RunConsentScreen", show=True,
+           context="agent run consent"),
+    KeyDef("d", "deny", "Deny", "RunConsentScreen", show=True,
+           context="agent run consent"),
+    KeyDef("escape", "dismiss", "Later (TTL denies)", "RunConsentScreen",
+           show=True, context="agent run consent"),
+
     # ── ViewerScreen ────────────────────────────────────────────────────────
     KeyDef("escape", "close", "Close", "ViewerScreen", show=True,
            context="full-screen viewer"),
