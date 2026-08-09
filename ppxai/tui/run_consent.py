@@ -75,8 +75,14 @@ class RunConsentWatcher:
                 self._prompt(meta, token)
         except Exception as e:  # noqa: BLE001
             # A watcher that dies takes every future prompt with it, silently.
-            # NB: this project's get_logger() is not stdlib-compatible —
-            # its debug() takes no exc_info, so the error goes in the text.
+            #
+            # Logged at debug, with the error in the message: this poll runs
+            # every couple of seconds, so a transient registry error must not
+            # produce a stream of error-level noise. Note that only
+            # `logger.error()` accepts `exc_info` in this project's Logger
+            # (common/logger.py:242); debug/info/warning take `msg` alone, so
+            # `exc_info=True` here would raise INSIDE the except block and
+            # convert a handled failure into an escaping one.
             logger.debug(f"run consent poll failed: {e}")
 
     @staticmethod
