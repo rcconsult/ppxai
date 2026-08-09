@@ -136,3 +136,12 @@ discoverable later.
   stale key silently reverts to its default; only a check that reads the
   config FILE can detect it (`/doctor`'s ADR 0010 section) — ship that scan
   with the move, not as cleanup
+
+- [parity-harness-must-know-every-client.md](parity-harness-must-know-every-client.md)
+  — a multi-client parity harness that knows N-1 clients is a blind spot. Adding
+  a client is a change to the harness FIRST. Cost: three shipped-missing
+  capabilities that no test caught (2026-08-09).
+- [module-level-home-paths-leak-into-user-state.md](module-level-home-paths-leak-into-user-state.md)
+  — `Path.home()` constants resolve at IMPORT time, so isolating a directory
+  through a constructor does not stop a test writing the user's real state.
+  Cost: the suite silently clobbered the developer's session pointer.
