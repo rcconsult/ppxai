@@ -61,6 +61,7 @@ a = Analysis(
         'ppxai.commands.display',
         'ppxai.commands.attach',     # added v1.18.0 fix
         'ppxai.commands.doctor',     # added v1.18.0 fix
+    'ppxai.commands.task',    # T8b: /task + /run
         # Engine
         'ppxai.engine',
         'ppxai.engine.client',

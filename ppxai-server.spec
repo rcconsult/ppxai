@@ -229,6 +229,7 @@ a = Analysis(
         'ppxai.commands.display',
         'ppxai.commands.attach',
         'ppxai.commands.doctor',
+        'ppxai.commands.task',    # T8b: /task + /run
         # Tool modules (v1.17.4 — data file tools)
         'ppxai.engine.tools.builtin',
         'ppxai.engine.tools.builtin.pdf_tools',

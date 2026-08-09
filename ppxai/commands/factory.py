@@ -34,6 +34,10 @@ _BUILTIN_COMMAND_MODULES = (
     "display",
     "attach",
     "doctor",
+    # T8b: /task and /run. Registered here rather than per-client because the
+    # capability that decides availability is a live event loop, not which
+    # client is running — see commands/task.py.
+    "task",
 )
 
 

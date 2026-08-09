@@ -63,6 +63,7 @@ a = Analysis(
         'ppxai.commands.display',
         'ppxai.commands.attach',
         'ppxai.commands.doctor',
+    'ppxai.commands.task',    # T8b: /task + /run
         'tree_sitter',
         'tree_sitter_python',
         'tree_sitter_javascript',

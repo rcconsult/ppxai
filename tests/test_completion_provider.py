@@ -461,15 +461,24 @@ class TestClientGating:
     """Client-side commands are surfaced only to clients that implement
     them (Item 40 follow-up, 2026-07-12).
 
-    U3 (ADR 0011): /agentrun + /agentruns are RETIRED (hard removal);
-    /task + /run + /token are web+VSCode; the in-process TUIs
-    (rich/textual) implement none of them. Before gating, autocomplete
-    taught TUI/VSCode users to type commands that answered
-    "Unknown command".
+    U3 (ADR 0011): /agentrun + /agentruns are RETIRED (hard removal).
+
+    **Updated for T8b (v1.19.1).** /task and /run were gated to web+VSCode
+    while the TUIs had no channel to the run registry. The embed decision
+    removed that: both are now real `CommandFactory` commands and are
+    UNIVERSAL. Availability is decided per verb by a capability (a live event
+    loop, needed only by launch/resume) rather than per client by a name — so
+    a TUI user who completes `/task` gets working `ls`/`get`/`cancel`, and a
+    precise message for the verbs their client cannot drive yet.
+
+    /token remains genuinely client-side (web command-dispatcher.js +
+    VSCode chatPanel.ts), so it stays gated — which is what keeps these
+    tests meaningful rather than vacuous.
     """
 
     _RETIRED = {"/agentrun", "/agentruns"}
-    _GATED_WEB_VSCODE = {"/task", "/run", "/token"}
+    _GATED_WEB_VSCODE = {"/token"}
+    _NOW_UNIVERSAL = {"/task", "/run"}
 
     def _names(self, prefix, client):
         return {i["text"] for i in complete(prefix, client=client)}
@@ -490,6 +499,25 @@ class TestClientGating:
             assert not (self._GATED_WEB_VSCODE & names), client
             # Universal builtins + factory commands stay visible.
             assert "/quit" in names
+
+    def test_tuis_now_see_task_and_run(self):
+        """T8b inverted the old assertion — deliberately, not by accident.
+
+        These were gated away from the TUIs precisely because they could not
+        work there. They can now (partially, per verb), so hiding them would
+        teach the opposite wrong lesson from the one the gating fixed.
+        """
+        for client in ("rich", "textual"):
+            assert self._NOW_UNIVERSAL <= self._names("/", client), client
+
+    def test_task_and_run_are_listed_once(self):
+        """They are factory commands now; a leftover client-side entry would
+        double-list them in every client's completions."""
+        for client in ("web", "vscode", "rich", "textual", None):
+            items = [i for i in complete("/", client=client)
+                     if i["text"] in self._NOW_UNIVERSAL]
+            texts = [i["text"] for i in items]
+            assert len(texts) == len(set(texts)), (client, texts)
 
     def test_none_client_fails_open(self):
         # Legacy callers (no client declared) keep the full catalog —
@@ -513,10 +541,11 @@ class TestClientGating:
         assert [i["text"] for i in complete("/token ", client="web")] == \
             ["status", "set", "mint", "clear"]
         assert complete("/token ", client="rich") == []
-        # …same for /task verbs.
-        assert complete("/task ", client="textual") == []
-        assert any(i["text"] == "get"
-                   for i in complete("/task ", client="vscode"))
+        # …but /task verbs are NOT gated any more (T8b): the TUIs run these.
+        # `get` must be offered everywhere, since it works everywhere.
+        for client in ("textual", "rich", "vscode", "web"):
+            assert any(i["text"] == "get"
+                       for i in complete("/task ", client=client)), client
 
     def test_route_passes_client_through(self, tmp_path, monkeypatch):
         route = TestTaskCompletionRoute()
@@ -526,8 +555,11 @@ class TestClientGating:
                         json={"buffer": "/to", "client": "vscode"})
         assert r.status_code == 200
         assert "/token" in [i["text"] for i in r.json()["items"]]
-        # A TUI-declared caller gets no run-id items even with a held run.
+        # T8b: a TUI-declared caller DOES get run-id items now — collecting a
+        # held result is a synchronous registry op that works in every client,
+        # so completing the id it needs must work there too. Previously this
+        # asserted [] because /task did not exist in the TUIs at all.
         r = client.post("/complete",
                         json={"buffer": "/task collect ", "client": "rich"})
         assert r.status_code == 200
-        assert r.json()["items"] == []
+        assert "run_held1" in [i["text"] for i in r.json()["items"]]

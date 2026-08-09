@@ -77,15 +77,18 @@ _BUILTIN_SPECIAL_COMMANDS: List[Dict[str, Any]] = [
     # unfiltered list taught users to type commands that answered
     # "Unknown command" everywhere else (Item 40 VSCode trial, 2026-07-12).
     # Entries without a `clients` key are universal.
-    # U3 (ADR 0011): /run replaced the retired /agentrun + /agentruns.
-    {"text": "/run", "display": "/run",
-     "description": "One-off background run — direct launch, no flags (ls·get·watch·collect·cancel)",
-     "kind": "command", "clients": {"web", "vscode"}},
-    # v1.19.x /task — the tool-capable sandboxed tier (web T1+, VSCode T8a;
-    # the in-process TUIs have no channel to the registry — T8b parked).
-    {"text": "/task", "display": "/task",
-     "description": "Tool-capable background agent runs — direct launch (ls·get·watch·respond·collect·resume·cancel)",
-     "kind": "command", "clients": {"web", "vscode"}},
+    # /run and /task USED to be listed here, gated to {"web", "vscode"},
+    # because the in-process TUIs had no channel to the run registry. T8b
+    # (v1.19.1) embedded the runner, so both are now real `CommandFactory`
+    # commands — universal, and surfaced from the factory like every other
+    # command. Listing them here as well would double-list them AND re-apply
+    # a gate that no longer describes reality.
+    #
+    # Availability is now decided per VERB by a capability rather than per
+    # client by a name: launching and resuming need a live event loop, which
+    # Textual has and Rich does not yet, while ls/get/cancel/collect are
+    # synchronous registry reads that work anywhere. See commands/task.py.
+    #
     # Item 40: /v1 bearer management (web command-dispatcher.js + VSCode
     # chatPanel.ts; VSCode additionally has the ppxai.setApiToken
     # command-palette entry for masked paste).

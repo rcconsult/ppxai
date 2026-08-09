@@ -48,6 +48,30 @@ def collect_holds() -> bool:
         return True
 
 
+_shared: Optional["InProcessTaskBackend"] = None
+
+
+def get_task_backend() -> "InProcessTaskBackend":
+    """Process-wide backend singleton.
+
+    **Must be shared, not constructed per call.** `default_run_registry()`
+    builds a NEW registry each time, and a registry carries in-memory state
+    the filesystem store does not: the cooperative `RunControl` per run, the
+    background `asyncio.Task` handles, and event subscribers. Two registries
+    over the same directory would agree about persisted meta and disagree
+    about everything live — `cancel` would find no control for a run another
+    instance launched, and a watcher would never receive its events.
+
+    Intended for in-process clients (the TUIs). The server does NOT use this:
+    it owns its own registry singleton in `server/state.py`, which layers on
+    the orphan sweep and the AppState mirror hook.
+    """
+    global _shared
+    if _shared is None:
+        _shared = InProcessTaskBackend()
+    return _shared
+
+
 class InProcessTaskBackend:
     """Verb-for-verb peer of the web client's `/v1/agent/*` slice.
 
