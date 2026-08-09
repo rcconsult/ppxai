@@ -232,7 +232,17 @@ async def render_table(renderer: TextualRenderer, result: TableResult) -> None:
         table.add_columns(*result.columns)
         for row in result.rows:
             table.add_row(*[str(cell) for cell in row])
-        await renderer.app.show_widget_in_panel(table, title=result.message)
+        # `focus_panel` lets the COMMAND declare whether its output should
+        # take focus; the renderer should not guess. Default True keeps every
+        # existing caller unchanged. `/task ls` and `/run ls` opt out: a
+        # background-run list is glanced at, not driven, and stealing focus
+        # would contradict the non-blocking promise those commands make.
+        focus_panel = True
+        if result.metadata:
+            focus_panel = bool(result.metadata.get("focus_panel", True))
+        await renderer.app.show_widget_in_panel(
+            table, title=result.message, focus=focus_panel
+        )
 
     chat_view.add_system_message(f"[dim]{result.message} (opened in side panel, V for source)[/dim]")
 

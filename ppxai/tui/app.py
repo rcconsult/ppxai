@@ -1815,15 +1815,18 @@ class PPXAIDEApp(App):
         side_panel = self.query_one("#side-panel", SidePanel)
         await side_panel.show_file(path, content, mode, line, col, read_only)
 
-    async def show_widget_in_panel(self, widget, title: str = "") -> None:
+    async def show_widget_in_panel(self, widget, title: str = "",
+                                   focus: bool = True) -> None:
         """Show an arbitrary widget in the side panel.
 
         Args:
             widget: The widget to display (DataTable, Tree, etc.)
             title: Title to show in panel header
+            focus: Move focus to the panel. False keeps it where it is, for
+                output the user glances at while continuing to type.
         """
         side_panel = self.query_one("#side-panel", SidePanel)
-        await side_panel.show_widget(widget, title)
+        await side_panel.show_widget(widget, title, focus=focus)
 
     def close_side_panel(self) -> None:
         """Close the side panel."""

@@ -120,6 +120,10 @@ def _lifecycle(family: str, kind: str, verb: str, run_id: str,
             message=f"{len(runs)} {kind} run(s)",
             columns=["Run", "Status", "Task", "Grant"],
             rows=_rows(runs),
+            # Do not take focus. These runs are asynchronous by design and the
+            # command's whole promise is that chat stays usable; a run list
+            # that grabs the cursor contradicts the thing it is reporting on.
+            metadata={"focus_panel": False},
         )
 
     if not run_id:

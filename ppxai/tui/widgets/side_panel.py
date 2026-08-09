@@ -209,12 +209,23 @@ class SidePanel(Widget):
         self.is_open = True
         self.post_message(self.Opened())
 
-    async def show_widget(self, widget: Widget, title: str = "") -> None:
+    async def show_widget(self, widget: Widget, title: str = "",
+                          focus: bool = True) -> None:
         """Show an arbitrary widget in the panel.
 
         Args:
             widget: The widget to display (DataTable, Tree, etc.)
             title: Title to show in header
+            focus: Move focus to the widget. Default True preserves the
+                behaviour every existing caller relies on — `/sessions`,
+                `/tools list` and the file viewers open a panel the user
+                immediately wants to drive.
+
+                Pass False for output that ACCOMPANIES the conversation
+                rather than replacing it: a background-run list is something
+                you glance at while continuing to type, and stealing focus
+                there breaks the "chat stays usable" promise the async run
+                surface is built on (T8b).
         """
         self._path = None
         self._content = ""
@@ -235,8 +246,11 @@ class SidePanel(Widget):
         await content_container.remove_children()
         await content_container.mount(widget)
 
-        # Focus the widget (guard against widget being unmounted if panel is replaced rapidly)
-        self.call_after_refresh(lambda: widget.is_mounted and widget.focus())
+        # Focus the widget (guard against widget being unmounted if panel is
+        # replaced rapidly). Skipped entirely when the caller asked to keep
+        # focus where it is — see `focus` above.
+        if focus:
+            self.call_after_refresh(lambda: widget.is_mounted and widget.focus())
 
         # Show the panel
         self.add_class("visible")
