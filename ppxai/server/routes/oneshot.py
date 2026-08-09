@@ -49,9 +49,12 @@ Implementation notes:
       specifically: the google-genai SDK's `Schema` model accepts it, but the
       REST API answers 400 INVALID_ARGUMENT ("Unknown name
       `additional_properties` at 'generation_config.response_schema'"), and
-      that key is in almost every OpenAI-generated schema. Second, a schema
-      suppresses Google Search grounding for that call, since Gemini refuses
-      the combination.
+      that key is in almost every OpenAI-generated schema. Second — and
+      contrary to a briefly-shipped revision of this note — structured output
+      does NOT disable grounding: `google_search` coexists with both
+      `response_mime_type` and `response_schema` (verified live against
+      gemini-3.1-pro-preview, 2026-08-09). Only function declarations
+      conflict with grounding.
   Before v1.19.1 the Gemini path accepted `response_format` and dropped it —
   a caller pinning a schema got a 200 and unconstrained output with no error
   raised anywhere.

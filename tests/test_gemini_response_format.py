@@ -171,25 +171,18 @@ def test_build_config_carries_the_schema():
     assert config.response_schema is not None
 
 
-def test_schema_suppresses_grounding():
-    """Gemini rejects grounding combined with response_schema.
-
-    A caller who pinned a schema asked for the schema, so it wins — the same
-    coexistence rule function declarations already follow.
-    """
-    provider = _make_provider()
-    config = provider._build_config(
-        use_grounding=True,
-        response_format={"type": "json_schema",
-                         "json_schema": {"schema": CLASSIFIER_SCHEMA}},
-    )
-    assert not getattr(config, "tools", None), (
-        "grounding must not be attached alongside a response_schema"
-    )
+# `test_schema_suppresses_grounding` lived here and asserted the OPPOSITE of
+# what the API does. It was written from an untested generalization of the
+# function-declaration conflict, and it passed because it tested the same
+# wrong assumption the code encoded — the failure mode a unit test cannot
+# catch on its own. Superseded by
+# `test_structured_output_does_not_disable_grounding` below, which is backed
+# by a live call. Removed rather than left skipped: a test asserting the
+# wrong contract is worse than no test.
 
 
 def test_grounding_still_applied_without_a_schema():
-    """Guard the negative case, so the suppression can't silently over-reach."""
+    """Guard the plain case, so grounding can't regress for ordinary calls."""
     provider = _make_provider()
     config = provider._build_config(use_grounding=True)
     assert getattr(config, "tools", None), "grounding regressed for plain calls"
@@ -199,3 +192,41 @@ def test_no_response_format_leaves_config_untouched():
     provider = _make_provider()
     config = provider._build_config(use_grounding=False, response_format=None)
     assert config is None or getattr(config, "response_mime_type", None) is None
+
+
+def test_structured_output_does_not_disable_grounding():
+    """Grounding and structured output COEXIST — regression guard.
+
+    A pre-release revision suppressed grounding whenever `response_format`
+    was set, generalizing the function-declaration conflict without testing
+    it. The cost was silent: a caller combining `response_format` with
+    `execution.run.grounding` kept its JSON and quietly lost its search.
+
+    Verified live against gemini-3.1-pro-preview (2026-08-09): both
+    `google_search + response_mime_type` and
+    `google_search + response_mime_type + response_schema` are ACCEPTED.
+    """
+    provider = _make_provider()
+    for rf in ({"type": "json_object"},
+               {"type": "json_schema", "json_schema": {"schema": CLASSIFIER_SCHEMA}}):
+        config = provider._build_config(use_grounding=True, response_format=rf)
+        assert getattr(config, "tools", None), (
+            f"grounding was dropped for {rf['type']} — structured output does "
+            f"not conflict with google_search"
+        )
+        assert config.response_mime_type == "application/json"
+
+
+def test_function_declarations_still_win_over_grounding():
+    """The REAL conflict is unchanged: tools and grounding cannot coexist."""
+    provider = _make_provider()
+    config = provider._build_config(
+        use_grounding=True,
+        tools=[{"type": "function",
+                "function": {"name": "t", "description": "d",
+                             "parameters": {"type": "object", "properties": {}}}}],
+    )
+    tools = getattr(config, "tools", None) or []
+    assert not any(getattr(t, "google_search", None) for t in tools), (
+        "grounding must still be suppressed when function declarations exist"
+    )

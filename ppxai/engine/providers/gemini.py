@@ -575,9 +575,10 @@ class GeminiProvider(BaseProvider):
         `response_mime_type` / `response_schema` by
         `response_format_to_gemini`. It was previously accepted and dropped,
         which meant a caller pinning a JSON schema got a 200 and
-        unconstrained output with no error raised anywhere. Note that a
-        schema suppresses Google Search grounding for that call; the two
-        cannot coexist.
+        unconstrained output with no error raised anywhere.
+
+        Structured output and Google Search grounding COEXIST — verified live
+        2026-08-09. Only function declarations conflict with grounding.
         """
         messages: List[Message] = []
         if system:
@@ -871,11 +872,21 @@ class GeminiProvider(BaseProvider):
             if function_declarations:
                 gemini_tools.append(genai_types.Tool(function_declarations=function_declarations))
 
-        # Add Google Search Grounding ONLY if no function declarations
-        # (they cannot coexist in the same request) and no structured-output
-        # schema — Gemini rejects grounding combined with response_schema, and
-        # a caller who pinned a schema asked for the schema, so it wins.
-        if use_grounding and not gemini_tools and not structured:
+        # Add Google Search Grounding ONLY if no function declarations —
+        # THOSE cannot coexist with grounding in the same request (400
+        # INVALID_ARGUMENT).
+        #
+        # Structured output is NOT such a conflict, contrary to an earlier
+        # revision of this code which also suppressed grounding whenever a
+        # response_format was set. Verified live against
+        # gemini-3.1-pro-preview, 2026-08-09 — both of these are ACCEPTED:
+        #   google_search + response_mime_type
+        #   google_search + response_mime_type + response_schema
+        # The restriction was generalized from the function-declaration case
+        # without being tested, and the cost was silent: a caller combining
+        # `response_format` with `execution.run.grounding` kept its JSON and
+        # quietly lost its search.
+        if use_grounding and not gemini_tools:
             gemini_tools.append(genai_types.Tool(google_search=genai_types.GoogleSearch()))
 
         if gemini_tools:

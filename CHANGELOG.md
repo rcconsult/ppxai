@@ -34,10 +34,11 @@ Now mapped onto Gemini's `response_mime_type` / `response_schema`:
   answers `400 INVALID_ARGUMENT — Unknown name "additional_properties" at
   'generation_config.response_schema'`. It appears in virtually every
   OpenAI-generated schema, so this is the common case.
-- **A schema suppresses Google Search grounding for that call.** Gemini
-  refuses the combination, the same way it refuses grounding alongside
-  function declarations. If you rely on grounded answers, do not pin a
-  schema on the same request.
+- **Structured output and Google Search grounding coexist.** Only
+  function declarations conflict with grounding; `response_mime_type` and
+  `response_schema` do not. (A pre-release revision briefly suppressed
+  grounding whenever `response_format` was set — that was wrong and never
+  shipped in a release.)
 
 Unrecognised `response_format` shapes still degrade to previous behaviour
 rather than raising. No wire change: request and response shapes are

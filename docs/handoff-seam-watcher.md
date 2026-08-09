@@ -330,9 +330,11 @@ onto `response_mime_type` / `response_schema`:
   in virtually every OpenAI-generated schema. **Passing SDK validation is not
   evidence the API will accept a payload**, and only a live call surfaces the
   gap: this one was found by a 502 after unit tests were green.
-- A schema **suppresses Google Search grounding** for that call; Gemini
-  refuses the combination, the same way it refuses grounding alongside
-  function declarations.
+- Structured output and Google Search grounding **coexist**. An earlier
+  revision of this note claimed a schema suppressed grounding; that was
+  generalized from the function-declaration conflict without being tested,
+  and is wrong. Verified live 2026-08-09: `google_search` +
+  `response_mime_type` + `response_schema` is accepted.
 
 Live-verified end to end, not just unit-tested: against
 `gemini-3.1-pro-preview` the smoke now reports `schema=enforced`, and the
