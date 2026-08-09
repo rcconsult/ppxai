@@ -52,6 +52,57 @@ def test_commands_are_registered(name):
     assert spec is not None and spec.name == name
 
 
+# ── verb parity (the T8a sentinel pattern, applied to the TUIs) ─────────────
+
+def test_every_grammar_verb_is_handled(backend):
+    """No verb in the shared grammar may fall through unhandled.
+
+    Closes the last link of the chain. `test_task_grammar_parity.py` pins the
+    web client's `TASK_VERBS` against `engine/task_grammar.py`; this pins
+    `task_grammar` against what the TUI command actually *does*. Without it a
+    verb could be added to the grammar, complete in the UI, and then answer
+    "Unsupported verb" — which is exactly the "taught users to type commands
+    that answered Unknown command" failure the client gating was introduced to
+    fix (Item 40).
+
+    Same shape as `tests/test_vscode_task_controller.py`'s verb-parity
+    sentinel, which pins VSCode against the web verb set.
+    """
+    from ppxai.engine.task_grammar import TASK_VERBS
+
+    meta = backend.registry.start_run(task="t", tools=[], provider="p", model="m")
+    unhandled = []
+    for verb in sorted(TASK_VERBS):
+        result = task_cmd.handle_task(_Ctx(), f"{verb} {meta.run_id}")
+        if "Unsupported verb" in (result.message or ""):
+            unhandled.append(verb)
+    assert not unhandled, f"/task does not handle: {unhandled}"
+
+
+def test_run_handles_every_verb_it_claims(backend):
+    """`/run` handles the shared set minus the two a oneshot cannot have."""
+    from ppxai.engine.task_grammar import RUN_ONLY_EXCLUDED_VERBS, TASK_VERBS
+
+    meta = backend.registry.start_run(task="t", kind="oneshot", tools=[],
+                                      provider="p", model="m")
+    for verb in sorted(TASK_VERBS - RUN_ONLY_EXCLUDED_VERBS):
+        result = task_cmd.handle_run(_Ctx(), f"{verb} {meta.run_id}")
+        assert "Unsupported verb" not in (result.message or ""), verb
+
+
+def test_excluded_verbs_are_refused_not_unhandled(backend):
+    """respond/resume on /run must explain, not fall through.
+
+    "Unsupported verb" would be true but useless; the user needs to know a
+    one-off run never parks, so there is nothing to respond to.
+    """
+    from ppxai.engine.task_grammar import RUN_ONLY_EXCLUDED_VERBS
+
+    for verb in sorted(RUN_ONLY_EXCLUDED_VERBS):
+        result = task_cmd.handle_run(_Ctx(), f"{verb} run_0123456789ab")
+        assert "never parks" in result.message, verb
+
+
 # ── the event-loop gate, both directions ────────────────────────────────────
 
 def test_launch_without_a_loop_is_refused_clearly(backend):

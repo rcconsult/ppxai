@@ -565,14 +565,34 @@ paths; TaskBackend methods exist on httpClient), **status-parity**
 consent-token discipline (park token rides every respond; one QuickPick per
 park). Plus `npm run compile` (tsc + esbuild) green.
 
-### T8b — TUI port — ⏸️ PARKED
+### T8b — TUI port — 🚧 IN PROGRESS (unparked 2026-08-08)
 
-Parked 2026-07-07 pending the transport decision above (option 1 recommended —
-it retires debt (t) and gives ppxai-sre the embeddable runner). Scope when
-resumed: Rich + Textual command handlers (`/task` family), a run view per TUI
-idiom, consent prompt via each TUI's consent affordance, the same parity
-sentinels. Until then the `/task` family ships in **web + VSCode**; the TUIs
-keep their in-process `/agent` loop.
+**Transport decided: EMBED** (option 1). `build_task_runner` was extracted to
+`ppxai/engine/task_runner.py` (`eeb82076`), retiring debt (t) and giving
+ppxai-sre the embeddable runner as the plan predicted.
+
+| Piece | State |
+|---|---|
+| Embeddable runner | ✅ `eeb82076` — seam verified 9/9 byte-identical |
+| In-process backend | ✅ `d2886958` — `engine/task_backend.py`, full lifecycle with no server |
+| U2 grammar, shared with the web client | ✅ `1615b9d1` — `engine/task_grammar.py` + parity sentinels |
+| `/task` + `/run` command handlers | ✅ `f3b42a63` — registered in `CommandFactory` |
+| Run view per TUI idiom | ⬜ **next** — `SidePanel.show_widget()` is the mount point |
+| Consent affordance (T5 park) | ⬜ — `/task respond <id> approve\|deny` works today; no prompt yet |
+| T8a-style parity sentinels vs the web verb set | ⬜ |
+
+**Availability is gated per VERB on a capability, not per client.** Launch and
+resume need a live event loop; `ls`/`get`/`cancel`/`collect`/`respond` are
+synchronous registry operations. So Textual has the full set today, and Rich
+has everything except launch/resume — with a message naming the reason rather
+than the command being absent. Rich's remaining half is its blocking prompt
+(`main.py:477`) plus five `asyncio.run()` call sites; that is a main-loop
+decision, not a `/task` decision, and it is still open.
+
+Two things found while unparking, both fixed: the engine-level egress-ceiling
+gap (`82ae0bcb` — the ceiling was route-only, so an embedded run escaped it),
+and the completion gating that hid `/task` from the TUIs, which was correct
+before the embed and wrong after.
 
 ---
 
