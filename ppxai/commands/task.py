@@ -120,10 +120,17 @@ def _lifecycle(family: str, kind: str, verb: str, run_id: str,
             message=f"{len(runs)} {kind} run(s)",
             columns=["Run", "Status", "Task", "Grant"],
             rows=_rows(runs),
-            # Do not take focus. These runs are asynchronous by design and the
-            # command's whole promise is that chat stays usable; a run list
-            # that grabs the cursor contradicts the thing it is reporting on.
-            metadata={"focus_panel": False},
+            metadata={
+                # Do not take focus. These runs are asynchronous by design and
+                # the command's whole promise is that chat stays usable; a run
+                # list that grabs the cursor contradicts what it reports on.
+                "focus_panel": False,
+                # Selecting a row opens that run. Without this the table is
+                # inert — the cursor moves and Enter does nothing, which reads
+                # as a broken widget rather than a list. `{0}` is the Run
+                # column, so activation becomes `<family> get run_abc…`.
+                "row_command": f"{family} get {{0}}",
+            },
         )
 
     if not run_id:

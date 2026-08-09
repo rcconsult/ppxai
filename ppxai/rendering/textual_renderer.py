@@ -232,6 +232,17 @@ async def render_table(renderer: TextualRenderer, result: TableResult) -> None:
         table.add_columns(*result.columns)
         for row in result.rows:
             table.add_row(*[str(cell) for cell in row])
+
+        # `row_command` lets a COMMAND declare what activating a row means,
+        # the same way `focus_panel` declares whether to take focus. Without
+        # it a table in the panel is inert: you can move the cursor and Enter
+        # does nothing, which reads as a broken widget rather than a list.
+        # The template is formatted with the row's cells, so `/task get {0}`
+        # becomes `/task get run_abc…` for the selected row.
+        row_command = (result.metadata or {}).get("row_command")
+        if row_command:
+            table.cursor_type = "row"
+            table.row_command = row_command  # read by the app's RowSelected handler
         # `focus_panel` lets the COMMAND declare whether its output should
         # take focus; the renderer should not guess. Default True keeps every
         # existing caller unchanged. `/task ls` and `/run ls` opt out: a

@@ -1823,6 +1823,30 @@ class PPXAIDEApp(App):
         side_panel = self.query_one("#side-panel", SidePanel)
         await side_panel.show_file(path, content, mode, line, col, read_only)
 
+    async def on_data_table_row_selected(self, event) -> None:
+        """Activate a panel table row by running the command it declares.
+
+        A table rendered into the side panel used to be inert — the cursor
+        moved and Enter did nothing, which reads as a broken widget rather
+        than a list. A command that wants its rows actionable sets
+        `TableResult.metadata["row_command"]` to a template; the row's cells
+        fill it (`/task get {0}` -> `/task get run_abc…`).
+
+        Silent when the table declares nothing, so every other table in the
+        app keeps its current behaviour.
+        """
+        template = getattr(event.data_table, "row_command", None)
+        if not template:
+            return
+        try:
+            cells = event.data_table.get_row(event.row_key)
+            command = template.format(*[str(c) for c in cells])
+        except (IndexError, KeyError, ValueError):
+            # A template that doesn't match the table's shape is a bug in the
+            # command, not something the user should see as a crash.
+            return
+        await self._handle_command(command)
+
     def ensure_run_consent_watcher(self) -> None:
         """Start the parked-run consent watcher once per session (T8b).
 

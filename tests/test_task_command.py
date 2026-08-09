@@ -227,3 +227,42 @@ def test_respond_on_a_run_that_is_not_waiting(backend):
     meta = backend.registry.start_run(task="t", tools=[], provider="p", model="m")
     result = task_cmd.handle_task(_Ctx(), f"respond {meta.run_id} approve")
     assert isinstance(result, ErrorResult) and "not waiting" in result.message
+
+
+# ── panel rows are actionable ───────────────────────────────────────────────
+
+def test_ls_declares_a_row_command(backend):
+    """Selecting a run in the panel must DO something.
+
+    Live trial (2026-08-09) found the run list inert: the cursor moved and
+    Enter did nothing, which reads as a broken widget rather than a list.
+    The command declares what activation means — same pattern as
+    `focus_panel` — and `{0}` is the Run column.
+    """
+    backend.registry.start_run(task="t", tools=[], provider="p", model="m")
+    result = task_cmd.handle_task(_Ctx(), "ls")
+    assert result.metadata["row_command"] == "/task get {0}"
+    assert result.columns[0] == "Run", (
+        "row_command formats {0} from the first column — it must be the run id"
+    )
+
+
+def test_run_ls_declares_its_own_family(backend):
+    backend.registry.start_run(task="t", kind="oneshot", tools=[],
+                               provider="p", model="m")
+    assert task_cmd.handle_run(_Ctx(), "ls").metadata["row_command"] == "/run get {0}"
+
+
+def test_row_command_formats_to_a_working_command(backend):
+    """The template must produce a command the handler actually accepts."""
+    meta = backend.registry.start_run(task="inspect me", tools=[],
+                                      provider="p", model="m")
+    listed = task_cmd.handle_task(_Ctx(), "ls")
+    run_id = listed.rows[0][0]
+    command = listed.metadata["row_command"].format(run_id)
+    assert command == f"/task get {meta.run_id}"
+
+    # Feed it back through the handler exactly as the app would.
+    verb_and_args = command[len("/task "):]
+    out = task_cmd.handle_task(_Ctx(), verb_and_args)
+    assert "inspect me" in out.message
