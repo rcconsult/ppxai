@@ -25,6 +25,45 @@ def pytest_configure(config):
 
 
 @pytest.fixture(autouse=True)
+def _isolate_session_state_pointer(tmp_path_factory, monkeypatch):
+    """No test may write the user's real `~/.ppxai/session-state.json`.
+
+    THE RECURRING TUI REGRESSION. `session.py` defines
+
+        SESSION_STATE_FILE = Path.home() / ".ppxai" / "session-state.json"
+
+    at MODULE level, so it is resolved at import time. A test that redirects
+    `sessions_dir`/`exports_dir` through the SessionManager constructor — or
+    that monkeypatches HOME after import — still writes the real pointer.
+    `test_v1_session_migration.py` does exactly that: it isolates the session
+    directory and never touches SESSION_STATE_FILE.
+
+    The consequence is invisible during the run and shows up later as "session
+    restore is broken" in the TUIs: the pointer now names a fixture session
+    (`v1_with_image`, working_dir `/home/user/projects/ops`), the TUI finds it
+    missing or wrong, falls back to newest-on-disk, hits a 0-message session
+    and restores nothing. Web/VSCode survive because the server resolves
+    sessions through its own manager.
+
+    Demonstrated 2026-08-09: `pytest tests/test_v1_session_migration.py`
+    alone moved the real file's mtime from 22:58:50 to 23:08:06.
+
+    Autouse and suite-wide ON PURPOSE. Fixing the one guilty test would leave
+    the next one free to reintroduce it, and this has recurred often enough to
+    be treated as a class of bug rather than an incident. Tests that need
+    their own pointer still patch it themselves — an inner patch wins and
+    unwinds back to this tmp path.
+    """
+    state = tmp_path_factory.mktemp("ppxai-state") / "session-state.json"
+    try:
+        monkeypatch.setattr("ppxai.engine.session.SESSION_STATE_FILE", state)
+    except (ImportError, AttributeError):
+        # Engine not importable in this env — nothing to protect.
+        pass
+    yield
+
+
+@pytest.fixture(autouse=True)
 def reset_config_after_test():
     """Reset PROVIDERS/MODELS after each test for isolation.
 
