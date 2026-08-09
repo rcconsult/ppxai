@@ -224,20 +224,35 @@ class Logger:
                 self._logger.info(f"{self.name.upper()} DEBUG SESSION STARTED - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
                 self._logger.info("=" * 80)
 
-    def info(self, msg: str):
+    # `exc_info` is accepted at EVERY level, matching stdlib.
+    #
+    # It used to be on `error` alone, which made this class look like a
+    # stdlib logger at the call site while behaving differently — and the
+    # codebase runs two logger populations side by side (54 modules on this
+    # class via get_logger, 17 on logging.getLogger directly). Moving code
+    # between them is routine; `engine/tools/builtin/__init__.py:83,95,109`
+    # already logs `warning(..., exc_info=True)` on a stdlib logger.
+    #
+    # The failure mode was not a missing feature. Passing `exc_info` to
+    # `debug` raised TypeError, and these calls live inside `except` blocks,
+    # so a HANDLED error became an escaping one — turning a logged warning
+    # into a crash at exactly the moment the code was trying to be careful.
+    # Hit while writing the T8b consent watcher, 2026-08-09.
+
+    def info(self, msg: str, exc_info: bool = False):
         """Log info message."""
         if self._logger:
-            self._logger.info(msg)
+            self._logger.info(msg, exc_info=exc_info)
 
-    def debug(self, msg: str):
+    def debug(self, msg: str, exc_info: bool = False):
         """Log debug message."""
         if self._logger:
-            self._logger.debug(msg)
+            self._logger.debug(msg, exc_info=exc_info)
 
-    def warning(self, msg: str):
+    def warning(self, msg: str, exc_info: bool = False):
         """Log warning message."""
         if self._logger:
-            self._logger.warning(msg)
+            self._logger.warning(msg, exc_info=exc_info)
 
     def error(self, msg: str, exc_info: bool = False):
         """Log error message.
