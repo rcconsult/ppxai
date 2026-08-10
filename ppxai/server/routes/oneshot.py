@@ -79,6 +79,7 @@ from ...config import (
     get_provider_config,
 )
 from ...config.execution import get_effective_oneshot_path
+from ...engine.task_authorizer import TIERS as _TIERS
 from ...engine.providers import create_provider
 from ...engine.providers.openai_compat import OpenAICompatibleProvider
 from ...engine.types import ProviderCapabilities
@@ -222,7 +223,10 @@ def _oneshot_effective_path(provider_name: str, model: str) -> str:
 # ---------------------------------------------------------------------------
 
 # Small §4 iteration cap: enough for search → answer, not an agent budget.
-ONESHOT_SEARCH_ITERATIONS = 2
+# The value is TIER DATA (`task_authorizer.TIERS["oneshot"].iterations`) —
+# it belongs with the grant rule that decides it, not with the transport.
+# Re-exported here because this is where the long tail of importers looks.
+ONESHOT_SEARCH_ITERATIONS = _TIERS["oneshot"].iterations
 # Bound the synchronous wait; on expiry the run is cooperatively cancelled
 # and the 504 carries the run id (the run record keeps whatever happened).
 ONESHOT_SEARCH_TIMEOUT_S = 180.0

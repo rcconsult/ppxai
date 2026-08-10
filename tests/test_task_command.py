@@ -27,6 +27,17 @@ def backend(tmp_path, monkeypatch):
         AgentRunRegistry(FilesystemAgentRunStore(tmp_path / "runs"))
     )
     monkeypatch.setattr(task_cmd, "get_task_backend", lambda: b)
+
+    # `/task` now passes the shared authorizer (the T8b security fix), so a
+    # LAUNCH test has to satisfy admission: the tool-capable tier ships
+    # default-off and the provider must resolve. These tests are about the
+    # command surface, not admission — that is pinned in
+    # tests/test_task_authorization_parity.py.
+    from ppxai.engine import task_authorizer as authz
+
+    real = authz._task_cfg
+    monkeypatch.setattr(authz, "_task_cfg", lambda: {**real(), "enabled": True})
+    monkeypatch.setattr(authz, "validate_provider_or_error", lambda name: None)
     return b
 
 

@@ -63,3 +63,101 @@ one. Follow it to the thing that *produces* the state, not the thing that
 - Guard against vacuity. Each sentinel there asserts it parsed a non-empty
   set, and one asserts the TUI still subscribes to `background_agents` — if
   that stops being true, delete the class rather than let it pass silently.
+
+## The sharper version (2026-08-10): a STATIC harness cannot catch a policy hole
+
+Both harnesses above read client sources and assert a code shape is present.
+That is the right tool for wiring drift, and it is the wrong tool for
+*authorization* drift — a file can contain a plausible-looking call and still
+admit the request.
+
+The Critical finding in `docs/branch-review-v1.19.1.md` proved it. The TUI's
+in-process `/task` reached the runner with **no** tier gate, **no** shell
+reject, and raw `--skill` strings mounted as filesystem read roots. Both
+static parity files were green. So was the whole suite — 4951 tests.
+
+What actually catches this is **behavioral** parity: drive the SAME request
+through every admission path and assert the refusals match.
+
+```bash
+# The behavioral fence, and the shape to copy for a 4th client
+grep -n "REFUSAL_CASES\|def _engine_refusal" -A6 \
+  tests/test_task_authorization_parity.py
+```
+
+Two properties make it work, both worth copying:
+
+- It asserts **status AND the substring a user would act on**, so a refusal
+  that happens for the wrong reason still fails.
+- It asserts **no run was minted** on refusal. A gate that refuses *after*
+  minting leaves an orphan run record — a different bug that a
+  status-code-only assertion happily passes.
+
+Corollary for the design, not just the test: if a second entry point can reach
+a privileged operation, the fix is one shared admission boundary
+(`engine/task_authorizer.py`), not a second copy of the checks. A copy is a
+parity problem with a countdown on it.
+
+## The corollary has teeth (2026-08-10, same day)
+
+Having written that sentence, the next change proposed an
+`authorize_oneshot()` "sibling" for the second tier and wrote 120 lines that
+re-derived provider resolution and re-implemented the egress assembly. Same
+countdown, one function later. The owner rejected it on sight:
+
+> code re-use via parametrization is OK, code duplication is not as it spreads
+> error prone code base as candidate for ommission errors and hard to debug
+> run-time issues
+
+Comparing the two tiers gate by gate showed only three of ten gates actually
+differed, and two of those were "skip a step". That is a table, not a second
+function:
+
+```bash
+# The differences, as data
+grep -n "class TierPolicy" -A 40 ppxai/engine/task_authorizer.py
+```
+
+**What the merge found that neither copy would have.** Duplication does not
+just risk future drift — it hides present bugs, because nobody diffs two
+files that are supposed to be different. Forcing the tiers into one gate
+order surfaced three defects immediately, none of which was in the review:
+the operator kill-switch (`tools.web_search.enabled=false`) silently did not
+cover the one-off tier; the in-process `/run` used the chat pane's provider
+where ADR 0003 §9 requires injected intent; and a grant constant lived in the
+route layer. Copying the route would have preserved all three.
+
+## A policy field that changes no behaviour is worse than no field
+
+`TierPolicy.honors_client_fallback` was gated at the merge call — and a
+mutation proved the whole suite passed with it removed, because the
+config-granted branch never read those parameters anyway. It read like
+enforcement and enforced nothing.
+
+The fix was to make it load-bearing: offering UI context to a tier that must
+not take one is now a **refusal**, not a silent drop.
+
+```bash
+# Every table field must be reachable by a mutation that fails a test
+grep -n "honors_client_fallback" ppxai/engine/task_authorizer.py
+grep -n "injected intent" tests/test_task_authorization_parity.py
+```
+
+Mutation-test the *table*, not only the gates. A descriptive-looking config
+row that no test can kill is documentation pretending to be a control.
+
+## The structural assertion that ends the whole class
+
+The bypass existed because `AuthorizedTask` could be built by hand — the type
+existed without the checks that give it meaning. One test now pins that:
+
+```bash
+grep -n "only_one_construction_site" -A 20 \
+  tests/test_task_authorization_parity.py
+```
+
+Production code may construct the authorized-result type in exactly **one**
+place: the `return` inside `authorize()`. Reintroducing the original bug shape
+(verified by mutation) fails that test. When a type means "these gates
+passed", make it un-forgeable and assert the count — it is cheaper than
+auditing every future call site.

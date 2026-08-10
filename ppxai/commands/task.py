@@ -27,6 +27,12 @@ from __future__ import annotations
 import asyncio
 from typing import Any, Optional
 
+from ..engine.task_authorizer import (
+    TIERS,
+    TaskAuthorizationError,
+    TaskRequest,
+    authorize,
+)
 from ..engine.task_backend import get_task_backend
 from ..engine.task_grammar import (
     Action,
@@ -295,8 +301,7 @@ def _dispatch(family: str, kind: str, context: Any, args: str) -> CommandResult:
                          "config (execution.run.web_search)."),
                 suggestions=["Use /task for an explicit tool grant"],
             )
-        spec_tools, spec_kwargs = [], {}
-        task_text = prompt.strip('"\'')
+        req = TaskRequest(task=prompt.strip('"\''), kind=kind)
     else:
         parsed = parse_task_args(d.rest)
         if parsed.errors:
@@ -307,28 +312,68 @@ def _dispatch(family: str, kind: str, context: Any, args: str) -> CommandResult:
                 status=ResultStatus.ERROR,
                 message='/task needs a description: /task "<desc>" --tools a,b',
             )
-        task_text = parsed.task
-        spec_tools = parsed.tools
-        spec_kwargs = {
-            "network": parsed.network.get("allow_outbound") or [],
-            "budget": parsed.budget or None,
-            "system": parsed.system,
-            "workdir": parsed.workdir,
-            "extra_read_paths": parsed.skills or None,
-        }
+        # EVERY parsed field is forwarded. Previously --spec, --profile and
+        # --enrichment were parsed and then dropped (silent no-ops the help
+        # text advertised), and --skill tokens were passed straight through as
+        # filesystem read paths. They are now what they always claimed to be:
+        # names and flags the shared authorizer resolves.
+        req = TaskRequest(
+            task=parsed.task,
+            kind=kind,
+            tools=parsed.tools,
+            spec=parsed.spec,
+            skills=parsed.skills,
+            profile=parsed.profile,
+            enrichment=parsed.enrichment,
+            provider=parsed.provider,
+            model=parsed.model,
+            system=parsed.system,
+            budget=parsed.budget or None,
+            # `--allow` absent means "not stated" (inherit from a spec/profile),
+            # which is not the same as an explicit empty allowlist.
+            network=parsed.network.get("allow_outbound") or None,
+            workdir=parsed.workdir,
+        )
 
     if not _has_running_loop():
         return _no_loop_error(family, "launch")
 
+    # ADMISSION. Both families pass the SAME boundary the HTTP routes use —
+    # `req.kind` selects the tier row, so the TUI cannot be a weaker door than
+    # the server for either tier.
+    #
+    # The UI's selected provider/model ride in as FALLBACKS. They only apply
+    # where the tier says so (`honors_client_fallback`): for `/task` they sit
+    # below an explicit --provider/--model flag and below a spec/profile,
+    # because a UI selection is this client's default rather than a statement
+    # about this request; for `/run` they are ignored outright, since a
+    # sub-agent's provider is per-run injected intent (ADR 0003 §9), not
+    # whatever the chat pane happens to be on.
+    # The fallbacks are offered only to a tier that accepts them; the
+    # authorizer REFUSES a run whose tier must not inherit UI context rather
+    # than dropping it silently, so this cannot decay into the old behaviour
+    # where `/run` quietly used the chat pane's provider.
+    offers_ui_context = TIERS[kind].honors_client_fallback
+    try:
+        auth = authorize(
+            req,
+            fallback_provider=_ctx_provider(context) if offers_ui_context else None,
+            fallback_model=_ctx_model(context) if offers_ui_context else None,
+        )
+    except TaskAuthorizationError as exc:
+        return ErrorResult(status=ResultStatus.ERROR, message=exc.detail)
+
     backend = get_task_backend()
-    meta = backend.launch(
-        task_text,
-        kind=kind,
-        tools=spec_tools,
-        provider=_ctx_provider(context),
-        model=_ctx_model(context),
-        **spec_kwargs,
-    )
+    meta = backend.launch(auth, kind=kind)
+    # Warn-don't-fail notices the authorizer resolved. Silence here would make
+    # a sealed host look like it honored --work-dir, and an operator ceiling
+    # look like the run got the egress it asked for.
+    notes = ""
+    if auth.workdir_ignored:
+        notes += "  ·  ⚠️ --work-dir ignored (filesystem seal is on)"
+    if auth.stripped:
+        dropped = ", ".join(sorted(str(s) for s in auth.stripped))
+        notes += f"  ·  ⚠️ egress ceiling stripped: {dropped}"
     # Open the panel on launch, like the web client does, and name the next
     # step. The previous breadcrumb pointed only at `ls`, so a user who wanted
     # the result had no way to learn `collect` at the moment they needed it —
@@ -337,7 +382,8 @@ def _dispatch(family: str, kind: str, context: Any, args: str) -> CommandResult:
         family, kind, backend.list_runs(kind=kind),
         (f"🤖 {meta.run_id} running — chat stays usable  ·  "
          f"`{family} get {meta.run_id}` to view  ·  "
-         f"`{family} collect {meta.run_id}` when done  ·  F6 switches pane"),
+         f"`{family} collect {meta.run_id}` when done  ·  F6 switches pane"
+         + notes),
     )
 
 

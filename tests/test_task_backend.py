@@ -21,6 +21,7 @@ import pytest
 
 from ppxai.engine import task_backend
 from ppxai.engine.agent_runs import AgentRunRegistry, FilesystemAgentRunStore
+from ppxai.engine.task_authorizer import AuthorizedTask
 from ppxai.engine.task_backend import InProcessTaskBackend, collect_holds
 
 
@@ -29,6 +30,25 @@ def backend(tmp_path):
     """A backend over an isolated run store — never the user's ~/.ppxai/runs."""
     registry = AgentRunRegistry(FilesystemAgentRunStore(tmp_path / "runs"))
     return InProcessTaskBackend(registry)
+
+
+def _authorized(task="do a thing", *, tools=(), provider="p", model="m", **kw):
+    """An already-authorized launch, for tests about LIFECYCLE not admission.
+
+    `launch()` takes an `AuthorizedTask` by design: the only way to get one in
+    production is `authorize_task()`, so the in-process path cannot skip the
+    tier gate / shell reject / skill name-resolution the way it used to.
+    These tests exercise what happens AFTER admission, so they construct the
+    approved value directly. Admission itself is pinned in
+    tests/test_task_authorization_parity.py.
+    """
+    return AuthorizedTask(
+        task=task, tools=list(tools), provider=provider, model=model,
+        system=kw.get("system"), budget=kw.get("budget") or {},
+        network=kw.get("network") or [], read_roots=kw.get("read_roots") or [],
+        workdir=kw.get("workdir"), workdir_ignored=False,
+        enrichment=False, enrichment_layer=None, tools_layer=None, stripped=[],
+    )
 
 
 def _stub_runner(text="ok"):
@@ -60,8 +80,7 @@ async def test_launch_runs_to_completion_without_a_server(backend, monkeypatch):
     monkeypatch.setattr(task_backend, "build_task_runner", _stub_runner("done"))
     monkeypatch.setattr(task_backend, "collect_holds", lambda: False)
 
-    meta = backend.launch("do a thing", tools=["read_file"],
-                          provider="p", model="m")
+    meta = backend.launch(_authorized("do a thing", tools=["read_file"]))
     assert meta.run_id.startswith("run_")
 
     final = await _poll(backend, meta.run_id, {"completed", "failed"})
@@ -86,7 +105,7 @@ async def test_launch_returns_immediately(backend, monkeypatch):
         return _runner
 
     monkeypatch.setattr(task_backend, "build_task_runner", _slow)
-    meta = backend.launch("slow", tools=[], provider="p", model="m")
+    meta = backend.launch(_authorized("slow"))
 
     # The run has not finished; the call already returned.
     assert backend.get_run(meta.run_id).status in {"pending", "running"}
@@ -100,7 +119,7 @@ async def test_held_result_needs_collect(backend, monkeypatch):
     monkeypatch.setattr(task_backend, "build_task_runner", _stub_runner("held"))
     monkeypatch.setattr(task_backend, "collect_holds", lambda: True)
 
-    meta = backend.launch("hold me", tools=[], provider="p", model="m")
+    meta = backend.launch(_authorized("hold me"))
     held = await _poll(backend, meta.run_id, {"completed_pending_ack", "failed"})
     assert held.status == "completed_pending_ack"
 
@@ -133,7 +152,7 @@ async def test_cancel_stops_a_cooperating_run(backend, monkeypatch):
         return _runner
 
     monkeypatch.setattr(task_backend, "build_task_runner", _cooperative)
-    meta = backend.launch("long", tools=[], provider="p", model="m")
+    meta = backend.launch(_authorized("long"))
     await _poll(backend, meta.run_id, {"running"})
 
     assert backend.cancel(meta.run_id) is True
@@ -151,9 +170,8 @@ async def test_list_runs_is_kind_filtered(backend, monkeypatch):
     monkeypatch.setattr(task_backend, "build_task_runner", _stub_runner())
     monkeypatch.setattr(task_backend, "collect_holds", lambda: False)
 
-    t = backend.launch("a task", tools=[], provider="p", model="m", kind="task")
-    o = backend.launch("a oneshot", tools=[], provider="p", model="m",
-                       kind="oneshot")
+    t = backend.launch(_authorized("a task"), kind="task")
+    o = backend.launch(_authorized("a oneshot"), kind="oneshot")
     for rid in (t.run_id, o.run_id):
         await _poll(backend, rid, {"completed", "failed"})
 
@@ -166,7 +184,7 @@ async def test_list_runs_is_kind_filtered(backend, monkeypatch):
 async def test_events_are_recorded_for_a_run(backend, monkeypatch):
     monkeypatch.setattr(task_backend, "build_task_runner", _stub_runner())
     monkeypatch.setattr(task_backend, "collect_holds", lambda: False)
-    meta = backend.launch("x", tools=[], provider="p", model="m")
+    meta = backend.launch(_authorized("x"))
     await _poll(backend, meta.run_id, {"completed", "failed"})
     assert backend.events(meta.run_id), "no events recorded for the run"
 
@@ -187,7 +205,7 @@ async def test_resume_refuses_a_completed_run(backend, monkeypatch):
     """
     monkeypatch.setattr(task_backend, "build_task_runner", _stub_runner())
     monkeypatch.setattr(task_backend, "collect_holds", lambda: False)
-    meta = backend.launch("y", tools=[], provider="p", model="m")
+    meta = backend.launch(_authorized("y"))
     await _poll(backend, meta.run_id, {"completed", "failed"})
 
     ok, reason = backend.resume(meta.run_id)
@@ -215,11 +233,11 @@ async def test_allow_spawn_is_derived_from_the_grant(backend, monkeypatch):
     monkeypatch.setattr(task_backend, "build_task_runner", _capture)
     monkeypatch.setattr(task_backend, "collect_holds", lambda: False)
 
-    backend.launch("no spawn", tools=["read_file"], provider="p", model="m")
+    backend.launch(_authorized("no spawn", tools=["read_file"]))
     assert seen["allow_spawn"] is False
 
-    backend.launch("may spawn", tools=["read_file", "spawn_subagent"],
-                   provider="p", model="m")
+    backend.launch(_authorized("may spawn",
+                               tools=["read_file", "spawn_subagent"]))
     assert seen["allow_spawn"] is True
 
 
@@ -271,7 +289,7 @@ async def test_collect_merges_the_result_as_a_pair(backend_with_session, monkeyp
     monkeypatch.setattr(task_backend, "build_task_runner", _stub_runner("the answer"))
     monkeypatch.setattr(task_backend, "collect_holds", lambda: True)
 
-    meta = backend.launch("what is the answer", tools=[], provider="p", model="m")
+    meta = backend.launch(_authorized("what is the answer"))
     await _poll(backend, meta.run_id, {"completed_pending_ack", "failed"})
 
     ok, _ = backend.collect(meta.run_id)
@@ -311,7 +329,7 @@ async def test_collect_reports_when_the_merge_fails(backend_with_session, monkey
     backend, session = backend_with_session
     monkeypatch.setattr(task_backend, "build_task_runner", _stub_runner("x"))
     monkeypatch.setattr(task_backend, "collect_holds", lambda: True)
-    meta = backend.launch("t", tools=[], provider="p", model="m")
+    meta = backend.launch(_authorized("t"))
     await _poll(backend, meta.run_id, {"completed_pending_ack", "failed"})
 
     backend._session_provider = lambda: None  # session vanished
@@ -327,7 +345,7 @@ async def test_auto_merge_only_in_auto_mode(backend_with_session, monkeypatch):
     backend, session = backend_with_session
     monkeypatch.setattr(task_backend, "build_task_runner", _stub_runner("auto result"))
     monkeypatch.setattr(task_backend, "collect_holds", lambda: False)
-    meta = backend.launch("t", tools=[], provider="p", model="m")
+    meta = backend.launch(_authorized("t"))
     await _poll(backend, meta.run_id, {"completed", "failed"})
 
     monkeypatch.setattr(execution_cfg, "get_execution_collect", lambda: "yes")

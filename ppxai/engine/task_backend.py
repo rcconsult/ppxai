@@ -16,9 +16,14 @@ prompt is a blocking `session.prompt()` and each operation spins a throwaway
 prompt. That is the open half of T8b and needs an explicit decision (async
 main loop, or a blocking variant of `launch`), not a silent workaround.
 
-Scope: lifecycle only. The request-shaped validation in the routes — grant
-merge across request/spec/skills, egress ceiling, provider 400s — stays there
-for now. A TUI caller passes an already-resolved grant.
+Scope: lifecycle only — but "lifecycle only" is NOT "unpoliced". This module
+once said the request-shaped validation "stays in the routes for now" and that
+a TUI "passes an already-resolved grant". That sentence was the bug: nothing
+resolved or authorized the TUI's grant, so an in-process launch reached the
+runner with no tier gate, no shell reject, and raw `--skill` strings mounted
+as read roots (docs/branch-review-v1.19.1.md). Admission now lives in
+`engine/task_authorizer.py`, and `launch()` takes an `AuthorizedTask` — the
+only way to obtain one is to pass `authorize_task()`.
 """
 
 from __future__ import annotations
@@ -27,6 +32,7 @@ from typing import Any, Optional
 
 from ..common.logger import get_logger
 from .agent_runs import RunMeta, resume_refusal
+from .task_authorizer import AuthorizedTask, check_tier_enabled
 from .task_runner import build_task_runner, default_run_registry
 
 logger = get_logger("engine")
@@ -147,20 +153,26 @@ class InProcessTaskBackend:
 
     def launch(
         self,
-        task: str,
+        auth: AuthorizedTask,
         *,
         kind: str = "task",
-        tools: Optional[list[str]] = None,
-        provider: Optional[str] = None,
-        model: Optional[str] = None,
-        network: Optional[list] = None,
-        budget: Optional[dict] = None,
-        system: Optional[str] = None,
-        workdir: Optional[str] = None,
-        extra_read_paths: Optional[list[str]] = None,
         owner: Optional[str] = None,
     ) -> RunMeta:
-        """Mint a run and schedule it. Returns immediately with its meta.
+        """Mint a run from an AUTHORIZED task and schedule it.
+
+        Takes an `AuthorizedTask` — not loose kwargs — because that is the only
+        way to make "was this authorized?" unanswerable-in-the-negative at this
+        seam. The single way to obtain one is
+        `task_authorizer.authorize_task()`, which runs the tier gate, the shell
+        reject, the tool kill-switches, provider validation, name-only
+        spec/skill resolution and the egress ceiling.
+
+        In particular there is deliberately NO `extra_read_paths` parameter.
+        Read scope is an OUTPUT of authorization (`auth.read_roots`, resolved
+        skill directories confined to `skills_dir`), never a caller input —
+        mirroring the HTTP request model, which has no such field either. The
+        removed kwarg is what let `--skill /etc` mount an arbitrary directory
+        under the filesystem seal.
 
         Non-blocking by construction: the caller gets a `run_id` it can list,
         watch, cancel or collect. **Needs a live event loop** — see the module
@@ -171,32 +183,32 @@ class InProcessTaskBackend:
         with `allow_spawn=False`. Keeping that derivation here means a caller
         cannot widen depth by asking.
         """
-        grant = list(tools or [])
+        grant = list(auth.tools)
         meta = self.registry.start_run(
-            task=task,
+            task=auth.task,
             kind=kind,
             tools=grant,
-            provider=provider,
-            model=model,
-            network=network,
-            budget=budget,
+            provider=auth.provider,
+            model=auth.model,
+            network=auth.network,
+            budget=auth.budget,
             owner=owner,
             hold_result=collect_holds(),
-            system=system,
-            read_roots=extra_read_paths,
-            workdir=workdir,
+            system=auth.system,
+            read_roots=auth.read_roots,
+            workdir=auth.workdir,
         )
         runner = build_task_runner(
             self.registry,
-            provider_name=provider,
-            model=model,
-            task=task,
+            provider_name=auth.provider,
+            model=auth.model,
+            task=auth.task,
             tools=grant,
-            allow_outbound=list(network or []),
+            allow_outbound=list(auth.network or []),
             allow_spawn="spawn_subagent" in grant,
-            system=system,
-            extra_read_paths=extra_read_paths,
-            workdir=workdir,
+            system=auth.system,
+            extra_read_paths=auth.read_roots,
+            workdir=auth.workdir,
         )
         self.registry.run_in_background(meta, runner)
         return meta
@@ -341,10 +353,21 @@ class InProcessTaskBackend:
 
         `workdir` comes from the meta on purpose: a resume continues where the
         run actually ran, not where this process happens to be.
+
+        Resume is a SECOND admission path — it starts tool-capable execution
+        from a persisted grant without going through `authorize_task`. So it
+        re-checks the tier gate explicitly, exactly as the HTTP resume route
+        does: an operator who switched the tier off must not be able to
+        restart a tool-capable run that predates the switch.
         """
         meta = self.registry.get_run(run_id)
         if meta is None:
             return False, f"unknown run_id: {run_id!r}"
+        if getattr(meta, "kind", "task") == "task":
+            try:
+                check_tier_enabled()
+            except Exception as exc:
+                return False, getattr(exc, "detail", str(exc))
         refusal = resume_refusal(
             meta, in_flight=self.registry.get_run_task(run_id) is not None
         )

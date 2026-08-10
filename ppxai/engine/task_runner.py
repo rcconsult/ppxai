@@ -41,7 +41,11 @@ from .agent_scoped_tools import ScopedToolManager
 from .client import EngineClient
 from .tools.agent_spawn import SpawnSubagentTool
 from .tools.filesystem_policy import build_filesystem_policy
-from .tools.network_policy import NetworkPolicy, apply_egress_ceiling
+from .tools.network_policy import (
+    NetworkPolicy,
+    apply_egress_ceiling,
+    grant_has_shell,
+)
 from .types import EventType
 
 # An egress allowlist entry is either a bare host ("example.com", any path) or
@@ -176,7 +180,40 @@ def build_task_runner(
     jail). None → the server default (server.working_dir config, else home) —
     deliberately NEVER the process launch dir, which made a run's relative
     paths depend on how the operator happened to start the server.
+
+    SHELL BACKSTOP, applied HERE and not only at admission — same reasoning as
+    the deployment ceiling below. `task_authorizer.authorize_task` rejects a
+    shell grant, but authorization is not the only way into this builder:
+    RESUME rebuilds from a run's PERSISTED grant (never re-authorized), and
+    `SpawnSubagentTool` builds child runs through `runner_builder`. A grant
+    persisted by an older build, or a future caller that forgets, would
+    otherwise reach a live run. Shell is the one tool no in-process control
+    can contain — the egress allowlist cannot inspect what `curl` does, and
+    the filesystem seal confines named path-taking tools by inspecting their
+    path kwarg, which a shell command string simply does not have. So the
+    check is structural here, at the single construction site.
+
+    The TIER gate deliberately does NOT get the same treatment. This builder
+    is shared with the tool-FREE tier — `/v1/oneshot` and the enriched
+    `/v1/agent/run` branch both call it with a `["web_search"]` grant — and
+    that tier is documented as always available regardless of
+    `execution.task.enabled`. Gating here would break a stable v1 surface on
+    every box with the task tier off. A `tier=` kwarg would make the gate
+    caller-declared, which is ceremony rather than a gate. The tier gate
+    belongs at admission (`authorize_task`), plus the one other admission
+    path, `InProcessTaskBackend.resume`, which checks it explicitly.
     """
+    # Raise EAGERLY, not inside `_runner`: a raise in the closure would mint a
+    # failed RUN RECORD rather than refuse the launch — the wrong failure mode,
+    # and it would leave an orphan run behind a refusal.
+    if grant_has_shell(tools):
+        raise ValueError(
+            "execute_shell_command is not permitted in a tool-capable "
+            "agent run: arbitrary shell escapes the egress allowlist "
+            "(AC-2). It requires the OS-isolation tier (ADR 0003 §3 "
+            "tier-d), which is deferred past the MVP."
+        )
+
     async def _runner(m) -> str:
         engine = EngineClient()
         engine.set_provider(provider_name)

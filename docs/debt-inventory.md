@@ -1617,6 +1617,36 @@ revisit:** now — user-visible wrong output (fabricated weather). **Effort:** X
 
 ---
 
+### Item 60 — spec/skill refusal messages still name the pre-ADR-0010 config keys [agent platform / config / UX]
+
+**Affected files:** `ppxai/engine/task_authorizer.py` (`resolve_named_spec`,
+`resolve_named_skill`, `load_skills` — the "not enabled" / scripts-refused
+messages).
+
+ADR 0010 moved the sandbox keys to `execution.task.sandbox.*`, but three
+user-facing refusals still tell operators to set the old paths:
+
+- "Spec files are not enabled: set **`tools.agent.sandbox.specs_dir`**."
+- "Skills are not enabled: set **`tools.agent.sandbox.skills_dir`**."
+- "…Set **`tools.agent.sandbox.allow_skill_scripts`** to acknowledge…"
+
+Under the clean break those keys are read by nothing, so an operator who
+follows the hint edits a key that has no effect — the exact silent-no-op
+failure ADR 0010's `/doctor` scan exists to surface, except here *we* are the
+one printing the stale path.
+
+The text was carried over **verbatim** during the v1.19.1 authorizer
+extraction on purpose: several tests assert on substrings of these messages,
+and changing wording inside a security fix would have mixed a cosmetic edit
+into a diff that needed to be reviewable as byte-identical. Fixing it is safe
+— `tests/test_agent_runs.py:1761` asserts only `"skills_dir" in detail`, which
+survives the rename.
+
+**Planned:** next docs/UX pass. **Trigger to revisit:** any operator report of
+"I set skills_dir and nothing happened". **Effort:** XS.
+
+---
+
 ## Closed (recent)
 
 One-liners only — full bodies + evidence trails in

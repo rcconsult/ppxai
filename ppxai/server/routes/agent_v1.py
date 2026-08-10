@@ -112,6 +112,13 @@ from ...engine.tools.network_policy import (
     apply_egress_ceiling,
     grant_has_shell,
 )
+from ...engine import task_authorizer as _authz
+from ...engine.task_authorizer import (
+    TaskAuthorizationError,
+    TaskRequest,
+    authorize_oneshot,
+    authorize_task,
+)
 from ...engine import task_runner as _task_runner
 from ...engine.task_runner import (  # noqa: F401  (compat re-exports)
     DEFAULT_AGENT_SYSTEM_PROMPT,
@@ -355,91 +362,66 @@ async def create_agent_run(req: AgentRunRequest, request: Request) -> AgentRunRe
     """
     registry = get_agent_run_registry()
 
-    # Provider/model is PER-RUN INJECTED INTENT (ADR 0003 §9), not inherited
-    # from the interactive chat session. Resolution: explicit request value
-    # -> execution.default_subagent config -> 400. The session's active
-    # chat provider is deliberately NOT consulted (a sub-agent's model is
-    # chosen for its task, not for whatever the UI happens to be on).
+    # ADMISSION. Same boundary /task uses; the `kind="oneshot"` row supplies
+    # the differences (no tier gate, config-decided grant, no client fallback
+    # for provider/model). Provider/model stays PER-RUN INJECTED INTENT
+    # (ADR 0003 §9) — the interactive session's provider is deliberately not
+    # consulted, which the tier row encodes as honors_client_fallback=False.
     # NOTE: per-session sub-agent config + a /subagent slash command, both
     # persisted in the session checkpoint, are a later increment (debt-filed);
-    # they will slot in as a layer between request and global config here.
-    sub_defaults = get_execution_default_subagent()
-    provider_name = req.provider or sub_defaults.get("provider")
-    model = req.model
-    if not model:
-        # default_subagent.model belongs to default_subagent.provider —
-        # cross-pairing it with a DIFFERENT explicit provider 400s at the API
-        # (e.g. perplexity handed a Qwen model id). For any other provider,
-        # fall back to its own default_model, mirroring /v1/oneshot.
-        if provider_name == sub_defaults.get("provider"):
-            model = sub_defaults.get("model")
-        if not model and provider_name:
-            model = get_default_model(provider_name) or None
-    if not provider_name:
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                "No provider for the agent run. Pass `provider` in the request, "
-                "or set execution.default_subagent.provider in ppxai-config.json."
-            ),
+    # they will slot in as a layer between request and global config there.
+    try:
+        auth = authorize_oneshot(
+            req.task,
+            provider=req.provider,
+            model=req.model,
+            system=req.system,
         )
-    if not model:
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                f"No model for provider {provider_name!r}. Pass `model` in the "
-                f"request, or set execution.default_subagent.model in config."
-            ),
-        )
+    except TaskAuthorizationError as exc:
+        raise HTTPException(status_code=exc.status, detail=exc.detail)
 
     # Build the provider BEFORE minting/backgrounding so an UNBUILDABLE
     # provider (unknown name / missing key) fails fast with 400 and creates no
     # run. v1.19.x: any buildable provider is accepted (gates by capability,
     # not class — see _v1_provider_or_400).
-    provider = _v1_provider_or_400(provider_name)
+    provider = _v1_provider_or_400(auth.provider)
+
+    # U4 (ADR 0011): execution.collect drives the T6 hold. "yes" → hold
+    # until collected; "auto"/"no" → auto-finalize (the watching client
+    # merges on "auto"; "no" offers no merge path at all).
+    hold = _collect_holds()
 
     # U3 grant rule (config-decided, never request-decided): web_search on
     # → the run goes through the FULL task-tier sandbox with the hardwired
     # {web_search} grant + built-in backend hosts + the operator's
     # tools.web_search.egress baseline; off → plain closed-book LLM call.
-    from ...config.execution import get_execution_run_config
-
-    web_search_on = bool(get_execution_run_config().get("web_search"))
-    # U4 (ADR 0011): execution.collect drives the T6 hold. "yes" → hold
-    # until collected; "auto"/"no" → auto-finalize (the watching client
-    # merges on "auto"; "no" offers no merge path at all).
-    hold = _collect_holds()
-    if web_search_on:
-        # Step ③/④: effective backend set + operator baseline, capped by the
-        # Q3 ceiling (400 pre-start when the cap breaks the set — never a
-        # half-enriched run). Provider context threads into the resolver so a
-        # per-provider strict pin narrows this run's baseline consistently.
-        egress_hosts = _enriched_oneshot_egress_or_400(provider_name)
+    # `auth.tools` IS that decision, already capped by the Q3 ceiling.
+    if auth.tools:
         meta = registry.start_run(
-            task=req.task, kind="oneshot", tools=["web_search"],
-            provider=provider_name, model=model,
-            network=list(egress_hosts),
-            budget={"iterations": ONESHOT_SEARCH_ITERATIONS},
+            task=auth.task, kind="oneshot", tools=list(auth.tools),
+            provider=auth.provider, model=auth.model,
+            network=list(auth.network),
+            budget=dict(auth.budget),
             owner=_caller_owner(request),
             hold_result=hold,
-            system=req.system,
+            system=auth.system,
         )
         runner = _task_runner.build_task_runner(
             registry,
-            provider_name=provider_name,
-            model=model,
-            task=req.task,
-            tools=["web_search"],
-            allow_outbound=list(egress_hosts),
+            provider_name=auth.provider,
+            model=auth.model,
+            task=auth.task,
+            tools=list(auth.tools),
+            allow_outbound=list(auth.network),
             allow_spawn=False,  # consent/park path structurally unreachable
-            system=req.system,
+            system=auth.system,
         )
         registry.run_in_background(meta, runner)
         return AgentRunResponse(run_id=meta.run_id, status=meta.status)
 
     meta = registry.start_run(
-        task=req.task, kind="oneshot", tools=req.tools,
-        provider=provider_name, model=model,
+        task=auth.task, kind="oneshot", tools=req.tools,
+        provider=auth.provider, model=auth.model,
         owner=_caller_owner(request),
         hold_result=hold,  # same execution.collect contract as the grant path
     )
@@ -448,7 +430,8 @@ async def create_agent_run(req: AgentRunRequest, request: Request) -> AgentRunRe
         # provider.oneshot is blocking I/O — run it off the event loop so
         # other requests (e.g. GET status polls) aren't starved.
         result = await asyncio.to_thread(
-            provider.oneshot, prompt=req.task, model=model, system=req.system
+            provider.oneshot, prompt=auth.task, model=auth.model,
+            system=auth.system,
         )
         return result.get("content", "")
 
@@ -625,313 +608,31 @@ class AgentTaskRequest(BaseModel):
         return self
 
 
-# --- T3/T4: name-only resolution under an operator-configured root --------
+# --- T3/T4 + grant/egress helpers: ONE implementation, in the engine -------
+#
+# These used to be defined here, which is exactly how the in-process clients
+# ended up on a weaker path (they could not import a route module). They now
+# live in `engine/task_authorizer.py`; the names below stay as delegating
+# aliases because tests and `create_agent_run` still reach for them, and a
+# second copy would be the very drift this change removes.
+#
+# The two that raise map the engine's `TaskAuthorizationError` onto HTTP —
+# that translation is the only thing this layer legitimately owns.
 
-def _reject_unsafe_name(name: str, kind: str) -> None:
-    """400 unless `name` is a bare name (no separator / parent-ref / absolute).
-
-    Shared by the spec (T3) and skill (T4) resolvers so both enforce the SAME
-    traversal defence at the trust boundary — a caller may name a file/dir
-    under the configured root, never point at an arbitrary path.
-    """
-    if not name or "/" in name or "\\" in name or ".." in name or Path(name).is_absolute():
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid {kind} name {name!r}: a bare name is required (no path).",
-        )
-
-
-def _within_root(root: Path, candidate: Path) -> bool:
-    """True if `candidate` resolves to `root` or something under it.
-
-    Symlink-escape defence: `candidate` is already `.resolve()`d by the caller;
-    we confirm containment against the resolved root.
-    """
-    return root == candidate or root in candidate.parents
+_reject_unsafe_name = _authz.reject_unsafe_name
+_within_root = _authz.within_root
+_LAYER_RANK = _authz._LAYER_RANK
+_web_search_banned = _authz.web_search_banned
+_with_tool_egress_defaults = _authz.with_tool_egress_defaults
+_enrichment_survives_ceiling = _authz.enrichment_survives_ceiling
 
 
-# --- T3: spec resolution + precedence merge -------------------------------
-
-def _resolve_named_spec(name: str) -> AgentSpec:
-    """Load a spec by NAME from `tools.agent.sandbox.specs_dir` (T3).
-
-    Security: name-only, no path. Reject any name with a path separator, a
-    parent ref, or an absolute form; then confirm the resolved real path is
-    still INSIDE specs_dir (defends against symlink escape) — the same
-    name-only discipline the T4 skills resolver uses. 400 on any problem: a
-    bad/unknown spec is a request error, not a server fault.
-    """
-    specs_dir = get_execution_task_config()["sandbox"].get("specs_dir")
-    if not specs_dir:
-        raise HTTPException(
-            status_code=400,
-            detail="Spec files are not enabled: set tools.agent.sandbox.specs_dir.",
-        )
-    _reject_unsafe_name(name, "spec")
-    root = Path(specs_dir).expanduser().resolve()
-    # Accept an explicit extension, else try the known ones in a stable order.
-    candidates = (
-        [root / name]
-        if Path(name).suffix
-        else [root / f"{name}{ext}" for ext in (".md", ".json", ".yaml", ".yml")]
-    )
-    for cand in candidates:
-        try:
-            real = cand.resolve()
-        except OSError:
-            continue
-        # Containment check: the resolved file must live under specs_dir.
-        if not _within_root(root, real):
-            continue
-        if real.is_file():
-            try:
-                return load_spec_file(real)
-            except AgentSpecError as exc:
-                raise HTTPException(status_code=400, detail=f"Spec {name!r}: {exc}")
-    raise HTTPException(
-        status_code=400,
-        detail=f"Spec {name!r} not found under specs_dir ({root}).",
-    )
-
-
-def _resolve_named_skill(name: str) -> LoadedSkill:
-    """Load a skill by NAME from `tools.agent.sandbox.skills_dir` (T4).
-
-    Same name-only discipline as the spec resolver: reject any name with a
-    path separator / parent-ref / absolute form, resolve `<skills_dir>/<name>`,
-    and confirm the real directory is still INSIDE skills_dir (symlink-escape
-    defence) BEFORE reading its SKILL.md. 400 on any problem — an unknown or
-    malformed skill is a request error, not a server fault.
-    """
-    skills_dir = get_execution_task_config()["sandbox"].get("skills_dir")
-    if not skills_dir:
-        raise HTTPException(
-            status_code=400,
-            detail="Skills are not enabled: set tools.agent.sandbox.skills_dir.",
-        )
-    _reject_unsafe_name(name, "skill")
-    root = Path(skills_dir).expanduser().resolve()
+def _apply_ceiling_or_400(network: list) -> tuple[list, list]:
+    """`apply_egress_ceiling` at the trust boundary, as an HTTP 400."""
     try:
-        real = (root / name).resolve()
-    except OSError as exc:
-        raise HTTPException(status_code=400, detail=f"Skill {name!r}: {exc}")
-    if not _within_root(root, real) or not real.is_dir():
-        raise HTTPException(
-            status_code=400,
-            detail=f"Skill {name!r} not found under skills_dir ({root}).",
-        )
-    try:
-        return load_skill(real, name)
-    except AgentSkillError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
-
-
-def _load_skills(names: list[str]) -> list[LoadedSkill]:
-    """Resolve every `--skill <name>`, refusing a scripts-requiring skill unless
-    `allow_skill_scripts` is on.
-
-    A skill's scripts/ can never run in the in-process tier (no shell grant),
-    so a skill that ships scripts/ is refused up front UNLESS the operator has
-    explicitly set allow_skill_scripts — matching the plan's "reject/warn on a
-    skill that requires scripts/ while allow_skill_scripts:false". The gate is
-    an operator ceiling, not a per-request field.
-    """
-    if not names:
-        return []
-    allow_scripts = bool(
-        get_execution_task_config()["sandbox"].get("allow_skill_scripts", False)
-    )
-    loaded: list[LoadedSkill] = []
-    for name in names:
-        skill = _resolve_named_skill(name)
-        if skill.has_scripts and not allow_scripts:
-            raise HTTPException(
-                status_code=400,
-                detail=(
-                    f"Skill {name!r} ships a scripts/ directory, which cannot run "
-                    "in the in-process tier (no shell grant; scripts need the "
-                    "container tier). Set tools.agent.sandbox.allow_skill_scripts "
-                    "to acknowledge they stay inert, or use a skill without scripts/."
-                ),
-            )
-        loaded.append(skill)
-    return loaded
-
-
-def _resolve_named_profile(name: str) -> AgentSpec:
-    """Resolve `execution.profiles.<name>` → AgentSpec (ADR 0009 §1, step ③).
-
-    A profile IS a spec mapping in a config location — same fields, same
-    `spec_from_mapping` normalizer as a `--spec` file, zero new schema shape.
-    Unknown name / malformed mapping → 400 PRE-START (§5 two-stage
-    validation: config-resolvable checks never become async run failures).
-    """
-    from ...config.execution import get_execution_profiles
-
-    profiles = get_execution_profiles()
-    if name not in profiles:
-        available = ", ".join(sorted(profiles)) or "(none configured)"
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                f"Unknown execution profile {name!r}. Configured profiles "
-                f"under execution.profiles: {available}."
-            ),
-        )
-    try:
-        return spec_from_mapping(profiles[name])
-    except AgentSpecError as exc:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid execution profile {name!r}: {exc}",
-        )
-
-
-# §5 layer ranks for the contradiction rule: LOWER = more specific. Skills sit
-# between spec and profile — an explicitly named per-run mount is more
-# specific than a standing config profile, less than the authored spec file.
-_LAYER_RANK = {"request": 0, "spec": 1, "skill": 2, "profile": 3}
-
-
-def _merge_task_fields(req: AgentTaskRequest) -> dict:
-    """Effective run fields, precedence: request > spec > skills > profile >
-    default (ADR 0009 Q1; step ③ inserts the named-profile layer).
-
-    Returns {task, tools, provider, model, system, budget(dict), network(list),
-    read_roots(list), enrichment(bool), enrichment_layer, tools_layer}.
-
-    **List fields (tools, network) REPLACE, never union** (Q1): the most
-    specific layer that STATES the field supplies all of it, so a narrower
-    layer can actually remove a tool or a host — a security surface must be
-    able to narrow. The one deliberate exception stays: SKILLS union their
-    tool grants into the effective grant (that is their purpose — mount
-    capability) and each skill dir joins `read_roots` (T4).
-
-    **Enrichment (§5)** resolves here as an ordinary scalar, then the caller
-    derives web_search + its egress baseline ONCE from the resolved value —
-    never per layer. The contradiction rule is enforced here, pre-start: an
-    explicit tools list omitting web_search, stated at or more specific than
-    the layer declaring enrichment:true, is a 400 naming both layers.
-
-    The caller runs the SAME ceiling guards (shell-reject, non-empty grant,
-    provider/model present) on these merged values — so no spec, skill, or
-    profile can smuggle a grant past the checks a direct request faces.
-    """
-    spec = _resolve_named_spec(req.spec) if req.spec else AgentSpec()
-    skills = _load_skills(req.skills)
-    profile = _resolve_named_profile(req.profile) if req.profile else AgentSpec()
-    sub_defaults = get_execution_default_subagent()
-
-    # A skill scalar is the first skill (in --skill order) that sets it — so
-    # composition is deterministic and skill order is meaningful for scalars.
-    def _skill_scalar(attr: str):
-        for s in skills:
-            val = getattr(s.spec, attr, None)
-            if val is not None:
-                return val
-        return None
-
-    task = req.task or spec.task  # req.task is required (min_length=1); spec.task is a fallback only if ever relaxed
-
-    # Base grant = the most specific layer that STATES tools (replace, Q1).
-    # req.tools is a pydantic default-list, so empty means "not stated" there;
-    # a spec/profile distinguishes stated-empty (narrows to nothing → the
-    # post-merge 400) from absent (inherit).
-    if req.tools:
-        tools, tools_layer = list(req.tools), "request"
-    elif spec.tools is not None:
-        tools, tools_layer = list(spec.tools), "spec"
-    elif profile.tools is not None:
-        tools, tools_layer = list(profile.tools), "profile"
-    else:
-        tools, tools_layer = [], None
-    # Skills UNION on top — a skill ADDS capability; it never removes what
-    # the request/spec/profile asked for.
-    for s in skills:
-        for t in (s.spec.tools or []):
-            if t not in tools:
-                tools.append(t)
-
-    provider = (req.provider or spec.provider or _skill_scalar("provider")
-                or profile.provider or sub_defaults.get("provider"))
-    model = req.model or spec.model or _skill_scalar("model") or profile.model
-    if not model:
-        # Same cross-pairing guard as /run: the subagent default model only
-        # pairs with the subagent default provider; otherwise the chosen
-        # provider's own default_model.
-        if provider == sub_defaults.get("provider"):
-            model = sub_defaults.get("model")
-        if not model and provider:
-            model = get_default_model(provider) or None
-    system = (req.system if req.system is not None
-              else spec.system if spec.system is not None
-              else _skill_scalar("system") if _skill_scalar("system") is not None
-              else profile.system)
-    budget = (_budget_dict(req.budget) or dict(spec.budget or {})
-              or dict(_skill_scalar("budget") or {}) or dict(profile.budget or {}))
-
-    # Network REPLACES per layer too (Q1) — `is not None` per layer, so a
-    # stated-empty list is an expressible "no egress", not a fall-through.
-    if req.network is not None:
-        network = list(req.network.allow_outbound)
-    elif spec.network is not None:
-        network = list(spec.network)
-    elif _skill_scalar("network") is not None:
-        network = list(_skill_scalar("network"))
-    elif profile.network is not None:
-        network = list(profile.network)
-    else:
-        network = []
-
-    # §5 step 1: enrichment resolves as an ordinary scalar, tracking WHICH
-    # layer stated it (for the contradiction rule).
-    if req.enrichment is not None:
-        enrichment, enrichment_layer = req.enrichment, "request"
-    elif spec.enrichment is not None:
-        enrichment, enrichment_layer = spec.enrichment, "spec"
-    elif _skill_scalar("enrichment") is not None:
-        enrichment, enrichment_layer = _skill_scalar("enrichment"), "skill"
-    elif profile.enrichment is not None:
-        enrichment, enrichment_layer = profile.enrichment, "profile"
-    else:
-        enrichment, enrichment_layer = False, None
-
-    # §5 contradiction rule (pre-start 400): a tools list stated at or more
-    # specific than the enrichment declaration, omitting web_search, disagrees
-    # with it about the same run — fail naming both layers, don't guess.
-    if (enrichment and "web_search" not in tools and tools_layer is not None
-            and _LAYER_RANK[tools_layer] <= _LAYER_RANK[enrichment_layer]):
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                f"Contradictory grant: the {enrichment_layer} layer declares "
-                f"enrichment:true, but the {tools_layer} layer states an "
-                "explicit tools list that omits web_search. Either add "
-                "web_search to that tools list or set enrichment:false at "
-                "the more specific layer (ADR 0009 §5)."
-            ),
-        )
-    # §5 step 2: derive ONCE from the resolved value — effective enrichment
-    # adds web_search (the egress baseline is merged by the route, where the
-    # allowlist is assembled). Only reachable when the tools statement is
-    # LESS specific than the enrichment declaration, or absent.
-    if enrichment and "web_search" not in tools:
-        tools.append("web_search")
-
-    # T4: each skill dir is mounted into the run read-scope. De-dup while
-    # preserving --skill order so the run can read references/ (and only these
-    # new roots), not siblings outside the skills.
-    read_roots: list[str] = []
-    for s in skills:
-        if s.read_root not in read_roots:
-            read_roots.append(s.read_root)
-    return {
-        "read_roots": read_roots,
-        "task": task, "tools": tools, "provider": provider, "model": model,
-        "system": system, "budget": budget, "network": network,
-        "enrichment": bool(enrichment), "enrichment_layer": enrichment_layer,
-        "tools_layer": tools_layer,
-    }
+        return _authz.apply_ceiling_or_error(network)
+    except TaskAuthorizationError as exc:
+        raise HTTPException(status_code=exc.status, detail=exc.detail)
 
 
 def _collect_holds() -> bool:
@@ -949,112 +650,20 @@ def _collect_holds() -> bool:
         return True
 
 
-def _web_search_banned(tools: list) -> bool:
-    """True when the grant includes web_search but the operator disabled it.
-
-    `tools.web_search.enabled=false` is a config kill-switch for the task tier
-    — e.g. a locked-down coder pod that must never let a sandboxed run search
-    the web. Absent/true → allowed (backward compatible)."""
-    if "web_search" not in tools:
-        return False
-    try:
-        return get_tool_config("web_search").get("enabled", True) is False
-    except Exception:
-        return False
-
-
-def _with_tool_egress_defaults(network: list, tools: list) -> list:
-    """Merge per-tool operator egress baselines into a run's allowlist.
-
-    ADR 0009 §2 (step ②, generalizes the old web_search-only
-    `task_default_allow`): **`tools.<tool>.egress`** — a list of host
-    strings per tool — is trusted operator input, the same trust level as a
-    per-run `--allow`. The union across the run's GRANTED tools is merged
-    in, so an operator declares once what each tool needs (e.g.
-    `tools.get_weather.egress` = wttr.in + Open-Meteo + premium hosts) and
-    a run granting that tool just works — one config-driven mechanism
-    across local `/task`, coder pods, and the oneshot facade. This retires
-    Item 52's hardcoded, config-blind weather path.
-
-    Dual-read: for `web_search`, the legacy
-    `tools.web_search.task_default_allow` spelling is honored when no
-    `egress` key is present; an explicit `egress` wins. Dedups against
-    existing entries; string hosts only.
-    """
-    merged = list(network)
-    existing = {e for e in merged if isinstance(e, str)}
-    for tool in tools or []:
-        try:
-            cfg = get_tool_config(tool) or {}
-        except Exception:
-            continue
-        if "egress" in cfg:
-            hosts = cfg.get("egress") or []
-        elif tool == "web_search":
-            hosts = cfg.get("task_default_allow", []) or []  # legacy dual-read
-        else:
-            hosts = []
-        for host in hosts:
-            if isinstance(host, str) and host and host not in existing:
-                merged.append(host)
-                existing.add(host)
-    return merged
-
-
-def _apply_ceiling_or_400(network: list) -> tuple[list, list]:
-    """`apply_egress_ceiling` at the trust boundary: (kept, stripped), with a
-    malformed `execution.egress_ceiling` surfacing as a pre-start 400 — a
-    security cap fails loud, never open, and never as an async run failure."""
-    try:
-        return apply_egress_ceiling(network)
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
-
-
-def _enrichment_survives_ceiling(
-    kept: list, provider_name: Optional[str] = None
-) -> bool:
-    """Q3 check: does the EFFECTIVE web_search egress set survive the cap
-    in full?
-
-    Step ④ refinement (replaces step ③'s any-surviving-host approximation):
-    `NetworkPolicy.authorize` enforces ALL-OF over the tool's target set, so
-    a partially-surviving baseline passes grant time but the tool is
-    un-callable at run time — exactly the half-enriched failure Q3 exists
-    to prevent. The effective set comes from the shared resolver: the full
-    superset in auto/ordering mode, the pinned backend's host(s) under
-    `strict` — so an operator who wants a narrow ceiling pins with
-    `strict: true` and the two configs compose instead of colliding."""
-    baseline = set(_web_search_egress_hosts(provider_name))
-    return baseline <= {e for e in kept if isinstance(e, str)}
-
 
 def _enriched_oneshot_egress_or_400(provider_name: Optional[str] = None) -> list:
-    """The one-off tier's enrichment allowlist (shared by the /v1/agent/run
-    grant branch and the /v1/oneshot facade): effective backend egress set
-    (resolver: superset, or the strict-pinned backend) + operator
-    `tools.web_search.egress` baseline, capped by `execution.egress_ceiling`
-    — with the Q3 fail-fast when the cap breaks the set (pre-start 4xx, no
-    half-enriched run)."""
-    hosts = _with_tool_egress_defaults(
-        _web_search_egress_hosts(provider_name), ["web_search"]
-    )
-    kept, stripped = _apply_ceiling_or_400(hosts)
-    if not _enrichment_survives_ceiling(kept, provider_name):
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                "execution.run.web_search is on, but execution.egress_ceiling "
-                "strips part of web_search's effective egress set "
-                f"(stripped: {', '.join(sorted(str(s) for s in stripped))}). "
-                "The egress check is all-of over the whole set, so a partial "
-                "allowlist makes the tool un-callable — never a half-enriched "
-                "run (ADR 0009 Q3). Widen the ceiling, pin one backend with "
-                "tools.web_search.{preferred,strict:true}, or turn "
-                "execution.run.web_search off."
-            ),
-        )
-    return kept
+    """HTTP adapter over `task_authorizer.enriched_oneshot_egress_or_error`.
+
+    The assembly itself lives in the engine so `/v1/agent/run`, the
+    `/v1/oneshot` facade and any in-process caller share ONE copy — this
+    function only maps the engine's `TaskAuthorizationError` onto HTTP. Used
+    by the facade (`oneshot.py`); `create_agent_run` reaches the same logic
+    through `authorize_oneshot`.
+    """
+    try:
+        return _authz.enriched_oneshot_egress_or_error(provider_name)
+    except TaskAuthorizationError as exc:
+        raise HTTPException(status_code=exc.status, detail=exc.detail)
 
 
 @router.post("/task", response_model=AgentRunResponse)
@@ -1072,156 +681,49 @@ async def create_agent_task(req: AgentTaskRequest, request: Request) -> AgentRun
     # ONLY for trusted operators (threat model A). An operator must opt in
     # explicitly — that toggle IS the "trusted operator" gate. The tool-free
     # tiers (/v1/agent/run, /v1/oneshot) are always available.
-    if not get_execution_task_config().get("enabled", False):
-        raise HTTPException(
-            status_code=403,
-            detail=(
-                "The tool-capable agent tier (/v1/agent/task) is disabled. It is "
-                "sandboxed in-process only and intended for trusted operators; "
-                "enable it deliberately via execution.task.enabled=true in "
-                "ppxai-config.json. The tool-free tier (/v1/agent/run) is always "
-                "available."
-            ),
+    # ADMISSION: every gate for this tier lives in the engine's authorizer, so
+    # the in-process clients (TUIs, SDK embedders) cannot be a weaker path to
+    # the same runner — the T8b bug this route used to own alone. Statuses and
+    # detail text are the authorizer's; this route only translates them onto
+    # HTTP. See ppxai/engine/task_authorizer.py.
+    try:
+        auth = authorize_task(
+            TaskRequest(
+                task=req.task,
+                tools=list(req.tools),
+                spec=req.spec,
+                skills=list(req.skills),
+                profile=req.profile,
+                enrichment=req.enrichment,
+                provider=req.provider,
+                model=req.model,
+                system=req.system,
+                budget=_budget_dict(req.budget),
+                # None = "not stated" (inherit); [] = "stated: no egress".
+                # Collapsing the two would let a deliberately egress-free
+                # request inherit a spec's allowlist.
+                network=(
+                    list(req.network.allow_outbound)
+                    if req.network is not None
+                    else None
+                ),
+                workdir=req.workdir,
+            )
         )
+    except TaskAuthorizationError as exc:
+        raise HTTPException(status_code=exc.status, detail=exc.detail)
 
     registry = get_agent_run_registry()
-
-    # T3: resolve the spec (if any) + merge request > spec > default AFTER the
-    # tier gate — never touch the filesystem for a disabled tier. Every ceiling
-    # guard below runs on the EFFECTIVE (merged) values, so a spec can't smuggle
-    # a grant past checks a direct request faces.
-    eff = _merge_task_fields(req)
-    tools = eff["tools"]
-
-    # Post-merge non-empty grant (400, not 422): the model_validator lets a
-    # spec-carrying request through with no request-level tools; if neither the
-    # request nor the spec yields a grant, reject here.
-    if not tools:
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                "Empty tool grant: neither the request nor the resolved "
-                "spec/skills/profile provided any tools. A tool-capable run "
-                "needs a non-empty grant."
-            ),
-        )
-
-    # AC-2: a shell-execution tool runs arbitrary commands whose network egress
-    # the allowlist cannot inspect (curl/pip/Invoke-WebRequest/…), so it would
-    # bypass the egress chokepoint entirely. The only tier that can contain it
-    # is OS isolation (ADR 0003 §3 tier-d), deferred past the MVP. Reject the
-    # (merged) grant up front — a spec-supplied shell tool is rejected too.
-    if grant_has_shell(tools):
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                "execute_shell_command is not permitted in a tool-capable "
-                "agent run: arbitrary shell escapes the egress allowlist "
-                "(AC-2). It requires the OS-isolation tier (ADR 0003 §3 "
-                "tier-d), which is deferred past the MVP. Grant any other "
-                "tool instead — every non-shell builtin (read_file, grep, "
-                "web_search, fetch_url, write_file, apply_patch, …) is "
-                "permitted; only the shell tool is held back."
-            ),
-        )
-
-    # Operator kill-switch (AC-2 policy surface): web_search can be banned for
-    # the task tier via tools.web_search.enabled=false — e.g. a locked-down
-    # coder pod. Checked on the MERGED grant so a spec/skill can't smuggle it in.
-    if _web_search_banned(tools):
-        raise HTTPException(
-            status_code=403,
-            detail=(
-                "web_search is disabled for the tool-capable tier by operator "
-                "config (tools.web_search.enabled=false). Remove it from the "
-                "grant, or enable it in ppxai-config.json."
-            ),
-        )
-
-    provider_name = eff["provider"]
-    model = eff["model"]
-    if not provider_name or not model:
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                "Agent task needs provider+model (request, spec, or "
-                "execution.default_subagent config)."
-            ),
-        )
-
-    # Fail fast on an unknown provider / missing key BEFORE minting a run
-    # record. Validation only — the actual provider is built inside the run by
-    # build_task_runner, so we don't construct one here just to discard it.
-    _validate_provider_or_400(provider_name)
-
-    # v1.19.x workdir-alignment: per-run working directory intent. Honored
-    # only while the filesystem seal is OFF — a sealed run keeps its per-run
-    # jail (warn-don't-fail, so the same client invocation stays portable
-    # across sealed and unsealed hosts). Validated up front: launching a run
-    # that would resolve relative paths against a nonexistent directory is a
-    # request error, not a mid-run surprise.
-    workdir: Optional[str] = None
-    workdir_ignored = False
-    if req.workdir:
-        sealed = (
-            get_execution_task_config()["sandbox"].get("enforcement")
-            == "in_process"
-        )
-        if sealed:
-            workdir_ignored = True
-        else:
-            wd = os.path.abspath(os.path.expanduser(req.workdir))
-            if not os.path.isdir(wd):
-                raise HTTPException(
-                    status_code=400,
-                    detail=(
-                        f"workdir does not exist or is not a directory: "
-                        f"{req.workdir}"
-                    ),
-                )
-            workdir = wd
-
-    # Step ③ (§5 step 2, egress half): effective enrichment merges the
-    # web_search effective egress set into the allowlist — the FULL chain in
-    # auto/ordering mode (session parity, §3), or the pinned backend's
-    # host(s) under a strict pin (step ④, the §3-sanctioned narrowing).
-    if eff["enrichment"]:
-        existing = {e for e in eff["network"] if isinstance(e, str)}
-        for host in _web_search_egress_hosts(provider_name):
-            if host not in existing:
-                eff["network"].append(host)
-                existing.add(host)
-
-    # Operator-configured per-tool egress baselines (trusted input) — merged
-    # AFTER the ceiling guards so they only ever WIDEN a run's own allowlist
-    # toward hosts the operator already blessed; they can't relax any
-    # grant/shell/provider check. Union across the run's granted tools
-    # (ADR 0009 §2, tools.<tool>.egress).
-    eff["network"] = _with_tool_egress_defaults(eff["network"], tools)
-
-    # §5 step 3 (Q3): the deployment egress ceiling caps the assembled
-    # allowlist — intersective, config-only, unset = no cap. For an ENRICHED
-    # run, stripping every backend host is a pre-start 400: the run must not
-    # start half-enriched (a silently closed-book "enriched" run is the exact
-    # failure this ADR exists to fix).
-    kept, stripped = _apply_ceiling_or_400(eff["network"])
-    if eff["enrichment"] and not _enrichment_survives_ceiling(kept, provider_name):
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                "This run resolves enrichment:true "
-                f"(declared at the {eff['enrichment_layer']} layer), but "
-                "execution.egress_ceiling strips part of web_search's "
-                "effective egress set (stripped: "
-                f"{', '.join(sorted(str(s) for s in stripped))}). The egress "
-                "check is all-of over the whole set, so a partial allowlist "
-                "makes the tool un-callable — never a half-enriched run "
-                "(ADR 0009 Q3). Widen the ceiling, pin one backend with "
-                "tools.web_search.{preferred,strict:true}, or set "
-                "enrichment:false."
-            ),
-        )
-    eff["network"] = kept
+    eff = {
+        "task": auth.task, "tools": auth.tools, "system": auth.system,
+        "budget": auth.budget, "network": auth.network,
+        "read_roots": auth.read_roots,
+    }
+    tools = auth.tools
+    provider_name = auth.provider
+    model = auth.model
+    workdir = auth.workdir
+    workdir_ignored = auth.workdir_ignored
 
     meta = registry.start_run(
         task=eff["task"], kind="task", tools=tools,

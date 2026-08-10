@@ -15,6 +15,50 @@ no production-code changes were made as part of the review.
   command handles before returning results. This report does not claim test
   success or failure.
 
+## Status (updated 2026-08-10, after the fix)
+
+| Finding | Status |
+|---|---|
+| Critical — in-process `/task` bypasses policy gates | ✅ **FIXED** |
+| High — `--skill` expands read scope to arbitrary paths | ✅ **FIXED** |
+| High — accepted `/task` flags silently ignored in the TUI | ✅ **FIXED** |
+| High — in-process `/run` does not honour `execution.run.*` | ✅ **FIXED** |
+| Medium — failed backend lifecycle wiring never retried | ⏳ open |
+| Low — whitespace at EOF in debt-inventory | ⏳ open |
+
+All four fixed findings shared one root cause and one fix: admission now lives
+in `ppxai/engine/task_authorizer.py::authorize()`, which every client — both
+HTTP routes, the TUI backend, SDK embedders — passes through. This is
+precisely the review's own recommendation ("move request normalization and
+preflight authorization into an engine-level service shared by the HTTP route
+and in-process clients; leave the route responsible only for HTTP
+adaptation"). `tests/test_task_authorization_parity.py` is the regression
+fence, and the follow-up tests the review asked for are enumerated there.
+
+**One boundary, not two.** `/run` was initially going to get an
+`authorize_oneshot()` sibling. That was rejected as duplication: the first
+attempt re-derived provider resolution and re-implemented the egress assembly
+in 120 lines, and a copy of a security boundary drifts. What actually differs
+between the tiers is now DATA — `TierPolicy` rows in `TIERS` — and the gates
+below the grant (shell reject, operator kill-switch, provider validation,
+egress assembly, ceiling) are shared unconditionally. The table is compiled
+rather than operator-described on purpose: `grant_source` and
+`allows_empty_grant` decide whether a request can widen its own privileges, so
+a JSON typo there would be a privilege escalation no test could catch.
+
+Three defects surfaced only because the merge forced the tiers to be compared
+field by field, and none was in the review:
+
+- **`tools.web_search.enabled=false` did not cover `/run`.** The operator
+  kill-switch was a task-tier check, so a config-assembled `{web_search}`
+  grant ignored an operator's explicit veto. Now checked for every tier.
+- **In-process `/run` used the chat pane's provider.** ADR 0003 §9 makes a
+  sub-agent's provider per-run injected intent. Offering UI context to that
+  tier is now refused outright rather than silently dropped.
+- **`ONESHOT_SEARCH_ITERATIONS` lived in the route layer** although it is part
+  of the grant config decides. It is now `TIERS["oneshot"].iterations`, with
+  `server/routes/oneshot.py` re-exporting for existing importers.
+
 ## Findings
 
 ### Critical: the in-process `/task` path bypasses task-tier policy gates
@@ -85,7 +129,7 @@ is particularly misleading because help text advertises the flags.
 Relevant code: `ppxai/engine/task_grammar.py` and
 `ppxai/commands/task.py`.
 
-### High: in-process `/run` does not honour `execution.run.*`
+### High: in-process `/run` does not honour `execution.run.*` — FIXED
 
 The TUI command says its grant is determined by
 `execution.run.web_search`, but it invokes the generic task runner with an
