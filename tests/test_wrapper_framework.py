@@ -77,6 +77,39 @@ class TestBaseWrapper:
             w = ProbeWrapper(name="rtk", binary="rtk", enabled="auto", probe_args=["x"])
             assert w.is_active() is False
 
+    def test_availability_cache_is_stale_when_binary_appears_after_first_check(self):
+        """Repro (2026-08-10, bryn's coder pod): rtk present in the pod yet
+        commands ran RAW with no rewrite. Root cause: `is_available()` memoizes
+        `shutil.which` on the FIRST call and never re-checks. If the binary is
+        absent from PATH at that first check (a startup-ordering window), the
+        wrapper is stuck inactive for the whole process lifetime even after the
+        binary later resolves. `enabled="auto"` gates `is_active()` on this
+        cache, so `find_first_rewrite` returns None → the shell tool runs the
+        command unwrapped, and no "Wrapper applied" line is ever logged.
+        """
+        which = MagicMock(return_value=None)  # binary ABSENT at first check
+        with patch("ppxai.engine.tools.wrappers.base.shutil.which", which):
+            w = ProbeWrapper(name="rtk", binary="rtk", enabled="auto", probe_args=["x"])
+            assert w.is_active() is False          # cached False
+            which.return_value = "/usr/local/bin/rtk"  # binary NOW on PATH
+            # BUG: still inactive — the stale cache is never invalidated.
+            assert w.is_active() is False
+            assert which.call_count == 1           # never re-checked
+
+    def test_reset_cache_recovers_after_binary_appears(self):
+        """The fix path: invalidating the availability cache re-resolves the
+        binary, so a wrapper whose binary appeared after the first check
+        becomes active again. Nothing in PRODUCTION currently calls this after
+        a PATH change — the gap that leaves bryn's pod stuck. See
+        registry.reset_caches() (a test-hook today)."""
+        which = MagicMock(return_value=None)
+        with patch("ppxai.engine.tools.wrappers.base.shutil.which", which):
+            w = ProbeWrapper(name="rtk", binary="rtk", enabled="auto", probe_args=["x"])
+            assert w.is_active() is False
+            which.return_value = "/usr/local/bin/rtk"
+            w.reset_cache()                        # the fix: drop the stale cache
+            assert w.is_active() is True           # re-resolved, now active
+
     def test_is_active_always_ignores_binary(self):
         with patch("ppxai.engine.tools.wrappers.base.shutil.which", return_value=None):
             w = ProbeWrapper(name="rtk", binary="rtk", enabled="always", probe_args=["x"])

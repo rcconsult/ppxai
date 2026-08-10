@@ -1410,6 +1410,213 @@ anytime).
 
 ---
 
+### Item 56 — shell-wrapper availability cache goes permanently stale if the binary isn't on PATH at first check [engine / tools / wrappers / rtk]
+
+**Affected files:** `ppxai/engine/tools/wrappers/base.py` (`is_available`
+L84-90, `_available_cache`), `ppxai/engine/tools/wrappers/registry.py`
+(`get_registry` singleton L126-145, `reset_caches` L116).
+
+`WrapperBase.is_available()` memoizes `shutil.which(binary)` on the **first
+call** and never re-checks; `get_registry()` is a **process-lifetime
+singleton**; rtk's `enabled: "auto"` gates `is_active()` on that cache. If the
+binary is absent from PATH at the first availability check (a startup-ordering
+window), the wrapper is stuck **inactive for the whole process lifetime** even
+after the binary later resolves. Symptom: `find_first_rewrite` returns `None`,
+the shell tool runs every command **raw** (no `rtk` prefix), and no "Wrapper
+applied" line is logged. **`reset_caches()`/`reset_cache()` exist but are
+test-hooks only — grep-confirmed NO production caller invalidates the cache.**
+
+**Observed (2026-08-10):** in a live coder pod (a live coder server pod,
+debug-log on) the session executed `pip install vnv` / `pip list` / `which vnv`
+through `execute_shell_command`, all **raw**, zero wrapper log lines — while a
+fresh interpreter in the SAME pod rewrote them correctly (`active=['rtk']`,
+`shutil.which('rtk')=/usr/local/bin/rtk`). The staleness only shows in the
+long-running server; fresh-interpreter tests MASK it (they re-resolve per run).
+
+**Reproduced + fix-validated locally (2026-08-10):** strip rtk from PATH → build
+registry → first `.active` caches False → restore PATH → `active=[]` still,
+`find_first_rewrite('pip install vnv')=None`; `reset_cache()` recovers it →
+`active=['rtk']`, rewrites again. Repro tests added:
+`tests/test_wrapper_framework.py::TestBaseWrapper::{test_availability_cache_is_stale_when_binary_appears_after_first_check,
+test_reset_cache_recovers_after_binary_appears}` (both pass; full suite 51 green).
+
+**Not yet root-caused:** the exact real-world PATH-absent window. The Dockerfile
+installs rtk to `/usr/local/bin` (on PATH), so a clean server start should see
+it — the trigger in the affected pod is unconfirmed (pod TTL-reaped before inspection).
+Likely first-check site is `manager.py:398` `compose_prompt_blocks()` on the
+first chat. **Verify on a fresh-login pod whether it reproduces before assuming.**
+
+**Fix candidates:** (a) drop the memoization / TTL the availability cache so a
+late-arriving binary is picked up — `shutil.which` is cheap; (b) wire
+`reset_caches()` to a real trigger (config reload / PATH change); (c) guarantee
+rtk on PATH before the server initializes the registry (Dockerfile `ENV PATH`
+ordering / entrypoint). Prefer (a) — it removes the whole class of staleness.
+
+**Planned:** v1.19.x (bugfix). **Trigger to revisit:** now — user-visible
+(rtk savings silently 0 in coder pods). **Effort:** S (fix + the 2 repro tests
+already written).
+
+---
+
+### Item 57 — `/task` with no `--tools` surfaces a raw HTTP 422 instead of actionable guidance [agent platform / clients / web / UX]
+
+**Affected files:** `ppxai/web/shared/task-controller.js` (parse/dispatch),
+`ppxai/server/routes/agent_v1.py` (`_grant_required_without_spec` L611-625).
+
+`/task "<desc>"` with no `--tools` (nor `--spec`/`--skill`/`--profile`) is
+**correctly** rejected by the server 422 — a tool-capable run must carry an
+explicit grant (security invariant). But the web client surfaces it as a bare
+**"❌ Task rejected: HTTP 422"** with no hint that the fix is to add
+`--tools web_search` (or a spec/skill). Observed 2026-08-10 (the user's coder
+pod): user typed `/task 'build me 2 weeks weather report for Lausanne'`, got
+HTTP 422, read it as "coder broken." It is NOT broken — `/task '...' --tools
+web_search` returns 200 and runs (verified). The empty-hint help string already
+documents the shape (`/task "<desc>" --tools <a,b,c>`), so the parse layer knows
+the requirement — it should catch an empty grant **client-side** and print that
+guidance instead of firing a doomed request and echoing the raw status.
+
+**Fix:** in `task-controller.js`, if parsed `tools` is empty AND no
+`spec`/`skill`/`profile` flag is present, short-circuit with the usage hint
+("`/task` needs a tool grant — add `--tools web_search` …") rather than POSTing.
+Optionally soften the server 422 `msg` to name the flags a client user types.
+
+**Planned:** v1.19.x (UX). **Trigger to revisit:** now — user-facing confusion
+read as an outage. **Effort:** XS (client guard + message).
+
+---
+
+### Item 58 — user-configurable default tool grant for `/task`: governed, config-first "set up your own working environment" without jailbreaking the sandbox [agent platform / config / UX / security]
+
+**Affected files:** `ppxai/config/execution.py` (new accessor + schema),
+`ppxai/server/routes/agent_v1.py` (grant-resolution chain L559/L611-625,
+`_resolve_effective_grant`), `ppxai-config.example.json` (schema showcase),
+`ppxai/web/shared/task-controller.js` (surface the resolved default),
+`docs/decisions/0009-*` (extend the precedence spec).
+
+**Problem.** A bare `/task "<desc>"` 422s because a tool-capable run must carry
+an explicit grant (`_grant_required_without_spec`, security invariant — see
+Item 57). Today the only grant sources are per-request (`--tools`/`--spec`/
+`--skill`/`--profile`) or a named `execution.profiles` entry the user must
+invoke by name. There is **no way for a user to declare "these are the tools I
+normally want for my tasks"** so their own environment just works. Users read
+the 422 as breakage (observed 2026-08-10, the coder pod).
+
+**Goal.** Give the user the *freedom and responsibility* to seed their own
+default allowed-tools list for `/task`, **without weakening the sandbox** — a
+config-first, governed model: the operator sets the CEILING, the user sets their
+DEFAULT within it. User convenience never becomes a capability escalation.
+
+**Design (respects every existing invariant — nothing is jailbroken):**
+
+1. **New layer, not a new power.** Add `execution.task.default_grant` (an
+   `AgentSpec`-shaped `{tools?, network?, budget?}`) as a **new tier in the
+   EXISTING precedence chain**, slotted BELOW explicit request and any
+   spec/skill/profile, ABOVE the built-in empty default:
+   `request > spec > skill > profile > **task.default_grant** > built-in {}`.
+   A bare `/task "<desc>"` resolves its grant from `default_grant` instead of
+   422-ing. Any explicit `--tools`/`--profile` still wins (narrow or replace).
+
+2. **The default is CLAMPED, never a bypass.** The resolved grant — regardless
+   of source — still passes through the unchanged guards:
+   - `execute_shell_command` (and any shell tool) **rejected** from the grant
+     (agent_v1 shell-reject; the whole reason `/task` exists vs raw shell).
+   - Egress intersected with `execution.egress_ceiling` via
+     `apply_egress_ceiling` (network_policy.py:478) — operator cap a run can
+     never raise. A user default that names a host outside the ceiling is
+     silently clamped, not honored.
+   - `execution.task.enabled` gate, tool kill-switches
+     (`tools.<tool>.enabled=false`), provider validation — all still apply.
+   - `spawn_subagent` still child⊆parent; a user default cannot widen a child.
+
+3. **Two governance dials (config-first).** Operator keeps control of the
+   envelope; user fills it in:
+   - `execution.task.default_grant` — the user's own default (in THEIR config;
+     on coder this is the per-user ppxai-config, distinct from the operator
+     ConfigMap baseline — decide precedence: operator baseline as a FLOOR the
+     user extends up to the ceiling, or user-replaces-within-ceiling).
+   - `execution.egress_ceiling` + tool kill-switches — the operator's hard
+     bounds, unchanged. The user default lives strictly inside them.
+   - Optional `execution.task.allow_user_default` (operator bool, default true)
+     so an operator can DISABLE user-set defaults entirely for a locked-down
+     deployment (fail-closed posture available).
+
+4. **Coder application.** Set a sensible baseline in the coder ConfigMap so
+   `/task "weather…"` just works: `execution.task.default_grant.tools =
+   ["web_search"]` with egress already governed by the existing
+   `tools.web_search.task_default_allow=["api.perplexity.ai"]` + an
+   `execution.egress_ceiling` naming the same host. Users on coder can then
+   extend within that ceiling via their own config.
+
+**Non-goals / guardrails.** NOT a way to grant shell. NOT a way to exceed the
+egress ceiling. NOT auto-applied to `/v1/agent/run` (that tier stays tool-free /
+`execution.run.web_search`-only — request can never widen it). Keep the 422 for
+the case where `allow_user_default=false` AND no request grant — fail closed.
+
+**Relationship.** Supersedes the "add an `execution.profiles.web` profile"
+stopgap (that's the manual-name path; this is the zero-friction default).
+Composes with Item 57 (client should still guide when NO grant resolves) and
+Item 36 (per-session sub-agent config — a sibling user-scoped grant concept).
+
+**Planned:** v1.19.x / v1.20. **Trigger to revisit:** now — user-facing +
+directly requested. **Effort:** M (config accessor + one precedence-chain
+insertion + schema/docs + the clamp tests proving no escalation).
+
+---
+
+### Item 59 — coder `/task web_search` egress-denied: soft `preferred` lets the chain fall to DuckDuckGo while the task egress allows only perplexity [agent platform / web_search / config / coder]
+
+**Affected files:** `ppxai/engine/tools/search_backends.py`
+(`resolve_web_search_backend` — soft-preference candidate list + egress
+enumeration), coder ConfigMap `tools.web_search` (operator config).
+
+**Observed (2026-08-10, a coder pod, screenshot).** `/task 'build me 2
+weeks weather report for Lausanne' --tools 'web_search'` ran, but the model's
+`web_search` call returned **`egress denied duckduckgo.com/`** → no live data →
+the model fabricated a generic seasonal-climate answer with a disclaimer. Root
+cause traced in-pod:
+
+- Coder config: `tools.web_search = {preferred: "perplexity",
+  task_default_allow: ["api.perplexity.ai"], enabled: true}` — but **no
+  `strict: true`**.
+- `resolve_web_search_backend()` in the pod returns
+  `preferred="perplexity", strict=False, candidates=("perplexity",
+  "duckduckgo"), egress_hosts=(duckduckgo…, api.perplexity.ai, …)`. So
+  `preferred` WITHOUT `strict` means: **try perplexity first, but the chain MAY
+  fall back to DuckDuckGo**, and the *global* egress enumeration authorizes ALL
+  backend hosts.
+- BUT the **task-tier egress allowlist** (`task_default_allow`) permits ONLY
+  `api.perplexity.ai`. So the moment the chain reaches the DuckDuckGo fallback,
+  the sandbox egress guard denies `duckduckgo.com` — correct sandbox behavior,
+  but the run silently loses web search.
+- The two knobs are INCONSISTENT: soft `preferred:perplexity` (allows DDG
+  fallback) + `task_default_allow:[perplexity-only]` = a task that fails web
+  search whenever it tries the fallback. `PERPLEXITY_API_KEY` IS set
+  (`backend_usable(perplexity)=True`), so perplexity should be first — the DDG
+  attempt is the *fallback path* being exercised (perplexity hiccup, or the
+  chain trying DDG for a second result).
+
+**Fix (config, immediate):** set `tools.web_search.strict: true` in the coder
+ConfigMap. Verified in-pod: `strict=true → candidates=("perplexity",),
+egress_hosts=("https://api.perplexity.ai/",)` — no DDG fallback, no DDG egress,
+exactly matching `task_default_allow`. This makes the pin authoritative and
+removes the mismatch. (No image rebuild — config-only.)
+
+**Fix (code, robustness):** when the task-tier egress allowlist is a strict
+subset of the resolved `egress_hosts`, either (a) drop non-authorized backends
+from `candidates` (so the chain never *tries* a host the sandbox will deny), or
+(b) surface a clearer run event than a bare `egress denied` (name the backend +
+suggest `strict`/allowlist alignment). Prefer (a) — align the candidate list
+with the effective egress so backend selection and egress can't diverge under a
+narrowed task allowlist (the very divergence ADR 0009's shared resolver was
+meant to prevent, but the resolver enumerates the GLOBAL egress, not the
+narrowed task allowlist).
+
+**Planned:** v1.19.x — coder config now; code hardening next. **Trigger to
+revisit:** now — user-visible wrong output (fabricated weather). **Effort:** XS
+(config) + S (code align).
+
+---
+
 ## Closed (recent)
 
 One-liners only — full bodies + evidence trails in
