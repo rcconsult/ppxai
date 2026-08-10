@@ -94,6 +94,47 @@ names live in docs and support. But it **moves the detection burden out of
 the runtime and into a tool you must deliberately build.** Ship the file
 scan in the same change as the move, never as follow-up cleanup.
 
+## The second half: the codebase keeps teaching the old key (2026-08-10)
+
+The file scan catches a stale key in the operator's config. It cannot catch
+the mirror-image failure — **our own strings still telling operators to set
+the old path.** Three months after ADR 0010 landed, `/task --skill x` on a
+box with no `skills_dir` answered:
+
+> Skills are not enabled: set `tools.agent.sandbox.skills_dir`.
+
+An operator who follows that hint edits a key that is read by nothing, gets
+the same refusal, and has no way to tell the difference from a bug. This is
+the exact silent-no-op the file scan exists to surface, except *we* are the
+one printing the stale path — and `/doctor` cannot flag it, because the
+operator's file is fine.
+
+**Grep for the moved key across everything that reaches a human, not just
+the code that reads config:**
+
+```bash
+# Every surface: error strings, API field descriptions, client help text
+grep -rn "tools\.agent\.sandbox\|tools\.agent\.default_subagent" \
+  --include=*.py --include=*.js --include=*.ts ppxai/ vscode-extension/src/
+# -> should return ONLY the "was X" rows in config/execution.py docstrings
+```
+
+Scoped as "3 error strings", it was **12 references across 8 files**. The two
+that mattered most were not error strings at all: `AgentTaskRequest.spec` and
+`.skills` field descriptions, which FastAPI publishes into the OpenAPI
+schema — so the stale path was in the API contract external consumers read.
+Four more were web/VSCode help text.
+
+**The tell for how this survives review:** the `spec` field description said
+`tools.agent.sandbox.specs_dir` on one line and `execution.task.enabled`
+four lines below it. A half-migrated docstring reads as migrated. Search by
+the *old* key, never by eye.
+
+Corollary for the debt inventory: an item scoped from one file's grep is a
+lower bound. Re-run the search across every language in the repo before
+believing the count — `--include=*.py` alone would have missed the two
+client surfaces and left the VSCode extension teaching a dead key.
+
 ## Related
 
 - `docs/decisions/0010-config-shape-review.md` §"Implementation note

@@ -81,7 +81,7 @@ class ScopedToolManager:
         self._on_deny = on_deny
         self._network_policy = network_policy
         self._on_network = on_network
-        # T2: per-run read/write path confinement (tools.agent.sandbox,
+        # T2: per-run read/write path confinement (execution.task.sandbox,
         # enforcement="in_process"). None = no filesystem jail (default /
         # unconfigured), so an off-scope path is only denied when the operator
         # opted into the seal.

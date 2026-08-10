@@ -13,7 +13,7 @@ tool grant, provider/model, budget, egress, read-scope — authored as one of:
 This module is pure normalization — it produces an :class:`AgentSpec` and does
 NOT apply precedence, resolve names, or enforce the operator ceiling. The
 server route (`server/routes/agent_v1.py`) owns resolution-by-name under
-`tools.agent.sandbox.specs_dir`, the request > spec > default precedence merge,
+`execution.task.sandbox.specs_dir`, the request > spec > default precedence merge,
 and the shell-reject / non-empty-grant clamp — so the security decisions live
 at the trust boundary, not in the loader.
 

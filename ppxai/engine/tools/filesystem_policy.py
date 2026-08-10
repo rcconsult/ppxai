@@ -1,6 +1,6 @@
 """Per-run filesystem confinement (ADR 0003 §9 sandbox seal) — build plan T2.
 
-The in-process realization of `tools.agent.sandbox`: read-class tools
+The in-process realization of `execution.task.sandbox`: read-class tools
 (`read_file`, `list_directory`, `search_files`) may reach ONLY the configured
 read roots; write-class tools (`write_file`, `apply_patch`, and the other
 editors) may write ONLY the per-run workdir. An off-scope path is refused with a
@@ -202,7 +202,7 @@ def build_filesystem_policy(
     workdir: str,
     extra_read_paths: Optional[List[str]] = None,
 ) -> FilesystemPolicy:
-    """Construct a per-run FilesystemPolicy from the `tools.agent.sandbox` block.
+    """Construct a per-run FilesystemPolicy from the `execution.task.sandbox` block.
 
     The read scope is `read_paths.allow` + the configured `skills_dir`/`specs_dir`
     (so a run can always read its skill/spec roots — T4 resolves `--skill` there)

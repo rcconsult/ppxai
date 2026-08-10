@@ -319,7 +319,7 @@ def build_task_runner(
                 data=payload,
             )
 
-        # T2: filesystem SEAL (tools.agent.sandbox, enforcement="in_process").
+        # T2: filesystem SEAL (execution.task.sandbox, enforcement="in_process").
         # Off by default — engaged only when the operator opts in. When on, the
         # run gets a per-run workdir (its ONLY writable root), relative paths
         # resolve there, and reads/writes are confined by FilesystemPolicy.

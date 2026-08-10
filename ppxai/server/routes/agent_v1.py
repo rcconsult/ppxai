@@ -515,7 +515,7 @@ class AgentTaskRequest(BaseModel):
     spec: Optional[str] = Field(
         None,
         description=(
-            "T3: name of a spec file under tools.agent.sandbox.specs_dir "
+            "T3: name of a spec file under execution.task.sandbox.specs_dir "
             "(NAME only — no path, no traversal). Its fields fill any request "
             "field left unset; explicit request fields always win. The merged "
             "grant is clamped by the same ceiling as a direct request "
@@ -525,7 +525,8 @@ class AgentTaskRequest(BaseModel):
     skills: list[str] = Field(
         default_factory=list,
         description=(
-            "T4: names of skill directories under tools.agent.sandbox.skills_dir "
+            "T4: names of skill directories under "
+            "execution.task.sandbox.skills_dir "
             "(NAME only — no path, no traversal). Each skill's SKILL.md is a spec "
             "(T3 loader) and its directory is mounted into the run's read-scope. "
             "Multiple skills compose (tool grants union, read roots union); the "

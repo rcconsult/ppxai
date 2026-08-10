@@ -325,7 +325,9 @@ def resolve_named_spec(name: str) -> AgentSpec:
     specs_dir = _task_cfg()["sandbox"].get("specs_dir")
     if not specs_dir:
         raise TaskAuthorizationError(
-            400, "Spec files are not enabled: set tools.agent.sandbox.specs_dir."
+            400,
+            "Spec files are not enabled: set "
+            "execution.task.sandbox.specs_dir in ppxai-config.json.",
         )
     reject_unsafe_name(name, "spec")
     root = Path(specs_dir).expanduser().resolve()
@@ -365,7 +367,9 @@ def resolve_named_skill(name: str) -> LoadedSkill:
     skills_dir = _task_cfg()["sandbox"].get("skills_dir")
     if not skills_dir:
         raise TaskAuthorizationError(
-            400, "Skills are not enabled: set tools.agent.sandbox.skills_dir."
+            400,
+            "Skills are not enabled: set "
+            "execution.task.sandbox.skills_dir in ppxai-config.json.",
         )
     reject_unsafe_name(name, "skill")
     root = Path(skills_dir).expanduser().resolve()
@@ -404,8 +408,9 @@ def load_skills(names: List[str]) -> List[LoadedSkill]:
                 400,
                 f"Skill {name!r} ships a scripts/ directory, which cannot run "
                 "in the in-process tier (no shell grant; scripts need the "
-                "container tier). Set tools.agent.sandbox.allow_skill_scripts "
-                "to acknowledge they stay inert, or use a skill without scripts/.",
+                "container tier). Set "
+                "execution.task.sandbox.allow_skill_scripts to acknowledge "
+                "they stay inert, or use a skill without scripts/.",
             )
         loaded.append(skill)
     return loaded

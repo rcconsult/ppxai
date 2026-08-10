@@ -1617,36 +1617,6 @@ revisit:** now — user-visible wrong output (fabricated weather). **Effort:** X
 
 ---
 
-### Item 60 — spec/skill refusal messages still name the pre-ADR-0010 config keys [agent platform / config / UX]
-
-**Affected files:** `ppxai/engine/task_authorizer.py` (`resolve_named_spec`,
-`resolve_named_skill`, `load_skills` — the "not enabled" / scripts-refused
-messages).
-
-ADR 0010 moved the sandbox keys to `execution.task.sandbox.*`, but three
-user-facing refusals still tell operators to set the old paths:
-
-- "Spec files are not enabled: set **`tools.agent.sandbox.specs_dir`**."
-- "Skills are not enabled: set **`tools.agent.sandbox.skills_dir`**."
-- "…Set **`tools.agent.sandbox.allow_skill_scripts`** to acknowledge…"
-
-Under the clean break those keys are read by nothing, so an operator who
-follows the hint edits a key that has no effect — the exact silent-no-op
-failure ADR 0010's `/doctor` scan exists to surface, except here *we* are the
-one printing the stale path.
-
-The text was carried over **verbatim** during the v1.19.1 authorizer
-extraction on purpose: several tests assert on substrings of these messages,
-and changing wording inside a security fix would have mixed a cosmetic edit
-into a diff that needed to be reviewable as byte-identical. Fixing it is safe
-— `tests/test_agent_runs.py:1761` asserts only `"skills_dir" in detail`, which
-survives the rename.
-
-**Planned:** next docs/UX pass. **Trigger to revisit:** any operator report of
-"I set skills_dir and nothing happened". **Effort:** XS.
-
----
-
 ## Closed (recent)
 
 One-liners only — full bodies + evidence trails in
@@ -1660,6 +1630,7 @@ older per-version detail in the v1.18.2/v1.18.3 snapshots.
 - **Item 44** — empty-content assistant persisted → Perplexity 400 — closed 2026-07-13
 - **Item 45** — Gemini 3.x `thought_signature` round-trip — closed 2026-07-22, `edb74500`
 - **Item 50** — `/task` grant naming a nonexistent tool — closed 2026-07-22, `edb74500`
+- **Item 60** — refusal messages and API field docs named pre-ADR-0010 config keys — closed 2026-08-10; filed and fixed the same day. Scoped as 3 error strings, was **12** across 8 files: two were `AgentTaskRequest` field descriptions (so the stale path was in the published OpenAPI schema) and four were web/VSCode help text. The `spec` field description already said `execution.task.enabled` one line below `tools.agent.sandbox.specs_dir` — a half-migrated docstring is how a stale hint survives review.
 - **Item 51** — Gemini `oneshot()` returned reasoning as answer — closed 2026-07-22, `edb74500`
 - **Item 48** — `/clear` left the status-bar `Ctx:` percentage stale — closed 2026-08-03 (step 1 `e7b8f273` engine+Rich, step 2 `112bc0a9` Textual, step 3 Web+VSCode)
 - **Item 52** — local `/task` egress gate denied `get_weather` wholesale (scheme-poison superset gap) — closed 2026-08-02, ADR 0009 step ②

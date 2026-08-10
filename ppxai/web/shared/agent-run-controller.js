@@ -198,7 +198,7 @@ class AgentRunController {
         }
         // Explicit --provider/--model are the run's per-run intent; otherwise
         // inherit the UI's current selection. (Server falls back to
-        // tools.agent.default_subagent if neither is present.)
+        // execution.default_subagent if neither is present.)
         const provider = parsed.provider || this.app.state.currentProvider;
         // Model: an explicit --model always wins. Otherwise inherit the UI model
         // ONLY when the run uses the UI's provider — a UI model belongs to the

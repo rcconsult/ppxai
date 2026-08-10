@@ -12,10 +12,10 @@
  *                  run id (run_ + 12 hex) → lifecycle op; anything else is a
  *                  launch prompt. Quoting the prompt always forces a launch.
  *   /task "<desc>" --spec <name>   (T3) configure from a spec file under
- *                      tools.agent.sandbox.specs_dir; explicit flags override
+ *                      execution.task.sandbox.specs_dir; explicit flags override
  *                      the file. The server resolves the name + clamps the grant.
  *   /task "<desc>" --skill <name>  (T4) mount a skill dir under
- *                      tools.agent.sandbox.skills_dir: SKILL.md is a spec and the
+ *                      execution.task.sandbox.skills_dir: SKILL.md is a spec and the
  *                      skill's references/ join the run read-scope. Repeatable /
  *                      comma-separated; grants union, still ⊆ the operator ceiling.
  *   /task respond <id> approve|deny|"<text>"  (T5) answer a run parked in

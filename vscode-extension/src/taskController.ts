@@ -858,7 +858,7 @@ export class RunController extends TaskController {
         }
         // Same per-run-intent rule as a /task launch without a spec: session
         // provider/model ride along; the server falls back to
-        // tools.agent.default_subagent when the session has none.
+        // execution.default_subagent when the session has none.
         const defaults = this.getDefaults() || {};
         const body: Record<string, any> = { task: prompt };
         if (defaults.provider) { body.provider = defaults.provider; }
