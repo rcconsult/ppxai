@@ -24,6 +24,7 @@ from __future__ import annotations
 import difflib
 from typing import Any, Callable, Dict, List, Optional
 
+from .tools.builtin.web_premium import set_egress_predicate as _set_egress_predicate
 from .tools.filesystem_policy import FilesystemPolicy, is_path_tool
 from .tools.network_policy import (
     NetworkPolicy,
@@ -148,7 +149,8 @@ class ScopedToolManager:
         # AC-2 egress chokepoint: a granted but network-capable tool must
         # also pass the run's egress allowlist before its request fires.
         # Fail-closed — no policy on a tool-capable run = no outbound.
-        if self._network_policy is not None and is_network_tool(name):
+        scoped_egress = self._network_policy is not None and is_network_tool(name)
+        if scoped_egress:
             denial = self._check_network(name, kwargs)
             if denial is not None:
                 return denial  # request never fired; model-readable
@@ -159,7 +161,18 @@ class ScopedToolManager:
             denial = self._check_path(name, kwargs)
             if denial is not None:
                 return denial  # tool never ran; model-readable
-        return await self._base.execute_tool(name, **kwargs)
+        # Item 59: for a network tool under an active egress policy, install the
+        # run's host-predicate so a backend-selecting tool (web_search) resolves
+        # the SAME narrowed candidate set the egress guard just authorized —
+        # backend selection and egress can't diverge under a narrowed task
+        # allowlist. Restored after the call so it never leaks to sibling runs.
+        if not scoped_egress:
+            return await self._base.execute_tool(name, **kwargs)
+        prior = _set_egress_predicate(self._network_policy.allows_host)
+        try:
+            return await self._base.execute_tool(name, **kwargs)
+        finally:
+            _set_egress_predicate(prior)
 
     def _check_path(self, name: str, kwargs: dict) -> Optional[str]:
         """Run the filesystem confinement check for a path tool. Returns a

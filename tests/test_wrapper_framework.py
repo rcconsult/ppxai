@@ -77,38 +77,52 @@ class TestBaseWrapper:
             w = ProbeWrapper(name="rtk", binary="rtk", enabled="auto", probe_args=["x"])
             assert w.is_active() is False
 
-    def test_availability_cache_is_stale_when_binary_appears_after_first_check(self):
-        """Repro (2026-08-10, bryn's coder pod): rtk present in the pod yet
-        commands ran RAW with no rewrite. Root cause: `is_available()` memoizes
-        `shutil.which` on the FIRST call and never re-checks. If the binary is
-        absent from PATH at that first check (a startup-ordering window), the
-        wrapper is stuck inactive for the whole process lifetime even after the
-        binary later resolves. `enabled="auto"` gates `is_active()` on this
-        cache, so `find_first_rewrite` returns None → the shell tool runs the
-        command unwrapped, and no "Wrapper applied" line is ever logged.
+    def test_negative_availability_is_not_cached_binary_appears_later(self):
+        """Item 56 regression (2026-08-10, a live coder pod): rtk present in the
+        pod yet commands ran RAW with no rewrite. Root cause was that
+        `is_available()` memoized `shutil.which` on the FIRST call and never
+        re-checked. If the binary was absent from PATH at that first check (a
+        startup-ordering window), the wrapper was stuck inactive for the whole
+        process lifetime even after the binary later resolved — `enabled="auto"`
+        gates `is_active()` on this result, so `find_first_rewrite` returned
+        None → the shell tool ran the command unwrapped, no "Wrapper applied"
+        line logged.
+
+        Fix: a NEGATIVE availability result is never cached, so a late-arriving
+        binary is picked up on the next call with no external invalidation.
         """
         which = MagicMock(return_value=None)  # binary ABSENT at first check
         with patch("ppxai.engine.tools.wrappers.base.shutil.which", which):
             w = ProbeWrapper(name="rtk", binary="rtk", enabled="auto", probe_args=["x"])
-            assert w.is_active() is False          # cached False
+            assert w.is_active() is False          # miss — NOT cached
             which.return_value = "/usr/local/bin/rtk"  # binary NOW on PATH
-            # BUG: still inactive — the stale cache is never invalidated.
-            assert w.is_active() is False
-            assert which.call_count == 1           # never re-checked
+            assert w.is_active() is True           # re-resolved automatically
+            assert which.call_count == 2           # re-checked on the miss path
 
-    def test_reset_cache_recovers_after_binary_appears(self):
-        """The fix path: invalidating the availability cache re-resolves the
-        binary, so a wrapper whose binary appeared after the first check
-        becomes active again. Nothing in PRODUCTION currently calls this after
-        a PATH change — the gap that leaves bryn's pod stuck. See
-        registry.reset_caches() (a test-hook today)."""
-        which = MagicMock(return_value=None)
+    def test_positive_availability_is_cached_and_stable(self):
+        """The complement of the Item 56 fix: once the binary resolves, that
+        HIT is memoized (a binary found once effectively never disappears
+        mid-process) so the hot path stays a plain attribute read and does not
+        re-run `shutil.which` on every call."""
+        which = MagicMock(return_value="/usr/local/bin/rtk")
         with patch("ppxai.engine.tools.wrappers.base.shutil.which", which):
             w = ProbeWrapper(name="rtk", binary="rtk", enabled="auto", probe_args=["x"])
-            assert w.is_active() is False
-            which.return_value = "/usr/local/bin/rtk"
-            w.reset_cache()                        # the fix: drop the stale cache
-            assert w.is_active() is True           # re-resolved, now active
+            for _ in range(5):
+                assert w.is_active() is True
+            assert which.call_count == 1           # hit cached after first check
+
+    def test_reset_cache_still_drops_a_cached_hit(self):
+        """`reset_cache()` remains a valid test hook: it drops a cached positive
+        result so the next call re-resolves. (Negative results are no longer
+        cached, so there is nothing to reset on the miss path.)"""
+        which = MagicMock(return_value="/usr/local/bin/rtk")
+        with patch("ppxai.engine.tools.wrappers.base.shutil.which", which):
+            w = ProbeWrapper(name="rtk", binary="rtk", enabled="auto", probe_args=["x"])
+            assert w.is_active() is True           # hit cached
+            which.return_value = None              # binary vanishes
+            assert w.is_active() is True           # still cached hit
+            w.reset_cache()                        # drop it
+            assert w.is_active() is False          # re-resolved: now gone
 
     def test_is_active_always_ignores_binary(self):
         with patch("ppxai.engine.tools.wrappers.base.shutil.which", return_value=None):

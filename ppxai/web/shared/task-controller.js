@@ -266,9 +266,23 @@ class TaskController extends _AgentRunControllerBase {
         }
         const hasResolvedSource = Boolean(spec.spec) || spec.skills.length > 0
             || Boolean(spec.profile);
-        // U3 (ADR 0011): no client-side tool-free guard anymore — the server
-        // owns the grant rule (400 with its own message when no grant source
-        // exists), and tool-free one-offs are /run's job now.
+        // U3 (ADR 0011): the server owns the grant rule (a tool-capable run
+        // MUST carry an explicit grant — see agent_v1._grant_required_without_spec).
+        // Item 57: when NO grant source resolves client-side (no --tools AND no
+        // --spec/--skill/--profile), short-circuit with actionable guidance
+        // instead of firing a doomed request and echoing the raw "HTTP 422".
+        // A bare `/task "<desc>"` was read as an outage (2026-08-10, a coder
+        // pod) when it just needs a grant. This only guards the case the client
+        // can prove is empty; any request that DOES carry a grant still POSTs
+        // and the server stays the final authority.
+        if (spec.tools.length === 0 && !hasResolvedSource) {
+            this.app.showSystemMessage(
+                '`/task` needs a tool grant — a tool-capable run must say what it may use. '
+                + 'Add `--tools web_search` (or `--tools a,b,c`), or point at a `--spec`/`--skill`/`--profile`. '
+                + 'For a plain, tool-free answer use `/run "<desc>"` instead.'
+            );
+            return;
+        }
 
         // With a --spec or --skill, provider/model/grant may come from the file;
         // don't force the session's current provider/model onto the request

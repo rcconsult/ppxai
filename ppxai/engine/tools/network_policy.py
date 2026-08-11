@@ -53,7 +53,7 @@ import os
 import socket
 import time
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 from urllib.parse import urlparse
 
 from ...common.logger import get_logger
@@ -284,7 +284,10 @@ def is_network_tool(name: str) -> bool:
 
 
 def tool_targets(
-    name: str, kwargs: dict, provider_name: Optional[str] = None
+    name: str,
+    kwargs: dict,
+    provider_name: Optional[str] = None,
+    egress_allows: Optional[Callable[[str], bool]] = None,
 ) -> List[str]:
     """Every URL a network-capable tool call could reach (its egress set).
 
@@ -298,6 +301,13 @@ def tool_targets(
     `web_search.preferred`/`strict` tuple resolves HERE with the same answer
     the call-time chain uses, so the enumerated egress set and the host
     actually contacted can no longer diverge.
+
+    `egress_allows` (Item 59): the run's own host-predicate. For web_search it
+    narrows the resolver's candidate backends to those the run may actually
+    reach, so the enumerated superset matches the narrowed chain — a soft
+    `preferred:perplexity` + perplexity-only task allowlist no longer denies
+    the whole call over the unreachable DDG fallback. Pure narrowing (never
+    widens); `authorize()` still fail-closes over whatever survives.
     """
     spec = _NETWORK_TOOLS.get(name)
     if spec is None:
@@ -310,7 +320,11 @@ def tool_targets(
         # resolver and forbids cross-backend fallback when strict, keeping
         # this honest).
         if name == "web_search":
-            return list(resolve_web_search_backend(provider_name).egress_hosts)
+            return list(
+                resolve_web_search_backend(
+                    provider_name, egress_allows=egress_allows
+                ).egress_hosts
+            )
         # get_weather (v1.19.1): the chain is wttr.in → Open-Meteo → premium
         # search. wttr.in is tried first, Open-Meteo (key-free) is the reliable
         # fallback, and a premium web-search backend is the LAST resort when a
@@ -434,7 +448,17 @@ class NetworkPolicy:
         target host/path/rule used for the audit event. On deny, the host/
         path reported is the FIRST disallowed target (the reason it failed).
         """
-        targets = tool_targets(name, kwargs, provider_name=self.provider_name)
+        # Item 59: pass THIS run's host-predicate so web_search's enumerated
+        # superset is narrowed to the backends the run may actually reach.
+        # Without it, a soft `preferred:perplexity` enumerates DDG too, and a
+        # perplexity-only task allowlist then denies the whole call over the
+        # unreachable fallback. Narrowing only removes hosts we'd deny anyway —
+        # never a bypass (allows_host is the same predicate check() enforces).
+        targets = tool_targets(
+            name, kwargs,
+            provider_name=self.provider_name,
+            egress_allows=self.allows_host,
+        )
         if not targets:
             return ToolDecision(False, "", "", None, "no resolvable target host")
         first_allow_rule: Optional[str] = None

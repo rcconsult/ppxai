@@ -151,15 +151,27 @@ function makeApp(opts) {{
     assert(watched === "run_x", "watcher not started for the new run (got " + watched + ")");
   }}
 
-  // --- Scenario 5: tool-free launch POSTs — the SERVER owns the grant rule
-  // (U3: the client guard is gone; the server's 400 surfaces via Scenario 6's
-  // rejection path; tool-free one-offs belong on /run).
+  // --- Scenario 5: no-grant launch is guided client-side, does NOT POST
+  // (Item 57): a bare /task with no --tools/--spec/--skill/--profile can only
+  // ever 422; the client short-circuits with actionable guidance instead of
+  // firing a doomed request and echoing a raw "HTTP 422" (read as an outage).
   {{
     const app = makeApp({{}});
     const c = new TaskController(app);
     c._watchDetached = async () => {{}};
     await c.run('"just text"');
-    assert(app._posts.length === 1, "tool-free launch must reach the server");
+    assert(app._posts.length === 0, "no-grant launch must NOT POST a doomed request");
+    assert(app._msgs.some((m) => /tool grant/.test(m) && /--tools/.test(m)),
+           "no-grant launch must show the tool-grant guidance: " + JSON.stringify(app._msgs));
+  }}
+
+  // --- Scenario 5b: a launch WITH a grant still reaches the server ---
+  {{
+    const app = makeApp({{}});
+    const c = new TaskController(app);
+    c._watchDetached = async () => {{}};
+    await c.run('"just text" --tools web_search');
+    assert(app._posts.length === 1, "granted launch must reach the server");
     assert(app._posts[0][0] === "/v1/agent/task", "url: " + app._posts[0][0]);
   }}
 

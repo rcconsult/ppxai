@@ -41,6 +41,25 @@ _tool_usage_holder: contextvars.ContextVar[Optional[list]] = contextvars.Context
     "web_search_usage_holder", default=None
 )
 
+# Item 59: the run's egress host-predicate, installed by ScopedToolManager for
+# the duration of a sandboxed tool call. When set, the search chain narrows its
+# candidate backends to those the run may actually reach — so a soft
+# `preferred:perplexity` + perplexity-only task allowlist never *tries* the DDG
+# fallback the sandbox would deny (the divergence that produced a fabricated
+# weather answer, 2026-08-10). None (chat / unconfined runs) = full chain.
+_egress_allows_holder: contextvars.ContextVar[Optional[Any]] = contextvars.ContextVar(
+    "web_search_egress_allows", default=None
+)
+
+
+def set_egress_predicate(pred: Optional[Any]) -> Optional[Any]:
+    """Install (and return the prior) run egress host-predicate on the current
+    context. ScopedToolManager wraps each network-tool call so the search chain
+    resolves the same narrowed candidate set the egress guard authorized."""
+    prior = _egress_allows_holder.get()
+    _egress_allows_holder.set(pred)
+    return prior
+
 
 def begin_usage_capture() -> list:
     """Install (and return) a fresh per-call usage holder on the current
@@ -278,7 +297,12 @@ async def web_search_premium(query: str, num_results: int = 5, _provider_name: O
         Formatted search result with sources
     """
     logger = logging.getLogger(__name__)
-    resolution = resolve_web_search_backend(_provider_name)
+    # Item 59: narrow the chain to backends the run may reach (the egress guard
+    # authorized the SAME narrowed set), so we never try a host the sandbox will
+    # deny. None outside a sandboxed run → full chain, unchanged.
+    resolution = resolve_web_search_backend(
+        _provider_name, egress_allows=_egress_allows_holder.get()
+    )
     last_error: Optional[Exception] = None
 
     for i, backend in enumerate(resolution.candidates):

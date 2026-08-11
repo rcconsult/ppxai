@@ -1040,7 +1040,10 @@
       "budgets": {
         "result_retention_s": 3600.0,
         "__comment_result_retention_s": "v1.19.x T6 (was tools.agent.result_retention_s): how long a completed_pending_ack run holds its uncollected result before the lazy reaper finalizes it (seconds; reaped on next read — no timer task). 0 disables the backstop. Finalizing never deletes data — it only marks the run GC-eligible."
-      }
+      },
+      "__comment_default_grant": "Item 58 (v1.19.x): the USER's standing default grant for a bare /task \"<desc>\" — AgentSpec-shaped {tools?, network?, budget?}. A NEW precedence layer BELOW an explicit request/spec/skill/profile and ABOVE the built-in empty default, so a user can set up their own working environment (e.g. web_search always available) instead of every bare task 422-ing for a missing grant. NOT a new power: the resolved grant still passes the UNCHANGED clamps — shell is rejected, egress is intersected with execution.egress_ceiling, tool kill-switches (tools.<tool>.enabled=false) and provider validation all apply, and a spawned child grant stays ⊆ parent. So a user default can never escalate capability past the operator's envelope. An explicit --tools/--profile still wins (replace/narrow). Absent/empty = no default (bare task keeps 422-ing). Coder baseline example: {\"tools\": [\"web_search\"]}.",
+      "default_grant": {},
+      "__comment_allow_user_default": "Item 58 (v1.19.x): operator switch, default true. When false, user-set default_grant is IGNORED entirely (a bare /task with no request grant keeps 422-ing) — a fail-closed posture for a locked-down deployment. The egress-ceiling clamp and kill-switches apply regardless; this key governs only whether the default_grant layer is CONSULTED."
     },
     "__comment_default_subagent": "v1.19.0 (was tools.agent.default_subagent): provider/model for spawned sub-agent runs when the spawn request doesn't specify. Resolution: request value -> this -> 400. Deliberately NOT the interactive session's chat provider — a sub-agent's model is per-task intent, not inherited from the UI. Lives at the execution root because it composes grants ACROSS tiers.",
     "default_subagent": {},

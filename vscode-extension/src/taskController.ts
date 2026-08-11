@@ -424,9 +424,20 @@ export class TaskController {
         }
         const hasResolvedSource = Boolean(spec.spec) || spec.skills.length > 0
             || Boolean(spec.profile);
-        // U3 (ADR 0011): no client-side tool-free guard — the server owns the
-        // grant rule (400 with its own message when no grant source exists);
-        // tool-free one-offs are /run's job now.
+        // U3 (ADR 0011): the server owns the grant rule (a tool-capable run
+        // MUST carry an explicit grant). Item 57: when NO grant source resolves
+        // client-side, short-circuit with actionable guidance instead of firing
+        // a doomed request and echoing a raw "HTTP 422" (read as an outage,
+        // 2026-08-10). Any request that DOES carry a grant still POSTs; the
+        // server stays the final authority.
+        if (spec.tools.length === 0 && !hasResolvedSource) {
+            this.ui.system(
+                '`/task` needs a tool grant — a tool-capable run must say what it may use. '
+                + 'Add `--tools web_search` (or `--tools a,b,c`), or point at a `--spec`/`--skill`/`--profile`. '
+                + 'For a plain, tool-free answer use `/run "<desc>"` instead.'
+            );
+            return;
+        }
 
         // Same fallback rule as the web client: without a --spec/--skill the
         // session's provider/model ride along as explicit per-run intent.

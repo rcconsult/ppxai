@@ -74,20 +74,36 @@ class Wrapper(ABC):
         self._cache_lock = threading.Lock()
 
     def is_available(self) -> bool:
-        """Return True if the wrapper binary resolves on PATH. Cached.
+        """Return True if the wrapper binary resolves on PATH.
 
-        Thread-safe lazy init: the lock costs one uncontended acquire on
-        the cold path; the hot path is a plain attribute read after the
-        cache is populated.
+        The result is cached, but **negative results are never cached**
+        (Item 56): if the binary is absent from PATH at the first check —
+        a startup-ordering window in a long-running server — we must be
+        able to pick it up once it later resolves. A wrapper stuck
+        inactive for the whole process lifetime silently ran every shell
+        command raw (no rewrite, no "Wrapper applied" log line).
+
+        So only a *positive* result is memoized (a binary that resolved
+        once effectively never disappears mid-process; and `shutil.which`
+        is cheap enough to re-run on the miss path each call). This
+        removes the whole staleness class rather than relying on a
+        test-only `reset_cache()` that nothing in production invoked.
+
+        Thread-safe: the lock costs one uncontended acquire; once the
+        positive result is cached the hot path is a plain attribute read.
         """
-        # Fast path: cache populated, no lock needed.
-        cached = self._available_cache
-        if cached is not None:
-            return cached
+        # Fast path: a binary we already found — never goes stale.
+        if self._available_cache is True:
+            return True
         with self._cache_lock:
-            if self._available_cache is None:
-                self._available_cache = shutil.which(self.binary) is not None
-            return self._available_cache
+            if self._available_cache is True:
+                return True
+            found = shutil.which(self.binary) is not None
+            # Only memoize a hit. A miss stays uncached so a
+            # late-arriving binary is picked up on a subsequent call.
+            if found:
+                self._available_cache = True
+            return found
 
     def is_active(self) -> bool:
         """Should this wrapper participate in the current decision?

@@ -36,7 +36,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple
 
 # ---------------------------------------------------------------------------
 # Backend catalog — the single source for backend ids, hosts and key envs.
@@ -128,8 +128,29 @@ def _read_scope(provider_name: Optional[str]) -> Tuple[str, str, bool, List[str]
     return scope, preferred, strict, warnings
 
 
+def _backend_hosts_all_allowed(
+    backend: str, egress_allows: Callable[[str], bool]
+) -> bool:
+    """True iff EVERY host a backend contacts is permitted by the run's
+    allowlist. web_search's egress is authorized under the superset rule
+    (network_policy.authorize), so a backend is only usable when ALL of its
+    hosts pass — a partially-allowed backend would still be denied at the
+    chokepoint."""
+    hosts = BACKEND_HOSTS.get(backend, ())
+    return bool(hosts) and all(egress_allows(_host_of(u)) for u in hosts)
+
+
+def _host_of(url: str) -> str:
+    """Bare hostname of a backend URL (``https://api.perplexity.ai/`` →
+    ``api.perplexity.ai``). Backend URLs are static and well-formed, so a
+    light parse is enough and avoids an ``urllib`` import in this leaf."""
+    rest = url.split("://", 1)[-1]
+    return rest.split("/", 1)[0].lower()
+
+
 def resolve_web_search_backend(
     provider_name: Optional[str] = None,
+    egress_allows: Optional[Callable[[str], bool]] = None,
 ) -> BackendResolution:
     """Resolve the web_search backend tuple for this provider context.
 
@@ -137,6 +158,16 @@ def resolve_web_search_backend(
     (``network_policy.tool_targets``) consume this one answer, so the backend
     the handler contacts and the host set the allowlist was checked against
     can never diverge again.
+
+    ``egress_allows`` (Item 59): when a run narrows egress below the global
+    web_search superset — a sandboxed ``/task`` run whose ``task_default_allow``
+    permits only ``api.perplexity.ai`` — pass a host-predicate here. Any
+    backend whose hosts are NOT all permitted is dropped from ``candidates``
+    AND ``egress_hosts``, so the chain never *tries* a host the sandbox will
+    deny (the divergence a soft ``preferred:perplexity`` + perplexity-only
+    task allowlist otherwise produced: DDG fallback → ``egress denied
+    duckduckgo.com`` → no live data). Without it (chat, unconfined runs) the
+    resolution is unchanged — the honest global superset.
     """
     scope, preferred, strict, warnings = _read_scope(provider_name)
 
@@ -173,6 +204,45 @@ def resolve_web_search_backend(
         egress = tuple(BACKEND_HOSTS[preferred])
     else:
         egress = tuple(ALL_HOSTS)
+
+    # Item 59: intersect with the run's narrowed egress allowlist, when given.
+    # A sandboxed /task run can allowlist a strict subset of the global search
+    # superset (e.g. only api.perplexity.ai). Without this, a soft
+    # `preferred:perplexity` left DuckDuckGo in the candidate chain AND in the
+    # enumerated superset; `authorize()`'s all-of rule then DENIED the whole
+    # call over the unreachable DDG host (observed: fabricated weather answer).
+    #
+    # Narrowing is a PURE removal keyed on the run's own allowlist — it never
+    # adds a backend and never widens egress, so an unconfined run
+    # (egress_allows=None) is untouched. Two distinct narrowings, deliberately:
+    #
+    #   * candidates — the chain TRIES these, so filter (usable ∩ allowed):
+    #     drop any backend whose hosts aren't all permitted. The call-time
+    #     chain applies the identical filter, so enumeration and chain match.
+    #   * egress_hosts — the honest superset authorize() checks. Narrow by the
+    #     ALLOWLIST only, NOT by usability (the pre-existing invariant: a
+    #     missing API key must never turn into a policy denial). This keeps
+    #     egress a subset of the allowlist so the all-of rule passes.
+    #
+    # If NO known backend is permitted, leave the resolution untouched and let
+    # authorize()/the chain fail-close honestly — we never invent a backend.
+    if egress_allows is not None:
+        permitted = tuple(
+            b for b in candidates if _backend_hosts_all_allowed(b, egress_allows)
+        )
+        allowed_egress = tuple(
+            h for h in egress if egress_allows(_host_of(h))
+        )
+        if permitted and allowed_egress:
+            if permitted != candidates:
+                warnings.append(
+                    "web_search candidates narrowed to "
+                    f"{', '.join(permitted)} by the run's egress allowlist "
+                    "(backends outside it dropped so the chain never tries a "
+                    "host the sandbox would deny)"
+                )
+            candidates = permitted
+            egress = allowed_egress
 
     return BackendResolution(
         scope=scope,

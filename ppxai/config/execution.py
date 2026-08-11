@@ -219,6 +219,51 @@ def get_execution_profiles() -> Dict[str, Any]:
     return dict(profiles) if isinstance(profiles, dict) else {}
 
 
+def get_execution_task_default_grant() -> Dict[str, Any]:
+    """`execution.task.default_grant` — the USER's own default `/task` grant
+    (ADR 0009 / Item 58).
+
+    An `AgentSpec`-shaped mapping (`{tools?, network?, budget?}` — the same
+    normalizer as a spec/profile) that seeds a bare `/task "<desc>"` so a user
+    can declare "these are the tools I normally want" and their environment
+    just works, instead of every bare task 422-ing for a missing grant.
+
+    A NEW PRECEDENCE LAYER, not a new power: it slots BELOW an explicit
+    request/spec/skill/profile and ABOVE the built-in empty default. The
+    resolved grant — whatever its source — still passes the UNCHANGED ceiling
+    guards (shell-reject, `execution.egress_ceiling` clamp, tool
+    kill-switches, provider validation, child⊆parent for spawns), so the user
+    default lives strictly inside the operator's envelope and can never
+    escalate capability. Governed by `allow_user_default` below (fail-closed
+    when an operator disables it).
+
+    Returns the raw mapping (absent / non-dict → {}); the same
+    `spec_from_mapping` validator that guards profiles rejects a malformed
+    shape at resolve time as a pre-start 400.
+    """
+    task = get_execution_config().get("task", {})
+    if not isinstance(task, dict):
+        return {}
+    grant = task.get("default_grant", {})
+    return dict(grant) if isinstance(grant, dict) else {}
+
+
+def get_execution_task_allow_user_default() -> bool:
+    """`execution.task.allow_user_default` — operator switch for Item 58.
+
+    Default TRUE: a user's `execution.task.default_grant` seeds their bare
+    `/task` runs. An operator running a locked-down deployment can set this
+    FALSE to disable user-set defaults entirely — a bare `/task` with no
+    request grant then keeps 422-ing (fail-closed posture). The default grant
+    is always clamped by the egress ceiling and kill-switches regardless; this
+    key governs only whether the layer is CONSULTED at all.
+    """
+    task = get_execution_config().get("task", {})
+    if not isinstance(task, dict):
+        return True
+    return bool(task.get("allow_user_default", True))
+
+
 def get_execution_egress_ceiling() -> Any:
     """`execution.egress_ceiling` — the deployment-wide egress cap (Q3).
 

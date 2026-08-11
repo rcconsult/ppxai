@@ -2,7 +2,7 @@
 
 **TL;DR:** ppxai has three filename-level breadcrumbs that look like
 MCP support but isn't. The integration is planned for v1.20.x, not
-shipped. Authoritative plan: [`../MCP-INTEGRATION-PLAN.md`](../MCP-INTEGRATION-PLAN.md).
+shipped. Authoritative plan: [`../mcp-integration-plan.md`](../mcp-integration-plan.md).
 
 **Verify with:**
 ```bash
@@ -46,7 +46,7 @@ build downstream code against a feature that isn't there.
   with no extension point. External tool sources (MCP servers,
   ppxai-sre's `tools_adapter.py` workaround, etc.) have no public
   way to surface tools through the engine today.
-- The MCP integration plan ([`../MCP-INTEGRATION-PLAN.md`](../MCP-INTEGRATION-PLAN.md),
+- The MCP integration plan ([`../mcp-integration-plan.md`](../mcp-integration-plan.md),
   ~500 lines, committed 2026-05-23) enumerates 17 missing pieces
   across engine / slash command / UI / security / config layers, and
   a 5-phase implementation breakdown (~6-8d total).
@@ -80,7 +80,7 @@ When asked "does ppxai support X?", grep these in order:
 
 ## Related
 
-- [`../MCP-INTEGRATION-PLAN.md`](../MCP-INTEGRATION-PLAN.md) — the
+- [`../mcp-integration-plan.md`](../mcp-integration-plan.md) — the
   full v1.20.x plan + verified-state section
 - [`../../ROADMAP.md`](../../ROADMAP.md) §"v1.20.x — MCP integration
   Day-0 (planned)"

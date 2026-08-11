@@ -187,10 +187,30 @@ class TestToolTargets:
 class TestAuthorizeSupersetRule:
     """AC-2 superset: a tool is allowed only if EVERY possible target passes."""
 
-    def test_web_search_denied_when_only_some_backends_allowed(self):
-        # THE High-finding invariant: allowlisting DuckDuckGo must NOT permit
-        # web_search, because the call could instead reach Perplexity/Gemini.
+    def test_web_search_narrows_to_the_allowlisted_backend(self):
+        # Item 59 (2026-08-10): the AC-2 property is "never reach an
+        # unallowlisted host", NOT "deny web_search unless EVERY backend is
+        # allowlisted". `authorize()` now threads the run's own host-predicate
+        # into the resolver, which DROPS backends the run can't reach from the
+        # candidate chain. The SAME predicate narrows the call-time chain
+        # (web_premium reads it off the egress contextvar), so the enumeration
+        # and the chain are provably identical — the divergence the old
+        # all-or-nothing denial guarded against can no longer occur.
+        #
+        # So allowlisting only DuckDuckGo now AUTHORIZES web_search over DDG
+        # alone (a host the run explicitly permitted) instead of denying the
+        # whole call: the chain will only ever try DuckDuckGo.
         p = NetworkPolicy(["duckduckgo.com", "html.duckduckgo.com"])
+        d = p.authorize("web_search", {"query": "q"})
+        assert d.allowed is True
+        assert set(d.approved_targets) == {"duckduckgo.com", "html.duckduckgo.com"}
+
+    def test_web_search_denied_when_no_backend_is_allowlisted(self):
+        # The floor still holds: a run whose allowlist names NO known search
+        # backend cannot do web_search. The resolver leaves the honest global
+        # superset in place (it never invents a usable backend), and the
+        # superset rule then denies over the first unallowlisted host.
+        p = NetworkPolicy(["example.com"])
         d = p.authorize("web_search", {"query": "q"})
         assert d.allowed is False
         assert d.rule_id is None
@@ -330,6 +350,40 @@ class TestEgressChokepoint:
         out = await s.execute_tool("read_file", path="x")
         assert out == "ran read_file"
         assert base.ran == [("read_file", {"path": "x"})]
+
+    @pytest.mark.asyncio
+    async def test_item59_egress_predicate_installed_during_network_call(self):
+        # Item 59: the run's egress predicate must be active WHILE the network
+        # tool executes (so a backend-selecting tool like web_search resolves
+        # the same narrowed chain the egress guard authorized) and torn down
+        # after (so it never leaks to a sibling run on this context).
+        from ppxai.engine.tools.builtin import web_premium
+
+        seen = {}
+
+        class _ObserveBase:
+            async def execute_tool(self, name, **kw):
+                pred = web_premium._egress_allows_holder.get()
+                seen["pred"] = pred
+                seen["allows_perplexity"] = pred("api.perplexity.ai") if pred else None
+                seen["allows_ddg"] = pred("duckduckgo.com") if pred else None
+                return "ok"
+
+        assert web_premium._egress_allows_holder.get() is None  # clean start
+        s = ScopedToolManager(
+            _ObserveBase(), ["web_search"],
+            network_policy=NetworkPolicy([
+                "duckduckgo.com", "html.duckduckgo.com",
+                "api.perplexity.ai", "generativelanguage.googleapis.com",
+            ]),
+        )
+        out = await s.execute_tool("web_search", query="q")
+        assert out == "ok"
+        assert seen["pred"] is not None            # installed during the call
+        assert seen["allows_perplexity"] is True
+        assert seen["allows_ddg"] is True
+        # And restored to None afterwards — no leak to the next run.
+        assert web_premium._egress_allows_holder.get() is None
 
     @pytest.mark.asyncio
     async def test_no_policy_means_no_egress_enforcement(self):

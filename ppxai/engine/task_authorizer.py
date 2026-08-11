@@ -446,10 +446,41 @@ def resolve_named_profile(name: str) -> AgentSpec:
         )
 
 
+def _resolve_task_default_grant() -> AgentSpec:
+    """Resolve `execution.task.default_grant` → AgentSpec (Item 58).
+
+    The user's standing default `/task` grant. Returns an empty AgentSpec when
+    the operator has disabled it (`allow_user_default:false` → fail-closed, a
+    bare task keeps 422-ing) or when nothing is configured, so the merge just
+    falls through to the built-in empty default. A malformed mapping is a
+    pre-start 400 — the same `spec_from_mapping` normalizer profiles use, so a
+    bad default grant can never become an async run failure or a silent bypass.
+    """
+    from ..config.execution import (
+        get_execution_task_allow_user_default,
+        get_execution_task_default_grant,
+    )
+
+    if not get_execution_task_allow_user_default():
+        return AgentSpec()
+    raw = get_execution_task_default_grant()
+    if not raw:
+        return AgentSpec()
+    try:
+        return spec_from_mapping(raw)
+    except AgentSpecError as exc:
+        raise TaskAuthorizationError(
+            400, f"Invalid execution.task.default_grant: {exc}"
+        )
+
+
 # §5 layer ranks for the contradiction rule: LOWER = more specific. Skills sit
 # between spec and profile — an explicitly named per-run mount is more
 # specific than a standing config profile, less than the authored spec file.
-_LAYER_RANK = {"request": 0, "spec": 1, "skill": 2, "profile": 3}
+# default_grant is the LEAST specific real layer (rank 4) — below profile,
+# above only the built-in empty default — so a request/spec/skill/profile that
+# omits web_search always wins the enrichment contradiction check against it.
+_LAYER_RANK = {"request": 0, "spec": 1, "skill": 2, "profile": 3, "default_grant": 4}
 
 
 def merge_task_fields(
@@ -494,6 +525,15 @@ def merge_task_fields(
     spec = resolve_named_spec(req.spec) if req.spec else AgentSpec()
     skills = load_skills(req.skills)
     profile = resolve_named_profile(req.profile) if req.profile else AgentSpec()
+    # Item 58: the user's own default grant — a NEW precedence layer BELOW
+    # profile, ABOVE the built-in empty default. It seeds a bare `/task` from
+    # `execution.task.default_grant` (AgentSpec-shaped {tools?, network?,
+    # budget?}) so a user can set up their own working environment without a
+    # per-run flag. Gated by `allow_user_default` (operator fail-closed switch)
+    # and — like every other source — CLAMPED downstream by the unchanged
+    # ceiling guards (shell-reject, egress_ceiling, kill-switches), so it is a
+    # convenience layer, never a capability escalation.
+    default_grant = _resolve_task_default_grant()
     sub_defaults = get_execution_default_subagent()
 
     # A skill scalar is the first skill (in --skill order) that sets it — so
@@ -516,6 +556,9 @@ def merge_task_fields(
         tools, tools_layer = list(spec.tools), "spec"
     elif profile.tools is not None:
         tools, tools_layer = list(profile.tools), "profile"
+    elif default_grant.tools is not None:
+        # Item 58: the user's standing default seeds a bare `/task`.
+        tools, tools_layer = list(default_grant.tools), "default_grant"
     else:
         tools, tools_layer = [], None
     # Skills UNION on top — a skill ADDS capability; it never removes what
@@ -547,10 +590,14 @@ def merge_task_fields(
               else _skill_scalar("system") if _skill_scalar("system") is not None
               else profile.system)
     budget = (dict(req.budget or {}) or dict(spec.budget or {})
-              or dict(_skill_scalar("budget") or {}) or dict(profile.budget or {}))
+              or dict(_skill_scalar("budget") or {}) or dict(profile.budget or {})
+              or dict(default_grant.budget or {}))
 
     # Network REPLACES per layer too (Q1) — `is not None` per layer, so a
     # stated-empty list is an expressible "no egress", not a fall-through.
+    # Item 58 slots default_grant below profile: a user's default egress
+    # applies only when no more specific layer stated one — and it is still
+    # clamped by execution.egress_ceiling downstream.
     if req.network is not None:
         network = list(req.network)
     elif spec.network is not None:
@@ -559,6 +606,8 @@ def merge_task_fields(
         network = list(_skill_scalar("network"))
     elif profile.network is not None:
         network = list(profile.network)
+    elif default_grant.network is not None:
+        network = list(default_grant.network)
     else:
         network = []
 

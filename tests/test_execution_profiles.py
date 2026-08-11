@@ -470,6 +470,155 @@ class TestCeilingAtLaunch:
         assert "egress_ceiling" in r.json()["detail"]
 
 
+def _pin_default_grant(monkeypatch, grant, *, allow_user_default=True):
+    """Item 58: pin execution.task.default_grant + allow_user_default."""
+    from ppxai.config import execution as exec_mod
+    monkeypatch.setattr(
+        exec_mod, "get_execution_task_default_grant", lambda: grant
+    )
+    monkeypatch.setattr(
+        exec_mod, "get_execution_task_allow_user_default",
+        lambda: allow_user_default,
+    )
+
+
+def _pin_subagent(monkeypatch, provider, model):
+    """default_grant carries no provider/model (Item 58 scope: tools/network/
+    budget), so a bare task's provider/model come from default_subagent — as
+    on coder (default_subagent=qwen36)."""
+    from ppxai.server.routes import agent_v1
+    from ppxai.config import execution as exec_mod
+    sub = {"provider": provider, "model": model}
+    monkeypatch.setattr(agent_v1, "get_execution_default_subagent", lambda: sub)
+    monkeypatch.setattr(exec_mod, "get_execution_default_subagent", lambda: sub)
+
+
+class TestTaskDefaultGrant:
+    """Item 58: `execution.task.default_grant` — the user's standing default
+    grant. A NEW precedence layer below profile / above the built-in empty
+    default. It must (a) let a bare `/task` run, (b) always lose to an explicit
+    request/spec/profile, and (c) escalate NOTHING — every clamp still applies.
+    """
+
+    def test_config_readers(self, monkeypatch):
+        from ppxai.config.execution import (
+            get_execution_task_allow_user_default,
+            get_execution_task_default_grant,
+        )
+        _pin_execution(monkeypatch, {})
+        assert get_execution_task_default_grant() == {}
+        assert get_execution_task_allow_user_default() is True
+        _pin_execution(monkeypatch, {
+            "task": {"default_grant": {"tools": ["web_search"]},
+                     "allow_user_default": False},
+        })
+        assert get_execution_task_default_grant() == {"tools": ["web_search"]}
+        assert get_execution_task_allow_user_default() is False
+
+    def test_non_dict_default_grant_is_empty(self, monkeypatch):
+        from ppxai.config.execution import get_execution_task_default_grant
+        _pin_execution(monkeypatch, {"task": {"default_grant": ["nope"]}})
+        assert get_execution_task_default_grant() == {}
+
+    def test_bare_task_resolves_grant_from_default(self, task_client, monkeypatch):
+        # THE Item 58 goal: `/task "<desc>"` with no flags now RUNS, seeding
+        # its grant from the user's default instead of 422-ing.
+        c, _reg, cap, _ov = task_client
+        _pin_default_grant(monkeypatch, {"tools": ["web_search"]})
+        _pin_subagent(monkeypatch, "p", "m")
+        _pin_ceiling(monkeypatch, None)
+        r = c.post("/v1/agent/task", json={"task": "weather in Lausanne"})
+        assert r.status_code == 200, r.text
+        assert cap["tools"] == ["web_search"]
+
+    def test_bare_task_still_422_when_no_default_configured(
+        self, task_client, monkeypatch
+    ):
+        # The historical invariant holds when nothing is configured.
+        c, _reg, _cap, _ov = task_client
+        _pin_default_grant(monkeypatch, {})
+        r = c.post("/v1/agent/task", json={"task": "t"})
+        assert r.status_code == 422
+
+    def test_allow_user_default_false_fails_closed(self, task_client, monkeypatch):
+        # Operator kill-switch: a configured default is IGNORED when the
+        # operator locked it down — bare task 422s (fail-closed posture).
+        c, _reg, _cap, _ov = task_client
+        _pin_default_grant(
+            monkeypatch, {"tools": ["web_search"]}, allow_user_default=False
+        )
+        _pin_subagent(monkeypatch, "p", "m")
+        r = c.post("/v1/agent/task", json={"task": "t"})
+        assert r.status_code == 422
+
+    def test_request_tools_replace_default_grant(self, task_client, monkeypatch):
+        # Item 58 precedence: an explicit --tools always wins (replace/narrow).
+        c, _reg, cap, _ov = task_client
+        _pin_default_grant(monkeypatch, {"tools": ["web_search", "fetch_url"]})
+        _pin_subagent(monkeypatch, "p", "m")
+        _pin_ceiling(monkeypatch, None)
+        r = c.post("/v1/agent/task", json={
+            "task": "t", "tools": ["read_file"],
+        })
+        assert r.status_code == 200, r.text
+        assert cap["tools"] == ["read_file"]  # default REPLACED, not unioned
+
+    def test_profile_beats_default_grant(self, task_client, monkeypatch):
+        # A named profile is more specific than the standing default.
+        c, _reg, cap, _ov = task_client
+        _pin_default_grant(monkeypatch, {"tools": ["web_search"]})
+        _pin_profiles(monkeypatch, {
+            "research": {"tools": ["read_file"], "provider": "p", "model": "m"},
+        })
+        _pin_subagent(monkeypatch, "p", "m")
+        _pin_ceiling(monkeypatch, None)
+        r = c.post("/v1/agent/task", json={"task": "t", "profile": "research"})
+        assert r.status_code == 200, r.text
+        assert cap["tools"] == ["read_file"]  # profile wins over default_grant
+
+    def test_default_grant_cannot_grant_shell(self, task_client, monkeypatch):
+        # NO ESCALATION: a user default naming shell is rejected by the SAME
+        # shell-reject every source faces — the sandbox is never jailbroken.
+        c, _reg, _cap, _ov = task_client
+        _pin_default_grant(
+            monkeypatch, {"tools": ["execute_shell_command"]}
+        )
+        _pin_subagent(monkeypatch, "p", "m")
+        _pin_ceiling(monkeypatch, None)
+        r = c.post("/v1/agent/task", json={"task": "t"})
+        assert r.status_code == 400
+        assert "shell" in r.json()["detail"].lower()
+
+    def test_default_grant_egress_clamped_by_ceiling(self, task_client, monkeypatch):
+        # NO ESCALATION: a user default naming a host OUTSIDE the operator
+        # ceiling is silently clamped, never honored. The run keeps only the
+        # ceiling-permitted host.
+        c, _reg, cap, _ov = task_client
+        _pin_default_grant(monkeypatch, {
+            "tools": ["fetch_url"],
+            "network": ["api.allowed.com", "evil.example.com"],
+        })
+        _pin_subagent(monkeypatch, "p", "m")
+        _pin_ceiling(monkeypatch, ["api.allowed.com"])
+        r = c.post("/v1/agent/task", json={"task": "t"})
+        assert r.status_code == 200, r.text
+        assert cap["allow_outbound"] == ["api.allowed.com"]  # evil.* clamped out
+
+    def test_malformed_default_grant_400(self, task_client, monkeypatch):
+        # A bad default grant is a pre-start 400 (same normalizer as profiles),
+        # never a silent bypass or an async run failure. It carries a valid
+        # `tools` so it passes the request-shape 422 gate and reaches the
+        # resolver, where the non-bool `enrichment` is rejected.
+        c, _reg, _cap, _ov = task_client
+        _pin_default_grant(
+            monkeypatch, {"tools": ["web_search"], "enrichment": "yes"}
+        )
+        _pin_subagent(monkeypatch, "p", "m")
+        r = c.post("/v1/agent/task", json={"task": "t"})
+        assert r.status_code == 400
+        assert "default_grant" in r.json()["detail"]
+
+
 class TestRunFamilyCeiling:
     def test_run_grant_branch_stripped_of_all_backends_400(
         self, task_client, monkeypatch

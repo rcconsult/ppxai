@@ -92,8 +92,51 @@ def test_authorize_perplexity_pin_allows_single_host_grant(tools_cfg, monkeypatc
 
 def test_authorize_auto_still_needs_full_superset(tools_cfg):
     # Backward-compatible: the confused-deputy defense is unchanged in auto mode.
+    # No known backend is fully permitted by a perplexity-only allowlist here
+    # (auto + no keys → the usable chain is DuckDuckGo, whose hosts aren't
+    # allowlisted), so the resolver leaves the honest superset and the all-of
+    # rule denies. Item 59 narrowing NEVER invents a permitted backend.
     d = np.NetworkPolicy(["api.perplexity.ai"]).authorize("web_search", {})
     assert d.allowed is False
+
+
+def test_soft_preferred_perplexity_authorizes_perplexity_only_allowlist(
+    tools_cfg, monkeypatch
+):
+    # Item 59 (2026-08-10, a coder pod): the exact bug. Soft
+    # `preferred: perplexity` (NO strict) + a task allowlist that permits only
+    # api.perplexity.ai. Before the fix the resolver enumerated the full
+    # superset (perplexity + the DDG fallback), the all-of rule denied the
+    # whole call over the unreachable DDG host, the model got
+    # "egress denied duckduckgo.com" and fabricated a weather answer.
+    #
+    # After the fix `authorize()` threads the run's host-predicate into the
+    # resolver, which drops DDG from BOTH the candidate chain and the egress
+    # superset — so web_search authorizes over perplexity alone, no strict pin
+    # required. This is the config-free counterpart to the strict-pin fix.
+    tools_cfg["web_search"] = {"preferred": "perplexity"}  # soft, no strict
+    monkeypatch.setenv("PERPLEXITY_API_KEY", "k")
+    d = np.NetworkPolicy(["api.perplexity.ai"]).authorize("web_search", {})
+    assert d.allowed is True
+    assert d.approved_targets == ("api.perplexity.ai",)
+
+
+def test_soft_preferred_chain_matches_the_authorized_backend(tools_cfg, monkeypatch):
+    # The other half of Item 59: the CALL-TIME chain must narrow identically,
+    # or the enumeration/chain divergence returns. With the run's egress
+    # predicate installed (as ScopedToolManager does around each network tool),
+    # the resolver the chain reads yields ONLY perplexity — it never tries DDG.
+    from ppxai.engine.tools.search_backends import resolve_web_search_backend
+
+    tools_cfg["web_search"] = {"preferred": "perplexity"}
+    monkeypatch.setenv("PERPLEXITY_API_KEY", "k")
+    allow_perplexity_only = lambda h: h == "api.perplexity.ai"
+    res = resolve_web_search_backend(egress_allows=allow_perplexity_only)
+    assert res.candidates == ("perplexity",)
+    assert res.egress_hosts == ("https://api.perplexity.ai/",)
+    # Unconfined (no predicate) keeps the honest soft-preferred chain.
+    wide = resolve_web_search_backend()
+    assert "duckduckgo" in wide.candidates
 
 
 # --- ban + default-allow (agent_v1 route helpers) --------------------------

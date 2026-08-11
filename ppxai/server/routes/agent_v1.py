@@ -600,11 +600,22 @@ class AgentTaskRequest(BaseModel):
         # any grant source, the non-empty check happens post-merge in the
         # route (400). Without one, an empty/absent grant is a request-shape
         # error here.
+        #
+        # Item 58: a configured, operator-enabled `execution.task.default_grant`
+        # is ALSO a grant source — a bare `/task` then resolves its grant from
+        # the user's standing default (merged + clamped in the authorizer)
+        # instead of 422-ing here. When no default is configured, or the
+        # operator set `allow_user_default:false`, the historical 422 stands
+        # (fail-closed). The authorizer's post-merge non-empty check remains the
+        # final authority; this only decides whether to defer to it.
         if (not self.spec and not self.skills and not self.tools
-                and not self.profile and self.enrichment is not True):
+                and not self.profile and self.enrichment is not True
+                and not _has_usable_task_default_grant()):
             raise ValueError(
-                "tools is required and must be non-empty (or provide a `spec` / "
-                "`skills` / `profile` that supplies it)"
+                "a tool-capable /task run needs an explicit tool grant: pass "
+                "`--tools web_search` (or `--tools a,b,c`), or a "
+                "`--spec`/`--skill`/`--profile` that supplies one. For a "
+                "tool-free answer use /run instead."
             )
         return self
 
@@ -634,6 +645,28 @@ def _apply_ceiling_or_400(network: list) -> tuple[list, list]:
         return _authz.apply_ceiling_or_error(network)
     except TaskAuthorizationError as exc:
         raise HTTPException(status_code=exc.status, detail=exc.detail)
+
+
+def _has_usable_task_default_grant() -> bool:
+    """Item 58: does an operator-enabled `execution.task.default_grant` supply
+    a grant a bare `/task` could resolve? Gates whether the request-shape 422
+    defers to the authorizer's post-merge check. A default with no `tools` (or
+    `allow_user_default:false`, or none configured) is not a usable grant
+    source, so the 422 stands. Config errors resolve to "no default" — the
+    validator must never fail open on an unreadable config.
+    """
+    try:
+        from ...config.execution import (
+            get_execution_task_allow_user_default,
+            get_execution_task_default_grant,
+        )
+
+        if not get_execution_task_allow_user_default():
+            return False
+        grant = get_execution_task_default_grant()
+        return bool(grant.get("tools"))
+    except Exception:
+        return False
 
 
 def _collect_holds() -> bool:
