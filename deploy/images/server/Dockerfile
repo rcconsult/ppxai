@@ -113,7 +113,7 @@ RUN curl -fsSL -o /usr/local/bin/yq \
 # glibc 2.36, so the .deb fails dependency resolution. The
 # x86_64-unknown-linux-musl tarball is statically linked — no glibc
 # dependency at all, works on any kernel >=3.2.
-ARG RTK_VERSION=0.39.0
+ARG RTK_VERSION=0.45.0
 RUN set -eux \
     && mkdir -p /tmp/rtk-install \
     && curl -fsSL -o /tmp/rtk-install/rtk.tar.gz \
