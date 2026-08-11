@@ -16,6 +16,7 @@
 | [Bootstrap Context Guide](bootstrap-context-guide.md) | Project-specific instructions via AGENTS.md (v1.14.0+, hierarchical scopes v1.14.2+) |
 | [File Editing Guide](file-editing-guide.md) | AI-powered file editing with user consent |
 | [Shell Consent Guide](shell-consent-guide.md) | Shell command security with consent system |
+| [Shell Wrappers (rtk)](shell-wrappers.md) | Token-saving wrappers for the AI's shell tool (rtk etc.). **Wraps the agent's `execute_shell_command` only — NOT the interactive terminal.** |
 | [Context Injection Guide](context-injection.md) | `@file`, `@git`, `@tree`, `@clipboard`, `@url` context providers |
 | [Provider Setup Guide](provider-setup.md) | Configure AI providers (OpenAI, Gemini, Perplexity) |
 | [Autorouter Config](autorouter-config.md) | Automatic model routing for coding tasks |

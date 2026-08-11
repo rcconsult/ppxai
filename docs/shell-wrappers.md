@@ -23,6 +23,31 @@ requires zero ppxai code changes.
 The first wrapper that ships with ppxai is **rtk** (Rust Token Killer,
 https://github.com/rtk-ai/rtk) — see [§rtk](#rtk-the-first-concrete-wrapper) below.
 
+## Scope: the AI agent's shell tool ONLY — not the interactive terminal
+
+**Wrappers apply only to commands the AI runs through the `execute_shell_command`
+tool.** They do **not** touch the interactive browser terminal (the xterm PTY at
+`/ws/terminal`), and this is deliberate:
+
+- **The agent shell tool** (`ppxai/engine/tools/builtin/shell.py`) is the *single*
+  call site for `find_first_rewrite`. When the model asks to run `git status`,
+  the engine rewrites it to `rtk git status` before spawning, and only the
+  compact output enters the conversation — which is where the token savings live.
+- **The interactive terminal** (`ppxai/server/routes/terminal.py`) spawns a raw
+  PTY shell (bash). What *you* type there runs unmodified. `rtk gain` will show
+  0 for interactively-typed commands, because they never pass through the
+  wrapper framework.
+
+So "I typed `pip list` in the terminal and nothing was wrapped / `rtk gain` didn't
+move" is **expected, not a bug.** rtk optimizes the *AI's* token budget, not a
+human's terminal output — a person generally wants the real, full output of their
+own commands, not the model-oriented compact form. If the AI runs `pip list` via
+its shell tool, *that* invocation IS wrapped and counted.
+
+(If you ever want interactive-terminal commands wrapped too, that would be a new
+opt-in config toggle — it is intentionally NOT the default. Ask before assuming
+the terminal is "broken" because it doesn't wrap.)
+
 ## Why bother
 
 Agent loops that shell out a lot — running `git status`, checking CI,
@@ -178,9 +203,20 @@ fields. Plan to migrate to the wrappers form before v1.20.x.
 ## Troubleshooting
 
 **Wrapping isn't happening.** Check:
+0. **Are you in the interactive terminal instead of the AI agent?** Wrappers
+   only apply to the AI's `execute_shell_command` tool — commands you type in the
+   browser terminal (the xterm PTY) run raw by design and never move `rtk gain`.
+   See [§Scope](#scope-the-ai-agents-shell-tool-only--not-the-interactive-terminal).
+   Confirm by having the *AI* run a shell command and checking `rtk gain` again.
 1. `<binary> --version` works in the same shell that started ppxai.
 2. The wrapper entry's `enabled` is not `"never"`.
 3. ppxai was restarted after the wrapper became installed (detection cache is per-process).
+4. **The wrapper loggers are DEBUG-level.** Even with debug-log on, the
+   `ppxai.engine.tools.wrappers.*` loggers can sit at WARNING, so the
+   "Wrapper applied" / "Wrapper rtk:" DEBUG lines never appear in the log —
+   absence of those lines is NOT proof wrapping didn't happen. The ground truth
+   is rtk's own history: `rtk gain` and `~/.local/share/rtk/history.db` record
+   every command rtk actually rewrote and ran.
 
 **Specific command fails when wrapped.** This is a wrapper-upstream issue;
 file at the wrapper's repo. Workarounds: (a) set `enabled: "never"` on
