@@ -60,3 +60,83 @@ def test_kill_reaps_cooperative_child_quickly(tmp_path):
     proc.kill()
     assert time.monotonic() - start < 3
     assert proc.child_pid is None
+
+
+# ---------------------------------------------------------------------------
+# Interactive-shell fix: the browser terminal must give history + line editing.
+# ---------------------------------------------------------------------------
+
+
+class TestResolveTerminalShell:
+    """The unconfigured fallback must not land on /bin/sh→dash (no history,
+    no readline). It prefers bash so the browser terminal behaves like a real
+    shell — the user-reported "no command history / line editing" symptom."""
+
+    def test_config_value_wins(self, monkeypatch):
+        from ppxai.server.routes.terminal import _resolve_terminal_shell
+        monkeypatch.setenv("SHELL", "/usr/bin/zsh")
+        assert _resolve_terminal_shell("/opt/custom/fish") == "/opt/custom/fish"
+
+    def test_env_shell_next(self, monkeypatch):
+        from ppxai.server.routes.terminal import _resolve_terminal_shell
+        monkeypatch.setenv("SHELL", "/usr/bin/zsh")
+        assert _resolve_terminal_shell(None) == "/usr/bin/zsh"
+
+    def test_prefers_bash_when_no_config_no_env(self, monkeypatch):
+        # THE coder case: $SHELL empty, no config → must pick bash, not /bin/sh.
+        from ppxai.server.routes import terminal
+        monkeypatch.delenv("SHELL", raising=False)
+        monkeypatch.setattr(
+            terminal.shutil, "which",
+            lambda n: "/usr/bin/bash" if n == "bash" else None,
+        )
+        assert terminal._resolve_terminal_shell(None) == "/usr/bin/bash"
+
+    def test_falls_back_to_sh_only_when_no_bash(self, monkeypatch):
+        from ppxai.server.routes import terminal
+        monkeypatch.delenv("SHELL", raising=False)
+        monkeypatch.setattr(terminal.shutil, "which", lambda n: None)
+        assert terminal._resolve_terminal_shell(None) == "/bin/sh"
+
+
+def test_spawn_launches_interactive_shell_with_history(tmp_path):
+    """The spawned shell must be interactive (readline/history on) and write to
+    a HISTFILE. We prove it by driving a real bash through the PTY: run a
+    command, then send an up-arrow (history recall) and confirm the previous
+    command comes back — which only works when bash is interactive."""
+    import shutil as _sh
+    from ppxai.server.routes.terminal import PtyProcess
+
+    bash = _sh.which("bash")
+    if not bash:
+        pytest.skip("bash not available")
+
+    home = tmp_path / "home"
+    home.mkdir()
+    proc = PtyProcess(bash, str(home), login_shell=False)
+    # Point HOME at the tmp home so HISTFILE lands there.
+    old_home = os.environ.get("HOME")
+    os.environ["HOME"] = str(home)
+    try:
+        proc.spawn()
+        time.sleep(0.4)
+        proc.write(b"echo marker_one\n")
+        time.sleep(0.3)
+        # Up-arrow = ESC [ A ; interactive readline recalls the last command.
+        proc.write(b"\x1b[A")
+        time.sleep(0.3)
+        out = b""
+        for _ in range(5):
+            out += proc.read(8192)
+            time.sleep(0.1)
+        # The recalled command text must appear a SECOND time (echoed by
+        # readline on the input line), which only happens interactively.
+        assert out.count(b"echo marker_one") >= 2, (
+            "shell not interactive — up-arrow did not recall history: " + repr(out[-200:])
+        )
+    finally:
+        proc.kill()
+        if old_home is None:
+            os.environ.pop("HOME", None)
+        else:
+            os.environ["HOME"] = old_home

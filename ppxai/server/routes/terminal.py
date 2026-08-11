@@ -11,6 +11,7 @@ returns an error explaining that the terminal feature requires a Unix host.
 import asyncio
 import os
 import platform
+import shutil
 import struct
 import time
 
@@ -49,16 +50,42 @@ class PtyProcess:
         self.fd = None
 
     def spawn(self) -> None:
-        """Fork and exec the shell with a PTY."""
+        """Fork and exec the shell with a PTY.
+
+        The shell is launched **interactive** (`-i`) so readline is active —
+        command history (up/down), line editing (Ctrl-A/E, word motion),
+        tab-completion and a prompt all depend on the shell running in
+        interactive mode, which a bare `execvpe([shell])` on a PTY does NOT
+        reliably enable (bash only auto-goes-interactive when *both* stdin and
+        stderr are TTYs AND no non-option args force otherwise; being explicit
+        removes the ambiguity, and dash/sh never edit lines without it). It is
+        also launched **login** (`-l`) by default so the user's profile
+        (`.bash_profile`/`.profile` → PATH, aliases) is sourced — a browser
+        terminal is a full session, not a subshell. See _resolve_shell for why
+        we prefer bash over the /bin/sh→dash fallback (dash has no history and
+        no line editing regardless of flags).
+        """
         child_pid, fd = pty.fork()
         if child_pid == 0:
             # Child process — exec the shell
             os.chdir(self.working_dir)
             env = os.environ.copy()
             env["TERM"] = "xterm-256color"
+            # Make readline behave even when no rc file exists (fresh container
+            # HOME with no .bashrc): a writable HISTFILE so history persists
+            # across reconnects, and SHELL set so subshells/tools agree on it.
+            env.setdefault("SHELL", self.shell)
+            if not env.get("HISTFILE"):
+                env["HISTFILE"] = os.path.join(
+                    env.get("HOME", self.working_dir), ".bash_history"
+                )
+            env.setdefault("HISTSIZE", "10000")
+            env.setdefault("HISTFILESIZE", "20000")
             args = [self.shell]
             if self.login_shell:
                 args.append("-l")
+            # Interactive — the flag that turns on history + line editing.
+            args.append("-i")
             os.execvpe(self.shell, args, env)
         else:
             # Parent process
@@ -133,6 +160,30 @@ class PtyProcess:
             self.fd = None
 
 
+def _resolve_terminal_shell(configured: "str | None") -> str:
+    """Pick the shell binary for the browser terminal.
+
+    Order: explicit config (`tools.shell.shell_bin`) → `$SHELL` → **bash** if
+    on PATH → `/bin/sh`. The bash preference matters: the previous fallback was
+    `os.environ.get("SHELL", "/bin/sh")`, and in a fresh container `$SHELL` is
+    usually empty, so it landed on `/bin/sh` — which on Debian/Ubuntu is
+    **dash**. dash has NO command history and NO readline line-editing, so the
+    browser terminal felt broken (no up-arrow recall, no Ctrl-A/E, no
+    tab-complete) even though the PTY itself worked. bash gives all of those.
+    An explicit config value or a real `$SHELL` always wins, so this only
+    changes the unconfigured fallback.
+    """
+    if configured:
+        return configured
+    env_shell = os.environ.get("SHELL")
+    if env_shell:
+        return env_shell
+    bash = shutil.which("bash")
+    if bash:
+        return bash
+    return "/bin/sh"
+
+
 @router.websocket("/ws/terminal")
 async def websocket_terminal(websocket: WebSocket):
     """WebSocket endpoint for interactive terminal.
@@ -166,8 +217,12 @@ async def websocket_terminal(websocket: WebSocket):
 
     # Get shell config
     shell_config = get_shell_config()
-    shell_bin = shell_config.get("shell_bin") or os.environ.get("SHELL", "/bin/sh")
-    login_shell = shell_config.get("login_shell", False)
+    shell_bin = _resolve_terminal_shell(shell_config.get("shell_bin"))
+    # A browser terminal is a full interactive session: default to a login
+    # shell so the user's profile/PATH loads. Config can force it off.
+    login_shell = shell_config.get("login_shell")
+    if login_shell is None:
+        login_shell = True
     working_dir = engine.get_working_dir() or os.getcwd()
 
     logger.info(f"Terminal: opening {shell_bin} in {working_dir} (session={session_id})")

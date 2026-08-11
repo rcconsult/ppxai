@@ -89,6 +89,17 @@ def get_shell_config() -> Dict[str, Any]:
         "interactive_commands": shell_config.get("interactive_commands", default_interactive),
         "non_interactive_with_args": shell_config.get("non_interactive_with_args", default_non_interactive_with_args),
         "timeout": shell_config.get("timeout", 30),  # Default 30 seconds, configurable (v1.15.2)
+        # Interactive browser-terminal shell (server/routes/terminal.py). These
+        # were being DROPPED here — the terminal read `shell_config.get(...)`
+        # and always got None, so an operator that set `tools.shell.shell_bin`
+        # / `login_shell` (e.g. coder: /bin/bash + login) was silently ignored
+        # and the terminal fell back to /bin/sh→dash (no history/line editing).
+        # Pass them through so the config actually steers the terminal; None =
+        # let terminal.py apply its own bash-preferring / login-by-default
+        # fallback. NOT consumed by the agent shell TOOL (that always execs a
+        # command string, never an interactive shell).
+        "shell_bin": shell_config.get("shell_bin"),
+        "login_shell": shell_config.get("login_shell"),
         # v1.18.5: shell wrapper framework. User-facing config field
         # `tools.shell.wrappers` is merged with `DEFAULT_SHELL_WRAPPERS`
         # (the latter ships rtk as the canonical first wrapper). Conflict

@@ -594,6 +594,30 @@ class TestShellConfig:
         config = get_shell_config()
         assert "ssh" in config["interactive_commands"]
 
+    def test_shell_bin_and_login_shell_pass_through(self):
+        """Regression: get_shell_config() was DROPPING shell_bin/login_shell,
+        so an operator's `tools.shell.shell_bin`/`login_shell` (coder sets
+        /bin/bash + login) never reached server/routes/terminal.py — the
+        browser terminal fell back to /bin/sh→dash (no history/line editing).
+        They must pass through so the config actually steers the terminal."""
+        store = ConfigStore.get_instance()
+        store.config.setdefault("tools", {})["shell"] = {
+            "shell_bin": "/bin/bash",
+            "login_shell": True,
+        }
+        config = get_shell_config()
+        assert config["shell_bin"] == "/bin/bash"
+        assert config["login_shell"] is True
+
+    def test_shell_bin_and_login_shell_default_none_when_unset(self):
+        """Unset → None (terminal.py then applies its bash-preferring,
+        login-by-default fallback). Absent keys must not raise."""
+        store = ConfigStore.get_instance()
+        store.config.setdefault("tools", {})["shell"] = {}
+        config = get_shell_config()
+        assert config["shell_bin"] is None
+        assert config["login_shell"] is None
+
 
 class TestToolPricing:
     """Tests for tool pricing configuration (v1.13.4)."""
