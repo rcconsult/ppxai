@@ -873,25 +873,34 @@ def render_office_preview(
             pngs = render_pptx_slides(file_path, cache_dir)
         except Exception as exc:
             raise HTTPException(status_code=500, detail=f"Render failed: {exc}")
-        if not pngs:
-            raise HTTPException(status_code=500, detail="No slides rendered")
-        if total:
-            return JSONResponse({
-                "total": len(pngs), "name": name, "type": "pptx",
-                "kind": "presentation", "libreoffice_available": True,
-            })
-        if slide < 1 or slide > len(pngs):
-            raise HTTPException(
-                status_code=404,
-                detail=f"Slide {slide} out of range (1-{len(pngs)})",
+        # A present LibreOffice that produces NO output is not a server fault —
+        # it's a confined/broken install (e.g. the Ubuntu snap can't read files
+        # outside $HOME and exits 0 with an empty result). The contract is
+        # "never 503/500 for a preview we can't rasterize"; a hard 500 here
+        # broke that. Fall through to the SAME extracted-text degrade the
+        # LibreOffice-missing path uses, so the preview still returns a usable
+        # response. (The apt libreoffice the coder image ships is unconfined and
+        # renders normally — verified in-pod 2026-08-11.)
+        if pngs:
+            if total:
+                return JSONResponse({
+                    "total": len(pngs), "name": name, "type": "pptx",
+                    "kind": "presentation", "libreoffice_available": True,
+                })
+            if slide < 1 or slide > len(pngs):
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Slide {slide} out of range (1-{len(pngs)})",
+                )
+            return FileResponse(
+                pngs[slide - 1],
+                media_type="image/png",
+                headers={"Cache-Control": "private, no-cache"},
             )
-        return FileResponse(
-            pngs[slide - 1],
-            media_type="image/png",
-            headers={"Cache-Control": "private, no-cache"},
-        )
+        # else: empty render → drop into the text-fallback path below.
 
-    # PPTX, LibreOffice missing — degrade to extracted text (never 503 / 500).
+    # PPTX, LibreOffice missing OR unable to render — degrade to extracted text
+    # (never 503 / 500).
     if is_legacy:
         return _text_fallback(
             kind="presentation", name=name, total=1,

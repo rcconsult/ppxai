@@ -311,6 +311,19 @@ def _libreoffice_present() -> bool:
     return _libreoffice_available()
 
 
+def _libreoffice_can_render(tmp_path) -> bool:
+    """True iff LibreOffice can actually rasterize a file under *tmp_path*.
+
+    `_libreoffice_present()` only proves the binary exists — a snap-confined
+    install can't read `/tmp` and produces no output (exit 0), so the route
+    degrades to text_fallback exactly as if LibreOffice were absent. Branch the
+    render assertions on real capability so a confined dev box takes the same
+    text_fallback branch the route does, instead of a false failure. The coder
+    image's apt libreoffice is unconfined and renders (verified in-pod)."""
+    from ppxai.common.libreoffice import libreoffice_can_read
+    return _libreoffice_present() and libreoffice_can_read(tmp_path)
+
+
 class TestPreviewByPathPptx:
     """LibreOffice and text-fallback both end with a usable response;
     we assert the shape the client expects in each case."""
@@ -344,8 +357,14 @@ class TestPreviewByPathPptx:
         assert body["kind"] == "presentation"
         # When LibreOffice is present: type=pptx; when absent: still pptx
         # but with libreoffice_available=False.
-        assert body["type"] == "pptx"
-        if not _libreoffice_present():
+        # When LibreOffice can actually render: type=pptx + count via raster.
+        # When it can't (absent, or present-but-confined): the route degrades to
+        # a text_fallback whose libreoffice_available is False. Either way the
+        # response is a usable 200 (never a 500) — that degrade is the contract.
+        if _libreoffice_can_render(tmp_path):
+            assert body["type"] == "pptx"
+        else:
+            assert body["type"] in ("pptx", "text_fallback")
             assert body.get("libreoffice_available") is False
 
     def test_slide_fetch_returns_png_or_text_fallback(self, http_client, tmp_path):
@@ -358,11 +377,13 @@ class TestPreviewByPathPptx:
             headers=headers,
         )
         assert resp.status_code == 200, resp.text
-        if _libreoffice_present():
+        if _libreoffice_can_render(tmp_path):
             assert resp.headers["content-type"] == "image/png"
             # PNG magic bytes
             assert resp.content[:8] == b"\x89PNG\r\n\x1a\n"
         else:
+            # LibreOffice absent, OR present-but-unable-to-render (snap
+            # confinement): the route degrades to text_fallback either way.
             body = resp.json()
             assert body["type"] == "text_fallback"
             assert body["kind"] == "presentation"
@@ -423,6 +444,55 @@ class TestUnifiedPreviewContract:
         body = json.loads(resp.body)
         for key in ("type", "kind", "name", "total", "libreoffice_available"):
             assert key in body, f"unified preview shape missing {key!r}"
+
+    def _make_real_pptx(self, tmp_path):
+        pptx_mod = pytest.importorskip("pptx")
+        from pptx.util import Inches
+        prs = pptx_mod.Presentation()
+        slide = prs.slides.add_slide(prs.slide_layouts[6])
+        tb = slide.shapes.add_textbox(Inches(1), Inches(1), Inches(4), Inches(1))
+        tb.text_frame.text = "Hello PPTX"
+        target = tmp_path / "deck.pptx"
+        prs.save(str(target))
+        return target
+
+    def test_pptx_present_libreoffice_empty_render_degrades_not_500(
+        self, monkeypatch, tmp_path
+    ):
+        # A present-but-confined/broken LibreOffice renders NOTHING (the Ubuntu
+        # snap can't read /tmp and exits 0 with no output). The route used to
+        # raise a hard 500 "No slides rendered", breaking the "never 503/500 for
+        # a preview we can't rasterize" contract. It must instead degrade to the
+        # SAME text_fallback the LibreOffice-missing path uses. (The coder image
+        # ships an unconfined apt libreoffice and renders a real PNG — verified
+        # in-pod 2026-08-11; this fences the degrade for confined/broken hosts.)
+        from ppxai.server.routes.files import render_office_preview
+        target = self._make_real_pptx(tmp_path)
+        monkeypatch.setattr(
+            "ppxai.engine.tools.builtin.pptx_tools._libreoffice_available",
+            lambda: True,
+        )
+        monkeypatch.setattr(
+            "ppxai.engine.tools.builtin.pptx_tools.render_pptx_slides",
+            lambda *a, **k: [],  # present LibreOffice, empty render
+        )
+        # slide fetch: text_fallback, not 500
+        resp = render_office_preview(target, "deck.pptx", ".pptx", tmp_path, slide=1)
+        assert resp.status_code == 200
+        body = json.loads(resp.body)
+        assert body["type"] == "text_fallback"
+        assert body["kind"] == "presentation"
+        assert body["libreoffice_available"] is False
+        assert "Slide 1 of 1" in body["content"]
+        # total/metadata: also 200, never 500
+        resp_total = render_office_preview(
+            target, "deck.pptx", ".pptx", tmp_path, total=True
+        )
+        assert resp_total.status_code == 200
+        body_total = json.loads(resp_total.body)
+        assert body_total["type"] == "pptx"
+        assert body_total["total"] == 1
+        assert body_total["libreoffice_available"] is False
 
     def test_unsupported_extension_rejected_400(self, tmp_path):
         from ppxai.server.routes.files import render_office_preview

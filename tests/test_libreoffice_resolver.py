@@ -82,3 +82,52 @@ class TestFindLibreOffice:
     # to "nt" globally breaks pathlib (WindowsPath can't instantiate on a
     # POSIX host). The well-known-path *mechanism* is covered by
     # test_well_known_path_when_not_on_path and the macOS case above.
+
+
+class TestLibreOfficeCanRead:
+    """Item: `libreoffice_can_read(dir)` — the capability probe distinct from
+    mere presence. A snap-confined LibreOffice exists but can't read /tmp and
+    exits 0 with no output; this probe does a real convert and checks output,
+    so callers (test guards, and the preview route's degrade) branch on what
+    LibreOffice can actually do, not just that it's installed."""
+
+    def _fake_soffice(self, tmp_path, *, emit: bool):
+        """A stand-in soffice: parses `--outdir <dir> <src>` and either writes a
+        <src>.pdf into outdir (emit=True) or writes nothing (emit=False, the
+        confined/broken case). Always exits 0 — like the real snap does."""
+        exe = tmp_path / "soffice"
+        body = (
+            "#!/usr/bin/env python3\n"
+            "import sys\n"
+            "from pathlib import Path\n"
+            f"emit = {emit!r}\n"
+            "args = sys.argv[1:]\n"
+            "outdir = args[args.index('--outdir')+1]\n"
+            "src = Path(args[-1])\n"
+            "if emit:\n"
+            "    (Path(outdir)/(src.stem + '.pdf')).write_bytes(b'%PDF-1.4\\n')\n"
+            "sys.exit(0)\n"
+        )
+        exe.write_text(body)
+        exe.chmod(0o755)
+        return exe
+
+    def test_false_when_no_binary(self, monkeypatch, tmp_path):
+        monkeypatch.setattr(lo, "find_libreoffice", lambda: None)
+        assert lo.libreoffice_can_read(tmp_path) is False
+
+    def test_true_when_convert_emits_output(self, monkeypatch, tmp_path):
+        exe = self._fake_soffice(tmp_path, emit=True)
+        monkeypatch.setattr(lo, "find_libreoffice", lambda: str(exe))
+        assert lo.libreoffice_can_read(tmp_path) is True
+
+    def test_false_when_convert_emits_nothing(self, monkeypatch, tmp_path):
+        # The confinement signature: exit 0, no output. Presence != capability.
+        exe = self._fake_soffice(tmp_path, emit=False)
+        monkeypatch.setattr(lo, "find_libreoffice", lambda: str(exe))
+        assert lo.libreoffice_can_read(tmp_path) is False
+
+    def test_false_on_spawn_failure(self, monkeypatch, tmp_path):
+        # A resolved path that isn't actually runnable → False, never raises.
+        monkeypatch.setattr(lo, "find_libreoffice", lambda: str(tmp_path / "nope"))
+        assert lo.libreoffice_can_read(tmp_path) is False

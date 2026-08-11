@@ -448,8 +448,18 @@ class TestRenderPptxSlideArtifactFlow:
         from ppxai.engine.tools.builtin.pptx_tools import (
             RenderPptxSlideTool, _libreoffice_available,
         )
+        from ppxai.common.libreoffice import libreoffice_can_read
         if not _libreoffice_available():
             pytest.skip("LibreOffice not installed — render tests need it")
+        # A snap-confined LibreOffice can't read tmp_path (outside $HOME), so a
+        # convert silently yields no output (exit 0). Skip rather than report a
+        # false regression — the coder image's apt libreoffice is unconfined and
+        # this passes there (verified in-pod 2026-08-11).
+        if not libreoffice_can_read(tmp_path):
+            pytest.skip(
+                "LibreOffice cannot read the test tmp dir (snap confinement) — "
+                "render works with an unconfined install (e.g. the coder image)"
+            )
         pptx_bytes = _make_pptx([{"title": "Hello", "content": "Body"}])
         (tmp_path / "workspace" / "deck.pptx").write_bytes(pptx_bytes)
         tool = RenderPptxSlideTool(workspace_engine)
@@ -480,8 +490,13 @@ class TestRenderPptxSlideArtifactFlow:
         from ppxai.engine.tools.builtin.pptx_tools import (
             RenderPptxSlideTool, _libreoffice_available,
         )
+        from ppxai.common.libreoffice import libreoffice_can_read
         if not _libreoffice_available():
             pytest.skip("LibreOffice not installed")
+        if not libreoffice_can_read(tmp_path):
+            pytest.skip(
+                "LibreOffice cannot read the test tmp dir (snap confinement)"
+            )
         wd = tmp_path / "workspace"
         wd.mkdir()
         engine = SimpleNamespace(get_working_dir=lambda: str(wd))

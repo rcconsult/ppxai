@@ -91,3 +91,47 @@ def find_libreoffice() -> Optional[str]:
 def libreoffice_available() -> bool:
     """True iff a LibreOffice executable can be located (see find_libreoffice)."""
     return find_libreoffice() is not None
+
+
+def libreoffice_can_read(directory: "os.PathLike | str") -> bool:
+    """True iff the resolved LibreOffice can actually read+convert a file under
+    *directory*.
+
+    ``libreoffice_available()`` only proves the binary exists — it does NOT
+    prove the binary can reach the files it will be asked to convert. The
+    Ubuntu **snap** package (``/snap/bin/libreoffice``) runs under strict
+    confinement that forbids reading paths outside ``$HOME`` and a short
+    allowlist, so a conversion of a file under ``/tmp`` fails with *"source
+    file could not be loaded"* and **exit code 0** (no output, no error signal)
+    — indistinguishable from a corrupt deck to a caller. An apt-installed
+    ``/usr/bin/libreoffice`` (what the coder image ships) has no such limit.
+
+    This probe does a real, tiny ``--convert-to txt`` of a throwaway file
+    created inside *directory* and returns whether output appeared — the only
+    reliable way to detect confinement, since the exit code lies. Returns False
+    on any error (no binary, timeout, spawn failure). Intended as a test-skip
+    guard so a confined dev box doesn't report a false code regression; the
+    render tool itself already fails loud with a caller-readable message.
+    """
+    import subprocess
+    import tempfile
+
+    soffice = find_libreoffice()
+    if soffice is None:
+        return False
+    d = Path(directory)
+    try:
+        with tempfile.TemporaryDirectory(dir=d) as work:
+            work_path = Path(work)
+            src = work_path / "probe.txt"
+            src.write_text("probe", encoding="utf-8")
+            outdir = work_path / "out"
+            outdir.mkdir()
+            subprocess.run(
+                [soffice, "--headless", "--norestore",
+                 "--convert-to", "pdf", "--outdir", str(outdir), str(src)],
+                capture_output=True, timeout=60,
+            )
+            return any(outdir.iterdir())
+    except (OSError, subprocess.SubprocessError):
+        return False
