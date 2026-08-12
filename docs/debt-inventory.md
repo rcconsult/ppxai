@@ -1444,4 +1444,3 @@ older per-version detail in the v1.18.2/v1.18.3 snapshots.
   per-version debt inventories
 - `docs/TODO-*.md` — in-flight planning for the current branch (kept
   separate from debt — those are not "deferred", they're "planned now")
-

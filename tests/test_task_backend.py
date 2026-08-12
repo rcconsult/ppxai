@@ -374,3 +374,92 @@ def test_configure_is_idempotent(tmp_path, monkeypatch):
         )
     assert sweeps == [1], "swept more than once"
     assert len(hooks) == 1, "stacked change hooks"
+
+
+class TestLifecycleWiringRetriesAfterFailure:
+    """A transient wiring failure must not be permanent (review Medium).
+
+    The previous shape set ONE `_lifecycle_wired` flag BEFORE doing the work,
+    so if `sweep_orphans()` or `on_change()` raised once, every later dispatch
+    returned early: orphaned runs stayed `running` forever and the active-run
+    badge never lit — silently, since the failure logs at debug level only.
+
+    The two steps are now tracked separately and marked only on success.
+    """
+
+    def _backend(self, tmp_path, monkeypatch):
+        registry = AgentRunRegistry(FilesystemAgentRunStore(tmp_path / "runs"))
+        shared = InProcessTaskBackend(registry)
+        monkeypatch.setattr(task_backend, "_shared", shared)
+        return registry
+
+    def test_sweep_retries_after_a_transient_failure(self, tmp_path, monkeypatch):
+        registry = self._backend(tmp_path, monkeypatch)
+        calls = []
+
+        def flaky():
+            calls.append(1)
+            if len(calls) == 1:
+                raise RuntimeError("store briefly unavailable")
+
+        monkeypatch.setattr(registry, "sweep_orphans", flaky)
+        monkeypatch.setattr(registry, "on_change", lambda cb: None)
+
+        task_backend.configure_task_backend(on_change=lambda: None)
+        task_backend.configure_task_backend(on_change=lambda: None)
+        assert len(calls) == 2, (
+            "sweep was not retried after failing once — orphans stay unswept "
+            "for the life of the process"
+        )
+
+        # ...and once it SUCCEEDS it must stop (idempotence still holds).
+        task_backend.configure_task_backend(on_change=lambda: None)
+        assert len(calls) == 2, "swept again after success"
+
+    def test_on_change_retries_after_a_transient_failure(self, tmp_path, monkeypatch):
+        registry = self._backend(tmp_path, monkeypatch)
+        hooks = []
+
+        def flaky(cb):
+            hooks.append(cb)
+            if len(hooks) == 1:
+                raise RuntimeError("subscriber list busy")
+
+        monkeypatch.setattr(registry, "sweep_orphans", lambda: None)
+        monkeypatch.setattr(registry, "on_change", flaky)
+
+        task_backend.configure_task_backend(on_change=lambda: None)
+        task_backend.configure_task_backend(on_change=lambda: None)
+        assert len(hooks) == 2, (
+            "on_change was not retried — AppState.background_agents is never "
+            "written, so the TUI badge can never light"
+        )
+        task_backend.configure_task_backend(on_change=lambda: None)
+        assert len(hooks) == 2, "stacked a duplicate hook after success"
+
+    def test_a_failing_sweep_does_not_block_the_change_hook(self, tmp_path, monkeypatch):
+        """The steps are INDEPENDENT: one failing must not skip the other.
+
+        Under the old single-flag shape the `try` wrapped both, so a raising
+        sweep skipped `on_change()` entirely in the same call.
+        """
+        registry = self._backend(tmp_path, monkeypatch)
+        hooks = []
+        monkeypatch.setattr(
+            registry, "sweep_orphans",
+            lambda: (_ for _ in ()).throw(RuntimeError("nope")),
+        )
+        monkeypatch.setattr(registry, "on_change", lambda cb: hooks.append(cb))
+
+        task_backend.configure_task_backend(on_change=lambda: None)
+        assert len(hooks) == 1, "a failing sweep swallowed the change hook"
+
+    def test_configure_never_raises_to_the_caller(self, tmp_path, monkeypatch):
+        """Degrade, don't disappear: /task must still work if wiring fails."""
+        registry = self._backend(tmp_path, monkeypatch)
+        boom = lambda *a: (_ for _ in ()).throw(RuntimeError("x"))  # noqa: E731
+        monkeypatch.setattr(registry, "sweep_orphans", boom)
+        monkeypatch.setattr(registry, "on_change", boom)
+
+        backend = task_backend.configure_task_backend(on_change=lambda: None)
+        assert backend is not None

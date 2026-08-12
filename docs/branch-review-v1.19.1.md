@@ -23,8 +23,10 @@ no production-code changes were made as part of the review.
 | High — `--skill` expands read scope to arbitrary paths | ✅ **FIXED** |
 | High — accepted `/task` flags silently ignored in the TUI | ✅ **FIXED** |
 | High — in-process `/run` does not honour `execution.run.*` | ✅ **FIXED** |
-| Medium — failed backend lifecycle wiring never retried | ⏳ open |
-| Low — whitespace at EOF in debt-inventory | ⏳ open |
+| Medium — failed backend lifecycle wiring never retried | ✅ **FIXED** |
+| Low — whitespace at EOF in debt-inventory | ✅ **FIXED** |
+
+All six findings are now closed.
 
 All four fixed findings shared one root cause and one fix: admission now lives
 in `ppxai/engine/task_authorizer.py::authorize()`, which every client — both
@@ -144,7 +146,7 @@ launch mechanics.
 Relevant code: `ppxai/commands/task.py` and
 `ppxai/server/routes/agent_v1.py`.
 
-### Medium: failed backend lifecycle wiring is never retried
+### Medium: failed backend lifecycle wiring is never retried — FIXED
 
 `configure_task_backend()` marks the backend as `_lifecycle_wired` before it
 tries to sweep orphaned runs and register the change callback. If either action

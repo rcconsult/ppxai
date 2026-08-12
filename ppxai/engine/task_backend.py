@@ -83,21 +83,38 @@ def configure_task_backend(session_provider=None, on_change=None):
 
     Idempotent: called on every `/task`/`/run` dispatch, so it must not sweep
     repeatedly or stack hooks.
+
+    The two steps are tracked SEPARATELY and each is marked done only after
+    it succeeds, so a transient failure retries on the next dispatch. A single
+    flag set BEFORE the work (the shape this replaced) made one failure
+    permanent for the life of the process: every later call returned early,
+    so orphans stayed unswept and the badge could never light — silently,
+    because the failure is logged at debug. Splitting the `try` also matters:
+    with both steps inside one, a raising sweep swallowed the change hook in
+    the same call. Marking AFTER success keeps the idempotence promise — a
+    step that did succeed never runs twice, so hooks cannot stack.
     """
     backend = get_task_backend()
     if session_provider is not None:
         backend._session_provider = session_provider
-    if getattr(backend, "_lifecycle_wired", False):
-        return backend
-    backend._lifecycle_wired = True
-    try:
-        backend.registry.sweep_orphans()
-        if on_change is not None:
+
+    if not getattr(backend, "_orphans_swept", False):
+        try:
+            backend.registry.sweep_orphans()
+            backend._orphans_swept = True
+        except Exception:  # noqa: BLE001
+            # A registry that cannot sweep must not stop the command working;
+            # the run surface degrades, it does not disappear. Left unmarked
+            # so the next dispatch tries again.
+            logger.debug("task backend orphan sweep failed", exc_info=True)
+
+    if on_change is not None and not getattr(backend, "_on_change_wired", False):
+        try:
             backend.registry.on_change(on_change)
-    except Exception:  # noqa: BLE001
-        # A registry that cannot sweep must not stop the command working;
-        # the run surface degrades, it does not disappear.
-        logger.debug("task backend lifecycle wiring failed", exc_info=True)
+            backend._on_change_wired = True
+        except Exception:  # noqa: BLE001
+            logger.debug("task backend on_change wiring failed", exc_info=True)
+
     return backend
 
 

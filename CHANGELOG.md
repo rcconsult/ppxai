@@ -89,6 +89,8 @@ Why: "agent" meant three different things (in-session loop, tool-free background
 
 ### Fixed (agent platform)
 
+- **A transient lifecycle-wiring failure was permanent** (branch-review Medium — the last of the six findings). `configure_task_backend()` set one `_lifecycle_wired` flag *before* attempting both the orphan sweep and the change-hook registration, inside a single `try`. One failure meant every later dispatch returned early — orphaned runs stayed `running` forever and the active-run badge could never light, silently, since the failure logs at debug level. A raising sweep also swallowed the hook in the same call, a second defect the review did not name. The two steps are now tracked separately, each with its own `try`, and marked only **after** success — so each retries until it works while still never running twice (the idempotence promise is pinned by the pre-existing `test_configure_is_idempotent`).
+
 - **`--spec`, `--profile` and `--enrichment` were silent no-ops in the TUIs** while the help text advertised them: the shared grammar parsed them and the dispatcher dropped them. They now flow through the shared authorizer and behave as they do over HTTP.
 - **`--provider` / `--model` were parsed then overridden** by the UI's current selection. Precedence is now `flag > spec/skill/profile > UI selection > execution.default_subagent` — a UI selection is this client's default, not a statement about the request, so an explicit flag wins. ⚠️ Visible change if you relied on the UI selection while also typing the flag.
 - `--skill` with no `skills_dir` configured now fails with an actionable error instead of silently mounting the path.
