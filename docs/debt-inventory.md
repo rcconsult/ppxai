@@ -427,19 +427,49 @@ date bumped to 2026-07-11; no new table entries needed.
    Superseded by Item 55**, which carries the verified pricing/benchmark/
    hazard detail and the fix order.
 
-2. **Perplexity Agent API (the "search/coding API" addition)** — a NEW
-   surface beside Sonar chat completions and the Search API. Changelog
-   2026-05→07: exposes third-party + coding-focused models
-   (`openai/gpt-5.6-{sol,terra,luna}`, `anthropic/claude-sonnet-5`,
-   `anthropic/claude-opus-4-8`, `xai/grok-4.5` "flagship coding and agentic",
-   `perplexity/kimi-k2.7-code` "coding and agentic", `perplexity/glm-5.2`,
-   `nvidia/nemotron-3-super-120b-a12b`) plus a `finance_search` tool. Docs
-   are being restructured (the overview path 404s); endpoint shape /
-   OpenAI-compatibility / pricing unverified. **Trigger:** evaluate when docs
-   stabilize — could be (a) a second Perplexity provider entry if
-   OpenAI-compatible, (b) a web_search backend alternative (Search API), or
-   (c) out of scope. Note `anthropic/*` via this API would intersect the
-   roadmap's native Anthropic-provider item.
+2. **Perplexity Agent API** — ⚠️ **TRIGGER FIRED 2026-08-13: docs have
+   stabilized and Perplexity now states "Sonar Chat Completions is now
+   Agent API" (changelog, July 2026; GA was February 2026).** Chat
+   completions still works — the Item 43 live runs all went through it —
+   but it is now the legacy surface.
+
+   **Verified roster** (`docs.perplexity.ai/docs/agent-api/models.md`,
+   fetched 2026-08-13) — far wider than the 2026-07 changelog sample:
+   - Anthropic: `claude-opus-5`, `claude-opus-4-8`, `claude-opus-4-7`,
+     `claude-opus-4-6`, `claude-opus-4-5`, `claude-sonnet-5`,
+     `claude-fable-5`, `claude-sonnet-4-6`, `claude-sonnet-4-5`,
+     `claude-haiku-4-5`
+   - OpenAI: `gpt-5.6-{sol,terra,luna}`, `gpt-5.5`, `gpt-5.4`,
+     `gpt-5.4-mini`, `gpt-5.4-nano`, `gpt-5.2`, `gpt-5.1`, `gpt-5`,
+     `gpt-5-mini`
+   - Google: `gemini-3.1-pro-preview`, `gemini-3.1-flash-lite`,
+     `gemini-3.5-flash`, `gemini-3.5-flash-lite`, `gemini-3.6-flash`,
+     `gemini-3-flash-preview`
+   - xAI: `grok-4.6`, `grok-4.5`, `grok-4.3`, `grok-4.20-reasoning`,
+     `grok-4.20-non-reasoning`, `grok-4.20-multi-agent`
+   - Other: `perplexity/deepseek-v4-flash-0731`, `perplexity/glm-5.2`,
+     `perplexity/kimi-k3`, `perplexity/kimi-k2.7-code`,
+     `perplexity/nemotron-3.5-lightning-30b-a3b`,
+     `perplexity/nemotron-3-ultra-550b-a55b`, `perplexity/sonar`
+
+   **Wire shape — NOT OpenAI-compatible for tools.** The Agent API returns
+   `function_call` items (`{type, name, call_id, arguments}`) and takes
+   results back as `function_call_output`, *not* OpenAI-style `tool_calls`.
+   So option (a) below is **not** a drop-in second provider entry: our
+   `openai_compat`/`BaseProvider` path would need a translation layer.
+   Built-in tools: `web_search`, `sandbox` (code execution), `fetch_url`,
+   `finance_search`, `people_search`, plus MCP server support.
+
+   **Bearing on Item 43:** the Sonar chat-completions endpoint *does* now
+   emit native `tool_calls` for `sonar-pro` / `sonar-reasoning-pro`
+   (verified live), so fixing Item 43 does **not** require adopting the
+   Agent API. These are independent decisions.
+
+   **Still open:** (a) a second provider entry for the Agent API (needs the
+   `function_call` translation layer), (b) Search API as a `web_search`
+   backend, or (c) out of scope. `anthropic/*` here intersects the
+   roadmap's native Anthropic-provider item — going direct is likely
+   preferable to proxying through Perplexity. Pricing unverified.
 
 3. **`gemini-3.1-pro-preview` succession** — still live, no announced
    shutdown, but it is the only *preview*-class model left in our catalog and
@@ -459,7 +489,18 @@ date bumped to 2026-07-11; no new table entries needed.
    sweep at the next release prep.
 
 **Trigger:** gpt-5.6 GA announcement, Perplexity Agent API docs stabilizing,
-or the next release prep — whichever comes first.
+or the next release prep — whichever comes first. **Two of the three have
+now fired** (watch item 1 → Item 55, 2026-08-01; watch item 2 → 2026-08-13);
+only the release-prep sweep remains outstanding.
+
+**Perplexity capability correction (2026-08-13).** The 2026-07-11 sweep
+recorded "Perplexity 4/4 Sonar models unchanged", which is true of the
+*model list* but missed a **capability** change: `sonar-pro` and
+`sonar-reasoning-pro` gained native tool calling. A `/models`-style
+existence sweep cannot see this. **Method note for the next refresh:**
+probe capabilities, not just liveness — send a one-message request with a
+`tools=[...]` array per model and record whether it 400s, returns prose,
+or returns `tool_calls`. That single probe is what overturned Item 43.
 
 ---
 
@@ -501,7 +542,62 @@ hook-rewritten commands, OR `rtk gain` totals plateau across sessions
 
 ---
 
-### Item 43 — Perplexity `/task` never calls granted tools (prompt-based avoidance) → refusal / confabulation / external mis-grounding [providers / perplexity / agent platform] — ✅ CONFIRMED (2026-07-13, 8-run web-app trial)
+### Item 43 — Perplexity `/task` never calls granted tools → **ROOT CAUSE REVISED**: our hardcoded `native_tool_calling=False`, not a model limitation [providers / perplexity / agent platform] — ✅ CONFIRMED, ⚠️ **PREMISE OVERTURNED 2026-08-13**
+
+> **2026-08-13 — the diagnosis below is superseded; the fix is now a
+> one-line capability correction, not a routing gate.**
+>
+> Perplexity **added native tool calling**. Verified live against
+> `api.perplexity.ai` through our own provider client:
+>
+> | Model | Native `tool_calls` |
+> |---|---|
+> | `sonar` | ❌ HTTP 400 `Tool calling is not supported for this model` |
+> | **`sonar-pro`** | ✅ **emits `tool_calls`** |
+> | **`sonar-reasoning-pro`** | ✅ **emits `tool_calls`** |
+> | `sonar-deep-research` | ❌ HTTP 400 `Tool parameters must be a JSON object` |
+>
+> Full round-trip confirmed on `sonar-pro`: emits
+> `read_file{"path": ...}` → accepts the `tool` result message → answers
+> from it (unguessable canary content returned verbatim, so a real loop,
+> not inference).
+>
+> **So the failures below were caused by our own config.**
+> `ppxai/engine/providers/perplexity.py:63` hardcodes
+> `native_tool_calling=False` on `default_capabilities` with the comment
+> "Sonar models don't support native API tool_calls" — true when written,
+> false now. That flag forces `profile.mode=prompt_based` and every
+> symptom below follows from the prompt-based fallback, not from the API.
+>
+> A same-day direct-provider re-run (5 trials × `sonar`, `sonar-pro`,
+> `sonar-reasoning-pro`) scored **0/15 tool calls** — but that measured
+> the *prompt-based path*, i.e. the consequence of the flag. The earlier
+> "1 success in 6" was the agent loop's text-extraction fallback getting
+> lucky, not the model emitting a call.
+>
+> **Revised fix.** Make the capability **per-model**, not per-provider —
+> `openai_native.py:368` already implements exactly this via
+> `get_capabilities_for_model`, so it is the established shape:
+> `sonar-pro` / `sonar-reasoning-pro` → `True`; `sonar` /
+> `sonar-deep-research` → `False` **and** reject tool-capable `/task`
+> up front, since the API 400s rather than degrading.
+> Options (a)/(b)/(c) below are moot — (a) and (b) would now *block or
+> reroute working functionality*, and (c) was already low-confidence.
+>
+> **Open sub-question.** `sonar-deep-research`'s 400 is a *schema-shape*
+> complaint ("Tool parameters must be a JSON object"), not a flat refusal,
+> so it may be usable with a stricter schema. Not chased.
+>
+> **API-surface note.** Perplexity announced *"Sonar Chat Completions is
+> now Agent API"* (July 2026). Chat completions still works — all the
+> above ran through it — but the Agent API is the forward surface and uses
+> `function_call` / `function_call_output` rather than OpenAI-style
+> `tool_calls`. Official `perplexityai` SDK is at **0.43.3**; ppxai does
+> not use it (we go through the OpenAI SDK), so no SDK bump is implied.
+> The Agent API also fronts third-party models — see Item 38.
+
+**Historical diagnosis (2026-07-13, 8-run web-app trial) — kept for the
+symptom record; the root cause attribution is wrong, see above.**
 
 **Planned:** `v1.19.x`. Originally filed 2026-07-12 from one run
 (`run_07c2f15936d3`, "summarize docs/README.md", perplexity/sonar-pro) that
