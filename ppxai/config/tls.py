@@ -28,10 +28,19 @@ project's hybrid-config split (see CLAUDE.md) and is what CI and
 container deployments set; `ppxai-config.json` is the committed,
 shareable layer.
 
+A configured CA bundle is **added to** the system trust store, never
+substituted for it, so a laptop that roams between a TLS-inspecting
+corporate network and a direct connection needs no config change: the
+corporate CA validates the inspected chain at the office, the system
+roots validate real certificates everywhere else. This is why callers
+must use `tls_verify()` / `tls_ssl_context()` rather than passing a
+bundle path to httpx themselves — both `httpx(verify="<path>")` and
+`ssl.create_default_context(cafile=...)` REPLACE the default roots.
+
 `verify=False` disables certificate checking for every request the
-client makes. It exists for TLS-inspecting corporate proxies, where the
-alternative is no connectivity, and is reported by `describe_tls()` so
-the condition is visible rather than silent.
+client makes. With an additive CA bundle it should rarely be needed even
+behind TLS inspection; it is reported by `describe_tls()` so the
+condition is visible rather than silent.
 """
 
 from __future__ import annotations
@@ -43,8 +52,11 @@ from typing import Any, Dict, Optional, Union
 
 from .store import get_config
 
-#: What httpx/ssl expect for `verify=`: False (off) or a CA bundle path
-#: (str) or True (system store).
+#: The resolved policy as stored on `TLSSetting`: False (off), a CA bundle
+#: path (str), or True (system store). NOTE this is the *decision*, not
+#: what to hand httpx — use `tls_verify()`, which converts a bundle path
+#: into a context so the corporate CA ADDS to the system roots instead of
+#: replacing them.
 VerifyValue = Union[bool, str]
 
 
@@ -52,10 +64,12 @@ VerifyValue = Union[bool, str]
 class TLSSetting:
     """A resolved TLS decision plus why it was made.
 
-    `verify` is passed straight to `httpx.Client(verify=...)`. `source`
-    and `reason` exist so `/doctor` and the startup warning can explain
-    the decision without re-deriving it — the re-derivation is what
-    drifted last time.
+    `verify` is the resolved *policy* — True, False, or a CA bundle path.
+    Do not pass it to httpx directly; call `tls_verify()`, which turns a
+    bundle path into a context that trusts the corporate CA **and** the
+    system roots. `source` and `reason` exist so `/doctor` and the
+    startup warning can explain the decision without re-deriving it —
+    the re-derivation is what drifted last time.
     """
 
     verify: VerifyValue
@@ -141,28 +155,60 @@ def resolve_tls_verify() -> TLSSetting:
 
 
 def tls_verify() -> VerifyValue:
-    """The bare `verify=` value, for call sites that need nothing else."""
-    return resolve_tls_verify().verify
+    """What to pass as `verify=` to an httpx client.
+
+    Returns `False` when verification is off, otherwise an
+    `ssl.SSLContext` — **not** a bare path. httpx treats
+    `verify="<path>"` the same way `create_default_context(cafile=...)`
+    does: the bundle REPLACES the system roots, so a corporate CA alone
+    breaks every public endpoint off the inspecting network. Returning
+    the context keeps both trust anchors, so one config roams. See
+    `tls_ssl_context`.
+
+    Always a context when verifying, even with no custom CA configured:
+    httpx's own default trusts **certifi only**, while
+    `ssl.create_default_context()` also loads the OS trust store. On a
+    machine whose corporate CA was installed system-wide (the normal IT
+    route on Windows/macOS), certifi does not have it and the OS store
+    does — so returning `True` here would leave the httpx-based clients
+    failing under TLS inspection while the `ssl`-based web tools worked.
+    Verified on this host: the OS store carries the inspection CAs,
+    certifi does not.
+    """
+    setting = resolve_tls_verify()
+    if setting.is_insecure:
+        return False
+    return tls_ssl_context()
 
 
 def tls_ssl_context():
-    """The same decision as an `ssl.SSLContext`, for stdlib/aiohttp callers.
+    """The resolved decision as an `ssl.SSLContext`.
 
-    `httpx` accepts `verify=False|<path>` directly; `ssl`-based clients
-    need a context. Both shapes are built here so the two cannot express
-    different policies — the divergence this module exists to end.
+    A custom CA is **added to** the system trust store, not substituted
+    for it. `ssl.create_default_context(cafile=...)` *replaces* the
+    default roots, which breaks every public endpoint the moment the
+    machine leaves the inspecting network — a laptop that roams between
+    a TLS-inspecting corporate network and a direct connection would
+    need its config edited on every move. Loading both means one static
+    configuration works on both: the corporate CA validates the
+    inspected chain at the office, the system roots validate real
+    certificates everywhere else.
+
+    Verified on a direct connection: cafile-only fails
+    `CERTIFICATE_VERIFY_FAILED` against api.perplexity.ai, while
+    default-plus-corporate-CA succeeds.
     """
     import ssl
 
     setting = resolve_tls_verify()
+    ctx = ssl.create_default_context()
     if setting.is_insecure:
-        ctx = ssl.create_default_context()
         ctx.check_hostname = False
         ctx.verify_mode = ssl.CERT_NONE
         return ctx
     if setting.cert_file:
-        return ssl.create_default_context(cafile=setting.cert_file)
-    return ssl.create_default_context()
+        ctx.load_verify_locations(cafile=setting.cert_file)
+    return ctx
 
 
 def describe_tls() -> str:

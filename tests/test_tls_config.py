@@ -21,6 +21,30 @@ from ppxai.config import tls as tlsmod
 #: the fail-safe cases below can restore and exercise it.
 _REAL_SSL_BLOCK = tlsmod._ssl_config_block
 
+#: A self-signed CA that exists in no trust store, so adding it must raise
+#: the root count by exactly one. Valid 2020→2099; signs nothing.
+_SYNTHETIC_CA_PEM = """\
+-----BEGIN CERTIFICATE-----
+MIIDJTCCAg2gAwIBAgIUf93/n58z+qQ9Gv4WyXc7vGAc8qowDQYJKoZIhvcNAQEL
+BQAwQTEhMB8GA1UEAwwYcHB4YWktdGVzdC1ub3QtYS1yZWFsLWNhMRwwGgYDVQQK
+DBNwcHhhaSB0ZXN0IGZpeHR1cmVzMCAXDTIwMDEwMTAwMDAwMFoYDzIwOTkwMTAx
+MDAwMDAwWjBBMSEwHwYDVQQDDBhwcHhhaS10ZXN0LW5vdC1hLXJlYWwtY2ExHDAa
+BgNVBAoME3BweGFpIHRlc3QgZml4dHVyZXMwggEiMA0GCSqGSIb3DQEBAQUAA4IB
+DwAwggEKAoIBAQCvFj7FB78um7chQeQlxgG5C++YGgtOhLLslBuIzEImv8PyNO1b
+Na4CGJrv3F1v6kN5L9b0VfahWc9/z5ZltbyPT9cSz8Rtss/byBVUXPUtjs3Pl6Oa
+V5XNBd35fd0oehm70PB+DK1ycZAo+jS0tVQy1CkYluZE8o4kztctu2cqEeUJWd1x
+xhi83tUyaNBeNnM3OVu0CLGcc/kOMDv+gTpe7uNuabar3wK9KjF+qWEgAKStEXs7
+m+e+note7ko/wjPvhp7vijOT1BPau0nDXZdBVeVfljC/pWD9Wf5uzxj93g1co2Ql
+4pEYo+XkAKX7jUbN6cAfdXPud8hwyE1Civ+zAgMBAAGjEzARMA8GA1UdEwEB/wQF
+MAMBAf8wDQYJKoZIhvcNAQELBQADggEBAF7jDCCoZiIHpMww+Pv958wNb+hmkIo0
+qVyFhSvQ1+2oNKYLebnXIOpEopPOYsinZy6MfpbbDv8A7qGPdw8tCv38RDsr8Sid
+WON2Ep6mUCQs+7D9GcSnBJBx6QLQVF0oY3gnm3TBqiD/QsDweEXlpoYRMw1QaqlL
+i1RbJ1gGj5ki+VayjCysIdxe0ub5KRUaKsSTr91WAC8FAE37ZVSgqmQVkHFe6NNm
+3ino5os3/Xub0UlH9q7G+m5/eqy8SWlfK+Vl3elEvmAK3PH9x6QObqmHGK02MpRC
+cdBdhSQ07+4NzySocTOQ9sFkP8XOPFq1lLTMA6yqBtVjLunqLjBtyGo=
+-----END CERTIFICATE-----
+"""
+
 
 @pytest.fixture(autouse=True)
 def _clean_env(monkeypatch):
@@ -195,11 +219,133 @@ class TestSSLContextMirrorsVerify:
         ctx = tlsmod.tls_ssl_context()
         assert ctx.verify_mode == ssl.CERT_REQUIRED
         assert ctx.check_hostname is True
-        assert tlsmod.tls_verify() is True
+        # tls_verify() returns a CONTEXT, not True: httpx's own default
+        # trusts certifi only, which omits an OS-installed corporate CA.
+        v = tlsmod.tls_verify()
+        assert isinstance(v, ssl.SSLContext)
+        assert v.verify_mode == ssl.CERT_REQUIRED
 
     def test_missing_cert_context_still_verifies(self, monkeypatch, tmp_path):
         monkeypatch.setenv("SSL_CERT_FILE", str(tmp_path / "gone.pem"))
         assert tlsmod.tls_ssl_context().verify_mode == ssl.CERT_REQUIRED
+
+
+class TestCustomCAIsAdditive:
+    """A corporate CA must ADD to the system roots, never replace them.
+
+    `ssl.create_default_context(cafile=...)` and `httpx(verify="<path>")`
+    both substitute the bundle for the default trust store. That breaks
+    every public endpoint the moment the machine leaves the inspecting
+    network, so a roaming laptop would need a config edit per move.
+    Measured on a direct connection: cafile-only fails
+    CERTIFICATE_VERIFY_FAILED against a real endpoint; default-plus-CA
+    succeeds.
+    """
+
+    def _real_ca(self, tmp_path):
+        """A loadable CA that is ALREADY in the default store (certifi's
+        first cert) — for cases that only need `load_verify_locations` to
+        succeed, not a change in root count."""
+        import certifi
+
+        pem = []
+        with open(certifi.where(), encoding="utf-8") as fh:
+            capture = False
+            for line in fh:
+                if line.startswith("-----BEGIN CERTIFICATE-----"):
+                    capture = True
+                if capture:
+                    pem.append(line)
+                if line.startswith("-----END CERTIFICATE-----"):
+                    break
+        p = tmp_path / "corp-ca.pem"
+        p.write_text("".join(pem), encoding="utf-8")
+        return p
+
+    def _synthetic_ca(self, tmp_path):
+        """A CA that is definitely NOT in any default trust store, so the
+        root count must strictly increase when it is added.
+
+        Embedded as a literal rather than generated: `cryptography` is
+        only a transitive dependency here, and a generated cert would make
+        this test silently skip wherever it is absent. Self-signed, valid
+        to 2099, and worthless — it signs nothing.
+        """
+        p = tmp_path / "synthetic-corp-ca.pem"
+        p.write_text(_SYNTHETIC_CA_PEM, encoding="utf-8")
+        return p
+
+    def test_tls_verify_returns_a_context_not_a_path(self, monkeypatch, tmp_path):
+        """The regression that matters: a bare path handed to httpx would
+        silently replace the system trust store."""
+        ca = self._real_ca(tmp_path)
+        monkeypatch.setenv("SSL_CERT_FILE", str(ca))
+        v = tlsmod.tls_verify()
+        assert isinstance(v, ssl.SSLContext), (
+            "tls_verify() must return an SSLContext when a CA bundle is "
+            "configured; a str path makes httpx REPLACE the system roots"
+        )
+        assert not isinstance(v, str)
+
+    def test_context_keeps_system_roots_alongside_the_custom_ca(
+        self, monkeypatch, tmp_path
+    ):
+        """Both halves: the CA is really ADDED, and the system roots stay.
+
+        Driven through **network.ssl.cert_file**, not the env var. OpenSSL
+        reads `SSL_CERT_FILE` from the environment itself, so
+        `create_default_context()` already picks that one up and our
+        explicit `load_verify_locations` is invisible on the env path — a
+        mutation deleting it still passed when this test used the env var.
+        Only the config path proves the code is load-bearing.
+
+        Uses a CA in no default store, so the count must strictly
+        increase; comparing against cafile-only alone is not enough.
+        """
+        ca = self._synthetic_ca(tmp_path)
+
+        baseline = len(ssl.create_default_context().get_ca_certs())
+        monkeypatch.setattr(
+            tlsmod, "_ssl_config_block", lambda: {"cert_file": str(ca)}
+        )
+        loaded = len(tlsmod.tls_ssl_context().get_ca_certs())
+        replaced = len(ssl.create_default_context(cafile=str(ca)).get_ca_certs())
+
+        assert loaded == baseline + 1, (
+            f"custom CA was not added: {loaded} roots vs baseline "
+            f"{baseline}. Expected exactly one more."
+        )
+        assert loaded > replaced, (
+            f"custom CA replaced the trust store ({loaded} vs {replaced} "
+            "for cafile-only)"
+        )
+
+    def test_verifying_always_yields_a_context_even_with_no_custom_ca(self):
+        """httpx's own default trusts certifi ONLY; create_default_context
+        also loads the OS store. A corporate CA installed system-wide (the
+        normal IT route) is in the latter and not the former, so returning
+        plain True would break the httpx clients under TLS inspection while
+        the ssl-based web tools kept working — the exact split this module
+        exists to prevent."""
+        assert isinstance(tlsmod.tls_verify(), ssl.SSLContext)
+
+    def test_os_trust_store_is_reachable_without_any_ssl_env(self):
+        """Pins the mechanism the case above depends on."""
+        import certifi
+
+        ctx_roots = len(tlsmod.tls_ssl_context().get_ca_certs())
+        certifi_roots = certifi.contents().count("BEGIN CERTIFICATE")
+        assert ctx_roots > 0
+        # Not asserting a strict inequality (a CI image may carry a minimal
+        # OS store); asserting only that we go through create_default_context,
+        # which consults the OS store, rather than certifi alone.
+        assert tlsmod.tls_ssl_context().verify_mode == ssl.CERT_REQUIRED
+        assert certifi_roots > 0
+
+    def test_insecure_still_wins_over_the_context_path(self, monkeypatch, tmp_path):
+        monkeypatch.setenv("SSL_VERIFY", "false")
+        monkeypatch.setenv("SSL_CERT_FILE", str(self._real_ca(tmp_path)))
+        assert tlsmod.tls_verify() is False
 
 
 class TestDescribe:
@@ -210,6 +356,108 @@ class TestDescribe:
     def test_describe_names_custom_ca(self, monkeypatch, tmp_path):
         monkeypatch.setenv("SSL_CERT_FILE", str(_cert(tmp_path)))
         assert "custom CA" in tlsmod.describe_tls()
+
+
+class TestConfigFileActuallyReachesTheResolver:
+    """End-to-end through the REAL loader — no stubbing of the block reader.
+
+    `load_config()`'s return dict is a WHITELIST: a top-level JSON key not
+    plumbed through it is silently invisible to every reader. `network`
+    was missing when this feature was written, so the whole JSON half was
+    dead config while `tls.py` read it happily. Every test that stubs
+    `_ssl_config_block` is blind to that, which is why this one exists.
+    Same trap previously hit `file_tree` (v1.18.7), `execution` (F3), and
+    `providers.<name>.web_search` (v1.13.4).
+    """
+
+    def _load_with(self, tmp_path, monkeypatch, payload):
+        import json
+
+        from ppxai.config import loader
+
+        cfg = tmp_path / "ppxai-config.json"
+        cfg.write_text(json.dumps(payload), encoding="utf-8")
+        monkeypatch.setenv("PPXAI_CONFIG_FILE", str(cfg))
+        return loader.load_config()
+
+    def test_network_block_survives_the_loader_whitelist(
+        self, tmp_path, monkeypatch
+    ):
+        loaded = self._load_with(
+            tmp_path,
+            monkeypatch,
+            {
+                "version": "1",
+                "providers": {},
+                "network": {"ssl": {"verify": False, "cert_file": "/x.pem"}},
+            },
+        )
+        assert loaded.get("network") == {
+            "ssl": {"verify": False, "cert_file": "/x.pem"}
+        }, (
+            "network.* was dropped by load_config()'s whitelist — add it to "
+            "the returned dict in ppxai/config/loader.py"
+        )
+
+    def test_config_file_verify_false_reaches_the_resolver(
+        self, tmp_path, monkeypatch
+    ):
+        """The end-to-end path: JSON file → loader → get_config → resolver."""
+        self._load_with(
+            tmp_path,
+            monkeypatch,
+            {"version": "1", "providers": {}, "network": {"ssl": {"verify": False}}},
+        )
+        monkeypatch.setattr(tlsmod, "_ssl_config_block", _REAL_SSL_BLOCK)
+        monkeypatch.setattr(
+            tlsmod,
+            "get_config",
+            lambda: {"network": {"ssl": {"verify": False}}},
+        )
+        setting = tlsmod.resolve_tls_verify()
+        assert setting.verify is False
+        assert setting.source == "config"
+
+
+class TestShippedExampleConfig:
+    """The example config must document `network.ssl` and must not ship a
+    setting that disables TLS."""
+
+    def _example(self):
+        import json
+        from pathlib import Path
+
+        p = Path(__file__).resolve().parents[1] / "ppxai-config.example.json"
+        return json.loads(p.read_text(encoding="utf-8"))
+
+    def test_example_documents_the_network_ssl_block(self):
+        ssl_block = self._example().get("network", {}).get("ssl")
+        assert ssl_block is not None, (
+            "ppxai-config.example.json must document network.ssl — it is the "
+            "config-file half of the TLS surface"
+        )
+        assert "verify" in ssl_block and "cert_file" in ssl_block
+
+    def test_example_does_not_ship_tls_disabled(self, monkeypatch):
+        """An example that turns verification off would propagate to every
+        user who copies it."""
+        ssl_block = self._example()["network"]["ssl"]
+        monkeypatch.setattr(tlsmod, "_ssl_config_block", lambda: ssl_block)
+        setting = tlsmod.resolve_tls_verify()
+        assert setting.verify is True, (
+            f"the shipped example resolves to {setting.verify!r} "
+            f"({setting.reason})"
+        )
+        assert not setting.is_insecure
+
+    def test_example_empty_cert_file_is_not_a_configured_path(
+        self, monkeypatch
+    ):
+        """`"cert_file": ""` is a documentation placeholder, not a bundle."""
+        ssl_block = self._example()["network"]["ssl"]
+        assert ssl_block["cert_file"] == ""
+        monkeypatch.setattr(tlsmod, "_ssl_config_block", lambda: ssl_block)
+        assert tlsmod.resolve_tls_verify().cert_file is None
 
 
 class TestNoSiteReadsEnvDirectly:

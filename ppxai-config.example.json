@@ -59,6 +59,17 @@
     "enabled": true,
     "__comment_enabled": "Set to false to disable bootstrap context loading entirely"
   },
+  "network": {
+    "__comment": "Outbound network settings (v1.19.1+)",
+    "ssl": {
+      "__comment": "TLS verification for every outbound client (providers + web tools)",
+      "verify": true,
+      "__comment_verify": "false disables certificate checking for EVERY request, so traffic can be intercepted undetected. Prefer cert_file below. Warned at startup and flagged by /doctor while off.",
+      "cert_file": "",
+      "__comment_cert_file": "Path to a CA bundle, e.g. a TLS-inspecting corporate proxy's CA. It is ADDED to the system trust store, never substituted for it, so the same setting keeps working on a direct connection. Often unnecessary: a CA installed into the OS trust store is picked up automatically. A path that does not exist falls back to the system store rather than failing.",
+      "__comment_precedence": "The SSL_VERIFY and SSL_CERT_FILE environment variables override these keys."
+    }
+  },
   "paths": {
     "__comment": "Binary and data paths (v1.13.2+). Use {home} for home directory",
     "__comment_windows": "On Windows, {home} expands to %USERPROFILE% (e.g., C:\\Users\\YourName)",

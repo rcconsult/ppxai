@@ -21,12 +21,20 @@ CUSTOM_API_KEY=your-api-key-here
 VLLM_API_KEY=dummy
 
 # -----------------------------------------------------------------------------
-# SSL Configuration (Corporate Proxies)
+# TLS / SSL Configuration (Corporate Proxies)
 # -----------------------------------------------------------------------------
-# Uncomment if behind a corporate proxy with SSL inspection:
+# Behind TLS inspection, prefer the CA bundle. It is ADDED to the system trust
+# store, so the same setting also works on a direct connection:
+#
+# SSL_CERT_FILE=/path/to/corporate-ca-bundle.pem
+#
+# Nothing may be needed at all if IT installed the CA system-wide.
+#
+# Last resort — disables certificate checking entirely (warned at startup):
 #
 # SSL_VERIFY=false
-# SSL_CERT_FILE=/path/to/corporate-ca-bundle.pem
+#
+# Equivalent JSON: "network": {"ssl": {"cert_file": "..."}} — env wins.
 
 # -----------------------------------------------------------------------------
 # Optional: Override default provider

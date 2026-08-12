@@ -434,6 +434,12 @@ def load_config() -> Dict[str, Any]:
             # execution.run block parsed fine but get_config() never saw it,
             # and the dual-read fallback masked the drop.
             "execution": json_config.get("execution", {}),
+            # Outbound TLS (v1.19.1). Fourth occurrence of the whitelist trap
+            # described above — verified dropped before this line existed, so
+            # network.ssl.* was dead config while ppxai/config/tls.py read it
+            # happily. tests/test_tls_config.py drives the real loader for
+            # exactly this reason; stubbing the block reader cannot see it.
+            "network": json_config.get("network", {}),
         }
 
     else:

@@ -46,22 +46,61 @@ class TestCreateSSLContext:
             ctx = _create_ssl_context()
             assert ctx.verify_mode == ssl.CERT_NONE
 
-    def test_ssl_cert_file_loads_custom_ca(self):
-        """SSL_CERT_FILE pointing to a real file loads it as CA."""
-        # Create a temp file to act as cert (we just check the path is accepted)
-        with tempfile.NamedTemporaryFile(suffix=".pem", delete=False) as f:
+    def test_ssl_cert_file_is_added_to_the_system_roots(self):
+        """SSL_CERT_FILE ADDS a CA; it must not replace the trust store.
+
+        Retargeted 2026-08-13. This test used to patch
+        `web.ssl.create_default_context` and assert it was called with
+        `cafile=<path>` — i.e. it pinned the *replace* semantics. Two
+        things changed: `_create_ssl_context` now delegates to
+        `ppxai.config.tls`, so the patched symbol is no longer reached,
+        and a bundle passed as `cafile=` SUBSTITUTES for the default
+        roots, which breaks every public endpoint once the machine
+        leaves a TLS-inspecting network. Asserting the observable
+        outcome (root count grows) instead of the call shape also stops
+        the test from re-breaking on the next refactor.
+        """
+        from tests.test_tls_config import _SYNTHETIC_CA_PEM
+
+        with tempfile.NamedTemporaryFile(
+            suffix=".pem", delete=False, mode="w", encoding="utf-8"
+        ) as f:
             cert_path = f.name
-            # Write a minimal (invalid but parseable-path) cert file
-            f.write(b"dummy")
+            f.write(_SYNTHETIC_CA_PEM)
 
         try:
-            with patch.dict(os.environ, {"SSL_CERT_FILE": cert_path}, clear=True):
-                # ssl.create_default_context(cafile=...) will raise if file is invalid,
-                # but we're testing the branching logic, so mock the ssl call
-                with patch("ppxai.engine.tools.builtin.web.ssl.create_default_context") as mock_ctx:
-                    mock_ctx.return_value = MagicMock(spec=ssl.SSLContext)
-                    ctx = _create_ssl_context()
-                    mock_ctx.assert_called_once_with(cafile=cert_path)
+            # Drive the CONFIG path, not SSL_CERT_FILE: OpenSSL honours that
+            # env var itself, so create_default_context() would pick the CA
+            # up regardless and the assertion could not tell whether our own
+            # code added it (a mutation proved this exact blind spot).
+            #
+            # Baseline is measured INSIDE the same cleared-env block as the
+            # subject. tests/conftest.py loads the developer's real
+            # ~/.ppxai/.env (for SSL_VERIFY), so a baseline taken outside
+            # can be computed under different ambient TLS env than the
+            # value it is compared with — that made this test pass alone
+            # and fail in the full suite.
+            with patch.dict(os.environ, {}, clear=True):
+                baseline = len(ssl.create_default_context().get_ca_certs())
+                with patch(
+                    "ppxai.config.tls._ssl_config_block",
+                    lambda: {"cert_file": cert_path},
+                ):
+                    additive = len(_create_ssl_context().get_ca_certs())
+                replaced = len(
+                    ssl.create_default_context(cafile=cert_path).get_ca_certs()
+                )
+            # Strictly added — comparing only against cafile-only would also
+            # pass if the CA were dropped entirely (a mutation proved it).
+            assert additive == baseline + 1, (
+                f"custom CA was not added: {additive} roots vs baseline "
+                f"{baseline}"
+            )
+            assert additive > replaced, (
+                f"custom CA replaced the trust store ({additive} roots vs "
+                f"{replaced} for cafile-only) — a roaming laptop would lose "
+                "every public endpoint off the corporate network"
+            )
         finally:
             os.unlink(cert_path)
 
@@ -74,17 +113,36 @@ class TestCreateSSLContext:
             assert ctx.check_hostname is True
 
     def test_ssl_verify_true_with_cert_file(self):
-        """SSL_VERIFY=true + SSL_CERT_FILE uses the cert file."""
-        with tempfile.NamedTemporaryFile(suffix=".pem", delete=False) as f:
+        """SSL_VERIFY=true + SSL_CERT_FILE still verifies, with the CA added.
+
+        Retargeted alongside the case above — same reason: it asserted
+        `cafile=` on a now-unreached patch target.
+        """
+        import certifi
+
+        pem = []
+        with open(certifi.where(), encoding="utf-8") as fh:
+            for line in fh:
+                pem.append(line)
+                if line.startswith("-----END CERTIFICATE-----"):
+                    break
+
+        with tempfile.NamedTemporaryFile(
+            suffix=".pem", delete=False, mode="w", encoding="utf-8"
+        ) as f:
             cert_path = f.name
-            f.write(b"dummy")
+            f.write("".join(pem))
 
         try:
-            with patch.dict(os.environ, {"SSL_VERIFY": "true", "SSL_CERT_FILE": cert_path}, clear=True):
-                with patch("ppxai.engine.tools.builtin.web.ssl.create_default_context") as mock_ctx:
-                    mock_ctx.return_value = MagicMock(spec=ssl.SSLContext)
-                    ctx = _create_ssl_context()
-                    mock_ctx.assert_called_once_with(cafile=cert_path)
+            with patch.dict(
+                os.environ,
+                {"SSL_VERIFY": "true", "SSL_CERT_FILE": cert_path},
+                clear=True,
+            ):
+                ctx = _create_ssl_context()
+                assert ctx.verify_mode == ssl.CERT_REQUIRED
+                assert ctx.check_hostname is True
+                assert len(ctx.get_ca_certs()) > 0
         finally:
             os.unlink(cert_path)
 
