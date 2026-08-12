@@ -9,6 +9,11 @@ Windows Program Files, and a `PPXAI_LIBREOFFICE` override.
 
 from __future__ import annotations
 
+import os
+import sys
+
+import pytest
+
 from ppxai.common import libreoffice as lo
 
 
@@ -78,10 +83,17 @@ class TestFindLibreOffice:
         paths = [p.as_posix() for p in lo._well_known_paths()]
         assert any("LibreOffice.app/Contents/MacOS/soffice" in p for p in paths)
 
-    # NB: the Windows branch isn't exercised here — monkeypatching os.name
-    # to "nt" globally breaks pathlib (WindowsPath can't instantiate on a
-    # POSIX host). The well-known-path *mechanism* is covered by
-    # test_well_known_path_when_not_on_path and the macOS case above.
+    # NB: the Windows branch can't be reached by patching from a POSIX host —
+    # monkeypatching os.name to "nt" globally breaks pathlib (WindowsPath
+    # can't instantiate there). Unlike the darwin branch above (which reads
+    # sys.platform and so is patchable anywhere), this one reads os.name. So
+    # it's covered natively on Windows only; the well-known-path *mechanism*
+    # is still covered everywhere by test_well_known_path_when_not_on_path.
+    @pytest.mark.skipif(os.name != "nt", reason="reads os.name; only reachable natively on Windows")
+    def test_windows_well_known_includes_program_files(self, monkeypatch):
+        monkeypatch.setenv("PROGRAMFILES", r"C:\Program Files")
+        paths = [p.as_posix() for p in lo._well_known_paths()]
+        assert any(p.endswith("LibreOffice/program/soffice.exe") for p in paths)
 
 
 class TestLibreOfficeCanRead:
@@ -94,10 +106,18 @@ class TestLibreOfficeCanRead:
     def _fake_soffice(self, tmp_path, *, emit: bool):
         """A stand-in soffice: parses `--outdir <dir> <src>` and either writes a
         <src>.pdf into outdir (emit=True) or writes nothing (emit=False, the
-        confined/broken case). Always exits 0 — like the real snap does."""
-        exe = tmp_path / "soffice"
+        confined/broken case). Always exits 0 — like the real snap does.
+
+        Returned as a single spawnable path because `find_libreoffice()` yields
+        one token, so the probe's argv shape must be preserved. Windows has no
+        shebang mechanism: an extensionless `#!/usr/bin/env python3` script is
+        rejected by CreateProcess with WinError 193, which
+        `libreoffice_can_read` catches as OSError → False. That made
+        `test_true_when_convert_emits_output` fail and, worse, made both
+        emit=False cases pass for the wrong reason. So the launcher is a `.cmd`
+        shim there and a shebang script elsewhere.
+        """
         body = (
-            "#!/usr/bin/env python3\n"
             "import sys\n"
             "from pathlib import Path\n"
             f"emit = {emit!r}\n"
@@ -108,7 +128,20 @@ class TestLibreOfficeCanRead:
             "    (Path(outdir)/(src.stem + '.pdf')).write_bytes(b'%PDF-1.4\\n')\n"
             "sys.exit(0)\n"
         )
-        exe.write_text(body)
+        script = tmp_path / "_fake_soffice_impl.py"
+        script.write_text(body, encoding="utf-8")
+
+        if os.name == "nt":
+            exe = tmp_path / "soffice.cmd"
+            exe.write_text(
+                f'@echo off\r\n"{sys.executable}" "{script}" %*\r\n',
+                encoding="utf-8",
+            )
+        else:
+            exe = tmp_path / "soffice"
+            exe.write_text(
+                f"#!{sys.executable}\n{body}", encoding="utf-8"
+            )
         exe.chmod(0o755)
         return exe
 
