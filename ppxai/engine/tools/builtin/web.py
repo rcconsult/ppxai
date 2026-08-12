@@ -6,7 +6,6 @@ These tools are provider-aware - providers with native web capabilities
 """
 
 import json
-import os
 import re
 import ssl
 import urllib.request
@@ -14,25 +13,17 @@ import urllib.parse
 import urllib.error
 from ...types import ToolManagerProtocol
 from ....config import get_tool_config
+from ....config.tls import tls_ssl_context
 
 
 def _create_ssl_context() -> ssl.SSLContext:
-    """Create SSL context respecting SSL_VERIFY and SSL_CERT_FILE env vars.
+    """SSL context for the built-in web tools.
 
-    Consistent with BaseProvider (base.py) pattern for corporate proxy support.
+    Delegates to the shared resolver so these tools and the provider
+    clients cannot disagree about TLS policy (they used to: this site
+    checked that SSL_CERT_FILE existed, the provider sites did not).
     """
-    ssl_verify = os.getenv("SSL_VERIFY", "true").lower()
-    ssl_cert_file = os.getenv("SSL_CERT_FILE", "")
-
-    if ssl_verify == "false":
-        ctx = ssl.create_default_context()
-        ctx.check_hostname = False
-        ctx.verify_mode = ssl.CERT_NONE
-        return ctx
-    elif ssl_cert_file and os.path.exists(ssl_cert_file):
-        return ssl.create_default_context(cafile=ssl_cert_file)
-    else:
-        return ssl.create_default_context()
+    return tls_ssl_context()
 
 
 def _get_web_timeout(tool_name: str, default: int = 15) -> int:

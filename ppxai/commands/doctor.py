@@ -192,6 +192,27 @@ def _format_audit_report(audit: Dict[str, Any]) -> str:
     lines.append(f"Config: {audit['config_path'] or '(none found)'}")
     lines.append("")
 
+    # TLS posture, before the early return below: a disabled-verification
+    # warning must still show on an otherwise-clean config, which is exactly
+    # the case where nothing else would print it.
+    try:
+        from ..config.tls import resolve_tls_verify
+
+        tls = resolve_tls_verify()
+        if tls.is_insecure:
+            lines.append(f"⚠ TLS verification DISABLED ({tls.reason})")
+            lines.append(
+                "   All provider and web-tool traffic is open to interception."
+            )
+            lines.append(
+                "   Prefer network.ssl.cert_file with your proxy's CA bundle."
+            )
+        elif tls.cert_file:
+            lines.append(f"✓ TLS: custom CA bundle ({tls.reason})")
+        lines.append("")
+    except Exception:  # noqa: BLE001 — /doctor must never crash on this
+        pass
+
     dead = audit["dead"]
     upcoming = audit["upcoming"]
     missing = audit["missing_recommended"]

@@ -16,6 +16,7 @@ import httpx
 from openai import AsyncOpenAI
 
 from ppxai.config import get_tool_config, get_tool_pricing
+from ppxai.config.tls import tls_verify
 from ...types import ToolUsage
 # ADR 0009 step ④: the ONE shared backend resolver (leaf module, top-level
 # import — retires the function-local `network_policy` import this module
@@ -162,11 +163,11 @@ async def web_search_perplexity(query: str, num_results: int = 5) -> Tuple[str, 
     tool_config = get_tool_config("web_search")
     perplexity_model = tool_config.get("perplexity_model", "sonar")
 
-    # Respect SSL_VERIFY setting (for corporate proxies with SSL inspection)
-    ssl_verify = os.getenv("SSL_VERIFY", "true").lower() != "false"
-    http_client = None
-    if not ssl_verify:
-        http_client = httpx.AsyncClient(verify=False)
+    # TLS via the shared resolver. This site previously honoured SSL_VERIFY
+    # but ignored SSL_CERT_FILE, so a custom-CA install silently verified
+    # against the system store here while every other client used the bundle.
+    verify = tls_verify()
+    http_client = None if verify is True else httpx.AsyncClient(verify=verify)
 
     client = AsyncOpenAI(
         api_key=api_key,
@@ -227,11 +228,10 @@ async def web_search_gemini(query: str, num_results: int = 5) -> Tuple[str, List
         "tools": [{"google_search": {}}]
     }
 
-    # Respect SSL_VERIFY setting (for corporate proxies with SSL inspection)
-    ssl_verify = os.getenv("SSL_VERIFY", "true").lower() != "false"
-
+    # TLS via the shared resolver — this site also used to collapse the
+    # setting to a bool, discarding any configured CA bundle.
     try:
-        async with httpx.AsyncClient(verify=ssl_verify) as client:
+        async with httpx.AsyncClient(verify=tls_verify()) as client:
             resp = await client.post(
                 url,
                 params={"key": api_key},

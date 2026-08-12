@@ -28,6 +28,7 @@ import openai
 from openai import OpenAI
 
 from ...common.logger import get_logger
+from ...config.tls import tls_verify
 from ..types import Message, Event, EventType, ProviderCapabilities, UsageStats
 from ..uploaded_file import flatten_uploaded_file_blocks
 from .base import BaseProvider
@@ -123,16 +124,12 @@ class OpenAINativeProvider(BaseProvider):
             **kwargs,
         )
 
-        # Create our own OpenAI client (no base_url = api.openai.com default)
-        ssl_verify_env = os.getenv("SSL_VERIFY", "true").lower()
-        ssl_cert_file = os.getenv("SSL_CERT_FILE", "")
-
+        # Create our own OpenAI client (no base_url = api.openai.com default).
+        # TLS comes from the shared resolver (env, then network.ssl.*).
         client_kwargs = {"api_key": api_key}
-
-        if ssl_verify_env == "false":
-            client_kwargs["http_client"] = httpx.Client(verify=False)
-        elif ssl_cert_file:
-            client_kwargs["http_client"] = httpx.Client(verify=ssl_cert_file)
+        verify = tls_verify()
+        if verify is not True:
+            client_kwargs["http_client"] = httpx.Client(verify=verify)
 
         self.client = OpenAI(**client_kwargs)
 

@@ -13,6 +13,39 @@ Branch: `bugfix/v1.19.1`. Opening theme: **tool-loop transcript integrity** — 
 
 > ⚠️ **Breaking: `ppxai-config.json` tier keys moved, no dual-read** (ADR 0010). Six `tools.agent.*` keys moved to the `execution.*` axis. A config left at the old paths is **silently ignored** and those settings revert to their defaults — run **`/doctor`**, which prints the exact old→new mapping for anything still stale. `/v1/oneshot` and `/v1/agent/*` are **config-consuming, not config-shaped**: no request or response changes.
 
+### Added — `network.ssl.*` config, and one resolver for outbound TLS
+
+TLS verification could previously be configured only through the
+`SSL_VERIFY` / `SSL_CERT_FILE` environment variables. It is now also
+settable in `ppxai-config.json`:
+
+```json
+{ "network": { "ssl": { "verify": true, "cert_file": "/path/to/ca.pem" } } }
+```
+
+Precedence is `SSL_VERIFY` → `SSL_CERT_FILE` → `network.ssl.verify` →
+`network.ssl.cert_file` → system trust store. Environment wins, so
+existing `.env` setups are unchanged.
+
+**Fixed along the way — three inconsistencies between outbound clients.**
+The two env vars were read independently at six sites, which had drifted:
+
+- `tools/builtin/web_premium.py` honoured `SSL_VERIFY` but **ignored
+  `SSL_CERT_FILE` entirely** (twice), so a custom-CA install silently
+  verified against the system store on the premium web-search paths while
+  every other client used the bundle.
+- Only `tools/builtin/web.py` checked that `SSL_CERT_FILE` **exists**; at
+  the provider sites a stale path was handed straight to httpx, turning
+  every request into an opaque connection error. A missing bundle now
+  falls back to the system store.
+
+All six now call `ppxai/config/tls.py`, and a test fails if any module
+reads those env vars directly again.
+
+**Disabled verification is no longer silent.** When certificate checking
+is off, startup logs a warning and `/doctor` reports it — including on an
+otherwise-clean config, where nothing else would print.
+
 ### Fixed — `response_format` was silently ignored on Gemini
 
 `POST /v1/oneshot` accepts an OpenAI-shaped `response_format`, and every

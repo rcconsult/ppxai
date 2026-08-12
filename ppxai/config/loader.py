@@ -170,6 +170,31 @@ def initialize() -> None:
 
     _initialized = True
 
+    # Warn once if outbound TLS verification is off. Deliberately AFTER the
+    # .env load (SSL_VERIFY lives there) and after _initialized, so a config
+    # read inside the resolver cannot recurse. Disabled TLS is otherwise
+    # completely silent — it stayed unnoticed on a dev box for months.
+    _warn_if_tls_insecure()
+
+
+def _warn_if_tls_insecure() -> None:
+    """Log a single warning when certificate verification is disabled."""
+    try:
+        from ..common.logger import get_logger
+        from .tls import resolve_tls_verify
+
+        logger = get_logger("config")
+        setting = resolve_tls_verify()
+        if setting.is_insecure:
+            logger.warning(
+                "TLS certificate verification is DISABLED (%s) — all provider "
+                "and web-tool traffic is open to interception. Prefer "
+                "network.ssl.cert_file with your proxy's CA.",
+                setting.reason,
+            )
+    except Exception:  # noqa: BLE001 — a warning must never break startup
+        pass
+
 
 # Legacy alias for backward compatibility
 def initialize_environment() -> None:

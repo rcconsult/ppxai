@@ -22,7 +22,6 @@ import asyncio
 import base64
 import json
 import logging
-import os
 import traceback
 import uuid
 from typing import List, AsyncIterator, Optional, Dict, Any
@@ -30,6 +29,7 @@ from typing import List, AsyncIterator, Optional, Dict, Any
 import httpx
 
 from ...common.logger import get_logger
+from ...config.tls import tls_verify
 from ..types import Message, Event, EventType, ProviderCapabilities, UsageStats
 from ..uploaded_file import flatten_uploaded_file_blocks
 from .base import BaseProvider
@@ -284,14 +284,11 @@ class GeminiProvider(BaseProvider):
             **kwargs,
         )
 
-        # Initialize the Gemini client with SSL configuration
-        # Respects SSL_VERIFY and SSL_CERT_FILE env vars (consistent with BaseProvider)
-        ssl_verify_env = os.getenv("SSL_VERIFY", "true").lower()
-        ssl_cert_file = os.getenv("SSL_CERT_FILE", "")
-
+        # Initialize the Gemini client with TLS configuration resolved by the
+        # shared resolver (env SSL_VERIFY/SSL_CERT_FILE, then network.ssl.*).
+        verify = tls_verify()
         http_options = None
-        if ssl_verify_env == "false" or ssl_cert_file:
-            verify = False if ssl_verify_env == "false" else ssl_cert_file
+        if verify is not True:
             http_options = genai_types.HttpOptions(
                 httpx_client=httpx.Client(verify=verify)
             )
