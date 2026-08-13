@@ -72,16 +72,14 @@ class BaseProvider(ABC):
         # TLS verification: env (SSL_VERIFY / SSL_CERT_FILE) then
         # network.ssl.* in ppxai-config.json. Resolved in ONE place so this
         # site cannot drift from the other outbound clients — it already had
-        # (see ppxai/config/tls.py).
-        verify = tls_verify()
-        if verify is True:
-            self.client = OpenAI(api_key=api_key, base_url=base_url)
-        else:
-            self.client = OpenAI(
-                api_key=api_key,
-                base_url=base_url,
-                http_client=httpx.Client(verify=verify),
-            )
+        # (see ppxai/config/tls.py). tls_verify() returns False (off) or an
+        # SSLContext — never True — so the client always carries an explicit
+        # policy; a `verify is True` fast path would be dead code.
+        self.client = OpenAI(
+            api_key=api_key,
+            base_url=base_url,
+            http_client=httpx.Client(verify=tls_verify()),
+        )
 
     @abstractmethod
     async def chat(

@@ -126,12 +126,12 @@ class OpenAINativeProvider(BaseProvider):
 
         # Create our own OpenAI client (no base_url = api.openai.com default).
         # TLS comes from the shared resolver (env, then network.ssl.*).
-        client_kwargs = {"api_key": api_key}
-        verify = tls_verify()
-        if verify is not True:
-            client_kwargs["http_client"] = httpx.Client(verify=verify)
-
-        self.client = OpenAI(**client_kwargs)
+        # tls_verify() returns False (off) or an SSLContext — never True — so
+        # the explicit http_client is always supplied.
+        self.client = OpenAI(
+            api_key=api_key,
+            http_client=httpx.Client(verify=tls_verify()),
+        )
 
     # ------------------------------------------------------------------
     # Model classification helpers

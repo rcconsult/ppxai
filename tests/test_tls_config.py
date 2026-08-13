@@ -48,10 +48,18 @@ cdBdhSQ07+4NzySocTOQ9sFkP8XOPFq1lLTMA6yqBtVjLunqLjBtyGo=
 
 @pytest.fixture(autouse=True)
 def _clean_env(monkeypatch):
-    """No ambient SSL_* from the developer's own shell/.env."""
+    """No ambient SSL_* from the developer's own shell/.env.
+
+    Also drops the memoised SSLContexts on both sides of each test: the
+    cache is keyed by resolved policy, and these tests re-resolve the
+    same policies under different mocked configs.
+    """
     monkeypatch.delenv("SSL_VERIFY", raising=False)
     monkeypatch.delenv("SSL_CERT_FILE", raising=False)
     monkeypatch.setattr(tlsmod, "_ssl_config_block", lambda: {})
+    tlsmod.reset_tls_context_cache()
+    yield
+    tlsmod.reset_tls_context_cache()
 
 
 def _cert(tmp_path, name="ca.pem"):
@@ -292,12 +300,15 @@ class TestCustomCAIsAdditive:
     ):
         """Both halves: the CA is really ADDED, and the system roots stay.
 
-        Driven through **network.ssl.cert_file**, not the env var. OpenSSL
-        reads `SSL_CERT_FILE` from the environment itself, so
-        `create_default_context()` already picks that one up and our
-        explicit `load_verify_locations` is invisible on the env path — a
-        mutation deleting it still passed when this test used the env var.
-        Only the config path proves the code is load-bearing.
+        Driven through **network.ssl.cert_file**. The env-path twin below
+        (`test_env_cert_file_is_also_additive`) covers `SSL_CERT_FILE` —
+        historically the blind spot: OpenSSL reads that env var itself
+        inside `set_default_verify_paths()`, so the "default" context was
+        ALREADY narrowed to the bundle (measured: 1 root vs 124) and our
+        `load_verify_locations` was an invisible no-op there. The fix
+        (`_system_roots_context` neutralises the vars while the base
+        roots load) makes the code load-bearing on both paths, so both
+        are pinned.
 
         Uses a CA in no default store, so the count must strictly
         increase; comparing against cafile-only alone is not enough.
@@ -318,6 +329,31 @@ class TestCustomCAIsAdditive:
         assert loaded > replaced, (
             f"custom CA replaced the trust store ({loaded} vs {replaced} "
             "for cafile-only)"
+        )
+
+    def test_env_cert_file_is_also_additive(self, monkeypatch, tmp_path):
+        """The SSL_CERT_FILE env path must keep the system roots too.
+
+        This was shipped broken: OpenSSL honours SSL_CERT_FILE inside
+        `set_default_verify_paths()`, so `create_default_context()` built
+        a context containing ONLY the bundle (measured 1 root vs 124) and
+        the module's additive guarantee was false on the very path
+        `.env.example` documents first — the exact roaming-laptop
+        breakage the module says it prevents. `_system_roots_context`
+        now neutralises the env vars while the base roots load; deleting
+        that neutralisation makes this test fail with a root count equal
+        to the bundle's own size.
+        """
+        ca = self._synthetic_ca(tmp_path)
+
+        baseline = len(tlsmod._system_roots_context().get_ca_certs())
+        monkeypatch.setenv("SSL_CERT_FILE", str(ca))
+        loaded = len(tlsmod.tls_ssl_context().get_ca_certs())
+
+        assert loaded == baseline + 1, (
+            f"SSL_CERT_FILE narrowed the trust store to {loaded} root(s) "
+            f"instead of adding to the {baseline} system roots — the env "
+            "path lost the additive guarantee"
         )
 
     def test_verifying_always_yields_a_context_even_with_no_custom_ca(self):
@@ -346,6 +382,76 @@ class TestCustomCAIsAdditive:
         monkeypatch.setenv("SSL_VERIFY", "false")
         monkeypatch.setenv("SSL_CERT_FILE", str(self._real_ca(tmp_path)))
         assert tlsmod.tls_verify() is False
+
+
+class TestEnvVerifyTrueOverridesConfigOptOut:
+    """SSL_VERIFY=true must beat network.ssl.verify=false.
+
+    Env is the higher-priority layer in BOTH directions. Before the fix
+    it was only consulted for the false spelling, so a ConfigMap or
+    committed JSON carrying `verify: false` silently won over the layer
+    the docstring declares higher-priority — and /doctor reported the
+    config value, agreeing with the wrong answer.
+    """
+
+    def test_env_true_re_enables_over_config_false(self, monkeypatch):
+        monkeypatch.setenv("SSL_VERIFY", "true")
+        monkeypatch.setattr(tlsmod, "_ssl_config_block", lambda: {"verify": False})
+        s = tlsmod.resolve_tls_verify()
+        assert not s.is_insecure
+        assert s.source == "env"
+        assert "overrides" in s.reason  # /doctor must explain, not contradict
+
+    def test_config_false_still_wins_when_env_is_unset(self, monkeypatch):
+        """Regression guard: the override must not weaken the config opt-out."""
+        monkeypatch.setattr(tlsmod, "_ssl_config_block", lambda: {"verify": False})
+        assert tlsmod.resolve_tls_verify().is_insecure
+
+    def test_unrecognised_env_value_is_not_an_opt_in(self, monkeypatch):
+        """Garbage in SSL_VERIFY neither disables nor force-enables."""
+        monkeypatch.setenv("SSL_VERIFY", "banana")
+        monkeypatch.setattr(tlsmod, "_ssl_config_block", lambda: {"verify": False})
+        assert tlsmod.resolve_tls_verify().is_insecure
+
+    def test_env_true_with_config_cert_file_uses_the_bundle(
+        self, monkeypatch, tmp_path
+    ):
+        """Re-enabling verification keeps the configured CA in play."""
+        ca = tmp_path / "ca.pem"
+        ca.write_text(_SYNTHETIC_CA_PEM, encoding="utf-8")
+        monkeypatch.setenv("SSL_VERIFY", "true")
+        monkeypatch.setattr(
+            tlsmod,
+            "_ssl_config_block",
+            lambda: {"verify": False, "cert_file": str(ca)},
+        )
+        s = tlsmod.resolve_tls_verify()
+        assert not s.is_insecure
+        assert s.cert_file == str(ca)
+
+
+class TestContextCache:
+    """Contexts are memoised per resolved policy, not rebuilt per request.
+
+    Per-request construction re-parsed the whole OS trust store (~10 ms)
+    at four call sites in web.py alone. Identity, not equality: sharing
+    one SSLContext across connections is the documented pattern.
+    """
+
+    def test_same_policy_returns_the_same_context(self):
+        assert tlsmod.tls_ssl_context() is tlsmod.tls_ssl_context()
+
+    def test_reset_yields_a_fresh_context(self):
+        first = tlsmod.tls_ssl_context()
+        tlsmod.reset_tls_context_cache()
+        assert tlsmod.tls_ssl_context() is not first
+
+    def test_policy_change_yields_a_different_context(self, monkeypatch, tmp_path):
+        default_ctx = tlsmod.tls_ssl_context()
+        ca = tmp_path / "ca.pem"
+        ca.write_text(_SYNTHETIC_CA_PEM, encoding="utf-8")
+        monkeypatch.setenv("SSL_CERT_FILE", str(ca))
+        assert tlsmod.tls_ssl_context() is not default_ctx
 
 
 class TestDescribe:

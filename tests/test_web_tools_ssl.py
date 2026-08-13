@@ -281,3 +281,83 @@ class TestGetWeatherHTTPSOnly:
         src = (Path(__file__).parent.parent / "ppxai" / "engine" / "tools"
                / "builtin" / "web.py").read_text(encoding="utf-8")
         assert "http://wttr.in" not in src
+
+
+class TestPerplexityClientLifecycle:
+    """web_search_perplexity must close the httpx client it creates.
+
+    tls_verify() never returns True (always False or an SSLContext), so
+    the old `None if verify is True else AsyncClient(...)` ternary built
+    a client on EVERY call — and AsyncOpenAI never closes a
+    caller-supplied http_client (no __del__; verified on openai 2.11.0).
+    In a long-lived server each web_search leaked a connection pool.
+    The fix wraps the client in `async with`, same as web_search_gemini.
+    """
+
+    @staticmethod
+    def _canned_response():
+        response = MagicMock()
+        response.choices = [MagicMock()]
+        response.choices[0].message.content = "answer"
+        response.citations = ["https://example.com"]
+        response.usage.prompt_tokens = 10
+        response.usage.completion_tokens = 20
+        return response
+
+    @pytest.mark.asyncio
+    async def test_http_client_is_closed_after_the_call(self, monkeypatch):
+        from ppxai.engine.tools.builtin import web_premium
+
+        monkeypatch.setenv("PERPLEXITY_API_KEY", "test-key")
+        captured = {}
+
+        class FakeAsyncOpenAI:
+            def __init__(self, api_key, base_url=None, http_client=None):
+                captured["http_client"] = http_client
+                self.chat = MagicMock()
+                create = MagicMock()
+
+                async def _create(**kwargs):
+                    return TestPerplexityClientLifecycle._canned_response()
+
+                create.create = _create
+                self.chat.completions = create
+
+        with patch.object(web_premium, "AsyncOpenAI", FakeAsyncOpenAI):
+            await web_premium.web_search_perplexity("q")
+
+        assert captured["http_client"] is not None, (
+            "an explicit http_client must be supplied (tls_verify() "
+            "never returns True)"
+        )
+        assert captured["http_client"].is_closed, (
+            "the AsyncClient was not closed after the call — connection "
+            "pool leaks on every web_search in a long-lived server"
+        )
+
+    @pytest.mark.asyncio
+    async def test_http_client_is_closed_when_the_request_raises(self, monkeypatch):
+        from ppxai.engine.tools.builtin import web_premium
+
+        monkeypatch.setenv("PERPLEXITY_API_KEY", "test-key")
+        captured = {}
+
+        class FakeAsyncOpenAI:
+            def __init__(self, api_key, base_url=None, http_client=None):
+                captured["http_client"] = http_client
+                self.chat = MagicMock()
+                create = MagicMock()
+
+                async def _create(**kwargs):
+                    raise RuntimeError("provider down")
+
+                create.create = _create
+                self.chat.completions = create
+
+        with patch.object(web_premium, "AsyncOpenAI", FakeAsyncOpenAI):
+            with pytest.raises(RuntimeError):
+                await web_premium.web_search_perplexity("q")
+
+        assert captured["http_client"].is_closed, (
+            "the AsyncClient must be closed on the error path too"
+        )

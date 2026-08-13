@@ -46,7 +46,9 @@ condition is visible rather than silent.
 from __future__ import annotations
 
 import os
+import ssl
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, Optional, Union
 
@@ -112,12 +114,30 @@ def _is_false(raw: Any) -> bool:
     return str(raw).strip().lower() in ("false", "0", "no", "off")
 
 
+def _is_true(raw: Any) -> bool:
+    """Whether an env value explicitly states verification-on.
+
+    `SSL_VERIFY=true` must be able to override a committed/ConfigMap
+    `network.ssl.verify: false` — env is the higher-priority layer in
+    both directions, not only for the opt-out spelling. Unrecognised
+    values are neither an opt-in nor an opt-out.
+    """
+    return str(raw).strip().lower() in ("true", "1", "yes", "on")
+
+
 def resolve_tls_verify() -> TLSSetting:
     """Resolve the outbound TLS setting from env, then config, then default."""
-    # 1. SSL_VERIFY=false (env) — the explicit, highest-priority opt-out.
+    # 1. SSL_VERIFY (env) — the explicit, highest-priority layer, in BOTH
+    #    directions: `false` disables verification outright, and `true`
+    #    re-enables it over a config `network.ssl.verify: false` (which a
+    #    ConfigMap or committed JSON may carry that the operator cannot
+    #    easily edit). Without the `true` half, config `false` silently
+    #    won over the layer documented as higher priority — and /doctor
+    #    reported the config value, agreeing with the wrong answer.
     env_verify = os.getenv("SSL_VERIFY")
     if env_verify is not None and _is_false(env_verify):
         return TLSSetting(False, "env", "SSL_VERIFY=false")
+    env_forces_on = env_verify is not None and _is_true(env_verify)
 
     # 2. SSL_CERT_FILE (env) — custom CA. A configured-but-missing bundle
     #    falls through rather than being handed to httpx, which would fail
@@ -135,8 +155,9 @@ def resolve_tls_verify() -> TLSSetting:
 
     block = _ssl_config_block()
 
-    # 3. network.ssl.verify (json)
-    if "verify" in block and _is_false(block.get("verify")):
+    # 3. network.ssl.verify (json) — unless SSL_VERIFY=true overrode it.
+    config_verify_off = "verify" in block and _is_false(block.get("verify"))
+    if config_verify_off and not env_forces_on:
         return TLSSetting(False, "config", "network.ssl.verify=false")
 
     # 4. network.ssl.cert_file (json)
@@ -150,7 +171,15 @@ def resolve_tls_verify() -> TLSSetting:
             f"network.ssl.cert_file={cfg_cert} does not exist; using the system store",
         )
 
-    # 5. System trust store.
+    # 5. System trust store. When SSL_VERIFY=true overrode a config
+    #    opt-out, say so — /doctor must explain the decision, not
+    #    contradict the operator's config file.
+    if config_verify_off and env_forces_on:
+        return TLSSetting(
+            True,
+            "env",
+            "SSL_VERIFY=true overrides network.ssl.verify=false; system certificate store",
+        )
     return TLSSetting(True, "default", "system certificate store")
 
 
@@ -181,15 +210,71 @@ def tls_verify() -> VerifyValue:
     return tls_ssl_context()
 
 
-def tls_ssl_context():
+def _system_roots_context() -> ssl.SSLContext:
+    """A base context trusting the SYSTEM roots regardless of SSL_CERT_FILE/DIR.
+
+    OpenSSL itself honours `SSL_CERT_FILE`/`SSL_CERT_DIR` inside
+    `set_default_verify_paths()`, substituting the bundle for the system
+    roots — the exact replacement this module exists to prevent,
+    happening underneath `create_default_context()` on the env path.
+    Measured: with SSL_CERT_FILE pointing at a one-CA bundle the
+    "default" context held 1 root (vs 124), and the follow-up
+    `load_verify_locations` re-loaded the same file as a no-op.
+    Neutralise the vars while the base roots load; the caller then
+    layers the custom CA on top additively. The brief env mutation is
+    bounded by `_build_context`'s cache — this runs once per resolved
+    policy, not per request.
+    """
+    saved: Dict[str, str] = {}
+    for var in ("SSL_CERT_FILE", "SSL_CERT_DIR"):
+        val = os.environ.pop(var, None)
+        if val is not None:
+            saved[var] = val
+    try:
+        return ssl.create_default_context()
+    finally:
+        os.environ.update(saved)
+
+
+@lru_cache(maxsize=8)
+def _build_context(verify: VerifyValue) -> ssl.SSLContext:
+    """Build (and memoise) the context for a resolved policy.
+
+    Keyed by the resolved policy — False, a CA bundle path, or True — so
+    a config change to a different bundle gets a fresh context while
+    steady-state callers share one. Sharing an `SSLContext` across
+    connections is the documented pattern; building one per request was
+    re-parsing the whole OS trust store (~10 ms) at four per-request
+    sites in web.py alone. A changed file at the SAME path is
+    deliberately not detected — call `reset_tls_context_cache()`
+    (tests, config reload) for that.
+    """
+    ctx = _system_roots_context()
+    if verify is False:
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+        return ctx
+    if isinstance(verify, str):
+        ctx.load_verify_locations(cafile=verify)
+    return ctx
+
+
+def reset_tls_context_cache() -> None:
+    """Drop memoised contexts (config reload, tests)."""
+    _build_context.cache_clear()
+
+
+def tls_ssl_context() -> ssl.SSLContext:
     """The resolved decision as an `ssl.SSLContext`.
 
     A custom CA is **added to** the system trust store, not substituted
-    for it. `ssl.create_default_context(cafile=...)` *replaces* the
-    default roots, which breaks every public endpoint the moment the
-    machine leaves the inspecting network — a laptop that roams between
-    a TLS-inspecting corporate network and a direct connection would
-    need its config edited on every move. Loading both means one static
+    for it — on BOTH the config path and the `SSL_CERT_FILE` env path
+    (see `_system_roots_context` for why the env path needs help).
+    `ssl.create_default_context(cafile=...)` *replaces* the default
+    roots, which breaks every public endpoint the moment the machine
+    leaves the inspecting network — a laptop that roams between a
+    TLS-inspecting corporate network and a direct connection would need
+    its config edited on every move. Loading both means one static
     configuration works on both: the corporate CA validates the
     inspected chain at the office, the system roots validate real
     certificates everywhere else.
@@ -198,17 +283,8 @@ def tls_ssl_context():
     `CERTIFICATE_VERIFY_FAILED` against api.perplexity.ai, while
     default-plus-corporate-CA succeeds.
     """
-    import ssl
-
     setting = resolve_tls_verify()
-    ctx = ssl.create_default_context()
-    if setting.is_insecure:
-        ctx.check_hostname = False
-        ctx.verify_mode = ssl.CERT_NONE
-        return ctx
-    if setting.cert_file:
-        ctx.load_verify_locations(cafile=setting.cert_file)
-    return ctx
+    return _build_context(setting.verify)
 
 
 def describe_tls() -> str:

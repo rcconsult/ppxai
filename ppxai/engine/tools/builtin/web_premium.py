@@ -166,19 +166,22 @@ async def web_search_perplexity(query: str, num_results: int = 5) -> Tuple[str, 
     # TLS via the shared resolver. This site previously honoured SSL_VERIFY
     # but ignored SSL_CERT_FILE, so a custom-CA install silently verified
     # against the system store here while every other client used the bundle.
-    verify = tls_verify()
-    http_client = None if verify is True else httpx.AsyncClient(verify=verify)
+    #
+    # `async with` because AsyncOpenAI never closes a caller-supplied
+    # http_client — an unclosed AsyncClient here leaked its connection
+    # pool on every web_search call in a long-lived server. Same pattern
+    # as web_search_gemini below.
+    async with httpx.AsyncClient(verify=tls_verify()) as http_client:
+        client = AsyncOpenAI(
+            api_key=api_key,
+            base_url="https://api.perplexity.ai",
+            http_client=http_client
+        )
 
-    client = AsyncOpenAI(
-        api_key=api_key,
-        base_url="https://api.perplexity.ai",
-        http_client=http_client
-    )
-
-    response = await client.chat.completions.create(
-        model=perplexity_model,
-        messages=[{"role": "user", "content": query}]
-    )
+        response = await client.chat.completions.create(
+            model=perplexity_model,
+            messages=[{"role": "user", "content": query}]
+        )
 
     content = response.choices[0].message.content
     citations = getattr(response, 'citations', [])[:num_results]

@@ -46,6 +46,30 @@ reads those env vars directly again.
 is off, startup logs a warning and `/doctor` reports it — including on an
 otherwise-clean config, where nothing else would print.
 
+**Review follow-ups (same branch).** Four defects found by code review of
+the resolver, fixed before any release carried it:
+
+- **The additive guarantee was false on the `SSL_CERT_FILE` env path.**
+  OpenSSL itself honours that env var inside `set_default_verify_paths()`,
+  so `create_default_context()` was already narrowed to the bundle
+  (measured: 1 root vs 124) and the explicit additive load was a no-op —
+  the exact roaming-laptop breakage the resolver exists to prevent, on the
+  path `.env.example` documents first. The base context now loads the
+  system roots with `SSL_CERT_FILE`/`SSL_CERT_DIR` neutralised, then adds
+  the custom CA (env path measured additive: 125 roots).
+- **`SSL_VERIFY=true` can now re-enable verification over a config
+  `network.ssl.verify: false`** — env is the higher-priority layer in both
+  directions, not just for the opt-out spelling. `/doctor`'s reason string
+  records the override instead of contradicting the operator.
+- **`web_search` (Perplexity) leaked an httpx connection pool per call**:
+  `tls_verify()` never returns `True`, so the client was now always
+  constructed, and `AsyncOpenAI` never closes a caller-supplied client.
+  Wrapped in `async with`, matching the Gemini path.
+- **Resolved `SSLContext`s are memoised per policy** (was ~10 ms of OS
+  trust-store re-parsing per request at four web.py call sites), and the
+  unreachable `verify is True` fast paths at the provider call sites were
+  removed. `reset_tls_context_cache()` covers config reload and tests.
+
 ### Fixed — `response_format` was silently ignored on Gemini
 
 `POST /v1/oneshot` accepts an OpenAI-shaped `response_format`, and every

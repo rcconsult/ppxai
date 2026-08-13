@@ -286,16 +286,13 @@ class GeminiProvider(BaseProvider):
 
         # Initialize the Gemini client with TLS configuration resolved by the
         # shared resolver (env SSL_VERIFY/SSL_CERT_FILE, then network.ssl.*).
-        verify = tls_verify()
-        http_options = None
-        if verify is not True:
-            http_options = genai_types.HttpOptions(
-                httpx_client=httpx.Client(verify=verify)
-            )
-
+        # tls_verify() returns False (off) or an SSLContext — never True — so
+        # the explicit httpx client is always supplied.
         self.client = genai.Client(
             api_key=api_key,
-            http_options=http_options
+            http_options=genai_types.HttpOptions(
+                httpx_client=httpx.Client(verify=tls_verify())
+            ),
         )
 
     async def chat(
