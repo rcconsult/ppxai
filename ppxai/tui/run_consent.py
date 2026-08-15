@@ -76,9 +76,30 @@ class RunConsentWatcher:
                 # only thing that can put it in the conversation. Mirrors the
                 # web client's _autoMergeIfConfigured, which fires on the
                 # watcher's terminal render. Once per run.
-                if getattr(meta, "status", None) in _TERMINAL                         and meta.run_id not in self._merged:
-                    self._merged.add(meta.run_id)
-                    self.backend.auto_merge_if_configured(meta.run_id)
+                if getattr(meta, "status", None) in _TERMINAL \
+                        and meta.run_id not in self._merged:
+                    # Mark merged only AFTER the merge succeeds. Marking
+                    # first made a transient failure permanent: the merge
+                    # raised, the run was already in `_merged`, and every
+                    # later poll skipped it — the result never reached the
+                    # conversation. The inner try also keeps one bad run
+                    # from aborting the loop and starving the consent
+                    # prompts for every OTHER run in this poll.
+                    try:
+                        self.backend.auto_merge_if_configured(meta.run_id)
+                    except Exception:  # noqa: BLE001
+                        # f-string, NOT printf-style: this logger is
+                        # debug(msg, exc_info=False) with no *args, so a
+                        # lazy-format call raises TypeError inside the
+                        # handler and escapes to the outer except — which
+                        # is exactly the starvation this block prevents.
+                        logger.debug(
+                            f"auto-merge failed for {meta.run_id}; "
+                            f"will retry next poll",
+                            exc_info=True,
+                        )
+                    else:
+                        self._merged.add(meta.run_id)
 
                 token = self._pending_token(meta)
                 if token is None or token in self._prompted:

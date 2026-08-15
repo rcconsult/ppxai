@@ -486,6 +486,30 @@ class TestOneShotTierParity:
         assert exc.value.status == 403
         assert "web_search" in exc.value.detail
 
+    def test_oneshot_facade_honours_the_kill_switch(self):
+        """`/v1/oneshot`'s enriched path is the THIRD admission route.
+
+        The parity harness covered `/v1/agent/run` and the in-process `/run`,
+        but not the `POST /v1/oneshot` facade. Its search-loop branch
+        hardwired `tools=["web_search"]` and called `build_task_runner`
+        directly, so `tools.web_search.enabled=false` returned 403 for
+        `/v1/agent/run` while an enriched oneshot still searched — an
+        operator veto with a hole in it.
+        """
+        from ppxai.server.routes import oneshot as _oneshot
+
+        assert hasattr(_oneshot, "_authorize_oneshot_search_loop"), (
+            "the /v1/oneshot search-loop branch must route through the "
+            "shared authorizer, not mint a grant of its own"
+        )
+        with patch.object(_authz, "_config_flag", lambda key: True), \
+             patch.object(_authz, "_default_subagent", lambda: _SUB), \
+             patch.object(_authz, "get_tool_config", lambda name: {"enabled": False}):
+            with pytest.raises(TaskAuthorizationError) as exc:
+                _oneshot._authorize_oneshot_search_loop("x", "gemini", "m")
+        assert exc.value.status == 403
+        assert "web_search" in exc.value.detail
+
     def test_ui_selection_never_supplies_the_provider(self):
         """ADR 0003 §9: a sub-agent's provider is per-run injected intent.
 

@@ -160,6 +160,52 @@ def test_poll_failure_does_not_escape(app):
     RunConsentWatcher(app, _Boom()).poll_once()  # must not raise
 
 
+# ── auto-merge ──────────────────────────────────────────────────────────────
+
+class _MergeBackend(_FakeBackend):
+    def __init__(self, runs, fail_times=0):
+        super().__init__(runs)
+        self.merged = []
+        self._fail_times = fail_times
+
+    def auto_merge_if_configured(self, run_id):
+        if self._fail_times > 0:
+            self._fail_times -= 1
+            raise RuntimeError("session not ready")
+        self.merged.append(run_id)
+
+
+def test_terminal_run_is_merged_once(app):
+    b = _MergeBackend([_FakeMeta("run_0123456789ab", "completed")])
+    w = RunConsentWatcher(app, b)
+    w.poll_once()
+    w.poll_once()
+    assert b.merged == ["run_0123456789ab"]
+
+
+def test_a_failed_merge_is_retried_on_the_next_poll(app):
+    """Marking merged BEFORE merging made a transient failure permanent.
+
+    The first poll raises (session momentarily unavailable); if the run were
+    recorded as merged anyway, every later poll would skip it and the result
+    would never reach the conversation.
+    """
+    b = _MergeBackend([_FakeMeta("run_0123456789ab", "completed")], fail_times=1)
+    w = RunConsentWatcher(app, b)
+    w.poll_once()
+    assert b.merged == []
+    w.poll_once()
+    assert b.merged == ["run_0123456789ab"]
+
+
+def test_a_failed_merge_does_not_starve_other_runs(app):
+    """One bad run must not abort the loop and skip everyone else's prompt."""
+    b = _MergeBackend([_FakeMeta("run_bbbbbbbbbbbb", "completed"), _parked()],
+                      fail_times=1)
+    RunConsentWatcher(app, b).poll_once()
+    assert len(app.pushed) == 1, "the parked run still had to prompt"
+
+
 # ── lifecycle ───────────────────────────────────────────────────────────────
 
 def test_start_is_idempotent(app):

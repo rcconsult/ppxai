@@ -305,6 +305,26 @@ def _grounding_from_events(
     return grounding, usage
 
 
+def _authorize_oneshot_search_loop(task: str, provider_name: str, model: str):
+    """Admission for the enriched `/v1/oneshot` path — the shared authorizer.
+
+    This branch used to hardwire `tools=["web_search"]` and go straight to
+    `build_task_runner`, which made it a THIRD admission route that applied
+    none of the tier's policy. Concretely: `tools.web_search.enabled=false`
+    is an operator veto that returned 403 for `POST /v1/agent/run`, and an
+    enriched oneshot searched anyway. The grant is still config-decided and
+    still un-widenable by the request — that is `TIERS["oneshot"]`'s job, not
+    this function's — but it is now DERIVED by `authorize_oneshot()` rather
+    than asserted here.
+
+    Raises `TaskAuthorizationError`; the caller maps it onto `HTTPException`
+    exactly as `agent_v1` does.
+    """
+    from ...engine.task_authorizer import authorize_oneshot
+
+    return authorize_oneshot(task, provider=provider_name, model=model)
+
+
 async def _oneshot_via_search_loop(
     req: OneshotRequest, provider_name: str, model: str, owner: Optional[str]
 ) -> OneshotResponse:
@@ -333,6 +353,16 @@ async def _oneshot_via_search_loop(
     # execution.egress_ceiling (step ③ Q3 — 400 pre-start when the cap
     # breaks the set, never a half-enriched request) — one mechanism shared
     # with /v1/agent/run.
+    # Admission FIRST — before any run is minted. The tier's policy (grant
+    # source, operator kill-switches, provider validation) lives in one place
+    # for every client; see task_authorizer.TIERS["oneshot"].
+    from ...engine.task_authorizer import TaskAuthorizationError
+
+    try:
+        _authorize_oneshot_search_loop(req.prompt, provider_name, model)
+    except TaskAuthorizationError as e:
+        raise HTTPException(status_code=e.status, detail=e.detail) from e
+
     egress_hosts = _enriched_oneshot_egress_or_400(provider_name)
     registry = get_agent_run_registry()
     meta = registry.start_run(
