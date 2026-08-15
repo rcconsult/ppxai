@@ -19,19 +19,20 @@ Pre-v1.18.1, the same slash command was implemented twice — once in the Python
      "ok": true,
      "result": { ...CommandResult.to_dict()... },
      "side_effects": [{"kind": "...", ...payload}],
+     "events": [ ... ],
      "version": 1
    }
    ```
-   `result` is the rendered payload (TableResult, MarkdownResult, FileViewResult, etc.). `side_effects` are orthogonal UI directives.
+   `result` is the rendered payload (TableResult, MarkdownResult, FileViewResult, etc.). `side_effects` are orthogonal UI directives. **`events`** carries any engine side-channel events the handler enqueued (`state_sync`, `working_dir_changed`, …), drained into the response by `with_drained_events()` — without that piggyback they would sit in `engine._event_queue` until the next SSE turn. It is part of the envelope, not an extra.
 
-3. **Side-effect kinds name the user's intent, not the rendering.** Web builds panels (xterm.js, CodeMirror, iframe); VSCode delegates to first-party APIs (`createTerminal`, `showTextDocument`, `executeCommand('vscode.open')`). The kind is the contract; the rendering is the client's choice. See `ppxai/commands/results.py::SideEffectKind` for the canonical list (15 kinds in v1.18.1).
+3. **Side-effect kinds name the user's intent, not the rendering.** Web builds panels (xterm.js, CodeMirror, iframe); VSCode delegates to first-party APIs (`createTerminal`, `showTextDocument`, `executeCommand('vscode.open')`). The kind is the contract; the rendering is the client's choice. See `ppxai/commands/results.py::SideEffectKind` for the canonical list (**16 kinds** as of v1.19.1; 15 at v1.18.1).
 
 4. **Open-enum invariant.** Clients ignore unknown kinds gracefully. Adding a new kind is non-breaking. `vscode_delegate` is the escape hatch for VSCode-only features (e.g. `workbench.action.openGlobalKeybindings`); web ignores it.
 
 ## TUI handlers vs HTTP handlers
 
 The factory handlers are called from BOTH paths:
-- **In-process** (Rich/Textual): `CommandFactory.get("name").handler(context, args)` with a `RichCommandContext` / `TextualCommandContext`. The result's `side_effects` field is read directly by the TUI renderer; no envelope wrap.
+- **In-process** (Rich/Textual): `CommandFactory.get("name").handler(context, args)` with a `RichCommandContext`, or — for Textual — the app object itself, which satisfies the protocol directly. (`TextualCommandContext` was removed in v1.18.2; see ADR 0002 for why the three patterns are deliberately not unified.) The result's `side_effects` field is read directly by the TUI renderer; no envelope wrap.
 - **HTTP** (web/VSCode): `POST /command/<name>` → `ServerCommandContext` → handler → route layer wraps the result in the v1 envelope.
 
 Handlers branch on `isinstance(context, ServerCommandContext)` when they need to format differently for HTTP (e.g. `/help` returns `MarkdownResult` for HTTP and `TextResult` with Rich markup for TUI; same content, two formatters via `CommandFactory.generate_help(markdown=True)`).

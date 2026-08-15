@@ -14,8 +14,11 @@ replies.
 **Verify with:**
 `grep -n "def strip_orphan_tool_calls" ppxai/engine/session.py` (the
 single cleanup pass), and
-`grep -n "strip_orphan_tool_calls" ppxai/engine/chat.py` (the outbound
-guards before the in-loop provider calls). Live-check the alternation
+`grep -n "sanitize_outbound" ppxai/engine/chat.py` (the outbound guards
+before the in-loop provider calls — chat.py calls the composed
+`sanitize_outbound`, which runs the orphan strip plus the empty-assistant
+strip; the bare `strip_orphan_tool_calls` name resolves only in
+`session.py`). Live-check the alternation
 claim: send `[{"role":"user"},{"role":"user"}]` to `sonar` — it returns
 200, not the historical "messages must alternate" 400.
 

@@ -264,7 +264,10 @@ update-desktop-database ~/.local/share/applications/
 - Allows distinguishing all modifier+key combinations
 
 **Textual Support:**
-Textual (ppxaide's framework) automatically enables Kitty keyboard protocol:
+Textual (ppxaide's framework) unconditionally *enables* the Kitty keyboard
+protocol — but it does not negotiate or verify support, so a terminal that
+ignores the sequence simply never delivers Ctrl+Enter (see
+[ppxaide-impl.md](ppxaide-impl.md#kitty-keyboard-protocol)):
 ```python
 # From textual/drivers/linux_driver.py
 self.write("\x1b[>1u")  # Enable Kitty keyboard protocol

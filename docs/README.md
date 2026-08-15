@@ -250,7 +250,7 @@ async for event in engine.chat("Explore this project"):
 ppxai/
 ├── ppxai/                                # Main package
 │   ├── rich/main.py                      # CLI entry point (ppxai = ppxai.rich.main:main)
-│   ├── commands/                         # Slash command handlers (16-file package)
+│   ├── commands/                         # Slash command handlers (17-file package)
 │   └── engine/                           # Core engine
 │       ├── client.py                     # EngineClient (primary interface)
 │       ├── providers/                    # Provider implementations

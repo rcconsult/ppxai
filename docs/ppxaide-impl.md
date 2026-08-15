@@ -27,7 +27,7 @@ The TUI has **two separate theme systems** that must stay synchronized:
 
 | System | Purpose | Available |
 |--------|---------|-----------|
-| **App theme** | Overall UI colors (Textual CSS) | 17+ themes (catppuccin-mocha, dracula, etc.) |
+| **App theme** | Overall UI colors (Textual CSS) | Every Textual built-in **plus 2 custom** (`tron-legacy`, `matrix`, in `tui/themes/themes.py`). 8 are in the Ctrl+T cycle (`CYCLE_THEMES`); all are reachable via Ctrl+P. The exact total tracks the installed Textual version, so it is not pinned here. |
 | **Syntax theme** | Code highlighting (TextArea) | 5 only: dracula, github_light, monokai, vscode_dark, css |
 
 ## Theme synchronization
@@ -89,7 +89,13 @@ File tree bindings (when file tree focused):
 
 ## Kitty keyboard protocol
 
-Textual 8.1.1 does NOT auto-negotiate Kitty keyboard protocol (upstream issue #6074 open). Ctrl+Enter only works in terminals that send CSI u sequences:
+Textual **does** emit the Kitty-protocol enable sequence (`\x1b[>1u`) from
+its drivers — `linux_driver.py`, `linux_inline_driver.py` and
+`windows_driver.py` in textual 8.1.1 all write it. What it does *not* do is
+negotiate: it never checks whether the terminal implements the protocol, and
+takes no fallback when it doesn't (upstream issue #6074). So enabling is
+unconditional, and Ctrl+Enter still works only in terminals that actually
+send CSI u sequences:
 - **Kitty** — works natively
 - **Ghostty** — requires `ctrl+enter=text:\x1b[13;5u` in config
 - **WezTerm** — requires `enable_kitty_keyboard = true`
@@ -112,10 +118,13 @@ ppxai supports high-resolution inline image display in terminals that support im
 |----------|----------|-------------------|--------------|
 | Windows Terminal | Sixel | textual-image | textual-image |
 | WezTerm | iTerm2 | ITerm2ImageWidget | ITerm2Image |
-| iTerm2 (macOS) | TGP/iTerm2 | textual-image | ITerm2Image |
+| iTerm2 (macOS) | TGP/iTerm2 | ITerm2ImageWidget | ITerm2Image |
 | Kitty | TGP | textual-image | Fallback |
 
-**Textual TUI:** uses `render_lines()` override to inject escape sequences. Cannot use Rich renderables directly because Textual processes segments differently. See `ppxai/tui/widgets/iterm2_widget.py`.
+**Textual TUI:** `image_handlers.py::get_image_widget_class()` selects on
+`TERM_PROGRAM` — `wezterm` and `iterm.app` **both** get `ITerm2ImageWidget`
+(OSC 1337); everything else falls to `textual-image`. The widget uses a
+`render_lines()` override to inject escape sequences. Cannot use Rich renderables directly because Textual processes segments differently. See `ppxai/tui/widgets/iterm2_widget.py`.
 
 **Rich TUI:** uses Rich renderables with the `_NULL_CONTROL` trick to pass escape sequences through:
 ```python

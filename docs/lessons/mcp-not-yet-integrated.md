@@ -26,10 +26,11 @@ Three filename-level signals make ppxai look MCP-enabled:
    `ModuleNotFoundError` in a fresh sync. The extra is documented
    intent, not shipped functionality.
 
-2. **`.mcp.json` at repo root** lists `code-review-graph` as if it
-   were a wired MCP server config. It's a placeholder. **Zero Python
-   code in `ppxai/` loads it** — verified by grep across the whole
-   tree.
+2. **`.mcp.json` at repo root** is now an empty `{"mcpServers": {}}`.
+   It previously listed `code-review-graph` as if it were a wired MCP
+   server config; either way it is not evidence of integration —
+   **zero Python code in `ppxai/` loads this file**, verified by grep
+   across the whole tree.
 
 3. **`tests/test_mcp.py`** exists. It's a *diagnostic script* — "can
    my host run MCP?" — not an integration test against ppxai's MCP

@@ -1,6 +1,24 @@
 # TODO — documentation accuracy sweep (v1.19.1)
 
-**Status:** Planned, not started. Filed 2026-08-15 on `bugfix/v1.19.1` @ `7c82c95e`.
+**Status:** ✅ **COMPLETE** — all 7 phases + the lower-severity remainder
+executed 2026-08-15 on `bugfix/v1.19.1`, one commit per phase
+(`421e381c` P0 · `b7c6b527` P1 · `20c695ab` P2 · `7698bd75` P7 ·
+`0b3bde98` P3 · `66639086` P4 · `7bec4940` P6 · `575ae3e7` P5).
+Filed 2026-08-15 @ `7c82c95e`.
+
+**Two filed findings were REJECTED on verification** (in addition to the
+macOS-Intel one at the bottom) — do not re-file:
+1. *"`autorouter-config.md:30` names the wrong OpenAI coding model."*
+   False: it names `gpt-5.4-mini`, which **is** `providers.openai.coding_model`
+   in `ppxai-config.json`.
+2. *"The `strip_orphan_tool_calls` grep in the Perplexity lesson no longer
+   resolves."* Half false: it still resolves in `engine/session.py:29`. Only
+   the **chat.py** grep was stale (that file now calls the composed
+   `sanitize_outbound`), and only that half was corrected.
+
+The widened ADR-0010 sentinel found **four more** cases on its first run that
+no reviewer had filed: `AGENTS.md:530`, `scripts/trial-task-lifecycle.py:21`,
+and five stale version stamps.
 **Scope:** repo documentation only — no production-code changes except where a doc
 fix requires confirming behavior.
 
@@ -64,7 +82,7 @@ Also `docs/plan-task-command-sequencing.md:568` header still says "🚧 IN PROGR
 And `docs/archive/plan-v1.19.0-sequencing.md:11` still says "**Status:** Active" three lines
 under a "CLOSED" banner.
 
-## PHASE 1 — top-level files
+## PHASE 1 — ✅ DONE — top-level files
 
 | # | File:line | Sev | Issue | Fix |
 |---|---|---|---|---|
@@ -80,7 +98,7 @@ under a "CLOSED" banner.
 No findings: ROADMAP.md, AGENTS.md, BUILD.md, CONTRIBUTING.md, SECURITY.md,
 SPECIFICATIONS.md, RELATED-PROJECTS.md, CODE_OF_CONDUCT.md.
 
-## PHASE 2 — release paperwork (blocks any release)
+## PHASE 2 — ✅ DONE — release paperwork (blocked any release)
 
 1. **`docs/release-notes-v1.19.1-DRAFT.md` is ~40 commits stale** (last touched `573b76ff`,
    2026-08-06). Missing: security/admission-boundary unification (`135abf48`), the entire
@@ -93,7 +111,7 @@ SPECIFICATIONS.md, RELATED-PROJECTS.md, CODE_OF_CONDUCT.md.
    mentions (lines 129/137/142) sit inside *Security*, describing a bug T8b launched
    with. Add an explicit Added/Changed bullet.
 
-## PHASE 3 — actively-wrong user guides (High)
+## PHASE 3 — ✅ DONE — actively-wrong user guides (High)
 
 | File:line | Issue | Evidence |
 |---|---|---|
@@ -109,7 +127,7 @@ SPECIFICATIONS.md, RELATED-PROJECTS.md, CODE_OF_CONDUCT.md.
 | `docs/vllm-tool-calling-guide.md:459-479` | "native tool calling now safe for GPT-OSS (vLLM PR #30205+)" | `ppxai/engine/model_profiles.py:657-661` forces `prompt_based`; `ppxai/engine/chat.py:693-694` overrides capability flags; upstream issue #23567 open |
 | `docs/decisions/README.md` | has **no ADR index at all** — pure process prose | add a table of all 11 ADRs with status |
 
-## PHASE 4 — dev guides teach broken code (High for contributors)
+## PHASE 4 — ✅ DONE — dev guides taught broken code
 
 `docs/custom-command-development-guide.md`:
 - `:309` `handler.engine_client.working_dir` → **AttributeError**; real API `get_working_dir()` (`ppxai/engine/client.py:539`)
@@ -125,7 +143,7 @@ SPECIFICATIONS.md, RELATED-PROJECTS.md, CODE_OF_CONDUCT.md.
 - `:609` drops the required `engine` arg; `:1132` version footer stale
 - no mention of `tools.<tool>.egress` / `execution.egress_ceiling` despite network-tool examples
 
-## PHASE 5 — missing documentation for shipped features
+## PHASE 5 — ✅ DONE — missing documentation for shipped features
 
 - **`network.ssl.*` has zero user-facing coverage** — absent from README, `docs/index.md`,
   `docs/README.md`, `known-issues.md`, `dev-setup.md`. `installation.md:952-974` covers only
@@ -143,7 +161,7 @@ SPECIFICATIONS.md, RELATED-PROJECTS.md, CODE_OF_CONDUCT.md.
 - `docs/debug-logging.md:7` lists 4 log files; 13 are produced
 - `docs/file-editing-guide.md` — no mention of the R13 post-write syntax validator gating all 5 edit tools
 
-## PHASE 6 — lifecycle: archive completed docs
+## PHASE 6 — ✅ DONE — lifecycle: archive completed docs
 
 Move to `docs/archive/` (each self-declares completion — verify the banner before moving,
 then fix inbound links):
@@ -165,7 +183,7 @@ each benchmark session", untouched ~3 months; Items 54/55 would change its ranki
 Also `docs/debt-inventory.md:1497-1502` — Item 37 letter (t) should be marked RETIRED
 (cite `eeb82076`), matching how sibling (r) is already handled.
 
-## PHASE 7 — sentinel extensions (`tests/test_docs_consistency.py`)
+## PHASE 7 — ✅ DONE — sentinel extensions (21 → 27 tests)
 
 Per the standing "extend the sentinel, don't re-audit" rule:
 1. **T8b/surface-split fence** — fail on `web + VSCode only` and on `T8b` near `PARKED` in active docs.
@@ -178,7 +196,7 @@ Per the standing "extend the sentinel, don't re-audit" rule:
 5. **Stale version banners** — several guides carry `v1.11.2` / `v1.13.0` / `v1.13.10` footers
    while linked as current.
 
-## Lower-severity remainder (~25, batch opportunistically)
+## Lower-severity remainder — ✅ DONE
 
 `patterns/command-envelope.md` `:16` canonical envelope omits `events`, `:34` names the deleted
 `TextualCommandContext`, `:27` "15 kinds" now 16 · `patterns/appstate.md:28,44` (schema-derived

@@ -13,6 +13,7 @@ vLLM supports multiple tool calling formats via `--tool-call-parser`. Different 
 |--------------|--------|-----------|-----------|
 | GPT-OSS | Harmony | `--tool-call-parser openai` | ⚠️ Intermittent |
 | Qwen3 | Hermes | `--tool-call-parser hermes` | Stable |
+| **Qwen3-Coder** | **qwen3_coder** | `--tool-call-parser qwen3_coder` | Stable — top DGX performer (Qwen3-Coder-30B, 81.25%) |
 | Qwen2.5 | Hermes | `--tool-call-parser hermes` | Stable |
 | Nous Hermes | Hermes | `--tool-call-parser hermes` | Stable |
 

@@ -71,8 +71,10 @@ All GPT-5.x models support image+text input natively. Audio requires the separat
 - `gpt-5.1` and variants — removed from ChatGPT March 11, 2026; still in API but migrate to 5.4
 - Assistants API — sunset anticipated in 2026; migrate to Responses API
 
-### Pricing (as of March 2026)
-- `gpt-5.4`: $1.75/1M input, $14/1M output (90% discount on cached inputs)
+### Pricing (synced to `ppxai-config.json`, 2026-08-15)
+- `gpt-5.4`: **$2.50/1M input, $15/1M output** per the shipped
+  `ppxai-config.json` pricing block (an earlier revision of this doc quoted
+  $1.75/$14, which no longer matches). Cached inputs are discounted.
 - `gpt-5.4-mini`: lower cost tier for high-volume
 
 ---
@@ -87,7 +89,7 @@ Sonar models support image input alongside their core real-time web search capab
 |---|---|---|---|---|---|---|
 | `sonar` | ✅ | ✅ | ❌ | ❌ | ✅ | Fast; $1/1M tokens |
 | `sonar-pro` | ✅ | ✅ | ❌ | ❌ | ✅ | Deep retrieval; 200K context; $3/1M tokens |
-| `sonar-reasoning` | ✅ | ❌ | ❌ | ❌ | ✅ | Multi-step reasoning; $1/1M tokens |
+| `sonar-reasoning-pro` | ✅ | ❌ | ❌ | ❌ | ✅ | Multi-step reasoning. **This is the id in the shipped config** — plain `sonar-reasoning` is not configured. |
 | `sonar-deep-research` | ✅ | ❌ | ❌ | ❌ | ✅ | Long-form research; $2/1M input, $8/1M output |
 
 ### Image Input Specs (sonar / sonar-pro)
