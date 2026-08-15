@@ -218,11 +218,29 @@ extract at that point).
 
 ### Item 29 — `engine.completion` imports `commands.factory` and reads its internals [layer inversion]
 
-**Affected files:** `ppxai/engine/completion.py` (import at line 47;
-reads `CommandFactory._registry` at lines 234/249, `._aliases` at 248,
-`._ensure_loaded()` at 229). Shared entrypoint `complete()` (line 165) is
-called from `ppxai/tui/completer.py:25`, `ppxai/rich/main.py:34`, and
-`ppxai/server/routes/completion.py:17`.
+**Affected files:** `ppxai/engine/completion.py` (import at line **48**).
+Shared entrypoint `complete()` is called from `ppxai/tui/completer.py:25`,
+`ppxai/rich/main.py:34`, and `ppxai/server/routes/completion.py:17`.
+
+> **Re-verified 2026-08-15 — half of this item is already closed.** The
+> private-registry access is **gone**: completion now reads the public
+> `iter_completion_specs()` snapshot and `CommandFactory.get()` for alias
+> resolution, so the "reads privates, brittle to factory refactors" half no
+> longer applies. What remains is the **layer inversion alone** — one
+> import, the only `engine → commands` edge in the whole engine package.
+>
+> **It is not currently blocking the SDK use case.** Measured: importing
+> `ppxai.engine.task_runner` + `ppxai.engine.client` — the path ppxai-sre
+> embeds — pulls in **zero** `ppxai.commands` modules and never imports
+> `engine.completion`. The edge is dormant unless a caller imports
+> completion explicitly, which only the three client glue layers do.
+>
+> **Reclassified:** architectural cleanup, no current correctness defect.
+> Keep open, not release-blocking. The conditions that would make it hard-
+> blocking are enumerated in
+> [ADR 0007](decisions/0007-completion-first-class-service.md) "Triggers to
+> revisit"; the planned fix (a top-level `CompletionService` behind narrow
+> protocols, roster published via AppState) is unchanged and still right.
 
 **What's wrong:** `engine/completion.py` is documented as engine /
 client-agnostic, but it imports **upward** into the `commands` layer and

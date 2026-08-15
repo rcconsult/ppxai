@@ -20,10 +20,27 @@ run **concurrently for one user against one provider account**:
 
 1. **Interactive session** — Rich/Textual/Web/VSCode `/chat`, one long-lived
    `EngineClient` per session.
-2. **`/v1/oneshot`** — stateless; builds the provider directly, **no
-   `EngineClient`** (ADR 0004, deliberately, for zero session side-effects).
+2. **`/v1/oneshot`** — stateless *to the caller*; ~~builds the provider
+   directly, **no `EngineClient`**~~.
 3. **`/v1/agent/task`** — a **per-run `EngineClient`** (ADR 0003 D1 isolation);
    one throwaway engine + session per run.
+
+> **Premise update (2026-08-15, v1.19.1 — this ADR is a living draft).**
+> Tier 2's description above is **no longer true**. The FU unification made
+> *every* `/v1/oneshot` — plain and enriched alike — execute as a
+> `kind=oneshot` registry run through `build_task_runner`, and the direct
+> non-registry path was **deleted**. That runner constructs a per-run
+> `EngineClient` (`ppxai/engine/task_runner.py:218`), so tiers 2 and 3 now
+> share one execution path and one client shape; the wire contract of
+> `/v1/oneshot` is unchanged.
+>
+> This **simplifies the decision rather than complicating it**: the sink
+> only has to reach two shapes — the long-lived interactive `EngineClient`
+> and the per-run one — not three, and a single hook at the run-registry
+> boundary covers both background tiers at once. Whoever picks up this ADR
+> should re-read the options below with that in mind; some of the
+> complexity they weigh against each other was tier-2-specific and has
+> evaporated.
 
 Each tier's client-side isolation was a correct decision for its own purpose
 (oneshot statelessness; task blast-radius containment). But that isolation
@@ -164,6 +181,15 @@ never as something ppxai tries to account per-request.
 ---
 
 ## Triggers to revisit / decide
+
+**SDK consumers raise the stakes (noted 2026-08-15).** ppxai-sre embeds
+ppxai to implement its own agents and drives `/v1/oneshot`. An embedder
+that runs agents on a shared provider account has no way to attribute or
+cap spend while this ADR is unimplemented — the blind spot is not just a
+`/cost` under-report in the TUI (debt Item 49), it is a missing API for
+anyone building on the platform. That does not by itself decide the
+options below, but it means the consumer of this decision is now external,
+not only the interactive user.
 
 - ppxai-sre runs interactive + background task on **one** provider budget and
   needs a true total (the concrete driver — likely forces Option A soon).

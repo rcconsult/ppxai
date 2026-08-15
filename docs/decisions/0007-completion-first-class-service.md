@@ -1,6 +1,7 @@
 # ADR 0007 — Completion as a first-class service; command roster via AppState
 
-**Date:** 2026-06-14
+**Date:** 2026-06-14 (revised 2026-08-15 — coupling re-measured on
+`bugfix/v1.19.1`; the SDK trigger below partially fired)
 **Status:** Proposed — step 1 shipped v1.18.8 (`CommandFactory.iter_completion_specs`, `commands/factory.py`); step 2 (extract `ppxai/completion/` package) open, target v1.19.x
 **Related:**
 - `ppxai/engine/completion.py` — current home of `complete()`
@@ -42,8 +43,44 @@ Two distinct concerns are tangled here:
    all clients, with no per-client code when a command is added.
 
 The call graph shows the coupling sits entirely *below* the shared
-`complete()` seam — no client references `CommandFactory` — so the seam is
-the right place to invert, and the roster is the right thing to publish.
+`complete()` seam, so the seam is the right place to invert, and the roster
+is the right thing to publish.
+
+> **Correction (2026-08-15):** the original text said "no client references
+> `CommandFactory`". That is no longer true — the two in-process TUIs
+> dispatch through it directly (`rich/main.py:20`,
+> `rich/event_handler.py:20`, `tui/app.py:61`). It does not change the
+> decision: those are *dispatch* references, not roster reads, and the
+> roster is still funnelled through the single `complete()` seam. It does
+> mean the eventual `CompletionService` cannot assume the command layer is
+> reachable only from completion.
+
+### Re-measured status (2026-08-15, `bugfix/v1.19.1`)
+
+What step 1 actually fixed, and what is left:
+
+- ✅ **Private-registry access is gone.** `engine/completion.py` reads the
+  public `iter_completion_specs()` snapshot and `CommandFactory.get()` for
+  alias resolution. No `_registry` / `_aliases` poking remains.
+- ⚠️ **The layer inversion itself is unchanged**: `from ..commands.factory
+  import CommandFactory` at `ppxai/engine/completion.py:48`. It is the
+  **only** `engine → commands` import in the entire engine package — the
+  extraction stays a one-edge job.
+- 🔎 **It does not currently block SDK embedding.** Measured: importing
+  `ppxai.engine.task_runner` and `ppxai.engine.client` — the path a
+  headless embedder such as ppxai-sre uses — pulls in **zero**
+  `ppxai.commands` modules and never imports `engine.completion`. The
+  inversion is latent, traversed only when a caller imports completion
+  explicitly, which today only the three client glue layers do.
+- 📈 **Surface has grown since the ADR was written.** `/task` and `/run`
+  are now factory-registered, so the roster completion depends on is
+  broader; completion also gained client-specific gating (the `clients`
+  set, `engine/completion.py:73-75`) and dynamic run-id suggestions. None
+  of that isnew coupling, but it raises the cost of the eventual move.
+
+Nothing here changes the decision. It moves the *priority*: this is an
+architectural cleanup with no current correctness defect, not a
+release-blocker.
 
 ## Decision
 
@@ -122,6 +159,18 @@ seed. Incremental path:
 
 - A "ship the engine as a standalone library" goal (makes the residual
   `engine → commands` import a hard blocker, not a smell).
+  **Partially fired 2026-08-15:** ppxai-sre consumes ppxai as an SDK
+  dependency to implement its agents, and `build_task_runner` was extracted
+  to `ppxai/engine/task_runner.py` (`eeb82076`) precisely to serve that
+  model. It is *not* yet hard-blocking, because that consumer's import path
+  never reaches `engine.completion` (measured above). It becomes hard the
+  moment any of these is true:
+  - `ppxai/engine/` is packaged as its own distribution, so an unused
+    upward import is a real dependency rather than a dormant one;
+  - an embedder needs the command roster — a palette, a menu, an
+    `/help` equivalent — **without** running the client command layer;
+  - the `commands` package acquires an import-time side effect (config
+    read, registry build, I/O) that an embedder must not pay for.
 - A second client surface needing the live command roster (palette, menu),
   which makes the AppState roster publication pay for itself.
 - A second cross-layer capability appearing with the same "belongs to no
