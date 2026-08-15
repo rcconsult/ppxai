@@ -1,5 +1,13 @@
 # Custom Tool Development Guide
 
+> **Imports are top-of-file, DAG style — no `if TYPE_CHECKING:`, no lazy
+> imports.** Circular imports are broken with a `Protocol` defined in a leaf
+> module instead, which is why tools annotate `manager: ToolManagerProtocol`
+> and `engine: ToolEngineProtocol` and import them normally. See
+> [patterns/protocol-dependency-inversion.md](patterns/protocol-dependency-inversion.md).
+> Earlier revisions of this guide taught the guarded-import idiom; the
+> examples below have been corrected.
+
 Complete guide to creating, testing, and integrating custom tools. Custom tools work with both **ppxai** (Rich TUI) and **ppxaide** (Textual TUI), as well as the VSCode extension.
 
 ## Table of Contents
@@ -31,10 +39,7 @@ Create `ppxai/engine/tools/builtin/my_tool.py`:
 """
 My custom tool for ppxai.
 """
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from ..manager import ToolManager
+from ...types import ToolManagerProtocol
 
 
 def greet_user(name: str, formal: bool = False) -> str:
@@ -52,7 +57,7 @@ def greet_user(name: str, formal: bool = False) -> str:
     return f"Hey {name}! What's up?"
 
 
-def register_tools(manager: 'ToolManager'):
+def register_tools(manager: ToolManagerProtocol):
     """Register custom tools with the manager."""
     manager.register_function(
         name="greet_user",
@@ -80,12 +85,19 @@ def register_tools(manager: 'ToolManager'):
 Edit `ppxai/engine/tools/builtin/__init__.py`:
 
 ```python
-def register_all_builtin_tools(manager: 'ToolManager', provider: str = None, engine: Optional['EngineClient'] = None):
+def register_all_builtin_tools(manager: ToolManagerProtocol, provider: str = None, engine: Optional[ToolEngineProtocol] = None):
     from . import filesystem, calculator, datetime_tool, web, my_tool  # Add import
 
     # ... existing registrations ...
     my_tool.register_tools(manager)  # Add registration
 ```
+
+> If your tool needs engine services (working dir, consent, session), its
+> `register_tools` takes `engine` too — declare it as
+> `register_tools(manager: ToolManagerProtocol, engine: ToolEngineProtocol)`
+> and register with `my_tool.register_tools(manager, engine)`. Dropping the
+> argument here is the most common cause of a tool that imports cleanly and
+> then fails at call time.
 
 ### Step 3: Test It
 
@@ -192,10 +204,7 @@ ppxai/engine/tools/builtin/stock_price.py
 Stock price lookup tool.
 """
 import os
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from ..manager import ToolManager
+from ...types import ToolManagerProtocol
 
 
 def get_stock_price(symbol: str) -> str:
@@ -224,7 +233,7 @@ def get_stock_price(symbol: str) -> str:
         return f"Error fetching stock price: {str(e)}"
 
 
-def register_tools(manager: 'ToolManager'):
+def register_tools(manager: ToolManagerProtocol):
     """Register stock tools with the manager."""
     manager.register_function(
         name="get_stock_price",
@@ -253,12 +262,9 @@ ppxai/engine/tools/builtin/database_query.py
 
 Database query tool with connection pooling.
 """
-from typing import TYPE_CHECKING
 from ..base import BaseTool
 
-if TYPE_CHECKING:
-    from ...client import EngineClient
-    from ..manager import ToolManager
+from ...types import ToolEngineProtocol, ToolManagerProtocol
 
 
 class DatabaseQueryTool(BaseTool):
@@ -316,7 +322,7 @@ class DatabaseQueryTool(BaseTool):
             return f"Database error: {str(e)}"
 
 
-def register_tools(manager: 'ToolManager'):
+def register_tools(manager: ToolManagerProtocol):
     """Register database tools."""
     import os
     conn_string = os.getenv("DATABASE_URL")
@@ -604,7 +610,7 @@ ppxai/engine/tools/builtin/
 Edit `ppxai/engine/tools/builtin/__init__.py`:
 
 ```python
-def register_all_builtin_tools(manager: 'ToolManager', provider: str = None, engine: Optional['EngineClient'] = None):
+def register_all_builtin_tools(manager: ToolManagerProtocol, provider: str = None, engine: Optional[ToolEngineProtocol] = None):
     """Register all built-in tools with the manager."""
     from . import filesystem, calculator, datetime_tool, web
     from . import my_tool  # Add your import
@@ -631,7 +637,7 @@ uv run ppxai
 
 # You should see your tool:
 # ┌──────────────┬─────────────────────────────────────┬────────┐
-# │ Tool         │ Description                         │ Source │
+# │ Tool         │ Description                         │
 # ├──────────────┼─────────────────────────────────────┼────────┤
 # │ greet_user   │ Generate a personalized greeting... │ engine │
 # └──────────────┴─────────────────────────────────────┴────────┘
@@ -679,10 +685,7 @@ Use Python's standard logging:
 ```python
 """Tool with logging."""
 import logging
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from ..manager import ToolManager
+from ...types import ToolManagerProtocol
 
 # Create logger for this module
 logger = logging.getLogger(__name__)
@@ -789,7 +792,7 @@ its description in one table:
 
 # Output:
 # ┌──────────────┬───────────────────────────────────────┬────────┐
-# │ Tool         │ Description                            │ Source │
+# │ Tool         │ Description                            │
 # ├──────────────┼───────────────────────────────────────┼────────┤
 # │ greet_user   │ Generate a personalized greeting for a │ engine │
 # │              │ user                                    │        │
@@ -864,7 +867,7 @@ class MyDangerousTool(BaseTool):
     description = "Performs an operation that requires user approval"
     parameters = {...}
 
-    def __init__(self, engine: 'EngineClient'):
+    def __init__(self, engine: ToolEngineProtocol):
         self.engine = engine
 
     async def execute(self, target: str, **kwargs) -> str:
@@ -1007,10 +1010,7 @@ See `ppxai/engine/tools/builtin/calculator.py`:
 
 ```python
 """Calculator tool for mathematical expressions."""
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from ..manager import ToolManager
+from ...types import ToolManagerProtocol
 
 
 def calculate(expression: str) -> str:
@@ -1025,7 +1025,7 @@ def calculate(expression: str) -> str:
         return f"Error calculating: {str(e)}"
 
 
-def register_tools(manager: 'ToolManager'):
+def register_tools(manager: ToolManagerProtocol):
     manager.register_function(
         name="calculator",
         description="Evaluate a mathematical expression",
@@ -1132,3 +1132,24 @@ print(result)
 **Version:** v1.13.0+
 **Last Updated:** 2026-01-03
 **License:** MIT
+
+
+## Network access: declaring egress
+
+A tool that reaches the network is only usable inside a sandboxed `/task`
+run if the operator can allowlist the hosts it needs. Two keys govern that,
+and neither is set by the tool's own code:
+
+- **`tools.<tool>.egress`** — the operator-declared host baseline merged
+  into any run that *grants* your tool. Without it, a run whose allowlist
+  doesn't happen to name your hosts denies the call. This supersedes the
+  old `web_search`-only `task_default_allow` (still dual-read).
+- **`execution.egress_ceiling`** — a deployment-wide cap intersected with
+  every run's allowlist. It can only narrow; a run that needs a host the
+  ceiling strips fails **before starting**, naming the stripped hosts.
+
+Design implication: enumerate a *fixed* set of hosts. A tool that derives
+its target from model-supplied input cannot be allowlisted, which is why
+`get_weather` was made https-only — a scheme fallback put an always-denied
+entry into its egress superset and made the whole tool un-allowlistable
+under the all-or-nothing rule.

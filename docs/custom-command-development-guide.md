@@ -1,6 +1,15 @@
 # Custom Command Development Guide
 
-This guide explains how to create, register, and debug custom commands using the Command Factory framework. Custom commands work with both **ppxai** (Rich TUI) and **ppxaide** (Textual TUI).
+This guide explains how to create, register, and debug custom commands using the Command Factory framework. Custom commands are registered once and dispatched by every client.
+
+> ⚠️ **The examples in this guide are written in the Rich TUI's idiom**
+> (`console.print`, reading attributes off the handler). That style works in
+> `ppxai` only. A command that must run in **ppxaide**, the web UI or VSCode
+> should take a `CommandContext` and **return a `CommandResult`**
+> (`TextResult`, `TableResult`, `ErrorResult`, ...) instead of printing —
+> the client then renders it in its own idiom. That is how every built-in
+> command is written; see `ppxai/commands/system.py` for a worked example
+> and `docs/patterns/command-envelope.md` for the contract.
 
 ---
 
@@ -76,7 +85,7 @@ Custom
 Every command is a Python function with this signature:
 
 ```python
-def handle_<name>(handler, args: str) -> Optional[bool]:
+def handle_<name>(handler, args: str) -> Optional[CommandResult]:
     """
     Handle /<name> command.
 
@@ -85,14 +94,27 @@ def handle_<name>(handler, args: str) -> Optional[bool]:
         args: Raw argument string (everything after the command name)
 
     Returns:
-        None - Normal completion
-        True - Signal to exit the application (only for /quit-like commands)
-        False - Continue but indicate failure (rarely used)
+        A CommandResult (TextResult, TableResult, ErrorResult, ...) which the
+        client renders, or None for a handler that printed nothing.
     """
     pass
 ```
 
+> **A custom command cannot exit the application.** `/quit` and `/exit` are
+> special-cased *before* factory dispatch (`ppxai/commands/handler.py`), and
+> the dispatcher returns `False` unconditionally after running your handler —
+> so a returned `True` is discarded. Earlier revisions of this guide
+> documented `True` as an exit signal; it never had that effect for a
+> factory command.
+
 ### The CommandSpec
+
+> ⚠️ **`category` is not cosmetic for user commands.** `CommandSpec`
+> defaults to `category="general"`, but `CommandFactory.reload_user_commands()`
+> only unregisters specs whose category is exactly `"custom"`. A user
+> command filed under any other category (including the default) survives
+> `/reload` as a stale duplicate pointing at the old module object. Always
+> pass `category="custom"` from a file in `~/.ppxai/commands/`.
 
 ```python
 @dataclass
@@ -101,7 +123,7 @@ class CommandSpec:
     description: str             # Short description for /help
     handler: Callable            # The handler function
     category: str = "general"    # Category for grouping in /help
-    aliases: List[str] = []      # Alternative names (e.g., ["h"] for /h -> /hello)
+    aliases: List[str] = field(default_factory=list)   # e.g. ["h"] for /h -> /hello
     usage: str = ""              # Usage hint (e.g., "/hello [name]")
     hidden: bool = False         # Hide from /help listing
 ```
@@ -306,7 +328,7 @@ def handle_info(handler, args: str):
     console.print(f"Provider: {handler.provider}")
     console.print(f"Model: {handler.current_model}")
     console.print(f"Tools enabled: {handler.engine_client.tools_enabled}")
-    console.print(f"Working dir: {handler.engine_client.working_dir}")
+    console.print(f"Working dir: {handler.engine_client.get_working_dir()}")
 ```
 
 ### Theme
@@ -594,7 +616,8 @@ CommandSpec(
 category="git"       # Git operations
 category="file"      # File operations
 category="session"   # Session management
-category="custom"    # User-defined (default)
+category="custom"    # REQUIRED for user commands — see the warning below
+category="general"   # the actual CommandSpec default
 ```
 
 ### 5. Handle Async Operations
