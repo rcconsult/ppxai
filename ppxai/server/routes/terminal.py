@@ -148,7 +148,22 @@ class PtyProcess:
                     time.sleep(0.05)
                 if not reaped:
                     os.kill(self.child_pid, signal.SIGKILL)
-                    os.waitpid(self.child_pid, 0)
+                    # Bounded HERE TOO. SIGKILL does not make a blocking
+                    # waitpid safe: a child STOPPED by job control (an
+                    # interactive shell on a PTY takes SIGTTIN/SIGTTOU when
+                    # it is not the foreground process group) is not reaped
+                    # by `waitpid(pid, 0)`, which has no WUNTRACED and so
+                    # waits for an exit that never comes. That is the same
+                    # unbounded wait this method's docstring exists to
+                    # avoid — it was simply left on the backstop path.
+                    # Leaking a zombie for init to reap beats hanging the
+                    # caller forever.
+                    deadline = time.monotonic() + 2.0
+                    while time.monotonic() < deadline:
+                        pid, _ = os.waitpid(self.child_pid, os.WNOHANG)
+                        if pid != 0:
+                            break
+                        time.sleep(0.05)
             except (ProcessLookupError, ChildProcessError):
                 pass
             self.child_pid = None

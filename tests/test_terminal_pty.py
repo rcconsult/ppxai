@@ -45,6 +45,59 @@ def test_kill_returns_promptly_for_sigterm_ignoring_child(tmp_path):
         os.kill(child, 0)  # child must actually be gone
 
 
+def test_kill_returns_promptly_when_child_is_never_reapable(tmp_path):
+    """The SIGKILL backstop must be bounded too.
+
+    `kill()` fell back to a plain `os.waitpid(pid, 0)` after SIGKILL. SIGKILL
+    does not make that safe: a child STOPPED by job control is not reaped by
+    a waitpid without WUNTRACED, so the call waits for an exit that never
+    comes. That is the same unbounded wait the method's docstring exists to
+    avoid, left on the backstop path — and it hung the whole suite via
+    test_spawn_launches_interactive_shell_with_history, which calls kill()
+    directly rather than in a thread.
+
+    Simulated with a waitpid that never reports the child as reaped, which is
+    what a stopped child looks like to this code.
+    """
+    from unittest.mock import patch
+
+    from ppxai.server.routes.terminal import PtyProcess
+
+    script = tmp_path / "sleeper.sh"
+    script.write_text("#!/bin/sh\nwhile :; do sleep 0.1; done\n")
+    script.chmod(0o755)
+
+    proc = PtyProcess(str(script), str(tmp_path))
+    proc.spawn()
+    time.sleep(0.3)
+
+    real_waitpid = os.waitpid
+
+    def never_reaped(pid, options):
+        if options == 0:            # the unbounded form -- must not be used
+            raise AssertionError(
+                "kill() used a blocking waitpid(pid, 0); that is the hang"
+            )
+        return (0, 0)               # WNOHANG: "not reaped yet", forever
+
+    with patch("os.waitpid", side_effect=never_reaped):
+        t = threading.Thread(target=proc.kill, daemon=True)
+        start = time.monotonic()
+        t.start()
+        t.join(timeout=12)
+        elapsed = time.monotonic() - start
+
+    assert not t.is_alive(), "kill() blocked on an unreapable child"
+    assert elapsed < 10, f"kill() took {elapsed:.1f}s"
+    assert proc.child_pid is None
+
+    # Don't leave the real process behind now that waitpid is un-patched.
+    try:
+        real_waitpid(-1, os.WNOHANG)
+    except (ChildProcessError, OSError):
+        pass
+
+
 def test_kill_reaps_cooperative_child_quickly(tmp_path):
     from ppxai.server.routes.terminal import PtyProcess
 
