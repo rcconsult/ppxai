@@ -161,12 +161,12 @@ Asset cache busting (`?_t=<mtime>`) ensures CSS/JS/JSON changes are immediately 
 
 ### Multi-Provider Support
 - **Perplexity AI** - Real-time search with citations
-- **Google Gemini** - 3.5 Flash (default), 2.5 Pro, 3-Flash/Pro Preview, 3.1 Pro Preview with 1M context, Google Search Grounding
-- **OpenAI** - GPT-5.4 (default), GPT-5.4-mini/nano/pro, GPT-5.1-codex, o-series (dedicated `OpenAINativeProvider` with profile-driven routing)
+- **Google Gemini** - 3.5 Flash (default), 3.1 Pro Preview with 1M context, 3.1 Flash Lite, Gemma 4 (31B / 26B-A4B), Google Search Grounding
+- **OpenAI** - GPT-5.4-mini (default), GPT-5.5, GPT-5.5-pro, GPT-5.4/-pro/-nano, GPT-5.3-codex (dedicated `OpenAINativeProvider` with profile-driven routing)
 - **OpenRouter** - Claude, Llama, 100+ models
 - **Local** - Ollama, vLLM, llama.cpp
 
-Switch providers anytime: `/provider gemini` or `/model gemini-2.5-pro`
+Switch providers anytime: `/provider gemini` or `/model gemini-3.1-pro-preview`
 
 **Enhanced Gemini support (v1.12.5+):** Install `pip install ppxai[gemini]` for native Google Search Grounding with citations. **v1.13.3+:** Tools and grounding now work together—use file editing tools while keeping native web search with citations.
 
@@ -236,6 +236,20 @@ Durable, addressable background runs with per-run tool grants and a sandboxed wo
 - Default-off via `execution.task.enabled`
 
 See [docs/task-agent-guide.md](docs/task-agent-guide.md) and [docs/api-gateway.md](docs/api-gateway.md) for details.
+
+### One-Off Runs (`/run`, v1.19.x)
+The tool-free sibling of `/task`: one prompt, one answer, in the background.
+- `/run <prompt>` — launch; no flags, since the tier grants no tools by design
+- Lifecycle: `/run ls|get|watch|collect|cancel` (`/run help` for the full grammar)
+- No `respond`/`resume` — a one-off run has no consent park to return to
+- Enrichment is config-decided, not per-run: `execution.run.grounding`
+  (provider-native search) and `execution.run.web_search` (the `web_search`
+  tool loop), both default off
+- Same registry as `/task`, recorded as `kind=oneshot`; this is also what
+  `POST /v1/oneshot` executes as of v1.19.1
+
+See [docs/session-agent-guide.md](docs/session-agent-guide.md) for how `/run`,
+`/task` and `/auto` differ.
 
 ### Bootstrap Context (v1.14.0+)
 Load project-specific instructions from `AGENTS.md` or `CLAUDE.md`:
