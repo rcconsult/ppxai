@@ -559,7 +559,7 @@ python3 scripts/gateway-smoke.py --skip-llm
 ```
 
 Expect exit 0 with 5 PASS (or task-tier SKIP when
-`tools.agent.task_tier_enabled` is false — that gate defaults off, so
+`execution.task.enabled` is false — that gate defaults off, so
 the SKIP is correct behavior, not a failure). Steps 3–5 each cost one
 trivial LLM call on the default provider; `--skip-llm` if that matters.
 

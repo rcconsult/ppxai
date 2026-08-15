@@ -188,9 +188,9 @@ commit as the verbs they name. A running release-note entry
   held + collectable; `no` = collect impossible — button greyed/disabled,
   TUI warns with the enable hint. Mechanics ride T6 `hold_result`
   (auto→merge+finalize; yes→hold; no→auto-finalize, no merge path).
-- TUI legs apply where the commands exist — full TUI `/run`+`/task` ride
-  T8b (parked); until then the config drives web/VSCode + any TUI warning
-  surface that exists.
+- TUI legs apply where the commands exist — full TUI `/run`+`/task` rode
+  T8b, which shipped 2026-08-08, so the config now drives all four client
+  families.
 - **Trial matrix:** 3 config values × {`/run`, `/task`} in web; merged text
   visible to the model in the next chat turn (ask it about the result).
 - **Tests:** hold_result mapping per value, merge payload plain, greyed/

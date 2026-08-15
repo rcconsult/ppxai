@@ -497,7 +497,7 @@ independently-trialable halves:
 - **T8a — VSCode (✅ DONE):** the extension already speaks
   HTTP to ppxai-server (`httpClient.ts`), so the port is a faithful mirror
   of the web client over the identical `/v1/agent/*` surface.
-- **T8b — Rich/Textual TUI (⏸️ PARKED, 2026-07-07 — resume here):** the TUIs
+- **T8b — Rich/Textual TUI (✅ DONE — unparked 2026-08-08, option (1) chosen; see §T8b below):** the TUIs
   are **in-process** — they have NO channel to a ppxai-server. Porting `/task`
   there forces the transport decision that is debt Item 37(t)'s SDK question:
   **(1)** embed the registry + an embeddable `build_task_runner` in-process
@@ -565,7 +565,7 @@ paths; TaskBackend methods exist on httpClient), **status-parity**
 consent-token discipline (park token rides every respond; one QuickPick per
 park). Plus `npm run compile` (tsc + esbuild) green.
 
-### T8b — TUI port — 🚧 IN PROGRESS (unparked 2026-08-08)
+### T8b — TUI port — ✅ DONE (unparked 2026-08-08, closed 2026-08-11)
 
 **Transport decided: EMBED** (option 1). `build_task_runner` was extracted to
 `ppxai/engine/task_runner.py` (`eeb82076`), retiring debt (t) and giving
@@ -580,6 +580,7 @@ ppxai-sre the embeddable runner as the plan predicted.
 | Run view per TUI idiom | ✅ `6ddc1dc0` — `TableResult` already routed to the side panel; what it needed was a focus opt-out so a run list does not steal the cursor |
 | Consent affordance (T5 park) | ✅ `2e32b02a` — `RunConsentScreen` + a single watcher, one prompt per park token, Escape defers rather than denies |
 | T8a-style parity sentinels vs the web verb set | ✅ `defc13cc` — every grammar verb is handled; chain is web JS ↔ engine grammar ↔ TUI handler |
+| Third-client defect sweep (RED→GREEN) | ✅ `f3cf3d53` (one failing sentinel per defect) → `394bdf1f` (U4 merge, lifecycle wiring, discoverability) — the last T8b gaps |
 
 **Availability is gated per VERB on a capability, not per client.** Launch and
 resume need a live event loop; `ls`/`get`/`cancel`/`collect`/`respond` are

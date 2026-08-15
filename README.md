@@ -232,7 +232,8 @@ Durable, addressable background runs with per-run tool grants and a sandboxed wo
 - Lifecycle: `/task ls|get|watch|cancel`, plus `respond` (interactive consent), `collect` (a held result), and `resume` (recover an interrupted run)
 - Spec files (`--spec`) and skills (`--skill`) grant reusable tool/read-scope bundles
 - Egress allowlists and budgets bound what a run can reach and spend
-- Ships in **Web** and **VSCode**; default-off via `tools.agent.task_tier_enabled`
+- Ships in **all clients** — Web, VSCode, Textual (`ppxaide`) and Rich (`ppxai`). The Rich TUI has no live event loop, so it serves every read verb but rejects `launch`/`resume`
+- Default-off via `execution.task.enabled`
 
 See [docs/task-agent-guide.md](docs/task-agent-guide.md) and [docs/api-gateway.md](docs/api-gateway.md) for details.
 

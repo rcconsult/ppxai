@@ -10,8 +10,8 @@
 > | Surface | What it is | Where documented |
 > |---|---|---|
 > | **`/auto` session mode** (this guide) | The IN-SESSION iterative loop: your current chat session plans + executes tools turn by turn, inside the session's context and working dir. | here |
-> | **`/run` one-off runs** | One-off background runs (`POST /v1/agent/run`, `kind=oneshot`): a single prompt answered by a per-run provider/model; grant is config-decided (`execution.run.web_search` on → web_search only, off → closed-book); held result. Web + VSCode. | [api-gateway.md](api-gateway.md) §`/v1/agent/*` |
-> | **`/task` sub-agent platform** (v1.19.0) | Tool-CAPABLE, sandboxed, durable background runs (`POST /v1/agent/task`): capability grants (`--tools`), spec/skill files, egress allowlists, budgets, consent parks, held results, resume. Web + VSCode. | [agent-task-command-design.html](agent-task-command-design.html), [api-gateway.md](api-gateway.md) |
+> | **`/run` one-off runs** | One-off background runs (`POST /v1/agent/run`, `kind=oneshot`): a single prompt answered by a per-run provider/model; grant is config-decided (`execution.run.web_search` on → web_search only, off → closed-book); held result. All clients. | [api-gateway.md](api-gateway.md) §`/v1/agent/*` |
+> | **`/task` sub-agent platform** (v1.19.0) | Tool-CAPABLE, sandboxed, durable background runs (`POST /v1/agent/task`): capability grants (`--tools`), spec/skill files, egress allowlists, budgets, consent parks, held results, resume. All clients (the Rich TUI reads but cannot `launch`/`resume`). | [agent-task-command-design.html](agent-task-command-design.html), [api-gateway.md](api-gateway.md) |
 >
 > If you want a background agent that reads/edits files under a grant, you want **`/task`**, not this mode.
 

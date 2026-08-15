@@ -2,13 +2,14 @@
 
 > **CLOSED — v1.19.0 released 2026-07-12 with all 9 increments landed.**
 > The "Next:" pointer below (the `/task` command family) is also complete:
-> T1–T7 + T8a are committed and live-trial-verified, T8b is parked, T9 is
-> deferred. This doc is kept as the iteration's historical sequencing
-> record.
+> T1–T7 + T8a are committed and live-trial-verified, T8b shipped on
+> `bugfix/v1.19.1` (unparked 2026-08-08), T9 is deferred. This doc is kept
+> as the iteration's historical sequencing record.
 
 **Branch:** `feature/v1.19.0` (off `master` @ a1a8cc35, post-v1.18.8)
 **Created:** 2026-06-15
-**Status:** Active — iteration tracker. This is the source of truth for
+**Status:** CLOSED (see banner) — historical iteration tracker. It was the
+source of truth for
 *what order* v1.19.x work happens in. ROADMAP.md describes the full
 v1.19.x scope; this doc says what THIS iteration does first and what it
 explicitly defers.

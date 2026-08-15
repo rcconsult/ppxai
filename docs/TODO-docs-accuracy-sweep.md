@@ -32,9 +32,20 @@ links, phantom repo paths, legacy `tools.agent.*` key paths) was excluded from s
 
 ---
 
-## PHASE 0 — one wrong fact, nine places (do first, ~30 min)
+## PHASE 0 — ✅ DONE (2026-08-15) — one wrong fact, nine places
 
 Every "web + VSCode only" / "T8b parked" claim is false (see ground truth above).
+All nine below are fixed, plus four spots the review missed: ADR
+`0011-command-taxonomy-streamline.md:172` (annotated *Resolved*, ADR body kept
+historical), `plan-run-taxonomy-sequencing.md:192`, and three live references to
+the retired key (`tools.agent.task_tier_enabled` -> `execution.task.enabled`)
+**outside `docs/`** — `scripts/gateway-smoke.py:16,758` and
+`.claude/skills/build-install/SKILL.md:562` — which survived precisely because
+the ADR-0010 sentinel only scans `docs/`
+(Phase 7 item 2, now empirically confirmed; widen it to `scripts/` and
+`.claude/` too). `docs/release-notes-v1.19.0.md` and the `CHANGELOG` `[1.19.0]`
+section were left alone on purpose: they are historical records that were
+accurate at their release.
 
 | File:line | Claim to fix |
 |---|---|

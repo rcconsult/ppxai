@@ -1,9 +1,11 @@
 # Task Agent User Guide (`/task`)
 
-**Applies to**: v1.19.0+ · **Clients**: Web + VSCode (TUIs: not yet — the
-in-process TUIs have no channel to the run registry; their autocomplete
-deliberately does not offer `/task`)
-**Status**: Shipped (T1–T8a), live-trial-verified · API surface under the
+**Applies to**: v1.19.0+ (TUIs: v1.19.1+) · **Clients**: Web, VSCode, Textual
+(`ppxaide`) and Rich (`ppxai`). The TUIs drive the run registry **in-process**
+(`ppxai/engine/task_runner.py`), no HTTP channel involved. The Rich TUI's
+blocking prompt has no live event loop, so it answers every read verb but
+rejects `launch` and `resume` with an error pointing at `ppxaide`.
+**Status**: Shipped (T1–T8b), live-trial-verified · API surface under the
 `/v1/agent/*` in-development exemption — see
 [api-gateway.md](api-gateway.md)
 

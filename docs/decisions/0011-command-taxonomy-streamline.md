@@ -169,9 +169,10 @@ deprecation window — the old names simply stop existing:
   sentinels** (VSCode↔web), completion data, `/task help` texts, docs.
 - **Sequencing / T8b:** `/auto` (rename of `/agent`) lands everywhere at once
   — it's a commands/-layer rename shared by all clients. `/run` + the new
-  `/task` verbs reach the TUIs only with T8b (transport decision, parked);
-  until then the TUIs have `/auto` but no registry commands, which is a
-  feature gap, not a dialect mismatch.
+  `/task` verbs reach the TUIs only with T8b (transport decision, parked at
+  the time of writing); until then the TUIs have `/auto` but no registry
+  commands, which is a feature gap, not a dialect mismatch. *(Resolved: T8b
+  shipped 2026-08-08 with the in-process embed, so the gap is closed.)*
 
 ## Consequences
 

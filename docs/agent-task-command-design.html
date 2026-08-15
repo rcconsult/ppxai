@@ -149,7 +149,7 @@
 <span class="p">&gt;</span> /task collect <span class="rid">r_2ab1</span>
   <span class="g-ok">✓</span> <span class="rid">r_2ab1</span>  <span class="dim">completed_pending_ack → finalized</span>   <span class="dim">result collected</span></pre>
   </div>
-  <div class="note"><b>Status today:</b> the <code>/task</code> command family is <b>built and live</b> in web + VSCode as of v1.19.0 (T1–T8a) — direct launch plus <code>ls</code>, <code>get</code>, <code>watch</code>, <code>cancel</code>, <code>respond</code>, <code>collect</code> and <code>resume</code> all ship, backed by the full <code>waiting</code> / <code>completed_pending_ack</code> / <code>finalized</code> lifecycle. The TUI port (T8b) is parked pending a transport decision; the container tier (T9) stays deferred.</div>
+  <div class="note"><b>Status today:</b> the <code>/task</code> command family is <b>built and live</b> in web + VSCode as of v1.19.0 (T1–T8a) — direct launch plus <code>ls</code>, <code>get</code>, <code>watch</code>, <code>cancel</code>, <code>respond</code>, <code>collect</code> and <code>resume</code> all ship, backed by the full <code>waiting</code> / <code>completed_pending_ack</code> / <code>finalized</code> lifecycle. The TUI port (T8b) landed on <code>bugfix/v1.19.1</code>, so all four client families now carry the family — the TUIs drive the registry <b>in-process</b> via <code>ppxai/engine/task_runner.py</code>, with the Rich TUI limited to the read verbs. The container tier (T9) stays deferred.</div>
 
   <h2><span class="n">01</span> Sub-commands</h2>
   <p class="sub">Verb-first, git-shaped. Read verbs observe; lifecycle verbs drive a transition. <code style="font-family:var(--mono)">{id}</code> accepts a run-id prefix.</p>
@@ -254,7 +254,7 @@
         <li><b>Client:</b> <code>TaskController</code> (mirror of <code>agent-run-controller.js</code>) + <code>TaskRunView</code> — the denser pane with per-state controls</li>
         <li><b>Dispatch:</b> <code>/task</code> + sub-verbs registered in the command dispatcher; flag parser for the launch line</li>
         <li><b>VSCode (T8a):</b> <code>taskController.ts</code> with verb/endpoint/status parity sentinels + consent QuickPick</li>
-        <li><b>Parked:</b> TUI port (T8b) — pending a transport decision, since the TUIs are in-process with no server channel</li>
+        <li><b>TUI (T8b):</b> transport decided in favour of <b>embedding</b> — <code>build_task_runner</code> lives in <code>ppxai/engine/task_runner.py</code> and the TUIs drive the registry in-process, no HTTP client. Textual reaches full parity; Rich serves the read verbs only (<code>launch</code>/<code>resume</code> need a live event loop)</li>
         <li><b>Deferred:</b> container tier (T9)</li>
       </ul>
     </div>

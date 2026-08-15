@@ -13,7 +13,7 @@ gateway:
   3. POST /v1/oneshot                  → one cheap LLM round-trip, shape check
   4. POST /v1/agent/run  + poll        → tool-free run lifecycle to `completed`
   5. POST /v1/agent/task + poll + ack  → sandboxed tier to `finalized`
-                                         (SKIP when task_tier_enabled=false —
+                                         (SKIP when execution.task.enabled=false —
                                          403 from the gate is the default)
 
 Steps 3-5 cost one trivial LLM call each; --skip-llm keeps the run free
@@ -755,7 +755,7 @@ def main() -> int:
             )
             if code == 403:
                 record("POST /v1/agent/task lifecycle", SKIP,
-                       "task tier disabled (tools.agent.task_tier_enabled=false)")
+                       "task tier disabled (execution.task.enabled=false)")
             elif code != 200 or not isinstance(body, dict) or not body.get("run_id"):
                 record("POST /v1/agent/task lifecycle", FAIL, f"create → http {code}")
             else:
