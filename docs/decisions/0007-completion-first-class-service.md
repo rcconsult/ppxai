@@ -78,25 +78,33 @@ What step 1 actually fixed, and what is left:
   inversion is latent, traversed only when a caller imports completion
   explicitly, which today only the three client glue layers do.
 
-  **Runtime, not just import time (2026-08-15).** The consumer re-ran this
-  with a `sys.meta_path` observer installed *before* any ppxai import,
-  recording every `ppxai.commands*` / `ppxai.*completion*` resolution with
-  its stack, then drove real execution: its full test suite (loading all 12
-  of its own modules) and separately `EngineClient()` + `ToolManager()`
-  construction. The `ppxai.*` closure did not grow by a single module in
-  either probe — **zero commands, zero completion**. (The 64-vs-65 counts
-  in the two repos reconcile exactly: one includes the `ppxai` root
-  package, the other counts submodules only.)
+  **Measured as three composable spans (2026-08-15).** A `sys.meta_path`
+  observer was installed *before* any ppxai import, recording every
+  `ppxai.commands*` / `ppxai.*completion*` resolution with its stack, then
+  real execution was driven — not bare imports. Each span is independently
+  re-runnable:
 
-  **Still unmeasured, stated so this is not over-cited:** a completed
-  provider round-trip with tool dispatch. If a lazy `ppxai.commands` import
-  exists, it would have to sit inside request-time execution below
-  `chat()`. The claim is therefore "no coupling at import time, package
-  load, or client construction" — not "no coupling, ever". Closing the
-  remainder needs no credentials: `tests/test_tool_messages.py::
-  test_multi_tool_session_messages_native` drives a full native tool
-  round-trip against the scripted `MockProvider` in that file, which is the
-  fixture shape to reuse.
+  | Span | What was driven | `commands` / `completion` imports |
+  |---|---|---|
+  | Import time + full consumer package load | all 12 consumer modules | **0 / 0** (closure flat at 64) |
+  | Client + tool-manager construction (the provider-build path) | `EngineClient()`, `ToolManager()` | **0 / 0** (closure flat at 64) |
+  | Request-time loop + tool dispatch | `tests/test_tool_messages.py` in full — 41 tests, native branch, multi-tool batches, mid-batch error, interrupt, loop detection, session serialization | **0 / 0** (73 modules) |
+
+  The third span injects a scripted `MockProvider` directly, so it exercises
+  the *loop* rather than provider construction — which is precisely what the
+  second span covers, so the three compose. The observer recorded stack
+  frames for attribution and never fired.
+
+  **The resulting claim, stated exactly:** no `engine → commands` coupling
+  at import time, package load, client construction, or request-time
+  execution including tool dispatch. **The only unexercised code is the
+  provider's own network round-trip** — HTTP and serialization under
+  `engine/providers/`, structurally not a place the command layer can be
+  reached from. Closing that last sliver would need live credentials and is
+  not where a lazy import could plausibly live.
+
+  (Baseline reproduced on this side: `tests/test_tool_messages.py` is 41
+  tests, green in 1.27s.)
 
   Note the consumer's engine entry point is **`EngineClient`**, not
   `task_runner` — `build_task_runner`'s extraction (`eeb82076`) widened
