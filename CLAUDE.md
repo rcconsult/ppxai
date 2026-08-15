@@ -57,7 +57,7 @@ Each has a dedicated doc — read it before changing code in that area.
 
 ## Test-count expectations
 
-Tests: **5,108 collected — 5,107 passed, 1 skipped, 0 failed** on macOS/Unix with `uv sync --all-extras` (verified 2026-08-15 on `bugfix/v1.19.1` @ `eace6fff`, 322s). The count is environment-dependent: a base venv without the `[data]`/multipart extras skips the office + upload suites, and the release script's own run reports whatever its env yields — so the README badge routinely trails this number. On Windows the 7 `TestKillPreviewBackend` cases also skip (`os.getpgid`/`os.killpg` can't be `patch()`-ed).
+Tests: **5,110 collected — 5,109 passed, 1 skipped, 0 failed** on macOS/Unix with `uv sync --all-extras` (verified 2026-08-15 on `bugfix/v1.19.1` @ `ee4e625b`, 315s). The count is environment-dependent: a base venv without the `[data]`/multipart extras skips the office + upload suites, and the release script's own run reports whatever its env yields — so the README badge routinely trails this number. On Windows the 7 `TestKillPreviewBackend` cases also skip (`os.getpgid`/`os.killpg` can't be `patch()`-ed).
 
 The Playwright specs under `tests/e2e/` are **not** in that count. Most drive a static `file://` harness; `live-app.spec.ts` drives the real web UI against a real `ppxai-server` and is opt-in via `npm run test:live`.
 
