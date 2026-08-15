@@ -1,5 +1,28 @@
 # Architecture Decision Records (ADRs)
 
+## Index
+
+Status is summarised; the record itself is authoritative.
+
+| # | Decision | Status |
+|---|---|---|
+| [0001](0001-keys-command-cross-client.md) | `/keys` cross-client behavior | ✅ Accepted — implemented |
+| [0002](0002-command-context-three-pattern-split.md) | CommandContext three-pattern split | ✅ Accepted — implemented |
+| [0003](0003-agent-platform-architecture.md) | Agent platform architecture | ✅ Accepted — Stage 2 shipped v1.19.0 (T9 container tier deferred) |
+| [0004](0004-llm-gateway-features.md) | LLM gateway features | ✅ Accepted — implemented; §4 revised by ADR 0009 |
+| [0005](0005-inspection-triplet.md) | Inspection Triplet for runtime observability | ✅ Accepted — implemented |
+| [0006](0006-content-block-schema-separation.md) | Engine-internal vs wire content schema | ✅ Accepted — implemented |
+| [0007](0007-completion-first-class-service.md) | Completion as a first-class service | 🟡 Proposed — step 1 shipped v1.18.8; **step 2 open** |
+| [0008](0008-cross-tier-cost-and-resource-accounting.md) | Cross-tier cost + shared-resource accounting | 🟡 Proposed — **not implemented** (debt Item 49) |
+| [0009](0009-task-execution-profiles.md) | Task execution profiles + web_search enrichment | ✅ Accepted — all four steps implemented v1.19.1 |
+| [0010](0010-config-shape-review.md) | Config shape: three axes | ✅ Implemented v1.19.1 — **clean break**, one deviation from the planned migration |
+| [0011](0011-command-taxonomy-streamline.md) | Command taxonomy (`/auto` · `/run` · `/task`) | ✅ Accepted — implemented v1.19.1 |
+
+The two open records are **0007 step 2** and **0008**; everything else is
+implemented. Numbering is sequential — the next record is `0012`.
+
+## About these records
+
 Short, dated records of architecture decisions where the chosen
 option is non-obvious or where we deliberately deferred a "proper"
 solution. Each record names:

@@ -961,7 +961,7 @@ Or to use a specific certificate file:
 SSL_CERT_FILE=/path/to/corporate-ca-bundle.pem
 ```
 
-**v1.15.4+:** Web tools (`get_weather`, `fetch_url`, `web_search`) automatically use these settings. The `get_weather` tool also falls back to HTTP when HTTPS fails.
+**v1.15.4+:** Web tools (`get_weather`, `fetch_url`, `web_search`) automatically use these settings. `get_weather` is **HTTPS-only as of v1.19.1** (ADR 0009 §2 / debt Item 52) — the old plain-HTTP fallback put an always-denied scheme into its egress superset, which made the tool un-allowlistable under a per-run network policy. Reliability fallback is a second backend (Open-Meteo), not a scheme downgrade.
 
 You can also configure per-tool timeouts in `ppxai-config.json`:
 ```json

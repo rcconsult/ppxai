@@ -222,9 +222,14 @@ Two distinct gates, separate from the file-edit/shell contract above:
 | `spawn_subagent` tool call | YES (server context) | **Deny** (fail-closed) | `execution.task.consent.spawn_consent: deny\|auto` |
 | Mid-run interactive park (T5) | YES — run parks as `waiting{kind:"consent"}` | **Deny on TTL expiry** (fail-closed) | `execution.task.consent.consent_ttl_s` (default 300s) |
 
-- **`spawn_subagent`:** with `spawn_consent: "deny"` (default), any
-  `spawn_subagent` call in a server-context run is refused outright — no
-  callback, no park. Setting `auto` approves without a human in the loop
+- **`spawn_subagent`:** with `spawn_consent: "deny"` (default), a
+  `spawn_subagent` call needs a human decision. Over `/v1/agent/task` the
+  injected consent channel **parks the run** as `waiting{kind:"consent"}`
+  (T5 — `AGENT_WAITING`, answered via `POST .../respond`), and an
+  unanswered park **denies when the TTL expires** (fail-closed). Only with
+  no consent channel at all is the spawn refused outright, with a visible
+  event. "Deny" names the fail-closed *default outcome*, not an immediate
+  refusal. Setting `auto` approves without a human in the loop
   (delegated trust, not an unattended default).
 - **T5 run park:** a run needing a human decision emits `AGENT_WAITING`
   (`resume_token`, `ttl_s`) and halts at `status=waiting`. The human answers

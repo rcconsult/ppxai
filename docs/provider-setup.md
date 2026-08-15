@@ -102,18 +102,18 @@ MODEL_PROVIDER=gemini
       "name": "Google Gemini",
       "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
       "api_key_env": "GEMINI_API_KEY",
-      "default_model": "gemini-2.5-flash",
-      "coding_model": "gemini-2.5-flash",
+      "default_model": "gemini-3.5-flash",
+      "coding_model": "gemini-3.5-flash",
       "options": {
         "enable_grounding": true
       },
       "models": {
-        "gemini-2.5-flash": {
-          "name": "Gemini 2.5 Flash",
+        "gemini-3.5-flash": {
+          "name": "Gemini 3.5 Flash",
           "description": "Fast model with best price/performance"
         },
-        "gemini-2.5-flash-lite": {
-          "name": "Gemini 2.5 Flash Lite",
+        "gemini-3.1-flash-lite": {
+          "name": "Gemini 3.1 Flash Lite",
           "description": "Cost-efficient for high-volume tasks"
         },
         "gemini-1.5-pro": {
@@ -126,8 +126,8 @@ MODEL_PROVIDER=gemini
         }
       },
       "pricing": {
-        "gemini-2.5-flash": {"input": 0.15, "output": 0.60},
-        "gemini-2.5-flash-lite": {"input": 0.075, "output": 0.30},
+        "gemini-3.5-flash": {"input": 0.5, "output": 3},
+        "gemini-3.1-flash-lite": {"input": 0.1, "output": 0.4},
         "gemini-1.5-pro": {"input": 1.25, "output": 5.00},
         "gemini-1.5-flash": {"input": 0.075, "output": 0.30}
       },
@@ -446,10 +446,10 @@ MODEL_PROVIDER=perplexity
       "name": "Google Gemini",
       "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
       "api_key_env": "GEMINI_API_KEY",
-      "default_model": "gemini-2.5-flash",
-      "coding_model": "gemini-2.5-flash",
+      "default_model": "gemini-3.5-flash",
+      "coding_model": "gemini-3.5-flash",
       "models": {
-        "gemini-2.5-flash": {"name": "Gemini 2.5 Flash", "description": "Fast multimodal"},
+        "gemini-3.5-flash": {"name": "Gemini 3.5 Flash", "description": "Fast multimodal"},
         "gemini-1.5-pro": {"name": "Gemini 1.5 Pro", "description": "2M context"}
       },
       "capabilities": {"web_search": true, "realtime_info": true}

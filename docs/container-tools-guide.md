@@ -147,8 +147,12 @@ is detected) and are **not** configurable via `ppxai-config.json` today:
   (`ppxai/engine/tools/builtin/container.py`) checks for `docker` in PATH
   first, then falls back to `podman`. There is no way to force one or the
   other.
-- **Timeouts are fixed per-tool** in code (e.g. 30s for list/inspect
-  operations, 60s for logs) and cannot be overridden from config.
+- **Timeouts are fixed per-tool** in code and cannot be overridden from
+  config. **30s** is the base for read operations — list, inspect and
+  **logs** — and also for the two exec tools, which override back down.
+  **60s** applies to the remaining consent-gated operations (start/stop,
+  `kube apply`). The split is `CLITool` vs `ConsentCLITool` in
+  `ppxai/engine/tools/builtin/container.py`, not read-vs-logs.
 - **Consent is always required** for destructive operations (start, stop,
   restart, exec, `kubectl apply`, `pod_exec`) — it cannot be disabled.
 
@@ -606,8 +610,9 @@ kubectl cluster-info
 
 ### Timeout Errors
 
-**Cause:** Command taking longer than the fixed per-tool timeout (e.g. 30s
-for list/inspect, 60s for logs — see [Configuration](#configuration)).
+**Cause:** Command taking longer than the fixed per-tool timeout (30s for
+reads incl. logs and for exec, 60s for the other consent-gated operations —
+see [Configuration](#configuration)).
 
 **Solution:** Timeouts are not currently configurable. Reduce the scope of
 the command (e.g. `tail` fewer log lines) or run it directly via the shell

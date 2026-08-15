@@ -462,7 +462,17 @@ The Harmony parsing issue has been fixed in vLLM (PR #30205). Check your vLLM ve
 
 ### Recommended Configuration
 
-**With fixed vLLM (PR #30205+):** Use native tool calling for best performance:
+> ⚠️ **ppxai overrides this today, whatever your vLLM version.** The
+> `openai/gpt-oss*` model profile pins `mode="prompt_based"`
+> (`ppxai/engine/model_profiles.py`), and profile mode takes precedence
+> over provider capabilities in `ppxai/engine/chat.py` — setting
+> `native_tool_calling: true` for a gpt-oss model is accepted by config and
+> then ignored at dispatch. Upstream issue #23567 is still open. Treat the
+> block below as what to use *once that pin is lifted*, not as a working
+> configuration; the prompt-based block underneath is what actually runs.
+
+**With fixed vLLM (PR #30205+), once the profile pin is lifted:** native
+tool calling gives the best performance:
 
 ```json
 {

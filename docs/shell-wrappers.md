@@ -101,7 +101,7 @@ Every entry needs:
 | `name` | yes | str | Identifier; conflict with default entries resolves "user wins" — your fields override the default's. |
 | `type` | yes | `"probe"` \| `"always"` | Decision strategy. |
 | `binary` | yes | str | Name to look up via `shutil.which`. |
-| `enabled` | no | `"auto"` \| `"always"` \| `"never"` (default `"auto"`) | `auto` = wrap iff binary is on PATH; `always` = error if missing; `never` = disabled. |
+| `enabled` | no | `"auto"` \| `"always"` \| `"never"` (default `"auto"`) | `auto` = wrap iff binary is on PATH; `always` = wrap unconditionally, **without checking PATH**; `never` = disabled. |
 | `transparent_for_safety` | no | bool (default `true`) | Consent classifier strips this wrapper's prefix before classification, so safety verdicts are invariant under wrapping. |
 | `prompt_block_path` | no | str | Path to a markdown file injected into the system prompt. Resolution order: absolute → `~/.ppxai/wrappers/<path>` → ppxai package data. |
 | `failure_markers` | no | list[str] | Stderr substrings that signal wrapper-side failure (used by graceful-fallback retry, when enabled). |
@@ -127,7 +127,7 @@ Always-only:
 - **First-match-wins.** The first wrapper whose `maybe_rewrite()` returns a non-None form wraps the command; subsequent wrappers don't see the wrapped form. (No pipelining today; if pipelined wrapping is ever wanted, a `chain: bool` field can be added.)
 - A wrapper with `enabled: never` is skipped entirely — neither engine-side rewrite nor prompt-hint injection.
 - `enabled: auto` skips the wrapper when its binary isn't on PATH (silent no-op).
-- `enabled: always` raises a clear error if the binary is missing — useful for cluster deployments that mandate a wrapper.
+- `enabled: always` wraps **unconditionally, without consulting PATH** — `is_active()` returns `True` and never calls `shutil.which` (`engine/tools/wrappers/base.py`, pinned by `test_is_active_always_ignores_binary`). Use it for a cluster deployment that mandates a wrapper and guarantees the binary. ⚠️ It does **not** raise if the binary is missing: the command is rewritten to a name the shell can't resolve and fails at execution time with that shell's error, not a wrapper-framework one. Use `auto` if you want a missing binary to degrade to the raw command.
 
 ## Safety classification interaction
 

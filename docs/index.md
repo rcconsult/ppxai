@@ -76,7 +76,7 @@ ppxai-desktop      # Desktop web app
 | Checkpoint/undo | ✅ | ✅ | ✅ | ✅ |
 | Markdown in chat | Limited | ✅ Full rendering | ✅ | ✅ |
 | Themes | 4 themes | 17+ themes | N/A | N/A |
-| Tab completion | ✅ | ✅ | N/A | N/A |
+| Tab completion | ✅ | ✅ | ✅ | ✅ |
 
 ### Agent Mode
 

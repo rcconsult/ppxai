@@ -67,9 +67,17 @@ async def switch_provider(new_provider: str, new_model: str):
 
 ## Implementation Status
 
-- StatusBar badge management (`ppxai/tui/widgets/status_bar.py`)
-- Provider/model switching (badge updates in `_restore_session`, `handle_load`)
-- Session state management (`EngineClient.restore_session()` — atomic restore)
-- Context injection — planned
+- StatusBar badge management (`ppxai/tui/widgets/status_bar.py`) — the
+  `BadgeTransaction` API is **built and tested**.
+- Session state management (`EngineClient.restore_session()` — atomic restore).
+- Context injection — planned.
 
-**Rule:** Any operation that modifies multiple related pieces of state MUST use this pattern.
+⚠️ **The badge transaction has no production caller yet.** All three
+`status_bar.transaction()` call sites live in the `/badge txn` demo handler
+(`ppxai/tui/app.py`), not in provider/model switching or session restore —
+session restore is sequential best-effort (`ppxai/engine/session_ops.py`),
+and the examples above show the pattern as it is *intended* to be applied
+rather than as it is wired today. Adopting it in those paths is open work.
+
+**Rule:** Any operation that modifies multiple related pieces of state SHOULD
+use this pattern where a transaction API exists for that state.

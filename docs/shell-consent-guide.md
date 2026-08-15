@@ -258,6 +258,13 @@ You can customize patterns to match your security requirements:
 
 #### Example: Sandbox to project directory only
 
+> ⚠️ **`tools.shell.sandboxed_paths` is not enforced.** Like
+> `require_consent` above, it is parsed by `get_shell_config()`
+> (`ppxai/config/tools.py`) and never read by any consumer — setting it
+> confines nothing. The example below documents the intended shape only.
+> To actually confine filesystem access today, use the per-run seal on the
+> `/task` tier (`execution.task.sandbox`), which *is* enforced.
+
 ```json
 {
   "tools": {

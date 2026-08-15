@@ -528,7 +528,7 @@ trail — concurrent requests cannot cross-attribute cost.
   | `execution.run.web_search` | `execution.run.grounding` | Behavior |
   |---|---|---|
   | off | off | **Closed-book** (default): training-data answer only. |
-  | off | on | **Native**: the provider's own search (Gemini grounding, Perplexity Sonar) retrieves *inside the provider's API call*. No new egress, no tool exposed, no run record. Non-search providers degrade gracefully to closed-book. |
+  | off | on | **Native**: the provider's own search (Gemini grounding, Perplexity Sonar) retrieves *inside the provider's API call*. No new egress and no tool exposed. It still executes as a `kind=oneshot` registry run like every other oneshot (see the run-record section above) — native retrieval changes what the provider does, not whether the call is recorded. Non-search providers degrade gracefully to closed-book. |
   | on | off | **Search-loop**: the model gets exactly one tool, `web_search`, and the request executes as an auditable `kind=oneshot` run (the `grounding` response field appears). Exists so **local models get context enrichment** they otherwise never have. Non-tool-capable models degrade to closed-book; a failed search degrades to answering with what the model has. |
   | on | on | **Best available per provider**: native wins when the provider has it (never both — retrieval is never done or billed twice); the search loop is the fallback for providers without native search. |
 
