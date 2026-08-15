@@ -191,6 +191,13 @@ anyone building on the platform. That does not by itself decide the
 options below, but it means the consumer of this decision is now external,
 not only the interactive user.
 
+The consumer has confirmed (2026-08-15) that the collapsed tier shape is
+also the one it would consume most cleanly: a **single tap at the
+run-registry boundary** covers both background tiers, which is the shape
+its own `AuditLogger` already expects. That is evidence for the
+registry-boundary option below, not a decision — the options still need
+owner sign-off.
+
 - ppxai-sre runs interactive + background task on **one** provider budget and
   needs a true total (the concrete driver — likely forces Option A soon).
 - A user reports `/cost` "wrong" while background runs are active.

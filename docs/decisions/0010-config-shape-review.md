@@ -167,8 +167,16 @@ actually asks:
   config-consuming, not config-shaped, so renaming keys alters no request or
   response. (Wire changes decided elsewhere are unaffected by this statement:
   ADR 0009 §4 adds the optional `grounding` response field on its own
-  authority.) ppxai-sre's k8s config templates need the rename in the same
-  window — coordinate per the consumer-alignment practice of ADR 0009.
+  authority.) ppxai-sre's k8s config templates were flagged here as needing the
+  rename in the same window. **Verified not applicable (2026-08-15):** a
+  grep of that repo for all six moved keys plus `visualization.` returns
+  zero hits, and its only manifests
+  (`agents/outlook-monitor/k8s/{deployment,cronjob,service}.yaml`) carry no
+  ppxai config keys at all. The consumer reaches ppxai through the Python
+  API and `/v1/*`, not through a ppxai ConfigMap, so the silent-ignore
+  hazard never reached it. Kept as a dated correction rather than deleted:
+  the *practice* of checking consumers is right, the specific action item
+  was a false alarm.
 
 ## Consequences
 
@@ -215,8 +223,11 @@ this section records what shipped.
   `get_agent_config()` verbatim). Not a `/v1/*` surface, so the gateway
   stability contract is untouched; the only consumer is the bundled VSCode
   extension, versioned together with the server.
-- ppxai-sre's k8s config templates need the rename in the same window — no
-  grace period now exists.
+- ~~ppxai-sre's k8s config templates need the rename in the same window~~
+  — **verified not applicable 2026-08-15** (zero occurrences of any moved
+  key in that repo; its manifests carry no ppxai config). Any *other*
+  deployment that pins these keys in a ConfigMap still has no grace
+  period.
 
 **Also cleaned up under "no dead code, no misaligned bits":**
 

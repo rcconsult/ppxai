@@ -66,12 +66,22 @@ What step 1 actually fixed, and what is left:
   import CommandFactory` at `ppxai/engine/completion.py:48`. It is the
   **only** `engine → commands` import in the entire engine package — the
   extraction stays a one-edge job.
-- 🔎 **It does not currently block SDK embedding.** Measured: importing
-  `ppxai.engine.task_runner` and `ppxai.engine.client` — the path a
-  headless embedder such as ppxai-sre uses — pulls in **zero**
-  `ppxai.commands` modules and never imports `engine.completion`. The
+- 🔎 **It does not block SDK embedding — measured on the real consumer
+  surface.** ppxai-sre's actual integration surface is these eight symbols:
+  `engine.client.EngineClient`, `engine.types.{Event, EventType}`,
+  `engine.tools.base.FunctionTool`, `engine.tools.manager.ToolManager`,
+  `engine.bootstrap.BootstrapContext`, `config.loader.PPXAI_HOME`,
+  `config.providers.get_provider_config`, `engine.model_profiles.get_profile`.
+  Importing all eight loads 64 `ppxai.*` modules and **zero**
+  `ppxai.commands` modules; nothing matching `completion` is imported.
+  Reproduced independently in both repos' environments (2026-08-15). The
   inversion is latent, traversed only when a caller imports completion
   explicitly, which today only the three client glue layers do.
+
+  Note the consumer's engine entry point is **`EngineClient`**, not
+  `task_runner` — `build_task_runner`'s extraction (`eeb82076`) widened
+  what an embedder *could* drive in-process, but ppxai-sre has not adopted
+  it and reaches the engine through a single `engine.chat()` call today.
 - 📈 **Surface has grown since the ADR was written.** `/task` and `/run`
   are now factory-registered, so the roster completion depends on is
   broader; completion also gained client-specific gating (the `clients`

@@ -96,8 +96,12 @@ versioned with the server. **`/v1/oneshot` and `/v1/agent/*` are unchanged**:
 they consume config, they are not shaped by it, so no request or response
 field moves.
 
-**Deployment note:** k8s/ConfigMap templates (including ppxai-sre's) need the
-rename in the same window — there is no grace period.
+**Deployment note:** if you pin any of the six moved keys in a k8s
+ConfigMap or a checked-in `ppxai-config.json`, rename them in the same
+window — there is **no grace period** and a stale key is silently ignored.
+Run `/doctor`, which prints the old→new mapping for anything still stale.
+(An earlier draft named ppxai-sre specifically; that was checked and it
+carries no ppxai config keys, so it is unaffected.)
 
 Also removed as dead config in this pass: the root-level **`visualization.*`**
 block (documented as configuring `/show`, but nothing ever read it).
