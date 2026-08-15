@@ -3,6 +3,11 @@
 > Working draft per the F/U sequencing plan: each U-stage lands its breaking
 > changes here as it commits. Finalized (and renamed to
 > `release-notes-v1.19.1.md`) by the `/release` flow.
+>
+> **Maintainer note:** this file is what ships. Backfilled through
+> `b7c6b527` (2026-08-15); if commits land after that, extend it before
+> running `/release` — `CHANGELOG.md` `[1.19.1]` is the authoritative
+> source to backfill from.
 
 ## ⚠ Breaking changes (ADR 0011 — command taxonomy, hard rename, NO aliases)
 
@@ -265,8 +270,148 @@ web_search-only `task_default_allow` (dual-read). `get_weather` is now
 https-only (the plain-http wttr.in fallback that made it un-allowlistable
 is removed — debt Item 52 retired).
 
+## New: `/task` and `/run` in the TUIs (T8b — the port is done)
+
+`/task` and `/run` previously existed only in the web and VSCode clients.
+They now ship in **all four client families**. The transport question
+parked since 2026-07-07 resolved in favour of **embed**: `build_task_runner`
+moved to `ppxai/engine/task_runner.py`, `ppxai/engine/task_backend.py`
+drives the same registry and the same sandbox in-process, and the TUIs
+became peers of the HTTP clients rather than a second implementation of
+them. No TUI grew an HTTP client, and no server is required.
+
+**Availability is gated per verb on a capability, not per client on a
+name.** `launch` and `resume` schedule an `asyncio.Task` and need a live
+event loop; `ls` / `get` / `watch` / `cancel` / `collect` / `respond` are
+synchronous registry operations that do not.
+
+| Client | `/task` + `/run` |
+|---|---|
+| Web, VSCode | full set |
+| **Textual** (`ppxaide`) | full set |
+| **Rich** (`ppxai`) | every verb **except `launch` and `resume`**, which return an error naming the reason and pointing at `ppxaide` |
+
+Rich's gap is its blocking prompt, not a `/task` decision — it starts
+working the moment that main-loop question is settled, with no change to
+this command family. Textual also gained a parked-run consent screen (one
+prompt per park token; Escape defers rather than denies) and a focus
+opt-out, so `/task ls` no longer steals the cursor.
+
+## New: `network.ssl.*` — TLS settings in config, not just env
+
+TLS verification could previously be configured only through the
+`SSL_VERIFY` / `SSL_CERT_FILE` environment variables. It is now also
+settable in `ppxai-config.json`:
+
+```json
+{ "network": { "ssl": { "verify": true, "cert_file": "/path/to/ca.pem" } } }
+```
+
+Precedence: `SSL_VERIFY` → `SSL_CERT_FILE` → `network.ssl.verify` →
+`network.ssl.cert_file` → system trust store. **Environment wins**, so
+existing `.env` setups are unchanged.
+
+**A custom CA now ADDS to the system trust store rather than replacing
+it.** This is the behavior most corporate-proxy users expect and the one
+that survives a laptop moving between networks: your internal hosts and
+the public internet both verify. Previously — and still, if you set
+`SSL_CERT_FILE` in the environment on an older build — OpenSSL narrowed
+the context to the bundle alone (measured: 1 trusted root vs 124).
+
+Three drifted outbound clients were unified onto one resolver
+(`ppxai/config/tls.py`) along the way: `web_premium.py` honoured
+`SSL_VERIFY` but ignored `SSL_CERT_FILE` entirely, so a custom-CA install
+silently verified against the system store on the premium search paths;
+and only `web.py` checked that the bundle path *exists*, so elsewhere a
+stale path became an opaque connection error instead of a fallback. A test
+now fails if any module reads those env vars directly again.
+
+**Disabled verification is no longer silent** — startup logs a warning and
+`/doctor` reports it, including on an otherwise-clean config where nothing
+else would print.
+
+## Security: one admission boundary for every tier
+
+Two paths into the run registry had drifted apart, and T8b's in-process
+route reached the runner without the HTTP route's admission checks.
+Concretely, before this release: `ppxaide` could start a tool-capable run
+while **`execution.task.enabled` was false**; a grant containing
+**`execute_shell_command`** evaded the server's explicit rejection; and
+**`--skill` values were passed straight through as filesystem read roots**,
+so `--skill /etc` mounted that directory into the run's read scope. The
+suite was green throughout — no test drove one request through both paths.
+
+Admission now lives in one engine-level boundary,
+`ppxai/engine/task_authorizer.py::authorize_task()`, which every client
+passes through; the HTTP route is a thin adapter over it. The differences
+between the tool-capable and one-off tiers are expressed as **data**
+(`TierPolicy` rows) rather than as a second code path, and `AuthorizedTask`
+has exactly one construction site in the production tree — a hand-built
+literal is how the bypass existed in the first place.
+
+Three defects fell out of that merge, none of them in the original review:
+`tools.web_search.enabled=false` did not cover `/run`; the in-process
+`/run` borrowed the chat pane's provider/model instead of resolving it per
+run; and the oneshot iteration count lived in the route layer although it
+is part of the grant that config decides.
+
+**Operator-visible:** none of this changes a request or response shape.
+`/v1/oneshot` stays byte-identical.
+
 ## Fixed
 
+- **Structured output silently disabled Gemini grounding.** A caller
+  combining `response_format` with `execution.run.grounding` kept its JSON
+  and quietly lost its search. Verified against the live API on
+  `gemini-3.1-pro-preview`: `google_search` coexists with both
+  `response_mime_type` and `response_schema` — only *function
+  declarations* conflict with grounding. Affected web, VSCode and
+  `/v1/oneshot` consumers alike, since it sat in the provider.
+- **`response_format` was silently dropped on Gemini** — the fix the item
+  above corrects a regression in. `/v1/oneshot` now *delivers*
+  `response_format` to the provider; note it delivers rather than
+  enforces, which the gateway doc now states explicitly.
+- **`/task` with no grant guided instead of firing a doomed HTTP 422**
+  (Item 57). A bare `/task "<desc>"` is correctly rejected — a tool-capable
+  run must carry an explicit grant — but clients echoed a raw
+  *"❌ Task rejected: HTTP 422"*, which read as an outage. Both clients now
+  short-circuit client-side with actionable guidance, and the server's 422
+  names the flags a user actually types.
+- **`/task web_search` no longer loses live data under a narrowed task
+  egress** (Item 59). With a soft `preferred: perplexity` and an allowlist
+  permitting only `api.perplexity.ai`, the resolver still enumerated the
+  DuckDuckGo fallback, the all-of egress rule denied the whole call over
+  the unreachable host, and the model fabricated an answer with a
+  disclaimer. Selection and egress can no longer diverge.
+- **rtk (and any shell wrapper) no longer goes permanently silent** when
+  its binary isn't on PATH at first check (Item 56). A negative
+  `shutil.which` result was memoized for the process lifetime, so a
+  startup-ordering window left the wrapper inactive with no rewrite and no
+  log line — observed in a long-running coder pod. Only positive hits are
+  cached now.
+- **A user-configurable default `/task` grant** (`execution.task.default_grant`,
+  Item 58) so a bare `/task "<desc>"` works in an environment that declares
+  the tools it normally wants. It is a new precedence *layer*, not a new
+  power: it sits below any explicit request/spec/skill/profile and above
+  the empty built-in default, and still passes every unchanged clamp.
+  `execution.task.allow_user_default` (default true) disables it for a
+  locked-down deployment.
+- **The browser terminal had no interactive shell** — no history, no line
+  editing, no completion. `get_shell_config()` dropped `shell_bin` and
+  `login_shell`, so an operator setting `tools.shell.shell_bin` was
+  ignored; and the fallback landed on `/bin/sh`, which is dash on
+  Debian/Ubuntu. Config now steers it, the unset case prefers bash, and the
+  PTY child launches interactive and login with a seeded writable
+  `HISTFILE`.
+- **Office preview 500'd when LibreOffice was present but could not
+  render** — the Ubuntu snap is confined to `$HOME` and fails on `/tmp`
+  sources *with exit code 0*. That now degrades to extracted text like the
+  LibreOffice-missing path, honouring the route's documented "never 500 for
+  a preview we can't rasterize" contract.
+- **A transient lifecycle-wiring failure was permanent.** One flag was set
+  before two operations were attempted inside a single `try`, so a single
+  failure meant orphaned runs stayed `running` forever and the active-run
+  badge could never light — silently, since it logs at debug level.
 - `/clear` left the status-bar `Ctx:` badge stale (Item 48) — fixed in
   **all four clients**. `context_percentage` is refreshed by the engine's
   messages-changed fan-out, so `/clear`, `/compact`, session load and
