@@ -1129,6 +1129,6 @@ print(result)
 
 ---
 
-**Version:** v1.13.0
+**Version:** v1.13.0+
 **Last Updated:** 2026-01-03
 **License:** MIT

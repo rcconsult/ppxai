@@ -527,7 +527,7 @@ ppxai is a terminal-based UI application for interacting with multiple AI provid
 - `ppxai/engine/model_profiles.py` - Per-model behavioral profiles (tool calling, API routing)
 - `ppxai/engine/tools/` - Tool system with builtins + brace-counting JSON parser
   - `network_policy.py` - AC-2 egress allowlist (fail-closed, https-only, SSRF guard)
-  - `filesystem_policy.py` - filesystem seal (per-run read/write jail; `tools.agent.sandbox`)
+  - `filesystem_policy.py` - filesystem seal (per-run read/write jail; `execution.task.sandbox`)
   - `agent_scoped_tools.py` - AC-1 per-run tool allowlist (`ScopedToolManager` chokepoint)
 - `ppxai/engine/agent_runs.py` - agent-platform run registry (`AgentRunRegistry`: lifecycle, events.jsonl, budgets, consent/ack/resume)
 - `ppxai/engine/agent_spec.py` / `agent_skill.py` - `--spec` / `--skill` loaders for the `/task` tier

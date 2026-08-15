@@ -1,6 +1,6 @@
 # Container & Kubernetes Tools User Guide
 
-**Version:** v1.13.10
+**Version:** v1.13.10+
 **Last Updated:** 2026-01-14
 
 This guide covers ppxai's built-in tools for managing Docker, Podman, and Kubernetes resources through natural language commands.

@@ -1,6 +1,6 @@
 # Ollama Local Model Limitations
 
-**Document Version:** v1.14.0
+**Document Version:** v1.14.0+
 **Last Updated:** January 19, 2026
 
 ## Overview

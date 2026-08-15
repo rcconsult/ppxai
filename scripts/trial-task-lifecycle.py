@@ -18,7 +18,7 @@ run/task lifecycle) by driving the harder state machine:
                         resuming a finalized run → 409 (refusal matrix).
 
 Prerequisites (this host's ~/.ppxai/ppxai-config.json already satisfies them):
-  tools.agent.task_tier_enabled: true, a working default_subagent, and
+  execution.task.enabled: true, a working default_subagent, and
   spawn_consent left at "deny" (the park mode). On an auth-enabled host
   (server.secrets file store) the script bootstrap-mints its own bearer, same
   as gateway-smoke.

@@ -17,6 +17,21 @@ wrong on this project:
    docs referenced ``ppxai/main.py``, ``ppxai/config.py``, ``ppxai/web/server.py``,
    ``scripts/install.sh`` and ``kubernetes/`` -- none of which exist.
 
+4. **A shipped feature described as unshipped.** T8b put ``/task`` and ``/run``
+   in every client on 2026-08-08; nine active docs still said "web + VSCode
+   only" or "T8b is parked" a week later, each phrased differently.
+
+5. **Numbers and stamps that quietly rot.** CLAUDE.md's test count, model ids
+   named in the README that were never in ``ppxai-config.json``, and
+   ``**Version:**`` footers up to eight minor releases behind on guides
+   linked as current.
+
+The 2026-08-15 accuracy sweep found the ADR-0010 key check was scanning only
+``docs/``, so three live references to a retired config key survived in
+``README.md``, ``scripts/`` and ``.claude/``. That check now runs over a
+wider corpus (see ``_adr0010_corpus``) with its own exemption list, because
+a skill file and a README instruct an operator exactly as a guide does.
+
 Historical records are exempt by design: CHANGELOG entries, release notes,
 ADRs and archived plans *should* name commands as they were at the time.
 The exemption list is deliberately narrow -- if you find yourself adding to
@@ -43,9 +58,27 @@ HISTORICAL = (
     "docs/plan-",               # build-order records
     "docs/agent-platform-call-graphs.md",
     "docs/debt-inventory.md",
-    "docs/TODO-routing.md",
+    "docs/TODO-",               # sweep/routing trackers quote the bad strings
     "docs/research/",
     ".claude/",                 # prompt templates, not user docs
+)
+
+# The ADR-0010 key check uses its own exemption list, NOT ``HISTORICAL``:
+# `.claude/` skill files DO instruct an operator (a stale key hid in one),
+# so they stay in scope, while plans, handoffs and lessons must be able to
+# name the old path because they are *about* the migration.
+ADR0010_EXEMPT = (
+    "CHANGELOG.md",
+    "docs/release-notes-",
+    "docs/archive/",
+    "docs/decisions/",
+    "docs/lessons/",
+    "docs/plan-",
+    "docs/handoff-",
+    "docs/debt-inventory.md",
+    "docs/TODO-",
+    "docs/research/",
+    "docs/agent-platform-call-graphs.md",
 )
 
 # Sections of ROADMAP.md under "## Completed (vN.NN.x)" correctly use the
@@ -71,6 +104,35 @@ def _active_docs(suffixes=(".md", ".html")):
                                       "dist/", "build/", ".git/")):
             continue
         out.append((rel, path, path.read_text(encoding="utf-8", errors="ignore")))
+    return tuple(out)
+
+
+@lru_cache(maxsize=None)
+def _adr0010_corpus():
+    """Files that may instruct an operator to set a config key.
+
+    Deliberately WIDER than ``docs/``. The ADR-0010 key check used to scan
+    only ``docs/``, so three live references to the retired tier key
+    survived the migration in ``README.md``, ``scripts/gateway-smoke.py``
+    and ``.claude/skills/build-install/SKILL.md`` -- found by hand in the
+    2026-08-15 accuracy sweep, which is exactly the drift this test exists
+    to make impossible. An operator reads a README and a skill file the
+    same way they read a guide.
+    """
+    out = []
+    for path in PROJECT_ROOT.rglob("*"):
+        if not path.is_file() or path.suffix not in (".md", ".html", ".py"):
+            continue
+        rel = path.relative_to(PROJECT_ROOT).as_posix()
+        if any(seg in rel for seg in ("node_modules", ".venv", "graphify-out",
+                                      "dist/", "build/", ".git/", "tests/")):
+            continue
+        if any(seg in rel for seg in ADR0010_EXEMPT):
+            continue
+        top = rel.split("/")[0]
+        if top not in ("docs", "scripts", ".claude") and "/" in rel:
+            continue  # nested source trees; config keys are not taught there
+        out.append((rel, path))
     return tuple(out)
 
 
@@ -226,6 +288,7 @@ KNOWN_INERT_KEYS = {
 # that is simply ignored. These sentinels make that silence loud.
 ADR_0010_MOVED_KEYS = {
     "task_tier_enabled": "execution.task.enabled",
+    "sandbox": "execution.task.sandbox",
     "spawn_consent": "execution.task.consent.spawn_consent",
     "consent_ttl_s": "execution.task.consent.consent_ttl_s",
     "result_retention_s": "execution.task.budgets.result_retention_s",
@@ -262,21 +325,11 @@ class TestAdr0010MigrationStaysComplete:
     def test_active_docs_do_not_use_legacy_path(self, old, new):
         """No active doc may still tell operators to set `tools.agent.<old>`."""
         stale = []
-        for path in (PROJECT_ROOT / "docs").rglob("*"):
-            if path.suffix not in (".md", ".html") or not path.is_file():
-                continue
-            rel = path.relative_to(PROJECT_ROOT).as_posix()
-            # Frozen or necessarily-both-sided documents:
-            #  - archives and per-version release notes record what a PAST
-            #    version shipped; rewriting them would falsify history.
-            #  - the ADR itself, and any doc annotating "was X, now Y", must
-            #    be able to name the old path to describe the migration.
-            if (
-                rel.startswith("docs/archive/")
-                or rel.startswith("docs/release-notes-")
-                or "0010-config-shape-review" in rel
-            ):
-                continue
+        for rel, path in _adr0010_corpus():
+            # Frozen and both-sided files are already excluded by the corpus
+            # helper (archives, per-version release notes, the ADR itself,
+            # CHANGELOG) -- they must be able to name the old path to
+            # describe the migration.
             text = path.read_text(encoding="utf-8", errors="ignore")
             # A mention that DOCUMENTS the move is fine; only a mention that
             # still instructs an operator to use the old path is stale. Both
@@ -302,6 +355,169 @@ class TestAdr0010MigrationStaysComplete:
         assert not stale, (
             f"{stale} still document `tools.agent.{old}`, which nothing reads "
             f"since v1.19.1. Use `{new}` (ADR 0010 — clean break, no dual-read)."
+        )
+
+
+# ---------------------------------------------------------------------------
+# 5. T8b shipped: no doc may re-park it or re-split the client surface
+# ---------------------------------------------------------------------------
+
+SURFACE_SPLIT = re.compile(r"web\s*\+\s*VSCode\s+only", re.I)
+T8B_PARKED = re.compile(r"T8b[^\n]{0,80}\bparked\b|\bparked\b[^\n]{0,80}T8b", re.I)
+
+
+class TestT8bIsNotReParked:
+    """`/task` + `/run` ship in all four clients since 2026-08-08.
+
+    Nine active docs asserted the opposite for a week after the port
+    landed, because the claim was phrased differently in each of them.
+    The real constraint is per-VERB (`launch`/`resume` need a live event
+    loop, so the Rich TUI declines those two) and never per-client.
+    """
+
+    def test_no_doc_claims_web_vscode_only(self):
+        hits = [rel for rel, _p, text in _active_docs()
+                if not any(seg in rel for seg in COMMAND_CHECK_SKIP)
+                and SURFACE_SPLIT.search(text)]
+        assert not hits, (
+            f"{hits} still claim /run + /task are 'web + VSCode only'. T8b "
+            f"shipped: they register in ppxai/commands/factory.py for every "
+            f"client. Only `launch`/`resume` are gated, on a live event loop."
+        )
+
+    def test_no_doc_says_t8b_is_parked(self):
+        hits = [rel for rel, _p, text in _active_docs()
+                if not any(seg in rel for seg in COMMAND_CHECK_SKIP)
+                and T8B_PARKED.search(text)]
+        assert not hits, (
+            f"{hits} still describe T8b as parked. It was unparked "
+            f"2026-08-08 and shipped via the in-process embed "
+            f"(ppxai/engine/task_runner.py)."
+        )
+
+
+# ---------------------------------------------------------------------------
+# 6. CLAUDE.md's stated test count must track the suite
+# ---------------------------------------------------------------------------
+
+class TestStatedTestCountTracksSuite:
+    """CLAUDE.md's test count went 301 stale before anyone noticed.
+
+    Collection can't be run from inside the suite, so this compares against
+    the number of test *functions*, which is a hard lower bound (parametrize
+    only ever multiplies). It catches the count going structurally stale --
+    a claim below the function count is impossible, and one far above it
+    means whole suites were deleted. It deliberately does NOT catch small
+    drift; the README badge is exempt entirely, since it trails by design
+    and `/release` owns it.
+    """
+
+    def test_claude_md_count_is_plausible(self):
+        text = (PROJECT_ROOT / "CLAUDE.md").read_text(encoding="utf-8")
+        m = re.search(r"Tests:\s*\*\*([\d,]+)\s+collected\*\*", text)
+        assert m, (
+            "CLAUDE.md lost its 'Tests: **N collected**' line. Keep it "
+            "greppable -- this sentinel and every future reader depend on it."
+        )
+        stated = int(m.group(1).replace(",", ""))
+
+        n_funcs = 0
+        for path in (PROJECT_ROOT / "tests").rglob("*.py"):
+            n_funcs += len(re.findall(
+                r"^\s*(?:async\s+)?def\s+test_", path.read_text(
+                    encoding="utf-8", errors="ignore"), re.M))
+
+        assert stated >= n_funcs, (
+            f"CLAUDE.md claims {stated:,} tests collected but the suite "
+            f"defines {n_funcs:,} test functions, and collection can never "
+            f"be below the function count. Re-run "
+            f"`uv run pytest tests/ --collect-only -q` and update it."
+        )
+        assert stated <= n_funcs * 2, (
+            f"CLAUDE.md claims {stated:,} tests against only {n_funcs:,} "
+            f"test functions. Either whole suites were deleted or the "
+            f"number is fiction; re-collect and update it."
+        )
+
+
+# ---------------------------------------------------------------------------
+# 7. Model ids named in the README must exist in the shipped catalog
+# ---------------------------------------------------------------------------
+
+MODEL_ID = re.compile(r"\b(gpt-[0-9][\w.-]*|gemini-[0-9][\w.-]*|gemma-[0-9][\w.-]*)")
+
+
+class TestReadmeModelsExistInConfig:
+    """The README named four models that were never in `ppxai-config.json`.
+
+    It advertised `gemini-2.5-pro` and `gpt-5.1-codex` (neither shipped) and
+    told users to type `/model gemini-2.5-pro`, a model past its shutdown
+    date. The README is an overview, not a migration note, so every model
+    id it names must be one a user can actually select.
+    """
+
+    def test_every_readme_model_is_configured(self):
+        import json
+
+        cfg = json.loads((PROJECT_ROOT / "ppxai-config.json").read_text(
+            encoding="utf-8"))
+        known = set()
+        for prov in (cfg.get("providers") or {}).values():
+            for m in prov.get("models", []) or []:
+                known.add(m if isinstance(m, str) else m.get("id", ""))
+            if prov.get("default_model"):
+                known.add(prov["default_model"])
+
+        text = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
+        named = {m.group(1).rstrip(".,);:") for m in MODEL_ID.finditer(text)}
+        # Family names in prose ("GPT-5.4-mini/nano/pro") are not ids; only
+        # flag lowercase, fully-qualified ids, which is how a user types them.
+        named = {n for n in named if n.islower()}
+        missing = sorted(named - known)
+        assert not missing, (
+            f"README.md names model id(s) {missing} that are not in "
+            f"ppxai-config.json. A reader will type one and get an error. "
+            f"Shipped ids: {sorted(known)}"
+        )
+
+
+# ---------------------------------------------------------------------------
+# 8. Version stamps: current, or explicitly open-ended
+# ---------------------------------------------------------------------------
+
+VERSION_STAMP = re.compile(
+    r"^\*\*(?:Document\s+)?Version:?\*\*:?\s*v?(\d+\.\d+\.\d+)(\+?)", re.M)
+
+
+class TestVersionStampsAreNotStale:
+    """A bare `**Version:** v1.11.2` on a live guide reads as "last true then".
+
+    Guides carried stamps up to eight minor versions behind while being
+    linked as current. The fix is not to bump them mechanically: a stamp
+    means one of two things, so say which. `vX.Y.Z+` = "applies from here
+    onward" and never goes stale; a bare `vX.Y.Z` is a claim about the
+    CURRENT release and must equal it.
+    """
+
+    def test_bare_version_stamps_match_current_release(self):
+        from ppxai.version import __version__
+
+        stale = []
+        for rel, _path, text in _active_docs(suffixes=(".md",)):
+            # docs/ guides only. THIRD_PARTY_LICENSES.md stamps *dependency*
+            # versions, and benchmark records are dated by design -- neither
+            # is a claim about which ppxai release the text describes.
+            if not rel.startswith("docs/") or any(s in rel for s in HISTORICAL):
+                continue
+            for m in VERSION_STAMP.finditer(text):
+                ver, open_ended = m.group(1), m.group(2)
+                if not open_ended and ver != __version__:
+                    stale.append(f"{rel} (v{ver})")
+        assert not stale, (
+            f"{stale} carry a bare version stamp that is not the current "
+            f"release (v{__version__}). Either bump it, or mark it "
+            f"open-ended as `vX.Y.Z+` if the doc applies from that version "
+            f"onward."
         )
 
 

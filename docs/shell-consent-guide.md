@@ -1,6 +1,6 @@
 # Shell Command Consent Guide
 
-**Version:** v1.11.2
+**Version:** v1.11.2+
 **Last Updated:** 2025-12-22
 
 ## Overview
@@ -652,6 +652,6 @@ For questions or issues with shell command consent:
 
 ---
 
-**Version:** v1.11.2
+**Version:** v1.11.2+
 **Last Updated:** 2025-12-22
 **License:** MIT
