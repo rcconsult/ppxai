@@ -55,6 +55,54 @@ identically while appearing to be ruled out. A false negative, not an error.
 Found 2026-08-15 when a sibling-repo session used method-zero, got a clean
 result, and checked why before trusting it.
 
+## Corollary 2: it makes *import success* depend on the passwd database
+
+The same constant has a deploy-time half. `Path.home()` resolves `~` via
+`$HOME`, falling back to the passwd entry for the current uid. With neither
+available it does not return a default — it **raises**:
+
+```python
+# measured, not inferred
+with patch.dict(os.environ, {}, clear=True), \
+     patch('pwd.getpwuid', side_effect=KeyError):
+    Path.home()
+# RuntimeError: Could not determine home directory.
+```
+
+Because `PPXAI_HOME` is module-level (`config/loader.py:30`), that raise
+happens **at import of `ppxai.config.loader`** — before any application code
+runs. The traceback points at ppxai's loader, not at the change that caused
+it, so the cause (a base image or a `runAsUser`) is one indirection away
+from the symptom.
+
+**Not a live bug here today, and it is worth knowing why:** every shipped
+image creates a real passwd entry — `deploy/docker/Dockerfile` and
+`Dockerfile.multistage` use `useradd --uid 1000 ... --create-home`,
+`Dockerfile.binary` uses `adduser -D -u 1000`, and
+`deploy/k8s/standalone/deployment.yaml:38` pins `runAsUser: 1000`, which
+*matches* those images. Safety comes from that alignment, not from the code
+tolerating its absence.
+
+**What breaks the alignment** (reasoned from the code path above, not
+observed in a live cluster):
+
+- a **distroless or scratch** base, which ships no `/etc/passwd` entries;
+- **OpenShift's restricted SCC**, which assigns an arbitrary high uid with
+  no passwd entry — the common real-world case;
+- any `runAsUser` that does not match the image's `useradd` uid;
+- dropping `--create-home`, or clearing `HOME` in the pod spec.
+
+**Verify before changing any of those:**
+```bash
+grep -rnE "^FROM|^USER|useradd|adduser" deploy/ --include=Dockerfile*
+grep -rn "runAsUser" deploy/ --include=*.yaml
+```
+
+Surfaced 2026-08-15 by the ppxai-sre session tracing the same constant
+through its own deployment; both halves — "your isolation did not isolate"
+and "import now depends on the container's passwd database" — are the same
+module-level `Path.home()` root cause.
+
 ## How it was proven, not inferred
 
 ```bash
