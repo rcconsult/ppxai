@@ -16,6 +16,45 @@ grep -rn "^[A-Z_]* *= *Path.home()" ppxai/ --include=*.py
 grep -n "_isolate_session_state_pointer" -A20 tests/conftest.py
 ```
 
+## Corollary: `PPXAI_HOME` is NOT an environment variable
+
+The name invites the wrong fix. Reaching for isolation, the obvious move is
+`PPXAI_HOME=/scratch pytest ...` — and it does **nothing**, silently. There
+is no reader:
+
+```bash
+# The definition: a module constant off Path.home(), resolved at import
+grep -n "^PPXAI_HOME" ppxai/config/loader.py     # -> Path.home() / ".ppxai"
+
+# The readers: there are none
+grep -rn "PPXAI_HOME" ppxai/ --include=*.py | grep -E "environ|getenv"   # -> empty
+```
+
+**Why the trap is so easy to fall into:** six sibling `PPXAI_*` names ARE
+read from the environment — `PPXAI_CONFIG_FILE`, `PPXAI_DEBUG`,
+`PPXAI_FORWARDED_ALLOW_IPS`, `PPXAI_IMAGE_PROTOCOL`, `PPXAI_TERMINAL`,
+`PPXAI_WEB_DIR`. So the convention appears to exist, and the one name that
+looks most like a home-directory override is the exception.
+
+The failure mode is the dangerous kind: the run **looks** isolated, still
+reads real `~/.ppxai`, and a host-state-dependent failure reproduces
+identically while appearing to be ruled out. A false negative, not an error.
+
+**What actually works:**
+
+1. `env HOME=/scratch pytest ...` — set at *process launch*, so
+   `Path.home()` resolves elsewhere before `loader` is first imported.
+   Caveat: this also moves caches and dotfiles for everything else
+   in-process, so a fixture depending on real host config may fail for an
+   unrelated reason.
+2. Patch `ppxai.config.loader.PPXAI_HOME` — or the constant as bound on the
+   *importing* module's namespace — **before** the consumer reads it.
+   Patching after import does nothing, for the same import-time reason as
+   the main lesson above. Mock the helper, not `HOME`.
+
+Found 2026-08-15 when a sibling-repo session used method-zero, got a clean
+result, and checked why before trusting it.
+
 ## How it was proven, not inferred
 
 ```bash
