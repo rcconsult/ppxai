@@ -78,6 +78,26 @@ What step 1 actually fixed, and what is left:
   inversion is latent, traversed only when a caller imports completion
   explicitly, which today only the three client glue layers do.
 
+  **Runtime, not just import time (2026-08-15).** The consumer re-ran this
+  with a `sys.meta_path` observer installed *before* any ppxai import,
+  recording every `ppxai.commands*` / `ppxai.*completion*` resolution with
+  its stack, then drove real execution: its full test suite (loading all 12
+  of its own modules) and separately `EngineClient()` + `ToolManager()`
+  construction. The `ppxai.*` closure did not grow by a single module in
+  either probe — **zero commands, zero completion**. (The 64-vs-65 counts
+  in the two repos reconcile exactly: one includes the `ppxai` root
+  package, the other counts submodules only.)
+
+  **Still unmeasured, stated so this is not over-cited:** a completed
+  provider round-trip with tool dispatch. If a lazy `ppxai.commands` import
+  exists, it would have to sit inside request-time execution below
+  `chat()`. The claim is therefore "no coupling at import time, package
+  load, or client construction" — not "no coupling, ever". Closing the
+  remainder needs no credentials: `tests/test_tool_messages.py::
+  test_multi_tool_session_messages_native` drives a full native tool
+  round-trip against the scripted `MockProvider` in that file, which is the
+  fixture shape to reuse.
+
   Note the consumer's engine entry point is **`EngineClient`**, not
   `task_runner` — `build_task_runner`'s extraction (`eeb82076`) widened
   what an embedder *could* drive in-process, but ppxai-sre has not adopted
