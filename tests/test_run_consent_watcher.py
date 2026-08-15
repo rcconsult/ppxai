@@ -163,16 +163,33 @@ def test_poll_failure_does_not_escape(app):
 # ── auto-merge ──────────────────────────────────────────────────────────────
 
 class _MergeBackend(_FakeBackend):
-    def __init__(self, runs, fail_times=0):
+    """`auto_merge_if_configured` returns (merged, reason, retryable).
+
+    `raise_times` exercises the exception path; `defer_times` exercises the
+    RETURNED-failure path, which is the one that looks like success to a
+    caller that only guards with try/except.
+    """
+
+    def __init__(self, runs, fail_times=0, defer_times=0, decided=False):
         super().__init__(runs)
         self.merged = []
+        self.calls = 0
         self._fail_times = fail_times
+        self._defer_times = defer_times
+        self._decided = decided
 
     def auto_merge_if_configured(self, run_id):
+        self.calls += 1
         if self._fail_times > 0:
             self._fail_times -= 1
             raise RuntimeError("session not ready")
+        if self._decided:
+            return False, "not in auto mode", False
+        if self._defer_times > 0:
+            self._defer_times -= 1
+            return False, "no active session", True
         self.merged.append(run_id)
+        return True, "merged 42 chars", False
 
 
 def test_terminal_run_is_merged_once(app):
@@ -196,6 +213,37 @@ def test_a_failed_merge_is_retried_on_the_next_poll(app):
     assert b.merged == []
     w.poll_once()
     assert b.merged == ["run_0123456789ab"]
+
+
+def test_a_returned_failure_is_retried_not_swallowed(app):
+    """`(False, "no active session", retryable=True)` must NOT count as done.
+
+    The contract reports recoverable states by RETURN, not by raising, so a
+    watcher guarded only by try/except sails into its success path and marks
+    the run merged — dropping the result permanently the moment a poll lands
+    while no session is active.
+    """
+    b = _MergeBackend([_FakeMeta("run_0123456789ab", "completed")], defer_times=1)
+    w = RunConsentWatcher(app, b)
+    w.poll_once()
+    assert b.merged == [], "merge should not have happened yet"
+    w.poll_once()
+    assert b.merged == ["run_0123456789ab"], "deferred run was never retried"
+
+
+def test_a_decided_refusal_is_not_retried_forever(app):
+    """The mirror image: `retryable=False` must stop the retries.
+
+    "not in auto mode" is the answer under the DEFAULT `collect: "yes"`, so
+    treating every False as retryable would re-ask on every poll for the life
+    of the process and make the `_merged` guard dead code.
+    """
+    b = _MergeBackend([_FakeMeta("run_0123456789ab", "completed")], decided=True)
+    w = RunConsentWatcher(app, b)
+    for _ in range(4):
+        w.poll_once()
+    assert b.calls == 1, f"decided refusal re-asked {b.calls} times"
+    assert b.merged == []
 
 
 def test_a_failed_merge_does_not_starve_other_runs(app):

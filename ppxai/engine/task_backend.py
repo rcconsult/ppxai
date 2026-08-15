@@ -342,22 +342,47 @@ class InProcessTaskBackend:
                 return True, f"collected (not merged: {detail})"
         return ok, reason
 
-    def auto_merge_if_configured(self, run_id: str) -> tuple[bool, str]:
+    def auto_merge_if_configured(self, run_id: str) -> tuple[bool, str, bool]:
         """Merge a terminal run without an explicit `collect`, under "auto".
 
         Mirrors the web client's `_autoMergeIfConfigured`, which fires on the
         watcher's terminal render. Under "yes" the result is HELD and the user
         collects it; under "auto" nothing holds it, so the watcher is the only
         thing that can put it in the conversation.
+
+        Returns `(merged, reason, retryable)`.
+
+        **`retryable` is why this returns three values.** A `False` here means
+        two very different things, and a caller that conflates them breaks in
+        one of two ways: treat every `False` as final and a transient failure
+        silently DROPS the run's result forever; treat every `False` as
+        retryable and a decided run is re-attempted on every poll for the life
+        of the process — which is the *default* config, since `collect: "yes"`
+        makes "not in auto mode" the normal answer.
+
+        - **Decided** (`retryable=False`): not in auto mode, collect disabled,
+          unknown run, no result to merge. Nothing about polling again changes
+          these.
+        - **Transient** (`retryable=True`): no active session yet, or the
+          collect mode was momentarily unreadable. The precondition can arrive
+          later.
+
+        Session availability is checked HERE rather than inferred from
+        `merge_result`'s reason text: it is the one precondition that can
+        change between polls, and classifying it by string-matching a message
+        would break the moment that message is reworded.
         """
         from ..config.execution import get_execution_collect
 
         try:
             if get_execution_collect() != "auto":
-                return False, "not in auto mode"
+                return False, "not in auto mode", False
         except Exception:  # noqa: BLE001
-            return False, "collect mode unreadable"
-        return self.merge_result(run_id)
+            return False, "collect mode unreadable", True
+        if self._session_provider is None or self._session_provider() is None:
+            return False, "no active session", True
+        ok, reason = self.merge_result(run_id)
+        return ok, reason, False
 
     def resume(self, run_id: str) -> tuple[bool, str]:
         """Resume an interrupted run (T7). Returns `(ok, reason)`.

@@ -78,15 +78,32 @@ class RunConsentWatcher:
                 # watcher's terminal render. Once per run.
                 if getattr(meta, "status", None) in _TERMINAL \
                         and meta.run_id not in self._merged:
-                    # Mark merged only AFTER the merge succeeds. Marking
-                    # first made a transient failure permanent: the merge
-                    # raised, the run was already in `_merged`, and every
-                    # later poll skipped it — the result never reached the
-                    # conversation. The inner try also keeps one bad run
-                    # from aborting the loop and starving the consent
-                    # prompts for every OTHER run in this poll.
+                    # Mark merged only once the outcome is FINAL. This was
+                    # wrong twice: marking BEFORE the call made a raised
+                    # failure permanent, and then marking on any
+                    # non-raising call made a RETURNED failure permanent —
+                    # auto_merge_if_configured reports "no active session"
+                    # as (False, ..., retryable=True), not an exception.
+                    # Either way the result never reached the conversation.
+                    # The inner try also keeps one bad run from aborting
+                    # the loop and starving the consent prompts for every
+                    # OTHER run in this poll.
                     try:
-                        self.backend.auto_merge_if_configured(meta.run_id)
+                        merged, why, retryable = \
+                            self.backend.auto_merge_if_configured(meta.run_id)
+                        # Mark done when it merged, OR when the backend says
+                        # the answer is final ("not in auto mode" is the
+                        # DEFAULT answer, so retrying it would re-ask every
+                        # poll forever). Leave it unmarked only while the
+                        # precondition can still arrive — no active session
+                        # yet — so the result is not silently dropped.
+                        if merged or not retryable:
+                            self._merged.add(meta.run_id)
+                        else:
+                            logger.debug(
+                                f"auto-merge deferred for {meta.run_id}: "
+                                f"{why}; will retry next poll"
+                            )
                     except Exception:  # noqa: BLE001
                         # f-string, NOT printf-style: this logger is
                         # debug(msg, exc_info=False) with no *args, so a
@@ -98,8 +115,6 @@ class RunConsentWatcher:
                             f"will retry next poll",
                             exc_info=True,
                         )
-                    else:
-                        self._merged.add(meta.run_id)
 
                 token = self._pending_token(meta)
                 if token is None or token in self._prompted:
