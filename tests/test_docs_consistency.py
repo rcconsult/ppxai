@@ -414,7 +414,11 @@ class TestStatedTestCountTracksSuite:
 
     def test_claude_md_count_is_plausible(self):
         text = (PROJECT_ROOT / "CLAUDE.md").read_text(encoding="utf-8")
-        m = re.search(r"Tests:\s*\*\*([\d,]+)\s+collected\*\*", text)
+        # Tolerate a richer bold span than "**N collected**" -- the line now
+        # also carries passed/skipped/failed, which is the more useful claim
+        # (a bare "collected" count let a suite with a permanent hang look
+        # healthy). Only the leading number is load-bearing here.
+        m = re.search(r"Tests:\s*\*\*([\d,]+)\s+collected", text)
         assert m, (
             "CLAUDE.md lost its 'Tests: **N collected**' line. Keep it "
             "greppable -- this sentinel and every future reader depend on it."
