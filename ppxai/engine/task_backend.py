@@ -21,7 +21,7 @@ once said the request-shaped validation "stays in the routes for now" and that
 a TUI "passes an already-resolved grant". That sentence was the bug: nothing
 resolved or authorized the TUI's grant, so an in-process launch reached the
 runner with no tier gate, no shell reject, and raw `--skill` strings mounted
-as read roots (docs/branch-review-v1.19.1.md). Admission now lives in
+as read roots (docs/archive/branch-review-v1.19.1.md). Admission now lives in
 `engine/task_authorizer.py`, and `launch()` takes an `AuthorizedTask` — the
 only way to obtain one is to pass `authorize_task()`.
 """

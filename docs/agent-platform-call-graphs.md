@@ -1,5 +1,13 @@
 # Agent platform — endpoint call graphs (per increment)
 
+> ⚠️ **Partially stale (flagged 2026-08-15).** These graphs predate the
+> admission-boundary unification (`135abf48`), so they do not show
+> `ppxai/engine/task_authorizer.py::authorize_task()` — today the single
+> admission point every client passes through, with the HTTP route reduced to
+> a thin adapter. The per-endpoint routing below is still accurate; the
+> authorization step drawn inside each route now lives in front of all of
+> them. Redrawing is open work.
+
 **Purpose:** a reference map of what each `/v1/agent/*` endpoint actually
 calls, traced from code, maintained **per increment**. Use it for
 debugging (where does this path go?), refactoring (what depends on this
@@ -12,7 +20,7 @@ ADR-governance "factual-reality corrections" discipline). Source of truth
 is the code; if a graph and the code disagree, the code wins — fix the
 graph.
 
-- **Plan / increments:** [plan-v1.19.0-sequencing.md](plan-v1.19.0-sequencing.md)
+- **Plan / increments:** [plan-v1.19.0-sequencing.md](archive/plan-v1.19.0-sequencing.md)
 - **Design:** [decisions/0003-agent-platform-architecture.md](decisions/0003-agent-platform-architecture.md)
 - **Triplet path:** [decisions/0005-inspection-triplet.md](decisions/0005-inspection-triplet.md)
 
@@ -789,7 +797,7 @@ POST /v1/oneshot | POST /v1/agent/run
 Tests: `test_oneshot_grounding.py` (flag plumbing, capability gate, build
 wiring, + an AST perimeter-lock test that fails if a web-tool symbol is ever
 referenced in oneshot CODE — drift fence against Option B). Docs:
-`docs/api-gateway.md` Notes, `docs/plan-oneshot-grounding.md`.
+`docs/api-gateway.md` Notes, `docs/archive/plan-oneshot-grounding.md`.
 
 **§J — `/v1/agent/run` loopback carve-out (refines §H).** §H protected the
 WHOLE `/v1/agent` prefix on loopback, which broke the web `/agentrun` command

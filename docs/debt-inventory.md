@@ -112,7 +112,7 @@ Not in this iteration's active set. The decomposition is best done
 *alongside or after* Stage 2 lands its run-state machine — Stage 2 will
 add run-namespace / budget / sub-agent code into this exact function, so
 decomposing first would just be re-touched. Let Stage 2 settle the shape,
-then split. See [docs/plan-v1.19.0-sequencing.md](plan-v1.19.0-sequencing.md).
+then split. See [docs/archive/plan-v1.19.0-sequencing.md](archive/plan-v1.19.0-sequencing.md).
 
 **Branch when ready:** `feat/chat-with-tools-decomp` (ADR + tests
 first commit; code split as a follow-on).
@@ -1118,7 +1118,7 @@ modular-prompt refactor.
   up). Tests: `test_oneshot_grounding.py` (flag plumbing, capability gate,
   build-wiring, + a **perimeter-lock AST test** that fails if a web-tool symbol
   is ever referenced in oneshot CODE — guards against drift to Option B). Docs:
-  `docs/api-gateway.md` Notes, `docs/plan-oneshot-grounding.md`. **Deferred
+  `docs/api-gateway.md` Notes, `docs/archive/plan-oneshot-grounding.md`. **Deferred
   (out of scope, low value):** Perplexity model-substitution when a non-sonar
   model is requested under the flag — risks downgrading a deliberately chosen
   reasoning model, so left to the caller to pass a sonar model.
@@ -1496,10 +1496,11 @@ genuine open set. (Lettered q–t; upstream owns p = external review round.)**
 tier-d OS-isolation; (p)-token-O(N)/role-mint with Inc 8b RBAC; (a)/(b)/(q) with
 N>1 sub-agents + the `agent_n`-nesting / `/task` design; **(r) RETIRED
 (landed across `/task` T5–T7, 2026-07-07)**; (s) with the
-v1.19.x→migration-doc rewrite; (t) with the `/task` SDK-embedding design (re-verify
-vs T1–T2 first) — **T8b (TUI port) is now a second forcing function**: the TUIs are
-in-process, so their `/task` port either embeds the runner (retires (t)) or grows an
-HTTP client (see plan-task-command-sequencing.md §T8); **(u) DONE** (CORS+Host fix, bind-conditional, shipped `b1e5b3a4`); **(v) ingress
+v1.19.x→migration-doc rewrite; **(t) RETIRED** (2026-08-08, `eeb82076`) — T8b was the forcing function
+and it resolved in favour of embedding: `build_task_runner` was extracted to
+`ppxai/engine/task_runner.py`, so the TUIs drive the registry in-process and
+no client grew an HTTP transport. The SDK-embedding question (t) tracked is
+answered by that extraction; **(u) DONE** (CORS+Host fix, bind-conditional, shipped `b1e5b3a4`); **(v) ingress
 NetworkPolicy + optional app-layer bearer for cross-tenant coder isolation, with
 Item 3**; (d) with an SSE rework; (i) with a per-model capability-hint pass (cheap,
 anytime).

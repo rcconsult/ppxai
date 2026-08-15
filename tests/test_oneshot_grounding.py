@@ -1,6 +1,6 @@
 """Tests for Option A — config-driven native web search on the oneshot tiers.
 
-See docs/plan-oneshot-grounding.md. The contract under test:
+See docs/archive/plan-oneshot-grounding.md. The contract under test:
 
 1. `tools.web_search.oneshot_grounding` (default OFF) gates everything.
 2. When ON, a SEARCH-CAPABLE provider (capabilities.web_search=true) is switched

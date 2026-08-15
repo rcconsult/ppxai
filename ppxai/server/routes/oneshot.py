@@ -177,7 +177,7 @@ class OneshotResponse(BaseModel):
 def _oneshot_grounding_enabled() -> bool:
     """True when the operator has opted oneshot into native web search.
 
-    Option A (docs/plan-oneshot-grounding.md): the tool-FREE oneshot tiers
+    Option A (docs/archive/plan-oneshot-grounding.md): the tool-FREE oneshot tiers
     (`/v1/oneshot`, `/v1/agent/run`) may augment a single-turn completion with
     the PROVIDER'S OWN web search (Perplexity Sonar, Gemini grounding) — NOT by
     handing the model a `web_search`/`fetch_url` tool (that's Option B, with the

@@ -128,7 +128,7 @@ scrapes it, flag it.
 
 Two properties of that prompt are deliberate and should survive edits:
 
-- **It is told to push back.** `docs/handoff-adr0010-k8s.md` exists
+- **It is told to push back.** `docs/archive/handoff-adr0010-k8s.md` exists
   because the first verbal warning was wrong and broader than reality. A
   watcher that only ever confirms is worth nothing.
 - **Its first task is concrete work, not a posture.** The ADR 0010 grep

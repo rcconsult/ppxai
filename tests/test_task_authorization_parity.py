@@ -230,7 +230,7 @@ class TestInProcessPathIsNotAWeakerDoor:
             "InProcessTaskBackend does not reference the shared authorizer. "
             "An in-process launch that skips authorize_task() is the T8b "
             "security hole: the tier gate, the shell reject and the skill "
-            "name-resolution never run. See docs/branch-review-v1.19.1.md."
+            "name-resolution never run. See docs/archive/branch-review-v1.19.1.md."
         )
 
     def test_launch_cannot_be_handed_raw_read_paths(self):

@@ -110,7 +110,7 @@ auth carve-outs. Existing bearer clients are unaffected. The `/v1/agent/*` +
 - **Model:** vLLM `Qwen3.6-27B-FP8-agent` config provider (self-hosted
   llm-eval champion, 93.6%).
 
-See [docs/plan-v1.19.0-sequencing.md](plan-v1.19.0-sequencing.md) +
+See [docs/archive/plan-v1.19.0-sequencing.md](archive/plan-v1.19.0-sequencing.md) +
 [docs/plan-task-command-sequencing.md](plan-task-command-sequencing.md) for the
 increment plans and
 [docs/agent-platform-call-graphs.md](agent-platform-call-graphs.md) for

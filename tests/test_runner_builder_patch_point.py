@@ -24,7 +24,7 @@ has moved: settle where it should be and update this file on purpose.
 
 Intercepting child-run construction is how ppxai-sre applies its PolicyEngine
 to spawned children, so this is a supported integration surface, not internal
-detail. See docs/handoff-build-task-runner-extraction.md.
+detail. See docs/archive/handoff-build-task-runner-extraction.md.
 """
 
 from __future__ import annotations

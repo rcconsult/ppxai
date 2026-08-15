@@ -57,11 +57,11 @@ accurate at their release.
 | `docs/agent-task-command-design.html:152` | "The TUI port (T8b) is parked pending a transport decision" |
 | `docs/agent-task-command-design.html:257` | "**Parked:** TUI port (T8b)" |
 | `docs/plan-task-command-sequencing.md:500` | "T8b — ⏸️ PARKED (2026-07-07 — resume here)" — contradicts its own `:568` |
-| `docs/plan-v1.19.0-sequencing.md:3-7` | banner "T8b is parked" |
+| `docs/archive/plan-v1.19.0-sequencing.md:3-7` | banner "T8b is parked" |
 
 Also `docs/plan-task-command-sequencing.md:568` header still says "🚧 IN PROGRESS" —
 `f3cf3d53` and `394bdf1f` closed the remaining gaps; it is DONE.
-And `docs/plan-v1.19.0-sequencing.md:11` still says "**Status:** Active" three lines
+And `docs/archive/plan-v1.19.0-sequencing.md:11` still says "**Status:** Active" three lines
 under a "CLOSED" banner.
 
 ## PHASE 1 — top-level files

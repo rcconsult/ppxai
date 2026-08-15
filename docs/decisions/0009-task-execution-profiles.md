@@ -280,7 +280,7 @@ have to guess which they enabled, which is why both live side by side under
 >    facade share one brain). The side-by-side principle above is unchanged.
 > 2. **"No run registry entry":** enriched oneshot executes as a real
 >    registry run (`kind=oneshot`) — the facade over unmodified task gears
->    ([plan](../plan-adr0009-step1-oneshot-enrichment.md)). "Stateless" keeps
+>    ([plan](../archive/plan-adr0009-step1-oneshot-enrichment.md)). "Stateless" keeps
 >    its ADR 0004 meaning (no *session* side-effects); the run record is the
 >    audit + debug surface, and the sync HTTP response is unchanged.
 

@@ -13,7 +13,7 @@ on `bugfix/v1.19.1`.
 - [`0003-agent-platform-architecture.md`](0003-agent-platform-architecture.md) — the run registry + `start_run` contract verb this taxonomy surfaces
 - [`0009-task-execution-profiles.md`](0009-task-execution-profiles.md) §4 — enriched oneshot; step ① makes oneshot a facade over the run tier, which is what makes this streamline possible
 - [`0010-config-shape-review.md`](0010-config-shape-review.md) — the `execution.*` axis where the collect config lives
-- [`docs/plan-adr0009-step1-oneshot-enrichment.md`](../plan-adr0009-step1-oneshot-enrichment.md) — the facade plan (oneshot = a registry run awaited server-side)
+- [`docs/archive/plan-adr0009-step1-oneshot-enrichment.md`](../archive/plan-adr0009-step1-oneshot-enrichment.md) — the facade plan (oneshot = a registry run awaited server-side)
 
 ---
 

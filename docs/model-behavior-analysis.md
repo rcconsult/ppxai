@@ -1,5 +1,12 @@
 # Model Behavior Analysis & ppxai Architecture Recommendations
 
+> ⚠️ **Rankings are stale (flagged 2026-08-15).** This document declares
+> itself living and updated each benchmark session, but has not been touched
+> in roughly three months. Debt Items 54 (Gemini fleet migration) and 55
+> (OpenAI fleet refresh) both change the model set it ranks, so treat the
+> per-model conclusions as a snapshot of its Created date, not current
+> guidance. The architectural reasoning is unaffected.
+
 **Created:** 2026-02-19
 **Last updated:** 2026-02-22
 **Status:** Living document — updated with each benchmark session

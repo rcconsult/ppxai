@@ -71,7 +71,7 @@ That is the right tool for wiring drift, and it is the wrong tool for
 *authorization* drift — a file can contain a plausible-looking call and still
 admit the request.
 
-The Critical finding in `docs/branch-review-v1.19.1.md` proved it. The TUI's
+The Critical finding in `docs/archive/branch-review-v1.19.1.md` proved it. The TUI's
 in-process `/task` reached the runner with **no** tier gate, **no** shell
 reject, and raw `--skill` strings mounted as filesystem read roots. Both
 static parity files were green. So was the whole suite — 4951 tests.

@@ -899,7 +899,7 @@ when there's evidence of wrapper-side failures in real use.
 > on the Agent platform Stage 2 track below (the ppxai-sre-blocking work);
 > the Anthropic provider is sequenced after that lands. Branch
 > `feat/anthropic-provider` stays reserved/untouched. See
-> [docs/plan-v1.19.0-sequencing.md](docs/plan-v1.19.0-sequencing.md).
+> [docs/archive/plan-v1.19.0-sequencing.md](docs/archive/plan-v1.19.0-sequencing.md).
 
 Moved from the debt inventory on 2026-05-05 — feature work, not a fix, so
 it belongs on the roadmap rather than the debt list. The original Item 14
@@ -938,7 +938,7 @@ the TOS-warning UX needs review independently.
 
 **Status:** ✅ Shipped in v1.19.0 (2026-07-12) — all 9 increments (Phases
 1-7 below) landed and live-trial-verified. See
-[docs/plan-v1.19.0-sequencing.md](docs/plan-v1.19.0-sequencing.md) for the
+[docs/archive/plan-v1.19.0-sequencing.md](docs/archive/plan-v1.19.0-sequencing.md) for the
 increment-by-increment build record.
 
 Bundles the ppxai-side work required to support [ppxai-sre](https://github.com/rcconsult/ppxai-sre)'s
@@ -1029,7 +1029,7 @@ needed; the full bundle is what makes v1.19.x "ready for ppxai-sre."
 > **SEQUENCING (2026-06-15): DEFERRED — do AFTER agent-platform Stage 2.**
 > Already marked "(Future)"; this iteration (`feature/v1.19.0`) does not
 > touch it. Sequenced after Stage 2. See
-> [docs/plan-v1.19.0-sequencing.md](docs/plan-v1.19.0-sequencing.md).
+> [docs/archive/plan-v1.19.0-sequencing.md](docs/archive/plan-v1.19.0-sequencing.md).
 
 | Feature | Description | Plan |
 |---------|-------------|------|

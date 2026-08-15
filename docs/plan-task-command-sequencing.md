@@ -5,7 +5,7 @@ Sequencing plan for the interactive **`/task`** command family (design:
 [agent-task-lifecycle.html](agent-task-lifecycle.html); architecture:
 [decisions/0003-agent-platform-architecture.md](decisions/0003-agent-platform-architecture.md)
 §8–§9). Same contract as the Stage-2 increment plan
-([plan-v1.19.0-sequencing.md](plan-v1.19.0-sequencing.md)):
+([plan-v1.19.0-sequencing.md](archive/plan-v1.19.0-sequencing.md)):
 
 > **Build contract.** Each increment is a **vertical slice** that brings
 > exactly the server + client bits needed to **live-trial it end-to-end**,
