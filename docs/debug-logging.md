@@ -4,11 +4,23 @@ ppxai writes detailed runtime logs (message flow, API requests/responses,
 tool invocations, session-recovery decisions) to files under
 `~/.ppxai/logs/` when debug logging is **enabled**.
 
+**Filenames are derived, not fixed.** Each logger writes to
+`~/.ppxai/logs/{logger-name}-debug.log` (`ppxai/common/logger.py`), so the
+set of files depends on which components ran — a working install commonly
+has 20-35 of them, not a fixed list. The ones you will usually want:
+
 | Log file | Emitted by |
 |----------|-----------|
 | `tui-debug.log` | Rich TUI (`ppxai`) and Textual TUI (`ppxaide`) |
 | `server-debug.log` | `ppxai-server` + `ppxai-desktop` |
-| `chat-debug.log`, `validator-debug.log` | Engine components |
+| `chat-debug.log`, `session-debug.log`, `engine-debug.log` | Engine components |
+| `config-debug.log` | Config resolution — first stop for "it read the wrong config" |
+| `gemini-debug.log`, `openai_native-debug.log`, … | One per provider that was used |
+| `ppxai.server.secrets*-debug.log` | Token/secret store (dotted logger names keep their dots) |
+| `preview-backend-<pid>.log` | Office/preview subprocess — **one per PID**, not rotated |
+| `keys.log` | Key-handling diagnostics |
+
+To see what a given run actually produced: `ls -lt ~/.ppxai/logs/ | head`.
 
 ## Default: OFF
 

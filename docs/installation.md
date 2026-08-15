@@ -961,6 +961,30 @@ Or to use a specific certificate file:
 SSL_CERT_FILE=/path/to/corporate-ca-bundle.pem
 ```
 
+**Or set it persistently in `ppxai-config.json`** (v1.19.1+) so it survives
+without a `.env`:
+
+```json
+{
+  "network": {
+    "ssl": {
+      "verify": true,
+      "cert_file": "/path/to/corporate-ca-bundle.pem"
+    }
+  }
+}
+```
+
+Precedence is `SSL_VERIFY` → `SSL_CERT_FILE` → `network.ssl.verify` →
+`network.ssl.cert_file` → system trust store — **environment always wins**,
+in both directions (`SSL_VERIFY=true` re-enables verification over a config
+`verify: false`). A custom CA is **added to** the system trust store, not
+substituted for it, so internal hosts and the public internet both verify
+on a laptop that moves between networks. A `cert_file` that doesn't exist
+falls back to the system store rather than failing every request. Run
+`/doctor` to see the resolved policy and its reason; disabled verification
+is reported there and warned about at startup.
+
 **v1.15.4+:** Web tools (`get_weather`, `fetch_url`, `web_search`) automatically use these settings. `get_weather` is **HTTPS-only as of v1.19.1** (ADR 0009 §2 / debt Item 52) — the old plain-HTTP fallback put an always-denied scheme into its egress superset, which made the tool un-allowlistable under a per-run network policy. Reliability fallback is a second backend (Open-Meteo), not a scheme downgrade.
 
 You can also configure per-tool timeouts in `ppxai-config.json`:

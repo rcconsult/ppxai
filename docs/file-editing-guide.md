@@ -414,6 +414,35 @@ write_file(
 
 ---
 
+## Syntax validation on write (R13)
+
+**All five editing tools** — `apply_patch`, `replace_block`, `insert_text`,
+`delete_lines` and `write_file` — run a syntax check on the *resulting*
+content **before** committing it. If the edit would leave the file
+unparseable, the write is **abandoned, the file is left in its pre-edit
+state, and the tool returns an error instead of reporting success**
+(`ppxai/engine/tools/builtin/syntax_validator.py`).
+
+This exists because the failure it prevents is silent: an edit that drops a
+closing brace or dedents a block still "succeeds" at the byte level, and the
+model happily continues against a file that no longer parses.
+
+Validated by extension:
+
+| Language | Extensions |
+|---|---|
+| Python | `.py` |
+| JSON | `.json` |
+| YAML | `.yaml`, `.yml` |
+| TOML | `.toml` |
+| JavaScript | `.js`, `.mjs`, `.cjs`, `.jsx` |
+| TypeScript | `.ts`, `.tsx` |
+
+Any other extension is written through unchecked — the validator is a
+safety net for the formats it knows, not a gate on every file. An error
+names the failing line, so the usual recovery is to re-read the region and
+retry with corrected context rather than to force the write.
+
 ## Best Practices
 
 ### ✅ Do's

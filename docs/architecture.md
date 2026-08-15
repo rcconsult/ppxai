@@ -43,6 +43,7 @@ ppxai/
 │   ├── loader.py      # Config file discovery + load
 │   ├── store.py       # ConfigStore, get_config, reload
 │   ├── execution.py   # execution.* axis readers (ADR 0010/0011)
+│   ├── tls.py         # LEAF: the ONE outbound-TLS resolver (network.ssl.* + SSL_* env)
 │   └── …              # paths, providers, tools, features, prompts, context, defaults
 ├── constants.py       # LEAF: Enums and constants
 ├── prompts.py         # LEAF: No ppxai imports
@@ -57,8 +58,11 @@ ppxai/
 │   ├── async_compat.py    # Asyncio compatibility helpers
 │   └── file_type.py       # File-type / mimetype helpers
 ├── preview_server.py  # Stdlib HTTP preview server (v1.15.4)
-├── engine/            # Core business logic
-│   ├── types.py       # LEAF: No ppxai imports
+├── engine/            # Core business logic (~36 modules; the layering-relevant ones shown)
+│   ├── types.py       # LEAF: No ppxai imports — ToolManagerProtocol / ToolEngineProtocol live here
+│   ├── task_runner.py # build_task_runner — embeddable, drives in-process runs (T8b)
+│   ├── task_backend.py# In-process run lifecycle for the TUIs (no HTTP)
+│   ├── task_authorizer.py # authorize_task(): THE admission boundary for every tier
 │   ├── bootstrap.py   # LEAF: Bootstrap context parsing (v1.14.0)
 │   ├── providers/     # Provider implementations
 │   ├── tools/         # Tool system
@@ -71,6 +75,7 @@ ppxai/
 │   ├── protocol.py    # CommandContext protocol (interface)
 │   ├── factory.py     # CommandFactory + CommandSpec registry
 │   ├── context.py     # Adapters: RichCommandContext (Pattern A proxy), ServerCommandContext (Pattern B explicit). Textual uses no adapter — see ADR 0002.
+│   ├── task.py        # /task + /run handlers; per-verb loop gating (T8b)
 │   ├── results.py     # 21 CommandResult types
 │   ├── system.py      # /help, /status, /theme
 │   ├── provider.py    # /provider, /model
@@ -96,6 +101,26 @@ from ..base import BaseTool
 def register_tools(manager: ToolManagerProtocol, engine: ToolEngineProtocol):
     ...
 ```
+
+### Config: three top-level axes (ADR 0010)
+
+Configuration is organised by *what a key describes*, not by which code path
+happens to read it:
+
+| Axis | Answers | Examples |
+|---|---|---|
+| `providers.*` | **WHO** answers | base_url, api keys, models, per-provider `web_search` |
+| `tools.*` | **WHAT** each tool is, tier-independently | `tools.shell.*`, `tools.web_search.*`, `tools.<tool>.egress`, the agent *loop* knobs (`max_iterations`, `zombie_threshold`) |
+| `execution.*` | **WHERE** work runs | `execution.task.*` (tier switch, sandbox, consent, budgets), `execution.run.*`, `execution.profiles`, `execution.egress_ceiling`, `execution.collect`, `execution.default_subagent` |
+
+The point of the split is that the security surface — tier switch, sandbox,
+consent, egress ceiling — reads top-to-bottom in one block instead of being
+a sub-key of a sub-key of `tools`. `network.*` sits alongside for transport
+settings (`network.ssl.*`, `network.allow_outbound`).
+
+ADR 0010 moved six tier keys off `tools.agent.*` as a **clean break with no
+dual-read**: a config left at an old path is silently ignored and reverts to
+its default, which is why `/doctor` scans the config *file* for stale paths.
 
 **Why**: `ppxai/engine/types.py` is a leaf — it imports nothing from ppxai — so
 anything may import it. The tool depends on the *interface* it actually needs
@@ -769,6 +794,23 @@ app.js                (PpxaiApp — orchestrates all modules)
 **Inline image flow** — when `display_file` SSE fires for an image extension: (1) inline `<img>` injected into chat bubble via `/files/image/{path}` endpoint, tracked in `_streamInlineImages`; (2) `stream_end` prepends `_streamInlineImages` to the server's text response to preserve order; (3) `showToolResult` skips the bubble for `display_file` events.
 
 ### Server ↔ Web API (key endpoints)
+
+The **`/v1/*` gateway** is a separate, externally-facing surface — see
+[api-gateway.md](api-gateway.md) for its stability contract:
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/v1/oneshot` | POST | **Stable since v1.18.3**, byte-identical wire since v1.18.4. Executes as a `kind=oneshot` registry run since v1.19.1 — same response. |
+| `/v1/agent/run` | POST | Tool-free background run (`kind=oneshot`) |
+| `/v1/agent/task` | POST | Tool-capable sandboxed run; gated by `execution.task.enabled` |
+| `/v1/agent/runs`, `/runs/{id}`, `/runs/{id}/events` | GET | Registry listing, meta, SSE event stream |
+| `/v1/agent/runs/{id}/{cancel,respond,ack,resume}` | POST | Lifecycle verbs |
+| `/v1/tokens` | POST | Bearer minting (loopback bootstrap) |
+
+⚠️ The whole `/v1/agent/*` + `/v1/tokens` surface is **exempt from the v1
+stability contract** until sealed; only `/v1/oneshot` is frozen.
+
+Internal endpoints (these keep evolving):
 
 | Endpoint | Method | Purpose |
 |----------|--------|---------|

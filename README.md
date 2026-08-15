@@ -168,6 +168,12 @@ Asset cache busting (`?_t=<mtime>`) ensures CSS/JS/JSON changes are immediately 
 
 Switch providers anytime: `/provider gemini` or `/model gemini-3.1-pro-preview`
 
+**Behind a corporate proxy?** Set your CA bundle once in `ppxai-config.json`
+(`network.ssl.cert_file`) — it is *added to* the system trust store, so
+internal and public hosts both verify. See
+[docs/installation.md](docs/installation.md) and run `/doctor` to confirm
+which rule applied.
+
 **Enhanced Gemini support (v1.12.5+):** Install `pip install ppxai[gemini]` for native Google Search Grounding with citations. **v1.13.3+:** Tools and grounding now work together—use file editing tools while keeping native web search with citations.
 
 ### Triple Interface

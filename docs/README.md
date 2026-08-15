@@ -68,6 +68,36 @@ Legacy and completed documentation is preserved in `archive/` for historical ref
 - `archive/v1.15.3/` - v1.15.3 planning docs
 - `archive/v1.15.4/` - v1.15.4 planning docs (preview, SSL bugfix)
 
+## Maintenance commands
+
+Two commands exist for keeping an install healthy and are easy to miss
+because no guide is dedicated to them.
+
+### `/doctor` — configuration advisor
+
+Reports the resolved state of things that are otherwise invisible:
+
+- **Deprecated / dead / unknown models** in your configured catalog, with
+  replacements and shutdown dates.
+- **Config shape (ADR 0010)** — scans your config **file** and prints the
+  old→new mapping for any key still on a retired path. This section has to
+  read the file directly: since v1.19.1 the tier keys moved to
+  `execution.*` with **no dual-read**, so nothing in the code looks at the
+  old locations any more and a stale key is invisible to the accessors by
+  construction. If you moved from ≤1.19.0, run this once.
+- **TLS policy** — the resolved `network.ssl.*` / `SSL_*` outcome and the
+  reason for it, including a warning when verification is disabled.
+- **Web-search backend tuple** per scope, flagging a concrete `preferred`
+  with no `strict`, and dead per-provider `strict` keys.
+
+### `/reload` — pick up custom command edits
+
+Re-imports `~/.ppxai/commands/*.py` without restarting. It unregisters only
+specs whose `category` is exactly `"custom"`, so a user command filed under
+any other category (including the `"general"` default) survives as a stale
+duplicate — see
+[custom-command-development-guide.md](custom-command-development-guide.md).
+
 ## Tool System Overview
 
 ppxai includes built-in tools for AI-powered development:
@@ -87,15 +117,33 @@ ppxai includes built-in tools for AI-powered development:
 | `web_search_premium` | Premium web search (Perplexity/Gemini) |
 | `fetch_url` | Fetch URL contents |
 | `get_datetime` | Get current date/time |
-| `get_weather` | Get weather information (HTTPS/HTTP fallback for corporate proxies) |
+| `get_weather` | Get weather information (**HTTPS-only** since v1.19.1) |
 | `calculator` | Perform calculations |
 | `display_file` | AI proactively shows files after generating them |
 | `search_files` | Search for files by pattern |
 | `get_working_directory` | Get current working directory |
-| `container_list` | List Docker/Podman containers |
-| `container_logs` | Get container logs |
-| `pod_list` | List Kubernetes pods |
-| `kubectl_apply` | Apply Kubernetes manifests |
+
+**Office / document tools** (require the `[data]` extra):
+
+| Tool | Description |
+|------|-------------|
+| `read_docx` | Read a Word document |
+| `read_pdf`, `get_pdf_page_image` | Read PDF text; rasterize a page |
+| `list_excel_sheets`, `read_excel_sheet` | Enumerate and read Excel sheets |
+| `list_pptx_slides`, `read_pptx_slide_text`, `summarize_pptx_visual`, `render_pptx_slide` | PowerPoint text, visual summary, slide render |
+| `read_csv`, `list_csv_columns` | Read CSV data and columns |
+
+**Container / Kubernetes tools** (consent-gated where destructive):
+
+| Tool | Description |
+|------|-------------|
+| `container_list`, `container_logs`, `container_inspect` | Inspect Docker/Podman containers |
+| `container_exec` | Run a command in a container (consent) |
+| `image_list` | List local images |
+| `pod_list`, `pod_logs`, `pod_describe` | Inspect Kubernetes pods |
+| `deployment_list`, `service_list`, `namespace_list` | Inspect cluster objects |
+| `kubectl_apply` | Apply Kubernetes manifests (consent) |
+| `pod_exec` | Run a command in a pod (consent) |
 
 ### Enabling Tools
 

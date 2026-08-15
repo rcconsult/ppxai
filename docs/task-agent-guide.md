@@ -285,3 +285,32 @@ Everything above is a thin client over `POST /v1/agent/task`,
 exemption) and
 [agent-platform-call-graphs.md](agent-platform-call-graphs.md) for
 route→event call graphs.
+
+## Making a bare `/task` work: `execution.task.default_grant`
+
+A tool-capable run must carry an explicit grant, so a bare
+`/task "<desc>"` with no `--tools`/`--spec`/`--skill`/`--profile` is
+rejected. If you keep typing the same grant, declare it once:
+
+```json
+{
+  "execution": {
+    "task": {
+      "default_grant": { "tools": ["web_search"] },
+      "allow_user_default": true
+    }
+  }
+}
+```
+
+`default_grant` is AgentSpec-shaped (`tools`, `network`, `budget`). It is a
+new **precedence layer, not a new power**: it sits *below* an explicit
+request, spec, skill or profile and *above* the built-in empty default, and
+whatever grant results still passes every clamp unchanged — shell rejected,
+egress intersected with `execution.egress_ceiling`, tool kill-switches,
+provider validation, and child ⊆ parent for spawns. It can never widen what
+the operator allows.
+
+`allow_user_default` (operator bool, default `true`) turns the layer off
+entirely for a locked-down deployment. It is fail-closed: with it `false`, a
+bare `/task` goes back to being rejected.

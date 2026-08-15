@@ -507,6 +507,25 @@ This allows you to:
 
 ## Troubleshooting
 
+### TLS / certificate errors behind a corporate proxy
+
+```
+SSLError / CERTIFICATE_VERIFY_FAILED
+```
+**Solution**: point ppxai at your proxy's CA bundle. Prefer the config key
+over disabling verification — `/doctor` recommends exactly this:
+
+```json
+{ "network": { "ssl": { "cert_file": "/path/to/corporate-ca.pem" } } }
+```
+
+The bundle is **added to** the system trust store, so public hosts keep
+working. `SSL_CERT_FILE` / `SSL_VERIFY` still take precedence if set. Full
+precedence table and the `verify: false` escape hatch (warned about at
+startup and in `/doctor`) are in
+[installation.md](installation.md#corporate-proxy--tls). Run `/doctor` to
+see which rule actually applied.
+
 ### API Key Not Found
 ```
 Error: OPENAI_API_KEY not found in environment variables.

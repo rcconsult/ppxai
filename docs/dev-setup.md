@@ -133,6 +133,20 @@ $UV pip install hatchling editables
 
 `UV_NATIVE_TLS=true` tells uv to use the OS native TLS stack instead of bundled rustls. This trusts certificates from the Windows certificate store (including corporate proxy CAs). No need for `SSL_CERT_FILE`.
 
+That covers **uv's own** downloads. ppxai's *runtime* outbound TLS (provider
+calls, `fetch_url`, `web_search`) is separate and resolved by
+`ppxai/config/tls.py`: `SSL_VERIFY` → `SSL_CERT_FILE` → `network.ssl.verify`
+→ `network.ssl.cert_file` → system store. Setting the CA once in
+`ppxai-config.json` is usually easier than an env var per shell:
+
+```json
+{ "network": { "ssl": { "cert_file": "/path/to/corporate-ca.pem" } } }
+```
+
+A custom CA is **added to** the system trust store, not substituted for it,
+so a laptop moving between the corporate network and the open internet keeps
+working. `/doctor` prints the resolved policy and the rule that produced it.
+
 ### Refresh package metadata after version bump
 
 When version numbers change in source but venv metadata is stale:
