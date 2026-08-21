@@ -86,6 +86,18 @@ ADR0010_EXEMPT = (
 COMMAND_CHECK_SKIP = HISTORICAL + ("ROADMAP.md",)
 
 
+#: Directories whose contents are never tracked docs. Pruned by path BEFORE
+#: any filesystem stat: a dangling symlink under node_modules (npm leaves
+#: these behind) raises OSError on is_file() under Windows, so a filter
+#: applied afterwards never runs.
+_PRUNED_SEGMENTS = ("node_modules", ".venv", "graphify-out",
+                    "dist/", "build/", ".git/")
+
+
+def _is_pruned(rel: str) -> bool:
+    return any(seg in rel for seg in _PRUNED_SEGMENTS)
+
+
 @lru_cache(maxsize=None)
 def _active_docs(suffixes=(".md", ".html")):
     """Every tracked doc that is not a historical record.
@@ -97,13 +109,23 @@ def _active_docs(suffixes=(".md", ".html")):
     """
     out = []
     for path in PROJECT_ROOT.rglob("*"):
-        if path.suffix not in suffixes or not path.is_file():
+        if path.suffix not in suffixes:
             continue
         rel = path.relative_to(PROJECT_ROOT).as_posix()
-        if any(seg in rel for seg in ("node_modules", ".venv", "graphify-out",
-                                      "dist/", "build/", ".git/")):
+        # Prune BEFORE any stat: node_modules carries dangling npm symlink
+        # stubs that raise WinError 1920 on is_file() (Windows returns
+        # ERROR_CANT_ACCESS_FILE for a reparse point whose target is gone).
+        # Filtering after the stat crashed the whole walk on a repo that had
+        # simply run `npm install`.
+        if _is_pruned(rel):
             continue
-        out.append((rel, path, path.read_text(encoding="utf-8", errors="ignore")))
+        try:
+            if not path.is_file():
+                continue
+            text = path.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            continue  # unreadable build artifact, never a tracked doc
+        out.append((rel, path, text))
     return tuple(out)
 
 
@@ -121,11 +143,16 @@ def _adr0010_corpus():
     """
     out = []
     for path in PROJECT_ROOT.rglob("*"):
-        if not path.is_file() or path.suffix not in (".md", ".html", ".py"):
+        if path.suffix not in (".md", ".html", ".py"):
             continue
         rel = path.relative_to(PROJECT_ROOT).as_posix()
-        if any(seg in rel for seg in ("node_modules", ".venv", "graphify-out",
-                                      "dist/", "build/", ".git/", "tests/")):
+        # Prune BEFORE the is_file() stat -- see _active_docs for why.
+        if _is_pruned(rel) or "tests/" in rel:
+            continue
+        try:
+            if not path.is_file():
+                continue
+        except OSError:
             continue
         if any(seg in rel for seg in ADR0010_EXEMPT):
             continue
