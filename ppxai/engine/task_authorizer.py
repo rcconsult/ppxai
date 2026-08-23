@@ -937,6 +937,105 @@ def _config_flag(dotted_key: str) -> bool:
 
 # --- the boundary ----------------------------------------------------------
 
+def _reject_tool_incapable_model(
+    provider: Optional[str], model: Optional[str], tools: List[str]
+) -> None:
+    """Refuse a tool-carrying run on a model that cannot call tools.
+
+    Debt Item 43: Perplexity's `sonar` answers a tools request with HTTP 400
+    ("Tool calling is not supported for this model"), and
+    `sonar-deep-research` rejects the parameter shape. Neither degrades. The
+    engine's fallback for a non-tool-capable model is PROMPT-BASED calling,
+    and that fallback is exactly what produced Item 43's refusals,
+    confabulated tool results ("a child agent has been spawned, it read
+    ...") and answers grounded in an unrelated web page.
+
+    So a tool-capable run targeting such a model is refused BEFORE a run is
+    minted, with the capable models named. Failing loud beats a plausible
+    wrong answer — the same reason the shell reject and the tier gate live
+    at admission rather than at send time.
+
+    Silent on anything it cannot resolve: an unknown provider, no model, or
+    a provider whose capability lookup raises. This gate exists to convert a
+    KNOWN-bad combination into a clear error, never to block a combination
+    it merely failed to look up.
+    """
+    if not tools or not provider or not model:
+        return
+    try:
+        from ..config.capabilities import config_model_overrides
+        from .providers import get_provider_class
+
+        provider_cls = get_provider_class(provider)
+        if provider_cls is None:
+            return
+        caps = provider_cls.default_capabilities
+        shipped = getattr(provider_cls, "shipped_capabilities_for_model", None)
+        capable: Optional[bool] = None
+        if shipped is not None:
+            # Read the class-level table without constructing a provider (no
+            # API key here). Fall back to the declared default when the
+            # implementation needs an instance.
+            try:
+                capable = shipped(
+                    _CapabilityProbe(caps), model  # type: ignore[arg-type]
+                ).native_tool_calling
+            except Exception:  # noqa: BLE001
+                capable = None
+        if capable is None:
+            capable = bool(getattr(caps, "native_tool_calling", False))
+        # Operator config wins, same precedence as everywhere else.
+        override = config_model_overrides(provider, model).get(
+            "native_tool_calling"
+        )
+        if override is not None:
+            capable = bool(override)
+    except Exception:  # noqa: BLE001 — never block on a lookup failure
+        return
+
+    if capable:
+        return
+
+    hint = _tool_capable_models_hint(provider)
+    raise TaskAuthorizationError(
+        400,
+        f"Model {model!r} on provider {provider!r} does not support tool "
+        f"calling, so a run granted {sorted(tools)!r} cannot execute them. "
+        "Running it anyway would fall back to prompt-based tool calling, "
+        "which this model ignores — producing a refusal or a confabulated "
+        f"result rather than a real tool call (debt Item 43).{hint}",
+    )
+
+
+class _CapabilityProbe:
+    """Minimal stand-in so a provider's capability table can be read without
+    constructing the provider (which would need an API key)."""
+
+    def __init__(self, capabilities):
+        self.capabilities = capabilities
+
+
+def _tool_capable_models_hint(provider: str) -> str:
+    """" Use <models> instead." when the provider names tool-capable models."""
+    try:
+        from .providers import get_provider_class
+
+        cls = get_provider_class(provider)
+        names = getattr(cls, "NATIVE_TOOL_MODELS", None)
+        if not names:
+            import importlib
+
+            mod = importlib.import_module(cls.__module__)
+            names = getattr(
+                mod, f"{provider.upper()}_NATIVE_TOOL_MODELS", None
+            )
+        if names:
+            return f" Tool-capable models here: {', '.join(sorted(names))}."
+    except Exception:  # noqa: BLE001
+        pass
+    return ""
+
+
 def authorize(
     req: TaskRequest,
     *,
@@ -1085,6 +1184,7 @@ def authorize(
         )
     if policy.validates_provider:
         validate_provider_or_error(provider_name)
+        _reject_tool_incapable_model(provider_name, model, tools)
 
     # The per-run jail always wins over a caller-supplied workdir: under the
     # seal the run's writable root IS its jail workdir. Warn-don't-fail — the

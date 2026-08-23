@@ -5,6 +5,7 @@ Perplexity has native web search and citation capabilities.
 """
 
 import asyncio
+import json
 import re
 from typing import List, AsyncIterator, Optional, Dict, Any
 from ..types import Message, Event, EventType, ProviderCapabilities
@@ -44,6 +45,40 @@ def inject_citation_urls(content: str, citations: List[str]) -> str:
     return re.sub(pattern, replace_citation, content)
 
 
+# Which Sonar models accept a `tools` array, measured live against
+# api.perplexity.ai (2026-08-13, re-verified 2026-08-23):
+#
+#   sonar                 400  "Tool calling is not supported for this model"
+#   sonar-pro             200  emits tool_calls  (full round-trip canary-verified)
+#   sonar-reasoning-pro   200  emits tool_calls
+#   sonar-deep-research   400  "Tool parameters must be a JSON object."
+#
+# The capability was per-PROVIDER until v1.19.1 and hardcoded False with the
+# comment "Sonar models don't support native API tool_calls" — true when
+# written, false since Perplexity shipped tool calling. That stale flag
+# forced `profile.mode=prompt_based`, and debt Item 43's refusals /
+# confabulations / external mis-grounding were all the prompt-based fallback
+# failing, not the API. Data, not branches: add a row rather than a code path.
+#
+# NB the two 400s differ in kind. `sonar` states the capability is absent;
+# `sonar-deep-research` complains about the SHAPE of the parameters, so it
+# may be usable with a stricter schema — not chased, and it is being dropped
+# from the shipped model list, so it is recorded here only as a known 400.
+PERPLEXITY_NATIVE_TOOL_MODELS = frozenset({
+    "sonar-pro",
+    "sonar-reasoning-pro",
+})
+
+#: Models that reject a `tools` array with HTTP 400 rather than degrading.
+#: The distinction matters: a tool-capable request to one of these must be
+#: refused up front, NOT routed to the prompt-based fallback, because that
+#: fallback is precisely what produces Item 43's confabulated answers.
+PERPLEXITY_TOOL_REJECTING_MODELS = frozenset({
+    "sonar",
+    "sonar-deep-research",
+})
+
+
 class PerplexityProvider(BaseProvider):
     """Provider for Perplexity AI API.
 
@@ -51,6 +86,8 @@ class PerplexityProvider(BaseProvider):
     - Web search (always on for sonar models)
     - Citations
     - Real-time information
+
+    Tool calling is per-MODEL — see PERPLEXITY_NATIVE_TOOL_MODELS.
     """
 
     name = "perplexity"
@@ -60,8 +97,30 @@ class PerplexityProvider(BaseProvider):
         weather=True,  # Can answer weather via search
         citations=True,
         streaming=True,
-        native_tool_calling=False  # Sonar models don't support native API tool_calls
+        # Per-model, resolved by shipped_capabilities_for_model below. False
+        # is the safe default: an unknown/new model is assumed non-tool-capable
+        # until measured, so it degrades rather than 400ing a user's request.
+        native_tool_calling=False,
     )
+
+    def shipped_capabilities_for_model(self, model: str) -> ProviderCapabilities:
+        """Native tool calling per model (plan layer 2).
+
+        Operator config can still override this per model — see
+        `ppxai/config/capabilities.py` — which is the escape hatch if
+        Perplexity changes a model's support before we ship a new table.
+        """
+        model_id = (model or "").strip().lower()
+        if model_id not in PERPLEXITY_NATIVE_TOOL_MODELS:
+            return self.capabilities
+        return ProviderCapabilities(
+            web_search=self.capabilities.web_search,
+            web_fetch=self.capabilities.web_fetch,
+            weather=self.capabilities.weather,
+            citations=self.capabilities.citations,
+            streaming=self.capabilities.streaming,
+            native_tool_calling=True,
+        )
 
     async def chat(
         self,
@@ -104,6 +163,17 @@ class PerplexityProvider(BaseProvider):
             # configured; empty dict skipped.
             extra_body = self._get_extra_body(model)
 
+            # Native tool calling, per MODEL (v1.19.1, debt Item 43).
+            # Until now this method ignored `tools` outright — the docstring
+            # said Sonar had no native function calling, true when written.
+            # Measured 2026-08-13/23: sonar-pro and sonar-reasoning-pro emit
+            # real tool_calls; sonar and sonar-deep-research answer HTTP 400.
+            # Gated on the capability table so the two that 400 never see a
+            # tools array, and so an unmeasured model degrades instead.
+            native_tools = bool(
+                tools and self.get_capabilities_for_model(model).native_tool_calling
+            )
+
             if stream:
                 # Streaming response with usage tracking
                 request_kwargs = {
@@ -117,6 +187,9 @@ class PerplexityProvider(BaseProvider):
                     request_kwargs.update(generation_params)
                 if extra_body:
                     request_kwargs["extra_body"] = extra_body
+                if native_tools:
+                    request_kwargs["tools"] = tools
+                    request_kwargs["tool_choice"] = "auto"
                 response_stream = self.client.chat.completions.create(**request_kwargs)
 
                 full_response = []
@@ -159,6 +232,9 @@ class PerplexityProvider(BaseProvider):
                     request_kwargs.update(generation_params)
                 if extra_body:
                     request_kwargs["extra_body"] = extra_body
+                if native_tools:
+                    request_kwargs["tools"] = tools
+                    request_kwargs["tool_choice"] = "auto"
                 # Off-load the blocking SDK call so a non-streaming agent-tier
                 # run doesn't starve the event loop (v1.19.x — see
                 # openai_compat.chat).
@@ -166,8 +242,24 @@ class PerplexityProvider(BaseProvider):
                     lambda: self.client.chat.completions.create(**request_kwargs)
                 )
 
-                content = response.choices[0].message.content or ""
+                message = response.choices[0].message
+                content = message.content or ""
                 usage = self._parse_usage(response.usage)
+
+                # Emit native tool calls, same event contract as
+                # openai_compat/openai_native so the tool loop is provider
+                # agnostic (tool / arguments / native / tool_call_id).
+                for tc in (getattr(message, "tool_calls", None) or []):
+                    try:
+                        args = json.loads(tc.function.arguments) if tc.function.arguments else {}
+                    except json.JSONDecodeError:
+                        args = {}
+                    yield Event(EventType.TOOL_CALL, {
+                        "tool": tc.function.name,
+                        "arguments": args,
+                        "native": True,
+                        "tool_call_id": tc.id,
+                    })
 
                 # Extract citations if available (Perplexity-specific)
                 citations = []

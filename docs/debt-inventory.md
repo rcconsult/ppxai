@@ -560,7 +560,52 @@ hook-rewritten commands, OR `rtk gain` totals plateau across sessions
 
 ---
 
-### Item 43 — Perplexity `/task` never calls granted tools → **ROOT CAUSE REVISED**: our hardcoded `native_tool_calling=False`, not a model limitation [providers / perplexity / agent platform] — ✅ CONFIRMED, ⚠️ **PREMISE OVERTURNED 2026-08-13**
+### Item 43 — Perplexity `/task` never calls granted tools → ✅ **FIXED 2026-08-24** (plan I3) [providers / perplexity / agent platform]
+
+> **CLOSED.** The cause was ours, not the model's. Fixed in three parts,
+> because two of them were separately load-bearing:
+>
+> 1. **Per-model capability table** — `PERPLEXITY_NATIVE_TOOL_MODELS` in
+>    `providers/perplexity.py`. `sonar-pro` and `sonar-reasoning-pro`
+>    resolve `native_tool_calling=True`; everything else stays False, so an
+>    unmeasured model degrades rather than 400ing.
+> 2. **Model profiles** — `sonar-pro*` and `sonar-reasoning-pro*` were
+>    pinned `mode="prompt_based"` in `model_profiles.py`. `chat.py:693`
+>    checks the mode FIRST and short-circuits without consulting provider
+>    capabilities, so **the table alone would have been decorative** —
+>    measured: `profile.mode=prompt_based, caps.native=True → use_native=
+>    False`. Both are now `"auto"`, which defers to the table. Same
+>    "override exists but nothing reads it" shape as plan finding F1.
+> 3. **Admission guard** — `_reject_tool_incapable_model` in
+>    `task_authorizer.py`. `sonar` and `sonar-deep-research` answer a tools
+>    array with HTTP 400 rather than degrading, and the engine's fallback
+>    for a non-capable model is the prompt-based path that produced this
+>    item's confabulations. A tool-carrying run on such a model is now
+>    refused before it is minted, naming the capable models. Fails OPEN on
+>    any unresolved lookup — it converts a KNOWN-bad combination into a
+>    clear error, it is not a security boundary.
+>
+> `sonar-deep-research` **dropped from the shipped catalog** (owner
+> decision) — example config, `install.sh`, `scripts/install.ps1`,
+> `vscode-extension/src/config.ts`, and their pricing tables. Note its 400
+> is not a schema quirk: the example config's own comment records that it
+> "uses Jobs API with reasoning_effort … not chat completions", so it was
+> never reachable on the endpoint we call. Its `model_profiles.py` entry
+> stays as a behavioural fallback for anyone who configures it by hand.
+>
+> Tests: `tests/test_perplexity_model_capabilities.py` (31), including an
+> end-to-end mode-resolution check that replicates `chat.py`'s logic so the
+> profile/table coupling cannot silently break again. Five mutations killed.
+>
+> Framework context: `docs/plan-per-model-capabilities.md` (I1 send-path
+> wiring, I2 config layers, I3 this). Remaining: I4 roster probe, I4b the
+> new Agent-API fleet, I5 other providers.
+
+---
+
+**Historical (superseded) — the diagnosis arc, kept for the evidence.**
+
+### Item 43 — original entry [providers / perplexity / agent platform] — ⚠️ **PREMISE OVERTURNED 2026-08-13**
 
 > **2026-08-13 — the diagnosis below is superseded; the fix is now a
 > one-line capability correction, not a routing gate.**

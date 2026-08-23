@@ -623,7 +623,13 @@ BUILTIN_PROFILES: Dict[str, ModelProfile] = {
     # native_tool_calling=False). Parser extracts tool JSON from response text.
     # NOTE: sonar-reasoning-pro MUST come before sonar* to avoid glob shadowing
     "sonar-reasoning-pro*": ModelProfile(
-        tool_calling=ToolCallingProfile(mode="prompt_based"),
+        # v1.19.1: was "prompt_based" — correct when Perplexity had no
+        # tool calling, false since it shipped. "auto" defers to the
+        # provider capability table (PERPLEXITY_NATIVE_TOOL_MODELS),
+        # because chat.py:693 short-circuits on mode="prompt_based" and
+        # would make that table decorative. Measured: sonar-pro and
+        # sonar-reasoning-pro emit real tool_calls. Debt Item 43.
+        tool_calling=ToolCallingProfile(mode="auto"),
         max_tokens=12_288,
         supports_reasoning=True,
         tier="C",
@@ -639,7 +645,13 @@ BUILTIN_PROFILES: Dict[str, ModelProfile] = {
         tier="D",
     ),
     "sonar-pro*": ModelProfile(
-        tool_calling=ToolCallingProfile(mode="prompt_based"),
+        # v1.19.1: was "prompt_based" — correct when Perplexity had no
+        # tool calling, false since it shipped. "auto" defers to the
+        # provider capability table (PERPLEXITY_NATIVE_TOOL_MODELS),
+        # because chat.py:693 short-circuits on mode="prompt_based" and
+        # would make that table decorative. Measured: sonar-pro and
+        # sonar-reasoning-pro emit real tool_calls. Debt Item 43.
+        tool_calling=ToolCallingProfile(mode="auto"),
         max_tokens=8_192,
         max_tool_iterations=20,
         supports_vision=True,

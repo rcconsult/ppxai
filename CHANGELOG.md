@@ -13,6 +13,41 @@ Branch: `bugfix/v1.19.1`. Opening theme: **tool-loop transcript integrity** — 
 
 > ⚠️ **Breaking: `ppxai-config.json` tier keys moved, no dual-read** (ADR 0010). Six `tools.agent.*` keys moved to the `execution.*` axis. A config left at the old paths is **silently ignored** and those settings revert to their defaults — run **`/doctor`**, which prints the exact old→new mapping for anything still stale. `/v1/oneshot` and `/v1/agent/*` are **config-consuming, not config-shaped**: no request or response changes.
 
+### Fixed — Perplexity tool calling, and the per-model capability framework
+
+`/task` on Perplexity never called its granted tools — it refused,
+confabulated a tool result, or answered from an unrelated web page (debt
+Item 43). The cause was ours: `native_tool_calling` was a per-PROVIDER
+constant hardcoded `False`, true when written and false since Perplexity
+shipped tool calling. Measured live: **`sonar-pro` and
+`sonar-reasoning-pro` emit real `tool_calls`**; `sonar` and
+`sonar-deep-research` return HTTP 400.
+
+Fixing it surfaced a **separate live bug**: `get_capabilities_for_model()`
+existed but no provider *send path* consulted it — all four read the
+static `self.capabilities`. So `o4-mini`, which the OpenAI provider marks
+prompt-based on its own benchmark evidence (10.9% vs 62.5%), was sent
+native tools regardless. All four sites now consult the hook.
+
+Capability is therefore per-model across every provider, resolved
+narrowest-first:
+
+    1. config  providers.<p>.models.<m>.capabilities   (per model)
+    2. code    provider per-model table                (per model)
+    3. config  providers.<p>.capabilities              (per provider)
+    4. code    default_capabilities                    (per provider)
+
+Specificity outranks authorship deliberately: a provider-wide config line
+must not cancel a shipped per-model table.
+
+Also: a tool-carrying run targeting a model that cannot call tools is now
+**refused at admission** rather than falling back to prompt-based calling,
+because that fallback is what produced the confabulated results.
+
+**`sonar-deep-research` is removed from the shipped model catalog.** It
+uses Perplexity's Jobs API, not chat completions, so it was never usable
+on the endpoint ppxai calls.
+
 ### Added — `network.ssl.*` config, and one resolver for outbound TLS
 
 TLS verification could previously be configured only through the

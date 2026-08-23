@@ -220,7 +220,48 @@ pure refactor with identical outputs.
   Test through the REAL loader, not a stubbed block reader.
 - Fence: precedence matrix test; mutation-test each layer.
 
-### I3 — Perplexity per-model table (closes Item 43)
+### I3 — Perplexity per-model table (closes Item 43) — ✅ DONE 2026-08-24
+
+Took FOUR layers, not one. Each looked correct in isolation, and each was
+inert until the one below it was fixed — the F1 shape, three more times:
+
+1. **Capability table** (`PERPLEXITY_NATIVE_TOOL_MODELS`) — the obvious part.
+2. **Model profile** — `sonar-pro*`/`sonar-reasoning-pro*` were pinned
+   `mode="prompt_based"`, and `chat.py:693` checks the mode FIRST and
+   short-circuits without reading capabilities. Measured:
+   `profile.mode=prompt_based, caps.native=True -> use_native=False`. Both
+   are now `"auto"`.
+3. **`perplexity.chat()` ignored `tools` outright** — it carried
+   `# Note: tools parameter is ignored` and had no native path at all, so
+   the table, the profile and I1's send-path wiring were ALL inert here.
+   Live-verified before the fix: sonar-pro produced 0 tool calls and refused
+   in prose while every upstream layer resolved native=True. Added the
+   tools/tool_choice kwargs plus `TOOL_CALL` event emission matching the
+   `openai_compat` contract.
+4. **Admission guard** — `sonar`/`sonar-deep-research` HTTP-400 on a tools
+   array rather than degrading, and the fallback for a non-capable model is
+   the prompt-based path that produced Item 43's confabulations. A
+   tool-carrying run on those is refused before it is minted; fails OPEN on
+   any unresolved lookup.
+
+**Live trial (the actual proof):** `sonar-pro` and `sonar-reasoning-pro`
+both emit a real `TOOL_CALL` event — `tool=read_file`, correct path
+argument, `native=True`. `sonar` sends no tools array.
+
+`sonar-deep-research` dropped from the shipped catalog (example config,
+`install.sh`, `scripts/install.ps1`, `vscode-extension/src/config.ts`, and
+their pricing tables). Its 400 is **not** a schema quirk after all: the
+example config's own comment records it "uses Jobs API with
+reasoning_effort … not chat completions", so it was never reachable on the
+endpoint ppxai calls. Its `model_profiles.py` entry stays as a fallback for
+anyone configuring it by hand.
+
+Tests: 35, five mutations killed. The lesson worth carrying into I4b/I5 is
+that a capability decision passes through FOUR independent layers, and a
+green unit test at any one of them proves nothing about the wire. Trial
+live, or check the request kwargs.
+
+#### Original I3 scope (for reference)
 
 `sonar-pro`, `sonar-reasoning-pro` to native. `sonar` not tool-capable. Drop
 `sonar-deep-research` from the configured model list per owner decision (its

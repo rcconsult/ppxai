@@ -43,15 +43,13 @@ const DEFAULT_CONFIG: PpxaiConfig = {
                 "sonar": { name: "Sonar", description: "Fast, good for general queries" },
                 "sonar-pro": { name: "Sonar Pro", description: "Advanced reasoning and analysis" },
                 "sonar-reasoning": { name: "Sonar Reasoning", description: "Extended thinking for complex problems" },
-                "sonar-reasoning-pro": { name: "Sonar Reasoning Pro", description: "Most capable reasoning model" },
-                "sonar-deep-research": { name: "Sonar Deep Research", description: "Comprehensive research and analysis" }
+                "sonar-reasoning-pro": { name: "Sonar Reasoning Pro", description: "Most capable reasoning model" }
             },
             pricing: {
                 "sonar": { input: 1.0, output: 1.0 },
                 "sonar-pro": { input: 3.0, output: 15.0 },
                 "sonar-reasoning": { input: 1.0, output: 5.0 },
-                "sonar-reasoning-pro": { input: 2.0, output: 8.0 },
-                "sonar-deep-research": { input: 2.0, output: 8.0 }
+                "sonar-reasoning-pro": { input: 2.0, output: 8.0 }
             },
             capabilities: {
                 web_search: true,

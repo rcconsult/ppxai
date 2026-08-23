@@ -381,17 +381,12 @@ generate_config() {
         "sonar-reasoning-pro": {
           "name": "Sonar Reasoning Pro",
           "description": "Precision reasoning with Chain of Thought capabilities"
-        },
-        "sonar-deep-research": {
-          "name": "Sonar Deep Research",
-          "description": "Exhaustive research with comprehensive reports"
         }
       },
       "pricing": {
         "sonar": {"input": 0.20, "output": 0.20},
         "sonar-pro": {"input": 3.00, "output": 15.00},
-        "sonar-reasoning-pro": {"input": 5.00, "output": 15.00},
-        "sonar-deep-research": {"input": 5.00, "output": 15.00}
+        "sonar-reasoning-pro": {"input": 5.00, "output": 15.00}
       },
       "capabilities": {
         "web_search": true,
@@ -553,7 +548,7 @@ generate_env_template() {
 # PERPLEXITY AI (Recommended - includes web search)
 # =============================================================================
 # Perplexity provides real-time web search with AI-powered answers.
-# Models: sonar (fast), sonar-pro (advanced), sonar-reasoning-pro, sonar-deep-research
+# Models: sonar (fast), sonar-pro (advanced), sonar-reasoning-pro
 #
 # PERPLEXITY_API_KEY=pplx-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 

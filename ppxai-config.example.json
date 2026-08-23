@@ -133,12 +133,6 @@
             "max_tokens": 12288,
             "frequency_penalty": 0.15
           }
-        },
-        "sonar-deep-research": {
-          "name": "Sonar Deep Research",
-          "description": "Exhaustive research with comprehensive reports (Async Jobs API)",
-          "__comment_best_for": "Comprehensive documentation, multi-step research, technical writing",
-          "__comment_note": "Uses Jobs API with reasoning_effort parameter (low/medium/high), not chat completions"
         }
       },
       "pricing": {
@@ -151,10 +145,6 @@
           "output": 15
         },
         "sonar-reasoning-pro": {
-          "input": 2,
-          "output": 8
-        },
-        "sonar-deep-research": {
           "input": 2,
           "output": 8
         }
