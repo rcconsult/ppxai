@@ -206,13 +206,36 @@ class BaseProvider(ABC):
         """
         return get_profile(model)
 
-    def get_capabilities_for_model(self, model: str) -> ProviderCapabilities:
-        """Get model-aware capabilities.
+    def shipped_capabilities_for_model(self, model: str) -> ProviderCapabilities:
+        """What THIS provider's own code says about `model` (plan layers 3-4).
 
-        Returns the provider's capabilities, potentially adjusted for specific
-        models. The default returns self.capabilities unchanged. Providers like
-        OpenAINativeProvider override this to disable native_tool_calling for
-        models that perform better with prompt-based routing.
+        Override this, not `get_capabilities_for_model`. The default returns
+        `self.capabilities` unchanged; providers with a mixed fleet return a
+        per-model answer (see `OpenAINativeProvider`, whose benchmark table
+        marks o4-mini / gpt-4.1-mini prompt-based).
+
+        Split from the public accessor so operator config can sit ABOVE every
+        provider without each one remembering to consult it — a subclass that
+        overrode the public method would otherwise silently drop the config
+        layers, which is the same "override bypasses the shared path" shape
+        that made the per-model hook unreachable in the first place.
+
+        Args:
+            model: Model ID (e.g., "gpt-5.2", "o4-mini")
+
+        Returns:
+            ProviderCapabilities as shipped, before operator overrides
+        """
+        return self.capabilities
+
+    def get_capabilities_for_model(self, model: str) -> ProviderCapabilities:
+        """Effective capabilities for `model` — the accessor callers use.
+
+        Applies operator config (`providers.<p>.capabilities` and
+        `providers.<p>.models.<m>.capabilities`) on top of whatever
+        `shipped_capabilities_for_model` returned. With no config stated this
+        returns the shipped value unchanged, so behaviour is identical for
+        every existing install.
 
         Args:
             model: Model ID (e.g., "gpt-5.2", "o4-mini")
@@ -220,7 +243,16 @@ class BaseProvider(ABC):
         Returns:
             ProviderCapabilities for the model
         """
-        return self.capabilities
+        base = self.shipped_capabilities_for_model(model)
+        provider_key = self.provider_id or self.name
+        if not provider_key:
+            return base
+        try:
+            from ...config.capabilities import apply_capability_overrides
+
+            return apply_capability_overrides(base, provider_key, model)
+        except Exception:  # noqa: BLE001 — config must never break a request
+            return base
 
     def _get_generation_params(self, model: str) -> Dict[str, Any]:
         """Get generation parameters (temperature, top_p, etc.) from config.

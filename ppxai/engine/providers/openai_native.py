@@ -359,7 +359,7 @@ class OpenAINativeProvider(BaseProvider):
             "usage": usage_dict,
         }
 
-    def get_capabilities_for_model(self, model: str) -> ProviderCapabilities:
+    def shipped_capabilities_for_model(self, model: str) -> ProviderCapabilities:
         """Get model-aware capabilities.
 
         Returns native_tool_calling=False for models that perform better with

@@ -168,10 +168,19 @@ One declarative source of truth, consulted through one accessor.
 
 Resolution order (narrowest wins), mirroring `get_tool_calling_config`:
 
-    1. ppxai-config.json  providers.<p>.models.<m>.capabilities   (operator)
-    2. ppxai-config.json  providers.<p>.capabilities              (operator)
-    3. provider code      per-model table / prefix rules          (shipped)
-    4. provider code      default_capabilities                    (shipped)
+    1. ppxai-config.json  providers.<p>.models.<m>.capabilities   (per model)
+    2. provider code      per-model table / prefix rules          (per model)
+    3. ppxai-config.json  providers.<p>.capabilities              (per provider)
+    4. provider code      default_capabilities                    (per provider)
+
+CORRECTED during I2. The original ordering put both config layers above
+both code layers; that is wrong. A provider-WIDE operator statement must
+not outrank a shipped per-MODEL table — specificity wins before
+authorship. Caught by running against the developer real config, which
+carries `providers.openai.capabilities.native_tool_calling: true` (a
+restatement of the default, predating per-model tables). Under the flat
+ordering it silently cancelled the o4-mini benchmark table. Every I2 unit
+test passed while this was broken.
 
 Notes on the shape:
 
