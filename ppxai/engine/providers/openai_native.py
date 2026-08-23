@@ -430,8 +430,11 @@ class OpenAINativeProvider(BaseProvider):
                         generation_params.pop(param, None)
                 request_kwargs.update(generation_params)
 
-            # Add tools for native tool calling
-            if tools and self.capabilities.native_tool_calling:
+            # Per-model, not per-provider: get_capabilities_for_model()
+            # is the hook that lets a provider mark individual models
+            # prompt-based. Reading self.capabilities here ignored it --
+            # o4-mini resolved False but was sent native tools anyway.
+            if tools and self.get_capabilities_for_model(model).native_tool_calling:
                 request_kwargs["tools"] = tools
                 request_kwargs["tool_choice"] = "auto"
 
@@ -646,8 +649,11 @@ class OpenAINativeProvider(BaseProvider):
             if self.enable_web_search:
                 response_tools.append({"type": "web_search_preview"})
 
-            # Add function tools if native tool calling enabled
-            if tools and self.capabilities.native_tool_calling:
+            # Per-model, not per-provider: get_capabilities_for_model()
+            # is the hook that lets a provider mark individual models
+            # prompt-based. Reading self.capabilities here ignored it --
+            # o4-mini resolved False but was sent native tools anyway.
+            if tools and self.get_capabilities_for_model(model).native_tool_calling:
                 converted = self._convert_tools_for_responses(tools)
                 response_tools.extend(converted)
 

@@ -331,6 +331,7 @@ class GeminiProvider(BaseProvider):
             # v1.15.2: Pass tools to config for native function calling
             # Both grounding AND function calling can work together
             config = self._build_config(
+                model=model,
                 use_grounding=self.enable_grounding,
                 system_instruction=system_instruction,
                 generation_params=generation_params,
@@ -529,6 +530,7 @@ class GeminiProvider(BaseProvider):
         contents, system_instruction = self._convert_messages(messages)
         generation_params = self._get_generation_params(model)
         config = self._build_config(
+            model=model,
             use_grounding=self.enable_grounding,
             system_instruction=system_instruction,
             generation_params=generation_params
@@ -587,6 +589,7 @@ class GeminiProvider(BaseProvider):
             # Gemini SDK uses max_output_tokens.
             generation_params["max_output_tokens"] = max_tokens
         config = self._build_config(
+            model=model,
             use_grounding=self.enable_grounding,
             system_instruction=system_instruction,
             generation_params=generation_params,
@@ -824,6 +827,7 @@ class GeminiProvider(BaseProvider):
 
     def _build_config(
         self,
+        model: Optional[str] = None,
         use_grounding: bool = True,
         system_instruction: Optional[str] = None,
         generation_params: Optional[Dict[str, Any]] = None,
@@ -861,7 +865,14 @@ class GeminiProvider(BaseProvider):
 
         # Add function declarations from ppxai tools (v1.15.2)
         # This takes priority over grounding when tools are enabled
-        if tools and self.capabilities.native_tool_calling:
+        # Per-model, not per-provider: get_capabilities_for_model() is the
+        # hook that lets a provider mark individual models prompt-based.
+        # `model` is threaded in for exactly this -- reading self.capabilities
+        # made the override unreachable on the send path.
+        caps = (
+            self.get_capabilities_for_model(model) if model else self.capabilities
+        )
+        if tools and caps.native_tool_calling:
             function_declarations = self._convert_tools_to_gemini(tools)
             if function_declarations:
                 gemini_tools.append(genai_types.Tool(function_declarations=function_declarations))
