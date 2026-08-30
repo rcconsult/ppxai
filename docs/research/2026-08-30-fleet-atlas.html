@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ppxai Fleet Atlas</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --bg: #F2F2F3;
+    --surface: #FFFFFF;
+    --tint: #E9F4FB;
+    --text: #1D1F20;
+    --head: #032B46;
+    --muted: #5D5D60;
+    --faint: #98989B;
+    --line: #D9DCDF;
+    --accent: #0072B8;
+    --accent2: #005A93;
+    --band: #032B46;
+    --band-text: #F2F2F3;
+    --band-muted: #A1D4F0;
+    --p-chat: #0072B8;
+    --p-resp: #7A4FC7;
+    --p-gen: #0E8A7D;
+    --p-msg: #C0570F;
+    --p-chat-bg: #E3F0F8;
+    --p-resp-bg: #EFE9F9;
+    --p-gen-bg: #E2F2F0;
+    --p-msg-bg: #F9ECE1;
+    --ok: #1A7F37;
+    --ok-bg: #E4F2E8;
+    --warn: #9A6700;
+    --warn-bg: #F7EFD8;
+    --bad: #C62828;
+    --bad-bg: #FAE7E5;
+    --code-bg: #EBEDEF;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #141619;
+      --surface: #1D1F20;
+      --tint: #0C2638;
+      --text: #F2F2F3;
+      --head: #A1D4F0;
+      --muted: #98989B;
+      --faint: #6E6E71;
+      --line: #34383C;
+      --accent: #62B2E0;
+      --accent2: #A1D4F0;
+      --band: #071E2F;
+      --band-text: #F2F2F3;
+      --band-muted: #62B2E0;
+      --p-chat: #62B2E0;
+      --p-resp: #B49AEA;
+      --p-gen: #52C2B2;
+      --p-msg: #EC9A62;
+      --p-chat-bg: #10293A;
+      --p-resp-bg: #251C3A;
+      --p-gen-bg: #0F2E2A;
+      --p-msg-bg: #38220F;
+      --ok: #5CBE7C;
+      --ok-bg: #10301B;
+      --warn: #DCAF3C;
+      --warn-bg: #33290C;
+      --bad: #EF7B6E;
+      --bad-bg: #3A1613;
+      --code-bg: #26292C;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #141619;
+    --surface: #1D1F20;
+    --tint: #0C2638;
+    --text: #F2F2F3;
+    --head: #A1D4F0;
+    --muted: #98989B;
+    --faint: #6E6E71;
+    --line: #34383C;
+    --accent: #62B2E0;
+    --accent2: #A1D4F0;
+    --band: #071E2F;
+    --band-text: #F2F2F3;
+    --band-muted: #62B2E0;
+    --p-chat: #62B2E0;
+    --p-resp: #B49AEA;
+    --p-gen: #52C2B2;
+    --p-msg: #EC9A62;
+    --p-chat-bg: #10293A;
+    --p-resp-bg: #251C3A;
+    --p-gen-bg: #0F2E2A;
+    --p-msg-bg: #38220F;
+    --ok: #5CBE7C;
+    --ok-bg: #10301B;
+    --warn: #DCAF3C;
+    --warn-bg: #33290C;
+    --bad: #EF7B6E;
+    --bad-bg: #3A1613;
+    --code-bg: #26292C;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Sans','Segoe UI','Noto Sans',Arial,sans-serif;
+    font-size: 15px;
+    line-height: 1.55;
+    margin: 0;
+  }
+  h1,h2,h3,h4 {
+    font-family: 'IBM Plex Sans Condensed','Arial Narrow','Noto Sans Condensed',sans-serif;
+    color: var(--head);
+    text-wrap: balance;
+    line-height: 1.15;
+    margin: 0;
+  }
+  code, .mono {
+    font-family: 'IBM Plex Mono',Consolas,'Courier New',monospace;
+    font-size: 0.88em;
+  }
+  code { background: var(--code-bg); padding: 1px 5px; border-radius: 3px; }
+  a { color: var(--accent); }
+
+  .band {
+    background: var(--band);
+    color: var(--band-text);
+    padding: 44px 24px 36px;
+  }
+  .band-inner { max-width: 1160px; margin: 0 auto; }
+  .eyebrow {
+    font-family: 'IBM Plex Sans Condensed','Arial Narrow','Noto Sans Condensed',sans-serif;
+    font-size: 13px; font-weight: 600;
+    letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--band-muted);
+    margin-bottom: 10px;
+  }
+  .band h1 { color: var(--band-text); font-size: 44px; font-weight: 700; }
+  .band .sub { color: #C8CDD1; max-width: 68ch; margin-top: 12px; font-size: 16px; }
+  .band .stamp { color: var(--band-muted); font-size: 12.5px; margin-top: 16px; letter-spacing: 0.04em; }
+
+  .statgrid {
+    max-width: 1160px; margin: 0 auto; padding: 0 24px;
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px;
+    transform: translateY(-26px);
+  }
+  .stat {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 6px;
+    padding: 14px 16px 12px;
+    box-shadow: 0 2px 10px rgba(3,43,70,0.08);
+  }
+  .stat .n {
+    font-family: 'IBM Plex Sans Condensed','Arial Narrow',sans-serif;
+    font-size: 34px; font-weight: 700; color: var(--head);
+    font-variant-numeric: tabular-nums; line-height: 1;
+  }
+  .stat .l { font-size: 12.5px; color: var(--muted); margin-top: 5px; line-height: 1.3; }
+  .stat.alert { border-left: 4px solid var(--bad); }
+  .stat.alert .n { color: var(--bad); }
+
+  main { max-width: 1160px; margin: 0 auto; padding: 12px 24px 60px; }
+  section { margin-top: 52px; }
+  .sec-head { display: flex; align-items: baseline; gap: 14px; border-bottom: 2px solid var(--head); padding-bottom: 8px; margin-bottom: 20px; }
+  .sec-head h2 { font-size: 26px; font-weight: 700; }
+  .sec-head .k {
+    font-family: 'IBM Plex Sans Condensed','Arial Narrow',sans-serif;
+    font-size: 13px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint);
+  }
+  .lede { max-width: 76ch; color: var(--text); }
+  .lede.dim { color: var(--muted); }
+
+  .callout {
+    border-radius: 6px; padding: 14px 18px; margin: 18px 0;
+    border: 1px solid var(--line); border-left-width: 5px;
+    background: var(--surface);
+  }
+  .callout.bad  { border-left-color: var(--bad);  background: var(--bad-bg); }
+  .callout.warn { border-left-color: var(--warn); background: var(--warn-bg); }
+  .callout.ok   { border-left-color: var(--ok);   background: var(--ok-bg); }
+  .callout b.tag { text-transform: uppercase; letter-spacing: 0.08em; font-size: 12px; }
+  .callout.bad b.tag { color: var(--bad); }
+  .callout.warn b.tag { color: var(--warn); }
+  .callout.ok b.tag { color: var(--ok); }
+
+  .pill {
+    display: inline-block; padding: 1px 9px; border-radius: 999px;
+    font-family: 'IBM Plex Sans Condensed','Arial Narrow',sans-serif;
+    font-size: 12px; font-weight: 600; letter-spacing: 0.05em; white-space: nowrap;
+    border: 1px solid transparent;
+  }
+  .pill.chat { color: var(--p-chat); background: var(--p-chat-bg); }
+  .pill.resp { color: var(--p-resp); background: var(--p-resp-bg); }
+  .pill.gen  { color: var(--p-gen);  background: var(--p-gen-bg); }
+  .pill.msg  { color: var(--p-msg);  background: var(--p-msg-bg); }
+  .pill.ok   { color: var(--ok);     background: var(--ok-bg); }
+  .pill.warn { color: var(--warn);   background: var(--warn-bg); }
+  .pill.bad  { color: var(--bad);    background: var(--bad-bg); }
+  .pill.dim  { color: var(--muted);  background: var(--code-bg); }
+
+  .vbadge {
+    display: inline-block; font-size: 11px; color: var(--muted);
+    border: 1px solid var(--line); border-radius: 3px; padding: 0 5px;
+    letter-spacing: 0.03em; white-space: nowrap;
+  }
+  .vbadge.live { color: var(--ok); border-color: var(--ok); }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(255px, 1fr)); gap: 16px; }
+  .card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 6px;
+    padding: 16px 18px; border-top: 4px solid var(--line);
+  }
+  .card.chat { border-top-color: var(--p-chat); }
+  .card.resp { border-top-color: var(--p-resp); }
+  .card.gen  { border-top-color: var(--p-gen); }
+  .card.msg  { border-top-color: var(--p-msg); }
+  .card h3 { font-size: 18px; margin-bottom: 2px; }
+  .card .ep { font-size: 12px; color: var(--muted); word-break: break-all; }
+  .card p { font-size: 13.5px; margin: 10px 0 0; color: var(--text); }
+  .card ul { font-size: 13px; margin: 8px 0 0; padding-left: 18px; color: var(--muted); }
+  .card li { margin-top: 3px; }
+
+  .tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+  thead th {
+    font-family: 'IBM Plex Sans Condensed','Arial Narrow',sans-serif;
+    font-size: 12px; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase;
+    color: var(--band-text); background: var(--band);
+    text-align: left; padding: 8px 12px; white-space: nowrap;
+  }
+  tbody td { padding: 7px 12px; border-top: 1px solid var(--line); vertical-align: top; }
+  tbody tr:nth-child(even) { background: color-mix(in srgb, var(--tint) 45%, var(--surface)); }
+  td.mono, th.mono { font-family: 'IBM Plex Mono',Consolas,monospace; font-size: 12.5px; white-space: nowrap; }
+  .tiny { font-size: 12px; color: var(--muted); }
+  .num { font-variant-numeric: tabular-nums; }
+
+  .prov {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 8px;
+    margin-top: 22px; overflow: hidden;
+  }
+  .prov-head {
+    display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px 14px;
+    background: var(--tint); border-bottom: 1px solid var(--line);
+    padding: 12px 18px;
+  }
+  .prov-head h3 { font-size: 20px; }
+  .prov-head .cls { font-size: 12.5px; color: var(--muted); }
+  .prov-body { padding: 14px 18px 18px; }
+  .prov-body .tablewrap { border-radius: 4px; }
+  .prov-note { font-size: 13px; color: var(--muted); margin-top: 10px; max-width: 85ch; }
+
+  figure { margin: 22px 0 8px; }
+  figure svg { max-width: 100%; height: auto; display: block; margin: 0 auto; }
+  figcaption { font-size: 13px; color: var(--muted); max-width: 80ch; margin: 10px auto 0; text-align: center; }
+  .svgwrap { overflow-x: auto; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 12.5px; color: var(--muted); margin-top: 14px; align-items: center; }
+  .sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-right: 5px; }
+
+  .srcs { font-size: 13px; color: var(--muted); }
+  .srcs ul { padding-left: 20px; }
+  .srcs li { margin-top: 4px; }
+  footer { border-top: 1px solid var(--line); margin-top: 56px; padding: 18px 24px 30px; }
+  .foot-inner { max-width: 1160px; margin: 0 auto; font-size: 12px; color: var(--faint); }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+
+<div class="band">
+  <div class="band-inner">
+    <div class="eyebrow">ppxai · providers × models × wire protocols</div>
+    <h1>ppxai Fleet Atlas</h1>
+    <p class="sub">Every model ppxai can reach today, the wire protocol each one actually travels on, and the fleets
+    arriving next — traced from code, config, and live probes, then checked against the provider docs on the web.
+    Companion to ADR 0012 — <em>wire protocol as a per-model capability</em> (Proposed).</p>
+    <div class="stamp">Compiled 2026-08-30 · branch <span class="mono">bugfix/v1.19.1</span> @ <span class="mono">9e6df49f</span> · verification dates on every claim</div>
+  </div>
+</div>
+
+<div class="statgrid">
+  <div class="stat"><div class="n">10</div><div class="l">provider entries in the example config</div></div>
+  <div class="stat"><div class="n">4</div><div class="l">provider classes behind them</div></div>
+  <div class="stat"><div class="n">3<span style="font-size:20px;color:var(--muted)">+1</span></div><div class="l">wire protocols live today + Messages designed (ADR 0012)</div></div>
+  <div class="stat"><div class="n">35</div><div class="l">models configured · 65 built-in behaviour profiles</div></div>
+  <div class="stat"><div class="n">38+</div><div class="l">models on Perplexity's Agent API, unreachable until I4b</div></div>
+  <div class="stat alert"><div class="n">28<span style="font-size:18px">d</span></div><div class="l">until the Sonar chat-completions endpoint retires (2026-09-27)</div></div>
+</div>
+
+<main>
+
+<section id="alerts">
+  <div class="callout bad">
+    <b class="tag">Deadline · new finding (web, 2026-08-30)</b> —
+    <b>Perplexity retires the Sonar chat-completions endpoint on 2026-09-27.</b>
+    That endpoint is the <em>only</em> wire the shipped <code>PerplexityProvider</code> speaks. Perplexity's forum and changelog
+    now label Sonar Chat Completions “legacy” and direct everyone to the Agent API — which is the OpenAI Responses API
+    ppxai already implements for OpenAI Codex models. This turns plan iteration <b>I4b</b> (Responses routing) from an
+    enhancement into a dated migration, ahead of the Gemini deadline below.
+  </div>
+  <div class="callout warn">
+    <b class="tag">Deadline · known (debt Item 54)</b> —
+    <b>Google shuts down the whole Gemini 2.5 line on 2026-10-16</b> (confirmed on ai.google.dev; forum reports say some users lost
+    2.5-flash <em>early</em>). No configured model is hit, but the code default <code>tools.web_search.gemini_model =
+    "gemini-2.5-flash"</code> dies with it.
+  </div>
+</section>
+
+<section id="hierarchy">
+  <div class="sec-head"><h2>The hierarchy: config → class → wire</h2><span class="k">today + designed</span></div>
+  <p class="lede">Ten configured provider entries funnel into four Python provider classes, which speak three wire
+  protocols. The mapping is not one-to-one in either direction — that asymmetry is the whole subject of ADR 0012.
+  <b>OpenAI already splits per model across two wires</b>, and Perplexity is about to be forced to.</p>
+
+  <div class="svgwrap">
+  <figure>
+  <svg viewBox="0 0 1160 660" role="img" aria-label="Flow diagram: ten config provider entries map to four provider classes, which map to three live wire protocols plus the designed Messages protocol. OpenAI's class reaches two protocols per model; Perplexity's chat-completions wire retires 2026-09-27 and a dashed future edge moves it to the Responses wire; a dashed future Anthropic provider reaches the Messages wire.">
+    <defs>
+      <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M0 0 L10 5 L0 10 z" fill="currentColor"/>
+      </marker>
+      <marker id="arr-bad" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M0 0 L10 5 L0 10 z" fill="var(--bad)"/>
+      </marker>
+    </defs>
+    <g font-family="'IBM Plex Sans Condensed','Arial Narrow',sans-serif" font-size="13" fill="currentColor">
+      <text x="130" y="24" text-anchor="middle" font-weight="700" letter-spacing="1.5" font-size="12" fill="var(--faint)">CONFIG ENTRIES</text>
+      <text x="520" y="24" text-anchor="middle" font-weight="700" letter-spacing="1.5" font-size="12" fill="var(--faint)">PROVIDER CLASSES</text>
+      <text x="960" y="24" text-anchor="middle" font-weight="700" letter-spacing="1.5" font-size="12" fill="var(--faint)">WIRE PROTOCOLS</text>
+
+      <!-- column 1: config entries -->
+      <g>
+        <rect x="30" y="40" width="200" height="38" rx="5" fill="var(--surface)" stroke="var(--line)"/>
+        <text x="130" y="64" text-anchor="middle" font-family="'IBM Plex Mono',monospace" font-size="13">openai</text>
+
+        <rect x="30" y="96" width="200" height="38" rx="5" fill="var(--surface)" stroke="var(--line)"/>
+        <text x="130" y="120" text-anchor="middle" font-family="'IBM Plex Mono',monospace" font-size="13">perplexity</text>
+
+        <rect x="30" y="152" width="200" height="38" rx="5" fill="var(--surface)" stroke="var(--line)"/>
+        <text x="130" y="176" text-anchor="middle" font-family="'IBM Plex Mono',monospace" font-size="13">gemini</text>
+
+        <rect x="30" y="210" width="200" height="170" rx="5" fill="var(--surface)" stroke="var(--line)"/>
+        <text x="130" y="230" text-anchor="middle" font-size="11.5" fill="var(--muted)" letter-spacing="1">7 OPENAI-COMPATIBLE</text>
+        <g font-family="'IBM Plex Mono',monospace" font-size="11.5" fill="var(--muted)">
+          <text x="130" y="250" text-anchor="middle">openrouter · nvidia</text>
+          <text x="130" y="268" text-anchor="middle">local-vllm · vllm-gpt-oss</text>
+          <text x="130" y="286" text-anchor="middle">qwen36-agent</text>
+          <text x="130" y="304" text-anchor="middle">lmstudio · ollama</text>
+        </g>
+        <text x="130" y="336" text-anchor="middle" font-size="11" fill="var(--faint)">unregistered names fall back to</text>
+        <text x="130" y="352" text-anchor="middle" font-size="11" fill="var(--faint)">OpenAICompatibleProvider</text>
+
+        <rect x="30" y="520" width="200" height="52" rx="5" fill="none" stroke="var(--p-msg)" stroke-dasharray="6 4"/>
+        <text x="130" y="541" text-anchor="middle" font-family="'IBM Plex Mono',monospace" font-size="13" fill="var(--p-msg)">anthropic</text>
+        <text x="130" y="559" text-anchor="middle" font-size="11" fill="var(--faint)">planned · separate entry (§7)</text>
+      </g>
+
+      <!-- column 2: classes -->
+      <g>
+        <rect x="400" y="40" width="240" height="56" rx="5" fill="var(--tint)" stroke="var(--accent2)"/>
+        <text x="520" y="63" text-anchor="middle" font-weight="600">OpenAINativeProvider</text>
+        <text x="520" y="82" text-anchor="middle" font-size="11.5" fill="var(--muted)">two wires · chosen per model</text>
+
+        <rect x="400" y="120" width="240" height="56" rx="5" fill="var(--tint)" stroke="var(--accent2)"/>
+        <text x="520" y="143" text-anchor="middle" font-weight="600">PerplexityProvider</text>
+        <text x="520" y="162" text-anchor="middle" font-size="11.5" fill="var(--muted)">per-model tool capability (I3)</text>
+
+        <rect x="400" y="200" width="240" height="56" rx="5" fill="var(--tint)" stroke="var(--accent2)"/>
+        <text x="520" y="223" text-anchor="middle" font-weight="600">GeminiProvider</text>
+        <text x="520" y="242" text-anchor="middle" font-size="11.5" fill="var(--muted)">native google-genai SDK</text>
+
+        <rect x="400" y="280" width="240" height="56" rx="5" fill="var(--tint)" stroke="var(--accent2)"/>
+        <text x="520" y="303" text-anchor="middle" font-weight="600">OpenAICompatibleProvider</text>
+        <text x="520" y="322" text-anchor="middle" font-size="11.5" fill="var(--muted)">one wire, any OpenAI-shaped host</text>
+
+        <rect x="400" y="520" width="240" height="52" rx="5" fill="none" stroke="var(--p-msg)" stroke-dasharray="6 4"/>
+        <text x="520" y="541" text-anchor="middle" font-weight="600" fill="var(--p-msg)">AnthropicProvider</text>
+        <text x="520" y="559" text-anchor="middle" font-size="11" fill="var(--faint)">reserved: feat/anthropic-provider</text>
+      </g>
+
+      <!-- column 3: protocols -->
+      <g>
+        <rect x="810" y="40" width="300" height="66" rx="5" fill="var(--p-resp-bg)" stroke="var(--p-resp)" stroke-width="1.5"/>
+        <text x="960" y="63" text-anchor="middle" font-weight="700" fill="var(--p-resp)">responses</text>
+        <text x="960" y="81" text-anchor="middle" font-family="'IBM Plex Mono',monospace" font-size="11" fill="var(--muted)">POST /v1/responses</text>
+        <text x="960" y="97" text-anchor="middle" font-size="11" fill="var(--muted)">OpenAI SDK · function_call items</text>
+
+        <rect x="810" y="160" width="300" height="66" rx="5" fill="var(--p-chat-bg)" stroke="var(--p-chat)" stroke-width="1.5"/>
+        <text x="960" y="183" text-anchor="middle" font-weight="700" fill="var(--p-chat)">chat_completions</text>
+        <text x="960" y="201" text-anchor="middle" font-family="'IBM Plex Mono',monospace" font-size="11" fill="var(--muted)">POST /chat/completions</text>
+        <text x="960" y="217" text-anchor="middle" font-size="11" fill="var(--muted)">OpenAI SDK · tool_calls · 8 of 10 entries</text>
+
+        <rect x="810" y="280" width="300" height="66" rx="5" fill="var(--p-gen-bg)" stroke="var(--p-gen)" stroke-width="1.5"/>
+        <text x="960" y="303" text-anchor="middle" font-weight="700" fill="var(--p-gen)">generate_content</text>
+        <text x="960" y="321" text-anchor="middle" font-family="'IBM Plex Mono',monospace" font-size="11" fill="var(--muted)">google-genai SDK</text>
+        <text x="960" y="337" text-anchor="middle" font-size="11" fill="var(--muted)">parts arrays · system_instruction hoist</text>
+
+        <rect x="810" y="513" width="300" height="66" rx="5" fill="none" stroke="var(--p-msg)" stroke-width="1.5" stroke-dasharray="6 4"/>
+        <text x="960" y="536" text-anchor="middle" font-weight="700" fill="var(--p-msg)">messages</text>
+        <text x="960" y="554" text-anchor="middle" font-family="'IBM Plex Mono',monospace" font-size="11" fill="var(--muted)">POST /v1/messages · anthropic SDK</text>
+        <text x="960" y="570" text-anchor="middle" font-size="11" fill="var(--faint)">designed in ADR 0012 §6 — not built</text>
+      </g>
+
+      <!-- edges: entries -> classes -->
+      <g stroke="currentColor" fill="none" stroke-width="1.3">
+        <line x1="230" y1="59" x2="396" y2="66" marker-end="url(#arr)"/>
+        <line x1="230" y1="115" x2="396" y2="146" marker-end="url(#arr)"/>
+        <line x1="230" y1="171" x2="396" y2="226" marker-end="url(#arr)"/>
+        <line x1="230" y1="295" x2="396" y2="307" marker-end="url(#arr)"/>
+        <line x1="230" y1="546" x2="396" y2="546" marker-end="url(#arr)" stroke-dasharray="6 4" stroke="var(--p-msg)"/>
+      </g>
+
+      <!-- edges: classes -> protocols -->
+      <g fill="none" stroke-width="1.6">
+        <path d="M640 56 C 730 50, 750 62, 806 68" stroke="var(--p-resp)" marker-end="url(#arr)"/>
+        <path d="M640 84 C 720 100, 740 160, 806 182" stroke="var(--p-chat)" marker-end="url(#arr)"/>
+        <path d="M640 150 C 730 160, 750 180, 806 195" stroke="var(--p-chat)" marker-end="url(#arr-bad)"/>
+        <path d="M640 236 C 730 250, 750 290, 806 306" stroke="var(--p-gen)" marker-end="url(#arr)"/>
+        <path d="M640 312 C 720 300, 760 240, 806 213" stroke="var(--p-chat)" marker-end="url(#arr)"/>
+        <path d="M640 536 C 700 480, 730 200, 806 94" stroke="var(--p-resp)" stroke-dasharray="6 4" marker-end="url(#arr)"/>
+        <path d="M640 556 C 720 552, 740 546, 806 546" stroke="var(--p-msg)" stroke-dasharray="6 4" marker-end="url(#arr)"/>
+      </g>
+
+      <!-- edge labels -->
+      <g font-size="11" fill="var(--muted)">
+        <text x="712" y="44">codex / pro models</text>
+        <text x="700" y="126">everything else</text>
+        <text x="660" y="178" fill="var(--bad)" font-weight="600">Sonar · wire retires 2026-09-27</text>
+        <text x="712" y="272">all models</text>
+        <text x="716" y="318">all models</text>
+        <text x="656" y="420" fill="var(--p-resp)" font-weight="600" transform="rotate(-52 700 400)">I4b: Agent fleet · 38+ models</text>
+        <text x="700" y="533" fill="var(--faint)">native Claude</text>
+      </g>
+    </g>
+  </svg>
+  <figcaption>Solid edges are shipped and verified; dashed edges are planned. The red edge is the load-bearing risk:
+  PerplexityProvider's only wire retires 2026-09-27, and its replacement (violet dashed) is the Responses protocol that
+  <code>OpenAINativeProvider</code> already implements — I4b is routing, not new protocol code.</figcaption>
+  </figure>
+  </div>
+
+  <div class="legend">
+    <span><span class="sw" style="background:var(--p-chat)"></span>chat_completions</span>
+    <span><span class="sw" style="background:var(--p-resp)"></span>responses</span>
+    <span><span class="sw" style="background:var(--p-gen)"></span>generate_content</span>
+    <span><span class="sw" style="background:var(--p-msg)"></span>messages (designed)</span>
+    <span style="border-left:1px solid var(--line);padding-left:16px">dashed = planned · red = retiring wire</span>
+  </div>
+</section>
+
+<section id="protocols">
+  <div class="sec-head"><h2>The four wire protocols</h2><span class="k">3 live · 1 designed</span></div>
+  <div class="cards">
+    <div class="card chat">
+      <h3>chat_completions</h3>
+      <div class="ep mono">POST /chat/completions · OpenAI SDK</div>
+      <p>The workhorse: 8 of 10 config entries end here. Tool calls go out as a <code>tools</code> array and come back as
+      <code>tool_calls</code>; results return as <code>tool</code>-role messages.</p>
+      <ul>
+        <li>Message conversion: <code>BaseProvider._convert_messages</code></li>
+        <li>The only wire guarded by ADR 0006's validator (Item 62)</li>
+        <li>Perplexity's copy of it retires 2026-09-27</li>
+      </ul>
+    </div>
+    <div class="card resp">
+      <h3>responses</h3>
+      <div class="ep mono">POST /v1/responses · OpenAI SDK</div>
+      <p>Server-side conversation state (<code>previous_response_id</code>), tool calls as <code>function_call</code> items.
+      Live for OpenAI codex/pro models — and <b>measured live on Perplexity</b>: the stock SDK drives its Agent API unchanged.</p>
+      <ul>
+        <li>Implemented once: <code>openai_native.py · _chat_responses_api</code></li>
+        <li>Routing today: hardcoded prefix tuple, <em>not</em> the profile table (Item 61)</li>
+        <li>I4b re-registers it on PerplexityProvider</li>
+      </ul>
+    </div>
+    <div class="card gen">
+      <h3>generate_content</h3>
+      <div class="ep mono">google-genai SDK</div>
+      <p>Gemini's native wire: <code>parts</code> arrays, <code>user/model</code> roles, system prompts hoisted to
+      <code>system_instruction</code>. No tool-call ids — pairing is by function <em>name</em>.</p>
+      <ul>
+        <li>Overrides <code>_convert_messages</code> with an incompatible return type (Item 62)</li>
+        <li>Gemini 3.x makes <code>thought_signature</code> mandatory (Item 54)</li>
+        <li>Falls back to chat_completions if google-genai is absent</li>
+      </ul>
+    </div>
+    <div class="card msg">
+      <h3>messages <span class="pill dim">designed</span></h3>
+      <div class="ep mono">POST /v1/messages · anthropic SDK</div>
+      <p>Anthropic-native: top-level <code>system</code>, <b>required</b> <code>max_tokens</code>, tool calls as
+      <code>tool_use</code> blocks, results batched into a <em>single</em> user message.</p>
+      <ul>
+        <li>Specified in ADR 0012 §6; built with <code>feat/anthropic-provider</code></li>
+        <li><code>thinking</code> blocks must round-trip unchanged (Item 45's bug class)</li>
+        <li>Separate provider = separate billing/token (§7, owner decision)</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="fleet">
+  <div class="sec-head"><h2>Today's fleet, wire-confirmed</h2><span class="k">35 configured models</span></div>
+  <p class="lede dim">Each row names its verification source. <span class="vbadge live">probed live</span> means a real
+  request was sent and the behaviour measured; <span class="vbadge">profile</span> means the shipped behaviour table;
+  <span class="vbadge">config</span> means present in <code>ppxai-config.example.json</code>; <span class="vbadge">web</span>
+  means confirmed against provider docs during this compile.</p>
+
+  <!-- PERPLEXITY -->
+  <div class="prov">
+    <div class="prov-head">
+      <h3>perplexity</h3>
+      <span class="cls">PerplexityProvider · <span class="mono">PERPLEXITY_API_KEY</span> · api.perplexity.ai</span>
+      <span class="pill bad">wire retires 2026-09-27</span>
+    </div>
+    <div class="prov-body">
+      <div class="tablewrap">
+      <table>
+        <thead><tr><th>Model</th><th>Wire today</th><th>Native tools</th><th>Tier</th><th>Verified</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">sonar</td><td><span class="pill chat">chat_completions</span></td>
+              <td><span class="pill bad">rejects — HTTP 400</span> <span class="tiny">guarded up front by task_authorizer</span></td>
+              <td class="num">B</td><td><span class="vbadge live">probed 2026-08-24</span></td></tr>
+          <tr><td class="mono">sonar-pro</td><td><span class="pill chat">chat_completions</span></td>
+              <td><span class="pill ok">native</span> <span class="tiny">emitted a real tool call</span></td>
+              <td class="num">A</td><td><span class="vbadge live">probed 2026-08-24</span></td></tr>
+          <tr><td class="mono">sonar-reasoning-pro</td><td><span class="pill chat">chat_completions</span></td>
+              <td><span class="pill ok">native</span></td>
+              <td class="num">C</td><td><span class="vbadge live">probed 2026-08-24</span></td></tr>
+        </tbody>
+      </table>
+      </div>
+      <p class="prov-note"><code>sonar-deep-research</code> was dropped from the catalog at I3 (distinct parameter-shape 400).
+      Perplexity has <b>no <code>/models</code> endpoint</b> (404, re-verified) — capability is declared in
+      <code>PERPLEXITY_NATIVE_TOOL_MODELS</code> and guarded by <code>scripts/probe-perplexity-capabilities.py</code>,
+      which exits non-zero on drift. Last probe: <b>no drift</b>.</p>
+    </div>
+  </div>
+
+  <!-- OPENAI -->
+  <div class="prov">
+    <div class="prov-head">
+      <h3>openai</h3>
+      <span class="cls">OpenAINativeProvider · <span class="mono">OPENAI_API_KEY</span> · api.openai.com</span>
+      <span class="pill resp">2 wires, per model</span>
+    </div>
+    <div class="prov-body">
+      <div class="tablewrap">
+      <table>
+        <thead><tr><th>Model</th><th>Wire (actual router)</th><th>Profile says</th><th>Tool mode</th><th>Tier</th><th>Verified</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">gpt-5.5</td><td><span class="pill chat">chat_completions</span></td><td class="tiny">chat ·  agrees</td><td>native</td><td class="num">A</td><td><span class="vbadge">profile + live /models 07-11</span></td></tr>
+          <tr><td class="mono">gpt-5.5-pro</td><td><span class="pill chat">chat_completions</span></td><td class="tiny">chat · agrees</td><td>native</td><td class="num">A</td><td><span class="vbadge">profile</span></td></tr>
+          <tr><td class="mono">gpt-5.4</td><td><span class="pill chat">chat_completions</span></td><td class="tiny">chat · agrees</td><td>native</td><td class="num">A</td><td><span class="vbadge">profile + live /models 07-11</span></td></tr>
+          <tr><td class="mono">gpt-5.4-pro</td><td><span class="pill chat">chat_completions</span></td><td class="tiny">chat · agrees</td><td>native</td><td class="num">A</td><td><span class="vbadge">profile</span></td></tr>
+          <tr><td class="mono">gpt-5.4-mini</td><td><span class="pill chat">chat_completions</span></td><td class="tiny">chat · agrees</td><td>native</td><td class="num">A</td><td><span class="vbadge">profile + live /models 07-11</span></td></tr>
+          <tr><td class="mono">gpt-5.4-nano</td><td><span class="pill chat">chat_completions</span></td><td class="tiny">chat · agrees</td><td>native</td><td class="num">A</td><td><span class="vbadge">profile</span></td></tr>
+          <tr><td class="mono">gpt-5.3-codex</td><td><span class="pill chat">chat_completions</span> <span class="pill bad">drift</span></td>
+              <td class="tiny" style="color:var(--bad)"><b>responses</b> · ignored</td><td>native</td><td class="num">A</td><td><span class="vbadge live">measured 2026-08-30</span></td></tr>
+        </tbody>
+      </table>
+      </div>
+      <p class="prov-note">The only provider that already speaks two wires. Routing is
+      <code>RESPONSES_API_PREFIXES</code> — a hardcoded tuple that <b>ignores the profile table's <code>api_path</code></b>
+      (debt Item 61, measured: 3 models drift in both directions; see below). Reasoning-tier models
+      (<code>o4-mini</code>) run prompt-based by benchmark evidence — the I1 fix made send paths honour that.</p>
+    </div>
+  </div>
+
+  <!-- GEMINI -->
+  <div class="prov">
+    <div class="prov-head">
+      <h3>gemini</h3>
+      <span class="cls">GeminiProvider (native SDK) · <span class="mono">GEMINI_API_KEY</span> · generativelanguage.googleapis.com</span>
+      <span class="pill gen">generate_content</span>
+    </div>
+    <div class="prov-body">
+      <div class="tablewrap">
+      <table>
+        <thead><tr><th>Model</th><th>Wire</th><th>Tool mode</th><th>Tier</th><th>Status</th><th>Verified</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">gemini-3.5-flash</td><td><span class="pill gen">generate_content</span></td><td>native</td><td class="num">S</td>
+              <td><span class="pill ok">recommended default</span></td><td><span class="vbadge">live /models 07-11 + web 08-30</span></td></tr>
+          <tr><td class="mono">gemini-3.1-pro-preview</td><td><span class="pill gen">generate_content</span></td><td>native</td><td class="num">A</td>
+              <td><span class="pill warn">last preview-class model — Google retires previews in 2–3 months</span></td><td><span class="vbadge">live /models 07-11</span></td></tr>
+          <tr><td class="mono">gemini-3.1-flash-lite</td><td><span class="pill gen">generate_content</span></td><td>native</td><td class="num">B</td>
+              <td><span class="tiny">cheap tier · own sunset 2027-05-07 → 3.5-flash-lite</span></td><td><span class="vbadge">live /models 07-11</span></td></tr>
+          <tr><td class="mono">gemma-4-31b-it</td><td><span class="pill gen">generate_content</span></td><td>native</td><td class="num">B</td>
+              <td><span class="tiny">open weights, free tier, vision</span></td><td><span class="vbadge">live /models 07-11</span></td></tr>
+          <tr><td class="mono">gemma-4-26b-a4b-it</td><td><span class="pill gen">generate_content</span></td><td>native</td><td class="num">B</td>
+              <td><span class="tiny">MoE, 3.8B active</span></td><td><span class="vbadge">live /models 07-11</span></td></tr>
+        </tbody>
+      </table>
+      </div>
+      <p class="prov-note">If <code>google-genai</code> is not installed the entry silently falls back to
+      <code>OpenAICompatibleProvider</code> over Gemini's OpenAI-compat endpoint — same models, different wire.
+      Gemini 3.x makes <code>thought_signature</code> <b>mandatory</b> on function-call turns with chain rules the
+      round-trip tests don't cover yet (Item 54 fact 4).</p>
+    </div>
+  </div>
+
+  <!-- OPENAI-COMPAT -->
+  <div class="prov">
+    <div class="prov-head">
+      <h3>7 × OpenAI-compatible</h3>
+      <span class="cls">OpenAICompatibleProvider · one wire, many hosts</span>
+      <span class="pill chat">chat_completions</span>
+    </div>
+    <div class="prov-body">
+      <div class="tablewrap">
+      <table>
+        <thead><tr><th>Entry</th><th>Host</th><th>Configured models</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">openrouter</td><td class="tiny">openrouter.ai</td>
+              <td class="mono">anthropic/claude-sonnet-4 · claude-opus-4 · claude-haiku · deepseek/deepseek-r1 · llama-3.1-70b / 405b · google/gemini-2.0-flash-001</td>
+              <td class="tiny"><b>Claude is already reachable today</b> — over chat_completions, on OpenRouter's bill.
+              <span style="color:var(--warn)">gemini-2.0-flash-001 upstream died 2026-06-01 (Item 54 lineage)</span></td></tr>
+          <tr><td class="mono">nvidia</td><td class="tiny">integrate.api.nvidia.com</td>
+              <td class="mono">qwen/qwen3.5-122b-a10b · qwen3-next-80b-a3b-instruct · deepseek-v4-pro · deepseek-v4-flash · kimi-k2.6</td>
+              <td class="tiny">9/9 live at the 07-11 sweep; NIM publishes no deprecation calendar — the live-catalog diff <em>is</em> the check</td></tr>
+          <tr><td class="mono">local-vllm · vllm-gpt-oss · qwen36-agent</td><td class="tiny">self-hosted vLLM</td>
+              <td class="mono">Llama-3-70b · openai/gpt-oss-120b · Qwen3.6-27B-FP8-agent</td>
+              <td class="tiny">gpt-oss runs prompt-based (Harmony parser quirks — docs/vllm-notes.md)</td></tr>
+          <tr><td class="mono">lmstudio · ollama</td><td class="tiny">localhost</td>
+              <td class="mono">qwen2.5-coder 7b/3b/0.5b · qwen2.5:3b</td>
+              <td class="tiny">desktop-class; qwen2.5-coder:32b profile is prompt-based</td></tr>
+        </tbody>
+      </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="drift">
+  <div class="sec-head"><h2>Declared vs routed: the api_path drift</h2><span class="k">debt Item 61 · measured 2026-08-30</span></div>
+  <p class="lede">The profile table carries an <code>api_path</code> per model — merged through the config precedence
+  ladder, operator-overridable, displayed by <code>/provider</code> — and <b>nothing routes on it</b>. The actual router
+  is a hardcoded prefix tuple. The two disagree on three models, in both directions, and an operator's override is
+  silently inert.</p>
+  <div class="tablewrap" style="max-width:720px">
+  <table>
+    <thead><tr><th>Model</th><th>Profile declares</th><th>Actually routed</th><th></th></tr></thead>
+    <tbody>
+      <tr><td class="mono">gpt-5.3-codex</td><td><span class="pill resp">responses</span></td><td><span class="pill chat">chat_completions</span></td><td><span class="pill bad">drift</span></td></tr>
+      <tr><td class="mono">gpt-5.2-pro</td><td><span class="pill chat">chat</span></td><td><span class="pill resp">responses</span></td><td><span class="pill bad">drift</span></td></tr>
+      <tr><td class="mono">gpt-5-pro</td><td><span class="pill chat">chat</span></td><td><span class="pill resp">responses</span></td><td><span class="pill bad">drift</span></td></tr>
+      <tr><td class="mono">gpt-5.1-codex / -mini</td><td><span class="pill resp">responses</span></td><td><span class="pill resp">responses</span></td><td><span class="pill ok">agrees — by coincidence</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="lede dim" style="margin-top:12px"><code>"gpt-5.3-codex"</code> misses the tuple because <code>"codex"</code>
+  is a <em>prefix</em> match, not a substring. ADR 0012 steps 1–2 make <code>api_path</code> load-bearing and fence it
+  with a declared-vs-routed test over every built-in profile.</p>
+</section>
+
+<section id="future">
+  <div class="sec-head"><h2>The fleets arriving next</h2><span class="k">verified rosters, not speculation</span></div>
+
+  <div class="prov">
+    <div class="prov-head">
+      <h3>Perplexity Agent API</h3>
+      <span class="cls">the same <span class="mono">perplexity</span> entry, second wire (ADR 0012 §5 · I4b)</span>
+      <span class="pill resp">responses</span>
+      <span class="pill bad">mandatory by 2026-09-27</span>
+    </div>
+    <div class="prov-body">
+      <p class="prov-note" style="margin:0 0 12px">Roster fetched from <span class="mono">docs.perplexity.ai</span> 2026-08-13,
+      additions confirmed on the web 2026-08-30. All of it is <b>one Perplexity key, one bill, one accounting bucket</b> —
+      which is why it stays one provider entry (§5), unlike Anthropic-direct (§7). Wire measured live:
+      <code>anthropic/claude-sonnet-5</code> answered and emitted a real <code>function_call</code> through the stock OpenAI SDK.</p>
+      <div class="tablewrap">
+      <table>
+        <thead><tr><th>Namespace</th><th>Models on the Agent API</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">anthropic/</td>
+              <td class="mono">claude-opus-5 · opus-4-8 · opus-4-7 · opus-4-6 · opus-4-5 · claude-sonnet-5 · sonnet-4-6 · sonnet-4-5 · claude-fable-5 · claude-haiku-4-5</td>
+              <td class="tiny"><b>requires <code>max_output_tokens</code></b> (400 without) — table data, not a code branch</td></tr>
+          <tr><td class="mono">openai/</td>
+              <td class="mono">gpt-5.6-sol · gpt-5.6-terra · gpt-5.6-luna · gpt-5.5 · gpt-5.4 · gpt-5.4-mini · gpt-5.4-nano · gpt-5.2 · gpt-5.1 · gpt-5 · gpt-5-mini</td>
+              <td class="tiny">the 5.6 line lands here before our own openai entry adopts it</td></tr>
+          <tr><td class="mono">google/</td>
+              <td class="mono">gemini-3.1-pro-preview · 3.1-flash-lite · 3.5-flash · 3.5-flash-lite · 3.6-flash · 3-flash-preview</td>
+              <td class="tiny">includes 3.5/3.6 successors of the dying 2.5 line</td></tr>
+          <tr><td class="mono">xai/</td>
+              <td class="mono">grok-4.6 · grok-4.5 · grok-4.3 · grok-4.20-reasoning · grok-4.20-non-reasoning · grok-4.20-multi-agent</td>
+              <td class="tiny">only route to Grok from ppxai</td></tr>
+          <tr><td class="mono">perplexity/ + other</td>
+              <td class="mono">sonar · kimi-k3 · kimi-k2.7-code · glm-5.2 · glm-5.3 <span class="pill warn">new 08/2026</span> · deepseek-v4-flash-0731 · nemotron-3.5-lightning-30b-a3b · nemotron-3-ultra-550b-a55b</td>
+              <td class="tiny">GLM 5.3 added Aug 2026 ($1.40/$4.40 per MTok)</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <p class="prov-note">Built-in server tools: <code>web_search</code>, <code>sandbox</code>, <code>fetch_url</code>,
+      <code>finance_search</code>, <code>people_search</code>, MCP connections.</p>
+    </div>
+  </div>
+
+  <div class="cards" style="margin-top:22px">
+    <div class="card msg">
+      <h3>Anthropic direct <span class="pill dim">reserved</span></h3>
+      <div class="ep">feat/anthropic-provider · new provider entry (§7 — owner decision)</div>
+      <p>Separate entry, separate <code>ANTHROPIC_API_KEY</code>, separate billing and accounting bucket — <em>not</em> merged
+      with the Perplexity route to the same weights. Current first-party fleet:</p>
+      <ul>
+        <li class="mono">claude-fable-5 · claude-opus-5 · opus-4-8 / 4-7 / 4-6</li>
+        <li class="mono">claude-sonnet-5 · sonnet-4-6 · claude-haiku-4-5</li>
+        <li>Wire: <span class="pill msg">messages</span> per ADR 0012 §6</li>
+        <li>Claude will appear <b>three ways</b>: OpenRouter (today), Perplexity Agent (I4b), native (future) — different bills, so different entries is correct</li>
+      </ul>
+    </div>
+    <div class="card chat">
+      <h3>OpenAI gpt-5.6 line <span class="pill warn">Item 55</span></h3>
+      <div class="ep">Sol / Terra / Luna · GA, prices cut 2026-07-30 (Sol −20% again in Aug)</div>
+      <ul>
+        <li><span class="mono">gpt-5.6-sol</span> — $5/$30, beats gpt-5.5 at its price</li>
+        <li><span class="mono">gpt-5.6-terra</span> — $2/$12, beats gpt-5.5 at 40% of its price: clearest swap</li>
+        <li><span class="mono">gpt-5.6-luna</span> — $0.20/$1.20, but MRCR long-context recall 41% — cheap context it can't recall over</li>
+        <li>Hazard before switching: community-reported Sol 400 on tools + <code>reasoning_effort</code> over chat_completions — probe first</li>
+      </ul>
+    </div>
+    <div class="card gen">
+      <h3>Gemini succession <span class="pill warn">Item 54</span></h3>
+      <div class="ep">2.5 line shuts down 2026-10-16 · replacements GA</div>
+      <ul>
+        <li><span class="mono">gemini-3.6-flash</span> — GA since 2026-07-21, no sunset</li>
+        <li><span class="mono">gemini-3.5-flash-lite</span> — successor of 3.1-flash-lite</li>
+        <li>Code default <span class="mono">web_search → gemini-2.5-flash</span> dies on sunset — must move</li>
+        <li>SDK pinned 2.11.0, upstream 2.16.0; Google says pin &lt;3.0.0</li>
+      </ul>
+    </div>
+    <div class="card chat">
+      <h3>NVIDIA NIM watchlist <span class="pill dim">Item 38.4</span></h3>
+      <div class="ep">no deprecation calendar — live-catalog diff is the check</div>
+      <ul>
+        <li class="mono">z-ai/glm-5.2 · minimaxai/minimax-m3</li>
+        <li class="mono">mistral-small-4-119b · mistral-medium-3.5-128b</li>
+        <li class="mono">google/gemma-4-31b-it</li>
+        <li>5 NIM retirements already absorbed 2026-05-31</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="timeline">
+  <div class="sec-head"><h2>Deadline runway</h2><span class="k">from today, 2026-08-30</span></div>
+  <div class="svgwrap">
+  <figure>
+  <svg viewBox="0 0 1120 250" role="img" aria-label="Timeline from 30 August to mid December 2026. Sonar chat-completions endpoint retires 27 September, hitting ppxai's Perplexity provider. Gemini 2.5 line shuts down 16 October, hitting the web-search default model. Minor retirements on 28 September, 2 October, and 11 December do not touch configured models.">
+    <defs>
+      <marker id="arr-t" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M0 0 L10 5 L0 10 z" fill="currentColor"/>
+      </marker>
+    </defs>
+    <g font-family="'IBM Plex Sans Condensed','Arial Narrow',sans-serif" font-size="12.5" fill="currentColor">
+      <line x1="40" y1="150" x2="1090" y2="150" stroke="currentColor" stroke-width="2" marker-end="url(#arr-t)"/>
+      <!-- today -->
+      <circle cx="70" cy="150" r="6" fill="var(--accent)"/>
+      <text x="70" y="180" text-anchor="middle" font-weight="700">Aug 30</text>
+      <text x="70" y="196" text-anchor="middle" fill="var(--muted)">today</text>
+      <!-- Sep 27 -->
+      <line x1="330" y1="150" x2="330" y2="72" stroke="var(--bad)" stroke-width="2"/>
+      <circle cx="330" cy="150" r="7" fill="var(--bad)"/>
+      <text x="330" y="52" text-anchor="middle" font-weight="700" fill="var(--bad)" font-size="14">Sep 27 · Sonar chat-completions retires</text>
+      <text x="330" y="66" text-anchor="middle" fill="var(--bad)">breaks PerplexityProvider's only wire → I4b</text>
+      <text x="330" y="180" text-anchor="middle" fill="var(--bad)" font-weight="600">28 days</text>
+      <!-- Sep 28 minor -->
+      <circle cx="368" cy="150" r="4" fill="var(--faint)"/>
+      <text x="368" y="204" text-anchor="middle" fill="var(--faint)" font-size="11">Sep 28 · gpt-3.5-turbo*</text>
+      <text x="368" y="218" text-anchor="middle" fill="var(--faint)" font-size="11">not configured</text>
+      <!-- Oct 2 minor -->
+      <circle cx="404" cy="150" r="4" fill="var(--faint)"/>
+      <text x="470" y="126" text-anchor="middle" fill="var(--faint)" font-size="11">Oct 2 · gemini-2.5-flash-image · not configured</text>
+      <!-- Oct 16 -->
+      <line x1="520" y1="150" x2="520" y2="84" stroke="var(--warn)" stroke-width="2"/>
+      <circle cx="520" cy="150" r="7" fill="var(--warn)"/>
+      <text x="520" y="64" text-anchor="middle" font-weight="700" fill="var(--warn)" font-size="14">Oct 16 · Gemini 2.5 line shutdown</text>
+      <text x="520" y="78" text-anchor="middle" fill="var(--warn)">kills web_search default gemini-2.5-flash (code, not config)</text>
+      <text x="520" y="180" text-anchor="middle" fill="var(--warn)" font-weight="600">47 days</text>
+      <!-- Dec 11 -->
+      <circle cx="1000" cy="150" r="4" fill="var(--faint)"/>
+      <text x="1000" y="180" text-anchor="middle" fill="var(--faint)" font-size="11">Dec 11 · dated gpt-5-* snapshots</text>
+      <text x="1000" y="194" text-anchor="middle" fill="var(--faint)" font-size="11">not configured</text>
+    </g>
+  </svg>
+  <figcaption>Two deadlines actually touch ppxai. The Sonar retirement is the nearer and the harder: it removes the wire,
+  not a model — every configured Perplexity model becomes unreachable unless I4b lands first.
+  Forum reports of Gemini 2.5-flash disappearing <em>early</em> for some users argue against running either one to the day.</figcaption>
+  </figure>
+  </div>
+</section>
+
+<section id="verify">
+  <div class="sec-head"><h2>How each claim is verified</h2><span class="k">the audit trail</span></div>
+  <div class="tablewrap">
+  <table>
+    <thead><tr><th>Layer</th><th>Source of truth</th><th>Checked by</th><th>Last verified</th></tr></thead>
+    <tbody>
+      <tr><td>Configured models</td><td class="mono">ppxai-config.example.json</td><td class="tiny">version-controlled; live <span class="mono">/models</span> sweep per provider</td><td class="num">2026-07-11 (all live)</td></tr>
+      <tr><td>Per-model behaviour</td><td class="mono">model_profiles.py · 65 profiles</td><td class="tiny">benchmark-derived; mode + api_path + tier</td><td class="num">rolling</td></tr>
+      <tr><td>Perplexity tool capability</td><td class="mono">PERPLEXITY_NATIVE_TOOL_MODELS</td><td class="tiny"><span class="mono">scripts/probe-perplexity-capabilities.py</span> — live probe, exits non-zero on drift, ERROR is never a verdict</td><td class="num">2026-08-24 (no drift)</td></tr>
+      <tr><td>Wire routing (openai)</td><td class="mono">RESPONSES_API_PREFIXES</td><td class="tiny" style="color:var(--bad)">nothing — that's Item 61; fence lands with ADR 0012 step 2</td><td class="num">drift measured 2026-08-30</td></tr>
+      <tr><td>Deprecations & sunsets</td><td class="mono">model_deprecations.py · 29 entries</td><td class="tiny"><span class="mono">/doctor</span> config advisor; web sweeps</td><td class="num">2026-08-01 / 08-30</td></tr>
+      <tr><td>Agent API roster</td><td class="tiny">docs.perplexity.ai (no /models endpoint exists)</td><td class="tiny">docs fetch + live Responses probe with real key</td><td class="num">2026-08-13 / 08-30</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section id="sources" class="srcs">
+  <div class="sec-head"><h2>Sources</h2><span class="k">repo + web</span></div>
+  <p><b>Repository</b> (branch <code>bugfix/v1.19.1</code> @ <code>9e6df49f</code>):
+  <code>ppxai-config.example.json</code> · <code>ppxai/engine/model_profiles.py</code> ·
+  <code>ppxai/engine/model_deprecations.py</code> · <code>ppxai/engine/providers/{perplexity,openai_native,gemini,openai_compat,base}.py</code> ·
+  <code>scripts/probe-perplexity-capabilities.py</code> · <code>docs/decisions/0012-wire-protocol-as-per-model-capability.md</code> ·
+  <code>docs/plan-per-model-capabilities.md</code> · <code>docs/debt-inventory.md</code> (Items 38, 54, 55, 61, 62)</p>
+  <p><b>Web</b> (checked 2026-08-30):</p>
+  <ul>
+    <li><a href="https://community.perplexity.ai/t/sonar-is-moving-to-the-agent-api/5802">Perplexity forum — “Sonar is moving to the Agent API”</a> and the <a href="https://docs.perplexity.ai/docs/resources/changelog">Perplexity changelog</a> — Sonar endpoints retire 2026-09-27; Agent API additions incl. GLM 5.3</li>
+    <li><a href="https://www.perplexity.ai/hub/blog/agent-api-one-place-to-build-with-llms-the-web-and-agents">Perplexity blog — Agent API launch</a></li>
+    <li><a href="https://ai.google.dev/gemini-api/docs/deprecations.md.txt">Google — Gemini API deprecations</a> and <a href="https://ai.google.dev/gemini-api/docs/changelog">release notes</a> — 2.5 line shutdown 2026-10-16; gemini-3.6-flash GA</li>
+    <li><a href="https://discuss.ai.google.dev/t/gemini-2-5-flash-deprecated-without-warning-earlier-than-shutdown-date/174217">Google AI forum — 2.5-flash unavailable early for some users</a></li>
+    <li><a href="https://help.openai.com/en/articles/9624314-model-release-notes">OpenAI model release notes</a> — gpt-5.6 family, Sol price cut, ChatGPT-side retirements</li>
+  </ul>
+</section>
+
+</main>
+
+<footer><div class="foot-inner">ppxai Fleet Atlas · compiled 2026-08-30 from bugfix/v1.19.1 @ 9e6df49f · verification badges date every claim; anything unbadged is repo-derived. Companion to ADR 0012 (Proposed).</div></footer>
+
+</body>
+</html>
