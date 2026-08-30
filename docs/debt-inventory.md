@@ -470,11 +470,23 @@ date bumped to 2026-07-11; no new table entries needed.
      `perplexity/nemotron-3.5-lightning-30b-a3b`,
      `perplexity/nemotron-3-ultra-550b-a55b`, `perplexity/sonar`
 
-   **Wire shape — NOT OpenAI-compatible for tools.** The Agent API returns
-   `function_call` items (`{type, name, call_id, arguments}`) and takes
-   results back as `function_call_output`, *not* OpenAI-style `tool_calls`.
-   So option (a) below is **not** a drop-in second provider entry: our
-   `openai_compat`/`BaseProvider` path would need a translation layer.
+   **Wire shape — CORRECTED 2026-08-15, measured live.** The paragraph
+   here previously read *"NOT OpenAI-compatible for tools … would need a
+   translation layer"*. That was derived from the docs and is **wrong**.
+   The Agent API **is the OpenAI Responses API**: `POST /v1/agent` and
+   `POST /v1/responses` are both live, accept the new model IDs, and return
+   the Responses envelope. It does return `function_call` items rather than
+   `tool_calls` — but that *is* the Responses shape, and ppxai already
+   implements it at `openai_native.py:610` (`_chat_responses_api`), which
+   already handles `function_call`. The stock OpenAI SDK
+   (`OpenAI(base_url=...).responses.create`) drives it unchanged.
+
+   So this is a **routing** problem, not a protocol problem — per-model
+   `api_path`, which is exactly what `ToolCallingProfile` already carries.
+   Tracked as I4b in [plan-per-model-capabilities.md](plan-per-model-capabilities.md).
+   Note `anthropic/*` **requires `max_output_tokens`** (400 without) — more
+   table data, not a code branch.
+
    Built-in tools: `web_search`, `sandbox` (code execution), `fetch_url`,
    `finance_search`, `people_search`, plus MCP server support.
 
@@ -483,9 +495,12 @@ date bumped to 2026-07-11; no new table entries needed.
    (verified live), so fixing Item 43 does **not** require adopting the
    Agent API. These are independent decisions.
 
-   **Still open:** (a) a second provider entry for the Agent API (needs the
-   `function_call` translation layer), (b) Search API as a `web_search`
-   backend, or (c) out of scope. `anthropic/*` here intersects the
+   **Still open:** (a) reaching the Agent-API fleet — no translation layer
+   needed (see the correction above), only `api_path` routing; the open
+   question is whether these are new models on the existing `perplexity`
+   provider or a second provider entry, deliberately reserved for the owner
+   at I4b — (b) Search API as a `web_search` backend, or (c) out of scope.
+   `anthropic/*` here intersects the
    roadmap's native Anthropic-provider item — going direct is likely
    preferable to proxying through Perplexity. Pricing unverified.
 
@@ -519,6 +534,20 @@ existence sweep cannot see this. **Method note for the next refresh:**
 probe capabilities, not just liveness — send a one-message request with a
 `tools=[...]` array per model and record whether it 400s, returns prose,
 or returns `tool_calls`. That single probe is what overturned Item 43.
+
+**That method is now a script (2026-08-24, plan I4):**
+`scripts/probe-perplexity-capabilities.py` runs the probe against the
+shipped roster and exits non-zero on drift, so the next refresh does not
+have to re-derive the method. Run it as part of the sweep:
+
+    python3 scripts/probe-perplexity-capabilities.py --check-models-endpoint
+
+Result 2026-08-24 — **no drift**: `sonar` REJECTS, `sonar-pro` NATIVE
+(emitted a real tool call), `sonar-reasoning-pro` NATIVE; all three match
+the shipped table. `/models` still 404, so enumeration remains impossible
+and this probe stays the only check that can see a capability change.
+`sonar-deep-research` (dropped from the roster at I3) still returns its
+distinct parameter-SHAPE 400, unchanged.
 
 ---
 

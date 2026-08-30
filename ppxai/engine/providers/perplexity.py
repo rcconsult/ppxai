@@ -135,20 +135,24 @@ class PerplexityProvider(BaseProvider):
             messages: Conversation history
             model: Model ID to use
             stream: Whether to stream the response
-            tools: Converted to prompt-based tool calling. Perplexity Sonar models
-                   do not support native function calling via the API (tool_calls response).
-                   Instead, tool definitions are injected into the system prompt and
-                   responses are parsed for JSON tool call format.
+            tools: Sent natively for models in PERPLEXITY_NATIVE_TOOL_MODELS
+                   (measured: `sonar-pro`, `sonar-reasoning-pro` emit real
+                   `tool_calls`). For any other model the array is NOT sent —
+                   `sonar` and `sonar-deep-research` answer HTTP 400 rather
+                   than degrading, so a tool-carrying run on them is refused
+                   up front by the admission guard in `task_authorizer`.
 
-                   Note: Perplexity's Agentic Research API supports native tools for
-                   third-party models (openai/gpt-*, etc.) but NOT for Sonar models.
+                   The capability is resolved through
+                   `get_capabilities_for_model()`, so operator config can
+                   override the shipped table per model.
 
-                   See: https://docs.perplexity.ai/docs/agentic-research/tools
+                   Re-verify with `scripts/probe-perplexity-capabilities.py`
+                   — there is no `/models` endpoint, so the table cannot be
+                   validated by enumeration and goes stale silently.
 
         Yields:
             Event objects including citations when available
         """
-        # Note: tools parameter is ignored - Perplexity has native search
         try:
             api_messages = self._convert_messages(messages)
 

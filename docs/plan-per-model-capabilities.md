@@ -272,11 +272,52 @@ live, or check the request kwargs.
 - Also: a tool-capable `/task` on `sonar` must be REJECTED up front, not
   routed to the prompt-based path.
 
-### I4 — refresh the Perplexity model roster
+### I4 — refresh the Perplexity model roster — ✅ DONE 2026-08-24
 
 Reconcile configured models against what the API actually serves. No
 `/models` endpoint, so this is a capability PROBE per model (one request
 carrying a `tools=[...]` array), not an enumeration. Feeds debt Item 38.
+
+**Shipped:** `scripts/probe-perplexity-capabilities.py` + 23 offline tests
+in `tests/test_perplexity_capability_probe.py`.
+
+**Live result — no drift.** All three shipped models match the table:
+
+| Model | Measured | Table |
+|---|---|---|
+| `sonar` | REJECTS (400 "Tool calling is not supported") | REJECTS |
+| `sonar-pro` | NATIVE — *emitted a real tool call* | NATIVE |
+| `sonar-reasoning-pro` | NATIVE | NATIVE |
+
+`/models` re-verified **404**. `sonar-deep-research` (dropped at I3) still
+returns its distinct parameter-SHAPE 400.
+
+**Design points worth keeping:**
+
+- **The roster is read from `ppxai-config.example.json`, not hardcoded** —
+  a model added to config but never measured starts being probed with no
+  edit to the script. The one thing a stale-table guard must not do is go
+  stale itself.
+- **Four verdicts, not two.** `REJECTS` (capability absent) and `SHAPE`
+  (parameter-shape complaint) are different findings; `ABSENT`
+  (`invalid_model`) is not a capability statement at all. Collapsing them
+  would assert measurements we have not made.
+- **`ERROR` is never a capability verdict.** A 401/5xx exits 2 and judges
+  nothing — a failed probe must not read as "the model lost tool calling".
+  Mutation-verified with a deliberately bad key: the run reported ERROR on
+  a model the table calls NATIVE, rather than a false drift.
+- **Drift is checked in both directions.** The underclaim direction (table
+  says not-capable, API accepts) is the Item 43 shape — silent, and it cost
+  about a month.
+
+All four properties were mutation-tested by breaking the script and
+confirming the suite goes red; the baseline was then restored and verified
+byte-identical to the version that produced the live result above.
+
+Also corrected here: **debt Item 38's "NOT OpenAI-compatible for tools …
+needs a translation layer" paragraph**, which was doc-derived and wrong —
+it survived unamended when this plan was corrected at I2, and would have
+misdirected I4b.
 
 ### I4b — reach the new Perplexity fleet (Responses routing)
 
