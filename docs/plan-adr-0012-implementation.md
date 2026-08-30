@@ -111,7 +111,11 @@ iteration implements it; no separate ADR to draft.
   generic" is today only a hand-maintained comment, not computed.
 - **Q0c** — config keys: **clean break** per ADR 0010, `/doctor` scan in the
   **same commit**, and the §2 clean-break inventory (4 reader modules + 4
-  user docs) moves with it.
+  user docs) moves with it. ⚠️ **Translate, don't drop:**
+  `capabilities.native_tool_calling: true` → `tool_mode: native`. Measured:
+  `openrouter` and `ollama` in the shipped example config have **no
+  `tool_calling` block at all**, so that key is the only thing holding
+  native on — a pure drop demotes every field config copied from it.
 - ⚠️ **Rung 4 is a declared behaviour change:** provider-level operator
   config currently outranks AGENTS.md (both flattened into one layer by
   `get_tool_calling_config`); the ladder demotes it below AGENTS.md.
@@ -130,6 +134,15 @@ iteration implements it; no separate ADR to draft.
   **consumed in W2**.
 - Config accessors merge; `/doctor` scan; `chat.py:693`'s mode check reads
   the unified facts.
+
+**Pre-measured (auditor, 2026-08-30, 90 configured models across example +
+a real user config):** 14 models resolve mode via the profile default; the
+conservative default demotes **none** of them (13 held native by
+provider-level capabilities config, 1 already `prompt_based`). One explicit
+row needed: **`gpt-5.1` on `openai`** — native in the shipped table, matches
+no glob. No profile-vs-capability disagreement requires arbitration.
+Rung-4 reorder is **inert today**: no AGENTS.md anywhere carries a
+`tool_calling` section.
 
 **Fences:** a model in **neither** table resolves NOT tool-capable, asserted
 end-to-end through `authorize_task()` (Q0a's default flip); an exact id that

@@ -355,8 +355,16 @@ provider-wide operator default, which is the same specificity-before-authorship
 rule I2 established — but it **must be declared and fenced, not slipped in**.
 W1 ships a real-config cross-pair test (provider-level config × AGENTS.md ×
 per-model glob), because this is precisely the class of ordering bug that 22
-green unit tests missed in I2. If any shipped config depends on the old order,
-the migration notes it.
+green unit tests missed in I2.
+
+**Measured (2026-08-30): the reorder changes nothing observable today.**
+Provider-level `tool_calling` blocks do exist (example config: `nvidia`,
+`local-vllm`, `vllm-gpt-oss`, `qwen36-agent`, `lmstudio`; a real user config:
+7 providers), but **no AGENTS.md carries a `tool_calling` section** — zero
+hits across this repo, ppxai-sre and a third checkout. The two layers being
+reordered never currently meet. The migration note still ships, because the
+docs and example config teach *both* mechanisms and a future AGENTS.md would
+land straight into the changed order.
 
 I2's guard carries over unchanged: a test bans subclasses from overriding the
 public accessor, since one that did would silently drop the config layers —
@@ -394,6 +402,18 @@ those and give each an explicit row, not inherit them by default flip.
 assert it resolves not-tool-capable, plus an end-to-end assertion through
 `authorize_task()` (the I3 lesson: testing the helper is not testing the call
 site).
+
+**Measured demotion risk (2026-08-30, example config + a real user config,
+90 configured models): 14 models resolve their mode via the profile default
+alone, and the conservative default demotes effectively none of them** —
+13 are held native by a provider-level `capabilities.native_tool_calling:
+true` (which the translation above preserves), and the 14th
+(`meta-llama/Llama-3-70b` on example `local-vllm`) is already configured
+`prompt_based`, so the new default agrees with it. **One exception needs an
+explicit row:** `gpt-5.1` on `openai` is native by the shipped code table
+but matches no glob (`gpt-5.1-codex*` exists; bare `gpt-5.1` does not).
+Applying the real ladders to all 90 found **no model where built-in profile
+and resolved capability disagree in a way the unification must arbitrate.**
 
 #### Q0b — glob vs exact key: globs win, one matcher, **exact ids matched first**
 
@@ -437,6 +457,21 @@ the docs still taught it. Every one of these moves in the same change:
 *User docs that teach the key and would otherwise contradict the scan:*
 `docs/tool-calling.md` · `docs/vllm-notes.md` ·
 `docs/vllm-tool-calling-guide.md` · `docs/dgx-spark-setup.md`.
+
+⚠️ **The break is NOT drop-and-scan — the key must be TRANSLATED.**
+Measured across the example config and a real user config (90 configured
+models): several providers carry `capabilities.native_tool_calling: true`
+and **no `tool_calling` block at all** — `openrouter` and `ollama` in the
+shipped example config are exactly this shape (verified: `tool_calling`
+absent, capabilities key `true`). For them that key is the *only* thing
+holding native tool calling on.
+
+So Q0c's migration must map `capabilities.native_tool_calling: true` →
+`tool_mode: native` (and `false` → `prompt_based`), in `/doctor`'s rewrite
+and in the example config, in the same change. A pure drop — even with a
+scan that *reports* the stale key — silently demotes every `openai_compat`
+deployment in the field that copied the example config. **The migration
+cost of this ADR lives in field configs, not in code tables.**
 
 ### 3. `api_path` is finally *consumed* — as `ModelFacts.wire_protocol`
 
