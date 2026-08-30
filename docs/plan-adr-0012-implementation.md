@@ -1,11 +1,13 @@
 # Plan: ADR 0012 implementation — protocol handlers, under the Sonar deadline
 
 **Status: DRAFT — awaiting owner review. Nothing below is started.**
-**Owner decision 2026-08-30:** capabilities + profiles **unify first** (new
-W1); wire protocol then lives in the unified model-facts system, not in a
-third parallel resolver. ADR 0012 §2 will be amended accordingly; the
-unification itself gets its own short ADR (0013) drafted at W1 start and
-signed off before code.
+**Owner decisions 2026-08-30:** (1) capabilities + profiles **unify first**
+(W1); wire protocol lives in the unified model-facts system, not in a third
+parallel resolver. (2) That design is **folded into ADR 0012 in place** —
+no separate ADR 0013. 0012 is `Proposed`, and the README's Proposed-records
+rule makes in-place revision the way a design converges; the unification IS
+0012's core question converging, not a second decision. **ADR 0012 §2 now
+carries the full design (`ModelFacts`, Q0a–Q0c) and is what you sign off.**
 **Drives:** [ADR 0012](decisions/0012-wire-protocol-as-per-model-capability.md)
 (Proposed) · closes debt **Item 61** (W2) and **Item 62** (W4) · absorbs
 **I4b** from [plan-per-model-capabilities.md](plan-per-model-capabilities.md)
@@ -91,31 +93,45 @@ IDs are safe on provider `perplexity` — every production provider-key split
 is `split("/")[0]` / `split("/", 1)` (`usage.py:243`, `session.py:1326`,
 `tools.py:569`/`647`, `search_backends.py:148`).
 
-## W1 — unify per-model fact resolution (NEW · ADR 0013 · ~2.5–3d)
+## W1 — unify per-model fact resolution (ADR 0012 §2 + migration step 0 · ~2.5d)
 
-Today two parallel systems answer overlapping per-model questions:
-`ProviderCapabilities` (6 booleans; I2 ladder in `config/capabilities.py`;
-2 `shipped_capabilities_for_model` overrides) and `ModelProfile` /
-`ToolCallingProfile` (65 globs; own layered merge in `chat.py`; carries the
-inert `api_path`). `native_tool_calling` (boolean) vs `tool_calling.mode`
-(native/prompt_based/auto) is the visible redundancy — I3's Layer-2 bug
-lived exactly in their seam (`chat.py:693` checks mode FIRST and
-short-circuits capabilities).
+Design is **already written and owner-reviewable** in
+[ADR 0012 §2](decisions/0012-wire-protocol-as-per-model-capability.md) —
+`ModelFacts`, the five-layer ladder, and Q0a–Q0c are decided there. This
+iteration implements it; no separate ADR to draft.
 
-- **ADR 0013 first** (short): the unified model-facts shape, which field
-  wins the boolean-vs-mode pair, the config key surface (both systems have
-  config overrides today — a merge is an ADR-0010-style clean break and
-  needs the `/doctor` config-shape scan shipped WITH it), migration of the
-  65 profiles. Owner signs off before code.
-- One resolution ladder, one accessor family on `BaseProvider`, one guard.
-  `wire_protocol` is a field of the unified facts from day one —
-  **declared here, consumed in W2**.
+**What §2 settles (recorded here so the plan stands alone):**
+- **Q0a** — `tool_mode` subsumes `native_tool_calling`; the boolean is
+  **deleted**, not kept as a derived alias (a readable alias is how the I3
+  seam bug survived).
+- **Q0b** — globs win over exact keys (globs generalise; 65 patterns already
+  depend on them). One matcher, first-match-wins, most-specific-first.
+- **Q0c** — config keys: **clean break** per ADR 0010, with the `/doctor`
+  config-shape scan shipped in the **same commit**.
 
-**Fences:** every existing capability + profile test passes against the
-unified accessor; the I2 real-config cross-pair test extended to profile
-fields; mode-vs-capability seam test (the I3 regression). **Runnable
-after:** behaviour byte-identical — this iteration only moves where facts
-are resolved, not what they say. Call graphs + graphify refresh.
+**Work:**
+- `ModelFacts` + `shipped_facts_for_model()` / `get_facts_for_model()` on
+  `BaseProvider`; the two `shipped_capabilities_for_model` overrides migrate.
+- **Delete** both old accessors and both merge sites
+  (`get_capabilities_for_model`, `chat.py::_merge_profile`) — collapse, not
+  wrap. An accessor that internally calls both ladders passes every
+  behavioural test while leaving the code worse; that is the failure this
+  iteration must not produce.
+- Absorb the profile path's **AGENTS.md bootstrap layer** (the capability
+  path has no equivalent) as ladder layer 2.
+- `wire_protocol` declared here (renamed from the inert `api_path`);
+  **consumed in W2**.
+- Config accessors merge; `/doctor` scan; `chat.py:693`'s mode check reads
+  the unified facts.
+
+**Fences:** every existing capability + profile test green against the
+unified accessor; I2's real-config cross-pair test extended to profile
+fields; mode-vs-capability seam test (the I3 regression); accessor-override
+ban; **behaviour byte-identical** — spot-check a sample of models across all
+4 providers before/after. Full suite (5188/32/0 baseline).
+**Runnable after:** identical behaviour, one resolution system.
+**Simplification report:** ladders removed, accessors deleted, LoC delta.
+Call graphs: create `docs/provider-wire-call-graphs.md` + `graphify update .`.
 
 ## W2 — extract the Responses handler + make routing consume the facts (ADR 0012 steps 1–2 · closes Item 61 · ~1.5d)
 
@@ -221,7 +237,7 @@ Audited 2026-08-30 by grep, not assumption. "User-side" = existing
 
 ## Sequencing summary
 
-    W0 ✅ DONE → W1 (UNIFY facts + ADR 0013, ~3d)
+    W0 ✅ DONE → W1 (UNIFY facts, ADR 0012 §2, ~2.5d)
       → W2 (extract handler + routing from facts, ~1.5d)
       → W3 (Perplexity Responses, ~2d, DONE BY 09-20)
       → W4 (remaining handlers) → W5 (closeout)

@@ -1,6 +1,9 @@
-# ADR 0012 — Wire protocol as a per-model capability, not a provider property
+# ADR 0012 — Per-model facts: one resolution system, wire protocol included
 
-**Date:** 2026-08-30
+**Date:** 2026-08-30 (revised 2026-08-30 — scope widened from "add a protocol
+resolver" to "unify the two per-model fact systems, protocol among them",
+after the owner asked why protocol was absent from the capability table;
+revised in place per the README's Proposed-records rule)
 **Status:** 🟡 **Proposed** — design record, no code written. Supersedes the
 `api_path` routing sketch in
 [`../plan-per-model-capabilities.md`](../plan-per-model-capabilities.md) §I4b,
@@ -271,37 +274,115 @@ into a concrete provider class; that is what makes one handler usable by
 several providers, and what keeps a non-OpenAI-shaped wire from being a special
 case.
 
-### 2. `BaseProvider` composes handlers; the model selects one
+### 2. One per-model fact system — protocol is a field in it, not a third resolver
 
-`BaseProvider` gains a handler map and a resolver that mirrors
-`get_capabilities_for_model()` exactly — same shape, same ladder, same
-`shipped_*` / final-accessor split that I2 established:
+**This section was rewritten.** It first proposed
+`shipped_protocol_for_model()` / `get_protocol_for_model()` — an accessor pair
+*mirroring* `get_capabilities_for_model()`. The owner's question ("why is wire
+protocol not in the capability table?") exposed the flaw: mirroring would make
+**three** parallel per-model resolution systems, when the ADR's stated purpose
+is to simplify and increase reuse. Duplicating a ladder to hold one more field
+is the carve-out this ADR exists to remove.
+
+#### What exists today — two systems, surveyed
+
+| | `ProviderCapabilities` | `ModelProfile` / `ToolCallingProfile` |
+|---|---|---|
+| Fields | `web_search`, `web_fetch`, `weather`, `citations`, `streaming`, `native_tool_calling` | `tool_calling.{mode, fallback_on_empty, fallback_on_failure, strip_json_from_text, parallel_tool_calls, api_path}`, `max_tokens`, `max_tool_iterations`, `supports_reasoning`, `supports_vision`, `restricted_params`, `tier` |
+| Keyed by | exact model id | **glob** (65 patterns, first match wins) |
+| Code table | `shipped_capabilities_for_model()` — 2 providers override | `BUILTIN_PROFILES` dict |
+| Config keys | `providers.<p>.capabilities`, `providers.<p>.models.<m>.capabilities` | `providers.<p>.tool_calling`, `providers.<p>.models.<m>.tool_calling` |
+| Config reader | `config/capabilities.py` (reads the **raw file** — `_convert_models_format` drops per-model blocks) | `config/providers.py::get_tool_calling_config` (same raw-file workaround) |
+| Merge site | `BaseProvider.get_capabilities_for_model()` | `chat.py::_merge_profile` |
+| Extra layer | — | **AGENTS.md bootstrap overrides** (`_get_bootstrap_tool_calling`) |
+| Precedence | model-config → model-code → provider-config → provider-code | built-in profile → AGENTS.md → config |
+
+They already answer the *same question twice*: `native_tool_calling` (bool)
+and `tool_calling.mode` (`native`/`prompt_based`/`auto`). **I3's Layer-2 bug
+lived exactly in that seam** — `chat.py:693` checks `mode` first and
+short-circuits, so a capability resolving `native=True` never reached the
+wire. Two systems, two precedence orders, one question.
+
+#### The decision
+
+**One `ModelFacts` record, one resolver, one precedence ladder.** Protocol
+joins it as a field; it gets no machinery of its own.
 
 ```python
-protocols: dict[str, ProtocolHandler]         # what this provider CAN speak
-def shipped_protocol_for_model(model) -> str  # subclass-overridable
-def get_protocol_for_model(model) -> str      # final; applies config
+@dataclass(frozen=True)
+class ModelFacts:
+    # wire
+    wire_protocol: str = "chat_completions"   # was ToolCallingProfile.api_path
+    # tool calling
+    tool_mode: str = "native"                 # native | prompt_based | auto
+    fallback_on_empty: bool = False
+    ...
+    # provider-native abilities
+    web_search: bool = False
+    ...
+    # limits / behaviour
+    max_tokens: int = 0
+    supports_vision: bool = False
+    ...
 ```
 
-Precedence is I2's, unchanged — **specificity before authorship**:
+`BaseProvider` keeps the I2 split, now over facts rather than capabilities:
+`shipped_facts_for_model()` (subclass-overridable) and
+`get_facts_for_model()` (final; applies config). **The two old accessors and
+both old merge sites are deleted, not wrapped** — an accessor that internally
+called both ladders would pass every behavioural test while leaving the code
+worse, which is the failure mode this section exists to prevent.
 
-1. config `models.<m>.…api_path` (per model)
-2. code per-model table (per model)
-3. config `providers.<p>.…api_path` (per provider)
-4. code provider default
+Resolution order, generalising I2's **specificity before authorship** and
+absorbing the profile path's extra layer:
 
-I2's guard applies unchanged too: a test must ban subclasses from overriding
-the public accessor, since a subclass that did would silently drop the config
-layers — the same shape that broke I1.
+1. config `providers.<p>.models.<m>.*` (per model)
+2. **AGENTS.md bootstrap** (per model, benchmark-locked)
+3. code per-model table / glob (per model)
+4. config `providers.<p>.*` (per provider)
+5. code provider default
 
-### 3. `api_path` becomes the live input to that resolution
+I2's guard carries over unchanged: a test bans subclasses from overriding the
+public accessor, since one that did would silently drop the config layers —
+the shape that broke I1.
 
-The existing field is kept and finally *consumed*, rather than a parallel
-mechanism being invented next to it. `_is_responses_api_model` and
-`RESPONSES_API_PREFIXES` become the *seed data* for `openai_native`'s per-model
-table and then stop being a router. The three measured drifts are resolved as
-an explicit, reviewed table — each row a decision, not a coincidence of prefix
-matching.
+#### Q0a — `native_tool_calling` vs `tool_mode`: mode wins, boolean **deleted**
+
+`tool_mode` strictly subsumes the boolean (`native`/`auto` ⇒ true,
+`prompt_based` ⇒ false) and carries a distinction the boolean cannot express.
+The boolean is **removed from the record**, not kept as a derived property:
+a readable alias is how the seam bug survives. Call sites reading
+`caps.native_tool_calling` migrate to `facts.tool_mode != "prompt_based"`.
+
+#### Q0b — glob vs exact key: globs win, one matcher
+
+Capabilities key on exact ids, profiles on globs; globs strictly generalise
+(an exact id is a glob without wildcards), and 65 patterns already depend on
+them. One matcher, first-match-wins, most-specific-first — the existing
+`BUILTIN_PROFILES` ordering rule, applied to the merged table.
+
+#### Q0c — config migration: clean break, with the file scan shipped alongside
+
+Two key families merge into one. Following **ADR 0010**'s precedent and the
+lesson it produced (`docs/lessons/clean-break-config-moves-need-a-file-scan.md`):
+no dual-read, and **`/doctor` gains the config-shape scan in the same
+commit** — a moved key with no dual-read is invisible to every accessor, so
+only a check that reads the config *file* can report it. Both old families
+already have raw-file readers, so the scan has a working precedent to copy.
+
+### 3. `api_path` is finally *consumed* — as `ModelFacts.wire_protocol`
+
+The declared-but-inert field is carried into the unified record (renamed to
+say what it means) rather than a parallel mechanism being invented beside it.
+`_is_responses_api_model` and `RESPONSES_API_PREFIXES` become *seed data* for
+`openai_native`'s per-model table and then stop being a router. The three
+measured drifts are resolved as an explicit, reviewed table — each row a
+decision, not a coincidence of prefix matching.
+
+Naming: `api_path` described an OpenAI endpoint suffix; the field now selects
+a protocol handler across four wires, one of which (`generate_content`) is not
+an HTTP path at all. Renaming is part of the config clean break in Q0c, not a
+separate migration.
 
 ### 4. Registration time is the wiring point
 
@@ -433,13 +514,24 @@ depends on it.
 Ordered so each step is verifiable before the next depends on it. Every step is
 gated on the owner's explicit go, per the arc's standing rule.
 
+0. **Unify the fact systems (§2).** `ModelFacts` + one resolver replaces
+   `ProviderCapabilities` and `ModelProfile`'s parallel ladders; both old
+   accessors and merge sites are deleted; config keys merge under Q0c with
+   the `/doctor` scan in the same commit. Behaviour byte-identical — this
+   step moves *where* facts resolve, not *what they say*. Fences: every
+   existing capability and profile test passes against the unified accessor;
+   I2's real-config cross-pair test extended to profile fields; a
+   mode-vs-capability seam test (the I3 regression); the accessor-override
+   ban.
+
 1. **Extract, no behaviour change.** Lift the Responses block into a handler;
    `openai_native` consumes it via the handler while keeping
    `_is_responses_api_model` as its resolver. Fence: existing suite green, plus
    a request-kwargs spy proving the outgoing request is byte-identical
    before/after for one `responses` model and one `chat` model.
-2. **Make `api_path` load-bearing.** Resolution moves to
-   `get_protocol_for_model()`; the prefix tuple becomes table seed data. Fence:
+2. **Make the protocol field load-bearing.** Routing reads
+   `get_facts_for_model(model).wire_protocol`; the prefix tuple becomes
+   table seed data. Fence:
    a test asserting declared-vs-routed agreement **for every built-in profile**
    — the check that would have caught all three drifts — plus a test that an
    operator `api_path` override actually changes the outgoing request (the
