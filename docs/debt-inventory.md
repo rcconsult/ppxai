@@ -1068,6 +1068,38 @@ other two converters — cheap, and worth doing regardless.
 
 ---
 
+### Item 63 — benchmark conclusions are hand-typed into code, unlinked and unchecked [benchmarks / providers]
+
+**Filed 2026-08-30** from ADR 0012 Q0h. Design decided there; this is the
+tracking entry. Not on the 2026-09-27 deadline path — sequenced after W3.
+
+`BenchmarkResult` (`benchmarks/llm-eval/results.py`) captures
+`overall_score`, `category_scores`, `test_results` — the **measurements**.
+It has no field for what they *mean*, so behavioural conclusions reach the
+code by a human retyping them:
+
+    #   o4-mini: 10.9% native → 62.5% prompt-based (native returns empty responses)
+    #   gpt-4.1-mini: 60.9% native → 71.9% prompt-based (hybrid tool_json_in_content)
+    PROMPT_BASED_MODEL_PREFIXES = ("o4-mini", "gpt-4.1-mini")
+
+(`openai_native.py:50-52`.) A measured conclusion as a comment above a
+hardcoded tuple: nothing links it to the run, nothing rechecks it, nothing
+fails when it rots. **Same shape as Item 61**, which is the defect ADR 0012
+exists to remove — a fact declared in one place and verified by nobody.
+
+**Fix (Q0h):** benchmark runs append
+`benchmarks/tuning/<provider>_<model>.json` carrying `recommended_facts`
+(in `ModelFacts` shape) + `rationale` keyed by field, referenced by run id.
+Separate from `BenchmarkResult` on purpose: a score is a measurement, a
+recommendation is an interpretation, and they have different lifetimes — a
+re-run replaces the former while the latter may be reviewed or superseded.
+One format then serves a maintainer promoting it into the shipped table, an
+operator dropping it into config, and `/doctor` scaffolding from it.
+
+**Depends on:** ADR 0012 W1 (defines `ModelFacts`). **Blocks:** nothing.
+
+---
+
 ## Recently moved out of debt scope
 
 These items left the debt inventory because they're not bug-fix-class

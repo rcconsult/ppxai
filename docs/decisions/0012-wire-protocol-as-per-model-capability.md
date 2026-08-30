@@ -520,6 +520,60 @@ recorded here as the trigger to revisit, not silently dropped.
 `/doctor` reports any AGENTS.md `tool_calling` section it finds, naming the
 config record that replaces it.
 
+#### Q0h — benchmarks write a tuning artifact; the code table stops being hand-typed
+
+**Owner decision 2026-08-30.** Q0f established that behavioural benchmark
+findings belong in the shipped table. This closes the loop on *how they get
+there*, because today they do not get there — they are **retyped by hand**.
+
+The evidence is in the file this ADR is already fixing:
+
+```python
+#   o4-mini: 10.9% native → 62.5% prompt-based (native returns empty responses)
+#   gpt-4.1-mini: 60.9% native → 71.9% prompt-based (hybrid tool_json_in_content)
+PROMPT_BASED_MODEL_PREFIXES = ("o4-mini", "gpt-4.1-mini")
+```
+
+A measured conclusion, living as a comment above a hardcoded tuple. Nothing
+links it to the run that produced it, nothing rechecks it, and nothing fails
+if it goes stale — **the same shape as debt Item 61**, which is the defect
+this ADR exists to remove. `BenchmarkResult` captures `overall_score`,
+`category_scores` and `test_results`; it has no field for *what the numbers
+mean*.
+
+**Decision: a separate tuning artifact**, appended by the benchmark run and
+referenced by run id — measurement stays pure, recommendation is its own
+file:
+
+```
+benchmarks/tuning/<provider>_<model>.json
+{
+  "run_id": "...", "timestamp": "...",
+  "recommended_facts": { "tool_mode": "prompt_based", ... },
+  "rationale": {
+    "tool_mode": "10.9% native -> 62.5% prompt_based (native returns empty)"
+  }
+}
+```
+
+Why separate rather than a field on `BenchmarkResult`: a score is a
+*measurement* and a recommendation is an *interpretation* of it, and the two
+have different lifetimes — a re-run replaces the measurement, while a
+recommendation may be reviewed, rejected, or superseded by a later
+judgement. Keeping them in one record would make it impossible to say "this
+number stands, that conclusion was revised."
+
+`recommended_facts` uses the **`ModelFacts` shape**, so one format serves
+three consumers: a maintainer promoting it into the shipped table, an
+operator dropping it into config, and `/doctor` scaffolding from it. The
+rationale travels with the fields it justifies rather than sitting above an
+unrelated tuple.
+
+**Scope:** the artifact format and the benchmark writing it are **not W1
+work** — W1 defines the `ModelFacts` shape they depend on. Sequenced after
+the deadline path (W2–W3) and tracked as its own item, so this does not
+grow the iteration that the 2026-09-27 retirement is waiting on.
+
 #### Q0g — the provider record is `ProviderCapabilities`, retargeted in place
 
 **Owner decision 2026-08-30.** No new `ProviderFacts` type: drop
