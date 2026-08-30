@@ -1022,6 +1022,44 @@ value to copy from one side to the other.
 
 ---
 
+### Item 62 — ADR 0006's wire validator covers only ONE of three protocols; `_convert_messages` is one protocol's emitter in the shared base [providers / multimodal]
+
+**Filed 2026-08-30** while designing
+[ADR 0012](decisions/0012-wire-protocol-as-per-model-capability.md).
+Independent of that ADR; two coupled defects, both live.
+
+**(a) The ADR 0006 validator has exactly one call site.**
+`assert_wire_blocks_clean` is called only at `base.py:384`, inside
+`BaseProvider._convert_messages` — the **chat-completions** emitter.
+(Verified: one call site in `ppxai/`; the only other grep hit is a comment
+in `file_preprocessing.py:299`.) `flatten_uploaded_file_blocks` *is* called
+by all three wire paths, but the validator is not — so
+`_convert_messages_for_responses` (`openai_native.py:863`) and
+`GeminiProvider._convert_messages` (`gemini.py:655`) reach the wire
+**unchecked**. ADR 0006's "spec-clean by construction" guarantee is in
+practice **chat-completions-only**, which is not what that ADR claims.
+
+**(b) The base emitter asserts one protocol's shape.**
+`BaseProvider._convert_messages` (`base.py:346`) returns
+`{role, content, tool_calls, tool_call_id}` — the chat-completions wire
+shape, not a neutral utility. `GeminiProvider` **overrides it with an
+incompatible return type** (`tuple` vs `List[Dict[str, Any]]`) because it
+must. A Liskov violation in shipped code, caused by the base class
+asserting a shape only one of its subclasses' protocols uses.
+
+**Not yet established:** whether (a) has produced a user-visible escape.
+The validator is `__debug__`-gated and was WARN-MODE by design during ADR
+0006's rollout, so the honest claim is "two paths are unguarded", not "bad
+blocks are reaching the wire". Worth a targeted check on the Responses
+path, which carries images.
+
+**Fix:** ADR 0012 step 4 moves `convert_messages` into the protocol handlers
+and the validator travels with it, covering all protocols. If ADR 0012 is
+not taken, (a) is independently fixable by calling the validator in the
+other two converters — cheap, and worth doing regardless.
+
+---
+
 ## Recently moved out of debt scope
 
 These items left the debt inventory because they're not bug-fix-class
