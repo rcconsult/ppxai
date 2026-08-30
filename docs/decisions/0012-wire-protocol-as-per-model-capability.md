@@ -95,11 +95,17 @@ know to be wrong:
    names it as the live-trial canary.
 
 Those two together are the strongest argument for this ADR's whole premise:
-**the same model is reachable over two different wires.** If protocol were a
-provider property, `anthropic/claude-sonnet-5` (Perplexity, Responses) and
-`claude-sonnet-5` (native, Messages) would be two unrelated entries with
-duplicated capability data. As a per-model capability they are one model with
-two routes, and which one is used is data.
+**the same model is reachable over two different wires.**
+`anthropic/claude-sonnet-5` (Perplexity, Responses) and `claude-sonnet-5`
+(native, Messages) stay **two catalog entries on two providers** — §7 decides
+that, and for billing/credential reasons that have nothing to do with protocol.
+What per-model capability buys is not merging them; it is that **neither entry
+has to be special-cased to reach its wire**. One `perplexity` provider serves
+Sonar over chat-completions *and* the Agent fleet over Responses from one
+identity, and the Anthropic provider speaks Messages, all through the same
+resolution. Under a provider-property model, the first of those is impossible
+without a second Perplexity entry that exists purely to hold a different
+endpoint.
 
 Messages differs from both existing shapes in ways that bear directly on the
 handler contract:
@@ -315,10 +321,17 @@ what the plan wanted, now actually true rather than assumed.
 
 **This settles the question I4b reserved for the owner** ("new models on the
 existing `perplexity` provider, or a second provider entry?"). Under this ADR
-the question dissolves: a provider is a composition of protocol handlers, so one
-`perplexity` entry speaking two protocols is the natural expression. A second
-entry would exist only to work around a provider being unable to speak two
-protocols — the very limitation this removes.
+the question dissolves *for this case*: the Agent-API fleet is reached with the
+**same Perplexity key, billed on the same Perplexity account, under the same
+price table** — one identity, two wires — so one `perplexity` entry speaking two
+protocols is the natural expression. A second entry here would exist only to
+work around a provider being unable to speak two protocols, which is the
+limitation this removes.
+
+That reasoning is **scoped to a shared identity**, and does not generalize to
+every two-wire case. Where the second route is a different account with its own
+credential and rates, the entries stay separate no matter how the protocol is
+resolved — see §7, which decides exactly that for Anthropic-direct.
 
 ### 6. Messages is designed for, not built
 
@@ -342,12 +355,42 @@ inside its own handler. That is the test of whether this design is right, and
 it is the reason for specifying it before the handler set exists rather than
 after.
 
-**Deliberately left open for that work:** whether `anthropic/claude-sonnet-5`
-(via Perplexity Responses) and `claude-sonnet-5` (via native Messages) should
-present as one model with two routes or two catalog entries. This ADR makes
-both expressible; it does not choose. That is a product question about how the
-model picker should read, not a structural one, and it should be answered with
-the native provider in hand.
+### 7. The same model over two wires stays two catalog entries — DECIDED
+
+**Owner decision, 2026-08-30:** `anthropic/claude-sonnet-5` (via Perplexity)
+and `claude-sonnet-5` (native Messages) are **separate catalog entries on
+separate providers** — *"different provider, different billing, accounting and
+API access token."*
+
+This was raised in §6 as an open product question about the model picker. It
+is not: all three reasons are **structural**, and each is keyed on provider
+identity in shipped code.
+
+| Axis | Where it is keyed | Consequence of merging |
+|---|---|---|
+| **API token** | `api_key_env` is a **provider-level** config key, read by `get_api_key(provider)` ([`config/providers.py:103-106`](../../ppxai/config/providers.py#L103-L106)) | One catalog entry cannot resolve two credentials — the second route has no key to send |
+| **Billing** | `pricing` is a **provider-level** config block, read by `get_provider_config(provider).get("pricing")` ([`config/providers.py:83`](../../ppxai/config/providers.py#L83)) | Two routes at different rates would share one price table; every cost figure for one of them is wrong |
+| **Accounting** | Usage aggregates by splitting the `"provider/model"` key on `/` ([`usage.py:243`](../../ppxai/usage.py#L243)) — the **provider name is literally the accounting key** | The two routes collapse into one bucket in `/cost` and `by_provider`, unattributable |
+
+So merging them would not be a nicer model picker with a hidden route — it
+would be one entry that cannot authenticate its second route, prices it wrong,
+and cannot report it separately. **The catalog entry is the billing boundary**,
+and that is a stronger invariant than the display convenience §6 weighed.
+
+**This does not weaken the ADR — it sharpens what the ADR is for.** Protocol
+stays a per-model capability: it decides *how a request is encoded and sent*.
+Identity, credentials, price and accounting stay per-provider: they decide
+*whose account pays and under what terms*. Those are different questions, and
+this ADR only unifies the first. `PerplexityProvider` speaking two protocols is
+still right (one key, one price table, one bucket, two wires); Anthropic-direct
+is a separate provider because it is a separate account — not because it speaks
+a different protocol.
+
+**Consequences for the Anthropic work:** `feat/anthropic-provider` registers a
+new provider with its own `api_key_env`, `pricing` block and catalog entries,
+and declares the `messages` handler from §6. Users see Claude models twice, and
+that is correct — the two entries bill differently and draw on different
+credentials. Worth a doc note so it does not read as a duplication bug.
 
 ---
 
