@@ -134,10 +134,24 @@ definition** so an operator never hand-writes a full record.
   (harness already built and passing).
 - Full suite (5188/32/0 baseline).
 
-**Declared behaviour changes** (both measured, both need migration notes):
-AGENTS.md vs provider config, and the 34 field flips in the owner's config
-where provider-level `tool_calling` currently beats a matching code glob —
-`/doctor`'s push-down is the migration for both.
+**Declared behaviour changes** (measured, migration notes required):
+provider-level `tool_calling` currently beats a matching code glob;
+under Q0e it does not. **54 field flips** — 20 in the shipped example
+config across 10 models, 34 in the owner's config across 17 — over the
+five `ToolCallingProfile` fields. (Two earlier counts, 34 and 47,
+disagreed because each scanned a different field subset; the number is
+now produced by a stated method: for every configured model whose
+provider states a `tool_calling` key, compare that key against
+`get_profile(model).tool_calling`.) Nearly all are
+`fallback_on_empty`/`strip_json_from_text` `true → false` on local-model
+providers; one is a `mode` flip (`vllm-gpt-oss openai/gpt-oss-120b`,
+`native → prompt_based`) and is the round-trip fixture.
+
+⚠️ **This makes the byte-identical fence conditional**, and the plan must
+say so: the 35-model harness compares against the **post-`/doctor`**
+example config, which ships rewritten in this iteration. Comparing against
+the un-migrated file would fail by design — those 20 flips are the declared
+change, not a regression.
 
 Call graphs: create `docs/provider-wire-call-graphs.md` + `graphify update .`.
 

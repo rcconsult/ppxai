@@ -441,17 +441,44 @@ arbitrate** — the five-rung ladder collapses to two independent lookups.
 `tool_mode` being a model fact is what makes the `sonar` regression
 structurally impossible: no provider-wide setting can reach it.
 
-**No defaults, no inheritance, no shortcuts** (owner: *"we stop providing
-shortcuts for this round"*). A record is complete and explicit or it is
-absent. Combined with Q0d this means:
+**No inheritance, no shortcuts** (owner: *"we stop providing shortcuts for
+this round"*). Stated precisely, because "no defaults anywhere" would
+contradict Q0a:
+
+- **No inheritance between records or levels.** A provider record never
+  supplies a model field, and a model record never supplies a provider
+  field. There is no partial record that something else completes.
+- **Exactly one fallback exists**, owned by this ADR: the conservative
+  `ModelFacts` used when no table names a model at all (Q0a —
+  `tool_mode="prompt_based"`). It is a floor for the unmeasured, not a
+  layer anything inherits from, and **`/doctor` reports every model that
+  lands on it** so "unmeasured" is visible rather than silent.
+
+Combined with Q0d this means:
 
 - The resolver never guesses, because there is never a partial record to
   interpret.
+- **Code rows may rely on dataclass defaults; config rows may not.** A code
+  row is a complete record *by construction* — the dataclass guarantees
+  every field has a value, and the row is reviewed in a diff alongside the
+  type. A config file has no such guarantee and no reviewer, which is the
+  asymmetry Q0d exists for. (Measured: a representative row states 5 of 7
+  fields explicitly and inherits 2 — rewriting 65 rows to restate defaults
+  would add noise without adding information.)
 - Resolution is: shipped table row (complete) → operator config row
   (complete). Two rungs, one per record type, no cross-level merging.
 - Fleet-wide conveniences (`fallback_on_empty` et al. set once per vLLM box)
   are **not** carried over. They become per-model statements, written by
   `/doctor`.
+
+**Migration order matters and is part of the decision.** `/doctor` must
+push legacy *provider-level* statements down into each configured model's
+row **before** filling remaining blanks from the shipped table. The reverse
+order silently destroys operator intent: in the shipped example config
+`vllm-gpt-oss` sets `tool_calling.mode: native` at provider level while the
+shipped glob `openai/gpt-oss*` says `prompt_based`, so "fill blanks from the
+resolved value" would overwrite the operator's explicit `native`. That exact
+case is the round-trip fixture.
 
 **`/doctor` carries the entire burden this creates**, which is why it was
 worth the investment: it reports partial records (Q0d), fills blanks with
@@ -810,6 +837,10 @@ change.
 
 ## Triggers to revisit
 
+- `streaming` stops being a pure endpoint fact. It holds today (no model
+  anywhere sets `streaming=False`), but reasoning models with streaming
+  restrictions are the obvious future exception — and the field would then
+  have to move from `ProviderFacts` to `ModelFacts`.
 - A provider needs a protocol whose transport is not an SDK client at all (a
   raw-HTTP or gRPC wire): `ctx` carrying *a* client stops being the right
   abstraction. Note this trigger originally read "not OpenAI-SDK-shaped" and
