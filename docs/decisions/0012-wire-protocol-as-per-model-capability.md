@@ -36,6 +36,7 @@ been for some time:
 | `/chat/completions` | `perplexity`, `openai_compat`, `openai_native` |
 | `/responses` | `openai_native` |
 | `generate_content` | `gemini` |
+| `/v1/messages` | **nobody yet — see §"The fourth protocol"** |
 
 `OpenAINativeProvider` **already dispatches per model between two protocols**,
 at three separate sites — `chat()`
@@ -47,6 +48,91 @@ protocols, chosen per model: the multi-protocol provider is not a hypothetical
 we are proposing, it is the shipped state. What is missing is that it is
 expressed as a hardcoded branch repeated three times rather than as resolved
 data.
+
+### `BaseProvider._convert_messages` is one protocol's emitter in the shared base
+
+[`base.py:346`](../../ppxai/engine/providers/base.py#L346) returns
+`{role, content, tool_calls, tool_call_id}` — that is the **chat-completions
+wire shape specifically**, not a neutral base-class utility. Every other
+protocol already has to route around it:
+
+| Protocol | How it converts messages | Return type |
+|---|---|---|
+| `chat_completions` | `BaseProvider._convert_messages` | `List[Dict]` |
+| `responses` | `_convert_messages_for_responses` (separate method) | `tuple` |
+| `generate_content` | **overrides** `_convert_messages` | `tuple` |
+
+`GeminiProvider._convert_messages`
+([`gemini.py:655`](../../ppxai/engine/providers/gemini.py#L655)) overrides the
+base method **with an incompatible return type** — `(contents,
+system_instruction)` instead of `List[Dict[str, Any]]`. That is a Liskov
+violation living in shipped code, and it exists because the base class
+asserts a shape only one protocol uses.
+
+There is a second, sharper consequence. ADR 0006's wire validator
+`assert_wire_blocks_clean` is called in **exactly one place**
+([`base.py:384`](../../ppxai/engine/providers/base.py#L384)) — inside the
+chat-completions emitter. `flatten_uploaded_file_blocks` is called by all
+three paths, but the *validator* is not: the Responses and `generate_content`
+paths emit to the wire without it. So ADR 0006's "spec-clean by construction"
+guarantee is, in practice, **chat-completions-only**. Message conversion
+belongs to the protocol, and so does the validator that checks its output.
+
+### The fourth protocol: Anthropic's Messages API
+
+There is **no Anthropic provider today** — no `anthropic` dependency in
+`pyproject.toml`; the only production references are an image-size cap
+([`image_validation.py:68`](../../ppxai/engine/image_validation.py#L68)) and a
+deprecation-table row. But `/v1/messages` is arriving from two directions at
+once, and a design that ignores it would bake in an assumption we already
+know to be wrong:
+
+1. **The reserved provider.** `feat/anthropic-provider` is reserved on the
+   roadmap, deferred until after agent-platform Stage 2 — which has now
+   shipped (v1.19.0).
+2. **`anthropic/*` through Perplexity.** §5 below routes
+   `anthropic/claude-sonnet-5` over Perplexity's *Responses* endpoint, and
+   names it as the live-trial canary.
+
+Those two together are the strongest argument for this ADR's whole premise:
+**the same model is reachable over two different wires.** If protocol were a
+provider property, `anthropic/claude-sonnet-5` (Perplexity, Responses) and
+`claude-sonnet-5` (native, Messages) would be two unrelated entries with
+duplicated capability data. As a per-model capability they are one model with
+two routes, and which one is used is data.
+
+Messages differs from both existing shapes in ways that bear directly on the
+handler contract:
+
+| Concern | chat_completions | responses | **messages** |
+|---|---|---|---|
+| Client | OpenAI SDK | OpenAI SDK | **`anthropic` SDK** (not OpenAI-shaped) |
+| System prompt | a `system` role message | `instructions` param | **top-level `system` param** |
+| Tool call out | `tool_calls` | `function_call` item | **`tool_use` content block** |
+| Tool result in | `tool`-role message | `function_call_output` | **`tool_result` block in a *user* message** |
+| `max_tokens` | optional | optional | **required** |
+
+Two Messages-specific hazards worth recording now, because both are the kind
+of thing discovered late and expensively:
+
+- **Parallel tool results must be returned in a *single* user message.**
+  Splitting them across several user messages is accepted by the API but
+  degrades the model's parallel tool use. The engine's native pairing branch
+  records one tool-role message *per* result, so the handler must batch them —
+  a genuine conversion, not a rename.
+- **`thinking` blocks must be echoed back unchanged** on the same model
+  across a tool round-trip. This is the same class of bug as debt Item 45
+  (Gemini `thought_signature` round-trip), which was a real shipped defect.
+
+Encouragingly, the hardest part is already solved once: Gemini's converter
+already hoists system messages out of the turn list into a separate
+`system_instruction`, which is exactly Messages' shape. Its docstring also
+records the inverse hazard — Gemini's wire has **no** tool-call id, so pairing
+is by function *name*, resolved from the preceding assistant turn. Messages
+*does* carry `tool_use_id`, so it escapes that trap and falls into the
+batching one instead. Different protocols, different failure modes; both are
+conversion concerns, which is the argument for keeping conversion inside the
+handler.
 
 ### The declared table and the actual router disagree — measured
 
@@ -145,16 +231,39 @@ Following
 
 ```python
 class ProtocolHandler(Protocol):
-    name: str          # "chat_completions" | "responses" | "generate_content"
+    name: str   # "chat_completions" | "responses" | "generate_content" | "messages"
 
+    def convert_messages(self, messages: List[Message]) -> Any: ...
     def chat(self, ctx, messages, model, stream, tools) -> AsyncIterator[Event]: ...
     def oneshot(self, ctx, messages, model, max_tokens) -> str: ...
 ```
 
-`ctx` carries what the handler needs from its host — the client, and the
-provider-specific request inputs (`enable_web_search`, tool-hint builder) that
-the coupling audit identified. The handler never reaches back into a concrete
-provider class; that is what makes one handler usable by several providers.
+**`convert_messages` belongs to the handler, not to `BaseProvider`.** This is
+the direct consequence of the shared-emitter finding above: message conversion
+*is* protocol-specific, every protocol already routes around the base method,
+and Gemini overrides it with an incompatible return type to do so. Its return
+type is deliberately `Any` — each protocol's wire shape is its own
+(`List[Dict]`, `(contents, system_instruction)`, `(system, messages)`), and
+pretending otherwise is what produced the Liskov violation. **ADR 0006's
+`assert_wire_blocks_clean` moves with it**, so the validator finally covers all
+protocols instead of chat-completions alone.
+
+**`ctx` is deliberately not "an OpenAI SDK client."** It is whatever the handler
+needs from its host, and the client type is the handler's business:
+
+| Handler | client in `ctx` | other host inputs |
+|---|---|---|
+| `chat_completions` | OpenAI SDK | — |
+| `responses` | OpenAI SDK | `enable_web_search`, tool-hint builder |
+| `generate_content` | google-genai | — |
+| `messages` | `anthropic` SDK | — |
+
+Specifying `ctx` this way now costs nothing and is the one part that would be
+expensive to relax later: three handlers written against "the OpenAI client"
+would each need reworking when Messages arrives. The handler never reaches back
+into a concrete provider class; that is what makes one handler usable by
+several providers, and what keeps a non-OpenAI-shaped wire from being a special
+case.
 
 ### 2. `BaseProvider` composes handlers; the model selects one
 
@@ -210,6 +319,35 @@ the question dissolves: a provider is a composition of protocol handlers, so one
 `perplexity` entry speaking two protocols is the natural expression. A second
 entry would exist only to work around a provider being unable to speak two
 protocols — the very limitation this removes.
+
+### 6. Messages is designed for, not built
+
+The `messages` handler is **specified here and implemented by whoever picks up
+`feat/anthropic-provider`** — this ADR does not schedule it, and no migration
+step below builds it. What this ADR commits to is narrower and load-bearing:
+the contract above must not have to change when it arrives.
+
+Concretely, that means three things hold today:
+
+- `ctx` is client-agnostic (§1), so the `anthropic` SDK is not a special case.
+- `convert_messages` is a handler method with a protocol-owned return type, so
+  system-hoisting and `tool_result` batching are ordinary handler work rather
+  than a base-class exception.
+- The wire validator travels with the converter, so a fourth protocol is
+  covered by ADR 0006 on day one instead of joining the two that currently
+  bypass it.
+
+The consequences of Messages *not* being OpenAI-shaped therefore land entirely
+inside its own handler. That is the test of whether this design is right, and
+it is the reason for specifying it before the handler set exists rather than
+after.
+
+**Deliberately left open for that work:** whether `anthropic/claude-sonnet-5`
+(via Perplexity Responses) and `claude-sonnet-5` (via native Messages) should
+present as one model with two routes or two catalog entries. This ADR makes
+both expressible; it does not choose. That is a product question about how the
+model picker should read, not a structural one, and it should be answered with
+the native provider in hand.
 
 ---
 
@@ -268,10 +406,21 @@ gated on the owner's explicit go, per the arc's standing rule.
    `/task --tools read_file`, canary-verified end to end, per the arc's
    trial-after rule.
 4. **`chat_completions` and `generate_content` become handlers.** Completes the
-   model; `openai_compat` and `gemini` stop being special cases.
+   model; `openai_compat` and `gemini` stop being special cases. This is the
+   step that moves `convert_messages` into the handlers and retires Gemini's
+   incompatible override — and where `assert_wire_blocks_clean` starts covering
+   all protocols. Fence: the ADR 0006 validator runs on every protocol's
+   output, asserted per handler.
 
 Steps 1–2 stand on their own merit — they fix measured drift and an inert
 config override — and are worth doing even if step 3 were abandoned.
+
+**Messages (`/v1/messages`) is not a step here.** It is specified in §6 and
+built with `feat/anthropic-provider`, on that work's own schedule. If it lands
+*before* step 4, it should be written as a handler against this contract from
+the start rather than as a fifth bespoke provider — that is cheaper than
+retrofitting it, and it is the case this ADR is designed to absorb without
+change.
 
 ---
 
@@ -293,8 +442,12 @@ config override — and are worth doing even if step 3 were abandoned.
 
 ## Triggers to revisit
 
-- A provider needs a protocol that is **not** OpenAI-SDK-shaped (a raw-HTTP or
-  gRPC wire): `ctx` carrying an SDK client stops being the right abstraction.
+- A provider needs a protocol whose transport is not an SDK client at all (a
+  raw-HTTP or gRPC wire): `ctx` carrying *a* client stops being the right
+  abstraction. Note this trigger originally read "not OpenAI-SDK-shaped" and
+  was **already live when written** — Messages is exactly that case, which is
+  why §1 now specifies `ctx` client-agnostically and §6 designs for it. A
+  pre-armed trigger is worth less than a contract that does not need it.
 - A fifth provider or a fourth protocol arrives before step 4 lands — the
   handler set is still small enough to reshape cheaply, and would not stay so.
 - Perplexity exposes a real `/models` endpoint. Capability and protocol could
