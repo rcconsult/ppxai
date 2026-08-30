@@ -61,6 +61,28 @@ Tests: **5,110 collected — 5,109 passed, 1 skipped, 0 failed** on macOS/Unix w
 
 The Playwright specs under `tests/e2e/` are **not** in that count. Most drive a static `file://` harness; `live-app.spec.ts` drives the real web UI against a real `ppxai-server` and is opt-in via `npm run test:live`.
 
+## Test-scope rule for docs-only changes
+
+Owner rule (2026-08-30):
+
+- **Docs-only change** (`docs/**`, `README.md`, `CHANGELOG.md`, `*.md`
+  prose): **no test run required** — UNLESS the change touches something
+  tooling consumes. Known doc surfaces that ARE consumed and DO need their
+  tests: `README.md` version badge / tests-NNNN counter
+  (`tests/test_version_consistency.py`), AGENTS.md **or CLAUDE.md**
+  structured sections — `DEFAULT_BOOTSTRAP_FILES` is `["AGENTS.md",
+  "CLAUDE.md", "INSTRUCTIONS.md"]`, so THIS repo (which has AGENTS.md at
+  the root) loads AGENTS.md, while a checkout or user project without one
+  loads CLAUDE.md as bootstrap context; after editing whichever file is
+  first on that list here, run `BootstrapContext.from_file` on it — and
+  any doc a script under `scripts/` reads (none today; the catch-all
+  stays for tomorrow). When in doubt, grep the filename in `ppxai/`,
+  `tests/` and `scripts/` first — 10 seconds decides it.
+- **Docstring/comment-only code change**: run **syntax + linter only**
+  (`python -m py_compile <files>` + `ruff check <files>`); no test run —
+  though ruff may still legitimately fail on line length/format. Anything
+  that changes executable statements is not docstring-only.
+
 ## Installation Locations (CRITICAL)
 
 **IMPORTANT: Follow these exact paths. NEVER use `AppData\Local\ppxai` on Windows.**
