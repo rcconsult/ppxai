@@ -273,8 +273,8 @@
     <h1>ppxai Fleet Atlas</h1>
     <p class="sub">Every model ppxai can reach today, the wire protocol each one actually travels on, and the fleets
     arriving next — traced from code, config, and live probes, then checked against the provider docs on the web.
-    Companion to ADR 0012 — <em>wire protocol as a per-model capability</em> (Proposed).</p>
-    <div class="stamp">Compiled 2026-08-30 · branch <span class="mono">bugfix/v1.19.1</span> @ <span class="mono">9e6df49f</span> · verification dates on every claim</div>
+    Companion to ADR 0012 — <em>wire protocol as a per-model capability</em> (Accepted-in-part: §2 and the Responses wire shipped; protocol handlers for the other wires open).</p>
+    <div class="stamp">Compiled 2026-08-30 · branch <span class="mono">bugfix/v1.19.1</span> · measurements taken @ <span class="mono">9e6df49f</span>, revised through ADR 0012 W2 @ <span class="mono">77818b21</span> · verification dates on every claim</div>
   </div>
 </div>
 
@@ -631,25 +631,38 @@
 </section>
 
 <section id="drift">
-  <div class="sec-head"><h2>Declared vs routed: the api_path drift</h2><span class="k">debt Item 61 · measured 2026-08-30</span></div>
-  <p class="lede">The profile table carries an <code>api_path</code> per model — merged through the config precedence
-  ladder, operator-overridable, displayed by <code>/provider</code> — and <b>nothing routes on it</b>. The actual router
-  is a hardcoded prefix tuple. The two disagree on three models, in both directions, and an operator's override is
+  <div class="sec-head"><h2>Declared vs routed: the api_path drift</h2><span class="k">debt Item 61 · measured 2026-08-30 · <b>RESOLVED in W2</b></span></div>
+  <p class="lede">The profile table carried an <code>api_path</code> per model — merged through the config precedence
+  ladder, operator-overridable, displayed by <code>/provider</code> — and <b>nothing routed on it</b>. The actual router
+  was a hardcoded prefix tuple. The two disagreed on three models, in both directions, and an operator's override was
   silently inert.</p>
+  <p class="lede" style="margin-top:10px"><b>Resolved 2026-08-30 (ADR 0012 W2).</b> Routing now reads
+  <code>get_facts_for_model(model).wire_protocol</code> through one reader, consumed by all four dispatch sites.
+  The prefix tuple survives only as seed data. Each row below was resolved as a <em>decision</em>, not by copying one
+  side onto the other — the "resolved to" column names the winner and why.</p>
   <div class="tablewrap" style="max-width:720px">
   <table>
-    <thead><tr><th>Model</th><th>Profile declares</th><th>Actually routed</th><th></th></tr></thead>
+    <thead><tr><th>Model</th><th>Profile declared</th><th>Was routed</th><th>Resolved to</th><th>On what evidence</th></tr></thead>
     <tbody>
-      <tr><td class="mono">gpt-5.3-codex</td><td><span class="pill resp">responses</span></td><td><span class="pill chat">chat_completions</span></td><td><span class="pill bad">drift</span></td></tr>
-      <tr><td class="mono">gpt-5.2-pro</td><td><span class="pill chat">chat</span></td><td><span class="pill resp">responses</span></td><td><span class="pill bad">drift</span></td></tr>
-      <tr><td class="mono">gpt-5-pro</td><td><span class="pill chat">chat</span></td><td><span class="pill resp">responses</span></td><td><span class="pill bad">drift</span></td></tr>
-      <tr><td class="mono">gpt-5.1-codex / -mini</td><td><span class="pill resp">responses</span></td><td><span class="pill resp">responses</span></td><td><span class="pill ok">agrees — by coincidence</span></td></tr>
+      <tr><td class="mono">gpt-5.3-codex</td><td><span class="pill resp">responses</span></td><td><span class="pill chat">chat_completions</span></td><td><span class="pill resp">responses</span></td><td class="tiny"><b>profile won</b> — codex 404s on Chat Completions; registered by <span class="mono">c4b6f431</span> without the tuple being updated</td></tr>
+      <tr><td class="mono">gpt-5.2-pro</td><td><span class="pill chat">chat</span></td><td><span class="pill resp">responses</span></td><td><span class="pill resp">responses</span></td><td class="tiny"><b>router won</b> — <span class="mono">5e1ace2f</span> added it after a measured <em>"not a chat model"</em> 404</td></tr>
+      <tr><td class="mono">gpt-5-pro</td><td><span class="pill chat">chat</span></td><td><span class="pill resp">responses</span></td><td><span class="pill resp">responses</span></td><td class="tiny"><b>router won</b> — same commit, same measured 404</td></tr>
+      <tr><td class="mono">gpt-5.5-pro</td><td><span class="pill chat">chat</span></td><td><span class="pill chat">chat_completions</span></td><td><span class="pill resp">responses</span></td><td class="tiny"><b>fourth drift, found in W2</b> — reached by <em>neither</em> mechanism. Row is <b>by analogy</b> with its siblings, <b>not separately probed</b></td></tr>
+      <tr><td class="mono">gpt-5.1-codex / -mini</td><td><span class="pill resp">responses</span></td><td><span class="pill resp">responses</span></td><td><span class="pill resp">responses</span></td><td class="tiny">agreed — by coincidence, not construction</td></tr>
     </tbody>
   </table>
   </div>
-  <p class="lede dim" style="margin-top:12px"><code>"gpt-5.3-codex"</code> misses the tuple because <code>"codex"</code>
-  is a <em>prefix</em> match, not a substring. ADR 0012 steps 1–2 make <code>api_path</code> load-bearing and fence it
-  with a declared-vs-routed test over every built-in profile.</p>
+  <p class="lede dim" style="margin-top:12px"><code>"gpt-5.3-codex"</code> missed the tuple because <code>"codex"</code>
+  is a <em>prefix</em> match, not a substring. Two fences now hold the line
+  (<span class="mono">tests/test_wire_responses_extraction.py</span>): declared-vs-routed agreement across every
+  built-in profile, and an operator override proven to change the <b>outgoing request</b> in both directions —
+  asserted at the client spy, not at the resolver, because resolving correctly is exactly what the inert field
+  also did.</p>
+  <p class="lede dim" style="margin-top:10px"><b>One row is weaker than the others and is marked as such.</b>
+  <code>gpt-5.5-pro</code> rests on analogy: nothing ever routed it to Chat Completions, so no 404 was ever
+  observed for that model specifically. Its siblings' rows rest on a commit-documented live failure. A single
+  probe would settle it — until then the assumption is visible in the table and in the code comment, rather than
+  buried in a glob.</p>
 </section>
 
 <section id="future">

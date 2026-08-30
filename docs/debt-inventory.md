@@ -1040,6 +1040,35 @@ that cannot speak `chat_completions` needed a provider-owned floor
 (`BaseProvider.unmeasured_facts`), or W2 would route unlisted Gemini models
 to a handler that does not exist.
 
+**CLOSED in W2 (2026-08-30).** Routing now reads
+`get_facts_for_model(model).wire_protocol` through a single reader
+(`OpenAINativeProvider._wire_for`), consumed by all four dispatch sites
+(`chat`, `chat_sync_simple`, `oneshot`, and the 404 auto-fallback).
+`_is_responses_api_model()` survives only as seed data and for the
+fallback's log line; nothing routes on the prefix tuple.
+
+Both fences are in `tests/test_wire_responses_extraction.py`:
+declared-vs-routed agreement across every built-in profile, and an operator
+override proven to change the **outgoing request** in both directions
+(forced onto Responses, and a Responses model forced onto Chat Completions)
+— asserted at the client spy, not at the resolver, because resolving
+correctly is exactly what the old field also did.
+
+**The "not yet established" question above is now answered, per row:**
+
+| model | resolution | evidence |
+|---|---|---|
+| `gpt-5.2-pro` | `responses` — the ROUTER was right | commit `5e1ace2f` *"Route gpt-5.2-pro to Responses API + add 404 auto-fallback"* added it after OpenAI returned **"not a chat model"**. The declared `chat` was never exercised, because nothing routed on `api_path`. |
+| `gpt-5-pro` | `responses` — same | same commit, same measured 404 |
+| `gpt-5.3-codex` | `responses` — the PROFILE was right | codex models 404 on Chat Completions; registered by `c4b6f431` without the routing tuple being updated |
+
+**A fourth drift, unfiled until now:** `gpt-5.5-pro` was sent to Responses by
+**neither** mechanism — no prefix entry, and its profile declares `chat`. It
+was registered by the same `c4b6f431` as `gpt-5.3-codex`. Its row is by
+**analogy** with its siblings, not separately probed, and is marked as such
+in the table: nothing ever routed it to Chat Completions, so no 404 was ever
+observed for that model specifically. A live probe would settle it.
+
 ---
 
 ### Item 62 — ADR 0006's wire validator covers only ONE of three protocols; `_convert_messages` is one protocol's emitter in the shared base [providers / multimodal]
@@ -1084,6 +1113,28 @@ per-model *fact* system; it did not move any message conversion, so both
 establishes the `wire/` handler package the converters move into. W1 does
 supply the prerequisite: `wire_protocol` is now resolved per model, so a
 handler can be selected at all.
+
+**W2 progress (2026-08-30) — (a) HALF FIXED, (b) STILL OPEN.** The `wire/`
+package now exists and the Responses converter lives in it, so
+`assert_wire_blocks_clean` gained its **second** call site:
+`ResponsesHandler.convert_messages` calls it right after
+`flatten_uploaded_file_blocks`, at both flatten points (tool results and
+user/assistant turns), matching `base.py`'s position exactly. Coverage is
+**2 of 3 wires**; `generate_content` remains unchecked until W4 moves
+Gemini's converter.
+
+Fenced by `TestValidatorCoversThisWire` in
+`tests/test_wire_responses_extraction.py` — parametrised over all three
+roles, and verified to actually trip (a polluted `image_url` block raises).
+Worth recording how that check nearly passed vacuously: the first fixture
+put the offending key *nested inside* `image_url`, where the validator does
+not look (it checks each block's **top-level** keys against
+`_WIRE_ALLOWED_BLOCK_KEYS`), so it reported "not caught" against correctly
+wired code. The wiring was right and the probe was wrong.
+
+(b) is untouched: `BaseProvider._convert_messages` is still the
+chat-completions emitter in the shared base, and `GeminiProvider` still
+overrides it with an incompatible return type. Both resolve in W4.
 
 ---
 

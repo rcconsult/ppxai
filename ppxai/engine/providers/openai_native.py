@@ -32,9 +32,9 @@ from ...config.tls import tls_verify
 from dataclasses import replace
 
 from ..model_facts import ModelFacts, shipped_facts_for_model
-from ..types import Message, Event, EventType, ProviderCapabilities, UsageStats
-from ..uploaded_file import flatten_uploaded_file_blocks
+from ..types import Message, Event, EventType, ProviderCapabilities
 from .base import BaseProvider
+from .wire import get_handler
 
 
 logger = get_logger("openai_native")
@@ -45,7 +45,50 @@ MAX_COMPLETION_TOKENS_PREFIXES = ("gpt-5", "o1", "o3", "o4")
 RESTRICTED_PARAM_PREFIXES = ("gpt-5", "o1", "o3", "o4")
 # Models that require Responses API instead of Chat Completions API
 # Codex models and Pro models return 404 on /v1/chat/completions
+#
+# ADR 0012 W2: kept as SEED DATA for `shipped_model_facts` below — routing no
+# longer consults it. `_is_responses_api_model()` remains as the seed's
+# predicate form and for the 404 auto-fallback's log message; the live router
+# reads `get_facts_for_model(model).wire_protocol`.
 RESPONSES_API_PREFIXES = ("gpt-5.1-codex", "codex", "gpt-5.2-pro", "gpt-5-pro", "gpt-6-pro")
+
+#: Which models speak the Responses wire, as reviewed globs (ADR 0012 §3).
+#: Replaces prefix matching, which drifted from the declared `api_path` table
+#: in BOTH directions — measured on 2026-08-30, three disagreements:
+#:
+#:   gpt-5.3-codex  declared responses, routed chat  (prefix "gpt-5.1-codex"
+#:                  does not match "gpt-5.3-codex"; "codex" is a PREFIX, not a
+#:                  substring) -> a live 404 on oneshot, which has no fallback
+#:   gpt-5.2-pro    declared chat, routed responses  -> router correct
+#:   gpt-5-pro      declared chat, routed responses  -> router correct
+#:
+#: The pro rows are resolved in the ROUTER's favour on measured evidence:
+#: commit 5e1ace2f ("Route gpt-5.2-pro to Responses API + add 404
+#: auto-fallback") added them after OpenAI returned "not a chat model" for
+#: Chat Completions. The declared `chat` was never exercised, because nothing
+#: ever routed on `api_path`. The codex row is resolved in the PROFILE's
+#: favour for the same reason: codex models 404 on Chat Completions, so
+#: `responses` is what the model actually needs.
+#:
+#: gpt-5.5-pro was found in the same sweep: a pro model that NEITHER mechanism
+#: sent to Responses (no prefix entry, profile says `chat`), registered by
+#: c4b6f431 alongside gpt-5.3-codex without updating the routing tuple.
+#:
+#: ⚠️ Its row is BY ANALOGY with its siblings, not separately probed. The
+#: other pro rows rest on an observed "not a chat model" 404 (5e1ace2f);
+#: gpt-5.5-pro was never routed to Chat Completions by anything, so nothing
+#: ever observed it either way. If a live probe shows it speaks Chat
+#: Completions, delete this glob — the analogy is the weakest evidence in
+#: this table and is marked as such deliberately.
+RESPONSES_WIRE_GLOBS = (
+    "gpt-5.1-codex*",
+    "gpt-5.3-codex*",
+    "codex*",
+    "gpt-5-pro*",
+    "gpt-5.2-pro*",
+    "gpt-5.5-pro*",
+    "gpt-6-pro*",
+)
 REASONING_MODEL_PREFIXES = ("o1", "o3", "o4")
 
 # Models that perform better with prompt-based tool calling than native.
@@ -134,14 +177,64 @@ class OpenAINativeProvider(BaseProvider):
             http_client=httpx.Client(verify=tls_verify()),
         )
 
+    #: Benchmark-derived per-model rows (ADR 0012 §2 Q0e). Was
+    #: `shipped_capabilities_for_model`, which answered only the tool-calling
+    #: boolean while `BUILTIN_PROFILES` answered mode, limits and routing for
+    #: the same models — the two-systems split this ADR removes.
+    #:
+    #: `PROMPT_BASED_MODEL_PREFIXES` are benchmark-proven to score
+    #: significantly HIGHER with prompt-based tool calling (o4-mini: 10.9%%
+    #: native -> 62.5%% prompt-based, native returns empty responses;
+    #: gpt-4.1-mini: 60.9%% -> 71.9%%, hybrid tool_json_in_content).
+    #:
+    #: `RESPONSES_WIRE_GLOBS` (ADR 0012 W2) carry the OTHER fact: which wire
+    #: the model speaks. Both sets write into ONE table because they are
+    #: fields of one record — that is the whole point of Q0e. A model in both
+    #: sets would need one row stating both facts; none is today, and the
+    #: disjointness fence would catch it if that changed.
+    #:
+    #: A wire row overrides ONLY `wire_protocol`, so `codex*` and `gpt-6-pro*`
+    #: (which have no built-in profile) keep the conservative `prompt_based`
+    #: floor while still routing to Responses. That asymmetry is deliberate
+    #: per Q0a: the wire is a property of the endpoint and is knowable without
+    #: measuring, tool support is not.
+    shipped_model_facts = {
+        **{
+            prefix + "*": replace(shipped_facts_for_model(prefix), tool_mode="prompt_based")
+            for prefix in PROMPT_BASED_MODEL_PREFIXES
+        },
+        **{
+            glob: replace(
+                shipped_facts_for_model(glob.rstrip("*")), wire_protocol="responses"
+            )
+            for glob in RESPONSES_WIRE_GLOBS
+        },
+    }
+
     # ------------------------------------------------------------------
     # Model classification helpers
     # ------------------------------------------------------------------
 
     @staticmethod
     def _is_responses_api_model(model: str) -> bool:
-        """Check if model requires Responses API (codex, pro models)."""
+        """Seed predicate: does this model's NAME match the legacy prefixes?
+
+        ADR 0012 W2: this is no longer the router. It survives as the seed
+        form of `RESPONSES_WIRE_GLOBS` and for the 404 auto-fallback's log
+        line. Routing asks `_wire_for(model)`, which reads the per-model
+        fact and therefore honours an operator override — the thing
+        `api_path` was declared for and never did (debt Item 61).
+        """
         return model.lower().startswith(RESPONSES_API_PREFIXES)
+
+    def _wire_for(self, model: str) -> str:
+        """The wire protocol this model speaks. The single routing question.
+
+        One reader, so an operator override of `wire_protocol` reaches every
+        send path at once — previously each of the three call sites asked the
+        hardcoded prefix tuple independently.
+        """
+        return self.get_facts_for_model(model).wire_protocol
 
     @staticmethod
     def _is_reasoning_model(model: str) -> bool:
@@ -184,8 +277,10 @@ class OpenAINativeProvider(BaseProvider):
         Yields:
             Event objects
         """
-        if self._is_responses_api_model(model):
-            async for event in self._chat_responses_api(messages, model, stream, tools):
+        if self._wire_for(model) == "responses":
+            async for event in get_handler("responses").chat(
+                self, messages, model, stream, tools
+            ):
                 yield event
         else:
             async for event in self._chat_completions_api(messages, model, stream, tools):
@@ -207,10 +302,10 @@ class OpenAINativeProvider(BaseProvider):
         """
         # Codex / Pro models 404 on Chat Completions — route them through the
         # Responses API just like chat() / oneshot() do.
-        if self._is_responses_api_model(model):
-            return self._oneshot_responses(messages, model, self._get_max_tokens(model)).get(
-                "content", ""
-            )
+        if self._wire_for(model) == "responses":
+            return get_handler("responses").oneshot(
+                self, messages, model, self._get_max_tokens(model)
+            ).get("content", "")
 
         api_messages = self._convert_messages(messages)
 
@@ -259,8 +354,8 @@ class OpenAINativeProvider(BaseProvider):
             messages.append(Message(role="system", content=system))
         messages.append(Message(role="user", content=prompt))
 
-        if self._is_responses_api_model(model):
-            return self._oneshot_responses(messages, model, max_tokens)
+        if self._wire_for(model) == "responses":
+            return get_handler("responses").oneshot(self, messages, model, max_tokens)
 
         request_kwargs: Dict[str, Any] = {
             "model": model,
@@ -299,84 +394,6 @@ class OpenAINativeProvider(BaseProvider):
             "model": getattr(response, "model", None) or model,
             "usage": usage_dict,
         }
-
-    def _oneshot_responses(
-        self,
-        messages: List[Message],
-        model: str,
-        max_tokens: Optional[int],
-    ) -> Dict[str, Any]:
-        """Stateless single-turn completion via the Responses API.
-
-        Codex / Pro models return 404 on Chat Completions, so oneshot for
-        those routes here. Non-streaming, sync (the caller offloads to a
-        thread). Returns the same {content, finish_reason, model, usage}
-        shape as the Chat Completions oneshot path.
-        """
-        instructions, input_items = self._convert_messages_for_responses(messages)
-
-        request_kwargs: Dict[str, Any] = {"model": model, "input": input_items}
-        if instructions:
-            request_kwargs["instructions"] = instructions
-
-        token_budget = max_tokens if max_tokens is not None else self._get_max_tokens(model)
-        if token_budget:
-            request_kwargs["max_output_tokens"] = token_budget
-
-        extra_body = self._get_extra_body(model)
-        if extra_body:
-            request_kwargs["extra_body"] = extra_body
-
-        response = self.client.responses.create(**request_kwargs, stream=False)
-
-        # Extract content from output items (same walk as _non_stream_responses).
-        content = ""
-        if hasattr(response, "output"):
-            for item in response.output:
-                if getattr(item, "type", None) != "message":
-                    continue
-                item_content = getattr(item, "content", None)
-                if isinstance(item_content, list):
-                    for part in item_content:
-                        if getattr(part, "type", None) == "output_text":
-                            content += getattr(part, "text", "")
-                elif isinstance(item_content, str):
-                    content += item_content
-        if not content and hasattr(response, "output_text"):
-            content = response.output_text or ""
-
-        usage_stats = self._parse_responses_usage(getattr(response, "usage", None))
-        usage_dict = None
-        if usage_stats is not None:
-            usage_dict = {
-                "prompt_tokens": usage_stats.prompt_tokens,
-                "completion_tokens": usage_stats.completion_tokens,
-                "total_tokens": usage_stats.total_tokens,
-            }
-        return {
-            "content": content,
-            "finish_reason": "stop",
-            "model": getattr(response, "model", None) or model,
-            "usage": usage_dict,
-        }
-
-    #: Benchmark-derived per-model rows (ADR 0012 §2 Q0e). Was
-    #: `shipped_capabilities_for_model`, which answered only the tool-calling
-    #: boolean while `BUILTIN_PROFILES` answered mode, limits and routing for
-    #: the same models — the two-systems split this ADR removes.
-    #:
-    #: These two are benchmark-proven to score significantly HIGHER with
-    #: prompt-based tool calling (o4-mini: 10.9%% native -> 62.5%% prompt-based,
-    #: native returns empty responses; gpt-4.1-mini: 60.9%% -> 71.9%%, hybrid
-    #: tool_json_in_content). Responses-API models (codex, pro) use native.
-    shipped_model_facts = {
-        prefix + "*": replace(shipped_facts_for_model(prefix), tool_mode="prompt_based")
-        for prefix in PROMPT_BASED_MODEL_PREFIXES
-    }
-
-    # ------------------------------------------------------------------
-    # Chat Completions API
-    # ------------------------------------------------------------------
 
     async def _chat_completions_api(
         self,
@@ -444,7 +461,9 @@ class OpenAINativeProvider(BaseProvider):
             # Auto-fallback to Responses API on 404 "not a chat model"
             if hasattr(e, 'status_code') and e.status_code == 404 and "not a chat model" in str(e).lower():
                 logger.warning(f"Model {model} not supported on Chat Completions API, falling back to Responses API")
-                async for event in self._chat_responses_api(messages, model, stream, tools):
+                async for event in get_handler("responses").chat(
+                    self, messages, model, stream, tools
+                ):
                     yield event
                 return
             # v1.18.3 follow-up: typed throttle event + persistent telemetry.
@@ -595,365 +614,6 @@ class OpenAINativeProvider(BaseProvider):
             metadata["reasoning"] = reasoning_content
         yield Event(EventType.STREAM_END, content, metadata)
 
-    # ------------------------------------------------------------------
-    # Responses API (Codex models + web search)
-    # ------------------------------------------------------------------
-
-    async def _chat_responses_api(
-        self,
-        messages: List[Message],
-        model: str,
-        stream: bool = True,
-        tools: Optional[List[Dict[str, Any]]] = None,
-    ) -> AsyncIterator[Event]:
-        """Responses API path for Codex models.
-
-        Uses client.responses.create() with different message format.
-        Native function calling: tools sent as function definitions in the
-        API request. Model emits function_call items for tool use.
-        Belt-and-suspenders: tool descriptions also injected into instructions
-        so fallback text-based parsing works if model outputs JSON in content.
-        """
-        try:
-            instructions, input_items = self._convert_messages_for_responses(messages)
-
-            yield Event(EventType.STREAM_START, {"model": model})
-
-            # Build request kwargs
-            request_kwargs: Dict[str, Any] = {
-                "model": model,
-                "input": input_items,
-            }
-
-            if instructions:
-                request_kwargs["instructions"] = instructions
-
-            # Add max_tokens
-            max_tokens = self._get_max_tokens(model)
-            if max_tokens:
-                request_kwargs["max_output_tokens"] = max_tokens
-
-            # Add web_search_preview if enabled
-            response_tools = []
-            if self.enable_web_search:
-                response_tools.append({"type": "web_search_preview"})
-
-            # Per-model, not per-provider: get_facts_for_model()
-            # is the hook that lets a provider mark individual models
-            # prompt-based. Reading self.capabilities here ignored it --
-            # o4-mini resolved False but was sent native tools anyway.
-            if tools and self.get_facts_for_model(model).tool_mode != "prompt_based":
-                converted = self._convert_tools_for_responses(tools)
-                response_tools.extend(converted)
-
-                # Belt-and-suspenders: also inject tool descriptions into
-                # instructions so text-based fallback parsing works if the
-                # model outputs tool calls as JSON in content instead of
-                # native function_call items.
-                tool_hint = self._build_tool_hint(tools)
-                if tool_hint:
-                    existing = request_kwargs.get("instructions", "")
-                    if existing:
-                        request_kwargs["instructions"] = f"{existing}\n\n{tool_hint}"
-                    else:
-                        request_kwargs["instructions"] = tool_hint
-
-            if response_tools:
-                request_kwargs["tools"] = response_tools
-
-            # v1.18.3 follow-up: extra_body also works on the Responses
-            # API (`client.responses.create(extra_body=...)`). Same lookup
-            # path as Chat Completions; only sent when configured.
-            extra_body = self._get_extra_body(model)
-            if extra_body:
-                request_kwargs["extra_body"] = extra_body
-
-            if stream:
-                async for event in self._stream_responses(request_kwargs):
-                    yield event
-            else:
-                async for event in self._non_stream_responses(request_kwargs):
-                    yield event
-
-        except Exception as e:
-            # v1.18.3 follow-up: typed throttle event + persistent telemetry.
-            throttle = self._classify_throttle(e)
-            if throttle is not None:
-                throttle["model"] = model
-                try:
-                    from ...usage import record_provider_error
-                    record_provider_error(
-                        provider=throttle["provider"] or self.provider_id or "",
-                        status_code=throttle["status_code"],
-                        model=model,
-                    )
-                except Exception:
-                    pass
-                yield Event(EventType.PROVIDER_THROTTLED, throttle)
-            else:
-                error_msg = self._format_error(e)
-                yield Event(EventType.ERROR, error_msg)
-            self._log_error_traceback(e)
-
-    async def _stream_responses(
-        self,
-        request_kwargs: Dict[str, Any],
-    ) -> AsyncIterator[Event]:
-        """Handle streaming Responses API response."""
-        response_stream = self.client.responses.create(
-            **request_kwargs,
-            stream=True,
-        )
-
-        full_response = []
-        usage = None
-        # Track in-progress function calls: call_id -> {"name": str, "arguments": str}
-        function_calls: Dict[str, Dict[str, str]] = {}
-
-        for event in response_stream:
-            event_type = getattr(event, "type", None)
-
-            # Text delta events
-            if event_type == "response.output_text.delta":
-                delta_text = getattr(event, "delta", "")
-                if delta_text:
-                    full_response.append(delta_text)
-                    yield Event(EventType.STREAM_CHUNK, delta_text)
-
-            # Function call item started
-            elif event_type == "response.output_item.added":
-                item = getattr(event, "item", None)
-                if item and getattr(item, "type", None) == "function_call":
-                    call_id = getattr(item, "call_id", "") or getattr(item, "id", "")
-                    name = getattr(item, "name", "")
-                    if call_id:
-                        function_calls[call_id] = {"name": name, "arguments": ""}
-
-            # Function call arguments streaming
-            elif event_type == "response.function_call_arguments.delta":
-                call_id = getattr(event, "call_id", "")
-                delta = getattr(event, "delta", "")
-                if call_id in function_calls and delta:
-                    function_calls[call_id]["arguments"] += delta
-
-            # Function call arguments complete
-            elif event_type == "response.function_call_arguments.done":
-                call_id = getattr(event, "call_id", "")
-                arguments = getattr(event, "arguments", "")
-                name = getattr(event, "name", "")
-                if call_id in function_calls:
-                    function_calls[call_id]["arguments"] = arguments
-                    if name:
-                        function_calls[call_id]["name"] = name
-
-            # Response completed — extract usage
-            elif event_type == "response.completed":
-                resp = getattr(event, "response", None)
-                if resp:
-                    usage = self._parse_responses_usage(getattr(resp, "usage", None))
-
-        # Emit TOOL_CALL events for all completed function calls
-        tool_calls_metadata = []
-        for call_id, fc in function_calls.items():
-            if fc.get("name"):
-                try:
-                    args = json.loads(fc["arguments"]) if fc["arguments"] else {}
-                except json.JSONDecodeError:
-                    args = {}
-                yield Event(EventType.TOOL_CALL, {
-                    "tool": fc["name"],
-                    "arguments": args,
-                    "native": True,
-                    "tool_call_id": call_id,
-                })
-                tool_calls_metadata.append({
-                    "id": call_id,
-                    "function": {"name": fc["name"], "arguments": fc["arguments"]},
-                })
-
-        final_content = "".join(full_response)
-        metadata: Dict[str, Any] = {}
-        if usage:
-            metadata["usage"] = usage
-        if tool_calls_metadata:
-            metadata["tool_calls"] = tool_calls_metadata
-        yield Event(EventType.STREAM_END, final_content, metadata or None)
-
-    async def _non_stream_responses(
-        self,
-        request_kwargs: Dict[str, Any],
-    ) -> AsyncIterator[Event]:
-        """Handle non-streaming Responses API response."""
-        response = await asyncio.to_thread(
-            lambda: self.client.responses.create(
-                **request_kwargs,
-                stream=False,
-            )
-        )
-
-        content = ""
-        tool_calls_metadata = []
-
-        if hasattr(response, "output"):
-            for item in response.output:
-                item_type = getattr(item, "type", None)
-
-                if item_type == "message":
-                    item_content = getattr(item, "content", None)
-                    if isinstance(item_content, list):
-                        for part in item_content:
-                            if getattr(part, "type", None) == "output_text":
-                                content += getattr(part, "text", "")
-                    elif isinstance(item_content, str):
-                        content += item_content
-                    elif item_content is not None:
-                        logger.warning(
-                            f"Unexpected item.content type in Responses API output: "
-                            f"{type(item_content).__name__!r} (value={item_content!r}), "
-                            f"item_type={item_type!r} — skipping"
-                        )
-
-                elif item_type == "function_call":
-                    call_id = getattr(item, "call_id", "") or getattr(item, "id", "")
-                    name = getattr(item, "name", "")
-                    arguments = getattr(item, "arguments", "")
-                    if name:
-                        try:
-                            args = json.loads(arguments) if arguments else {}
-                        except json.JSONDecodeError:
-                            args = {}
-                        yield Event(EventType.TOOL_CALL, {
-                            "tool": name,
-                            "arguments": args,
-                            "native": True,
-                            "tool_call_id": call_id,
-                        })
-                        tool_calls_metadata.append({
-                            "id": call_id,
-                            "function": {"name": name, "arguments": arguments},
-                        })
-
-        # Fallback: output_text convenience attribute
-        if not content and not tool_calls_metadata and hasattr(response, "output_text"):
-            content = response.output_text or ""
-
-        usage = self._parse_responses_usage(getattr(response, "usage", None))
-
-        metadata: Dict[str, Any] = {"usage": usage}
-        if tool_calls_metadata:
-            metadata["tool_calls"] = tool_calls_metadata
-        yield Event(EventType.STREAM_END, content, metadata)
-
-    # ------------------------------------------------------------------
-    # Message conversion helpers
-    # ------------------------------------------------------------------
-
-    @staticmethod
-    def _convert_messages_for_responses(messages: List[Message]) -> tuple:
-        """Convert Messages to Responses API format.
-
-        R5 (v1.17.6): any `uploaded_file` blocks on user/assistant/tool
-        messages are flattened to legacy text markers before they enter
-        the Responses API request. System messages are already flattened
-        to text via `text_content()`, so they're covered implicitly.
-
-        Returns:
-            Tuple of (instructions string or None, input items list)
-        """
-        instructions_parts = []
-        input_items = []
-
-        for m in messages:
-            if m.role == "system":
-                # system_instruction is text-only — multimodal content never
-                # appears on system messages, but extract text defensively.
-                instructions_parts.append(m.text_content())
-            elif m.role == "tool":
-                # Tool result — include tool_call_id for proper linking
-                item: Dict[str, Any] = {
-                    "role": "tool",
-                    "content": flatten_uploaded_file_blocks(m.content),
-                }
-                if m.tool_call_id:
-                    item["tool_call_id"] = m.tool_call_id
-                input_items.append(item)
-            else:
-                role = "assistant" if m.role == "assistant" else "user"
-                item = {
-                    "role": role,
-                    "content": flatten_uploaded_file_blocks(m.content),
-                }
-                if m.tool_calls:
-                    item["tool_calls"] = m.tool_calls
-                input_items.append(item)
-
-        instructions = "\n\n".join(instructions_parts) if instructions_parts else None
-        return instructions, input_items
-
-    @staticmethod
-    def _convert_tools_for_responses(openai_tools: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Convert OpenAI chat tools format to Responses API format.
-
-        Chat Completions: {"type": "function", "function": {"name": ..., "parameters": ...}}
-        Responses API:    {"type": "function", "name": ..., "parameters": ...}
-        """
-        response_tools = []
-        for tool in openai_tools:
-            if tool.get("type") == "function" and "function" in tool:
-                func = tool["function"]
-                response_tool = {
-                    "type": "function",
-                    "name": func.get("name", ""),
-                    "description": func.get("description", ""),
-                }
-                if "parameters" in func:
-                    response_tool["parameters"] = func["parameters"]
-                response_tools.append(response_tool)
-        return response_tools
-
-    @staticmethod
-    def _build_tool_hint(openai_tools: List[Dict[str, Any]]) -> str:
-        """Build a concise tool hint for injection into instructions.
-
-        This provides belt-and-suspenders context: if the model outputs
-        tool calls as JSON text instead of native function_call items,
-        the text-based parser in chat.py can still identify them.
-        """
-        if not openai_tools:
-            return ""
-        lines = ["You have the following tools available. Use them by calling the function directly:"]
-        for tool in openai_tools:
-            if tool.get("type") == "function" and "function" in tool:
-                func = tool["function"]
-                name = func.get("name", "")
-                desc = func.get("description", "")
-                params = func.get("parameters", {})
-                param_names = list(params.get("properties", {}).keys()) if params else []
-                if name:
-                    param_str = f"({', '.join(param_names)})" if param_names else "()"
-                    lines.append(f"- {name}{param_str}: {desc}")
-        return "\n".join(lines) if len(lines) > 1 else ""
-
-    # ------------------------------------------------------------------
-    # Usage parsing
-    # ------------------------------------------------------------------
-
-    @staticmethod
-    def _parse_responses_usage(usage) -> Optional[UsageStats]:
-        """Parse usage from Responses API response.
-
-        Responses API uses input_tokens/output_tokens instead of
-        prompt_tokens/completion_tokens.
-        """
-        if not usage:
-            return None
-        input_tokens = getattr(usage, "input_tokens", 0) or 0
-        output_tokens = getattr(usage, "output_tokens", 0) or 0
-        return UsageStats(
-            prompt_tokens=input_tokens,
-            completion_tokens=output_tokens,
-            total_tokens=input_tokens + output_tokens,
-        )
 
     # ------------------------------------------------------------------
     # Error handling

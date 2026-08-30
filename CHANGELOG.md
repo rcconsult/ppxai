@@ -57,6 +57,38 @@ because that fallback is what produced the confabulated results.
 uses Perplexity's Jobs API, not chat completions, so it was never usable
 on the endpoint ppxai calls.
 
+### Fixed (ADR 0012 W2) — the wire protocol is finally what routes the request
+
+**Closes debt Item 61.** `api_path` — renamed `ModelFacts.wire_protocol` in
+W1 — was declared per model, merged through the config ladder, operator-
+overridable and shown by `/provider`, while **nothing routed on it**. Routing
+was a hardcoded prefix tuple, re-asked independently at each of four dispatch
+sites. Now there is one reader (`_wire_for`), so an operator override reaches
+the wire instead of stopping at the resolver.
+
+The two sources had drifted apart, in both directions, on three models —
+resolved as decisions rather than by copying one table onto the other:
+
+- **`gpt-5.2-pro`, `gpt-5-pro`** — declared `chat`, routed `responses`. The
+  **router** was right: commit `5e1ace2f` added them after OpenAI answered
+  *"not a chat model"*. The declared value was never exercised.
+- **`gpt-5.3-codex`** — declared `responses`, routed `chat`, because
+  `"codex"` is a *prefix*, not a substring. The **profile** was right; codex
+  models 404 on Chat Completions. This one had teeth: `oneshot()` has no
+  404 auto-fallback, so the gateway path would have failed outright.
+- **`gpt-5.5-pro`** — a fourth drift found while fencing the other three:
+  reached by *neither* mechanism. Included **by analogy with its siblings and
+  not separately probed**, and marked as such in the table and the code.
+
+The Responses wire also moved out of the provider into
+`ppxai/engine/providers/wire/` behind a `ProtocolHandler` contract — the
+bodies were lifted mechanically and diffed against the originals, and a spy
+pins the outgoing `responses.create(**kwargs)`. Two things fell out of the
+move: ADR 0006's `assert_wire_blocks_clean` gained its **second** call site
+(Item 62 (a) now covers 2 of 3 wires), and the send-path fence widened from
+`glob` to `rglob` — a top-level-only scan would have stopped guarding that
+path on the very commit that relocated it.
+
 ### Changed (BREAKING — ADR 0012) — one per-model fact system, `facts` in config
 
 > ⚠️ **`ppxai-config.json` capability keys moved, no dual-read.** The

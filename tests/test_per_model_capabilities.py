@@ -84,9 +84,12 @@ class TestSendPathsConsultTheHook:
     """Source-level: the four sites that decide whether to attach tools."""
 
     #: (module, method) pairs that gate tool attachment on capability.
+    #: ADR 0012 W2 moved the Responses send path out of the provider and into
+    #: `wire/responses.py`; the fence follows the code, because a send path
+    #: that leaves this list stops being guarded the day it moves.
     SEND_PATHS = [
         ("openai_native.py", "_chat_completions_api"),
-        ("openai_native.py", "_chat_responses_api"),
+        ("wire/responses.py", "build_request"),
         ("openai_compat.py", "chat"),
         ("gemini.py", "_build_config"),
     ]
@@ -98,11 +101,14 @@ class TestSendPathsConsultTheHook:
         than a per-method check so a NEW provider or a NEW send path is
         covered the day it is written.
         """
-        pattern = re.compile(r"self\.capabilities\.(native_tool_calling|tool_mode)")
+        # rglob, not glob: ADR 0012 W2 put send-path code in the `wire/`
+        # subpackage, and a top-level-only scan would have stopped seeing it
+        # exactly when it moved.
+        pattern = re.compile(r"(self|ctx)\.capabilities\.(native_tool_calling|tool_mode)")
         offenders = []
-        for path in PROVIDERS_DIR.glob("*.py"):
+        for path in PROVIDERS_DIR.rglob("*.py"):
             if pattern.search(path.read_text(encoding="utf-8")):
-                offenders.append(path.name)
+                offenders.append(str(path.relative_to(PROVIDERS_DIR)))
         assert offenders == [], (
             f"{offenders} read self.capabilities.native_tool_calling, which "
             "ignores the per-model override. Use "

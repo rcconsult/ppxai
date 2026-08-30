@@ -11,7 +11,7 @@ Covers:
     openai_native chat-completions path, perplexity)
   - gemini.GeminiProvider._content_to_gemini_parts (Gemini overrides
     the whole conversion chain)
-  - openai_native.OpenAINativeProvider._convert_messages_for_responses
+  - wire.responses.ResponsesHandler.convert_messages
     (Responses API path for codex / pro models)
 
 Each test builds a Message whose content contains a structured
@@ -30,6 +30,7 @@ from ppxai.engine.uploaded_file import (
     format_uploaded_file_reference,
     make_uploaded_file_block,
 )
+from ppxai.engine.providers.wire.responses import ResponsesHandler
 
 
 def _pdf_block():
@@ -171,7 +172,7 @@ class TestOpenAINativeResponsesFlatten:
             ]),
         ]
         _instructions, input_items = (
-            OpenAINativeProvider._convert_messages_for_responses(messages)
+            ResponsesHandler.convert_messages(messages)
         )
         content = input_items[0]["content"]
         assert isinstance(content, list)
@@ -187,7 +188,7 @@ class TestOpenAINativeResponsesFlatten:
             Message(role="tool", content=[_pdf_block()], tool_call_id="call_1"),
         ]
         _instructions, input_items = (
-            OpenAINativeProvider._convert_messages_for_responses(messages)
+            ResponsesHandler.convert_messages(messages)
         )
         content = input_items[0]["content"]
         assert content[0]["type"] == "text"

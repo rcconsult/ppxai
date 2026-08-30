@@ -12,6 +12,7 @@ from unittest.mock import MagicMock
 from ppxai.engine.types import Message
 from ppxai.engine.session import SessionManager
 from ppxai.engine.providers.base import BaseProvider
+from ppxai.engine.providers.wire.responses import ResponsesHandler
 
 
 # ---------------------------------------------------------------------------
@@ -247,7 +248,7 @@ class TestBaseProviderConvertMessages:
 
 
 # ---------------------------------------------------------------------------
-# OpenAINativeProvider._convert_messages_for_responses() tests
+# ResponsesHandler.convert_messages() tests
 # ---------------------------------------------------------------------------
 
 class TestOpenAINativeConvertMessagesForResponses:
@@ -267,7 +268,7 @@ class TestOpenAINativeConvertMessagesForResponses:
             Message("assistant", "Here's the file."),
         ]
 
-        instructions, items = OpenAINativeProvider._convert_messages_for_responses(messages)
+        instructions, items = ResponsesHandler.convert_messages(messages)
         assert instructions == "You are helpful"
         assert len(items) == 4  # user, assistant, tool, assistant
 
@@ -290,18 +291,18 @@ class TestOpenAINativeConvertMessagesForResponses:
             Message("system", "Part 2"),
             Message("user", "hello"),
         ]
-        instructions, items = OpenAINativeProvider._convert_messages_for_responses(messages)
+        instructions, items = ResponsesHandler.convert_messages(messages)
         assert instructions == "Part 1\n\nPart 2"
         assert len(items) == 1
         assert items[0]["role"] == "user"
 
 
 # ---------------------------------------------------------------------------
-# _non_stream_responses content extraction tests (issue 9.1)
+# ResponsesHandler._non_stream content extraction tests (issue 9.1)
 # ---------------------------------------------------------------------------
 
 class TestNonStreamResponsesContentExtraction:
-    """Test _non_stream_responses handles various item.content shapes.
+    """Test ResponsesHandler._non_stream handles various item.content shapes.
 
     The Responses API can return item.content as a list of parts (normal),
     a plain string (shorthand), or a bool True (observed on some Codex
@@ -309,7 +310,7 @@ class TestNonStreamResponsesContentExtraction:
     """
 
     def _run(self, output_items, output_text=None):
-        """Drive _non_stream_responses with mocked client.responses.create."""
+        """Drive ResponsesHandler._non_stream with mocked client.responses.create."""
         import asyncio
         from unittest.mock import MagicMock, patch
         from ppxai.engine.providers.openai_native import OpenAINativeProvider
@@ -325,7 +326,12 @@ class TestNonStreamResponsesContentExtraction:
             provider.client.responses.create.return_value = response
 
             async def _drain():
-                return [ev async for ev in provider._non_stream_responses({"model": "test"})]
+                return [
+                    ev
+                    async for ev in ResponsesHandler()._non_stream(
+                        provider, {"model": "test"}
+                    )
+                ]
 
             events = asyncio.run(_drain())
 
@@ -363,7 +369,9 @@ class TestNonStreamResponsesContentExtraction:
         """Bug 9.1: content=True (bool) must not raise TypeError and logs a warning."""
         from unittest.mock import patch
         item = self._message_item(True)  # ← the bad value seen in production
-        with patch("ppxai.engine.providers.openai_native.logger") as mock_logger:
+        # ADR 0012 W2: the warning now fires from the handler's own logger,
+        # because the extraction moved the code that emits it.
+        with patch("ppxai.engine.providers.wire.responses.logger") as mock_logger:
             # Must not raise TypeError: 'bool' object is not iterable
             ev = self._run([item])
             assert ev.data == ""  # unexpected content type silently skipped

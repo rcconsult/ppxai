@@ -99,14 +99,65 @@ Each provider gates its tools array on the same hook. The fence for this is
 NEW send path is covered the day it is written).
 
 ```
-openai_native._chat_completions_api()  ┐
-openai_native._chat_responses_api()    ├─ self.get_facts_for_model(model)
-openai_compat.chat()                   │    .tool_mode != "prompt_based"
-gemini._build_config(model=...)        ┘
+openai_native._chat_completions_api()      ┐
+wire/responses.build_request(ctx, ...)     ├─ get_facts_for_model(model)
+openai_compat.chat()                       │    .tool_mode != "prompt_based"
+gemini._build_config(model=...)            ┘
 ```
 
 `gemini._build_config` takes `model` for exactly this reason; reading
 `self.capabilities` made the per-model answer unreachable (plan I1).
+
+W2 moved the second row out of the provider and into the handler, so the
+fence's path scan moved with it — and its glob widened from `*.py` to
+`rglob("*.py")`, because a top-level-only scan would have stopped seeing that
+send path on exactly the commit that relocated it. The banned-attribute
+pattern gained `ctx.` alongside `self.` for the same reason: the handler's
+receiver is named `ctx`, so a `self`-only regex would miss the identical bug
+in the new code.
+
+## Graph 2b — which wire, and who asks (ADR 0012 W2)
+
+Routing used to be three independent re-asks of a hardcoded prefix tuple.
+It is now one reader over the per-model fact, which is what makes an operator
+override reach the wire at all (debt Item 61).
+
+```
+              ┌─ chat()                  ─┐
+              ├─ chat_sync_simple()       │   self._wire_for(model)
+call sites ───┤                           ├──   = get_facts_for_model(model)
+              ├─ oneshot()                │       .wire_protocol
+              └─ 404 auto-fallback       ─┘            │
+                                                       │
+                        ┌──────────────────────────────┴───────────┐
+                        │                                          │
+                "responses"                                "chat_completions"
+                        │                                          │
+        wire.get_handler("responses")            openai_native._chat_completions_api()
+                        │                        (becomes a handler in W4)
+        ResponsesHandler.chat / .oneshot
+                  └─ build_request(ctx, ...)
+                       ├─ convert_messages()   ← ADR 0006 validator lives here
+                       ├─ convert_tools()
+                       └─ build_tool_hint()
+```
+
+Four call sites, ONE resolver — that is the fix. The four branches themselves
+collapse in W4, when `chat_completions` becomes a handler and dispatch is a
+dict lookup with no `if` at all.
+
+`get_handler()` raises `KeyError` for an unregistered protocol rather than
+falling back to a default. A silent fallback is precisely how `api_path` sat
+declared, config-overridable and inert for three releases: nothing consumed
+it, and nothing complained.
+
+**Seed data, not a router.** `RESPONSES_API_PREFIXES` survives as the seed
+form of `RESPONSES_WIRE_GLOBS` and for the fallback's log line;
+`_is_responses_api_model()` is no longer on any routing path. The two glob
+sets that build `shipped_model_facts` state *different fields* of one record
+(`tool_mode` vs `wire_protocol`) and must stay disjoint — a model in both
+would lose one fact to dict-merge order, so a fence asserts they never
+overlap.
 
 ## Graph 3 — resolution without a provider instance
 

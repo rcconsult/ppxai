@@ -7,13 +7,16 @@ revised in place per the README's Proposed-records rule; status corrected
 2026-08-30 from "no code written" to Accepted-in-part after §2 merged as
 `6b0f2214` — the header had drifted from shipped reality, which is the exact
 defect class this record exists to remove)
-**Status:** 🟡 **Accepted-in-part** — §2 (the unified fact system, Q0a–Q0h)
-is **implemented and merged** as migration step 0, commit `6b0f2214`
-(2026-08-30, `bugfix/v1.19.1`). Migration **steps 1–4 remain open**: the
-protocol handlers, the routing that consumes `wire_protocol`, and Perplexity
-over the Responses wire. Until step 2 lands, the operator `api_path` override
-stays inert — [debt Item 61](../debt-inventory.md) is still open, as is Item 62
-until step 4. §1 and §3–§7 are therefore still design, revisable in place.
+**Status:** 🟡 **Accepted-in-part** — §1, §2 and §3 are **implemented and
+merged** (2026-08-30, `bugfix/v1.19.1`): the unified fact system as migration
+step 0 (`6b0f2214`, W1), then the `ProtocolHandler` contract, the Responses
+handler and `wire_protocol`-driven routing as steps 1–2 (W2). **Steps 3–4
+remain open**: Perplexity over the Responses wire (W3) and the remaining
+protocol handlers (W4). [Debt Item 61](../debt-inventory.md) is **closed** —
+an operator `wire_protocol` override now changes the outgoing request. Item 62
+is **half closed**: the ADR 0006 validator covers 2 of 3 wires, and
+`_convert_messages` is still the shared base's chat-completions emitter until
+step 4. §5–§7 remain design, revisable in place.
 Supersedes the `api_path` routing sketch in
 [`../plan-per-model-capabilities.md`](../plan-per-model-capabilities.md) §I4b,
 which assumed the slot merely needed filling in.
@@ -950,18 +953,35 @@ gated on the owner's explicit go, per the arc's standing rule.
    the **old** code over the **old** file, with each deviation named explicitly
    and self-checked.
 
-1. ⬜ **Extract, no behaviour change.** Lift the Responses block into a handler;
-   `openai_native` consumes it via the handler while keeping
-   `_is_responses_api_model` as its resolver. Fence: existing suite green, plus
-   a request-kwargs spy proving the outgoing request is byte-identical
-   before/after for one `responses` model and one `chat` model.
-2. **Make the protocol field load-bearing.** Routing reads
-   `get_facts_for_model(model).wire_protocol`; the prefix tuple becomes
-   table seed data. Fence:
-   a test asserting declared-vs-routed agreement **for every built-in profile**
-   — the check that would have caught all three drifts — plus a test that an
-   operator `api_path` override actually changes the outgoing request (the
-   inert-config regression).
+1. ✅ **DONE** (W2, 2026-08-30) — **Extract, no behaviour change.** The
+   Responses block is `ppxai/engine/providers/wire/responses.py`
+   (`ResponsesHandler`), behind the `ProtocolHandler` contract in
+   `wire/protocol.py`. The six lifted members were copied out of
+   `openai_native.py` **mechanically**, so "no behaviour change" is a property
+   of the extraction rather than a promise, and the four converters plus both
+   stream handlers were diffed against the live pre-move sources to confirm it.
+   Fence: `tests/test_wire_responses_extraction.py` spies the outgoing
+   `responses.create(**kwargs)` and asserts the literal pre-move kwargs.
+2. ✅ **DONE** (W2, 2026-08-30) — **Make the protocol field load-bearing.**
+   `_wire_for(model)` is the single reader; all four dispatch sites (`chat`,
+   `chat_sync_simple`, `oneshot`, the 404 auto-fallback) consult it.
+   `RESPONSES_API_PREFIXES` is now seed data for `RESPONSES_WIRE_GLOBS`;
+   `_is_responses_api_model` routes nothing. **Closes debt Item 61.**
+
+   The three measured drifts were resolved per row on evidence, not by
+   copying one table onto the other: the two pro models in the **router's**
+   favour (commit `5e1ace2f` added them after a live *"not a chat model"*
+   404), `gpt-5.3-codex` in the **profile's** favour (codex 404s on Chat
+   Completions). A **fourth** drift surfaced in the same sweep —
+   `gpt-5.5-pro`, reached by neither mechanism — and is included **by
+   analogy, not separately probed**, marked as such in the table.
+
+   Two bonuses this step made cheap: ADR 0006's `assert_wire_blocks_clean`
+   gained its **second** call site inside the moved converter, taking Item 62
+   (a) from 1-of-3 wires to 2-of-3; and the send-path fence's scan widened
+   from `glob` to `rglob` with `ctx.` added to its banned-attribute pattern,
+   because the code it guards moved into a subpackage under a new receiver
+   name.
 3. **Perplexity speaks both.** Register the Responses handler on `perplexity`;
    add the fleet rows. Fence: live trial of `anthropic/claude-sonnet-5` through
    `/task --tools read_file`, canary-verified end to end, per the arc's

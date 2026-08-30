@@ -14,6 +14,7 @@ from ppxai.engine.providers.openai_native import (
     RESTRICTED_GENERATION_PARAMS,
 )
 from ppxai.engine.types import Message, Event, EventType, ProviderCapabilities, UsageStats
+from ppxai.engine.providers.wire.responses import ResponsesHandler
 
 
 # ---------------------------------------------------------------------------
@@ -192,7 +193,7 @@ class TestMessageConversion:
             Message(role="user", content="Hello"),
             Message(role="assistant", content="Hi"),
         ]
-        instructions, items = OpenAINativeProvider._convert_messages_for_responses(messages)
+        instructions, items = ResponsesHandler.convert_messages(messages)
         assert instructions == "System prompt\n\nMore instructions"
         assert len(items) == 2
         assert items[0] == {"role": "user", "content": "Hello"}
@@ -200,7 +201,7 @@ class TestMessageConversion:
 
     def test_convert_messages_for_responses_no_system(self):
         messages = [Message(role="user", content="Hello")]
-        instructions, items = OpenAINativeProvider._convert_messages_for_responses(messages)
+        instructions, items = ResponsesHandler.convert_messages(messages)
         assert instructions is None
         assert len(items) == 1
 
@@ -215,7 +216,7 @@ class TestMessageConversion:
                 }
             }
         ]
-        result = OpenAINativeProvider._convert_tools_for_responses(openai_tools)
+        result = ResponsesHandler.convert_tools(openai_tools)
         assert len(result) == 1
         assert result[0]["type"] == "function"
         assert result[0]["name"] == "web_search"
@@ -225,7 +226,7 @@ class TestMessageConversion:
 
     def test_convert_tools_for_responses_skips_non_function(self):
         tools = [{"type": "other", "data": "something"}]
-        result = OpenAINativeProvider._convert_tools_for_responses(tools)
+        result = ResponsesHandler.convert_tools(tools)
         assert len(result) == 0
 
 
@@ -248,13 +249,13 @@ class TestUsageParsing:
 
     def test_parse_responses_usage(self):
         usage = SimpleNamespace(input_tokens=200, output_tokens=80)
-        result = OpenAINativeProvider._parse_responses_usage(usage)
+        result = ResponsesHandler.parse_usage(usage)
         assert result.prompt_tokens == 200
         assert result.completion_tokens == 80
         assert result.total_tokens == 280
 
     def test_parse_responses_usage_none(self):
-        assert OpenAINativeProvider._parse_responses_usage(None) is None
+        assert ResponsesHandler.parse_usage(None) is None
 
 
 # ---------------------------------------------------------------------------
