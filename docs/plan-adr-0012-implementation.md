@@ -93,67 +93,52 @@ IDs are safe on provider `perplexity` — every production provider-key split
 is `split("/")[0]` / `split("/", 1)` (`usage.py:243`, `session.py:1326`,
 `tools.py:569`/`647`, `search_backends.py:148`).
 
-## W1 — unify per-model fact resolution (ADR 0012 §2 + migration step 0 · ~2.5d)
+## W1 — two fact records, explicit and complete (ADR 0012 §2 Q0d + Q0e · ~3.5d)
 
-Design is **already written and owner-reviewable** in
-[ADR 0012 §2](decisions/0012-wire-protocol-as-per-model-capability.md) —
-`ModelFacts`, the five-layer ladder, and Q0a–Q0c are decided there. This
-iteration implements it; no separate ADR to draft.
+**Re-scoped 2026-08-30 after three failed implementations** (see Q0e). The
+design is in [ADR 0012 §2](decisions/0012-wire-protocol-as-per-model-capability.md);
+this iteration implements it.
 
-**What §2 settles (recorded here so the plan stands alone):**
-- **Q0a** — `tool_mode` subsumes `native_tool_calling`; the boolean is
-  **deleted**, not kept as a derived alias. ⚠️ **`tool_mode` defaults to
-  `prompt_based`**, NOT the profile's `native`: the two systems disagree on
-  their safe default, and inheriting the profile's would flip every unlisted
-  model to tool-capable through `task_authorizer` and `execution.py`.
-- **Q0b** — globs win over exact keys, **two-pass matching**: every exact
-  (wildcard-free) id is tried before any wildcard glob. "Specific before
-  generic" is today only a hand-maintained comment, not computed.
-- **Q0c** — config keys: **clean break** per ADR 0010, `/doctor` scan in the
-  **same commit**, and the §2 clean-break inventory (4 reader modules + 4
-  user docs) moves with it. ⚠️ **Translate, don't drop:**
-  `capabilities.native_tool_calling: true` → `tool_mode: native`. Measured:
-  `openrouter` and `ollama` in the shipped example config have **no
-  `tool_calling` block at all**, so that key is the only thing holding
-  native on — a pure drop demotes every field config copied from it.
-- ⚠️ **Rung 4 is a declared behaviour change:** provider-level operator
-  config currently outranks AGENTS.md (both flattened into one layer by
-  `get_tool_calling_config`); the ladder demotes it below AGENTS.md.
+**The shape:**
+- `ProviderFacts` (endpoint: `web_search`, `web_fetch`, `weather`,
+  `citations`, `streaming`) and `ModelFacts` (model: `wire_protocol`,
+  `tool_mode`, fallbacks, limits, vision, reasoning, `restricted_params`,
+  `tier`) — **disjoint field sets**, so no field can be stated twice and
+  there is nothing to arbitrate.
+- **No defaults, no inheritance, no shortcuts.** A record is complete and
+  explicit, or absent. Fleet-wide conveniences do not survive; `/doctor`
+  writes them per model.
+- Resolution: shipped table row → operator config row. Two lookups, no
+  cross-level merge, no heuristics.
+- Shipped tables become explicit `{model_or_glob: <complete record>}` tables
+  consulted via `match_table` (exact before glob, Q0b). `BUILTIN_PROFILES`'
+  65 rows and both capability tables are the seed data.
+- Both old accessors (`get_capabilities_for_model`, `chat.py::_merge_profile`)
+  are **deleted**, not wrapped — the collapse the earlier drafts kept
+  deferring.
 
-**Work:**
-- `ModelFacts` + `shipped_facts_for_model()` / `get_facts_for_model()` on
-  `BaseProvider`; the two `shipped_capabilities_for_model` overrides migrate.
-- **Delete** both old accessors and both merge sites
-  (`get_capabilities_for_model`, `chat.py::_merge_profile`) — collapse, not
-  wrap. An accessor that internally calls both ladders passes every
-  behavioural test while leaving the code worse; that is the failure this
-  iteration must not produce.
-- Absorb the profile path's **AGENTS.md bootstrap layer** (the capability
-  path has no equivalent) as ladder layer 2.
-- `wire_protocol` declared here (renamed from the inert `api_path`);
-  **consumed in W2**.
-- Config accessors merge; `/doctor` scan; `chat.py:693`'s mode check reads
-  the unified facts.
+**`/doctor` is a deliverable of this iteration, not a follow-up:** report
+partial records with the resolved value for each blank, rewrite them
+complete, report legacy keys (Q0c), and **scaffold a new provider or model
+definition** so an operator never hand-writes a full record.
 
-**Pre-measured (auditor, 2026-08-30, 90 configured models across example +
-a real user config):** 14 models resolve mode via the profile default; the
-conservative default demotes **none** of them (13 held native by
-provider-level capabilities config, 1 already `prompt_based`). One explicit
-row needed: **`gpt-5.1` on `openai`** — native in the shipped table, matches
-no glob. No profile-vs-capability disagreement requires arbitration.
-Rung-4 reorder is **inert today**: no AGENTS.md anywhere carries a
-`tool_calling` section.
+**Fences:**
+- `sonar` cannot resolve tool-capable from ANY provider-level config — the
+  Item 43 regression, asserted end-to-end through `authorize_task()`.
+- A model in neither table resolves conservatively (Q0a).
+- Exact id beats an earlier generic glob (Q0b).
+- Operator config overrides a shipped row, per record type.
+- `/doctor` round-trips a partial config to a complete one **without
+  changing behaviour** — the field-config case, not a synthetic fixture.
+- **Behaviour byte-identical** across all 35 example-config models
+  (harness already built and passing).
+- Full suite (5188/32/0 baseline).
 
-**Fences:** a model in **neither** table resolves NOT tool-capable, asserted
-end-to-end through `authorize_task()` (Q0a's default flip); an exact id that
-also matches an earlier generic glob resolves to the exact row (Q0b);
-provider-config × AGENTS.md × per-model real-config cross-pair (rung 4);
-every existing capability + profile test green against the unified accessor; I2's real-config cross-pair test extended to profile
-fields; mode-vs-capability seam test (the I3 regression); accessor-override
-ban; **behaviour byte-identical** — spot-check a sample of models across all
-4 providers before/after. Full suite (5188/32/0 baseline).
-**Runnable after:** identical behaviour, one resolution system.
-**Simplification report:** ladders removed, accessors deleted, LoC delta.
+**Declared behaviour changes** (both measured, both need migration notes):
+AGENTS.md vs provider config, and the 34 field flips in the owner's config
+where provider-level `tool_calling` currently beats a matching code glob —
+`/doctor`'s push-down is the migration for both.
+
 Call graphs: create `docs/provider-wire-call-graphs.md` + `graphify update .`.
 
 ## W2 — extract the Responses handler + make routing consume the facts (ADR 0012 steps 1–2 · closes Item 61 · ~1.5d)
@@ -260,7 +245,7 @@ Audited 2026-08-30 by grep, not assumption. "User-side" = existing
 
 ## Sequencing summary
 
-    W0 ✅ DONE → W1 (UNIFY facts, ADR 0012 §2, ~2.5d)
+    W0 ✅ DONE → W1 (two fact records, ~3.5d)
       → W2 (extract handler + routing from facts, ~1.5d)
       → W3 (Perplexity Responses, ~2d, DONE BY 09-20)
       → W4 (remaining handlers) → W5 (closeout)

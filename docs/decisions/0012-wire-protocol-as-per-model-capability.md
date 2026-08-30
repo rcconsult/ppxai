@@ -333,6 +333,12 @@ both old merge sites are deleted, not wrapped** — an accessor that internally
 called both ladders would pass every behavioural test while leaving the code
 worse, which is the failure mode this section exists to prevent.
 
+> ⚠️ **The five-rung ladder below is SUPERSEDED by Q0e.** It is kept because
+> the reasoning that replaced it only makes sense against it: three
+> implementations failed trying to arbitrate between its rungs, and the third
+> reopened debt Item 43. With disjoint provider/model field sets there is
+> nothing to arbitrate, and this ladder collapses to two independent lookups.
+
 Resolution order, generalising I2's **specificity before authorship** and
 absorbing the profile path's extra layer:
 
@@ -369,6 +375,94 @@ land straight into the changed order.
 I2's guard carries over unchanged: a test bans subclasses from overriding the
 public accessor, since one that did would silently drop the config layers —
 the shape that broke I1.
+
+#### Q0e — TWO record types, disjoint fields, no defaults anywhere (supersedes the five-rung ladder)
+
+**Owner decision 2026-08-30, after three failed implementations.** The
+ladder above was wrong at the root, and the failures were the evidence:
+
+- drop-if-default (rung 5 overwrote rung 4 for every capability field),
+- a "profile-owned" exemption list (inverted precedence for a row that
+  deliberately stated a default value),
+- a value-comparison heuristic (**resolved `sonar` to `native` — reopening
+  debt Item 43 on the very model that produced it**, because a provider-wide
+  statement outranked a measured per-model fact).
+
+Each heuristic patched the previous one's failure. That is the patchwork
+pattern this project bans, and the third one should not have been written.
+
+**The root cause was not the arbitration rules — it was needing them at
+all.** Provider and model were modelled as two *levels of the same fields*,
+so every field could be stated twice and something had to decide who wins.
+The measurement says the domain does not work that way (example config, all
+10 providers):
+
+| Field | stated per provider | stated per model |
+|---|---|---|
+| `web_search`, `web_fetch`, `weather`, `citations` | 10 | **0** |
+| `native_tool_calling` / `mode` | 10 / 5 | **0** |
+| `fallback_on_empty`, `strip_json_from_text` | 4 | 1 |
+
+Endpoint abilities are **never** stated per model, because they are facts
+about the *service*: Perplexity has built-in search, the OpenAI API does
+not, and no model changes that. The collisions were an artefact of the
+schema, not of the domain.
+
+**Decision — two records with DISJOINT fields:**
+
+```python
+@dataclass(frozen=True)
+class ProviderFacts:      # what the ENDPOINT does
+    web_search: bool
+    web_fetch: bool
+    weather: bool
+    citations: bool
+    streaming: bool
+
+@dataclass(frozen=True)
+class ModelFacts:         # what THIS MODEL does
+    wire_protocol: str
+    tool_mode: str
+    fallback_on_empty: bool
+    fallback_on_failure: bool
+    strip_json_from_text: bool
+    parallel_tool_calls: bool
+    max_tokens: int
+    max_tool_iterations: int
+    supports_reasoning: bool
+    supports_vision: bool
+    restricted_params: tuple
+    tier: str
+```
+
+No field appears in both. A provider block cannot state a model fact and a
+model block cannot state a provider fact, so **there is nothing to
+arbitrate** — the five-rung ladder collapses to two independent lookups.
+`tool_mode` being a model fact is what makes the `sonar` regression
+structurally impossible: no provider-wide setting can reach it.
+
+**No defaults, no inheritance, no shortcuts** (owner: *"we stop providing
+shortcuts for this round"*). A record is complete and explicit or it is
+absent. Combined with Q0d this means:
+
+- The resolver never guesses, because there is never a partial record to
+  interpret.
+- Resolution is: shipped table row (complete) → operator config row
+  (complete). Two rungs, one per record type, no cross-level merging.
+- Fleet-wide conveniences (`fallback_on_empty` et al. set once per vLLM box)
+  are **not** carried over. They become per-model statements, written by
+  `/doctor`.
+
+**`/doctor` carries the entire burden this creates**, which is why it was
+worth the investment: it reports partial records (Q0d), fills blanks with
+resolved values, and **scaffolds new provider and new model definitions** so
+an operator adding a box or a model gets a complete record generated rather
+than hand-writing 12 fields. The verbosity is real and accepted; the tool,
+not the human, produces it.
+
+**Deferred, explicitly:** whether some fleet-level convenience returns as an
+inheritance mechanism. Reviewable later, once the explicit form is in place
+and its cost is measured rather than predicted.
 
 #### Q0a — `native_tool_calling` vs `tool_mode`: mode wins, boolean **deleted**, default stays CONSERVATIVE
 
@@ -433,6 +527,42 @@ row happens to sit.
 before any wildcard glob**, and only then insertion order applies among globs.
 A test enforces both passes, including the case that motivates it: an exact id
 that also matches an earlier generic glob must resolve to the exact row.
+
+#### Q0d — records are COMPLETE at every level; `/doctor` enforces it
+
+**Owner decision 2026-08-30.** Every `facts` block — in code and in config —
+states **all** `ModelFacts` fields. A partial block is a defect `/doctor`
+reports and rewrites, filling each unstated field with the value it
+currently resolves to.
+
+This came out of a live defect in the first implementation. The shipped
+tables are full records, so "deliberately `false`" and "nobody filled this
+in" are indistinguishable; the resolver tried to bridge that with a
+drop-if-default heuristic, which (a) let rung 5 overwrite rung 4 for every
+capability field and (b) inverted precedence for a row that deliberately
+stated a default value. Both were symptoms of one thing: **a merge that has
+to guess what a partial record meant.**
+
+The sparse-row alternative was considered and rejected by the owner:
+partial rows push the guessing onto every reader, and with dozens of models
+an operator cannot tell whether an absent field is an intention or an
+oversight. *"Having incomplete records always risks being missed, or default
+guesses might fail, and adds burden to the user."*
+
+Consequences, accepted deliberately:
+
+- **The resolver stops guessing.** With complete records at every rung, a
+  merge is a straight field-wise overwrite — no drop-if-default, no
+  "profile-owned" exemption list, no ambiguity about capability fields.
+- **Config becomes verbose**, and that is the point: a config diff shows an
+  operator exactly what their deployment does, rather than what it
+  inherits.
+- **Adding a field to `ModelFacts` makes every existing config block
+  incomplete.** `/doctor` is the migration path, and this is the same
+  mechanism as Q0c's legacy-key rewrite — one scan, two findings
+  (legacy keys, incomplete records), one rewrite.
+- `/doctor` must therefore be able to **render the resolved record**, which
+  it can: every rung is available to it.
 
 #### Q0c — config migration: clean break, with the file scan shipped alongside
 
