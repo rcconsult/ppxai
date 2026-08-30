@@ -963,37 +963,24 @@ def _reject_tool_incapable_model(
     if not tools or not provider or not model:
         return
     try:
-        from ..config.capabilities import config_model_overrides
+        from .model_facts import facts_without_an_instance
         from .providers import get_provider_class
 
-        provider_cls = get_provider_class(provider)
-        if provider_cls is None:
+        if get_provider_class(provider) is None:
             return
-        caps = provider_cls.default_capabilities
-        shipped = getattr(provider_cls, "shipped_capabilities_for_model", None)
-        capable: Optional[bool] = None
-        if shipped is not None:
-            # Read the class-level table without constructing a provider (no
-            # API key here). Fall back to the declared default when the
-            # implementation needs an instance.
-            try:
-                capable = shipped(
-                    _CapabilityProbe(caps), model  # type: ignore[arg-type]
-                ).native_tool_calling
-            except Exception:  # noqa: BLE001
-                capable = None
-        if capable is None:
-            capable = bool(getattr(caps, "native_tool_calling", False))
-        # Operator config wins, same precedence as everywhere else.
-        override = config_model_overrides(provider, model).get(
-            "native_tool_calling"
-        )
-        if override is not None:
-            capable = bool(override)
+        # ADR 0012 §2 Q0e: resolution is a pure function of (model, provider
+        # table, operator config), so this gate reads the same answer the
+        # send path will without constructing a provider — there is no API
+        # key here. The old form needed a `_CapabilityProbe` stand-in
+        # because resolution was an instance method; that indirection, and
+        # the "fall back to the provider default" branch it required, are
+        # both gone. The default was the dangerous half: it is what let a
+        # provider-wide `native_tool_calling: true` speak for `sonar`.
+        facts = facts_without_an_instance(provider, model)
     except Exception:  # noqa: BLE001 — never block on a lookup failure
         return
 
-    if capable:
+    if facts.tool_mode != "prompt_based":
         return
 
     hint = _tool_capable_models_hint(provider)
@@ -1007,31 +994,75 @@ def _reject_tool_incapable_model(
     )
 
 
-class _CapabilityProbe:
-    """Minimal stand-in so a provider's capability table can be read without
-    constructing the provider (which would need an API key)."""
-
-    def __init__(self, capabilities):
-        self.capabilities = capabilities
-
-
 def _tool_capable_models_hint(provider: str) -> str:
-    """" Use <models> instead." when the provider names tool-capable models."""
+    """" Use <models> instead." naming this provider's tool-capable models.
+
+    Derived from the SAME resolution the guard just used, deliberately
+    (ADR 0012 section 2 Q0e). This used to read a per-provider constant by
+    reflection -- `<PROVIDER>_NATIVE_TOOL_MODELS` -- which had two defects
+    of the shape debt Item 61 describes:
+
+    * it named models from a table the router no longer consults, so the
+      message could recommend a model the resolver disagreed about; and
+    * only Perplexity defined such a constant, so every other provider's
+      refusal came with no way forward.
+
+    Two sources, in order. The operator's CONFIGURED models come first,
+    because naming a model they have not configured is not actionable. When
+    nothing is configured for this provider -- a fresh install, or a test --
+    the provider's own shipped rows answer instead, so the hint degrades to
+    "generally capable here" rather than to silence.
+    """
     try:
+        from ..config.loader import load_config
+        from .model_facts import facts_without_an_instance
         from .providers import get_provider_class
 
-        cls = get_provider_class(provider)
-        names = getattr(cls, "NATIVE_TOOL_MODELS", None)
-        if not names:
-            import importlib
+        capable = []
+        cfg = load_config() or {}
+        pblock = (cfg.get("providers") or {}).get(provider) or {}
+        models = pblock.get("models")
+        if isinstance(models, dict):
+            for key, info in models.items():
+                # `load_config()` renumbers models — the FILE is keyed by
+                # model id, the loaded dict by "1", "2", "3" with the id
+                # inside. Resolving on the key silently asked about a model
+                # called "1" and got the conservative floor for every model,
+                # which is why this hint went quiet for every provider.
+                model_id = info.get("id", key) if isinstance(info, dict) else key
+                facts = facts_without_an_instance(provider, model_id)
+                if facts.tool_mode != "prompt_based":
+                    capable.append(model_id)
 
-            mod = importlib.import_module(cls.__module__)
-            names = getattr(
-                mod, f"{provider.upper()}_NATIVE_TOOL_MODELS", None
+        if not capable:
+            # Nothing configured: fall back to the PROVIDER's own rows only.
+            #
+            # Deliberately NOT the global seed table. That table is keyed by
+            # model id with no provider dimension, so a fallback through it
+            # suggested Gemini models for a Perplexity refusal — measured,
+            # not hypothetical. A hint naming a model the provider cannot
+            # serve is worse than no hint: it sends the operator to a
+            # second failure.
+            #
+            # A row keyed `sonar-pro*` names a real model with a version
+            # suffix, so a lone trailing `*` is dropped to give something
+            # typeable; an interior wildcard is skipped, because naming a
+            # pattern helps nobody.
+            cls = get_provider_class(provider)
+            for pattern, facts in (
+                getattr(cls, "shipped_model_facts", {}) or {}
+            ).items():
+                if facts.tool_mode == "prompt_based":
+                    continue
+                name = pattern[:-1] if pattern.endswith("*") else pattern
+                if not any(ch in name for ch in "*?["):
+                    capable.append(name)
+
+        if capable:
+            return " Tool-capable models here: {}.".format(
+                ", ".join(sorted(set(capable)))
             )
-        if names:
-            return f" Tool-capable models here: {', '.join(sorted(names))}."
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001 — a hint must never block the refusal
         pass
     return ""
 

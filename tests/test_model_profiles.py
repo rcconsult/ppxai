@@ -479,102 +479,92 @@ class TestFlashLiteProfile:
         assert profile.max_tokens == 8_192
 
 
-class TestGetEffectiveProfile:
-    """Tests for get_effective_profile merging (v1.16.0 Step 5)."""
+class TestEffectiveResolutionReplacesTheMergeSite:
+    """RETARGETED from `TestGetEffectiveProfile` (ADR 0012 section 2 Q0e/Q0f).
 
-    def test_no_overrides_returns_builtin(self):
-        """Without any overrides, returns the built-in profile unchanged."""
-        from unittest.mock import patch, MagicMock
-        from ppxai.engine.chat import get_effective_profile
+    `chat.get_effective_profile` merged THREE vocabularies onto a
+    `ModelProfile` -- the built-in table, an AGENTS.md `tool_calling`
+    section, and `providers.<p>.tool_calling` config -- with its own layer
+    order. It is deleted, so the six tests that drove it directly are
+    retargeted here rather than left asserting a function that is gone.
 
-        ctx = MagicMock()
-        ctx._bootstrap_context = None
+    Where each premise went:
 
-        with patch("ppxai.engine.chat.get_tool_calling_config", return_value={}):
-            profile = get_effective_profile("gpt-5.2", "openai", ctx)
-        builtin = get_profile("gpt-5.2")
-        assert profile.tool_calling.mode == builtin.tool_calling.mode
-        assert profile.tier == builtin.tier
+    * "config overrides built-in" -- ALIVE, and asserted here against the
+      resolver that replaced the merge site.
+    * "bootstrap overrides built-in" and "config overrides bootstrap" --
+      DEAD. Q0f retires the AGENTS.md `tool_calling` parser: measured
+      across this repo and two other checkouts, no AGENTS.md contains such
+      a section, so it was a parser with no users and a third vocabulary
+      for one question. Benchmark tuning gets a defined home instead
+      (Q0h, `benchmarks/tuning/<provider>_<model>.json`).
+    * "preserves non-tool-calling fields" -- ALIVE, and stronger now: the
+      old merge site silently DROPPED `supports_vision` whenever any
+      override layer was present, because it rebuilt the record field by
+      field and forgot one. A single `replace()` on a frozen record cannot
+      lose a field, which is why that shape is gone rather than fixed.
+    """
 
-    def test_config_overrides_builtin(self):
-        """Config overrides take precedence over built-in profile."""
-        from unittest.mock import patch, MagicMock
-        from ppxai.engine.chat import get_effective_profile
+    def _facts(self, model, provider="openai", overrides=None):
+        from ppxai.config.facts_config import resolve_model_facts
+        from ppxai.engine.model_facts import apply_overrides, shipped_facts_for_model
 
-        ctx = MagicMock()
-        ctx._bootstrap_context = None
+        shipped = shipped_facts_for_model(model)
+        if overrides is None:
+            return shipped
+        return apply_overrides(shipped, overrides)
 
-        overrides = {"mode": "prompt_based", "fallback_on_empty": True}
-        with patch("ppxai.engine.chat.get_tool_calling_config", return_value=overrides):
-            profile = get_effective_profile("gpt-5.2", "openai", ctx)
-        assert profile.tool_calling.mode == "prompt_based"
-        assert profile.tool_calling.fallback_on_empty is True
-        # Non-overridden fields preserved from built-in
-        builtin = get_profile("gpt-5.2")
-        assert profile.tool_calling.strip_json_from_text == builtin.tool_calling.strip_json_from_text
+    def test_no_overrides_returns_the_shipped_row(self):
+        from ppxai.engine.model_facts import shipped_facts_for_model
 
-    def test_bootstrap_overrides_builtin(self):
-        """Bootstrap overrides take precedence over built-in profile."""
-        from unittest.mock import patch, MagicMock
-        from ppxai.engine.chat import get_effective_profile
+        assert self._facts("gpt-5.2") == shipped_facts_for_model("gpt-5.2")
 
-        bootstrap = MagicMock()
-        bootstrap.get_tool_calling_overrides.return_value = {"mode": "auto"}
+    def test_config_overrides_the_shipped_row(self):
+        got = self._facts(
+            "gpt-5.2",
+            overrides={"tool_mode": "prompt_based", "fallback_on_empty": True},
+        )
+        assert got.tool_mode == "prompt_based"
+        assert got.fallback_on_empty is True
 
-        ctx = MagicMock()
-        ctx._bootstrap_context = bootstrap
+    def test_unstated_fields_are_preserved(self):
+        from ppxai.engine.model_facts import shipped_facts_for_model
 
-        with patch("ppxai.engine.chat.get_tool_calling_config", return_value={}):
-            profile = get_effective_profile("gpt-5.2", "openai", ctx)
-        assert profile.tool_calling.mode == "auto"
-
-    def test_config_overrides_bootstrap(self):
-        """Config overrides take precedence over bootstrap overrides."""
-        from unittest.mock import patch, MagicMock
-        from ppxai.engine.chat import get_effective_profile
-
-        bootstrap = MagicMock()
-        bootstrap.get_tool_calling_overrides.return_value = {"mode": "auto", "fallback_on_empty": True}
-
-        ctx = MagicMock()
-        ctx._bootstrap_context = bootstrap
-
-        config_overrides = {"mode": "prompt_based"}
-        with patch("ppxai.engine.chat.get_tool_calling_config", return_value=config_overrides):
-            profile = get_effective_profile("gpt-5.2", "openai", ctx)
-        # Config wins for mode
-        assert profile.tool_calling.mode == "prompt_based"
-        # Bootstrap wins for fallback_on_empty (config didn't set it)
-        assert profile.tool_calling.fallback_on_empty is True
+        shipped = shipped_facts_for_model("gpt-5.2")
+        got = self._facts("gpt-5.2", overrides={"tool_mode": "prompt_based"})
+        assert got.strip_json_from_text == shipped.strip_json_from_text
+        assert got.tier == shipped.tier
 
     def test_max_tokens_override(self):
-        """max_tokens can be overridden via config."""
-        from unittest.mock import patch, MagicMock
-        from ppxai.engine.chat import get_effective_profile
+        assert self._facts("gpt-5.2", overrides={"max_tokens": 1234}).max_tokens == 1234
 
-        ctx = MagicMock()
-        ctx._bootstrap_context = None
+    def test_supports_vision_survives_an_override(self):
+        """The bug the old merge site actually had -- LATENT, not live.
 
-        overrides = {"max_tokens": 32768}
-        with patch("ppxai.engine.chat.get_tool_calling_config", return_value=overrides):
-            profile = get_effective_profile("gpt-5.2", "openai", ctx)
-        assert profile.max_tokens == 32768
+        `get_effective_profile` rebuilt `ModelProfile` field by field when
+        any layer was present and omitted `supports_vision`, so its return
+        value said `False` for a vision model whenever a config override of
+        an unrelated field existed.
 
-    def test_preserves_non_tc_fields(self):
-        """Non-tool-calling fields (tier, supports_reasoning) are preserved."""
-        from unittest.mock import patch, MagicMock
-        from ppxai.engine.chat import get_effective_profile
+        It never reached an image decision: that function had exactly ONE
+        caller, which read only the tool-loop fields, while every vision
+        reader (`file_preprocessing`, the `model_supports_vision` AppState
+        field, the `/attach` warning) calls `model_profiles.supports_vision`
+        directly. A trap for the next caller rather than a shipped
+        regression -- worth pinning for exactly that reason.
+        """
+        from ppxai.engine.model_facts import shipped_facts_for_model
 
-        ctx = MagicMock()
-        ctx._bootstrap_context = None
+        model = "gemini-2.5-pro"
+        assert shipped_facts_for_model(model).supports_vision is True
+        got = self._facts(model, overrides={"max_tokens": 4096})
+        assert got.supports_vision is True
 
-        overrides = {"mode": "prompt_based"}
-        with patch("ppxai.engine.chat.get_tool_calling_config", return_value=overrides):
-            profile = get_effective_profile("gpt-5.2", "openai", ctx)
-        builtin = get_profile("gpt-5.2")
-        assert profile.tier == builtin.tier
-        assert profile.supports_reasoning == builtin.supports_reasoning
-        assert profile.restricted_params == builtin.restricted_params
+    def test_the_merge_site_is_gone(self):
+        """It was deleted, not wrapped -- the collapse ADR 0012 asked for."""
+        import ppxai.engine.chat as chat
+
+        assert not hasattr(chat, "get_effective_profile")
 
 
 class TestNvidiaNimProfiles:

@@ -32,7 +32,7 @@ from ppxai.engine.types import (
     Message,
     ProviderCapabilities,
 )
-from ppxai.engine.model_profiles import ModelProfile, ToolCallingProfile
+from ppxai.engine.model_facts import ModelFacts
 
 
 class MockProvider:
@@ -41,8 +41,18 @@ class MockProvider:
         self._responses = responses or []
         self._call_count = 0
 
-    def get_capabilities_for_model(self, model):
+    def get_capabilities(self):
+
         return self.capabilities
+
+
+    def get_facts_for_model(self, model):
+
+        return getattr(self, 'facts', None) or ModelFacts(
+
+            tool_mode="native"
+
+        )
 
     async def chat(self, messages, model, stream=False, tools=None):
         idx = min(self._call_count, len(self._responses) - 1)
@@ -151,17 +161,14 @@ class TestAgentLifecycleEmission:
         STREAM_START, before any tool iteration.
         """
         provider = MockProvider(
-            capabilities=ProviderCapabilities(native_tool_calling=True),
+            capabilities=ProviderCapabilities(),
             responses=[[Event(EventType.STREAM_END, "Done.")]],
         )
         ctx = MockChatContext(provider=provider, model="test")
         ctx.session.add_message(Message("user", "hello"))
 
-        with patch("ppxai.engine.chat.get_profile") as mock_profile:
-            mock_profile.return_value = ModelProfile(
-                tool_calling=ToolCallingProfile(mode="native"),
-            )
-            events = await _collect(ctx)
+        provider.facts = ModelFacts(tool_mode="native")
+        events = await _collect(ctx)
 
         run_starts = [e for e in events if e.type == EventType.AGENT_RUN_START]
         assert len(run_starts) == 1
@@ -175,17 +182,14 @@ class TestAgentLifecycleEmission:
     @pytest.mark.asyncio
     async def test_run_start_payload_shape(self):
         provider = MockProvider(
-            capabilities=ProviderCapabilities(native_tool_calling=True),
+            capabilities=ProviderCapabilities(),
             responses=[[Event(EventType.STREAM_END, "Done.")]],
         )
         ctx = MockChatContext(provider=provider, model="test-model-v3")
         ctx.session.add_message(Message("user", "hello"))
 
-        with patch("ppxai.engine.chat.get_profile") as mock_profile:
-            mock_profile.return_value = ModelProfile(
-                tool_calling=ToolCallingProfile(mode="native"),
-            )
-            events = await _collect(ctx)
+        provider.facts = ModelFacts(tool_mode="native")
+        events = await _collect(ctx)
 
         run_start = next(e for e in events if e.type == EventType.AGENT_RUN_START)
         assert isinstance(run_start.data, dict)
@@ -198,7 +202,7 @@ class TestAgentLifecycleEmission:
     async def test_beat_fires_per_tool_iteration(self):
         """Two tool iterations → exactly two AGENT_BEAT events."""
         provider = MockProvider(
-            capabilities=ProviderCapabilities(native_tool_calling=True),
+            capabilities=ProviderCapabilities(),
             responses=[
                 # Iteration 1: tool call
                 [
@@ -226,11 +230,8 @@ class TestAgentLifecycleEmission:
         ctx = MockChatContext(provider=provider, model="t", tool_manager=tm)
         ctx.session.add_message(Message("user", "read a and b"))
 
-        with patch("ppxai.engine.chat.get_profile") as mock_profile:
-            mock_profile.return_value = ModelProfile(
-                tool_calling=ToolCallingProfile(mode="native"),
-            )
-            events = await _collect(ctx)
+        provider.facts = ModelFacts(tool_mode="native")
+        events = await _collect(ctx)
 
         beats = [e for e in events if e.type == EventType.AGENT_BEAT]
         assert len(beats) == 2  # two tool iterations, not the final-answer iter
@@ -239,7 +240,7 @@ class TestAgentLifecycleEmission:
     async def test_beat_payload_matches_canonical_wire_shape(self):
         """AGENT_BEAT payload has every field from AgentBeatState.as_event_data()."""
         provider = MockProvider(
-            capabilities=ProviderCapabilities(native_tool_calling=True),
+            capabilities=ProviderCapabilities(),
             responses=[
                 [
                     Event(EventType.TOOL_CALL, {
@@ -256,11 +257,8 @@ class TestAgentLifecycleEmission:
         ctx = MockChatContext(provider=provider, model="t", tool_manager=tm)
         ctx.session.add_message(Message("user", "read a"))
 
-        with patch("ppxai.engine.chat.get_profile") as mock_profile:
-            mock_profile.return_value = ModelProfile(
-                tool_calling=ToolCallingProfile(mode="native"),
-            )
-            events = await _collect(ctx)
+        provider.facts = ModelFacts(tool_mode="native")
+        events = await _collect(ctx)
 
         beat = next(e for e in events if e.type == EventType.AGENT_BEAT)
         assert set(beat.data.keys()) == {
@@ -280,7 +278,7 @@ class TestAgentLifecycleEmission:
         invariant.
         """
         provider = MockProvider(
-            capabilities=ProviderCapabilities(native_tool_calling=True),
+            capabilities=ProviderCapabilities(),
             responses=[
                 # Iter 1: tool fails
                 [
@@ -315,11 +313,8 @@ class TestAgentLifecycleEmission:
         ctx = MockChatContext(provider=provider, model="t", tool_manager=tm)
         ctx.session.add_message(Message("user", "retry"))
 
-        with patch("ppxai.engine.chat.get_profile") as mock_profile:
-            mock_profile.return_value = ModelProfile(
-                tool_calling=ToolCallingProfile(mode="native"),
-            )
-            events = await _collect(ctx)
+        provider.facts = ModelFacts(tool_mode="native")
+        events = await _collect(ctx)
 
         beats = [e for e in events if e.type == EventType.AGENT_BEAT]
         assert len(beats) == 2
@@ -335,17 +330,14 @@ class TestAgentLifecycleEmission:
         before the generator returns.
         """
         provider = MockProvider(
-            capabilities=ProviderCapabilities(native_tool_calling=True),
+            capabilities=ProviderCapabilities(),
             responses=[[Event(EventType.ERROR, "upstream 500")]],
         )
         ctx = MockChatContext(provider=provider, model="t")
         ctx.session.add_message(Message("user", "hi"))
 
-        with patch("ppxai.engine.chat.get_profile") as mock_profile:
-            mock_profile.return_value = ModelProfile(
-                tool_calling=ToolCallingProfile(mode="native"),
-            )
-            events = await _collect(ctx)
+        provider.facts = ModelFacts(tool_mode="native")
+        events = await _collect(ctx)
 
         # ERROR preceded by AGENT_RUN_START, followed by AGENT_RUN_ERROR
         types = [e.type for e in events]
@@ -367,18 +359,15 @@ class TestAgentLifecycleEmission:
         reason='interrupted'.
         """
         provider = MockProvider(
-            capabilities=ProviderCapabilities(native_tool_calling=True),
+            capabilities=ProviderCapabilities(),
             responses=[[Event(EventType.STREAM_END, "unused")]],
         )
         ctx = MockChatContext(provider=provider, model="t")
         ctx.session.add_message(Message("user", "hi"))
         ctx._interrupted = True  # simulate user hitting Escape
 
-        with patch("ppxai.engine.chat.get_profile") as mock_profile:
-            mock_profile.return_value = ModelProfile(
-                tool_calling=ToolCallingProfile(mode="native"),
-            )
-            events = await _collect(ctx)
+        provider.facts = ModelFacts(tool_mode="native")
+        events = await _collect(ctx)
 
         types = [e.type for e in events]
         assert EventType.AGENT_RUN_ERROR in types

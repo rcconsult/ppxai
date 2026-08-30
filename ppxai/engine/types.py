@@ -882,13 +882,30 @@ class ChatResponse:
 
 @dataclass
 class ProviderCapabilities:
-    """Capabilities that a provider has natively (no tool needed)."""
+    """What an ENDPOINT can do natively, without a tool (ADR 0012 §2 Q0e).
+
+    Every field here is a fact about the *service*: Perplexity carries a
+    search index, the OpenAI API does not, and no choice of model changes
+    that. Measured across the shipped example config, all ten providers
+    state these per provider and **none** states them per model.
+
+    Deliberately **disjoint** from `ModelFacts`, which holds what a MODEL
+    does (tool mode, wire protocol, limits, vision). Because no field
+    appears in both records, a provider block cannot state a model fact and
+    a model block cannot state an endpoint fact — so there is nothing to
+    arbitrate between them, and the precedence ladder that three failed
+    implementations tried to get right does not need to exist.
+
+    `native_tool_calling` was removed here (Q0a/Q0g): it is a per-model
+    fact, it collided with `ToolCallingProfile.mode` on the same question in
+    a different vocabulary, and debt Item 43's Layer-2 bug lived in exactly
+    that seam. Call sites ask `facts.tool_mode != "prompt_based"`.
+    """
     web_search: bool = False
     web_fetch: bool = False
     weather: bool = False
     citations: bool = False
     streaming: bool = True
-    native_tool_calling: bool = False  # OpenAI-style function calling
 
     @classmethod
     def from_dict(cls, data: Dict[str, bool]) -> 'ProviderCapabilities':
@@ -899,7 +916,6 @@ class ProviderCapabilities:
             weather=data.get('weather', False),
             citations=data.get('citations', False),
             streaming=data.get('streaming', True),
-            native_tool_calling=data.get('native_tool_calling', False),
         )
 
 

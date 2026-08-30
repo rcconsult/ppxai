@@ -48,7 +48,6 @@ DEFAULT_CAPABILITIES = {
     "web_fetch": False,
     "weather": False,
     "realtime_info": False,
-    "native_tool_calling": False,  # Default to prompt-based, enable per-provider
 }
 
 

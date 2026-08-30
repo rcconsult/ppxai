@@ -1057,8 +1057,14 @@ class TestAgentRunRoutes:
             task_runner, "build_task_runner", lambda reg_, **kw: _ok_runner,
         )
 
+        # A model that RESOLVES tool-capable. The model id matters now:
+        # ADR 0012 §2 Q0a makes an unmeasured model resolve `prompt_based`,
+        # and the admission guard refuses a tool-carrying run on one — so
+        # the old synthetic "m" 400'd for a reason this test is not about.
+        # `gpt-5.2` is in the shipped table and resolves native.
         r = c.post("/v1/agent/task", json={
-            "task": "t", "tools": ["read_file"], "provider": "openai", "model": "m",
+            "task": "t", "tools": ["read_file"], "provider": "openai",
+            "model": "gpt-5.2",
         })
         assert r.status_code == 200          # accepted, not 400-by-class
         assert r.json()["status"] in ("running", "completed", "completed_pending_ack")

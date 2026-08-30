@@ -1,11 +1,20 @@
-"""
-Tests for profile-driven tool calling mode routing (v1.16.0 Step 2).
+"""Facts-driven tool calling mode routing (v1.16.0 Step 2, ADR 0012 §2 Q0e).
 
-Tests that chat_with_tools uses ModelProfile.tool_calling to determine:
+`chat_with_tools` resolves ONE record — `ModelFacts` — to determine:
 - Native vs prompt-based mode selection
 - Fallback on empty response
 - Fallback on failure (unknown tool)
-- Profile-driven strip_json_from_text
+- strip_json_from_text
+
+**Retargeted from a two-system setup.** These tests used to patch
+`chat.get_profile` for the mode AND set `ProviderCapabilities.
+native_tool_calling` on the mock provider for the gate, because the code
+asked both in a fixed order. That order was debt Item 43's Layer-2 bug: a
+capability resolving native=True never reached the wire if the profile said
+prompt_based. `tool_mode` now answers the whole question from the model's
+own record, so each test states one value instead of two — and the pairs
+that used to express "mode says X but the capability says Y" no longer
+have a way to be written, which is the point.
 """
 
 import asyncio
@@ -16,7 +25,7 @@ from unittest.mock import MagicMock, patch, AsyncMock
 
 from ppxai.engine.chat import chat_with_tools, _build_prompt_based_messages
 from ppxai.engine.types import Event, EventType, Message, UsageStats, ProviderCapabilities
-from ppxai.engine.model_profiles import ModelProfile, ToolCallingProfile
+from ppxai.engine.model_facts import ModelFacts
 from ppxai.engine.session import SessionManager
 from ppxai.engine.tools.manager import ToolManager
 
@@ -24,14 +33,18 @@ from ppxai.engine.tools.manager import ToolManager
 class MockProvider:
     """Minimal mock provider for chat_with_tools tests."""
 
-    def __init__(self, capabilities=None, responses=None):
+    def __init__(self, capabilities=None, responses=None, facts=None):
         self.capabilities = capabilities or ProviderCapabilities()
+        self.facts = facts or ModelFacts()
         self._responses = responses or []
         self._call_count = 0
         self.chat_calls = []  # Track (messages, model, stream, tools) calls
 
-    def get_capabilities_for_model(self, model):
+    def get_capabilities(self):
         return self.capabilities
+
+    def get_facts_for_model(self, model):
+        return self.facts
 
     async def chat(self, messages, model, stream=False, tools=None):
         self.chat_calls.append({
@@ -164,59 +177,56 @@ class TestModeRouting:
     async def test_native_mode_with_native_provider(self):
         """mode='native' + native-capable provider → use_native_tools=True."""
         provider = MockProvider(
-            capabilities=ProviderCapabilities(native_tool_calling=True),
             responses=[[Event(EventType.STREAM_END, "Hello")]],
         )
         tm = MockToolManager(tools={"read_file": lambda: "content"})
         ctx = MockChatContext(provider=provider, model="gpt-5", tool_manager=tm)
         ctx.session.add_message(Message("user", "hi"))
 
-        with patch("ppxai.engine.chat.get_profile") as mock_profile:
-            mock_profile.return_value = ModelProfile(
-                tool_calling=ToolCallingProfile(mode="native")
-            )
-            events = await collect_events(ctx)
+        provider.facts = ModelFacts(tool_mode="native")
+        events = await collect_events(ctx)
 
         # Provider should be called with tools (native mode)
         assert provider.chat_calls[0]["tools"] is not None
         assert any(e.type == EventType.STREAM_END for e in events)
 
     @pytest.mark.asyncio
-    async def test_native_mode_without_native_provider(self):
-        """mode='native' + non-native provider → use_native_tools=False (capability gates it)."""
+    async def test_prompt_based_sends_no_tools(self):
+        """RETARGETED — its original premise is dead under ADR 0012 §2 Q0e.
+
+        This asserted `mode="native"` + a provider whose capability said
+        NOT native → no tools, i.e. the capability GATED the mode. That gate
+        was debt Item 43's Layer-2 bug in the other direction, and it cannot
+        be expressed any more: tool mode is a model fact, and there is no
+        provider-level value left to gate it with.
+
+        What survives is the half that was always the real contract — a
+        model resolving `prompt_based` must not receive a tools array.
+        """
         provider = MockProvider(
-            capabilities=ProviderCapabilities(native_tool_calling=False),
             responses=[[Event(EventType.STREAM_END, "Hello")]],
         )
         tm = MockToolManager(tools={"read_file": lambda: "content"})
         ctx = MockChatContext(provider=provider, model="test-model", tool_manager=tm)
         ctx.session.add_message(Message("user", "hi"))
 
-        with patch("ppxai.engine.chat.get_profile") as mock_profile:
-            mock_profile.return_value = ModelProfile(
-                tool_calling=ToolCallingProfile(mode="native")
-            )
-            events = await collect_events(ctx)
+        provider.facts = ModelFacts(tool_mode="prompt_based")
+        events = await collect_events(ctx)
 
-        # Provider should be called WITHOUT tools (prompt-based fallback)
         assert provider.chat_calls[0]["tools"] is None
 
     @pytest.mark.asyncio
     async def test_prompt_based_mode_overrides_native_provider(self):
         """mode='prompt_based' + native-capable provider → use_native_tools=False."""
         provider = MockProvider(
-            capabilities=ProviderCapabilities(native_tool_calling=True),
             responses=[[Event(EventType.STREAM_END, "I used a tool")]],
         )
         tm = MockToolManager(tools={"read_file": lambda: "content"})
         ctx = MockChatContext(provider=provider, model="gpt-4.1-mini", tool_manager=tm)
         ctx.session.add_message(Message("user", "hi"))
 
-        with patch("ppxai.engine.chat.get_profile") as mock_profile:
-            mock_profile.return_value = ModelProfile(
-                tool_calling=ToolCallingProfile(mode="prompt_based")
-            )
-            events = await collect_events(ctx)
+        provider.facts = ModelFacts(tool_mode="prompt_based")
+        events = await collect_events(ctx)
 
         # Provider should be called WITHOUT tools even though it supports native
         assert provider.chat_calls[0]["tools"] is None
@@ -225,38 +235,45 @@ class TestModeRouting:
     async def test_auto_mode_with_native_provider(self):
         """mode='auto' + native-capable provider → use_native_tools=True."""
         provider = MockProvider(
-            capabilities=ProviderCapabilities(native_tool_calling=True),
             responses=[[Event(EventType.STREAM_END, "Hello")]],
         )
         tm = MockToolManager(tools={"read_file": lambda: "content"})
         ctx = MockChatContext(provider=provider, model="test-model", tool_manager=tm)
         ctx.session.add_message(Message("user", "hi"))
 
-        with patch("ppxai.engine.chat.get_profile") as mock_profile:
-            mock_profile.return_value = ModelProfile(
-                tool_calling=ToolCallingProfile(mode="auto")
-            )
-            events = await collect_events(ctx)
+        provider.facts = ModelFacts(tool_mode="auto")
+        events = await collect_events(ctx)
 
         # Auto starts with native mode
         assert provider.chat_calls[0]["tools"] is not None
 
     @pytest.mark.asyncio
-    async def test_default_profile_backwards_compat(self):
-        """No explicit profile (default) → same as mode='native' (backwards compat)."""
+    async def test_unmeasured_model_defaults_to_prompt_based(self):
+        """INVERTED, deliberately — Q0a flipped this default on purpose.
+
+        The old assertion was "an unknown model gets native tools", because
+        `ToolCallingProfile.mode` defaulted to `"native"` while
+        `ProviderCapabilities.native_tool_calling` defaulted to `False` —
+        two systems, opposite assumptions about the same unmeasured model.
+        Unifying on the permissive one would have made every model absent
+        from both tables tool-capable, silently, through the task-tier gate
+        and oneshot enrichment.
+
+        `prompt_based` wins because a model that degrades is recoverable and
+        one that answers HTTP 400 is not. This test is the fence on that
+        choice, so it asserts the OPPOSITE of what it used to.
+        """
         provider = MockProvider(
-            capabilities=ProviderCapabilities(native_tool_calling=True),
             responses=[[Event(EventType.STREAM_END, "Hello")]],
         )
         tm = MockToolManager(tools={"read_file": lambda: "content"})
         ctx = MockChatContext(provider=provider, model="unknown-model-xyz", tool_manager=tm)
         ctx.session.add_message(Message("user", "hi"))
 
-        # Don't mock get_profile — let it use the real default
+        # No facts stated: the real conservative floor applies.
         events = await collect_events(ctx)
 
-        # Default profile has mode="native", so with native-capable provider → native
-        assert provider.chat_calls[0]["tools"] is not None
+        assert provider.chat_calls[0]["tools"] is None
 
 
 # ── Fallback tests ──────────────────────────────────────────────────
@@ -269,7 +286,6 @@ class TestFallbackOnEmpty:
     async def test_fallback_on_empty_retries_prompt_based(self):
         """fallback_on_empty=True + native returns empty → retries with prompt-based."""
         provider = MockProvider(
-            capabilities=ProviderCapabilities(native_tool_calling=True),
             responses=[
                 # First call: native returns empty
                 [Event(EventType.STREAM_END, "")],
@@ -281,14 +297,9 @@ class TestFallbackOnEmpty:
         ctx = MockChatContext(provider=provider, model="test-model", tool_manager=tm)
         ctx.session.add_message(Message("user", "hi"))
 
-        with patch("ppxai.engine.chat.get_profile") as mock_profile:
-            mock_profile.return_value = ModelProfile(
-                tool_calling=ToolCallingProfile(
-                    mode="native",
-                    fallback_on_empty=True,
-                )
-            )
-            events = await collect_events(ctx)
+        provider.facts = ModelFacts(tool_mode="native",
+                    fallback_on_empty=True,)
+        events = await collect_events(ctx)
 
         # Should have 2 provider calls: native (empty) + prompt-based fallback
         assert len(provider.chat_calls) == 2
@@ -304,7 +315,6 @@ class TestFallbackOnEmpty:
     async def test_no_fallback_on_empty_when_disabled(self):
         """fallback_on_empty=False + native returns empty → no retry."""
         provider = MockProvider(
-            capabilities=ProviderCapabilities(native_tool_calling=True),
             responses=[
                 [Event(EventType.STREAM_END, "")],
             ],
@@ -313,14 +323,9 @@ class TestFallbackOnEmpty:
         ctx = MockChatContext(provider=provider, model="test-model", tool_manager=tm)
         ctx.session.add_message(Message("user", "hi"))
 
-        with patch("ppxai.engine.chat.get_profile") as mock_profile:
-            mock_profile.return_value = ModelProfile(
-                tool_calling=ToolCallingProfile(
-                    mode="native",
-                    fallback_on_empty=False,
-                )
-            )
-            events = await collect_events(ctx)
+        provider.facts = ModelFacts(tool_mode="native",
+                    fallback_on_empty=False,)
+        events = await collect_events(ctx)
 
         # Only 1 provider call — no fallback retry
         assert len(provider.chat_calls) == 1
@@ -329,7 +334,6 @@ class TestFallbackOnEmpty:
     async def test_no_fallback_when_native_returns_content(self):
         """fallback_on_empty=True but native returns content → no fallback needed."""
         provider = MockProvider(
-            capabilities=ProviderCapabilities(native_tool_calling=True),
             responses=[
                 [Event(EventType.STREAM_END, "I have an answer")],
             ],
@@ -338,14 +342,9 @@ class TestFallbackOnEmpty:
         ctx = MockChatContext(provider=provider, model="test-model", tool_manager=tm)
         ctx.session.add_message(Message("user", "hi"))
 
-        with patch("ppxai.engine.chat.get_profile") as mock_profile:
-            mock_profile.return_value = ModelProfile(
-                tool_calling=ToolCallingProfile(
-                    mode="native",
-                    fallback_on_empty=True,
-                )
-            )
-            events = await collect_events(ctx)
+        provider.facts = ModelFacts(tool_mode="native",
+                    fallback_on_empty=True,)
+        events = await collect_events(ctx)
 
         # Only 1 call — response was not empty
         assert len(provider.chat_calls) == 1
@@ -358,7 +357,6 @@ class TestFallbackOnFailure:
     async def test_fallback_on_failure_tries_prompt_parser(self):
         """fallback_on_failure=True + unknown native tool → tries prompt-based parser."""
         provider = MockProvider(
-            capabilities=ProviderCapabilities(native_tool_calling=True),
             responses=[[
                 Event(EventType.TOOL_CALL, {"tool": "unknown_tool_xyz", "arguments": {}}),
                 Event(EventType.STREAM_END, '```json\n{"tool": "read_file", "arguments": {"filepath": "test.py"}}\n```'),
@@ -368,14 +366,9 @@ class TestFallbackOnFailure:
         ctx = MockChatContext(provider=provider, model="test-model", tool_manager=tm)
         ctx.session.add_message(Message("user", "read test.py"))
 
-        with patch("ppxai.engine.chat.get_profile") as mock_profile:
-            mock_profile.return_value = ModelProfile(
-                tool_calling=ToolCallingProfile(
-                    mode="native",
-                    fallback_on_failure=True,
-                )
-            )
-            events = await collect_events(ctx)
+        provider.facts = ModelFacts(tool_mode="native",
+                    fallback_on_failure=True,)
+        events = await collect_events(ctx)
 
         # Should have found the tool call via prompt-based parser
         tool_call_events = [e for e in events if e.type == EventType.TOOL_CALL]
@@ -386,7 +379,6 @@ class TestFallbackOnFailure:
     async def test_no_fallback_on_failure_when_disabled(self):
         """fallback_on_failure=False + unknown native tool → no fallback."""
         provider = MockProvider(
-            capabilities=ProviderCapabilities(native_tool_calling=True),
             responses=[[
                 Event(EventType.TOOL_CALL, {"tool": "unknown_tool_xyz", "arguments": {}}),
                 Event(EventType.STREAM_END, '```json\n{"tool": "read_file", "arguments": {}}\n```'),
@@ -396,14 +388,9 @@ class TestFallbackOnFailure:
         ctx = MockChatContext(provider=provider, model="test-model", tool_manager=tm)
         ctx.session.add_message(Message("user", "hi"))
 
-        with patch("ppxai.engine.chat.get_profile") as mock_profile:
-            mock_profile.return_value = ModelProfile(
-                tool_calling=ToolCallingProfile(
-                    mode="native",
-                    fallback_on_failure=False,
-                )
-            )
-            events = await collect_events(ctx)
+        provider.facts = ModelFacts(tool_mode="native",
+                    fallback_on_failure=False,)
+        events = await collect_events(ctx)
 
         # Tool call should still use the unknown tool name (no fallback)
         tool_call_events = [e for e in events if e.type == EventType.TOOL_CALL]
@@ -422,7 +409,6 @@ class TestProfileStripJson:
         """strip_json_from_text=True + no native calls → strips from response text."""
         json_in_text = 'Here is the answer.\n```json\n{"tool": "read_file", "arguments": {}}\n```\nDone.'
         provider = MockProvider(
-            capabilities=ProviderCapabilities(native_tool_calling=False),
             responses=[[Event(EventType.STREAM_END, json_in_text)]],
         )
         # No tools registered so parse_tool_call won't match
@@ -430,14 +416,9 @@ class TestProfileStripJson:
         ctx = MockChatContext(provider=provider, model="test-model", tool_manager=tm)
         ctx.session.add_message(Message("user", "hi"))
 
-        with patch("ppxai.engine.chat.get_profile") as mock_profile:
-            mock_profile.return_value = ModelProfile(
-                tool_calling=ToolCallingProfile(
-                    mode="prompt_based",
-                    strip_json_from_text=True,
-                )
-            )
-            events = await collect_events(ctx)
+        provider.facts = ModelFacts(tool_mode="prompt_based",
+                    strip_json_from_text=True,)
+        events = await collect_events(ctx)
 
         # The final STREAM_END should have stripped JSON
         end_events = [e for e in events if e.type == EventType.STREAM_END]
@@ -450,21 +431,15 @@ class TestProfileStripJson:
         """strip_json_from_text=False + no native calls → text unchanged."""
         json_in_text = 'Here is the answer.\n```json\n{"tool": "read_file", "arguments": {}}\n```\nDone.'
         provider = MockProvider(
-            capabilities=ProviderCapabilities(native_tool_calling=False),
             responses=[[Event(EventType.STREAM_END, json_in_text)]],
         )
         tm = MockToolManager(tools={})
         ctx = MockChatContext(provider=provider, model="test-model", tool_manager=tm)
         ctx.session.add_message(Message("user", "hi"))
 
-        with patch("ppxai.engine.chat.get_profile") as mock_profile:
-            mock_profile.return_value = ModelProfile(
-                tool_calling=ToolCallingProfile(
-                    mode="prompt_based",
-                    strip_json_from_text=False,
-                )
-            )
-            events = await collect_events(ctx)
+        provider.facts = ModelFacts(tool_mode="prompt_based",
+                    strip_json_from_text=False,)
+        events = await collect_events(ctx)
 
         end_events = [e for e in events if e.type == EventType.STREAM_END]
         assert len(end_events) == 1
@@ -482,21 +457,15 @@ class TestBeltAndSuspenders:
     async def test_tool_hints_injected_for_fallback_models(self):
         """Models with fallback flags get tool descriptions in system prompt (belt-and-suspenders)."""
         provider = MockProvider(
-            capabilities=ProviderCapabilities(native_tool_calling=True),
             responses=[[Event(EventType.STREAM_END, "Hello")]],
         )
         tm = MockToolManager(tools={"read_file": lambda: "content"})
         ctx = MockChatContext(provider=provider, model="test-model", tool_manager=tm)
         ctx.session.add_message(Message("user", "hi"))
 
-        with patch("ppxai.engine.chat.get_profile") as mock_profile:
-            mock_profile.return_value = ModelProfile(
-                tool_calling=ToolCallingProfile(
-                    mode="native",
-                    fallback_on_empty=True,
-                )
-            )
-            events = await collect_events(ctx)
+        provider.facts = ModelFacts(tool_mode="native",
+                    fallback_on_empty=True,)
+        events = await collect_events(ctx)
 
         # The first message sent should be a system message containing tool descriptions
         first_call = provider.chat_calls[0]
@@ -507,22 +476,16 @@ class TestBeltAndSuspenders:
     async def test_no_tool_hints_without_fallback_flags(self):
         """Models without fallback flags don't get extra tool hints in native mode."""
         provider = MockProvider(
-            capabilities=ProviderCapabilities(native_tool_calling=True),
             responses=[[Event(EventType.STREAM_END, "Hello")]],
         )
         tm = MockToolManager(tools={"read_file": lambda: "content"})
         ctx = MockChatContext(provider=provider, model="test-model", tool_manager=tm)
         ctx.session.add_message(Message("user", "hi"))
 
-        with patch("ppxai.engine.chat.get_profile") as mock_profile:
-            mock_profile.return_value = ModelProfile(
-                tool_calling=ToolCallingProfile(
-                    mode="native",
+        provider.facts = ModelFacts(tool_mode="native",
                     fallback_on_empty=False,
-                    fallback_on_failure=False,
-                )
-            )
-            events = await collect_events(ctx)
+                    fallback_on_failure=False,)
+        events = await collect_events(ctx)
 
         # System messages should NOT contain tool descriptions
         first_call = provider.chat_calls[0]
@@ -579,7 +542,6 @@ class TestTruncationRecovery:
         # First response: truncated JSON (no closing braces)
         truncated_json = '{"tool": "apply_patch", "arguments": {"patch": "--- a.py\\n+++ b.py\\n'
         provider = MockProvider(
-            capabilities=ProviderCapabilities(native_tool_calling=False),
             responses=[
                 [Event(EventType.STREAM_END, truncated_json)],
                 [Event(EventType.STREAM_END, "I'll use a smaller approach instead.")],
@@ -589,11 +551,8 @@ class TestTruncationRecovery:
         ctx = MockChatContext(provider=provider, model="sonar-pro", tool_manager=tm)
         ctx.session.add_message(Message("user", "fix the file"))
 
-        with patch("ppxai.engine.chat.get_profile") as mock_profile:
-            mock_profile.return_value = ModelProfile(
-                tool_calling=ToolCallingProfile(mode="prompt_based")
-            )
-            events = await collect_events(ctx)
+        provider.facts = ModelFacts(tool_mode="prompt_based")
+        events = await collect_events(ctx)
 
         # Should have retried (2 provider calls)
         assert len(provider.chat_calls) >= 2
@@ -606,7 +565,6 @@ class TestTruncationRecovery:
         """After 2 consecutive truncated retries, recovery message escalates to CRITICAL."""
         truncated_json = '{"tool": "apply_patch", "arguments": {"patch": "--- a.py\\n+++ b.py\\n'
         provider = MockProvider(
-            capabilities=ProviderCapabilities(native_tool_calling=False),
             responses=[
                 [Event(EventType.STREAM_END, truncated_json)],  # 1st truncation
                 [Event(EventType.STREAM_END, truncated_json)],  # 2nd truncation (escalated)
@@ -617,11 +575,8 @@ class TestTruncationRecovery:
         ctx = MockChatContext(provider=provider, model="sonar-pro", tool_manager=tm)
         ctx.session.add_message(Message("user", "fix the file"))
 
-        with patch("ppxai.engine.chat.get_profile") as mock_profile:
-            mock_profile.return_value = ModelProfile(
-                tool_calling=ToolCallingProfile(mode="prompt_based")
-            )
-            events = await collect_events(ctx)
+        provider.facts = ModelFacts(tool_mode="prompt_based")
+        events = await collect_events(ctx)
 
         # Should have 3 provider calls (2 retries + final)
         assert len(provider.chat_calls) >= 3
@@ -635,7 +590,6 @@ class TestTruncationRecovery:
         truncated_json = '{"tool": "apply_patch", "arguments": {"patch": "--- a.py\\n+++ b.py\\n'
         # 4 truncated responses + 1 final (the 4th truncation exceeds cap)
         provider = MockProvider(
-            capabilities=ProviderCapabilities(native_tool_calling=False),
             responses=[
                 [Event(EventType.STREAM_END, truncated_json)],  # retry 1
                 [Event(EventType.STREAM_END, truncated_json)],  # retry 2
@@ -647,11 +601,8 @@ class TestTruncationRecovery:
         ctx = MockChatContext(provider=provider, model="sonar-pro", tool_manager=tm)
         ctx.session.add_message(Message("user", "fix the file"))
 
-        with patch("ppxai.engine.chat.get_profile") as mock_profile:
-            mock_profile.return_value = ModelProfile(
-                tool_calling=ToolCallingProfile(mode="prompt_based")
-            )
-            events = await collect_events(ctx)
+        provider.facts = ModelFacts(tool_mode="prompt_based")
+        events = await collect_events(ctx)
 
         # Should emit WARNING event with stuck_tool_loop type
         warning_events = [e for e in events if e.type == EventType.WARNING]
@@ -667,7 +618,6 @@ class TestTruncationRecovery:
         """Consecutive truncation counter resets when a non-truncated response arrives."""
         truncated_json = '{"tool": "apply_patch", "arguments": {"patch": "--- a.py\\n+++ b.py\\n'
         provider = MockProvider(
-            capabilities=ProviderCapabilities(native_tool_calling=False),
             responses=[
                 [Event(EventType.STREAM_END, truncated_json)],  # retry 1
                 [Event(EventType.STREAM_END, "Here is my answer without tools.")],  # success
@@ -677,11 +627,8 @@ class TestTruncationRecovery:
         ctx = MockChatContext(provider=provider, model="sonar-pro", tool_manager=tm)
         ctx.session.add_message(Message("user", "fix the file"))
 
-        with patch("ppxai.engine.chat.get_profile") as mock_profile:
-            mock_profile.return_value = ModelProfile(
-                tool_calling=ToolCallingProfile(mode="prompt_based")
-            )
-            events = await collect_events(ctx)
+        provider.facts = ModelFacts(tool_mode="prompt_based")
+        events = await collect_events(ctx)
 
         # Should complete successfully (2 calls, no stuck_tool_loop warning)
         assert len(provider.chat_calls) == 2

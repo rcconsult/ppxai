@@ -724,6 +724,76 @@ def _format_config_migration_section(config_data: Dict[str, Any]) -> List[str]:
     return lines
 
 
+def _format_facts_section() -> List[str]:
+    """Report `facts` blocks that are stale, partial, misplaced or mistyped.
+
+    ADR 0012 section 2 Q0c/Q0d/Q0e. Four findings, all read from the config
+    FILE for the reason the ADR 0010 scan above documents: under a clean
+    break the accessors do not look at the legacy names at all, so a stale
+    key is invisible to them by construction.
+
+    The other three findings exist because Q0d requires records to be
+    COMPLETE. With dozens of models an operator cannot tell whether an
+    absent field is an intention or an oversight, and a resolver that has
+    to guess is how a provider-level statement came to speak for `sonar`.
+    So `/doctor` carries the verbosity Q0e creates: it names every blank,
+    and `complete_record_for()` supplies the value to fill it with.
+    """
+    from ..config.facts_config import (
+        incomplete_blocks_in_config,
+        migration_plan,
+        misplaced_fields_in_config,
+        wrong_typed_fields_in_config,
+    )
+
+    lines: List[str] = ["Per-model facts (ADR 0012, v1.19.1):"]
+    found = False
+
+    plan = migration_plan()
+    if plan:
+        found = True
+        lines.append(
+            f"   ⚠ {len(plan)} legacy key(s) — BREAKING change in v1.19.1, no "
+            "dual-read. These are being IGNORED. Move them:"
+        )
+        for line in plan:
+            lines.append(f"      {line}")
+
+    misplaced = misplaced_fields_in_config()
+    if misplaced:
+        found = True
+        lines.append(
+            "   ⚠ field(s) stated against the wrong record — a provider block "
+            "cannot state a model fact, and a model block cannot state an "
+            "endpoint fact. These are IGNORED:"
+        )
+        for path, fields in sorted(misplaced.items()):
+            lines.append(f"      {path}: {', '.join(fields)}")
+
+    mistyped = wrong_typed_fields_in_config()
+    if mistyped:
+        found = True
+        lines.append("   ⚠ value(s) that do not match the declared type:")
+        for path, fields in sorted(mistyped.items()):
+            lines.append(f"      {path}: {', '.join(fields)}")
+
+    incomplete = incomplete_blocks_in_config()
+    if incomplete:
+        found = True
+        lines.append(
+            f"   ⚠ {len(incomplete)} partial record(s) — a config record must "
+            "state every field of its type. Unstated:"
+        )
+        for path, fields in sorted(incomplete.items()):
+            shown = ", ".join(fields[:6])
+            more = f" (+{len(fields) - 6} more)" if len(fields) > 6 else ""
+            lines.append(f"      {path}: {shown}{more}")
+
+    if not found:
+        lines.append("   ✓ facts blocks are complete and correctly placed")
+    return lines
+
+
 def handle_doctor(context: CommandContext, args: str) -> CommandResult:
     """Handle /doctor command — scan config and report deprecated models.
 
@@ -763,6 +833,14 @@ def handle_doctor(context: CommandContext, args: str) -> CommandResult:
         except (FileNotFoundError, json.JSONDecodeError, OSError):
             # Never fail /doctor over the migration check.
             pass
+    # ADR 0012 (v1.19.1): legacy / misplaced / mistyped / partial facts
+    # blocks. Offline and always shown, for the same reason as the section
+    # above — under a clean break these are silently ignored, so this is the
+    # only surface that reveals them.
+    try:
+        report = report + "\n\n" + "\n".join(_format_facts_section())
+    except Exception:  # noqa: BLE001 — never fail /doctor over a scan
+        pass
     probe_results: Dict[str, Dict[str, Any]] = {}
     drift: List[Dict[str, Any]] = []
 

@@ -38,7 +38,7 @@ from ppxai.engine.chat import (
     EMPTY_RESPONSE_SENTINEL,
 )
 from ppxai.engine.types import Message, Event, EventType, ProviderCapabilities
-from ppxai.engine.model_profiles import ModelProfile, ToolCallingProfile
+from ppxai.engine.model_facts import ModelFacts
 
 from tests.test_tool_messages import (
     MockProvider, MockToolManager, MockChatContext, collect_events,
@@ -154,7 +154,7 @@ class TestBugB_OutboundOrphanGuard:
         session must still not reach the provider — the in-loop outbound guard
         strips it before the send."""
         provider = MockProvider(
-            capabilities=ProviderCapabilities(native_tool_calling=True),
+            capabilities=ProviderCapabilities(),
             responses=[[Event(EventType.STREAM_END, "Done.")]],
         )
         tm = MockToolManager(tools={"read_file": lambda path="": "x"})
@@ -167,11 +167,8 @@ class TestBugB_OutboundOrphanGuard:
         ctx.session.add_message(_a_tc("call_orphan"))        # mid-loop orphan
         ctx.session.add_message(Message("user", "follow up"))
 
-        with patch("ppxai.engine.chat.get_profile") as mock_profile:
-            mock_profile.return_value = ModelProfile(
-                tool_calling=ToolCallingProfile(mode="native", parallel_tool_calls=True),
-            )
-            await collect_events(ctx)
+        provider.facts = ModelFacts(tool_mode="native", parallel_tool_calls=True)
+        await collect_events(ctx)
 
         assert provider.chat_calls, "provider was never called"
         sent = provider.chat_calls[0]["messages"]

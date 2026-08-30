@@ -29,7 +29,8 @@ class OpenAICompatibleProvider(BaseProvider):
     - Local models (Ollama, vLLM, LM Studio)
     - Any other OpenAI-compatible endpoint
 
-    Supports native tool calling when enabled via capabilities.native_tool_calling.
+    Supports native tool calling per model (ADR 0012 §2 Q0e): the answer is
+    `get_facts_for_model(model).tool_mode`, not a provider-wide boolean.
     This is used by vLLM with --enable-auto-tool-choice flag.
 
     v1.13.9: Detects OpenAI native reasoning models (o1, o3, o4) and warns about
@@ -53,7 +54,6 @@ class OpenAICompatibleProvider(BaseProvider):
         weather=False,
         citations=False,
         streaming=True,
-        native_tool_calling=False  # Override per-provider if vLLM has tool calling enabled
     )
 
     # OpenAI native endpoint detection
@@ -260,11 +260,11 @@ class OpenAICompatibleProvider(BaseProvider):
                         generation_params.pop(param, None)
                 request_kwargs.update(generation_params)
 
-            # Per-model, not per-provider: get_capabilities_for_model()
+            # Per-model, not per-provider: get_facts_for_model()
             # is the hook that lets a provider mark individual models
             # prompt-based. Reading self.capabilities here ignored it --
             # o4-mini resolved False but was sent native tools anyway.
-            if tools and self.get_capabilities_for_model(model).native_tool_calling:
+            if tools and self.get_facts_for_model(model).tool_mode != "prompt_based":
                 request_kwargs["tools"] = tools
                 request_kwargs["tool_choice"] = "auto"
 

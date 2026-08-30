@@ -32,7 +32,7 @@ import pytest
 pytest.importorskip("fastapi")
 
 from ppxai.engine.client import EngineClient
-from ppxai.engine.model_profiles import ModelProfile, ToolCallingProfile
+from ppxai.engine.model_facts import ModelFacts
 from ppxai.engine.types import (
     Event,
     EventType,
@@ -85,13 +85,22 @@ class MockProvider:
 
     def __init__(self, capabilities=None, scripted_iterations=None):
         self.capabilities = capabilities or ProviderCapabilities(
-            native_tool_calling=True,
         )
         self._scripts = scripted_iterations or []
         self._idx = 0
 
-    def get_capabilities_for_model(self, _model):
+    def get_capabilities(self):
+
         return self.capabilities
+
+
+    def get_facts_for_model(self, _model):
+
+        return getattr(self, 'facts', None) or ModelFacts(
+
+            tool_mode="native"
+
+        )
 
     async def chat(self, messages, model, stream=False, tools=None):
         events = self._scripts[min(self._idx, len(self._scripts) - 1)]
@@ -186,11 +195,8 @@ class TestAgentBeatSSEHappyPath:
 
     @pytest.mark.asyncio
     async def test_sse_carries_lifecycle_events_in_order(self, engine, provider):
-        with patch("ppxai.engine.chat.get_profile") as mock_profile:
-            mock_profile.return_value = ModelProfile(
-                tool_calling=ToolCallingProfile(mode="native"),
-            )
-            events = await _drain_sse(sse_event_generator("hello", engine))
+        provider.facts = ModelFacts(tool_mode="native")
+        events = await _drain_sse(sse_event_generator("hello", engine))
 
         types = [e["type"] for e in events]
 
@@ -213,11 +219,8 @@ class TestAgentBeatSSEHappyPath:
 
     @pytest.mark.asyncio
     async def test_agent_run_start_payload(self, engine, provider):
-        with patch("ppxai.engine.chat.get_profile") as mock_profile:
-            mock_profile.return_value = ModelProfile(
-                tool_calling=ToolCallingProfile(mode="native"),
-            )
-            events = await _drain_sse(sse_event_generator("hello", engine))
+        provider.facts = ModelFacts(tool_mode="native")
+        events = await _drain_sse(sse_event_generator("hello", engine))
 
         run_start = next(e for e in events if e["type"] == "agent_run_start")
         assert isinstance(run_start["data"], dict)
@@ -231,11 +234,8 @@ class TestAgentBeatSSEHappyPath:
         """Beat payload is the schema contract — every client that
         subscribes to AppState.agent_beat reads these exact keys.
         """
-        with patch("ppxai.engine.chat.get_profile") as mock_profile:
-            mock_profile.return_value = ModelProfile(
-                tool_calling=ToolCallingProfile(mode="native"),
-            )
-            events = await _drain_sse(sse_event_generator("hello", engine))
+        provider.facts = ModelFacts(tool_mode="native")
+        events = await _drain_sse(sse_event_generator("hello", engine))
 
         beats = [e for e in events if e["type"] == "agent_beat"]
         assert len(beats) == 2
@@ -253,11 +253,8 @@ class TestAgentBeatSSEHappyPath:
         state_sync event on the wire with the new agent_beat value.
         Web + VSCode depend on this for live updates.
         """
-        with patch("ppxai.engine.chat.get_profile") as mock_profile:
-            mock_profile.return_value = ModelProfile(
-                tool_calling=ToolCallingProfile(mode="native"),
-            )
-            events = await _drain_sse(sse_event_generator("hello", engine))
+        provider.facts = ModelFacts(tool_mode="native")
+        events = await _drain_sse(sse_event_generator("hello", engine))
 
         state_syncs = [e for e in events if e["type"] == "state_sync"]
         beat_syncs = [
@@ -295,11 +292,8 @@ class TestAgentBeatSSEErrorPath:
         ])
         _install_mock_provider(engine, provider)
 
-        with patch("ppxai.engine.chat.get_profile") as mock_profile:
-            mock_profile.return_value = ModelProfile(
-                tool_calling=ToolCallingProfile(mode="native"),
-            )
-            events = await _drain_sse(sse_event_generator("hello", engine))
+        provider.facts = ModelFacts(tool_mode="native")
+        events = await _drain_sse(sse_event_generator("hello", engine))
 
         types = [e["type"] for e in events]
         assert "agent_run_start" in types
@@ -353,11 +347,8 @@ class TestAgentBeatSSEMixedSuccessFailure:
         ])
         _install_mock_provider(engine, provider)
 
-        with patch("ppxai.engine.chat.get_profile") as mock_profile:
-            mock_profile.return_value = ModelProfile(
-                tool_calling=ToolCallingProfile(mode="native"),
-            )
-            events = await _drain_sse(sse_event_generator("hello", engine))
+        provider.facts = ModelFacts(tool_mode="native")
+        events = await _drain_sse(sse_event_generator("hello", engine))
 
         beats = [e for e in events if e["type"] == "agent_beat"]
         assert len(beats) == 2
@@ -398,11 +389,8 @@ class TestStateSyncBeatPayloadRoundTrips:
         ])
         _install_mock_provider(engine, provider)
 
-        with patch("ppxai.engine.chat.get_profile") as mock_profile:
-            mock_profile.return_value = ModelProfile(
-                tool_calling=ToolCallingProfile(mode="native"),
-            )
-            events = await _drain_sse(sse_event_generator("hello", engine))
+        provider.facts = ModelFacts(tool_mode="native")
+        events = await _drain_sse(sse_event_generator("hello", engine))
 
         # Every event type must have parsed — _drain_sse dropped malformed frames
         # silently via try/except. Assert total count is non-zero and no

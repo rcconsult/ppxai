@@ -30,6 +30,7 @@ import httpx
 
 from ...common.logger import get_logger
 from ...config.tls import tls_verify
+from ..model_facts import ModelFacts
 from ..types import Message, Event, EventType, ProviderCapabilities, UsageStats
 from ..uploaded_file import flatten_uploaded_file_blocks
 from .base import BaseProvider
@@ -223,18 +224,35 @@ class GeminiProvider(BaseProvider):
     disabled for that request.
 
     Inherits from BaseProvider (v1.16.0) for shared interface: needs_tool(),
-    get_model_profile(), list_models(), validate_config(), get_capabilities_for_model(),
+    get_model_profile(), list_models(), validate_config(), get_facts_for_model(),
     _get_generation_params(), _get_max_tokens().
     """
 
     name = "gemini"
+
+    #: Stands in when a caller builds a config with no target model. Every
+    #: Gemini model this provider reaches is native + generate_content, so
+    #: any row answers correctly; naming one keeps the resolution honest
+    #: rather than special-casing "no model" into a hardcoded True.
+    default_model_for_facts = "gemini-2.5-pro"
+
+    #: An UNLISTED Gemini model still speaks `generate_content` — this
+    #: provider has no other wire. The global floor says `chat_completions`,
+    #: which is safe everywhere else and simply wrong here, so Gemini
+    #: supplies its own complete floor (ADR 0012 §2 Q0e).
+    #:
+    #: `tool_mode` stays CONSERVATIVE: an unmeasured model is assumed not
+    #: tool-capable regardless of provider. The wire is a fact about the
+    #: endpoint's protocol; tool support is a fact about the model, and only
+    #: the first is knowable without measuring.
+    unmeasured_facts = ModelFacts(wire_protocol="generate_content")
+
     default_capabilities = ProviderCapabilities(
         web_search=True,   # Via Google Search Grounding
         web_fetch=True,    # Can answer about URLs via grounding
         weather=True,      # Can answer weather via grounding
         citations=True,    # Grounding provides citations
         streaming=True,
-        native_tool_calling=True  # v1.15.2: Enable native function calling
     )
 
     def __init__(
@@ -865,14 +883,19 @@ class GeminiProvider(BaseProvider):
 
         # Add function declarations from ppxai tools (v1.15.2)
         # This takes priority over grounding when tools are enabled
-        # Per-model, not per-provider: get_capabilities_for_model() is the
-        # hook that lets a provider mark individual models prompt-based.
-        # `model` is threaded in for exactly this -- reading self.capabilities
-        # made the override unreachable on the send path.
-        caps = (
-            self.get_capabilities_for_model(model) if model else self.capabilities
-        )
-        if tools and caps.native_tool_calling:
+        # Per-model, not per-provider: get_facts_for_model() is the hook
+        # that lets a provider mark individual models prompt-based. `model`
+        # is threaded in for exactly this -- reading self.capabilities made
+        # the override unreachable on the send path (plan I1).
+        # `model` is optional on this path (a caller building a config
+        # without a target). At HEAD the fallback was `self.capabilities`,
+        # which said native for the whole provider; the equivalent now is
+        # the provider's default model, because tool mode is a MODEL fact
+        # and there is no provider-level value to fall back to. Resolving
+        # `""` instead would hit the conservative floor and silently drop
+        # function declarations — measured, not hypothetical.
+        facts = self.get_facts_for_model(model or self.default_model_for_facts)
+        if tools and facts.tool_mode != "prompt_based":
             function_declarations = self._convert_tools_to_gemini(tools)
             if function_declarations:
                 gemini_tools.append(genai_types.Tool(function_declarations=function_declarations))

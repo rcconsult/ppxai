@@ -636,7 +636,7 @@ import asyncio
 from unittest.mock import patch
 from ppxai.engine.chat import chat_with_tools, _execute_single_tool
 from ppxai.engine.types import Event, EventType, ProviderCapabilities
-from ppxai.engine.model_profiles import ModelProfile, ToolCallingProfile
+from ppxai.engine.model_facts import ModelFacts
 
 
 class MockProvider:
@@ -648,8 +648,18 @@ class MockProvider:
         self._call_count = 0
         self.chat_calls = []
 
-    def get_capabilities_for_model(self, model):
+    def get_capabilities(self):
+
         return self.capabilities
+
+
+    def get_facts_for_model(self, model):
+
+        return getattr(self, 'facts', None) or ModelFacts(
+
+            tool_mode="native"
+
+        )
 
     async def chat(self, messages, model, stream=False, tools=None):
         self.chat_calls.append({
@@ -790,7 +800,7 @@ class TestMultiToolExecution:
         """
         prose = "I'll read the file first to understand the context."
         provider = MockProvider(
-            capabilities=ProviderCapabilities(native_tool_calling=True),
+            capabilities=ProviderCapabilities(),
             responses=[
                 # Iteration 1: one tool_call + narrative in STREAM_END.data
                 [
@@ -809,11 +819,8 @@ class TestMultiToolExecution:
         ctx = MockChatContext(provider=provider, model="gpt-5.2", tool_manager=tm)
         ctx.session.add_message(Message("user", "read a.py"))
 
-        with patch("ppxai.engine.chat.get_profile") as mock_profile:
-            mock_profile.return_value = ModelProfile(
-                tool_calling=ToolCallingProfile(mode="native"),
-            )
-            events = await collect_events(ctx)
+        provider.facts = ModelFacts(tool_mode="native")
+        events = await collect_events(ctx)
 
         # Exactly one intermediate-prose event (from iteration 1).
         prose_events = [e for e in events if e.type == EventType.AGENT_INTERMEDIATE_PROSE]
@@ -837,7 +844,7 @@ class TestMultiToolExecution:
         bubble on every iteration.
         """
         provider = MockProvider(
-            capabilities=ProviderCapabilities(native_tool_calling=True),
+            capabilities=ProviderCapabilities(),
             responses=[
                 [
                     Event(EventType.TOOL_CALL, {
@@ -855,11 +862,8 @@ class TestMultiToolExecution:
         ctx = MockChatContext(provider=provider, model="gpt-5.2", tool_manager=tm)
         ctx.session.add_message(Message("user", "read a.py"))
 
-        with patch("ppxai.engine.chat.get_profile") as mock_profile:
-            mock_profile.return_value = ModelProfile(
-                tool_calling=ToolCallingProfile(mode="native"),
-            )
-            events = await collect_events(ctx)
+        provider.facts = ModelFacts(tool_mode="native")
+        events = await collect_events(ctx)
 
         prose_events = [e for e in events if e.type == EventType.AGENT_INTERMEDIATE_PROSE]
         assert prose_events == []
@@ -868,7 +872,7 @@ class TestMultiToolExecution:
     async def test_two_native_tool_calls_both_execute(self):
         """When parallel_tool_calls=True, both native tool calls are executed."""
         provider = MockProvider(
-            capabilities=ProviderCapabilities(native_tool_calling=True),
+            capabilities=ProviderCapabilities(),
             responses=[
                 # First call: 2 tool calls
                 [
@@ -886,11 +890,8 @@ class TestMultiToolExecution:
         ctx = MockChatContext(provider=provider, model="gpt-5.2", tool_manager=tm)
         ctx.session.add_message(Message("user", "read a.py and b.py"))
 
-        with patch("ppxai.engine.chat.get_profile") as mock_profile:
-            mock_profile.return_value = ModelProfile(
-                tool_calling=ToolCallingProfile(mode="native", parallel_tool_calls=True),
-            )
-            events = await collect_events(ctx)
+        provider.facts = ModelFacts(tool_mode="native", parallel_tool_calls=True)
+        events = await collect_events(ctx)
 
         # Both tool calls should fire
         tool_call_events = [e for e in events if e.type == EventType.TOOL_CALL]
@@ -911,7 +912,7 @@ class TestMultiToolExecution:
     async def test_single_tool_when_parallel_false(self):
         """When parallel_tool_calls=False, only first native tool call is processed."""
         provider = MockProvider(
-            capabilities=ProviderCapabilities(native_tool_calling=True),
+            capabilities=ProviderCapabilities(),
             responses=[
                 # First call: 2 tool calls
                 [
@@ -929,11 +930,8 @@ class TestMultiToolExecution:
         ctx = MockChatContext(provider=provider, model="test-model", tool_manager=tm)
         ctx.session.add_message(Message("user", "read a.py"))
 
-        with patch("ppxai.engine.chat.get_profile") as mock_profile:
-            mock_profile.return_value = ModelProfile(
-                tool_calling=ToolCallingProfile(mode="native", parallel_tool_calls=False),
-            )
-            events = await collect_events(ctx)
+        provider.facts = ModelFacts(tool_mode="native", parallel_tool_calls=False)
+        events = await collect_events(ctx)
 
         # Only first tool call should fire
         tool_call_events = [e for e in events if e.type == EventType.TOOL_CALL]
@@ -944,7 +942,7 @@ class TestMultiToolExecution:
     async def test_multi_tool_session_messages_native(self):
         """Multi-tool creates ONE assistant(tool_calls) + N tool messages."""
         provider = MockProvider(
-            capabilities=ProviderCapabilities(native_tool_calling=True),
+            capabilities=ProviderCapabilities(),
             responses=[
                 [
                     Event(EventType.TOOL_CALL, {"tool": "read_file", "arguments": {"path": "a.py"}, "tool_call_id": "call_1"}),
@@ -961,11 +959,8 @@ class TestMultiToolExecution:
         ctx = MockChatContext(provider=provider, model="gpt-5.2", tool_manager=tm)
         ctx.session.add_message(Message("user", "read file and list dir"))
 
-        with patch("ppxai.engine.chat.get_profile") as mock_profile:
-            mock_profile.return_value = ModelProfile(
-                tool_calling=ToolCallingProfile(mode="native", parallel_tool_calls=True),
-            )
-            events = await collect_events(ctx)
+        provider.facts = ModelFacts(tool_mode="native", parallel_tool_calls=True)
+        events = await collect_events(ctx)
 
         # Check session messages: user, assistant(tool_calls=[2]), tool, tool, assistant
         msgs = ctx.session.messages
@@ -995,7 +990,7 @@ class TestMultiToolExecution:
             raise ValueError("disk full")
 
         provider = MockProvider(
-            capabilities=ProviderCapabilities(native_tool_calling=True),
+            capabilities=ProviderCapabilities(),
             responses=[
                 [
                     Event(EventType.TOOL_CALL, {"tool": "read_file", "arguments": {"path": "a.py"}, "tool_call_id": "call_1"}),
@@ -1012,11 +1007,8 @@ class TestMultiToolExecution:
         ctx = MockChatContext(provider=provider, model="gpt-5.2", tool_manager=tm)
         ctx.session.add_message(Message("user", "read a.py and write b.py"))
 
-        with patch("ppxai.engine.chat.get_profile") as mock_profile:
-            mock_profile.return_value = ModelProfile(
-                tool_calling=ToolCallingProfile(mode="native", parallel_tool_calls=True),
-            )
-            events = await collect_events(ctx)
+        provider.facts = ModelFacts(tool_mode="native", parallel_tool_calls=True)
+        events = await collect_events(ctx)
 
         # Should have TOOL_CALL, TOOL_RESULT, TOOL_CALL, TOOL_ERROR
         tool_call_events = [e for e in events if e.type == EventType.TOOL_CALL]
@@ -1041,7 +1033,7 @@ class TestMultiToolExecution:
     async def test_loop_detection_mid_batch_stops_remaining(self):
         """Loop detection on second tool stops processing remaining tools."""
         provider = MockProvider(
-            capabilities=ProviderCapabilities(native_tool_calling=True),
+            capabilities=ProviderCapabilities(),
             responses=[
                 [
                     Event(EventType.TOOL_CALL, {"tool": "read_file", "arguments": {"path": "a.py"}, "tool_call_id": "call_1"}),
@@ -1064,11 +1056,8 @@ class TestMultiToolExecution:
         ctx = MockChatContext(provider=provider, model="gpt-5.2", tool_manager=tm)
         ctx.session.add_message(Message("user", "read and list"))
 
-        with patch("ppxai.engine.chat.get_profile") as mock_profile:
-            mock_profile.return_value = ModelProfile(
-                tool_calling=ToolCallingProfile(mode="native", parallel_tool_calls=True),
-            )
-            events = await collect_events(ctx)
+        provider.facts = ModelFacts(tool_mode="native", parallel_tool_calls=True)
+        events = await collect_events(ctx)
 
         # First call executes, second triggers loop detection
         tool_call_events = [e for e in events if e.type == EventType.TOOL_CALL]
@@ -1081,7 +1070,7 @@ class TestMultiToolExecution:
     async def test_prompt_based_stays_single_tool(self):
         """Prompt-based mode still processes only one tool call."""
         provider = MockProvider(
-            capabilities=ProviderCapabilities(native_tool_calling=False),
+            capabilities=ProviderCapabilities(),
             responses=[
                 [Event(EventType.STREAM_END, '{"tool": "read_file", "arguments": {"path": "a.py"}}')],
                 [Event(EventType.STREAM_END, "Done reading.")],
@@ -1093,11 +1082,8 @@ class TestMultiToolExecution:
         ctx = MockChatContext(provider=provider, model="test-model", tool_manager=tm)
         ctx.session.add_message(Message("user", "read a.py"))
 
-        with patch("ppxai.engine.chat.get_profile") as mock_profile:
-            mock_profile.return_value = ModelProfile(
-                tool_calling=ToolCallingProfile(mode="prompt_based"),
-            )
-            events = await collect_events(ctx)
+        provider.facts = ModelFacts(tool_mode="prompt_based")
+        events = await collect_events(ctx)
 
         tool_call_events = [e for e in events if e.type == EventType.TOOL_CALL]
         assert len(tool_call_events) == 1
@@ -1122,7 +1108,7 @@ class TestMultiToolExecution:
             return f"result {call_count}"
 
         provider = MockProvider(
-            capabilities=ProviderCapabilities(native_tool_calling=True),
+            capabilities=ProviderCapabilities(),
             responses=[
                 [
                     Event(EventType.TOOL_CALL, {"tool": "read_file", "arguments": {"path": "a.py"}, "tool_call_id": "call_1"}),
@@ -1140,11 +1126,8 @@ class TestMultiToolExecution:
         ctx = MockChatContext(provider=provider, model="gpt-5.2", tool_manager=tm)
         ctx.session.add_message(Message("user", "read files"))
 
-        with patch("ppxai.engine.chat.get_profile") as mock_profile:
-            mock_profile.return_value = ModelProfile(
-                tool_calling=ToolCallingProfile(mode="native", parallel_tool_calls=True),
-            )
-            events = await collect_events(ctx)
+        provider.facts = ModelFacts(tool_mode="native", parallel_tool_calls=True)
+        events = await collect_events(ctx)
 
         # Should get error event for interrupt
         error_events = [e for e in events if e.type == EventType.ERROR]

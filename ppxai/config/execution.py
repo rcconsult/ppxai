@@ -326,22 +326,35 @@ def get_effective_oneshot_path(provider: str, model: str) -> str:
     (`/doctor`) can report the effective path per configured model without
     importing server routes — fastapi is an optional dependency there.
     """
-    from .providers import get_provider_config, get_tool_calling_config
+    from ..engine.model_facts import (
+        can_drive_a_tool_loop,
+        capabilities_without_an_instance,
+        facts_without_an_instance,
+    )
 
     run_cfg = get_execution_run_config()
+
+    # Endpoint ability and model ability are two separate questions with two
+    # separate records (ADR 0012 §2 Q0e), which is what this function used
+    # to approximate with a capabilities dict plus a tool_calling fallback.
     try:
-        caps = get_provider_config(provider).get("capabilities", {}) or {}
-    except Exception:
-        caps = {}
-    if run_cfg.get("grounding") and caps.get("web_search", False):
+        caps = capabilities_without_an_instance(provider)
+    except Exception:  # noqa: BLE001 — an unknown provider is not fatal here
+        caps = None
+    if run_cfg.get("grounding") and caps is not None and caps.web_search:
         return "native"
-    tool_capable = bool(caps.get("native_tool_calling", False))
-    if not tool_capable:
-        try:
-            mode = (get_tool_calling_config(provider, model) or {}).get("mode")
-            tool_capable = bool(mode) and mode != "none"
-        except Exception:
-            tool_capable = False
+
+    # NOT `tool_mode != "prompt_based"`. The question here is whether the
+    # model can drive a tool loop at ALL, and prompt-based tool calling can
+    # — see `can_drive_a_tool_loop`. Asking the send-path question instead
+    # silently dropped enrichment for every prompt-based model.
+    try:
+        tool_capable = can_drive_a_tool_loop(
+            facts_without_an_instance(provider, model)
+        )
+    except Exception:  # noqa: BLE001 — conservative when unresolvable
+        tool_capable = False
+
     if run_cfg.get("web_search") and tool_capable:
         return "search-loop"
     return "closed-book"

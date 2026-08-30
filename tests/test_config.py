@@ -1,5 +1,6 @@
 """Unit tests for ppxai.config module."""
 import json
+import pathlib
 import os
 import pytest
 import tempfile
@@ -1078,105 +1079,124 @@ class TestContextConfig:
         os.unlink(f.name)
 
 
-class TestToolCallingConfig:
-    """Tests for get_tool_calling_config (v1.16.0 Step 5)."""
+class TestFactsConfig:
+    """RETARGETED from `TestToolCallingConfig` (ADR 0012 section 2 Q0e).
+
+    `get_tool_calling_config` is deleted — it read the `tool_calling`
+    block, one of the two vocabularies this ADR collapses into `facts`.
+    Three of its four premises survive in the new vocabulary and are kept
+    here; the fourth does not, and its removal is the point:
+
+    * "empty when nothing is configured" — ALIVE.
+    * "comment keys are filtered" — ALIVE (configs are hand-edited and
+      carry `__comment_*` keys throughout).
+    * "a model-level block overrides" — ALIVE, restated as "a model block
+      is the only place a model fact can be stated".
+    * "provider-level acts as a default for all models" — **DEAD, and
+      deliberately.** That inheritance is exactly what let a provider-wide
+      statement speak for `sonar` (debt Item 43). Under Q0e a provider
+      block cannot state a model fact at all, so the negative is asserted
+      instead.
+    """
 
     def test_empty_when_no_config(self, restore_config):
-        """Returns empty dict when no tool_calling section exists."""
-        from ppxai.config import get_tool_calling_config
-        result = get_tool_calling_config("perplexity", "sonar-pro")
-        assert result == {}
+        from ppxai.config.facts_config import model_fact_overrides
 
-    def test_provider_level_defaults(self, restore_config):
-        """Provider-level tool_calling acts as default for all models."""
-        from ppxai.config import get_tool_calling_config
-        config_data = {
-            "providers": {
-                "custom": {
-                    "name": "Custom",
-                    "base_url": "http://localhost:8000/v1",
-                    "api_key_env": "CUSTOM_KEY",
-                    "tool_calling": {
-                        "mode": "prompt_based",
-                        "fallback_on_empty": True
-                    },
-                    "models": {"my-model": {"name": "My Model"}}
-                }
-            }
-        }
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+        assert model_fact_overrides("perplexity", "sonar-pro") == {}
+
+    def _write(self, config_data, fn):
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".json", delete=False
+        ) as f:
             json.dump(config_data, f)
             f.flush()
             with patch.dict(os.environ, {"PPXAI_CONFIG_FILE": f.name}):
                 reload_config()
-                result = get_tool_calling_config("custom", "my-model")
-                assert result["mode"] == "prompt_based"
-                assert result["fallback_on_empty"] is True
-        os.unlink(f.name)
+                import ppxai.config.facts_config as fcmod
 
-    def test_model_level_overrides_provider(self, restore_config):
-        """Model-level tool_calling overrides provider defaults."""
-        from ppxai.config import get_tool_calling_config
+                with patch.object(
+                    fcmod, "find_config_file", lambda: pathlib.Path(f.name)
+                ):
+                    result = fn()
+        os.unlink(f.name)
+        return result
+
+    def test_a_provider_block_cannot_state_a_model_fact(self, restore_config):
+        """The INVERTED premise — this is the Item 43 fence."""
+        from ppxai.config.facts_config import model_fact_overrides
+
         config_data = {
             "providers": {
                 "custom": {
                     "name": "Custom",
                     "base_url": "http://localhost:8000/v1",
                     "api_key_env": "CUSTOM_KEY",
-                    "tool_calling": {
-                        "mode": "prompt_based",
-                        "fallback_on_empty": False
-                    },
+                    "facts": {"tool_mode": "prompt_based",
+                              "fallback_on_empty": True},
+                    "models": {"my-model": {"name": "My Model"}},
+                }
+            }
+        }
+        got = self._write(
+            config_data, lambda: model_fact_overrides("custom", "my-model")
+        )
+        assert got == {}, (
+            "a provider-level block reached a model fact — the records must "
+            "be disjoint"
+        )
+
+    def test_a_model_block_states_model_facts(self, restore_config):
+        from ppxai.config.facts_config import model_fact_overrides
+
+        config_data = {
+            "providers": {
+                "custom": {
+                    "name": "Custom",
+                    "base_url": "http://localhost:8000/v1",
+                    "api_key_env": "CUSTOM_KEY",
                     "models": {
                         "my-model": {
                             "name": "My Model",
-                            "tool_calling": {
-                                "mode": "native",
-                                "strip_json_from_text": True
-                            }
+                            "facts": {
+                                "tool_mode": "native",
+                                "fallback_on_empty": True,
+                            },
                         }
-                    }
+                    },
                 }
             }
         }
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
-            json.dump(config_data, f)
-            f.flush()
-            with patch.dict(os.environ, {"PPXAI_CONFIG_FILE": f.name}):
-                reload_config()
-                result = get_tool_calling_config("custom", "my-model")
-                # Model overrides provider
-                assert result["mode"] == "native"
-                assert result["strip_json_from_text"] is True
-                # Provider default inherited
-                assert result["fallback_on_empty"] is False
-        os.unlink(f.name)
+        got = self._write(
+            config_data, lambda: model_fact_overrides("custom", "my-model")
+        )
+        assert got["tool_mode"] == "native"
+        assert got["fallback_on_empty"] is True
 
     def test_comment_keys_filtered(self, restore_config):
-        """Comment keys (__comment_*) are filtered out."""
-        from ppxai.config import get_tool_calling_config
+        """Hand-edited configs carry `__comment_*` keys throughout."""
+        from ppxai.config.facts_config import model_fact_overrides
+
         config_data = {
             "providers": {
                 "custom": {
                     "name": "Custom",
                     "base_url": "http://localhost:8000/v1",
                     "api_key_env": "CUSTOM_KEY",
-                    "tool_calling": {
-                        "mode": "prompt_based",
-                        "__comment_mode": "Use prompt-based for this provider"
-                    },
                     "models": {
-                        "test-model": {}
-                    }
+                        "my-model": {
+                            "facts": {
+                                "__comment": "why this model is special",
+                                "__comment_tool_mode": "measured 2026-08-30",
+                                "tool_mode": "native",
+                            }
+                        }
+                    },
                 }
             }
         }
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
-            json.dump(config_data, f)
-            f.flush()
-            with patch.dict(os.environ, {"PPXAI_CONFIG_FILE": f.name}):
-                reload_config()
-                result = get_tool_calling_config("custom", "nonexistent")
-                assert "mode" in result
-                assert "__comment_mode" not in result
-        os.unlink(f.name)
+        got = self._write(
+            config_data, lambda: model_fact_overrides("custom", "my-model")
+        )
+        assert got == {"tool_mode": "native"}
+
+

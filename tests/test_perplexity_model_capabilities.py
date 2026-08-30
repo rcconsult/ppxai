@@ -46,7 +46,7 @@ def _provider():
 class TestTableMatchesMeasurement:
     @pytest.mark.parametrize("model,capable", sorted(MEASURED.items()))
     def test_shipped_table(self, model, capable):
-        got = _provider().shipped_capabilities_for_model(model).native_tool_calling
+        got = _provider().get_facts_for_model(model).tool_mode != "prompt_based"
         assert got is capable, (
             f"{model}: table says {got}, live API says {capable}"
         )
@@ -54,24 +54,47 @@ class TestTableMatchesMeasurement:
     def test_unknown_model_defaults_to_not_capable(self):
         """A model we have not measured must degrade, not 400 the user."""
         p = _provider()
-        assert (
-            p.shipped_capabilities_for_model("sonar-9-turbo").native_tool_calling
-            is False
-        )
+        assert p.get_facts_for_model("sonar-9-turbo").tool_mode == "prompt_based"
 
     def test_model_id_is_matched_case_insensitively(self):
         p = _provider()
-        assert p.shipped_capabilities_for_model("Sonar-Pro").native_tool_calling
+        assert p.get_facts_for_model("Sonar-Pro").tool_mode != "prompt_based"
 
-    def test_other_capabilities_are_preserved(self):
-        """Flipping native_tool_calling must not clear web_search/citations —
-        Perplexity's whole value is the built-in search."""
+    def test_endpoint_abilities_are_untouched_by_tool_mode(self):
+        """RETARGETED: this used to check that flipping the tool-calling
+        boolean did not clear web_search/citations on the same record.
+
+        Under ADR 0012 section 2 Q0e it cannot: they are on DIFFERENT
+        records now, so no tool-mode resolution can reach them. That is a
+        stronger guarantee than the original test asserted, and Perplexity's
+        built-in search is its whole value, so the fence stays -- pointed at
+        the endpoint record."""
         p = _provider()
-        caps = p.shipped_capabilities_for_model("sonar-pro")
-        assert caps.native_tool_calling is True
+        caps = p.get_capabilities()
         assert caps.web_search is True
         assert caps.citations is True
         assert caps.streaming is True
+        assert p.get_facts_for_model("sonar-pro").tool_mode != "prompt_based"
+
+    def test_the_measured_sets_still_agree_with_the_seed_rows(self):
+        """The sets have no production readers; this keeps them honest.
+
+        They record what was measured against the live API. The seed rows
+        are what the router actually consults. If the two ever disagree,
+        either the measurement is stale or a seed row is wrong -- and
+        without this fence, nothing would say so.
+        """
+        p = _provider()
+        for model in PERPLEXITY_NATIVE_TOOL_MODELS:
+            assert p.get_facts_for_model(model).tool_mode != "prompt_based", (
+                f"{model} was MEASURED tool-capable but its seed row "
+                "resolves prompt_based"
+            )
+        for model in PERPLEXITY_TOOL_REJECTING_MODELS:
+            assert p.get_facts_for_model(model).tool_mode == "prompt_based", (
+                f"{model} REJECTS a tools array live, but its seed row "
+                "resolves tool-capable"
+            )
 
     def test_the_two_sets_are_disjoint_and_complete(self):
         assert not (PERPLEXITY_NATIVE_TOOL_MODELS & PERPLEXITY_TOOL_REJECTING_MODELS)
@@ -79,52 +102,68 @@ class TestTableMatchesMeasurement:
             PERPLEXITY_NATIVE_TOOL_MODELS | PERPLEXITY_TOOL_REJECTING_MODELS
         ) == set(MEASURED)
 
-    def test_provider_default_stays_false(self):
-        """The safe default: an unmeasured model degrades rather than 400s."""
-        assert PerplexityProvider.default_capabilities.native_tool_calling is False
+    def test_the_provider_record_cannot_state_tool_mode(self):
+        """RETARGETED from `test_provider_default_stays_false`.
 
-
-class TestProfileModeDoesNotShortCircuitTheTable:
-    """The capability table only decides if the model PROFILE lets it.
-
-    `chat.py:693` resolves the mode first: `mode="prompt_based"` sets
-    use_native=False WITHOUT consulting provider capabilities. Both capable
-    Sonar profiles shipped as "prompt_based" (correct when written), so the
-    table alone left Item 43 wide open — measured before the fix:
-
-        sonar-pro  profile.mode=prompt_based  caps.native=True  -> use_native=False
-
-    That is the same "the override exists but nothing reads it" shape as
-    plan finding F1. Pinned here because the two live in different modules
-    and nothing else couples them.
-    """
-
-    @pytest.mark.parametrize("model", sorted(PERPLEXITY_NATIVE_TOOL_MODELS))
-    def test_capable_models_are_not_pinned_to_prompt_based(self, model):
-        from ppxai.engine.model_profiles import get_profile
-
-        mode = get_profile(model).tool_calling.mode
-        assert mode != "prompt_based", (
-            f"{model} resolves native tool calling in the capability table, "
-            f'but its profile pins mode="prompt_based", which chat.py checks '
-            "FIRST — the table would never be consulted."
+        The safe default it guarded -- an unmeasured model degrades rather
+        than 400s -- now lives on `ModelFacts` (asserted above). What
+        replaces it here is the stronger structural claim: there is no
+        provider-level tool-calling field left to get wrong, which is why a
+        provider-wide statement can no longer speak for `sonar`."""
+        assert not hasattr(
+            PerplexityProvider.default_capabilities, "native_tool_calling"
         )
+
+
+class TestOneLookupCannotShortCircuit:
+    """Item 43's Layer-2 bug, fenced by REMOVING the second system.
+
+    The original defect: `chat.py` resolved `profile.tool_calling.mode`
+    FIRST and short-circuited on `prompt_based` without ever consulting
+    provider capabilities. Both capable Sonar profiles shipped as
+    `prompt_based` (correct when written), so the capability table alone
+    left Item 43 wide open -- measured before the fix::
+
+        sonar-pro  profile.mode=prompt_based  caps.native=True  -> False
+
+    The predecessor of this class pinned the two systems into agreement,
+    because they lived in different modules and nothing else coupled them.
+    ADR 0012 section 2 Q0e deletes the coupling problem instead: there is
+    ONE record, so "which system is asked first" has no referent. These
+    tests now assert the single lookup matches the live API directly -- no
+    chain to replicate, which is the whole improvement.
+    """
 
     @pytest.mark.parametrize("model,capable", sorted(MEASURED.items()))
     def test_end_to_end_mode_resolution(self, model, capable):
-        """Replicates chat.py's resolution: profile mode, then capability."""
-        from ppxai.engine.model_profiles import get_profile
-
-        mode = get_profile(model).tool_calling.mode
-        caps = _provider().shipped_capabilities_for_model(model)
-        if mode == "prompt_based":
-            use_native = False
-        else:  # "native" or "auto" both gate on the capability
-            use_native = caps.native_tool_calling
+        facts = _provider().get_facts_for_model(model)
+        use_native = facts.tool_mode != "prompt_based"
         assert use_native is capable, (
-            f"{model}: chain resolves use_native={use_native}, live API "
-            f"says tool calling is {'supported' if capable else 'rejected'}"
+            f"{model}: resolver says use_native={use_native}, live API "
+            f"disagrees (capable={capable})"
         )
+
+    def test_there_is_no_second_system_to_disagree_with(self):
+        """The structural claim, asserted rather than assumed.
+
+        If a second per-model tool-calling vocabulary ever comes back, this
+        is where it gets caught: neither `ToolCallingProfile.mode` nor a
+        provider-level boolean may reach the tool-mode decision.
+        """
+        import inspect
+
+        from ppxai.engine.chat import chat_with_tools
+
+        # Strip comments: the function's own docstring and comments explain
+        # the defect by naming it, and matching those would make this fence
+        # fire on its own explanation rather than on real code.
+        src = "\n".join(
+            line.split("#", 1)[0]
+            for line in inspect.getsource(chat_with_tools).splitlines()
+        )
+        assert "tool_calling.mode" not in src
+        assert "native_tool_calling" not in src
+
 
 
 class TestChatActuallySendsTools:
@@ -413,12 +452,26 @@ class TestOperatorConfigWins:
     def test_operator_can_unblock_a_model_the_table_calls_incapable(
         self, config_file
     ):
-        config_file({"sonar": {"capabilities": {"native_tool_calling": True}}})
+        config_file({"sonar": {"facts": {"tool_mode": "native"}}})
         _reject_tool_incapable_model("perplexity", "sonar", ["read_file"])
 
     def test_operator_can_block_a_model_the_table_calls_capable(
         self, config_file
     ):
-        config_file({"sonar-pro": {"capabilities": {"native_tool_calling": False}}})
+        config_file({"sonar-pro": {"facts": {"tool_mode": "prompt_based"}}})
         with pytest.raises(TaskAuthorizationError):
             _reject_tool_incapable_model("perplexity", "sonar-pro", ["read_file"])
+
+    def test_the_legacy_block_no_longer_applies(self, config_file):
+        """The clean break, asserted where it is most dangerous (Q0c).
+
+        An operator whose config still says `capabilities.
+        native_tool_calling: true` for `sonar` used to get a tool-capable
+        run. Under the break that key resolves to nothing, so the guard
+        refuses -- which is the SAFE direction, but silent, so `/doctor`
+        must report it. That report is fenced in
+        `tests/test_capability_resolution.py`.
+        """
+        config_file({"sonar": {"capabilities": {"native_tool_calling": True}}})
+        with pytest.raises(TaskAuthorizationError):
+            _reject_tool_incapable_model("perplexity", "sonar", ["read_file"])

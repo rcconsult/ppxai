@@ -23,9 +23,9 @@ from .tools.manager import ToolManager
 from .tools.builtin import web_premium
 from .tools.parser import parse_tool_call, detect_truncated_tool_call, strip_tool_json_from_text
 from .tools.validator import ResponseValidator, ValidationResult, check_session_pollution
-from .model_profiles import get_profile, ModelProfile, ToolCallingProfile
+from .model_facts import shipped_facts_for_model
 from .providers.base import BaseProvider
-from ..config import get_system_prompt, get_system_prompt_mode, calculate_cost, get_tool_calling_config
+from ..config import get_system_prompt, get_system_prompt_mode, calculate_cost
 from ..common.logger import get_logger
 
 logger = get_logger("chat")
@@ -150,69 +150,6 @@ class ChatContext(Protocol):
     def get_working_dir(self) -> Optional[str]:
         """Get current working directory (v1.15.2)."""
         ...
-
-
-def get_effective_profile(model: str, provider: str, ctx: ChatContext) -> ModelProfile:
-    """Get model profile with config and bootstrap overrides applied.
-
-    Precedence (highest wins per field):
-    1. ppxai-config.json per-model tool_calling
-    2. AGENTS.md tool_calling overrides (project-level)
-    3. Built-in profile (model_profiles.py)
-
-    Public (v1.18.0 Phase 5g) so the profile-merging test suite can
-    exercise precedence rules directly instead of driving a full
-    chat invocation. Pure function — reads ctx.bootstrap and global
-    config; no mutation.
-
-    Args:
-        model: Model ID
-        provider: Provider name
-        ctx: Chat context (for bootstrap access)
-
-    Returns:
-        ModelProfile with all overrides merged
-    """
-    profile = get_profile(model)
-
-    # Collect override layers (lowest priority first, so later layers win)
-    layers: list = []
-
-    # Layer 1: AGENTS.md tool_calling overrides
-    bootstrap_overrides = _get_bootstrap_tool_calling(ctx, model)
-    if bootstrap_overrides:
-        layers.append(bootstrap_overrides)
-
-    # Layer 2: Config overrides (highest priority)
-    config_overrides = get_tool_calling_config(provider, model)
-    if config_overrides:
-        layers.append(config_overrides)
-
-    if not layers:
-        return profile
-
-    # Merge all override layers on top of built-in profile
-    tc = profile.tool_calling
-    merged: dict = {}
-    for layer in layers:
-        merged.update(layer)
-
-    merged_tc = ToolCallingProfile(
-        mode=merged.get("mode", tc.mode),
-        fallback_on_empty=merged.get("fallback_on_empty", tc.fallback_on_empty),
-        fallback_on_failure=merged.get("fallback_on_failure", tc.fallback_on_failure),
-        strip_json_from_text=merged.get("strip_json_from_text", tc.strip_json_from_text),
-        parallel_tool_calls=merged.get("parallel_tool_calls", tc.parallel_tool_calls),
-        api_path=merged.get("api_path", tc.api_path),
-    )
-    return ModelProfile(
-        tool_calling=merged_tc,
-        max_tokens=merged.get("max_tokens", profile.max_tokens),
-        max_tool_iterations=merged.get("max_tool_iterations", profile.max_tool_iterations),
-        supports_reasoning=profile.supports_reasoning,
-        restricted_params=profile.restricted_params,
-        tier=profile.tier,
-    )
 
 
 # Tool categories used by the success heuristic. Module-level so
@@ -655,11 +592,17 @@ async def chat_with_tools(
     iteration = 0
     max_iterations = ctx.tool_manager.max_iterations
 
-    # Override with per-model limit if profile specifies a higher value (B2)
-    # v1.16.0 Step 5: Apply config + bootstrap overrides on top of built-in profile
-    profile = get_effective_profile(ctx.model, ctx.provider_name, ctx)
-    if profile.max_tool_iterations > 0:
-        max_iterations = max(max_iterations, profile.max_tool_iterations)
+    # Per-model facts: shipped row, then operator config (ADR 0012 §2 Q0e).
+    # One resolver, one record — replaces `get_effective_profile`, which
+    # merged a third vocabulary (AGENTS.md `tool_calling`, retired in Q0f as
+    # a parser with zero users) on top of the profile table.
+    facts = (
+        ctx.provider.get_facts_for_model(ctx.model)
+        if ctx.provider
+        else shipped_facts_for_model(ctx.model)
+    )
+    if facts.max_tool_iterations > 0:
+        max_iterations = max(max_iterations, facts.max_tool_iterations)
 
     # Reset tool call history for loop detection
     ctx.tool_manager.reset_tool_history()
@@ -681,27 +624,23 @@ async def chat_with_tools(
         except AttributeError:
             pass
 
-    # Profile-driven tool calling mode resolution (v1.16.0 Step 2)
-    # Replaces the binary native/prompt decision with profile-aware routing.
-    provider_caps = ctx.provider.get_capabilities_for_model(ctx.model) if ctx.provider else None
-    tc_profile = profile.tool_calling
-
-    # Mode resolution:
-    # 1. Profile mode takes precedence ("native", "prompt_based", "auto")
-    # 2. Provider capabilities gate native mode (provider must support it)
-    # 3. "auto" starts native if provider supports it
-    if tc_profile.mode == "prompt_based":
-        use_native_tools = False
-    elif tc_profile.mode == "native":
-        use_native_tools = bool(provider_caps and provider_caps.native_tool_calling)
-    else:  # "auto"
-        use_native_tools = bool(provider_caps and provider_caps.native_tool_calling)
+    # Tool calling mode: ONE lookup (ADR 0012 §2 Q0e).
+    #
+    # This site was debt Item 43's Layer-2 bug. It asked TWO systems in a
+    # fixed order — `profile.tool_calling.mode` first, then
+    # `ProviderCapabilities.native_tool_calling` as a gate — so a capability
+    # resolving native=True never reached the wire if the profile glob said
+    # prompt_based, and a provider-wide capability could speak for a model
+    # the profile had measured. `tool_mode` now answers the whole question
+    # from the model's own record, and no provider-level statement can
+    # reach it, because tool mode is not a field of the provider record.
+    use_native_tools = facts.tool_mode != "prompt_based"
 
     openai_tools = ctx.tool_manager.get_tools_openai_format() if use_native_tools else None
 
     logger.debug(
-        f"Tool mode: profile.mode={tc_profile.mode}, use_native={use_native_tools}, "
-        f"fallback_empty={tc_profile.fallback_on_empty}, fallback_fail={tc_profile.fallback_on_failure}"
+        f"Tool mode: tool_mode={facts.tool_mode}, use_native={use_native_tools}, "
+        f"fallback_empty={facts.fallback_on_empty}, fallback_fail={facts.fallback_on_failure}"
     )
 
     # Debug: log session state at start of chat_with_tools
@@ -783,7 +722,7 @@ async def chat_with_tools(
             # for models with fallback flags, so prompt-based parsing can work
             # if native tool calling returns empty or fails
             tool_hint = ""
-            if tc_profile.fallback_on_empty or tc_profile.fallback_on_failure:
+            if facts.fallback_on_empty or facts.fallback_on_failure:
                 tool_hint = ctx.tool_manager.get_tools_prompt(working_dir=ctx.get_working_dir())
 
             parts = [p for p in [bootstrap_prompt, system_prompt, tool_hint] if p]
@@ -859,7 +798,7 @@ async def chat_with_tools(
             return
 
         # Fallback on empty: native mode returned nothing — retry with prompt-based
-        if use_native_tools and tc_profile.fallback_on_empty:
+        if use_native_tools and facts.fallback_on_empty:
             if not native_tool_calls and not full_response.strip():
                 logger.info(f"Native empty response, falling back to prompt-based (model={ctx.model})")
                 yield Event(EventType.INFO, "Native tool calling returned empty, retrying with prompt-based...")
@@ -901,13 +840,13 @@ async def chat_with_tools(
                 parsed_calls.append(entry)
 
             # Limit to first call unless parallel_tool_calls enabled
-            if not tc_profile.parallel_tool_calls:
+            if not facts.parallel_tool_calls:
                 parsed_calls = parsed_calls[:1]
 
             # Fallback on failure: first tool call has unknown tool — try prompt-based parser
             # Must run BEFORE strip_tool_json so the parser can find JSON in response text
             if parsed_calls and not ctx.tool_manager.get_tool(parsed_calls[0]["tool"]):
-                if tc_profile.fallback_on_failure:
+                if facts.fallback_on_failure:
                     logger.info(f"Native tool call unknown tool '{parsed_calls[0]['tool']}', falling back to prompt-based parser")
                     fallback_call = parse_tool_call(full_response, ctx.tool_manager.get_tool)
                     if fallback_call:
@@ -924,7 +863,7 @@ async def chat_with_tools(
                 tool_calls_list = [single]
 
         # Profile-driven strip_json: strip tool JSON from text even without native calls
-        if not native_tool_calls and tc_profile.strip_json_from_text and full_response:
+        if not native_tool_calls and facts.strip_json_from_text and full_response:
             full_response = strip_tool_json_from_text(full_response)
 
         if tool_calls_list:

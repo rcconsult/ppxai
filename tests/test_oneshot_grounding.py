@@ -195,29 +195,55 @@ class TestUsageCaptureChannel:
         assert web_premium.get_last_tool_usage() is None  # reset-on-read
 
 
+class _StubProvider:
+    """Stands in for a registered provider class in the gate tests."""
+
+    from ppxai.engine.types import ProviderCapabilities as _PC
+
+    default_capabilities = _PC()
+    shipped_model_facts: dict = {}
+
+
 class TestEffectivePath:
-    """The ADR 0009 §4 gating truth table. F5: the logic lives on the config
-    axis (config.execution.get_effective_oneshot_path) so /doctor shares the
-    exact decision the route makes — patches target the config layer."""
+    """The ADR 0009 section 4 gating truth table.
+
+    F5: the logic lives on the config axis
+    (`config.execution.get_effective_oneshot_path`) so `/doctor` shares the
+    exact decision the route makes.
+
+    **Retargeted for ADR 0012 section 2 Q0e.** The two inputs used to come
+    from two vocabularies — `get_provider_config()["capabilities"]` for
+    endpoint search and `get_tool_calling_config()` for tool mode, with a
+    hand-written "native OR an explicit tool_calling block" rule bridging
+    them. They are now two disjoint records read through one resolver each,
+    so the patches target `ProviderCapabilities` (endpoint) and
+    `ModelFacts` (model). The truth table itself is unchanged — this is
+    the same decision, asked once instead of twice.
+    """
 
     @staticmethod
     def _path(*, grounding=False, enrichment=False, web_capable=False,
-              native_tools=False, tc_mode=None):
+              tool_mode="prompt_based"):
         from ppxai.config import execution as exec_mod
-        from ppxai.config import providers as providers_mod
+        from ppxai.engine.model_facts import ModelFacts
+        from ppxai.engine.types import ProviderCapabilities
 
         with patch.object(
             exec_mod, "get_execution_run_config",
             return_value={"web_search": enrichment, "grounding": grounding},
-        ), patch.object(
-            providers_mod, "get_provider_config",
-            return_value={"capabilities": {
-                "web_search": web_capable,
-                "native_tool_calling": native_tools,
-            }},
-        ), patch.object(
-            providers_mod, "get_tool_calling_config",
-            return_value={"mode": tc_mode} if tc_mode else {},
+        ), patch(
+            "ppxai.engine.providers.get_provider_class",
+            # A real class, so the endpoint branch is reached at all — the
+            # test provider "p" is not registered, and the resolver treats
+            # an unknown provider as "no endpoint record", which silently
+            # made both grounding cases fall through to closed-book.
+            return_value=_StubProvider,
+        ), patch(
+            "ppxai.config.facts_config.apply_provider_overrides",
+            return_value=ProviderCapabilities(web_search=web_capable),
+        ), patch(
+            "ppxai.engine.model_facts.facts_without_an_instance",
+            return_value=ModelFacts(tool_mode=tool_mode),
         ):
             return oneshot_mod._oneshot_effective_path("p", "m")
 
@@ -228,31 +254,124 @@ class TestEffectivePath:
         assert self._path(grounding=True, web_capable=True) == "native"
 
     def test_grounding_on_incapable_falls_closed_book(self):
+        """An endpoint with no search index cannot ground natively."""
         assert self._path(grounding=True, web_capable=False) == "closed-book"
 
     def test_enrichment_on_tool_capable_is_search_loop(self):
-        assert self._path(enrichment=True, native_tools=True) == "search-loop"
+        assert self._path(enrichment=True, tool_mode="native") == "search-loop"
 
-    def test_enrichment_on_tool_incapable_is_closed_book(self):
-        assert self._path(enrichment=True) == "closed-book"
+    def test_enrichment_off_is_closed_book_whatever_the_model(self):
+        """CORRECTED. This asserted that a `prompt_based` model made the
+        gate closed-book, which was my own misreading — see
+        `test_prompt_based_still_drives_the_search_loop` below. What is
+        actually true is the simpler thing: with enrichment off, no model
+        reaches the search loop."""
+        assert self._path(enrichment=False, tool_mode="native") == "closed-book"
+        assert self._path(enrichment=False, tool_mode="prompt_based") == (
+            "closed-book"
+        )
 
     def test_native_beats_search_loop_xor(self):
-        # Enrichment XOR native — never both; native wins when effective.
+        """Both enabled: native grounding wins, exactly as before."""
         assert self._path(
-            grounding=True, enrichment=True,
-            web_capable=True, native_tools=True,
+            grounding=True, enrichment=True, web_capable=True,
+            tool_mode="native",
         ) == "native"
 
-    def test_prompt_based_tool_calling_counts_as_capable(self):
-        assert self._path(enrichment=True, tc_mode="prompt") == "search-loop"
+    def test_auto_mode_counts_as_capable(self):
+        """`auto` carries "native with a prompt-based fallback"."""
+        assert self._path(enrichment=True, tool_mode="auto") == "search-loop"
 
-    def test_tc_mode_none_is_incapable(self):
-        assert self._path(enrichment=True, tc_mode="none") == "closed-book"
+    def test_prompt_based_still_drives_the_search_loop(self):
+        """RESTORED — deleting this hid a `/v1/oneshot` regression.
+
+        Its predecessor (`test_prompt_based_tool_calling_counts_as_capable`)
+        asserted that an explicit `tool_calling` block made a model capable
+        for this gate even at `mode: prompt_based`, because the ADR 0009
+        search loop runs fine on prompt-based calling — `chat.py` parses
+        tool JSON out of the response text, which is what `prompt_based`
+        MEANS. I dropped it while retargeting and replaced it with the
+        opposite assertion, which took `execution.run.web_search`
+        enrichment away from o4-mini, gpt-4.1-mini, sonar and every local
+        model.
+
+        The gate's question is "can this model drive a tool loop at all",
+        not "should we send a native tools array". Pre-ADR it asked
+        `mode != "none"`, and `"none"` has no successor in `ToolMode`.
+        """
+        assert self._path(enrichment=True, tool_mode="prompt_based") == (
+            "search-loop"
+        )
+
+    @pytest.mark.parametrize("tool_mode", ["native", "prompt_based", "auto"])
+    def test_every_tool_mode_can_drive_the_loop(self, tool_mode):
+        """Parametrised so a new `ToolMode` value cannot silently default
+        to incapable — it fails here until someone decides."""
+        assert self._path(enrichment=True, tool_mode=tool_mode) == "search-loop"
+
+    def test_the_capability_question_is_not_the_send_path_question(self):
+        """The two questions are distinct and must stay distinct."""
+        from ppxai.engine.model_facts import ModelFacts, can_drive_a_tool_loop
+
+        facts = ModelFacts(tool_mode="prompt_based")
+        assert can_drive_a_tool_loop(facts) is True
+        assert (facts.tool_mode != "prompt_based") is False
 
 
-# ---------------------------------------------------------------------------
-# _apply_oneshot_grounding — capability gate + per-provider mechanism
-# ---------------------------------------------------------------------------
+class TestTypeBasedProviders:
+    """openai_compat-TYPE providers reach the gate too (openrouter, nvidia,
+    every vLLM/Ollama box) — and `get_provider_class` returns None for all
+    of them, because they are configured by name rather than registered.
+
+    Reading `get_provider_class(p).default_capabilities` therefore raised
+    `AttributeError` and the gate silently concluded "no endpoint record",
+    so provider-native grounding never resolved for any of them. The truth
+    table above never caught it because it only ever instantiated a
+    registered provider.
+    """
+
+    def test_an_unregistered_provider_resolves_to_openai_compat(self):
+        from ppxai.engine.model_facts import provider_class_for
+        from ppxai.engine.providers import get_provider_class
+        from ppxai.engine.providers.openai_compat import OpenAICompatibleProvider
+
+        assert get_provider_class("myrouter") is None
+        assert provider_class_for("myrouter") is OpenAICompatibleProvider
+
+    def test_grounding_resolves_native_for_a_type_based_provider(
+        self, tmp_path, monkeypatch
+    ):
+        import json
+
+        import ppxai.config.facts_config as fc
+        from ppxai.config import execution as exec_mod
+
+        cfg = tmp_path / "ppxai-config.json"
+        cfg.write_text(
+            json.dumps(
+                {
+                    "providers": {
+                        "myrouter": {
+                            "name": "MR",
+                            "base_url": "https://example.invalid",
+                            "api_key_env": "K",
+                            "facts": {"web_search": True},
+                        }
+                    }
+                }
+            ),
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(fc, "find_config_file", lambda: cfg)
+        with patch.object(
+            exec_mod,
+            "get_execution_run_config",
+            return_value={"web_search": False, "grounding": True},
+        ):
+            assert (
+                exec_mod.get_effective_oneshot_path("myrouter", "some-model")
+                == "native"
+            )
 
 
 class TestApplyGrounding:

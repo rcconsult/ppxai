@@ -1,11 +1,17 @@
-"""Per-model capabilities must reach the provider SEND paths (plan I1).
+"""Per-model facts must reach the provider SEND paths (plan I1, ADR 0012).
 
-`BaseProvider.get_capabilities_for_model(model)` is the hook that lets a
-provider mark individual models prompt-based. Before this fence only
-`chat.py:686` consulted it: all four provider send paths read the static
+`BaseProvider.get_facts_for_model(model)` is the hook that lets a provider
+mark individual models prompt-based. Before this fence only `chat.py`
+consulted it: all four provider send paths read the static
 `self.capabilities` instead, so `OpenAINativeProvider`'s benchmark-backed
 `PROMPT_BASED_MODEL_PREFIXES` override resolved False and the send path
 shipped native tools anyway.
+
+Retargeted for ADR 0012 §2 Q0e: the accessor is now `get_facts_for_model`
+and the answer is `tool_mode`, not a boolean. The fence itself is
+unchanged in kind — it is the one that catches a send path reading a
+static attribute instead of resolving per model — so it is retargeted
+rather than dropped.
 
 Two layers of protection, deliberately:
 
@@ -37,28 +43,41 @@ class TestTheHookResolvesPerModel:
     """The override itself — unchanged behaviour, pinned so I2/I5 can't
     silently drop it while reshaping the table."""
 
-    def test_prompt_based_models_resolve_false(self):
+    def test_prompt_based_models_resolve_prompt_based(self):
         p = OpenAINativeProvider(api_key="sk-test")
         for prefix in PROMPT_BASED_MODEL_PREFIXES:
-            caps = p.get_capabilities_for_model(prefix)
-            assert caps.native_tool_calling is False, (
+            facts = p.get_facts_for_model(prefix)
+            assert facts.tool_mode == "prompt_based", (
                 f"{prefix} is in PROMPT_BASED_MODEL_PREFIXES but resolved "
-                "native_tool_calling=True"
+                f"tool_mode={facts.tool_mode}"
             )
 
-    def test_other_models_resolve_true(self):
+    def test_other_models_resolve_tool_capable(self):
         p = OpenAINativeProvider(api_key="sk-test")
-        assert p.get_capabilities_for_model("gpt-5.4").native_tool_calling is True
+        assert p.get_facts_for_model("gpt-5.4").tool_mode != "prompt_based"
 
-    def test_the_static_attribute_still_disagrees(self):
-        """The whole point: `self.capabilities` is NOT per-model.
+    def test_resolution_differs_per_model(self):
+        """The whole point: the answer is NOT one value for the provider.
 
-        If this ever stops disagreeing, the send-path tests below become
-        vacuous — they would pass whichever attribute the code read.
+        If two models ever stop disagreeing, the send-path tests below
+        become vacuous — they would pass whichever value the code read.
+
+        Under ADR 0012 §2 Q0e this can no longer be phrased as "the static
+        attribute disagrees with the hook": tool mode was removed from
+        `ProviderCapabilities` entirely, so there is no provider-level
+        value left to disagree with. That is a stronger guarantee than the
+        one this test originally asserted — the stale read is now a
+        `AttributeError`, not a wrong answer — and the per-model
+        disagreement is what remains to pin.
         """
         p = OpenAINativeProvider(api_key="sk-test")
-        assert p.capabilities.native_tool_calling is True
-        assert p.get_capabilities_for_model("o4-mini").native_tool_calling is False
+        assert p.get_facts_for_model("gpt-5.4").tool_mode != "prompt_based"
+        assert p.get_facts_for_model("o4-mini").tool_mode == "prompt_based"
+
+    def test_tool_mode_is_not_reachable_from_the_provider_record(self):
+        """Q0g removed the boolean; a stale read must fail loudly."""
+        p = OpenAINativeProvider(api_key="sk-test")
+        assert not hasattr(p.capabilities, "native_tool_calling")
 
 
 class TestSendPathsConsultTheHook:
@@ -79,7 +98,7 @@ class TestSendPathsConsultTheHook:
         than a per-method check so a NEW provider or a NEW send path is
         covered the day it is written.
         """
-        pattern = re.compile(r"self\.capabilities\.native_tool_calling")
+        pattern = re.compile(r"self\.capabilities\.(native_tool_calling|tool_mode)")
         offenders = []
         for path in PROVIDERS_DIR.glob("*.py"):
             if pattern.search(path.read_text(encoding="utf-8")):
@@ -87,7 +106,7 @@ class TestSendPathsConsultTheHook:
         assert offenders == [], (
             f"{offenders} read self.capabilities.native_tool_calling, which "
             "ignores the per-model override. Use "
-            "self.get_capabilities_for_model(model).native_tool_calling."
+            'self.get_facts_for_model(model).tool_mode != "prompt_based".'
         )
 
     @pytest.mark.parametrize("module,method", SEND_PATHS)
@@ -99,9 +118,9 @@ class TestSendPathsConsultTheHook:
         rest = src[m.end():]
         nxt = re.search(r"\n    (?:async )?def ", rest)
         body = rest[: nxt.start()] if nxt else rest
-        assert "get_capabilities_for_model(" in body, (
+        assert "get_facts_for_model(" in body, (
             f"{module}::{method} decides tool attachment but never calls "
-            "get_capabilities_for_model()"
+            "get_facts_for_model()"
         )
 
 
@@ -143,11 +162,37 @@ class TestGeminiThreadsModel:
 
 class TestHookContractOnBase:
     def test_base_declares_the_hook(self):
-        assert hasattr(BaseProvider, "get_capabilities_for_model")
+        assert hasattr(BaseProvider, "get_facts_for_model")
 
-    def test_base_default_is_a_passthrough(self):
-        """Providers without a per-model table must behave exactly as before
-        — I1 is a wiring change, not a behaviour change, for them."""
+    def test_base_declares_the_endpoint_accessor_separately(self):
+        """Two records, two accessors (ADR 0012 §2 Q0e).
+
+        `get_capabilities()` takes NO model, because every field on that
+        record is a fact about the service. The signature is the guarantee:
+        an endpoint question cannot accidentally be asked per model.
+        """
+        import inspect
+
+        assert hasattr(BaseProvider, "get_capabilities")
+        params = inspect.signature(BaseProvider.get_capabilities).parameters
+        assert list(params) == ["self"], (
+            "get_capabilities() grew a model parameter — the provider record "
+            "is per-ENDPOINT, and a model argument reintroduces exactly the "
+            "two-levels-of-one-field shape ADR 0012 removed"
+        )
+
+    def test_base_default_falls_to_the_shipped_table(self):
+        """A provider with no table of its own resolves from the shipped one.
+
+        RETARGETED for ADR 0012 §2 Q0e. This test used to assert the default
+        was `self.capabilities` — a passthrough — because tool mode lived on
+        the provider record. It no longer does, so "passthrough" has no
+        meaning here: the base default now consults the shipped per-model
+        table, and a model nobody has measured lands on the conservative
+        floor rather than inheriting a provider-wide value. That inheritance
+        is precisely what let a provider-level statement speak for `sonar`.
+        """
+        from ppxai.engine.model_facts import shipped_facts_for_model
 
         class _Dummy(BaseProvider):
             async def chat(self, *a, **k):  # pragma: no cover - unused
@@ -157,4 +202,7 @@ class TestHookContractOnBase:
                 return {}
 
         d = _Dummy(api_key="k")
-        assert d.get_capabilities_for_model("anything") is d.capabilities
+        assert d.get_facts_for_model("gpt-5.2") == shipped_facts_for_model("gpt-5.2")
+        assert d.get_facts_for_model("nobody-measured-this").tool_mode == (
+            "prompt_based"
+        )

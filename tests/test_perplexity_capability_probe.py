@@ -33,6 +33,10 @@ from pathlib import Path
 
 import pytest
 
+from ppxai.engine.providers.perplexity import (
+    PERPLEXITY_NATIVE_TOOL_MODELS as NATIVE_TOOL_MODELS,
+)
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 PROBE_PATH = REPO_ROOT / "scripts" / "probe-perplexity-capabilities.py"
 
@@ -112,7 +116,7 @@ class TestExpectedVerdict:
     """The table's claim, including its safe default."""
 
     def test_native_models_expect_native(self):
-        for model in probe_mod.PERPLEXITY_NATIVE_TOOL_MODELS:
+        for model in NATIVE_TOOL_MODELS:
             assert probe_mod.expected_verdict(model) == probe_mod.NATIVE
 
     def test_rejecting_models_expect_rejects(self):
@@ -175,7 +179,7 @@ class TestRosterFollowsShippedConfig:
         assert roster, "probe found no Perplexity models to probe"
         # Every model the table declares native must actually be shipped —
         # a native claim for a model nobody can select is dead data.
-        for model in probe_mod.PERPLEXITY_NATIVE_TOOL_MODELS:
+        for model in NATIVE_TOOL_MODELS:
             assert model in roster, (
                 f"{model} is declared natively tool-capable but is not in the "
                 f"shipped roster {roster}"

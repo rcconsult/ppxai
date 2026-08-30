@@ -93,6 +93,90 @@ IDs are safe on provider `perplexity` — every production provider-key split
 is `split("/")[0]` / `split("/", 1)` (`usage.py:243`, `session.py:1326`,
 `tools.py:569`/`647`, `search_backends.py:148`).
 
+## W1 ✅ DONE (2026-08-30) — two fact records, explicit and complete (ADR 0012 §2 Q0d + Q0e)
+
+**Delivered:** two disjoint records (`ProviderCapabilities` retargeted in
+place, `ModelFacts` new), one resolver each, both old accessors **deleted**
+(`get_capabilities_for_model`, `chat.get_effective_profile`) along with
+`config/capabilities.py`, `get_tool_calling_config()`,
+`shipped_capabilities_for_model()` and the AGENTS.md `tool_calling` parser.
+Verified against a refreshed graph: all five resolve to **zero nodes**.
+`/doctor` ships with four scans plus record scaffolding; the example config
+ships migrated; call graphs in
+[`provider-wire-call-graphs.md`](provider-wire-call-graphs.md).
+
+**Five defects found and fixed on the way**, all of them shapes this ADR
+exists to remove — four were caught by review rather than by the tests.
+
+⚠️ **None was reachable in shipped default behaviour.** An earlier draft of
+this section called three of them "live", which was wrong; the reachability
+below is measured, and the correction is kept visible because overstating a
+finding is its own defect. Two are latent behind an opt-in flag, two are
+latent until W2, one is advice-only. They were worth fixing — a gate that
+silently downgrades the moment someone enables a feature is a bad failure
+mode — but none of them was degrading anyone's deployment.
+
+| # | Defect | Reachable when |
+|---|---|---|
+| 1 | `supports_vision` dropped by any override | **never** — see below |
+| 2 | prompt-based models denied the search loop | `execution.run.web_search` **on** (default off) |
+| 3 | type-based providers denied native grounding | `execution.run.grounding` **on** (default off) |
+| 4 | unmeasured floor claims the wrong wire | **W2**, once routing reads it |
+| 5 | `/doctor` names a dead migration target | advice only; no runtime effect |
+
+1. **`supports_vision` was dropped by ANY config override.**
+   `get_effective_profile` rebuilt `ModelProfile` field-by-field and omitted
+   the field, so its return value said `False` for a vision model whenever a
+   config layer existed. **It never reached a vision decision**: that
+   function had exactly one caller (`chat.py:660`), which used only the
+   tool-loop fields, while every real reader — `file_preprocessing`,
+   `provider_ops`' `model_supports_vision` state, the `/attach` warning —
+   calls `model_profiles.supports_vision()` directly, which stayed correct.
+   Measured on HEAD: `get_effective_profile(...).supports_vision` is `False`
+   for `gemini-2.5-pro` under an unrelated `max_tokens` override while
+   `supports_vision("gemini-2.5-pro")` is `True`. A latent trap for the next
+   caller, not a shipped regression. Impossible now on a frozen record.
+
+2. **`/v1/oneshot` enrichment.** `tool_mode != "prompt_based"` is the
+   SEND-PATH question ("attach a native tools array?"), not the gate's
+   question ("can this model drive a tool loop at all?"). Asking the wrong
+   one dropped every prompt-based model to closed-book. Reachable only with
+   `execution.run.web_search` on, which defaults **off**. Now
+   `can_drive_a_tool_loop()`, a named predicate distinct from the send-path
+   test.
+
+3. **`/v1/oneshot` grounding.** `get_provider_class()` returns `None` for
+   every openai_compat-TYPE provider (openrouter, nvidia, a vLLM box), so
+   the gate raised and silently concluded "no endpoint record". That is most
+   of a typical fleet — but again only with `execution.run.grounding` on,
+   default **off**. Now `provider_class_for()`, resolving the way
+   `provider_ops` does.
+
+   Scope for 2 and 3: `get_effective_oneshot_path()` has exactly two callers
+   — `POST /v1/oneshot` and `/doctor`'s report line. Grep confirms zero
+   callers under `ppxai/engine/`, so `/task`, `/auto`, the chat tool loop and
+   the premium `web_search` tool never touch it.
+
+4. **The unmeasured floor claimed `chat_completions` for every provider**,
+   including one that cannot speak it. Harmless while nothing routes on
+   `wire_protocol` — and a real wire bug the moment W2 does, which is why it
+   was fixed now rather than discovered there. Now a provider-owned complete
+   floor (`unmeasured_facts`).
+
+5. **`migration_plan()` pointed operators at `providers.<p>.facts.tool_mode`**,
+   a location the resolver ignores and the misplaced scan then flags — advice
+   that leaves the operator demoted and warned. No runtime effect; the cost
+   is a wasted migration. Now pushed down per model, fenced by a property
+   test.
+
+**Migration fence:** every field of all 45 records in the example config
+resolves as it did pre-ADR, with exactly **two declared deviations**
+(Q0d) — asserted, plus a self-check that a declared deviation which stops
+deviating fails rather than silently excusing a future regression.
+
+<details>
+<summary>Original W1 plan (as written before implementation)</summary>
+
 ## W1 — two fact records, explicit and complete (ADR 0012 §2 Q0d + Q0e · ~3.5d)
 
 **Re-scoped 2026-08-30 after three failed implementations** (see Q0e). The
@@ -157,6 +241,8 @@ change, not a regression.
   `model_hints` is untouched. `/doctor` reports any section it finds.
 
 Call graphs: create `docs/provider-wire-call-graphs.md` + `graphify update .`.
+
+</details>
 
 ## W2 — extract the Responses handler + make routing consume the facts (ADR 0012 steps 1–2 · closes Item 61 · ~1.5d)
 
@@ -262,7 +348,7 @@ Audited 2026-08-30 by grep, not assumption. "User-side" = existing
 
 ## Sequencing summary
 
-    W0 ✅ DONE → W1 (two fact records, ~3.5d)
+    W0 ✅ DONE → W1 ✅ DONE
       → W2 (extract handler + routing from facts, ~1.5d)
       → W3 (Perplexity Responses, ~2d, DONE BY 09-20)
       → W4 (remaining handlers) → W5 (closeout)

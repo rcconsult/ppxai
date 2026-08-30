@@ -68,7 +68,6 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
 from ppxai.engine.providers.perplexity import (  # noqa: E402
-    PERPLEXITY_NATIVE_TOOL_MODELS,
     PERPLEXITY_TOOL_REJECTING_MODELS,
 )
 
@@ -137,12 +136,25 @@ def shipped_roster():
 
 
 def expected_verdict(model):
-    """What the shipped capability table claims for this model."""
-    if model in PERPLEXITY_NATIVE_TOOL_MODELS:
-        return NATIVE
-    if model in PERPLEXITY_TOOL_REJECTING_MODELS:
-        return REJECTS
-    return REJECTS  # table's safe default: unmeasured => assumed not capable
+    """What the SHIPPED RESOLVER claims for this model.
+
+    Reads the same resolution the send path reads, deliberately. Until ADR
+    0012 this asked `PERPLEXITY_NATIVE_TOOL_MODELS` -- a set the provider
+    consulted at the time, but which the seed glob rows now decide instead.
+    A probe that validates a table production no longer reads reports
+    agreement while the live behaviour drifts, which is exactly the
+    "declared here, decided there" shape debt Item 61 is about.
+
+    Unmeasured models resolve `prompt_based`, so they map to REJECTS -- the
+    table's safe default, unchanged.
+    """
+    return NATIVE if _resolver_says_capable(model) else REJECTS
+
+
+def _resolver_says_capable(model):
+    from ppxai.engine.model_facts import shipped_facts_for_model
+
+    return shipped_facts_for_model(model).tool_mode != "prompt_based"
 
 
 def classify(status, body):

@@ -14,9 +14,8 @@ from ..config import (
     get_base_url,
     get_coding_model,
     get_provider_config,
-    get_tool_calling_config,
 )
-from ..engine.model_profiles import get_profile, ToolCallingProfile
+from ..engine.model_facts import apply_overrides
 from .factory import CommandFactory, CommandSpec
 from .protocol import CommandContext
 from .results import (
@@ -275,7 +274,8 @@ def handle_autoroute(context: CommandContext, args: str) -> CommandResult:
 def handle_model_info(context: CommandContext, provider: str, model_id: str) -> CommandResult:
     """Handle /model info [model-id] - show effective tool calling profile.
 
-    Shows the merged profile (built-in + AGENTS.md + config) with source attribution.
+    Shows the resolved `ModelFacts` (shipped row + config) with source
+    attribution — the same answer the send path resolves.
 
     Args:
         context: Command context
@@ -285,45 +285,33 @@ def handle_model_info(context: CommandContext, provider: str, model_id: str) -> 
     Returns:
         KeyValueResult with effective profile details
     """
-    # Get built-in profile
-    builtin = get_profile(model_id)
-    builtin_tc = builtin.tool_calling
+    # ONE resolver (ADR 0012 §2 Q0e). This display used to re-implement the
+    # merge a third time — its own layer order, its own field list — which is
+    # how `api_path` came to be shown here while nothing routed on it (debt
+    # Item 61). It now reports what the send path will actually do.
+    from ..config.facts_config import model_fact_overrides
+    from ..engine.model_facts import is_unmeasured, shipped_facts_for_model
+    from ..engine.providers import get_provider_class
 
-    # Get config overrides
-    config_overrides = get_tool_calling_config(provider, model_id)
+    try:
+        provider_table = getattr(
+            get_provider_class(provider), "shipped_model_facts", {}
+        )
+    except Exception:  # noqa: BLE001 — an unknown provider still shows rows
+        provider_table = {}
 
-    # Get bootstrap overrides
-    bootstrap_overrides: dict = {}
-    bootstrap_ctx = getattr(context.engine_client, "_bootstrap_context", None) if context.engine_client else None
-    if bootstrap_ctx is not None:
-        try:
-            bootstrap_overrides = bootstrap_ctx.get_tool_calling_overrides(model_id)
-        except (AttributeError, TypeError):
-            pass
+    shipped = shipped_facts_for_model(model_id, provider_table)
+    config_overrides = model_fact_overrides(provider, model_id)
+    effective = apply_overrides(shipped, config_overrides)
+    unmeasured = is_unmeasured(model_id, provider_table)
 
-    # Build effective values with source tracking
     def _source(field: str) -> str:
         if field in config_overrides:
             return "config"
-        if field in bootstrap_overrides:
-            return "AGENTS.md"
-        return "built-in"
+        return "unmeasured" if unmeasured else "built-in"
 
-    # Compute effective values (config > bootstrap > built-in)
-    merged: dict = {}
-    merged.update({k: v for k, v in bootstrap_overrides.items()})
-    merged.update({k: v for k, v in config_overrides.items()})
-
-    eff_tc = ToolCallingProfile(
-        mode=merged.get("mode", builtin_tc.mode),
-        fallback_on_empty=merged.get("fallback_on_empty", builtin_tc.fallback_on_empty),
-        fallback_on_failure=merged.get("fallback_on_failure", builtin_tc.fallback_on_failure),
-        strip_json_from_text=merged.get("strip_json_from_text", builtin_tc.strip_json_from_text),
-        parallel_tool_calls=merged.get("parallel_tool_calls", builtin_tc.parallel_tool_calls),
-        api_path=merged.get("api_path", builtin_tc.api_path),
-    )
-    eff_max_tokens = merged.get("max_tokens", builtin.max_tokens)
-    eff_max_iters = merged.get("max_tool_iterations", builtin.max_tool_iterations)
+    def _row(field: str) -> str:
+        return "{:<20s} ({})".format(str(getattr(effective, field)), _source(field))
 
     # Count active hints
     hint_count = ""
@@ -339,17 +327,17 @@ def handle_model_info(context: CommandContext, provider: str, model_id: str) -> 
     # Format pairs
     pairs = {
         "Model": f"{model_id} ({provider})",
-        "Tier": builtin.tier or "(no profile)",
+        "Tier": effective.tier or ("(unmeasured)" if unmeasured else "(no tier)"),
         "": "",  # separator
-        "mode": f"{eff_tc.mode:<20s} ({_source('mode')})",
-        "fallback_on_empty": f"{str(eff_tc.fallback_on_empty):<20s} ({_source('fallback_on_empty')})",
-        "fallback_on_failure": f"{str(eff_tc.fallback_on_failure):<20s} ({_source('fallback_on_failure')})",
-        "strip_json_from_text": f"{str(eff_tc.strip_json_from_text):<20s} ({_source('strip_json_from_text')})",
-        "parallel_tool_calls": f"{str(eff_tc.parallel_tool_calls):<20s} ({_source('parallel_tool_calls')})",
-        "api_path": f"{eff_tc.api_path:<20s} ({_source('api_path')})",
+        "wire_protocol": _row("wire_protocol"),
+        "tool_mode": _row("tool_mode"),
+        "fallback_on_empty": _row("fallback_on_empty"),
+        "fallback_on_failure": _row("fallback_on_failure"),
+        "strip_json_from_text": _row("strip_json_from_text"),
+        "parallel_tool_calls": _row("parallel_tool_calls"),
         " ": "",  # separator
-        "max_tokens": f"{eff_max_tokens:<20} ({_source('max_tokens')})",
-        "max_tool_iterations": f"{eff_max_iters:<20} ({_source('max_tool_iterations')})",
+        "max_tokens": _row("max_tokens"),
+        "max_tool_iterations": _row("max_tool_iterations"),
     }
 
     if hint_count:

@@ -1028,6 +1028,18 @@ an operator override changes the outgoing request.
 and the profile wrong?). Each row is a decision to make deliberately, not a
 value to copy from one side to the other.
 
+**W1 progress (2026-08-30) — STILL OPEN.** ADR 0012's W1 replaced
+`api_path` with `ModelFacts.wire_protocol`, so the field is now resolved
+through one path and displayed by `/provider` from that same resolution
+(the display previously re-implemented the merge, which is how it came to
+show a value nothing routed on). **Routing still does not read it** —
+`openai_native` keeps its three `_is_responses_api_model()` branches. The
+item closes in **W2**, which moves those branches onto the resolved fact.
+One design correction landed on the way: an unlisted model on a provider
+that cannot speak `chat_completions` needed a provider-owned floor
+(`BaseProvider.unmeasured_facts`), or W2 would route unlisted Gemini models
+to a handler that does not exist.
+
 ---
 
 ### Item 62 — ADR 0006's wire validator covers only ONE of three protocols; `_convert_messages` is one protocol's emitter in the shared base [providers / multimodal]
@@ -1066,6 +1078,13 @@ and the validator travels with it, covering all protocols. If ADR 0012 is
 not taken, (a) is independently fixable by calling the validator in the
 other two converters — cheap, and worth doing regardless.
 
+**W1 progress (2026-08-30) — STILL OPEN, untouched.** W1 unified the
+per-model *fact* system; it did not move any message conversion, so both
+(a) and (b) are exactly as filed. The item closes in **W4**, after W2
+establishes the `wire/` handler package the converters move into. W1 does
+supply the prerequisite: `wire_protocol` is now resolved per model, so a
+handler can be selected at all.
+
 ---
 
 ### Item 63 — benchmark conclusions are hand-typed into code, unlinked and unchecked [benchmarks / providers]
@@ -1082,7 +1101,7 @@ code by a human retyping them:
     #   gpt-4.1-mini: 60.9% native → 71.9% prompt-based (hybrid tool_json_in_content)
     PROMPT_BASED_MODEL_PREFIXES = ("o4-mini", "gpt-4.1-mini")
 
-(`openai_native.py:50-52`.) A measured conclusion as a comment above a
+(`openai_native.py:53-55`.) A measured conclusion as a comment above a
 hardcoded tuple: nothing links it to the run, nothing rechecks it, nothing
 fails when it rots. **Same shape as Item 61**, which is the defect ADR 0012
 exists to remove — a fact declared in one place and verified by nobody.

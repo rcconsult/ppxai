@@ -77,7 +77,6 @@ from .providers import (
     get_generation_params,
     get_extra_body,
     get_reasoning_trigger,
-    get_tool_calling_config,
 )
 
 # Execution surfaces (ADR 0010 third axis; ADR 0011 one-off tier)
@@ -330,7 +329,6 @@ __all__ = [
     # In-prompt reasoning trigger (v1.18.3) — e.g. nemotron's /think convention
     "get_reasoning_trigger",
     # Tool calling config (v1.16.0)
-    "get_tool_calling_config",
     # Bootstrap functions (v1.14.0)
     "DEFAULT_BOOTSTRAP_FILES",
     "get_bootstrap_config",

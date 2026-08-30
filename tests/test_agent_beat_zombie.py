@@ -27,19 +27,28 @@ from ppxai.engine.types import (
     Message,
     ProviderCapabilities,
 )
-from ppxai.engine.model_profiles import ModelProfile, ToolCallingProfile
+from ppxai.engine.model_facts import ModelFacts
 
 
 class MockProvider:
     def __init__(self, capabilities=None, scripted=None):
         self.capabilities = capabilities or ProviderCapabilities(
-            native_tool_calling=True,
         )
         self._scripts = scripted or []
         self._idx = 0
 
-    def get_capabilities_for_model(self, _model):
+    def get_capabilities(self):
+
         return self.capabilities
+
+
+    def get_facts_for_model(self, _model):
+
+        return getattr(self, 'facts', None) or ModelFacts(
+
+            tool_mode="native"
+
+        )
 
     async def chat(self, messages, model, stream=False, tools=None):
         events = self._scripts[min(self._idx, len(self._scripts) - 1)]
@@ -158,11 +167,8 @@ class TestZombieDetectionAtDefaultThreshold:
         ctx = MockChatContext(provider=provider, tool_manager=tm)
         ctx.session.add_message(Message("user", "try"))
 
-        with patch("ppxai.engine.chat.get_profile") as mock_profile, \
-             patch("ppxai.engine.chat._get_zombie_threshold") as mock_threshold:
-            mock_profile.return_value = ModelProfile(
-                tool_calling=ToolCallingProfile(mode="native"),
-            )
+        provider.facts = ModelFacts(tool_mode="native")
+        with patch("ppxai.engine.chat._get_zombie_threshold") as mock_threshold:
             mock_threshold.return_value = 3
             events = await _collect(ctx)
 
@@ -190,11 +196,8 @@ class TestZombieDetectionAtDefaultThreshold:
         ctx = MockChatContext(provider=provider, tool_manager=tm)
         ctx.session.add_message(Message("user", "retry"))
 
-        with patch("ppxai.engine.chat.get_profile") as mock_profile, \
-             patch("ppxai.engine.chat._get_zombie_threshold") as mock_threshold:
-            mock_profile.return_value = ModelProfile(
-                tool_calling=ToolCallingProfile(mode="native"),
-            )
+        provider.facts = ModelFacts(tool_mode="native")
+        with patch("ppxai.engine.chat._get_zombie_threshold") as mock_threshold:
             mock_threshold.return_value = 3
             events = await _collect(ctx)
 
@@ -228,11 +231,8 @@ class TestZombieDetectionAtDefaultThreshold:
         ctx = MockChatContext(provider=provider, tool_manager=tm)
         ctx.session.add_message(Message("user", "retry"))
 
-        with patch("ppxai.engine.chat.get_profile") as mock_profile, \
-             patch("ppxai.engine.chat._get_zombie_threshold") as mock_threshold:
-            mock_profile.return_value = ModelProfile(
-                tool_calling=ToolCallingProfile(mode="native"),
-            )
+        provider.facts = ModelFacts(tool_mode="native")
+        with patch("ppxai.engine.chat._get_zombie_threshold") as mock_threshold:
             mock_threshold.return_value = 3
             events = await _collect(ctx)
 
@@ -267,11 +267,8 @@ class TestZombieDetectionResetsOnSuccess:
         ctx = MockChatContext(provider=provider, tool_manager=tm)
         ctx.session.add_message(Message("user", "long recovery"))
 
-        with patch("ppxai.engine.chat.get_profile") as mock_profile, \
-             patch("ppxai.engine.chat._get_zombie_threshold") as mock_threshold:
-            mock_profile.return_value = ModelProfile(
-                tool_calling=ToolCallingProfile(mode="native"),
-            )
+        provider.facts = ModelFacts(tool_mode="native")
+        with patch("ppxai.engine.chat._get_zombie_threshold") as mock_threshold:
             mock_threshold.return_value = 3
             events = await _collect(ctx)
 
@@ -306,11 +303,8 @@ class TestZombieThresholdZeroDisables:
         ctx = MockChatContext(provider=provider, tool_manager=tm)
         ctx.session.add_message(Message("user", "retry"))
 
-        with patch("ppxai.engine.chat.get_profile") as mock_profile, \
-             patch("ppxai.engine.chat._get_zombie_threshold") as mock_threshold:
-            mock_profile.return_value = ModelProfile(
-                tool_calling=ToolCallingProfile(mode="native"),
-            )
+        provider.facts = ModelFacts(tool_mode="native")
+        with patch("ppxai.engine.chat._get_zombie_threshold") as mock_threshold:
             mock_threshold.return_value = 0
             events = await _collect(ctx)
 
@@ -338,11 +332,8 @@ class TestZombieThresholdFromConfig:
         ctx = MockChatContext(provider=provider, tool_manager=tm)
         ctx.session.add_message(Message("user", "retry"))
 
-        with patch("ppxai.engine.chat.get_profile") as mock_profile, \
-             patch("ppxai.engine.chat._get_zombie_threshold") as mock_threshold:
-            mock_profile.return_value = ModelProfile(
-                tool_calling=ToolCallingProfile(mode="native"),
-            )
+        provider.facts = ModelFacts(tool_mode="native")
+        with patch("ppxai.engine.chat._get_zombie_threshold") as mock_threshold:
             mock_threshold.return_value = 2
             events = await _collect(ctx)
 
@@ -441,11 +432,8 @@ class TestEveryExitYieldsStreamEnd:
         ctx = MockChatContext(provider=provider, tool_manager=tm)
         ctx.session.add_message(Message("user", "retry"))
 
-        with patch("ppxai.engine.chat.get_profile") as mock_profile, \
-             patch("ppxai.engine.chat._get_zombie_threshold") as mock_threshold:
-            mock_profile.return_value = ModelProfile(
-                tool_calling=ToolCallingProfile(mode="native"),
-            )
+        provider.facts = ModelFacts(tool_mode="native")
+        with patch("ppxai.engine.chat._get_zombie_threshold") as mock_threshold:
             mock_threshold.return_value = 3
             events = await _collect(ctx)
 
@@ -470,11 +458,8 @@ class TestEveryExitYieldsStreamEnd:
         ctx = MockChatContext(provider=provider, tool_manager=tm)
         ctx.session.add_message(Message("user", "loop"))
 
-        with patch("ppxai.engine.chat.get_profile") as mock_profile, \
-             patch("ppxai.engine.chat._get_zombie_threshold") as mock_threshold:
-            mock_profile.return_value = ModelProfile(
-                tool_calling=ToolCallingProfile(mode="native"),
-            )
+        provider.facts = ModelFacts(tool_mode="native")
+        with patch("ppxai.engine.chat._get_zombie_threshold") as mock_threshold:
             mock_threshold.return_value = 0
             events = await _collect(ctx)
 

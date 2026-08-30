@@ -57,6 +57,128 @@ because that fallback is what produced the confabulated results.
 uses Perplexity's Jobs API, not chat completions, so it was never usable
 on the endpoint ppxai calls.
 
+### Changed (BREAKING — ADR 0012) — one per-model fact system, `facts` in config
+
+> ⚠️ **`ppxai-config.json` capability keys moved, no dual-read.** The
+> `capabilities` and `tool_calling` blocks are replaced by **`facts`**, and
+> a config left at the old keys is **silently ignored**. Run **`/doctor`**:
+> it prints the exact old→new mapping, names every partial, misplaced or
+> mistyped block, and generates the complete record to paste in. The
+> shipped `ppxai-config.example.json` ships migrated. **No API change** —
+> `/v1/oneshot` and `/v1/agent/*` keep their exact paths and shapes.
+
+ppxai answered per-model questions with **two** parallel systems —
+`ProviderCapabilities` (6 booleans, per provider) and `ModelProfile` /
+`ToolCallingProfile` (65 globs, per model) — each with its own table, its
+own config keys, its own merge site and its own precedence order. They
+overlapped on the question that matters most, `native_tool_calling` versus
+`tool_calling.mode`, and **debt Item 43's Layer-2 bug lived exactly in that
+seam**: `chat.py` checked `mode` first and short-circuited, so a capability
+resolving native never reached the wire.
+
+Three attempts to arbitrate the overlap failed in a row — the last
+resolving `sonar` to `native`, reopening Item 43 on the very model that
+produced it. The root cause was needing arbitration at all: provider and
+model were modelled as two *levels of the same fields*. The measurement
+says the domain does not work that way (shipped example config, all 10
+providers): endpoint abilities are stated **10× per provider and 0× per
+model**, because they are facts about the *service*.
+
+So the records are now **disjoint**:
+
+- **`ProviderCapabilities`** — what the ENDPOINT does (`web_search`,
+  `web_fetch`, `weather`, `citations`, `streaming`), reached by
+  `get_capabilities()`, which takes **no model argument**.
+- **`ModelFacts`** — what a MODEL does (`wire_protocol`, `tool_mode`,
+  fallbacks, limits, vision, `restricted_params`, `tier`), reached by
+  `get_facts_for_model(model)`.
+
+No field appears on both, so a provider block cannot state a model fact and
+a model block cannot state an endpoint fact — **there is nothing to
+arbitrate**, and the Item 43 regression becomes structurally impossible
+rather than merely tested against. `native_tool_calling` is **deleted**,
+not aliased (two spellings of one answer is how the seam bug survived
+review); call sites ask `facts.tool_mode != "prompt_based"`.
+
+Deleted rather than wrapped: `config/capabilities.py`,
+`get_tool_calling_config()`, `chat.get_effective_profile()`,
+`shipped_capabilities_for_model()`, and the AGENTS.md `tool_calling`
+parser (measured: zero users across three checkouts). Benchmark tuning
+gets a defined home instead — see debt Item 63.
+
+**Two declared behaviour changes**, both fenced in
+`tests/test_adr0012_migration_fence.py`; any other difference from
+pre-ADR behaviour is a regression:
+
+1. **An unstated endpoint field takes the class default.** `provider_ops`
+   built the deployed record with `ProviderCapabilities.from_dict()`, so a
+   config `capabilities` block **replaced** the class record and any field
+   it omitted fell to `False`. Perplexity's `citations` was `false` in
+   every deployment despite the provider declaring `True`. The rule is now
+   uniform for both records: shipped row, then stated overrides.
+2. **`tool_mode` defaults to `prompt_based` for an unmeasured model.**
+   `ToolCallingProfile.mode` defaulted to `native` while
+   `native_tool_calling` defaulted to `False` — two systems, opposite
+   assumptions. Unifying on the permissive one would have made every model
+   absent from both tables tool-capable, silently, through the task-tier
+   gate and oneshot enrichment. A model that degrades is recoverable; one
+   that answers HTTP 400 is not.
+
+### Fixed (latent) — `supports_vision` was dropped by any config override
+
+`chat.get_effective_profile()` rebuilt `ModelProfile` field by field
+whenever an override layer was present and **omitted `supports_vision`**,
+so its return value reported `False` for a vision-capable model whenever a
+config override of an unrelated field (a `max_tokens`, a
+`fallback_on_empty`) existed.
+
+**No user-visible symptom** — the wrong value never reached an image
+decision. `get_effective_profile()` had exactly one caller, which read only
+the tool-loop fields; every vision reader (`file_preprocessing`, the
+`model_supports_vision` AppState field, the `/attach` warning) calls
+`model_profiles.supports_vision()` directly, which was unaffected. This was
+a trap waiting for the next caller, not a shipped regression. A `replace()`
+on a frozen record cannot lose a field, so the shape is gone rather than
+patched.
+
+### Fixed — `/provider model info` reported routing nothing acted on
+
+The display re-implemented the capability merge a third time, with its own
+layer order and field list — which is how `api_path` came to be shown to
+operators while **nothing routed on it** (debt Item 61). It now reports the
+resolved `ModelFacts` the send path will actually use, labels each field's
+source (`config` / `built-in` / `unmeasured`), and shows `wire_protocol`
+in place of the retired `api_path`.
+
+The refusal message for a tool-incapable model had the same shape: it named
+models from a per-provider constant the router no longer consulted, and was
+**empty for every provider except Perplexity**. It is now derived from the
+same resolution the guard used, so the suggestion cannot drift from the
+decision and every provider gets one.
+
+### Fixed (latent, opt-in path) — two defects in the `/v1/oneshot` enrichment gate
+
+Both live in `get_effective_oneshot_path()`, whose only callers are
+`POST /v1/oneshot` and `/doctor`'s report line — `/task`, `/auto`, the chat
+tool loop and the premium `web_search` tool do not consult it. Both
+enrichment switches (`execution.run.grounding`, `execution.run.web_search`)
+default **off**, so neither defect was reachable without opting in; with
+both off the gate answers `closed-book` and the wire is unchanged.
+
+- **Prompt-based models were denied the search loop.** The gate asked the
+  send-path question (`tool_mode != "prompt_based"` — "attach a native
+  tools array?") instead of its own ("can this model drive a tool loop at
+  all?"). Prompt-based tool calling *is* tool calling — `chat.py` parses
+  the JSON out of the response text — so `o4-mini`, `gpt-4.1-mini`, `sonar`
+  and every local model fell to closed-book with enrichment on. Now
+  `can_drive_a_tool_loop()`, a named predicate distinct from the send-path
+  test.
+- **openai_compat-TYPE providers were denied native grounding.**
+  `get_provider_class()` returns `None` for every provider configured by
+  name rather than registered (openrouter, nvidia, a vLLM box, an Ollama
+  host), so the gate raised and silently concluded "no endpoint record".
+  Now resolved the way `provider_ops` does, via `provider_class_for()`.
+
 ### Added — `network.ssl.*` config, and one resolver for outbound TLS
 
 TLS verification could previously be configured only through the

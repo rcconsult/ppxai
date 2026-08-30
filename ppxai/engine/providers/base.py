@@ -14,6 +14,7 @@ import httpx
 import openai
 from openai import OpenAI
 
+from ..model_facts import ModelFacts, shipped_facts_for_model
 from ..model_profiles import ModelProfile, get_profile
 from ..types import Message, Event, EventType, ProviderCapabilities, ModelInfo, UsageStats
 from ..uploaded_file import flatten_uploaded_file_blocks, assert_wire_blocks_clean
@@ -38,6 +39,28 @@ class BaseProvider(ABC):
     # Class attributes to be overridden
     name: str = "base"
     default_capabilities: ProviderCapabilities = ProviderCapabilities()
+
+    #: This provider's own per-model rows, `{model_or_glob: ModelFacts}`,
+    #: consulted BEFORE the global shipped table (ADR 0012 §2 Q0e).
+    #:
+    #: The provider dimension exists because one model id is not one model:
+    #: `anthropic/claude-sonnet-5` is reached over `responses` on Perplexity
+    #: and `chat_completions` on OpenRouter, so its `wire_protocol` has no
+    #: single correct global value. Rows here are complete records and win
+    #: whole — there is no field-level merge against the global table.
+    shipped_model_facts: Dict[str, ModelFacts] = {}
+
+    #: The floor for a model no table names, when the GLOBAL floor would be
+    #: wrong for this provider (ADR 0012 §2 Q0e). A COMPLETE record, chosen
+    #: whole — never merged field-by-field, so there is still nothing to
+    #: arbitrate.
+    #:
+    #: `None` means the global `UNMEASURED` applies, which is right for
+    #: every provider that speaks `chat_completions`. `GeminiProvider`
+    #: overrides it because it can ONLY speak `generate_content`: routing an
+    #: unlisted Gemini model to a chat-completions handler is not a
+    #: conservative default, it is a wire the provider does not have.
+    unmeasured_facts: Optional[ModelFacts] = None
 
     def __init__(
         self,
@@ -206,53 +229,82 @@ class BaseProvider(ABC):
         """
         return get_profile(model)
 
-    def shipped_capabilities_for_model(self, model: str) -> ProviderCapabilities:
-        """What THIS provider's own code says about `model` (plan layers 3-4).
+    def get_capabilities(self) -> ProviderCapabilities:
+        """What this ENDPOINT can do, with operator config applied.
 
-        Override this, not `get_capabilities_for_model`. The default returns
-        `self.capabilities` unchanged; providers with a mixed fleet return a
-        per-model answer (see `OpenAINativeProvider`, whose benchmark table
-        marks o4-mini / gpt-4.1-mini prompt-based).
+        `ProviderCapabilities` is a statement about the *service* — built-in
+        search, fetch, weather, citations, streaming — so it takes no model
+        argument (ADR 0012 §2 Q0e). Measured across the shipped example
+        config, every one of these fields is stated per provider and none is
+        stated per model, because no model changes whether the endpoint it
+        sits behind has a search index.
 
-        Split from the public accessor so operator config can sit ABOVE every
-        provider without each one remembering to consult it — a subclass that
-        overrode the public method would otherwise silently drop the config
-        layers, which is the same "override bypasses the shared path" shape
-        that made the per-model hook unreachable in the first place.
-
-        Args:
-            model: Model ID (e.g., "gpt-5.2", "o4-mini")
+        The per-model half of the old signature moved to
+        :meth:`get_facts_for_model`, which answers a disjoint set of
+        questions. Nothing can be asked of both.
 
         Returns:
-            ProviderCapabilities as shipped, before operator overrides
+            ProviderCapabilities for this provider
         """
-        return self.capabilities
-
-    def get_capabilities_for_model(self, model: str) -> ProviderCapabilities:
-        """Effective capabilities for `model` — the accessor callers use.
-
-        Applies operator config (`providers.<p>.capabilities` and
-        `providers.<p>.models.<m>.capabilities`) on top of whatever
-        `shipped_capabilities_for_model` returned. With no config stated this
-        returns the shipped value unchanged, so behaviour is identical for
-        every existing install.
-
-        Args:
-            model: Model ID (e.g., "gpt-5.2", "o4-mini")
-
-        Returns:
-            ProviderCapabilities for the model
-        """
-        base = self.shipped_capabilities_for_model(model)
         provider_key = self.provider_id or self.name
         if not provider_key:
-            return base
+            return self.capabilities
         try:
-            from ...config.capabilities import apply_capability_overrides
+            from ...config.facts_config import apply_provider_overrides
 
-            return apply_capability_overrides(base, provider_key, model)
+            return apply_provider_overrides(self.capabilities, provider_key)
         except Exception:  # noqa: BLE001 — config must never break a request
-            return base
+            return self.capabilities
+
+    def shipped_facts_for_model(self, model: str) -> ModelFacts:
+        """What THIS provider's own code says about `model`.
+
+        Override this, not `get_facts_for_model`. The default consults the
+        shipped table, which is where a provider's benchmark-derived rows
+        live; a provider overrides only when it knows something the table
+        cannot express.
+
+        Split from the public accessor so operator config sits ABOVE every
+        provider without each one remembering to consult it — a subclass that
+        overrode the public method would otherwise silently drop the config
+        layer, the same "override bypasses the shared path" shape that made
+        the per-model hook unreachable in the first place (plan I1).
+
+        Args:
+            model: Model ID (e.g., "gpt-5.2", "o4-mini")
+
+        Returns:
+            ModelFacts as shipped, before operator overrides
+        """
+        return shipped_facts_for_model(
+            model, self.shipped_model_facts, self.unmeasured_facts
+        )
+
+    def get_facts_for_model(self, model: str) -> ModelFacts:
+        """Effective per-model facts — the accessor callers use.
+
+        Two rungs and no arbitration (ADR 0012 §2 Q0e): the shipped row, then
+        `providers.<p>.models.<m>.facts`. A provider-level block cannot reach
+        this result, because none of these fields is a provider field — which
+        is precisely what makes the debt Item 43 regression structurally
+        impossible rather than merely tested-against.
+
+        Args:
+            model: Model ID (e.g., "gpt-5.2", "o4-mini")
+
+        Returns:
+            ModelFacts for the model
+        """
+        shipped = self.shipped_facts_for_model(model)
+        provider_key = self.provider_id or self.name
+        if not provider_key:
+            return shipped
+        try:
+            from ...config.facts_config import resolve_model_facts
+
+            return resolve_model_facts(shipped, provider_key, model)
+        except Exception:  # noqa: BLE001 — config must never break a request
+            return shipped
 
     def _get_generation_params(self, model: str) -> Dict[str, Any]:
         """Get generation parameters (temperature, top_p, etc.) from config.

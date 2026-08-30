@@ -114,13 +114,41 @@
             "top_p": 0.85,
             "max_tokens": 2048,
             "frequency_penalty": 0.2
+          },
+          "facts": {
+            "tool_mode": "prompt_based",
+            "fallback_on_empty": false,
+            "fallback_on_failure": false,
+            "strip_json_from_text": false,
+            "parallel_tool_calls": false,
+            "wire_protocol": "chat_completions",
+            "max_tokens": 2048,
+            "max_tool_iterations": 20,
+            "supports_reasoning": false,
+            "supports_vision": true,
+            "restricted_params": [],
+            "tier": "B"
           }
         },
         "sonar-pro": {
           "name": "Sonar Pro",
           "description": "Advanced search model for complex queries",
           "context_limit": 200000,
-          "__comment_best_for": "Complex refactoring, multi-file changes, architecture decisions, code review, debugging. Best all-around model for agentic coding tasks (73.4% benchmark)."
+          "__comment_best_for": "Complex refactoring, multi-file changes, architecture decisions, code review, debugging. Best all-around model for agentic coding tasks (73.4% benchmark).",
+          "facts": {
+            "tool_mode": "auto",
+            "fallback_on_empty": false,
+            "fallback_on_failure": false,
+            "strip_json_from_text": false,
+            "parallel_tool_calls": false,
+            "wire_protocol": "chat_completions",
+            "max_tokens": 8192,
+            "max_tool_iterations": 20,
+            "supports_reasoning": false,
+            "supports_vision": true,
+            "restricted_params": [],
+            "tier": "A"
+          }
         },
         "sonar-reasoning-pro": {
           "name": "Sonar Reasoning Pro",
@@ -132,6 +160,20 @@
             "top_p": 0.9,
             "max_tokens": 12288,
             "frequency_penalty": 0.15
+          },
+          "facts": {
+            "tool_mode": "auto",
+            "fallback_on_empty": false,
+            "fallback_on_failure": false,
+            "strip_json_from_text": false,
+            "parallel_tool_calls": false,
+            "wire_protocol": "chat_completions",
+            "max_tokens": 12288,
+            "max_tool_iterations": 0,
+            "supports_reasoning": true,
+            "supports_vision": false,
+            "restricted_params": [],
+            "tier": "C"
           }
         }
       },
@@ -149,13 +191,12 @@
           "output": 8
         }
       },
-      "capabilities": {
+      "facts": {
         "web_search": true,
         "web_fetch": true,
         "weather": true,
-        "realtime_info": true,
-        "native_tool_calling": false,
-        "__comment_native_tool_calling": "Perplexity Sonar models do NOT support native function calling - ppxai uses prompt-based tool calling as fallback"
+        "citations": true,
+        "streaming": true
       }
     },
     "gemini": {
@@ -180,32 +221,102 @@
         "gemini-3.1-pro-preview": {
           "name": "Gemini 3.1 Pro Preview",
           "description": "Advanced reasoning and agentic model with 1M context. SWE-Bench 80.6%, GPQA Diamond 94.3%.",
-          "context_limit": 1000000
+          "context_limit": 1000000,
+          "facts": {
+            "tool_mode": "native",
+            "fallback_on_empty": false,
+            "fallback_on_failure": false,
+            "strip_json_from_text": true,
+            "parallel_tool_calls": false,
+            "wire_protocol": "chat_completions",
+            "max_tokens": 65536,
+            "max_tool_iterations": 20,
+            "supports_reasoning": false,
+            "supports_vision": true,
+            "restricted_params": [],
+            "tier": "A"
+          }
         },
         "gemini-3.1-flash-lite": {
           "name": "Gemini 3.1 Flash Lite",
           "description": "Cheapest Gemini 3 tier with text + image + video input. Replaces gemini-2.5-flash-lite. GA as of 2026-05; preview alias retires 2026-05-25.",
           "context_limit": 1000000,
-          "__comment_best_for": "High-volume, cost-sensitive workloads where full Gemini 3 Pro isn't needed."
+          "__comment_best_for": "High-volume, cost-sensitive workloads where full Gemini 3 Pro isn't needed.",
+          "facts": {
+            "tool_mode": "native",
+            "fallback_on_empty": true,
+            "fallback_on_failure": true,
+            "strip_json_from_text": false,
+            "parallel_tool_calls": false,
+            "wire_protocol": "chat_completions",
+            "max_tokens": 16384,
+            "max_tool_iterations": 15,
+            "supports_reasoning": false,
+            "supports_vision": true,
+            "restricted_params": [],
+            "tier": "B"
+          }
         },
         "gemma-4-31b-it": {
           "name": "Gemma 4 31B (Dense)",
           "description": "Dense 31B open-weights instruct model with text + vision, 256K context. Served via Gemini API (same API key) or self-hosted.",
           "context_limit": 262144,
-          "__comment_best_for": "Open-weights workloads needing vision support. Free tier via Gemini API."
+          "__comment_best_for": "Open-weights workloads needing vision support. Free tier via Gemini API.",
+          "facts": {
+            "tool_mode": "native",
+            "fallback_on_empty": true,
+            "fallback_on_failure": false,
+            "strip_json_from_text": false,
+            "parallel_tool_calls": false,
+            "wire_protocol": "chat_completions",
+            "max_tokens": 32768,
+            "max_tool_iterations": 20,
+            "supports_reasoning": false,
+            "supports_vision": true,
+            "restricted_params": [],
+            "tier": "B"
+          }
         },
         "gemma-4-26b-a4b-it": {
           "name": "Gemma 4 26B (MoE)",
           "description": "Mixture-of-Experts 26B (3.8B active) with text + vision, 256K context. Faster inference than 31B dense for similar quality.",
           "context_limit": 262144,
-          "__comment_best_for": "Workloads benefiting from MoE efficiency — lower latency per token with 3.8B active parameters."
+          "__comment_best_for": "Workloads benefiting from MoE efficiency — lower latency per token with 3.8B active parameters.",
+          "facts": {
+            "tool_mode": "native",
+            "fallback_on_empty": true,
+            "fallback_on_failure": false,
+            "strip_json_from_text": false,
+            "parallel_tool_calls": false,
+            "wire_protocol": "chat_completions",
+            "max_tokens": 32768,
+            "max_tool_iterations": 20,
+            "supports_reasoning": false,
+            "supports_vision": true,
+            "restricted_params": [],
+            "tier": "B"
+          }
         },
         "gemini-3.5-flash": {
           "name": "Gemini 3.5 Flash",
           "description": "Google's newest GA flash model (2026) — most intelligent flash tier for agentic and coding tasks. Supersedes gemini-3-flash-preview. 1M context, text + image + video input.",
           "context_limit": 1048576,
           "__comment_best_for": "Recommended default. Everyday coding, editing, agentic tool loops.",
-          "__comment_benchmark_status": "NOT YET BENCHMARKED — profile cloned from gemini-3-flash (Tier S). Run benchmarks/llm-eval before tuning."
+          "__comment_benchmark_status": "NOT YET BENCHMARKED — profile cloned from gemini-3-flash (Tier S). Run benchmarks/llm-eval before tuning.",
+          "facts": {
+            "tool_mode": "native",
+            "fallback_on_empty": true,
+            "fallback_on_failure": false,
+            "strip_json_from_text": true,
+            "parallel_tool_calls": false,
+            "wire_protocol": "chat_completions",
+            "max_tokens": 65536,
+            "max_tool_iterations": 25,
+            "supports_reasoning": false,
+            "supports_vision": true,
+            "restricted_params": [],
+            "tier": "S"
+          }
         }
       },
       "pricing": {
@@ -233,14 +344,12 @@
           "__comment": "approximate — verify against current Gemini pricing"
         }
       },
-      "capabilities": {
+      "facts": {
         "web_search": true,
         "web_fetch": true,
         "weather": true,
-        "realtime_info": true,
         "citations": true,
-        "native_tool_calling": true,
-        "__comment_native_tool_calling": "Gemini supports native function calling"
+        "streaming": true
       }
     },
     "openai": {
@@ -269,21 +378,72 @@
           "description": "Newest OpenAI flagship (released 2026-04-23). 1M context, $5/$30 per MTok — 2× the price of GPT-5.4. First fully retrained base since GPT-4.5.",
           "context_limit": 1048576,
           "__comment_best_for": "Hardest reasoning, novel algorithm design, long-context refactors. Expensive — prefer gpt-5.4-mini for everyday work.",
-          "__comment_benchmark_status": "NOT YET BENCHMARKED — hints cloned from gpt-5.4 as starting point. Run benchmarks/llm-eval before tuning."
+          "__comment_benchmark_status": "NOT YET BENCHMARKED — hints cloned from gpt-5.4 as starting point. Run benchmarks/llm-eval before tuning.",
+          "facts": {
+            "tool_mode": "native",
+            "fallback_on_empty": false,
+            "fallback_on_failure": false,
+            "strip_json_from_text": true,
+            "parallel_tool_calls": true,
+            "wire_protocol": "chat_completions",
+            "max_tokens": 128000,
+            "max_tool_iterations": 0,
+            "supports_reasoning": false,
+            "supports_vision": true,
+            "restricted_params": [
+              "temperature",
+              "top_p"
+            ],
+            "tier": "A"
+          }
         },
         "gpt-5.5-pro": {
           "name": "GPT-5.5 Pro",
           "description": "Premium tier of GPT-5.5 (released 2026-04-23). $30/$180 per MTok — highest available capability.",
           "context_limit": 1048576,
           "__comment_best_for": "Critical code review, ADR drafting, multi-day investigation work. ~6× the cost of gpt-5.4-pro.",
-          "__comment_benchmark_status": "NOT YET BENCHMARKED — likely cost-prohibitive for the 36-test suite (~$15-20 per run)."
+          "__comment_benchmark_status": "NOT YET BENCHMARKED — likely cost-prohibitive for the 36-test suite (~$15-20 per run).",
+          "facts": {
+            "tool_mode": "native",
+            "fallback_on_empty": false,
+            "fallback_on_failure": false,
+            "strip_json_from_text": true,
+            "parallel_tool_calls": true,
+            "wire_protocol": "chat_completions",
+            "max_tokens": 128000,
+            "max_tool_iterations": 0,
+            "supports_reasoning": false,
+            "supports_vision": true,
+            "restricted_params": [
+              "temperature",
+              "top_p"
+            ],
+            "tier": "A"
+          }
         },
         "gpt-5.4": {
           "name": "GPT-5.4",
           "description": "Current flagship (released 2026-03-05). 1M context, 75% computer use benchmark, best overall intelligence.",
           "context_limit": 1048576,
           "__comment_best_for": "Complex refactoring, architecture decisions, multi-file changes, agentic workflows with browser/computer use.",
-          "__comment_benchmark_status": "NOT YET BENCHMARKED by ppxai — using stub hints from gpt-5.2*. Refine after running benchmarks/llm-eval."
+          "__comment_benchmark_status": "NOT YET BENCHMARKED by ppxai — using stub hints from gpt-5.2*. Refine after running benchmarks/llm-eval.",
+          "facts": {
+            "tool_mode": "native",
+            "fallback_on_empty": false,
+            "fallback_on_failure": false,
+            "strip_json_from_text": true,
+            "parallel_tool_calls": true,
+            "wire_protocol": "chat_completions",
+            "max_tokens": 128000,
+            "max_tool_iterations": 0,
+            "supports_reasoning": false,
+            "supports_vision": true,
+            "restricted_params": [
+              "temperature",
+              "top_p"
+            ],
+            "tier": "A"
+          }
         },
         "gpt-5.4-pro": {
           "name": "GPT-5.4 Pro",
@@ -294,6 +454,23 @@
           "generation_params": {
             "temperature": 0.1,
             "max_tokens": 16384
+          },
+          "facts": {
+            "tool_mode": "native",
+            "fallback_on_empty": false,
+            "fallback_on_failure": false,
+            "strip_json_from_text": true,
+            "parallel_tool_calls": true,
+            "wire_protocol": "chat_completions",
+            "max_tokens": 128000,
+            "max_tool_iterations": 0,
+            "supports_reasoning": false,
+            "supports_vision": true,
+            "restricted_params": [
+              "temperature",
+              "top_p"
+            ],
+            "tier": "A"
           }
         },
         "gpt-5.4-mini": {
@@ -301,7 +478,21 @@
           "description": "Newest small model (released 2026-03-17). 400K context, $0.75/$4.50 per MTok. OpenAI's 'most capable small model yet'.",
           "context_limit": 400000,
           "__comment_best_for": "Everyday coding, edits, explanations at lower cost than full GPT-5.4. Good price/performance sweet spot.",
-          "__comment_benchmark_status": "NOT YET BENCHMARKED — using stub hints. Refine after benchmark run."
+          "__comment_benchmark_status": "NOT YET BENCHMARKED — using stub hints. Refine after benchmark run.",
+          "facts": {
+            "tool_mode": "native",
+            "fallback_on_empty": true,
+            "fallback_on_failure": false,
+            "strip_json_from_text": true,
+            "parallel_tool_calls": false,
+            "wire_protocol": "chat_completions",
+            "max_tokens": 128000,
+            "max_tool_iterations": 0,
+            "supports_reasoning": false,
+            "supports_vision": true,
+            "restricted_params": [],
+            "tier": "A"
+          }
         },
         "gpt-5.4-nano": {
           "name": "GPT-5.4 Nano",
@@ -311,6 +502,23 @@
           "__comment_benchmark_status": "NOT YET BENCHMARKED — using stub hints. Refine after benchmark run.",
           "generation_params": {
             "max_tokens": 8192
+          },
+          "facts": {
+            "tool_mode": "native",
+            "fallback_on_empty": false,
+            "fallback_on_failure": false,
+            "strip_json_from_text": true,
+            "parallel_tool_calls": true,
+            "wire_protocol": "chat_completions",
+            "max_tokens": 128000,
+            "max_tool_iterations": 0,
+            "supports_reasoning": false,
+            "supports_vision": true,
+            "restricted_params": [
+              "temperature",
+              "top_p"
+            ],
+            "tier": "A"
           }
         },
         "gpt-5.3-codex": {
@@ -320,6 +528,23 @@
           "__comment_best_for": "Long-horizon agentic coding sessions, multi-file refactors with extensive tool chains.",
           "generation_params": {
             "max_tokens": 16384
+          },
+          "facts": {
+            "tool_mode": "native",
+            "fallback_on_empty": true,
+            "fallback_on_failure": false,
+            "strip_json_from_text": true,
+            "parallel_tool_calls": false,
+            "wire_protocol": "responses",
+            "max_tokens": 128000,
+            "max_tool_iterations": 20,
+            "supports_reasoning": false,
+            "supports_vision": true,
+            "restricted_params": [
+              "temperature",
+              "top_p"
+            ],
+            "tier": "A"
           }
         }
       },
@@ -357,13 +582,12 @@
           "output": 1.25
         }
       },
-      "capabilities": {
+      "facts": {
         "web_search": false,
         "web_fetch": false,
         "weather": false,
-        "realtime_info": false,
-        "native_tool_calling": true,
-        "__comment_native_tool_calling": "OpenAI supports native function calling via tools parameter. Codex models use Responses API."
+        "citations": false,
+        "streaming": true
       }
     },
     "openrouter": {
@@ -381,31 +605,129 @@
       "models": {
         "anthropic/claude-sonnet-4": {
           "name": "Claude Sonnet 4",
-          "description": "Anthropic's balanced model for most tasks"
+          "description": "Anthropic's balanced model for most tasks",
+          "facts": {
+            "tool_mode": "native",
+            "fallback_on_empty": false,
+            "fallback_on_failure": false,
+            "strip_json_from_text": false,
+            "parallel_tool_calls": false,
+            "wire_protocol": "chat_completions",
+            "max_tokens": 0,
+            "max_tool_iterations": 0,
+            "supports_reasoning": false,
+            "supports_vision": false,
+            "restricted_params": [],
+            "tier": ""
+          }
         },
         "anthropic/claude-opus-4": {
           "name": "Claude Opus 4",
-          "description": "Anthropic's most capable model"
+          "description": "Anthropic's most capable model",
+          "facts": {
+            "tool_mode": "native",
+            "fallback_on_empty": false,
+            "fallback_on_failure": false,
+            "strip_json_from_text": false,
+            "parallel_tool_calls": false,
+            "wire_protocol": "chat_completions",
+            "max_tokens": 0,
+            "max_tool_iterations": 0,
+            "supports_reasoning": false,
+            "supports_vision": false,
+            "restricted_params": [],
+            "tier": ""
+          }
         },
         "anthropic/claude-haiku": {
           "name": "Claude Haiku",
-          "description": "Fast and affordable Claude model"
+          "description": "Fast and affordable Claude model",
+          "facts": {
+            "tool_mode": "native",
+            "fallback_on_empty": false,
+            "fallback_on_failure": false,
+            "strip_json_from_text": false,
+            "parallel_tool_calls": false,
+            "wire_protocol": "chat_completions",
+            "max_tokens": 0,
+            "max_tool_iterations": 0,
+            "supports_reasoning": false,
+            "supports_vision": false,
+            "restricted_params": [],
+            "tier": ""
+          }
         },
         "deepseek/deepseek-r1": {
           "name": "DeepSeek R1",
-          "description": "Reasoning model with Chain of Thought"
+          "description": "Reasoning model with Chain of Thought",
+          "facts": {
+            "tool_mode": "native",
+            "fallback_on_empty": false,
+            "fallback_on_failure": false,
+            "strip_json_from_text": false,
+            "parallel_tool_calls": false,
+            "wire_protocol": "chat_completions",
+            "max_tokens": 0,
+            "max_tool_iterations": 0,
+            "supports_reasoning": false,
+            "supports_vision": false,
+            "restricted_params": [],
+            "tier": ""
+          }
         },
         "meta-llama/llama-3.1-70b-instruct": {
           "name": "Llama 3.1 70B",
-          "description": "Meta's open-weight model"
+          "description": "Meta's open-weight model",
+          "facts": {
+            "tool_mode": "native",
+            "fallback_on_empty": false,
+            "fallback_on_failure": false,
+            "strip_json_from_text": false,
+            "parallel_tool_calls": false,
+            "wire_protocol": "chat_completions",
+            "max_tokens": 0,
+            "max_tool_iterations": 0,
+            "supports_reasoning": false,
+            "supports_vision": false,
+            "restricted_params": [],
+            "tier": ""
+          }
         },
         "meta-llama/llama-3.1-405b-instruct": {
           "name": "Llama 3.1 405B",
-          "description": "Meta's largest open model"
+          "description": "Meta's largest open model",
+          "facts": {
+            "tool_mode": "native",
+            "fallback_on_empty": false,
+            "fallback_on_failure": false,
+            "strip_json_from_text": false,
+            "parallel_tool_calls": false,
+            "wire_protocol": "chat_completions",
+            "max_tokens": 0,
+            "max_tool_iterations": 0,
+            "supports_reasoning": false,
+            "supports_vision": false,
+            "restricted_params": [],
+            "tier": ""
+          }
         },
         "google/gemini-2.0-flash-001": {
           "name": "Gemini 2.0 Flash",
-          "description": "Google's fast multimodal model"
+          "description": "Google's fast multimodal model",
+          "facts": {
+            "tool_mode": "native",
+            "fallback_on_empty": false,
+            "fallback_on_failure": false,
+            "strip_json_from_text": false,
+            "parallel_tool_calls": false,
+            "wire_protocol": "chat_completions",
+            "max_tokens": 0,
+            "max_tool_iterations": 0,
+            "supports_reasoning": false,
+            "supports_vision": false,
+            "restricted_params": [],
+            "tier": ""
+          }
         }
       },
       "pricing": {
@@ -438,13 +760,12 @@
           "output": 0.4
         }
       },
-      "capabilities": {
+      "facts": {
         "web_search": false,
         "web_fetch": false,
         "weather": false,
-        "realtime_info": false,
-        "native_tool_calling": true,
-        "__comment_native_tool_calling": "OpenRouter supports native function calling via tools parameter (varies by model)"
+        "citations": false,
+        "streaming": true
       }
     },
     "nvidia": {
@@ -462,12 +783,6 @@
         "top_p": 0.9,
         "__comment": "Provider-level defaults. NVIDIA portal recommends different params per model — see model-level overrides below."
       },
-      "tool_calling": {
-        "mode": "native",
-        "__comment_mode": "NVIDIA NIM supports OpenAI-style function calling for most models (qwen2.5-coder-32b is an exception — set mode='prompt_based' on that model)",
-        "fallback_on_empty": true,
-        "strip_json_from_text": true
-      },
       "models": {
         "qwen/qwen3.5-122b-a10b": {
           "name": "Qwen3.5 122B-A10B",
@@ -484,6 +799,20 @@
             "chat_template_kwargs": {
               "enable_thinking": true
             }
+          },
+          "facts": {
+            "tool_mode": "native",
+            "fallback_on_empty": true,
+            "fallback_on_failure": false,
+            "strip_json_from_text": true,
+            "parallel_tool_calls": false,
+            "wire_protocol": "chat_completions",
+            "max_tokens": 4096,
+            "max_tool_iterations": 0,
+            "supports_reasoning": false,
+            "supports_vision": false,
+            "restricted_params": [],
+            "tier": "A"
           }
         },
         "qwen/qwen3-next-80b-a3b-instruct": {
@@ -495,25 +824,81 @@
           "generation_params": {
             "temperature": 0.7,
             "top_p": 0.8
+          },
+          "facts": {
+            "tool_mode": "native",
+            "fallback_on_empty": true,
+            "fallback_on_failure": false,
+            "strip_json_from_text": true,
+            "parallel_tool_calls": false,
+            "wire_protocol": "chat_completions",
+            "max_tokens": 8192,
+            "max_tool_iterations": 0,
+            "supports_reasoning": false,
+            "supports_vision": false,
+            "restricted_params": [],
+            "tier": "C"
           }
         },
         "deepseek-ai/deepseek-v4-pro": {
           "name": "DeepSeek V4 Pro",
           "description": "DeepSeek frontier (1.6T MoE, multimodal). 1M-token context via Compressed Sparse Attention. Replaces retired deepseek-v3.2. Added 2026-05-31 from live NIM /models; not yet benchmarked.",
           "context_limit": 1000000,
-          "max_tokens": 8192
+          "max_tokens": 8192,
+          "facts": {
+            "tool_mode": "native",
+            "fallback_on_empty": true,
+            "fallback_on_failure": false,
+            "strip_json_from_text": true,
+            "parallel_tool_calls": false,
+            "wire_protocol": "chat_completions",
+            "max_tokens": 8192,
+            "max_tool_iterations": 20,
+            "supports_reasoning": false,
+            "supports_vision": true,
+            "restricted_params": [],
+            "tier": "B"
+          }
         },
         "deepseek-ai/deepseek-v4-flash": {
           "name": "DeepSeek V4 Flash",
           "description": "Fast 284B variant of DeepSeek V4. 1M-token context, lower latency than V4 Pro. Added 2026-05-31; not yet benchmarked.",
           "context_limit": 1000000,
-          "max_tokens": 8192
+          "max_tokens": 8192,
+          "facts": {
+            "tool_mode": "native",
+            "fallback_on_empty": true,
+            "fallback_on_failure": false,
+            "strip_json_from_text": true,
+            "parallel_tool_calls": false,
+            "wire_protocol": "chat_completions",
+            "max_tokens": 8192,
+            "max_tool_iterations": 20,
+            "supports_reasoning": false,
+            "supports_vision": true,
+            "restricted_params": [],
+            "tier": "B"
+          }
         },
         "moonshotai/kimi-k2.6": {
           "name": "Kimi K2.6",
           "description": "Moonshot K2.6 (non-reasoning). 262K context, strong open-weight coding/agentic. Replaces retired kimi-k2-thinking. Added 2026-05-31; not yet benchmarked.",
           "context_limit": 262144,
-          "max_tokens": 8192
+          "max_tokens": 8192,
+          "facts": {
+            "tool_mode": "native",
+            "fallback_on_empty": true,
+            "fallback_on_failure": false,
+            "strip_json_from_text": true,
+            "parallel_tool_calls": false,
+            "wire_protocol": "chat_completions",
+            "max_tokens": 8192,
+            "max_tool_iterations": 20,
+            "supports_reasoning": false,
+            "supports_vision": false,
+            "restricted_params": [],
+            "tier": "B"
+          }
         }
       },
       "pricing": {
@@ -540,13 +925,12 @@
           "output": 0
         }
       },
-      "capabilities": {
+      "facts": {
         "web_search": false,
         "web_fetch": false,
         "weather": false,
-        "realtime_info": false,
-        "native_tool_calling": true,
-        "__comment_native_tool_calling": "NVIDIA NIM supports OpenAI-style function calling via /v1/chat/completions for most models. Set per-model tool_calling.mode='prompt_based' for older models that don't enable it."
+        "citations": false,
+        "streaming": true
       }
     },
     "local-vllm": {
@@ -556,19 +940,23 @@
       "api_key_env": "LOCAL_API_KEY",
       "default_model": "meta-llama/Llama-3-70b",
       "coding_model": "meta-llama/Llama-3-70b",
-      "tool_calling": {
-        "__comment": "Provider-level tool_calling defaults (v1.16.0). Per-model overrides go in models.<id>.tool_calling",
-        "mode": "prompt_based",
-        "__comment_mode": "Tool calling strategy: 'native', 'prompt_based', or 'auto'"
-      },
       "models": {
         "meta-llama/Llama-3-70b": {
           "name": "Llama 3 70B",
           "description": "Self-hosted Llama 3 70B model",
-          "tool_calling": {
-            "__comment": "Per-model overrides (highest priority). Keys: mode, fallback_on_empty, fallback_on_failure, strip_json_from_text, parallel_tool_calls, api_path",
+          "facts": {
+            "tool_mode": "prompt_based",
             "fallback_on_empty": true,
-            "strip_json_from_text": true
+            "fallback_on_failure": false,
+            "strip_json_from_text": true,
+            "parallel_tool_calls": false,
+            "wire_protocol": "chat_completions",
+            "max_tokens": 0,
+            "max_tool_iterations": 0,
+            "supports_reasoning": false,
+            "supports_vision": false,
+            "restricted_params": [],
+            "tier": ""
           }
         }
       },
@@ -578,13 +966,12 @@
           "output": 0
         }
       },
-      "capabilities": {
+      "facts": {
         "web_search": false,
         "web_fetch": false,
         "weather": false,
-        "realtime_info": false,
-        "native_tool_calling": false,
-        "__comment_native_tool_calling": "Set true if vLLM started with --enable-auto-tool-choice"
+        "citations": false,
+        "streaming": true
       }
     },
     "vllm-gpt-oss": {
@@ -601,15 +988,6 @@
         "frequency_penalty": 0.1,
         "presence_penalty": 0
       },
-      "tool_calling": {
-        "__comment": "Provider-level tool calling defaults (v1.16.0). Overrides built-in model profiles.",
-        "mode": "native",
-        "__comment_mode": "native: use OpenAI-style function calling. prompt_based: inject tool schema into prompt. auto: try native first, fall back.",
-        "fallback_on_empty": true,
-        "__comment_fallback_on_empty": "If native returns empty, retry with prompt-based. Recommended for vLLM Harmony parser (intermittent failures).",
-        "strip_json_from_text": true,
-        "__comment_strip_json_from_text": "Remove duplicate tool JSON from response text when native tool_calls are present"
-      },
       "models": {
         "openai/gpt-oss-120b": {
           "name": "GPT-OSS 120B",
@@ -618,10 +996,19 @@
           "__comment_context_limit": "vLLM requires power of 2. Model supports ~120K, rounded up to 2^17=131072",
           "max_tokens": 8192,
           "__comment_max_tokens": "Max output tokens. Set explicitly to prevent truncated tool calls (v1.15.2+)",
-          "tool_calling": {
-            "__comment": "Per-model tool_calling overrides (v1.16.0). Highest priority — overrides provider-level and built-in profiles.",
+          "facts": {
+            "tool_mode": "native",
+            "fallback_on_empty": true,
             "fallback_on_failure": true,
-            "__comment_fallback_on_failure": "If native tool call fails to parse (HarmonyError), retry with prompt-based"
+            "strip_json_from_text": true,
+            "parallel_tool_calls": false,
+            "wire_protocol": "chat_completions",
+            "max_tokens": 16384,
+            "max_tool_iterations": 0,
+            "supports_reasoning": false,
+            "supports_vision": false,
+            "restricted_params": [],
+            "tier": "B"
           }
         }
       },
@@ -631,13 +1018,12 @@
           "output": 0
         }
       },
-      "capabilities": {
+      "facts": {
         "web_search": false,
         "web_fetch": false,
         "weather": false,
-        "realtime_info": false,
-        "native_tool_calling": true,
-        "__comment": "Native tool calling enabled - vLLM started with --enable-auto-tool-choice --tool-call-parser openai"
+        "citations": false,
+        "streaming": true
       }
     },
     "qwen36-agent": {
@@ -653,29 +1039,41 @@
         "top_p": 0.9,
         "frequency_penalty": 0.0
       },
-      "tool_calling": {
-        "mode": "native",
-        "fallback_on_empty": true,
-        "strip_json_from_text": true
-      },
       "models": {
         "Qwen/Qwen3.6-27B-FP8-agent": {
           "name": "Qwen3.6 27B FP8 (agent)",
           "description": "Agent-tuned Qwen3.6-27B-FP8, native tool calling, 128K context",
           "context_limit": 131072,
           "__comment_context_limit": "vLLM max-model-len; 128K = 131072",
-          "max_tokens": 8192
+          "max_tokens": 8192,
+          "facts": {
+            "tool_mode": "native",
+            "fallback_on_empty": true,
+            "fallback_on_failure": false,
+            "strip_json_from_text": true,
+            "parallel_tool_calls": false,
+            "wire_protocol": "chat_completions",
+            "max_tokens": 8192,
+            "max_tool_iterations": 20,
+            "supports_reasoning": false,
+            "supports_vision": true,
+            "restricted_params": [],
+            "tier": "A"
+          }
         }
       },
       "pricing": {
-        "Qwen/Qwen3.6-27B-FP8-agent": { "input": 0, "output": 0 }
+        "Qwen/Qwen3.6-27B-FP8-agent": {
+          "input": 0,
+          "output": 0
+        }
       },
-      "capabilities": {
+      "facts": {
         "web_search": false,
         "web_fetch": false,
         "weather": false,
-        "realtime_info": false,
-        "native_tool_calling": true
+        "citations": false,
+        "streaming": true
       }
     },
     "lmstudio": {
@@ -693,25 +1091,47 @@
         "top_p": 0.9,
         "frequency_penalty": 0.1
       },
-      "tool_calling": {
-        "mode": "native",
-        "__comment_mode": "LM Studio supports native tool calling via llama.cpp for Qwen models",
-        "fallback_on_empty": true,
-        "strip_json_from_text": true
-      },
       "models": {
         "qwen2.5-coder-7b-instruct": {
           "name": "Qwen2.5 Coder 7B",
           "description": "Dedicated coding model with native tool calling. Best balance of speed and quality for local inference.",
           "context_limit": 32768,
           "max_tokens": 4096,
-          "__comment_best_for": "Code generation, refactoring, debugging. ~12 tok/s with GPU offload."
+          "__comment_best_for": "Code generation, refactoring, debugging. ~12 tok/s with GPU offload.",
+          "facts": {
+            "tool_mode": "native",
+            "fallback_on_empty": true,
+            "fallback_on_failure": false,
+            "strip_json_from_text": true,
+            "parallel_tool_calls": false,
+            "wire_protocol": "chat_completions",
+            "max_tokens": 4096,
+            "max_tool_iterations": 0,
+            "supports_reasoning": false,
+            "supports_vision": false,
+            "restricted_params": [],
+            "tier": "C"
+          }
         },
         "qwen2.5-coder-3b-instruct": {
           "name": "Qwen2.5 Coder 3B",
           "description": "Fast lightweight coding model, ~20 tok/s. Good for simple edits.",
           "context_limit": 32768,
-          "max_tokens": 4096
+          "max_tokens": 4096,
+          "facts": {
+            "tool_mode": "native",
+            "fallback_on_empty": true,
+            "fallback_on_failure": false,
+            "strip_json_from_text": true,
+            "parallel_tool_calls": false,
+            "wire_protocol": "chat_completions",
+            "max_tokens": 4096,
+            "max_tool_iterations": 0,
+            "supports_reasoning": false,
+            "supports_vision": false,
+            "restricted_params": [],
+            "tier": "C"
+          }
         }
       },
       "pricing": {
@@ -724,13 +1144,12 @@
           "output": 0
         }
       },
-      "capabilities": {
+      "facts": {
         "web_search": false,
         "web_fetch": false,
         "weather": false,
-        "realtime_info": false,
-        "native_tool_calling": true,
-        "__comment_native_tool_calling": "LM Studio supports native function calling via llama.cpp for supported models (Qwen, Llama, etc.)"
+        "citations": false,
+        "streaming": true
       }
     },
     "ollama": {
@@ -752,19 +1171,61 @@
           "name": "Qwen2.5 Coder 3B",
           "description": "Best coding model: 3.38GB VRAM, 75% tool accuracy, ~60 tok/s (recommended)",
           "context_limit": 32768,
-          "max_tokens": 4096
+          "max_tokens": 4096,
+          "facts": {
+            "tool_mode": "native",
+            "fallback_on_empty": false,
+            "fallback_on_failure": false,
+            "strip_json_from_text": false,
+            "parallel_tool_calls": false,
+            "wire_protocol": "chat_completions",
+            "max_tokens": 4096,
+            "max_tool_iterations": 0,
+            "supports_reasoning": false,
+            "supports_vision": false,
+            "restricted_params": [],
+            "tier": "C"
+          }
         },
         "qwen2.5:3b": {
           "name": "Qwen2.5 3B General",
           "description": "Highest tool accuracy: 3.38GB VRAM, 79.2% tool accuracy, better reasoning",
           "context_limit": 32768,
-          "max_tokens": 4096
+          "max_tokens": 4096,
+          "facts": {
+            "tool_mode": "native",
+            "fallback_on_empty": false,
+            "fallback_on_failure": false,
+            "strip_json_from_text": false,
+            "parallel_tool_calls": false,
+            "wire_protocol": "chat_completions",
+            "max_tokens": 0,
+            "max_tool_iterations": 0,
+            "supports_reasoning": false,
+            "supports_vision": false,
+            "restricted_params": [],
+            "tier": ""
+          }
         },
         "qwen2.5-coder:0.5b": {
           "name": "Qwen2.5 Coder 0.5B",
           "description": "Fast router: 1.44GB VRAM, 70.8% tool accuracy, 448ms latency",
           "context_limit": 32768,
-          "max_tokens": 2048
+          "max_tokens": 2048,
+          "facts": {
+            "tool_mode": "native",
+            "fallback_on_empty": false,
+            "fallback_on_failure": false,
+            "strip_json_from_text": false,
+            "parallel_tool_calls": false,
+            "wire_protocol": "chat_completions",
+            "max_tokens": 4096,
+            "max_tool_iterations": 0,
+            "supports_reasoning": false,
+            "supports_vision": false,
+            "restricted_params": [],
+            "tier": "C"
+          }
         }
       },
       "pricing": {
@@ -781,13 +1242,12 @@
           "output": 0
         }
       },
-      "capabilities": {
+      "facts": {
         "web_search": true,
         "web_fetch": true,
         "weather": true,
-        "realtime_info": true,
-        "native_tool_calling": true,
-        "__comment_native_tool_calling": "Qwen2.5 models support tool calling via Ollama's OpenAI-compatible API"
+        "citations": false,
+        "streaming": true
       }
     }
   },
@@ -1023,8 +1483,22 @@
       "__comment_sandbox": "v1.19.x build plan T2 (was tools.agent.sandbox): filesystem SEAL for the tool-capable tier. Off by default. Set enforcement='in_process' to confine a run's reads to read_paths.allow (+ skills_dir/specs_dir + its per-run workdir) and writes to the per-run workdir only. deny globs override allow (deny wins). A bare name in deny (e.g. '.env', 'secrets') blocks that file/dir anywhere in the tree; a '/'-containing pattern (e.g. '/abs/path', '**/x') matches the full path. Best-effort under trusted-operator (a path-prefix jail, not an OS boundary); enforcement='container' (tier-d, not yet built) realizes the SAME fields as read-only mounts + ConfigMaps. To activate, set enforcement and read_paths.allow below.",
       "sandbox": {
         "enforcement": "off",
-        "workdir": { "root": "~/.ppxai/runs", "writable": true, "cleanup": "keep" },
-        "read_paths": { "allow": [], "deny": [".env", ".git", ".ssh", "secrets", "node_modules"], "follow_symlinks": false },
+        "workdir": {
+          "root": "~/.ppxai/runs",
+          "writable": true,
+          "cleanup": "keep"
+        },
+        "read_paths": {
+          "allow": [],
+          "deny": [
+            ".env",
+            ".git",
+            ".ssh",
+            "secrets",
+            "node_modules"
+          ],
+          "follow_symlinks": false
+        },
         "skills_dir": null,
         "__comment_skills_dir": "v1.19.0 (/task T4): a directory of agent SKILL directories. When set, `POST /v1/agent/task {\"skills\":[\"<name>\"]}` (and the web `/task run --skill <name>`) resolves <name> under this dir (NAME only — no path/traversal). Each skill is `<name>/SKILL.md` (a spec, T3 loader) + optional `references/` (mounted into the run read-scope when enforcement=in_process) + optional `scripts/` (INERT). Multiple skills compose: grants union, read-roots union, still clamped by the ceiling (no-shell, execution.task.enabled). A scripts/-bearing skill is refused unless allow_skill_scripts is true. null = skills disabled.",
         "specs_dir": null,
@@ -1063,6 +1537,17 @@
   "file_tree": {
     "__comment": "Web file tree + /files/list + /files/search settings (v1.18.7+)",
     "__comment_ignore_dirs": "Directory names hidden from the file tree. REPLACE semantics (not merge) — your list is used verbatim. Empty list = show everything. Default: ['.git', 'node_modules', '__pycache__', '.venv', 'venv', '.tox', 'dist', 'build', '.eggs', '.mypy_cache']. Remove an entry from the default list to unhide that dir (e.g. drop 'venv' if you want it visible).",
-    "ignore_dirs": [".git", "node_modules", "__pycache__", ".venv", "venv", ".tox", "dist", "build", ".eggs", ".mypy_cache"]
+    "ignore_dirs": [
+      ".git",
+      "node_modules",
+      "__pycache__",
+      ".venv",
+      "venv",
+      ".tox",
+      "dist",
+      "build",
+      ".eggs",
+      ".mypy_cache"
+    ]
   }
 }

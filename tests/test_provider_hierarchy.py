@@ -3,7 +3,7 @@ Tests for provider hierarchy compliance (v1.16.0 Step 1).
 
 Verifies that all providers inherit from BaseProvider and implement
 the shared interface: needs_tool, get_model_profile, list_models,
-validate_config, get_capabilities_for_model, _get_generation_params,
+validate_config, get_capabilities, get_facts_for_model, _get_generation_params,
 _get_max_tokens, _convert_messages, _parse_usage, _format_error,
 _log_error_traceback.
 """
@@ -46,7 +46,8 @@ class TestProviderInterface:
         "validate_config",
         "needs_tool",
         "get_model_profile",
-        "get_capabilities_for_model",
+        "get_capabilities",
+    "get_facts_for_model",
         "_get_generation_params",
         "_get_max_tokens",
         "_format_error",
@@ -61,57 +62,56 @@ class TestProviderInterface:
         assert callable(getattr(cls, method))
 
 
-class TestGetCapabilitiesForModel:
-    """Test get_capabilities_for_model behavior."""
+class TestTheTwoAccessors:
+    """Two records, two accessors (ADR 0012 section 2 Q0e).
 
-    def test_base_returns_self_capabilities(self):
-        """BaseProvider default returns self.capabilities unchanged."""
+    RETARGETED from `TestGetCapabilitiesForModel`. Every test here used to
+    assert `get_capabilities_for_model(m) is provider.capabilities` -- a
+    PASSTHROUGH, which was the right contract while tool calling lived on
+    the provider record. It does not any more: `get_capabilities()` answers
+    for the endpoint and takes no model, `get_facts_for_model()` answers for
+    the model and consults the shipped table. "Returns self.capabilities
+    unchanged for any model" is not a claim that can be made about either.
+    """
+
+    def test_endpoint_accessor_returns_the_provider_record(self):
         with patch("ppxai.engine.providers.base.OpenAI"):
             provider = OpenAICompatibleProvider(
                 api_key="test",
                 base_url="http://localhost:8000/v1",
             )
-        caps = provider.get_capabilities_for_model("any-model")
-        assert caps is provider.capabilities
+        assert provider.get_capabilities() == provider.capabilities
 
-    def test_openai_native_overrides_for_prompt_based_models(self):
-        """OpenAINativeProvider returns native_tool_calling=False for o4-mini."""
+    def test_openai_native_resolves_prompt_based_models_per_model(self):
+        """The benchmark table, through the new accessor."""
         with patch("ppxai.engine.providers.openai_native.OpenAI"):
             provider = OpenAINativeProvider(api_key="test")
 
-        # Standard model keeps native
-        caps = provider.get_capabilities_for_model("gpt-5.2")
-        assert caps.native_tool_calling is True
+        assert provider.get_facts_for_model("gpt-5.2").tool_mode != "prompt_based"
+        assert provider.get_facts_for_model("o4-mini").tool_mode == "prompt_based"
+        assert (
+            provider.get_facts_for_model("gpt-4.1-mini").tool_mode == "prompt_based"
+        )
 
-        # o4-mini gets prompt-based
-        caps = provider.get_capabilities_for_model("o4-mini")
-        assert caps.native_tool_calling is False
-
-        # gpt-4.1-mini gets prompt-based
-        caps = provider.get_capabilities_for_model("gpt-4.1-mini")
-        assert caps.native_tool_calling is False
-
-    def test_perplexity_returns_self_capabilities(self):
-        """PerplexityProvider uses base default (returns self.capabilities)."""
+    def test_perplexity_splits_endpoint_from_model(self):
+        """`sonar` is not tool-capable, but the ENDPOINT still searches."""
         with patch("ppxai.engine.providers.base.OpenAI"):
             provider = PerplexityProvider(
                 api_key="test",
                 base_url="https://api.perplexity.ai",
             )
-        caps = provider.get_capabilities_for_model("sonar")
-        assert caps is provider.capabilities
-        assert caps.web_search is True
-        assert caps.native_tool_calling is False
+        assert provider.get_capabilities().web_search is True
+        assert provider.get_facts_for_model("sonar").tool_mode == "prompt_based"
+        assert provider.get_facts_for_model("sonar-pro").tool_mode != "prompt_based"
 
-    def test_gemini_returns_self_capabilities(self):
-        """GeminiProvider uses base default (returns self.capabilities)."""
+    def test_gemini_splits_endpoint_from_model(self):
         with patch("ppxai.engine.providers.gemini.genai") as mock_genai:
             mock_genai.Client.return_value = MagicMock()
             provider = GeminiProvider(api_key="test")
-        caps = provider.get_capabilities_for_model("gemini-2.5-flash")
-        assert caps is provider.capabilities
-        assert caps.web_search is True
-        assert caps.native_tool_calling is True
+        assert provider.get_capabilities().web_search is True
+        facts = provider.get_facts_for_model("gemini-2.5-flash")
+        assert facts.tool_mode == "native"
+        assert facts.wire_protocol == "generate_content"
 
 
 class TestValidateConfig:

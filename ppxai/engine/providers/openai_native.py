@@ -29,6 +29,9 @@ from openai import OpenAI
 
 from ...common.logger import get_logger
 from ...config.tls import tls_verify
+from dataclasses import replace
+
+from ..model_facts import ModelFacts, shipped_facts_for_model
 from ..types import Message, Event, EventType, ProviderCapabilities, UsageStats
 from ..uploaded_file import flatten_uploaded_file_blocks
 from .base import BaseProvider
@@ -76,7 +79,6 @@ class OpenAINativeProvider(BaseProvider):
         weather=False,
         citations=False,
         streaming=True,
-        native_tool_calling=True,
     )
 
     def __init__(
@@ -108,7 +110,6 @@ class OpenAINativeProvider(BaseProvider):
                 weather=enable_web_search,
                 citations=enable_web_search,
                 streaming=True,
-                native_tool_calling=True,
             )
 
         # Remove base_url from kwargs if passed for compat (we don't use it)
@@ -359,31 +360,19 @@ class OpenAINativeProvider(BaseProvider):
             "usage": usage_dict,
         }
 
-    def shipped_capabilities_for_model(self, model: str) -> ProviderCapabilities:
-        """Get model-aware capabilities.
-
-        Returns native_tool_calling=False for models that perform better with
-        prompt-based tool calling:
-        - PROMPT_BASED_MODEL_PREFIXES (o4-mini, gpt-4.1-mini): benchmark-proven to
-          score significantly higher with prompt-based routing
-
-        Responses API models (codex, pro) now use native tool calling:
-        - Tools sent as function definitions in the API request
-        - Model emits function_call items handled by _stream_responses()
-        - Fallback: chat.py parse_tool_call() catches JSON-in-text output
-        """
-        model_lower = model.lower()
-        use_prompt_based = model_lower.startswith(PROMPT_BASED_MODEL_PREFIXES)
-        if use_prompt_based:
-            return ProviderCapabilities(
-                web_search=self.capabilities.web_search,
-                web_fetch=self.capabilities.web_fetch,
-                weather=self.capabilities.weather,
-                citations=self.capabilities.citations,
-                streaming=self.capabilities.streaming,
-                native_tool_calling=False,
-            )
-        return self.capabilities
+    #: Benchmark-derived per-model rows (ADR 0012 §2 Q0e). Was
+    #: `shipped_capabilities_for_model`, which answered only the tool-calling
+    #: boolean while `BUILTIN_PROFILES` answered mode, limits and routing for
+    #: the same models — the two-systems split this ADR removes.
+    #:
+    #: These two are benchmark-proven to score significantly HIGHER with
+    #: prompt-based tool calling (o4-mini: 10.9%% native -> 62.5%% prompt-based,
+    #: native returns empty responses; gpt-4.1-mini: 60.9%% -> 71.9%%, hybrid
+    #: tool_json_in_content). Responses-API models (codex, pro) use native.
+    shipped_model_facts = {
+        prefix + "*": replace(shipped_facts_for_model(prefix), tool_mode="prompt_based")
+        for prefix in PROMPT_BASED_MODEL_PREFIXES
+    }
 
     # ------------------------------------------------------------------
     # Chat Completions API
@@ -430,11 +419,11 @@ class OpenAINativeProvider(BaseProvider):
                         generation_params.pop(param, None)
                 request_kwargs.update(generation_params)
 
-            # Per-model, not per-provider: get_capabilities_for_model()
+            # Per-model, not per-provider: get_facts_for_model()
             # is the hook that lets a provider mark individual models
             # prompt-based. Reading self.capabilities here ignored it --
             # o4-mini resolved False but was sent native tools anyway.
-            if tools and self.get_capabilities_for_model(model).native_tool_calling:
+            if tools and self.get_facts_for_model(model).tool_mode != "prompt_based":
                 request_kwargs["tools"] = tools
                 request_kwargs["tool_choice"] = "auto"
 
@@ -649,11 +638,11 @@ class OpenAINativeProvider(BaseProvider):
             if self.enable_web_search:
                 response_tools.append({"type": "web_search_preview"})
 
-            # Per-model, not per-provider: get_capabilities_for_model()
+            # Per-model, not per-provider: get_facts_for_model()
             # is the hook that lets a provider mark individual models
             # prompt-based. Reading self.capabilities here ignored it --
             # o4-mini resolved False but was sent native tools anyway.
-            if tools and self.get_capabilities_for_model(model).native_tool_calling:
+            if tools and self.get_facts_for_model(model).tool_mode != "prompt_based":
                 converted = self._convert_tools_for_responses(tools)
                 response_tools.extend(converted)
 

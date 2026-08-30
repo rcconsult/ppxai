@@ -83,11 +83,16 @@ class TestInit:
     """Test provider initialization."""
 
     def test_default_capabilities(self):
+        """Endpoint fields only (ADR 0012 section 2 Q0g).
+
+        `native_tool_calling` moved off this record: tool calling is a
+        MODEL fact, asserted in `TestPromptBasedRouting` below.
+        """
         with patch("ppxai.engine.providers.openai_native.OpenAI"):
             p = OpenAINativeProvider(api_key="test-key")
-            assert p.capabilities.native_tool_calling is True
             assert p.capabilities.streaming is True
             assert p.capabilities.web_search is False
+            assert not hasattr(p.capabilities, "native_tool_calling")
 
     def test_web_search_capabilities(self):
         with patch("ppxai.engine.providers.openai_native.OpenAI"):
@@ -96,11 +101,11 @@ class TestInit:
             assert p.capabilities.web_fetch is True
 
     def test_custom_capabilities(self):
-        caps = ProviderCapabilities(web_search=True, native_tool_calling=False)
+        caps = ProviderCapabilities(web_search=True, citations=True)
         with patch("ppxai.engine.providers.openai_native.OpenAI"):
             p = OpenAINativeProvider(api_key="test-key", capabilities=caps)
             assert p.capabilities.web_search is True
-            assert p.capabilities.native_tool_calling is False
+            assert p.capabilities.citations is True
 
     def test_validate_config(self):
         with patch("ppxai.engine.providers.openai_native.OpenAI"):
@@ -141,24 +146,24 @@ class TestPromptBasedRouting:
         """Dated model IDs like o4-mini-2025-04-16 should get prompt-based routing."""
         with patch("ppxai.engine.providers.openai_native.OpenAI"):
             p = OpenAINativeProvider(api_key="test-key")
-            caps = p.get_capabilities_for_model("o4-mini-2025-04-16")
-            assert caps.native_tool_calling is False
+            facts = p.get_facts_for_model("o4-mini-2025-04-16")
+            assert facts.tool_mode == "prompt_based"
 
     def test_prompt_based_for_exact_model_id(self):
         """Exact model IDs should still get prompt-based routing."""
         with patch("ppxai.engine.providers.openai_native.OpenAI"):
             p = OpenAINativeProvider(api_key="test-key")
             for model in ("o4-mini", "gpt-4.1-mini"):
-                caps = p.get_capabilities_for_model(model)
-                assert caps.native_tool_calling is False, f"{model} should be prompt-based"
+                facts = p.get_facts_for_model(model)
+                assert facts.tool_mode == "prompt_based", f"{model} should be prompt-based"
 
     def test_native_for_non_prompt_based_models(self):
         """Other models should keep native tool calling."""
         with patch("ppxai.engine.providers.openai_native.OpenAI"):
             p = OpenAINativeProvider(api_key="test-key")
             for model in ("gpt-5.2", "gpt-4.1", "gpt-5.1-codex"):
-                caps = p.get_capabilities_for_model(model)
-                assert caps.native_tool_calling is True, f"{model} should be native"
+                facts = p.get_facts_for_model(model)
+                assert facts.tool_mode != "prompt_based", f"{model} should be native"
 
 
 # ---------------------------------------------------------------------------

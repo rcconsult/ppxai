@@ -649,27 +649,53 @@ class TestNativeToolCalling:
 
         assert tools == []
 
-    def test_provider_capabilities_native_tool_calling(self):
-        """Test that ProviderCapabilities includes native_tool_calling flag."""
+    def test_tool_mode_is_a_model_fact_not_an_endpoint_one(self):
+        """RETARGETED — the premise moved records (ADR 0012 section 2 Q0a/Q0g).
+
+        This asserted `ProviderCapabilities.native_tool_calling` defaulted
+        False, could be enabled, and round-tripped through `from_dict`. The
+        field is gone from that record: tool calling is a fact about a
+        MODEL, and keeping it on the endpoint record is what let a
+        provider-wide statement speak for `sonar` (debt Item 43).
+
+        The three properties it checked all survive, on `ModelFacts`:
+        a conservative default, the ability to state otherwise, and
+        round-tripping through config.
+        """
+        from ppxai.engine.model_facts import ModelFacts, apply_overrides
         from ppxai.engine.types import ProviderCapabilities
 
-        # Default is False
-        caps = ProviderCapabilities()
-        assert caps.native_tool_calling is False
+        # The boolean is DELETED, not aliased — a readable alias is how the
+        # seam bug survived review in the first place.
+        assert not hasattr(ProviderCapabilities(), "native_tool_calling")
+        assert "native_tool_calling" not in ProviderCapabilities.from_dict(
+            {"native_tool_calling": True}
+        ).__dict__
 
-        # Can be enabled
-        caps = ProviderCapabilities(native_tool_calling=True)
-        assert caps.native_tool_calling is True
+        # Conservative default: an unmeasured model degrades, never 400s.
+        assert ModelFacts().tool_mode == "prompt_based"
 
-        # Works with from_dict
-        caps = ProviderCapabilities.from_dict({"native_tool_calling": True})
-        assert caps.native_tool_calling is True
+        # Statable, and round-trips through the config vocabulary.
+        assert apply_overrides(
+            ModelFacts(), {"tool_mode": "native"}
+        ).tool_mode == "native"
 
     def test_openai_provider_default_no_native_tools(self):
         """Test that OpenAI provider defaults to no native tool calling."""
         from ppxai.engine.providers.openai_compat import OpenAICompatibleProvider
 
-        assert OpenAICompatibleProvider.default_capabilities.native_tool_calling is False
+        # RETARGETED: the endpoint record no longer carries tool calling, so
+        # "this provider defaults to no native tools" is now a statement
+        # about a MODEL. An unlisted model resolves conservatively.
+        assert not hasattr(
+            OpenAICompatibleProvider.default_capabilities, "native_tool_calling"
+        )
+        p = OpenAICompatibleProvider(
+            api_key="k", base_url="http://localhost:8000/v1"
+        )
+        assert p.get_facts_for_model("some-unlisted-model").tool_mode == (
+            "prompt_based"
+        )
 
     @pytest.mark.asyncio
     async def test_openai_provider_handles_tool_calls_in_response(self):
@@ -680,7 +706,7 @@ class TestNativeToolCalling:
         from types import SimpleNamespace
 
         # Create provider with native tool calling enabled
-        caps = ProviderCapabilities(native_tool_calling=True)
+        caps = ProviderCapabilities()
         provider = OpenAICompatibleProvider(
             api_key="test-key",
             base_url="http://localhost:8000/v1",
@@ -739,7 +765,7 @@ class TestNativeToolCalling:
         from unittest.mock import MagicMock, patch
 
         # Create provider WITHOUT native tool calling
-        caps = ProviderCapabilities(native_tool_calling=False)
+        caps = ProviderCapabilities()
         provider = OpenAICompatibleProvider(
             api_key="test-key",
             base_url="http://localhost:8000/v1",

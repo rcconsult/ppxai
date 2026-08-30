@@ -471,6 +471,24 @@ Combined with Q0d this means:
   are **not** carried over. They become per-model statements, written by
   `/doctor`.
 
+**The floor is provider-owned where the global one would be wrong.**
+Found in review before W2 made `wire_protocol` load-bearing. `UNMEASURED`
+says `wire_protocol="chat_completions"` — safe for every provider that
+speaks it, and simply WRONG for Gemini, which has no such wire: an unlisted
+Gemini model would be routed to a handler the provider does not have. That
+is a wire bug, not a degraded answer, and the conservative-default argument
+does not reach it, because a protocol is a fact about the *endpoint*, not
+something a model can be conservative about.
+
+So `BaseProvider.unmeasured_facts` lets a provider supply a **complete
+alternative record**, chosen whole (`GeminiProvider` sets
+`wire_protocol="generate_content"`). This does not reintroduce the
+provider-code-default rung: nothing is merged field-by-field, one whole
+record is selected, so "nothing to arbitrate" still holds. `tool_mode`
+stays `prompt_based` in that record — the wire is knowable without
+measuring, tool support is not. It is also where a provider-wide fleet fact
+(Perplexity's `requires_max_output_tokens`) would sit if one is needed.
+
 **Migration order matters and is part of the decision.** `/doctor` must
 push legacy *provider-level* statements down into each configured model's
 row **before** filling remaining blanks from the shipped table. The reverse
@@ -690,6 +708,38 @@ Consequences, accepted deliberately:
   (legacy keys, incomplete records), one rewrite.
 - `/doctor` must therefore be able to **render the resolved record**, which
   it can: every rung is available to it.
+
+**Two declared semantic changes**, both found by review of the migrated
+example config and both recorded here so they are decisions rather than
+accidents the fixture happens to encode:
+
+1. **An unstated endpoint field takes the CLASS default, not `false`.**
+   Before this ADR, `provider_ops` built the deployed record with
+   `ProviderCapabilities.from_dict(config["capabilities"])`, so a config
+   `capabilities` block **replaced** the class record wholesale and any
+   field it omitted fell to the dataclass default rather than the
+   provider's own. The shipped example states no `citations` for
+   Perplexity, so the deployed record said `citations: false` even though
+   `PerplexityProvider` declares `True`. Under Q0e the rule is uniform for
+   both records — **shipped row, then stated overrides** — so an unstated
+   field now keeps the class value. Behaviour-neutral for today's two
+   readers (`chat.py:312` and `:397` test `citations or web_search`, and
+   `web_search` is true), but not in general, which is why it is declared.
+
+2. **`supports_vision` survives an override.** `get_effective_profile`
+   rebuilt `ModelProfile` field by field whenever any override layer was
+   present and omitted `supports_vision`, so its return value reported
+   `False` for a vision model under an unrelated override. **Latent, not
+   live** — that function's one caller read only the tool-loop fields, and
+   every vision reader calls `model_profiles.supports_vision` directly, so
+   no image decision ever saw the wrong value. A `replace()` on a frozen
+   record cannot lose a field. The migration still writes the glob's value
+   for the three affected models rather than freezing `false` into explicit
+   config rows, where it would outrank the corrected seed and become a
+   permanent statement that those models have no vision.
+
+Both are fenced in `tests/test_adr0012_migration_fence.py`; any OTHER
+difference from pre-ADR behaviour is a regression, not a decision.
 
 #### Q0c — config migration: clean break, with the file scan shipped alongside
 

@@ -64,6 +64,19 @@ def inject_citation_urls(content: str, citations: List[str]) -> str:
 # `sonar-deep-research` complains about the SHAPE of the parameters, so it
 # may be usable with a stricter schema — not chased, and it is being dropped
 # from the shipped model list, so it is recorded here only as a known 400.
+# ⚠ NO PRODUCTION READERS. Kept as the RECORD of a live measurement, not
+# as a routing table — ADR 0012 §2 Q0e made tool mode a per-model fact, so
+# the shipped seed rows decide: `sonar-pro` and `sonar-reasoning-pro`
+# resolve `auto` (native with a prompt-based fallback) and `sonar` resolves
+# `prompt_based`. A provider override forcing `native` here would silently
+# DROP that fallback, which is why there is no override.
+#
+# The probe derives its expectations from the RESOLVER (see
+# `expected_verdict`), not from these sets: a probe validating a table
+# production does not consult reports agreement while behaviour drifts,
+# which is debt Item 61's shape. `test_perplexity_model_capabilities.py`
+# asserts the two still agree, so a drift between measurement and seed rows
+# fails a test rather than passing silently.
 PERPLEXITY_NATIVE_TOOL_MODELS = frozenset({
     "sonar-pro",
     "sonar-reasoning-pro",
@@ -87,7 +100,8 @@ class PerplexityProvider(BaseProvider):
     - Citations
     - Real-time information
 
-    Tool calling is per-MODEL — see PERPLEXITY_NATIVE_TOOL_MODELS.
+    Tool calling is per-MODEL, resolved from the shipped seed rows via
+    `get_facts_for_model()` (ADR 0012 section 2 Q0e).
     """
 
     name = "perplexity"
@@ -97,30 +111,7 @@ class PerplexityProvider(BaseProvider):
         weather=True,  # Can answer weather via search
         citations=True,
         streaming=True,
-        # Per-model, resolved by shipped_capabilities_for_model below. False
-        # is the safe default: an unknown/new model is assumed non-tool-capable
-        # until measured, so it degrades rather than 400ing a user's request.
-        native_tool_calling=False,
     )
-
-    def shipped_capabilities_for_model(self, model: str) -> ProviderCapabilities:
-        """Native tool calling per model (plan layer 2).
-
-        Operator config can still override this per model — see
-        `ppxai/config/capabilities.py` — which is the escape hatch if
-        Perplexity changes a model's support before we ship a new table.
-        """
-        model_id = (model or "").strip().lower()
-        if model_id not in PERPLEXITY_NATIVE_TOOL_MODELS:
-            return self.capabilities
-        return ProviderCapabilities(
-            web_search=self.capabilities.web_search,
-            web_fetch=self.capabilities.web_fetch,
-            weather=self.capabilities.weather,
-            citations=self.capabilities.citations,
-            streaming=self.capabilities.streaming,
-            native_tool_calling=True,
-        )
 
     async def chat(
         self,
@@ -135,16 +126,18 @@ class PerplexityProvider(BaseProvider):
             messages: Conversation history
             model: Model ID to use
             stream: Whether to stream the response
-            tools: Sent natively for models in PERPLEXITY_NATIVE_TOOL_MODELS
-                   (measured: `sonar-pro`, `sonar-reasoning-pro` emit real
-                   `tool_calls`). For any other model the array is NOT sent —
+            tools: Sent natively when `get_facts_for_model(model).tool_mode`
+                   is not `prompt_based` (measured: `sonar-pro`,
+                   `sonar-reasoning-pro` emit real `tool_calls`, and their
+                   seed rows resolve `auto`). For any other model the array
+                   is NOT sent —
                    `sonar` and `sonar-deep-research` answer HTTP 400 rather
                    than degrading, so a tool-carrying run on them is refused
                    up front by the admission guard in `task_authorizer`.
 
                    The capability is resolved through
-                   `get_capabilities_for_model()`, so operator config can
-                   override the shipped table per model.
+                   `get_facts_for_model()`, so operator config can override
+                   the shipped table per model.
 
                    Re-verify with `scripts/probe-perplexity-capabilities.py`
                    — there is no `/models` endpoint, so the table cannot be
@@ -175,7 +168,7 @@ class PerplexityProvider(BaseProvider):
             # Gated on the capability table so the two that 400 never see a
             # tools array, and so an unmeasured model degrades instead.
             native_tools = bool(
-                tools and self.get_capabilities_for_model(model).native_tool_calling
+                tools and self.get_facts_for_model(model).tool_mode != "prompt_based"
             )
 
             if stream:
