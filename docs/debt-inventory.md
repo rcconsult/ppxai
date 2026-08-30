@@ -976,6 +976,52 @@ deprecation-table rows for 5.5/5.5-pro if bench confirms. Effort: (a) ~30min;
 
 ---
 
+### Item 61 — `api_path` is declared, config-overridable, displayed — and never routed on [providers / config]
+
+**Filed 2026-08-30** while designing
+[ADR 0012](decisions/0012-wire-protocol-as-per-model-capability.md).
+Independent of that ADR: this is a live defect today.
+
+`ToolCallingProfile.api_path` (`model_profiles.py:43`) is set on built-in
+profiles, merged through the full precedence ladder (`chat.py:206`), exposed
+to operator override (`config/providers.py:385`) and displayed by `/provider`
+(`commands/provider.py:349`). **Nothing reads it to route a request.** Actual
+routing is `_is_responses_api_model()`, a hardcoded prefix tuple
+(`openai_native.py:45`).
+
+Measured (project venv, 2026-08-30) — the two sources disagree on three
+models, **in both directions**:
+
+| model | `profile.api_path` | actual router |
+|---|---|---|
+| `gpt-5.3-codex` | `responses` | `chat` |
+| `gpt-5.2-pro` | `chat` | `responses` |
+| `gpt-5-pro` | `chat` | `responses` |
+
+`gpt-5.3-codex` is declared Responses-only and sent to Chat Completions:
+`"gpt-5.3-codex"` does not *start with* any tuple entry (`"codex"` is a
+prefix, not a substring). A sweep of all 65 built-in globs finds two drifting
+globs; `gpt-5.2-pro` drifts as a model but owns no glob.
+
+**Two harms.** (1) The profile table is decorative for routing, which is how
+it drifted unnoticed. (2) **An operator's `api_path` override is silently
+inert** — it validates, merges and displays as though applied. Same shape as
+Item 43 and the same failure ADR 0010's config-shape file scan exists to
+catch: every upper layer resolves a confident answer, the wire never sees it.
+
+**Fix:** ADR 0012 steps 1–2 (make `api_path` load-bearing; the prefix tuple
+becomes table seed data). Those two steps stand alone and are worth doing even
+if the rest of that ADR is not taken. Minimum fence: a test asserting
+declared-vs-routed agreement for **every** built-in profile, plus one proving
+an operator override changes the outgoing request.
+
+**Not yet established:** whether either drift is user-visible today (does
+`gpt-5.2-pro` actually work over `/chat/completions`, or is the router right
+and the profile wrong?). Each row is a decision to make deliberately, not a
+value to copy from one side to the other.
+
+---
+
 ## Recently moved out of debt scope
 
 These items left the debt inventory because they're not bug-fix-class

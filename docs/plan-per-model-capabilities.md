@@ -321,6 +321,18 @@ misdirected I4b.
 
 ### I4b — reach the new Perplexity fleet (Responses routing)
 
+> **Superseded in shape by [ADR 0012](decisions/0012-wire-protocol-as-per-model-capability.md)
+> (2026-08-30).** This section assumed `api_path` merely needed filling in and
+> that the owner had to choose "new models on `perplexity`" vs "a second
+> provider entry". Investigating found (a) `api_path` is declared, config-
+> overridable and `/provider`-displayed but **never read** — routing is a
+> hardcoded prefix tuple, and the two disagree on three models today; (b) the
+> Responses helpers are private to `OpenAINativeProvider`, so "no new protocol
+> code" was true of the behaviour but not the reachability. ADR 0012 makes
+> protocol a per-model capability resolved through the I2 ladder, which
+> dissolves the provider-entry question. I4b becomes step 3 of that ADR's
+> migration.
+
 Only after I1-I3 are green. Route `anthropic/*`, `openai/*`, `google/*`,
 `xai/*`, `perplexity/*` model IDs to `POST /v1/responses` instead of
 `/chat/completions`, driven by the table's `api_path` — no new protocol
