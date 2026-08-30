@@ -115,7 +115,13 @@ are resolved, not what they say. Call graphs + graphify refresh.
   `facts.wire_protocol` from W1's resolver — `RESPONSES_API_PREFIXES`
   becomes seed data; the 3 drift rows each decided from measurement.
 - ADR 0006 `assert_wire_blocks_clean` added to the Responses converter
-  (Item 62 fix (a)). Call graphs + graphify refresh.
+  (Item 62 fix (a)).
+- **Probe de-duplication:** `scripts/probe-perplexity-capabilities.py`
+  currently carries its own `to_responses_tool` copy of
+  `_convert_tools_for_responses`. Once `wire/responses.py` exists the probe
+  imports the real converter — otherwise it stops testing the shape the
+  provider actually sends (raised by the auditor session, W0 review).
+- Call graphs + graphify refresh.
 
 **Fences:** request-kwargs spy byte-identical for unchanged models;
 declared-vs-routed across all 65 profiles; operator `wire_protocol`

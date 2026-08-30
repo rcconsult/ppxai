@@ -27,6 +27,7 @@ The exact wire strings below were measured live against api.perplexity.ai
 
 from __future__ import annotations
 
+import copy
 import importlib.util
 from pathlib import Path
 
@@ -205,3 +206,111 @@ class TestProbeToolShape:
     def test_probe_stays_cheap(self):
         """Runs against a real billed key; keep the ceiling low."""
         assert probe_mod.PROBE_MAX_TOKENS <= 128
+
+
+class TestResponsesToolShape:
+    """to_responses_tool: chat tool -> Responses flat shape (plan W0)."""
+
+    def test_flattens_function_wrapper(self):
+        t = probe_mod.to_responses_tool(probe_mod.PROBE_TOOL)
+        assert t["type"] == "function"
+        assert t["name"] == probe_mod.PROBE_TOOL["function"]["name"]
+        assert t["parameters"] == probe_mod.PROBE_TOOL["function"]["parameters"]
+        # The Responses shape has NO nested "function" key -- sending the
+        # chat shape to /v1/responses is a 400, which would read as SHAPE
+        # and poison the survey's tool verdicts.
+        assert "function" not in t
+
+    def test_source_tool_not_mutated(self):
+        # deepcopy, not dict(): a shallow copy SHARES the nested "function"
+        # dict, so mutating it would compare equal and pass vacuously.
+        before = copy.deepcopy(probe_mod.PROBE_TOOL)
+        probe_mod.to_responses_tool(probe_mod.PROBE_TOOL)
+        assert probe_mod.PROBE_TOOL == before
+
+
+class TestCitationPathFinder:
+    """find_citation_paths: pure envelope walker for W0 (c)."""
+
+    def test_finds_top_level_citations(self):
+        assert probe_mod.find_citation_paths({"citations": ["u1"]}) == ["citations"]
+
+    def test_finds_nested_and_listed_keys(self):
+        payload = {
+            "output": [
+                {"content": [{"annotations": [{"url": "x"}], "text": "hi"}]},
+            ],
+            "search_results": [{"url": "y"}],
+        }
+        hits = probe_mod.find_citation_paths(payload)
+        assert "search_results" in hits
+        assert any(h.endswith("annotations") for h in hits)
+
+    def test_empty_values_are_not_hits(self):
+        # An empty citations list proves nothing about where citations live.
+        assert probe_mod.find_citation_paths({"citations": []}) == []
+
+    def test_no_false_positives_on_plain_envelope(self):
+        payload = {"output": [{"content": [{"text": "hello"}]}], "usage": {}}
+        assert probe_mod.find_citation_paths(payload) == []
+
+
+class TestSurveyStaysCheapAndScoped:
+    """The survey runs against a billed key -- its scope is pinned."""
+
+    def test_extra_models_are_exactly_the_planned_pair(self):
+        # perplexity/sonar answers W0 (a) (namespaced-vs-bare IDs);
+        # anthropic/claude-sonnet-5 is the W3 canary and the measured
+        # carrier of the max_output_tokens requirement (W0 (e)).
+        assert probe_mod.SURVEY_EXTRA_MODELS == (
+            "perplexity/sonar",
+            "anthropic/claude-sonnet-5",
+        )
+
+    def test_responses_base_url_is_v1(self):
+        # Measured 2026-08-15: /v1/responses is live, bare /responses is not.
+        # The survey re-verifies at runtime; this pins the default.
+        assert probe_mod.RESPONSES_BASE_URL == probe_mod.BASE_URL + "/v1"
+
+
+class TestResponsesWireWording:
+    """The Responses wire words invalid-model differently (measured 2026-08-30)."""
+
+    def test_responses_model_not_supported_is_absent(self):
+        wire = (
+            "Error code: 400 - {'error': {'message': 'validation failed: "
+            "model \"sonar\" is not supported', 'type': 'validation_error'}}"
+        )
+        assert probe_mod.classify(400, wire) == probe_mod.ABSENT
+
+    def test_tool_not_supported_still_rejects(self):
+        # The chat-wire REJECTS wording contains both 'tool' and 'not
+        # supported' -- the new ABSENT rule must not swallow it.
+        assert probe_mod.classify(400, WIRE_SONAR_REJECTS) == probe_mod.REJECTS
+
+
+class TestSearchResultsItemIsFound:
+    """Citations on the Responses wire live in a search_results OUTPUT ITEM.
+
+    Measured 2026-08-30 (plan W0 (c)): unlike Sonar chat-completions, which
+    carries a top-level `citations` list, the Agent-API envelope returns a
+    `search_results` item (15 results with id/snippet/date/url) and leaves
+    the text block's `annotations` EMPTY. A walker keyed only on dict keys
+    would miss it, because here the marker is the item's `type` VALUE.
+    """
+
+    def test_search_results_output_item_is_detected(self):
+        payload = {
+            "output": [
+                {"type": "search_results", "results": [{"id": 1, "snippet": "x"}]},
+                {"type": "message", "content": [{"type": "output_text",
+                                                 "annotations": []}]},
+            ]
+        }
+        hits = probe_mod.find_citation_paths(payload)
+        assert any("search_results" in h for h in hits)
+
+    def test_empty_annotations_alone_are_not_citations(self):
+        payload = {"output": [{"type": "message",
+                               "content": [{"annotations": []}]}]}
+        assert probe_mod.find_citation_paths(payload) == []

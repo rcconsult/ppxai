@@ -38,6 +38,19 @@ Usage:
   python3 scripts/probe-perplexity-capabilities.py --json
   python3 scripts/probe-perplexity-capabilities.py --model sonar-pro
   python3 scripts/probe-perplexity-capabilities.py --check-models-endpoint
+  python3 scripts/probe-perplexity-capabilities.py --api-path responses
+  python3 scripts/probe-perplexity-capabilities.py --survey-responses
+
+`--api-path responses` runs the same drift check over POST /v1/responses --
+the wire the Agent API serves and the one the whole provider moves to when
+the chat-completions endpoint retires (2026-09-27, see
+docs/plan-adr-0012-implementation.md).
+
+`--survey-responses` is plan W0's one-off measurement battery: model
+existence under bare vs namespaced IDs, native tools, citation location in
+the Responses envelope, streaming, and the max_output_tokens requirement.
+It measures and reports -- it judges no table (exit 0 unless nothing could
+be measured).
 
 Exit codes:
   0  every probed model matched the shipped table
@@ -60,6 +73,17 @@ from ppxai.engine.providers.perplexity import (  # noqa: E402
 )
 
 BASE_URL = "https://api.perplexity.ai"
+
+#: The Responses API lives under /v1 (measured 2026-08-15: POST /v1/responses
+#: and POST /v1/agent are both live; /chat/completions has no /v1 prefix).
+#: The survey re-verifies this rather than trusting it.
+RESPONSES_BASE_URL = BASE_URL + "/v1"
+
+#: Extra IDs the survey checks beyond the shipped roster: the namespaced
+#: form of sonar (the 2026-08-13 Agent-API roster lists ONLY this form) and
+#: one cross-vendor model (the planned W3 canary; also the measured carrier
+#: of the max_output_tokens requirement).
+SURVEY_EXTRA_MODELS = ("perplexity/sonar", "anthropic/claude-sonnet-5")
 
 #: Verdicts. Only NATIVE/REJECTS/SHAPE/ABSENT are capability statements.
 NATIVE, REJECTS, SHAPE, ABSENT, ERROR = "NATIVE", "REJECTS", "SHAPE", "ABSENT", "ERROR"
@@ -85,6 +109,14 @@ PROBE_TOOL = {
 }
 
 PROBE_PROMPT = "What time is it in UTC? Use the get_time tool."
+
+#: The survey's existence request doubles as the citation probe, so its
+#: prompt must actually invite a web search -- the tool prompt above never
+#: does, and a search-free answer carries no citations to find.
+SURVEY_PROMPT = "In one short sentence: what is the latest stable Python release?"
+
+#: The citation probe must actually trigger a search.
+CITATION_PROMPT = "What is the latest stable Python release? Search the web."
 
 #: Cheap on purpose -- this runs against a real, billed key.
 PROBE_MAX_TOKENS = 64
@@ -120,6 +152,10 @@ def classify(status, body):
     if status == 400:
         low = str(body).lower()
         if "invalid_model" in low or "invalid model" in low:
+            return ABSENT
+        # Responses-wire wording (measured 2026-08-30): 'validation failed:
+        # model "sonar" is not supported'. An unknown model, not a shape issue.
+        if "model" in low and "is not supported" in low and "tool" not in low:
             return ABSENT
         # Order matters: a parameter-SHAPE complaint mentions "tool" too, so
         # test the shape wording before the generic unsupported wording.
@@ -158,6 +194,227 @@ def probe(client, model):
     except Exception:  # noqa: BLE001
         pass
     return NATIVE, "accepted tools array", called
+
+
+def to_responses_tool(chat_tool):
+    """Convert a chat-completions tool to the Responses API's flat shape.
+
+    Chat:      {"type": "function", "function": {"name", "description", "parameters"}}
+    Responses: {"type": "function", "name", "description", "parameters"}
+
+    Same conversion `openai_native._convert_tools_for_responses` performs;
+    duplicated here only because the probe deliberately imports nothing from
+    the provider under test beyond its capability tables.
+    """
+    fn = chat_tool["function"]
+    return {
+        "type": "function",
+        "name": fn["name"],
+        "description": fn["description"],
+        "parameters": fn["parameters"],
+    }
+
+
+def find_citation_paths(payload, _prefix=""):
+    """Walk a response payload; return dot-paths whose key smells of citations.
+
+    Pure and offline-testable. The chat-completions envelope carries a
+    top-level `citations` list; where (or whether) the Responses envelope
+    carries them is exactly what W0 (c) exists to measure, so the survey
+    reports every candidate path rather than asserting one.
+    """
+    hits = []
+    keywords = ("citation", "search_result", "annotation", "source")
+    # `search_results` arrives as an output ITEM whose type is the marker,
+    # so match on the value too, not only on keys.
+    if isinstance(payload, dict) and payload.get("type") == "search_results":
+        hits.append("{}[type=search_results]".format(_prefix or "output"))
+    if isinstance(payload, dict):
+        for k, v in payload.items():
+            path = "{}.{}".format(_prefix, k) if _prefix else str(k)
+            if any(w in str(k).lower() for w in keywords) and v:
+                hits.append(path)
+            hits.extend(find_citation_paths(v, path))
+    elif isinstance(payload, list):
+        for i, item in enumerate(payload[:5]):  # sample, not exhaustive
+            hits.extend(find_citation_paths(item, "{}[{}]".format(_prefix, i)))
+    return hits
+
+
+def probe_responses(client, model):
+    """Drift-check one model over POST /v1/responses.
+
+    Same verdict semantics as `probe()`: the capability is proven by the
+    endpoint ACCEPTING the tools array. `called_tool` is true when the
+    output contains a function_call item.
+    """
+    try:
+        resp = client.responses.create(
+            model=model,
+            input=PROBE_PROMPT,
+            tools=[to_responses_tool(PROBE_TOOL)],
+            max_output_tokens=PROBE_MAX_TOKENS,
+        )
+    except Exception as exc:  # noqa: BLE001 -- classify, never swallow
+        status = getattr(exc, "status_code", None)
+        verdict = classify(status, exc) if status else ERROR
+        return verdict, _one_line(exc), False
+
+    called = False
+    try:
+        called = any(
+            getattr(item, "type", "") == "function_call" for item in resp.output
+        )
+    except Exception:  # noqa: BLE001
+        pass
+    return NATIVE, "accepted tools array", called
+
+
+def _survey_request(client, model, **overrides):
+    """One Responses request; returns (status, resp_or_exc)."""
+    kwargs = {
+        "model": model,
+        "input": SURVEY_PROMPT,
+        "max_output_tokens": PROBE_MAX_TOKENS,
+    }
+    kwargs.update(overrides)
+    for key in [k for k, v in list(kwargs.items()) if v is None]:
+        del kwargs[key]
+    try:
+        return 200, client.responses.create(**kwargs)
+    except Exception as exc:  # noqa: BLE001
+        # Same idiom as probe()/probe_responses(): a missing status_code is
+        # not a status, and classify() turns None into ERROR.
+        return getattr(exc, "status_code", None), exc
+
+
+def survey_responses(api_key, json_out):
+    """Plan W0's measurement battery over the Responses wire.
+
+    Measures, per model (roster + SURVEY_EXTRA_MODELS): existence, native
+    tools, citation candidate paths, streaming. Plus two one-off checks:
+    which base_url serves /responses, and whether max_output_tokens is
+    required (measured on one Sonar and one anthropic/* model).
+    Reports; judges no table.
+    """
+    from openai import OpenAI
+
+    client = OpenAI(api_key=api_key, base_url=RESPONSES_BASE_URL)
+    models = list(shipped_roster()) + list(SURVEY_EXTRA_MODELS)
+    report = {"base_url": {}, "models": {}, "max_output_tokens_required": {}}
+
+    # (f) which base_url serves /responses -- one cheap request each.
+    for base in (RESPONSES_BASE_URL, BASE_URL):
+        c = OpenAI(api_key=api_key, base_url=base)
+        status, _ = _survey_request(c, "sonar-pro")
+        report["base_url"][base] = status or "no status (connection/other)"
+    if report["base_url"][RESPONSES_BASE_URL] not in (200, 400):  # noqa: PLR2004
+        alt = report["base_url"][BASE_URL]
+        if alt in (200, 400):
+            client = OpenAI(api_key=api_key, base_url=BASE_URL)
+
+    for model in models:
+        row = {}
+        # (a) existence: plain request, no tools
+        status, resp = _survey_request(client, model)
+        row["exists"] = classify(status, resp) if status else ERROR
+        row["exists_detail"] = "" if status == 200 else _one_line(resp, 100)
+        if status == 200:
+            # (c) citations. MEASURED 2026-08-30: on this wire search is an
+            # explicit TOOL, not implicit as on Sonar chat-completions -- a
+            # plain request runs no search and carries no citations. So the
+            # citation probe must ask for web_search, and the answer lives in
+            # a `search_results` OUTPUT ITEM (not in text annotations, which
+            # come back empty).
+            c_status, c_resp = _survey_request(
+                client, model, tools=[{"type": "web_search"}], input=CITATION_PROMPT
+            )
+            payload = {}
+            if c_status == 200:
+                try:
+                    payload = c_resp.model_dump()
+                except Exception:  # noqa: BLE001
+                    payload = {}
+            row["citation_paths"] = sorted(set(find_citation_paths(payload)))[:8]
+            row["search_result_items"] = sum(
+                len(i.get("results") or [])
+                for i in payload.get("output", [])
+                if isinstance(i, dict) and i.get("type") == "search_results"
+            )
+            # (b) tools
+            verdict, detail, called = probe_responses(client, model)
+            row["tools"] = verdict
+            row["tools_called"] = called
+            row["tools_detail"] = detail if verdict != NATIVE else ""
+            # (d) streaming -- limited to the survey extras (the models
+            # measured to EXIST on this wire) to keep the bill small.
+            if model in SURVEY_EXTRA_MODELS:
+                s_status, s_resp = _survey_request(client, model, stream=True)
+                if s_status == 200:
+                    try:
+                        events = sum(1 for _ in s_resp)
+                        row["streaming"] = "OK ({} events)".format(events)
+                    except Exception as exc:  # noqa: BLE001
+                        row["streaming"] = "BROKE mid-stream: " + _one_line(exc, 60)
+                else:
+                    row["streaming"] = "HTTP {}: {}".format(
+                        s_status, _one_line(s_resp, 60)
+                    )
+        report["models"][model] = row
+
+    # (e) is max_output_tokens required? One Sonar-family + one anthropic/*.
+    for model in SURVEY_EXTRA_MODELS:
+        if report["models"].get(model, {}).get("exists") != NATIVE:
+            continue
+        status, resp = _survey_request(client, model, max_output_tokens=None)
+        report["max_output_tokens_required"][model] = (
+            "no (200 without it)" if status == 200
+            else "YES (HTTP {}: {})".format(status, _one_line(resp, 80))
+        )
+
+    if json_out:
+        print(json.dumps(report, indent=2))
+        return 0
+
+    print("Responses-wire survey (plan W0) -- measured live")
+    print()
+    print("  base_url serving /responses:")
+    for base, status in report["base_url"].items():
+        print("    {:<38} HTTP {}".format(base, status))
+    print()
+    print(
+        "  {:<28} {:<8} {:<8} {:<6} {:<22} CITATION PATHS".format(
+            "MODEL", "EXISTS", "TOOLS", "CALLED", "STREAMING"
+        )
+    )
+    for model, row in report["models"].items():
+        print(
+            "  {:<28} {:<8} {:<8} {:<6} {:<22} {}".format(
+                model,
+                row.get("exists", "?"),
+                row.get("tools", "-"),
+                "yes" if row.get("tools_called") else "-",
+                row.get("streaming", "-"),
+                (
+                    "{} results @ {}".format(
+                        row["search_result_items"],
+                        ", ".join(row.get("citation_paths", [])) or "?",
+                    )
+                    if row.get("search_result_items")
+                    else (", ".join(row.get("citation_paths", [])) or "-")
+                ),
+            )
+        )
+        for key in ("exists_detail", "tools_detail"):
+            if row.get(key):
+                print("  {:<28}   {}".format("", row[key]))
+    print()
+    print("  max_output_tokens required?")
+    for model, answer in report["max_output_tokens_required"].items():
+        print("    {:<28} {}".format(model, answer))
+
+    measured = [r for r in report["models"].values() if r.get("exists") != ERROR]
+    return 0 if measured else 2
 
 
 def check_models_endpoint(client):
@@ -200,14 +457,30 @@ def main():
         action="store_true",
         help="also re-verify that GET /models is still absent",
     )
+    ap.add_argument(
+        "--api-path",
+        choices=("chat", "responses"),
+        default="chat",
+        help="which wire the drift check probes (default: chat)",
+    )
+    ap.add_argument(
+        "--survey-responses",
+        action="store_true",
+        help="run plan W0's Responses-wire measurement battery instead of the drift check",
+    )
     args = ap.parse_args()
 
     models = args.models or shipped_roster()
 
     if args.dry_run:
+        endpoint = (
+            RESPONSES_BASE_URL + "/responses"
+            if args.api_path == "responses"
+            else BASE_URL + "/chat/completions"
+        )
         print(
             "DRY RUN -- no API calls. Would probe {} model(s) at "
-            "{}/chat/completions,".format(len(models), BASE_URL)
+            "{},".format(len(models), endpoint)
         )
         print(
             "one request each, max_tokens={}, tool={}.".format(
@@ -238,7 +511,12 @@ def main():
         print("ERROR: openai SDK not installed", file=sys.stderr)
         return 2
 
-    client = OpenAI(api_key=api_key, base_url=BASE_URL)
+    if args.survey_responses:
+        return survey_responses(api_key, args.json)
+
+    wire_base = RESPONSES_BASE_URL if args.api_path == "responses" else BASE_URL
+    probe_fn = probe_responses if args.api_path == "responses" else probe
+    client = OpenAI(api_key=api_key, base_url=wire_base)
 
     if args.check_models_endpoint:
         print("Enumeration check:")
@@ -247,7 +525,7 @@ def main():
 
     results = []
     for model in models:
-        verdict, detail, called = probe(client, model)
+        verdict, detail, called = probe_fn(client, model)
         exp = expected_verdict(model)
         # The table has only two sets, so it cannot express SHAPE separately
         # from REJECTS -- both mean "not natively tool-capable". Only a
@@ -275,8 +553,8 @@ def main():
         print(json.dumps(results, indent=2))
     else:
         print(
-            "Perplexity capability probe -- {} model(s), live at {}".format(
-                len(results), BASE_URL
+            "Perplexity capability probe -- {} model(s), live at {} ({})".format(
+                len(results), wire_base, args.api_path
             )
         )
         print()
@@ -309,14 +587,29 @@ def main():
             file=sys.stderr,
         )
         for r in drift:
-            print(
-                "  {}: measured {}, table says {} -- update "
-                "PERPLEXITY_NATIVE_TOOL_MODELS in "
-                "ppxai/engine/providers/perplexity.py".format(
-                    r["model"], r["verdict"], r["expected"]
-                ),
-                file=sys.stderr,
-            )
+            if args.api_path == "responses" and r["verdict"] == ABSENT:
+                # Not a table bug: the capability table describes the CHAT
+                # wire. An ABSENT here means this model ID is not served on
+                # the Responses wire at all -- a routing/ID fact (plan W0
+                # (a)), whose remedy is the per-model wire table, not the
+                # tool-capability sets.
+                print(
+                    "  {}: not served on the responses wire (ABSENT). This is "
+                    "an ID/routing fact, not a tool-capability drift -- see "
+                    "docs/plan-adr-0012-implementation.md W0 (a).".format(
+                        r["model"]
+                    ),
+                    file=sys.stderr,
+                )
+            else:
+                print(
+                    "  {}: measured {}, table says {} -- update "
+                    "PERPLEXITY_NATIVE_TOOL_MODELS in "
+                    "ppxai/engine/providers/perplexity.py".format(
+                        r["model"], r["verdict"], r["expected"]
+                    ),
+                    file=sys.stderr,
+                )
         return 1
     print("Table matches the live API for every probed model.")
     return 0
