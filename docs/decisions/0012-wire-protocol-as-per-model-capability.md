@@ -3,9 +3,18 @@
 **Date:** 2026-08-30 (revised 2026-08-30 — scope widened from "add a protocol
 resolver" to "unify the two per-model fact systems, protocol among them",
 after the owner asked why protocol was absent from the capability table;
-revised in place per the README's Proposed-records rule)
-**Status:** 🟡 **Proposed** — design record, no code written. Supersedes the
-`api_path` routing sketch in
+revised in place per the README's Proposed-records rule; status corrected
+2026-08-30 from "no code written" to Accepted-in-part after §2 merged as
+`6b0f2214` — the header had drifted from shipped reality, which is the exact
+defect class this record exists to remove)
+**Status:** 🟡 **Accepted-in-part** — §2 (the unified fact system, Q0a–Q0h)
+is **implemented and merged** as migration step 0, commit `6b0f2214`
+(2026-08-30, `bugfix/v1.19.1`). Migration **steps 1–4 remain open**: the
+protocol handlers, the routing that consumes `wire_protocol`, and Perplexity
+over the Responses wire. Until step 2 lands, the operator `api_path` override
+stays inert — [debt Item 61](../debt-inventory.md) is still open, as is Item 62
+until step 4. §1 and §3–§7 are therefore still design, revisable in place.
+Supersedes the `api_path` routing sketch in
 [`../plan-per-model-capabilities.md`](../plan-per-model-capabilities.md) §I4b,
 which assumed the slot merely needed filling in.
 **Related:**
@@ -924,17 +933,24 @@ depends on it.
 Ordered so each step is verifiable before the next depends on it. Every step is
 gated on the owner's explicit go, per the arc's standing rule.
 
-0. **Unify the fact systems (§2).** `ModelFacts` + one resolver replaces
-   `ProviderCapabilities` and `ModelProfile`'s parallel ladders; both old
-   accessors and merge sites are deleted; config keys merge under Q0c with
-   the `/doctor` scan in the same commit. Behaviour byte-identical — this
-   step moves *where* facts resolve, not *what they say*. Fences: every
-   existing capability and profile test passes against the unified accessor;
-   I2's real-config cross-pair test extended to profile fields; a
-   mode-vs-capability seam test (the I3 regression); the accessor-override
-   ban.
+0. ✅ **DONE** (`6b0f2214`, 2026-08-30) — **Unify the fact systems (§2).**
+   *As shipped, per Q0e/Q0g rather than this paragraph's original wording:*
+   `ModelFacts` + one resolver replaces `ModelProfile`'s ladder, and
+   `ProviderCapabilities` was **retargeted in place** to the endpoint record
+   (Q0g) rather than replaced — the two records are disjoint, so there is no
+   merge site left to arbitrate. Both old accessors are deleted; config keys
+   merge under Q0c with the `/doctor` scan in the same commit. **Not
+   byte-identical:** four *declared* deviations in two classes (Q0d) — the
+   `perplexity` endpoint's `citations` semantic and three `supports_vision`
+   rows — plus five latent defects
+   the unification exposed and fixed — none of them reachable in shipped
+   default behaviour; see the CHANGELOG's reachability tiering. Fences as
+   listed, plus `tests/test_adr0012_migration_fence.py`, which compares all 45
+   example-config records field-by-field against a fixture harvested by running
+   the **old** code over the **old** file, with each deviation named explicitly
+   and self-checked.
 
-1. **Extract, no behaviour change.** Lift the Responses block into a handler;
+1. ⬜ **Extract, no behaviour change.** Lift the Responses block into a handler;
    `openai_native` consumes it via the handler while keeping
    `_is_responses_api_model` as its resolver. Fence: existing suite green, plus
    a request-kwargs spy proving the outgoing request is byte-identical

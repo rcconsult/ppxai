@@ -17,10 +17,10 @@ Status is summarised; the record itself is authoritative.
 | [0009](0009-task-execution-profiles.md) | Task execution profiles + web_search enrichment | ✅ Accepted — all four steps implemented v1.19.1 |
 | [0010](0010-config-shape-review.md) | Config shape: three axes | ✅ Implemented v1.19.1 — **clean break**, one deviation from the planned migration |
 | [0011](0011-command-taxonomy-streamline.md) | Command taxonomy (`/auto` · `/run` · `/task`) | ✅ Accepted — implemented v1.19.1 |
-| [0012](0012-wire-protocol-as-per-model-capability.md) | Per-model facts: one resolution system, wire protocol included | 🟡 Proposed — **not implemented**; unifies the two per-model fact systems (ModelFacts); 3 measured `api_path` drifts, operator override inert; designs for Anthropic Messages as the 4th protocol |
+| [0012](0012-wire-protocol-as-per-model-capability.md) | Per-model facts: one resolution system, wire protocol included | 🟡 Accepted-in-part — §2 (the unified `ModelFacts`/`ProviderCapabilities` split) **implemented** v1.19.1 as migration step 0 (`6b0f2214`); **steps 1–4 open** — protocol handlers + the routing that consumes `wire_protocol`, so the operator `api_path` override stays inert (debt Item 61) until step 2; designs for Anthropic Messages as the 4th protocol |
 
-The open records are **0007 step 2**, **0008** and **0012**; everything else
-is implemented. Numbering is sequential — the next record is `0013`.
+The open records are **0007 step 2**, **0008** and **0012** (partly — its §2
+shipped, its migration steps 1–4 have not); everything else is implemented. Numbering is sequential — the next record is `0013`.
 
 ## About these records
 
