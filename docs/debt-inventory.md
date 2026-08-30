@@ -445,11 +445,19 @@ date bumped to 2026-07-11; no new table entries needed.
    Superseded by Item 55**, which carries the verified pricing/benchmark/
    hazard detail and the fix order.
 
-2. **Perplexity Agent API** — ⚠️ **TRIGGER FIRED 2026-08-13: docs have
-   stabilized and Perplexity now states "Sonar Chat Completions is now
-   Agent API" (changelog, July 2026; GA was February 2026).** Chat
-   completions still works — the Item 43 live runs all went through it —
-   but it is now the legacy surface.
+2. **Perplexity Agent API** — 🔴 **ESCALATED 2026-08-30: the Sonar
+   chat-completions endpoint has a RETIREMENT DATE — 2026-09-27** (forum
+   announcement "Sonar is moving to the Agent API",
+   community.perplexity.ai/t/5802, + changelog; endpoint now labelled
+   *legacy* with a migration guide). It is the only wire
+   `PerplexityProvider` — and `web_premium.py`'s separate web_search
+   client — speak. Migration is planned as
+   [plan-adr-0012-implementation.md](plan-adr-0012-implementation.md)
+   W0–W3, target complete **2026-09-20** (forum precedent: Gemini
+   endpoints have died early). Prior state (TRIGGER FIRED 2026-08-13):
+   docs stabilized, "Sonar Chat Completions is now Agent API" (changelog,
+   July 2026; GA February 2026); chat completions still works — the
+   Item 43 live runs all went through it.
 
    **Verified roster** (`docs.perplexity.ai/docs/agent-api/models.md`,
    fetched 2026-08-13) — far wider than the 2026-07 changelog sample:

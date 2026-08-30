@@ -13,6 +13,15 @@ Branch: `bugfix/v1.19.1`. Opening theme: **tool-loop transcript integrity** — 
 
 > ⚠️ **Breaking: `ppxai-config.json` tier keys moved, no dual-read** (ADR 0010). Six `tools.agent.*` keys moved to the `execution.*` axis. A config left at the old paths is **silently ignored** and those settings revert to their defaults — run **`/doctor`**, which prints the exact old→new mapping for anything still stale. `/v1/oneshot` and `/v1/agent/*` are **config-consuming, not config-shaped**: no request or response changes.
 
+### Notice — Perplexity Sonar chat-completions endpoint retires 2026-09-27
+
+Web-verified 2026-08-30 (Perplexity forum + changelog): the legacy Sonar
+chat-completions endpoint — the wire the `perplexity` provider and the
+premium `web_search` backend use — is retired by Perplexity on
+**2026-09-27**. Migration to the Agent API (OpenAI Responses shape, already
+implemented in ppxai for OpenAI Codex models) is planned and sequenced in
+`docs/plan-adr-0012-implementation.md` (W0–W3, target 2026-09-20).
+
 ### Fixed — Perplexity tool calling, and the per-model capability framework
 
 `/task` on Perplexity never called its granted tools — it refused,

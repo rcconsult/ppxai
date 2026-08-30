@@ -319,7 +319,12 @@ needs a translation layer" paragraph**, which was doc-derived and wrong —
 it survived unamended when this plan was corrected at I2, and would have
 misdirected I4b.
 
-### I4b — reach the new Perplexity fleet (Responses routing)
+### I4b — reach the new Perplexity fleet (Responses routing) — ⏰ DEADLINE-DRIVEN
+
+> **2026-08-30:** the Sonar chat-completions endpoint **retires
+> 2026-09-27** (web-verified; see debt Item 38 watch 2). I4b is executed
+> as W0–W3 of [plan-adr-0012-implementation.md](plan-adr-0012-implementation.md),
+> target 2026-09-20.
 
 > **Superseded in shape by [ADR 0012](decisions/0012-wire-protocol-as-per-model-capability.md)
 > (2026-08-30).** This section assumed `api_path` merely needed filling in and
