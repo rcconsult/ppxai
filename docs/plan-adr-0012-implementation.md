@@ -100,8 +100,8 @@ design is in [ADR 0012 §2](decisions/0012-wire-protocol-as-per-model-capability
 this iteration implements it.
 
 **The shape:**
-- `ProviderFacts` (endpoint: `web_search`, `web_fetch`, `weather`,
-  `citations`, `streaming`) and `ModelFacts` (model: `wire_protocol`,
+- `ProviderCapabilities` **retargeted in place** (Q0g) — endpoint fields
+  only, `native_tool_calling` removed — and `ModelFacts` (model: `wire_protocol`,
   `tool_mode`, fallbacks, limits, vision, reasoning, `restricted_params`,
   `tier`) — **disjoint field sets**, so no field can be stated twice and
   there is nothing to arbitrate.
@@ -152,6 +152,9 @@ say so: the 35-model harness compares against the **post-`/doctor`**
 example config, which ships rewritten in this iteration. Comparing against
 the un-migrated file would fail by design — those 20 flips are the declared
 change, not a regression.
+
+- Retire the AGENTS.md `tool_calling` parser (Q0f — zero users measured);
+  `model_hints` is untouched. `/doctor` reports any section it finds.
 
 Call graphs: create `docs/provider-wire-call-graphs.md` + `graphify update .`.
 

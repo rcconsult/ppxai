@@ -487,6 +487,52 @@ an operator adding a box or a model gets a complete record generated rather
 than hand-writing 12 fields. The verbosity is real and accepted; the tool,
 not the human, produces it.
 
+#### Q0f — the AGENTS.md `tool_calling` layer retires; benchmark tuning gets a defined home
+
+**Owner decision 2026-08-30:** retire it, *"but we need another way to
+supply these tuning instructions we got after benchmarks."*
+
+What is actually being retired is small: `bootstrap.py:315` parses a
+`tool_calling` section from AGENTS.md, and **no AGENTS.md in any checkout
+contains one** (measured across this repo, ppxai-sre and a third checkout).
+It is a parser with no users, and under Q0e it would have to become a third
+`ModelFacts` lookup for zero current benefit.
+
+**Benchmark tuning is not lost, because it does not live there.** Two
+distinct things were conflated:
+
+| Kind of tuning | Where it lives | Status |
+|---|---|---|
+| *Behaviour* — tool mode, fallbacks, limits, tier | `BUILTIN_PROFILES` → the shipped `ModelFacts` table | unchanged by this ADR; already benchmark-derived |
+| *Prompt guidance* — "call tools directly", "don't echo tool JSON" | AGENTS.md `model_hints` (~100 lines, actively used, additive per glob) | **untouched** — not a `ModelFacts` concern |
+
+So a benchmark run produces: prompt findings → `model_hints` (unchanged
+path), and behavioural findings → a row in the shipped table, which is
+where `o4-mini`'s and `gpt-4.1-mini`'s benchmark results already live.
+
+**The gap this leaves, and how it closes.** Today an operator who benchmarks
+a model on *their own* fleet has no path except editing our code table.
+`/doctor`'s scaffolding (Q0e) is that path: it emits a complete per-model
+record they drop into config, which outranks the shipped row. Project-level
+pinning without touching config is the one capability genuinely lost —
+recorded here as the trigger to revisit, not silently dropped.
+
+`/doctor` reports any AGENTS.md `tool_calling` section it finds, naming the
+config record that replaces it.
+
+#### Q0g — the provider record is `ProviderCapabilities`, retargeted in place
+
+**Owner decision 2026-08-30.** No new `ProviderFacts` type: drop
+`native_tool_calling` from the existing `ProviderCapabilities` (it becomes a
+`ModelFacts` concern) and use that as the provider record. `ModelFacts` is
+new because nothing equivalent existed; the provider record already exists
+in 12 production files, and introducing a parallel type would recreate the
+"two records for one question" smell this ADR removes — at the type level
+this time.
+
+Migration is confined to call sites reading the removed field, which W1
+must touch anyway.
+
 **Deferred, explicitly:** whether some fleet-level convenience returns as an
 inheritance mechanism. Reviewable later, once the explicit form is in place
 and its cost is measured rather than predicted.
