@@ -102,12 +102,19 @@ iteration implements it; no separate ADR to draft.
 
 **What §2 settles (recorded here so the plan stands alone):**
 - **Q0a** — `tool_mode` subsumes `native_tool_calling`; the boolean is
-  **deleted**, not kept as a derived alias (a readable alias is how the I3
-  seam bug survived).
-- **Q0b** — globs win over exact keys (globs generalise; 65 patterns already
-  depend on them). One matcher, first-match-wins, most-specific-first.
-- **Q0c** — config keys: **clean break** per ADR 0010, with the `/doctor`
-  config-shape scan shipped in the **same commit**.
+  **deleted**, not kept as a derived alias. ⚠️ **`tool_mode` defaults to
+  `prompt_based`**, NOT the profile's `native`: the two systems disagree on
+  their safe default, and inheriting the profile's would flip every unlisted
+  model to tool-capable through `task_authorizer` and `execution.py`.
+- **Q0b** — globs win over exact keys, **two-pass matching**: every exact
+  (wildcard-free) id is tried before any wildcard glob. "Specific before
+  generic" is today only a hand-maintained comment, not computed.
+- **Q0c** — config keys: **clean break** per ADR 0010, `/doctor` scan in the
+  **same commit**, and the §2 clean-break inventory (4 reader modules + 4
+  user docs) moves with it.
+- ⚠️ **Rung 4 is a declared behaviour change:** provider-level operator
+  config currently outranks AGENTS.md (both flattened into one layer by
+  `get_tool_calling_config`); the ladder demotes it below AGENTS.md.
 
 **Work:**
 - `ModelFacts` + `shipped_facts_for_model()` / `get_facts_for_model()` on
@@ -124,8 +131,11 @@ iteration implements it; no separate ADR to draft.
 - Config accessors merge; `/doctor` scan; `chat.py:693`'s mode check reads
   the unified facts.
 
-**Fences:** every existing capability + profile test green against the
-unified accessor; I2's real-config cross-pair test extended to profile
+**Fences:** a model in **neither** table resolves NOT tool-capable, asserted
+end-to-end through `authorize_task()` (Q0a's default flip); an exact id that
+also matches an earlier generic glob resolves to the exact row (Q0b);
+provider-config × AGENTS.md × per-model real-config cross-pair (rung 4);
+every existing capability + profile test green against the unified accessor; I2's real-config cross-pair test extended to profile
 fields; mode-vs-capability seam test (the I3 regression); accessor-override
 ban; **behaviour byte-identical** — spot-check a sample of models across all
 4 providers before/after. Full suite (5188/32/0 baseline).

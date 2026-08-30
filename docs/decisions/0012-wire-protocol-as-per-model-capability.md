@@ -342,11 +342,27 @@ absorbing the profile path's extra layer:
 4. config `providers.<p>.*` (per provider)
 5. code provider default
 
+⚠️ **Rung 4 is a deliberate behaviour CHANGE, not a move.** Today
+`get_tool_calling_config` ([`providers.py:377`](../../ppxai/config/providers.py#L377))
+flattens provider-level **and** model-level config into a *single* layer that
+`chat.py:187` applies **above** AGENTS.md — so an operator's *provider-level*
+`tool_calling` currently beats a benchmark-locked AGENTS.md setting. Splitting
+the two config levels onto rungs 1 and 4 puts AGENTS.md above provider-level
+config.
+
+That is the correct end state — a per-model benchmark result should outrank a
+provider-wide operator default, which is the same specificity-before-authorship
+rule I2 established — but it **must be declared and fenced, not slipped in**.
+W1 ships a real-config cross-pair test (provider-level config × AGENTS.md ×
+per-model glob), because this is precisely the class of ordering bug that 22
+green unit tests missed in I2. If any shipped config depends on the old order,
+the migration notes it.
+
 I2's guard carries over unchanged: a test bans subclasses from overriding the
 public accessor, since one that did would silently drop the config layers —
 the shape that broke I1.
 
-#### Q0a — `native_tool_calling` vs `tool_mode`: mode wins, boolean **deleted**
+#### Q0a — `native_tool_calling` vs `tool_mode`: mode wins, boolean **deleted**, default stays CONSERVATIVE
 
 `tool_mode` strictly subsumes the boolean (`native`/`auto` ⇒ true,
 `prompt_based` ⇒ false) and carries a distinction the boolean cannot express.
@@ -354,12 +370,49 @@ The boolean is **removed from the record**, not kept as a derived property:
 a readable alias is how the seam bug survives. Call sites reading
 `caps.native_tool_calling` migrate to `facts.tool_mode != "prompt_based"`.
 
-#### Q0b — glob vs exact key: globs win, one matcher
+⚠️ **The two systems disagree on their SAFE DEFAULT, and a naive merge
+inverts it.** `ProviderCapabilities.native_tool_calling` defaults **False**
+([`types.py:891`](../../ppxai/engine/types.py#L891); `loader.py:51` says
+"Default to prompt-based"; the Perplexity probe encodes the same rule —
+*unmeasured ⇒ assumed not capable*). `ToolCallingProfile.mode` defaults
+**`"native"`** ([`model_profiles.py:38`](../../ppxai/engine/model_profiles.py#L38)).
+Merging on the profile's default would flip **every model absent from both
+code tables** from not-tool-capable to tool-capable — silently, and through
+gated consumers: `task_authorizer.py:982-989` (task-tier eligibility),
+`execution.py:338` (oneshot enrichment), and the I1 send paths.
+
+**Decision: `ModelFacts.tool_mode` defaults to `"prompt_based"`** — the
+capability system's conservative default wins, because an unmeasured model
+that degrades is recoverable while one that 400s a user's request is not
+(the Item 43 lesson, and exactly why `PerplexityProvider` sets
+`native_tool_calling=False` as its provider default). A model that today
+resolves `mode="native"` only via `ToolCallingProfile`'s *default* — rather
+than via an explicit glob — is a model nobody measured; W1 must enumerate
+those and give each an explicit row, not inherit them by default flip.
+
+**Fence:** the seam test must include a model listed in **neither** table and
+assert it resolves not-tool-capable, plus an end-to-end assertion through
+`authorize_task()` (the I3 lesson: testing the helper is not testing the call
+site).
+
+#### Q0b — glob vs exact key: globs win, one matcher, **exact ids matched first**
 
 Capabilities key on exact ids, profiles on globs; globs strictly generalise
 (an exact id is a glob without wildcards), and 65 patterns already depend on
-them. One matcher, first-match-wins, most-specific-first — the existing
-`BUILTIN_PROFILES` ordering rule, applied to the merged table.
+them. One matcher for the merged table.
+
+⚠️ **"Most-specific-first" is today a COMMENT, not a computed rule.**
+[`model_profiles.py:82`](../../ppxai/engine/model_profiles.py#L82) says *"First
+match wins — order matters (specific before generic)"* — specificity is
+maintained by hand, by insertion order. Merging the exact-id tables
+(`PERPLEXITY_NATIVE_TOOL_MODELS`, the openai prompt-based prefixes) into a
+65-entry glob dict by insertion order would make correctness depend on where a
+row happens to sit.
+
+**Decision: matching is two-pass — every exact (wildcard-free) id is tried
+before any wildcard glob**, and only then insertion order applies among globs.
+A test enforces both passes, including the case that motivates it: an exact id
+that also matches an earlier generic glob must resolve to the exact row.
 
 #### Q0c — config migration: clean break, with the file scan shipped alongside
 
@@ -369,6 +422,21 @@ no dual-read, and **`/doctor` gains the config-shape scan in the same
 commit** — a moved key with no dual-read is invisible to every accessor, so
 only a check that reads the config *file* can report it. Both old families
 already have raw-file readers, so the scan has a working precedent to copy.
+
+**Clean-break inventory (grep-verified 2026-08-30) — the scan is necessary
+but not sufficient.** ADR 0010's trap was flagging a key in `/doctor` while
+the docs still taught it. Every one of these moves in the same change:
+
+*Production readers outside `config/capabilities.py`:*
+`config/execution.py:338` (oneshot enrichment gate) ·
+`config/loader.py:51` (the `False` default itself) ·
+`engine/chat.py:696,698` (the native-vs-prompt branch) ·
+`engine/task_authorizer.py:982,986,989` (task-tier eligibility, incl. a raw
+`config_model_overrides[...]` read).
+
+*User docs that teach the key and would otherwise contradict the scan:*
+`docs/tool-calling.md` · `docs/vllm-notes.md` ·
+`docs/vllm-tool-calling-guide.md` · `docs/dgx-spark-setup.md`.
 
 ### 3. `api_path` is finally *consumed* — as `ModelFacts.wire_protocol`
 
