@@ -20,7 +20,7 @@ from typing import Callable, Any
 from dataclasses import dataclass
 
 from response_quality import validate_response_quality, QualityMetrics
-from ppxai.engine.model_profiles import get_profile
+from ppxai.engine.model_facts import shipped_facts_for_model
 from ppxai.engine.tools.builtin.editor import _replace_hunk, _apply_search_replace_diff
 
 
@@ -280,8 +280,11 @@ async def test_tool_call_large_payload(client) -> tuple[bool, dict]:
     repeated patterns instead of reproducing content faithfully.
     """
     model = getattr(client, "model", "")
-    profile = get_profile(model)
-    max_output = profile.max_tokens if profile.max_tokens > 0 else 16_384
+    # Item 65 retired `model_profiles.get_profile`; `ModelFacts` carries the
+    # same `max_tokens`, and 0 still means "use the provider default" — which
+    # is why the fallback below exists rather than trusting the 0.
+    facts = shipped_facts_for_model(model)
+    max_output = facts.max_tokens if facts.max_tokens > 0 else 16_384
 
     # Scale repetitions: each function is ~90 chars (~25 tokens).
     # Target ~2% of max output tokens to stay well within limits while
