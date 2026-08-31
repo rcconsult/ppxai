@@ -47,6 +47,9 @@ from .results import (
     NotificationResult,
     ResultStatus,
 )
+from ..config.tls import resolve_tls_verify
+from ..engine.tools.search_backends import resolve_web_search_backend
+from ..config.facts_config import incomplete_blocks_in_config, migration_plan, misplaced_fields_in_config, wrong_typed_fields_in_config
 
 # Per-endpoint timeout (seconds) for /doctor probe. Short on purpose:
 # /doctor must stay snappy even when one of N providers is unreachable.
@@ -196,7 +199,6 @@ def _format_audit_report(audit: Dict[str, Any]) -> str:
     # warning must still show on an otherwise-clean config, which is exactly
     # the case where nothing else would print it.
     try:
-        from ..config.tls import resolve_tls_verify
 
         tls = resolve_tls_verify()
         if tls.is_insecure:
@@ -673,7 +675,6 @@ def _format_web_search_backend_section() -> List[str]:
         to closed-book.
     """
     from ..config import get_available_providers, get_provider_config, get_tool_config
-    from ..engine.tools.search_backends import resolve_web_search_backend
 
     lines: List[str] = []
     lines.append(
@@ -831,12 +832,6 @@ def _format_facts_section() -> List[str]:
     So `/doctor` carries the verbosity Q0e creates: it names every blank,
     and `complete_record_for()` supplies the value to fill it with.
     """
-    from ..config.facts_config import (
-        incomplete_blocks_in_config,
-        migration_plan,
-        misplaced_fields_in_config,
-        wrong_typed_fields_in_config,
-    )
 
     lines: List[str] = ["Per-model facts (ADR 0012, v1.19.1):"]
     found = False

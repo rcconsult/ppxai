@@ -29,34 +29,16 @@ correct code:
 actually hoisting each one and importing the module in a fresh interpreter,
 not by reading the graph. The 8 are step 3's structural work.
 
-**"Imports cleanly" is necessary but NOT sufficient.** A hoist can be
-import-safe and still change behaviour, because it moves name resolution
-from call time to import time:
+**"Imports cleanly" is necessary but NOT sufficient.** Hoisting moves name
+resolution from call time to import time, so a test doing
+`patch.object(source_module, name)` or `monkeypatch.setattr(...)` stops
+reaching it — the module imports fine and the test fails. 25 rows are kept
+for this reason. Run the tests, not just an import check.
 
-    # lazy: resolved per call, so patch.object(tools, "get_tool_config") is seen
-    def f():
-        from .tools import get_tool_config
-
-    # hoisted: this module binds its OWN reference at import time, and a
-    # patch on the SOURCE module no longer reaches it
-
-`config/execution.py` was reverted for exactly this — its lazy import sat
-inside a `try:` whose docstring states "a capability must never survive the
-failure of the config that governs it", and hoisting silently defeated both
-that fail-safe and the test asserting it. 24 of the 89 import a name that
-some test replaces on the source module, so each batch needs its tests run,
-not just an import check.
-
-**Both patching idioms count.** A sweep looking only for `patch` /
-`patch.object` found 18 and called the engine batch safe; it shipped 15
-failures, all of them `monkeypatch.setattr(module, "name", ...)`. Widening
-the search to that form took the count to 24. When looking for "what does a
-test replace at runtime", enumerate the idioms — missing one makes the sweep
-confidently wrong rather than silent.
-
-**A bare `import ppxai.tui.*` hangs** (Textual sets up the terminal at import
-time), on a clean tree as much as a modified one. Verify TUI modules with the
-suite; a per-module import check there burns a timeout and proves nothing.
+Two traps worth not rediscovering: a sweep for `patch`/`patch.object` alone
+misses `monkeypatch.setattr` and reports those rows as safe; and a bare
+`import ppxai.tui.*` hangs (Textual sets up the terminal at import) on a
+clean tree as much as a modified one, so verify TUI modules with the suite.
 """
 
 import ast
@@ -75,8 +57,7 @@ PPXAI = pathlib.Path(__file__).resolve().parent.parent / "ppxai"
 RETAINED_ON_PURPOSE = {
     # --- genuine import cycles (8) -------------------------------------
     # Hoisting raises ImportError from a partially initialized module.
-    # Measured by actually hoisting, not by reading the graph. Step 3 fixes
-    # these structurally, via a Protocol in a leaf module.
+    # Step 3 fixes these structurally, via a Protocol in a leaf module.
     ("ppxai.common.consent", "ppxai.engine.tools.wrappers"): "cycle",
     ("ppxai.config.execution", "ppxai.engine.model_facts"): "cycle",
     ("ppxai.config.loader", "ppxai.config.tls"): "cycle",
@@ -85,22 +66,38 @@ RETAINED_ON_PURPOSE = {
     ("ppxai.rendering.rich_renderer", "ppxai.common.markdown_links"): "cycle",
     ("ppxai.rendering.rich_renderer", "ppxai.tui.renderable.iterm2"): "cycle",
     ("ppxai.rendering.textual_renderer", "ppxai.common.markdown_links"): "cycle",
-    # --- patch semantics (3) -------------------------------------------
-    # The module imports cleanly when hoisted, and tests then fail: a
-    # call-time lookup sees `patch.object(source_module, name)`, a
-    # module-level binding made at import time does not. Each was reverted
-    # after MEASURING a failure, not on suspicion.
-    #
-    # `doctor.py`'s other three rows are NOT here: they were reverted with
-    # the file, and no test patches what they import. They are ordinary
-    # step-2 work that needs retrying per-import rather than per-file.
+    # --- patch semantics (25) ------------------------------------------
+    # Hoisting binds the name at import time, so a test patching it on the
+    # source module stops reaching it. Grep the imported name in tests/ to
+    # see which test.
     ("ppxai.commands.doctor", "ppxai.config"): "patch-semantics",
     ("ppxai.commands.doctor", "ppxai.config.execution"): "patch-semantics",
     ("ppxai.config.execution", "ppxai.config.tools"): "patch-semantics",
+    ("ppxai.engine.model_facts", "ppxai.engine.providers"): "patch-semantics",
+    ("ppxai.engine.providers.base", "ppxai.config.facts_config"): "patch-semantics",
+    ("ppxai.engine.providers.gemini", "ppxai.usage"): "patch-semantics",
+    ("ppxai.engine.providers.openai_compat", "ppxai.usage"): "patch-semantics",
+    ("ppxai.engine.providers.openai_native", "ppxai.usage"): "patch-semantics",
+    ("ppxai.engine.providers.perplexity", "ppxai.usage"): "patch-semantics",
+    ("ppxai.engine.providers.wire.responses", "ppxai.usage"): "patch-semantics",
+    ("ppxai.engine.task_authorizer", "ppxai.config.execution"): "patch-semantics",
+    ("ppxai.engine.task_authorizer", "ppxai.engine.model_facts"): "patch-semantics",
+    ("ppxai.engine.task_authorizer", "ppxai.engine.providers"): "patch-semantics",
+    ("ppxai.engine.task_backend", "ppxai.config.execution"): "patch-semantics",
+    ("ppxai.engine.tools.network_policy", "ppxai.config.execution"): "patch-semantics",
+    ("ppxai.engine.tools.search_backends", "ppxai.config"): "patch-semantics",
+    ("ppxai.server.auth", "ppxai.config.execution"): "patch-semantics",
+    ("ppxai.server.http", "ppxai.config.loader"): "patch-semantics",
+    ("ppxai.server.routes.agent_v1", "ppxai.config.execution"): "patch-semantics",
+    ("ppxai.server.routes.config", "ppxai.config"): "patch-semantics",
+    ("ppxai.server.routes.config", "ppxai.config.execution"): "patch-semantics",
+    ("ppxai.server.routes.files", "ppxai.engine.tools.builtin.pptx_tools"): "patch-semantics",
+    ("ppxai.server.routes.oneshot", "ppxai.server.routes.agent_v1"): "patch-semantics",
+    ("ppxai.server.routes.sessions", "ppxai.config.execution"): "patch-semantics",
+    ("ppxai.server.routes.sessions", "ppxai.server.auth"): "patch-semantics",
     # --- empty block (1) -----------------------------------------------
-    # The import is the SOLE statement of its block, so removing it leaves
-    # `try:` with no body. More to the point, an import alone in a try is
-    # deliberately conditional — a judgement call, not a mechanical move.
+    # Sole statement of its block: removing it leaves `try:` with no body,
+    # and an import alone in a try is deliberately conditional.
     ("ppxai.commands.handler", "ppxai.rendering.rich_renderer"): "empty-block",
 }
 
@@ -111,9 +108,6 @@ BASELINE = {
     ("ppxai.commands.handler", "ppxai.rendering.rich_renderer"),
     ("ppxai.commands.doctor", "ppxai.config"),
     ("ppxai.commands.doctor", "ppxai.config.execution"),
-    ("ppxai.commands.doctor", "ppxai.config.facts_config"),
-    ("ppxai.commands.doctor", "ppxai.config.tls"),
-    ("ppxai.commands.doctor", "ppxai.engine.tools.search_backends"),
     ("ppxai.common.consent", "ppxai.engine.tools.wrappers"),
     ("ppxai.config.execution", "ppxai.config.tools"),
     ("ppxai.config.execution", "ppxai.engine.model_facts"),
@@ -312,6 +306,15 @@ class TestRetentionReasonsStayHonest:
             "these rows are marked retained-on-purpose but are no longer in "
             "BASELINE — the import was fixed, so drop the annotation too:\n  "
             + "\n  ".join(f"{m} -> {t}" for m, t in orphans)
+        )
+
+    def test_every_baseline_row_has_a_reason(self):
+        """Step 2 ended with every remaining row explained, so keep it that
+        way: an unannotated row is one nobody can classify later."""
+        unexplained = sorted(BASELINE - set(RETAINED_ON_PURPOSE))
+        assert not unexplained, (
+            "baseline rows with no retention reason — either hoist them or "
+            "add a reason:\n  " + "\n  ".join(f"{m} -> {t}" for m, t in unexplained)
         )
 
     def test_the_reasons_are_from_the_known_set(self):
