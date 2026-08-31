@@ -20,6 +20,7 @@ from ppxai import __version__
 from ppxai.common.logger import get_logger
 from ppxai.config import initialize
 from ppxai.tui.app import PPXAIDEApp
+
 from ..config import get_debug_log_enabled
 
 __all__ = ["PPXAIDEApp", "main"]

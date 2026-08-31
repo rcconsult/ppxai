@@ -27,8 +27,7 @@ from fastapi import APIRouter, Depends
 
 from ...common.logger import get_logger
 from ...engine.client import SSE_SYNC_FIELDS
-from ..state import Session, get_session
-from ..state import get_agent_run_registry
+from ..state import Session, get_agent_run_registry, get_session
 
 logger = get_logger("server")
 

@@ -36,7 +36,9 @@ import time
 from typing import Any, Dict, List, Optional, Protocol, Union
 
 from ..config.execution import get_execution_task_config
+from ..config.loader import PPXAI_HOME
 from ..config.paths import get_default_working_dir
+from .agent_runs import AgentRunRegistry, FilesystemAgentRunStore
 from .agent_scoped_tools import ScopedToolManager
 from .client import EngineClient
 from .tools.agent_spawn import SpawnSubagentTool
@@ -47,8 +49,6 @@ from .tools.network_policy import (
     grant_has_shell,
 )
 from .types import EventType
-from ..config.loader import PPXAI_HOME
-from .agent_runs import AgentRunRegistry, FilesystemAgentRunStore
 
 # An egress allowlist entry is either a bare host ("example.com", any path) or
 # a scoped mapping {"host": ..., "paths": [...]}. Typed here because the

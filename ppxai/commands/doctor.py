@@ -33,12 +33,20 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from ..config import find_config_file
+from ..config.facts_config import (
+    incomplete_blocks_in_config,
+    migration_plan,
+    misplaced_fields_in_config,
+    wrong_typed_fields_in_config,
+)
+from ..config.tls import resolve_tls_verify
 from ..engine.model_deprecations import (
     RECOMMENDED_DEFAULTS,
     audit_config_models,
     classify_model,
     find_missing_recommended,
 )
+from ..engine.tools.search_backends import resolve_web_search_backend
 from .factory import CommandFactory, CommandSpec
 from .protocol import CommandContext
 from .results import (
@@ -47,9 +55,6 @@ from .results import (
     NotificationResult,
     ResultStatus,
 )
-from ..config.tls import resolve_tls_verify
-from ..engine.tools.search_backends import resolve_web_search_backend
-from ..config.facts_config import incomplete_blocks_in_config, migration_plan, misplaced_fields_in_config, wrong_typed_fields_in_config
 
 # Per-endpoint timeout (seconds) for /doctor probe. Short on purpose:
 # /doctor must stay snappy even when one of N providers is unreachable.

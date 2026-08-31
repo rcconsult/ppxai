@@ -17,9 +17,9 @@ from typing import Optional
 
 from fastapi import Header, HTTPException
 
+from ..config.loader import load_config
 from ..engine import EngineClient
 from ..engine.task_runner import default_run_registry
-from ..config.loader import load_config
 from .secrets import build_chain_from_config
 
 
@@ -31,7 +31,9 @@ class Session:
     lock: asyncio.Lock
 
 
-from ..engine.preview_backend import PreviewBackend, stop_backend as _stop_backend  # noqa: E402,F401
+from ..engine.preview_backend import PreviewBackend  # noqa: E402,F401
+from ..engine.preview_backend import stop_backend as _stop_backend
+
 # `PreviewBackend` is re-exported from this module for backward compatibility
 # with existing tests (`from ppxai.server.state import PreviewBackend`).
 # Authoritative definition lives in `engine/preview_backend.py` (v1.18.5)

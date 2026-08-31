@@ -55,6 +55,7 @@ from typing import Any, Dict, List, Optional
 
 from ..config import execution as _execution_config
 from ..config import get_default_model
+from ..config.loader import load_config
 from ..config.providers import get_api_key, get_available_providers
 from ..config.tools import get_tool_config
 from .agent_skill import AgentSkillError, LoadedSkill, load_skill
@@ -66,7 +67,6 @@ from .agent_spec import (
 )
 from .tools.network_policy import apply_egress_ceiling, grant_has_shell
 from .tools.search_backends import resolve_web_search_backend
-from ..config.loader import load_config
 
 
 class TaskAuthorizationError(Exception):

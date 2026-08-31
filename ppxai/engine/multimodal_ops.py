@@ -33,13 +33,12 @@ from typing import Any, Dict, List
 from ..common.logger import get_logger
 from ..config import get_vision_model_config
 from .artifact_projector import ContextAttachmentProjector
-from .types import OfficeAttachmentRef, PdfAttachmentRef
+from .types import ImageAttachmentRef, OfficeAttachmentRef, PdfAttachmentRef, TextAttachmentRef
 from .uploaded_file import (
+    UPLOADED_FILE_RE,
     parse_uploaded_file_markers,
     strip_uploaded_file_marker,
 )
-from .types import ImageAttachmentRef, TextAttachmentRef
-from .uploaded_file import UPLOADED_FILE_RE
 
 logger = get_logger("engine")
 

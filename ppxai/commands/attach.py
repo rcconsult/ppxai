@@ -33,8 +33,11 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from ..common.logger import get_logger
+from ..engine.artifact_projector import ContextAttachmentProjector
 from ..engine.file_preprocessing import preprocess_file
 from ..engine.image_validation import validate_image
+from ..engine.model_facts import supports_vision as _sv
+from ..engine.multimodal_ops import _synthesize_refs_from_content
 from .factory import CommandFactory, CommandSpec
 from .results import (
     CommandResult,
@@ -43,9 +46,6 @@ from .results import (
     ResultStatus,
     SideEffectKind,
 )
-from ..engine.model_facts import supports_vision as _sv
-from ..engine.artifact_projector import ContextAttachmentProjector
-from ..engine.multimodal_ops import _synthesize_refs_from_content
 
 _attach_logger = get_logger("attach")
 
