@@ -99,16 +99,20 @@ class EngineClientWrapper:
             return True
         if self.tool_calling_method == "prompt_based":
             return False
-        # auto: detect from provider capabilities
+        # auto: ask the provider's per-model facts (ADR 0012).
+        #
+        # This branch used to call `get_capabilities_for_model()` and read
+        # `capabilities.native_tool_calling` — BOTH DELETED by ADR 0012 W1.
+        # `hasattr` was False and `getattr(..., False)` swallowed the rest, so
+        # the branch silently returned False for every model and every `auto`
+        # run measured prompt-based tool calling regardless of the model's
+        # real capability. Found 2026-08-31; see debt Item 55.
         if not self._client or not self._client.provider:
             return False
         provider = self._client.provider
-        # Use model-aware capabilities when available (v1.15.6)
-        if hasattr(provider, 'get_capabilities_for_model'):
-            caps = provider.get_capabilities_for_model(self.model)
-        else:
-            caps = getattr(provider, "capabilities", None)
-        return bool(caps and getattr(caps, "native_tool_calling", False))
+        if hasattr(provider, "get_facts_for_model"):
+            return provider.get_facts_for_model(self.model).tool_mode != "prompt_based"
+        return False
 
     async def initialize(self) -> bool:
         """Initialize the EngineClient with provider and model."""
@@ -762,19 +766,79 @@ class EngineBenchmarkRunner:
         return hashlib.md5(combined.encode()).hexdigest()[:12]
 
     def _detect_tool_calling_method(self) -> str:
-        """Get the effective tool calling method.
+        """What the PROVIDER actually did — not what was requested.
 
-        Respects --tool-calling-method override, falls back to detection.
+        This used to return the `--tool-calling-method` flag verbatim, so a
+        run recorded `method=native` whenever native was ASKED FOR, even when
+        the provider then declined to attach a tools array. Measured
+        2026-08-31 on gpt-5.6-terra: recorded `native`, actually prompt-based,
+        because the runner calls `provider.chat()` directly and the provider
+        gates the tools array on `ModelFacts.tool_mode` — which the CLI flag
+        does not reach.
 
-        Returns:
-            "native" if using native function calling API
-            "prompt_based" if tools are injected via system prompt
+        A metadata field that reports the request rather than the outcome
+        makes every historical comparison unfalsifiable: two runs labelled
+        `native` may have exercised different code paths. So the provider's
+        own resolution wins, and the request is recorded beside it when they
+        disagree.
         """
-        if self.tool_calling_method != "auto":
-            return self.tool_calling_method
-        if self.client._use_native_tools():
-            return "native"
-        return "prompt_based"
+        requested = self.tool_calling_method
+        actual = None
+        try:
+            provider = self.client._client.provider if self.client._client else None
+            if provider is not None and hasattr(provider, "get_facts_for_model"):
+                mode = provider.get_facts_for_model(self.model).tool_mode
+                actual = "prompt_based" if mode == "prompt_based" else "native"
+        except Exception:  # noqa: BLE001 — never fail a run over metadata
+            actual = None
+
+        if actual is None:
+            # Cannot resolve the provider's answer; fall back to the request
+            # but SAY so rather than presenting it as the outcome.
+            return f"{requested}(unverified)" if requested != "auto" else "auto(unverified)"
+        if requested in ("native", "prompt_based") and requested != actual:
+            return f"{actual}(requested:{requested})"
+        return actual
+
+    #: Substrings that mark an INFRASTRUCTURE failure rather than a wrong
+    #: answer. A provider 400/401/429 arrives as ordinary event TEXT — nothing
+    #: raises — so without this the harness scores "the API refused to talk to
+    #: us" identically to "the model answered badly".
+    #:
+    #: Not hypothetical: 34 historical runs in results/ sit at exactly 0, 8.1
+    #: or 10.9 — three discrete floors, not a quality distribution — and
+    #: identical models spread up to 89 points across repeat runs. Those are
+    #: infrastructure failures wearing a score, and they have been corrupting
+    #: comparisons since 2026-02. Measured 2026-08-31 while sizing the Phase C
+    #: benchmark; see debt Item 55.
+    INFRA_ERROR_MARKERS = (
+        "error code: 4",
+        "error code: 5",
+        "invalid_request_error",
+        "authentication",
+        "rate limit",
+        "insufficient_quota",
+        "connection error",
+        "timeout",
+        "not supported",
+        "has reached its end of life",
+    )
+
+    @classmethod
+    def is_infrastructure_failure(cls, details) -> bool:
+        """True when a failed test failed because the API would not serve us.
+
+        Deliberately conservative: it matches the API's own error vocabulary,
+        so a model that merely answers badly is never excused. A false
+        NEGATIVE costs one mis-scored test; a false POSITIVE would hide a real
+        quality regression, which is worse.
+        """
+        if not isinstance(details, dict):
+            return False
+        blob = str(details.get("error") or "").lower()
+        if not blob:
+            return False
+        return any(marker in blob for marker in cls.INFRA_ERROR_MARKERS)
 
     def run(self, categories: Optional[list[str]] = None) -> BenchmarkResult:
         """Run benchmark synchronously."""
@@ -817,6 +881,10 @@ class EngineBenchmarkRunner:
         print(f"Running {len(tests)} tests using ppxai Engine...")
         print(f"Provider: {self.provider}, Model: {self.model}")
         print()
+
+        #: Tests that failed because the API would not serve us. Kept apart
+        #: from scores — see `is_infrastructure_failure`.
+        infra_failures: list[dict] = []
 
         for i, test in enumerate(tests, 1):
             print(f"[{i}/{len(tests)}] {test.category}/{test.name}...", end=" ", flush=True)
@@ -880,6 +948,19 @@ class EngineBenchmarkRunner:
             else:
                 score = float(details.get("score", 0.0))
 
+            # ADR-adjacent (debt Item 55, 2026-08-31): an infrastructure
+            # failure is NOT a score. Counted separately so it can never be
+            # averaged into a quality number, and surfaced per test so a
+            # contaminated run is visible while it happens rather than
+            # inferred from a suspiciously round total afterwards.
+            if not passed and self.is_infrastructure_failure(details):
+                infra_failures.append(
+                    {
+                        "test": f"{test.category}/{test.name}",
+                        "error": str(details.get("error"))[:200],
+                    }
+                )
+
             if score == 1.0:
                 status = "PASS"
             elif score > 0.0:
@@ -921,6 +1002,36 @@ class EngineBenchmarkRunner:
         total_weight = sum(t.weight for t in tests)
         scored_weight = sum(r["score"] * r["weight"] for r in test_results)
         overall_score = (scored_weight / total_weight * 100) if total_weight > 0 else 0
+
+        # FAIL LOUD on a contaminated run (debt Item 55, 2026-08-31).
+        #
+        # This score is only a QUALITY measurement if every test actually
+        # reached the model. When some did not, the number is a blend of
+        # quality and availability, and nothing downstream can separate them —
+        # which is how 34 runs came to sit at 0 / 8.1 / 10.9 and get compared
+        # against real scores for six months.
+        #
+        # Printed rather than raised: a partial run still carries information
+        # for whoever is watching, and killing it would discard the tests that
+        # DID reach the model. But it can no longer be read as clean.
+        if infra_failures:
+            pct = len(infra_failures) / max(len(tests), 1) * 100
+            print()
+            print("=" * 72)
+            print(
+                f"  ⚠ CONTAMINATED RUN — {len(infra_failures)}/{len(tests)} tests "
+                f"({pct:.0f}%) failed on INFRASTRUCTURE, not quality."
+            )
+            print(
+                f"  overall_score={overall_score:.1f} is NOT a quality measurement "
+                "and must not be compared against a clean run."
+            )
+            for f in infra_failures[:5]:
+                print(f"    {f['test']}: {f['error'][:90]}")
+            if len(infra_failures) > 5:
+                print(f"    ... and {len(infra_failures) - 5} more")
+            print("=" * 72)
+            print()
 
         category_scores = {}
         for category, results in category_results.items():
@@ -981,5 +1092,13 @@ class EngineBenchmarkRunner:
                 "tool_calling_method": self._detect_tool_calling_method(),
                 "total_tokens": self.client.total_tokens,
                 "total_tool_calls": self.client.total_tool_calls,
+                # Debt Item 55: persisted so a LATER comparison can exclude
+                # contaminated runs. Printing the warning helps whoever is
+                # watching the run; only the recorded flag helps the person
+                # who reads results/ six months later — which is the case
+                # that actually went wrong.
+                "infrastructure_failures": len(infra_failures),
+                "infrastructure_failure_detail": infra_failures[:10],
+                "is_clean_run": not infra_failures,
             },
         )

@@ -57,6 +57,36 @@ because that fallback is what produced the confabulated results.
 uses Perplexity's Jobs API, not chat completions, so it was never usable
 on the endpoint ppxai calls.
 
+### Fixed — the benchmark harness scored infrastructure failures as quality
+
+Three defects, all found while sizing a Terra-vs-5.5 comparison that the
+harness could not honestly have answered.
+
+**Infrastructure failures were scored as quality.** 34 historical runs sit at
+exactly `0`, `8.1` or `10.9` — three discrete floors, not a distribution —
+and identical models spread up to **89 points** across repeat runs. Those are
+400s and timeouts wearing a score. API refusals are now classified, a
+contaminated run prints a loud banner, and `metadata.is_clean_run` is
+persisted so a later comparison can exclude them.
+
+**The `auto` tool-calling branch had been dead since the ADR 0012 fact-system
+change.** It read two members that change deleted, and both lookups degraded
+silently — so `auto` resolved `prompt_based` for *every* model regardless of
+capability. Every benchmark run in that window measured prompt-based tool
+calling.
+
+**Recorded metadata reported the request, not the outcome.** A run recorded
+`method=native` while the provider actually used prompt-based, because the
+runner calls `provider.chat()` directly and the provider gates its tools
+array on the model's facts, which the CLI flag never reaches. Two runs
+labelled `native` could have exercised different code paths, making
+historical comparisons unfalsifiable. It now records
+`prompt_based(requested:native)` when they disagree.
+
+`benchmarks/` is excluded from both graphify and the test suite, so nothing
+guarded it. `tests/test_benchmark_harness_integrity.py` adds 28 offline tests
+covering exactly these three defect classes.
+
 ### Fixed — the Gemini 2.5 line is retired ahead of its 2026-10-16 sunset
 
 Google sunsets the Gemini 2.5 line from **2026-10-16** (earliest). Three

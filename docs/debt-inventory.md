@@ -1083,6 +1083,53 @@ W2). This is the case that ADR was built to absorb as table data.
 `reasoning_effort="none"` stays the fallback and would be a stated row
 decision, never a default.
 
+**Proven end to end through ppxai's own engine, not just the raw API:** with
+`wire_protocol="responses"` + `tool_mode="native"` supplied as config,
+`openai_native.chat()` returns `tool_calls=1` for both sol and terra. No code
+change — the routing ADR 0012 W2 built already handles it.
+
+**C2 BLOCKED ON THREE HARNESS DEFECTS (found 2026-08-31 while sizing it;
+fixed in the same pass).** The benchmark could not have answered the question
+it was asked:
+
+1. **Infrastructure failures scored as quality.** 34 historical runs sit at
+   exactly `0`, `8.1` or `10.9` — three discrete floors, not a distribution —
+   and identical models spread up to **89 points** across repeats
+   (`gpt-5.5`'s own four runs: 85.6–92.1). A single Terra-vs-5.5 delta would
+   have been noise reported as signal. Fixed: `is_infrastructure_failure`
+   classifies API refusals, a contaminated run prints a loud banner, and
+   `metadata.is_clean_run` / `infrastructure_failures` are persisted so a
+   LATER comparison can exclude them — the case that actually went wrong,
+   since printing helps only whoever watches the run.
+2. **The `auto` tool-calling branch had been dead since ADR 0012 W1** — OUR
+   regression. It called `get_capabilities_for_model()` and read
+   `capabilities.native_tool_calling`, both deleted by W1; `hasattr` was
+   False and `getattr(..., False)` swallowed the rest, so `auto` silently
+   resolved `prompt_based` for **every model** for the whole arc. Nothing
+   caught it because `benchmarks/` is excluded from graphify *and* from the
+   test suite.
+3. **Recorded metadata lied about how a score was obtained.**
+   `tool_calling_method` returned the requested flag, never the outcome.
+   Measured: a run recorded `method=native` while the provider used
+   prompt-based, because the runner calls `provider.chat()` directly and the
+   provider gates its tools array on `ModelFacts.tool_mode`, which the CLI
+   flag never reaches. Two runs labelled `native` may have exercised
+   different code paths — which makes every historical comparison
+   unfalsifiable, and is the worst of the three. Now records
+   `prompt_based(requested:native)` when they disagree, and
+   `native(unverified)` when the provider cannot be asked.
+
+**Fenced by `tests/test_benchmark_harness_integrity.py`** (28 offline tests,
+no live calls) — the first thing that has ever guarded this harness. Each
+defect class is mutation-tested: reverting them fails 2, 4 and 9 tests
+respectively.
+
+**C2 method, decided with the owner:** repeat runs, contaminated runs
+excluded **by the persisted flag rather than by eyeball**, no single-run
+deltas, and the comparison must exercise the **shipped shape**
+(`wire_protocol="responses"`) rather than the default — otherwise it measures
+a path the swap would never use.
+
 **Facts (verified 2026-08-01, post the 2026-07-30 price cuts — Luna −80%,
 Terra −20%; Item 38's Terra $2.50/$15 figure is stale):**
 | Model | $/M in/out | Context | Cutoff | vs configured |
