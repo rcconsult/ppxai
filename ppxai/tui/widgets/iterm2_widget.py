@@ -20,9 +20,6 @@ try:
 except ImportError:
     PILImage = None  # type: ignore[assignment,misc]
 
-# Image input type — includes PILImage.Image when available
-_ImageInput = Union[Path, bytes, IO[bytes], Any]  # Any covers PILImage.Image
-
 from rich.control import Control
 from rich.segment import ControlType, Segment
 from rich.style import Style
@@ -30,6 +27,9 @@ from textual.dom import NoScreen
 from textual.geometry import Region, Size
 from textual.strip import Strip
 from textual.widget import Widget
+
+# Image input type — includes PILImage.Image when available
+_ImageInput = Union[Path, bytes, IO[bytes], Any]  # Any covers PILImage.Image
 
 logger = logging.getLogger(__name__)
 

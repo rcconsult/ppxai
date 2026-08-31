@@ -45,15 +45,15 @@ def list_registered_providers() -> List[str]:
 
 # Import and register built-in providers
 # These imports trigger the registration via decorators or explicit calls
-from .openai_compat import OpenAICompatibleProvider
-from .perplexity import PerplexityProvider
+from .openai_compat import OpenAICompatibleProvider  # noqa: E402 — must follow register_provider
+from .perplexity import PerplexityProvider  # noqa: E402
 
 # Import native OpenAI provider
-from .openai_native import OpenAINativeProvider
+from .openai_native import OpenAINativeProvider  # noqa: E402
 
 # Try to import native Gemini provider (optional dependency)
 # Falls back to OpenAI-compatible provider if google-genai not installed
-from .gemini import is_available as gemini_available, GeminiProvider
+from .gemini import is_available as gemini_available, GeminiProvider  # noqa: E402
 
 # Register providers
 register_provider("openai", OpenAINativeProvider)

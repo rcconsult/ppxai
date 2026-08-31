@@ -27,6 +27,10 @@ from ...types import ToolEngineProtocol, ToolManagerProtocol
 from ..base import BaseTool
 from ...file_ref import resolve_file_reference
 from ...file_ref import FILE_REF_PROPERTIES
+import base64
+import subprocess
+import tempfile
+from ....common.libreoffice import find_libreoffice, libreoffice_available
 
 
 _MAX_TEXT_CHARS = 100_000
@@ -334,14 +338,6 @@ def _table_to_markdown(table) -> str:
 # =============================================================================
 # Slide rasterization via LibreOffice headless
 # =============================================================================
-
-import base64
-import shutil
-import subprocess
-import tempfile
-from pathlib import Path
-
-from ....common.libreoffice import find_libreoffice, libreoffice_available
 
 
 def _libreoffice_available() -> bool:

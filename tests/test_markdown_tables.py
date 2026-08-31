@@ -14,6 +14,11 @@ from ppxai.rich.markdown_tables import (
     split_markdown_content,
     render_markdown_with_tables,
 )
+from ppxai.rich.markdown_tables import (
+    _extract_markdown_links,
+    convert_markdown_links_to_rich,
+    parse_inline_markdown,
+)
 
 
 class TestTableAlignment:
@@ -554,11 +559,6 @@ class TestEmojiConversion:
         assert "Error" in output
 
 
-from ppxai.rich.markdown_tables import (
-    _extract_markdown_links,
-    convert_markdown_links_to_rich,
-    parse_inline_markdown,
-)
 
 
 class TestMarkdownLinkExtraction:

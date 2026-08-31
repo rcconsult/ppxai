@@ -50,6 +50,7 @@ from . import state as _state  # noqa: F401 — backing store for session_manage
 import types as _types  # noqa: E402
 from .state import all_preview_backends, remove_preview_backend, kill_preview_backend
 from .state import get_secret_provider
+from .auth import check_request as _auth_check_request
 
 _this = sys.modules[__name__]
 _original_getattr = None
@@ -295,8 +296,6 @@ app.add_middleware(
     **_cors_kwargs(),
 )
 
-
-from .auth import check_request as _auth_check_request
 
 
 @app.middleware("http")

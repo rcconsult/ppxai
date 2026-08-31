@@ -4,6 +4,7 @@
 import asyncio
 import sys
 from ppxai.tui.event_bus import EventBus, Events
+import pytest
 
 
 def test_basic_event_flow():
@@ -219,7 +220,6 @@ if __name__ == "__main__":
 # Regression: sync-lambda wrapping an async handler (v1.17.4)
 # =============================================================================
 
-import pytest
 
 
 @pytest.mark.asyncio

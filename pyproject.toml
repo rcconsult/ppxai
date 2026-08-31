@@ -184,6 +184,12 @@ extend-exclude = ["benchmarks/llm-eval/src"]
 select = ["E", "F", "I", "N", "W", "UP"]
 ignore = ["E501"]  # Line length handled by formatter
 
+[tool.ruff.lint.per-file-ignores]
+# Standalone entry points: both insert the project root on sys.path before
+# importing ppxai, so their imports cannot come first.
+"scripts/benchmark.py" = ["E402"]
+"benchmarks/llm-eval/engine_runner.py" = ["E402"]
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]

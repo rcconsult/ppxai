@@ -6,6 +6,7 @@ Provides centralized default constants that can be overridden by user config.
 """
 
 from typing import Any, Dict, List
+from ppxai.constants import Default
 
 
 # =============================================================================
@@ -120,8 +121,6 @@ DEFAULT_SHELL_WRAPPERS: List[Dict[str, Any]] = [
 # =============================================================================
 # Agent Defaults — canonical values in ppxai/constants.py:Default
 # =============================================================================
-
-from ppxai.constants import Default
 
 DEFAULT_AGENT_MAX_ITERATIONS = Default.MAX_ITERATIONS
 DEFAULT_AGENT_MAX_TOOL_ITERATIONS = Default.MAX_TOOL_ITERATIONS

@@ -32,7 +32,7 @@ class Session:
 
 
 from ..engine.preview_backend import PreviewBackend  # noqa: E402,F401
-from ..engine.preview_backend import stop_backend as _stop_backend
+from ..engine.preview_backend import stop_backend as _stop_backend  # noqa: E402
 
 # `PreviewBackend` is re-exported from this module for backward compatibility
 # with existing tests (`from ppxai.server.state import PreviewBackend`).

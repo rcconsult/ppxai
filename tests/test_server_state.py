@@ -17,6 +17,18 @@ import sys
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from fastapi import HTTPException
+from ppxai.server import state as state_mod
+from ppxai.server.state import (
+    PreviewBackend,
+    all_preview_backends,
+    get_or_create_session,
+    get_preview_backend,
+    get_session_or_query,
+    kill_preview_backend,
+    remove_preview_backend,
+    set_preview_backend,
+)
 
 # Windows lacks `os.getpgid` and `os.killpg` (Unix process-group APIs).
 # unittest.mock.patch() validates the target attribute exists at import
@@ -41,19 +53,7 @@ _unix_only = pytest.mark.skipif(
 
 pytest.importorskip("fastapi")
 
-from fastapi import HTTPException
 
-from ppxai.server import state as state_mod
-from ppxai.server.state import (
-    PreviewBackend,
-    all_preview_backends,
-    get_or_create_session,
-    get_preview_backend,
-    get_session_or_query,
-    kill_preview_backend,
-    remove_preview_backend,
-    set_preview_backend,
-)
 
 
 # ---------------------------------------------------------------------------
