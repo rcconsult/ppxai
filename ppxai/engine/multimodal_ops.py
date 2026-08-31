@@ -575,7 +575,7 @@ def has_vision_sidecar() -> bool:
     Note the name: this checks the `tools.vision_model` config section,
     NOT whether the currently active model is vision-capable. For
     "does my model understand images natively?" use
-    `model_profiles.get_profile(model).supports_vision` instead
+    `model_facts.supports_vision(model)` instead
     (see R4 in TODO-file-upload.md for the original naming confusion).
 
     The sidecar is "available" when `enabled=True`, endpoint and model

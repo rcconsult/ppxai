@@ -24,7 +24,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from ppxai.engine.model_facts import ModelFacts, shipped_facts_for_model
-from ppxai.engine.model_profiles import BUILTIN_PROFILES
+from ppxai.engine.model_facts import SHIPPED_MODEL_FACTS
 from ppxai.engine.providers.openai_native import (
     OpenAINativeProvider,
     PROMPT_BASED_MODEL_PREFIXES,
@@ -139,7 +139,7 @@ class TestRoutingReadsTheFact:
         not the other.
         """
         disagreements = []
-        for name in sorted(BUILTIN_PROFILES):
+        for name in sorted(SHIPPED_MODEL_FACTS):
             facts = shipped_facts_for_model(name, OpenAINativeProvider.shipped_model_facts)
             declared = facts.wire_protocol
             seeded = name.rstrip("*").lower().startswith(

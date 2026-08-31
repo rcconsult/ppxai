@@ -162,7 +162,7 @@ handler.
 ### The declared table and the actual router disagree — measured
 
 `ToolCallingProfile` carries an `api_path` field
-([`model_profiles.py:43`](../../ppxai/engine/model_profiles.py#L43)) documented
+(`model_profiles.py:43`, deleted by Item 65) documented
 as *"OpenAI API endpoint routing"*, with values `chat` / `responses` / `auto`.
 It is set on three built-in profiles, merged through the full config precedence
 ladder ([`chat.py:206`](../../ppxai/engine/chat.py#L206)), exposed to operator
@@ -638,7 +638,7 @@ inverts it.** `ProviderCapabilities.native_tool_calling` defaults **False**
 ([`types.py:891`](../../ppxai/engine/types.py#L891); `loader.py:51` says
 "Default to prompt-based"; the Perplexity probe encodes the same rule —
 *unmeasured ⇒ assumed not capable*). `ToolCallingProfile.mode` defaults
-**`"native"`** ([`model_profiles.py:38`](../../ppxai/engine/model_profiles.py#L38)).
+**`"native"`** (`model_profiles.py:38`, deleted by Item 65).
 Merging on the profile's default would flip **every model absent from both
 code tables** from not-tool-capable to tool-capable — silently, and through
 gated consumers: `task_authorizer.py:982-989` (task-tier eligibility),
@@ -677,7 +677,7 @@ Capabilities key on exact ids, profiles on globs; globs strictly generalise
 them. One matcher for the merged table.
 
 ⚠️ **"Most-specific-first" is today a COMMENT, not a computed rule.**
-[`model_profiles.py:82`](../../ppxai/engine/model_profiles.py#L82) says *"First
+`model_profiles.py:82` (deleted by Item 65) says *"First
 match wins — order matters (specific before generic)"* — specificity is
 maintained by hand, by insertion order. Merging the exact-id tables
 (`PERPLEXITY_NATIVE_TOOL_MODELS`, the openai prompt-based prefixes) into a

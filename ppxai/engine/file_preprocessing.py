@@ -61,7 +61,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
 from .image_validation import sniff_media_type, validate_image
-from .model_profiles import supports_vision as model_supports_vision
+from .model_facts import supports_vision as model_supports_vision
 from .types import (
     ArtifactRef,
     ImageAttachmentRef,

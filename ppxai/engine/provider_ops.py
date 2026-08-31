@@ -219,7 +219,7 @@ def _apply_model_switch(engine, model_id: str, reset_context: bool) -> bool:
     # it. Single source of truth lives in model_profiles.supports_vision();
     # this just projects it onto AppState so the SSE_SYNC_FIELDS push
     # reaches every connected web/VSCode client transparently.
-    from .model_profiles import supports_vision as _supports_vision
+    from .model_facts import supports_vision as _supports_vision
     engine.state.set("model_supports_vision", _supports_vision(model_id))
     engine.session.set_model(model_id)
     if reset_context and engine.session.messages:

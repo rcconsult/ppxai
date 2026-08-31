@@ -61,7 +61,8 @@ task-tier gate and oneshot enrichment. `tool_mode` therefore defaults to
 two-pass — every wildcard-free key is tried before any glob — so correctness
 no longer depends on where a row sits in a dict.
 
-This is a LEAF MODULE — no ppxai imports except `model_profiles` (seed data)
+This is a LEAF MODULE — no ppxai imports at all (Item 65 retired the last
+one, `model_profiles`, which supplied seed data)
 and `types` (the provider record).
 """
 
@@ -71,7 +72,6 @@ import fnmatch
 from dataclasses import dataclass, fields as dataclass_fields, replace
 from typing import Any, Dict, List, Literal, Optional
 
-from .model_profiles import BUILTIN_PROFILES, ModelProfile
 from .types import ProviderCapabilities
 
 #: Wire protocols a model can be reached over. `chat_completions` is the
@@ -212,71 +212,21 @@ def apply_overrides(facts: ModelFacts, overrides: Dict[str, Any]) -> ModelFacts:
 # `_API_PATH_TO_WIRE` and `_WIRE_BY_GLOB`, outside the rows entirely.
 # ──────────────────────────────────────────────────────────────────────
 
-#: `ToolCallingProfile.api_path` → `ModelFacts.wire_protocol`. `auto` (try
-#: chat, fall back to responses on 404) is DOCUMENTED but was never
-#: implemented, and ADR 0012 "Future" keeps it that way until a consumer
-#: needs it — mapping it to a handler name would route to one that does not
-#: exist, so it lands on the default and `/doctor` reports it.
-_API_PATH_TO_WIRE: Dict[str, str] = {
-    "chat": "chat_completions",
-    "responses": "responses",
-    "auto": "chat_completions",
-}
-
-
-def facts_from_profile(profile: ModelProfile) -> ModelFacts:
-    """Flatten a legacy `ModelProfile` into a `ModelFacts` record.
-
-    Public because it is the seed-data bridge AND the migration helper
-    `/doctor` uses to show an operator what a legacy row becomes.
-    """
-    tc = profile.tool_calling
-    return ModelFacts(
-        wire_protocol=_API_PATH_TO_WIRE.get(tc.api_path, "chat_completions"),
-        tool_mode=tc.mode,
-        fallback_on_empty=tc.fallback_on_empty,
-        fallback_on_failure=tc.fallback_on_failure,
-        strip_json_from_text=tc.strip_json_from_text,
-        parallel_tool_calls=tc.parallel_tool_calls,
-        max_tokens=profile.max_tokens,
-        max_tool_iterations=profile.max_tool_iterations,
-        supports_reasoning=profile.supports_reasoning,
-        supports_vision=profile.supports_vision,
-        restricted_params=tuple(profile.restricted_params),
-        tier=profile.tier,
-    )
-
-
-#: Model globs reached over a non-default wire. `ToolCallingProfile` had no
-#: way to say this — its `api_path` covered only OpenAI's two endpoints — so
-#: `generate_content` was implicit in "the Gemini provider is the only thing
-#: that can serve these". ADR 0012 makes it a stated model fact.
+#: `wire_protocol` used to be supplied from OUTSIDE the rows, by two
+#: mechanisms that no longer exist: `_API_PATH_TO_WIRE` mapped
+#: `ToolCallingProfile.api_path` onto a wire, and `_WIRE_BY_GLOB` bolted
+#: `generate_content` onto the gemini/gemma globs because `api_path` had no
+#: way to say it — it covered only OpenAI's two endpoints. Item 65 step 1
+#: moved the value onto each row, so both are gone.
 #:
-#: Uniform across a fleet is NOT the same as provider-level: every Gemini
-#: model happens to share this wire today, but the statement still belongs
-#: on the model, because `anthropic/claude-sonnet-5` is `responses` on
-#: Perplexity and `chat_completions` on OpenRouter. Stating it per row keeps
-#: the one case and the many cases in the same vocabulary.
-_WIRE_BY_GLOB: Dict[str, str] = {
-    "gemini-*": "generate_content",
-    "gemma-*": "generate_content",
-}
-
-
-def _wire_for(pattern: str) -> Optional[str]:
-    """The non-default wire for a seed glob, if it has one."""
-    for glob, wire in _WIRE_BY_GLOB.items():
-        if fnmatch.fnmatch(pattern.lower(), glob):
-            return wire
-    return None
-
-
-def _seed_row(pattern: str, profile: ModelProfile) -> ModelFacts:
-    """One seed row: the legacy profile, plus the wire it is reached over."""
-    facts = facts_from_profile(profile)
-    wire = _wire_for(pattern)
-    return replace(facts, wire_protocol=wire) if wire else facts
-
+#: One decision worth not losing with them. `api_path="auto"` (try chat, fall
+#: back to responses on a 404) was DOCUMENTED but never implemented, and the
+#: mapping sent it to `chat_completions` rather than a handler name, because
+#: naming a handler that does not exist would route requests into nothing.
+#: ADR 0012 "Future" keeps it that way until a consumer needs it. No shipped
+#: profile ever used the value (measured 2026-08-31: zero rows), so nothing
+#: was carried forward — but if `auto` is ever implemented, it needs a real
+#: handler, not a mapping entry.
 
 #: The shipped per-model table: `{model_or_glob: complete ModelFacts}`.
 #: Consulted via `match_table`, so exact ids beat globs regardless of
@@ -1424,9 +1374,17 @@ UNTRANSLATABLE_MODES = frozenset({"none"})
 LEGACY_KEY_TRANSLATIONS: Dict[str, Any] = {
     "native_tool_calling": ("tool_mode", lambda v: "native" if v else "prompt_based"),
     "mode": ("tool_mode", lambda v: v),
+    # An operator's legacy `api_path`, mapped onto the wire it meant. This
+    # OUTLIVES the seed table's `_API_PATH_TO_WIRE` (deleted with the bridge
+    # in Item 65) because it answers a different question: not "what wire do
+    # our shipped rows use" but "what did this user's old config key mean".
+    # `auto` lands on chat_completions for the reason recorded above the
+    # shipped table — it was never implemented, and naming a handler that
+    # does not exist would route requests into nothing.
     "api_path": (
         "wire_protocol",
-        lambda v: _API_PATH_TO_WIRE.get(v, "chat_completions"),
+        lambda v: {"chat": "chat_completions", "responses": "responses",
+                   "auto": "chat_completions"}.get(v, "chat_completions"),
     ),
 }
 
@@ -1452,3 +1410,20 @@ def translate_legacy(block: Dict[str, Any]) -> Dict[str, Any]:
 def legacy_keys_in(block: Dict[str, Any]) -> List[str]:
     """Legacy keys present in `block` — what `/doctor` reports and rewrites."""
     return [k for k in (block or {}) if k in LEGACY_KEY_TRANSLATIONS]
+
+
+def supports_vision(model: str) -> bool:
+    """True if the model accepts image_url content parts natively.
+
+    Used by `file_preprocessing` to decide whether to send images directly to
+    the provider or route them through a VL sidecar for captioning. Unknown
+    models return False — the conservative default, and the caller decides
+    what to do about it (a helpful error, or a text fallback).
+
+    Item 65: this lived in `model_profiles` until that module retired. It had
+    already stopped reading profiles in ADR 0012 refactor (b) — it is a
+    two-line read of `ModelFacts` — so it was a live function stranded in a
+    dying module rather than anything that depended on the seed data. It now
+    sits with the data it reads.
+    """
+    return shipped_facts_for_model(model).supports_vision

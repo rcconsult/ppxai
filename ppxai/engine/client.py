@@ -501,7 +501,7 @@ class EngineClient:
 
         Checks the `tools.vision_model` config section only. Does NOT
         report whether the currently active model is vision-capable
-        (for that, see `model_profiles.get_profile(model).supports_vision`).
+        (for that, see `model_facts.supports_vision(model)`).
         Renamed from `has_vision_model` in v1.17.4 to remove the
         model-vs-sidecar ambiguity (R4 in TODO-file-upload.md); the
         back-compat alias was removed in v1.18.0 after confirming no

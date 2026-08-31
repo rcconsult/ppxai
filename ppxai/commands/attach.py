@@ -665,7 +665,7 @@ def handle_attach(context: Any, args: str) -> CommandResult:
                 engine_client.state.get("model_supports_vision")
             )
         except (AttributeError, KeyError):
-            from ..engine.model_profiles import supports_vision as _sv
+            from ..engine.model_facts import supports_vision as _sv
             model_has_vision = _sv(active_model) if active_model else False
         if not model_has_vision:
             names = ", ".join(pf.name for pf in image_attachments)

@@ -1,4 +1,9 @@
-"""Tests for supports_vision flag on ModelProfile (Phase 2.5, v1.17.4).
+"""Tests for the supports_vision fact (Phase 2.5, v1.17.4; retargeted Item 65).
+
+Originally written against `ModelProfile.supports_vision`. Item 65 retired
+the profile vocabulary, so these now assert the same behaviour against
+`ModelFacts` and the operator-config override path that replaced the custom
+profile registry. The model-by-model expectations are unchanged.
 
 The `supports_vision` flag is the single source of truth for
 `file_preprocessing` deciding whether to send an image_url content part
@@ -8,7 +13,7 @@ means either:
     (b) Wastefully captioning images for a vision-capable model
 
 These tests pin the expected classification for every model family in
-BUILTIN_PROFILES, so accidentally flipping a flag during a future profile
+the shipped facts table, so flipping a flag during a future
 update is caught immediately. Verified against official provider docs
 (OpenAI, Google AI, Perplexity, Mistral) as of April 2026.
 """
@@ -17,38 +22,41 @@ from __future__ import annotations
 
 import pytest
 
-from ppxai.engine.model_profiles import (
-    ModelProfile,
-    ModelProfileRegistry,
-    ToolCallingProfile,
-    get_profile,
+from ppxai.engine.model_facts import (
+    ModelFacts,
+    shipped_facts_for_model,
     supports_vision,
 )
 
-
 # -----------------------------------------------------------------------------
-# ModelProfile dataclass — new field
+# ModelFacts dataclass — the supports_vision field
 # -----------------------------------------------------------------------------
 
 
-class TestModelProfileField:
+class TestModelFactsField:
+    """Item 65 retargeted this from `ModelProfile` to `ModelFacts`.
+
+    Same three properties, asserted against the record that survived. The
+    conservative default is the one that matters: an unmeasured model must
+    not claim vision, because a wrong True sends an image to a provider that
+    cannot read it.
+    """
+
     def test_default_is_false(self):
-        profile = ModelProfile()
-        assert profile.supports_vision is False
+        assert ModelFacts().supports_vision is False
 
     def test_field_is_settable(self):
-        profile = ModelProfile(supports_vision=True)
-        assert profile.supports_vision is True
+        assert ModelFacts(supports_vision=True).supports_vision is True
 
     def test_field_coexists_with_other_flags(self):
-        profile = ModelProfile(
+        facts = ModelFacts(
             supports_reasoning=True,
             supports_vision=True,
             tier="A",
         )
-        assert profile.supports_reasoning is True
-        assert profile.supports_vision is True
-        assert profile.tier == "A"
+        assert facts.supports_reasoning is True
+        assert facts.supports_vision is True
+        assert facts.tier == "A"
 
 
 # -----------------------------------------------------------------------------
@@ -212,7 +220,7 @@ class TestUnknownModels:
         "fictional/mega-large-xxl",
     ])
     def test_unknown_model_returns_false(self, model):
-        # The default ModelProfile() has supports_vision=False, so
+        # The default ModelFacts() has supports_vision=False, so
         # unknown models fall through to the conservative default.
         assert supports_vision(model) is False
 
@@ -222,51 +230,62 @@ class TestUnknownModels:
 # -----------------------------------------------------------------------------
 
 
-class TestCustomProfiles:
-    def test_custom_profile_can_enable_vision(self):
-        # A user could register a custom profile claiming vision support
-        # for a model we don't know about.
-        registry = ModelProfileRegistry()
-        registry.register(
-            "my-custom-vision-*",
-            ModelProfile(
-                tool_calling=ToolCallingProfile(mode="native"),
-                supports_vision=True,
-            ),
+class TestOperatorOverrides:
+    """The capability the retired `ModelProfileRegistry` provided.
+
+    Item 65 deleted that registry; the same need — an operator declaring
+    vision for a model our table does not know, or correcting one it gets
+    wrong — is served by `providers.<p>.models.<m>.facts.supports_vision`,
+    which `resolve_model_facts` applies over the shipped row. Testing it here
+    keeps the CAPABILITY fenced rather than the vanished implementation.
+    """
+
+    def test_an_operator_can_declare_vision_for_an_unknown_model(self, monkeypatch):
+        import ppxai.config.facts_config as fc
+
+        monkeypatch.setattr(
+            fc, "model_fact_overrides",
+            lambda provider, model, block=None: {"supports_vision": True},
         )
-        profile = registry.get("my-custom-vision-7b")
-        assert profile.supports_vision is True
+        base = shipped_facts_for_model("my-custom-vision-7b")
+        assert base.supports_vision is False, "fixture drifted: expected the floor"
+        assert fc.resolve_model_facts(
+            base, "local-vllm", "my-custom-vision-7b"
+        ).supports_vision is True
 
-    def test_custom_profile_takes_priority_over_builtin(self):
-        # If a user overrides gpt-5 with supports_vision=False (unlikely
-        # but allowed), the override wins.
-        registry = ModelProfileRegistry()
-        registry.register(
-            "gpt-5*",
-            ModelProfile(
-                tool_calling=ToolCallingProfile(mode="native"),
-                supports_vision=False,
-            ),
+    def test_an_operator_override_beats_the_shipped_row(self, monkeypatch):
+        """The other direction, and the one with teeth: turning vision OFF
+        for a model we ship as vision-capable."""
+        import ppxai.config.facts_config as fc
+
+        shipped = shipped_facts_for_model("gpt-5.2")
+        assert shipped.supports_vision is True, "fixture drifted: gpt-5.2 was vision"
+        monkeypatch.setattr(
+            fc, "model_fact_overrides",
+            lambda provider, model, block=None: {"supports_vision": False},
         )
-        profile = registry.get("gpt-5.2")
-        assert profile.supports_vision is False
-
-
-# -----------------------------------------------------------------------------
-# supports_vision() convenience vs get_profile().supports_vision
-# -----------------------------------------------------------------------------
+        assert fc.resolve_model_facts(
+            shipped, "openai", "gpt-5.2"
+        ).supports_vision is False
 
 
 class TestConvenienceFunction:
-    def test_matches_get_profile(self):
-        # supports_vision(m) is sugar for get_profile(m).supports_vision —
-        # both paths must return identical results.
-        for model in [
-            "gpt-5.2",
-            "gemini-3-flash-preview",
-            "sonar-pro",
-            "sonar-reasoning-pro",
-            "o3-mini",
-            "unknown",
-        ]:
-            assert supports_vision(model) == get_profile(model).supports_vision
+    """`supports_vision(m)` was sugar for `get_profile(m).supports_vision`.
+
+    `get_profile` is gone with the profile registry, so the old "both paths
+    agree" test has no second path to compare against. What remains true and
+    worth pinning is that the helper reads the SHIPPED FACTS record — the
+    same record every other consumer resolves — rather than keeping a private
+    answer.
+    """
+
+    @pytest.mark.parametrize("model", [
+        "gpt-5.2",
+        "gemini-3-flash-preview",
+        "sonar-pro",
+        "sonar-reasoning-pro",
+        "o3-mini",
+        "unknown-model-xyz",
+    ])
+    def test_it_reads_the_shipped_facts_record(self, model):
+        assert supports_vision(model) is shipped_facts_for_model(model).supports_vision

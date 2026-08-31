@@ -126,7 +126,7 @@ def _build_chat_payload(
     # v1.18.6: precompute vision capability so we can detect the
     # image-on-non-vision-model case and emit a structured warning the
     # client can render distinctly from generic preprocess warnings.
-    from ...engine.model_profiles import supports_vision as _supports_vision
+    from ...engine.model_facts import supports_vision as _supports_vision
     model_has_vision = _supports_vision(model) if model else False
 
     for attachment in files:
