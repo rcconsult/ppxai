@@ -825,7 +825,6 @@ def render_office_preview(
 
     is_word = ext in {'.docx', '.doc'}
     is_legacy = ext in _LEGACY_OFFICE_EXTENSIONS
-    kind = "word" if is_word else "presentation"
 
     from ...engine.tools.builtin.pptx_tools import _libreoffice_available
     libreoffice_ok = _libreoffice_available()

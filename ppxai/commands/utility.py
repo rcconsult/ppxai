@@ -50,7 +50,6 @@ def _show_active_hints(handler: Any, console) -> None:
     console.print("\n[bold cyan]━━━ Active Bootstrap Hints ━━━[/bold cyan]")
 
     # Source file
-    source_name = Path(hints_info["source"]).name
     console.print(f"  [cyan]Source:[/cyan] {hints_info['source']}")
 
     # Current provider/model

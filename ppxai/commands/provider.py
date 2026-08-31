@@ -189,7 +189,6 @@ def handle_provider(context: CommandContext, args: str) -> CommandResult:
         )
 
     # Switch to new provider
-    new_base_url = get_base_url(new_provider)
     new_config = get_provider_config(new_provider)
 
     # Update context and engine client

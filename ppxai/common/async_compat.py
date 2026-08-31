@@ -67,7 +67,7 @@ def run_coro_sync(coro: Coroutine[Any, Any, T]) -> T:
     """
     try:
         # Check if there's already a running event loop
-        loop = asyncio.get_running_loop()
+        asyncio.get_running_loop()
     except RuntimeError:
         # No event loop running - safe to use asyncio.run()
         return asyncio.run(coro)

@@ -276,7 +276,7 @@ def _web_search_ddg_package(query: str, num_results: int = 5) -> str:
 
         return f"[via duckduckgo]\n\nSearch results for '{query}':\n\n" + "\n".join(formatted)
 
-    except Exception as e:
+    except Exception:
         # Fall back to HTML scraping on any error
         return _web_search_html_fallback(query, num_results)
 

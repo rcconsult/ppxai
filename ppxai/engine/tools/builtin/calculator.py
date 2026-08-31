@@ -92,7 +92,7 @@ def calculate(expression: str) -> str:
         if isinstance(result, float) and result.is_integer():
             return str(int(result))
         return str(result)
-    except SyntaxError as e:
+    except SyntaxError:
         return f"Error: Invalid expression syntax"
     except ZeroDivisionError:
         return "Error: Division by zero"

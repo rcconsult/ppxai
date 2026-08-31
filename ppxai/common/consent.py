@@ -550,7 +550,7 @@ class ConsentManager(BaseConsentManager):
             approved, decision = await self.consent_callback(request)
             return self._process_file_decision(decision, file_path_normalized)
 
-        except Exception as e:
+        except Exception:
             # Error during consent - deny for safety
             return False
 

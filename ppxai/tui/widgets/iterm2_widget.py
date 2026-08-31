@@ -270,7 +270,6 @@ class ITerm2ImageWidget(Widget):
             return 1
 
         cell_size = _get_cell_size()
-        aspect = self._image_height / self._image_width
 
         # Fit to container width
         cell_width = min(container.width, self._image_width // cell_size.width)

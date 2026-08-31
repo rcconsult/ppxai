@@ -979,7 +979,6 @@ class PPXAIDEApp(App):
                 attachment_refs = []
 
             # Setup in main thread (UI-safe)
-            status_bar = self._status_bar
             self._current_message_content = ""
             self._engine_client.state.update(is_streaming=True, cancel_requested=False)
             self._reasoning_started = False

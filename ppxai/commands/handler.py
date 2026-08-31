@@ -462,7 +462,6 @@ class CommandHandler:
         root = Path(self.engine_client.get_working_dir())
 
         # Build search patterns
-        patterns = []
         query_lower = query.lower()
 
         # If query looks like a path, try exact match first

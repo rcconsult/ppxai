@@ -124,7 +124,7 @@ class EventBus:
                 if asyncio.iscoroutinefunction(receiver):
                     # Schedule async handler as task (if event loop running)
                     try:
-                        loop = asyncio.get_running_loop()
+                        asyncio.get_running_loop()
                         asyncio.create_task(
                             self._handle_async(event, receiver, kwargs)
                         )
@@ -153,7 +153,7 @@ class EventBus:
                     # response appeared in the UI" (handler body never ran).
                     if asyncio.iscoroutine(result):
                         try:
-                            loop = asyncio.get_running_loop()
+                            asyncio.get_running_loop()
                             asyncio.create_task(
                                 self._await_and_log(event, result)
                             )

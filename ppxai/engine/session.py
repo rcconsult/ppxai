@@ -1012,7 +1012,6 @@ class SessionManager:
         # left behind). In the common case of a valid-pair tail the
         # tool stays — the next turn's API call has a valid shape.
         while fixed_messages and fixed_messages[-1].role == "tool":
-            tail = fixed_messages[-1]
             # Walk backward to find this tool's assistant.tool_calls parent.
             parent_idx = None
             for k in range(len(fixed_messages) - 2, -1, -1):
