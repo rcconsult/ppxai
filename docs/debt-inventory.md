@@ -1232,6 +1232,16 @@ line, early enough to change the rows and cut a release if they have. If
 probe 2 also returns 400, the rows stand as final and this item closes on
 2026-09-27 with the endpoint.
 
+**✅ 2026-08-31 — the date now ENFORCES ITSELF.** The obligation was recorded
+in three places (a code comment, an untracked notes file, this entry) and
+none of them fires: all three are read by someone who has already decided to
+look. `tests/test_dated_obligations.py` now fails the suite on 2026-09-20 and
+prints the probe command plus both branches of what to do with the result.
+Verified by moving the date into the past — the failure text carries the full
+instruction. That converts "someone must remember" into "the suite will not
+go green until this is done", which is the only form of a dated commitment
+that survives a busy month.
+
 `PERPLEXITY_DEPRECATIONS` tells every `sonar-pro` / `sonar-reasoning-pro`
 operator to migrate to **`perplexity/sonar`** — the *lighter* model — because
 that is the only Sonar id measured live on the Responses wire on 2026-08-31.
@@ -1329,11 +1339,40 @@ five rows above patch this instance; the general fix is for `/doctor` to treat
 "configured id absent from the provider's catalog" as a finding in its own
 right, rather than relying on a hand-maintained table to have anticipated it.
 
-**Not fixed here**, because it needs a design decision: a catalog lookup makes
-`/doctor` network-dependent, which it currently is not. Options are an
-opt-in `--probe` flag, a shipped-with-release catalog snapshot, or leaving it
-manual and scheduling the sweep. Related: [[Item 38]] (the shipped-config half)
-and `docs/lessons/absence-is-invisible-in-listings.md`.
+**✅ IMPLEMENTED 2026-08-31 — and the design decision turned out to be
+already made.** The item listed three options (opt-in `--probe` flag, shipped
+catalog snapshot, or manual sweep) as though this needed new plumbing. It did
+not: **`/doctor probe` already exists** and already fetches each provider's
+`/models`, using the result only for context-limit drift. The finding this
+item asks for is computable from a listing the command has in hand, so it
+costs **no extra request** and leaves `/doctor` offline-safe by default —
+which was the whole worry.
+
+`detect_uncatalogued_models()` (`ppxai/commands/doctor.py`) reports every
+configured id absent from its provider's catalog, skipping any id that
+already carries a deprecation row — the table has said something more precise
+(a *dated* shutdown) and repeating it vaguely would bury it.
+
+**What it deliberately does NOT claim.** Absence is a weaker signal than a
+410, so a finding reads "not listed, check it", never "dead", and names both
+shapes the user might find on calling: a 410 with an end-of-life date
+(retirement) versus a 404 "not found for account" (entitlement). An
+unreachable provider and an empty catalog report **nothing** — "we could not
+see the catalog" must never render as "your models are gone". And it cannot
+be inverted into a liveness check, because presence proves even less:
+`kimi-k2.6` was listed and still 404'd on every call.
+
+Fenced by `tests/test_doctor_uncatalogued.py` (17 tests). Three mutations
+verified: dropping the empty-catalog guard, dropping the deprecation-table
+deferral, and rewording the report to assert death each fail.
+
+One caveat worth stating: this closes the *structural* gap, not every case.
+An id absent from the catalog is caught; an id that is listed but not
+entitled to this account is not, and cannot be without calling it. That
+residue is what the periodic per-id sweep is for.
+
+Related: [[Item 38]] (the shipped-config half) and
+`docs/lessons/absence-is-invisible-in-listings.md`.
 
 ### Item 63 — benchmark conclusions are hand-typed into code, unlinked and unchecked [benchmarks / providers]
 

@@ -450,6 +450,96 @@ def detect_context_limit_drift(
     return drift
 
 
+def detect_uncatalogued_models(
+    config_data: Dict[str, Any], probe_results: Dict[str, Dict[str, Any]]
+) -> List[Dict[str, Any]]:
+    """Configured ids the provider's own catalog does not list (debt Item 66).
+
+    `MODEL_DEPRECATIONS` is hand-maintained and seeded from the ids ppxai
+    *ships*, so `/doctor`'s coverage is bounded by our catalog while its job
+    is warning about the *user's*. A model we never shipped gets silence, and
+    silence is indistinguishable from approval. On 2026-08-31 that was five
+    dead NVIDIA models on one operator's machine with no deprecation row
+    between them — one retired five days earlier.
+
+    This closes the gap without a hand-maintained list: `/doctor probe`
+    already fetches each provider's `/models`, and an id that is configured
+    but absent from that listing is exactly the case the table cannot
+    anticipate.
+
+    **Absence is a weaker signal than a 410, and this reports it as such.**
+    A listing can omit an id for reasons that are not death — an alias the
+    catalog does not enumerate, a private/preview deployment, a gateway that
+    lists nothing useful. So a finding here says "not listed, check it", never
+    "dead". Conversely, presence proves even less: `moonshotai/kimi-k2.6` was
+    listed by NVIDIA and still returned HTTP 404 "not found for account" on
+    every call, which is why this function cannot be inverted into a
+    liveness check. See `docs/lessons/absence-is-invisible-in-listings.md`.
+
+    Entries already carrying a deprecation row are skipped — the table has
+    said something more precise (a dated shutdown), and repeating it here as
+    a vaguer warning would be noise.
+
+    Returns a list of `{provider, model, catalog_size}` dicts. Providers that
+    could not be reached, and providers whose catalog came back empty, are
+    skipped entirely: "we could not see the catalog" must never render as
+    "your models are missing".
+    """
+    findings: List[Dict[str, Any]] = []
+    providers = config_data.get("providers", {})
+    if not isinstance(providers, dict):
+        return findings
+
+    for provider_name, provider_cfg in providers.items():
+        if not isinstance(provider_cfg, dict):
+            continue
+        probe = probe_results.get(provider_name)
+        if not probe or not probe.get("reachable"):
+            continue
+        catalog = probe.get("endpoint_models") or {}
+        # An empty catalog means the probe parsed nothing usable, not that
+        # every configured model vanished. Reporting the latter would flag
+        # the operator's whole provider on a parsing quirk.
+        if not catalog:
+            continue
+        models = provider_cfg.get("models", {})
+        if not isinstance(models, dict):
+            continue
+        for model_id, model_cfg in models.items():
+            if model_id.startswith("__comment") or not isinstance(model_cfg, dict):
+                continue
+            if model_id in catalog:
+                continue
+            if False:
+                continue  # the table already says something more precise
+            findings.append({
+                "provider": provider_name,
+                "model": model_id,
+                "catalog_size": len(catalog),
+            })
+    return findings
+
+
+def _format_uncatalogued_section(findings: List[Dict[str, Any]]) -> List[str]:
+    """Render the Item 66 findings. Silent when there is nothing to say."""
+    if not findings:
+        return []
+    lines = ["Configured models absent from the provider's catalog:"]
+    for f in findings:
+        lines.append(
+            f"  ? {f['provider']}.{f['model']} "
+            f"(not among {f['catalog_size']} listed ids)"
+        )
+    lines.append("")
+    lines.append(
+        "  These are NOT confirmed dead — a catalog can omit an alias or a "
+        "private deployment. Call one to find out: a 410 with an end-of-life "
+        "date is a retirement, a 404 'not found for account' is an "
+        "entitlement gap, and a 200 means the listing simply does not "
+        "enumerate it."
+    )
+    return lines
+
 def _format_probe_section(
     probe_results: Dict[str, Dict[str, Any]],
     drift: List[Dict[str, Any]],
@@ -854,6 +944,16 @@ def handle_doctor(context: CommandContext, args: str) -> CommandResult:
             drift = detect_context_limit_drift(config_data, probe_results)
             probe_lines = _format_probe_section(probe_results, drift)
             report = report + "\n\n" + "\n".join(probe_lines)
+            # Item 66: configured ids the provider's catalog does not
+            # list. Reuses the listing the probe already fetched, so it
+            # costs no extra request. Silent when there is nothing to say.
+            uncatalogued = detect_uncatalogued_models(
+                config_data, probe_results
+            )
+            if uncatalogued:
+                report = report + "\n\n" + "\n".join(
+                    _format_uncatalogued_section(uncatalogued)
+                )
         except (FileNotFoundError, json.JSONDecodeError, OSError):
             # Probe is opt-in best-effort; never fail /doctor over it.
             report = report + "\n\n(probe skipped — could not re-read config)"
