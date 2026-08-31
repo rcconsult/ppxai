@@ -91,11 +91,8 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field, model_validator
 
 from ...common.logger import get_logger
-from ...config.execution import (
-    get_execution_task_config,
-)
-from ...engine import task_authorizer as _authz
-from ...engine import task_runner as _task_runner
+from ...config.execution import (get_execution_default_subagent, get_execution_task_config)  # noqa: F401 — patched/read by tests
+from ...engine import (task_authorizer as _authz, task_runner as _task_runner)
 from ...engine.agent_runs import RunMeta, resume_refusal
 from ...engine.task_authorizer import (
     TaskAuthorizationError,
@@ -125,10 +122,6 @@ from .oneshot import (  # noqa: F401 — ONESHOT_SEARCH_ITERATIONS read by tests
 )
 from pathlib import Path  # noqa: F401 — patched by tests
 from ...config import get_default_model  # noqa: F401 — patched by tests
-from ...config.execution import (
-    get_execution_default_subagent,
-    get_execution_task_config,
-)  # noqa: F401 — patched by tests
 from ...config.tools import get_tool_config  # noqa: F401 — patched by tests
 
 logger = get_logger("server")

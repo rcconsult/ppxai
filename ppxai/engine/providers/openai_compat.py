@@ -11,19 +11,14 @@ import re
 from collections.abc import AsyncIterator
 from typing import Any
 
-from ...config import (
+from ...config import (  # noqa: F401 — patched/read by tests
     get_context_warn_percent,
     get_default_provider,
+    get_extra_body,
     get_model_context_limit,
 )
 from ..types import Event, EventType, Message, ProviderCapabilities
 from .base import BaseProvider
-from ...config import (
-    get_model_context_limit,
-    get_default_provider,
-    get_context_warn_percent,
-    get_extra_body,
-)  # noqa: F401 — patched by tests
 
 
 class OpenAICompatibleProvider(BaseProvider):

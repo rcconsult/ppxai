@@ -23,14 +23,14 @@ from ppxai.engine.tools.builtin.excel_tools import (  # noqa: E402
     ListExcelSheetsTool,
     ReadExcelSheetTool,
 )
-from ppxai.engine.tools.builtin.excel_tools import (
+from ppxai.engine.tools.builtin.excel_tools import (  # noqa: E402
     register_tools as register_excel,
 )
 from ppxai.engine.tools.builtin.pptx_tools import (  # noqa: E402
     ListPptxSlidesTool,
     ReadPptxSlideTextTool,
 )
-from ppxai.engine.tools.builtin.pptx_tools import (
+from ppxai.engine.tools.builtin.pptx_tools import (  # noqa: E402
     register_tools as register_pptx,
 )
 

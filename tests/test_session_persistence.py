@@ -14,9 +14,8 @@ import pytest
 
 from ppxai.config import get_auto_restore_mode, get_auto_save_interval, get_session_config
 from ppxai.config.store import ConfigStore
-from ppxai.engine.session import SessionManager
+from ppxai.engine.session import (SESSION_STATE_FILE, SessionManager)  # noqa: F401 — patched/read by tests
 from ppxai.engine.types import Message
-from ppxai.engine.session import SessionManager, SESSION_STATE_FILE  # noqa: F401 — read by tests
 
 
 @pytest.fixture

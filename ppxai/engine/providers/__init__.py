@@ -46,7 +46,7 @@ def list_registered_providers() -> list[str]:
 
 # Import and register built-in providers
 # These imports trigger the registration via decorators or explicit calls
-from .gemini import GeminiProvider
+from .gemini import GeminiProvider  # noqa: E402 — must follow register_provider
 
 # Try to import native Gemini provider (optional dependency)
 # Falls back to OpenAI-compatible provider if google-genai not installed

@@ -27,17 +27,17 @@ jobs:
     - name: Install dependencies
       run: uv sync --frozen --all-extras
 
-    # A ratchet, not a gate. `ruff check .` reports ~3.9k findings, so failing
-    # on all of them would fail every build forever and get switched off in a
-    # week. These rules are at ZERO today and must stay there: each one is a
-    # name that resolves to nothing at runtime, which is a defect rather than
-    # style. Item 67 found ten live F821s this way — two inside `except`
-    # handlers, where the error path itself raised NameError.
+    # A ratchet, not a gate. Failing on every ruff finding would fail every
+    # build and get switched off in a week; these rules are at ZERO and must
+    # stay there. F821/F822/F823/F632 are names that resolve to nothing at
+    # runtime. F811 and E402 joined after both regressed to non-zero within a
+    # single commit of reaching zero, unnoticed by a green suite — which is
+    # exactly what a ratchet is for.
     #
-    # Widen this list as classes reach zero; that is how the backlog gets paid
-    # down without a flag day. The full count is deliberately NOT gated yet.
-    - name: Lint (undefined names — must stay at zero)
-      run: uv run ruff check . --select F821,F822,F823,F632
+    # Widen as classes reach zero; that is how the backlog gets paid down
+    # without a flag day. The full count is deliberately NOT gated.
+    - name: Lint (must stay at zero)
+      run: uv run ruff check . --select F821,F822,F823,F632,F811,E402
 
     - name: Run Python tests
       run: uv run pytest tests/ -v --ignore=tests/test_custom_endpoint_integration.py --ignore=tests/e2e

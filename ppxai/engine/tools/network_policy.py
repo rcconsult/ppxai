@@ -177,7 +177,7 @@ def grant_has_shell(grant) -> bool:
 from .search_backends import (  # noqa: E402  (leaf module, no cycle)
     ALL_HOSTS as _WEB_SEARCH_ALL_HOSTS,
 )
-from .search_backends import (
+from .search_backends import (  # noqa: E402  (leaf module, no cycle)
     resolve_web_search_backend,
 )
 

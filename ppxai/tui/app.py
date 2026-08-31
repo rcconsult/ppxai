@@ -24,13 +24,16 @@ from textual.widgets import Footer, Header
 
 # Command Factory integration (Phase 6.1.1 - Technical debt cleanup)
 from ppxai.commands import CommandFactory
-from ppxai.commands.attach import _load_file as _attach_load_file
-from ppxai.commands.attach import build_multimodal_content
+from ppxai.commands.attach import (_load_file as _attach_load_file, build_multimodal_content)
 from ppxai.commands.results import DirectoryListingResult, DirectoryTreeResult
 from ppxai.common.autosave_guard import AutosaveFailureGuard
 from ppxai.common.consent import normalize_consent_response
 from ppxai.common.logger import Logger, get_logger
-from ppxai.config import (
+from ppxai.config import (  # noqa: F401 — patched/read by tests
+    PROVIDERS,
+    get_api_key,
+    get_auto_restore_mode,
+    get_auto_save_interval,
     get_default_model,
     get_default_provider,
     get_tui_config,
@@ -41,8 +44,7 @@ from ppxai.constants import ConsentResponse
 # Engine integration (Phase 6.1)
 from ppxai.engine import EngineClient
 from ppxai.rendering.textual_renderer import TextualRenderer
-from ppxai.tui import commands as local_commands
-from ppxai.tui import stream_handler
+from ppxai.tui import (commands as local_commands, stream_handler)
 from ppxai.tui.clipboard import copy_to_clipboard, paste_from_clipboard
 from ppxai.tui.completer import TextualCompleter
 from ppxai.tui.event_bus import EventBus, Events
@@ -64,10 +66,6 @@ from ..config import set_tui_config
 from ..engine.task_backend import configure_task_backend
 from .run_consent import RunConsentWatcher
 from .session_restore_ops import check_session_restoration, restore_session
-from ppxai.config import (
-    PROVIDERS, get_default_provider, get_default_model, get_api_key, initialize,
-    get_tui_config, get_auto_restore_mode, get_auto_save_interval,
-)  # noqa: F401 — patched by tests
 
 
 class PPXAIDEApp(App):

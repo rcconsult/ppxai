@@ -17,11 +17,10 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 from ..common.logger import get_logger
-from ..config import get_available_providers
+from ..config import (get_available_providers, get_server_config)  # noqa: F401 — patched/read by tests
 from ..config.paths import get_default_working_dir
 from ..engine import EngineClient
 from pathlib import Path  # noqa: F401 — patched by tests
-from ..config import get_available_providers, get_server_config  # noqa: F401 — patched by tests
 
 logger = get_logger("session_manager")
 

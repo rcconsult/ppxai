@@ -8,9 +8,10 @@ v1.15.0: Migrated to type-based renderer dispatch
 """
 
 
-from ..config import (
+from ..config import (  # noqa: F401 — patched/read by tests
     PROVIDERS,
     get_api_key,
+    get_base_url,
     get_coding_model,
     get_provider_config,
 )
@@ -27,13 +28,6 @@ from .results import (
     ListResult,
     ResultStatus,
 )
-from ..config import (
-    PROVIDERS,
-    get_api_key,
-    get_base_url,
-    get_coding_model,
-    get_provider_config,
-)  # noqa: F401 — patched by tests
 
 
 def handle_model(context: CommandContext, args: str) -> CommandResult:

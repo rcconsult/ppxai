@@ -10,7 +10,7 @@ share the same code path. This route is now a thin HTTP wrapper.
 
 import os
 import time
-from pathlib import PurePosixPath
+from pathlib import (Path, PurePosixPath)  # noqa: F401 — patched/read by tests
 from urllib.parse import parse_qs, urlparse
 
 import httpx
@@ -19,8 +19,9 @@ from fastapi.responses import FileResponse, HTMLResponse
 
 from ...common.logger import get_logger
 from ...common.preview import inject_reload_script, resolve_preview_path, rewrite_asset_paths
-from ...engine.preview_backend import (
+from ...engine.preview_backend import (  # noqa: F401 — patched/read by tests
     PreviewBackendError,
+    start_proxied_backend,
     start_served_backend,
     wait_for_port,
 )
@@ -34,13 +35,6 @@ from ..state import (
     remove_preview_backend,
     set_preview_backend,
 )
-from pathlib import Path, PurePosixPath  # noqa: F401 — patched by tests
-from ...engine.preview_backend import (
-    PreviewBackendError,
-    start_proxied_backend,
-    start_served_backend,
-    wait_for_port,
-)  # noqa: F401 — patched by tests
 
 logger = get_logger("server")
 
