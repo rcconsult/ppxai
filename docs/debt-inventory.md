@@ -984,6 +984,76 @@ deprecation-table rows for 5.5/5.5-pro if bench confirms. Effort: (a) ~30min;
 
 ---
 
+### Item 64 — ⏰ re-probe Perplexity's pro line on the Responses wire BEFORE 2026-09-27 [providers / deadline]
+
+**Filed 2026-08-31.** Deadline-carrying, and the shortest item here that can
+still break users.
+
+`PERPLEXITY_DEPRECATIONS` tells every `sonar-pro` / `sonar-reasoning-pro`
+operator to migrate to **`perplexity/sonar`** — the *lighter* model — because
+that is the only Sonar id measured live on the Responses wire on 2026-08-31.
+Both pro ids answered `400 validation failed: model "..." is not supported`
+there, in bare and namespaced form (probe + a plain SDK call, no framing).
+
+That hint is correct only while it stays true. If Perplexity ships the pro
+line on Responses before the cutover, ppxai will be actively advising a
+downgrade nobody needs — a wrong migration hint the user *will* follow.
+
+**Action, ~2 minutes:**
+
+```bash
+uv run python scripts/probe-perplexity-capabilities.py --api-path responses   --model "perplexity/sonar-pro" --model "perplexity/sonar-reasoning-pro"   --model "sonar-pro"
+```
+
+If any answers, update `replacement` in
+[`ppxai/engine/model_deprecations.py`](../ppxai/engine/model_deprecations.py)
+and re-add the entries to `ppxai-config.example.json` (with a pricing row and
+the migration fence's `RETIRED` set trimmed to match).
+
+**Why this is an inventory item and not just a code comment.** It was one: a
+`Re-probe before the date` line in `model_deprecations.py` and a line in an
+untracked audit-notes file. Neither is a commitment anyone will find — the
+comment is only read by someone already editing that table, which is the
+person who least needs telling. A dated obligation belongs where dated
+obligations are tracked.
+
+---
+
+### Item 65 — `BUILTIN_PROFILES` is still the seed vocabulary; the bridge needs a scheduled death [providers / config]
+
+**Filed 2026-08-31.** ADR 0012 refactor (b), second half. Not deadline-bound,
+but time-sensitive in a different way: an adapter with no scheduled removal
+becomes permanent, which is the whole concern that prompted the refactor.
+
+`ModelFacts` is the record every consumer reads. `BUILTIN_PROFILES` (65 rows
+of `ModelProfile` / `ToolCallingProfile`) survives as its **seed**, flattened
+once at import via `facts_from_profile`. Two vocabularies for one set of
+facts is the two-systems problem ADR 0012 exists to remove — the same shape
+as the `capabilities` / `tool_calling` split W1 collapsed, just one level
+down.
+
+**What already landed (d1fe2912):** `supports_vision()` reads `ModelFacts`,
+so no behaviour-bearing reader consults the profile table; the dead
+`BaseProvider.get_model_profile()` accessor is deleted.
+
+**What remains:** re-author the 65 rows as native `ModelFacts` literals, then
+retire `ModelProfile`, `ToolCallingProfile`, `facts_from_profile`,
+`_seed_row`, `_wire_for` and `_API_PATH_TO_WIRE`.
+
+**Deliberately deferred rather than rushed:** that is a data migration, and
+mixing its diff with a behaviour change is what makes such a diff
+unreviewable — the same reason this was kept out of W4, where it would have
+blinded the byte-identical converter check.
+
+**The fence is already in place**, which is what makes the migration
+checkable whenever it is scheduled:
+`tests/test_model_facts_are_the_source.py` asserts every profile row
+flattens to its facts row, field for field, with the mapping written out
+rather than inferred, plus a row-count canary that trips the moment the
+re-authoring starts.
+
+---
+
 ### Item 63 — benchmark conclusions are hand-typed into code, unlinked and unchecked [benchmarks / providers]
 
 **Filed 2026-08-30** from ADR 0012 Q0h. Design decided there; this is the

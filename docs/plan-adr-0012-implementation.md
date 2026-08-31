@@ -424,10 +424,34 @@ LoC delta + deleted-override list.
   grep-verifiable bar. A third candidate (graph-refresh-as-verification) was
   **not** promoted — it is a working habit, not an observable repo fact.
 
-**Still open, needing the owner:** the `sonar` → `perplexity/sonar` rename +
-`/v1` base_url in the install scripts and VSCode bootstrap (before
-**2026-09-27**), and the two approved structural refactors (`FactsResolver`;
-`BUILTIN_PROFILES` as native `ModelFacts`).
+## Post-arc (2026-08-31) — the three owner items, and what they left behind
+
+All three shipped:
+
+- **ID rename** `066dc22b`. Not the rename this plan expected: probing the
+  namespaced forms first showed W0 (a) does **not** generalise — the
+  Responses wire serves only `perplexity/sonar`, and `sonar-pro` (the
+  shipped default) plus `sonar-reasoning-pro` 400 there in both forms. A
+  blanket rename would have shipped a config that fails every request. The
+  defaults moved to `perplexity/sonar` on the owner's call; the pro models
+  keep their ids and their chat wire with `/doctor` deprecation rows.
+  **This plan's "add the `/v1` base_url suffix" item is now WRONG** — W3's
+  two-client design derives the Responses root per wire, and pinning `/v1`
+  would break the chat wire the pro models still need. Verified both ways.
+- **`FactsResolver`** `b328c356` — one fallback rule where there had been
+  five spellings, two of which bypassed `provider_class_for` entirely.
+- **`ModelFacts` as source** `d1fe2912` — refactor (b), **first half**.
+
+**Two follow-ups are now tracked as debt items rather than as comments:**
+
+- **[Item 64](debt-inventory.md)** ⏰ — re-probe the Perplexity pro line on
+  the Responses wire **before 2026-09-27**. The shipped deprecation rows
+  advise a downgrade to the lighter `perplexity/sonar`; that hint is correct
+  only while it stays true.
+- **[Item 65](debt-inventory.md)** — re-author `BUILTIN_PROFILES` as native
+  `ModelFacts` and retire the seed vocabulary. Deferred deliberately (a data
+  migration should not share a diff with a behaviour change), fenced so the
+  migration stays checkable.
 
 ---
 

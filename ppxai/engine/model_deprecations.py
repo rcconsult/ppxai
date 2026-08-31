@@ -237,9 +237,15 @@ OPENAI_DEPRECATIONS: Dict[str, Deprecation] = {
 # So `sonar` has a successor and the pro models, as of today, do not. Their
 # entries below say that plainly instead of inventing a replacement ID that
 # would 400 — a wrong migration hint is worse than an honest dead end, since
-# the user would follow it and get a broken config. Re-probe before the date
-# with `scripts/probe-perplexity-capabilities.py --api-path responses`; if
-# Perplexity ships the pro models there, update `replacement` here.
+# the user would follow it and get a broken config.
+#
+# ⏰ RE-PROBE BEFORE 2026-09-27 — tracked as debt Item 64, not just here: a
+# comment is only read by someone already editing this table, who is the
+# person least in need of the reminder. If Perplexity ships the pro line on
+# Responses, update `replacement` below (and see Item 64 for the rest of the
+# migration: example config, pricing row, the migration fence's RETIRED set).
+#
+#   uv run python scripts/probe-perplexity-capabilities.py #       --api-path responses --model "perplexity/sonar-pro"
 
 PERPLEXITY_DEPRECATIONS: Dict[str, Deprecation] = {
     "sonar": Deprecation(
