@@ -19,7 +19,6 @@ from datetime import date
 
 import pytest
 
-
 #: (due, description, what to do). `due` is when the work must HAPPEN, which
 #: is deliberately earlier than any external cutover it protects against —
 #: late enough for the upstream change to have landed, early enough to still
