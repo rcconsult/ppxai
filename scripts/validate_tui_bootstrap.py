@@ -10,17 +10,19 @@ Usage:
 """
 
 import asyncio
-from pathlib import Path
-from rich.console import Console
-from rich.panel import Panel
 
 # Add project root to path
 import sys
+from pathlib import Path
+
+from rich.console import Console
+from rich.panel import Panel
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from ppxai.engine import EngineClient
-from ppxai.engine.bootstrap import find_bootstrap_files_by_scope, ContextScope
 from ppxai.commands.factory import CommandFactory
+from ppxai.engine import EngineClient
+from ppxai.engine.bootstrap import ContextScope, find_bootstrap_files_by_scope
 
 console = Console()
 
@@ -76,7 +78,7 @@ async def validate_engine_bootstrap_loading():
         console.print("[dim]This is normal if no bootstrap files exist[/dim]")
         return True  # Not an error, just no bootstrap files
 
-    console.print(f"[green]✅ Bootstrap context loaded successfully[/green]")
+    console.print("[green]✅ Bootstrap context loaded successfully[/green]")
     console.print(f"  Sources: {len(status['sources'])}")
     console.print(f"  Char count: {status['char_count']:,}")
     console.print(f"  Total size: {status['total_size']:,} bytes")
@@ -215,7 +217,7 @@ async def validate_context_badge_display():
         scopes = [src["scope"] for src in sources]
         scope_text = "/".join(scopes)
 
-        console.print(f"[green]✅ Context badge data available:[/green]")
+        console.print("[green]✅ Context badge data available:[/green]")
         console.print(f"  Badge text: \"Context: {scope_text}\"")
         console.print(f"  Sources: {len(sources)}")
         return True

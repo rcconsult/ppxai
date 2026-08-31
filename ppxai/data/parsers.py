@@ -7,11 +7,11 @@ v1.13.8: Initial implementation
 """
 
 import csv
-import json
 import io
+import json
 import sys
 from dataclasses import dataclass, field
-from typing import Any, List, Optional, Union
+from typing import Any
 
 # Optional data format parsers (in 'data' extras group)
 try:
@@ -38,8 +38,8 @@ except ImportError:
 class TableData:
     """Parsed tabular data (CSV/TSV)."""
 
-    headers: List[str]
-    rows: List[List[str]]
+    headers: list[str]
+    rows: list[list[str]]
     row_count: int = 0
     column_count: int = 0
     truncated: bool = False  # True if max_rows limit was hit
@@ -56,7 +56,7 @@ class TreeNode:
     key: str
     value: Any = None
     node_type: str = "null"  # 'object', 'array', 'string', 'number', 'boolean', 'null'
-    children: List["TreeNode"] = field(default_factory=list)
+    children: list["TreeNode"] = field(default_factory=list)
     depth: int = 0
 
     @property

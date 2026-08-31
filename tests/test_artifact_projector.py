@@ -26,8 +26,7 @@ Pins the per-consumer plug-n-play projection registries:
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Any, ClassVar, Dict
+from dataclasses import dataclass
 
 import pytest
 
@@ -45,7 +44,6 @@ from ppxai.engine.types import (
     PdfAttachmentRef,
     TextAttachmentRef,
 )
-
 
 # =============================================================================
 # 1. Per-subclass registry isolation

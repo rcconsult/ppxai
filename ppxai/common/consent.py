@@ -16,17 +16,17 @@ Architecture:
 """
 
 import re
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from typing import Callable, Awaitable, Dict, Set, List, Optional
 from pathlib import Path
 
-from .logger import get_logger
 from ..constants import (
     ConsentDecision,
     ConsentMode,
     ConsentResponse,
     ShellRiskLevel,
 )
+from .logger import get_logger
 
 logger = get_logger("tui")
 
@@ -88,7 +88,7 @@ def normalize_consent_response(response: str) -> str:
         return ConsentResponse.NO
 
 
-def classify_shell_command(command: str, config: Dict[str, List[str]]) -> str:
+def classify_shell_command(command: str, config: dict[str, list[str]]) -> str:
     """Classify shell command risk level.
 
     This is a standalone function for use by EngineClient and other modules
@@ -201,7 +201,7 @@ class BaseConsentManager:
     - File/command approval checking (non-prompting)
     """
 
-    def __init__(self, shell_config: Optional[Dict] = None):
+    def __init__(self, shell_config: dict | None = None):
         """
         Initialize base consent manager state.
 
@@ -211,28 +211,28 @@ class BaseConsentManager:
         # File editing consent state
         self._always_approve = False
         self._never_approve = False
-        self._approved_files: Set[str] = set()
-        self._denied_files: Set[str] = set()
+        self._approved_files: set[str] = set()
+        self._denied_files: set[str] = set()
 
         # Shell command consent state
         self._always_approve_shell = False
         self._never_approve_shell = False
-        self._approved_commands: Set[str] = set()
-        self._denied_commands: Set[str] = set()
+        self._approved_commands: set[str] = set()
+        self._denied_commands: set[str] = set()
 
         # Load shell configuration patterns
         self._load_shell_config(shell_config or {})
 
-    def _load_shell_config(self, config: Dict):
+    def _load_shell_config(self, config: dict):
         """
         Load shell command patterns from configuration.
 
         Args:
             config: Shell tool configuration dict with dangerous/allowed/never patterns
         """
-        self._dangerous_patterns: List[re.Pattern] = []
-        self._allowed_patterns: List[re.Pattern] = []
-        self._never_allow_patterns: List[re.Pattern] = []
+        self._dangerous_patterns: list[re.Pattern] = []
+        self._allowed_patterns: list[re.Pattern] = []
+        self._never_allow_patterns: list[re.Pattern] = []
 
         # Compile dangerous command patterns
         for pattern in config.get("dangerous_commands", []):
@@ -338,7 +338,7 @@ class BaseConsentManager:
         self._approved_commands.clear()
         self._denied_commands.clear()
 
-    def get_status(self) -> Dict[str, any]:
+    def get_status(self) -> dict[str, any]:
         """
         Get current consent status.
 
@@ -488,7 +488,7 @@ class ConsentManager(BaseConsentManager):
         self,
         consent_callback: Callable[[ConsentRequest], Awaitable[tuple[bool, str]]] = None,
         shell_consent_callback: Callable[[ShellConsentRequest], Awaitable[tuple[bool, str]]] = None,
-        shell_config: Optional[Dict] = None
+        shell_config: dict | None = None
     ):
         """
         Initialize async consent manager.
@@ -627,7 +627,7 @@ class SyncConsentManager(BaseConsentManager):
         self,
         consent_callback: Callable[[ConsentRequest], tuple[bool, str]] = None,
         shell_consent_callback: Callable[[ShellConsentRequest], tuple[bool, str]] = None,
-        shell_config: Optional[Dict] = None
+        shell_config: dict | None = None
     ):
         """
         Initialize sync consent manager.

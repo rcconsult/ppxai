@@ -9,35 +9,32 @@ v1.15.0: Migrated to type-based renderer dispatch
 
 import asyncio
 import subprocess
-from typing import Optional
 
 from prompt_toolkit import prompt as pt_prompt
 
+from ..common.logger import get_logger
+from ..config.defaults import DEFAULT_AGENT_MAX_ITERATIONS, DEFAULT_AGENT_MIN_TASK_WORDS
+from ..rich.event_handler import TUIEventHandler
+from ..rich.ui import console
 from .factory import CommandFactory, CommandSpec
 from .protocol import CommandContext
 from .results import (
-    ResultStatus,
-    CommandResult,
     AIResponseResult,
+    CommandResult,
     ConfirmationResult,
     ErrorResult,
     KeyValueResult,
     NotificationResult,
+    ResultStatus,
     SideEffectKind,
     TableResult,
-    TextResult,
 )
-
-from ..common.logger import get_logger
-from ..rich.event_handler import TUIEventHandler
-from ..rich.ui import console
-from ..config.defaults import DEFAULT_AGENT_MAX_ITERATIONS, DEFAULT_AGENT_MIN_TASK_WORDS
 
 
 def _handle_agent_interrupt(
     context,
-    checkpoint_id: Optional[str],
-    checkpoint_backend: Optional[str]
+    checkpoint_id: str | None,
+    checkpoint_backend: str | None
 ) -> None:
     """Handle agent interruption and offer automatic rollback.
 
@@ -186,7 +183,7 @@ If more work is needed, explain what you're doing next and use the appropriate t
 def validate_agent_task(
     task: str,
     min_words: int,
-) -> Optional[CommandResult]:
+) -> CommandResult | None:
     """Return a NotificationResult if the task is too vague, else None.
 
     The non-None return is a friendly nudge framed as a question
@@ -466,7 +463,7 @@ def _checkpoint_list(context: CommandContext) -> CommandResult:
     )
 
 
-def _checkpoint_backend(context: CommandContext, backend: Optional[str]) -> CommandResult:
+def _checkpoint_backend(context: CommandContext, backend: str | None) -> CommandResult:
     """Set or show the checkpoint backend."""
     if not backend:
         # Show current backend
@@ -535,7 +532,7 @@ def _checkpoint_clear(context: CommandContext) -> CommandResult:
     )
 
 
-def _checkpoint_info(context: CommandContext, checkpoint_id: Optional[str]) -> CommandResult:
+def _checkpoint_info(context: CommandContext, checkpoint_id: str | None) -> CommandResult:
     """Show details about a specific checkpoint."""
     if not checkpoint_id:
         return ErrorResult(
@@ -667,10 +664,10 @@ def handle_agent(context: CommandContext, args: str) -> CommandResult:
         console.print("[yellow]Enabling agent mode...[/yellow]")
         context.engine_client.enable_agent_mode()
 
-    console.print(f"\n[cyan]🤖 Starting autonomous agent[/cyan]")
+    console.print("\n[cyan]🤖 Starting autonomous agent[/cyan]")
     console.print(f"[dim]Task: {task}[/dim]")
     console.print(f"[dim]Max iterations: {max_iterations}[/dim]")
-    console.print(f"[dim]Press Ctrl-C to interrupt[/dim]\n")
+    console.print("[dim]Press Ctrl-C to interrupt[/dim]\n")
 
     # Create checkpoint before agent task
     checkpoint_id = context.engine_client.create_checkpoint(task[:100])
@@ -732,7 +729,7 @@ def handle_agent(context: CommandContext, args: str) -> CommandResult:
                 task_complete = True
                 summary_parts = response.split("TASK_COMPLETE:", 1)
                 final_summary = summary_parts[1].strip() if len(summary_parts) > 1 else "Done"
-                console.print(f"\n[green]✅ Task completed![/green]")
+                console.print("\n[green]✅ Task completed![/green]")
                 console.print(f"[dim]Summary: {final_summary[:200]}{'...' if len(final_summary) > 200 else ''}[/dim]\n")
                 return "\n\n".join(accumulated_output), final_summary, True
 

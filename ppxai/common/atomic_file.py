@@ -25,7 +25,6 @@ import sys
 import time
 from pathlib import Path
 
-
 # Tuned for the common Windows antivirus / indexer / preview-server
 # file-lock scenarios. 3 attempts with 100ms + 200ms backoffs covers
 # the sub-second scans seen in practice; anything longer is a real

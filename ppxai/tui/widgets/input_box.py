@@ -8,7 +8,7 @@ from textual.app import ComposeResult
 from textual.containers import Horizontal
 from textual.css.query import NoMatches
 from textual.message import Message
-from textual.widgets import Input, Static, TextArea
+from textual.widgets import Static, TextArea
 
 
 class ChatTextArea(TextArea):

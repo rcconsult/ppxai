@@ -27,7 +27,6 @@ import logging
 import shutil
 import threading
 from abc import ABC, abstractmethod
-from typing import List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -45,8 +44,8 @@ class Wrapper(ABC):
     binary: str
     enabled: str  # "auto" | "always" | "never"
     transparent_for_safety: bool
-    prompt_block: Optional[str]
-    failure_markers: Tuple[str, ...]
+    prompt_block: str | None
+    failure_markers: tuple[str, ...]
     retry_raw_on_failure: bool
 
     def __init__(
@@ -56,8 +55,8 @@ class Wrapper(ABC):
         binary: str,
         enabled: str = "auto",
         transparent_for_safety: bool = True,
-        prompt_block: Optional[str] = None,
-        failure_markers: Optional[List[str]] = None,
+        prompt_block: str | None = None,
+        failure_markers: list[str] | None = None,
         retry_raw_on_failure: bool = False,
     ):
         self.name = name
@@ -67,7 +66,7 @@ class Wrapper(ABC):
         self.prompt_block = prompt_block
         self.failure_markers = tuple(failure_markers or ())
         self.retry_raw_on_failure = retry_raw_on_failure
-        self._available_cache: Optional[bool] = None
+        self._available_cache: bool | None = None
         # Thread-safety: protects the lazy-init of `_available_cache`. Asyncio
         # alone doesn't need this (sync function, no await), but multiple
         # OS threads — e.g. future sub-agent workers — could race here.
@@ -125,7 +124,7 @@ class Wrapper(ABC):
             self._available_cache = None
 
     @abstractmethod
-    async def maybe_rewrite(self, command: str) -> Optional[str]:
+    async def maybe_rewrite(self, command: str) -> str | None:
         """Return the wrapped form of `command`, or None to skip.
 
         Implementations must NOT raise on subprocess failure or timeout —
@@ -159,7 +158,7 @@ class ProbeWrapper(Wrapper):
     def __init__(
         self,
         *,
-        probe_args: List[str],
+        probe_args: list[str],
         no_rewrite_marker: str = "",
         probe_timeout_seconds: float = 5.0,
         **kwargs,
@@ -169,7 +168,7 @@ class ProbeWrapper(Wrapper):
         self.no_rewrite_marker = no_rewrite_marker
         self.probe_timeout_seconds = probe_timeout_seconds
 
-    async def maybe_rewrite(self, command: str) -> Optional[str]:
+    async def maybe_rewrite(self, command: str) -> str | None:
         if not self.is_available():
             return None
 
@@ -225,7 +224,7 @@ class AlwaysWrapper(Wrapper):
             raise ValueError(f"AlwaysWrapper {kwargs.get('name')!r} requires a non-empty prefix")
         self.prefix = prefix.strip()
 
-    async def maybe_rewrite(self, command: str) -> Optional[str]:
+    async def maybe_rewrite(self, command: str) -> str | None:
         if not self.is_available():
             return None
         return f"{self.prefix} {command}"

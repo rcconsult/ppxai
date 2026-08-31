@@ -14,12 +14,12 @@ Verifies the tool-loop circuit breaker:
     ppxai-config.json is what the engine uses.
 """
 
-import json
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
 from ppxai.engine.chat import chat_with_tools
+from ppxai.engine.model_facts import ModelFacts
 from ppxai.engine.session import SessionManager
 from ppxai.engine.types import (
     Event,
@@ -27,7 +27,6 @@ from ppxai.engine.types import (
     Message,
     ProviderCapabilities,
 )
-from ppxai.engine.model_facts import ModelFacts
 
 
 class MockProvider:

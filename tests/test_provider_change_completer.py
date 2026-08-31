@@ -4,9 +4,9 @@ Test that completer updates model list when provider changes.
 """
 
 from pathlib import Path
-from ppxai.tui.completer import TextualCompleter
+
 from ppxai.engine.client import EngineClient
-from ppxai.config import get_provider_config
+from ppxai.tui.completer import TextualCompleter
 
 # Initialize engine client
 engine_client = EngineClient()

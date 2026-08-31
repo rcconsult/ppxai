@@ -10,7 +10,6 @@ from typing import Union
 
 from ...types import ToolManagerProtocol
 
-
 # Supported operators for safe evaluation
 _BINARY_OPERATORS = {
     ast.Add: operator.add,
@@ -93,7 +92,7 @@ def calculate(expression: str) -> str:
             return str(int(result))
         return str(result)
     except SyntaxError:
-        return f"Error: Invalid expression syntax"
+        return "Error: Invalid expression syntax"
     except ZeroDivisionError:
         return "Error: Division by zero"
     except ValueError as e:

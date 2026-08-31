@@ -25,9 +25,7 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-import pytest
-
-from ppxai.commands.context import ServerCommandContext, RichCommandContext
+from ppxai.commands.context import ServerCommandContext
 from ppxai.commands.factory import CommandFactory
 from ppxai.commands.results import (
     ErrorResult,
@@ -35,7 +33,6 @@ from ppxai.commands.results import (
     ResultStatus,
     TextResult,
 )
-
 
 # ---------------------------------------------------------------------------
 # /help — overall listing

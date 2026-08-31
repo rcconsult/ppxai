@@ -6,7 +6,6 @@ reference marker. The model uses read_csv and list_csv_columns tools.
 
 import csv
 import io
-from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest

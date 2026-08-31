@@ -9,11 +9,10 @@ v1.12.3: Initial implementation
 
 import json
 import logging
+from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, Any, List, Optional
-from dataclasses import dataclass, asdict, field
-import uuid
+from typing import Any
 
 from .common.logger import get_logger
 
@@ -26,11 +25,11 @@ class SessionUsageRecord:
     session_id: str
     started_at: str  # ISO format
     ended_at: str  # ISO format
-    usage_by_model: Dict[str, Dict[str, Any]]  # "provider/model" -> {prompt_tokens, completion_tokens, estimated_cost}
+    usage_by_model: dict[str, dict[str, Any]]  # "provider/model" -> {prompt_tokens, completion_tokens, estimated_cost}
     total_cost: float
     total_tokens: int
     message_count: int
-    tool_calls: Dict[str, Dict[str, Any]] = field(default_factory=dict)  # Tool usage tracking
+    tool_calls: dict[str, dict[str, Any]] = field(default_factory=dict)  # Tool usage tracking
 
 
 class UsageStorage:
@@ -57,7 +56,7 @@ class UsageStorage:
 
     STORAGE_VERSION = 1
 
-    def __init__(self, usage_dir: Optional[Path] = None):
+    def __init__(self, usage_dir: Path | None = None):
         """Initialize usage storage.
 
         Args:
@@ -75,7 +74,7 @@ class UsageStorage:
         # Load existing data or initialize empty
         self._data = self._load()
 
-    def _load(self) -> Dict[str, Any]:
+    def _load(self) -> dict[str, Any]:
         """Load usage data from disk."""
         if self.usage_file.exists():
             try:
@@ -110,11 +109,11 @@ class UsageStorage:
         session_id: str,
         started_at: datetime,
         ended_at: datetime,
-        usage_by_model: Dict[str, Dict[str, Any]],
+        usage_by_model: dict[str, dict[str, Any]],
         total_cost: float,
         total_tokens: int,
         message_count: int,
-        tool_calls: Dict[str, Dict[str, Any]] = None  # Tool usage tracking
+        tool_calls: dict[str, dict[str, Any]] = None  # Tool usage tracking
     ):
         """Save a session's usage data.
 
@@ -162,7 +161,7 @@ class UsageStorage:
 
         self._save()
 
-    def get_usage_report(self, period: str = "all") -> Dict[str, Any]:
+    def get_usage_report(self, period: str = "all") -> dict[str, Any]:
         """Get aggregated usage report for a time period.
 
         Args:
@@ -211,9 +210,9 @@ class UsageStorage:
         total_prompt_tokens = 0
         total_completion_tokens = 0
         total_cost = 0.0
-        by_provider: Dict[str, Dict[str, Any]] = {}
-        by_model: Dict[str, Dict[str, Any]] = {}
-        by_tool: Dict[str, Dict[str, Any]] = {}  # Tool usage aggregation
+        by_provider: dict[str, dict[str, Any]] = {}
+        by_model: dict[str, dict[str, Any]] = {}
+        by_tool: dict[str, dict[str, Any]] = {}  # Tool usage aggregation
 
         for session in filtered_sessions:
             total_tokens += session.get("total_tokens", 0)
@@ -299,7 +298,7 @@ class UsageStorage:
             "sessions": session_summaries
         }
 
-    def get_sessions(self, limit: int = 20, offset: int = 0) -> List[Dict[str, Any]]:
+    def get_sessions(self, limit: int = 20, offset: int = 0) -> list[dict[str, Any]]:
         """Get list of recorded sessions.
 
         Args:
@@ -338,7 +337,7 @@ class UsageStorage:
         self,
         provider: str,
         status_code: int,
-        model: Optional[str] = None,
+        model: str | None = None,
     ) -> None:
         """Increment a counter for a provider-side error (e.g. 403, 429).
 
@@ -375,13 +374,13 @@ class UsageStorage:
         except Exception as e:
             logger.debug(f"record_provider_error failed to persist: {e}")
 
-    def get_provider_errors(self) -> Dict[str, Dict[str, Any]]:
+    def get_provider_errors(self) -> dict[str, dict[str, Any]]:
         """Return the provider_errors counter dict (read-only view)."""
         return dict(self._data.get("provider_errors", {}))
 
 
 # Module-level singleton for convenience
-_storage: Optional[UsageStorage] = None
+_storage: UsageStorage | None = None
 
 
 def get_usage_storage() -> UsageStorage:
@@ -396,11 +395,11 @@ def save_session_usage(
     session_id: str,
     started_at: datetime,
     ended_at: datetime,
-    usage_by_model: Dict[str, Dict[str, Any]],
+    usage_by_model: dict[str, dict[str, Any]],
     total_cost: float,
     total_tokens: int,
     message_count: int,
-    tool_calls: Dict[str, Dict[str, Any]] = None
+    tool_calls: dict[str, dict[str, Any]] = None
 ):
     """Convenience function to save session usage."""
     get_usage_storage().save_session_usage(
@@ -418,7 +417,7 @@ def save_session_usage(
 def record_provider_error(
     provider: str,
     status_code: int,
-    model: Optional[str] = None,
+    model: str | None = None,
 ) -> None:
     """Module-level convenience: record a provider-side error (403/429)."""
     try:
@@ -427,7 +426,7 @@ def record_provider_error(
         logger.debug(f"record_provider_error noop: {e}")
 
 
-def get_provider_errors() -> Dict[str, Dict[str, Any]]:
+def get_provider_errors() -> dict[str, dict[str, Any]]:
     """Module-level convenience: read provider_errors counter dict."""
     try:
         return get_usage_storage().get_provider_errors()
@@ -436,6 +435,6 @@ def get_provider_errors() -> Dict[str, Dict[str, Any]]:
         return {}
 
 
-def get_usage_report(period: str = "all") -> Dict[str, Any]:
+def get_usage_report(period: str = "all") -> dict[str, Any]:
     """Convenience function to get usage report."""
     return get_usage_storage().get_usage_report(period)

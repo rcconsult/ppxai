@@ -15,16 +15,14 @@ Usage:
     manager.restore_checkpoint(checkpoint_id)
 """
 
-import os
 import shutil
 import subprocess
 from abc import ABC, abstractmethod
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, List, Tuple
 
-from .config import SESSIONS_DIR
 from .common.logger import get_logger
+from .config import SESSIONS_DIR
 
 logger = get_logger("tui")
 
@@ -48,7 +46,7 @@ class CheckpointBackend(ABC):
         pass
 
     @abstractmethod
-    def list_checkpoints(self) -> List[Tuple[str, str, str]]:
+    def list_checkpoints(self) -> list[tuple[str, str, str]]:
         """List available checkpoints. Returns [(id, description, timestamp), ...]."""
         pass
 
@@ -69,7 +67,7 @@ class GitCheckpointBackend(CheckpointBackend):
         git_dir = self.working_dir / ".git"
         return git_dir.exists() and git_dir.is_dir()
 
-    def is_checkpoint_valid(self, checkpoint_id: str) -> Tuple[bool, str]:
+    def is_checkpoint_valid(self, checkpoint_id: str) -> tuple[bool, str]:
         """Check if a checkpoint is still valid (not stale).
 
         A checkpoint is valid if:
@@ -171,7 +169,7 @@ class GitCheckpointBackend(CheckpointBackend):
         except subprocess.CalledProcessError:
             return False
 
-    def list_checkpoints(self) -> List[Tuple[str, str, str]]:
+    def list_checkpoints(self) -> list[tuple[str, str, str]]:
         """List ppxai checkpoint and agent commits (undoable commits)."""
         try:
             # Include both checkpoint and agent commits
@@ -215,13 +213,13 @@ class FileCheckpointBackend(CheckpointBackend):
         self.checkpoint_dir.mkdir(parents=True, exist_ok=True)
 
         # Track modified files
-        self.modified_files: List[Path] = []
+        self.modified_files: list[Path] = []
 
     def is_available(self) -> bool:
         """File backend is always available."""
         return True
 
-    def is_checkpoint_valid(self, checkpoint_id: str) -> Tuple[bool, str]:
+    def is_checkpoint_valid(self, checkpoint_id: str) -> tuple[bool, str]:
         """Check if a checkpoint is still valid.
 
         File-based checkpoints are always valid if the snapshot directory exists.
@@ -310,7 +308,7 @@ class FileCheckpointBackend(CheckpointBackend):
         except (OSError, IOError):
             return False
 
-    def list_checkpoints(self) -> List[Tuple[str, str, str]]:
+    def list_checkpoints(self) -> list[tuple[str, str, str]]:
         """List file-based checkpoints."""
         checkpoints = []
         for checkpoint_dir in sorted(self.checkpoint_dir.iterdir(), reverse=True):
@@ -363,7 +361,7 @@ class CheckpointManager:
         self.working_dir = Path(working_dir).resolve()
         self.session_id = session_id
         self.backend_mode = backend
-        self.backend: Optional[CheckpointBackend] = None
+        self.backend: CheckpointBackend | None = None
 
         self._initialize_backend()
 
@@ -398,7 +396,7 @@ class CheckpointManager:
             return "none"
         return self.backend.get_backend_name()
 
-    def create_checkpoint(self, description: str) -> Optional[str]:
+    def create_checkpoint(self, description: str) -> str | None:
         """
         Create a checkpoint before agent task execution.
 
@@ -428,7 +426,7 @@ class CheckpointManager:
 
         return self.backend.restore_checkpoint(checkpoint_id)
 
-    def is_checkpoint_valid(self, checkpoint_id: str) -> Tuple[bool, str]:
+    def is_checkpoint_valid(self, checkpoint_id: str) -> tuple[bool, str]:
         """
         Check if a checkpoint is still valid (not stale).
 
@@ -449,7 +447,7 @@ class CheckpointManager:
 
         return self.backend.is_checkpoint_valid(checkpoint_id)
 
-    def list_checkpoints(self) -> List[Tuple[str, str, str]]:
+    def list_checkpoints(self) -> list[tuple[str, str, str]]:
         """
         List available checkpoints.
 

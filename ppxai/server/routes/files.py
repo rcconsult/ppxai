@@ -12,14 +12,20 @@ from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, Response
-from typing import Optional
 
+from ...common.docx_to_pdf import convert_docx_to_pdf
 from ...common.logger import get_logger
 from ...config import get_file_tree_ignore_dirs
-from ..models import FileReadRequest, FileSearchRequest, FileWriteRequest
-from ..state import Session, get_session, get_session_or_query, is_path_allowed, MIME_TYPES, with_drained_events
 from ...engine.tools.builtin.docx_tools import _extract_docx_text
-from ...common.docx_to_pdf import convert_docx_to_pdf
+from ..models import FileReadRequest, FileSearchRequest, FileWriteRequest
+from ..state import (
+    MIME_TYPES,
+    Session,
+    get_session,
+    get_session_or_query,
+    is_path_allowed,
+    with_drained_events,
+)
 
 logger = get_logger("server")
 
@@ -59,7 +65,7 @@ router = APIRouter()
 # ---------------------------------------------------------------------------
 
 def _check_cwd_anchor(
-    cwd_anchor: Optional[str],
+    cwd_anchor: str | None,
     engine_working_dir: str,
     engine_for_drain,
 ) -> None:
@@ -151,7 +157,7 @@ def _within_tree(path: Path, base: Path) -> bool:
 def _resolve_safe_path(
     raw: str,
     engine,
-    cwd_anchor: Optional[str] = None,
+    cwd_anchor: str | None = None,
     allow_directory: bool = False,
 ) -> Path:
     """Resolve user-supplied path to an absolute, access-allowed Path.
@@ -336,7 +342,7 @@ async def search_files(
 
 @router.get("/files/list")
 async def list_files(
-    path: Optional[str] = None,
+    path: str | None = None,
     a: bool = False,
     s: Session = Depends(get_session)
 ):
@@ -415,7 +421,7 @@ async def list_files(
 
 @router.get("/files/tree")
 async def get_file_tree(
-    path: Optional[str] = None,
+    path: str | None = None,
     depth: int = 3,
     s: Session = Depends(get_session)
 ):
@@ -576,7 +582,7 @@ async def write_file(
 @router.get("/files/image/{filepath:path}")
 async def serve_image(
     filepath: str,
-    cwd_anchor: Optional[str] = None,
+    cwd_anchor: str | None = None,
     s: Session = Depends(get_session_or_query)
 ):
     """Serve raw image file for inline display in chat bubbles (v1.16.2).
@@ -767,7 +773,7 @@ _LEGACY_OFFICE_EXTENSIONS = {'.ppt', '.doc'}
 
 
 def _text_fallback(*, kind: str, name: str, total: int, content: str,
-                   slide: Optional[int] = None) -> JSONResponse:
+                   slide: int | None = None) -> JSONResponse:
     """The single text_fallback JSON shape (LibreOffice-missing degrade)."""
     body = {
         "type": "text_fallback",
@@ -943,7 +949,7 @@ async def preview_file_by_path(
     path: str = Query(..., description="Working-dir-relative or absolute path"),
     slide: int = Query(1, ge=1, description="Slide number (1-based)"),
     total: bool = Query(False, description="Return only metadata (slide count, type)"),
-    cwd_anchor: Optional[str] = Query(None, description="Client cwd at click time"),
+    cwd_anchor: str | None = Query(None, description="Client cwd at click time"),
     s: Session = Depends(get_session_or_query),
 ):
     """Office preview — path-based variant. Delegates to the shared
@@ -973,7 +979,7 @@ async def preview_file_by_path(
 @router.get("/files/download")
 async def download_file(
     path: str = Query(..., description="Working-dir-relative or absolute path"),
-    cwd_anchor: Optional[str] = Query(None, description="Client cwd at click time"),
+    cwd_anchor: str | None = Query(None, description="Client cwd at click time"),
     s: Session = Depends(get_session_or_query),
 ):
     """Download a file as raw bytes with attachment Content-Disposition.
@@ -1018,7 +1024,7 @@ async def upload_file(
     file: UploadFile = File(..., description="The uploaded file"),
     path: str = Query(..., description="Destination DIRECTORY (working-dir-relative or absolute)"),
     overwrite: bool = Query(False, description="Overwrite existing file at the target name"),
-    cwd_anchor: Optional[str] = Query(None, description="Client cwd at click time"),
+    cwd_anchor: str | None = Query(None, description="Client cwd at click time"),
     s: Session = Depends(get_session_or_query),
 ):
     """Upload a file from the user's local PC into the workspace.

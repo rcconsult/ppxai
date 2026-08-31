@@ -22,12 +22,11 @@ from .factory import CommandFactory, CommandSpec
 from .handler import CODING_PROMPTS
 from .protocol import CommandContext
 from .results import (
-    ResultStatus,
+    AIResponseResult,
     CommandResult,
     ErrorResult,
-    AIResponseResult,
+    ResultStatus,
 )
-
 
 # =============================================================================
 # Type-Based Result Handlers (v1.15.0)

@@ -89,8 +89,8 @@ class TestOfferedSetFiltered:
         # enumerate only granted tools, not merely append a note while still
         # listing every tool. Uses a real ToolManager so the base renderer
         # runs against the scoped get_available_tools().
-        from ppxai.engine.tools.manager import ToolManager
         from ppxai.engine.tools.base import FunctionTool
+        from ppxai.engine.tools.manager import ToolManager
 
         real = ToolManager()
         for n in ("read_file", "write_file", "shell"):
@@ -114,8 +114,8 @@ class TestOfferedSetFiltered:
         # contain NO execute_shell_command reference — neither the gated
         # instruction line (base renderer) nor the shell-wrapper context
         # block (rtk etc.). Both are off-grant guidance.
-        from ppxai.engine.tools.manager import ToolManager
         from ppxai.engine.tools.base import FunctionTool
+        from ppxai.engine.tools.manager import ToolManager
 
         real = ToolManager()
         for n in ("read_file", "execute_shell_command"):
@@ -131,8 +131,8 @@ class TestOfferedSetFiltered:
         assert "### read_file" in p  # but the granted tool is still there
 
     def test_prompt_keeps_shell_guidance_when_granted(self):
-        from ppxai.engine.tools.manager import ToolManager
         from ppxai.engine.tools.base import FunctionTool
+        from ppxai.engine.tools.manager import ToolManager
 
         real = ToolManager()
         for n in ("read_file", "execute_shell_command"):
@@ -150,9 +150,9 @@ class TestOfferedSetFiltered:
         # via include_wrapper_context — never emitted-then-stripped. Force a
         # non-empty wrapper block and assert the flag controls it directly, so
         # the AC-1 filter no longer depends on the section's markdown format.
-        from ppxai.engine.tools.manager import ToolManager
-        from ppxai.engine.tools.base import FunctionTool
         import ppxai.engine.tools.manager as mgr_mod
+        from ppxai.engine.tools.base import FunctionTool
+        from ppxai.engine.tools.manager import ToolManager
 
         class _FakeReg:
             def compose_prompt_blocks(self):
@@ -173,8 +173,8 @@ class TestOfferedSetFiltered:
         assert "rtk: token-optimized" not in without_ctx
 
     def test_empty_grant_yields_empty_prompt(self, base):
-        from ppxai.engine.tools.manager import ToolManager
         from ppxai.engine.tools.base import FunctionTool
+        from ppxai.engine.tools.manager import ToolManager
 
         real = ToolManager()
         real.register_tool(FunctionTool(

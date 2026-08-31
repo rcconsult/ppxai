@@ -12,13 +12,13 @@ v1.17.0: Eliminated deferred imports — loader imported at top level,
 """
 
 import threading
-from typing import Any, Callable, Dict, List, Optional
+from collections.abc import Callable
+from typing import Any, Optional
 
 from .loader import load_config
 
-
 # Callbacks invoked after config reload (registered by __init__.py)
-_reload_callbacks: List[Callable[[], None]] = []
+_reload_callbacks: list[Callable[[], None]] = []
 
 
 def register_reload_callback(callback: Callable[[], None]) -> None:
@@ -59,7 +59,7 @@ class ConfigStore:
                 # Double-check locking pattern
                 if cls._instance is None:
                     instance = super().__new__(cls)
-                    instance._config: Optional[Dict[str, Any]] = None
+                    instance._config: dict[str, Any] | None = None
                     instance._config_lock = threading.Lock()
                     instance._loaded = False
                     cls._instance = instance
@@ -71,7 +71,7 @@ class ConfigStore:
         return cls()
 
     @property
-    def config(self) -> Dict[str, Any]:
+    def config(self) -> dict[str, Any]:
         """Get configuration, loading lazily on first access.
 
         Thread-safe: Uses double-check locking for initialization.
@@ -84,7 +84,7 @@ class ConfigStore:
                     self._loaded = True
         return self._config
 
-    def reload(self) -> Dict[str, Any]:
+    def reload(self) -> dict[str, Any]:
         """Reload configuration from disk.
 
         Thread-safe: Atomically replaces config reference.
@@ -95,7 +95,7 @@ class ConfigStore:
             self._loaded = True
         return self._config
 
-    def set_for_testing(self, config: Dict[str, Any]) -> None:
+    def set_for_testing(self, config: dict[str, Any]) -> None:
         """Replace config for testing purposes.
 
         Thread-safe but NOT intended for production use.
@@ -126,12 +126,12 @@ class ConfigStore:
 
 
 # Module-level convenience functions
-def get_config() -> Dict[str, Any]:
+def get_config() -> dict[str, Any]:
     """Get the current configuration dict."""
     return ConfigStore.get_instance().config
 
 
-def reload_config() -> Dict[str, Any]:
+def reload_config() -> dict[str, Any]:
     """Reload configuration from disk and refresh module-level attributes."""
     result = ConfigStore.get_instance().reload()
     # Notify registered callbacks (e.g., re-populate PROVIDERS/MODELS)

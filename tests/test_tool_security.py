@@ -27,10 +27,8 @@ docs/consent-contract.md for the full contract.
 
 from __future__ import annotations
 
-import asyncio
-import subprocess
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -42,7 +40,6 @@ from ppxai.engine.tools.builtin.editor import (
     ReplaceBlockTool,
 )
 from ppxai.engine.tools.builtin.filesystem import ReadFileTool
-
 
 # ---------------------------------------------------------------------------
 # Fixtures

@@ -18,10 +18,11 @@ Unlike OpenAICompatibleProvider, this provider:
 
 import asyncio
 import json
-import os
 import re
 import traceback
-from typing import List, AsyncIterator, Optional, Dict, Any
+from collections.abc import AsyncIterator
+from dataclasses import replace
+from typing import Any
 
 import httpx
 import openai
@@ -29,13 +30,10 @@ from openai import OpenAI
 
 from ...common.logger import get_logger
 from ...config.tls import tls_verify
-from dataclasses import replace
-
-from ..model_facts import ModelFacts, shipped_facts_for_model
-from ..types import Message, Event, EventType, ProviderCapabilities
+from ..model_facts import shipped_facts_for_model
+from ..types import Event, EventType, Message, ProviderCapabilities
 from .base import BaseProvider
 from .wire import get_handler
-
 
 logger = get_logger("openai_native")
 
@@ -127,10 +125,10 @@ class OpenAINativeProvider(BaseProvider):
     def __init__(
         self,
         api_key: str,
-        models: Optional[Dict[str, Dict[str, str]]] = None,
-        capabilities: Optional[ProviderCapabilities] = None,
+        models: dict[str, dict[str, str]] | None = None,
+        capabilities: ProviderCapabilities | None = None,
         enable_web_search: bool = False,
-        provider_id: Optional[str] = None,
+        provider_id: str | None = None,
         **kwargs
     ):
         """Initialize the OpenAI provider.
@@ -257,10 +255,10 @@ class OpenAINativeProvider(BaseProvider):
 
     async def chat(
         self,
-        messages: List[Message],
+        messages: list[Message],
         model: str,
         stream: bool = True,
-        tools: Optional[List[Dict[str, Any]]] = None,
+        tools: list[dict[str, Any]] | None = None,
         **kwargs
     ) -> AsyncIterator[Event]:
         """Send chat request to OpenAI API.
@@ -288,7 +286,7 @@ class OpenAINativeProvider(BaseProvider):
 
     def chat_sync_simple(
         self,
-        messages: List[Message],
+        messages: list[Message],
         model: str,
     ) -> str:
         """Simple synchronous chat that returns just the content.
@@ -330,11 +328,11 @@ class OpenAINativeProvider(BaseProvider):
         self,
         prompt: str,
         model: str,
-        system: Optional[str] = None,
-        response_format: Optional[Dict[str, Any]] = None,
-        max_tokens: Optional[int] = None,
-        temperature: Optional[float] = None,
-    ) -> Dict[str, Any]:
+        system: str | None = None,
+        response_format: dict[str, Any] | None = None,
+        max_tokens: int | None = None,
+        temperature: float | None = None,
+    ) -> dict[str, Any]:
         """Stateless single-turn completion (BaseProvider contract).
 
         Same return shape as OpenAICompatibleProvider.oneshot
@@ -349,7 +347,7 @@ class OpenAINativeProvider(BaseProvider):
         forwarded on the Responses path — structured output there uses a
         different knob; out of scope for this stateless call.)
         """
-        messages: List[Message] = []
+        messages: list[Message] = []
         if system:
             messages.append(Message(role="system", content=system))
         messages.append(Message(role="user", content=prompt))
@@ -357,7 +355,7 @@ class OpenAINativeProvider(BaseProvider):
         if self._wire_for(model) == "responses":
             return get_handler("responses").oneshot(self, messages, model, max_tokens)
 
-        request_kwargs: Dict[str, Any] = {
+        request_kwargs: dict[str, Any] = {
             "model": model,
             "messages": self._convert_messages(messages),
             "stream": False,
@@ -397,10 +395,10 @@ class OpenAINativeProvider(BaseProvider):
 
     async def _chat_completions_api(
         self,
-        messages: List[Message],
+        messages: list[Message],
         model: str,
         stream: bool = True,
-        tools: Optional[List[Dict[str, Any]]] = None,
+        tools: list[dict[str, Any]] | None = None,
     ) -> AsyncIterator[Event]:
         """Chat Completions API path for standard models.
 
@@ -412,7 +410,7 @@ class OpenAINativeProvider(BaseProvider):
             yield Event(EventType.STREAM_START, {"model": model})
 
             # Build request kwargs
-            request_kwargs: Dict[str, Any] = {
+            request_kwargs: dict[str, Any] = {
                 "model": model,
                 "messages": api_messages,
             }
@@ -487,7 +485,7 @@ class OpenAINativeProvider(BaseProvider):
 
     async def _stream_chat_completions(
         self,
-        request_kwargs: Dict[str, Any],
+        request_kwargs: dict[str, Any],
     ) -> AsyncIterator[Event]:
         """Handle streaming Chat Completions response."""
         response_stream = self.client.chat.completions.create(
@@ -571,7 +569,7 @@ class OpenAINativeProvider(BaseProvider):
 
     async def _non_stream_chat_completions(
         self,
-        request_kwargs: Dict[str, Any],
+        request_kwargs: dict[str, Any],
     ) -> AsyncIterator[Event]:
         """Handle non-streaming Chat Completions response."""
         # Off-load the blocking SDK call so a non-streaming agent-tier run
@@ -604,7 +602,7 @@ class OpenAINativeProvider(BaseProvider):
                     "tool_call_id": tc.id,
                 })
 
-        metadata: Dict[str, Any] = {"usage": usage}
+        metadata: dict[str, Any] = {"usage": usage}
         if hasattr(message, "tool_calls") and message.tool_calls:
             metadata["tool_calls"] = [
                 {"id": tc.id, "function": {"name": tc.function.name, "arguments": tc.function.arguments}}
@@ -656,8 +654,8 @@ class OpenAINativeProvider(BaseProvider):
             # Check for model not found (codex 404s on Chat Completions)
             if "404" in error_str or "not found" in error_str.lower():
                 return (
-                    f"Model not found or unsupported API. "
-                    f"If using a Codex model, ensure it's routed to Responses API."
+                    "Model not found or unsupported API. "
+                    "If using a Codex model, ensure it's routed to Responses API."
                 )
             if "'message':" in error_str:
                 match = re.search(r"'message':\s*'([^']+)'", error_str)

@@ -11,19 +11,21 @@ Usage:
 """
 
 import asyncio
-import time
-from pathlib import Path
-from unittest.mock import Mock, AsyncMock, patch
-from rich.console import Console
-from rich.panel import Panel
 
 # Add project root to path
 import sys
+import time
+from pathlib import Path
+from unittest.mock import AsyncMock, Mock
+
+from rich.console import Console
+from rich.panel import Panel
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from ppxai.engine.types import Event, EventType
 from ppxai.commands.factory import CommandFactory
 from ppxai.commands.results import ResultStatus
+from ppxai.engine.types import Event, EventType
 
 console = Console()
 
@@ -175,7 +177,7 @@ async def validate_conversation_flow():
         console.print("[green]✅ Content accumulation correct[/green]")
         console.print(f"  Final message: '{accumulated}'")
     else:
-        console.print(f"[red]❌ Content mismatch:[/red]")
+        console.print("[red]❌ Content mismatch:[/red]")
         console.print(f"  Expected: '{expected}'")
         console.print(f"  Got: '{accumulated}'")
         return False
@@ -209,7 +211,7 @@ async def validate_tool_execution_flow():
     ]
 
     console.print("[green]✅ Tool event sequence validated[/green]")
-    console.print(f"  TOOL_CALL → TOOL_RESULT")
+    console.print("  TOOL_CALL → TOOL_RESULT")
 
     # Test error scenario
     error_event = Event(
@@ -353,7 +355,7 @@ async def validate_error_handling():
             error_tests.append(False)
     except Exception as e:
         # If it raises an exception, that's also acceptable error handling
-        console.print(f"[green]✅ Missing engine client raises exception (expected)[/green]")
+        console.print("[green]✅ Missing engine client raises exception (expected)[/green]")
         console.print(f"  Error: {str(e)[:60]}")
         error_tests.append(True)
 
@@ -379,7 +381,7 @@ async def validate_performance():
     elapsed = time.perf_counter() - start
 
     lookups_per_sec = (iterations * 10) / elapsed
-    console.print(f"[green]✅ Command lookup performance:[/green]")
+    console.print("[green]✅ Command lookup performance:[/green]")
     console.print(f"  {lookups_per_sec:,.0f} lookups/second")
     console.print(f"  {elapsed*1000:.2f}ms for {iterations*10:,} lookups")
 
@@ -387,7 +389,7 @@ async def validate_performance():
         console.print("[green]✅ Performance acceptable[/green]")
         perf_ok = True
     else:
-        console.print(f"[yellow]⚠️  Performance slower than expected[/yellow]")
+        console.print("[yellow]⚠️  Performance slower than expected[/yellow]")
         perf_ok = False
 
     # Test event processing performance
@@ -403,7 +405,7 @@ async def validate_performance():
     elapsed = time.perf_counter() - start
 
     events_per_sec = len(events) / elapsed
-    console.print(f"\n[green]✅ Event processing performance:[/green]")
+    console.print("\n[green]✅ Event processing performance:[/green]")
     console.print(f"  {events_per_sec:,.0f} events/second")
     console.print(f"  {elapsed*1000:.2f}ms for {len(events):,} events")
 
@@ -411,7 +413,7 @@ async def validate_performance():
         console.print("[green]✅ Event processing fast enough for real-time[/green]")
         event_perf_ok = True
     else:
-        console.print(f"[yellow]⚠️  Event processing may impact streaming UX[/yellow]")
+        console.print("[yellow]⚠️  Event processing may impact streaming UX[/yellow]")
         event_perf_ok = False
 
     return perf_ok and event_perf_ok
@@ -459,7 +461,7 @@ async def validate_bootstrap_integration():
     # Check active hints
     hints = client.get_active_hints()
     if "provider_hints" in hints and "model_hints" in hints:
-        console.print(f"[green]✅ Active hints available[/green]")
+        console.print("[green]✅ Active hints available[/green]")
         console.print(f"  Providers: {', '.join(hints['provider_hints'])}")
         console.print(f"  Models: {', '.join(hints['model_hints'])}")
         checks.append(True)

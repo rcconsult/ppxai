@@ -15,17 +15,15 @@ Covers:
 
 from __future__ import annotations
 
-import asyncio
 import json
 import os
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
 from ppxai.engine.tools.builtin import preview_log
 from ppxai.engine.tools.builtin.preview_log import read_preview_log
-
 
 # ---------------------------------------------------------------------------
 # Fixtures

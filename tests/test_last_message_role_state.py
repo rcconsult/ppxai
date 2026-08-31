@@ -26,7 +26,6 @@ from ppxai.engine.app_state import AppState
 from ppxai.engine.client import EngineClient
 from ppxai.engine.types import Message
 
-
 # -----------------------------------------------------------------------------
 # AppState field shape
 # -----------------------------------------------------------------------------

@@ -22,7 +22,6 @@ import json
 from datetime import date, timedelta
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any
 
 import pytest
 
@@ -45,7 +44,6 @@ from ppxai.engine.model_deprecations import (
     classify_model,
     find_missing_recommended,
 )
-
 
 # -----------------------------------------------------------------------------
 # classify_model — per-model classification

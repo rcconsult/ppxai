@@ -8,16 +8,15 @@ _get_max_tokens, _convert_messages, _parse_usage, _format_error,
 _log_error_traceback.
 """
 
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
 
 from ppxai.engine.providers.base import BaseProvider
-from ppxai.engine.providers.openai_compat import OpenAICompatibleProvider
-from ppxai.engine.providers.perplexity import PerplexityProvider
-from ppxai.engine.providers.openai_native import OpenAINativeProvider
 from ppxai.engine.providers.gemini import GeminiProvider
-from ppxai.engine.types import ProviderCapabilities
-
+from ppxai.engine.providers.openai_compat import OpenAICompatibleProvider
+from ppxai.engine.providers.openai_native import OpenAINativeProvider
+from ppxai.engine.providers.perplexity import PerplexityProvider
 
 # All provider classes to test
 ALL_PROVIDERS = [

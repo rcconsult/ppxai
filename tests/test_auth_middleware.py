@@ -46,6 +46,7 @@ def _env_only_secret_provider(monkeypatch):
 def http_client():
     """Fresh TestClient per test."""
     import importlib
+
     import ppxai.server.http as http_module
     importlib.reload(http_module)  # ensure fresh app state per test
     with TestClient(http_module.app, raise_server_exceptions=False) as client:
@@ -273,8 +274,9 @@ class TestLoopbackHardening:
             assert _is_loopback(self._req("127.0.0.1", {hdr: "127.0.0.1"})) is False, hdr
 
     def test_forwarded_allow_ips_defaults_to_trust_no_proxy(self):
-        from ppxai.server.http import _forwarded_allow_ips
         import os
+
+        from ppxai.server.http import _forwarded_allow_ips
         os.environ.pop("PPXAI_FORWARDED_ALLOW_IPS", None)
         assert _forwarded_allow_ips() == ""   # uvicorn trusts no proxy client-IP
 

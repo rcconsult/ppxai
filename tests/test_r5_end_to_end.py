@@ -19,7 +19,6 @@ vanish or double-emit. The Stage 1–3 unit tests cover each link in
 isolation; this module pins the chain.
 """
 
-from unittest.mock import patch
 
 import pytest
 

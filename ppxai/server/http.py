@@ -17,6 +17,11 @@ import signal
 import sys
 import threading
 import time
+
+# Backward-compat proxy: tests do `http_module.session_manager = mock_manager`.
+# We need reads/writes of `session_manager` on this module to proxy through to
+# the state module so route handlers (which import from state) see the same value.
+import types as _types  # noqa: E402
 import webbrowser
 from contextlib import asynccontextmanager
 from datetime import datetime
@@ -28,29 +33,26 @@ from fastapi.middleware.cors import CORSMiddleware
 from ..common.logger import get_logger
 from ..config import get_idle_timeout, initialize
 from ..version import __version__
+from . import state as _state  # noqa: F401 — backing store for session_manager
+from .auth import check_request as _auth_check_request
 from .routes import all_routers
 from .session_manager import SessionManager
-from .state import (
+
+# Re-export for backward compatibility (tests, PyInstaller specs, entry points)
+from .state import (  # noqa: F401
+    all_preview_backends,
+    get_or_create_session,
+    get_secret_provider,
     get_server_start_time,
+    is_path_allowed,
+    kill_preview_backend,
+    remove_preview_backend,
     set_server_start_time,
     set_session_manager,
     set_shutdown_event,
     update_activity,
 )
-
-# Re-export for backward compatibility (tests, PyInstaller specs, entry points)
-from .state import get_or_create_session, is_path_allowed  # noqa: F401
-from .streaming import sse_event_generator, sse_coding_task_generator  # noqa: F401
-from . import state as _state  # noqa: F401 — backing store for session_manager
-
-
-# Backward-compat proxy: tests do `http_module.session_manager = mock_manager`.
-# We need reads/writes of `session_manager` on this module to proxy through to
-# the state module so route handlers (which import from state) see the same value.
-import types as _types  # noqa: E402
-from .state import all_preview_backends, remove_preview_backend, kill_preview_backend
-from .state import get_secret_provider
-from .auth import check_request as _auth_check_request
+from .streaming import sse_coding_task_generator, sse_event_generator  # noqa: F401
 
 _this = sys.modules[__name__]
 _original_getattr = None
@@ -158,11 +160,11 @@ async def lifespan(app: FastAPI):
     print(f"ppxai HTTP server started ({startup_time:.2f}s)")
     print(f"Provider: {default_engine.provider_name}")
     print(f"Model: {default_engine.model}")
-    print(f"Session isolation: enabled (X-Session-Id header)")
+    print("Session isolation: enabled (X-Session-Id header)")
     if idle_timeout > 0:
         print(f"Auto-shutdown: {idle_timeout // 60} minutes of inactivity")
     else:
-        print(f"Auto-shutdown: disabled")
+        print("Auto-shutdown: disabled")
 
     yield
 

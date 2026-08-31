@@ -33,7 +33,7 @@ from __future__ import annotations
 
 import os
 import time
-from typing import Any, Dict, List, Optional, Protocol, Union
+from typing import Any, Protocol, Union
 
 from ..config.execution import get_execution_task_config
 from ..config.loader import PPXAI_HOME
@@ -53,7 +53,7 @@ from .types import EventType
 # An egress allowlist entry is either a bare host ("example.com", any path) or
 # a scoped mapping {"host": ..., "paths": [...]}. Typed here because the
 # element shape was previously implicit in a bare `list`.
-EgressEntry = Union[str, Dict[str, Any]]
+EgressEntry = Union[str, dict[str, Any]]
 
 
 class RunMetaLike(Protocol):
@@ -72,7 +72,7 @@ class RunMetaLike(Protocol):
     """
 
     run_id: str
-    owner: Optional[str]
+    owner: str | None
 
 
 class TaskRunRegistry(Protocol):
@@ -90,10 +90,10 @@ class TaskRunRegistry(Protocol):
     """
 
     def emit_event(self, run_id: str, event: str, *, level: str = "info",
-                   category: str = "", data: Optional[dict] = None) -> None: ...
+                   category: str = "", data: dict | None = None) -> None: ...
 
     async def park_run(self, meta: Any, *, kind: str, prompt: str,
-                       ttl_s: float, data: Optional[dict] = None) -> dict: ...
+                       ttl_s: float, data: dict | None = None) -> dict: ...
 
     def get_control(self, run_id: str) -> Any: ...
 
@@ -131,7 +131,7 @@ DEFAULT_AGENT_SYSTEM_PROMPT = (
 )
 
 
-def compose_agent_system_prompt(caller_system: Optional[str]) -> str:
+def compose_agent_system_prompt(caller_system: str | None) -> str:
     """Build the /task engine system prompt: the bounded-agent default, plus
     the caller-supplied `system` (rendered AGENT.md / persona) when present.
 
@@ -151,11 +151,11 @@ def build_task_runner(
     model: str,
     task: str,
     tools: list[str],
-    allow_outbound: List[EgressEntry],
+    allow_outbound: list[EgressEntry],
     allow_spawn: bool = False,
-    system: Optional[str] = None,
-    extra_read_paths: Optional[List[str]] = None,
-    workdir: Optional[str] = None,
+    system: str | None = None,
+    extra_read_paths: list[str] | None = None,
+    workdir: str | None = None,
 ):
     """Build the async runner that drives a tool-capable run (Inc 4–7).
 

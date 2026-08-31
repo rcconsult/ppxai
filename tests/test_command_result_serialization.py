@@ -26,7 +26,6 @@ from __future__ import annotations
 
 import dataclasses
 import importlib
-import inspect
 
 import pytest
 
@@ -34,7 +33,6 @@ from ppxai.commands.results import (
     CommandResult,
     ResultStatus,
 )
-
 
 # Fields inherited from CommandResult that are deliberately NOT in
 # to_dict() — they're either internal (side_effects is promoted to the
@@ -158,7 +156,7 @@ def test_to_dict_includes_every_dataclass_field(cls: type):
         f"        " + "\n        ".join(
             f'd["{f}"] = self.{f}' for f in sorted(missing)
         ) + "\n"
-        f"        return d"
+        "        return d"
     )
 
 

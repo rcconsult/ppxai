@@ -4,7 +4,6 @@ Tests for the ppxai data visualization module (v1.13.8).
 Tests format detection, parsing, and data structures.
 """
 
-import pytest
 from pathlib import Path
 
 # Test fixtures directory
@@ -268,7 +267,7 @@ class TestExtensionMapping:
 
     def test_format_sets(self):
         """Test TABULAR_FORMATS and STRUCTURED_FORMATS."""
-        from ppxai.data import TABULAR_FORMATS, STRUCTURED_FORMATS
+        from ppxai.data import STRUCTURED_FORMATS, TABULAR_FORMATS
 
         assert "csv" in TABULAR_FORMATS
         assert "tsv" in TABULAR_FORMATS

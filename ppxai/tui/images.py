@@ -11,7 +11,6 @@ Uses terminal capability detection to choose the best protocol.
 
 import base64
 import io
-import os
 import sys
 from pathlib import Path
 
@@ -32,10 +31,8 @@ except ImportError:
     libsixel = None  # type: ignore[assignment]
     sixel_encoder = None  # type: ignore[assignment]
     HAS_SIXEL = False
-from typing import Optional, Tuple
 
-from .terminal import ImageProtocol, detect_image_protocol, can_display_images
-
+from .terminal import ImageProtocol, can_display_images, detect_image_protocol
 
 # Image file extensions
 IMAGE_EXTENSIONS = {
@@ -56,7 +53,7 @@ def is_image_file(path: Path) -> bool:
     return path.suffix.lower() in IMAGE_EXTENSIONS
 
 
-def get_image_size(data: bytes) -> Optional[Tuple[int, int]]:
+def get_image_size(data: bytes) -> tuple[int, int] | None:
     """Get image dimensions from raw bytes.
 
     Args:
@@ -86,8 +83,8 @@ def get_image_size(data: bytes) -> Optional[Tuple[int, int]]:
 
 def display_image_iterm2(
     data: bytes,
-    width: Optional[str] = None,
-    height: Optional[str] = None,
+    width: str | None = None,
+    height: str | None = None,
     preserve_aspect: bool = True,
     inline: bool = True,
 ) -> str:
@@ -123,8 +120,8 @@ def display_image_iterm2(
 
 def display_image_kitty(
     data: bytes,
-    width: Optional[int] = None,
-    height: Optional[int] = None,
+    width: int | None = None,
+    height: int | None = None,
 ) -> str:
     """Generate Kitty graphics protocol escape sequence.
 
@@ -168,9 +165,9 @@ def display_image_kitty(
 
 def display_image_sixel(
     data: bytes,
-    width: Optional[int] = None,
-    height: Optional[int] = None,
-) -> Optional[str]:
+    width: int | None = None,
+    height: int | None = None,
+) -> str | None:
     """Generate Sixel graphics data.
 
     Args:
@@ -308,9 +305,9 @@ def _generate_basic_sixel(img) -> str:
 
 def display_image(
     path: Path,
-    max_width: Optional[int] = None,
-    max_height: Optional[int] = None,
-) -> Optional[str]:
+    max_width: int | None = None,
+    max_height: int | None = None,
+) -> str | None:
     """Display an image using the best available protocol.
 
     Args:
@@ -351,8 +348,8 @@ def display_image(
 
 def print_image(
     path: Path,
-    max_width: Optional[int] = None,
-    max_height: Optional[int] = None,
+    max_width: int | None = None,
+    max_height: int | None = None,
 ) -> bool:
     """Print an image to the terminal.
 

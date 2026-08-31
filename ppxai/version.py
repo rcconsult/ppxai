@@ -7,18 +7,16 @@ TUI dependencies like prompt_toolkit.
 
 from __future__ import annotations
 
-import os
 import platform
 import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Optional
 
 __version__ = "1.19.1"
 
 
-def _build_info() -> Optional[Dict[str, str]]:
+def _build_info() -> dict[str, str] | None:
     """Return build-time commit + mtime if `_build_info.py` was generated.
 
     PyInstaller binaries lose access to git and to the source tree's
@@ -44,7 +42,7 @@ def _build_info() -> Optional[Dict[str, str]]:
     return None
 
 
-def _git_commit_hash() -> Optional[str]:
+def _git_commit_hash() -> str | None:
     """Return the short git commit hash if running from a git checkout.
 
     Returns None if not in a repo, git unavailable, or any subprocess
@@ -68,7 +66,7 @@ def _git_commit_hash() -> Optional[str]:
     return None
 
 
-def _source_mtime() -> Optional[str]:
+def _source_mtime() -> str | None:
     """Return the most recent mtime across the engine + clients dirs.
 
     Catches the "edited source but stale Python process" gap: if you
@@ -95,7 +93,7 @@ def _source_mtime() -> Optional[str]:
         return None
 
 
-def get_runtime_version_info() -> Dict[str, str]:
+def get_runtime_version_info() -> dict[str, str]:
     """Build a runtime-version snapshot for startup banners and log headers.
 
     Keys (all values are strings so the dict round-trips through

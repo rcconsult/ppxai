@@ -13,14 +13,21 @@ import json
 import os
 import re
 import shlex
-import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
+
+from ppxai.common.file_type import (
+    FileType,
+    detect_file_type,
+    get_language_for_extension,
+)
+from ppxai.common.logger import get_logger
+from ppxai.common.preview import resolve_preview_path
+from ppxai.engine.tools.builtin.preview_log import read_preview_log
 
 from .factory import CommandFactory, CommandSpec
 from .protocol import CommandContext
 from .results import (
-    ResultStatus,
     CommandResult,
     ErrorResult,
     FileViewResult,
@@ -28,23 +35,16 @@ from .results import (
     MarkdownResult,
     NotificationResult,
     PreviewResult,
+    ResultStatus,
     SideEffectKind,
     TableResult,
     TextResult,
     TreeResult,
 )
-from ppxai.common.logger import get_logger
-from ppxai.common.preview import resolve_preview_path
-from ppxai.common.file_type import (
-    FileType,
-    detect_file_type,
-    get_view_mode,
-    get_language_for_extension,
-)
-from ppxai.engine.tools.builtin.preview_log import read_preview_log
+
 
 # Helper function for file search (used by both old and new handlers)
-def _search_files(handler: Any, query: str, max_results: int = 10) -> List[Path]:
+def _search_files(handler: Any, query: str, max_results: int = 10) -> list[Path]:
     """Search for files matching query in engine's working directory.
 
     Args:
@@ -147,7 +147,7 @@ def _resolve_at_query(
     Match cap is 25 to keep the quick-pick payload small. If the user's
     intent is broader, they re-search with a more specific term.
     """
-    matches: List[Path] = []
+    matches: list[Path] = []
     try:
         for candidate in working_dir.rglob('*'):
             try:
@@ -423,7 +423,7 @@ def handle_show(context: CommandContext, args: str) -> CommandResult:
         return result
 
 
-def _parse_structured_data(content: str, file_type: FileType) -> Optional[Dict[str, Any]]:
+def _parse_structured_data(content: str, file_type: FileType) -> dict[str, Any] | None:
     """Parse structured data content into a dictionary.
 
     Args:
@@ -467,7 +467,7 @@ def _parse_structured_data(content: str, file_type: FileType) -> Optional[Dict[s
     return None
 
 
-def _dict_to_tree(data: Any, label: str = "root") -> Dict[str, Any]:
+def _dict_to_tree(data: Any, label: str = "root") -> dict[str, Any]:
     """Convert a dictionary/list to tree structure for TreeResult.
 
     Args:
@@ -546,7 +546,7 @@ CommandFactory.register(CommandSpec(
 # /preview Command — Live HTML Preview
 # =============================================================================
 
-def _parse_preview_args(args: str) -> Tuple[Optional[CommandResult], dict]:
+def _parse_preview_args(args: str) -> tuple[CommandResult | None, dict]:
     """Parse `/preview <file> [--serve [cmd]] [--proxy port] [--port N]`.
 
     Returns (error_result, parsed) — exactly one of the two is non-None.
@@ -568,10 +568,10 @@ def _parse_preview_args(args: str) -> Tuple[Optional[CommandResult], dict]:
         ), {}
 
     serve_flag = False
-    serve_command: Optional[str] = None
-    proxy_port: Optional[int] = None
-    explicit_port: Optional[int] = None
-    positional: List[str] = []
+    serve_command: str | None = None
+    proxy_port: int | None = None
+    explicit_port: int | None = None
+    positional: list[str] = []
 
     i = 0
     while i < len(tokens):
@@ -740,7 +740,7 @@ def handle_preview(context: CommandContext, args: str) -> CommandResult:
         )
 
     mode = parsed["mode"]
-    payload: Dict[str, Any] = {"filepath": str(path), "mode": mode}
+    payload: dict[str, Any] = {"filepath": str(path), "mode": mode}
     if mode == "served":
         payload["command"] = parsed["command"]  # may be None → autodetect
         payload["port"] = parsed["port"]

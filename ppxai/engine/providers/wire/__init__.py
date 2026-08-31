@@ -25,10 +25,9 @@ from .generate_content import GenerateContentHandler
 from .protocol import ProtocolHandler
 from .responses import ResponsesHandler
 
-
 #: name -> handler instance. Handlers are stateless, so one shared instance
 #: per protocol is correct; per-request state lives in the arguments.
-HANDLERS: Dict[str, ProtocolHandler] = {
+HANDLERS: dict[str, ProtocolHandler] = {
     ChatCompletionsHandler.name: ChatCompletionsHandler(),
     GenerateContentHandler.name: GenerateContentHandler(),
     ResponsesHandler.name: ResponsesHandler(),

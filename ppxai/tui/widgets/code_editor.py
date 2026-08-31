@@ -6,14 +6,11 @@ syntax highlighting for various programming languages.
 """
 
 from pathlib import Path
-from typing import Optional
 
 from textual.app import ComposeResult
-from textual.containers import Vertical
 from textual.css.query import NoMatches
 from textual.widget import Widget
 from textual.widgets import Static, TextArea
-from textual.widgets.text_area import Selection
 
 # Languages supported by Textual's built-in TextArea (tree-sitter)
 # Check TextArea.available_languages for the full list
@@ -149,7 +146,7 @@ class CodeEditor(Widget):
         self._show_line_numbers = show_line_numbers
         self._show_header = show_header
         self._show_footer = show_footer
-        self._text_area: Optional[TextArea] = None
+        self._text_area: TextArea | None = None
         self._modified = False
 
     def compose(self) -> ComposeResult:
@@ -243,7 +240,7 @@ class CodeEditor(Widget):
         return self._modified
 
     @property
-    def language(self) -> Optional[str]:
+    def language(self) -> str | None:
         """Get the current language."""
         if self._text_area:
             return self._text_area.language

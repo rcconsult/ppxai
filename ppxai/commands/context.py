@@ -38,7 +38,7 @@ v1.17.1: Replaced boilerplate forwarding with __getattr__ proxy
 v1.18.2: Removed unused `TextualCommandContext` (Item 1 narrowing).
 """
 
-from typing import Any, Optional
+from typing import Any
 
 from ..engine.types import EngineClientProtocol
 
@@ -62,7 +62,7 @@ class _CommandContextProxy:
     def __getattr__(self, name: str) -> Any:
         return getattr(self._wrapped, name)
 
-    def get_config_value(self, key: str, default: Optional[str] = None) -> Optional[str]:
+    def get_config_value(self, key: str, default: str | None = None) -> str | None:
         wrapped = object.__getattribute__(self, '_wrapped')
         if hasattr(wrapped, 'get_config_value'):
             return wrapped.get_config_value(key, default)
@@ -157,7 +157,7 @@ class ServerCommandContext:
     def set_tools_verbose(self, verbose: bool) -> None:
         pass
 
-    def get_config_value(self, key: str, default: Optional[str] = None) -> Optional[str]:
+    def get_config_value(self, key: str, default: str | None = None) -> str | None:
         return default
 
     def set_config_value(self, key: str, value: str) -> None:

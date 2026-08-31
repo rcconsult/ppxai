@@ -4,11 +4,19 @@ Shared types and data classes for the ppxai engine.
 These types are used across all layers (engine, server, clients) and have no UI dependencies.
 """
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import ClassVar, List, Dict, Any, Optional, Callable, Protocol, Set, Tuple, Union, runtime_checkable
 from enum import Enum
-from .artifact_projector import TextMarkerProjector
+from typing import (
+    Any,
+    ClassVar,
+    Optional,
+    Protocol,
+    Union,
+    runtime_checkable,
+)
 
+from .artifact_projector import TextMarkerProjector
 
 # Type alias for multimodal message content.
 #
@@ -20,7 +28,7 @@ from .artifact_projector import TextMarkerProjector
 #
 # All str-consuming code paths (logging, token estimation, markdown export,
 # clipboard copy, widget rendering) must go through Message.text_content().
-MessageContent = Union[str, List[Dict[str, Any]]]
+MessageContent = Union[str, list[dict[str, Any]]]
 
 
 # =============================================================================
@@ -45,9 +53,9 @@ class ToolEngineProtocol(Protocol):
     concrete class, avoiding the client → tools → client circular dependency.
     """
 
-    _agent_edited_files: Set[str]
+    _agent_edited_files: set[str]
 
-    def get_working_dir(self) -> Optional[str]: ...
+    def get_working_dir(self) -> str | None: ...
     def set_working_dir(self, path: str) -> None: ...
     async def request_file_edit_consent(self, file_path: str) -> bool: ...
     async def request_shell_consent(self, command: str, working_dir: str = ".") -> bool: ...
@@ -55,9 +63,9 @@ class ToolEngineProtocol(Protocol):
     def unregister_subprocess(self, proc: Any) -> None: ...
     def resolve_file_reference(
         self,
-        file_id: Optional[str] = None,
-        path: Optional[str] = None,
-    ) -> Tuple[Optional[Any], Optional[str]]: ...
+        file_id: str | None = None,
+        path: str | None = None,
+    ) -> tuple[Any | None, str | None]: ...
 
 
 @runtime_checkable
@@ -73,10 +81,10 @@ class ToolManagerProtocol(Protocol):
         self,
         name: str,
         description: str,
-        parameters: Dict[str, Any],
+        parameters: dict[str, Any],
         handler: Callable,
-        provider_specific: Optional[List[str]] = None,
-        provider_excluded: Optional[List[str]] = None,
+        provider_specific: list[str] | None = None,
+        provider_excluded: list[str] | None = None,
     ) -> None: ...
 
 
@@ -129,7 +137,7 @@ class EngineClientProtocol(Protocol):
     def set_provider(self, provider: str) -> None: ...
 
     # --- 3. Working directory ----------------------------------------
-    def get_working_dir(self) -> Optional[str]: ...
+    def get_working_dir(self) -> str | None: ...
     def set_working_dir(self, path: str) -> None: ...
 
     # --- 4. Tool + agent management ----------------------------------
@@ -138,7 +146,7 @@ class EngineClientProtocol(Protocol):
     def enable_agent_mode(self) -> None: ...
     def disable_agent_mode(self) -> None: ...
     def get_agent_config(self) -> Any: ...
-    def get_tools_status(self) -> Dict[str, Any]: ...
+    def get_tools_status(self) -> dict[str, Any]: ...
     def set_tool_config(self, key: str, value: Any) -> None: ...
 
     # --- 5. Bootstrap + context injection ----------------------------
@@ -148,14 +156,14 @@ class EngineClientProtocol(Protocol):
     def reload_config(self) -> None: ...
     def clear_injected_contexts(self) -> Any: ...
     def get_context_info(self) -> Any: ...
-    def get_context_attachments(self) -> List[Dict[str, Any]]: ...
+    def get_context_attachments(self) -> list[dict[str, Any]]: ...
     def remove_context_attachment(self, target: str) -> Any: ...
 
     # --- 6. Checkpoints ----------------------------------------------
     def create_checkpoint(self, label: str) -> Any: ...
     def undo_last_checkpoint(self) -> bool: ...
     def get_checkpoint_status(self) -> Any: ...
-    def list_checkpoints(self, limit: int = 20) -> List[Any]: ...
+    def list_checkpoints(self, limit: int = 20) -> list[Any]: ...
     def set_checkpoint_backend(self, backend: str) -> bool: ...
     def clear_file_checkpoints(self, keep_last: int = 0) -> int: ...
 
@@ -207,7 +215,7 @@ class Event:
     """
     type: EventType
     data: Any = None
-    metadata: Optional[Dict[str, Any]] = None
+    metadata: dict[str, Any] | None = None
 
 
 # =============================================================================
@@ -308,7 +316,7 @@ class MarshallableArtifact(Protocol):
     payloads is the kind's responsibility. Unknown future versions raise
     ValueError so a downgraded ppxai catches the mismatch loudly."""
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Serialize to a JSON-safe dict. Output MUST include `kind`
         (discriminator), `_schema_version` (per-kind version), and
         `block_index` (universal). Other fields are kind-specific.
@@ -317,7 +325,7 @@ class MarshallableArtifact(Protocol):
         ...
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "MarshallableArtifact":
+    def from_dict(cls, data: dict[str, Any]) -> "MarshallableArtifact":
         """Reconstruct from a JSON-loaded dict. Reads
         `data["_schema_version"]` and branches per version internally.
         Caller (`ArtifactRegistry.deserialize`) has already validated
@@ -365,7 +373,7 @@ class ImageAttachmentRef:
     media_type: str = ""
     kind: str = "image"
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """MarshallableArtifact contract — serialize to v2-schema dict."""
         return {
             "kind": self.kind,
@@ -377,7 +385,7 @@ class ImageAttachmentRef:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "ImageAttachmentRef":
+    def from_dict(cls, data: dict[str, Any]) -> "ImageAttachmentRef":
         """MarshallableArtifact contract — reconstruct from v2-schema dict.
 
         Branches on `data["_schema_version"]` (defaulting to 1 when
@@ -430,10 +438,10 @@ class PdfAttachmentRef:
     name: str
     file_id: str = ""
     media_type: str = "application/pdf"
-    page_count: Optional[int] = None
+    page_count: int | None = None
     kind: str = "pdf"
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "kind": self.kind,
             "_schema_version": self.SCHEMA_VERSION,
@@ -445,7 +453,7 @@ class PdfAttachmentRef:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "PdfAttachmentRef":
+    def from_dict(cls, data: dict[str, Any]) -> "PdfAttachmentRef":
         version = data.get("_schema_version", 1)
         if version == 1:
             page_count = data.get("page_count")
@@ -486,11 +494,11 @@ class OfficeAttachmentRef:
     name: str
     file_id: str = ""
     media_type: str = ""
-    sheet_count: Optional[int] = None
-    slide_count: Optional[int] = None
+    sheet_count: int | None = None
+    slide_count: int | None = None
     kind: str = "office"
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "kind": self.kind,
             "_schema_version": self.SCHEMA_VERSION,
@@ -503,7 +511,7 @@ class OfficeAttachmentRef:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "OfficeAttachmentRef":
+    def from_dict(cls, data: dict[str, Any]) -> "OfficeAttachmentRef":
         version = data.get("_schema_version", 1)
         if version == 1:
             sc = data.get("sheet_count")
@@ -551,7 +559,7 @@ class TextAttachmentRef:
     char_count: int = 0
     kind: str = "text"
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "kind": self.kind,
             "_schema_version": self.SCHEMA_VERSION,
@@ -563,7 +571,7 @@ class TextAttachmentRef:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "TextAttachmentRef":
+    def from_dict(cls, data: dict[str, Any]) -> "TextAttachmentRef":
         version = data.get("_schema_version", 1)
         if version == 1:
             return cls(
@@ -579,7 +587,7 @@ class TextAttachmentRef:
         )
 
 
-def extract_attachment_refs(content: Any) -> List["ImageAttachmentRef"]:
+def extract_attachment_refs(content: Any) -> list["ImageAttachmentRef"]:
     """Walk a multimodal content list and pull out attachment metadata.
 
     Reads the legacy in-block `name` + `file_id` keys that producers
@@ -598,7 +606,7 @@ def extract_attachment_refs(content: Any) -> List["ImageAttachmentRef"]:
     """
     if not isinstance(content, list):
         return []
-    refs: List[ImageAttachmentRef] = []
+    refs: list[ImageAttachmentRef] = []
     for idx, block in enumerate(content):
         if not isinstance(block, dict):
             continue
@@ -649,8 +657,8 @@ class Message:
     """
     role: str  # 'user', 'assistant', 'system', 'tool'
     content: MessageContent
-    tool_calls: Optional[List[Dict[str, Any]]] = None   # For assistant messages with native calls
-    tool_call_id: Optional[str] = None                    # For tool role messages
+    tool_calls: list[dict[str, Any]] | None = None   # For assistant messages with native calls
+    tool_call_id: str | None = None                    # For tool role messages
     # ADR 0006 Phase 1 + Foundation. Typed as List[ArtifactRef] (Protocol)
     # so v1.19.x agent-platform artifact kinds (sub-agent outputs, plan
     # documents, tool artifacts) can be added to the same list without
@@ -660,7 +668,7 @@ class Message:
     # Callers that need image-specific fields use attachment_for_block
     # which narrows via isinstance check; future kind-specific helpers
     # follow the same pattern.
-    attachments: List["ArtifactRef"] = field(default_factory=list)
+    attachments: list["ArtifactRef"] = field(default_factory=list)
 
     def attachment_for_block(self, block_index: int) -> Optional["ImageAttachmentRef"]:
         """Return the ImageAttachmentRef whose block_index == `block_index`, or None.
@@ -755,13 +763,13 @@ class Message:
         # uses in multimodal_ops, kept local here to avoid the import
         # cycle with engine.multimodal_ops).
 
-        ref_by_index: Dict[int, "ArtifactRef"] = {
+        ref_by_index: dict[int, "ArtifactRef"] = {
             ref.block_index: ref
             for ref in self.attachments
             if hasattr(ref, "block_index")
         }
 
-        parts: List[str] = []
+        parts: list[str] = []
         for idx, block in enumerate(self.content):
             if not isinstance(block, dict):
                 continue
@@ -792,7 +800,7 @@ def _guess_name_from_url(url: str) -> str:
     return tail.rsplit("/", 1)[-1] if "/" in tail else tail
 
 
-def _synthesize_block_ref(block: Dict[str, Any], idx: int) -> Optional[Any]:
+def _synthesize_block_ref(block: dict[str, Any], idx: int) -> Any | None:
     """Synthesize an artifact ref from a raw content block when the
     parent Message has no `attachments` entry for this index.
 
@@ -869,15 +877,15 @@ class UsageStats:
     completion_tokens: int = 0
     total_tokens: int = 0
     estimated_cost: float = 0.0
-    tool_calls: Dict[str, 'ToolUsage'] = field(default_factory=dict)
+    tool_calls: dict[str, 'ToolUsage'] = field(default_factory=dict)
 
 
 @dataclass
 class ChatResponse:
     """Response from a chat request."""
     content: str
-    citations: List[str] = field(default_factory=list)
-    usage: Optional[UsageStats] = None
+    citations: list[str] = field(default_factory=list)
+    usage: UsageStats | None = None
 
 
 @dataclass
@@ -908,7 +916,7 @@ class ProviderCapabilities:
     streaming: bool = True
 
     @classmethod
-    def from_dict(cls, data: Dict[str, bool]) -> 'ProviderCapabilities':
+    def from_dict(cls, data: dict[str, bool]) -> 'ProviderCapabilities':
         """Create from dictionary."""
         return cls(
             web_search=data.get('web_search', False),
@@ -924,10 +932,10 @@ class ToolDefinition:
     """Definition of a tool."""
     name: str
     description: str
-    parameters: Dict[str, Any]
-    handler: Optional[Callable] = None
-    provider_specific: Optional[List[str]] = None  # If set, only for these providers
-    provider_excluded: Optional[List[str]] = None  # If set, excluded for these providers
+    parameters: dict[str, Any]
+    handler: Callable | None = None
+    provider_specific: list[str] | None = None  # If set, only for these providers
+    provider_excluded: list[str] | None = None  # If set, excluded for these providers
 
 
 @dataclass
@@ -940,7 +948,7 @@ class ProviderInfo:
     has_api_key: bool
     capabilities: ProviderCapabilities
     default_model: str
-    coding_model: Optional[str] = None
+    coding_model: str | None = None
 
 
 @dataclass
@@ -949,7 +957,7 @@ class ModelInfo:
     id: str
     name: str
     description: str = ""
-    context_length: Optional[int] = None
+    context_length: int | None = None
 
 
 @dataclass
@@ -967,9 +975,9 @@ class SessionInfo:
 class ToolCallInfo:
     """Information about a tool call."""
     tool_name: str
-    arguments: Dict[str, Any]
-    result: Optional[str] = None
-    error: Optional[str] = None
+    arguments: dict[str, Any]
+    result: str | None = None
+    error: str | None = None
 
 
 @dataclass
@@ -1004,7 +1012,7 @@ class AgentBeatState:
             return 0.0
         return time.monotonic() - self.start_time
 
-    def as_event_data(self) -> Dict[str, Any]:
+    def as_event_data(self) -> dict[str, Any]:
         """Serialize to the AGENT_BEAT event payload (stable wire shape).
 
         The keys here are the canonical schema — web/VSCode/TUI

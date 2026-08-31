@@ -33,7 +33,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date, datetime
-from typing import Dict, List, Optional
 
 
 @dataclass(frozen=True)
@@ -61,7 +60,7 @@ class Deprecation:
 # Gemini deprecations — verified 2026-04-12
 # =============================================================================
 
-GEMINI_DEPRECATIONS: Dict[str, Deprecation] = {
+GEMINI_DEPRECATIONS: dict[str, Deprecation] = {
     "gemini-3-pro-preview": Deprecation(
         shutdown_date="2026-03-09",
         replacement="gemini-3.1-pro-preview",
@@ -135,7 +134,7 @@ GEMINI_DEPRECATIONS: Dict[str, Deprecation] = {
 # pre-date the example file regeneration, or migrations from third-party
 # tooling that used the older aliases).
 
-OPENAI_DEPRECATIONS: Dict[str, Deprecation] = {
+OPENAI_DEPRECATIONS: dict[str, Deprecation] = {
     # ----- Already shut down (status auto-transitions to "shutdown") -----
     "chatgpt-4o-latest": Deprecation(
         shutdown_date="2026-02-17",
@@ -263,7 +262,7 @@ OPENAI_DEPRECATIONS: Dict[str, Deprecation] = {
 #
 #   uv run python scripts/probe-perplexity-capabilities.py #       --api-path responses --model "perplexity/sonar-pro"
 
-PERPLEXITY_DEPRECATIONS: Dict[str, Deprecation] = {
+PERPLEXITY_DEPRECATIONS: dict[str, Deprecation] = {
     "sonar": Deprecation(
         shutdown_date="2026-09-27",
         replacement="perplexity/sonar",
@@ -308,7 +307,7 @@ PERPLEXITY_DEPRECATIONS: Dict[str, Deprecation] = {
 # (the exact retirement date is unpublished); /doctor surfaces them so users
 # who still reference them in their own configs get a migration hint.
 
-NVIDIA_DEPRECATIONS: Dict[str, Deprecation] = {
+NVIDIA_DEPRECATIONS: dict[str, Deprecation] = {
     # ---- Found by the Item 38 sweep, 2026-08-31 -------------------------
     # These four were CONFIGURED in the shipped example and answer HTTP 410
     # Gone with an explicit end-of-life date in the body. Two died BEFORE the
@@ -443,7 +442,7 @@ NVIDIA_DEPRECATIONS: Dict[str, Deprecation] = {
 # Merged lookup — every known deprecation across all providers
 # =============================================================================
 
-ALL_DEPRECATIONS: Dict[str, Deprecation] = {
+ALL_DEPRECATIONS: dict[str, Deprecation] = {
     **GEMINI_DEPRECATIONS,
     **OPENAI_DEPRECATIONS,
     **PERPLEXITY_DEPRECATIONS,
@@ -454,7 +453,7 @@ ALL_DEPRECATIONS: Dict[str, Deprecation] = {
 # Models to recommend when a user's config doesn't include them.
 # Listed in priority order — /doctor shows the first few as "consider
 # adding" so newcomers don't have to read provider changelogs.
-RECOMMENDED_NEW_MODELS: List[Dict[str, str]] = [
+RECOMMENDED_NEW_MODELS: list[dict[str, str]] = [
     {
         "provider": "openai",
         "model": "gpt-5.6-terra",
@@ -543,7 +542,7 @@ RECOMMENDED_NEW_MODELS: List[Dict[str, str]] = [
 # Models that the advisor recommends as safe defaults by provider.
 # Used both for "your default_model is deprecated, switch to this"
 # warnings and as the suggested default for a fresh config.
-RECOMMENDED_DEFAULTS: Dict[str, str] = {
+RECOMMENDED_DEFAULTS: dict[str, str] = {
     "gemini": "gemini-3.5-flash",     # Updated 2026-05-31 (was gemini-3-flash-preview; superseded by 3.5-flash GA)
     "openai": "gpt-5.6-terra",        # 2026-08-31: parity with gpt-5.5 at 40% price
     "perplexity": "perplexity/sonar",  # ADR 0012: only Sonar on the surviving wire
@@ -557,7 +556,7 @@ RECOMMENDED_DEFAULTS: Dict[str, str] = {
 # =============================================================================
 
 
-def classify_model(model: str, today: Optional[date] = None) -> Optional[Dict[str, str]]:
+def classify_model(model: str, today: date | None = None) -> dict[str, str] | None:
     """Return deprecation info for a model, or None if not deprecated.
 
     The returned dict has a stable schema suitable for direct display
@@ -591,7 +590,7 @@ def classify_model(model: str, today: Optional[date] = None) -> Optional[Dict[st
         return None
 
     delta = (shutdown - current).days
-    result: Dict[str, str] = {
+    result: dict[str, str] = {
         "model": model,
         "status": "shutdown" if delta < 0 else "deprecated",
         "shutdown_date": entry.shutdown_date,
@@ -604,9 +603,9 @@ def classify_model(model: str, today: Optional[date] = None) -> Optional[Dict[st
 
 
 def audit_config_models(
-    provider_models: Dict[str, List[str]],
-    today: Optional[date] = None,
-) -> Dict[str, List[Dict[str, str]]]:
+    provider_models: dict[str, list[str]],
+    today: date | None = None,
+) -> dict[str, list[dict[str, str]]]:
     """Walk a user's configured models and categorize each by deprecation status.
 
     Args:
@@ -626,9 +625,9 @@ def audit_config_models(
         already knows the provider). "dead" and "upcoming" carry the
         full classification dict.
     """
-    dead: List[Dict[str, str]] = []
-    upcoming: List[Dict[str, str]] = []
-    healthy: List[str] = []
+    dead: list[dict[str, str]] = []
+    upcoming: list[dict[str, str]] = []
+    healthy: list[str] = []
 
     for provider, models in provider_models.items():
         for model in models:
@@ -650,8 +649,8 @@ def audit_config_models(
 
 
 def find_missing_recommended(
-    provider_models: Dict[str, List[str]],
-) -> List[Dict[str, str]]:
+    provider_models: dict[str, list[str]],
+) -> list[dict[str, str]]:
     """Return recommended models the user doesn't have in their config.
 
     Used by /doctor to suggest new models worth adopting. Skips
@@ -659,7 +658,7 @@ def find_missing_recommended(
     want to nag users about Gemma 4 if they haven't set up a Gemini
     API key.
     """
-    result: List[Dict[str, str]] = []
+    result: list[dict[str, str]] = []
     for rec in RECOMMENDED_NEW_MODELS:
         provider = rec["provider"]
         if provider not in provider_models:

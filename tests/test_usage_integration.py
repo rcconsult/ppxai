@@ -16,8 +16,9 @@ NOTE: Requires ~/.ppxai/.env with valid API keys and ~/.ppxai/ppxai-config.json.
 
 import asyncio
 import os
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
-from unittest.mock import MagicMock, AsyncMock
 from dotenv import load_dotenv
 
 # Skip tests if server dependencies not installed
@@ -132,8 +133,8 @@ def _parse_cost(s: str) -> float:
 
 def _get_usage_result(engine, args: str = "") -> dict:
     """Run /usage through CommandFactory and return to_dict() result."""
-    from ppxai.commands.factory import CommandFactory
     from ppxai.commands.context import ServerCommandContext
+    from ppxai.commands.factory import CommandFactory
 
     context = ServerCommandContext(engine)
     return CommandFactory.get("usage").handler(context, args).to_dict()
@@ -170,6 +171,7 @@ def _get_usage_result_via_http(engine, args: str = "") -> dict:
     so we unwrap envelope.result here.
     """
     from fastapi.testclient import TestClient
+
     import ppxai.server.http as http_module
 
     manager = _create_test_client_with_engine(engine)
@@ -535,6 +537,7 @@ class TestUsageCountersViaHttp:
         engine, _ = openai_engine
 
         from fastapi.testclient import TestClient
+
         import ppxai.server.http as http_module
 
         manager = _create_test_client_with_engine(engine)

@@ -5,8 +5,10 @@ Reasoning tokens are used by models like DeepSeek R1 and GPT-OSS 120B
 to show their thought process before generating the final response.
 """
 
+from unittest.mock import MagicMock
+
 import pytest
-from unittest.mock import MagicMock, AsyncMock
+
 from ppxai.engine.types import Event, EventType
 
 

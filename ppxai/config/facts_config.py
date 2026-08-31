@@ -50,19 +50,20 @@ and both lookups are served from it.
 from __future__ import annotations
 
 from dataclasses import fields as dataclass_fields
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from ..engine.model_facts import (
     FACT_FIELDS,
     LEGACY_KEY_TRANSLATIONS,
     PROVIDER_FACT_FIELDS,
+    UNTRANSLATABLE_MODES,
+    FactsResolver,
     ModelFacts,
+    ToolMode,
     apply_overrides,
 )
 from ..engine.types import ProviderCapabilities
 from .loader import _load_json_config, find_config_file
-from ..engine.model_facts import ToolMode, UNTRANSLATABLE_MODES
-from ..engine.model_facts import FactsResolver
 
 #: The one block the resolver reads. Legacy names are reported by `/doctor`,
 #: never resolved.
@@ -72,7 +73,7 @@ FACTS_BLOCK = "facts"
 LEGACY_BLOCKS = ("capabilities", "tool_calling")
 
 
-def raw_provider_block(provider: str) -> Dict[str, Any]:
+def raw_provider_block(provider: str) -> dict[str, Any]:
     """`providers.<provider>` straight from the config FILE.
 
     Public because a caller resolving both records should read the file
@@ -101,7 +102,7 @@ def raw_provider_block(provider: str) -> Dict[str, Any]:
 #: classes. Normalising both to classes here is what makes the coercion
 #: below apply to both records — reading `f.type` naively silently covered
 #: only one of them, which is how a `"false"` model field stayed truthy.
-_TYPE_NAMES: Dict[Any, Any] = {"bool": bool, "int": int, "str": str}
+_TYPE_NAMES: dict[Any, Any] = {"bool": bool, "int": int, "str": str}
 
 
 def _declared_type(raw: Any) -> Any:
@@ -110,7 +111,7 @@ def _declared_type(raw: Any) -> Any:
     return raw if raw in (bool, int, str) else None
 
 
-_FIELD_TYPES: Dict[str, Any] = {
+_FIELD_TYPES: dict[str, Any] = {
     **{f.name: _declared_type(f.type) for f in dataclass_fields(ModelFacts)},
     **{
         f.name: _declared_type(f.type)
@@ -185,7 +186,7 @@ def is_wrong_typed(field: str, value: Any) -> bool:
     return False
 
 
-def _stated_facts(container: Any, allowed: tuple) -> Dict[str, Any]:
+def _stated_facts(container: Any, allowed: tuple) -> dict[str, Any]:
     """The recognised, type-coerced entries of a container's `facts` block.
 
     `allowed` is the field set of the record this position denotes, so a
@@ -205,8 +206,8 @@ def _stated_facts(container: Any, allowed: tuple) -> Dict[str, Any]:
 
 
 def provider_fact_overrides(
-    provider: str, block: Optional[Dict[str, Any]] = None
-) -> Dict[str, Any]:
+    provider: str, block: dict[str, Any] | None = None
+) -> dict[str, Any]:
     """Operator statements about the ENDPOINT (`ProviderCapabilities`)."""
     return _stated_facts(
         raw_provider_block(provider) if block is None else block,
@@ -215,8 +216,8 @@ def provider_fact_overrides(
 
 
 def model_fact_overrides(
-    provider: str, model: Optional[str], block: Optional[Dict[str, Any]] = None
-) -> Dict[str, Any]:
+    provider: str, model: str | None, block: dict[str, Any] | None = None
+) -> dict[str, Any]:
     """Operator statements about ONE MODEL (`ModelFacts`)."""
     if not model:
         return {}
@@ -228,7 +229,7 @@ def model_fact_overrides(
 
 
 def apply_provider_overrides(
-    caps: ProviderCapabilities, provider: str, block: Optional[Dict[str, Any]] = None
+    caps: ProviderCapabilities, provider: str, block: dict[str, Any] | None = None
 ) -> ProviderCapabilities:
     """`caps` with the operator's endpoint statements applied."""
     stated = provider_fact_overrides(provider, block)
@@ -242,8 +243,8 @@ def apply_provider_overrides(
 def resolve_model_facts(
     shipped: ModelFacts,
     provider: str,
-    model: Optional[str],
-    block: Optional[Dict[str, Any]] = None,
+    model: str | None,
+    block: dict[str, Any] | None = None,
 ) -> ModelFacts:
     """`shipped` with the operator's per-model statements applied.
 
@@ -261,7 +262,7 @@ def resolve_model_facts(
 # ──────────────────────────────────────────────────────────────────────
 
 
-def _walk_config() -> Dict[str, Any]:
+def _walk_config() -> dict[str, Any]:
     try:
         path = find_config_file()
         if not path:
@@ -273,7 +274,7 @@ def _walk_config() -> Dict[str, Any]:
     return providers if isinstance(providers, dict) else {}
 
 
-def _each_block(cfg_providers: Dict[str, Any]):
+def _each_block(cfg_providers: dict[str, Any]):
     """Yield `(dotted_path, container, allowed_fields)` for every position
     that may carry a `facts` block."""
     for pname, pblock in cfg_providers.items():
@@ -291,14 +292,14 @@ def _each_block(cfg_providers: Dict[str, Any]):
                     )
 
 
-def legacy_blocks_in_config() -> Dict[str, List[str]]:
+def legacy_blocks_in_config() -> dict[str, list[str]]:
     """Every legacy key still in the config file, keyed by its dotted path.
 
     Feeds `/doctor`. Under a clean break these keys resolve to nothing, so
     only a check that reads the FILE can tell an operator their setting has
     stopped applying.
     """
-    found: Dict[str, List[str]] = {}
+    found: dict[str, list[str]] = {}
     for prefix, container, _allowed in _each_block(_walk_config()):
         for bname in LEGACY_BLOCKS:
             block = container.get(bname)
@@ -310,7 +311,7 @@ def legacy_blocks_in_config() -> Dict[str, List[str]]:
     return found
 
 
-def incomplete_blocks_in_config() -> Dict[str, List[str]]:
+def incomplete_blocks_in_config() -> dict[str, list[str]]:
     """Every `facts` block that does not state all of its record's fields.
 
     Returns dotted path -> the field names it leaves unstated (ADR 0012 §2
@@ -319,7 +320,7 @@ def incomplete_blocks_in_config() -> Dict[str, List[str]]:
     an oversight. Code rows are exempt by construction — the dataclass
     guarantees them complete — which is the asymmetry Q0d rests on.
     """
-    missing: Dict[str, List[str]] = {}
+    missing: dict[str, list[str]] = {}
     for prefix, container, allowed in _each_block(_walk_config()):
         block = container.get(FACTS_BLOCK)
         if not isinstance(block, dict):
@@ -331,7 +332,7 @@ def incomplete_blocks_in_config() -> Dict[str, List[str]]:
     return missing
 
 
-def misplaced_fields_in_config() -> Dict[str, List[str]]:
+def misplaced_fields_in_config() -> dict[str, list[str]]:
     """Fields stated against the wrong record (ADR 0012 §2 Q0e).
 
     A model fact in a provider block, or an endpoint fact in a model block,
@@ -339,7 +340,7 @@ def misplaced_fields_in_config() -> Dict[str, List[str]]:
     (there is nothing to arbitrate) but a poor experience unless something
     says so. This is what says so.
     """
-    wrong: Dict[str, List[str]] = {}
+    wrong: dict[str, list[str]] = {}
     both = set(FACT_FIELDS) | set(PROVIDER_FACT_FIELDS)
     for prefix, container, allowed in _each_block(_walk_config()):
         block = container.get(FACTS_BLOCK)
@@ -355,7 +356,7 @@ def misplaced_fields_in_config() -> Dict[str, List[str]]:
     return wrong
 
 
-def wrong_typed_fields_in_config() -> Dict[str, List[str]]:
+def wrong_typed_fields_in_config() -> dict[str, list[str]]:
     """Fields whose value cannot be coerced to the declared type.
 
     The third `/doctor` finding, beside missing (Q0d) and misplaced (Q0e).
@@ -364,7 +365,7 @@ def wrong_typed_fields_in_config() -> Dict[str, List[str]]:
     sense of, and the operator has to be told rather than have it silently
     ignored or silently truthy.
     """
-    wrong: Dict[str, List[str]] = {}
+    wrong: dict[str, list[str]] = {}
     for prefix, container, allowed in _each_block(_walk_config()):
         block = container.get(FACTS_BLOCK)
         if not isinstance(block, dict):
@@ -382,8 +383,8 @@ def wrong_typed_fields_in_config() -> Dict[str, List[str]]:
 
 
 def complete_record_for(
-    provider: str, model: Optional[str] = None
-) -> Dict[str, Any]:
+    provider: str, model: str | None = None
+) -> dict[str, Any]:
     """The full `facts` record `/doctor` writes to fix a partial block.
 
     Q0e puts the verbosity burden on the tool, not the operator: with two
@@ -417,7 +418,7 @@ def complete_record_for(
     return record
 
 
-def migration_plan() -> List[str]:
+def migration_plan() -> list[str]:
     """Human-readable `old -> new` lines for `/doctor`.
 
     **The target level is not always the source level**, and getting that
@@ -435,7 +436,7 @@ def migration_plan() -> List[str]:
     fills blanks. A legacy key holding an ENDPOINT fact keeps its
     provider-level target, and a model-level key maps in place.
     """
-    lines: List[str] = []
+    lines: list[str] = []
     cfg_providers = _walk_config()
 
     for path, keys in sorted(legacy_blocks_in_config().items()):

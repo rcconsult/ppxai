@@ -31,10 +31,7 @@ is what protects callers from the schema migration.
 
 from __future__ import annotations
 
-import pytest
-
 from ppxai.engine.types import ImageAttachmentRef, Message
-
 
 # =============================================================================
 # attachment_for_block — low-level lookup

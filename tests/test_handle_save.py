@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import json
 from types import SimpleNamespace
-from typing import Any, List
+from typing import Any
 
 import pytest
 
@@ -47,7 +47,7 @@ def engine(tmp_path, monkeypatch):
     return client
 
 
-def _make_context(engine: EngineClient, pending_files: List[PendingFile] = None) -> Any:
+def _make_context(engine: EngineClient, pending_files: list[PendingFile] = None) -> Any:
     """Build a minimal CommandContext-compatible stub wrapping an engine."""
     return SimpleNamespace(
         engine_client=engine,

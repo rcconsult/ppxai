@@ -11,12 +11,14 @@ check, the iterate-over-None TypeError that users saw before the fix will
 come back.
 """
 
-import pytest
-from typing import Any, AsyncIterator
+from collections.abc import AsyncIterator
+from typing import Any
 from unittest.mock import MagicMock, patch
 
-from ppxai.engine.types import Event, EventType, Message
+import pytest
+
 from ppxai.engine.providers.wire.generate_content import GenerateContentHandler
+from ppxai.engine.types import Event, EventType, Message
 
 
 def _make_response_with_null_parts() -> Any:

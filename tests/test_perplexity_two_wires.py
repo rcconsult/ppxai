@@ -26,7 +26,6 @@ them the ADR's own failure shape (a declared value the wire never sees):
 and `ModelFacts.max_tokens` could not reach the request at all.
 """
 
-import asyncio
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -36,7 +35,6 @@ from ppxai.engine.providers.perplexity import (
     AGENT_FLEET_MAX_TOKENS,
     AGENT_FLEET_TOOL_MODE,
     PerplexityProvider,
-    _WireCtx,
 )
 from ppxai.engine.providers.wire.responses import ResponsesHandler
 from ppxai.engine.types import Message
@@ -190,8 +188,8 @@ class TestTheHostContractIsOptionalWhereItShouldBe:
 
     def test_every_host_attribute_the_handler_reads_exists_on_this_host(self, provider):
         """Catches the NEXT missing attribute at test time, not on the wire."""
-        import re
         import inspect
+        import re
 
         src = inspect.getsource(ResponsesHandler)
         reads = sorted(set(re.findall(r"ctx\.([A-Za-z_][A-Za-z0-9_]*)", src)))

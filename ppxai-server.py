@@ -4,8 +4,8 @@ ppxai-server launcher for standalone executable.
 
 This is the entry point for PyInstaller builds.
 """
-import sys
 import os
+import sys
 
 # Ensure the bundled app can find its modules
 if getattr(sys, 'frozen', False):

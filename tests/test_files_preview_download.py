@@ -495,8 +495,9 @@ class TestUnifiedPreviewContract:
         assert body_total["libreoffice_available"] is False
 
     def test_unsupported_extension_rejected_400(self, tmp_path):
-        from ppxai.server.routes.files import render_office_preview
         from fastapi import HTTPException
+
+        from ppxai.server.routes.files import render_office_preview
         with pytest.raises(HTTPException) as exc:
             render_office_preview(tmp_path / "x.txt", "x.txt", ".txt", tmp_path)
         assert exc.value.status_code == 400

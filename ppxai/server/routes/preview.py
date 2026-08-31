@@ -10,35 +10,44 @@ share the same code path. This route is now a thin HTTP wrapper.
 
 import os
 import time
-from pathlib import Path, PurePosixPath
+from pathlib import PurePosixPath
 from urllib.parse import parse_qs, urlparse
 
 import httpx
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse
-from typing import Optional
 
 from ...common.logger import get_logger
 from ...common.preview import inject_reload_script, resolve_preview_path, rewrite_asset_paths
 from ...engine.preview_backend import (
     PreviewBackendError,
-    start_proxied_backend,
     start_served_backend,
     wait_for_port,
 )
 from ..models import PreviewServeRequest
 from ..state import (
-    Session, get_or_create_session, get_session,
-    PreviewBackend, get_preview_backend, set_preview_backend,
-    remove_preview_backend, kill_preview_backend,
+    Session,
+    get_or_create_session,
+    get_preview_backend,
+    get_session,
+    kill_preview_backend,
+    remove_preview_backend,
+    set_preview_backend,
 )
+from pathlib import Path, PurePosixPath  # noqa: F401 — patched by tests
+from ...engine.preview_backend import (
+    PreviewBackendError,
+    start_proxied_backend,
+    start_served_backend,
+    wait_for_port,
+)  # noqa: F401 — patched by tests
 
 logger = get_logger("server")
 
 router = APIRouter()
 
 
-def _extract_session_from_referer(request: Request) -> Optional[str]:
+def _extract_session_from_referer(request: Request) -> str | None:
     """Extract session ID from the Referer header's query string."""
     referer = request.headers.get('referer', '')
     if 'session=' in referer:
@@ -49,7 +58,7 @@ def _extract_session_from_referer(request: Request) -> Optional[str]:
     return None
 
 
-async def _resolve_session(request: Request, x_session_id: Optional[str], session: Optional[str]):
+async def _resolve_session(request: Request, x_session_id: str | None, session: str | None):
     """Resolve session from header, query param, or referer."""
     sid = x_session_id or session or _extract_session_from_referer(request)
     session_id, engine, _ = await get_or_create_session(sid)
@@ -61,8 +70,8 @@ async def _resolve_session(request: Request, x_session_id: Optional[str], sessio
 async def preview_poll(
     request: Request,
     filepath: str,
-    x_session_id: Optional[str] = Header(None),
-    session: Optional[str] = None
+    x_session_id: str | None = Header(None),
+    session: str | None = None
 ):
     """Return file modification time for preview reload polling."""
     session_id, engine = await _resolve_session(request, x_session_id, session)
@@ -91,8 +100,8 @@ async def preview_poll(
 async def preview_static(
     request: Request,
     filepath: str,
-    x_session_id: Optional[str] = Header(None),
-    session: Optional[str] = None
+    x_session_id: str | None = Header(None),
+    session: str | None = None
 ):
     """Serve static assets (CSS/JS/images) referenced by preview HTML."""
     session_id, engine = await _resolve_session(request, x_session_id, session)
@@ -233,8 +242,8 @@ async def stop_preview_proxy(s: Session = Depends(get_session)):
 async def preview_proxy_passthrough(
     request: Request,
     path: str,
-    x_session_id: Optional[str] = Header(None),
-    session: Optional[str] = None,
+    x_session_id: str | None = Header(None),
+    session: str | None = None,
 ):
     """Reverse proxy requests to the user's backend.
 
@@ -283,8 +292,8 @@ async def preview_proxy_passthrough(
 async def preview_html(
     request: Request,
     filepath: str,
-    x_session_id: Optional[str] = Header(None),
-    session: Optional[str] = None
+    x_session_id: str | None = Header(None),
+    session: str | None = None
 ):
     """Serve HTML file with injected reload script, or static assets."""
     session_id, engine = await _resolve_session(request, x_session_id, session)

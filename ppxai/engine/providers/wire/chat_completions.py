@@ -21,7 +21,7 @@ wire owning its own converter there is no shared method to disagree about,
 and the validator travels with the conversion instead of with the base class.
 """
 
-from typing import Any, Dict, List
+from typing import Any
 
 from ...types import Message
 from ...uploaded_file import assert_wire_blocks_clean, flatten_uploaded_file_blocks
@@ -43,7 +43,7 @@ class ChatCompletionsHandler:
     name = "chat_completions"
 
     @staticmethod
-    def convert_messages(messages: List[Message]) -> List[Dict[str, Any]]:
+    def convert_messages(messages: list[Message]) -> list[dict[str, Any]]:
         """Convert Message objects to Chat Completions format.
 
         R5 (v1.17.6): any `uploaded_file` content blocks are flattened
@@ -71,7 +71,7 @@ class ChatCompletionsHandler:
             # this. Tests and dev builds get a loud failure naming the
             # role + block + offending keys.
             assert_wire_blocks_clean(content, role=m.role)
-            msg: Dict[str, Any] = {"role": m.role, "content": content}
+            msg: dict[str, Any] = {"role": m.role, "content": content}
             if m.tool_calls:
                 msg["tool_calls"] = m.tool_calls
             if m.tool_call_id:

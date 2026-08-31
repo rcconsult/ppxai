@@ -7,7 +7,6 @@ resolver). Covers md front-matter, json, yaml, jsonl batch, coercion, and errors
 import pytest
 
 from ppxai.engine.agent_spec import (
-    AgentSpec,
     AgentSpecError,
     load_batch_lines,
     load_spec_file,

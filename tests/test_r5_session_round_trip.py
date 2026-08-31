@@ -7,7 +7,6 @@ directory format, not flat JSON), and that the field values survive
 unchanged through JSON round-trip.
 """
 
-import pytest
 
 from ppxai.engine.session import SessionManager, _message_has_multimodal
 from ppxai.engine.types import Message

@@ -38,7 +38,6 @@ from ppxai.engine.uploaded_file import make_uploaded_file_block
 from ppxai.tui.event_bus import EventBus, Events
 from ppxai.tui.stream_handler import EVENT_MAP, handle_stream_event
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -261,7 +260,6 @@ class TestDispatcherMultimodalStreamOrdering:
         dispatcher doesn't cover must emit a WARNING (not a silent
         drop) naming the file to edit.
         """
-        import enum
 
         app = _make_app_fake()
         # Monkey-patch handle_stream_event's EVENT_MAP via a fake type
@@ -272,7 +270,8 @@ class TestDispatcherMultimodalStreamOrdering:
         fake_type = MagicMock()
         fake_type.__repr__ = lambda self: "EventType.FAKE_FUTURE"
 
-        from ppxai.tui.stream_handler import EVENT_MAP as real_map, NOOP_EVENTS as real_noop
+        from ppxai.tui.stream_handler import EVENT_MAP as real_map
+        from ppxai.tui.stream_handler import NOOP_EVENTS as real_noop
         # Sanity: the enum we're about to synthesize is NOT in either set
         # (otherwise the test would pass for the wrong reason).
         assert fake_type not in real_map

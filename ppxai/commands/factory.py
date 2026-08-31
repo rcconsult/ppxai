@@ -14,9 +14,10 @@ v1.17.4:  Eager loading — factory owns its preconditions
 import importlib
 import logging
 import sys
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Callable, Dict, List, Any, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +59,7 @@ class CommandSpec:
     description: str
     handler: Callable
     category: str = "general"
-    aliases: List[str] = field(default_factory=list)
+    aliases: list[str] = field(default_factory=list)
     usage: str = ""
     hidden: bool = False
 
@@ -108,8 +109,8 @@ class CommandFactory:
             usage="/save [name]"
         ))
     """
-    _registry: Dict[str, CommandSpec] = {}
-    _aliases: Dict[str, str] = {}  # alias -> canonical name
+    _registry: dict[str, CommandSpec] = {}
+    _aliases: dict[str, str] = {}  # alias -> canonical name
     _loaded: bool = False
 
     @classmethod
@@ -171,7 +172,7 @@ class CommandFactory:
         return True
 
     @classmethod
-    def get(cls, name: str) -> Optional[CommandSpec]:
+    def get(cls, name: str) -> CommandSpec | None:
         """Get command spec by name or alias.
 
         Args:
@@ -226,7 +227,7 @@ class CommandFactory:
         return cls.dispatch(name, handler, args)
 
     @classmethod
-    def list_all(cls) -> List[str]:
+    def list_all(cls) -> list[str]:
         """List all registered command names.
 
         Returns:
@@ -236,7 +237,7 @@ class CommandFactory:
         return list(cls._registry.keys())
 
     @classmethod
-    def list_by_category(cls, category: str) -> List[CommandSpec]:
+    def list_by_category(cls, category: str) -> list[CommandSpec]:
         """List commands in a category.
 
         Args:
@@ -250,7 +251,7 @@ class CommandFactory:
                 if spec.category == category and not spec.hidden]
 
     @classmethod
-    def iter_completion_specs(cls) -> List[CompletionCommandInfo]:
+    def iter_completion_specs(cls) -> list[CompletionCommandInfo]:
         """Public, completion-oriented snapshot of the registry.
 
         Returns one entry per canonical command followed by one per alias
@@ -262,7 +263,7 @@ class CommandFactory:
         candidate text).
         """
         cls._ensure_loaded()
-        infos: List[CompletionCommandInfo] = []
+        infos: list[CompletionCommandInfo] = []
         for name, spec in cls._registry.items():
             infos.append(CompletionCommandInfo(
                 name=name,
@@ -285,7 +286,7 @@ class CommandFactory:
         return infos
 
     @classmethod
-    def get_categories(cls) -> List[str]:
+    def get_categories(cls) -> list[str]:
         """Get all unique category names.
 
         Returns:
@@ -304,7 +305,7 @@ class CommandFactory:
         cls._loaded = False
 
     @classmethod
-    def generate_help(cls, client: Optional[str] = None, markdown: bool = False) -> str:
+    def generate_help(cls, client: str | None = None, markdown: bool = False) -> str:
         """Generate help text from registered commands.
 
         Dynamically builds help output grouped by category.
@@ -358,7 +359,7 @@ class CommandFactory:
         return "\n".join(lines)
 
     @classmethod
-    def get_command_help(cls, name: str, markdown: bool = False) -> Optional[str]:
+    def get_command_help(cls, name: str, markdown: bool = False) -> str | None:
         """Get detailed help for a specific command.
 
         Args:

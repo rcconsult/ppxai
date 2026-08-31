@@ -32,14 +32,12 @@ from fastapi.testclient import TestClient
 
 from ppxai.commands.factory import CommandFactory
 from ppxai.commands.results import (
-    CommandResult,
     NotificationResult,
     ResultStatus,
     SideEffect,
     SideEffectKind,
     TableResult,
 )
-
 
 # ---------------------------------------------------------------------------
 # SideEffectKind taxonomy sentinel

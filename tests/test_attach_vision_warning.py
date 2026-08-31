@@ -34,9 +34,8 @@ from typing import Any
 
 import pytest
 
-from ppxai.commands.attach import PendingFile, handle_attach
+from ppxai.commands.attach import handle_attach
 from ppxai.commands.results import ResultStatus
-
 
 # Minimal 1x1 red PNG — same fixture used by test_attach_command.py.
 _RED_PIXEL_PNG = base64.b64decode(

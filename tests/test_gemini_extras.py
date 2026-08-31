@@ -16,7 +16,6 @@ import pytest
 from ppxai.engine.providers.gemini import GeminiProvider, is_available
 from ppxai.engine.types import EventType, Message
 
-
 pytestmark = pytest.mark.skipif(
     not is_available(),
     reason="google-genai not installed",

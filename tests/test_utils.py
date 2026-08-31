@@ -1,6 +1,4 @@
 """Unit tests for ppxai.rich.utils module."""
-import pytest
-import tempfile
 from pathlib import Path
 from unittest.mock import patch
 

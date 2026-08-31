@@ -4,8 +4,8 @@ Tests for ppxai UI functions.
 Tests UI display functions including help displays and markdown rendering.
 """
 
-import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
+
 from ppxai.rich.ui import display_file_editing_help
 
 

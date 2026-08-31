@@ -27,7 +27,7 @@ import json
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import yaml
 
@@ -53,23 +53,23 @@ class AgentSpec:
     fills gaps from the request and server defaults; missing everywhere is the
     caller's problem to surface (e.g. an empty grant → 400)."""
 
-    task: Optional[str] = None
-    system: Optional[str] = None
-    tools: Optional[list] = None
-    provider: Optional[str] = None
-    model: Optional[str] = None
-    budget: Optional[dict] = None        # {iterations?, time_s?, tokens?}
-    network: Optional[list] = None       # allow_outbound entries
-    read_paths: Optional[dict] = None    # {allow?, deny?} — parsed for T4; inert in T3
+    task: str | None = None
+    system: str | None = None
+    tools: list | None = None
+    provider: str | None = None
+    model: str | None = None
+    budget: dict | None = None        # {iterations?, time_s?, tokens?}
+    network: list | None = None       # allow_outbound entries
+    read_paths: dict | None = None    # {allow?, deny?} — parsed for T4; inert in T3
     # ADR 0009 §3/§5 (step ③): tri-state — True/False when the layer states
     # it, None = absent-means-inherit through the precedence chain. Effective
     # True derives web_search + its egress baseline AFTER resolution (§5),
     # never per layer.
-    enrichment: Optional[bool] = None
+    enrichment: bool | None = None
     warnings: list = field(default_factory=list)
 
 
-def _coerce_tools(value: Any) -> Optional[list]:
+def _coerce_tools(value: Any) -> list | None:
     if value is None:
         return None
     if isinstance(value, str):
@@ -80,7 +80,7 @@ def _coerce_tools(value: Any) -> Optional[list]:
     raise AgentSpecError(f"`tools` must be a list or string, got {type(value).__name__}")
 
 
-def _coerce_network(value: Any) -> Optional[list]:
+def _coerce_network(value: Any) -> list | None:
     """Accept either a bare list (allow_outbound) or {allow_outbound: [...]}."""
     if value is None:
         return None
@@ -91,7 +91,7 @@ def _coerce_network(value: Any) -> Optional[list]:
     return list(value)
 
 
-def _coerce_budget(value: Any) -> Optional[dict]:
+def _coerce_budget(value: Any) -> dict | None:
     if value is None:
         return None
     if not isinstance(value, dict):

@@ -22,15 +22,10 @@ Usage:
 
 import argparse
 import io
-import json
-import hashlib
 import os
 import sys
-from datetime import datetime
-from pathlib import Path
-from dataclasses import dataclass, field, asdict
-from typing import Optional
 from enum import Enum
+from pathlib import Path
 
 # Fix Windows console encoding: force UTF-8 for stdout/stderr to prevent
 # 'charmap' codec errors when model responses contain Unicode characters
@@ -49,7 +44,7 @@ if sys.platform == "win32" and not os.environ.get("PYTHONIOENCODING"):
         )
 
 from engine_runner import EngineBenchmarkRunner
-from results import ResultsStore, BenchmarkResult
+from results import BenchmarkResult, ResultsStore
 
 
 class OutputFormat(Enum):
@@ -285,7 +280,7 @@ def print_history_comparison(current: BenchmarkResult, history: list[BenchmarkRe
             print(f"  {category:20} {direction} {abs(delta):.1f}%")
 
 
-def print_ranking(ranking: list[tuple[str, float, int]], current_pair: Optional[str] = None):
+def print_ranking(ranking: list[tuple[str, float, int]], current_pair: str | None = None):
     """Print ranking table."""
     if not ranking:
         print("  No results stored yet.")
@@ -381,7 +376,7 @@ def show_ranking(args: argparse.Namespace) -> int:
         without_map = {pair: score for pair, score, _ in ranking_without}
         common = sorted(set(with_map) & set(without_map), key=lambda p: with_map[p], reverse=True)
         if common:
-            print(f"\nAGENTS.md Impact (Delta = WITH - WITHOUT)")
+            print("\nAGENTS.md Impact (Delta = WITH - WITHOUT)")
             print(f"\n{'Provider/Model':<40} {'With':>8} {'Without':>8} {'Delta':>8}")
             print("-" * 66)
             for pair in common:

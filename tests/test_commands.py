@@ -4,10 +4,9 @@ Tests for command handlers with both Perplexity and Custom providers.
 v1.12.0: Updated to use EngineClient instead of legacy AIClient.
 """
 
+from unittest.mock import Mock, patch
+
 import pytest
-import os
-from unittest.mock import Mock, patch, MagicMock, call, AsyncMock
-from io import StringIO
 
 from ppxai.commands import CommandHandler, send_coding_task
 

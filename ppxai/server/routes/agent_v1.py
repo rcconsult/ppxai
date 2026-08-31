@@ -85,60 +85,51 @@ from __future__ import annotations
 
 import asyncio
 import json
-import os
-from pathlib import Path
-from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field, model_validator
 
 from ...common.logger import get_logger
-from ...config import get_default_model
 from ...config.execution import (
-    get_execution_default_subagent,
     get_execution_task_config,
 )
-from ...config.tools import get_tool_config
-from ...engine.agent_runs import RunMeta, resume_refusal
-from ...engine.agent_skill import AgentSkillError, LoadedSkill, load_skill
-from ...engine.agent_spec import (
-    AgentSpec,
-    AgentSpecError,
-    load_spec_file,
-    spec_from_mapping,
-)
-from ...engine.tools.network_policy import (
-    apply_egress_ceiling,
-    grant_has_shell,
-)
 from ...engine import task_authorizer as _authz
+from ...engine import task_runner as _task_runner
+from ...engine.agent_runs import RunMeta, resume_refusal
 from ...engine.task_authorizer import (
     TaskAuthorizationError,
     TaskRequest,
     authorize_oneshot,
     authorize_task,
 )
-from ...engine import task_runner as _task_runner
-from ...engine.task_runner import (  # noqa: F401  (compat re-exports)
-    DEFAULT_AGENT_SYSTEM_PROMPT,
-    compose_agent_system_prompt,
-)
+
 # Import alias for source compatibility (oneshot.py and older callers do
 # `from .agent_v1 import build_task_runner`). NOT a patch point: it is a
 # second binding to the same object, so rebinding it redirects nothing.
 # Patch `ppxai.engine.task_runner.build_task_runner` instead — see that
 # module's docstring and tests/test_runner_builder_patch_point.py.
-from ...engine.task_runner import build_task_runner  # noqa: F401
+from ...engine.task_runner import (  # noqa: F401  (compat re-exports)
+    DEFAULT_AGENT_SYSTEM_PROMPT,
+    build_task_runner,  # noqa: F401
+    compose_agent_system_prompt,
+)
 from ..state import get_agent_run_registry
+
 # Reuse oneshot's provider construction so Inc 1 has zero provider-wiring
 # duplication; the synchronous run IS a oneshot call under the hood.
-from .oneshot import (
+from .oneshot import (  # noqa: F401 — ONESHOT_SEARCH_ITERATIONS read by tests
     ONESHOT_SEARCH_ITERATIONS,
     _build_provider,
     _validate_provider_or_400,
-    _web_search_egress_hosts,
 )
+from pathlib import Path  # noqa: F401 — patched by tests
+from ...config import get_default_model  # noqa: F401 — patched by tests
+from ...config.execution import (
+    get_execution_default_subagent,
+    get_execution_task_config,
+)  # noqa: F401 — patched by tests
+from ...config.tools import get_tool_config  # noqa: F401 — patched by tests
 
 logger = get_logger("server")
 
@@ -182,7 +173,7 @@ logger = get_logger("server")
 #   caller — it is never broadened to unauthenticated access.
 
 
-def _caller_owner(request: Request) -> Optional[str]:
+def _caller_owner(request: Request) -> str | None:
     """Owner string of the authenticated principal, or None when auth is off.
 
     Tolerates a request without a ``state`` (e.g. hand-built test doubles or
@@ -253,13 +244,13 @@ class AgentRunRequest(BaseModel):
             "POST /v1/agent/task."
         ),
     )
-    provider: Optional[str] = Field(
+    provider: str | None = Field(
         None, description="Provider ID. Falls back to server default_provider."
     )
-    model: Optional[str] = Field(
+    model: str | None = Field(
         None, description="Model ID. Falls back to the provider's default_model."
     )
-    system: Optional[str] = Field(None, description="Optional system message.")
+    system: str | None = Field(None, description="Optional system message.")
 
 
 class RunMetaResponse(BaseModel):
@@ -271,10 +262,10 @@ class RunMetaResponse(BaseModel):
     # ADR 0011 (F1): "task" | "oneshot" run-kind discriminator. Additive —
     # legacy metas surface as "task".
     kind: str = "task"
-    parent_run_id: Optional[str] = None
-    owner: Optional[str] = None  # Inc 8b: principal that owns the run
-    provider: Optional[str] = None
-    model: Optional[str] = None
+    parent_run_id: str | None = None
+    owner: str | None = None  # Inc 8b: principal that owns the run
+    provider: str | None = None
+    model: str | None = None
     tools: list[str] = Field(default_factory=list)
     network: list = Field(default_factory=list)
     budget: dict = Field(default_factory=dict)
@@ -284,18 +275,18 @@ class RunMetaResponse(BaseModel):
     # owner IS the principal entitled to answer, so surfacing the resume
     # token here is deliberate (it's what the consent card / `/task respond`
     # presents back to POST .../respond).
-    waiting: Optional[dict] = None
+    waiting: dict | None = None
     # T6: when the held result was collected (/ack) or retention-reaped;
     # None until the run is finalized.
-    acked_at: Optional[float] = None
+    acked_at: float | None = None
     created_at: float = 0.0
-    started_at: Optional[float] = None
-    finished_at: Optional[float] = None
-    result: Optional[str] = None
-    error: Optional[str] = None
+    started_at: float | None = None
+    finished_at: float | None = None
+    result: str | None = None
+    error: str | None = None
     # v1.19.x workdir-alignment: the run's effective working dir (per-run
     # intent; None = server default or a sealed run's jail).
-    workdir: Optional[str] = None
+    workdir: str | None = None
 
     @classmethod
     def from_meta(cls, m: RunMeta) -> "RunMetaResponse":
@@ -467,9 +458,9 @@ class BudgetSpec(BaseModel):
     are enforced cooperatively at tool-loop boundaries, so a stop lands at a
     clean checkpoint (status='interrupted', resumable)."""
 
-    iterations: Optional[int] = Field(None, ge=1, description="Max tool-loop iterations.")
-    time_s: Optional[float] = Field(None, gt=0, description="Max wall-clock seconds.")
-    tokens: Optional[int] = Field(
+    iterations: int | None = Field(None, ge=1, description="Max tool-loop iterations.")
+    time_s: float | None = Field(None, gt=0, description="Max wall-clock seconds.")
+    tokens: int | None = Field(
         None, ge=1,
         description=(
             "Max tokens consumed. Best-effort: checked at tool-loop boundaries, "
@@ -479,7 +470,7 @@ class BudgetSpec(BaseModel):
     )
 
 
-def _budget_dict(spec: "Optional[BudgetSpec]") -> dict:
+def _budget_dict(spec: "BudgetSpec | None") -> dict:
     """Budget spec -> plain {axis: cap} dict, omitting unset axes. Built field
     by field so it works on Pydantic v1 and v2 (no model_dump/.dict coupling)."""
     if spec is None:
@@ -512,7 +503,7 @@ class AgentTaskRequest(BaseModel):
             "is rejected 400 post-merge."
         ),
     )
-    spec: Optional[str] = Field(
+    spec: str | None = Field(
         None,
         description=(
             "T3: name of a spec file under execution.task.sandbox.specs_dir "
@@ -535,7 +526,7 @@ class AgentTaskRequest(BaseModel):
             "(scripts stay inert until the container tier)."
         ),
     )
-    profile: Optional[str] = Field(
+    profile: str | None = Field(
         None,
         description=(
             "ADR 0009 §1 (step ③): name of an execution profile under "
@@ -546,7 +537,7 @@ class AgentTaskRequest(BaseModel):
             "name → 400 (pre-start)."
         ),
     )
-    enrichment: Optional[bool] = Field(
+    enrichment: bool | None = Field(
         None,
         description=(
             "ADR 0009 §3/§5: tri-state context-enrichment intent. Resolved "
@@ -555,10 +546,10 @@ class AgentTaskRequest(BaseModel):
             "Absent = inherit from spec/skill/profile; default false."
         ),
     )
-    provider: Optional[str] = Field(None, description="Provider (per-run intent).")
-    model: Optional[str] = Field(None, description="Model (per-run intent).")
-    system: Optional[str] = Field(None, description="Optional system message.")
-    budget: Optional[BudgetSpec] = Field(
+    provider: str | None = Field(None, description="Provider (per-run intent).")
+    model: str | None = Field(None, description="Model (per-run intent).")
+    system: str | None = Field(None, description="Optional system message.")
+    budget: BudgetSpec | None = Field(
         None,
         description=(
             "Per-run resource caps (Inc 6). Any subset of "
@@ -568,7 +559,7 @@ class AgentTaskRequest(BaseModel):
             "(resumable), not 'failed'."
         ),
     )
-    network: Optional[NetworkSpec] = Field(
+    network: NetworkSpec | None = Field(
         None,
         description=(
             "Per-run egress allowlist (ADR 0003 §3c / AC-2). Outbound network "
@@ -579,7 +570,7 @@ class AgentTaskRequest(BaseModel):
             "{host, paths:[prefix,...]}."
         ),
     )
-    workdir: Optional[str] = Field(
+    workdir: str | None = Field(
         None,
         description=(
             "Working directory for the run's relative tool paths — per-run "
@@ -685,7 +676,7 @@ def _collect_holds() -> bool:
 
 
 
-def _enriched_oneshot_egress_or_400(provider_name: Optional[str] = None) -> list:
+def _enriched_oneshot_egress_or_400(provider_name: str | None = None) -> list:
     """HTTP adapter over `task_authorizer.enriched_oneshot_egress_or_error`.
 
     The assembly itself lives in the engine so `/v1/agent/run`, the
@@ -800,7 +791,7 @@ async def create_agent_task(req: AgentTaskRequest, request: Request) -> AgentRun
 
 @router.get("/runs", response_model=RunListResponse)
 async def list_agent_runs(
-    request: Request, kind: Optional[str] = None
+    request: Request, kind: str | None = None
 ) -> RunListResponse:
     """List agent runs, newest first.
 
@@ -884,10 +875,10 @@ class RespondRequest(BaseModel):
         ..., min_length=1,
         description="Resume token from the run's waiting.token / agent_waiting event.",
     )
-    approved: Optional[bool] = Field(
+    approved: bool | None = Field(
         None, description="Consent decision (true approves, false denies)."
     )
-    text: Optional[str] = Field(
+    text: str | None = Field(
         None, description="Free-text answer (waiting{input} parks; optional otherwise)."
     )
 
@@ -1004,7 +995,7 @@ async def resume_agent_run(run_id: str, request: Request) -> dict:
     return {"ok": True, "run_id": run_id, "status": "running"}
 
 
-def _parse_categories(category: Optional[str]) -> Optional[set[str]]:
+def _parse_categories(category: str | None) -> set[str] | None:
     if not category:
         return None
     cats = {c.strip() for c in category.split(",") if c.strip()}
@@ -1018,7 +1009,7 @@ async def get_agent_run_events(
     since: int = Query(0, ge=0, description="Return events with seq > since (replay cursor)."),
     live: bool = Query(False, description="Keep the connection open and stream new events (SSE)."),
     min_level: str = Query("debug", description="debug|info|warning|error — drop lower severities."),
-    category: Optional[str] = Query(None, description="Comma-separated: lifecycle,tool,network,consent,result."),
+    category: str | None = Query(None, description="Comma-separated: lifecycle,tool,network,consent,result."),
 ):
     """Run events (ADR 0003 §11a). Replay (?since=) + optional live tail
     (?live=1), filtered by ?min_level= and ?category=.

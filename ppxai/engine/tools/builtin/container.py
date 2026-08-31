@@ -10,17 +10,15 @@ v1.13.10: Refactored to reduce code duplication using parameterized base classes
 
 import shutil
 import subprocess
-from typing import Optional, List, Dict, Any, Callable
 
 from ...types import ToolEngineProtocol, ToolManagerProtocol
 from ..base import BaseTool
-
 
 # =============================================================================
 # Runtime Detection
 # =============================================================================
 
-def detect_container_runtime() -> Optional[str]:
+def detect_container_runtime() -> str | None:
     """
     Detect available container runtime.
 
@@ -40,10 +38,10 @@ def detect_kubernetes_cli() -> bool:
 
 
 def _run_command(
-    cmd: List[str],
+    cmd: list[str],
     timeout: int = 30,
     max_output: int = 10000,
-    cwd: Optional[str] = None,
+    cwd: str | None = None,
 ) -> str:
     """
     Run a command and return output.
@@ -95,11 +93,11 @@ class CLITool(BaseTool):
         self.engine = engine
         self._timeout = 30
 
-    def runtime_check(self) -> Optional[str]:
+    def runtime_check(self) -> str | None:
         """Override to check runtime availability. Return error string or None."""
         return None
 
-    def build_command(self, **kwargs) -> List[str]:
+    def build_command(self, **kwargs) -> list[str]:
         """Override to build the command. Return list of command args."""
         raise NotImplementedError
 
@@ -147,7 +145,7 @@ class ConsentCLITool(CLITool):
 class DockerTool(CLITool):
     """Base class for Docker/Podman tools."""
 
-    def runtime_check(self) -> Optional[str]:
+    def runtime_check(self) -> str | None:
         if not detect_container_runtime():
             return "Error: No container runtime found. Install Docker or Podman."
         return None
@@ -160,7 +158,7 @@ class DockerTool(CLITool):
 class DockerConsentTool(ConsentCLITool):
     """Base class for Docker/Podman tools requiring consent."""
 
-    def runtime_check(self) -> Optional[str]:
+    def runtime_check(self) -> str | None:
         if not detect_container_runtime():
             return "Error: No container runtime found. Install Docker or Podman."
         return None
@@ -173,7 +171,7 @@ class DockerConsentTool(ConsentCLITool):
 class KubeTool(CLITool):
     """Base class for Kubernetes tools."""
 
-    def runtime_check(self) -> Optional[str]:
+    def runtime_check(self) -> str | None:
         if not detect_kubernetes_cli():
             return "Error: kubectl not found. Install Kubernetes CLI."
         return None
@@ -182,7 +180,7 @@ class KubeTool(CLITool):
 class KubeConsentTool(ConsentCLITool):
     """Base class for Kubernetes tools requiring consent."""
 
-    def runtime_check(self) -> Optional[str]:
+    def runtime_check(self) -> str | None:
         if not detect_kubernetes_cli():
             return "Error: kubectl not found. Install Kubernetes CLI."
         return None
@@ -217,7 +215,7 @@ class ContainerListTool(DockerTool):
             "required": []
         }
 
-    def build_command(self, all: bool = False, filter: str = None, **kwargs) -> List[str]:
+    def build_command(self, all: bool = False, filter: str = None, **kwargs) -> list[str]:
         cmd = [
             self.runtime, 'ps',
             '--format', 'table {{.ID}}\t{{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}'
@@ -258,7 +256,7 @@ class ContainerLogsTool(DockerTool):
             "required": ["container"]
         }
 
-    def build_command(self, container: str, tail: int = 100, since: str = None, **kwargs) -> List[str]:
+    def build_command(self, container: str, tail: int = 100, since: str = None, **kwargs) -> list[str]:
         cmd = [self.runtime, 'logs', '--tail', str(tail)]
         if since:
             cmd.extend(['--since', since])
@@ -291,7 +289,7 @@ class ContainerInspectTool(DockerTool):
             "required": ["container"]
         }
 
-    def build_command(self, container: str, format: str = None, **kwargs) -> List[str]:
+    def build_command(self, container: str, format: str = None, **kwargs) -> list[str]:
         cmd = [self.runtime, 'inspect']
         if format:
             cmd.extend(['--format', format])
@@ -318,7 +316,7 @@ class ContainerStartStopTool(DockerConsentTool):
             "required": ["container"]
         }
 
-    def build_command(self, container: str, **kwargs) -> List[str]:
+    def build_command(self, container: str, **kwargs) -> list[str]:
         return [self.runtime, self.action, container]
 
 
@@ -352,7 +350,7 @@ class ContainerExecTool(DockerConsentTool):
             "required": ["container", "command"]
         }
 
-    def build_command(self, container: str, command: str, workdir: str = None, **kwargs) -> List[str]:
+    def build_command(self, container: str, command: str, workdir: str = None, **kwargs) -> list[str]:
         cmd = [self.runtime, 'exec']
         if workdir:
             cmd.extend(['-w', workdir])
@@ -386,7 +384,7 @@ class ImageListTool(DockerTool):
             "required": []
         }
 
-    def build_command(self, all: bool = False, filter: str = None, **kwargs) -> List[str]:
+    def build_command(self, all: bool = False, filter: str = None, **kwargs) -> list[str]:
         cmd = [
             self.runtime, 'images',
             '--format', 'table {{.Repository}}\t{{.Tag}}\t{{.ID}}\t{{.Size}}\t{{.CreatedSince}}'
@@ -430,7 +428,7 @@ class KubePodListTool(KubeTool):
             "required": []
         }
 
-    def build_command(self, namespace: str = None, all_namespaces: bool = False, selector: str = None, **kwargs) -> List[str]:
+    def build_command(self, namespace: str = None, all_namespaces: bool = False, selector: str = None, **kwargs) -> list[str]:
         cmd = ['kubectl', 'get', 'pods', '-o', 'wide']
         if all_namespaces:
             cmd.append('-A')
@@ -478,7 +476,7 @@ class KubePodLogsTool(KubeTool):
             "required": ["pod"]
         }
 
-    def build_command(self, pod: str, namespace: str = None, container: str = None, tail: int = 100, previous: bool = False, **kwargs) -> List[str]:
+    def build_command(self, pod: str, namespace: str = None, container: str = None, tail: int = 100, previous: bool = False, **kwargs) -> list[str]:
         cmd = ['kubectl', 'logs', pod, '--tail', str(tail)]
         if namespace:
             cmd.extend(['-n', namespace])
@@ -514,7 +512,7 @@ class KubePodDescribeTool(KubeTool):
             "required": ["pod"]
         }
 
-    def build_command(self, pod: str, namespace: str = None, **kwargs) -> List[str]:
+    def build_command(self, pod: str, namespace: str = None, **kwargs) -> list[str]:
         cmd = ['kubectl', 'describe', 'pod', pod]
         if namespace:
             cmd.extend(['-n', namespace])
@@ -543,7 +541,7 @@ class KubeDeploymentListTool(KubeTool):
             "required": []
         }
 
-    def build_command(self, namespace: str = None, all_namespaces: bool = False, **kwargs) -> List[str]:
+    def build_command(self, namespace: str = None, all_namespaces: bool = False, **kwargs) -> list[str]:
         cmd = ['kubectl', 'get', 'deployments', '-o', 'wide']
         if all_namespaces:
             cmd.append('-A')
@@ -574,7 +572,7 @@ class KubeServiceListTool(KubeTool):
             "required": []
         }
 
-    def build_command(self, namespace: str = None, all_namespaces: bool = False, **kwargs) -> List[str]:
+    def build_command(self, namespace: str = None, all_namespaces: bool = False, **kwargs) -> list[str]:
         cmd = ['kubectl', 'get', 'services', '-o', 'wide']
         if all_namespaces:
             cmd.append('-A')
@@ -612,7 +610,7 @@ class KubeApplyTool(KubeConsentTool):
             "required": ["file"]
         }
 
-    def build_command(self, file: str, namespace: str = None, dry_run: bool = False, **kwargs) -> List[str]:
+    def build_command(self, file: str, namespace: str = None, dry_run: bool = False, **kwargs) -> list[str]:
         cmd = ['kubectl', 'apply', '-f', file]
         if namespace:
             cmd.extend(['-n', namespace])
@@ -663,7 +661,7 @@ class KubePodExecTool(KubeConsentTool):
             "required": ["pod", "command"]
         }
 
-    def build_command(self, pod: str, command: str, namespace: str = None, container: str = None, **kwargs) -> List[str]:
+    def build_command(self, pod: str, command: str, namespace: str = None, container: str = None, **kwargs) -> list[str]:
         cmd = ['kubectl', 'exec', pod]
         if namespace:
             cmd.extend(['-n', namespace])
@@ -690,7 +688,7 @@ class KubeNamespaceListTool(KubeTool):
             "required": []
         }
 
-    def build_command(self, **kwargs) -> List[str]:
+    def build_command(self, **kwargs) -> list[str]:
         return ['kubectl', 'get', 'namespaces']
 
 

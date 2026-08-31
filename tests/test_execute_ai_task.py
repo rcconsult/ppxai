@@ -18,8 +18,7 @@ Tests cover all 7 sub-items from critique #4:
 
 from __future__ import annotations
 
-import asyncio
-from typing import AsyncIterator
+from collections.abc import AsyncIterator
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -31,7 +30,6 @@ from ppxai.commands.results import (
     ResultStatus,
 )
 from ppxai.engine.types import Event, EventType
-
 
 # ---------------------------------------------------------------------------
 # Test helpers

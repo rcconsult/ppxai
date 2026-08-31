@@ -43,15 +43,14 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from ..commands.factory import CommandFactory
 from ..config import PROVIDERS, get_provider_config
 
-
 # Commands that accept path arguments, and what kinds of entries make
 # sense to complete for each.
-_PATH_ARG_COMMANDS: Dict[str, Dict[str, bool]] = {
+_PATH_ARG_COMMANDS: dict[str, dict[str, bool]] = {
     "attach":  {"include_files": True,  "include_dirs": True},
     "show":    {"include_files": True,  "include_dirs": True},
     "preview": {"include_files": True,  "include_dirs": True},
@@ -67,7 +66,7 @@ _IGNORE_DIRS = frozenset({
 })
 
 # Commands the factory doesn't own (special-cased in CommandHandler).
-_BUILTIN_SPECIAL_COMMANDS: List[Dict[str, Any]] = [
+_BUILTIN_SPECIAL_COMMANDS: list[dict[str, Any]] = [
     {"text": "/quit", "description": "Exit the application", "kind": "command"},
     {"text": "/exit", "description": "Exit the application", "kind": "command"},
     # v1.19.0 agent platform — client-side commands (handled in the web
@@ -99,14 +98,14 @@ _BUILTIN_SPECIAL_COMMANDS: List[Dict[str, Any]] = [
 
 # Command name (no slash) → clients that implement it. Derived once from
 # the entries above; commands without a `clients` tag never appear here.
-_CLIENT_GATES: Dict[str, frozenset] = {
+_CLIENT_GATES: dict[str, frozenset] = {
     bi["text"].lstrip("/"): frozenset(bi["clients"])
     for bi in _BUILTIN_SPECIAL_COMMANDS
     if "clients" in bi
 }
 
 
-def _client_allows(name: str, client: Optional[str]) -> bool:
+def _client_allows(name: str, client: str | None) -> bool:
     """True when `client` may see the client-side command `name` (no slash).
 
     `client=None` (legacy/unknown caller) fails open — the pre-gating
@@ -118,7 +117,7 @@ def _client_allows(name: str, client: Optional[str]) -> bool:
 # Context-provider shortcuts — handled by ContextInjector, not the
 # filesystem. They appear in the @ dropdown alongside file refs so
 # users discover them without having to remember the list.
-_CONTEXT_PROVIDERS: List[Tuple[str, str]] = [
+_CONTEXT_PROVIDERS: list[tuple[str, str]] = [
     ("@git",       "Include git diff (staged + unstaged)"),
     ("@tree",      "Include project directory structure"),
     ("@clipboard", "Include clipboard text content"),
@@ -129,7 +128,7 @@ _CONTEXT_PROVIDERS: List[Tuple[str, str]] = [
 # used to each maintain their own copies of. Web and VSCode get these
 # for free now that they come through POST /complete.
 
-_TOOLS_SUBCOMMANDS: List[Tuple[str, str]] = [
+_TOOLS_SUBCOMMANDS: list[tuple[str, str]] = [
     ("on",      "Enable AI tools"),
     ("off",     "Disable AI tools"),
     ("enable",  "Enable AI tools"),
@@ -142,7 +141,7 @@ _TOOLS_SUBCOMMANDS: List[Tuple[str, str]] = [
     ("auto",    "Enable/disable agent (auto) mode"),
 ]
 
-_USAGE_SUBCOMMANDS: List[Tuple[str, str]] = [
+_USAGE_SUBCOMMANDS: list[tuple[str, str]] = [
     ("show",     "Show usage statistics"),
     ("session",  "Show session usage"),
     ("provider", "Show provider usage"),
@@ -150,14 +149,14 @@ _USAGE_SUBCOMMANDS: List[Tuple[str, str]] = [
     ("reset",    "Reset usage counters"),
 ]
 
-_USAGE_DISPLAY_MODES: List[Tuple[str, str]] = [
+_USAGE_DISPLAY_MODES: list[tuple[str, str]] = [
     ("session",  "Status line shows session totals"),
     ("provider", "Status line shows current provider totals"),
     ("model",    "Status line shows current model totals"),
     ("off",      "Hide usage from status line"),
 ]
 
-_CHECKPOINT_SUBCOMMANDS: List[Tuple[str, str]] = [
+_CHECKPOINT_SUBCOMMANDS: list[tuple[str, str]] = [
     ("status",  "Show checkpoint status"),
     ("list",    "List recent checkpoints"),
     ("backend", "Set checkpoint backend"),
@@ -166,25 +165,25 @@ _CHECKPOINT_SUBCOMMANDS: List[Tuple[str, str]] = [
     ("undo",    "Revert last checkpoint"),
 ]
 
-_CHECKPOINT_BACKENDS: List[Tuple[str, str]] = [
+_CHECKPOINT_BACKENDS: list[tuple[str, str]] = [
     ("git",  "Use git commits"),
     ("file", "Use file snapshots"),
     ("auto", "Auto-detect best backend"),
     ("none", "Disable checkpoints"),
 ]
 
-_STATUS_SUBCOMMANDS: List[Tuple[str, str]] = [
+_STATUS_SUBCOMMANDS: list[tuple[str, str]] = [
     ("version",  "Toggle version display"),
     ("cwd",      "Toggle working directory display"),
     ("datetime", "Toggle date/time display"),
 ]
 
-_THEME_SUBCOMMANDS: List[Tuple[str, str]] = [
+_THEME_SUBCOMMANDS: list[tuple[str, str]] = [
     ("list",  "Show available themes"),
     ("emoji", "Toggle emoji mode (on|off)"),
 ]
 
-_THEME_NAMES: List[Tuple[str, str]] = [
+_THEME_NAMES: list[tuple[str, str]] = [
     ("catppuccin-mocha", "Catppuccin Mocha"),
     ("dracula",          "Dracula"),
     ("tokyo-night",      "Tokyo Night"),
@@ -200,7 +199,7 @@ _THEME_NAMES: List[Tuple[str, str]] = [
     ("matrix",           "Matrix (green-on-black)"),
 ]
 
-_EMOJI_OPTIONS: List[Tuple[str, str]] = [
+_EMOJI_OPTIONS: list[tuple[str, str]] = [
     ("on",  "Show original emojis"),
     ("off", "Convert to text symbols"),
 ]
@@ -211,7 +210,7 @@ _EMOJI_OPTIONS: List[Tuple[str, str]] = [
 # tests/test_vscode_task_controller.py pins THAT pair; this table lists the
 # canonical verbs (aliases `list`/`show`/`open`/`ack` omitted as noise).
 # There is no `run` verb: `/task "<desc>" --tools a,b,c` launches directly.
-_TASK_SUBCOMMANDS: List[Tuple[str, str]] = [
+_TASK_SUBCOMMANDS: list[tuple[str, str]] = [
     ("ls",      "List runs"),
     ("get",     "Open a run pane"),
     ("watch",   "Open + live-tail a run"),
@@ -225,7 +224,7 @@ _TASK_SUBCOMMANDS: List[Tuple[str, str]] = [
 # Which run statuses make sense as the <id> argument of each /task verb.
 # None = any run (inspection verbs work on everything, incl. finalized).
 # Aliases (show/open/ack) complete ids too — typed by muscle memory.
-_TASK_ID_VERB_STATUSES: Dict[str, Optional[frozenset]] = {
+_TASK_ID_VERB_STATUSES: dict[str, frozenset | None] = {
     "respond": frozenset({"waiting"}),
     "collect": frozenset({"completed_pending_ack"}),
     "ack":     frozenset({"completed_pending_ack"}),
@@ -237,7 +236,7 @@ _TASK_ID_VERB_STATUSES: Dict[str, Optional[frozenset]] = {
     "watch":   None,
 }
 
-_TASK_RESPOND_ANSWERS: List[Tuple[str, str]] = [
+_TASK_RESPOND_ANSWERS: list[tuple[str, str]] = [
     ("approve", "Approve the parked request"),
     ("deny",    "Deny the parked request"),
 ]
@@ -245,7 +244,7 @@ _TASK_RESPOND_ANSWERS: List[Tuple[str, str]] = [
 # /run verbs (U3, ADR 0011): the one-off family shares the /task lifecycle
 # dispatch but launches with no flags and never parks (respond/resume are
 # omitted here as noise — they exist but no-op/refuse for oneshot runs).
-_RUN_SUBCOMMANDS: List[Tuple[str, str]] = [
+_RUN_SUBCOMMANDS: list[tuple[str, str]] = [
     ("ls",      "List one-off runs"),
     ("get",     "Open a run pane"),
     ("watch",   "Open + live-tail a run"),
@@ -254,7 +253,7 @@ _RUN_SUBCOMMANDS: List[Tuple[str, str]] = [
     ("help",    "Show /run help"),
 ]
 
-_TOKEN_SUBCOMMANDS: List[Tuple[str, str]] = [
+_TOKEN_SUBCOMMANDS: list[tuple[str, str]] = [
     ("status", "Show whether a /v1 bearer token is stored (masked)"),
     ("set",    "Store a token — prompts for the value; never type it inline"),
     ("mint",   "Mint + store a token via the loopback bootstrap (local server)"),
@@ -266,12 +265,12 @@ def complete(
     buffer: str,
     cursor: int = -1,
     *,
-    working_dir: Optional[str] = None,
-    current_provider: Optional[str] = None,
-    tool_names: Optional[List[Tuple[str, str]]] = None,
-    agent_runs: Optional[List[Dict[str, Any]]] = None,
-    client: Optional[str] = None,
-) -> List[Dict[str, Any]]:
+    working_dir: str | None = None,
+    current_provider: str | None = None,
+    tool_names: list[tuple[str, str]] | None = None,
+    agent_runs: list[dict[str, Any]] | None = None,
+    client: str | None = None,
+) -> list[dict[str, Any]]:
     """Compute completions for a given input buffer + cursor position.
 
     This is the single entry point for all completion requests. Clients
@@ -339,8 +338,8 @@ def complete(
 
 
 def _complete_commands(
-    prefix: str, client: Optional[str] = None
-) -> List[Dict[str, Any]]:
+    prefix: str, client: str | None = None
+) -> list[dict[str, Any]]:
     """Complete slash command names from the CommandFactory registry.
 
     Consumes the public `CommandFactory.iter_completion_specs()` snapshot
@@ -348,7 +347,7 @@ def _complete_commands(
     seam). Behaviour is unchanged: canonicals and aliases, skipping hidden
     commands, with the alias description annotated.
     """
-    items: List[Dict[str, Any]] = []
+    items: list[dict[str, Any]] = []
     prefix_lower = prefix.lower()
 
     for info in CommandFactory.iter_completion_specs():
@@ -399,11 +398,11 @@ def _complete_slash_args(
     text: str,
     space_idx: int,
     wd: str,
-    current_provider: Optional[str],
-    tool_names: List[Tuple[str, str]],
-    agent_runs: List[Dict[str, Any]],
-    client: Optional[str] = None,
-) -> List[Dict[str, Any]]:
+    current_provider: str | None,
+    tool_names: list[tuple[str, str]],
+    agent_runs: list[dict[str, Any]],
+    client: str | None = None,
+) -> list[dict[str, Any]]:
     """Route `/cmd ...` to the right arg completer.
 
     Resolves aliases (so `/att` completes paths just like `/attach`)
@@ -469,7 +468,7 @@ def _complete_slash_args(
 # =============================================================================
 
 
-def _split_args(args_region: str) -> Tuple[List[str], str]:
+def _split_args(args_region: str) -> tuple[list[str], str]:
     """Split `/cmd a b c` args region into (completed_tokens, active_token).
 
     The active_token is what the user is currently typing. Completed
@@ -494,9 +493,9 @@ def _split_args(args_region: str) -> Tuple[List[str], str]:
 
 def _filter_table(
     token: str,
-    table: List[Tuple[str, str]],
+    table: list[tuple[str, str]],
     kind: str,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Filter a (name, description) table by prefix and wrap as items."""
     token_lower = token.lower()
     return [
@@ -514,8 +513,8 @@ def _filter_table(
 
 def _complete_tools(
     args_region: str,
-    tool_names: List[Tuple[str, str]],
-) -> List[Dict[str, Any]]:
+    tool_names: list[tuple[str, str]],
+) -> list[dict[str, Any]]:
     """`/tools <subcmd>` + `/tools help <tool>`."""
     completed, token = _split_args(args_region)
 
@@ -530,11 +529,11 @@ def _complete_tools(
 
 def _complete_task(
     args_region: str,
-    agent_runs: List[Dict[str, Any]],
+    agent_runs: list[dict[str, Any]],
     *,
-    table: Optional[List[Tuple[str, str]]] = None,
+    table: list[tuple[str, str]] | None = None,
     kind: str = "task",
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """`/task <verb>` + status-aware `/task <verb> <run_id>` completion.
 
     The verb determines which runs make sense as its id argument
@@ -565,7 +564,7 @@ def _complete_task(
 
     statuses = _TASK_ID_VERB_STATUSES[verb]
     token_lower = token.lower()
-    items: List[Dict[str, Any]] = []
+    items: list[dict[str, Any]] = []
     for run in agent_runs:
         run_id = str(run.get("id", ""))
         status = str(run.get("status", ""))
@@ -594,7 +593,7 @@ def _complete_task(
     return items
 
 
-def _complete_usage(args_region: str) -> List[Dict[str, Any]]:
+def _complete_usage(args_region: str) -> list[dict[str, Any]]:
     """`/usage <subcmd>` + `/usage show <mode>`."""
     completed, token = _split_args(args_region)
 
@@ -607,7 +606,7 @@ def _complete_usage(args_region: str) -> List[Dict[str, Any]]:
     return []
 
 
-def _complete_checkpoint(args_region: str) -> List[Dict[str, Any]]:
+def _complete_checkpoint(args_region: str) -> list[dict[str, Any]]:
     """`/checkpoint <subcmd>` + `/checkpoint backend <backend>`."""
     completed, token = _split_args(args_region)
 
@@ -620,7 +619,7 @@ def _complete_checkpoint(args_region: str) -> List[Dict[str, Any]]:
     return []
 
 
-def _complete_status(args_region: str) -> List[Dict[str, Any]]:
+def _complete_status(args_region: str) -> list[dict[str, Any]]:
     """`/status <subcmd>`."""
     completed, token = _split_args(args_region)
     if not completed:
@@ -628,7 +627,7 @@ def _complete_status(args_region: str) -> List[Dict[str, Any]]:
     return []
 
 
-def _complete_theme(args_region: str) -> List[Dict[str, Any]]:
+def _complete_theme(args_region: str) -> list[dict[str, Any]]:
     """`/theme <name|list|emoji>` + `/theme emoji <on|off>`."""
     completed, token = _split_args(args_region)
 
@@ -646,8 +645,8 @@ def _complete_theme(args_region: str) -> List[Dict[str, Any]]:
 
 def _complete_model(
     args_region: str,
-    current_provider: Optional[str],
-) -> List[Dict[str, Any]]:
+    current_provider: str | None,
+) -> list[dict[str, Any]]:
     """`/model <name>` — dynamic, depends on active provider."""
     if not current_provider:
         return []
@@ -656,7 +655,7 @@ def _complete_model(
     provider_config = get_provider_config(current_provider) or {}
     models = provider_config.get("models", {}) or {}
 
-    table: List[Tuple[str, str]] = []
+    table: list[tuple[str, str]] = []
     for model_key, model_info in models.items():
         if not isinstance(model_info, dict):
             continue
@@ -682,12 +681,12 @@ def _complete_model(
     ]
 
 
-def _complete_provider(args_region: str) -> List[Dict[str, Any]]:
+def _complete_provider(args_region: str) -> list[dict[str, Any]]:
     """`/provider <name>` — configured provider IDs."""
     _, token = _split_args(args_region)
     token_lower = token.lower()
 
-    table: List[Tuple[str, str]] = []
+    table: list[tuple[str, str]] = []
     for provider_id, provider_cfg in PROVIDERS.items():
         if not isinstance(provider_cfg, dict):
             continue
@@ -720,7 +719,7 @@ def _complete_path(
     include_files: bool = True,
     include_dirs: bool = True,
     max_entries: int = 200,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Shell-style path completion for command arguments."""
     parent, leaf = _resolve_path_base(partial, working_dir)
     if not parent.exists() or not parent.is_dir():
@@ -737,7 +736,7 @@ def _complete_path(
     except (OSError, PermissionError):
         return []
 
-    items: List[Dict[str, Any]] = []
+    items: list[dict[str, Any]] = []
     for entry in entries:
         if len(items) >= max_entries:
             break
@@ -767,7 +766,7 @@ def _complete_path(
     return items
 
 
-def _resolve_path_base(partial: str, working_dir: str) -> Tuple[Path, str]:
+def _resolve_path_base(partial: str, working_dir: str) -> tuple[Path, str]:
     """Split a user-typed partial path into (parent_dir, leaf_prefix)."""
     if not partial:
         return Path(working_dir), ""
@@ -786,7 +785,7 @@ def _resolve_path_base(partial: str, working_dir: str) -> Tuple[Path, str]:
     return Path(parent_str), leaf
 
 
-def _last_ws_token(text: str) -> Tuple[int, str]:
+def _last_ws_token(text: str) -> tuple[int, str]:
     """Return (start_index, token) for the last whitespace-delimited token."""
     if not text:
         return 0, ""
@@ -806,7 +805,7 @@ def _complete_at_query(
     working_dir: str,
     replace_len: int,
     max_files: int = 100,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Complete @-prefixed references: context providers + file refs.
 
     Context-provider shortcuts (`@git`, `@tree`, `@clipboard`, `@url`)
@@ -816,7 +815,7 @@ def _complete_at_query(
     an empty `@` surfaces both.
     """
     query_lower = query.lower()
-    items: List[Dict[str, Any]] = []
+    items: list[dict[str, Any]] = []
 
     # Context providers (prefix match on the bare name after @)
     context_provider_matched = False
@@ -850,7 +849,7 @@ def _complete_at_query(
 
     # File refs
     root = Path(working_dir)
-    files: List[Tuple[str, str]] = []
+    files: list[tuple[str, str]] = []
 
     if not skip_filesystem:
         try:

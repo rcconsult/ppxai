@@ -24,7 +24,6 @@ from __future__ import annotations
 
 import base64
 import json
-from pathlib import Path
 
 import pytest
 
@@ -32,7 +31,6 @@ from ppxai.engine.client import EngineClient
 from ppxai.engine.session import SessionManager
 from ppxai.engine.session_store import SessionFileStore
 from ppxai.engine.types import Message
-
 
 # A 1x1 red PNG (real bytes, decodable by PIL if needed downstream).
 _RED_PIXEL_PNG = base64.b64decode(

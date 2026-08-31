@@ -4,24 +4,25 @@ Tests for bootstrap context loading from AGENTS.md/CLAUDE.md files.
 v1.14.0: Initial implementation
 """
 
-import pytest
 import tempfile
-from pathlib import Path
 from contextlib import contextmanager
+from pathlib import Path
 
-from ppxai.engine.bootstrap import (
-    BootstrapContext,
-    find_bootstrap_file,
-    DEFAULT_BOOTSTRAP_FILES,
-    LOCAL_PROVIDERS,
+from ppxai.config import (
+    DEFAULT_BOOTSTRAP_FILES as CONFIG_DEFAULT_BOOTSTRAP_FILES,
 )
-from ppxai.engine.context import ContextInjector
 from ppxai.config import (
     get_bootstrap_config,
     get_bootstrap_files,
     is_bootstrap_enabled,
-    DEFAULT_BOOTSTRAP_FILES as CONFIG_DEFAULT_BOOTSTRAP_FILES,
 )
+from ppxai.engine.bootstrap import (
+    DEFAULT_BOOTSTRAP_FILES,
+    LOCAL_PROVIDERS,
+    BootstrapContext,
+    find_bootstrap_file,
+)
+from ppxai.engine.context import ContextInjector
 
 
 @contextmanager
@@ -542,7 +543,7 @@ class TestFindBootstrapFilesByScope:
 
     def test_finds_project_scope_at_git_root(self):
         """Find bootstrap file at git root as project scope."""
-        from ppxai.engine.bootstrap import find_bootstrap_files_by_scope, ContextScope
+        from ppxai.engine.bootstrap import ContextScope, find_bootstrap_files_by_scope
 
         # Use the actual ppxai project which has CLAUDE.md at root
         project_root = Path(__file__).parent.parent
@@ -572,8 +573,8 @@ class TestFindBootstrapFilesByScope:
 
     def test_finds_global_project_and_subdir(self):
         """Find files from all three scopes."""
-        from ppxai.engine.bootstrap import find_bootstrap_files_by_scope, ContextScope
-        import os
+
+        from ppxai.engine.bootstrap import find_bootstrap_files_by_scope
 
         with temp_dir() as project_root:
             # Create a fake git repo
@@ -700,7 +701,7 @@ class TestScopePrecedence:
 
     def test_precedence_order_is_global_project_subdir(self):
         """Scopes are returned in order: global, project, subdir."""
-        from ppxai.engine.bootstrap import find_bootstrap_files_by_scope, ContextScope
+        from ppxai.engine.bootstrap import ContextScope, find_bootstrap_files_by_scope
 
         with temp_dir() as project_root:
             # Create a fake git repo

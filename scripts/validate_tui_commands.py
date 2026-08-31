@@ -11,18 +11,19 @@ Usage:
 """
 
 import asyncio
-from pathlib import Path
-from rich.console import Console
-from rich.table import Table
-from rich.panel import Panel
 
 # Add project root to path
 import sys
+from pathlib import Path
+
+from rich.console import Console
+from rich.panel import Panel
+from rich.table import Table
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from ppxai.commands.factory import CommandFactory
 from ppxai.commands.results import ResultStatus
-
 
 console = Console()
 
@@ -71,7 +72,7 @@ async def validate_factory_registration():
         console.print(f"\n[red]❌ Missing critical commands: {missing}[/red]")
         return False
     else:
-        console.print(f"\n[green]✅ All critical commands registered[/green]")
+        console.print("\n[green]✅ All critical commands registered[/green]")
         return True
 
 
@@ -189,8 +190,9 @@ async def validate_result_types():
     print_header("Phase 6.2.5: Result Type Validation")
 
     from ppxai.commands.results import (
-        TextResult, ErrorResult, ListResult, KeyValueResult,
-        TableResult, FileViewResult, ConfirmationResult, NotificationResult
+        KeyValueResult,
+        ListResult,
+        TextResult,
     )
 
     # Simple mock context

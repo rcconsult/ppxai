@@ -17,17 +17,13 @@ that used to express "mode says X but the capability says Y" no longer
 have a way to be written, which is the point.
 """
 
-import asyncio
-import pytest
-from dataclasses import dataclass, field
-from typing import AsyncIterator, Dict, Any, List, Optional
-from unittest.mock import MagicMock, patch, AsyncMock
 
-from ppxai.engine.chat import chat_with_tools, _build_prompt_based_messages
-from ppxai.engine.types import Event, EventType, Message, UsageStats, ProviderCapabilities
+import pytest
+
+from ppxai.engine.chat import _build_prompt_based_messages, chat_with_tools
 from ppxai.engine.model_facts import ModelFacts
 from ppxai.engine.session import SessionManager
-from ppxai.engine.tools.manager import ToolManager
+from ppxai.engine.types import Event, EventType, Message, ProviderCapabilities
 
 
 class MockProvider:

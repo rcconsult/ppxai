@@ -8,7 +8,6 @@ import signal
 import time
 
 from fastapi import APIRouter, Depends, HTTPException
-from typing import Optional
 
 from ...common.logger import get_logger
 from ...config import (
@@ -16,8 +15,10 @@ from ...config import (
     get_auto_restore_mode,
     get_available_providers,
     get_idle_timeout,
-    get_paths_config as _get_paths_config,
     reload_config,
+)
+from ...config import (
+    get_paths_config as _get_paths_config,
 )
 from ...version import __version__
 from ..state import Session, get_session, get_session_manager, get_shutdown_event

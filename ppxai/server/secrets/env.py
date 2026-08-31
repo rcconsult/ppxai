@@ -13,9 +13,9 @@ unsupported (``capabilities()`` advertises only ``resolve``), so
 
 from __future__ import annotations
 
+import builtins
 import hmac
 import os
-from typing import List, Optional, Tuple
 
 from .base import (
     CAP_RESOLVE,
@@ -45,7 +45,7 @@ class EnvSecretProvider:
     def capabilities(self) -> frozenset:
         return frozenset({CAP_RESOLVE})
 
-    def _expected(self) -> Optional[str]:
+    def _expected(self) -> str | None:
         """Current configured token, or None when auth is disabled.
 
         Read live (not cached) so operators can enable/disable/rotate by
@@ -60,7 +60,7 @@ class EnvSecretProvider:
         return self._expected() is not None
 
     # -- resolve ------------------------------------------------------
-    def resolve(self, presented: str) -> Optional[TokenRecord]:
+    def resolve(self, presented: str) -> TokenRecord | None:
         expected = self._expected()
         if expected is None:
             return None
@@ -74,15 +74,15 @@ class EnvSecretProvider:
         )
 
     # -- mutating ops (unsupported) -----------------------------------
-    def list(self) -> List[TokenRecord]:
+    def list(self) -> builtins.list[TokenRecord]:
         raise CapabilityError(self.name, "list")
 
     def mint(
         self,
         owner: str,
-        roles: Tuple[str, ...] = (),
-        ttl_s: Optional[float] = None,
-    ) -> Tuple[str, TokenRecord]:
+        roles: tuple[str, ...] = (),
+        ttl_s: float | None = None,
+    ) -> tuple[str, TokenRecord]:
         raise CapabilityError(self.name, "mint")
 
     def revoke(self, token_id: str) -> bool:

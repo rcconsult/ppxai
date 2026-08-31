@@ -2,16 +2,15 @@
 Session management endpoints (save, load, clear, restore, merge).
 """
 
-from pathlib import Path
+
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Request
-from typing import Optional
 
 from ...engine.session import SessionManager as EngineSessionManager
-from ..state import Session, get_session, with_drained_events
 from ...engine.types import Message
-from ..state import get_agent_run_registry
+from ..state import Session, get_agent_run_registry, get_session, with_drained_events
 from .agent_v1 import _caller_owner
+from pathlib import Path  # noqa: F401 — patched by tests
 
 router = APIRouter()
 
@@ -104,7 +103,7 @@ async def get_sessions(s: Session = Depends(get_session)):
 
 @router.post("/sessions/save")
 async def save_session(
-    name: Optional[str] = Body(None, embed=True),
+    name: str | None = Body(None, embed=True),
     s: Session = Depends(get_session)
 ):
     """Save current session.

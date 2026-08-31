@@ -4,12 +4,9 @@ Tests the LibreOffice-based rendering pipeline and the VL sidecar
 batch captioning tool added in v1.17.4.
 """
 
-import base64
-from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -99,6 +96,7 @@ class TestRenderPptxSlides:
         the freshness check entirely. This test pins the fix.
         """
         import os
+
         from ppxai.engine.tools.builtin.pptx_tools import render_pptx_slides
 
         # Source pptx exists with a known mtime (now)
@@ -129,6 +127,7 @@ class TestRenderPptxSlides:
     def test_cache_kept_when_source_is_older(self, tmp_path):
         """Inverse: when cache is up-to-date, no re-render happens."""
         import os
+
         from ppxai.engine.tools.builtin.pptx_tools import render_pptx_slides
 
         # Source exists, but the cache is NEWER than the source.

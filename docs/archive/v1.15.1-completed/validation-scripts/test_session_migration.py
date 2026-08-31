@@ -4,14 +4,14 @@ Quick integration test for session command migration.
 Tests that the new typed-result session commands work end-to-end.
 """
 
-from ppxai.commands.session import handle_sessions_v2, handle_clear_v2
-from ppxai.commands.context import RichCommandContext
-from ppxai.commands.results import TableResult, ConfirmationResult
-from ppxai.rendering.rich_renderer import RichRenderer
-from ppxai.engine import EngineClient
-from ppxai.config import get_default_provider, get_default_model, get_api_key, get_base_url
-from ppxai.commands import CommandHandler
 from rich.console import Console
+
+from ppxai.commands import CommandHandler
+from ppxai.commands.context import RichCommandContext
+from ppxai.commands.results import ConfirmationResult, TableResult
+from ppxai.commands.session import handle_clear_v2, handle_sessions_v2
+from ppxai.config import get_api_key, get_base_url, get_default_model, get_default_provider
+from ppxai.rendering.rich_renderer import RichRenderer
 
 console = Console()
 

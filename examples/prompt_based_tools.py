@@ -23,9 +23,10 @@ See also:
 """
 
 import json
-import re
 import os
-from typing import Any, Callable, Optional
+import re
+from collections.abc import Callable
+
 from openai import OpenAI
 
 # =============================================================================
@@ -99,7 +100,7 @@ def get_weather(location: str) -> str:
     return f"Weather in {location}: 18°C, partly cloudy, humidity 65%"
 
 
-def read_file(filepath: str, max_lines: Optional[int] = None) -> str:
+def read_file(filepath: str, max_lines: int | None = None) -> str:
     """Read file contents."""
     try:
         with open(filepath, 'r', encoding='utf-8') as f:
@@ -201,7 +202,7 @@ You have access to tools. To use a tool, respond with ONLY a JSON block in this 
 # Tool Call Parser (Multi-Strategy)
 # =============================================================================
 
-def parse_tool_call(text: str, tools: list[dict]) -> Optional[dict]:
+def parse_tool_call(text: str, tools: list[dict]) -> dict | None:
     """
     Parse tool call from model response using multiple strategies.
 
@@ -270,7 +271,7 @@ def parse_tool_call(text: str, tools: list[dict]) -> Optional[dict]:
     return None
 
 
-def _try_parse_json(json_str: str, tool_names: set) -> Optional[dict]:
+def _try_parse_json(json_str: str, tool_names: set) -> dict | None:
     """
     Try to parse JSON and normalize the tool call.
 
@@ -348,7 +349,7 @@ def chat_with_tools(
     user_message: str,
     tools: list[dict],
     tool_handlers: dict[str, Callable],
-    system_prompt: Optional[str] = None,
+    system_prompt: str | None = None,
     max_iterations: int = 10,
     verbose: bool = True
 ) -> str:

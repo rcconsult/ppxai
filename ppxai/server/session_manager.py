@@ -12,14 +12,16 @@ import asyncio
 import os
 import threading
 import time
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Optional, Callable, Awaitable
+from typing import Optional
 
 from ..common.logger import get_logger
-from ..config import get_available_providers, get_server_config
+from ..config import get_available_providers
 from ..config.paths import get_default_working_dir
 from ..engine import EngineClient
+from pathlib import Path  # noqa: F401 — patched by tests
+from ..config import get_available_providers, get_server_config  # noqa: F401 — patched by tests
 
 logger = get_logger("session_manager")
 
@@ -91,8 +93,8 @@ class SessionManager:
         self._sessions_lock = asyncio.Lock()
 
         # Default engine for backward compatibility
-        self._default_engine: Optional['EngineClient'] = None
-        self._default_lock: Optional[asyncio.Lock] = None
+        self._default_engine: 'EngineClient' | None = None
+        self._default_lock: asyncio.Lock | None = None
 
         # Consent request tracking (keyed by (session_id, identifier))
         self._pending_consent: dict[tuple[str, str], asyncio.Future] = {}
@@ -105,7 +107,7 @@ class SessionManager:
         self._shutdown_reason: str = "unknown"
 
         # Idle shutdown task
-        self._idle_task: Optional[asyncio.Task] = None
+        self._idle_task: asyncio.Task | None = None
 
         # Configuration
         self._session_timeout: int = 3600  # 1 hour default
@@ -138,8 +140,8 @@ class SessionManager:
 
     async def initialize(
         self,
-        consent_callback: Optional[Callable[[str], Awaitable[tuple[bool, str]]]] = None,
-        shell_consent_callback: Optional[Callable[[str, str, str], Awaitable[tuple[bool, str]]]] = None,
+        consent_callback: Callable[[str], Awaitable[tuple[bool, str]]] | None = None,
+        shell_consent_callback: Callable[[str, str, str], Awaitable[tuple[bool, str]]] | None = None,
     ) -> None:
         """
         Initialize the session manager with default engine.
@@ -233,7 +235,7 @@ class SessionManager:
 
     async def get_or_create_session(
         self,
-        session_id: Optional[str]
+        session_id: str | None
     ) -> tuple[str, 'EngineClient', asyncio.Lock]:
         """
         Get existing session or create new one.
@@ -491,12 +493,12 @@ class SessionManager:
 
         async with self._consent_lock:
             if key not in self._pending_consent:
-                logger.debug(f"Consent: key NOT FOUND in pending_consent!")
+                logger.debug("Consent: key NOT FOUND in pending_consent!")
                 return False
 
             future = self._pending_consent[key]
             if future.done():
-                logger.debug(f"Consent: Future already done!")
+                logger.debug("Consent: Future already done!")
                 return False
 
             approved = response in ['y', 'always']

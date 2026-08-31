@@ -12,16 +12,15 @@ v1.15.0: Type-based renderer dispatch refactoring
 """
 
 import pytest
-from ppxai.rendering.base import Renderer, AsyncRenderer
+
 from ppxai.commands.results import (
-    ResultStatus,
-    CommandResult,
-    NotificationResult,
     ErrorResult,
+    NotificationResult,
+    ResultStatus,
     TableResult,
     TextResult,
 )
-
+from ppxai.rendering.base import AsyncRenderer, Renderer
 
 # ============================================================================
 # Test Renderer Implementations

@@ -6,10 +6,8 @@ based on their extension.
 """
 
 from pathlib import Path
-from typing import Optional
 
 from ..images import IMAGE_EXTENSIONS
-
 
 # File type detection constants
 DATA_FORMATS = {'.json', '.yaml', '.yml', '.toml'}
@@ -35,7 +33,7 @@ def detect_display_mode(path: Path) -> str:
     return "code"
 
 
-def get_data_format(path: Path) -> Optional[str]:
+def get_data_format(path: Path) -> str | None:
     """Get specific data format (json/yaml/toml) for a path.
 
     Args:

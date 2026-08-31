@@ -6,13 +6,10 @@ Covers:
 - render_prompt: free-form input, default value, validation loop, user_input stored
 """
 
-import re
-import pytest
-from unittest.mock import patch, call
+from unittest.mock import patch
 
 from ppxai.commands.results import ConsentResult, PromptResult, ResultStatus
 from ppxai.rendering.rich_renderer import RichRenderer
-
 
 # ---------------------------------------------------------------------------
 # Helpers

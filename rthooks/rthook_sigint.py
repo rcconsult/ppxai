@@ -9,4 +9,5 @@
 # in-flight SIGINT during startup. Uvicorn installs its own SIGINT handler
 # when it starts, restoring normal Ctrl+C behavior for the running server.
 import signal
+
 signal.signal(signal.SIGINT, signal.SIG_IGN)

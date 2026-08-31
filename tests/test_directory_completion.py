@@ -2,6 +2,7 @@
 """Test directory path completion."""
 
 from pathlib import Path
+
 from ppxai.tui.completer import TextualCompleter
 
 completer = TextualCompleter(working_dir=Path.cwd())
@@ -30,16 +31,16 @@ for text, description, expected in tests:
         # Verify directory paths return full paths
         if '/' in text.split()[-1]:
             if '/' in comp_text:
-                print(f"  ✓ Correctly returns full path")
+                print("  ✓ Correctly returns full path")
             else:
-                print(f"  ✗ ERROR: Should return full path, got just filename")
+                print("  ✗ ERROR: Should return full path, got just filename")
         else:
             if '/' not in comp_text:
-                print(f"  ✓ Correctly returns just filename")
+                print("  ✓ Correctly returns just filename")
             else:
-                print(f"  ✗ ERROR: Should return just filename, got path")
+                print("  ✗ ERROR: Should return just filename, got path")
     else:
-        print(f"  ⚠ No matches (files may not be in cache)")
+        print("  ⚠ No matches (files may not be in cache)")
 
 print("\n" + "=" * 60)
 print("✓ Directory completion test completed")

@@ -15,7 +15,6 @@ import pytest
 from ppxai.engine.file_ref import FileRef, resolve_file_reference
 from ppxai.engine.session_store import SessionFileStore
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------

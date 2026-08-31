@@ -22,16 +22,17 @@ treats it exactly like a normal manager — it just sees a smaller toolset.
 from __future__ import annotations
 
 import difflib
-from typing import Any, Callable, Dict, List, Optional
+from collections.abc import Callable
+from typing import Any
 
+from ..common.logger import get_logger
 from .tools.builtin.web_premium import set_egress_predicate as _set_egress_predicate
 from .tools.filesystem_policy import FilesystemPolicy, is_path_tool
 from .tools.network_policy import (
-    NetworkPolicy,
     SHELL_TOOL_NAMES,
+    NetworkPolicy,
     is_network_tool,
 )
-from ..common.logger import get_logger
 
 logger = get_logger("tui")
 
@@ -70,12 +71,12 @@ class ScopedToolManager:
     def __init__(
         self,
         base: Any,
-        grant: List[str],
-        on_deny: Optional[Callable[[str], None]] = None,
-        network_policy: Optional[NetworkPolicy] = None,
-        on_network: Optional[Callable[[bool, dict], None]] = None,
-        filesystem_policy: Optional[FilesystemPolicy] = None,
-        on_path: Optional[Callable[[bool, dict], None]] = None,
+        grant: list[str],
+        on_deny: Callable[[str], None] | None = None,
+        network_policy: NetworkPolicy | None = None,
+        on_network: Callable[[bool, dict], None] | None = None,
+        filesystem_policy: FilesystemPolicy | None = None,
+        on_path: Callable[[bool, dict], None] | None = None,
     ) -> None:
         self._base = base
         self._grant = set(grant or [])
@@ -174,7 +175,7 @@ class ScopedToolManager:
         finally:
             _set_egress_predicate(prior)
 
-    def _check_path(self, name: str, kwargs: dict) -> Optional[str]:
+    def _check_path(self, name: str, kwargs: dict) -> str | None:
         """Run the filesystem confinement check for a path tool. Returns a
         model-readable denial string if the path is off-scope (and the tool must
         NOT run), or None if allowed. Emits a `path_denied` event on denial
@@ -198,7 +199,7 @@ class ScopedToolManager:
             f"read within the allowed roots, write only inside the run workdir."
         )
 
-    def _check_network(self, name: str, kwargs: dict) -> Optional[str]:
+    def _check_network(self, name: str, kwargs: dict) -> str | None:
         """Run the egress check for a network tool. Returns a model-readable
         denial string if blocked (and the request must NOT fire), or None if
         allowed. Emits the typed NETWORK_POLICY_* event either way.
@@ -242,7 +243,7 @@ class ScopedToolManager:
 
     # --- grant hygiene ---------------------------------------------------
 
-    def unresolved_grant(self) -> List[str]:
+    def unresolved_grant(self) -> list[str]:
         """Granted names that no tool in the BASE registry provides.
 
         v1.19.1 Item 50. A grant entry that matches nothing is always a
@@ -268,7 +269,7 @@ class ScopedToolManager:
             return []
         return sorted({n for n in self._grant if n not in registered})
 
-    def _registered_names(self) -> Optional[set]:
+    def _registered_names(self) -> set | None:
         """Names in the base registry, or None if it cannot be enumerated."""
         getter = getattr(self._base, "get_available_tools", None)
         if not callable(getter):
@@ -278,7 +279,7 @@ class ScopedToolManager:
         except Exception:
             return None
 
-    def unresolved_grant_message(self) -> Optional[str]:
+    def unresolved_grant_message(self) -> str | None:
         """Human-facing explanation of `unresolved_grant()`, or None if clean.
 
         Includes a near-miss suggestion per bad name: difflib first, then a
@@ -303,13 +304,13 @@ class ScopedToolManager:
 
     # --- filtered OFFERED set (model never sees off-grant tools) ---------
 
-    def get_available_tools(self) -> List[Any]:
+    def get_available_tools(self) -> list[Any]:
         return [t for t in self._base.get_available_tools() if self._granted(t.name)]
 
-    def list_tools(self) -> List[Dict[str, Any]]:
+    def list_tools(self) -> list[dict[str, Any]]:
         return [t for t in self._base.list_tools() if self._granted(t.get("name"))]
 
-    def get_tools_openai_format(self) -> List[Dict[str, Any]]:
+    def get_tools_openai_format(self) -> list[dict[str, Any]]:
         out = []
         for spec in self._base.get_tools_openai_format():
             # OpenAI tool spec shape: {"type": "function", "function": {"name": ...}}
@@ -318,7 +319,7 @@ class ScopedToolManager:
                 out.append(spec)
         return out
 
-    def get_tools_prompt(self, working_dir: Optional[str] = None) -> str:
+    def get_tools_prompt(self, working_dir: str | None = None) -> str:
         # AC-1: the prompt-based / native-fallback path uses get_tools_prompt
         # to tell the model which tools exist — so it MUST enumerate only the
         # grant, not every registered tool. The base renderer builds from

@@ -1,21 +1,15 @@
 """Unit tests for the native OpenAI provider."""
 
-import json
-import pytest
-from unittest.mock import patch, MagicMock, PropertyMock
 from types import SimpleNamespace
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 from ppxai.engine.providers.openai_native import (
     OpenAINativeProvider,
-    MAX_COMPLETION_TOKENS_PREFIXES,
-    RESTRICTED_PARAM_PREFIXES,
-    RESPONSES_API_PREFIXES,
-    REASONING_MODEL_PREFIXES,
-    RESTRICTED_GENERATION_PARAMS,
 )
-from ppxai.engine.types import Message, Event, EventType, ProviderCapabilities, UsageStats
 from ppxai.engine.providers.wire.responses import ResponsesHandler
-
+from ppxai.engine.types import EventType, Message, ProviderCapabilities
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -811,7 +805,7 @@ class TestProviderRegistry:
         assert cls is OpenAINativeProvider
 
     def test_other_providers_unchanged(self):
-        from ppxai.engine.providers import get_provider_class, OpenAICompatibleProvider
+        from ppxai.engine.providers import OpenAICompatibleProvider, get_provider_class
         assert get_provider_class("local") is OpenAICompatibleProvider
         assert get_provider_class("custom") is OpenAICompatibleProvider
 

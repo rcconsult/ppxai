@@ -10,9 +10,10 @@ completion without reimplementing the logic in JavaScript/TypeScript.
     Response: {"items": [{"text": "/attach", "display": "/attach", ...}]}
 """
 
+from typing import Any
+
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
-from typing import Any, Dict, List, Optional, Tuple
 
 from ...engine.completion import complete
 from ..state import Session, get_agent_run_registry, get_session
@@ -27,12 +28,12 @@ class CompleteRequest(BaseModel):
     # Which client is asking ("web" | "vscode"). Client-side-only
     # commands (/task, /run, /token) are surfaced only to clients
     # that implement them; None (legacy caller) = no filtering.
-    client: Optional[str] = None
+    client: str | None = None
 
 
 class CompleteResponse(BaseModel):
     """Autocomplete response body."""
-    items: List[Dict[str, Any]]
+    items: list[dict[str, Any]]
 
 
 @router.post("/complete", response_model=CompleteResponse)
@@ -47,9 +48,9 @@ async def complete_endpoint(
     `/model <tab>`, and `/provider <tab>` behaviour that Rich/Textual
     already enjoy via in-process calls.
     """
-    working_dir: Optional[str] = None
-    current_provider: Optional[str] = None
-    tool_names: List[Tuple[str, str]] = []
+    working_dir: str | None = None
+    current_provider: str | None = None
+    tool_names: list[tuple[str, str]] = []
 
     if s.engine:
         working_dir = s.engine.get_working_dir()
@@ -68,7 +69,7 @@ async def complete_endpoint(
     # place the completion engine can learn live run ids. list_runs()
     # is an in-memory read, newest-first. Cheap enough per keystroke.
     # U3: `kind` rides along so each family only offers its own ids.
-    agent_runs: List[Dict[str, Any]] = []
+    agent_runs: list[dict[str, Any]] = []
     stripped = request.buffer.lstrip()
     if stripped.startswith("/task") or stripped.startswith("/run"):
         try:

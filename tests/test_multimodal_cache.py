@@ -16,10 +16,7 @@ This module pins the cache lifecycle so a well-intentioned "simplify
 the save path" refactor doesn't silently turn it back into an O(N) scan.
 """
 
-from pathlib import Path
 from unittest.mock import patch
-
-import pytest
 
 from ppxai.engine.session import SessionManager
 from ppxai.engine.types import Message

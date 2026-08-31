@@ -10,7 +10,7 @@ v1.13.4: Initial implementation
 import contextvars
 import logging
 import os
-from typing import Optional, Tuple, List, Dict, Any
+from typing import Any
 
 import httpx
 from openai import AsyncOpenAI
@@ -18,9 +18,11 @@ from openai import AsyncOpenAI
 from ppxai.config import get_tool_config, get_tool_pricing
 from ppxai.config.tls import tls_verify
 from ppxai.constants import APIEndpoint
+
 from ...model_facts import shipped_facts_for_model
 from ...providers.perplexity import PerplexityProvider
 from ...types import ToolUsage
+
 # ADR 0009 step ④: the ONE shared backend resolver (leaf module, top-level
 # import — retires the function-local `network_policy` import this module
 # used to reach the pin through).
@@ -30,7 +32,7 @@ from . import web
 # Global to store usage from last tool execution (LEGACY channel — see
 # _record_usage). Kept maintained for back-compat readers; new code uses
 # the per-call ContextVar holder below.
-_last_tool_usage: Optional[ToolUsage] = None
+_last_tool_usage: ToolUsage | None = None
 
 # Per-call usage channel (v1.19.1 F4 — fixes ADR 0009 §4's named bug).
 # The module global above is a process-wide reset-on-read handoff: with two
@@ -41,7 +43,7 @@ _last_tool_usage: Optional[ToolUsage] = None
 # inherits a context COPY, but the holder LIST is the same object, so the
 # handler's usage lands in exactly that caller's holder — per-run by
 # construction, no shared mutable slot.
-_tool_usage_holder: contextvars.ContextVar[Optional[list]] = contextvars.ContextVar(
+_tool_usage_holder: contextvars.ContextVar[list | None] = contextvars.ContextVar(
     "web_search_usage_holder", default=None
 )
 
@@ -51,12 +53,12 @@ _tool_usage_holder: contextvars.ContextVar[Optional[list]] = contextvars.Context
 # `preferred:perplexity` + perplexity-only task allowlist never *tries* the DDG
 # fallback the sandbox would deny (the divergence that produced a fabricated
 # weather answer, 2026-08-10). None (chat / unconfined runs) = full chain.
-_egress_allows_holder: contextvars.ContextVar[Optional[Any]] = contextvars.ContextVar(
+_egress_allows_holder: contextvars.ContextVar[Any | None] = contextvars.ContextVar(
     "web_search_egress_allows", default=None
 )
 
 
-def set_egress_predicate(pred: Optional[Any]) -> Optional[Any]:
+def set_egress_predicate(pred: Any | None) -> Any | None:
     """Install (and return the prior) run egress host-predicate on the current
     context. ScopedToolManager wraps each network-tool call so the search chain
     resolves the same narrowed candidate set the egress guard authorized."""
@@ -94,7 +96,7 @@ def is_available() -> bool:
     return bool(os.getenv("PERPLEXITY_API_KEY") or os.getenv("GEMINI_API_KEY"))
 
 
-def get_premium_search_provider(provider_name: Optional[str] = None) -> Optional[str]:
+def get_premium_search_provider(provider_name: str | None = None) -> str | None:
     """The FIRST backend the search chain will try, via the shared resolver.
 
     ADR 0009 step ④: delegates to `resolve_web_search_backend` — the same
@@ -186,7 +188,7 @@ def _responses_answer_and_citations(response, num_results: int):
     return content, citations[:num_results]
 
 
-async def web_search_perplexity(query: str, num_results: int = 5) -> Tuple[str, List[str], ToolUsage]:
+async def web_search_perplexity(query: str, num_results: int = 5) -> tuple[str, list[str], ToolUsage]:
     """Search web using Perplexity Sonar API.
 
     Uses OpenAI-compatible API format.
@@ -278,7 +280,7 @@ async def web_search_perplexity(query: str, num_results: int = 5) -> Tuple[str, 
     return content, citations, usage
 
 
-async def web_search_gemini(query: str, num_results: int = 5) -> Tuple[str, List[str], ToolUsage]:
+async def web_search_gemini(query: str, num_results: int = 5) -> tuple[str, list[str], ToolUsage]:
     """Search web using Gemini + Google Search Grounding.
 
     Uses REST API for simplicity (avoids extra google-genai dependency).
@@ -351,7 +353,7 @@ async def web_search_gemini(query: str, num_results: int = 5) -> Tuple[str, List
 
 
 def _format_search_result(
-    backend: str, content: str, citations: List[str], fallback: bool = False
+    backend: str, content: str, citations: list[str], fallback: bool = False
 ) -> str:
     """Provider tag at the beginning for visibility (v1.15.3 — not truncated)."""
     tag = f"[via {backend} (fallback)]" if fallback else f"[via {backend}]"
@@ -361,7 +363,7 @@ def _format_search_result(
     return result
 
 
-async def web_search_premium(query: str, num_results: int = 5, _provider_name: Optional[str] = None) -> str:
+async def web_search_premium(query: str, num_results: int = 5, _provider_name: str | None = None) -> str:
     """Search the web through the resolver's ordered backend chain.
 
     ADR 0009 step ④ / Q5: the chain IS `resolve_web_search_backend(...)`
@@ -389,7 +391,7 @@ async def web_search_premium(query: str, num_results: int = 5, _provider_name: O
     resolution = resolve_web_search_backend(
         _provider_name, egress_allows=_egress_allows_holder.get()
     )
-    last_error: Optional[Exception] = None
+    last_error: Exception | None = None
 
     for i, backend in enumerate(resolution.candidates):
         try:
@@ -423,7 +425,7 @@ async def web_search_premium(query: str, num_results: int = 5, _provider_name: O
 
 
 async def get_weather_premium(
-    location: str, format: str = "short", _provider_name: Optional[str] = None
+    location: str, format: str = "short", _provider_name: str | None = None
 ) -> str:
     """Weather via a three-tier chain: wttr.in → Open-Meteo → premium search.
 
@@ -474,7 +476,7 @@ async def get_weather_premium(
     return om
 
 
-def get_last_tool_usage() -> Optional[ToolUsage]:
+def get_last_tool_usage() -> ToolUsage | None:
     """Get usage from last premium search call.
 
     LEGACY channel (v1.19.1 F4): process-global, reset-on-read — racy under

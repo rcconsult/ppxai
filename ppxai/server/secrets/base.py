@@ -33,7 +33,7 @@ chain.py.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Optional, Protocol, Tuple, runtime_checkable
+from typing import Protocol, runtime_checkable
 
 # ---------------------------------------------------------------------------
 # Capability tokens. A provider advertises which mutating operations it
@@ -81,8 +81,8 @@ class TokenRecord:
     token_id: str
     owner: str
     secret_ref: SecretRef
-    roles: Tuple[str, ...] = field(default_factory=tuple)
-    expires_at: Optional[float] = None
+    roles: tuple[str, ...] = field(default_factory=tuple)
+    expires_at: float | None = None
     revoked: bool = False
 
     def is_active(self, now: float) -> bool:
@@ -111,7 +111,7 @@ class SecretProvider(Protocol):
         """Set of CAP_* this provider supports. Always includes resolve."""
         ...
 
-    def resolve(self, presented: str) -> Optional[TokenRecord]:
+    def resolve(self, presented: str) -> TokenRecord | None:
         """Validate an inbound bearer string.
 
         Returns the matching active :class:`TokenRecord`, or ``None`` if
@@ -128,9 +128,9 @@ class SecretProvider(Protocol):
     def mint(
         self,
         owner: str,
-        roles: Tuple[str, ...] = (),
-        ttl_s: Optional[float] = None,
-    ) -> Tuple[str, TokenRecord]:
+        roles: tuple[str, ...] = (),
+        ttl_s: float | None = None,
+    ) -> tuple[str, TokenRecord]:
         """Create a token. Returns ``(raw_material, record)``.
 
         The raw material is returned EXACTLY ONCE; the provider persists

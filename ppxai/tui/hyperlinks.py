@@ -7,11 +7,8 @@ Generates terminal hyperlinks that are clickable in supported terminals
 OSC 8 format: \033]8;;URL\033\\TEXT\033]8;;\033\\
 """
 
-import os
 import re
 from pathlib import Path
-from typing import Optional
-
 
 # OSC 8 escape sequences
 OSC_START = "\033]8;;"

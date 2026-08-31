@@ -10,7 +10,6 @@ v1.13.8: Initial implementation
 import json
 import re
 from pathlib import Path
-from typing import Optional, Literal
 
 # Extension to format mapping
 EXTENSION_MAP = {
@@ -40,9 +39,9 @@ DELIMITER_CANDIDATES = [",", "\t", ";", "|"]
 
 def detect_format(
     filepath: str,
-    content: Optional[str] = None,
+    content: str | None = None,
     auto_detect: bool = True,
-) -> Optional[str]:
+) -> str | None:
     """
     Detect data format from file path and optionally content.
 
@@ -124,7 +123,7 @@ def is_data_format(filepath: str) -> bool:
     return ext in EXTENSION_MAP
 
 
-def _sniff_format(content: str) -> Optional[str]:
+def _sniff_format(content: str) -> str | None:
     """
     Attempt to detect format from content.
 

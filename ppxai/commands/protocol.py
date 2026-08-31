@@ -13,7 +13,8 @@ Architecture:
 v1.15.0: Type-based renderer dispatch refactoring
 """
 
-from typing import Any, Protocol, runtime_checkable, Callable, Optional
+from collections.abc import Callable
+from typing import Any, Protocol, runtime_checkable
 
 from ..engine.types import EngineClientProtocol
 from .results import CommandResult
@@ -179,7 +180,7 @@ class CommandContext(Protocol):
     # Optional Methods for Advanced Features
     # ========================================================================
 
-    def get_config_value(self, key: str, default: Optional[str] = None) -> Optional[str]:
+    def get_config_value(self, key: str, default: str | None = None) -> str | None:
         """Get configuration value.
 
         Args:

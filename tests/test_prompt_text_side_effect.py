@@ -19,7 +19,6 @@ from ppxai.commands.results import (
     SideEffectKind,
 )
 
-
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 

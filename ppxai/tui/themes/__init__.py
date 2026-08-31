@@ -9,6 +9,6 @@ Built-in themes available via Ctrl+P command palette.
 Curated themes cycle via Ctrl+T.
 """
 
-from ppxai.tui.themes.themes import CUSTOM_THEMES, DEFAULT_THEME, CYCLE_THEMES
+from ppxai.tui.themes.themes import CUSTOM_THEMES, CYCLE_THEMES, DEFAULT_THEME
 
 __all__ = ["CUSTOM_THEMES", "DEFAULT_THEME", "CYCLE_THEMES"]

@@ -5,7 +5,6 @@ Provides copy/paste functionality using pyperclip for cross-platform
 clipboard access. Note: Only text is supported (no images or binary data).
 """
 
-from typing import Optional
 
 import pyperclip  # Required dependency (in pyproject.toml)
 
@@ -30,7 +29,7 @@ def copy_to_clipboard(text: str) -> bool:
         return False
 
 
-def paste_from_clipboard() -> Optional[str]:
+def paste_from_clipboard() -> str | None:
     """Paste text from the system clipboard.
 
     Returns:

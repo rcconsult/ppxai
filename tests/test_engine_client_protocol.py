@@ -19,8 +19,6 @@ Failure modes these tests catch:
 
 from __future__ import annotations
 
-from typing import get_type_hints
-
 import pytest
 
 from ppxai.engine.types import EngineClientProtocol
@@ -32,7 +30,6 @@ class TestProtocolStructure:
     def test_runtime_checkable(self):
         """isinstance() must work — commands rely on this for adapter wrapping."""
         # This will raise TypeError if the protocol forgot @runtime_checkable.
-        from typing import runtime_checkable
         # Just calling isinstance against an unrelated object is enough; we
         # don't care about the result, only that it doesn't TypeError.
         try:

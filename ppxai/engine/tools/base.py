@@ -4,10 +4,9 @@ Base tool abstract class.
 All tools must implement this interface.
 """
 
-import asyncio
 import inspect
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional, List
+from typing import Any
 
 
 class BaseTool(ABC):
@@ -22,11 +21,11 @@ class BaseTool(ABC):
     # Tool metadata (override in subclasses)
     name: str = "base_tool"
     description: str = "Base tool description"
-    parameters: Dict[str, Any] = {"type": "object", "properties": {}, "required": []}
+    parameters: dict[str, Any] = {"type": "object", "properties": {}, "required": []}
 
     # Provider filtering (None = available to all)
-    provider_specific: Optional[List[str]] = None  # Only for these providers
-    provider_excluded: Optional[List[str]] = None  # Excluded for these providers
+    provider_specific: list[str] | None = None  # Only for these providers
+    provider_excluded: list[str] | None = None  # Excluded for these providers
 
     @abstractmethod
     async def execute(self, **kwargs) -> str:
@@ -60,7 +59,7 @@ class BaseTool(ABC):
         # Otherwise available to all
         return True
 
-    def get_definition(self) -> Dict[str, Any]:
+    def get_definition(self) -> dict[str, Any]:
         """Get tool definition for prompts.
 
         Returns:
@@ -83,10 +82,10 @@ class FunctionTool(BaseTool):
         self,
         name: str,
         description: str,
-        parameters: Dict[str, Any],
+        parameters: dict[str, Any],
         handler: callable,
-        provider_specific: Optional[List[str]] = None,
-        provider_excluded: Optional[List[str]] = None
+        provider_specific: list[str] | None = None,
+        provider_excluded: list[str] | None = None
     ):
         """Create a tool from a function.
 

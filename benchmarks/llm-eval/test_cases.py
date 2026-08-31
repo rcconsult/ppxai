@@ -16,12 +16,13 @@ Categories:
 
 import json
 import re
-from typing import Callable, Any
+from collections.abc import Callable
 from dataclasses import dataclass
 
-from response_quality import validate_response_quality, QualityMetrics
+from response_quality import validate_response_quality
+
 from ppxai.engine.model_facts import shipped_facts_for_model
-from ppxai.engine.tools.builtin.editor import _replace_hunk, _apply_search_replace_diff
+from ppxai.engine.tools.builtin.editor import _apply_search_replace_diff, _replace_hunk
 
 
 def _dedup_tool_call(

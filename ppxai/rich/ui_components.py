@@ -10,22 +10,21 @@ Provides reusable Rich-based components with theme support:
 This module is designed to be imported by ui.py without breaking existing functionality.
 """
 
-import os
 import re
 import tempfile
 from datetime import datetime
 from pathlib import Path
-from typing import Any, List, Optional
+from typing import Any
 
 from rich import box
-from rich.console import Console, RenderableType
+from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-from .themes import Theme, get_theme, DEFAULT_THEME, THEMES
 from ..common.format import format_usage_badge
+from .themes import DEFAULT_THEME, THEMES, Theme, get_theme
 
 # Single temp file for copy link feature (v1.15.0)
 # Gets overwritten with each new assistant response - no accumulation
@@ -253,7 +252,7 @@ def sanitize_for_panel(text: str, use_text_symbols: bool = True) -> str:
     return result
 
 
-def _save_message_for_copy(content: str) -> Optional[str]:
+def _save_message_for_copy(content: str) -> str | None:
     """Save message content to temp file for copy link (v1.15.0).
 
     Overwrites a single temp file with latest response content.
@@ -279,8 +278,8 @@ console = Console()
 def render_message(
     content: str,
     role: str,
-    theme: Optional[Theme] = None,
-    timestamp: Optional[datetime] = None,
+    theme: Theme | None = None,
+    timestamp: datetime | None = None,
     show_timestamp: bool = True,
     normalize_emojis: bool = True,
     show_copy_link: bool = True,
@@ -371,9 +370,9 @@ def render_status_badges(
     model: str,
     tools_enabled: bool = False,
     agent_mode: bool = False,
-    usage_str: Optional[str] = None,
-    checkpoint_str: Optional[str] = None,
-    theme: Optional[Theme] = None,
+    usage_str: str | None = None,
+    checkpoint_str: str | None = None,
+    theme: Theme | None = None,
 ) -> Text:
     """Render a row of status badges.
 
@@ -432,9 +431,9 @@ def render_header(
     model: str,
     tools_enabled: bool = False,
     agent_mode: bool = False,
-    usage_str: Optional[str] = None,
-    checkpoint_str: Optional[str] = None,
-    theme: Optional[Theme] = None,
+    usage_str: str | None = None,
+    checkpoint_str: str | None = None,
+    theme: Theme | None = None,
 ) -> Panel:
     """Render the application header with status badges.
 
@@ -488,9 +487,9 @@ def render_status_line(
     model: str,
     tools_enabled: bool = False,
     agent_mode: bool = False,
-    usage_str: Optional[str] = None,
-    checkpoint_str: Optional[str] = None,
-    theme: Optional[Theme] = None,
+    usage_str: str | None = None,
+    checkpoint_str: str | None = None,
+    theme: Theme | None = None,
 ) -> Text:
     """Render a compact status line (for bottom of screen).
 
@@ -546,7 +545,7 @@ def render_status_line(
     return status
 
 
-def render_input_prompt_header(theme: Optional[Theme] = None) -> str:
+def render_input_prompt_header(theme: Theme | None = None) -> str:
     """Render the top border of an input frame.
 
     This creates a visual frame illusion for the input prompt.
@@ -566,7 +565,7 @@ def render_input_prompt_header(theme: Optional[Theme] = None) -> str:
     return f"[{theme.user_style}]╭─ {title} ─────────────────────────────────────────────╮[/{theme.user_style}]"
 
 
-def render_input_prompt_footer(theme: Optional[Theme] = None) -> str:
+def render_input_prompt_footer(theme: Theme | None = None) -> str:
     """Render the bottom border of an input frame.
 
     Args:
@@ -586,14 +585,14 @@ def render_status_panel(
     model: str,
     tools_enabled: bool = False,
     agent_mode: bool = False,
-    usage_str: Optional[str] = None,
-    checkpoint_str: Optional[str] = None,
-    theme: Optional[Theme] = None,
-    version: Optional[str] = None,
-    working_dir: Optional[str] = None,
+    usage_str: str | None = None,
+    checkpoint_str: str | None = None,
+    theme: Theme | None = None,
+    version: str | None = None,
+    working_dir: str | None = None,
     show_datetime: bool = False,
-    context_percent: Optional[float] = None,
-    pending_files: Optional[List[Any]] = None,
+    context_percent: float | None = None,
+    pending_files: list[Any] | None = None,
 ) -> Panel:
     """Render status line in a framed panel with badges.
 
@@ -738,7 +737,7 @@ def render_status_panel(
     )
 
 
-def render_welcome(theme: Optional[Theme] = None) -> Panel:
+def render_welcome(theme: Theme | None = None) -> Panel:
     """Render welcome message with theme styling.
 
     Args:
@@ -786,7 +785,7 @@ Welcome to the AI terminal interface!
     )
 
 
-def render_error(message: str, theme: Optional[Theme] = None) -> Panel:
+def render_error(message: str, theme: Theme | None = None) -> Panel:
     """Render an error message.
 
     Args:
@@ -809,7 +808,7 @@ def render_error(message: str, theme: Optional[Theme] = None) -> Panel:
     )
 
 
-def render_success(message: str, theme: Optional[Theme] = None) -> Panel:
+def render_success(message: str, theme: Theme | None = None) -> Panel:
     """Render a success message.
 
     Args:
@@ -832,7 +831,7 @@ def render_success(message: str, theme: Optional[Theme] = None) -> Panel:
     )
 
 
-def render_info(message: str, title: str = "Info", theme: Optional[Theme] = None) -> Panel:
+def render_info(message: str, title: str = "Info", theme: Theme | None = None) -> Panel:
     """Render an info message.
 
     Args:

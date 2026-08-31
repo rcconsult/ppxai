@@ -22,11 +22,10 @@ from __future__ import annotations
 
 import csv
 import io
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from ...types import ToolEngineProtocol, ToolManagerProtocol
 from ..base import BaseTool
-
 
 # Maximum characters to return per tool call. Matches the default
 # `_MAX_TEXT_CHARS` used by PDF tools and elsewhere in the engine.
@@ -36,7 +35,7 @@ _MAX_TEXT_CHARS = 100_000
 _MAX_ROWS_PER_REQUEST = 5000
 
 
-def _resolve_file(engine: Any, file_id: str) -> Tuple[Optional[Any], Optional[str]]:
+def _resolve_file(engine: Any, file_id: str) -> tuple[Any | None, str | None]:
     """Look up a file_id in the engine's SessionFileStore.
 
     Returns (FileMetadata, None) on success or (None, error_message) on
@@ -65,7 +64,7 @@ def _resolve_file(engine: Any, file_id: str) -> Tuple[Optional[Any], Optional[st
     return meta, None
 
 
-def _read_csv_rows(path: Any) -> Tuple[List[str], List[List[str]]]:
+def _read_csv_rows(path: Any) -> tuple[list[str], list[list[str]]]:
     """Read all rows from a CSV file, returning (headers, rows).
 
     Uses csv.reader with sniffing for delimiter detection. Falls back
@@ -90,7 +89,7 @@ def _read_csv_rows(path: Any) -> Tuple[List[str], List[List[str]]]:
     return headers, data_rows
 
 
-def _parse_rows_spec(spec: str, total_rows: int) -> Tuple[int, int]:
+def _parse_rows_spec(spec: str, total_rows: int) -> tuple[int, int]:
     """Parse a rows selector like '1-100' into (start_idx, end_idx) 0-based.
 
     Accepts:
@@ -130,10 +129,10 @@ def _parse_rows_spec(spec: str, total_rows: int) -> Tuple[int, int]:
 
 
 def _filter_columns(
-    headers: List[str],
-    rows: List[List[str]],
-    columns: Optional[str],
-) -> Tuple[List[str], List[List[str]], Optional[str]]:
+    headers: list[str],
+    rows: list[list[str]],
+    columns: str | None,
+) -> tuple[list[str], list[list[str]], str | None]:
     """Filter columns by name. Returns (filtered_headers, filtered_rows, error)."""
     if not columns:
         return headers, rows, None
@@ -167,7 +166,7 @@ def _filter_columns(
     return filtered_headers, filtered_rows, None
 
 
-def _format_markdown_table(headers: List[str], rows: List[List[str]]) -> str:
+def _format_markdown_table(headers: list[str], rows: list[list[str]]) -> str:
     """Format rows as a markdown table."""
     if not headers:
         return "(empty CSV)"
@@ -185,7 +184,7 @@ def _format_markdown_table(headers: List[str], rows: List[List[str]]) -> str:
     return "\n".join(lines)
 
 
-def _format_csv(headers: List[str], rows: List[List[str]]) -> str:
+def _format_csv(headers: list[str], rows: list[list[str]]) -> str:
     """Format rows as raw CSV text."""
     buf = io.StringIO()
     writer = csv.writer(buf)
@@ -194,7 +193,7 @@ def _format_csv(headers: List[str], rows: List[List[str]]) -> str:
     return buf.getvalue()
 
 
-def _infer_type(values: List[str]) -> str:
+def _infer_type(values: list[str]) -> str:
     """Infer column type from a sample of values."""
     non_empty = [v.strip() for v in values if v.strip()]
     if not non_empty:
@@ -253,7 +252,7 @@ class ReadCsvTool(BaseTool):
             "Optionally specify a row range (e.g., '1-100'), specific columns, "
             "and output format."
         )
-        self.parameters: Dict[str, Any] = {
+        self.parameters: dict[str, Any] = {
             "type": "object",
             "properties": {
                 "file_id": {
@@ -296,7 +295,7 @@ class ReadCsvTool(BaseTool):
         self,
         file_id: str,
         rows: str = "1-100",
-        columns: Optional[str] = None,
+        columns: str | None = None,
         format: str = "markdown",
         **kwargs,
     ) -> str:
@@ -368,7 +367,7 @@ class ListCsvColumnsTool(BaseTool):
             "file the user has attached. Use this to understand the structure of "
             "a CSV before reading specific rows or columns with read_csv."
         )
-        self.parameters: Dict[str, Any] = {
+        self.parameters: dict[str, Any] = {
             "type": "object",
             "properties": {
                 "file_id": {

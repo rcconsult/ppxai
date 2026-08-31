@@ -19,29 +19,29 @@ the chat_with_tools loop, so an orphan created mid-turn could reach a strict
 provider on a later iteration. Fix: strip orphans from the OUTBOUND message
 list before each in-loop provider call (session state untouched).
 """
-import json
 import tempfile
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 
-from ppxai.engine.session import (
-    SessionManager,
-    strip_orphan_tool_calls,
-    strip_empty_assistant,
-    sanitize_outbound,
-)
 from ppxai.engine.chat import (
-    finalize_empty_response,
     EMPTY_RESPONSE_NUDGE,
     EMPTY_RESPONSE_SENTINEL,
+    finalize_empty_response,
 )
-from ppxai.engine.types import Message, Event, EventType, ProviderCapabilities
 from ppxai.engine.model_facts import ModelFacts
-
+from ppxai.engine.session import (
+    SessionManager,
+    sanitize_outbound,
+    strip_empty_assistant,
+    strip_orphan_tool_calls,
+)
+from ppxai.engine.types import Event, EventType, Message, ProviderCapabilities
 from tests.test_tool_messages import (
-    MockProvider, MockToolManager, MockChatContext, collect_events,
+    MockChatContext,
+    MockProvider,
+    MockToolManager,
+    collect_events,
 )
 
 

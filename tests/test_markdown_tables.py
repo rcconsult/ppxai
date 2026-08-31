@@ -4,20 +4,19 @@ Tests for markdown table parser.
 Ensures tables are properly rendered in the TUI without regression.
 """
 
-import pytest
 from io import StringIO
+
 from rich.console import Console
-from ppxai.rich.markdown_tables import (
-    parse_table_alignment,
-    parse_markdown_table,
-    is_table_block,
-    split_markdown_content,
-    render_markdown_with_tables,
-)
+
 from ppxai.rich.markdown_tables import (
     _extract_markdown_links,
     convert_markdown_links_to_rich,
+    is_table_block,
     parse_inline_markdown,
+    parse_markdown_table,
+    parse_table_alignment,
+    render_markdown_with_tables,
+    split_markdown_content,
 )
 
 

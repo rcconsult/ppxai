@@ -10,7 +10,7 @@ names per ADR 0011 sign-off Q5 (superseding ADR 0009's planned
 `execution.oneshot.*` before anything shipped — amendment note there).
 """
 
-from typing import Any, Dict
+from typing import Any
 
 from .store import get_config
 
@@ -26,7 +26,7 @@ class _ConfigUnavailable(Exception):
     """
 
 
-def _read_execution_block() -> Dict[str, Any]:
+def _read_execution_block() -> dict[str, Any]:
     """The raw top-level `execution` block, or raise `_ConfigUnavailable`."""
     try:
         cfg = get_config() or {}
@@ -35,7 +35,7 @@ def _read_execution_block() -> Dict[str, Any]:
     return dict(cfg.get("execution", {}) or {})
 
 
-def get_execution_config() -> Dict[str, Any]:
+def get_execution_config() -> dict[str, Any]:
     """The raw top-level `execution` block (absent OR unreadable → {})."""
     try:
         return _read_execution_block()
@@ -43,7 +43,7 @@ def get_execution_config() -> Dict[str, Any]:
         return {}
 
 
-def get_execution_run_config() -> Dict[str, Any]:
+def get_execution_run_config() -> dict[str, Any]:
     """`execution.run.*` with defaults resolved — the one-off tier's knobs.
 
     Keys (both default OFF — the shipped `/v1/oneshot` behavior is
@@ -70,7 +70,7 @@ def get_execution_run_config() -> Dict[str, Any]:
         run = dict(_read_execution_block().get("run", {}) or {})
     except _ConfigUnavailable:
         return {"web_search": False, "grounding": False}
-    out: Dict[str, Any] = {"web_search": bool(run.get("web_search", False))}
+    out: dict[str, Any] = {"web_search": bool(run.get("web_search", False))}
     if "grounding" in run:
         out["grounding"] = bool(run["grounding"])
     else:
@@ -85,7 +85,7 @@ def get_execution_run_config() -> Dict[str, Any]:
     return out
 
 
-def _normalize_sandbox(sb: Dict[str, Any]) -> Dict[str, Any]:
+def _normalize_sandbox(sb: dict[str, Any]) -> dict[str, Any]:
     """Normalize the `execution.task.sandbox` block with defaults.
 
     `enforcement` defaults to "off" — a run is NOT confined unless the operator
@@ -116,7 +116,7 @@ def _normalize_sandbox(sb: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def get_execution_task_config() -> Dict[str, Any]:
+def get_execution_task_config() -> dict[str, Any]:
     """`execution.task.*` — the tool-capable `/v1/agent/task` tier (ADR 0010).
 
     BREAKING (v1.19.1): these keys moved wholesale off `tools.agent.*`, with
@@ -185,7 +185,7 @@ def get_execution_task_config() -> Dict[str, Any]:
     }
 
 
-def get_execution_default_subagent() -> Dict[str, Any]:
+def get_execution_default_subagent() -> dict[str, Any]:
     """`execution.default_subagent` — provider/model for spawned sub-agents.
 
     BREAKING (v1.19.1, ADR 0010): moved from `tools.agent.default_subagent`
@@ -201,7 +201,7 @@ def get_execution_default_subagent() -> Dict[str, Any]:
     return dict(subagent) if isinstance(subagent, dict) else {}
 
 
-def get_execution_profiles() -> Dict[str, Any]:
+def get_execution_profiles() -> dict[str, Any]:
     """`execution.profiles` — named, reusable task grants (ADR 0009 §1).
 
     A profile is an `AgentSpec`-shaped mapping in config (same fields, same
@@ -219,7 +219,7 @@ def get_execution_profiles() -> Dict[str, Any]:
     return dict(profiles) if isinstance(profiles, dict) else {}
 
 
-def get_execution_task_default_grant() -> Dict[str, Any]:
+def get_execution_task_default_grant() -> dict[str, Any]:
     """`execution.task.default_grant` — the USER's own default `/task` grant
     (ADR 0009 / Item 58).
 

@@ -46,6 +46,7 @@ from dotenv import load_dotenv
 load_dotenv(PROJECT_ROOT / ".env")
 # Also load from ~/.ppxai/.env (user config location)
 from pathlib import Path
+
 load_dotenv(Path.home() / ".ppxai" / ".env")
 
 
@@ -341,7 +342,7 @@ def print_summary(summary: dict, provider: str, model: str):
 
     if "ttft_ms" in summary:
         ttft = summary["ttft_ms"]
-        print(f"\nTime to First Token (TTFT):")
+        print("\nTime to First Token (TTFT):")
         print(f"  Mean: {ttft['mean']:.0f}ms")
         print(f"  Range: {ttft['min']:.0f}ms - {ttft['max']:.0f}ms")
         if ttft['stdev'] > 0:
@@ -349,7 +350,7 @@ def print_summary(summary: dict, provider: str, model: str):
 
     if "total_ms" in summary:
         total = summary["total_ms"]
-        print(f"\nTotal Response Time:")
+        print("\nTotal Response Time:")
         print(f"  Mean: {total['mean']:.0f}ms")
         print(f"  Range: {total['min']:.0f}ms - {total['max']:.0f}ms")
         if total['stdev'] > 0:
@@ -357,13 +358,13 @@ def print_summary(summary: dict, provider: str, model: str):
 
     if "tokens_per_sec" in summary:
         speed = summary["tokens_per_sec"]
-        print(f"\nThroughput:")
+        print("\nThroughput:")
         print(f"  Mean: {speed['mean']:.1f} tokens/sec")
         print(f"  Range: {speed['min']:.1f} - {speed['max']:.1f} tokens/sec")
 
     if "tokens" in summary:
         tokens = summary["tokens"]
-        print(f"\nToken Usage:")
+        print("\nToken Usage:")
         print(f"  Total: {tokens['total']:,} ({tokens['prompt_total']:,} in / {tokens['completion_total']:,} out)")
         print(f"  Per request: ~{int(tokens['prompt_mean'])} in / ~{int(tokens['completion_mean'])} out")
 
@@ -487,7 +488,7 @@ async def main():
     if args.mock:
         providers = ["mock"]
     elif args.all_providers:
-        from ppxai.config import get_available_providers, get_api_key
+        from ppxai.config import get_api_key, get_available_providers
         all_providers = get_available_providers()
         # Filter to only providers with valid API keys
         providers = [p for p in all_providers if get_api_key(p)]
@@ -505,7 +506,7 @@ async def main():
     for idx, provider_id in enumerate(providers):
         # Add delay between providers to avoid rate limiting
         if idx > 0:
-            print(f"\n--- Waiting 5s before next provider to avoid rate limits ---")
+            print("\n--- Waiting 5s before next provider to avoid rate limits ---")
             await asyncio.sleep(5)
         if provider_id == "mock":
             benchmark_data = await run_mock_benchmark()

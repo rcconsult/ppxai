@@ -19,11 +19,10 @@ from __future__ import annotations
 
 import logging
 import threading
-from typing import List, Optional
 
-from .base import Wrapper
 from ....config import get_shell_config
-from .factory import make_wrapper, WrapperConfigError
+from .base import Wrapper
+from .factory import WrapperConfigError, make_wrapper
 
 logger = logging.getLogger(__name__)
 
@@ -33,21 +32,21 @@ class WrapperRegistry:
     from the `tools.shell.wrappers` config list (defaults + user overrides).
     """
 
-    def __init__(self, wrappers: List[Wrapper]):
+    def __init__(self, wrappers: list[Wrapper]):
         self._wrappers = list(wrappers)
 
     @property
-    def all(self) -> List[Wrapper]:
+    def all(self) -> list[Wrapper]:
         return list(self._wrappers)
 
     @property
-    def active(self) -> List[Wrapper]:
+    def active(self) -> list[Wrapper]:
         """Wrappers that are enabled AND have their binary on PATH (or
         enabled=always). Order is declaration order from the config.
         """
         return [w for w in self._wrappers if w.is_active()]
 
-    async def find_first_rewrite(self, command: str) -> Optional[str]:
+    async def find_first_rewrite(self, command: str) -> str | None:
         """Engine-side rewrite. Iterate active wrappers; return the first
         non-None rewrite. None means no wrapper applied — caller runs raw.
         """
@@ -64,7 +63,7 @@ class WrapperRegistry:
                 return rewritten
         return None
 
-    def compose_prompt_blocks(self) -> Optional[str]:
+    def compose_prompt_blocks(self) -> str | None:
         """Concatenate prompt blocks from all active wrappers. Returns None
         if no active wrapper has a prompt block, so the caller can skip
         emitting the section header.
@@ -103,7 +102,7 @@ class WrapperRegistry:
             break
         return peeled
 
-    def find_active_wrapper_by_prefix(self, command: str) -> Optional[Wrapper]:
+    def find_active_wrapper_by_prefix(self, command: str) -> Wrapper | None:
         """Return the wrapper whose binary token leads `command`, or None.
 
         Used by graceful-fallback to attribute a failure to the right
@@ -121,7 +120,7 @@ class WrapperRegistry:
             wrapper.reset_cache()
 
 
-_REGISTRY_SINGLETON: Optional[WrapperRegistry] = None
+_REGISTRY_SINGLETON: WrapperRegistry | None = None
 _REGISTRY_LOCK = threading.Lock()
 
 
@@ -147,7 +146,7 @@ def get_registry() -> WrapperRegistry:
         return _REGISTRY_SINGLETON
 
 
-def set_registry(registry: Optional[WrapperRegistry]) -> None:
+def set_registry(registry: WrapperRegistry | None) -> None:
     """Test hook: install a registry, or pass None to force rebuild
     on the next `get_registry()`.
     """
@@ -169,7 +168,7 @@ def _build_registry_from_config() -> WrapperRegistry:
         return WrapperRegistry([])
 
     entries = shell_config.get("wrappers", [])
-    wrappers: List[Wrapper] = []
+    wrappers: list[Wrapper] = []
     for entry in entries:
         try:
             wrappers.append(make_wrapper(entry))

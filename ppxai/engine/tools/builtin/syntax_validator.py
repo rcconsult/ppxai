@@ -60,7 +60,6 @@ import os
 import shutil
 import subprocess
 from pathlib import Path
-from typing import Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +81,7 @@ _EXT_LANG = {
 }
 
 
-def _check_python(content: str) -> Optional[str]:
+def _check_python(content: str) -> str | None:
     """Return None if `content` parses; error string otherwise."""
     try:
         ast.parse(content)
@@ -96,7 +95,7 @@ def _check_python(content: str) -> Optional[str]:
         return f"{type(e).__name__}: {e}"
 
 
-def _check_json(content: str) -> Optional[str]:
+def _check_json(content: str) -> str | None:
     try:
         json.loads(content)
         return None
@@ -106,7 +105,7 @@ def _check_json(content: str) -> Optional[str]:
         return f"{type(e).__name__}: {e}"
 
 
-def _check_yaml(content: str) -> Optional[str]:
+def _check_yaml(content: str) -> str | None:
     try:
         import yaml  # deferred — pyyaml is a core dep but keep import tight
         yaml.safe_load(content)
@@ -123,7 +122,7 @@ def _check_yaml(content: str) -> Optional[str]:
         return str(e)
 
 
-def _check_toml(content: str) -> Optional[str]:
+def _check_toml(content: str) -> str | None:
     try:
         import tomllib  # stdlib in 3.11+
         tomllib.loads(content)
@@ -132,7 +131,7 @@ def _check_toml(content: str) -> Optional[str]:
         return f"{type(e).__name__}: {e}"
 
 
-def _check_js_like(content: str, kind: str) -> Optional[str]:
+def _check_js_like(content: str, kind: str) -> str | None:
     """Best-effort syntax check via `node --check`.
 
     If `node` isn't on PATH we skip — we never want file editing to
@@ -211,7 +210,7 @@ _VALIDATORS = {
 def validate_candidate_content(
     file_path: str | Path,
     content: str,
-) -> Tuple[bool, Optional[str], Optional[str]]:
+) -> tuple[bool, str | None, str | None]:
     """Run a cheap syntax check on `content` keyed by `file_path`'s extension.
 
     Returns a triple of (ok, language, error_message):

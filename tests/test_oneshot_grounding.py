@@ -16,12 +16,11 @@ These are unit tests on the construction helpers — no provider SDK is exercise
 
 from __future__ import annotations
 
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from ppxai.server.routes import oneshot as oneshot_mod
-
 
 # ---------------------------------------------------------------------------
 # Flag plumbing

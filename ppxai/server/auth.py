@@ -28,14 +28,12 @@ from __future__ import annotations
 
 import os
 import re
-from typing import Optional
 
 from fastapi import Request
 from fastapi.responses import JSONResponse
 
 from .secrets import CAP_MINT, EnvSecretProvider
 from .state import get_agent_run_registry, get_secret_provider
-
 
 ENV_TOKEN_VAR = "PPXAI_API_TOKEN"
 
@@ -44,7 +42,7 @@ ENV_TOKEN_VAR = "PPXAI_API_TOKEN"
 _WWW_AUTHENTICATE = 'Bearer realm="ppxai"'
 
 
-def get_required_token() -> Optional[str]:
+def get_required_token() -> str | None:
     """Return the configured env API token, or None if unset.
 
     Read on every request rather than cached at startup so operators
@@ -271,7 +269,7 @@ def _is_loopback_ui_request(request: Request) -> bool:
     return True
 
 
-def check_request(request: Request) -> Optional[JSONResponse]:
+def check_request(request: Request) -> JSONResponse | None:
     """Validate auth for a request.
 
     Returns None if the request should proceed (auth disabled, or

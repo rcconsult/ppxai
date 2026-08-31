@@ -9,10 +9,10 @@ import os
 import re
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from ..common.logger import get_logger
-from ..config import get_default_model, get_model_context_limit, EXPORTS_DIR
+from ..config import EXPORTS_DIR, get_default_model, get_model_context_limit
 
 logger = get_logger("engine")
 
@@ -67,17 +67,17 @@ def restore_session(engine, name: str) -> dict:
     }
 
 
-def get_history(engine) -> List[Dict[str, str]]:
+def get_history(engine) -> list[dict[str, str]]:
     """Get conversation history as dicts."""
     return engine.session.get_messages_as_dicts()
 
 
-def export_conversation(engine, filename: Optional[str] = None) -> Path:
+def export_conversation(engine, filename: str | None = None) -> Path:
     """Export conversation to markdown."""
     return engine.session.export(filename)
 
 
-def export_answer(engine, filename: Optional[str] = None) -> Path:
+def export_answer(engine, filename: str | None = None) -> Path:
     """Export last assistant answer to markdown.
 
     Raises:
@@ -107,12 +107,12 @@ def export_answer(engine, filename: Optional[str] = None) -> Path:
     return filepath
 
 
-def get_usage(engine) -> Dict[str, Any]:
+def get_usage(engine) -> dict[str, Any]:
     """Get usage statistics."""
     return engine.session.get_usage()
 
 
-def get_status(engine) -> Dict[str, Any]:
+def get_status(engine) -> dict[str, Any]:
     """Get current engine status."""
     return {
         "provider": engine.provider_name,
@@ -125,7 +125,7 @@ def get_status(engine) -> Dict[str, Any]:
     }
 
 
-def get_context_info(engine) -> Dict[str, Any]:
+def get_context_info(engine) -> dict[str, Any]:
     """Get context usage information for /context command.
 
     Token-count source (v1.18.4 Item A): prefer the authoritative

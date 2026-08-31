@@ -7,16 +7,16 @@ All functions take an engine reference as first parameter.
 
 import subprocess
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
-from .types import Event, EventType
 from ..checkpoint import CheckpointManager, FileCheckpointBackend
 from ..common.logger import get_logger
+from .types import Event, EventType
 
 logger = get_logger("engine")
 
 
-def create_checkpoint(engine, description: str) -> Optional[str]:
+def create_checkpoint(engine, description: str) -> str | None:
     """Create a checkpoint before agent task execution.
 
     Args:
@@ -76,7 +76,7 @@ def undo_last_checkpoint(engine) -> bool:
     return False
 
 
-def commit_agent_changes(engine, description: str) -> Optional[str]:
+def commit_agent_changes(engine, description: str) -> str | None:
     """Commit changes made during agent task.
 
     Only git backend supports this. Stages all changes and commits.
@@ -134,7 +134,7 @@ def commit_agent_changes(engine, description: str) -> Optional[str]:
         return None
 
 
-def get_checkpoint_status(engine) -> Dict[str, Any]:
+def get_checkpoint_status(engine) -> dict[str, Any]:
     """Get checkpoint system status.
 
     Returns:
@@ -170,7 +170,7 @@ def get_checkpoint_status(engine) -> Dict[str, Any]:
     }
 
 
-def list_checkpoints(engine, limit: int = 10) -> List[Dict[str, str]]:
+def list_checkpoints(engine, limit: int = 10) -> list[dict[str, str]]:
     """List recent checkpoints.
 
     Returns:

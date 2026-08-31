@@ -11,9 +11,9 @@ These issues can occur with any LLM model, not just GPT-OSS.
 """
 
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
-from typing import Optional, List, Dict, Any, Set
+from typing import Any
 
 from ...common.logger import get_logger
 from .parser import _find_json_objects
@@ -37,15 +37,15 @@ class ValidationWarning:
     result: ValidationResult
     severity: str  # "info", "warning", "error"
     message: str
-    details: Optional[str] = None
-    suggested_action: Optional[str] = None
+    details: str | None = None
+    suggested_action: str | None = None
 
 
 @dataclass
 class ToolCallRecord:
     """Record of a single tool call."""
     tool_name: str
-    arguments: Dict[str, Any]
+    arguments: dict[str, Any]
     result: str
     success: bool
     iteration: int
@@ -117,10 +117,10 @@ class ResponseValidator:
     SHELL_TOOLS = {'execute_shell_command', 'execute_command'}
 
     def __init__(self):
-        self._tool_calls: List[ToolCallRecord] = []
-        self._files_successfully_written: Set[str] = set()
-        self._files_displayed: Set[str] = set()
-        self._shell_commands_run: Set[str] = set()
+        self._tool_calls: list[ToolCallRecord] = []
+        self._files_successfully_written: set[str] = set()
+        self._files_displayed: set[str] = set()
+        self._shell_commands_run: set[str] = set()
 
     def reset(self):
         """Reset state for a new chat turn."""
@@ -132,7 +132,7 @@ class ResponseValidator:
     def record_tool_call(
         self,
         tool_name: str,
-        arguments: Dict[str, Any],
+        arguments: dict[str, Any],
         result: str,
         success: bool,
         iteration: int
@@ -180,7 +180,7 @@ class ResponseValidator:
             f"files_written={len(self._files_successfully_written)}"
         )
 
-    def validate_response(self, response_text: str) -> List[ValidationWarning]:
+    def validate_response(self, response_text: str) -> list[ValidationWarning]:
         """Validate a model response against recorded tool calls.
 
         Args:
@@ -223,7 +223,7 @@ class ResponseValidator:
 
         return warnings
 
-    def _check_tool_json_in_text(self, response: str) -> Optional[ValidationWarning]:
+    def _check_tool_json_in_text(self, response: str) -> ValidationWarning | None:
         """Check if response contains tool call JSON that should have been a tool call.
 
         Uses the brace-counting JSON parser from parser.py to correctly handle nested
@@ -278,7 +278,7 @@ class ResponseValidator:
                 pos = lower.find(signal, pos + 1)
         return False
 
-    def _check_success_after_failure(self, response: str) -> Optional[ValidationWarning]:
+    def _check_success_after_failure(self, response: str) -> ValidationWarning | None:
         """Check if model claims success but the most recent tool call failed.
 
         Only checks the last tool call — if the most recent call succeeded, any
@@ -313,7 +313,7 @@ class ResponseValidator:
     # Pattern: optional leading dot, name chars, then one-or-more .ext segments.
     _FILENAME_PAT = r'(?:\.[\w\-]+|[^\s`"\']*\w(?:\.\w+)+)'
 
-    def _check_file_claims_without_tools(self, response: str) -> Optional[ValidationWarning]:
+    def _check_file_claims_without_tools(self, response: str) -> ValidationWarning | None:
         """Check if model claims to have created/written/patched a file without using appropriate tools."""
         fp = self._FILENAME_PAT
         file_modification_patterns = [
@@ -364,7 +364,7 @@ class ResponseValidator:
 
         return None
 
-    def _check_display_claims_without_tools(self, response: str) -> Optional[ValidationWarning]:
+    def _check_display_claims_without_tools(self, response: str) -> ValidationWarning | None:
         """Check if model claims file is open/displayed without calling display_file."""
         display_patterns = [
             r"(?:is now|now)\s+(?:open|displayed|showing)\s+in\s+(?:the\s+)?viewer",
@@ -415,7 +415,7 @@ class ResponseValidator:
         r"ALL \d+ FILES? (?:RE-)?READ",
     ]
 
-    def _check_read_claims_without_tools(self, response: str) -> Optional[ValidationWarning]:
+    def _check_read_claims_without_tools(self, response: str) -> ValidationWarning | None:
         """Check if model claims to have read/reviewed files without any read_file calls."""
         claims_read = any(
             re.search(pattern, response, re.IGNORECASE)
@@ -439,7 +439,7 @@ class ResponseValidator:
 
         return None
 
-    def _check_fabricated_output(self, response: str) -> Optional[ValidationWarning]:
+    def _check_fabricated_output(self, response: str) -> ValidationWarning | None:
         """Check for fabricated output that looks like tool results."""
         # Only check if it looks like the model is showing "output" without having run a command
         if not self._shell_commands_run:
@@ -498,8 +498,8 @@ class ResponseValidator:
 # Convenience function for quick validation
 def validate_response(
     response_text: str,
-    tool_calls: List[Dict[str, Any]]
-) -> List[ValidationWarning]:
+    tool_calls: list[dict[str, Any]]
+) -> list[ValidationWarning]:
     """Quick validation without maintaining state.
 
     Args:
@@ -529,9 +529,9 @@ def validate_response(
 
 def check_session_pollution(
     response_text: str,
-    recent_assistant_messages: List[str],
+    recent_assistant_messages: list[str],
     threshold: float = 0.9,
-) -> Optional[ValidationWarning]:
+) -> ValidationWarning | None:
     """Detect session pollution after model switch (B7).
 
     Compares the new model's response against recent assistant messages.

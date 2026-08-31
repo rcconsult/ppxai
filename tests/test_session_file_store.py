@@ -21,7 +21,6 @@ Explicitly NOT in scope yet:
 from __future__ import annotations
 
 import json
-from pathlib import Path
 
 import pytest
 
@@ -36,7 +35,6 @@ from ppxai.engine.session_store import (
     _compute_file_id,
     classify_kind,
 )
-
 
 # Minimal valid image bytes — not a real image, just deterministic content
 # for hashing tests. SessionFileStore doesn't decode images, so any bytes

@@ -5,11 +5,8 @@ These tests verify the shared commands.js module functionality
 that's used by both the Web App and VSCode extension.
 """
 
-import pytest
 import subprocess
-import json
 from pathlib import Path
-
 
 # Path to the shared commands module
 SHARED_DIR = Path(__file__).parent.parent / "ppxai" / "web" / "shared"

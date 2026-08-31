@@ -6,43 +6,27 @@ It has no UI dependencies and communicates via events.
 """
 
 import asyncio
-import base64
-import os
 import threading
+from collections.abc import AsyncIterator
 from datetime import datetime
-from typing import List, AsyncIterator, Optional, Dict, Any, Tuple
 from pathlib import Path
+from typing import Any, Callable, Optional
 
-from .types import (
-    Message, MessageContent, Event, EventType, UsageStats,
-    ProviderInfo, ModelInfo, ProviderCapabilities,
-    extract_attachment_refs,
-)
-from ..prompts import CODING_PROMPTS
-from .providers import create_provider
-from .providers.base import BaseProvider
-from .tools.manager import ToolManager
-from .tools.builtin import register_all_builtin_tools
-from .tools.parser import parse_tool_call
-from .chat import chat_simple, chat_with_tools
-from .providers.openai_compat import OpenAICompatibleProvider
-from .session import SessionManager
-from .session_store import SessionFileStore
-from .context import ContextInjector, ScopedBootstrapSource
-from .bootstrap import BootstrapContext
 from ..checkpoint import CheckpointManager
+from ..common.logger import get_logger
 from ..config import (
+    PROVIDERS,
+    get_agent_config,
     get_api_key,
     get_base_url,
+    get_debug_log_enabled,
     get_shell_config,
-    get_agent_config,
-    get_vision_model_config,
-    reload_config as _reload_config,
-    PROVIDERS,
 )
-from ..common.logger import get_logger
+from ..config import (
+    reload_config as _reload_config,
+)
 from ..constants import Default
-from .app_state import AppState
+from ..prompts import CODING_PROMPTS
 from . import (
     bootstrap_ops,
     checkpoint_ops,
@@ -51,9 +35,29 @@ from . import (
     provider_ops,
     session_ops,
 )
-from ..config import get_debug_log_enabled
+from .app_state import AppState
+from .bootstrap import BootstrapContext
+from .chat import chat_simple, chat_with_tools
+from .context import ContextInjector, ScopedBootstrapSource
 from .file_ref import resolve_file_reference as _resolve
+from .providers.base import BaseProvider
+from .session import SessionManager
+from .session_store import SessionFileStore
+from .tools.builtin import register_all_builtin_tools
 from .tools.builtin.shell import terminate_subprocess_tree
+from .tools.manager import ToolManager
+from .tools.parser import parse_tool_call
+from .types import (
+    Event,
+    EventType,
+    Message,
+    MessageContent,
+    ModelInfo,
+    ProviderInfo,
+    UsageStats,
+    extract_attachment_refs,
+)
+from .providers import create_provider  # noqa: F401 — patched by tests
 
 logger = get_logger("tui")
 
@@ -83,9 +87,9 @@ class EngineClient:
 
     def __init__(
         self,
-        config: Optional[Dict[str, Any]] = None,
-        consent_callback: Optional[callable] = None,
-        shell_consent_callback: Optional[callable] = None
+        config: dict[str, Any] | None = None,
+        consent_callback: Callable | None = None,
+        shell_consent_callback: Callable | None = None
     ):
         """Initialize the engine client.
 
@@ -101,7 +105,7 @@ class EngineClient:
                              response can be: "y", "n", "always", "never"
         """
         self.config = config or {}
-        self.provider: Optional[BaseProvider] = None
+        self.provider: BaseProvider | None = None
         self.provider_name: str = ""
         self.model: str = ""
 
@@ -116,7 +120,7 @@ class EngineClient:
         # steered by the interactive-chat system prompt (which, e.g. for
         # Perplexity, encourages native web search over granted tools). None =
         # fall back to config (unchanged behavior for normal chat clients).
-        self.system_prompt_override: Optional[str] = None
+        self.system_prompt_override: str | None = None
 
         # Binary file store for multimodal attachments (v1.17.4 Phase 2.1a).
         # Owned by the engine and shared with the session manager, which
@@ -155,11 +159,11 @@ class EngineClient:
         self.auto_inject_context: bool = True  # Enabled by default
 
         # Track injected contexts for /context command
-        self._injected_contexts: List[Dict[str, Any]] = []
+        self._injected_contexts: list[dict[str, Any]] = []
 
         # Bootstrap context from AGENTS.md/CLAUDE.md (v1.14.0, v1.14.2 scopes)
-        self._bootstrap_context: Optional[BootstrapContext] = None
-        self._bootstrap_sources: List[ScopedBootstrapSource] = []
+        self._bootstrap_context: BootstrapContext | None = None
+        self._bootstrap_sources: list[ScopedBootstrapSource] = []
 
         # Interrupt handling for graceful stream cancellation
         self._interrupted: bool = False
@@ -168,7 +172,7 @@ class EngineClient:
         # interrupt_stream() terminates these so a hung shell command
         # (e.g. `python main.py &` that deadlocks on inherited pipe FDs)
         # cannot starve POST /interrupt by holding the event loop.
-        self._active_subprocesses: List["asyncio.subprocess.Process"] = []
+        self._active_subprocesses: list["asyncio.subprocess.Process"] = []
 
         # File edit consent callback (Phase 1: v1.11.0)
         self.consent_callback = consent_callback
@@ -180,8 +184,8 @@ class EngineClient:
         self._agent_mode: bool = False
 
         # Checkpoint manager for atomic multi-file rollback (v1.12.0)
-        self._checkpoint_manager: Optional[CheckpointManager] = None
-        self._last_checkpoint_id: Optional[str] = None
+        self._checkpoint_manager: CheckpointManager | None = None
+        self._last_checkpoint_id: str | None = None
         # Track files edited by agent during current task (v1.12.0)
         self._agent_edited_files: set = set()
 
@@ -214,7 +218,7 @@ class EngineClient:
 
         # Event side-channel for SSE streaming (consent requests, state sync).
         # Protected by a lock — SSE drain loop pops while listeners/callbacks append.
-        self._event_queue: List[Event] = []
+        self._event_queue: list[Event] = []
         self._event_queue_lock = threading.Lock()
 
         # Push AppState changes to SSE side-channel so connected web/VSCode
@@ -312,7 +316,7 @@ class EngineClient:
         with self._event_queue_lock:
             self._event_queue.append(event)
 
-    def drain_events(self) -> List[Event]:
+    def drain_events(self) -> list[Event]:
         """Atomically drain all pending events. Returns the list (may be empty)."""
         with self._event_queue_lock:
             events = self._event_queue
@@ -456,7 +460,7 @@ class EngineClient:
             # Never let a status-badge refresh break a message mutation.
             pass
 
-    def get_context_attachments(self) -> List[Dict[str, Any]]:
+    def get_context_attachments(self) -> list[dict[str, Any]]:
         """Return the current multimodal attachments in conversation context.
 
         Delegates to `multimodal_ops.get_context_attachments`. Reads from
@@ -467,9 +471,9 @@ class EngineClient:
 
     def resolve_file_reference(
         self,
-        file_id: Optional[str] = None,
-        path: Optional[str] = None,
-    ) -> Tuple[Optional[Any], Optional[str]]:
+        file_id: str | None = None,
+        path: str | None = None,
+    ) -> tuple[Any | None, str | None]:
         """Resolve either a SessionFileStore file_id or a workspace path.
 
         v1.18.7. Lets office tools (pdf/pptx/excel/docx) address files in
@@ -604,7 +608,7 @@ class EngineClient:
         """Reload bootstrap context from disk."""
         return bootstrap_ops.load_bootstrap_context(self)
 
-    def get_bootstrap_status(self) -> Dict[str, Any]:
+    def get_bootstrap_status(self) -> dict[str, Any]:
         """Get status of loaded bootstrap context."""
         return bootstrap_ops.get_bootstrap_status(self)
 
@@ -612,7 +616,7 @@ class EngineClient:
         """Get the bootstrap prompt for the current provider/model."""
         return bootstrap_ops.get_bootstrap_prompt(self)
 
-    def get_active_hints(self) -> Dict[str, Any]:
+    def get_active_hints(self) -> dict[str, Any]:
         """Get detailed breakdown of active hints for current provider/model."""
         return bootstrap_ops.get_active_hints(self)
 
@@ -671,14 +675,14 @@ class EngineClient:
         """
         return provider_ops.set_provider(self, provider_name)
 
-    def list_providers(self) -> List[ProviderInfo]:
+    def list_providers(self) -> list[ProviderInfo]:
         """List available providers with their status.
 
         Delegates to `provider_ops.list_providers`.
         """
         return provider_ops.list_providers(self)
 
-    def get_current_provider(self) -> Optional[str]:
+    def get_current_provider(self) -> str | None:
         """Get the current provider name.
 
         Delegates to `provider_ops.get_current_provider`. Returns the
@@ -709,14 +713,14 @@ class EngineClient:
         """
         return provider_ops.set_model(self, model_id, strict, reset_context)
 
-    def list_models(self) -> List[ModelInfo]:
+    def list_models(self) -> list[ModelInfo]:
         """List available models for current provider.
 
         Delegates to `provider_ops.list_models`.
         """
         return provider_ops.list_models(self)
 
-    def get_current_model(self) -> Optional[str]:
+    def get_current_model(self) -> str | None:
         """Get the current model.
 
         Delegates to `provider_ops.get_current_model`. Returns the active
@@ -837,7 +841,7 @@ class EngineClient:
 
     # === Checkpoint Management (delegated to checkpoint_ops.py) ===
 
-    def create_checkpoint(self, description: str) -> Optional[str]:
+    def create_checkpoint(self, description: str) -> str | None:
         """Create a checkpoint before agent task execution."""
         return checkpoint_ops.create_checkpoint(self, description)
 
@@ -845,15 +849,15 @@ class EngineClient:
         """Undo the last checkpoint (revert changes)."""
         return checkpoint_ops.undo_last_checkpoint(self)
 
-    def commit_agent_changes(self, description: str) -> Optional[str]:
+    def commit_agent_changes(self, description: str) -> str | None:
         """Commit changes made during agent task."""
         return checkpoint_ops.commit_agent_changes(self, description)
 
-    def get_checkpoint_status(self) -> Dict[str, Any]:
+    def get_checkpoint_status(self) -> dict[str, Any]:
         """Get checkpoint system status."""
         return checkpoint_ops.get_checkpoint_status(self)
 
-    def list_checkpoints(self, limit: int = 10) -> List[Dict[str, str]]:
+    def list_checkpoints(self, limit: int = 10) -> list[dict[str, str]]:
         """List recent checkpoints."""
         return checkpoint_ops.list_checkpoints(self, limit)
 
@@ -879,7 +883,7 @@ class EngineClient:
         """Request user consent for shell command execution."""
         return await consent_ops.request_shell_consent(self, command, working_dir)
 
-    def list_tools(self) -> List[Dict[str, Any]]:
+    def list_tools(self) -> list[dict[str, Any]]:
         """List available tools for current provider.
 
         Returns:
@@ -915,7 +919,7 @@ class EngineClient:
             return True
         return False
 
-    def get_tools_status(self) -> Dict[str, Any]:
+    def get_tools_status(self) -> dict[str, Any]:
         """Get tools status.
 
         Returns:
@@ -937,17 +941,17 @@ class EngineClient:
         """Whether the current operation is interrupted (ChatContext interface)."""
         return self._interrupted
 
-    def get_consent_events(self) -> List[Event]:
+    def get_consent_events(self) -> list[Event]:
         """Get and clear queued consent events (ChatContext interface)."""
         return self.drain_events()
 
-    def track_tool_usage(self, tool_name: str, usage: Dict[str, Any]) -> None:
+    def track_tool_usage(self, tool_name: str, usage: dict[str, Any]) -> None:
         """Track tool usage for cost calculation (ChatContext interface)."""
         if not hasattr(self, '_current_tool_usage'):
             self._current_tool_usage = {}
         self._current_tool_usage[tool_name] = usage
 
-    def commit_agent_changes_if_needed(self, message: str) -> Optional[str]:
+    def commit_agent_changes_if_needed(self, message: str) -> str | None:
         """Commit agent changes if in agent mode (ChatContext interface).
 
         Returns:
@@ -966,7 +970,7 @@ class EngineClient:
         self,
         message: MessageContent,
         stream: bool = True,
-        attachment_refs: Optional[List[Any]] = None,
+        attachment_refs: list[Any] | None = None,
     ) -> AsyncIterator[Event]:
         """Send a chat message, yielding events.
 
@@ -1138,7 +1142,7 @@ class EngineClient:
                 self.state.set("agent_beat", {})
             yield event
 
-    def _parse_tool_call(self, text: str) -> Optional[Dict[str, Any]]:
+    def _parse_tool_call(self, text: str) -> dict[str, Any] | None:
         """Parse a tool call from model response.
 
         Delegates to tools/parser.py for the actual parsing logic.
@@ -1180,8 +1184,8 @@ class EngineClient:
         self,
         content: str,
         task_type: str,
-        language: Optional[str] = None,
-        filename: Optional[str] = None,
+        language: str | None = None,
+        filename: str | None = None,
         stream: bool = True
     ) -> AsyncIterator[Event]:
         """Execute a coding task (explain, test, docs, debug, implement, generate).
@@ -1237,29 +1241,29 @@ class EngineClient:
         """Load session file and restore all engine state."""
         return session_ops.restore_session(self, name)
 
-    def get_history(self) -> List[Dict[str, str]]:
+    def get_history(self) -> list[dict[str, str]]:
         """Get conversation history as dicts."""
         return session_ops.get_history(self)
 
-    def export_conversation(self, filename: Optional[str] = None) -> Path:
+    def export_conversation(self, filename: str | None = None) -> Path:
         """Export conversation to markdown."""
         return session_ops.export_conversation(self, filename)
 
-    def export_answer(self, filename: Optional[str] = None) -> Path:
+    def export_answer(self, filename: str | None = None) -> Path:
         """Export last assistant answer to markdown."""
         return session_ops.export_answer(self, filename)
 
-    def get_usage(self) -> Dict[str, Any]:
+    def get_usage(self) -> dict[str, Any]:
         """Get usage statistics."""
         return session_ops.get_usage(self)
 
     # === Status & Context (delegated to session_ops.py) ===
 
-    def get_status(self) -> Dict[str, Any]:
+    def get_status(self) -> dict[str, Any]:
         """Get current engine status."""
         return session_ops.get_status(self)
 
-    def get_context_info(self) -> Dict[str, Any]:
+    def get_context_info(self) -> dict[str, Any]:
         """Get context usage information for /context command."""
         return session_ops.get_context_info(self)
 

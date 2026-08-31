@@ -49,7 +49,7 @@ __all__ = [
 ]
 
 
-def _build_one(spec: Dict[str, Any]) -> Optional[SecretProvider]:
+def _build_one(spec: dict[str, Any]) -> SecretProvider | None:
     """Construct a single provider from a config dict, or None if the
     type is unknown (logged + skipped — an unknown future backend in a
     config should degrade, not crash an older server)."""
@@ -63,7 +63,7 @@ def _build_one(spec: Dict[str, Any]) -> Optional[SecretProvider]:
     return None
 
 
-def build_chain_from_config(server_config: Dict[str, Any]) -> ProviderChain:
+def build_chain_from_config(server_config: dict[str, Any]) -> ProviderChain:
     """Build the :class:`ProviderChain` from ``server.secrets.providers``.
 
     Backward-compatible default: when ``server.secrets`` is absent or has
@@ -72,9 +72,9 @@ def build_chain_from_config(server_config: Dict[str, Any]) -> ProviderChain:
     env var is unset, single-shared-token when set).
     """
     secrets_cfg = (server_config or {}).get("secrets") or {}
-    raw_providers: List[Dict[str, Any]] = secrets_cfg.get("providers") or []
+    raw_providers: list[dict[str, Any]] = secrets_cfg.get("providers") or []
 
-    providers: List[SecretProvider] = []
+    providers: list[SecretProvider] = []
     for spec in raw_providers:
         built = _build_one(spec)
         if built is not None:

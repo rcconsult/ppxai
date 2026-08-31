@@ -7,14 +7,19 @@ commands for the Textual-based TUI.
 
 import os
 from pathlib import Path
-from typing import Any, Optional, Tuple
+from typing import Any
 
-from .terminal import can_display_images, detect_image_protocol, get_capabilities, get_image_protocol_name
+from .terminal import (
+    can_display_images,
+    detect_image_protocol,
+    get_capabilities,
+    get_image_protocol_name,
+)
 from .widgets.chat_view import ChatView
-from .widgets.image_handlers import ImageHandlerFactory, _IMAGEVIEW_AVAILABLE, _TextualImage
+from .widgets.image_handlers import _IMAGEVIEW_AVAILABLE, ImageHandlerFactory, _TextualImage
 
 
-def parse_file_location(args: str) -> Tuple[str, Optional[int], Optional[int]]:
+def parse_file_location(args: str) -> tuple[str, int | None, int | None]:
     """Parse file path with optional line:col suffix.
 
     Args:
@@ -48,7 +53,7 @@ def parse_file_location(args: str) -> Tuple[str, Optional[int], Optional[int]]:
     return path, line, col
 
 
-def resolve_path(path_str: str, working_dir: str = None) -> Optional[Path]:
+def resolve_path(path_str: str, working_dir: str = None) -> Path | None:
     """Resolve a path relative to working directory.
 
     Args:

@@ -7,7 +7,6 @@ Depends on providers.py (for get_default_provider).
 from .loader import _load_json_config, find_config_file
 from .providers import get_default_provider
 
-
 # =============================================================================
 # Default System Prompts
 # =============================================================================

@@ -13,7 +13,8 @@ mutating capability, the chain raises :class:`CapabilityError` (→ 405).
 
 from __future__ import annotations
 
-from typing import List, Optional, Sequence, Tuple
+import builtins
+from collections.abc import Sequence
 
 from .base import (
     CAP_LIST,
@@ -31,7 +32,7 @@ class ProviderChain:
     name = "chain"
 
     def __init__(self, providers: Sequence[SecretProvider]) -> None:
-        self.providers: List[SecretProvider] = list(providers)
+        self.providers: list[SecretProvider] = list(providers)
 
     def is_empty(self) -> bool:
         return not self.providers
@@ -44,7 +45,7 @@ class ProviderChain:
         return caps
 
     # -- resolve (first match wins) -----------------------------------
-    def resolve(self, presented: str) -> Optional[TokenRecord]:
+    def resolve(self, presented: str) -> TokenRecord | None:
         for p in self.providers:
             record = p.resolve(presented)
             if record is not None:
@@ -58,8 +59,8 @@ class ProviderChain:
         raise CapabilityError(self.name, capability)
 
     # -- list (concatenate every capable provider) --------------------
-    def list(self) -> List[TokenRecord]:
-        out: List[TokenRecord] = []
+    def list(self) -> builtins.list[TokenRecord]:
+        out: list[TokenRecord] = []
         any_capable = False
         for p in self.providers:
             if CAP_LIST in p.capabilities():
@@ -73,9 +74,9 @@ class ProviderChain:
     def mint(
         self,
         owner: str,
-        roles: Tuple[str, ...] = (),
-        ttl_s: Optional[float] = None,
-    ) -> Tuple[str, TokenRecord]:
+        roles: tuple[str, ...] = (),
+        ttl_s: float | None = None,
+    ) -> tuple[str, TokenRecord]:
         return self._first_with(CAP_MINT).mint(owner, roles, ttl_s)
 
     def revoke(self, token_id: str) -> bool:

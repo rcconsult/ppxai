@@ -15,7 +15,6 @@ import pytest
 
 from ppxai.engine.chat import _compute_tool_success
 
-
 # ---------------------------------------------------------------------------
 # Shell tools — header-based exit-code parsing (v1.18.7 fix)
 # ---------------------------------------------------------------------------

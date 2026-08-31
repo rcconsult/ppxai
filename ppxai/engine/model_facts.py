@@ -69,8 +69,9 @@ and `types` (the provider record).
 from __future__ import annotations
 
 import fnmatch
-from dataclasses import dataclass, fields as dataclass_fields, replace
-from typing import Any, Dict, List, Literal, Optional
+from dataclasses import dataclass, replace
+from dataclasses import fields as dataclass_fields
+from typing import Any, Literal
 
 from .types import ProviderCapabilities
 
@@ -138,7 +139,7 @@ FACT_FIELDS = tuple(f.name for f in dataclass_fields(ModelFacts))
 PROVIDER_FACT_FIELDS = tuple(f.name for f in dataclass_fields(ProviderCapabilities))
 
 
-def match_table(table: Dict[str, Any], model: str) -> Optional[Any]:
+def match_table(table: dict[str, Any], model: str) -> Any | None:
     """Look `model` up in a glob-keyed table, exact keys first.
 
     Two passes, and the order is the point (ADR 0012 §2 Q0b):
@@ -169,7 +170,7 @@ def _is_glob(key: str) -> bool:
     return any(ch in key for ch in "*?[")
 
 
-def apply_overrides(facts: ModelFacts, overrides: Dict[str, Any]) -> ModelFacts:
+def apply_overrides(facts: ModelFacts, overrides: dict[str, Any]) -> ModelFacts:
     """Return `facts` with `overrides` applied, ignoring unknown keys.
 
     An unknown key is far more likely a typo or a future field than an
@@ -232,7 +233,7 @@ def apply_overrides(facts: ModelFacts, overrides: Dict[str, Any]) -> ModelFacts:
 #: Consulted via `match_table`, so exact ids beat globs regardless of
 #: insertion order (Q0b) — unlike `ModelProfileRegistry`, which matched in
 #: dict order and relied on a comment to keep specific rows above generic.
-SHIPPED_MODEL_FACTS: Dict[str, ModelFacts] = {
+SHIPPED_MODEL_FACTS: dict[str, ModelFacts] = {
     "gemini-2.5-pro*": ModelFacts(
         wire_protocol='generate_content',
         tool_mode='native',
@@ -1154,8 +1155,8 @@ UNMEASURED = ModelFacts()
 
 def shipped_facts_for_model(
     model: str,
-    provider_table: Optional[Dict[str, ModelFacts]] = None,
-    unmeasured: Optional[ModelFacts] = None,
+    provider_table: dict[str, ModelFacts] | None = None,
+    unmeasured: ModelFacts | None = None,
 ) -> ModelFacts:
     """The shipped answer for `model`, or the conservative floor.
 
@@ -1334,7 +1335,7 @@ class FactsResolver:
 
 
 def is_unmeasured(
-    model: str, provider_table: Optional[Dict[str, ModelFacts]] = None
+    model: str, provider_table: dict[str, ModelFacts] | None = None
 ) -> bool:
     """True when no shipped row names `model` (what `/doctor` reports).
 
@@ -1371,7 +1372,7 @@ def is_unmeasured(
 #: would silently invent a meaning. `/doctor` reports it instead.
 UNTRANSLATABLE_MODES = frozenset({"none"})
 
-LEGACY_KEY_TRANSLATIONS: Dict[str, Any] = {
+LEGACY_KEY_TRANSLATIONS: dict[str, Any] = {
     "native_tool_calling": ("tool_mode", lambda v: "native" if v else "prompt_based"),
     "mode": ("tool_mode", lambda v: v),
     # An operator's legacy `api_path`, mapped onto the wire it meant. This
@@ -1389,13 +1390,13 @@ LEGACY_KEY_TRANSLATIONS: Dict[str, Any] = {
 }
 
 
-def translate_legacy(block: Dict[str, Any]) -> Dict[str, Any]:
+def translate_legacy(block: dict[str, Any]) -> dict[str, Any]:
     """Map a legacy `capabilities`/`tool_calling` block onto fact keys.
 
     Used by `/doctor` to compute a rewrite. **Not** used when resolving
     operator config — see `LEGACY_KEY_TRANSLATIONS`.
     """
-    out: Dict[str, Any] = {}
+    out: dict[str, Any] = {}
     for key, value in (block or {}).items():
         if key.startswith("__comment"):
             continue
@@ -1407,7 +1408,7 @@ def translate_legacy(block: Dict[str, Any]) -> Dict[str, Any]:
     return out
 
 
-def legacy_keys_in(block: Dict[str, Any]) -> List[str]:
+def legacy_keys_in(block: dict[str, Any]) -> list[str]:
     """Legacy keys present in `block` — what `/doctor` reports and rewrites."""
     return [k for k in (block or {}) if k in LEGACY_KEY_TRANSLATIONS]
 

@@ -28,7 +28,7 @@ from __future__ import annotations
 import mimetypes
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional, Tuple
+from typing import Any
 
 
 @dataclass
@@ -66,9 +66,9 @@ def _guess_media_type(path: Path) -> str:
 
 def resolve_file_reference(
     engine: Any,
-    file_id: Optional[str] = None,
-    path: Optional[str] = None,
-) -> Tuple[Optional[Any], Optional[str]]:
+    file_id: str | None = None,
+    path: str | None = None,
+) -> tuple[Any | None, str | None]:
     """Resolve a file reference from either file_id or workspace path.
 
     Returns (meta, error). meta is either a SessionFileStore.FileMetadata
@@ -104,7 +104,7 @@ def resolve_file_reference(
 
     # path branch
     p = Path(path).expanduser()
-    working_dir: Optional[Path] = None
+    working_dir: Path | None = None
     get_wd = getattr(engine, "get_working_dir", None)
     if callable(get_wd):
         wd = get_wd()

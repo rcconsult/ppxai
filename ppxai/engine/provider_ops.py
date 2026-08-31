@@ -21,15 +21,14 @@ The two internal helpers `_apply_model_switch` and
 functions because they're only called from `set_model` / `set_provider`.
 """
 
-from typing import List, Optional
 
-from .types import ProviderInfo, ModelInfo, ProviderCapabilities
-from .providers import create_provider
-from .providers.openai_compat import OpenAICompatibleProvider
-from .tools.builtin import register_all_builtin_tools
 from ..common.logger import get_logger
 from ..constants import Default
 from .model_facts import supports_vision as _supports_vision
+from .providers import create_provider
+from .providers.openai_compat import OpenAICompatibleProvider
+from .tools.builtin import register_all_builtin_tools
+from .types import ModelInfo, ProviderCapabilities, ProviderInfo
 
 logger = get_logger("engine")
 
@@ -136,7 +135,7 @@ def set_provider(engine, provider_name: str) -> bool:
     return True
 
 
-def list_providers(engine) -> List[ProviderInfo]:
+def list_providers(engine) -> list[ProviderInfo]:
     """List available providers with their status.
 
     Returns:
@@ -161,7 +160,7 @@ def list_providers(engine) -> List[ProviderInfo]:
     return providers
 
 
-def get_current_provider(engine) -> Optional[str]:
+def get_current_provider(engine) -> str | None:
     """Get the current provider name.
 
     Returns:
@@ -264,7 +263,7 @@ def _log_model_hints_transition(engine, model_id: str) -> None:
     # Available patterns can be seen via /context show command.
 
 
-def list_models(engine) -> List[ModelInfo]:
+def list_models(engine) -> list[ModelInfo]:
     """List available models for current provider.
 
     Returns:
@@ -275,7 +274,7 @@ def list_models(engine) -> List[ModelInfo]:
     return engine.provider.list_models()
 
 
-def get_current_model(engine) -> Optional[str]:
+def get_current_model(engine) -> str | None:
     """Get the current model.
 
     Returns:

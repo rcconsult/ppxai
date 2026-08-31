@@ -4,15 +4,20 @@ Quick integration test for model/provider command migration.
 Tests that the new typed-result model/provider commands work end-to-end.
 """
 
-from ppxai.commands.provider import handle_model, handle_provider, handle_autoroute
-from ppxai.commands.tools import handle_tools, handle_usage
-from ppxai.commands.context import RichCommandContext
-from ppxai.commands.results import ListResult, ConfirmationResult, KeyValueResult, TableResult, ErrorResult
-from ppxai.rendering.rich_renderer import RichRenderer
-from ppxai.engine import EngineClient
-from ppxai.config import get_default_provider, get_default_model, get_api_key, get_base_url
-from ppxai.commands import CommandHandler
 from rich.console import Console
+
+from ppxai.commands import CommandHandler
+from ppxai.commands.context import RichCommandContext
+from ppxai.commands.provider import handle_autoroute, handle_model, handle_provider
+from ppxai.commands.results import (
+    ErrorResult,
+    KeyValueResult,
+    ListResult,
+    TableResult,
+)
+from ppxai.commands.tools import handle_tools, handle_usage
+from ppxai.config import get_api_key, get_base_url, get_default_model, get_default_provider
+from ppxai.rendering.rich_renderer import RichRenderer
 
 console = Console()
 

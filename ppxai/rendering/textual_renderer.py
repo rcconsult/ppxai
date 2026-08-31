@@ -14,12 +14,32 @@ v1.15.0: Type-based renderer dispatch refactoring
 """
 
 from pathlib import Path
-from typing import Any, Optional
-from textual.widgets import DataTable, Tree, Static, Markdown as TextualMarkdown
-from textual.containers import VerticalScroll
+from typing import Any
 
-from .base import AsyncRenderer
-from ..preview_server import PreviewServer
+from textual.widgets import DataTable, Tree
+
+from ..commands.results import (
+    AIResponseResult,
+    CompositeResult,
+    ConfirmationResult,
+    ConsentResult,
+    DiffResult,
+    ErrorResult,
+    FileViewResult,
+    ImageResult,
+    KeyValueResult,
+    ListResult,
+    MarkdownResult,
+    NotificationResult,
+    PreviewResult,
+    ProgressResult,
+    PromptResult,
+    ResultStatus,
+    TableResult,
+    TextResult,
+    ToolExecutionResult,
+    TreeResult,
+)
 from ..engine.preview_backend import (
     PreviewBackend,
     PreviewBackendError,
@@ -27,29 +47,10 @@ from ..engine.preview_backend import (
     start_served_backend,
     stop_backend,
 )
+from ..preview_server import PreviewServer
 from ..tui.widgets.dialog import ConsentDialog, PromptDialog
-from ..commands.results import (
-    ResultStatus,
-    NotificationResult,
-    ErrorResult,
-    ConfirmationResult,
-    AIResponseResult,
-    TableResult,
-    TreeResult,
-    ListResult,
-    KeyValueResult,
-    FileViewResult,
-    MarkdownResult,
-    ImageResult,
-    PreviewResult,
-    ProgressResult,
-    DiffResult,
-    ConsentResult,
-    PromptResult,
-    CompositeResult,
-    ToolExecutionResult,
-    TextResult,
-)
+from .base import AsyncRenderer
+
 
 class TextualRenderer(AsyncRenderer):
     """Textual TUI renderer with type-based async dispatch.
@@ -69,7 +70,7 @@ class TextualRenderer(AsyncRenderer):
             app: PPXAIDEApp instance
         """
         self.app = app
-        self.chat_view: Optional[Any] = None
+        self.chat_view: Any | None = None
 
         # Lazy load chat_view to avoid errors during initialization
         try:
@@ -600,7 +601,7 @@ async def render_tool_execution(renderer: TextualRenderer, result: ToolExecution
 # Static-file PreviewServer (always used). Backend subprocess (only for
 # `--serve` / `--proxy` modes since v1.18.5).
 _active_preview = None
-_active_preview_backend: Optional[PreviewBackend] = None
+_active_preview_backend: PreviewBackend | None = None
 
 
 @TextualRenderer.register(PreviewResult)

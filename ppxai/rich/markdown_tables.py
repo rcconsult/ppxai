@@ -12,17 +12,16 @@ For proper rendering in the terminal with clickable citations.
 import os
 import re
 from pathlib import Path
-from typing import List, Tuple, Union
 
-from rich.table import Table
+from rich.console import Console
 from rich.markdown import Markdown
-
-from ppxai.rich.ui_components import sanitize_for_panel
-from rich.console import Console, RenderableType
+from rich.table import Table
 from rich.text import Text
 
+from ppxai.rich.ui_components import sanitize_for_panel
 
-def _extract_markdown_links(text: str) -> List[Tuple[int, int, str, str]]:
+
+def _extract_markdown_links(text: str) -> list[tuple[int, int, str, str]]:
     """Find all [text](url) links using bracket/paren depth counting.
 
     Handles edge cases that defeat simple regex:
@@ -33,7 +32,7 @@ def _extract_markdown_links(text: str) -> List[Tuple[int, int, str, str]]:
         List of (start, end, link_text, url) tuples.
         start/end are byte offsets into text (end is exclusive).
     """
-    results: List[Tuple[int, int, str, str]] = []
+    results: list[tuple[int, int, str, str]] = []
     i = 0
     n = len(text)
     while i < n:
@@ -117,7 +116,7 @@ def convert_markdown_links_to_rich(content: str, working_dir: str = None) -> str
     if not links:
         return content
 
-    parts: List[str] = []
+    parts: list[str] = []
     prev_end = 0
     for start, end, link_text, url in links:
         parts.append(content[prev_end:start])
@@ -206,7 +205,7 @@ def parse_inline_markdown(text: str) -> Text:
     return result
 
 
-def parse_table_alignment(alignment_row: str) -> List[str]:
+def parse_table_alignment(alignment_row: str) -> list[str]:
     """
     Parse table alignment markers.
 
@@ -309,7 +308,7 @@ def is_table_block(text: str) -> bool:
     return '|' in lines[0]
 
 
-def split_markdown_content(content: str) -> List[Tuple[str, str]]:
+def split_markdown_content(content: str) -> list[tuple[str, str]]:
     """
     Split markdown content into table and non-table blocks.
 

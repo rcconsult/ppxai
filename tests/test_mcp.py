@@ -11,7 +11,7 @@ This script checks:
 
 import asyncio
 import subprocess
-import sys
+
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table

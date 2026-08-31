@@ -24,12 +24,12 @@ Version: see ``ppxai.__version__`` (single source of truth in ``ppxai/version.py
 """
 
 import logging
-import sys
-from pathlib import Path
-from datetime import datetime
-from typing import Optional, Dict
 import os
+from datetime import datetime
+from pathlib import Path
+
 from ..version import format_version_banner
+import sys  # noqa: F401 — patched by tests
 
 
 def _sanitize_for_logging(text: str) -> str:
@@ -97,7 +97,7 @@ class Logger:
     """Unified logger for ppxai clients (TUI, Server, etc.)."""
 
     # Class-level registry of logger instances
-    _instances: Dict[str, 'Logger'] = {}
+    _instances: dict[str, 'Logger'] = {}
 
     def __init__(self, name: str):
         """
@@ -107,12 +107,12 @@ class Logger:
             name: Client name (e.g., "tui", "server")
         """
         self.name = name
-        self._logger: Optional[logging.Logger] = None
+        self._logger: logging.Logger | None = None
         self._enabled: bool = False
-        self._log_file: Optional[Path] = None
+        self._log_file: Path | None = None
 
         # Check if logging is enabled via environment
-        env_var = f'PPXAI_DEBUG' if name == "tui" else f'PPXAI_{name.upper()}_DEBUG'
+        env_var = 'PPXAI_DEBUG' if name == "tui" else f'PPXAI_{name.upper()}_DEBUG'
         if os.getenv('PPXAI_DEBUG', '').lower() in ['1', 'true', 'yes', 'on']:
             self._enabled = True
             self._initialize_logger()
@@ -173,7 +173,7 @@ class Logger:
         return self._enabled
 
     @property
-    def log_file(self) -> Optional[Path]:
+    def log_file(self) -> Path | None:
         """Get the log file path."""
         return self._log_file
 

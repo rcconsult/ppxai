@@ -16,10 +16,9 @@ session of 2026-05-02.
 import asyncio
 import logging
 import os
-import re
 import platform
+import re
 import signal
-from typing import List
 
 from ....config import get_shell_config
 from ...types import ToolEngineProtocol, ToolManagerProtocol
@@ -149,7 +148,7 @@ def _get_shell_config() -> dict:
         }
 
 
-def _get_interactive_commands() -> tuple[List[str], List[str]]:
+def _get_interactive_commands() -> tuple[list[str], list[str]]:
     """Get interactive command lists from config.
 
     Returns:

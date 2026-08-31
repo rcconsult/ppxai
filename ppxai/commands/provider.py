@@ -11,24 +11,29 @@ v1.15.0: Migrated to type-based renderer dispatch
 from ..config import (
     PROVIDERS,
     get_api_key,
-    get_base_url,
     get_coding_model,
     get_provider_config,
 )
-from ..engine.model_facts import apply_overrides
+from ..config.facts_config import model_fact_overrides
+from ..engine.model_facts import apply_overrides, is_unmeasured, shipped_facts_for_model
+from ..engine.providers import get_provider_class
 from .factory import CommandFactory, CommandSpec
 from .protocol import CommandContext
 from .results import (
-    ResultStatus,
     CommandResult,
     ConfirmationResult,
-    ListResult,
     ErrorResult,
     KeyValueResult,
+    ListResult,
+    ResultStatus,
 )
-from ..config.facts_config import model_fact_overrides
-from ..engine.model_facts import is_unmeasured, shipped_facts_for_model
-from ..engine.providers import get_provider_class
+from ..config import (
+    PROVIDERS,
+    get_api_key,
+    get_base_url,
+    get_coding_model,
+    get_provider_config,
+)  # noqa: F401 — patched by tests
 
 
 def handle_model(context: CommandContext, args: str) -> CommandResult:

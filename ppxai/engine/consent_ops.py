@@ -7,10 +7,10 @@ All functions take an engine reference as first parameter.
 
 from pathlib import Path
 
-from .types import Event, EventType
-from ..common.logger import get_logger
 from ..common.consent import classify_shell_command
+from ..common.logger import get_logger
 from ..constants import ConsentMode, ConsentResponse, ShellRiskLevel
+from .types import Event, EventType
 
 logger = get_logger("tui")
 

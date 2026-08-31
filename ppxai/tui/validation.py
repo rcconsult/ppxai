@@ -6,8 +6,6 @@ to prevent path traversal attacks and handle large files gracefully.
 """
 
 from pathlib import Path
-from typing import Optional, Tuple
-
 
 # File size limits
 MAX_TEXT_FILE_SIZE = 10 * 1024 * 1024  # 10 MB for text files
@@ -17,9 +15,9 @@ MAX_DATA_FILE_SIZE = 5 * 1024 * 1024  # 5 MB for JSON/YAML/TOML
 
 def safe_resolve_path(
     path_str: str,
-    base_dir: Optional[str] = None,
+    base_dir: str | None = None,
     allow_absolute: bool = True,
-) -> Optional[Path]:
+) -> Path | None:
     """Resolve a path safely, preventing directory traversal attacks.
 
     Args:
@@ -77,7 +75,7 @@ def safe_resolve_path(
 def validate_file_size(
     path: Path,
     max_size: int = MAX_TEXT_FILE_SIZE,
-) -> Tuple[bool, int]:
+) -> tuple[bool, int]:
     """Check if a file size is within acceptable limits.
 
     Args:

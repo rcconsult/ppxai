@@ -19,31 +19,31 @@ Use Cases:
 v1.15.0: Type-based renderer dispatch refactoring
 """
 
-from pathlib import Path
-from typing import List, Optional
+from typing import Optional
 
-from textual.widget import Widget
-from textual.widgets import DataTable, Markdown, TabbedContent, TabPane, Static, Tree
-from textual.containers import Container
 from textual import on
+from textual.containers import Container
+from textual.widget import Widget
+from textual.widgets import DataTable, Markdown, Static, TabbedContent, TabPane, Tree
 
-# `TextualRenderer` was named in this module's annotations but never
-# imported (ruff F821). It is a real class, not a typo — the annotations
-# were correct and simply had nothing in scope to refer to. No cycle:
-# textual_renderer.py does not import this module.
-from ...rendering.textual_renderer import TextualRenderer
 from ...commands.results import (
-    CommandResult,
     AIResponseResult,
+    CommandResult,
     ConfirmationResult,
     ErrorResult,
     FileViewResult,
     ImageResult,
     NotificationResult,
     TableResult,
-    TextResult,
     TreeResult,
 )
+
+# `TextualRenderer` was named in this module's annotations but never
+# imported (ruff F821). It is a real class, not a typo — the annotations
+# were correct and simply had nothing in scope to refer to. No cycle:
+# textual_renderer.py does not import this module.
+from ...rendering.textual_renderer import TextualRenderer
+from pathlib import Path  # noqa: F401 — patched by tests
 
 
 class ArtifactPanel(TabbedContent):
@@ -62,7 +62,7 @@ class ArtifactPanel(TabbedContent):
         panel.add_artifact(code_widget, "Code", "💻")
     """
 
-    def __init__(self, id: Optional[str] = None, *args, **kwargs):
+    def __init__(self, id: str | None = None, *args, **kwargs):
         """Initialize artifact panel.
 
         Args:
@@ -105,7 +105,7 @@ class ArtifactPanel(TabbedContent):
 
     async def show_artifacts(
         self,
-        results: List["CommandResult"],
+        results: list["CommandResult"],
         renderer: Optional["TextualRenderer"] = None
     ) -> None:
         """Display multiple result artifacts in tabs.

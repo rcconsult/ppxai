@@ -24,7 +24,7 @@ Usage:
 v1.15.0: Type-based renderer dispatch refactoring
 """
 
-from .base import Renderer, AsyncRenderer
+from .base import AsyncRenderer, Renderer
 
 # Rich and Textual renderers imported lazily to avoid circular imports
 # and ensure they're only loaded when needed

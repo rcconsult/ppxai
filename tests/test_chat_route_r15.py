@@ -17,9 +17,9 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from ppxai.server.routes.chat import is_empty_or_context_only, router as chat_router
+from ppxai.server.routes.chat import is_empty_or_context_only
+from ppxai.server.routes.chat import router as chat_router
 from ppxai.server.state import Session, get_session
-
 
 # ---------------------------------------------------------------------------
 # Pure function: is_empty_or_context_only

@@ -9,17 +9,15 @@ import asyncio
 import tempfile
 from pathlib import Path
 
-import pytest
-
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
 def _make_tree(tmp_path: Path, path: Path = None):
     """Return a mounted FileTree app for testing."""
-    from ppxai.tui.widgets.file_tree import FileTree
     from textual.app import App, ComposeResult
+
+    from ppxai.tui.widgets.file_tree import FileTree
 
     root = path or tmp_path
 
@@ -201,8 +199,9 @@ class TestGetCursorFilePath:
 
     def test_get_cursor_file_path_with_file_data(self, tmp_path):
         """_get_cursor_file_path returns path when node data has a .path pointing to a file."""
-        from ppxai.tui.widgets.file_tree import FileTree
         from unittest.mock import MagicMock, patch
+
+        from ppxai.tui.widgets.file_tree import FileTree
 
         target = tmp_path / "target.py"
         target.write_text("pass", encoding="utf-8")
@@ -224,8 +223,9 @@ class TestGetCursorFilePath:
 
     def test_get_cursor_file_path_with_directory(self, tmp_path):
         """_get_cursor_file_path returns None when node data points to a directory."""
-        from ppxai.tui.widgets.file_tree import FileTree
         from unittest.mock import MagicMock, patch
+
+        from ppxai.tui.widgets.file_tree import FileTree
 
         app = _make_tree(tmp_path)
         results = []
@@ -246,8 +246,9 @@ class TestFileTreeFilePreview:
     """Enter on a file posts FilePreview message."""
 
     def test_file_selected_posts_preview(self, tmp_path):
-        from ppxai.tui.widgets.file_tree import FileTree
         from textual.widgets import DirectoryTree
+
+        from ppxai.tui.widgets.file_tree import FileTree
 
         (tmp_path / "readme.md").write_text("# Hello", encoding="utf-8")
         previews = []
@@ -275,9 +276,11 @@ class TestFileTreeFilePreview:
 
     def test_file_selected_stops_event(self, tmp_path):
         """on_directory_tree_file_selected must call event.stop()."""
-        from ppxai.tui.widgets.file_tree import FileTree
-        from textual.widgets import DirectoryTree
         from unittest.mock import MagicMock
+
+        from textual.widgets import DirectoryTree
+
+        from ppxai.tui.widgets.file_tree import FileTree
 
         (tmp_path / "file.py").write_text("", encoding="utf-8")
         app = _make_tree(tmp_path)
@@ -298,8 +301,9 @@ class TestActionEdit:
     """action_edit() posts FileEdit when cursor is on a file."""
 
     def test_action_edit_posts_message(self, tmp_path):
+        from unittest.mock import patch
+
         from ppxai.tui.widgets.file_tree import FileTree
-        from unittest.mock import MagicMock, patch
 
         target = tmp_path / "main.py"
         target.write_text("pass", encoding="utf-8")
@@ -325,8 +329,9 @@ class TestActionEdit:
 
     def test_action_edit_noop_on_directory(self, tmp_path):
         """action_edit does nothing when cursor is on a directory."""
-        from ppxai.tui.widgets.file_tree import FileTree
         from unittest.mock import patch
+
+        from ppxai.tui.widgets.file_tree import FileTree
 
         edits = []
 
@@ -351,8 +356,9 @@ class TestActionInject:
     """action_inject() posts FileInject when cursor is on a file."""
 
     def test_action_inject_posts_message(self, tmp_path):
-        from ppxai.tui.widgets.file_tree import FileTree
         from unittest.mock import patch
+
+        from ppxai.tui.widgets.file_tree import FileTree
 
         target = tmp_path / "config.json"
         target.write_text("{}", encoding="utf-8")
@@ -376,8 +382,9 @@ class TestActionInject:
         assert injections[0] == target
 
     def test_action_inject_noop_on_directory(self, tmp_path):
-        from ppxai.tui.widgets.file_tree import FileTree
         from unittest.mock import patch
+
+        from ppxai.tui.widgets.file_tree import FileTree
 
         injections = []
 

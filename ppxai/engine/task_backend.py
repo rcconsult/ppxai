@@ -28,7 +28,7 @@ only way to obtain one is to pass `authorize_task()`.
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 from ..common.logger import get_logger
 from .agent_runs import RunMeta, resume_refusal
@@ -58,7 +58,7 @@ def collect_holds() -> bool:
         return True
 
 
-_shared: Optional["InProcessTaskBackend"] = None
+_shared: "InProcessTaskBackend" | None = None
 
 
 def configure_task_backend(session_provider=None, on_change=None):
@@ -174,7 +174,7 @@ class InProcessTaskBackend:
         auth: AuthorizedTask,
         *,
         kind: str = "task",
-        owner: Optional[str] = None,
+        owner: str | None = None,
     ) -> RunMeta:
         """Mint a run from an AUTHORIZED task and schedule it.
 
@@ -233,7 +233,7 @@ class InProcessTaskBackend:
 
     # ── observe ─────────────────────────────────────────────────────────────
 
-    def list_runs(self, kind: Optional[str] = None) -> list[RunMeta]:
+    def list_runs(self, kind: str | None = None) -> list[RunMeta]:
         """All runs, newest-first per the registry, optionally kind-filtered.
 
         `/task ls` shows `kind="task"`, `/run ls` shows `kind="oneshot"` —
@@ -244,7 +244,7 @@ class InProcessTaskBackend:
             return runs
         return [r for r in runs if getattr(r, "kind", None) == kind]
 
-    def get_run(self, run_id: str) -> Optional[RunMeta]:
+    def get_run(self, run_id: str) -> RunMeta | None:
         return self.registry.get_run(run_id)
 
     def events(self, run_id: str, **kwargs) -> list:
@@ -267,7 +267,7 @@ class InProcessTaskBackend:
         return self.registry.cancel_run(run_id)
 
     def respond(self, run_id: str, token: str, approved: bool,
-                text: Optional[str] = None) -> Any:
+                text: str | None = None) -> Any:
         """Answer a parked run (T5). The token comes from `meta.waiting`.
 
         A wrong or stale token is refused by the registry rather than

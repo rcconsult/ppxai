@@ -6,7 +6,6 @@ Supports multiple content types: code, markdown, tree, image.
 """
 
 from pathlib import Path
-from typing import Optional
 
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical, VerticalScroll
@@ -14,17 +13,15 @@ from textual.css.query import NoMatches
 from textual.message import Message
 from textual.reactive import reactive
 from textual.widget import Widget
-from textual.widgets import Static, Markdown
+from textual.widgets import Markdown, Static
 
-from .tree_viewer import TreeViewer
-from .code_editor import CodeEditor, EXTENSION_TO_LANGUAGE, SUPPORTED_LANGUAGES
+from ppxai.tui.keys import get_widget_bindings
+
+from ..screens.editor import ConfirmCloseScreen
+from .code_editor import EXTENSION_TO_LANGUAGE, SUPPORTED_LANGUAGES, CodeEditor
 from .data_viewer import DataViewer
 from .image_viewer import ImageViewer
 from .table_viewer import TableViewer
-
-from ..screens.editor import ConfirmCloseScreen
-
-from ppxai.tui.keys import get_widget_bindings
 
 
 class SidePanel(Widget):
@@ -51,14 +48,14 @@ class SidePanel(Widget):
 
     def __init__(self, id: str = "side-panel"):
         super().__init__(id=id)
-        self._path: Optional[Path] = None
+        self._path: Path | None = None
         self._content: str = ""
         self._mode: str = "code"
-        self._line: Optional[int] = None
-        self._col: Optional[int] = None
+        self._line: int | None = None
+        self._col: int | None = None
         self._read_only: bool = True
         self._modified: bool = False
-        self._current_language: Optional[str] = None
+        self._current_language: str | None = None
 
     def compose(self) -> ComposeResult:
         """Compose the panel layout - empty initially."""
@@ -74,8 +71,8 @@ class SidePanel(Widget):
         path: Path,
         content: str,
         mode: str = "code",
-        line: Optional[int] = None,
-        col: Optional[int] = None,
+        line: int | None = None,
+        col: int | None = None,
         read_only: bool = True,
     ) -> None:
         """Show a file in the panel.
@@ -257,7 +254,7 @@ class SidePanel(Widget):
         self.is_open = True
         self.post_message(self.Opened())
 
-    def _goto_line(self, line: int, col: Optional[int] = None) -> None:
+    def _goto_line(self, line: int, col: int | None = None) -> None:
         """Jump to a specific line after content is mounted."""
         try:
             editor = self.query_one("#panel-editor", CodeEditor)
@@ -372,7 +369,7 @@ class SidePanel(Widget):
                 pass  # Header not found
 
     @property
-    def current_path(self) -> Optional[Path]:
+    def current_path(self) -> Path | None:
         """Get the currently displayed file path."""
         return self._path
 

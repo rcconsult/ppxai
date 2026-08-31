@@ -15,12 +15,12 @@ provider-wide one: the same OpenAI account, the same key, two protocols.
 
 import asyncio
 import json
-from typing import Any, AsyncIterator, Dict, List, Optional
+from collections.abc import AsyncIterator
+from typing import Any
 
 from ....common.logger import get_logger
 from ...types import Event, EventType, Message, UsageStats
 from ...uploaded_file import assert_wire_blocks_clean, flatten_uploaded_file_blocks
-
 
 logger = get_logger("wire.responses")
 
@@ -44,7 +44,7 @@ class ResponsesHandler:
     # ------------------------------------------------------------------
 
     @staticmethod
-    def convert_messages(messages: List[Message]) -> tuple:
+    def convert_messages(messages: list[Message]) -> tuple:
         """Convert Messages to Responses API format.
 
         R5 (v1.17.6): any `uploaded_file` blocks on user/assistant/tool
@@ -73,7 +73,7 @@ class ResponsesHandler:
                 # the conversion — same position as base.py's call, right
                 # after the flatten. `__debug__`-gated: no cost under -O.
                 assert_wire_blocks_clean(content, role=m.role)
-                item: Dict[str, Any] = {
+                item: dict[str, Any] = {
                     "role": "tool",
                     "content": content,
                 }
@@ -96,7 +96,7 @@ class ResponsesHandler:
         return instructions, input_items
 
     @staticmethod
-    def convert_tools(openai_tools: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def convert_tools(openai_tools: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Convert OpenAI chat tools format to Responses API format.
 
         Chat Completions: {"type": "function", "function": {"name": ..., "parameters": ...}}
@@ -117,7 +117,7 @@ class ResponsesHandler:
         return response_tools
 
     @staticmethod
-    def build_tool_hint(openai_tools: List[Dict[str, Any]]) -> str:
+    def build_tool_hint(openai_tools: list[dict[str, Any]]) -> str:
         """Build a concise tool hint for injection into instructions.
 
         This provides belt-and-suspenders context: if the model outputs
@@ -144,7 +144,7 @@ class ResponsesHandler:
     # ------------------------------------------------------------------
 
     @staticmethod
-    def parse_usage(usage) -> Optional[UsageStats]:
+    def parse_usage(usage) -> UsageStats | None:
         """Parse usage from Responses API response.
 
         Responses API uses input_tokens/output_tokens instead of
@@ -165,7 +165,7 @@ class ResponsesHandler:
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _budget_for(ctx: Any, model: str) -> Optional[int]:
+    def _budget_for(ctx: Any, model: str) -> int | None:
         """Output budget: operator config first, then the shipped fact.
 
         `ctx._get_max_tokens()` reads CONFIG only. `ModelFacts.max_tokens` is
@@ -186,12 +186,12 @@ class ResponsesHandler:
     def build_request(
         self,
         ctx: Any,
-        messages: List[Message],
+        messages: list[Message],
         model: str,
-        tools: Optional[List[Dict[str, Any]]] = None,
-        max_tokens: Optional[int] = None,
+        tools: list[dict[str, Any]] | None = None,
+        max_tokens: int | None = None,
         for_oneshot: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Assemble the `client.responses.create(**kwargs)` arguments.
 
         Split out of `chat()`/`oneshot()` so the extraction fence can compare
@@ -201,7 +201,7 @@ class ResponsesHandler:
         """
         instructions, input_items = self.convert_messages(messages)
 
-        request_kwargs: Dict[str, Any] = {"model": model, "input": input_items}
+        request_kwargs: dict[str, Any] = {"model": model, "input": input_items}
         if instructions:
             request_kwargs["instructions"] = instructions
 
@@ -266,10 +266,10 @@ class ResponsesHandler:
     async def chat(
         self,
         ctx: Any,
-        messages: List[Message],
+        messages: list[Message],
         model: str,
         stream: bool = True,
-        tools: Optional[List[Dict[str, Any]]] = None,
+        tools: list[dict[str, Any]] | None = None,
     ) -> AsyncIterator[Event]:
         """Responses API path for Codex / Pro models.
 
@@ -314,10 +314,10 @@ class ResponsesHandler:
     def oneshot(
         self,
         ctx: Any,
-        messages: List[Message],
+        messages: list[Message],
         model: str,
-        max_tokens: Optional[int] = None,
-    ) -> Dict[str, Any]:
+        max_tokens: int | None = None,
+    ) -> dict[str, Any]:
         """Stateless single-turn completion via the Responses API.
 
         Codex / Pro models return 404 on Chat Completions, so oneshot for
@@ -369,7 +369,7 @@ class ResponsesHandler:
     async def _stream(
         self,
         ctx: Any,
-        request_kwargs: Dict[str, Any],
+        request_kwargs: dict[str, Any],
     ) -> AsyncIterator[Event]:
         """Handle streaming Responses API response."""
         response_stream = ctx.client.responses.create(
@@ -380,7 +380,7 @@ class ResponsesHandler:
         full_response = []
         usage = None
         # Track in-progress function calls: call_id -> {"name": str, "arguments": str}
-        function_calls: Dict[str, Dict[str, str]] = {}
+        function_calls: dict[str, dict[str, str]] = {}
 
         for event in response_stream:
             event_type = getattr(event, "type", None)
@@ -444,7 +444,7 @@ class ResponsesHandler:
                 })
 
         final_content = "".join(full_response)
-        metadata: Dict[str, Any] = {}
+        metadata: dict[str, Any] = {}
         if usage:
             metadata["usage"] = usage
         if tool_calls_metadata:
@@ -454,7 +454,7 @@ class ResponsesHandler:
     async def _non_stream(
         self,
         ctx: Any,
-        request_kwargs: Dict[str, Any],
+        request_kwargs: dict[str, Any],
     ) -> AsyncIterator[Event]:
         """Handle non-streaming Responses API response."""
         response = await asyncio.to_thread(
@@ -512,7 +512,7 @@ class ResponsesHandler:
 
         usage = self.parse_usage(getattr(response, "usage", None))
 
-        metadata: Dict[str, Any] = {"usage": usage}
+        metadata: dict[str, Any] = {"usage": usage}
         if tool_calls_metadata:
             metadata["tool_calls"] = tool_calls_metadata
         yield Event(EventType.STREAM_END, content, metadata)

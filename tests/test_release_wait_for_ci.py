@@ -24,7 +24,6 @@ from unittest.mock import patch
 
 import pytest
 
-
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 RELEASE_PY = PROJECT_ROOT / "scripts" / "release.py"
 

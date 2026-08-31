@@ -24,7 +24,7 @@ Design notes:
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 from ..common.logger import get_logger
 from ..engine.task_backend import get_task_backend
@@ -130,7 +130,7 @@ class RunConsentWatcher:
             logger.debug("run consent poll failed", exc_info=True)
 
     @staticmethod
-    def _pending_token(meta: Any) -> Optional[str]:
+    def _pending_token(meta: Any) -> str | None:
         """The resume token of a run parked for consent, else None."""
         if getattr(meta, "status", None) != "waiting":
             return None
@@ -148,7 +148,7 @@ class RunConsentWatcher:
             ttl_s=waiting.get("ttl_s"),
         )
 
-        def _answered(approved: Optional[bool]) -> None:
+        def _answered(approved: bool | None) -> None:
             if approved is None:
                 # Deferred, not refused. Leaving the run parked is correct:
                 # the TTL denies it and `/task respond` still works.

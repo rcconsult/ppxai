@@ -19,20 +19,21 @@ serves.
 import asyncio
 import json
 import re
+from collections.abc import AsyncIterator
 from dataclasses import replace
-from typing import List, AsyncIterator, Optional, Dict, Any
+from typing import Any
 
 import httpx
 from openai import OpenAI
 
 from ...config.tls import tls_verify
-from ..model_facts import ModelFacts, shipped_facts_for_model
-from ..types import Message, Event, EventType, ProviderCapabilities
+from ..model_facts import shipped_facts_for_model
+from ..types import Event, EventType, Message, ProviderCapabilities
 from .base import BaseProvider
 from .wire import get_handler
 
 
-def inject_citation_urls(content: str, citations: List[str]) -> str:
+def inject_citation_urls(content: str, citations: list[str]) -> str:
     """
     Inject citation URLs into response text.
 
@@ -288,10 +289,10 @@ class PerplexityProvider(BaseProvider):
 
     async def chat(
         self,
-        messages: List[Message],
+        messages: list[Message],
         model: str,
         stream: bool = False,
-        tools: Optional[List[Dict[str, Any]]] = None
+        tools: list[dict[str, Any]] | None = None
     ) -> AsyncIterator[Event]:
         """Send chat request to Perplexity API.
 
@@ -479,7 +480,7 @@ class PerplexityProvider(BaseProvider):
 
     def chat_sync_simple(
         self,
-        messages: List[Message],
+        messages: list[Message],
         model: str,
     ) -> str:
         """Simple synchronous chat that returns just the content.
@@ -513,18 +514,18 @@ class PerplexityProvider(BaseProvider):
         self,
         prompt: str,
         model: str,
-        system: Optional[str] = None,
-        response_format: Optional[Dict[str, Any]] = None,
-        max_tokens: Optional[int] = None,
-        temperature: Optional[float] = None,
-    ) -> Dict[str, Any]:
+        system: str | None = None,
+        response_format: dict[str, Any] | None = None,
+        max_tokens: int | None = None,
+        temperature: float | None = None,
+    ) -> dict[str, Any]:
         """Stateless single-turn completion (BaseProvider contract).
 
         Same return shape as OpenAICompatibleProvider.oneshot. Perplexity
         uses the OpenAI SDK, so this composes the existing message
         conversion + generation params.
         """
-        messages: List[Message] = []
+        messages: list[Message] = []
         if system:
             messages.append(Message(role="system", content=system))
         messages.append(Message(role="user", content=prompt))
@@ -535,7 +536,7 @@ class PerplexityProvider(BaseProvider):
                 self._wire_ctx(), messages, model, max_tokens
             )
 
-        request_kwargs: Dict[str, Any] = {
+        request_kwargs: dict[str, Any] = {
             "model": model,
             "messages": self._convert_messages(messages),
             "stream": False,

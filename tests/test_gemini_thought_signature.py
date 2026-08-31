@@ -24,10 +24,9 @@ Gemini 2.5 sends neither field, so both fixes must be no-ops there.
 
 from __future__ import annotations
 
-import ppxai.engine.providers.gemini as gm
 from ppxai.engine.providers.gemini import GeminiProvider
-from ppxai.engine.types import Message
 from ppxai.engine.providers.wire.generate_content import GenerateContentHandler
+from ppxai.engine.types import Message
 
 
 def _provider() -> GeminiProvider:
@@ -152,9 +151,9 @@ class TestSignatureReplay:
         assertions can still 400 in production. This is the check that would
         have caught the first attempt.
         """
-        from google.genai import types
-
         import base64
+
+        from google.genai import types
         original = b"\x01\x02\xff\xfe"
         stored = base64.b64encode(original).decode("ascii")
         contents, _ = GenerateContentHandler.convert_messages(self._msgs(sig=stored))

@@ -22,14 +22,17 @@ pptx_mod = pytest.importorskip("pptx")
 from ppxai.engine.tools.builtin.excel_tools import (  # noqa: E402
     ListExcelSheetsTool,
     ReadExcelSheetTool,
+)
+from ppxai.engine.tools.builtin.excel_tools import (
     register_tools as register_excel,
 )
 from ppxai.engine.tools.builtin.pptx_tools import (  # noqa: E402
     ListPptxSlidesTool,
     ReadPptxSlideTextTool,
+)
+from ppxai.engine.tools.builtin.pptx_tools import (
     register_tools as register_pptx,
 )
-
 
 # -----------------------------------------------------------------------------
 # Test data builders
@@ -70,7 +73,6 @@ def _make_pptx(slides: list[dict]) -> bytes:
         # Title
         title = slide_data.get("title")
         if title:
-            from pptx.util import Pt
             txBox = slide.shapes.add_textbox(Inches(0.5), Inches(0.3), Inches(8), Inches(1))
             tf = txBox.text_frame
             tf.text = title
@@ -445,10 +447,11 @@ class TestRenderPptxSlideArtifactFlow:
     the context window on every single render."""
 
     def _render(self, workspace_engine, tmp_path, slide_num=1):
-        from ppxai.engine.tools.builtin.pptx_tools import (
-            RenderPptxSlideTool, _libreoffice_available,
-        )
         from ppxai.common.libreoffice import libreoffice_can_read
+        from ppxai.engine.tools.builtin.pptx_tools import (
+            RenderPptxSlideTool,
+            _libreoffice_available,
+        )
         if not _libreoffice_available():
             pytest.skip("LibreOffice not installed — render tests need it")
         # A snap-confined LibreOffice can't read tmp_path (outside $HOME), so a
@@ -487,10 +490,11 @@ class TestRenderPptxSlideArtifactFlow:
     def test_render_falls_back_to_data_uri_without_store(self, tmp_path):
         # Engine stub WITHOUT file_store: legacy inline path stays
         # available so non-store callers still get pixels.
-        from ppxai.engine.tools.builtin.pptx_tools import (
-            RenderPptxSlideTool, _libreoffice_available,
-        )
         from ppxai.common.libreoffice import libreoffice_can_read
+        from ppxai.engine.tools.builtin.pptx_tools import (
+            RenderPptxSlideTool,
+            _libreoffice_available,
+        )
         if not _libreoffice_available():
             pytest.skip("LibreOffice not installed")
         if not libreoffice_can_read(tmp_path):

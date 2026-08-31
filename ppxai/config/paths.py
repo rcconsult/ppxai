@@ -5,7 +5,7 @@ Paths, data directory, and server configuration.
 import platform
 import sys
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 from ..common.logger import get_logger
 from .store import ConfigStore
@@ -18,7 +18,7 @@ def _expand_path_template(template: str) -> str:
     return template.replace("{home}", str(Path.home())).replace("{platform}", platform.system().lower())
 
 
-def get_paths_config() -> Dict[str, Any]:
+def get_paths_config() -> dict[str, Any]:
     """Get paths configuration for binary and data locations."""
     defaults = {
         "bin_search_paths": [
@@ -47,7 +47,7 @@ def get_paths_config() -> Dict[str, Any]:
     return result
 
 
-def get_bin_search_paths() -> List[str]:
+def get_bin_search_paths() -> list[str]:
     """Get list of directories to search for ppxai binaries (platform-aware).
 
     Returns only paths relevant to the current platform:
@@ -70,7 +70,7 @@ def get_data_dir() -> Path:
     return Path(get_paths_config().get("data_dir", str(Path.home() / ".ppxai")))
 
 
-def get_server_config() -> Dict[str, Any]:
+def get_server_config() -> dict[str, Any]:
     """Get server-specific configuration."""
     defaults = {
         "idle_timeout": 300,

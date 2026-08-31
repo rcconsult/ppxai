@@ -22,9 +22,7 @@ from __future__ import annotations
 import asyncio
 import importlib
 import sys
-from pathlib import Path
 from types import SimpleNamespace
-from typing import Any
 
 import pytest
 
@@ -40,7 +38,6 @@ from ppxai.engine.tools.builtin.pdf_tools import (  # noqa: E402
     _parse_pages_spec,
     register_tools,
 )
-
 
 # -----------------------------------------------------------------------------
 # Test fixtures — real PDFs generated with pypdf

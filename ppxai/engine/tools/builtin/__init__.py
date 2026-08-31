@@ -7,13 +7,13 @@ These tools are registered automatically when the engine starts.
 import logging
 from typing import Optional
 
-from . import filesystem, calculator, datetime_tool, preview_log, web
 from ...types import ToolEngineProtocol, ToolManagerProtocol
+from . import calculator, datetime_tool, filesystem, preview_log, web
 
 logger = logging.getLogger(__name__)
 
 
-def register_all_builtin_tools(manager: ToolManagerProtocol, provider: str = None, engine: Optional[ToolEngineProtocol] = None):
+def register_all_builtin_tools(manager: ToolManagerProtocol, provider: str = None, engine: ToolEngineProtocol | None = None):
     """Register all built-in tools with the manager.
 
     Args:

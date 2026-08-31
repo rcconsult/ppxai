@@ -7,7 +7,7 @@ describing WHERE work runs live in `execution.py` (axis 3) — see
 `tools.agent.*` in v1.19.1.
 """
 
-from typing import Any, Dict, List
+from typing import Any
 
 from .defaults import (
     DEFAULT_AGENT_AUTO_RETRY_EMPTY,
@@ -25,14 +25,14 @@ from .defaults import (
 from .store import ConfigStore
 
 
-def get_tool_config(tool_name: str) -> Dict[str, Any]:
+def get_tool_config(tool_name: str) -> dict[str, Any]:
     """Get configuration for a specific tool."""
     config = ConfigStore.get_instance().config
     tools_config = config.get("tools", {})
     return tools_config.get(tool_name, {})
 
 
-def get_tool_description_overrides(provider: str = None, model: str = None) -> Dict[str, str]:
+def get_tool_description_overrides(provider: str = None, model: str = None) -> dict[str, str]:
     """Get tool description overrides from config."""
     config = ConfigStore.get_instance().config
     tools_config = config.get("tools", {})
@@ -52,14 +52,14 @@ def get_tool_description_overrides(provider: str = None, model: str = None) -> D
     return result
 
 
-def get_tool_pricing(tool_name: str, provider: str) -> Dict[str, Any]:
+def get_tool_pricing(tool_name: str, provider: str) -> dict[str, Any]:
     """Get pricing configuration for a tool provider."""
     tool_config = get_tool_config(tool_name)
     pricing = tool_config.get("pricing", {})
     return pricing.get(provider, {})
 
 
-def get_shell_config() -> Dict[str, Any]:
+def get_shell_config() -> dict[str, Any]:
     """Get shell tool configuration with defaults from defaults.py."""
     shell_config = get_tool_config("shell")
 
@@ -109,7 +109,7 @@ def get_shell_config() -> Dict[str, Any]:
     }
 
 
-def _resolve_wrappers(shell_config: Dict[str, Any]) -> List[Dict[str, Any]]:
+def _resolve_wrappers(shell_config: dict[str, Any]) -> list[dict[str, Any]]:
     """Merge default wrapper entries with user-declared overrides.
 
     Resolution rules:
@@ -133,7 +133,7 @@ def _resolve_wrappers(shell_config: Dict[str, Any]) -> List[Dict[str, Any]]:
     use_rtk_prompt_hint_legacy = shell_config.get("use_rtk_prompt_hint")
 
     # Start with deep-ish copies of the defaults so we don't mutate the constant.
-    merged: List[Dict[str, Any]] = [dict(d) for d in DEFAULT_SHELL_WRAPPERS]
+    merged: list[dict[str, Any]] = [dict(d) for d in DEFAULT_SHELL_WRAPPERS]
     by_name = {entry["name"]: entry for entry in merged}
 
     # Apply legacy use_rtk* shim on the rtk default if it exists.
@@ -159,7 +159,7 @@ def _resolve_wrappers(shell_config: Dict[str, Any]) -> List[Dict[str, Any]]:
     return merged
 
 
-def get_agent_config() -> Dict[str, Any]:
+def get_agent_config() -> dict[str, Any]:
     """The `tools.agent.*` interactive tool-loop knobs (ADR 0010 axis 2).
 
     BREAKING (v1.19.1, ADR 0010): this accessor no longer carries the
@@ -190,7 +190,7 @@ def get_agent_config() -> Dict[str, Any]:
     }
 
 
-def get_container_config() -> Dict[str, Any]:
+def get_container_config() -> dict[str, Any]:
     """Get container tools configuration."""
     tool_config = get_tool_config("container")
 
@@ -202,7 +202,7 @@ def get_container_config() -> Dict[str, Any]:
     }
 
 
-def get_vision_model_config() -> Dict[str, Any]:
+def get_vision_model_config() -> dict[str, Any]:
     """Get vision-language sidecar configuration (v1.17.4 Phase 2.7).
 
     Returns the `tools.vision_model` section with sensible defaults for

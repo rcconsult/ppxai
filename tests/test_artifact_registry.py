@@ -21,7 +21,7 @@ class here following the same shape.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, ClassVar, Dict
+from typing import Any, ClassVar
 
 import pytest
 
@@ -34,7 +34,6 @@ from ppxai.engine.types import (
     PdfAttachmentRef,
     TextAttachmentRef,
 )
-
 
 # =============================================================================
 # Registry — discoverability
@@ -260,10 +259,10 @@ class TestRegistrationSemantics:
             SCHEMA_VERSION: ClassVar[int] = 1
             block_index: int = 0
             kind: str = "image"
-            def to_dict(self) -> Dict[str, Any]:
+            def to_dict(self) -> dict[str, Any]:
                 return {}
             @classmethod
-            def from_dict(cls, data: Dict[str, Any]) -> "FakeImage":
+            def from_dict(cls, data: dict[str, Any]) -> "FakeImage":
                 return cls()
 
         with pytest.raises(ValueError, match="kind='image' already registered"):
@@ -275,7 +274,7 @@ class TestRegistrationSemantics:
             SCHEMA_VERSION: ClassVar[int] = 1
             block_index: int = 0
             kind: str = ""
-            def to_dict(self) -> Dict[str, Any]: return {}
+            def to_dict(self) -> dict[str, Any]: return {}
             @classmethod
             def from_dict(cls, data): return cls()
 
@@ -288,7 +287,7 @@ class TestRegistrationSemantics:
             SCHEMA_VERSION: ClassVar[int] = 1
             block_index: int = 0
             kind: str = "test_dummy_unique_kind_for_decorator_check"
-            def to_dict(self) -> Dict[str, Any]:
+            def to_dict(self) -> dict[str, Any]:
                 return {"kind": self.kind, "_schema_version": 1, "block_index": 0}
             @classmethod
             def from_dict(cls, data): return cls()

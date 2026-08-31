@@ -8,28 +8,27 @@ These tests verify:
 - Error cases and rollback
 """
 
-import pytest
 import tempfile
-import asyncio
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
+
+from ppxai.constants import ConsentMode
 from ppxai.engine import EngineClient
 from ppxai.engine.session import SessionManager
-from ppxai.constants import ConsentMode
 from ppxai.engine.tools.builtin.editor import (
     ApplyPatchTool,
-    ReplaceBlockTool,
-    InsertTextTool,
     DeleteLinesTool,
-    _is_new_file_diff,
-    _apply_unified_diff,
+    InsertTextTool,
+    ReplaceBlockTool,
     _apply_search_replace_diff,
-    _normalize_whitespace,
+    _apply_unified_diff,
     _collapse_whitespace,
+    _is_new_file_diff,
+    _normalize_whitespace,
     _replace_hunk,
 )
-
 
 # === Fixtures ===
 
@@ -1737,10 +1736,14 @@ def test_validator_FILE_WRITE_TOOLS_match_registered_builtin_names():
     otherwise the claim_without_action hint advertises tools the model
     can't call (the bug captured in radovan's pod log 2026-06-09).
     Sentinel for the v1.18.7 fix that added WriteFileTool."""
-    from ppxai.engine.tools.validator import ResponseValidator
     from ppxai.engine.tools.builtin.editor import (
-        ApplyPatchTool, ReplaceBlockTool, InsertTextTool, DeleteLinesTool, WriteFileTool,
+        ApplyPatchTool,
+        DeleteLinesTool,
+        InsertTextTool,
+        ReplaceBlockTool,
+        WriteFileTool,
     )
+    from ppxai.engine.tools.validator import ResponseValidator
 
     # Build the set of names the editor module actually registers.
     fake_engine = MagicMock()

@@ -5,22 +5,19 @@ These tools provide safe, atomic file editing operations with user consent.
 All tools check for user consent before modifying files.
 """
 
-import difflib
 import os
 import re
-import sys
-import time
 import unicodedata
 from pathlib import Path
-from typing import Optional, Dict, Any
 
 from ....common.atomic_file import atomic_replace
 from ...types import ToolEngineProtocol, ToolManagerProtocol
 from ..base import BaseTool
 from .syntax_validator import (
-    validate_candidate_content,
     format_validation_error,
+    validate_candidate_content,
 )
+import sys  # noqa: F401 — patched by tests
 
 
 def _register_checkpoint_file(engine: ToolEngineProtocol, path: Path):

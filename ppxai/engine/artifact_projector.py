@@ -69,7 +69,8 @@ the dispatch never silently falls through to a wrong handler.
 
 from __future__ import annotations
 
-from typing import Any, Callable, Dict, List, Optional
+from collections.abc import Callable
+from typing import Any
 
 from ..common.logger import get_logger
 
@@ -90,7 +91,7 @@ class ArtifactProjector:
     initialized lazily at first registration.
     """
 
-    _registry: Dict[str, Callable] = {}
+    _registry: dict[str, Callable] = {}
 
     @classmethod
     def register(cls, kind: str) -> Callable[[Callable], Callable]:
@@ -201,7 +202,7 @@ class ArtifactProjector:
         return kind in own_registry
 
     @classmethod
-    def list_kinds(cls) -> List[str]:
+    def list_kinds(cls) -> list[str]:
         """Return the sorted list of currently-registered kinds.
 
         Mirrors `Renderer.list_registered_types()` for symmetry.
@@ -212,7 +213,7 @@ class ArtifactProjector:
         return sorted(own_registry.keys())
 
     @classmethod
-    def project_optional(cls, ref: Any) -> Optional[Any]:
+    def project_optional(cls, ref: Any) -> Any | None:
         """Dispatch if registered; return None silently if not.
 
         Forward-compat variant of `project()`. Use when a consumer

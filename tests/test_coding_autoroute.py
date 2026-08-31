@@ -11,12 +11,9 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from ppxai.commands.coding import _execute_ai_task
 from ppxai.commands.results import AIResponseResult, ResultStatus
 from ppxai.engine.types import Event, EventType
-
 
 _AI_OUTPUT = "Here you go:\n\n```python\ndef foo():\n    return 1\n```\n"
 

@@ -14,24 +14,23 @@ consumer can upload files without reimplementing the validation + vision
 routing logic that the Rich TUI already has.
 """
 
-import asyncio
 import base64
 import json
 import re
+from typing import Any
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
-from typing import Any, Dict, List, Optional
 
+from ...commands.agent import validate_agent_task
 from ...common.logger import get_logger
+from ...config.defaults import DEFAULT_AGENT_MIN_TASK_WORDS
 from ...engine.file_preprocessing import preprocess_file
+from ...engine.model_facts import supports_vision as _supports_vision
 from ...engine.types import Event, EventType
 from ..models import ChatRequest, CodingTaskRequest
 from ..state import Session, get_session
-from ..streaming import sse_event_generator, sse_coding_task_generator
-from ...engine.model_facts import supports_vision as _supports_vision
-from ...commands.agent import validate_agent_task
-from ...config.defaults import DEFAULT_AGENT_MIN_TASK_WORDS
+from ..streaming import sse_coding_task_generator, sse_event_generator
 
 logger = get_logger("server")
 
@@ -98,15 +97,15 @@ def _build_chat_payload(
     if not files:
         return message, [], []
 
-    text_chunks: List[str] = [message] if message else []
-    non_text_parts: List[Dict[str, Any]] = []
-    attachment_warnings: List[Dict[str, Any]] = []
+    text_chunks: list[str] = [message] if message else []
+    non_text_parts: list[dict[str, Any]] = []
+    attachment_warnings: list[dict[str, Any]] = []
     # ADR 0006 Step 2/3: collect kind-specific ArtifactRefs from each
     # PreprocessResult for re-basing into the final content list. Same
     # routing logic as build_multimodal_content — text-class attachments
     # share the merged text block; non-text attachments get their own.
-    text_artifact_refs: List[Any] = []
-    non_text_artifact_refs: List[Any] = []
+    text_artifact_refs: list[Any] = []
+    non_text_artifact_refs: list[Any] = []
 
     model = engine.model or ""
     provider = engine.provider_name or ""
@@ -248,7 +247,7 @@ def _build_chat_payload(
                 text_artifact_refs.append(result.attachment_ref)
 
     combined_text = "\n".join(chunk for chunk in text_chunks if chunk)
-    parts: List[Dict[str, Any]] = []
+    parts: list[dict[str, Any]] = []
     if combined_text:
         parts.append({"type": "text", "text": combined_text})
     parts.extend(non_text_parts)
@@ -260,7 +259,7 @@ def _build_chat_payload(
     # the final assembled content list. Mirrors the logic in
     # build_multimodal_content (commands/attach.py) so server route +
     # TUI/Rich path produce identical Message.attachments shape.
-    attachment_refs: List[Any] = []
+    attachment_refs: list[Any] = []
     has_combined_text = bool(combined_text)
     text_block_index = 0 if has_combined_text else -1
 

@@ -9,16 +9,15 @@ Provides a full-screen editing experience with:
 """
 
 from pathlib import Path
-from typing import Optional
 
 from textual.app import ComposeResult
 from textual.css.query import NoMatches
 from textual.screen import Screen
 from textual.widgets import Footer, Static
 
-from ..widgets.code_editor import CodeEditor
-
 from ppxai.tui.keys import get_widget_bindings
+
+from ..widgets.code_editor import CodeEditor
 
 
 class EditorScreen(Screen):
@@ -30,8 +29,8 @@ class EditorScreen(Screen):
         self,
         path: Path,
         content: str,
-        line: Optional[int] = None,
-        col: Optional[int] = None,
+        line: int | None = None,
+        col: int | None = None,
     ):
         """Initialize editor screen.
 
@@ -125,7 +124,7 @@ class EditorScreen(Screen):
         else:
             self.app.pop_screen()
 
-    def _handle_close_response(self, save: Optional[bool]) -> None:
+    def _handle_close_response(self, save: bool | None) -> None:
         """Handle response from close confirmation.
 
         Args:

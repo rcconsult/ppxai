@@ -20,7 +20,6 @@ from fastapi.testclient import TestClient
 
 from ppxai.engine.agent_runs import AgentRunRegistry, FilesystemAgentRunStore
 
-
 # ---------------------------------------------------------------------------
 # Config accessor
 # ---------------------------------------------------------------------------

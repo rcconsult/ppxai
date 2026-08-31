@@ -15,13 +15,12 @@ Covers:
 
 import json
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
 from ppxai.config import get_extra_body
 from ppxai.engine.providers.openai_compat import OpenAICompatibleProvider
-
 
 # ---------------------------------------------------------------------------
 # Config-layer behavior

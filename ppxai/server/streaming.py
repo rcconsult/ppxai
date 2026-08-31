@@ -5,7 +5,7 @@ SSE (Server-Sent Events) streaming generators for the ppxai HTTP server.
 import asyncio
 import json
 import traceback
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 
 from fastapi import Request
 

@@ -4,12 +4,12 @@ Tool manager for the ppxai engine.
 Handles tool registration, filtering by provider, and execution.
 """
 
-from typing import Dict, List, Optional, Any, Tuple
 import json
 import logging
-from .base import BaseTool, FunctionTool
-from ..types import Event, EventType, ToolCallInfo
+from typing import Any
+
 from ...config import get_tool_description_overrides
+from .base import BaseTool, FunctionTool
 from .wrappers import get_registry as get_wrapper_registry
 
 logger = logging.getLogger(__name__)
@@ -23,15 +23,15 @@ class ToolManager:
 
     def __init__(self):
         """Initialize the tool manager."""
-        self._tools: Dict[str, BaseTool] = {}
-        self._provider: Optional[str] = None
-        self._model: Optional[str] = None  # Track model for description overrides
-        self._description_overrides: Dict[str, str] = {}  # Cached description overrides
+        self._tools: dict[str, BaseTool] = {}
+        self._provider: str | None = None
+        self._model: str | None = None  # Track model for description overrides
+        self._description_overrides: dict[str, str] = {}  # Cached description overrides
         self.max_iterations: int = 15
         self.auto_retry_empty: int = 3  # Max retries for empty responses (0=disabled)
         # Loop detection - prevent models from calling same tool with same args repeatedly
         self.max_same_tool_calls: int = 3  # Max consecutive calls to same tool+args (0=disabled)
-        self._tool_call_history: List[Tuple[str, str]] = []  # Track (tool_name, args_hash) for loop detection
+        self._tool_call_history: list[tuple[str, str]] = []  # Track (tool_name, args_hash) for loop detection
 
         # Display limit configuration (v1.15.3)
         # Controls how much of a tool result is displayed to the user
@@ -39,7 +39,7 @@ class ToolManager:
         self.default_display_limit: int = 2000
 
         # Tool-specific display limits
-        self.tool_display_limits: Dict[str, Any] = {
+        self.tool_display_limits: dict[str, Any] = {
             # Weather tool has format-specific limits
             "get_weather": {
                 "short": 500,      # One-line format: "Geneva: ☁️  +5°C"
@@ -66,10 +66,10 @@ class ToolManager:
         self,
         name: str,
         description: str,
-        parameters: Dict[str, Any],
+        parameters: dict[str, Any],
         handler: callable,
-        provider_specific: Optional[List[str]] = None,
-        provider_excluded: Optional[List[str]] = None
+        provider_specific: list[str] | None = None,
+        provider_excluded: list[str] | None = None
     ):
         """Register a function as a tool.
 
@@ -132,7 +132,7 @@ class ToolManager:
         """
         return self._description_overrides.get(tool.name, tool.description)
 
-    def get_tool_display_limit(self, tool_name: str, tool_args: Optional[Dict[str, Any]] = None) -> int:
+    def get_tool_display_limit(self, tool_name: str, tool_args: dict[str, Any] | None = None) -> int:
         """Get display limit for a specific tool result.
 
         v1.15.3: Configurable, format-aware display limits for tool results.
@@ -164,7 +164,7 @@ class ToolManager:
         # Direct integer limit
         return tool_config
 
-    def get_tool(self, name: str) -> Optional[BaseTool]:
+    def get_tool(self, name: str) -> BaseTool | None:
         """Get a specific tool by name.
 
         Args:
@@ -180,7 +180,7 @@ class ToolManager:
             return None
         return tool
 
-    def get_available_tools(self) -> List[BaseTool]:
+    def get_available_tools(self) -> list[BaseTool]:
         """Get tools available for current provider.
 
         Returns:
@@ -190,7 +190,7 @@ class ToolManager:
             return list(self._tools.values())
         return [t for t in self._tools.values() if t.is_available_for(self._provider)]
 
-    def list_tools(self) -> List[Dict[str, Any]]:
+    def list_tools(self) -> list[dict[str, Any]]:
         """List available tools as dictionaries.
 
         Returns:
@@ -201,7 +201,7 @@ class ToolManager:
             for t in self.get_available_tools()
         ]
 
-    def get_tools_openai_format(self) -> List[Dict[str, Any]]:
+    def get_tools_openai_format(self) -> list[dict[str, Any]]:
         """Get tools in OpenAI function calling format.
 
         This format is used by vLLM with --enable-auto-tool-choice and other
@@ -342,7 +342,7 @@ class ToolManager:
 
     def get_tools_prompt(
         self,
-        working_dir: Optional[str] = None,
+        working_dir: str | None = None,
         include_wrapper_context: bool = True,
     ) -> str:
         """Generate system prompt describing available tools.
@@ -492,7 +492,7 @@ class ToolManager:
         """
         self._tool_call_history.clear()
 
-    def _hash_args(self, args: Dict[str, Any]) -> str:
+    def _hash_args(self, args: dict[str, Any]) -> str:
         """Create a stable hash of tool arguments for loop detection.
 
         Args:
@@ -506,7 +506,7 @@ class ToolManager:
         except (TypeError, ValueError):
             return str(args)
 
-    def record_tool_call(self, tool_name: str, args: Optional[Dict[str, Any]] = None):
+    def record_tool_call(self, tool_name: str, args: dict[str, Any] | None = None):
         """Record a tool call for loop detection.
 
         Args:
@@ -516,7 +516,7 @@ class ToolManager:
         args_hash = self._hash_args(args or {})
         self._tool_call_history.append((tool_name, args_hash))
 
-    def is_tool_loop_detected(self, tool_name: str, args: Optional[Dict[str, Any]] = None) -> bool:
+    def is_tool_loop_detected(self, tool_name: str, args: dict[str, Any] | None = None) -> bool:
         """Check if calling this tool with these args would create a loop.
 
         A loop is detected when the same tool with the same arguments has been

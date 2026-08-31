@@ -11,12 +11,12 @@ from __future__ import annotations
 import pytest
 
 from ppxai.engine.agent_skill import (
-    AgentSkillError,
-    LoadedSkill,
-    load_skill,
     REFERENCES_DIR,
     SCRIPTS_DIR,
     SKILL_MANIFEST,
+    AgentSkillError,
+    LoadedSkill,
+    load_skill,
 )
 
 

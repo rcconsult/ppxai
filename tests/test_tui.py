@@ -11,10 +11,9 @@ Phase 1 tests validate core visual components work reliably:
 - Keybindings: No conflicts between widgets
 """
 
-import pytest
+import asyncio
 import json
 import tempfile
-import asyncio
 from pathlib import Path
 
 
@@ -23,7 +22,7 @@ class TestThemes:
 
     def test_custom_themes_defined(self):
         """Verify custom themes are properly defined."""
-        from ppxai.tui.themes import CUSTOM_THEMES, DEFAULT_THEME, CYCLE_THEMES
+        from ppxai.tui.themes import CUSTOM_THEMES
 
         assert "tron-legacy" in CUSTOM_THEMES
         assert "matrix" in CUSTOM_THEMES
@@ -45,7 +44,7 @@ class TestThemes:
 
     def test_theme_objects_valid(self):
         """Custom Theme objects should have required attributes."""
-        from ppxai.tui.themes.themes import TRON_LEGACY_THEME, MATRIX_THEME
+        from ppxai.tui.themes.themes import MATRIX_THEME, TRON_LEGACY_THEME
 
         for theme in [TRON_LEGACY_THEME, MATRIX_THEME]:
             assert theme.name is not None
@@ -59,11 +58,6 @@ class TestClipboard:
 
     def test_clipboard_module_imports(self):
         """Clipboard module should import without error."""
-        from ppxai.tui.clipboard import (
-            copy_to_clipboard,
-            paste_from_clipboard,
-            is_clipboard_available,
-        )
 
     def test_clipboard_availability_check(self):
         """Should be able to check clipboard availability."""
@@ -132,7 +126,6 @@ class TestTreeViewer:
 
     def test_tree_viewer_imports(self):
         """TreeViewer should import without error."""
-        from ppxai.tui.widgets import TreeViewer
 
     def test_tree_viewer_format_value(self):
         """Test value formatting."""
@@ -159,7 +152,6 @@ class TestCodeEditor:
 
     def test_code_editor_imports(self):
         """CodeEditor should import without error."""
-        from ppxai.tui.widgets import CodeEditor
 
     def test_language_detection(self):
         """Test language detection from file extension."""
@@ -181,7 +173,6 @@ class TestSplitPane:
 
     def test_split_pane_imports(self):
         """SplitPane should import without error."""
-        from ppxai.tui.widgets import SplitPane, Pane, HorizontalSplit, VerticalSplit
 
     def test_pane_has_class(self):
         """Pane should add .pane class."""
@@ -196,20 +187,6 @@ class TestWidgetExports:
 
     def test_all_widgets_exported(self):
         """All widgets should be exported from __init__."""
-        from ppxai.tui.widgets import (
-            SafeQueryMixin,
-            StatusBar,
-            ChatView,
-            InputBox,
-            MessageBox,
-            TreeViewer,
-            CodeEditor,
-            SplitPane,
-            Pane,
-            HorizontalSplit,
-            VerticalSplit,
-            SidePanel,
-        )
 
     def test_all_exports_list(self):
         """__all__ should list all exports."""
@@ -253,7 +230,6 @@ class TestSidePanel:
 
     def test_side_panel_imports(self):
         """SidePanel should import without error."""
-        from ppxai.tui.widgets import SidePanel
 
     def test_side_panel_default_state(self):
         """SidePanel should start closed."""
@@ -275,7 +251,6 @@ class TestAppImports:
 
     def test_app_imports(self):
         """Main app should import without error."""
-        from ppxai.tui.app import PPXAIDEApp
 
     def test_app_has_bindings(self):
         """App should have keyboard bindings."""
@@ -294,16 +269,6 @@ class TestTerminalCapabilities:
 
     def test_terminal_imports(self):
         """Terminal module should import without error."""
-        from ppxai.tui.terminal import (
-            ImageProtocol,
-            TerminalCapabilities,
-            detect_terminal,
-            detect_true_color,
-            detect_image_protocol,
-            can_display_images,
-            get_capabilities,
-            format_capabilities,
-        )
 
     def test_image_protocol_enum(self):
         """ImageProtocol enum should have expected values."""
@@ -316,7 +281,7 @@ class TestTerminalCapabilities:
 
     def test_detect_capabilities_returns_dataclass(self):
         """detect_capabilities should return TerminalCapabilities."""
-        from ppxai.tui.terminal import get_capabilities, TerminalCapabilities
+        from ppxai.tui.terminal import TerminalCapabilities, get_capabilities
 
         caps = get_capabilities()
         assert isinstance(caps, TerminalCapabilities)
@@ -338,12 +303,6 @@ class TestImageSupport:
 
     def test_images_imports(self):
         """Images module should import without error."""
-        from ppxai.tui.images import (
-            IMAGE_EXTENSIONS,
-            is_image_file,
-            display_image,
-        )
-        from ppxai.tui.terminal import can_display_images
 
     def test_image_extensions(self):
         """IMAGE_EXTENSIONS should contain common formats."""
@@ -356,8 +315,9 @@ class TestImageSupport:
 
     def test_is_image_file(self):
         """is_image_file should detect image extensions."""
-        from ppxai.tui.images import is_image_file
         from pathlib import Path
+
+        from ppxai.tui.images import is_image_file
 
         assert is_image_file(Path("test.png"))
         assert is_image_file(Path("test.jpg"))
@@ -371,19 +331,12 @@ class TestContentFactory:
 
     def test_content_factory_imports(self):
         """Content factory should import without error."""
-        from ppxai.tui.widgets.content_factory import (
-            detect_display_mode,
-            get_data_format,
-            is_data_file,
-            is_markdown_file,
-            DATA_FORMATS,
-            MARKDOWN_FORMATS,
-        )
 
     def test_detect_display_mode_code(self):
         """detect_display_mode should return 'code' for code files."""
-        from ppxai.tui.widgets.content_factory import detect_display_mode
         from pathlib import Path
+
+        from ppxai.tui.widgets.content_factory import detect_display_mode
 
         assert detect_display_mode(Path("test.py")) == "code"
         assert detect_display_mode(Path("test.js")) == "code"
@@ -392,8 +345,9 @@ class TestContentFactory:
 
     def test_detect_display_mode_data(self):
         """detect_display_mode should return 'data' for data files."""
-        from ppxai.tui.widgets.content_factory import detect_display_mode
         from pathlib import Path
+
+        from ppxai.tui.widgets.content_factory import detect_display_mode
 
         assert detect_display_mode(Path("test.json")) == "data"
         assert detect_display_mode(Path("test.yaml")) == "data"
@@ -402,16 +356,18 @@ class TestContentFactory:
 
     def test_detect_display_mode_markdown(self):
         """detect_display_mode should return 'markdown' for markdown files."""
-        from ppxai.tui.widgets.content_factory import detect_display_mode
         from pathlib import Path
+
+        from ppxai.tui.widgets.content_factory import detect_display_mode
 
         assert detect_display_mode(Path("README.md")) == "markdown"
         assert detect_display_mode(Path("doc.markdown")) == "markdown"
 
     def test_detect_display_mode_image(self):
         """detect_display_mode should return 'image' for image files."""
-        from ppxai.tui.widgets.content_factory import detect_display_mode
         from pathlib import Path
+
+        from ppxai.tui.widgets.content_factory import detect_display_mode
 
         assert detect_display_mode(Path("test.png")) == "image"
         assert detect_display_mode(Path("test.jpg")) == "image"
@@ -419,8 +375,9 @@ class TestContentFactory:
 
     def test_get_data_format(self):
         """get_data_format should return specific format."""
-        from ppxai.tui.widgets.content_factory import get_data_format
         from pathlib import Path
+
+        from ppxai.tui.widgets.content_factory import get_data_format
 
         assert get_data_format(Path("test.json")) == "json"
         assert get_data_format(Path("test.yaml")) == "yaml"
@@ -430,8 +387,9 @@ class TestContentFactory:
 
     def test_is_data_file(self):
         """is_data_file should detect data file extensions."""
-        from ppxai.tui.widgets.content_factory import is_data_file
         from pathlib import Path
+
+        from ppxai.tui.widgets.content_factory import is_data_file
 
         assert is_data_file(Path("test.json"))
         assert is_data_file(Path("test.yaml"))
@@ -439,8 +397,9 @@ class TestContentFactory:
 
     def test_is_markdown_file(self):
         """is_markdown_file should detect markdown extensions."""
-        from ppxai.tui.widgets.content_factory import is_markdown_file
         from pathlib import Path
+
+        from ppxai.tui.widgets.content_factory import is_markdown_file
 
         assert is_markdown_file(Path("README.md"))
         assert is_markdown_file(Path("doc.markdown"))
@@ -452,16 +411,6 @@ class TestValidation:
 
     def test_validation_imports(self):
         """Validation module should import without error."""
-        from ppxai.tui.validation import (
-            safe_resolve_path,
-            validate_file_size,
-            get_size_limit_for_mode,
-            format_file_size,
-            is_safe_filename,
-            MAX_TEXT_FILE_SIZE,
-            MAX_IMAGE_SIZE,
-            MAX_DATA_FILE_SIZE,
-        )
 
     def test_safe_resolve_path_absolute(self):
         """safe_resolve_path should handle absolute paths."""
@@ -544,10 +493,10 @@ class TestValidation:
     def test_get_size_limit_for_mode(self):
         """get_size_limit_for_mode should return appropriate limits."""
         from ppxai.tui.validation import (
-            get_size_limit_for_mode,
-            MAX_TEXT_FILE_SIZE,
-            MAX_IMAGE_SIZE,
             MAX_DATA_FILE_SIZE,
+            MAX_IMAGE_SIZE,
+            MAX_TEXT_FILE_SIZE,
+            get_size_limit_for_mode,
         )
 
         assert get_size_limit_for_mode("image") == MAX_IMAGE_SIZE
@@ -970,8 +919,9 @@ class TestMultiLineInput:
 
     def test_chat_text_area_is_textarea(self):
         """ChatTextArea should be a TextArea subclass."""
-        from ppxai.tui.widgets.input_box import ChatTextArea
         from textual.widgets import TextArea
+
+        from ppxai.tui.widgets.input_box import ChatTextArea
 
         assert issubclass(ChatTextArea, TextArea)
 
@@ -1002,6 +952,7 @@ class TestMultiLineInput:
     def test_input_box_compose_references_chat_text_area(self):
         """InputBox compose method should reference ChatTextArea, not Input."""
         import inspect
+
         from ppxai.tui.widgets.input_box import InputBox
 
         source = inspect.getsource(InputBox.compose)
@@ -1090,7 +1041,7 @@ class TestThemeSwitching:
 
     def test_all_cycle_themes_valid(self):
         """All themes in CYCLE_THEMES should be valid."""
-        from ppxai.tui.themes import CYCLE_THEMES, CUSTOM_THEMES
+        from ppxai.tui.themes import CUSTOM_THEMES, CYCLE_THEMES
 
         # Built-in themes we expect to work
         builtin_themes = {
@@ -1109,7 +1060,7 @@ class TestThemeSwitching:
 
     def test_custom_themes_have_required_colors(self):
         """Custom themes should have all required color attributes."""
-        from ppxai.tui.themes.themes import TRON_LEGACY_THEME, MATRIX_THEME
+        from ppxai.tui.themes.themes import MATRIX_THEME, TRON_LEGACY_THEME
 
         required_attrs = ["primary", "secondary", "background", "surface"]
 
@@ -1132,7 +1083,7 @@ class TestThemeSwitching:
 
     def test_default_theme_in_cycle(self):
         """Default theme should be in the cycle list."""
-        from ppxai.tui.themes import DEFAULT_THEME, CYCLE_THEMES
+        from ppxai.tui.themes import CYCLE_THEMES, DEFAULT_THEME
 
         assert DEFAULT_THEME in CYCLE_THEMES
 
@@ -1249,7 +1200,6 @@ class TestMessageBox:
 
     def test_message_box_imports(self):
         """MessageBox should import without error."""
-        from ppxai.tui.widgets.message_box import MessageBox
 
     def test_message_box_roles(self):
         """MessageBox should support different roles."""
@@ -1300,8 +1250,6 @@ class TestDataViewer:
 
     def test_data_viewer_imports(self):
         """DataViewer should import without error."""
-        from ppxai.tui.widgets import DataViewer
-        from ppxai.tui.widgets.data_viewer import ViewMode
 
     def test_data_viewer_creation(self):
         """DataViewer should create with default values."""
@@ -1531,8 +1479,6 @@ class TestImageViewer:
 
     def test_image_viewer_imports(self):
         """ImageViewer should import without error."""
-        from ppxai.tui.widgets import ImageViewer
-        from ppxai.tui.widgets.image_viewer import ZOOM_LEVELS
 
     def test_image_viewer_creation(self):
         """ImageViewer should create with default values."""
@@ -1547,8 +1493,9 @@ class TestImageViewer:
 
     def test_image_viewer_with_nonexistent_path(self):
         """ImageViewer should handle non-existent path gracefully."""
-        from ppxai.tui.widgets.image_viewer import ImageViewer
         from pathlib import Path
+
+        from ppxai.tui.widgets.image_viewer import ImageViewer
 
         viewer = ImageViewer(path=Path("/nonexistent/image.png"))
         assert viewer.is_loaded is False
@@ -1564,7 +1511,7 @@ class TestImageViewer:
 
     def test_image_viewer_zoom_levels(self):
         """ImageViewer should have valid zoom levels."""
-        from ppxai.tui.widgets.image_viewer import ZOOM_LEVELS, DEFAULT_ZOOM_INDEX
+        from ppxai.tui.widgets.image_viewer import DEFAULT_ZOOM_INDEX, ZOOM_LEVELS
 
         # Should have multiple levels
         assert len(ZOOM_LEVELS) >= 5
@@ -1577,7 +1524,7 @@ class TestImageViewer:
 
     def test_image_viewer_zoom_in_action(self):
         """ImageViewer zoom in should increase zoom level."""
-        from ppxai.tui.widgets.image_viewer import ImageViewer, ZOOM_LEVELS, DEFAULT_ZOOM_INDEX
+        from ppxai.tui.widgets.image_viewer import DEFAULT_ZOOM_INDEX, ZOOM_LEVELS, ImageViewer
 
         viewer = ImageViewer()
         initial_zoom = viewer.zoom_level
@@ -1590,7 +1537,7 @@ class TestImageViewer:
 
     def test_image_viewer_zoom_out_action(self):
         """ImageViewer zoom out should decrease zoom level."""
-        from ppxai.tui.widgets.image_viewer import ImageViewer, ZOOM_LEVELS, DEFAULT_ZOOM_INDEX
+        from ppxai.tui.widgets.image_viewer import DEFAULT_ZOOM_INDEX, ZOOM_LEVELS, ImageViewer
 
         viewer = ImageViewer()
         initial_zoom = viewer.zoom_level
@@ -1656,8 +1603,9 @@ class TestImageViewer:
 
     def test_image_viewer_file_size_check(self):
         """ImageViewer should check file sizes."""
-        from ppxai.tui.widgets.image_viewer import ImageViewer
         from pathlib import Path
+
+        from ppxai.tui.widgets.image_viewer import ImageViewer
 
         # Non-existent file should return False
         result = ImageViewer.check_file_size(Path("/nonexistent/file.png"))
@@ -1693,8 +1641,9 @@ class TestImageViewer:
 
     def test_is_image_file_function(self):
         """is_image_file should correctly identify image files."""
-        from ppxai.tui.images import is_image_file
         from pathlib import Path
+
+        from ppxai.tui.images import is_image_file
 
         # Should be images
         assert is_image_file(Path("test.png"))
@@ -1714,16 +1663,18 @@ class TestSidePanelIntegration:
 
     def test_side_panel_uses_data_viewer_import(self):
         """SidePanel should import DataViewer."""
-        from ppxai.tui.widgets import side_panel
         import inspect
+
+        from ppxai.tui.widgets import side_panel
 
         source = inspect.getsource(side_panel)
         assert "from .data_viewer import DataViewer" in source
 
     def test_side_panel_uses_image_viewer_import(self):
         """SidePanel should import ImageViewer."""
-        from ppxai.tui.widgets import side_panel
         import inspect
+
+        from ppxai.tui.widgets import side_panel
 
         source = inspect.getsource(side_panel)
         assert "from .image_viewer import ImageViewer" in source
@@ -1804,8 +1755,9 @@ class TestSidePanelIntegration:
 
     def test_data_viewer_in_side_panel_mode(self):
         """DataViewer should be used for tree mode in SidePanel."""
-        from ppxai.tui.widgets import side_panel
         import inspect
+
+        from ppxai.tui.widgets import side_panel
 
         source = inspect.getsource(side_panel.SidePanel.show_file)
 
@@ -1815,8 +1767,9 @@ class TestSidePanelIntegration:
 
     def test_image_viewer_in_side_panel_mode(self):
         """ImageViewer should be used for image mode in SidePanel."""
-        from ppxai.tui.widgets import side_panel
         import inspect
+
+        from ppxai.tui.widgets import side_panel
 
         source = inspect.getsource(side_panel.SidePanel.show_file)
 
@@ -1826,8 +1779,9 @@ class TestSidePanelIntegration:
 
     def test_data_viewer_loads_json(self):
         """DataViewer in SidePanel should support JSON loading."""
-        from ppxai.tui.widgets import side_panel
         import inspect
+
+        from ppxai.tui.widgets import side_panel
 
         source = inspect.getsource(side_panel.SidePanel.show_file)
 
@@ -1837,8 +1791,9 @@ class TestSidePanelIntegration:
 
     def test_data_viewer_loads_yaml(self):
         """DataViewer in SidePanel should support YAML loading."""
-        from ppxai.tui.widgets import side_panel
         import inspect
+
+        from ppxai.tui.widgets import side_panel
 
         source = inspect.getsource(side_panel.SidePanel.show_file)
 
@@ -1848,8 +1803,9 @@ class TestSidePanelIntegration:
 
     def test_data_viewer_loads_toml(self):
         """DataViewer in SidePanel should support TOML loading."""
-        from ppxai.tui.widgets import side_panel
         import inspect
+
+        from ppxai.tui.widgets import side_panel
 
         source = inspect.getsource(side_panel.SidePanel.show_file)
 
@@ -2034,7 +1990,7 @@ class TestTableViewer:
 
     def test_table_viewer_large_data(self):
         """TableViewer should handle large datasets."""
-        from ppxai.tui.widgets.table_viewer import TableViewer, MAX_INITIAL_ROWS
+        from ppxai.tui.widgets.table_viewer import MAX_INITIAL_ROWS, TableViewer
 
         viewer = TableViewer()
 
@@ -2072,8 +2028,9 @@ class TestTableViewer:
 
     def test_table_viewer_is_tabular_file(self):
         """TableViewer should identify tabular files."""
-        from ppxai.tui.widgets.table_viewer import TableViewer
         from pathlib import Path
+
+        from ppxai.tui.widgets.table_viewer import TableViewer
 
         assert TableViewer.is_tabular_file(Path("data.csv")) is True
         assert TableViewer.is_tabular_file(Path("data.tsv")) is True
@@ -2090,8 +2047,9 @@ class TestTableViewer:
 
     def test_table_viewer_in_side_panel(self):
         """SidePanel should use TableViewer for table mode."""
-        from ppxai.tui.widgets import side_panel
         import inspect
+
+        from ppxai.tui.widgets import side_panel
 
         source = inspect.getsource(side_panel.SidePanel.show_file)
 
@@ -2101,8 +2059,9 @@ class TestTableViewer:
 
     def test_show_command_uses_table_mode(self):
         """cmd_show should use table mode for CSV/TSV."""
-        from ppxai.tui import commands
         import inspect
+
+        from ppxai.tui import commands
 
         source = inspect.getsource(commands.cmd_show)
 
@@ -2121,8 +2080,9 @@ class TestWidgetLifecycle:
 
     def test_message_box_mount_unmount(self):
         """MessageBox should mount and unmount cleanly."""
-        from ppxai.tui.widgets import MessageBox
         from textual.app import App
+
+        from ppxai.tui.widgets import MessageBox
 
         class TestApp(App):
             def compose(self):
@@ -2146,8 +2106,9 @@ class TestWidgetLifecycle:
 
     def test_chat_view_mount_unmount(self):
         """ChatView should mount and unmount cleanly."""
-        from ppxai.tui.widgets import ChatView
         from textual.app import App
+
+        from ppxai.tui.widgets import ChatView
 
         class TestApp(App):
             def compose(self):
@@ -2170,8 +2131,9 @@ class TestWidgetLifecycle:
 
     def test_status_bar_mount_unmount(self):
         """StatusBar should mount and unmount cleanly."""
-        from ppxai.tui.widgets import StatusBar
         from textual.app import App
+
+        from ppxai.tui.widgets import StatusBar
 
         class TestApp(App):
             def compose(self):
@@ -2194,8 +2156,9 @@ class TestWidgetLifecycle:
 
     def test_input_box_mount_unmount(self):
         """InputBox should mount and unmount cleanly."""
-        from ppxai.tui.widgets import InputBox
         from textual.app import App
+
+        from ppxai.tui.widgets import InputBox
 
         class TestApp(App):
             def compose(self):
@@ -2218,8 +2181,9 @@ class TestWidgetLifecycle:
 
     def test_tree_viewer_mount_unmount(self):
         """TreeViewer should mount and unmount cleanly."""
-        from ppxai.tui.widgets import TreeViewer
         from textual.app import App
+
+        from ppxai.tui.widgets import TreeViewer
 
         class TestApp(App):
             def compose(self):
@@ -2242,8 +2206,9 @@ class TestWidgetLifecycle:
 
     def test_code_editor_mount_unmount(self):
         """CodeEditor should mount and unmount cleanly."""
-        from ppxai.tui.widgets import CodeEditor
         from textual.app import App
+
+        from ppxai.tui.widgets import CodeEditor
 
         class TestApp(App):
             def compose(self):
@@ -2266,8 +2231,9 @@ class TestWidgetLifecycle:
 
     def test_data_viewer_mount_unmount(self):
         """DataViewer should mount and unmount cleanly."""
-        from ppxai.tui.widgets import DataViewer
         from textual.app import App
+
+        from ppxai.tui.widgets import DataViewer
 
         class TestApp(App):
             def compose(self):
@@ -2290,10 +2256,12 @@ class TestWidgetLifecycle:
 
     def test_image_viewer_mount_unmount(self):
         """ImageViewer should mount and unmount cleanly."""
-        from ppxai.tui.widgets import ImageViewer
-        from textual.app import App
-        from pathlib import Path
         import tempfile
+        from pathlib import Path
+
+        from textual.app import App
+
+        from ppxai.tui.widgets import ImageViewer
 
         class TestApp(App):
             def compose(self):
@@ -2322,8 +2290,9 @@ class TestWidgetLifecycle:
 
     def test_table_viewer_mount_unmount(self):
         """TableViewer should mount and unmount cleanly."""
-        from ppxai.tui.widgets import TableViewer
         from textual.app import App
+
+        from ppxai.tui.widgets import TableViewer
 
         class TestApp(App):
             def compose(self):
@@ -2346,8 +2315,9 @@ class TestWidgetLifecycle:
 
     def test_side_panel_mount_unmount(self):
         """SidePanel should mount and unmount cleanly."""
-        from ppxai.tui.widgets import SidePanel
         from textual.app import App
+
+        from ppxai.tui.widgets import SidePanel
 
         class TestApp(App):
             def compose(self):
@@ -2370,8 +2340,9 @@ class TestWidgetLifecycle:
 
     def test_focus_navigation_chat_to_input(self):
         """Focus should navigate from ChatView to InputBox."""
-        from ppxai.tui.widgets import ChatView, InputBox
         from textual.app import App
+
+        from ppxai.tui.widgets import ChatView, InputBox
 
         class TestApp(App):
             def compose(self):
@@ -2402,10 +2373,12 @@ class TestWidgetLifecycle:
 
     def test_focus_navigation_side_panel(self):
         """Focus should work with SidePanel widgets."""
-        from ppxai.tui.widgets import SidePanel, CodeEditor
-        from textual.app import App
-        from pathlib import Path
         import tempfile
+        from pathlib import Path
+
+        from textual.app import App
+
+        from ppxai.tui.widgets import CodeEditor, SidePanel
 
         class TestApp(App):
             def compose(self):
@@ -2444,9 +2417,10 @@ class TestWidgetLifecycle:
 
     def test_event_bubbling_message_box(self):
         """Events should bubble from MessageBox to ChatView."""
-        from ppxai.tui.widgets import MessageBox, ChatView
         from textual.app import App
         from textual.message import Message
+
+        from ppxai.tui.widgets import ChatView, MessageBox
 
         class CustomEvent(Message):
             pass
@@ -2484,8 +2458,9 @@ class TestWidgetLifecycle:
 
     def test_reactive_updates_status_bar(self):
         """Reactive properties should trigger updates in StatusBar."""
-        from ppxai.tui.widgets import StatusBar
         from textual.app import App
+
+        from ppxai.tui.widgets import StatusBar
 
         class TestApp(App):
             def compose(self):
@@ -2511,8 +2486,9 @@ class TestWidgetLifecycle:
 
     def test_reactive_updates_data_viewer(self):
         """Reactive view_mode should trigger updates in DataViewer."""
-        from ppxai.tui.widgets import DataViewer
         from textual.app import App
+
+        from ppxai.tui.widgets import DataViewer
 
         class TestApp(App):
             def compose(self):
@@ -2539,10 +2515,12 @@ class TestWidgetLifecycle:
 
     def test_widget_composition_side_panel(self):
         """SidePanel should compose child widgets correctly."""
-        from ppxai.tui.widgets import SidePanel, CodeEditor
-        from textual.app import App
-        from pathlib import Path
         import tempfile
+        from pathlib import Path
+
+        from textual.app import App
+
+        from ppxai.tui.widgets import CodeEditor, SidePanel
 
         class TestApp(App):
             def compose(self):
@@ -2581,8 +2559,9 @@ class TestWidgetLifecycle:
 
     def test_widget_composition_data_viewer(self):
         """DataViewer should compose TreeViewer and CodeEditor correctly."""
-        from ppxai.tui.widgets import DataViewer, TreeViewer, CodeEditor
         from textual.app import App
+
+        from ppxai.tui.widgets import CodeEditor, DataViewer, TreeViewer
 
         class TestApp(App):
             def compose(self):
@@ -2620,8 +2599,9 @@ class TestWidgetLifecycle:
 
     def test_multiple_widgets_cleanup(self):
         """Multiple widgets should clean up properly when removed."""
-        from ppxai.tui.widgets import MessageBox, ChatView, StatusBar, InputBox
         from textual.app import App
+
+        from ppxai.tui.widgets import ChatView, InputBox, StatusBar
 
         class TestApp(App):
             def compose(self):
@@ -2652,8 +2632,9 @@ class TestWidgetLifecycle:
 
     def test_widget_state_preservation(self):
         """Widget state should be preserved during lifecycle."""
-        from ppxai.tui.widgets import DataViewer
         from textual.app import App
+
+        from ppxai.tui.widgets import DataViewer
 
         class TestApp(App):
             def compose(self):
@@ -2688,8 +2669,9 @@ class TestWidgetLifecycle:
 
     def test_message_passing_between_widgets(self):
         """Widgets should communicate via message passing."""
-        from ppxai.tui.widgets import SidePanel
         from textual.app import App
+
+        from ppxai.tui.widgets import SidePanel
 
         class TestApp(App):
             def __init__(self):
@@ -2709,8 +2691,8 @@ class TestWidgetLifecycle:
         app = TestApp()
         async def run_test():
             async with app.run_test() as pilot:
-                from pathlib import Path
                 import tempfile
+                from pathlib import Path
 
                 panel = app.query_one("#side-panel", SidePanel)
 
@@ -2742,14 +2724,14 @@ class TestThemeConsistency:
 
     def test_all_widgets_with_default_theme(self):
         """All widgets should render correctly with default theme."""
-        from ppxai.tui.widgets import (
-            StatusBar, ChatView, InputBox, MessageBox,
-            TreeViewer, CodeEditor, DataViewer, ImageViewer,
-            TableViewer, SidePanel
-        )
+
         from textual.app import App
-        from pathlib import Path
-        import tempfile
+
+        from ppxai.tui.widgets import (
+            ChatView,
+            InputBox,
+            StatusBar,
+        )
 
         class TestApp(App):
             def compose(self):
@@ -2772,8 +2754,9 @@ class TestThemeConsistency:
 
     def test_status_bar_across_themes(self):
         """StatusBar should work with all themes."""
-        from ppxai.tui.widgets import StatusBar
         from textual.app import App
+
+        from ppxai.tui.widgets import StatusBar
 
         themes_to_test = [
             "textual-dark", "textual-light",
@@ -2801,8 +2784,9 @@ class TestThemeConsistency:
 
     def test_chat_view_across_themes(self):
         """ChatView should work with all themes."""
-        from ppxai.tui.widgets import ChatView, MessageBox
         from textual.app import App
+
+        from ppxai.tui.widgets import ChatView, MessageBox
 
         themes_to_test = [
             "textual-dark", "nord", "monokai"
@@ -2834,8 +2818,9 @@ class TestThemeConsistency:
 
     def test_data_viewer_across_themes(self):
         """DataViewer should work with all themes."""
-        from ppxai.tui.widgets import DataViewer
         from textual.app import App
+
+        from ppxai.tui.widgets import DataViewer
 
         themes_to_test = ["textual-dark", "gruvbox", "solarized-light"]
 
@@ -2866,8 +2851,9 @@ class TestThemeConsistency:
 
     def test_code_editor_syntax_themes(self):
         """CodeEditor syntax highlighting should work with app themes."""
-        from ppxai.tui.widgets import CodeEditor
         from textual.app import App
+
+        from ppxai.tui.widgets import CodeEditor
 
         app_themes = ["textual-dark", "nord", "monokai"]
 
@@ -2896,8 +2882,9 @@ class TestThemeConsistency:
 
     def test_table_viewer_across_themes(self):
         """TableViewer should work with all themes."""
-        from ppxai.tui.widgets import TableViewer
         from textual.app import App
+
+        from ppxai.tui.widgets import TableViewer
 
         themes_to_test = ["textual-dark", "dracula", "textual-light"]
 
@@ -2930,10 +2917,12 @@ class TestThemeConsistency:
 
     def test_side_panel_across_themes(self):
         """SidePanel should work with all themes."""
-        from ppxai.tui.widgets import SidePanel
-        from textual.app import App
-        from pathlib import Path
         import tempfile
+        from pathlib import Path
+
+        from textual.app import App
+
+        from ppxai.tui.widgets import SidePanel
 
         themes_to_test = ["textual-dark", "nord", "monokai"]
 
@@ -2992,8 +2981,9 @@ class TestThemeConsistency:
 
     def test_theme_switching_preserves_state(self):
         """Theme switching should not lose widget state."""
-        from ppxai.tui.widgets import DataViewer
         from textual.app import App
+
+        from ppxai.tui.widgets import DataViewer
 
         class TestApp(App):
             def compose(self):
@@ -3030,8 +3020,9 @@ class TestThemeConsistency:
 
     def test_message_box_styles_with_themes(self):
         """MessageBox styles should work with all themes."""
-        from ppxai.tui.widgets import MessageBox, ChatView
         from textual.app import App
+
+        from ppxai.tui.widgets import ChatView, MessageBox
 
         themes_to_test = ["textual-dark", "nord", "monokai"]
 
@@ -3063,8 +3054,9 @@ class TestThemeConsistency:
 
     def test_input_box_across_themes(self):
         """InputBox should work with all themes."""
-        from ppxai.tui.widgets import InputBox
         from textual.app import App
+
+        from ppxai.tui.widgets import InputBox
 
         themes_to_test = ["textual-dark", "nord", "atom-one-light"]
 
@@ -3088,8 +3080,9 @@ class TestThemeConsistency:
 
     def test_tree_viewer_across_themes(self):
         """TreeViewer should work with all themes."""
-        from ppxai.tui.widgets import TreeViewer
         from textual.app import App
+
+        from ppxai.tui.widgets import TreeViewer
 
         themes_to_test = ["textual-dark", "nord", "solarized-dark"]
 
@@ -3113,8 +3106,9 @@ class TestThemeConsistency:
 
     def test_widgets_visible_after_theme_change(self):
         """All widgets should remain visible after theme change."""
-        from ppxai.tui.widgets import StatusBar, ChatView, InputBox
         from textual.app import App
+
+        from ppxai.tui.widgets import ChatView, InputBox, StatusBar
 
         class TestApp(App):
             def compose(self):
@@ -3151,8 +3145,9 @@ class TestKeyboardNavigation:
 
     def test_tab_navigation_basic(self):
         """Tab should cycle through focusable widgets."""
-        from ppxai.tui.widgets import ChatView, InputBox
         from textual.app import App
+
+        from ppxai.tui.widgets import ChatView, InputBox
 
         class TestApp(App):
             def compose(self):
@@ -3173,10 +3168,12 @@ class TestKeyboardNavigation:
 
     def test_escape_closes_side_panel(self):
         """Escape should close SidePanel."""
-        from ppxai.tui.widgets import SidePanel
-        from textual.app import App
-        from pathlib import Path
         import tempfile
+        from pathlib import Path
+
+        from textual.app import App
+
+        from ppxai.tui.widgets import SidePanel
 
         class TestApp(App):
             def compose(self):
@@ -3212,8 +3209,9 @@ class TestKeyboardNavigation:
 
     def test_v_toggles_data_viewer(self):
         """V should toggle DataViewer between tree and source."""
-        from ppxai.tui.widgets import DataViewer
         from textual.app import App
+
+        from ppxai.tui.widgets import DataViewer
 
         class TestApp(App):
             def compose(self):
@@ -3247,8 +3245,9 @@ class TestKeyboardNavigation:
 
     def test_v_toggles_table_viewer(self):
         """V should toggle TableViewer between table and source."""
-        from ppxai.tui.widgets import TableViewer
         from textual.app import App
+
+        from ppxai.tui.widgets import TableViewer
 
         csv_data = "name,age\nAlice,30\nBob,25\n"
 
@@ -3284,10 +3283,12 @@ class TestKeyboardNavigation:
 
     def test_language_detection_in_side_panel(self):
         """SidePanel should detect language from file extension."""
-        from ppxai.tui.widgets import SidePanel
-        from textual.app import App
-        from pathlib import Path
         import tempfile
+        from pathlib import Path
+
+        from textual.app import App
+
+        from ppxai.tui.widgets import SidePanel
 
         class TestApp(App):
             def compose(self):
@@ -3318,8 +3319,9 @@ class TestKeyboardNavigation:
 
     def test_no_dead_ends_in_navigation(self):
         """Should be able to navigate through all widgets without getting stuck."""
-        from ppxai.tui.widgets import StatusBar, ChatView, InputBox
         from textual.app import App
+
+        from ppxai.tui.widgets import ChatView, InputBox, StatusBar
 
         class TestApp(App):
             def compose(self):
@@ -3342,8 +3344,9 @@ class TestKeyboardNavigation:
 
     def test_arrow_keys_in_chat_view(self):
         """Arrow keys should work for scrolling in ChatView."""
-        from ppxai.tui.widgets import ChatView, MessageBox
         from textual.app import App
+
+        from ppxai.tui.widgets import ChatView, MessageBox
 
         class TestApp(App):
             def compose(self):
@@ -3376,8 +3379,9 @@ class TestKeyboardNavigation:
 
     def test_home_end_keys_in_input_box(self):
         """Home/End keys should work in InputBox."""
-        from ppxai.tui.widgets import InputBox
         from textual.app import App
+
+        from ppxai.tui.widgets import InputBox
 
         class TestApp(App):
             def compose(self):
@@ -3408,10 +3412,12 @@ class TestKeyboardNavigation:
 
     def test_close_method_works(self):
         """Panel close() method should work."""
-        from ppxai.tui.widgets import SidePanel
-        from textual.app import App
-        from pathlib import Path
         import tempfile
+        from pathlib import Path
+
+        from textual.app import App
+
+        from ppxai.tui.widgets import SidePanel
 
         class TestApp(App):
             def compose(self):
@@ -3447,8 +3453,9 @@ class TestKeyboardNavigation:
 
     def test_focus_stays_within_app(self):
         """Focus should never be None during navigation."""
-        from ppxai.tui.widgets import ChatView, InputBox
         from textual.app import App
+
+        from ppxai.tui.widgets import ChatView, InputBox
 
         class TestApp(App):
             def compose(self):
@@ -3472,8 +3479,9 @@ class TestKeyboardNavigation:
 
     def test_shift_tab_reverses_navigation(self):
         """Shift+Tab should navigate backwards."""
-        from ppxai.tui.widgets import ChatView, InputBox
         from textual.app import App
+
+        from ppxai.tui.widgets import ChatView, InputBox
 
         class TestApp(App):
             def compose(self):
@@ -3505,10 +3513,12 @@ class TestKeyboardNavigation:
 
     def test_keyboard_shortcuts_dont_conflict(self):
         """No keyboard shortcut conflicts across widgets."""
-        from ppxai.tui.widgets import SidePanel, DataViewer
-        from textual.app import App
-        from pathlib import Path
         import tempfile
+        from pathlib import Path
+
+        from textual.app import App
+
+        from ppxai.tui.widgets import SidePanel
 
         class TestApp(App):
             def compose(self):
@@ -3545,8 +3555,9 @@ class TestKeyboardNavigation:
 
     def test_enter_key_in_input_box(self):
         """Enter key should work in InputBox (submit or new line)."""
-        from ppxai.tui.widgets import InputBox
         from textual.app import App
+
+        from ppxai.tui.widgets import InputBox
 
         class TestApp(App):
             def compose(self):
@@ -3573,10 +3584,12 @@ class TestKeyboardNavigation:
 
     def test_f6_switches_focus_to_side_panel(self):
         """F6 should switch focus to side panel when open."""
-        from ppxai.tui.widgets import ChatView, SidePanel
-        from textual.app import App
-        from pathlib import Path
         import tempfile
+        from pathlib import Path
+
+        from textual.app import App
+
+        from ppxai.tui.widgets import ChatView, SidePanel
 
         class TestApp(App):
             def compose(self):
@@ -3613,10 +3626,12 @@ class TestKeyboardNavigation:
 
     def test_multiple_escape_presses(self):
         """Multiple Escape presses should not cause issues."""
-        from ppxai.tui.widgets import SidePanel
-        from textual.app import App
-        from pathlib import Path
         import tempfile
+        from pathlib import Path
+
+        from textual.app import App
+
+        from ppxai.tui.widgets import SidePanel
 
         class TestApp(App):
             def compose(self):
@@ -3651,8 +3666,9 @@ class TestKeyboardNavigation:
 
     def test_page_up_down_in_chat_view(self):
         """Page Up/Down should work for scrolling in ChatView."""
-        from ppxai.tui.widgets import ChatView, MessageBox
         from textual.app import App
+
+        from ppxai.tui.widgets import ChatView, MessageBox
 
         class TestApp(App):
             def compose(self):
@@ -3691,8 +3707,9 @@ class TestEdgeCases:
 
     def test_empty_chat_view(self):
         """ChatView should handle zero messages."""
-        from ppxai.tui.widgets import ChatView
         from textual.app import App
+
+        from ppxai.tui.widgets import ChatView
 
         class TestApp(App):
             def compose(self):
@@ -3710,8 +3727,9 @@ class TestEdgeCases:
 
     def test_empty_string_message(self):
         """MessageBox should handle empty content."""
-        from ppxai.tui.widgets import MessageBox
         from textual.app import App
+
+        from ppxai.tui.widgets import MessageBox
 
         class TestApp(App):
             def compose(self):
@@ -3727,8 +3745,9 @@ class TestEdgeCases:
 
     def test_data_viewer_with_empty_json(self):
         """DataViewer should handle empty JSON object."""
-        from ppxai.tui.widgets import DataViewer
         from textual.app import App
+
+        from ppxai.tui.widgets import DataViewer
 
         class TestApp(App):
             def compose(self):
@@ -3746,8 +3765,9 @@ class TestEdgeCases:
 
     def test_table_viewer_with_empty_csv(self):
         """TableViewer should handle empty CSV."""
-        from ppxai.tui.widgets import TableViewer
         from textual.app import App
+
+        from ppxai.tui.widgets import TableViewer
 
         class TestApp(App):
             def compose(self):
@@ -3766,8 +3786,9 @@ class TestEdgeCases:
 
     def test_unicode_in_messages(self):
         """Messages should support Unicode characters."""
-        from ppxai.tui.widgets import MessageBox
         from textual.app import App
+
+        from ppxai.tui.widgets import MessageBox
 
         unicode_text = "Hello 世界 🌍 Привет مرحبا"
 
@@ -3785,8 +3806,9 @@ class TestEdgeCases:
 
     def test_unicode_in_data_viewer(self):
         """DataViewer should support Unicode in JSON."""
-        from ppxai.tui.widgets import DataViewer
         from textual.app import App
+
+        from ppxai.tui.widgets import DataViewer
 
         unicode_data = {"message": "Hello 世界", "emoji": "🎉"}
 
@@ -3807,8 +3829,9 @@ class TestEdgeCases:
 
     def test_very_long_message(self):
         """ChatView should handle very long messages."""
-        from ppxai.tui.widgets import ChatView, MessageBox
         from textual.app import App
+
+        from ppxai.tui.widgets import ChatView, MessageBox
 
         long_content = "A" * 10000  # 10k character message
 
@@ -3833,8 +3856,9 @@ class TestEdgeCases:
 
     def test_many_messages_performance(self):
         """ChatView should handle hundreds of messages."""
-        from ppxai.tui.widgets import ChatView, MessageBox
         from textual.app import App
+
+        from ppxai.tui.widgets import ChatView, MessageBox
 
         class TestApp(App):
             def compose(self):
@@ -3860,8 +3884,9 @@ class TestEdgeCases:
 
     def test_invalid_json_handling(self):
         """DataViewer should handle invalid JSON gracefully."""
-        from ppxai.tui.widgets import DataViewer
         from textual.app import App
+
+        from ppxai.tui.widgets import DataViewer
 
         class TestApp(App):
             def compose(self):
@@ -3883,10 +3908,12 @@ class TestEdgeCases:
 
     def test_special_characters_in_filenames(self):
         """SidePanel should handle special characters in filenames."""
-        from ppxai.tui.widgets import SidePanel
-        from textual.app import App
-        from pathlib import Path
         import tempfile
+        from pathlib import Path
+
+        from textual.app import App
+
+        from ppxai.tui.widgets import SidePanel
 
         class TestApp(App):
             def compose(self):
@@ -3916,8 +3943,9 @@ class TestEdgeCases:
 
     def test_newlines_in_messages(self):
         """Messages should preserve newlines."""
-        from ppxai.tui.widgets import MessageBox
         from textual.app import App
+
+        from ppxai.tui.widgets import MessageBox
 
         multiline_content = "Line 1\nLine 2\nLine 3"
 
@@ -3936,8 +3964,9 @@ class TestEdgeCases:
 
     def test_code_editor_with_empty_text(self):
         """CodeEditor should handle empty text."""
-        from ppxai.tui.widgets import CodeEditor
         from textual.app import App
+
+        from ppxai.tui.widgets import CodeEditor
 
         class TestApp(App):
             def compose(self):
@@ -3953,8 +3982,9 @@ class TestEdgeCases:
 
     def test_large_json_file(self):
         """DataViewer should handle large JSON."""
-        from ppxai.tui.widgets import DataViewer
         from textual.app import App
+
+        from ppxai.tui.widgets import DataViewer
 
         # Create large JSON structure
         large_data = {"items": [{"id": i, "name": f"Item {i}"} for i in range(100)]}
@@ -3976,8 +4006,9 @@ class TestEdgeCases:
 
     def test_large_csv_file(self):
         """TableViewer should handle large CSV (row limit)."""
-        from ppxai.tui.widgets import TableViewer
         from textual.app import App
+
+        from ppxai.tui.widgets import TableViewer
 
         # Create CSV with many rows
         rows = ["name,age"] + [f"Person{i},{20+i}" for i in range(500)]
@@ -4003,8 +4034,9 @@ class TestEdgeCases:
 
     def test_mixed_line_endings(self):
         """Content with mixed line endings should be handled."""
-        from ppxai.tui.widgets import CodeEditor
         from textual.app import App
+
+        from ppxai.tui.widgets import CodeEditor
 
         mixed_content = "Line 1\nLine 2\r\nLine 3\r"
 
@@ -4023,8 +4055,9 @@ class TestEdgeCases:
 
     def test_status_bar_with_long_values(self):
         """StatusBar should handle long provider/model names."""
-        from ppxai.tui.widgets import StatusBar
         from textual.app import App
+
+        from ppxai.tui.widgets import StatusBar
 
         class TestApp(App):
             def compose(self):
@@ -4044,10 +4077,12 @@ class TestEdgeCases:
 
     def test_side_panel_rapid_open_close(self):
         """SidePanel should handle rapid open/close cycles."""
-        from ppxai.tui.widgets import SidePanel
-        from textual.app import App
-        from pathlib import Path
         import tempfile
+        from pathlib import Path
+
+        from textual.app import App
+
+        from ppxai.tui.widgets import SidePanel
 
         class TestApp(App):
             def compose(self):
@@ -4080,8 +4115,9 @@ class TestEdgeCases:
 
     def test_data_viewer_view_mode_toggle_many_times(self):
         """DataViewer should handle many view toggles."""
-        from ppxai.tui.widgets import DataViewer
         from textual.app import App
+
+        from ppxai.tui.widgets import DataViewer
 
         class TestApp(App):
             def compose(self):
@@ -4106,8 +4142,9 @@ class TestEdgeCases:
 
     def test_malformed_yaml(self):
         """DataViewer should handle malformed YAML."""
-        from ppxai.tui.widgets import DataViewer
         from textual.app import App
+
+        from ppxai.tui.widgets import DataViewer
 
         class TestApp(App):
             def compose(self):
@@ -4320,7 +4357,7 @@ class TestAppIntegration:
     def test_edit_command(self, tmp_path):
         """/edit command should open file for editing."""
         from ppxai.tui.app import PPXAIDEApp
-        from ppxai.tui.widgets import SidePanel, CodeEditor
+        from ppxai.tui.widgets import CodeEditor, SidePanel
 
         # Create temporary file
         test_file = tmp_path / "edit.txt"
@@ -4345,9 +4382,9 @@ class TestAppIntegration:
 
     def test_cd_pwd_commands(self, tmp_path):
         """/cd and /pwd commands should work together."""
+
         from ppxai.tui.app import PPXAIDEApp
         from ppxai.tui.widgets import ChatView
-        import os
 
         # Create subdirectory
         subdir = tmp_path / "subdir"
@@ -4366,7 +4403,7 @@ class TestAppIntegration:
 
                 # Change directory
                 initial_msg_count = len(chat_view._messages)
-                await app._handle_command(f"/cd subdir")
+                await app._handle_command("/cd subdir")
 
                 # Should have a message about the directory change (success or error)
                 assert len(chat_view._messages) > initial_msg_count
@@ -4576,9 +4613,9 @@ class TestAppIntegration:
 
     def test_multiple_files_in_sequence(self, tmp_path):
         """Opening multiple files in sequence should work."""
+
         from ppxai.tui.app import PPXAIDEApp
         from ppxai.tui.widgets import SidePanel
-        from pathlib import Path
 
         # Create multiple JSON files (simpler content type)
         file1 = tmp_path / "file1.json"

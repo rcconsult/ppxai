@@ -24,7 +24,6 @@ import pytest
 
 from ppxai.engine.client import EngineClient
 
-
 # -----------------------------------------------------------------------------
 # Config loader
 # -----------------------------------------------------------------------------
@@ -395,8 +394,9 @@ class TestPreprocessingWithSidecar:
         `build_multimodal_content` feeds `engine.caption_image` into
         `preprocess_file`, which returns a text caption block.
         """
-        from ppxai.commands.attach import PendingFile, build_multimodal_content
         import base64
+
+        from ppxai.commands.attach import PendingFile, build_multimodal_content
 
         # Real PNG bytes so image validation passes.
         red_png = base64.b64decode(
@@ -456,8 +456,9 @@ class TestPreprocessingWithSidecar:
         model can't consume the image — so instead of a silent placeholder
         (which fed model hallucination) the attachment fails loud and the
         error is surfaced inline as a `[Attachment error: …]` annotation."""
-        from ppxai.commands.attach import PendingFile, build_multimodal_content
         import base64
+
+        from ppxai.commands.attach import PendingFile, build_multimodal_content
 
         red_png = base64.b64decode(
             b"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP"
@@ -496,8 +497,9 @@ class TestPreprocessingWithSidecar:
         has the shell tool enabled), a text-only model CAN consume the image
         — the persisted on-disk path is surfaced so the model can OCR/inspect
         it with an installed CLI instead of failing."""
-        from ppxai.commands.attach import PendingFile, build_multimodal_content
         import base64
+
+        from ppxai.commands.attach import PendingFile, build_multimodal_content
 
         red_png = base64.b64decode(
             b"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP"

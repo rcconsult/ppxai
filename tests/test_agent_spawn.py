@@ -373,7 +373,6 @@ class TestExecuteSpawns:
     @pytest.mark.asyncio
     async def test_spawn_runs_child_and_returns_result(self, registry, monkeypatch):
         # Stub the shared runner so the child "runs" without a real provider.
-        import ppxai.engine.tools.agent_spawn as spawn_mod
 
         async def fake_runner(meta):
             return f"child did: {meta.task}"
@@ -434,6 +433,7 @@ class TestExecuteSpawns:
         # stop it) and never finishes on its own; shrink the wait cap so the
         # timeout path fires fast.
         import asyncio
+
         import ppxai.engine.tools.agent_spawn as spawn_mod
         monkeypatch.setattr(spawn_mod, "_DEFAULT_CHILD_WAIT_S", 0.2)
 
@@ -468,6 +468,7 @@ class TestExecuteSpawns:
         # after the spawn, and assert the child lands cancelled well before the
         # (large) wait cap would have fired.
         import asyncio
+
         import ppxai.engine.tools.agent_spawn as spawn_mod
         from ppxai.engine.agent_runs import RunControl
         # Large cap so a pass can ONLY come from the parent-cancel path, not a timeout.

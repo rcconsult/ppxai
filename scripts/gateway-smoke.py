@@ -48,6 +48,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+
 def _force_utf8_console() -> None:
     """Make stdout/stderr able to carry this script's non-ASCII output.
 

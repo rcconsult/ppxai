@@ -2,8 +2,8 @@
 Date and time tool with timezone support.
 """
 
-from datetime import datetime
 import time
+from datetime import datetime
 
 from ...types import ToolManagerProtocol
 

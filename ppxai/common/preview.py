@@ -9,7 +9,6 @@ v1.15.4: Initial implementation
 
 import re
 from pathlib import Path
-from typing import Optional
 
 # The reload polling script injected before </body>.
 # {poll_url} is replaced with the actual endpoint URL.

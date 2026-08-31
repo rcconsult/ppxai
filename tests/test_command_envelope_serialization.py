@@ -23,7 +23,6 @@ from ppxai.commands.results import (
 )
 from ppxai.engine.types import Message
 
-
 # ---------------------------------------------------------------------------
 # The /load regression: Message objects in details must serialize cleanly.
 # ---------------------------------------------------------------------------

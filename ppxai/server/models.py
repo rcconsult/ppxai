@@ -2,7 +2,6 @@
 Pydantic request/response models for the ppxai HTTP server.
 """
 
-from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -40,23 +39,23 @@ class ChatRequest(BaseModel):
     does — same pipeline, same validation, same vision routing.
     """
     message: str
-    provider: Optional[str] = None
-    model: Optional[str] = None
-    files: List[FileAttachment] = Field(default_factory=list)
+    provider: str | None = None
+    model: str | None = None
+    files: list[FileAttachment] = Field(default_factory=list)
 
 
 class CodingTaskRequest(BaseModel):
     """Coding task request body."""
     message: str
     task_type: str = "generate"  # generate, debug, explain, test, docs, implement
-    provider: Optional[str] = None
-    model: Optional[str] = None
+    provider: str | None = None
+    model: str | None = None
 
 
 class SetProviderRequest(BaseModel):
     """Set provider request body."""
     provider: str
-    model: Optional[str] = None
+    model: str | None = None
     reset_context: bool = True
 
 
@@ -110,7 +109,7 @@ class FileReadRequest(BaseModel):
     backward-compatible for callers that haven't been updated yet.
     """
     path: str
-    cwd_anchor: Optional[str] = None
+    cwd_anchor: str | None = None
 
 
 class FileSearchRequest(BaseModel):
@@ -126,7 +125,7 @@ class FileWriteRequest(BaseModel):
     """
     path: str
     content: str
-    cwd_anchor: Optional[str] = None
+    cwd_anchor: str | None = None
 
 
 class UsageDisplayModeRequest(BaseModel):
@@ -142,5 +141,5 @@ class CommandRequest(BaseModel):
 class PreviewServeRequest(BaseModel):
     """Request to start a backend process for preview serving."""
     filepath: str = ""
-    command: Optional[str] = None
-    port: Optional[int] = None
+    command: str | None = None
+    port: int | None = None

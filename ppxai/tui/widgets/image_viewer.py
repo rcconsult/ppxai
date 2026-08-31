@@ -9,20 +9,17 @@ Install for full support: pip install ppxai[tui]
 """
 
 from pathlib import Path
-from typing import Optional, Tuple
 
 from textual.app import ComposeResult
-from textual.binding import Binding
 from textual.css.query import NoMatches
 from textual.message import Message
 from textual.reactive import reactive
 from textual.widget import Widget
 from textual.widgets import Static
 
-from ppxai.tui.images import IMAGE_EXTENSIONS, is_image_file, get_image_size
-from ppxai.tui.validation import format_file_size, MAX_IMAGE_SIZE
+from ppxai.tui.images import get_image_size
+from ppxai.tui.validation import MAX_IMAGE_SIZE, format_file_size
 from ppxai.tui.widgets.image_handlers import ImageHandler, ImageHandlerFactory
-
 
 # Default zoom levels for zoom in/out
 ZOOM_LEVELS = [0.1, 0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 3.0, 4.0]
@@ -58,7 +55,7 @@ class ImageViewer(Widget):
 
     def __init__(
         self,
-        path: Optional[Path] = None,
+        path: Path | None = None,
         id: str = None,
     ):
         """Initialize the image viewer.
@@ -69,8 +66,8 @@ class ImageViewer(Widget):
         """
         super().__init__(id=id)
         self._path = path
-        self._image_data: Optional[bytes] = None
-        self._dimensions: Optional[Tuple[int, int]] = None
+        self._image_data: bytes | None = None
+        self._dimensions: tuple[int, int] | None = None
         self._file_size: int = 0
         self._format: str = "unknown"
         self._zoom_index = DEFAULT_ZOOM_INDEX
@@ -129,7 +126,7 @@ class ImageViewer(Widget):
         yield from self._handler.compose()
 
         # Footer with image info
-        footer_text = f" [dim]Auto-scaled to fit container[/dim]"
+        footer_text = " [dim]Auto-scaled to fit container[/dim]"
         yield Static(footer_text, classes="image-viewer-footer", id="image-footer")
 
     def on_mount(self) -> None:
@@ -221,12 +218,12 @@ class ImageViewer(Widget):
         return self._handler.load(path)
 
     @property
-    def path(self) -> Optional[Path]:
+    def path(self) -> Path | None:
         """Get the current image path."""
         return self._path
 
     @property
-    def dimensions(self) -> Optional[Tuple[int, int]]:
+    def dimensions(self) -> tuple[int, int] | None:
         """Get image dimensions (width, height)."""
         return self._dimensions
 

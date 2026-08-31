@@ -16,14 +16,13 @@ import re
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Tuple, Optional, Set, Dict
-
-from .bootstrap import BootstrapContext, find_bootstrap_files_by_scope
-from ..common.logger import get_logger
-from ..config import get_bootstrap_files, get_max_injection_size, is_bootstrap_enabled
 
 import httpx
 import pyperclip
+
+from ..common.logger import get_logger
+from ..config import get_bootstrap_files, get_max_injection_size, is_bootstrap_enabled
+from .bootstrap import BootstrapContext, find_bootstrap_files_by_scope
 
 logger = get_logger("tui")
 
@@ -164,8 +163,8 @@ class ContextInjector:
 
     def __init__(
         self,
-        working_dir: Optional[str] = None,
-        bootstrap_files: Optional[List[str]] = None
+        working_dir: str | None = None,
+        bootstrap_files: list[str] | None = None
     ):
         """Initialize the context injector.
 
@@ -181,7 +180,7 @@ class ContextInjector:
         self.working_dir = path
 
     @property
-    def bootstrap_files(self) -> List[str]:
+    def bootstrap_files(self) -> list[str]:
         """Get bootstrap file aliases (from init or config).
 
         Returns:
@@ -195,7 +194,7 @@ class ContextInjector:
         except Exception:
             return self.DEFAULT_BOOTSTRAP_FILES
 
-    def find_bootstrap_files(self) -> List[Path]:
+    def find_bootstrap_files(self) -> list[Path]:
         """Find bootstrap files (AGENTS.md, CLAUDE.md, etc.) in working directory.
 
         Searches for files in the configured alias list, returning the first match.
@@ -230,7 +229,7 @@ class ContextInjector:
 
         return []
 
-    def find_bootstrap_files_with_scopes(self) -> List[ScopedBootstrapSource]:
+    def find_bootstrap_files_with_scopes(self) -> list[ScopedBootstrapSource]:
         """Find bootstrap files across all scopes (v1.14.2).
 
         Searches in precedence order:
@@ -254,7 +253,7 @@ class ContextInjector:
 
         scoped_files = find_bootstrap_files_by_scope(work_dir, self.bootstrap_files)
 
-        results: List[ScopedBootstrapSource] = []
+        results: list[ScopedBootstrapSource] = []
         for path, scope in scoped_files:
             try:
                 size = path.stat().st_size
@@ -268,7 +267,7 @@ class ContextInjector:
 
         return results
 
-    def load_bootstrap_context(self) -> Optional[BootstrapContext]:
+    def load_bootstrap_context(self) -> BootstrapContext | None:
         """Load and parse bootstrap context from working directory.
 
         Returns:
@@ -283,7 +282,7 @@ class ContextInjector:
         except Exception:
             return None
 
-    def load_bootstrap_context_merged(self) -> Tuple[Optional[BootstrapContext], List[ScopedBootstrapSource]]:
+    def load_bootstrap_context_merged(self) -> tuple[BootstrapContext | None, list[ScopedBootstrapSource]]:
         """Load and merge bootstrap context from all scopes (v1.14.2).
 
         Merges files from global → project → subdir:
@@ -298,7 +297,7 @@ class ContextInjector:
             return None, []
 
         # Parse each file individually to preserve YAML front matter parsing
-        parsed_contexts: List[Tuple[BootstrapContext, ScopedBootstrapSource]] = []
+        parsed_contexts: list[tuple[BootstrapContext, ScopedBootstrapSource]] = []
         for source in sources:
             try:
                 source.content = source.path.read_text(encoding="utf-8", errors="replace")
@@ -311,12 +310,12 @@ class ContextInjector:
             return None, []
 
         # Merge provider_hints, model_hints, and tool_calling_overrides (additive)
-        merged_provider_hints: Dict[str, List[str]] = {}
-        merged_model_hints: Dict[str, List[str]] = {}
-        merged_tc_overrides: Dict[str, Dict] = {}
+        merged_provider_hints: dict[str, list[str]] = {}
+        merged_model_hints: dict[str, list[str]] = {}
+        merged_tc_overrides: dict[str, dict] = {}
 
         # Combine base instructions with source markers
-        instruction_parts: List[str] = []
+        instruction_parts: list[str] = []
 
         for ctx, source in parsed_contexts:
             # Add provider hints (merge lists, don't overwrite)
@@ -357,7 +356,7 @@ class ContextInjector:
 
         return merged_ctx, sources
 
-    def detect_file_references(self, message: str) -> List[str]:
+    def detect_file_references(self, message: str) -> list[str]:
         """Detect file paths mentioned in the message.
 
         Args:
@@ -378,7 +377,7 @@ class ContextInjector:
 
         return list(set(files))  # dedupe
 
-    def should_inject(self, message: str, files: List[str]) -> bool:
+    def should_inject(self, message: str, files: list[str]) -> bool:
         """Determine if we should auto-inject file contents.
 
         Args:
@@ -408,7 +407,7 @@ class ContextInjector:
 
         return False
 
-    def resolve_path(self, filepath: str) -> Optional[Path]:
+    def resolve_path(self, filepath: str) -> Path | None:
         """Resolve a file path to an absolute path.
 
         Args:
@@ -433,7 +432,7 @@ class ContextInjector:
 
         return path
 
-    def read_file(self, filepath: str) -> Optional[InjectedContext]:
+    def read_file(self, filepath: str) -> InjectedContext | None:
         """Read a file and return its content.
 
         Args:
@@ -483,7 +482,7 @@ class ContextInjector:
         except Exception:
             return None
 
-    def inject_git_context(self, working_dir: Optional[str] = None) -> Optional[InjectedContext]:
+    def inject_git_context(self, working_dir: str | None = None) -> InjectedContext | None:
         """Inject git diff (staged + unstaged) as context.
 
         Args:
@@ -548,7 +547,7 @@ class ContextInjector:
         except (subprocess.CalledProcessError, FileNotFoundError):
             return None  # Not a git repository or git not installed
 
-    def inject_tree_context(self, working_dir: Optional[str] = None, max_depth: int = 3) -> Optional[InjectedContext]:
+    def inject_tree_context(self, working_dir: str | None = None, max_depth: int = 3) -> InjectedContext | None:
         """Inject directory tree structure as context.
 
         Args:
@@ -632,7 +631,7 @@ class ContextInjector:
             size=len(content)
         )
 
-    def inject_clipboard_context(self) -> Optional[InjectedContext]:
+    def inject_clipboard_context(self) -> InjectedContext | None:
         """Inject clipboard text content (v1.14.2).
 
         Returns:
@@ -698,7 +697,7 @@ class ContextInjector:
 
         return 'text'
 
-    def inject_url_context(self, url: str) -> Optional[InjectedContext]:
+    def inject_url_context(self, url: str) -> InjectedContext | None:
         """Fetch and inject URL content (v1.14.2).
 
         Args:
@@ -812,8 +811,8 @@ class ContextInjector:
     def inject_context(
         self,
         message: str,
-        skip_hashes: Optional[Set[str]] = None
-    ) -> Tuple[str, List[InjectedContext]]:
+        skip_hashes: set[str] | None = None
+    ) -> tuple[str, list[InjectedContext]]:
         """Process message and inject file/git/tree contents if appropriate.
 
         Args:

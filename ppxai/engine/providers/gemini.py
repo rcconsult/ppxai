@@ -24,24 +24,24 @@ import json
 import logging
 import traceback
 import uuid
-from typing import List, AsyncIterator, Optional, Dict, Any
+from collections.abc import AsyncIterator
+from typing import Any
 
 import httpx
 
 from ...common.logger import get_logger
 from ...config.tls import tls_verify
 from ..model_facts import ModelFacts
-from ..types import Message, Event, EventType, ProviderCapabilities, UsageStats
+from ..types import Event, EventType, Message, ProviderCapabilities, UsageStats
 from .base import BaseProvider
 from .wire import get_handler
-
 
 # Try to import google-genai package (optional dependency, v1.12.5+)
 _genai_available = False
 try:
     from google import genai
-    from google.genai import types as genai_types
     from google.genai import errors as genai_errors
+    from google.genai import types as genai_types
     _genai_available = True
 except ImportError:
     genai = None
@@ -182,7 +182,7 @@ def _strip_response_schema_rejects(node):
         for k, v in node.items()
         if k not in _RESPONSE_SCHEMA_REJECTED_KEYS
     }
-def response_format_to_gemini(response_format: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+def response_format_to_gemini(response_format: dict[str, Any] | None) -> dict[str, Any]:
     """Map an OpenAI-shaped `response_format` onto Gemini config kwargs.
 
     `{"type": "json_object"}`  → JSON mime type, model picks the shape.
@@ -199,7 +199,7 @@ def response_format_to_gemini(response_format: Optional[Dict[str, Any]]) -> Dict
         return {"response_mime_type": "application/json"}
     if kind == "json_schema":
         block = response_format.get("json_schema")
-        out: Dict[str, Any] = {"response_mime_type": "application/json"}
+        out: dict[str, Any] = {"response_mime_type": "application/json"}
         schema = block.get("schema") if isinstance(block, dict) else None
         if isinstance(schema, dict):
             out["response_schema"] = _strip_response_schema_rejects(
@@ -258,12 +258,12 @@ class GeminiProvider(BaseProvider):
     def __init__(
         self,
         api_key: str,
-        models: Optional[Dict[str, Dict[str, str]]] = None,
-        capabilities: Optional[ProviderCapabilities] = None,
+        models: dict[str, dict[str, str]] | None = None,
+        capabilities: ProviderCapabilities | None = None,
         enable_grounding: bool = True,
         enable_thinking: bool = True,
-        thinking_level: Optional[str] = None,
-        provider_id: Optional[str] = None,
+        thinking_level: str | None = None,
+        provider_id: str | None = None,
         **kwargs
     ):
         """Initialize the Gemini provider.
@@ -315,10 +315,10 @@ class GeminiProvider(BaseProvider):
 
     async def chat(
         self,
-        messages: List[Message],
+        messages: list[Message],
         model: str,
         stream: bool = True,
-        tools: Optional[List] = None,
+        tools: list | None = None,
         **kwargs
     ) -> AsyncIterator[Event]:
         """Send chat request to Gemini API with streaming.
@@ -533,7 +533,7 @@ class GeminiProvider(BaseProvider):
 
     def chat_sync_simple(
         self,
-        messages: List[Message],
+        messages: list[Message],
         model: str,
     ) -> str:
         """Simple synchronous chat that returns just the content.
@@ -572,11 +572,11 @@ class GeminiProvider(BaseProvider):
         self,
         prompt: str,
         model: str,
-        system: Optional[str] = None,
-        response_format: Optional[Dict[str, Any]] = None,
-        max_tokens: Optional[int] = None,
-        temperature: Optional[float] = None,
-    ) -> Dict[str, Any]:
+        system: str | None = None,
+        response_format: dict[str, Any] | None = None,
+        max_tokens: int | None = None,
+        temperature: float | None = None,
+    ) -> dict[str, Any]:
         """Stateless single-turn completion (BaseProvider contract).
 
         Same return shape as OpenAICompatibleProvider.oneshot
@@ -594,7 +594,7 @@ class GeminiProvider(BaseProvider):
         Structured output and Google Search grounding COEXIST — verified live
         2026-08-09. Only function declarations conflict with grounding.
         """
-        messages: List[Message] = []
+        messages: list[Message] = []
         if system:
             messages.append(Message(role="system", content=system))
         messages.append(Message(role="user", content=prompt))
@@ -673,12 +673,12 @@ class GeminiProvider(BaseProvider):
 
     def _build_config(
         self,
-        model: Optional[str] = None,
+        model: str | None = None,
         use_grounding: bool = True,
-        system_instruction: Optional[str] = None,
-        generation_params: Optional[Dict[str, Any]] = None,
-        tools: Optional[List] = None,
-        response_format: Optional[Dict[str, Any]] = None,
+        system_instruction: str | None = None,
+        generation_params: dict[str, Any] | None = None,
+        tools: list | None = None,
+        response_format: dict[str, Any] | None = None,
     ) -> "genai_types.GenerateContentConfig":
         """Build generation config with optional grounding, thinking, system instruction, tools, and generation params.
 
@@ -775,7 +775,7 @@ class GeminiProvider(BaseProvider):
             return genai_types.GenerateContentConfig(**config_kwargs)
         return None
 
-    def _parse_usage(self, usage_metadata) -> Optional[UsageStats]:
+    def _parse_usage(self, usage_metadata) -> UsageStats | None:
         """Parse usage from Gemini response.
 
         Args:
@@ -801,7 +801,7 @@ class GeminiProvider(BaseProvider):
             total_tokens=total_tokens,
         )
 
-    def _convert_tools_to_gemini(self, openai_tools: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def _convert_tools_to_gemini(self, openai_tools: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Convert OpenAI-format tools to Gemini function_declarations format.
 
         OpenAI format:
@@ -837,7 +837,7 @@ class GeminiProvider(BaseProvider):
                 declarations.append(declaration)
         return declarations
 
-    def _parse_function_call(self, function_call, part=None) -> Optional[Dict[str, Any]]:
+    def _parse_function_call(self, function_call, part=None) -> dict[str, Any] | None:
         """Parse a Gemini function_call part into tool call dict.
 
         Args:
@@ -884,7 +884,7 @@ class GeminiProvider(BaseProvider):
         return parsed
 
     @staticmethod
-    def _thought_signature_of(part, function_call=None) -> Optional[str]:
+    def _thought_signature_of(part, function_call=None) -> str | None:
         """Extract Gemini 3.x `thought_signature` from a response part.
 
         v1.19.1 Item 45: Gemini 3.x models return an opaque `thought_signature`
@@ -924,7 +924,7 @@ class GeminiProvider(BaseProvider):
         return None
 
 
-    def _parse_grounding(self, grounding_metadata) -> List[Dict[str, str]]:
+    def _parse_grounding(self, grounding_metadata) -> list[dict[str, str]]:
         """Parse grounding metadata to extract citations.
 
         Args:
@@ -952,7 +952,7 @@ class GeminiProvider(BaseProvider):
 
         return citations
 
-    def _inject_citations(self, content: str, citations: List[Dict[str, str]]) -> str:
+    def _inject_citations(self, content: str, citations: list[dict[str, str]]) -> str:
         """Inject citation URLs into response text.
 
         Unlike Perplexity which uses [1], [2] markers, Gemini doesn't
@@ -981,7 +981,7 @@ class GeminiProvider(BaseProvider):
 
         return content
 
-    def _classify_throttle(self, e: Exception) -> Optional[Dict[str, Any]]:
+    def _classify_throttle(self, e: Exception) -> dict[str, Any] | None:
         """Detect Gemini-side rate-limit / quota errors.
 
         v1.18.3 follow-up: the base class checks ``openai.APIStatusError``
@@ -1010,7 +1010,7 @@ class GeminiProvider(BaseProvider):
         code = getattr(e, "code", None)
         if code not in (403, 429):
             return None
-        retry_after: Optional[float] = None
+        retry_after: float | None = None
         # google-genai's APIError carries an httpx.Response-like object
         # on `.response` for live API calls; replay shims set it to None.
         try:
@@ -1055,7 +1055,7 @@ class GeminiProvider(BaseProvider):
 
         # Model not found
         if "NOT_FOUND" in error_str or "model" in error_str.lower() and "not found" in error_str.lower():
-            return f"Gemini model not found. Check model ID is valid."
+            return "Gemini model not found. Check model ID is valid."
 
         # Connection errors
         if "connect" in error_str.lower() or "timeout" in error_str.lower():

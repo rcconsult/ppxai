@@ -212,8 +212,8 @@ def render_halfblock(image_path: Path, width: int = 80):
 def render_textual_image(image_path: Path):
     """Render using textual-image library (for comparison)."""
     try:
-        from textual_image.renderable import Image
         from rich.console import Console
+        from textual_image.renderable import Image
 
         console = Console()
         console.print(f"textual-image auto-selected: {Image.__module__}")

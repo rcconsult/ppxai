@@ -5,8 +5,8 @@ Provides a directory tree for browsing and opening files
 in the side panel or injecting @file references into chat.
 """
 
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable, Optional
 
 from textual.events import Click
 from textual.message import Message
@@ -103,7 +103,7 @@ class FileTree(DirectoryTree):
         event.stop()
         self.post_message(self.FilePreview(event.path))
 
-    def _get_cursor_file_path(self) -> Optional[Path]:
+    def _get_cursor_file_path(self) -> Path | None:
         """Return the file Path at the current cursor position, or None if not a file."""
         node = self.cursor_node
         if node is None or node.data is None:

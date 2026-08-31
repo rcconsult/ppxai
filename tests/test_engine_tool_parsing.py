@@ -5,15 +5,15 @@ Ensures the engine correctly parses tool calls from various model outputs,
 including the Gemini-style nested JSON format.
 """
 
+from unittest.mock import Mock, patch
+
 import pytest
-from unittest.mock import Mock, patch, AsyncMock
-import json
 
 from ppxai.engine.tools.parser import (
     _find_json_objects,
+    detect_truncated_tool_call,
     parse_tool_call,
     strip_tool_json_from_text,
-    detect_truncated_tool_call,
 )
 
 
@@ -576,8 +576,8 @@ class TestNativeToolCalling:
     @pytest.fixture
     def tool_manager(self):
         """Create a tool manager with some tools registered."""
-        from ppxai.engine.tools.manager import ToolManager
         from ppxai.engine.tools.base import FunctionTool
+        from ppxai.engine.tools.manager import ToolManager
 
         manager = ToolManager()
 
@@ -700,10 +700,10 @@ class TestNativeToolCalling:
     @pytest.mark.asyncio
     async def test_openai_provider_handles_tool_calls_in_response(self):
         """Test that OpenAI provider correctly parses tool_calls from response."""
-        from ppxai.engine.providers.openai_compat import OpenAICompatibleProvider
-        from ppxai.engine.types import EventType, ProviderCapabilities, Message
-        from unittest.mock import MagicMock
         from types import SimpleNamespace
+
+        from ppxai.engine.providers.openai_compat import OpenAICompatibleProvider
+        from ppxai.engine.types import EventType, Message, ProviderCapabilities
 
         # Create provider with native tool calling enabled
         caps = ProviderCapabilities()
@@ -760,9 +760,10 @@ class TestNativeToolCalling:
     @pytest.mark.asyncio
     async def test_openai_provider_no_tools_without_capability(self):
         """Test that tools are not sent when native_tool_calling is disabled."""
-        from ppxai.engine.providers.openai_compat import OpenAICompatibleProvider
-        from ppxai.engine.types import ProviderCapabilities, Message
         from unittest.mock import MagicMock
+
+        from ppxai.engine.providers.openai_compat import OpenAICompatibleProvider
+        from ppxai.engine.types import Message, ProviderCapabilities
 
         # Create provider WITHOUT native tool calling
         caps = ProviderCapabilities()
@@ -807,8 +808,8 @@ class TestToolArgumentValidation:
     @pytest.fixture
     def tool_manager(self):
         """Create a tool manager with tools that have required arguments."""
-        from ppxai.engine.tools.manager import ToolManager
         from ppxai.engine.tools.base import FunctionTool
+        from ppxai.engine.tools.manager import ToolManager
 
         manager = ToolManager()
 

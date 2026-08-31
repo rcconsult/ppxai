@@ -13,10 +13,10 @@ Architecture:
 v1.15.0: Type-based renderer dispatch refactoring
 """
 
-from dataclasses import dataclass, field, is_dataclass, asdict
-from typing import Any, Optional, Dict, List
-from enum import Enum
 from abc import ABC
+from dataclasses import asdict, dataclass, field, is_dataclass
+from enum import Enum
+from typing import Any
 
 
 def _jsonsafe(value: Any) -> Any:
@@ -265,7 +265,7 @@ class SideEffect:
         "open_editor" (editable) + "open_viewer" (read-only)
     """
     kind: str
-    payload: Dict[str, Any] = field(default_factory=dict)
+    payload: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict:
         return {"kind": self.kind, **self.payload}
@@ -290,8 +290,8 @@ class CommandResult(ABC):
     """
     status: ResultStatus
     message: str
-    metadata: Dict[str, Any] = field(default_factory=dict)
-    side_effects: List[SideEffect] = field(default_factory=list)
+    metadata: dict[str, Any] = field(default_factory=dict)
+    side_effects: list[SideEffect] = field(default_factory=list)
 
     @property
     def success(self) -> bool:
@@ -374,8 +374,8 @@ class ErrorResult(CommandResult):
                         "Use /cd to navigate to correct location"]
         )
     """
-    error_details: Optional[str] = None
-    suggestions: List[str] = field(default_factory=list)
+    error_details: str | None = None
+    suggestions: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         d = super().to_dict()
@@ -402,7 +402,7 @@ class ConfirmationResult(CommandResult):
             details={"messages_cleared": 42, "session": "my-session"}
         )
     """
-    details: Dict[str, Any] = field(default_factory=dict)
+    details: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict:
         d = super().to_dict()
@@ -434,7 +434,7 @@ class AIResponseResult(CommandResult):
         )
     """
     content: str = ""  # Full markdown content
-    code_blocks: List[Dict[str, str]] = field(default_factory=list)
+    code_blocks: list[dict[str, str]] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         d = super().to_dict()
@@ -468,8 +468,8 @@ class TableResult(CommandResult):
             ]
         )
     """
-    columns: List[str] = field(default_factory=list)
-    rows: List[List[str]] = field(default_factory=list)
+    columns: list[str] = field(default_factory=list)
+    rows: list[list[str]] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         d = super().to_dict()
@@ -501,7 +501,7 @@ class TreeResult(CommandResult):
             }
         )
     """
-    root: Dict[str, Any] = field(default_factory=dict)
+    root: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict:
         """Serialize TreeResult including the `root` payload.
@@ -565,7 +565,7 @@ class ListResult(CommandResult):
             ]
         )
     """
-    items: List[Dict[str, Any]] = field(default_factory=list)
+    items: list[dict[str, Any]] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         d = super().to_dict()
@@ -594,7 +594,7 @@ class KeyValueResult(CommandResult):
             }
         )
     """
-    pairs: Dict[str, str] = field(default_factory=dict)
+    pairs: dict[str, str] = field(default_factory=dict)
 
     def to_dict(self) -> dict:
         d = super().to_dict()
@@ -629,9 +629,9 @@ class FileViewResult(CommandResult):
     """
     filepath: str = ""
     content: str = ""
-    language: Optional[str] = None
-    line_highlight: Optional[int] = None
-    col_highlight: Optional[int] = None
+    language: str | None = None
+    line_highlight: int | None = None
+    col_highlight: int | None = None
     read_only: bool = True
 
     def to_dict(self) -> dict:
@@ -694,7 +694,7 @@ class ImageResult(CommandResult):
         )
     """
     filepath: str = ""
-    image_data: Optional[str] = None  # Base64 encoded image data (optional)
+    image_data: str | None = None  # Base64 encoded image data (optional)
     format: str = "png"  # png, jpg, svg, etc.
 
     def to_dict(self) -> dict:
@@ -795,7 +795,7 @@ class DiffResult(CommandResult):
             summary="3 files changed, 42 insertions(+), 15 deletions(-)"
         )
     """
-    files: List[Dict[str, Any]] = field(default_factory=list)
+    files: list[dict[str, Any]] = field(default_factory=list)
     summary: str = ""
 
     def to_dict(self) -> dict:
@@ -830,9 +830,9 @@ class ConsentResult(CommandResult):
         )
     """
     question: str = ""
-    options: List[str] = field(default_factory=lambda: ["Allow", "Deny"])
+    options: list[str] = field(default_factory=lambda: ["Allow", "Deny"])
     default: str = "Deny"
-    context: Dict[str, Any] = field(default_factory=dict)
+    context: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict:
         d = super().to_dict()
@@ -866,7 +866,7 @@ class PromptResult(CommandResult):
     prompt: str = ""
     placeholder: str = ""
     default: str = ""
-    validation: Optional[str] = None  # Regex pattern
+    validation: str | None = None  # Regex pattern
 
     def to_dict(self) -> dict:
         d = super().to_dict()
@@ -902,7 +902,7 @@ class CompositeResult(CommandResult):
             ]
         )
     """
-    results: List[CommandResult] = field(default_factory=list)
+    results: list[CommandResult] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         """Serialize sub-results so HTTP clients can render the composite.
@@ -948,7 +948,7 @@ class ToolExecutionResult(CommandResult):
     stdout: str = ""
     stderr: str = ""
     exit_code: int = 0
-    artifacts: List[CommandResult] = field(default_factory=list)
+    artifacts: list[CommandResult] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         """Serialize execution payload + nested artifacts.
@@ -988,7 +988,7 @@ class TextResult(CommandResult):
             error_details="Optional error trace"
         )
     """
-    error_details: Optional[str] = None
+    error_details: str | None = None
 
     def to_dict(self) -> dict:
         d = super().to_dict()

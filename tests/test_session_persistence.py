@@ -7,15 +7,16 @@ working directory persistence, and auto-restore functionality.
 
 import json
 import os
-import pytest
-from datetime import datetime
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
-from ppxai.engine.session import SessionManager, SESSION_STATE_FILE
-from ppxai.engine.types import Message
-from ppxai.config import get_session_config, get_auto_restore_mode, get_auto_save_interval
+import pytest
+
+from ppxai.config import get_auto_restore_mode, get_auto_save_interval, get_session_config
 from ppxai.config.store import ConfigStore
+from ppxai.engine.session import SessionManager
+from ppxai.engine.types import Message
+from ppxai.engine.session import SessionManager, SESSION_STATE_FILE  # noqa: F401 — read by tests
 
 
 @pytest.fixture
@@ -734,7 +735,6 @@ class TestAtomicSessionFormatTransition:
     """
 
     def _minimal_session(self, tmp_path, name="test_session"):
-        from pathlib import Path as _Path
         sm = SessionManager(sessions_dir=tmp_path / "sessions")
         sm.sessions_dir.mkdir(parents=True, exist_ok=True)
         sm.session_name = name
@@ -1081,7 +1081,7 @@ class TestUsageRoundTrip:
         assert sm2.usage_by_model["openai/gpt-5.4-mini"].prompt_tokens == 2000000
 
     def test_save_then_load_preserves_tool_calls_usage(self, tmp_path):
-        from ppxai.engine.types import Message, UsageStats, ToolUsage
+        from ppxai.engine.types import Message, ToolUsage, UsageStats
         sm = self._sm(tmp_path)
         sm.session_name = "tool_usage"
         sm.messages = [

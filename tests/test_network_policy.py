@@ -13,6 +13,12 @@ from __future__ import annotations
 
 import pytest
 
+# The autouse `_no_dns` fixture patches `_host_resolves_to_blocked_ip` to a
+# no-op for hermetic host-matching tests. The cache tests below exercise the
+# REAL implementation, so they restore it from this import-time reference
+# (captured before any fixture runs).
+import ppxai.engine.tools.network_policy as _np_mod
+from ppxai.engine.agent_scoped_tools import ScopedToolManager
 from ppxai.engine.tools.network_policy import (
     Allow,
     Deny,
@@ -20,13 +26,7 @@ from ppxai.engine.tools.network_policy import (
     is_network_tool,
     tool_targets,
 )
-from ppxai.engine.agent_scoped_tools import ScopedToolManager
 
-# The autouse `_no_dns` fixture patches `_host_resolves_to_blocked_ip` to a
-# no-op for hermetic host-matching tests. The cache tests below exercise the
-# REAL implementation, so they restore it from this import-time reference
-# (captured before any fixture runs).
-import ppxai.engine.tools.network_policy as _np_mod
 _REAL_HOST_RESOLVES = _np_mod._host_resolves_to_blocked_ip
 
 

@@ -53,7 +53,8 @@ Cross-process dispatch needs a single source of truth for kind→class.
 
 from __future__ import annotations
 
-from typing import Any, Callable, Dict, List, Optional, Type, TypeVar
+from collections.abc import Callable
+from typing import Any, TypeVar
 
 from ..common.logger import get_logger
 from .types import MarshallableArtifact
@@ -94,13 +95,13 @@ class ArtifactRegistry:
     registry per process. Stateless dispatch.
     """
 
-    _registry: Dict[str, Type[MarshallableArtifact]] = {}
+    _registry: dict[str, type[MarshallableArtifact]] = {}
     """kind string → concrete MarshallableArtifact class.
     Filled at import time as each artifact dataclass is decorated.
     Read-only after init; cross-thread safe by construction."""
 
     @classmethod
-    def register(cls, kind: str) -> Callable[[Type[M]], Type[M]]:
+    def register(cls, kind: str) -> Callable[[type[M]], type[M]]:
         """Decorator — register a MarshallableArtifact class for the given kind.
 
         Args:
@@ -129,7 +130,7 @@ class ArtifactRegistry:
                 "ArtifactRegistry.register: kind must be a non-empty string"
             )
 
-        def decorator(target: Type[M]) -> Type[M]:
+        def decorator(target: type[M]) -> type[M]:
             existing = cls._registry.get(kind)
             if existing is not None and existing is not target:
                 raise ValueError(
@@ -144,7 +145,7 @@ class ArtifactRegistry:
         return decorator
 
     @classmethod
-    def deserialize(cls, data: Dict[str, Any]) -> Optional[MarshallableArtifact]:
+    def deserialize(cls, data: dict[str, Any]) -> MarshallableArtifact | None:
         """Reconstruct an artifact from its serialized dict via kind dispatch.
 
         Reads `data["kind"]`, looks up the registered class, calls
@@ -202,7 +203,7 @@ class ArtifactRegistry:
         return kind in cls._registry
 
     @classmethod
-    def list_registered_kinds(cls) -> List[str]:
+    def list_registered_kinds(cls) -> list[str]:
         """Return the sorted list of currently-registered kind strings.
 
         Useful for `/doctor` checks, diagnostics, and tests asserting
@@ -212,7 +213,7 @@ class ArtifactRegistry:
         return sorted(cls._registry.keys())
 
     @classmethod
-    def class_for_kind(cls, kind: str) -> Optional[Type[MarshallableArtifact]]:
+    def class_for_kind(cls, kind: str) -> type[MarshallableArtifact] | None:
         """Look up the registered class for a kind without deserializing.
 
         Useful when callers need to construct artifacts programmatically

@@ -28,7 +28,6 @@ import struct
 import pytest
 
 from ppxai.engine.file_preprocessing import (
-    PreprocessResult,
     preprocess_file,
 )
 from ppxai.engine.session_store import (
@@ -39,7 +38,6 @@ from ppxai.engine.session_store import (
     KIND_TEXT,
     SessionFileStore,
 )
-
 
 # -----------------------------------------------------------------------------
 # Test fixtures — synthesized image bytes with real headers

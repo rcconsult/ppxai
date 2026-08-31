@@ -9,7 +9,7 @@ Provides different handlers based on library availability and terminal capabilit
 import logging
 import os
 from pathlib import Path
-from typing import Optional, Protocol, Tuple
+from typing import Protocol
 
 from textual.app import ComposeResult
 from textual.containers import Center, Vertical
@@ -27,7 +27,6 @@ from ppxai.tui.terminal import (
 from ppxai.tui.validation import format_file_size
 from ppxai.tui.widgets.iterm2_widget import ITerm2ImageWidget
 
-
 # Check if textual-image is available
 _IMAGEVIEW_AVAILABLE = False
 _TextualImage = None
@@ -36,7 +35,7 @@ _SixelImage = None
 
 try:
     from textual_image.widget import Image as TextualImage
-    from textual_image.widget import TGPImage, SixelImage
+    from textual_image.widget import SixelImage, TGPImage
     _IMAGEVIEW_AVAILABLE = True
     _TextualImage = TextualImage
     _TGPImage = TGPImage
@@ -167,7 +166,7 @@ class FullImageHandler:
         """
         self._path = path
         self._parent = parent
-        self._viewer: Optional[Widget] = None
+        self._viewer: Widget | None = None
 
         # Create the textual-image widget
         try:
@@ -248,7 +247,7 @@ class FallbackHandler:
     can't be displayed (library missing or terminal doesn't support images).
     """
 
-    def __init__(self, path: Optional[Path], parent: Widget, reason: str):
+    def __init__(self, path: Path | None, parent: Widget, reason: str):
         """Initialize the fallback handler.
 
         Args:
@@ -259,7 +258,7 @@ class FallbackHandler:
         self._path = path
         self._parent = parent
         self._reason = reason
-        self._dimensions: Optional[Tuple[int, int]] = None
+        self._dimensions: tuple[int, int] | None = None
         self._file_size: int = 0
         self._format: str = "unknown"
 
@@ -368,7 +367,7 @@ class ImageHandlerFactory:
     """
 
     @staticmethod
-    def create(path: Optional[Path], parent: Widget) -> ImageHandler:
+    def create(path: Path | None, parent: Widget) -> ImageHandler:
         """Create appropriate image handler.
 
         Decision tree:

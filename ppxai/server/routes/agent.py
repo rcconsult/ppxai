@@ -2,8 +2,8 @@
 Agent mode endpoints (v1.11.8).
 """
 
+
 from fastapi import APIRouter, Depends
-from typing import Optional
 
 from ...common.logger import get_logger
 from ..state import Session, get_session, with_drained_events

@@ -19,24 +19,18 @@ Coverage:
 
 from __future__ import annotations
 
-import json
-from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
 
-from ppxai.commands.context import ServerCommandContext, RichCommandContext
+from ppxai.commands.context import ServerCommandContext
 from ppxai.commands.factory import CommandFactory
 from ppxai.commands.results import (
     CommandResult,
-    ConfirmationResult,
-    ErrorResult,
     KeyValueResult,
     MarkdownResult,
     NotificationResult,
-    ResultStatus,
     SideEffectKind,
-    TextResult,
 )
 
 

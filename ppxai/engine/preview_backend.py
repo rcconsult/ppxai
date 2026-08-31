@@ -40,7 +40,6 @@ import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, List, Optional
 
 import httpx
 
@@ -78,14 +77,14 @@ class PreviewBackend:
     in the caller's session map.
     """
 
-    process: Optional[asyncio.subprocess.Process]
+    process: asyncio.subprocess.Process | None
     port: int
     command: str
     url: str
     working_dir: str
-    log_path: Optional[Path] = None
+    log_path: Path | None = None
     last_seen: float = field(default_factory=time.time)
-    drain_task: Optional[asyncio.Task] = None
+    drain_task: asyncio.Task | None = None
     mode: str = "served"  # "served" | "proxied"
 
 
@@ -108,7 +107,7 @@ _FRAMEWORK_DEFAULTS = {
 }
 
 
-def detect_command(working_dir: str) -> Optional[str]:
+def detect_command(working_dir: str) -> str | None:
     """Auto-detect the backend start command from project files.
 
     Tries (in order): npm start (if package.json declares it), then
@@ -175,7 +174,7 @@ async def detect_port_from_output(
     process: asyncio.subprocess.Process,
     collected_output: list,
     timeout: float = 5.0,
-) -> Optional[int]:
+) -> int | None:
     """Read the process's stdout for port announcements over a deadline.
 
     Frameworks like uvicorn / flask print `Running on http://localhost:8000`
@@ -223,7 +222,7 @@ async def wait_for_port(port: int, timeout: float = 10.0) -> bool:
 
 async def drain_backend_output(
     process: asyncio.subprocess.Process,
-    log_path: Optional[Path] = None,
+    log_path: Path | None = None,
 ) -> None:
     """Continuously read the backend's stdout/stderr until it exits.
 
@@ -309,8 +308,8 @@ async def drain_backend_output(
 
 
 async def start_served_backend(
-    command: Optional[str],
-    port: Optional[int],
+    command: str | None,
+    port: int | None,
     working_dir: str,
 ) -> PreviewBackend:
     """Spawn the user's backend subprocess, drain its stdout to JSONL,
@@ -369,7 +368,7 @@ async def start_served_backend(
     except OSError as e:
         raise PreviewBackendError(f"Failed to start process: {e}", status_code=500)
 
-    collected_output: List[str] = []
+    collected_output: list[str] = []
     detected_port = await detect_port_from_output(process, collected_output, timeout=5.0)
     if detected_port:
         resolved_port = detected_port

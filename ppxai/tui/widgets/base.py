@@ -4,7 +4,8 @@ Base classes and mixins for TUI widgets.
 Provides common functionality used across multiple widgets.
 """
 
-from typing import TypeVar, Optional, Callable
+from collections.abc import Callable
+from typing import TypeVar
 
 from textual.css.query import NoMatches
 from textual.widget import Widget
@@ -32,8 +33,8 @@ class SafeQueryMixin:
         self,
         selector: str,
         widget_type: type[T],
-        action: Optional[Callable[[T], None]] = None
-    ) -> Optional[T]:
+        action: Callable[[T], None] | None = None
+    ) -> T | None:
         """Query for widget, optionally execute action, handle missing gracefully.
 
         Args:

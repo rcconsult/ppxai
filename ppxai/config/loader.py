@@ -18,11 +18,11 @@ import sys
 import warnings
 from io import StringIO
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from dotenv import load_dotenv
-from ..common.logger import get_logger
 
+from ..common.logger import get_logger
 
 # =============================================================================
 # Path Constants
@@ -91,7 +91,7 @@ def _ensure_directories() -> None:
     EXPORTS_DIR.mkdir(parents=True, exist_ok=True)
 
 
-def _find_example_config() -> Optional[Path]:
+def _find_example_config() -> Path | None:
     """Find the bundled example config file.
 
     Search order:
@@ -205,7 +205,7 @@ def initialize_environment() -> None:
 # Configuration File Discovery
 # =============================================================================
 
-def find_config_file() -> Optional[Path]:
+def find_config_file() -> Path | None:
     """Find the configuration file following the search order.
 
     Search order:
@@ -236,7 +236,7 @@ def find_config_file() -> Optional[Path]:
 # Configuration Parsing
 # =============================================================================
 
-def _load_json_config(config_path: Path) -> Dict[str, Any]:
+def _load_json_config(config_path: Path) -> dict[str, Any]:
     """Load and parse JSON configuration file.
 
     Args:
@@ -258,7 +258,7 @@ def _load_json_config(config_path: Path) -> Dict[str, Any]:
         raise ValueError(f"Error reading config file {config_path}: {e}")
 
 
-def _validate_provider_config(provider_id: str, provider: Dict[str, Any]) -> List[str]:
+def _validate_provider_config(provider_id: str, provider: dict[str, Any]) -> list[str]:
     """Validate a provider configuration.
 
     Args:
@@ -281,7 +281,7 @@ def _validate_provider_config(provider_id: str, provider: Dict[str, Any]) -> Lis
     return errors
 
 
-def _build_legacy_custom_provider() -> Optional[Dict[str, Any]]:
+def _build_legacy_custom_provider() -> dict[str, Any] | None:
     """Build a custom provider from legacy CUSTOM_* environment variables.
 
     This provides backward compatibility with the old .env-only configuration.
@@ -319,7 +319,7 @@ def _build_legacy_custom_provider() -> Optional[Dict[str, Any]]:
     }
 
 
-def _convert_models_format(models: Dict[str, Any]) -> Dict[str, Any]:
+def _convert_models_format(models: dict[str, Any]) -> dict[str, Any]:
     """Convert models from JSON format to internal numbered format.
 
     JSON format: {"model-id": {"name": "...", "description": "..."}}
@@ -345,7 +345,7 @@ def _convert_models_format(models: Dict[str, Any]) -> Dict[str, Any]:
 # Main Configuration Loading
 # =============================================================================
 
-def load_config() -> Dict[str, Any]:
+def load_config() -> dict[str, Any]:
     """Load the complete configuration from JSON file and environment.
 
     Returns:

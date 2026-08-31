@@ -19,7 +19,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
 # A registry run id is exactly `run_` + token_hex(6) — see
 # `ppxai/engine/agent_runs.py`. Kept as a literal (not imported) so the
@@ -73,16 +73,16 @@ class TaskArgs:
 
     task: str = ""
     tools: list[str] = field(default_factory=list)
-    provider: Optional[str] = None
-    model: Optional[str] = None
-    system: Optional[str] = None
+    provider: str | None = None
+    model: str | None = None
+    system: str | None = None
     network: dict[str, Any] = field(default_factory=lambda: {"allow_outbound": []})
     budget: dict[str, Any] = field(default_factory=dict)
-    spec: Optional[str] = None
+    spec: str | None = None
     skills: list[str] = field(default_factory=list)
-    profile: Optional[str] = None
-    enrichment: Optional[bool] = None
-    workdir: Optional[str] = None
+    profile: str | None = None
+    enrichment: bool | None = None
+    workdir: str | None = None
     errors: list[str] = field(default_factory=list)
 
 
@@ -103,7 +103,7 @@ def egress_entry(s: str):
     return {"host": s[:slash], "paths": [s[slash:]]}
 
 
-def parse_num(s: str) -> Optional[float]:
+def parse_num(s: str) -> float | None:
     """"100" | "100k" | "1.5m" → number, or None if malformed."""
     m = _NUM_RE.match((s or "").strip())
     if not m:
@@ -154,7 +154,7 @@ def parse_task_args(argline: str) -> TaskArgs:
         i += 1
     out.task = " ".join(desc).strip()
 
-    def value(name: str) -> Optional[str]:
+    def value(name: str) -> str | None:
         nonlocal i
         if i + 1 >= len(toks) or toks[i + 1].startswith("--"):
             out.errors.append(f"{name} needs a value")

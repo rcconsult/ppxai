@@ -9,6 +9,7 @@ NOTE: These tests require a running vLLM/Ollama server with CUSTOM_* env vars co
       - Or exclude when running all: pytest tests/ --ignore=tests/test_custom_endpoint_integration.py
 """
 import os
+
 import pytest
 from dotenv import load_dotenv
 
@@ -48,8 +49,8 @@ def load_env():
 
     # Restore original config state after all tests in this module
     ppxai.config.store.ConfigStore._instance = original_instance
-    import ppxai.config.loader
     import ppxai.config
+    import ppxai.config.loader
     importlib.reload(ppxai.config.loader)
     importlib.reload(ppxai.config.store)
     importlib.reload(ppxai.config)
@@ -92,8 +93,8 @@ def custom_engine():
     ppxai.config.store.ConfigStore._instance = None
 
     # Reload config modules to pick up new environment variables
-    import ppxai.config.loader
     import ppxai.config
+    import ppxai.config.loader
     importlib.reload(ppxai.config.loader)
     importlib.reload(ppxai.config.store)
     importlib.reload(ppxai.config)
@@ -159,6 +160,7 @@ class TestCustomEndpointIntegration:
     def test_streaming_chat_request(self, custom_engine, custom_model_id):
         """Test a streaming chat request to the custom endpoint."""
         import asyncio
+
         from ppxai.engine.types import EventType
 
         custom_engine.set_model(custom_model_id)
@@ -234,6 +236,7 @@ class TestCustomEndpointCodingTask:
         """Test that custom LLM can generate Python code for Fibonacci problem."""
         import httpx
         from openai import OpenAI
+
         from ppxai.config import PROVIDERS, get_api_key, get_base_url
 
         # Check if "custom" provider is explicitly configured (not a fallback)
@@ -349,6 +352,7 @@ class TestCustomEndpointToolCalling:
     def test_calculator_tool_execution(self, custom_engine, custom_model_id):
         """Test that calculator tool works with custom provider."""
         import asyncio
+
         from ppxai.engine.types import EventType
 
         custom_engine.set_model(custom_model_id)
@@ -390,6 +394,7 @@ class TestCustomEndpointToolCalling:
         """Test that read_file tool works with custom provider."""
         import asyncio
         import tempfile
+
         from ppxai.engine.types import EventType
 
         custom_engine.set_model(custom_model_id)
@@ -489,7 +494,7 @@ class TestCustomEndpointToolCalling:
         provider = custom_engine.provider
         capabilities = provider.capabilities
 
-        print(f"\nCustom provider capabilities:")
+        print("\nCustom provider capabilities:")
         print(f"  native_tool_calling: {capabilities.native_tool_calling}")
         print(f"  streaming: {capabilities.streaming}")
         print(f"  web_search: {capabilities.web_search}")
@@ -530,7 +535,7 @@ class TestCustomEndpointPremiumWebSearch:
     def test_premium_search_ssl_verify_setting(self):
         """Test that SSL_VERIFY setting is respected by premium search."""
         import os
-        from ppxai.engine.tools.builtin import web_premium
+
 
         # Check current SSL_VERIFY setting
         ssl_verify_env = os.getenv("SSL_VERIFY", "true")

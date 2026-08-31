@@ -30,7 +30,7 @@ import os
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from ..config import find_config_file
 from ..config.facts_config import (
@@ -61,14 +61,14 @@ from .results import (
 _PROBE_TIMEOUT_S = 2.0
 
 
-def _extract_provider_models(config_data: Dict[str, Any]) -> Dict[str, List[str]]:
+def _extract_provider_models(config_data: dict[str, Any]) -> dict[str, list[str]]:
     """Pull (provider → [model_ids]) out of a loaded config dict.
 
     Walks `providers.<name>.models.<model_id>` entries and drops any
     keys starting with `__comment` (those are inline documentation
     markers, not real model IDs).
     """
-    result: Dict[str, List[str]] = {}
+    result: dict[str, list[str]] = {}
     providers = config_data.get("providers", {})
     if not isinstance(providers, dict):
         return result
@@ -87,9 +87,9 @@ def _extract_provider_models(config_data: Dict[str, Any]) -> Dict[str, List[str]
     return result
 
 
-def _extract_default_models(config_data: Dict[str, Any]) -> Dict[str, str]:
+def _extract_default_models(config_data: dict[str, Any]) -> dict[str, str]:
     """Return {provider: default_model} for every provider that has one set."""
-    defaults: Dict[str, str] = {}
+    defaults: dict[str, str] = {}
     providers = config_data.get("providers", {})
     if not isinstance(providers, dict):
         return defaults
@@ -103,10 +103,10 @@ def _extract_default_models(config_data: Dict[str, Any]) -> Dict[str, str]:
 
 
 def audit_user_config(
-    config_path: Optional[Path] = None,
+    config_path: Path | None = None,
     *,
-    today: Optional[date] = None,
-) -> Dict[str, Any]:
+    today: date | None = None,
+) -> dict[str, Any]:
     """Load a config file from disk and run the full audit.
 
     Returns a structured dict with four keys:
@@ -125,7 +125,7 @@ def audit_user_config(
     lets tests assert on the raw data structure without touching Rich
     rendering.
     """
-    result: Dict[str, Any] = {
+    result: dict[str, Any] = {
         "config_path": None,
         "dead": [],
         "upcoming": [],
@@ -185,7 +185,7 @@ def audit_user_config(
     return result
 
 
-def _format_audit_report(audit: Dict[str, Any]) -> str:
+def _format_audit_report(audit: dict[str, Any]) -> str:
     """Render an audit dict as a human-readable plain-text report.
 
     Used by /doctor for its main output and by the startup warning for
@@ -193,7 +193,7 @@ def _format_audit_report(audit: Dict[str, Any]) -> str:
     single string with embedded newlines — callers (Rich / Textual)
     pass it through their usual text rendering.
     """
-    lines: List[str] = []
+    lines: list[str] = []
 
     lines.append("ppxai config check")
     lines.append("==================")
@@ -296,7 +296,7 @@ def _format_audit_report(audit: Dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def _summarize_startup(audit: Dict[str, Any]) -> Optional[str]:
+def _summarize_startup(audit: dict[str, Any]) -> str | None:
     """One-line summary for the optional startup warning.
 
     Returns None when there's nothing worth interrupting the user about
@@ -315,8 +315,8 @@ def _summarize_startup(audit: Dict[str, Any]) -> Optional[str]:
 
 
 def _probe_provider_endpoint(
-    provider_name: str, provider_cfg: Dict[str, Any]
-) -> Dict[str, Any]:
+    provider_name: str, provider_cfg: dict[str, Any]
+) -> dict[str, Any]:
     """Hit `<base_url>/models` and return what the endpoint advertises.
 
     Returns a dict shaped like:
@@ -330,7 +330,7 @@ def _probe_provider_endpoint(
     Best-effort: any network/parse failure is swallowed and surfaces
     as `reachable: False` with a short error string. Never raises.
     """
-    result: Dict[str, Any] = {
+    result: dict[str, Any] = {
         "reachable": False,
         "endpoint_models": {},
         "error": None,
@@ -362,7 +362,7 @@ def _probe_provider_endpoint(
         result["error"] = f"{type(exc).__name__}: {str(exc)[:80]}"
         return result
 
-    endpoint_models: Dict[str, int] = {}
+    endpoint_models: dict[str, int] = {}
     for entry in payload.get("data", []) or []:
         if not isinstance(entry, dict):
             continue
@@ -376,7 +376,7 @@ def _probe_provider_endpoint(
     return result
 
 
-def probe_all_providers(config_data: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
+def probe_all_providers(config_data: dict[str, Any]) -> dict[str, dict[str, Any]]:
     """Run `_probe_provider_endpoint` for every configured provider in parallel.
 
     Returns `{provider_name: probe_dict}`. Providers without a `base_url`
@@ -395,7 +395,7 @@ def probe_all_providers(config_data: Dict[str, Any]) -> Dict[str, Dict[str, Any]
     if not targets:
         return {}
 
-    results: Dict[str, Dict[str, Any]] = {}
+    results: dict[str, dict[str, Any]] = {}
     with ThreadPoolExecutor(max_workers=min(8, len(targets))) as pool:
         futures = {
             pool.submit(_probe_provider_endpoint, name, cfg): name
@@ -415,8 +415,8 @@ def probe_all_providers(config_data: Dict[str, Any]) -> Dict[str, Dict[str, Any]
 
 
 def detect_context_limit_drift(
-    config_data: Dict[str, Any], probe_results: Dict[str, Dict[str, Any]]
-) -> List[Dict[str, Any]]:
+    config_data: dict[str, Any], probe_results: dict[str, dict[str, Any]]
+) -> list[dict[str, Any]]:
     """Compare each model's `context_limit` to the endpoint's `max_model_len`.
 
     Returns a list of drift entries; over-claim is the dangerous case
@@ -424,7 +424,7 @@ def detect_context_limit_drift(
     missed-headroom note. Models whose endpoint omits `max_model_len`
     or whose config omits `context_limit` are skipped silently.
     """
-    drift: List[Dict[str, Any]] = []
+    drift: list[dict[str, Any]] = []
     providers = config_data.get("providers", {})
     if not isinstance(providers, dict):
         return drift
@@ -458,8 +458,8 @@ def detect_context_limit_drift(
 
 
 def detect_uncatalogued_models(
-    config_data: Dict[str, Any], probe_results: Dict[str, Dict[str, Any]]
-) -> List[Dict[str, Any]]:
+    config_data: dict[str, Any], probe_results: dict[str, dict[str, Any]]
+) -> list[dict[str, Any]]:
     """Configured ids the provider's own catalog does not list (debt Item 66).
 
     `MODEL_DEPRECATIONS` is hand-maintained and seeded from the ids ppxai
@@ -492,7 +492,7 @@ def detect_uncatalogued_models(
     skipped entirely: "we could not see the catalog" must never render as
     "your models are missing".
     """
-    findings: List[Dict[str, Any]] = []
+    findings: list[dict[str, Any]] = []
     providers = config_data.get("providers", {})
     if not isinstance(providers, dict):
         return findings
@@ -527,7 +527,7 @@ def detect_uncatalogued_models(
     return findings
 
 
-def _format_uncatalogued_section(findings: List[Dict[str, Any]]) -> List[str]:
+def _format_uncatalogued_section(findings: list[dict[str, Any]]) -> list[str]:
     """Render the Item 66 findings. Silent when there is nothing to say."""
     if not findings:
         return []
@@ -548,11 +548,11 @@ def _format_uncatalogued_section(findings: List[Dict[str, Any]]) -> List[str]:
     return lines
 
 def _format_probe_section(
-    probe_results: Dict[str, Dict[str, Any]],
-    drift: List[Dict[str, Any]],
-) -> List[str]:
+    probe_results: dict[str, dict[str, Any]],
+    drift: list[dict[str, Any]],
+) -> list[str]:
     """Render the probe results + drift table as plain-text lines."""
-    lines: List[str] = []
+    lines: list[str] = []
     lines.append("Endpoint probe (live `/v1/models`):")
     if not probe_results:
         lines.append("   (no providers with base_url configured)")
@@ -608,7 +608,7 @@ def _format_probe_section(
     return lines
 
 
-def _format_grounding_section() -> List[str]:
+def _format_grounding_section() -> list[str]:
     """Oneshot grounding path per configured provider (F5, ADR 0009 §4).
 
     Offline — resolved from config alone via the SAME function the
@@ -623,7 +623,7 @@ def _format_grounding_section() -> List[str]:
         get_execution_run_config,
     )
 
-    lines: List[str] = []
+    lines: list[str] = []
     lines.append("Oneshot grounding (execution.run):")
     try:
         run_cfg = get_execution_run_config()
@@ -660,7 +660,7 @@ def _format_grounding_section() -> List[str]:
     return lines
 
 
-def _format_web_search_backend_section() -> List[str]:
+def _format_web_search_backend_section() -> list[str]:
     """web_search backend tuple report + the three Q5 config checks
     (ADR 0009 step ④). Offline — reads the SAME shared resolver the search
     chain and the egress enumeration use, so what /doctor prints is what a
@@ -681,7 +681,7 @@ def _format_web_search_backend_section() -> List[str]:
     """
     from ..config import get_available_providers, get_provider_config, get_tool_config
 
-    lines: List[str] = []
+    lines: list[str] = []
     lines.append(
         "web_search backend (tools.web_search order/preferred/strict — Q5 tuple):"
     )
@@ -691,7 +691,7 @@ def _format_web_search_backend_section() -> List[str]:
         f"   global: preferred={res.preferred} strict={str(res.strict).lower()} "
         f"→ chain: {' → '.join(res.candidates) or '(none usable)'}"
     )
-    warnings: List[str] = list(res.warnings)
+    warnings: list[str] = list(res.warnings)
 
     try:
         g = get_tool_config("web_search") or {}
@@ -736,7 +736,7 @@ def _format_web_search_backend_section() -> List[str]:
         resolve_web_search_backend(p).strict for p in providers
     )
     if strict_anywhere:
-        enrichment_live: List[str] = []
+        enrichment_live: list[str] = []
         try:
             from ..config.execution import (
                 get_execution_profiles,
@@ -771,7 +771,7 @@ def _format_web_search_backend_section() -> List[str]:
 # silently ignored and its setting reverts to the default. That silence is
 # exactly what this check exists to break: /doctor is the operator's discovery
 # path for the rename.
-ADR_0010_KEY_MOVES: List[tuple] = [
+ADR_0010_KEY_MOVES: list[tuple] = [
     (("tools", "agent", "task_tier_enabled"), "execution.task.enabled"),
     (("tools", "agent", "sandbox"), "execution.task.sandbox"),
     (("tools", "agent", "spawn_consent"), "execution.task.consent.spawn_consent"),
@@ -784,7 +784,7 @@ ADR_0010_KEY_MOVES: List[tuple] = [
 ]
 
 
-def _lookup_path(config_data: Dict[str, Any], path: tuple) -> Any:
+def _lookup_path(config_data: dict[str, Any], path: tuple) -> Any:
     """Walk a dotted key path, returning None when any segment is missing."""
     node: Any = config_data
     for segment in path:
@@ -794,7 +794,7 @@ def _lookup_path(config_data: Dict[str, Any], path: tuple) -> Any:
     return node
 
 
-def _format_config_migration_section(config_data: Dict[str, Any]) -> List[str]:
+def _format_config_migration_section(config_data: dict[str, Any]) -> list[str]:
     """Report `ppxai-config.json` keys still at their pre-ADR-0010 location.
 
     Reads the config FILE rather than the accessors on purpose: the accessors
@@ -802,7 +802,7 @@ def _format_config_migration_section(config_data: Dict[str, Any]) -> List[str]:
     to them by construction. Only a raw file scan can tell an operator that
     the setting they wrote is being ignored.
     """
-    lines: List[str] = ["Config shape (ADR 0010, v1.19.1):"]
+    lines: list[str] = ["Config shape (ADR 0010, v1.19.1):"]
     stale = [
         (".".join(path), new)
         for path, new in ADR_0010_KEY_MOVES
@@ -822,7 +822,7 @@ def _format_config_migration_section(config_data: Dict[str, Any]) -> List[str]:
     return lines
 
 
-def _format_facts_section() -> List[str]:
+def _format_facts_section() -> list[str]:
     """Report `facts` blocks that are stale, partial, misplaced or mistyped.
 
     ADR 0012 section 2 Q0c/Q0d/Q0e. Four findings, all read from the config
@@ -838,7 +838,7 @@ def _format_facts_section() -> List[str]:
     and `complete_record_for()` supplies the value to fill it with.
     """
 
-    lines: List[str] = ["Per-model facts (ADR 0012, v1.19.1):"]
+    lines: list[str] = ["Per-model facts (ADR 0012, v1.19.1):"]
     found = False
 
     plan = migration_plan()
@@ -933,8 +933,8 @@ def handle_doctor(context: CommandContext, args: str) -> CommandResult:
         report = report + "\n\n" + "\n".join(_format_facts_section())
     except Exception:  # noqa: BLE001 — never fail /doctor over a scan
         pass
-    probe_results: Dict[str, Dict[str, Any]] = {}
-    drift: List[Dict[str, Any]] = []
+    probe_results: dict[str, dict[str, Any]] = {}
+    drift: list[dict[str, Any]] = []
 
     if do_probe and audit.get("config_path"):
         try:

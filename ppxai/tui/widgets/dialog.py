@@ -9,9 +9,9 @@ Provides:
 
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
+from textual.message import Message
 from textual.screen import ModalScreen
 from textual.widgets import Button, Input, Label, Static
-from textual.message import Message
 
 
 class ConsentDialog(ModalScreen):

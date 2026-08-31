@@ -41,12 +41,10 @@ from __future__ import annotations
 
 import struct
 from dataclasses import dataclass
-from typing import Dict, Optional
-
 
 # Universal image formats every major provider accepts. Keys are MIME
 # types, values are the magic-byte prefixes used by `sniff_media_type`.
-ACCEPTED_IMAGE_FORMATS: Dict[str, str] = {
+ACCEPTED_IMAGE_FORMATS: dict[str, str] = {
     "image/png": "png",
     "image/jpeg": "jpeg",
     "image/webp": "webp",
@@ -61,7 +59,7 @@ DEFAULT_IMAGE_SIZE_LIMIT = 10 * 1024 * 1024
 # Per-provider size caps. Providers not in this map fall back to the
 # conservative default. Sources: each provider's official docs as of
 # April 2026.
-PROVIDER_IMAGE_LIMITS: Dict[str, int] = {
+PROVIDER_IMAGE_LIMITS: dict[str, int] = {
     "perplexity": 50 * 1024 * 1024,   # Sonar accepts up to 50 MB
     "openai": 20 * 1024 * 1024,       # GPT-4o/GPT-5 accept up to 20 MB
     "gemini": 20 * 1024 * 1024,       # Gemini 2.5/3 accept up to 20 MB
@@ -94,7 +92,7 @@ class ImageValidationResult:
     reason: str = ""
 
 
-def sniff_media_type(data: bytes) -> Optional[str]:
+def sniff_media_type(data: bytes) -> str | None:
     """Detect image MIME type from magic bytes.
 
     Returns the canonical MIME type string for the first 4 supported
@@ -130,7 +128,7 @@ def sniff_media_type(data: bytes) -> Optional[str]:
     return None
 
 
-def _extract_png_dimensions(data: bytes) -> Optional[tuple[int, int]]:
+def _extract_png_dimensions(data: bytes) -> tuple[int, int] | None:
     """Extract (width, height) from a PNG header.
 
     PNG stores IHDR immediately after the 8-byte signature. IHDR layout:
@@ -146,7 +144,7 @@ def _extract_png_dimensions(data: bytes) -> Optional[tuple[int, int]]:
     return width, height
 
 
-def _extract_jpeg_dimensions(data: bytes) -> Optional[tuple[int, int]]:
+def _extract_jpeg_dimensions(data: bytes) -> tuple[int, int] | None:
     """Extract (width, height) from a JPEG Start-Of-Frame marker.
 
     JPEGs have a sequence of markers after the SOI (FF D8). We walk
@@ -188,7 +186,7 @@ def _extract_jpeg_dimensions(data: bytes) -> Optional[tuple[int, int]]:
     return None
 
 
-def _extract_gif_dimensions(data: bytes) -> Optional[tuple[int, int]]:
+def _extract_gif_dimensions(data: bytes) -> tuple[int, int] | None:
     """Extract (width, height) from a GIF header.
 
     GIFs store logical screen width/height at bytes 6-10 as
@@ -203,7 +201,7 @@ def _extract_gif_dimensions(data: bytes) -> Optional[tuple[int, int]]:
     return width, height
 
 
-def _extract_webp_dimensions(data: bytes) -> Optional[tuple[int, int]]:
+def _extract_webp_dimensions(data: bytes) -> tuple[int, int] | None:
     """Extract (width, height) from a WEBP header.
 
     WEBP comes in three chunk variants (VP8/VP8L/VP8X) with different
@@ -238,7 +236,7 @@ def _extract_webp_dimensions(data: bytes) -> Optional[tuple[int, int]]:
     return None
 
 
-def extract_dimensions(media_type: str, data: bytes) -> Optional[tuple[int, int]]:
+def extract_dimensions(media_type: str, data: bytes) -> tuple[int, int] | None:
     """Dispatch dimension extraction based on detected media type.
 
     Returns None when dimensions cannot be recovered — callers should
@@ -269,7 +267,7 @@ def estimate_tokens(width: int, height: int) -> int:
     return max(1, (width * height) // _PIXELS_PER_TOKEN)
 
 
-def get_size_limit(provider: Optional[str]) -> int:
+def get_size_limit(provider: str | None) -> int:
     """Return the per-file image size limit for a provider in bytes.
 
     Unknown providers fall back to the conservative default. Case
@@ -284,9 +282,9 @@ def get_size_limit(provider: Optional[str]) -> int:
 def validate_image(
     data: bytes,
     *,
-    declared_media_type: Optional[str] = None,
-    provider: Optional[str] = None,
-    size_limit: Optional[int] = None,
+    declared_media_type: str | None = None,
+    provider: str | None = None,
+    size_limit: int | None = None,
 ) -> ImageValidationResult:
     """Full validation pipeline for a candidate image attachment.
 

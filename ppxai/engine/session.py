@@ -11,23 +11,30 @@ import base64
 import json
 import os
 import shutil
+from collections.abc import Callable
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
-from typing import Callable, List, Dict, Any, Optional
+from typing import Any
 
-from .types import Message, ToolUsage, UsageStats, SessionInfo, extract_attachment_refs
-from .artifact_registry import ArtifactRegistry
-from .session_store import SessionFileStore
 from ..common.logger import get_logger
 from ..constants import ConsentMode
 from ..usage import save_session_usage
-from .types import ImageAttachmentRef
+from .artifact_registry import ArtifactRegistry
+from .session_store import SessionFileStore
+from .types import (
+    ImageAttachmentRef,
+    Message,
+    SessionInfo,
+    ToolUsage,
+    UsageStats,
+    extract_attachment_refs,
+)
 
 logger = get_logger("session")
 
 
-def strip_orphan_tool_calls(messages: List[Message]) -> tuple[List[Message], int]:
+def strip_orphan_tool_calls(messages: list[Message]) -> tuple[list[Message], int]:
     """Single pass of orphan-``assistant.tool_calls`` cleanup.
 
     An assistant message that carries ``tool_calls`` whose ``tool_call_id``s
@@ -46,7 +53,7 @@ def strip_orphan_tool_calls(messages: List[Message]) -> tuple[List[Message], int
     reaches a strict provider even though the once-per-turn pre-flight fix
     already ran before the loop started.
     """
-    cleaned: List[Message] = []
+    cleaned: list[Message] = []
     removed = 0
     i = 0
     while i < len(messages):
@@ -76,7 +83,7 @@ def strip_orphan_tool_calls(messages: List[Message]) -> tuple[List[Message], int
     return cleaned, removed
 
 
-def strip_empty_assistant(messages: List[Message]) -> tuple[List[Message], int]:
+def strip_empty_assistant(messages: list[Message]) -> tuple[list[Message], int]:
     """Single pass of empty-content ``assistant`` cleanup.
 
     An assistant message with neither ``tool_calls`` nor any non-whitespace
@@ -98,7 +105,7 @@ def strip_empty_assistant(messages: List[Message]) -> tuple[List[Message], int]:
     outbound-only guard in the chat tool-loop, so an empty assistant never
     reaches a strict provider even if one slips past the producer-side rollback.
     """
-    cleaned: List[Message] = []
+    cleaned: list[Message] = []
     removed = 0
     for msg in messages:
         if (
@@ -117,7 +124,7 @@ def strip_empty_assistant(messages: List[Message]) -> tuple[List[Message], int]:
     return cleaned, removed
 
 
-def sanitize_outbound(messages: List[Message]) -> tuple[List[Message], int]:
+def sanitize_outbound(messages: list[Message]) -> tuple[list[Message], int]:
     """Run every outbound-message hygiene pass in one place.
 
     The chat tool-loop must not hand a strict provider (OpenAI, Perplexity
@@ -183,8 +190,8 @@ def _ext_from_media_type(media_type: str) -> str:
 
 
 def _attachments_from_serialized_content(
-    content: List[Dict[str, Any]],
-) -> List[Any]:
+    content: list[dict[str, Any]],
+) -> list[Any]:
     """Synthesize ImageAttachmentRefs from serialized image_url blocks.
 
     ADR 0006 Step 7c (v1.18.6): used by `_serialize_message` to fill
@@ -198,7 +205,7 @@ def _attachments_from_serialized_content(
     etc.) — those have no file_id to record.
     """
 
-    refs: List[Any] = []
+    refs: list[Any] = []
     for idx, block in enumerate(content):
         if not isinstance(block, dict) or block.get("type") != "image_url":
             continue
@@ -216,7 +223,7 @@ def _attachments_from_serialized_content(
     return refs
 
 
-def _parse_file_uploads_url(url: str) -> Optional[tuple[str, str]]:
+def _parse_file_uploads_url(url: str) -> tuple[str, str] | None:
     """Parse a `file://uploads/<file_id>/<name>` reference into (file_id, name).
 
     ADR 0006 Step 7c (v1.18.6): the on-disk image_url block carries
@@ -262,7 +269,7 @@ def _message_has_multimodal(msg: Any) -> bool:
     return False
 
 
-def _safe_session_name(name: str, *, fallback: Optional[str] = None) -> str:
+def _safe_session_name(name: str, *, fallback: str | None = None) -> str:
     """Reject path-traversal / separators in a session name.
 
     A session name becomes ``<sessions_dir>/<name>.json`` (or a subdir), so a
@@ -295,7 +302,7 @@ def _safe_session_name(name: str, *, fallback: Optional[str] = None) -> str:
 class SessionManager:
     """Manages conversation sessions, history, and persistence."""
 
-    def __init__(self, sessions_dir: Optional[Path] = None, exports_dir: Optional[Path] = None):
+    def __init__(self, sessions_dir: Path | None = None, exports_dir: Path | None = None):
         """Initialize the session manager.
 
         Args:
@@ -317,8 +324,8 @@ class SessionManager:
 
         # Current session state
         self.session_name = f"session_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-        self.messages: List[Message] = []
-        self.metadata: Dict[str, Any] = {
+        self.messages: list[Message] = []
+        self.metadata: dict[str, Any] = {
             "created_at": datetime.now().isoformat(),
             "provider": None,
             "model": None,
@@ -337,7 +344,7 @@ class SessionManager:
 
         # Per-model usage tracking
         # Keys are "provider/model" strings, e.g., "perplexity/sonar-pro"
-        self.usage_by_model: Dict[str, UsageStats] = {}
+        self.usage_by_model: dict[str, UsageStats] = {}
 
         # Usage display mode for status line
         # "session" = total session usage (default)
@@ -355,19 +362,19 @@ class SessionManager:
         self.shell_consent_mode: str = ConsentMode.PROMPT  # ConsentMode: PROMPT, ALWAYS, NEVER
 
         # Session persistence and recovery
-        self.command_history: List[str] = []  # User input history for this session
+        self.command_history: list[str] = []  # User input history for this session
         self.working_dir: str = os.getcwd()  # Working directory for this session
         self.tools_enabled: bool = False  # Whether tools were enabled
         self._dirty: bool = False  # True if session has unsaved changes
         self._was_dirty: bool = False  # True if save_dirty() was ever called this session
 
         # Optional callbacks wired by EngineClient to sync to AppState.
-        self.on_usage_updated: Optional[Callable[[UsageStats], None]] = None
-        self.on_name_changed: Optional[Callable[[str], None]] = None
+        self.on_usage_updated: Callable[[UsageStats], None] | None = None
+        self.on_name_changed: Callable[[str], None] | None = None
         # Fires whenever `self.messages` mutates (add/remove/replace/load/clear).
         # EngineClient wires this to recompute the `context_attachments`
         # AppState field so every client's multimodal badge stays fresh.
-        self.on_messages_changed: Optional[Callable[[], None]] = None
+        self.on_messages_changed: Callable[[], None] | None = None
 
         # Binary file store for multimodal attachments (v1.17.4 Phase 2.1a).
         # EngineClient wires an instance here so serialize/deserialize can
@@ -375,7 +382,7 @@ class SessionManager:
         # JSON. When None, serialization falls back to the legacy
         # inline-base64 format — so tests that don't care about multimodal
         # content can use SessionManager standalone without wiring a store.
-        self.file_store: Optional[SessionFileStore] = None
+        self.file_store: SessionFileStore | None = None
 
         # R10: cache the answer to _has_multimodal_attachments() so save()
         # doesn't walk every message on every auto-save. None means "needs
@@ -384,7 +391,7 @@ class SessionManager:
         # mutation that could remove multimodal content; eagerly upgraded
         # to True in add_message when the new message is multimodal, so
         # the common "adding another user turn" path stays scan-free.
-        self._multimodal_cache: Optional[bool] = None
+        self._multimodal_cache: bool | None = None
 
     def _notify_messages_changed(self) -> None:
         """Invoke the on_messages_changed callback if wired.
@@ -413,7 +420,7 @@ class SessionManager:
             self._multimodal_cache = True
         self._notify_messages_changed()
 
-    def get_messages(self) -> List[Message]:
+    def get_messages(self) -> list[Message]:
         """Get conversation history.
 
         Returns:
@@ -421,7 +428,7 @@ class SessionManager:
         """
         return self.messages.copy()
 
-    def get_messages_as_dicts(self) -> List[Dict[str, Any]]:
+    def get_messages_as_dicts(self) -> list[dict[str, Any]]:
         """Get conversation history as dictionaries.
 
         Returns:
@@ -429,7 +436,7 @@ class SessionManager:
         """
         return [self._serialize_message(m) for m in self.messages]
 
-    def _serialize_message(self, m: Message) -> Dict[str, Any]:
+    def _serialize_message(self, m: Message) -> dict[str, Any]:
         """Serialize a Message to a dict for JSON storage/API use.
 
         Content handling (v1.17.4 Phase 2.1a):
@@ -475,7 +482,7 @@ class SessionManager:
         if not effective_attachments and isinstance(content, list):
             effective_attachments = _attachments_from_serialized_content(content)
 
-        msg: Dict[str, Any] = {"role": m.role, "content": content}
+        msg: dict[str, Any] = {"role": m.role, "content": content}
         if m.tool_calls:
             msg["tool_calls"] = m.tool_calls
         if m.tool_call_id:
@@ -486,7 +493,7 @@ class SessionManager:
 
     def _deserialize_message(
         self,
-        m: Dict[str, Any],
+        m: dict[str, Any],
         *,
         schema_version: int = 1,
     ) -> Message:
@@ -528,7 +535,7 @@ class SessionManager:
         # carries the legacy in-block name+file_id keys). The rewrite
         # below produces spec-clean blocks, so deferring extraction
         # until after the rewrite would lose all in-block metadata.
-        attachments: List[Any]
+        attachments: list[Any]
         if schema_version >= 2 and isinstance(m.get("attachments"), list):
             # v2: explicit attachments array. ArtifactRegistry.deserialize
             # returns None for unknown kinds (forward-compat) — drop those
@@ -560,8 +567,8 @@ class SessionManager:
     # ------------------------------------------------------------------
 
     def _rewrite_content_for_serialize(
-        self, content: List[Dict[str, Any]]
-    ) -> List[Dict[str, Any]]:
+        self, content: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
         """Rewrite `data:` URIs in image_url content parts to file_id references.
 
         For every block that carries a `data:image/...;base64,...` URI:
@@ -593,7 +600,7 @@ class SessionManager:
         # This function takes only `content`, so it derives the
         # serialize target from the URL (data: → file_store save →
         # file:// reference; existing file:// → idempotent pass-through).
-        rewritten: List[Dict[str, Any]] = []
+        rewritten: list[dict[str, Any]] = []
         for block in content:
             if not isinstance(block, dict) or block.get("type") != "image_url":
                 rewritten.append(block)
@@ -664,8 +671,8 @@ class SessionManager:
         return rewritten
 
     def _rewrite_content_for_deserialize(
-        self, content: List[Dict[str, Any]]
-    ) -> List[Dict[str, Any]]:
+        self, content: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
         """Expand file_id references back into data URIs.
 
         Inverse of `_rewrite_content_for_serialize`. For every block
@@ -688,7 +695,7 @@ class SessionManager:
         # an in-block `file_id` key. Engine-internal metadata reaches
         # callers via Message.attachments, populated separately by
         # _deserialize_message.
-        rewritten: List[Dict[str, Any]] = []
+        rewritten: list[dict[str, Any]] = []
         for block in content:
             if not isinstance(block, dict) or block.get("type") != "image_url":
                 rewritten.append(block)
@@ -1194,7 +1201,7 @@ class SessionManager:
             except TypeError:
                 self.on_usage_updated(self.usage)
 
-    def get_usage(self) -> Dict[str, Any]:
+    def get_usage(self) -> dict[str, Any]:
         """Get usage statistics.
 
         Returns:
@@ -1229,7 +1236,7 @@ class SessionManager:
             "display_mode": self.usage_display_mode
         }
 
-    def get_usage_for_display(self, current_provider: str = None, current_model: str = None) -> Optional[Dict[str, Any]]:
+    def get_usage_for_display(self, current_provider: str = None, current_model: str = None) -> dict[str, Any] | None:
         """Get usage statistics for status line display based on display mode.
 
         Args:
@@ -1314,13 +1321,13 @@ class SessionManager:
         self.usage = UsageStats()
         self.usage_by_model.clear()
 
-    def get_usage_by_provider(self) -> Dict[str, Dict[str, Any]]:
+    def get_usage_by_provider(self) -> dict[str, dict[str, Any]]:
         """Get usage aggregated by provider.
 
         Returns:
             Dictionary with provider as key and aggregated stats as value
         """
-        by_provider: Dict[str, UsageStats] = {}
+        by_provider: dict[str, UsageStats] = {}
         for key, stats in self.usage_by_model.items():
             provider = key.split("/")[0]
             if provider not in by_provider:
@@ -1410,7 +1417,7 @@ class SessionManager:
         return flat_path, False
 
     def _write_session_json(
-        self, session_name: str, session_data: Dict[str, Any]
+        self, session_name: str, session_data: dict[str, Any]
     ) -> Path:
         """Write session JSON to the correct flat/directory location.
 
@@ -1517,7 +1524,7 @@ class SessionManager:
     def _write_session_json_in_place(
         self,
         session_name: str,
-        session_data: Dict[str, Any],
+        session_data: dict[str, Any],
         is_dir_format: bool,
     ) -> Path:
         """Write session JSON without the flat→dir transition dance.
@@ -1540,7 +1547,7 @@ class SessionManager:
             json.dump(session_data, f, indent=2)
         return json_path
 
-    def save(self, name: Optional[str] = None) -> str:
+    def save(self, name: str | None = None) -> str:
         """Save current session to file.
 
         Args:
@@ -1589,7 +1596,7 @@ class SessionManager:
 
         return self.session_name
 
-    def _resolve_session_load_path(self, name: str) -> Optional[tuple[Path, Optional[Path]]]:
+    def _resolve_session_load_path(self, name: str) -> tuple[Path, Path | None] | None:
         """Find the JSON file for a saved session name.
 
         Returns a tuple of (json_path, session_dir) where `session_dir`
@@ -1798,7 +1805,7 @@ class SessionManager:
     def _migrate_v1_to_v2_if_needed(
         self,
         name: str,
-        session_dir: Optional[Path],
+        session_dir: Path | None,
         schema_version: int,
     ) -> None:
         """One-way v1 → v2 migration on first load by a 1.18.6 build.
@@ -1898,7 +1905,7 @@ class SessionManager:
         )
 
     def _backup_v1_session(
-        self, name: str, session_dir: Optional[Path]
+        self, name: str, session_dir: Path | None
     ) -> bool:
         """Copy the on-disk v1 session to a `.v1.backup` sibling.
 
@@ -1973,7 +1980,7 @@ class SessionManager:
                 getattr(ref, "block_index", -1): ref
                 for ref in (msg.attachments or [])
             }
-            new_content: List[Dict[str, Any]] = []
+            new_content: list[dict[str, Any]] = []
             for idx, block in enumerate(msg.content):
                 if not isinstance(block, dict):
                     new_content.append(block)
@@ -2013,7 +2020,7 @@ class SessionManager:
         self._multimodal_cache = None
         return dropped
 
-    def list_sessions(self) -> List[SessionInfo]:
+    def list_sessions(self) -> list[SessionInfo]:
         """List all saved sessions.
 
         Returns:
@@ -2026,7 +2033,7 @@ class SessionManager:
         a transition left stale artifacts on disk.
         """
         # Collect (json_path, synthetic_name) pairs from both layouts.
-        candidates: List[tuple[Path, str]] = []
+        candidates: list[tuple[Path, str]] = []
 
         # Flat format: ~/.ppxai/sessions/<name>.json
         # ADR 0006 Step 5: skip *.v1.backup.json — those are pre-migration
@@ -2052,7 +2059,7 @@ class SessionManager:
         # come first under the default naming convention).
         candidates.sort(key=lambda pair: pair[1], reverse=True)
 
-        sessions: List[SessionInfo] = []
+        sessions: list[SessionInfo] = []
         seen_names: set = set()
         for filepath, fallback_name in candidates:
             try:
@@ -2083,7 +2090,7 @@ class SessionManager:
 
         return sessions
 
-    def export(self, filename: Optional[str] = None) -> Path:
+    def export(self, filename: str | None = None) -> Path:
         """Export conversation to a markdown file.
 
         Args:
@@ -2099,7 +2106,7 @@ class SessionManager:
         filepath = self.exports_dir / filename
 
         # Build markdown content
-        content = f"# Conversation Export\n\n"
+        content = "# Conversation Export\n\n"
         content += f"**Exported:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
         content += f"**Session:** {self.session_name}\n"
         if self.metadata.get("model"):
@@ -2108,7 +2115,7 @@ class SessionManager:
 
         # Add usage stats
         usage = self.get_usage()
-        content += f"## Usage Statistics\n\n"
+        content += "## Usage Statistics\n\n"
         content += f"- Total Tokens: {usage['total_tokens']:,}\n"
         content += f"- Prompt Tokens: {usage['prompt_tokens']:,}\n"
         content += f"- Completion Tokens: {usage['completion_tokens']:,}\n"
@@ -2320,7 +2327,7 @@ class SessionManager:
             json.dump(state_data, f, indent=2)
 
     @staticmethod
-    def get_last_session_state() -> Optional[Dict[str, Any]]:
+    def get_last_session_state() -> dict[str, Any] | None:
         """Get the last session state from the state file.
 
         Returns:
@@ -2347,7 +2354,7 @@ class SessionManager:
             SESSION_STATE_FILE.unlink()
 
     @staticmethod
-    def session_file_exists(name: str, sessions_dir: Optional[Path] = None) -> bool:
+    def session_file_exists(name: str, sessions_dir: Path | None = None) -> bool:
         """True if a saved session `name` exists in EITHER on-disk format.
 
         Text-only sessions are flat `<name>.json`; multimodal sessions are a
@@ -2360,7 +2367,7 @@ class SessionManager:
         return (d / f"{name}.json").exists() or (d / name / "session.json").exists()
 
     @staticmethod
-    def find_most_recent_session_on_disk() -> Optional[Dict[str, Any]]:
+    def find_most_recent_session_on_disk() -> dict[str, Any] | None:
         """Scan ~/.ppxai/sessions/ for the newest session and return its info.
 
         Fallback path when `session-state.json` is missing or corrupt but
@@ -2387,7 +2394,7 @@ class SessionManager:
         if not sessions_dir.is_dir():
             return None
 
-        best_path: Optional[Path] = None
+        best_path: Path | None = None
         best_mtime: float = -1.0
         best_name: str = ""
         try:
@@ -2443,7 +2450,7 @@ class SessionManager:
         }
 
     @staticmethod
-    def get_last_session_state_or_scan() -> Optional[Dict[str, Any]]:
+    def get_last_session_state_or_scan() -> dict[str, Any] | None:
         """Return the last-session pointer, falling back to disk scan.
 
         Primary path: `get_last_session_state()` — reads the pointer file.

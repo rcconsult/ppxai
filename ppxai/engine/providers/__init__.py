@@ -4,24 +4,25 @@ Provider registry and factory.
 Providers are dynamically registered and can be retrieved by name.
 """
 
-from typing import Dict, Type, Optional, List
+from typing import Dict, List, Optional, Type
+
 from .base import BaseProvider
 
 # Provider registry - all providers inherit from BaseProvider (v1.16.0)
-_providers: Dict[str, Type[BaseProvider]] = {}
+_providers: dict[str, type[BaseProvider]] = {}
 
 
-def register_provider(name: str, provider_class: Type):
+def register_provider(name: str, provider_class: type):
     """Register a provider implementation."""
     _providers[name] = provider_class
 
 
-def get_provider_class(name: str) -> Optional[Type]:
+def get_provider_class(name: str) -> type | None:
     """Get a provider class by name."""
     return _providers.get(name)
 
 
-def create_provider(name: str, **kwargs) -> Optional[BaseProvider]:
+def create_provider(name: str, **kwargs) -> BaseProvider | None:
     """Create an instance of a provider by name.
 
     Args:
@@ -38,22 +39,23 @@ def create_provider(name: str, **kwargs) -> Optional[BaseProvider]:
     return provider_class(provider_id=name, **kwargs)
 
 
-def list_registered_providers() -> List[str]:
+def list_registered_providers() -> list[str]:
     """List all registered provider names."""
     return list(_providers.keys())
 
 
 # Import and register built-in providers
 # These imports trigger the registration via decorators or explicit calls
-from .openai_compat import OpenAICompatibleProvider  # noqa: E402 — must follow register_provider
-from .perplexity import PerplexityProvider  # noqa: E402
-
-# Import native OpenAI provider
-from .openai_native import OpenAINativeProvider  # noqa: E402
+from .gemini import GeminiProvider
 
 # Try to import native Gemini provider (optional dependency)
 # Falls back to OpenAI-compatible provider if google-genai not installed
-from .gemini import is_available as gemini_available, GeminiProvider  # noqa: E402
+from .gemini import is_available as gemini_available  # noqa: E402
+from .openai_compat import OpenAICompatibleProvider  # noqa: E402 — must follow register_provider
+
+# Import native OpenAI provider
+from .openai_native import OpenAINativeProvider  # noqa: E402
+from .perplexity import PerplexityProvider  # noqa: E402
 
 # Register providers
 register_provider("openai", OpenAINativeProvider)

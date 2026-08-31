@@ -4,8 +4,9 @@ import asyncio
 import os
 import sys
 import time
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from ppxai.engine.tools.builtin.shell import ShellExecuteTool, _is_backgrounded
 

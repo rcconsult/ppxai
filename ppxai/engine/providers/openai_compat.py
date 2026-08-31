@@ -8,15 +8,22 @@ including OpenAI, OpenRouter, Gemini (via compatibility layer), local models, et
 import asyncio
 import json
 import re
-from typing import List, AsyncIterator, Optional, Dict, Any
+from collections.abc import AsyncIterator
+from typing import Any
+
+from ...config import (
+    get_context_warn_percent,
+    get_default_provider,
+    get_model_context_limit,
+)
+from ..types import Event, EventType, Message, ProviderCapabilities
+from .base import BaseProvider
 from ...config import (
     get_model_context_limit,
     get_default_provider,
     get_context_warn_percent,
     get_extra_body,
-)
-from ..types import Message, Event, EventType, ProviderCapabilities
-from .base import BaseProvider
+)  # noqa: F401 — patched by tests
 
 
 class OpenAICompatibleProvider(BaseProvider):
@@ -123,7 +130,7 @@ class OpenAICompatibleProvider(BaseProvider):
         """
         return bool(self.api_key and self.base_url)
 
-    def _estimate_tokens(self, messages: List[Dict[str, Any]]) -> int:
+    def _estimate_tokens(self, messages: list[dict[str, Any]]) -> int:
         """Estimate token count for messages.
 
         This is a rough estimate using character count / 4.
@@ -174,10 +181,10 @@ class OpenAICompatibleProvider(BaseProvider):
 
     async def chat(
         self,
-        messages: List[Message],
+        messages: list[Message],
         model: str,
         stream: bool = False,
-        tools: Optional[List[Dict[str, Any]]] = None
+        tools: list[dict[str, Any]] | None = None
     ) -> AsyncIterator[Event]:
         """Send chat request to OpenAI-compatible API.
 
@@ -233,7 +240,7 @@ class OpenAICompatibleProvider(BaseProvider):
                 )
 
             # Build request kwargs
-            request_kwargs: Dict[str, Any] = {
+            request_kwargs: dict[str, Any] = {
                 "model": model,
                 "messages": api_messages,
             }
@@ -448,7 +455,7 @@ class OpenAICompatibleProvider(BaseProvider):
                             "tool_call_id": tc.id
                         })
 
-                metadata: Dict[str, Any] = {"usage": usage}
+                metadata: dict[str, Any] = {"usage": usage}
                 if hasattr(message, 'tool_calls') and message.tool_calls:
                     metadata["tool_calls"] = [
                         {"id": tc.id, "function": {"name": tc.function.name, "arguments": tc.function.arguments}}
@@ -489,7 +496,7 @@ class OpenAICompatibleProvider(BaseProvider):
 
     def chat_sync_simple(
         self,
-        messages: List[Message],
+        messages: list[Message],
         model: str,
     ) -> str:
         """Simple synchronous chat that returns just the content.
@@ -516,11 +523,11 @@ class OpenAICompatibleProvider(BaseProvider):
         self,
         prompt: str,
         model: str,
-        system: Optional[str] = None,
-        response_format: Optional[Dict[str, Any]] = None,
-        max_tokens: Optional[int] = None,
-        temperature: Optional[float] = None,
-    ) -> Dict[str, Any]:
+        system: str | None = None,
+        response_format: dict[str, Any] | None = None,
+        max_tokens: int | None = None,
+        temperature: float | None = None,
+    ) -> dict[str, Any]:
         """Stateless single-turn completion.
 
         v1.18.3: backs the `POST /v1/oneshot` gateway endpoint. No
@@ -552,7 +559,7 @@ class OpenAICompatibleProvider(BaseProvider):
               "model": str, "usage": {prompt_tokens, completion_tokens,
               total_tokens} | None}``
         """
-        messages: List[Message] = []
+        messages: list[Message] = []
         if system:
             messages.append(Message(role="system", content=system))
         messages.append(Message(role="user", content=prompt))
@@ -560,7 +567,7 @@ class OpenAICompatibleProvider(BaseProvider):
         api_messages = self._convert_messages(messages)
         api_messages = self._apply_reasoning_trigger(api_messages, model)
 
-        request_kwargs: Dict[str, Any] = {
+        request_kwargs: dict[str, Any] = {
             "model": model,
             "messages": api_messages,
             "stream": False,

@@ -10,16 +10,18 @@ Usage:
 """
 
 import asyncio
-from pathlib import Path
-from rich.console import Console
-from rich.panel import Panel
 
 # Add project root to path
 import sys
+from pathlib import Path
+
+from rich.console import Console
+from rich.panel import Panel
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from ppxai.engine import EngineClient
 from ppxai.commands.factory import CommandFactory
+from ppxai.engine import EngineClient
 
 console = Console()
 
@@ -40,7 +42,7 @@ async def validate_usage_stats_api():
     # Get usage stats
     usage = engine.get_usage()
 
-    console.print(f"[green]✅ Usage stats API available[/green]")
+    console.print("[green]✅ Usage stats API available[/green]")
     console.print(f"  Total tokens: {usage.get('total_tokens', 0):,}")
     console.print(f"  Prompt tokens: {usage.get('prompt_tokens', 0):,}")
     console.print(f"  Completion tokens: {usage.get('completion_tokens', 0):,}")
@@ -77,9 +79,9 @@ async def validate_display_modes():
 
             if mode == "off":
                 if usage_display is None:
-                    console.print(f"   Correctly returns None")
+                    console.print("   Correctly returns None")
                 else:
-                    console.print(f"   [yellow]WARNING: Expected None for 'off' mode[/yellow]")
+                    console.print("   [yellow]WARNING: Expected None for 'off' mode[/yellow]")
             else:
                 if usage_display is not None:
                     console.print(f"   Returns stats: {usage_display.get('total_tokens', 0)} tokens")

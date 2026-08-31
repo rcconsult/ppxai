@@ -28,7 +28,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
 
 from .agent_spec import AgentSpec, AgentSpecError, load_spec_file
 
@@ -64,7 +63,7 @@ class LoadedSkill:
     read_root: str            # dir mounted into read-scope (== root)
     spec: AgentSpec           # SKILL.md parsed via the T3 loader
     has_scripts: bool         # a non-empty scripts/ dir is present
-    references: Optional[str] = None  # absolute references/ dir if present
+    references: str | None = None  # absolute references/ dir if present
     warnings: list = field(default_factory=list)
 
 

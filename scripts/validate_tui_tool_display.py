@@ -10,12 +10,14 @@ Usage:
 """
 
 import asyncio
-from pathlib import Path
-from rich.console import Console
-from rich.panel import Panel
 
 # Add project root to path
 import sys
+from pathlib import Path
+
+from rich.console import Console
+from rich.panel import Panel
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from ppxai.engine.types import Event, EventType
@@ -63,7 +65,7 @@ async def validate_tool_call_event_structure():
         }
     )
 
-    console.print(f"[green]✅ TOOL_CALL event created:[/green]")
+    console.print("[green]✅ TOOL_CALL event created:[/green]")
     console.print(f"  Type: {event.type.value}")
     console.print(f"  Tool: {event.data['tool']}")
     console.print(f"  Arguments: {event.data['arguments']}")
@@ -100,7 +102,7 @@ async def validate_tool_result_event_structure():
         }
     )
 
-    console.print(f"[green]✅ TOOL_RESULT event created:[/green]")
+    console.print("[green]✅ TOOL_RESULT event created:[/green]")
     console.print(f"  Type: {event.type.value}")
     console.print(f"  Tool: {event.data['tool']}")
     console.print(f"  Result: {event.data['result'][:50]}...")
@@ -109,10 +111,10 @@ async def validate_tool_result_event_structure():
     result = event.data.get("result", "")
     if len(result) > 500:
         formatted_result = f"{result[:500]}...\n(Result truncated, {len(result)} chars total)"
-        console.print(f"\n[cyan]Would truncate result (> 500 chars)[/cyan]")
+        console.print("\n[cyan]Would truncate result (> 500 chars)[/cyan]")
     else:
         formatted_result = result
-        console.print(f"\n[cyan]Result fits in display (< 500 chars)[/cyan]")
+        console.print("\n[cyan]Result fits in display (< 500 chars)[/cyan]")
 
     return True
 
@@ -130,7 +132,7 @@ async def validate_tool_error_event_structure():
         }
     )
 
-    console.print(f"[green]✅ TOOL_ERROR event created:[/green]")
+    console.print("[green]✅ TOOL_ERROR event created:[/green]")
     console.print(f"  Type: {event.type.value}")
     console.print(f"  Tool: {event.data['tool']}")
     console.print(f"  Error: {event.data['error']}")

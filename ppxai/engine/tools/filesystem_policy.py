@@ -22,9 +22,9 @@ from __future__ import annotations
 
 import fnmatch
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional, Tuple, Union
+from typing import Union
 
 # tool name -> (mode, path-kwarg). mode "read" checks the read scope; "write"
 # checks the per-run workdir. Keys are the exact builtin tool names + their
@@ -77,7 +77,7 @@ class PathDecision:
     mode: str          # "read" | "write" | "" (non-path tool)
     target: str        # the resolved absolute path that was checked
     reason: str        # empty on allow
-    root: Optional[str] = None  # the read root that matched (allow only)
+    root: str | None = None  # the read root that matched (allow only)
 
 
 def _norm(p: str) -> str:
@@ -112,11 +112,11 @@ class FilesystemPolicy:
     def __init__(
         self,
         *,
-        read_roots: Optional[List[str]] = None,
-        workdir: Optional[str] = None,
-        deny: Tuple[str, ...] = (),
+        read_roots: list[str] | None = None,
+        workdir: str | None = None,
+        deny: tuple[str, ...] = (),
         follow_symlinks: bool = False,
-        base: Optional[str] = None,
+        base: str | None = None,
     ) -> None:
         self._workdir = _norm(workdir) if workdir else None
         roots = [r for r in (read_roots or []) if r]
@@ -137,7 +137,7 @@ class FilesystemPolicy:
             return os.path.normpath(str(p))
         return os.path.realpath(str(p))
 
-    def _denied_by_glob(self, target: str) -> Optional[str]:
+    def _denied_by_glob(self, target: str) -> str | None:
         # A deny pattern is matched three ways so the intuitive forms work:
         #   1. Against the full absolute path — for anchored globs
         #      (`/abs/path`, `**/.env`, `**/secrets/**`).
@@ -200,7 +200,7 @@ class FilesystemPolicy:
 def build_filesystem_policy(
     sandbox: dict,
     workdir: str,
-    extra_read_paths: Optional[List[str]] = None,
+    extra_read_paths: list[str] | None = None,
 ) -> FilesystemPolicy:
     """Construct a per-run FilesystemPolicy from the `execution.task.sandbox` block.
 

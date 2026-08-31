@@ -20,14 +20,15 @@ shape. These tests pin the fix:
 """
 
 import json
+from collections.abc import AsyncIterator
 from types import SimpleNamespace
-from typing import Any, AsyncIterator
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from ppxai.engine.types import Event, EventType, Message
 from ppxai.engine.providers.wire.generate_content import GenerateContentHandler
+from ppxai.engine.types import Event, EventType, Message
 
 
 def _fc(name: str, args: dict, call_id=None) -> SimpleNamespace:

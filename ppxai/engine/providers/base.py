@@ -8,24 +8,24 @@ import asyncio
 import re
 import traceback
 from abc import ABC, abstractmethod
-from typing import List, Dict, Any, AsyncIterator, Optional
-import os
+from collections.abc import AsyncIterator
+from typing import Any
+
 import httpx
 import openai
 from openai import OpenAI
 
-from ..model_facts import ModelFacts, shipped_facts_for_model
-from ..types import Message, Event, EventType, ProviderCapabilities, ModelInfo, UsageStats
-from ..uploaded_file import flatten_uploaded_file_blocks, assert_wire_blocks_clean
-from .wire import get_handler
+from ...common.logger import get_logger
 from ...config import (
+    get_extra_body,
     get_generation_params,
     get_model_max_tokens,
-    get_extra_body,
     get_reasoning_trigger,
 )
 from ...config.tls import tls_verify
-from ...common.logger import get_logger
+from ..model_facts import ModelFacts, shipped_facts_for_model
+from ..types import Event, Message, ModelInfo, ProviderCapabilities, UsageStats
+from .wire import get_handler
 
 
 class BaseProvider(ABC):
@@ -48,7 +48,7 @@ class BaseProvider(ABC):
     #: and `chat_completions` on OpenRouter, so its `wire_protocol` has no
     #: single correct global value. Rows here are complete records and win
     #: whole — there is no field-level merge against the global table.
-    shipped_model_facts: Dict[str, ModelFacts] = {}
+    shipped_model_facts: dict[str, ModelFacts] = {}
 
     #: The floor for a model no table names, when the GLOBAL floor would be
     #: wrong for this provider (ADR 0012 §2 Q0e). A COMPLETE record, chosen
@@ -60,15 +60,15 @@ class BaseProvider(ABC):
     #: overrides it because it can ONLY speak `generate_content`: routing an
     #: unlisted Gemini model to a chat-completions handler is not a
     #: conservative default, it is a wire the provider does not have.
-    unmeasured_facts: Optional[ModelFacts] = None
+    unmeasured_facts: ModelFacts | None = None
 
     def __init__(
         self,
         api_key: str,
-        base_url: Optional[str] = None,
-        models: Optional[Dict[str, Dict[str, str]]] = None,
-        capabilities: Optional[ProviderCapabilities] = None,
-        provider_id: Optional[str] = None,
+        base_url: str | None = None,
+        models: dict[str, dict[str, str]] | None = None,
+        capabilities: ProviderCapabilities | None = None,
+        provider_id: str | None = None,
         **kwargs
     ):
         """Initialize the provider.
@@ -107,10 +107,10 @@ class BaseProvider(ABC):
     @abstractmethod
     async def chat(
         self,
-        messages: List[Message],
+        messages: list[Message],
         model: str,
         stream: bool = False,
-        tools: Optional[List[Dict[str, Any]]] = None
+        tools: list[dict[str, Any]] | None = None
     ) -> AsyncIterator[Event]:
         """Send a chat request and yield events.
 
@@ -130,11 +130,11 @@ class BaseProvider(ABC):
         self,
         prompt: str,
         model: str,
-        system: Optional[str] = None,
-        response_format: Optional[Dict[str, Any]] = None,
-        max_tokens: Optional[int] = None,
-        temperature: Optional[float] = None,
-    ) -> Dict[str, Any]:
+        system: str | None = None,
+        response_format: dict[str, Any] | None = None,
+        max_tokens: int | None = None,
+        temperature: float | None = None,
+    ) -> dict[str, Any]:
         """Stateless single-turn completion (the v1 gateway contract).
 
         Backs `POST /v1/oneshot` and the tool-FREE `POST /v1/agent/run`
@@ -152,10 +152,10 @@ class BaseProvider(ABC):
 
     def chat_sync(
         self,
-        messages: List[Message],
+        messages: list[Message],
         model: str,
         stream: bool = False
-    ) -> List[Event]:
+    ) -> list[Event]:
         """Synchronous chat method.
 
         Args:
@@ -175,7 +175,7 @@ class BaseProvider(ABC):
         asyncio.run(collect())
         return events
 
-    def list_models(self) -> List[ModelInfo]:
+    def list_models(self) -> list[ModelInfo]:
         """Return available models for this provider.
 
         Returns:
@@ -291,7 +291,7 @@ class BaseProvider(ABC):
         except Exception:  # noqa: BLE001 — config must never break a request
             return shipped
 
-    def _get_generation_params(self, model: str) -> Dict[str, Any]:
+    def _get_generation_params(self, model: str) -> dict[str, Any]:
         """Get generation parameters (temperature, top_p, etc.) from config.
 
         Args:
@@ -306,7 +306,7 @@ class BaseProvider(ABC):
         except AttributeError:
             return {}
 
-    def _get_max_tokens(self, model: str) -> Optional[int]:
+    def _get_max_tokens(self, model: str) -> int | None:
         """Get max_tokens for output generation from config.
 
         Args:
@@ -320,7 +320,7 @@ class BaseProvider(ABC):
         except AttributeError:
             return None
 
-    def _get_extra_body(self, model: str) -> Dict[str, Any]:
+    def _get_extra_body(self, model: str) -> dict[str, Any]:
         """Get vendor-specific ``extra_body`` payload for a model.
 
         v1.18.3: thin instance wrapper over :func:`get_extra_body` so
@@ -335,9 +335,9 @@ class BaseProvider(ABC):
 
     def _apply_reasoning_trigger(
         self,
-        api_messages: List[Dict[str, Any]],
+        api_messages: list[dict[str, Any]],
         model: str,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Append the configured reasoning trigger to the system message.
 
         v1.18.3: nemotron's reasoning toggle is an in-prompt convention
@@ -380,7 +380,7 @@ class BaseProvider(ABC):
         # No system message present — prepend one carrying only the trigger.
         return [{"role": "system", "content": trigger}, *api_messages]
 
-    def _convert_messages(self, messages: List[Message]) -> List[Dict[str, Any]]:
+    def _convert_messages(self, messages: list[Message]) -> list[dict[str, Any]]:
         """Convert Message objects to Chat Completions wire format.
 
         ADR 0012 W4: the body moved to
@@ -394,7 +394,7 @@ class BaseProvider(ABC):
         """
         return get_handler("chat_completions").convert_messages(messages)
 
-    def _parse_usage(self, usage) -> Optional[UsageStats]:
+    def _parse_usage(self, usage) -> UsageStats | None:
         """Parse usage from API response.
 
         Args:
@@ -431,40 +431,40 @@ class BaseProvider(ABC):
             # Extract the root cause
             if "getaddrinfo failed" in error_str:
                 return (
-                    f"Connection failed: Unable to resolve hostname.\n"
-                    f"Check that:\n"
-                    f"  - You have network connectivity\n"
-                    f"  - VPN is connected (if required for this endpoint)\n"
-                    f"  - The API endpoint URL is correct"
+                    "Connection failed: Unable to resolve hostname.\n"
+                    "Check that:\n"
+                    "  - You have network connectivity\n"
+                    "  - VPN is connected (if required for this endpoint)\n"
+                    "  - The API endpoint URL is correct"
                 )
             elif "Connection refused" in error_str:
                 return (
-                    f"Connection refused: Server is not reachable.\n"
-                    f"Check that:\n"
-                    f"  - The server is running\n"
-                    f"  - The port number is correct\n"
-                    f"  - Firewall is not blocking the connection"
+                    "Connection refused: Server is not reachable.\n"
+                    "Check that:\n"
+                    "  - The server is running\n"
+                    "  - The port number is correct\n"
+                    "  - Firewall is not blocking the connection"
                 )
             elif "timed out" in error_str.lower():
                 return (
-                    f"Connection timed out: Server did not respond.\n"
-                    f"Check that:\n"
-                    f"  - The server is running and responsive\n"
-                    f"  - Network latency is acceptable"
+                    "Connection timed out: Server did not respond.\n"
+                    "Check that:\n"
+                    "  - The server is running and responsive\n"
+                    "  - Network latency is acceptable"
                 )
             else:
-                return f"Connection failed: Unable to reach the server."
+                return "Connection failed: Unable to reach the server."
 
         # Authentication errors
         if isinstance(e, openai.AuthenticationError):
             return (
-                f"Authentication failed: Invalid API key.\n"
-                f"Check that your API key is correct in .env or ppxai-config.json"
+                "Authentication failed: Invalid API key.\n"
+                "Check that your API key is correct in .env or ppxai-config.json"
             )
 
         # Rate limiting
         if isinstance(e, openai.RateLimitError):
-            return f"Rate limit exceeded. Please wait before retrying."
+            return "Rate limit exceeded. Please wait before retrying."
 
         # Bad request (invalid parameters)
         if isinstance(e, openai.BadRequestError):
@@ -483,10 +483,10 @@ class BaseProvider(ABC):
             if e.status_code == 403:
                 if "operation not allowed" in error_str.lower():
                     return (
-                        f"Provider quota / permission error (403): "
-                        f"endpoint refused the call. On NVIDIA NIM free tier "
-                        f"this typically means the per-model rate limit was "
-                        f"exhausted — wait, switch model, or use paid tier."
+                        "Provider quota / permission error (403): "
+                        "endpoint refused the call. On NVIDIA NIM free tier "
+                        "this typically means the per-model rate limit was "
+                        "exhausted — wait, switch model, or use paid tier."
                     )
                 return f"Provider permission error (403): {error_str}"
             if e.status_code == 429:
@@ -498,12 +498,12 @@ class BaseProvider(ABC):
 
         # httpx-level connection errors
         if isinstance(e, httpx.ConnectError):
-            return f"Connection failed: Unable to connect to the server."
+            return "Connection failed: Unable to connect to the server."
 
         # Fallback: return the exception type and message without full traceback
         return f"{error_type}: {error_str}"
 
-    def _classify_throttle(self, e: Exception) -> Optional[Dict[str, Any]]:
+    def _classify_throttle(self, e: Exception) -> dict[str, Any] | None:
         """Detect provider-side rate-limit / quota errors and return a
         structured payload for ``EventType.PROVIDER_THROTTLED``.
 
@@ -522,7 +522,7 @@ class BaseProvider(ABC):
         status = getattr(e, "status_code", None)
         if status not in (403, 429):
             return None
-        retry_after: Optional[float] = None
+        retry_after: float | None = None
         try:
             response = getattr(e, "response", None)
             if response is not None:

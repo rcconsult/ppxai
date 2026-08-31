@@ -35,21 +35,21 @@ Q5 settled semantics implemented here:
 from __future__ import annotations
 
 import os
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable, Dict, List, Optional, Tuple
 
 # ---------------------------------------------------------------------------
 # Backend catalog — the single source for backend ids, hosts and key envs.
 # (network_policy re-exports these under its historical names.)
 # ---------------------------------------------------------------------------
 
-BACKEND_HOSTS: Dict[str, List[str]] = {
+BACKEND_HOSTS: dict[str, list[str]] = {
     "perplexity": ["https://api.perplexity.ai/"],
     "gemini": ["https://generativelanguage.googleapis.com/"],
     "duckduckgo": ["https://duckduckgo.com/", "https://html.duckduckgo.com/"],
 }
 
-BACKEND_ENV: Dict[str, Optional[str]] = {
+BACKEND_ENV: dict[str, str | None] = {
     "perplexity": "PERPLEXITY_API_KEY",
     "gemini": "GEMINI_API_KEY",
     "duckduckgo": None,  # key-free
@@ -61,9 +61,9 @@ BACKEND_ENV: Dict[str, Optional[str]] = {
 # writes `"order": ["gemini", "duckduckgo", "perplexity"]` gets exactly that
 # sequence, in the one resolver both the call-time chain and the egress
 # enumeration consume.
-AUTO_ORDER: Tuple[str, ...] = ("perplexity", "gemini", "duckduckgo")
+AUTO_ORDER: tuple[str, ...] = ("perplexity", "gemini", "duckduckgo")
 
-ALL_HOSTS: List[str] = [
+ALL_HOSTS: list[str] = [
     "https://duckduckgo.com/",
     "https://html.duckduckgo.com/",
     "https://api.perplexity.ai/",
@@ -90,12 +90,12 @@ class BackendResolution:
     scope: str                       # "provider:<name>" | "global" | "default"
     preferred: str                   # effective preference ("auto" after fail-safe)
     strict: bool                     # effective strictness (False when fail-safed)
-    candidates: Tuple[str, ...]      # ordered, USABLE backends the chain may try
-    egress_hosts: Tuple[str, ...]    # effective egress URL set for authorize()
-    warnings: Tuple[str, ...] = ()   # fail-safe / dead-key / unknown-name notes
+    candidates: tuple[str, ...]      # ordered, USABLE backends the chain may try
+    egress_hosts: tuple[str, ...]    # effective egress URL set for authorize()
+    warnings: tuple[str, ...] = ()   # fail-safe / dead-key / unknown-name notes
 
 
-def _read_order(block: Dict[str, object], warnings: List[str]) -> Tuple[str, ...]:
+def _read_order(block: dict[str, object], warnings: list[str]) -> tuple[str, ...]:
     """The configured backend chain, or `AUTO_ORDER` when unset.
 
     `tools.web_search.order` is DATA for the one resolver — deliberately not
@@ -122,7 +122,7 @@ def _read_order(block: Dict[str, object], warnings: List[str]) -> Tuple[str, ...
         )
         return AUTO_ORDER
 
-    seen: List[str] = []
+    seen: list[str] = []
     for entry in raw:
         name = str(entry)
         if name not in BACKEND_HOSTS:
@@ -144,10 +144,10 @@ def _read_order(block: Dict[str, object], warnings: List[str]) -> Tuple[str, ...
 
 
 def _read_scope(
-    provider_name: Optional[str],
-) -> Tuple[str, str, bool, Tuple[str, ...], List[str]]:
+    provider_name: str | None,
+) -> tuple[str, str, bool, tuple[str, ...], list[str]]:
     """Select the (scope, preferred, strict, order) tuple per Q5. Never raises."""
-    warnings: List[str] = []
+    warnings: list[str] = []
     # Provider block first — it owns the tuple ONLY if it states `preferred`.
     if provider_name:
         try:
@@ -210,8 +210,8 @@ def _host_of(url: str) -> str:
 
 
 def resolve_web_search_backend(
-    provider_name: Optional[str] = None,
-    egress_allows: Optional[Callable[[str], bool]] = None,
+    provider_name: str | None = None,
+    egress_allows: Callable[[str], bool] | None = None,
 ) -> BackendResolution:
     """Resolve the web_search backend tuple for this provider context.
 

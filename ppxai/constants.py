@@ -14,7 +14,7 @@ v1.13.11: Converted to str, Enum with validation helpers
 """
 
 from enum import Enum
-from typing import Final, Type, TypeVar
+from typing import Final, TypeVar
 
 T = TypeVar('T', bound=Enum)
 
@@ -23,7 +23,7 @@ T = TypeVar('T', bound=Enum)
 # Validation Helpers
 # =============================================================================
 
-def is_valid_enum(enum_class: Type[T], value: str) -> bool:
+def is_valid_enum(enum_class: type[T], value: str) -> bool:
     """Check if value is a valid member of the enum.
 
     Args:
@@ -36,7 +36,7 @@ def is_valid_enum(enum_class: Type[T], value: str) -> bool:
     return value in {e.value for e in enum_class}
 
 
-def get_enum_values(enum_class: Type[T]) -> set[str]:
+def get_enum_values(enum_class: type[T]) -> set[str]:
     """Get all valid values for an enum class.
 
     Args:

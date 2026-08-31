@@ -33,9 +33,6 @@ before we tell the user" is a policy choice, not a user preference.
 
 from __future__ import annotations
 
-from typing import Optional
-
-
 # When a user-visible warning fires. 3 means: first failure + second
 # failure stay silent (transient blips are common on Windows file
 # locks, DFS paths), the third triggers the warning. If you need a
@@ -64,7 +61,7 @@ class AutosaveFailureGuard:
         self._consecutive_failures = 0
         self._warned = False
 
-    def on_failure(self, exc: Optional[BaseException] = None) -> bool:
+    def on_failure(self, exc: BaseException | None = None) -> bool:
         """Call after a failed save. Returns True exactly once per
         failure streak, on the Nth consecutive failure where N is
         `AUTOSAVE_WARN_THRESHOLD`. Further failures in the same

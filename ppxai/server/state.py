@@ -7,13 +7,8 @@ state but the app module depends on routes only at registration time.
 """
 
 import asyncio
-import os
-import platform
-import signal
-import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
 
 from fastapi import Header, HTTPException
 
@@ -21,6 +16,7 @@ from ..config.loader import load_config
 from ..engine import EngineClient
 from ..engine.task_runner import default_run_registry
 from .secrets import build_chain_from_config
+import platform  # noqa: F401 — patched by tests
 
 
 @dataclass
@@ -48,7 +44,7 @@ _preview_backends: dict[str, PreviewBackend] = {}
 PREVIEW_BACKEND_TTL = 300  # 5 minutes
 
 
-def get_preview_backend(session_id: str) -> Optional[PreviewBackend]:
+def get_preview_backend(session_id: str) -> PreviewBackend | None:
     """Get the preview backend for a session."""
     return _preview_backends.get(session_id)
 
@@ -58,7 +54,7 @@ def set_preview_backend(session_id: str, backend: PreviewBackend) -> None:
     _preview_backends[session_id] = backend
 
 
-def remove_preview_backend(session_id: str) -> Optional[PreviewBackend]:
+def remove_preview_backend(session_id: str) -> PreviewBackend | None:
     """Remove and return the preview backend for a session."""
     return _preview_backends.pop(session_id, None)
 
@@ -79,7 +75,7 @@ async def kill_preview_backend(backend: PreviewBackend) -> None:
     await _stop_backend(backend)
 
 
-async def get_session(x_session_id: Optional[str] = Header(None)) -> Session:
+async def get_session(x_session_id: str | None = Header(None)) -> Session:
     """FastAPI dependency — resolves session from X-Session-Id header.
 
     Usage in routes:
@@ -92,8 +88,8 @@ async def get_session(x_session_id: Optional[str] = Header(None)) -> Session:
 
 
 async def get_session_or_query(
-    x_session_id: Optional[str] = Header(None, alias="X-Session-Id"),
-    session: Optional[str] = None,
+    x_session_id: str | None = Header(None, alias="X-Session-Id"),
+    session: str | None = None,
 ) -> Session:
     """FastAPI dependency — resolves session from X-Session-Id header
     OR a `?session=<id>` query string. Header takes precedence.
@@ -272,7 +268,7 @@ def is_path_allowed(target: Path, base: Path) -> bool:
     return False
 
 
-async def get_or_create_session(session_id: Optional[str]) -> tuple[str, EngineClient, asyncio.Lock]:
+async def get_or_create_session(session_id: str | None) -> tuple[str, EngineClient, asyncio.Lock]:
     """Get existing session or create new one (v1.13.10, v1.13.10 refactored).
 
     Automatically reloads config on each call so routes don't need to

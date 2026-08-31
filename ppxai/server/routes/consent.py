@@ -2,8 +2,8 @@
 File edit and shell command consent endpoints.
 """
 
+
 from fastapi import APIRouter, Depends, HTTPException
-from typing import Optional
 
 from ...common.consent import normalize_consent_response
 from ...common.logger import get_logger

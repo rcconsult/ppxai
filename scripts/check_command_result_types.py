@@ -10,13 +10,13 @@ Usage:
 
 """
 
-import sys
 import ast
+import sys
 from pathlib import Path
-from typing import Dict, Set, List, Tuple
+
 from rich.console import Console
-from rich.table import Table
 from rich.panel import Panel
+from rich.table import Table
 
 console = Console()
 
@@ -24,7 +24,7 @@ console = Console()
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 
-def extract_return_types_from_file(filepath: Path) -> Dict[str, Set[str]]:
+def extract_return_types_from_file(filepath: Path) -> dict[str, set[str]]:
     """Extract return statement result types from command handlers."""
     try:
         content = filepath.read_text(encoding="utf-8")
@@ -71,7 +71,7 @@ def extract_return_types_from_file(filepath: Path) -> Dict[str, Set[str]]:
     return visitor.returns
 
 
-def extract_test_expectations(test_file: Path) -> Dict[str, Set[str]]:
+def extract_test_expectations(test_file: Path) -> dict[str, set[str]]:
     """Extract expected result types from test assertions."""
     try:
         content = test_file.read_text(encoding="utf-8")

@@ -4,11 +4,11 @@ Tests for ppxai/common/logger.py
 Tests the unified Logger class.
 """
 
-import pytest
 from pathlib import Path
-import tempfile
-import os
-from ppxai.common.logger import get_logger, Logger
+
+import pytest
+
+from ppxai.common.logger import Logger, get_logger
 
 
 @pytest.fixture(autouse=True)

@@ -1,5 +1,4 @@
 """Unit tests for ppxai.prompts module."""
-import pytest
 from ppxai.prompts import CODING_PROMPTS, SPEC_GUIDELINES, SPEC_TEMPLATES
 
 

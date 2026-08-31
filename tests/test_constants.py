@@ -1,28 +1,24 @@
 """Tests for constants module - enum behavior and validation helpers."""
 
-import pytest
 
 from ppxai.constants import (
-    ProviderName,
-    MessageRole,
-    ConsentMode,
-    ConsentResponse,
     ConsentDecision,
-    SystemPromptMode,
+    ConsentResponse,
+    MessageRole,
+    ProviderName,
     ShellRiskLevel,
-    FileEncoding,
-    CheckpointBackend,
-    is_valid_provider,
-    is_valid_role,
+    SystemPromptMode,
+    get_enum_values,
+    is_valid_checkpoint_backend,
+    is_valid_consent_decision,
     is_valid_consent_mode,
     is_valid_consent_response,
-    is_valid_consent_decision,
-    is_valid_prompt_mode,
-    is_valid_risk_level,
     is_valid_encoding,
-    is_valid_checkpoint_backend,
     is_valid_enum,
-    get_enum_values,
+    is_valid_prompt_mode,
+    is_valid_provider,
+    is_valid_risk_level,
+    is_valid_role,
 )
 
 

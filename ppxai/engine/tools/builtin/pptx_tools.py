@@ -20,18 +20,16 @@ follow-up step — they require system dependencies not all users have.
 
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Any, List, Optional, Tuple
-
-from ...types import ToolEngineProtocol, ToolManagerProtocol
-from ..base import BaseTool
-from ...file_ref import resolve_file_reference
-from ...file_ref import FILE_REF_PROPERTIES
 import base64
 import subprocess
 import tempfile
-from ....common.libreoffice import find_libreoffice, libreoffice_available
+from pathlib import Path
+from typing import Any
 
+from ....common.libreoffice import find_libreoffice, libreoffice_available
+from ...file_ref import FILE_REF_PROPERTIES, resolve_file_reference
+from ...types import ToolEngineProtocol, ToolManagerProtocol
+from ..base import BaseTool
 
 _MAX_TEXT_CHARS = 100_000
 
@@ -82,7 +80,7 @@ def extract_pptx_slide_text(path: Path, slide_num: int) -> str:
         return f"Error: slide {slide_num} out of range (presentation has {total} slides)."
 
     target_slide = prs.slides[slide_num - 1]
-    lines: List[str] = [f"# {path.name} — Slide {slide_num} of {total}\n"]
+    lines: list[str] = [f"# {path.name} — Slide {slide_num} of {total}\n"]
 
     # Title
     if target_slide.shapes.title and target_slide.shapes.title.has_text_frame:
@@ -135,9 +133,9 @@ def extract_pptx_slide_text(path: Path, slide_num: int) -> str:
 
 def _resolve_file(
     engine: Any,
-    file_id: Optional[str] = None,
-    path: Optional[str] = None,
-) -> Tuple[Optional[Any], Optional[str]]:
+    file_id: str | None = None,
+    path: str | None = None,
+) -> tuple[Any | None, str | None]:
     """Resolve a file reference via the unified engine resolver.
 
     Accepts EITHER `file_id` (SessionFileStore chat attachment) or
@@ -194,8 +192,8 @@ class ListPptxSlidesTool(BaseTool):
 
     async def execute(
         self,
-        file_id: Optional[str] = None,
-        path: Optional[str] = None,
+        file_id: str | None = None,
+        path: str | None = None,
         **kwargs,
     ) -> str:
         meta, err = _resolve_file(self.engine, file_id=file_id, path=path)
@@ -219,7 +217,7 @@ class ListPptxSlidesTool(BaseTool):
         if total == 0:
             return f"{meta.name}: empty presentation (0 slides)."
 
-        lines: List[str] = [f"# {meta.name} — {total} slide(s)\n"]
+        lines: list[str] = [f"# {meta.name} — {total} slide(s)\n"]
 
         for i, slide in enumerate(slides, 1):
             # Extract title from title placeholder if present
@@ -273,8 +271,8 @@ class ReadPptxSlideTextTool(BaseTool):
 
     async def execute(
         self,
-        file_id: Optional[str] = None,
-        path: Optional[str] = None,
+        file_id: str | None = None,
+        path: str | None = None,
         slide: int = 1,
         **kwargs,
     ) -> str:
@@ -296,7 +294,7 @@ def _text_frame_to_markdown(text_frame) -> str:
     Preserves paragraph breaks, bold/italic runs where possible,
     and bullet indicators from the paragraph level.
     """
-    parts: List[str] = []
+    parts: list[str] = []
     for para in text_frame.paragraphs:
         text = para.text.strip()
         if not text:
@@ -313,7 +311,7 @@ def _text_frame_to_markdown(text_frame) -> str:
 
 def _table_to_markdown(table) -> str:
     """Convert a PPTX table to a markdown table."""
-    rows: List[List[str]] = []
+    rows: list[list[str]] = []
     for row in table.rows:
         cells = []
         for cell in row.cells:
@@ -351,7 +349,7 @@ def _libreoffice_available() -> bool:
     return libreoffice_available()
 
 
-def render_pptx_slides(pptx_path: Path, cache_dir: Path) -> List[Path]:
+def render_pptx_slides(pptx_path: Path, cache_dir: Path) -> list[Path]:
     """Render all slides of a PPTX to PNG files via LibreOffice headless.
 
     Results are cached in *cache_dir* keyed by the source file name.
@@ -476,8 +474,8 @@ class SummarizePptxVisualTool(BaseTool):
 
     async def execute(
         self,
-        file_id: Optional[str] = None,
-        path: Optional[str] = None,
+        file_id: str | None = None,
+        path: str | None = None,
         slides: str = "all",
         **kwargs,
     ) -> str:
@@ -519,7 +517,7 @@ class SummarizePptxVisualTool(BaseTool):
         if not hasattr(self.engine, "caption_image"):
             return "Error: engine does not support caption_image."
 
-        results: List[str] = [f"# {meta.name} — Visual Summary ({len(indices)} slides)\n"]
+        results: list[str] = [f"# {meta.name} — Visual Summary ({len(indices)} slides)\n"]
 
         for idx in indices:
             slide_num = idx + 1
@@ -564,8 +562,8 @@ class RenderPptxSlideTool(BaseTool):
 
     async def execute(
         self,
-        file_id: Optional[str] = None,
-        path: Optional[str] = None,
+        file_id: str | None = None,
+        path: str | None = None,
         slide: int = 1,
         **kwargs,
     ) -> str:

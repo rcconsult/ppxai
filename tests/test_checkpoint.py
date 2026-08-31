@@ -4,16 +4,17 @@ Tests for checkpoint system (v1.12.0).
 Tests both git and file checkpoint backends for atomic multi-file rollback.
 """
 
-import pytest
-import tempfile
 import subprocess
+import tempfile
 from pathlib import Path
-from unittest.mock import Mock, patch, call
+from unittest.mock import patch
+
+import pytest
 
 from ppxai.checkpoint import (
     CheckpointManager,
-    GitCheckpointBackend,
     FileCheckpointBackend,
+    GitCheckpointBackend,
 )
 
 

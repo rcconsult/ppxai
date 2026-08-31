@@ -16,7 +16,6 @@ import pytest
 
 from ppxai.config import tls as tlsmod
 
-
 #: The real reader, captured before the autouse fixture stubs it out, so
 #: the fail-safe cases below can restore and exercise it.
 _REAL_SSL_BLOCK = tlsmod._ssl_config_block

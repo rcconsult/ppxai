@@ -4,21 +4,18 @@ Tests that native tool calls use proper assistant(tool_calls) + tool role messag
 instead of synthetic user/assistant pairs.
 """
 
+import asyncio
 import json
-import pytest
-from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
-from ppxai.engine.types import Message
-from ppxai.engine.session import SessionManager
+import pytest
+
+from ppxai.engine.chat import chat_with_tools
+from ppxai.engine.model_facts import ModelFacts
 from ppxai.engine.providers.base import BaseProvider
 from ppxai.engine.providers.wire.responses import ResponsesHandler
-import asyncio
-from unittest.mock import patch
-from ppxai.engine.chat import chat_with_tools, _execute_single_tool
-from ppxai.engine.types import Event, EventType, ProviderCapabilities
-from ppxai.engine.model_facts import ModelFacts
-
+from ppxai.engine.session import SessionManager
+from ppxai.engine.types import Event, EventType, Message, ProviderCapabilities
 
 # ---------------------------------------------------------------------------
 # Message dataclass tests
@@ -260,7 +257,6 @@ class TestOpenAINativeConvertMessagesForResponses:
     """Test Responses API message conversion with tool fields."""
 
     def test_tool_role_message(self):
-        from ppxai.engine.providers.openai_native import OpenAINativeProvider
 
         messages = [
             Message("system", "You are helpful"),
@@ -289,7 +285,6 @@ class TestOpenAINativeConvertMessagesForResponses:
         assert assistant_item["tool_calls"] is not None
 
     def test_system_messages_become_instructions(self):
-        from ppxai.engine.providers.openai_native import OpenAINativeProvider
 
         messages = [
             Message("system", "Part 1"),
@@ -317,6 +312,7 @@ class TestNonStreamResponsesContentExtraction:
     def _run(self, output_items, output_text=None):
         """Drive ResponsesHandler._non_stream with mocked client.responses.create."""
         from unittest.mock import MagicMock, patch
+
         from ppxai.engine.providers.openai_native import OpenAINativeProvider
         from ppxai.engine.types import EventType
 
@@ -580,6 +576,7 @@ class TestAlternationValidationWithToolMessages:
         bugs are diagnosable.
         """
         import logging
+
         from ppxai.engine import session as session_mod
 
         # The session logger is lazy-initialized and only dispatches when

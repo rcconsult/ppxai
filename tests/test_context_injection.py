@@ -7,10 +7,12 @@ These tests cover:
 3. Integration between both layers
 """
 
-import pytest
 import tempfile
 from pathlib import Path
-from ppxai.engine.context import ContextInjector, MAX_FILE_SIZE
+
+import pytest
+
+from ppxai.engine.context import MAX_FILE_SIZE, ContextInjector
 
 
 class TestContextInjector:
@@ -249,7 +251,6 @@ class TestContextInjector:
         """Test @git context injection when there are git changes."""
         import subprocess
         import tempfile
-        import os
 
         # Create a temporary git repo
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -324,7 +325,6 @@ class TestContextInjector:
     def test_inject_tree_context(self, injector):
         """Test @tree context injection."""
         import tempfile
-        import os
 
         # Create a temporary directory structure
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -437,9 +437,9 @@ class TestContextInjector:
 
     def test_inject_context_combined_git_tree_file(self, injector, temp_file):
         """Test using @git, @tree, and @file together."""
+        import shutil
         import subprocess
         import tempfile
-        import shutil
 
         # Create a temporary git repo
         with tempfile.TemporaryDirectory() as tmpdir:

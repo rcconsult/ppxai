@@ -31,8 +31,8 @@ import re
 import subprocess
 import sys
 import time
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
 
 # Fix Windows console encoding for Unicode output
 if sys.platform == 'win32':
@@ -250,7 +250,7 @@ def update_package_lock(version: str):
 
     if changed:
         lock_file.write_text(json.dumps(data, indent=2) + "\n", encoding='utf-8')
-        print(f"  ✅ Updated: vscode-extension/package-lock.json")
+        print("  ✅ Updated: vscode-extension/package-lock.json")
 
 
 def update_readme_badges(version: str, test_count: int | None = None):
@@ -277,7 +277,7 @@ def update_readme_badges(version: str, test_count: int | None = None):
         )
 
     filepath.write_text(content, encoding='utf-8')
-    print(f"  ✅ Updated: README.md (badges)")
+    print("  ✅ Updated: README.md (badges)")
 
 
 def create_release_notes(version: str, date: str):
@@ -337,7 +337,7 @@ This is a drop-in replacement for the previous version. No configuration changes
 
     notes_file.write_text(template, encoding='utf-8')
     print(f"  ✅ Created: {notes_file.name}")
-    print(f"  ⚠️  Please edit the release notes before continuing!")
+    print("  ⚠️  Please edit the release notes before continuing!")
 
 
 def check_release_notes_not_template(version: str) -> bool:
@@ -411,7 +411,7 @@ def run_typescript_lint() -> bool:
         print("  ✅ TypeScript lint passed")
         return True
     else:
-        print(f"  ❌ TypeScript lint failed!")
+        print("  ❌ TypeScript lint failed!")
         print(result.stdout[-1000:] if len(result.stdout) > 1000 else result.stdout)
         print(result.stderr[-500:] if len(result.stderr) > 500 else result.stderr)
         return False
@@ -447,7 +447,7 @@ def run_tests() -> tuple[bool, int]:
                 print(f"  ✅ {test_count} tests passed")
             return True, test_count
         elif "command not found" not in result.stderr and "No module named" not in result.stderr:
-            print(f"  ❌ Tests failed!")
+            print("  ❌ Tests failed!")
             print(result.stdout[-2000:] if len(result.stdout) > 2000 else result.stdout)
             return False, 0
 
@@ -493,7 +493,7 @@ def create_commit(version: str, message: str) -> bool:
     # Check if there are changes to commit
     result = run_command("git status --porcelain", check=False)
     if not result.stdout.strip():
-        print(f"  ⏭️  No changes to commit (version files already up to date)")
+        print("  ⏭️  No changes to commit (version files already up to date)")
         return False
 
     commit_msg = message
@@ -542,10 +542,10 @@ def delete_existing_release(version: str) -> bool:
         last_commit_msg = result.stdout.strip()
         if f"v{version}" in last_commit_msg and ("release" in last_commit_msg.lower() or "feat:" in last_commit_msg.lower()):
             print(f"  ⚠️  Last commit appears to be the release commit: {last_commit_msg[:50]}...")
-            print(f"  🔄 Resetting to previous commit...")
+            print("  🔄 Resetting to previous commit...")
             run_command("git reset --hard HEAD~1")
             run_command("git push origin master --force")
-            print(f"  ✅ Reset master to previous commit")
+            print("  ✅ Reset master to previous commit")
 
     return True
 
@@ -567,10 +567,10 @@ def merge_to_master_if_needed(current_branch: str, dry_run: bool = False) -> boo
 
     if dry_run:
         print(f"  [dry-run] Would merge {current_branch} to master")
-        print(f"  [dry-run] Steps that would run:")
-        print(f"    git fetch origin master")
-        print(f"    git checkout master")
-        print(f"    git pull origin master")
+        print("  [dry-run] Steps that would run:")
+        print("    git fetch origin master")
+        print("    git checkout master")
+        print("    git pull origin master")
         print(f"    git merge {current_branch} --no-edit")
         return True
 
@@ -592,7 +592,7 @@ def merge_to_master_if_needed(current_branch: str, dry_run: bool = False) -> boo
     result = run_command(f"git merge {current_branch} --no-edit", check=False)
     if result.returncode != 0:
         print(f"  ❌ Merge failed: {result.stderr}")
-        print(f"     Resolve conflicts and try again")
+        print("     Resolve conflicts and try again")
         # Switch back to original branch
         run_command(f"git checkout {current_branch}", check=False)
         return False
@@ -615,7 +615,7 @@ def create_and_push_tag(version: str):
     # Push master and tag (we are guaranteed to be on master at this point)
     run_command("git push origin master")
     run_command(f"git push origin {tag} --force")
-    print(f"  ✅ Pushed to origin")
+    print("  ✅ Pushed to origin")
 
 
 def wait_for_ci(version: str, timeout_minutes: int = 10) -> bool:
@@ -744,7 +744,7 @@ def publish_release_notes(version: str, max_retries: int = 12):
                 time.sleep(wait_time)
             else:
                 print(f"  ❌ Release {tag} not found after {max_retries} attempts")
-                print(f"     You can manually publish notes with:")
+                print("     You can manually publish notes with:")
                 print(f"     gh release edit {tag} --notes-file docs/release-notes-{tag}.md --latest")
         else:
             print(f"  ❌ Failed to publish release notes: {result.stderr}")
@@ -767,11 +767,11 @@ def deploy_docs(version: str) -> bool:
 
     if result.returncode != 0:
         print(f"  ⚠️  Failed to trigger docs deployment: {result.stderr}")
-        print(f"     You can manually trigger with:")
+        print("     You can manually trigger with:")
         print(f"     gh workflow run docs.yml -f version={version}")
         return False
 
-    print(f"  ✅ Docs deployment triggered")
+    print("  ✅ Docs deployment triggered")
     print(f"     View at: https://rcconsult.github.io/ppxai/{version}/")
     return True
 
@@ -791,7 +791,7 @@ def build_intel_assets(version: str) -> bool:
     build_script = PROJECT_ROOT / "scripts/build-intel.sh"
 
     if not build_script.exists():
-        print(f"  ⚠️  build-intel.sh not found, skipping Intel build")
+        print("  ⚠️  build-intel.sh not found, skipping Intel build")
         return True
 
     # The script auto-detects platform and exits gracefully if not Intel Mac
@@ -800,9 +800,9 @@ def build_intel_assets(version: str) -> bool:
     if result.returncode == 0:
         # Check if it actually built (vs graceful skip)
         if "Skipping macOS Intel build" in result.stdout:
-            print(f"  ⏭️  Not on macOS Intel - Intel build skipped")
+            print("  ⏭️  Not on macOS Intel - Intel build skipped")
         else:
-            print(f"  ✅ Intel Mac assets built and uploaded")
+            print("  ✅ Intel Mac assets built and uploaded")
         return True
     else:
         print(f"  ❌ Intel build failed: {result.stderr or result.stdout}")
@@ -838,15 +838,15 @@ def verify_release(version: str) -> bool:
 
     if result.returncode != 0:
         print(f"  ❌ FATAL: `gh release view v{version}` failed — release was NOT created.")
-        print(f"     Most common cause: a CI job failed and the `release` job was skipped.")
-        print(f"     Check failed runs:   gh run list --workflow='Build Executables' --limit 3")
-        print(f"     Re-run failed jobs:  gh run rerun <RUN_ID> --failed")
+        print("     Most common cause: a CI job failed and the `release` job was skipped.")
+        print("     Check failed runs:   gh run list --workflow='Build Executables' --limit 3")
+        print("     Re-run failed jobs:  gh run rerun <RUN_ID> --failed")
         sys.exit(1)
 
     try:
         data = json.loads(result.stdout)
     except json.JSONDecodeError:
-        print(f"  ❌ FATAL: could not parse `gh release view` output as JSON.")
+        print("  ❌ FATAL: could not parse `gh release view` output as JSON.")
         sys.exit(1)
 
     assets = [a["name"] for a in data.get("assets", [])]
@@ -899,19 +899,19 @@ def verify_release(version: str) -> bool:
         print(f"  ❌ FATAL: {len(missing_required)} required asset(s) missing:")
         for m in missing_required:
             print(f"      ❌ {m}")
-        print(f"     A build matrix job likely failed or was skipped.")
-        print(f"     Check:   gh run list --workflow='Build Executables' --limit 3")
+        print("     A build matrix job likely failed or was skipped.")
+        print("     Check:   gh run list --workflow='Build Executables' --limit 3")
         sys.exit(1)
 
     if missing_optional:
-        print(f"  ⏭️  Optional assets not present (Intel Mac builds — OK if local build skipped):")
+        print("  ⏭️  Optional assets not present (Intel Mac builds — OK if local build skipped):")
         for m in missing_optional:
             print(f"      ⏭️  {m}")
 
     if len(body) < MIN_RELEASE_BODY_CHARS:
         print(f"  ❌ FATAL: release body is only {len(body)} chars "
               f"(threshold: {MIN_RELEASE_BODY_CHARS}).")
-        print(f"     Release-notes publishing failed silently. Recover with:")
+        print("     Release-notes publishing failed silently. Recover with:")
         print(f"     gh release edit v{version} \\")
         print(f"       --notes-file docs/release-notes-v{version}.md")
         sys.exit(1)
@@ -920,7 +920,7 @@ def verify_release(version: str) -> bool:
     if notes_path.exists():
         expected_prefix = notes_path.read_text(encoding="utf-8").strip()[:200]
         if expected_prefix and expected_prefix not in body:
-            print(f"  ⚠️  WARNING: release body does not contain the first 200 chars")
+            print("  ⚠️  WARNING: release body does not contain the first 200 chars")
             print(f"     of docs/release-notes-v{version}.md — manual review recommended.")
 
     print(f"  ✅ {len(assets)} assets verified, body {len(body)} chars.")
@@ -967,16 +967,16 @@ def main():
         total_steps += 1  # Add "Merge to Master" step
 
     print(f"\n{'━' * 50}")
-    print(f"  🚀 ppxai Release Script")
+    print("  🚀 ppxai Release Script")
     print(f"{'━' * 50}")
     print(f"  Current version: {current_version}")
     print(f"  Target version:  v{version}")
     print(f"  Release date:    {date}")
 
     if args.dry_run:
-        print(f"  Mode: DRY RUN (no changes will be made)")
+        print("  Mode: DRY RUN (no changes will be made)")
     if args.redo:
-        print(f"  Mode: REDO (will delete existing release first)")
+        print("  Mode: REDO (will delete existing release first)")
 
     step = 0
     step_times = []  # Track (step_name, duration) tuples
@@ -994,10 +994,10 @@ def main():
     step += 1
     print_step(step, total_steps, "Checking Git Status")
     if not check_git_clean() and not args.force:
-        print(f"  ❌ Git working directory is not clean")
-        print(f"     Commit or stash changes first, or use --force")
+        print("  ❌ Git working directory is not clean")
+        print("     Commit or stash changes first, or use --force")
         sys.exit(1)
-    print(f"  ✅ Git working directory is clean")
+    print("  ✅ Git working directory is clean")
     record_step("Git Status")
 
     # Step 2: Check branch
@@ -1006,11 +1006,11 @@ def main():
     is_master, current_branch = check_branch()
     if not is_master and not args.force:
         print(f"  ❌ Not on master branch (current: {current_branch})")
-        print(f"     Switch to master first: git checkout master")
+        print("     Switch to master first: git checkout master")
         print(f"     Or use --force to release from {current_branch} (will merge to master)")
         sys.exit(1)
     if is_master:
-        print(f"  ✅ On master branch")
+        print("  ✅ On master branch")
     else:
         print(f"  ⚠️  On {current_branch} branch (--force used, will merge to master)")
     record_step("Branch Check")
@@ -1021,18 +1021,18 @@ def main():
         print_step(step, total_steps, "Merging to Master")
         if not merge_to_master_if_needed(current_branch, dry_run=args.dry_run):
             print(f"\n❌ Failed to merge {current_branch} to master")
-            print(f"   Resolve any conflicts and try again")
+            print("   Resolve any conflicts and try again")
             sys.exit(1)
         record_step("Merge to Master")
 
     # Pre-flight check: Warn if release notes are still template
     if not check_release_notes_not_template(version):
         notes_file = f"docs/release-notes-v{version}.md"
-        print(f"\n  ⚠️  WARNING: Release notes appear to be template!")
+        print("\n  ⚠️  WARNING: Release notes appear to be template!")
         print(f"     File: {notes_file}")
-        print(f"     Please edit the release notes with actual content before proceeding.")
-        print(f"     The release will continue, but GitHub release notes will be incomplete.")
-        print(f"")
+        print("     Please edit the release notes with actual content before proceeding.")
+        print("     The release will continue, but GitHub release notes will be incomplete.")
+        print("")
         if not args.force:
             response = input("     Continue anyway? [y/N]: ").strip().lower()
             if response != 'y':
@@ -1047,7 +1047,7 @@ def main():
         record_step("Delete Release")
 
     if args.dry_run:
-        print(f"\n📋 DRY RUN - Would execute the following steps:\n")
+        print("\n📋 DRY RUN - Would execute the following steps:\n")
 
         dry_step = 0
 
@@ -1061,9 +1061,9 @@ def main():
         print(f"  {dry_step}. 📝 Update version files:")
         for filepath in VERSION_FILES:
             print(f"       - {filepath}")
-        print(f"       - vscode-extension/package-lock.json (typed JSON edit)")
-        print(f"       - README.md (version + test-count badges)")
-        print(f"       - CHANGELOG.md (substitute `unreleased` → today's date)")
+        print("       - vscode-extension/package-lock.json (typed JSON edit)")
+        print("       - README.md (version + test-count badges)")
+        print("       - CHANGELOG.md (substitute `unreleased` → today's date)")
 
         # Validation
         dry_step += 1
@@ -1115,7 +1115,7 @@ def main():
         print(f"\n{'━' * 50}")
         print(f"  Total steps: {dry_step}")
         print(f"{'━' * 50}")
-        print(f"\n✅ Dry run complete. Use without --dry-run to execute.")
+        print("\n✅ Dry run complete. Use without --dry-run to execute.")
         return
 
     # Step 3: Update version files
@@ -1143,7 +1143,7 @@ def main():
         )
         if new_content != content:
             index_path.write_text(new_content, encoding='utf-8')
-            print(f"  ✅ Updated: docs/index.md")
+            print("  ✅ Updated: docs/index.md")
 
     # Substitute ``## [X.Y.Z] - unreleased`` → ``## [X.Y.Z] - <today>`` in
     # CHANGELOG.md. The placeholder is the canonical state during
@@ -1157,7 +1157,7 @@ def main():
     step += 1
     print_step(step, total_steps, "Validating Version References")
     if not run_validation(version):
-        print(f"\n❌ Validation failed. Some files may not have been updated correctly.")
+        print("\n❌ Validation failed. Some files may not have been updated correctly.")
         print(f"   Run: python scripts/validate-release.py v{version}")
         sys.exit(1)
     record_step("Validation")
@@ -1172,7 +1172,7 @@ def main():
     step += 1
     print_step(step, total_steps, "Running TypeScript Lint")
     if not run_typescript_lint():
-        print(f"\n❌ TypeScript lint failed. Fix issues and try again.")
+        print("\n❌ TypeScript lint failed. Fix issues and try again.")
         sys.exit(1)
     record_step("TS Lint")
 
@@ -1182,7 +1182,7 @@ def main():
         print_step(step, total_steps, "Running Tests")
         tests_passed, test_count = run_tests()
         if not tests_passed:
-            print(f"\n❌ Tests failed. Fix issues and try again.")
+            print("\n❌ Tests failed. Fix issues and try again.")
             sys.exit(1)
         # Update README badges with actual test count
         if test_count > 0:
@@ -1206,8 +1206,8 @@ def main():
         step += 1
         print_step(step, total_steps, "Waiting for CI")
         if not wait_for_ci(version):
-            print(f"\n⚠️  CI did not complete successfully")
-            print(f"    Check: https://github.com/rcconsult/ppxai/actions")
+            print("\n⚠️  CI did not complete successfully")
+            print("    Check: https://github.com/rcconsult/ppxai/actions")
         record_step("CI Wait")
 
     # Step 11: Publish release notes
@@ -1220,14 +1220,14 @@ def main():
     step += 1
     print_step(step, total_steps, "Deploying Documentation")
     if not deploy_docs(version):
-        print(f"\n⚠️  Docs deployment failed, but release continues")
+        print("\n⚠️  Docs deployment failed, but release continues")
     record_step("Deploy Docs")
 
     # Step 13: Build Intel Mac assets (auto-detects platform)
     step += 1
     print_step(step, total_steps, "Building Intel Mac Assets")
     if not build_intel_assets(version):
-        print(f"\n⚠️  Intel build failed, but release continues")
+        print("\n⚠️  Intel build failed, but release continues")
     record_step("Intel Build")
 
     # Step 14: Verify release
@@ -1242,7 +1242,7 @@ def main():
     print(f"  ✅ Release v{version} complete!")
     print(f"{'━' * 50}")
     print(f"  https://github.com/rcconsult/ppxai/releases/tag/v{version}")
-    print(f"\n  ⏱️  Timing Summary:")
+    print("\n  ⏱️  Timing Summary:")
     for step_name, duration in step_times:
         print(f"      {step_name:.<20} {duration:>6.1f}s")
     print(f"      {'─' * 27}")

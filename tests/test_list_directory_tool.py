@@ -15,8 +15,6 @@ its summary can quote the actual path verbatim instead of guessing.
 
 from __future__ import annotations
 
-import os
-from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest

@@ -4,7 +4,7 @@ StatusBar widget - Shows provider, model, tools status, and context info.
 Supports dynamic badge management with transactional updates (GitOps-style).
 """
 
-from typing import Optional
+
 from textual.app import ComposeResult
 from textual.containers import Horizontal
 from textual.reactive import reactive
@@ -86,7 +86,7 @@ class BadgeTransaction:
         self._operations.append(("show", badge_id))
         return self
 
-    def commit(self) -> tuple[bool, Optional[str]]:
+    def commit(self) -> tuple[bool, str | None]:
         """Apply staged changes atomically.
 
         Returns:
@@ -207,7 +207,7 @@ class StatusBar(Static):
         # Initialize state BEFORE setting reactive properties
         # (reactive properties trigger watch_* methods immediately)
         self._badges: dict[str, StatusBadge] = {}
-        self._container: Optional[Horizontal] = None
+        self._container: Horizontal | None = None
         # Now set reactive properties
         self.provider = provider
         self.model = model

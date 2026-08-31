@@ -15,13 +15,11 @@ from __future__ import annotations
 
 import xml.etree.ElementTree as ET
 import zipfile
-from typing import Any, List, Optional, Tuple
+from typing import Any
 
+from ...file_ref import FILE_REF_PROPERTIES, resolve_file_reference
 from ...types import ToolEngineProtocol, ToolManagerProtocol
 from ..base import BaseTool
-from ...file_ref import resolve_file_reference
-from ...file_ref import FILE_REF_PROPERTIES
-
 
 _MAX_TEXT_CHARS = 100_000
 
@@ -31,9 +29,9 @@ _W_NS = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
 
 def _resolve_file(
     engine: Any,
-    file_id: Optional[str] = None,
-    path: Optional[str] = None,
-) -> Tuple[Optional[Any], Optional[str]]:
+    file_id: str | None = None,
+    path: str | None = None,
+) -> tuple[Any | None, str | None]:
     """Resolve a file reference via the unified engine resolver.
 
     Accepts EITHER `file_id` (SessionFileStore chat attachment) or
@@ -66,10 +64,10 @@ def _extract_docx_text(path) -> str:
         return f"(Could not read .docx file: {exc})"
 
     root = ET.fromstring(xml_data)
-    paragraphs: List[str] = []
+    paragraphs: list[str] = []
 
     for para in root.iter(f"{_W_NS}p"):
-        texts: List[str] = []
+        texts: list[str] = []
         for t_elem in para.iter(f"{_W_NS}t"):
             if t_elem.text:
                 texts.append(t_elem.text)
@@ -99,8 +97,8 @@ class ReadDocxTool(BaseTool):
 
     async def execute(
         self,
-        file_id: Optional[str] = None,
-        path: Optional[str] = None,
+        file_id: str | None = None,
+        path: str | None = None,
         **kwargs,
     ) -> str:
         meta, err = _resolve_file(self.engine, file_id=file_id, path=path)

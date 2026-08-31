@@ -18,11 +18,10 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from ppxai.engine.providers.base import BaseProvider
+from ppxai.engine.providers.gemini import GeminiProvider
 from ppxai.engine.providers.openai_compat import OpenAICompatibleProvider
 from ppxai.engine.providers.openai_native import OpenAINativeProvider
-from ppxai.engine.providers.gemini import GeminiProvider
 from ppxai.engine.providers.perplexity import PerplexityProvider
-
 
 ALL_PROVIDER_CLASSES = [
     OpenAICompatibleProvider,

@@ -4,12 +4,13 @@ Integration tests for premium web search fallback system (v1.13.4).
 Tests end-to-end scenarios with actual configuration files and multiple API key combinations.
 """
 
-import pytest
-import json
-import tempfile
 import os
+import tempfile
 from pathlib import Path
-from unittest.mock import patch, AsyncMock, MagicMock
+from unittest.mock import patch
+
+import pytest
+
 from ppxai.engine.types import ToolUsage, UsageStats
 
 

@@ -63,7 +63,7 @@ Implementation notes:
 """
 
 import asyncio
-from typing import Any, Dict, Optional
+from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
@@ -79,15 +79,14 @@ from ...config import (
     get_provider_config,
 )
 from ...config.execution import get_effective_oneshot_path
-from ...engine.task_authorizer import TIERS as _TIERS
+from ...engine import task_runner as _task_runner
 from ...engine.providers import create_provider
 from ...engine.providers.openai_compat import OpenAICompatibleProvider
-from ...engine.types import ProviderCapabilities
+from ...engine.task_authorizer import TIERS as _TIERS
+from ...engine.task_authorizer import TaskAuthorizationError, authorize_oneshot
 from ...engine.tools.search_backends import resolve_web_search_backend
-from ...engine.task_authorizer import authorize_oneshot
+from ...engine.types import ProviderCapabilities
 from ..state import get_agent_run_registry
-from ...engine import task_runner as _task_runner
-from ...engine.task_authorizer import TaskAuthorizationError
 
 logger = get_logger("server")
 
@@ -107,16 +106,16 @@ class OneshotRequest(BaseModel):
     removing or repurposing fields requires a `/v2/oneshot`.
     """
     prompt: str = Field(..., min_length=1, description="User message content.")
-    provider: Optional[str] = Field(
+    provider: str | None = Field(
         None,
         description="Provider ID. Falls back to the server's default_provider.",
     )
-    model: Optional[str] = Field(
+    model: str | None = Field(
         None,
         description="Model ID. Falls back to the provider's default_model.",
     )
-    system: Optional[str] = Field(None, description="Optional system message.")
-    response_format: Optional[Dict[str, Any]] = Field(
+    system: str | None = Field(None, description="Optional system message.")
+    response_format: dict[str, Any] | None = Field(
         None,
         description=(
             "OpenAI-shaped response_format dict, e.g. "
@@ -124,10 +123,10 @@ class OneshotRequest(BaseModel):
             '{"type": "json_schema", "json_schema": {...}}.'
         ),
     )
-    max_tokens: Optional[int] = Field(
+    max_tokens: int | None = Field(
         None, gt=0, description="Cap output tokens. Overrides per-model config."
     )
-    temperature: Optional[float] = Field(
+    temperature: float | None = Field(
         None,
         ge=0.0,
         le=2.0,
@@ -153,25 +152,25 @@ class OneshotGrounding(BaseModel):
     process-global — so concurrent requests can't cross-attribute."""
 
     searched: bool = False
-    run_id: Optional[str] = None
+    run_id: str | None = None
     # F4: the query strings the model actually searched (from the run's
     # tool_call events), the premium backend that served them (from the
     # run's usage record; "duckduckgo" inferred for the costless path), and
     # the premium-search cost in USD for THIS request.
     queries: list = Field(default_factory=list)
-    backend: Optional[str] = None
+    backend: str | None = None
     search_cost: float = 0.0
 
 
 class OneshotResponse(BaseModel):
     content: str
-    finish_reason: Optional[str] = None
+    finish_reason: str | None = None
     model: str
     provider: str
-    usage: Optional[OneshotUsage] = None
+    usage: OneshotUsage | None = None
     # ADR 0009 §4 wire contract: optional, additive — absent when the
     # enrichment path is off (the shipped consumers see no change).
-    grounding: Optional[OneshotGrounding] = None
+    grounding: OneshotGrounding | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -237,7 +236,7 @@ ONESHOT_SEARCH_ITERATIONS = _TIERS["oneshot"].iterations
 ONESHOT_SEARCH_TIMEOUT_S = 180.0
 
 
-def _web_search_egress_hosts(provider_name: Optional[str] = None) -> list:
+def _web_search_egress_hosts(provider_name: str | None = None) -> list:
     """The bare HOSTNAMES of web_search's EFFECTIVE egress set, for the run's
     allowlist. Resolver entries are URLs (the shape `tool_targets` compares
     against), but `NetworkPolicy` allowlist rules take bare hosts — passing
@@ -260,7 +259,7 @@ def _web_search_egress_hosts(provider_name: Optional[str] = None) -> list:
 
 def _grounding_from_events(
     registry, run_id: str
-) -> tuple[OneshotGrounding, Optional[OneshotUsage]]:
+) -> tuple[OneshotGrounding, OneshotUsage | None]:
     """Derive the grounding record + model usage from the run's OWN audit
     trail (F4). No side channel, no process-global: the tool_call events
     carry the queries, the run_usage event carries tokens + the premium
@@ -272,9 +271,9 @@ def _grounding_from_events(
     # mutated-in field would silently vanish from the wire.
     searched = False
     queries: list = []
-    backend: Optional[str] = None
+    backend: str | None = None
     search_cost = 0.0
-    usage: Optional[OneshotUsage] = None
+    usage: OneshotUsage | None = None
     try:
         for e in registry.read_events(run_id):
             etype = getattr(e, "type", "")
@@ -329,7 +328,7 @@ def _authorize_oneshot_search_loop(task: str, provider_name: str, model: str):
 
 
 async def _oneshot_via_search_loop(
-    req: OneshotRequest, provider_name: str, model: str, owner: Optional[str]
+    req: OneshotRequest, provider_name: str, model: str, owner: str | None
 ) -> OneshotResponse:
     """Serve an enriched oneshot as a REAL `kind=oneshot` registry run.
 
@@ -638,7 +637,7 @@ async def oneshot(req: OneshotRequest, request: Request) -> OneshotResponse:
     # the provider's full envelope (finish_reason / model / usage) byte-
     # identical to the pre-FU direct path — the awaiting handler holds this
     # closure, so the envelope never touches shared state.
-    envelope: Dict[str, Any] = {}
+    envelope: dict[str, Any] = {}
 
     async def _runner(m) -> str:
         # provider.oneshot is blocking I/O (SDK round-trip). Offload it so a

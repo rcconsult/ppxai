@@ -29,7 +29,6 @@ from ppxai.engine.agent_runs import AgentRunRegistry, FilesystemAgentRunStore
 from ppxai.engine.agent_spec import AgentSpecError, spec_from_mapping
 from ppxai.engine.tools.network_policy import apply_egress_ceiling
 
-
 # ---------------------------------------------------------------------------
 # Config readers
 # ---------------------------------------------------------------------------
@@ -157,8 +156,8 @@ def task_client(tmp_path, monkeypatch):
     the runner stubbed (captures its kwargs), and tool-config emptied so
     egress assertions see exactly what the merge assembled."""
     import ppxai.server.state as state
-    from ppxai.server.routes import agent_v1
     from ppxai.engine import task_runner
+    from ppxai.server.routes import agent_v1
 
     reg = AgentRunRegistry(FilesystemAgentRunStore(tmp_path / "runs"))
     monkeypatch.setattr(state, "_agent_run_registry", reg)
@@ -486,8 +485,8 @@ def _pin_subagent(monkeypatch, provider, model):
     """default_grant carries no provider/model (Item 58 scope: tools/network/
     budget), so a bare task's provider/model come from default_subagent — as
     on coder (default_subagent=qwen36)."""
-    from ppxai.server.routes import agent_v1
     from ppxai.config import execution as exec_mod
+    from ppxai.server.routes import agent_v1
     sub = {"provider": provider, "model": model}
     monkeypatch.setattr(agent_v1, "get_execution_default_subagent", lambda: sub)
     monkeypatch.setattr(exec_mod, "get_execution_default_subagent", lambda: sub)
@@ -628,7 +627,6 @@ class TestRunFamilyCeiling:
         c, reg, _cap, _ov = task_client
         from ppxai.config import execution as exec_mod
         from ppxai.server.routes import agent_v1
-        from ppxai.engine import task_runner
         monkeypatch.setattr(
             exec_mod, "get_execution_run_config",
             lambda: {"web_search": True, "grounding": False},

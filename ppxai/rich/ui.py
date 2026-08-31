@@ -4,15 +4,14 @@ UI/display functions for the ppxai terminal interface.
 
 import json
 import sys
-from typing import Optional
 
 from rich.console import Console
-from rich.panel import Panel
 from rich.markdown import Markdown
+from rich.panel import Panel
 from rich.prompt import Prompt
 from rich.table import Table
 
-from ..config import MODELS, USAGE_FILE, PROVIDERS, get_provider_config
+from ..config import PROVIDERS, USAGE_FILE, get_provider_config
 from ..prompts import SPEC_GUIDELINES, SPEC_TEMPLATES
 
 # Initialize Rich console
@@ -286,7 +285,7 @@ For complete documentation with advanced patterns:
     console.print(Panel(Markdown(help_text), title="📝 File Editing Tools - Interactive Guide", border_style="green", padding=(1, 2)))
 
 
-def display_spec_help(spec_type: Optional[str] = None):
+def display_spec_help(spec_type: str | None = None):
     """Display specification guidelines or specific template."""
     if not spec_type:
         # Show general guidelines
@@ -317,7 +316,7 @@ def display_models(provider: str = None):
     console.print(table)
 
 
-def select_model(provider: str = None) -> Optional[str]:
+def select_model(provider: str = None) -> str | None:
     """Prompt user to select a model.
 
     Returns None and prints a clean exit message on Ctrl+C / EOF

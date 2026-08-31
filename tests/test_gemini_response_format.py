@@ -18,10 +18,10 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from ppxai.engine.providers.gemini import (
+    _GEMINI_SCHEMA_KEYS,
     GeminiProvider,
     is_available,
     response_format_to_gemini,
-    _GEMINI_SCHEMA_KEYS,
 )
 
 pytestmark = pytest.mark.skipif(

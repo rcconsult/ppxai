@@ -7,25 +7,22 @@ v1.13.10: Migrated to Command Factory pattern
 v1.15.0: Migrated to type-based renderer dispatch
 """
 
-from typing import List
 
-from ..config import get_model_context_limit, get_max_injection_size
+from ..config import get_max_injection_size, get_model_context_limit
 from ..engine.tools.builtin import web_premium
 from ..usage import get_provider_errors, get_usage_report
 from .factory import CommandFactory, CommandSpec
 from .protocol import CommandContext
 from .results import (
-    ResultStatus,
     CommandResult,
     CompositeResult,
     ConfirmationResult,
-    TableResult,
-    KeyValueResult,
     ErrorResult,
+    KeyValueResult,
     NotificationResult,
-    TextResult,
+    ResultStatus,
+    TableResult,
 )
-
 
 # =============================================================================
 # Type-Based Result Handlers (v1.15.0)
@@ -229,7 +226,7 @@ def _tools_status(context: CommandContext) -> CommandResult:
         )
 
 
-def _tools_config(context: CommandContext, args: List[str]) -> CommandResult:
+def _tools_config(context: CommandContext, args: list[str]) -> CommandResult:
     """Configure tool settings."""
     if not context.engine_client or not context.engine_client.tools_enabled:
         return NotificationResult(
@@ -304,7 +301,7 @@ def _tools_config(context: CommandContext, args: List[str]) -> CommandResult:
         )
 
 
-def _tools_set(context: CommandContext, args: List[str]) -> CommandResult:
+def _tools_set(context: CommandContext, args: list[str]) -> CommandResult:
     """Set tool settings (verbose mode)."""
     if not args:
         # Show current settings
@@ -357,7 +354,7 @@ def _tools_set(context: CommandContext, args: List[str]) -> CommandResult:
         )
 
 
-def _tools_agent(context: CommandContext, args: List[str]) -> CommandResult:
+def _tools_agent(context: CommandContext, args: list[str]) -> CommandResult:
     """Control agent mode for autonomous task execution."""
     if not context.engine_client:
         return ErrorResult(status=ResultStatus.ERROR, message="Engine client not available")

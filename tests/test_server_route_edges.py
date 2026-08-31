@@ -17,8 +17,6 @@ Gaps closed here:
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock
-
 import pytest
 
 pytest.importorskip("fastapi")
@@ -28,7 +26,6 @@ from fastapi import Request
 from fastapi.testclient import TestClient
 
 from ppxai.server.routes.preview import _extract_session_from_referer
-
 
 # ---------------------------------------------------------------------------
 # Helpers

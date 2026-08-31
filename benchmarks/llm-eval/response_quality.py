@@ -6,9 +6,8 @@ detecting anti-patterns and measuring response cleanliness.
 """
 
 import re
-import json
-from typing import Tuple, List, Dict, Any
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from typing import Any
 
 
 @dataclass
@@ -17,8 +16,8 @@ class QualityMetrics:
     tool_correctness: bool      # Did the right tool get called?
     tool_success: bool           # Did the tool execute successfully?
     response_quality: float      # Response cleanliness score (0.0-1.0)
-    anti_patterns: List[str]     # Detected anti-patterns
-    quality_notes: List[str]     # Detailed quality observations
+    anti_patterns: list[str]     # Detected anti-patterns
+    quality_notes: list[str]     # Detailed quality observations
 
     @property
     def overall_score(self) -> float:
@@ -40,7 +39,7 @@ class QualityMetrics:
         """Test passes if score >= 0.7 (70% threshold)."""
         return self.overall_score >= 0.7
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for storage."""
         return {
             "tool_correctness": self.tool_correctness,
@@ -54,7 +53,7 @@ class QualityMetrics:
 
 
 def validate_response_quality(
-    response: Dict[str, Any],
+    response: dict[str, Any],
     expected_tool: str = None,
     tool_calling_method: str = "native",
 ) -> QualityMetrics:
@@ -194,7 +193,7 @@ def _has_explanation_with_tool(content: str) -> bool:
     return False
 
 
-def _has_hallucinated_tools(content: str, tool_calls: List[Dict]) -> bool:
+def _has_hallucinated_tools(content: str, tool_calls: list[dict]) -> bool:
     """Check if model claims to use tools that weren't actually called."""
     if not content or not tool_calls:
         return False
@@ -230,7 +229,7 @@ def format_quality_report(metrics: QualityMetrics) -> str:
             lines.append(f"  - {pattern}")
 
     if metrics.quality_notes:
-        lines.append(f"\nQuality notes:")
+        lines.append("\nQuality notes:")
         for note in metrics.quality_notes:
             lines.append(f"  - {note}")
 

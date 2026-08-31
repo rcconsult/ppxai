@@ -21,16 +21,16 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from ppxai.engine.tools.builtin.filesystem import (
-    ListDirectoryTool,
-    SearchFilesTool,
-)
 from ppxai.engine.tools.builtin.display import DisplayFileTool
 from ppxai.engine.tools.builtin.editor import (
     ApplyPatchTool,
     DeleteLinesTool,
     InsertTextTool,
     ReplaceBlockTool,
+)
+from ppxai.engine.tools.builtin.filesystem import (
+    ListDirectoryTool,
+    SearchFilesTool,
 )
 from ppxai.engine.tools.builtin.shell import ShellExecuteTool
 
@@ -222,8 +222,8 @@ async def test_delete_lines_success_message_uses_resolved_path(tmp_path):
 
 
 def test_tools_prompt_includes_current_working_directory():
-    from ppxai.engine.tools.manager import ToolManager
     from ppxai.engine.tools.base import BaseTool
+    from ppxai.engine.tools.manager import ToolManager
 
     class _Stub(BaseTool):
         def __init__(self):
@@ -244,8 +244,8 @@ def test_tools_prompt_includes_current_working_directory():
 
 
 def test_tools_prompt_omits_cwd_when_none():
-    from ppxai.engine.tools.manager import ToolManager
     from ppxai.engine.tools.base import BaseTool
+    from ppxai.engine.tools.manager import ToolManager
 
     class _Stub(BaseTool):
         def __init__(self):

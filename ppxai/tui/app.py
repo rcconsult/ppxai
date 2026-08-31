@@ -9,65 +9,65 @@ This is the core application class that manages:
 - Split view for file viewing/editing
 """
 
-import asyncio
 import inspect
 import os
-import time
 import threading
+import time
 import traceback
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 from textual.app import App, ComposeResult
-from textual.containers import Container, Horizontal, Vertical
+from textual.containers import Horizontal, Vertical
 from textual.css.query import NoMatches
-from textual.message import Message
-from textual.widgets import Header, Footer, Static, Input, RichLog
-
-from ppxai.common.autosave_guard import AutosaveFailureGuard
-from ppxai.common.consent import normalize_consent_response
-from ppxai.common.logger import Logger, get_logger
-from ppxai.constants import ConsentResponse
-from ppxai.tui.widgets.status_bar import StatusBar
-from ppxai.tui.widgets.footer_status import FooterStatus
-from ppxai.tui.widgets.chat_view import ChatView
-from ppxai.tui.widgets.input_box import InputBox
-from ppxai.tui.widgets.side_panel import SidePanel
-from ppxai.tui.widgets.file_tree import FileTree
-from ppxai.tui.keys import get_app_bindings
-from ppxai.tui.widgets.code_editor import CodeEditor, get_syntax_theme_for_app_theme
-from ppxai.tui.widgets.dialog import ConsentDialog
-from ppxai.tui.widgets.message_box import MessageBox
-from ppxai.tui.themes.themes import CUSTOM_THEMES, DEFAULT_THEME, CYCLE_THEMES
-from ppxai.tui.clipboard import copy_to_clipboard, paste_from_clipboard, is_clipboard_available
-from ppxai.tui import commands as local_commands
-from ppxai.tui.completer import TextualCompleter
-from ppxai.tui.event_bus import EventBus, Events
-from ppxai.tui import stream_handler
-from ppxai.tui.terminal import can_display_images
-
-# Engine integration (Phase 6.1)
-from ppxai.engine import EngineClient
-from ppxai.engine.types import Event, EventType
-from ppxai.engine.session import SessionManager
-from ppxai.config import (
-    PROVIDERS, get_default_provider, get_default_model, get_api_key, initialize,
-    get_tui_config, get_auto_restore_mode, get_auto_save_interval,
-)
-from ppxai.version import __version__, format_version_banner
+from textual.widgets import Footer, Header
 
 # Command Factory integration (Phase 6.1.1 - Technical debt cleanup)
 from ppxai.commands import CommandFactory
-from ppxai.commands.attach import build_multimodal_content, _load_file as _attach_load_file
-from ppxai.commands.protocol import CommandContext
-from ppxai.commands.results import CommandResult, DirectoryListingResult, DirectoryTreeResult
+from ppxai.commands.attach import _load_file as _attach_load_file
+from ppxai.commands.attach import build_multimodal_content
+from ppxai.commands.results import DirectoryListingResult, DirectoryTreeResult
+from ppxai.common.autosave_guard import AutosaveFailureGuard
+from ppxai.common.consent import normalize_consent_response
+from ppxai.common.logger import Logger, get_logger
+from ppxai.config import (
+    get_default_model,
+    get_default_provider,
+    get_tui_config,
+    initialize,
+)
+from ppxai.constants import ConsentResponse
+
+# Engine integration (Phase 6.1)
+from ppxai.engine import EngineClient
 from ppxai.rendering.textual_renderer import TextualRenderer
-from .session_restore_ops import check_session_restoration
-from .session_restore_ops import restore_session
+from ppxai.tui import commands as local_commands
+from ppxai.tui import stream_handler
+from ppxai.tui.clipboard import copy_to_clipboard, paste_from_clipboard
+from ppxai.tui.completer import TextualCompleter
+from ppxai.tui.event_bus import EventBus, Events
+from ppxai.tui.keys import get_app_bindings
+from ppxai.tui.terminal import can_display_images
+from ppxai.tui.themes.themes import CUSTOM_THEMES, CYCLE_THEMES, DEFAULT_THEME
+from ppxai.tui.widgets.chat_view import ChatView
+from ppxai.tui.widgets.code_editor import CodeEditor, get_syntax_theme_for_app_theme
+from ppxai.tui.widgets.dialog import ConsentDialog
+from ppxai.tui.widgets.file_tree import FileTree
+from ppxai.tui.widgets.footer_status import FooterStatus
+from ppxai.tui.widgets.input_box import InputBox
+from ppxai.tui.widgets.message_box import MessageBox
+from ppxai.tui.widgets.side_panel import SidePanel
+from ppxai.tui.widgets.status_bar import StatusBar
+from ppxai.version import __version__, format_version_banner
+
 from ..config import set_tui_config
 from ..engine.task_backend import configure_task_backend
 from .run_consent import RunConsentWatcher
+from .session_restore_ops import check_session_restoration, restore_session
+from ppxai.config import (
+    PROVIDERS, get_default_provider, get_default_model, get_api_key, initialize,
+    get_tui_config, get_auto_restore_mode, get_auto_save_interval,
+)  # noqa: F401 — patched by tests
 
 
 class PPXAIDEApp(App):
@@ -106,7 +106,7 @@ class PPXAIDEApp(App):
         self._event_bus = EventBus(log_events=self._trace_logging)
 
         self._current_theme_index = 0
-        self._engine_client: Optional[EngineClient] = None
+        self._engine_client: EngineClient | None = None
         # Shadow state fields — kept for compose() which runs before engine init.
         # After _initialize_engine(), properties delegate to engine_client.state (AppState).
         self._provider = "perplexity"
@@ -135,15 +135,15 @@ class PPXAIDEApp(App):
         # Reasoning token state (DeepSeek R1, GPT-OSS thinking)
         self._reasoning_started = False
         self._reasoning_content = ""
-        self._reasoning_message: Optional["MessageBox"] = None  # For streaming updates
+        self._reasoning_message: "MessageBox" | None = None  # For streaming updates
         self._reasoning_update_pending = False  # Throttling flag
         self._reasoning_update_timer = None  # Timer for throttled updates
 
         # Cached widget references — set in on_mount, avoids repeated DOM traversal
-        self._chat_view: Optional["ChatView"] = None
-        self._status_bar: Optional["StatusBar"] = None
-        self._footer_status: Optional["FooterStatus"] = None
-        self._input_box: Optional["InputBox"] = None
+        self._chat_view: "ChatView" | None = None
+        self._status_bar: "StatusBar" | None = None
+        self._footer_status: "FooterStatus" | None = None
+        self._input_box: "InputBox" | None = None
 
         # Files staged for the next chat turn (v1.17.4 Phase 7.1-7.3).
         # Populated by FileTree.FileAttach handler and /attach command,
@@ -1059,7 +1059,7 @@ class PPXAIDEApp(App):
                 # Check if result is a coroutine (async handler)
                 if inspect.iscoroutine(result):
                     if self._debug_logging:
-                        self._log.debug(f"Handler returned coroutine, awaiting it")
+                        self._log.debug("Handler returned coroutine, awaiting it")
                     result = await result
 
                 # Render result if it's a CommandResult type
@@ -1166,7 +1166,7 @@ class PPXAIDEApp(App):
                         tb = traceback.format_exc()
                         error_msg += f"\n[dim]Full traceback:\n{tb}[/dim]"
                     else:
-                        error_msg += f"[dim]Use --trace flag for full traceback[/dim]"
+                        error_msg += "[dim]Use --trace flag for full traceback[/dim]"
 
                     chat_view.add_system_message(error_msg)
                 else:
@@ -1719,7 +1719,7 @@ class PPXAIDEApp(App):
             if can_display_images():
                 await self.show_file_in_panel(path, "", mode="image", read_only=True)
             else:
-                self.notify(f"Terminal does not support image display", title=path.name, severity="warning")
+                self.notify("Terminal does not support image display", title=path.name, severity="warning")
             return
 
         try:
@@ -1816,8 +1816,8 @@ class PPXAIDEApp(App):
         path: Path,
         content: str,
         mode: str = "code",
-        line: Optional[int] = None,
-        col: Optional[int] = None,
+        line: int | None = None,
+        col: int | None = None,
         read_only: bool = True,
     ) -> None:
         """Show a file in the side panel.

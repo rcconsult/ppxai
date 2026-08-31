@@ -3,7 +3,7 @@ TUI and session configuration.
 """
 
 import json
-from typing import Any, Dict
+from typing import Any
 
 from ..common.logger import get_logger
 from .loader import USER_CONFIG_FILE, find_config_file
@@ -16,7 +16,7 @@ logger = get_logger("config")
 # TUI Configuration
 # =============================================================================
 
-def get_tui_config() -> Dict[str, Any]:
+def get_tui_config() -> dict[str, Any]:
     """Get TUI-specific configuration."""
     defaults = {
         "theme": "standard",
@@ -90,7 +90,7 @@ def set_tui_config(key: str, value: Any) -> bool:
 # Session Configuration
 # =============================================================================
 
-def get_session_config() -> Dict[str, Any]:
+def get_session_config() -> dict[str, Any]:
     """Get session-specific configuration."""
     defaults = {
         "auto_restore": "prompt",
@@ -143,7 +143,7 @@ DEFAULT_FILE_TREE_IGNORE_DIRS = [
 ]
 
 
-def get_file_tree_config() -> Dict[str, Any]:
+def get_file_tree_config() -> dict[str, Any]:
     """Get file-tree-specific configuration."""
     defaults = {
         "ignore_dirs": list(DEFAULT_FILE_TREE_IGNORE_DIRS),

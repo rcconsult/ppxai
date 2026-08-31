@@ -18,7 +18,6 @@ import pytest
 
 # Trigger side-effect registrations so CommandFactory is populated
 import ppxai.commands.handler  # noqa: F401
-
 from ppxai.engine.completion import complete
 
 
@@ -418,11 +417,15 @@ class TestTaskCompletionRoute:
 
     def _client(self, tmp_path, monkeypatch):
         from types import SimpleNamespace
+
         from fastapi import FastAPI
         from fastapi.testclient import TestClient
+
         import ppxai.server.state as state
         from ppxai.engine.agent_runs import (
-            AgentRunRegistry, FilesystemAgentRunStore, RunMeta,
+            AgentRunRegistry,
+            FilesystemAgentRunStore,
+            RunMeta,
         )
         from ppxai.server.routes import completion as completion_route
 

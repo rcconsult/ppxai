@@ -5,7 +5,6 @@ Checkpoint management endpoints (v1.12.0).
 import subprocess
 
 from fastapi import APIRouter, Depends, HTTPException
-from typing import Optional
 
 from ...common.logger import get_logger
 from ..state import Session, get_session

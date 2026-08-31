@@ -24,15 +24,14 @@ from unittest.mock import patch
 import pytest
 
 from ppxai.engine.chat import chat_with_tools
+from ppxai.engine.model_facts import ModelFacts
 from ppxai.engine.session import SessionManager
 from ppxai.engine.types import (
-    AgentBeatState,
     Event,
     EventType,
     Message,
     ProviderCapabilities,
 )
-from ppxai.engine.model_facts import ModelFacts
 
 
 class MockProvider:

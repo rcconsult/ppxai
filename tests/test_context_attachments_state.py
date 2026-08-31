@@ -24,7 +24,6 @@ from ppxai.engine.client import EngineClient
 from ppxai.engine.session import SessionManager
 from ppxai.engine.types import Message
 
-
 # -----------------------------------------------------------------------------
 # AppState field exists and has the documented shape
 # -----------------------------------------------------------------------------

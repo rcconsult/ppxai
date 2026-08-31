@@ -28,9 +28,9 @@ import base64
 import difflib
 import mimetypes
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from ..common.logger import get_logger
 from ..engine.artifact_projector import ContextAttachmentProjector
@@ -180,9 +180,9 @@ def _classify(media_type: str, suffix: str) -> str:
 
 def _load_file(
     raw_path: str,
-    working_dir: Optional[str],
+    working_dir: str | None,
     file_store: Any = None,
-) -> tuple[Optional[PendingFile], Optional[str]]:
+) -> tuple[PendingFile | None, str | None]:
     """Resolve and load a single file, returning (pending, error_message).
 
     Relative paths resolve against the command context's working_dir so the
@@ -361,7 +361,7 @@ def _fmt_size(n: int) -> str:
     return f"{n / (1024 * 1024):.1f} MB"
 
 
-def _summary_lines(pending: List[PendingFile]) -> List[str]:
+def _summary_lines(pending: list[PendingFile]) -> list[str]:
     lines = []
     for i, pf in enumerate(pending, 1):
         kind_icon = "🖼" if pf.kind == "image" else "📄"
@@ -369,7 +369,7 @@ def _summary_lines(pending: List[PendingFile]) -> List[str]:
     return lines
 
 
-def _get_pending_files(context: Any) -> List[PendingFile]:
+def _get_pending_files(context: Any) -> list[PendingFile]:
     """Return the staged-file list, creating it on the wrapped handler if absent.
 
     Stored on the underlying CommandHandler (via the proxy) so state survives
@@ -392,7 +392,7 @@ def _get_pending_files(context: Any) -> List[PendingFile]:
     return pending
 
 
-def _handle_attach_list(context: Any, pending: List[PendingFile]) -> CommandResult:
+def _handle_attach_list(context: Any, pending: list[PendingFile]) -> CommandResult:
     """Render the combined staging + in-context attachment listing.
 
     Shows two sections when relevant:
@@ -405,7 +405,7 @@ def _handle_attach_list(context: Any, pending: List[PendingFile]) -> CommandResu
     """
     # Pull in-context attachments from AppState (single source of truth).
     engine_client = getattr(context, "engine_client", None)
-    in_context: List[Dict[str, Any]] = []
+    in_context: list[dict[str, Any]] = []
     if engine_client is not None and hasattr(engine_client, "get_context_attachments"):
         in_context = engine_client.get_context_attachments()
 
@@ -424,7 +424,7 @@ def _handle_attach_list(context: Any, pending: List[PendingFile]) -> CommandResu
             ),
         )
 
-    lines: List[str] = []
+    lines: list[str] = []
     if pending:
         lines.append(
             f"Staged ({len(pending)} file{'s' if len(pending) != 1 else ''}, "
@@ -628,8 +628,8 @@ def handle_attach(context: Any, args: str) -> CommandResult:
     engine_client = getattr(context, "engine_client", None)
     file_store = getattr(engine_client, "file_store", None) if engine_client else None
 
-    added: List[PendingFile] = []
-    errors: List[str] = []
+    added: list[PendingFile] = []
+    errors: list[str] = []
     for raw in paths:
         pf, err = _load_file(raw, working_dir, file_store=file_store)
         if err:
@@ -701,15 +701,15 @@ def handle_attach(context: Any, args: str) -> CommandResult:
     return result
 
 
-def _split_paths(args: str) -> List[str]:
+def _split_paths(args: str) -> list[str]:
     """Split `/attach` args into individual paths, honoring simple quoting.
 
     Supports double-quoted paths with spaces; everything else is whitespace-
     separated. Keeps the implementation deliberately small — shlex would also
     try to interpret backslashes, which breaks Windows paths.
     """
-    paths: List[str] = []
-    current: List[str] = []
+    paths: list[str] = []
+    current: list[str] = []
     in_quote = False
     for ch in args:
         if ch == '"':
@@ -726,7 +726,7 @@ def _split_paths(args: str) -> List[str]:
     return paths
 
 
-def collect_context_attachments(session: Any) -> List[ContextAttachment]:
+def collect_context_attachments(session: Any) -> list[ContextAttachment]:
     """Scan a session's messages for multimodal attachments still in context.
 
     Standalone fallback used in tests and contexts where no EngineClient is
@@ -765,7 +765,7 @@ def collect_context_attachments(session: Any) -> List[ContextAttachment]:
     # an engine.
 
     seen: set[str] = set()
-    result: List[ContextAttachment] = []
+    result: list[ContextAttachment] = []
     for msg in messages:
         refs = list(getattr(msg, "attachments", None) or [])
         if not refs:
@@ -784,7 +784,7 @@ def collect_context_attachments(session: Any) -> List[ContextAttachment]:
 
 def build_multimodal_content(
     text: str,
-    pending: List[PendingFile],
+    pending: list[PendingFile],
     *,
     model: str = "",
     provider: str = "",
@@ -833,10 +833,10 @@ def build_multimodal_content(
             in `parts`. Empty list when no attachments produced one
             (e.g., text-only call, or all attachments failed).
     """
-    text_chunks: List[str] = [text] if text else []
-    non_text_parts: List[Dict[str, Any]] = []
-    text_artifact_refs: List[Any] = []  # refs whose blocks merge into combined-text
-    non_text_artifact_refs: List[Any] = []  # refs whose blocks become non-text parts
+    text_chunks: list[str] = [text] if text else []
+    non_text_parts: list[dict[str, Any]] = []
+    text_artifact_refs: list[Any] = []  # refs whose blocks merge into combined-text
+    non_text_artifact_refs: list[Any] = []  # refs whose blocks become non-text parts
 
     for pf in pending:
         result = preprocess_file(
@@ -880,7 +880,7 @@ def build_multimodal_content(
 
     combined_text = "\n".join(chunk for chunk in text_chunks if chunk)
 
-    parts: List[Dict[str, Any]] = []
+    parts: list[dict[str, Any]] = []
     if combined_text:
         parts.append({"type": "text", "text": combined_text})
     parts.extend(non_text_parts)
@@ -899,7 +899,7 @@ def build_multimodal_content(
     # Multiple text artifacts sharing block_index=0 is correct — the
     # join key is "which content block does this artifact's payload
     # contribute to," not a uniqueness constraint.
-    attachment_refs: List[Any] = []
+    attachment_refs: list[Any] = []
     has_combined_text = bool(combined_text)
     text_block_index = 0 if has_combined_text else -1  # -1 sentinel: no text block
 

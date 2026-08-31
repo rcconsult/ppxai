@@ -7,7 +7,7 @@ Run: python test_tab_focus.py
 
 from textual.app import App, ComposeResult
 from textual.containers import Vertical
-from textual.widgets import Input, Button, Static
+from textual.widgets import Button, Input, Static
 
 
 class TabFocusApp(App):

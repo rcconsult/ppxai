@@ -5,10 +5,9 @@ This module sits below providers.py and prompts.py in the import DAG.
 It depends only on store.py (no provider/prompt dependencies).
 """
 
-from typing import Any, Dict, List
+from typing import Any
 
 from .store import ConfigStore
-
 
 # =============================================================================
 # Context Defaults
@@ -23,7 +22,7 @@ DEFAULT_CONTEXT_WARN_PERCENT = 80
 # Context Configuration
 # =============================================================================
 
-def get_context_config() -> Dict[str, Any]:
+def get_context_config() -> dict[str, Any]:
     """Get context and truncation configuration."""
     defaults = {
         "max_injection_size": DEFAULT_MAX_INJECTION_SIZE,
@@ -59,7 +58,7 @@ def get_context_warn_percent() -> int:
 DEFAULT_BOOTSTRAP_FILES = ["AGENTS.md", "CLAUDE.md", "INSTRUCTIONS.md"]
 
 
-def get_bootstrap_config() -> Dict[str, Any]:
+def get_bootstrap_config() -> dict[str, Any]:
     """Get bootstrap context configuration.
 
     Returns:
@@ -75,7 +74,7 @@ def get_bootstrap_config() -> Dict[str, Any]:
     return {**defaults, **bootstrap_config}
 
 
-def get_bootstrap_files() -> List[str]:
+def get_bootstrap_files() -> list[str]:
     """Get list of bootstrap file aliases to search for.
 
     Returns:

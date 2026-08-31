@@ -13,22 +13,22 @@ Architecture:
 import asyncio
 import json
 import time
+from collections.abc import AsyncIterator
 from dataclasses import asdict
 from pathlib import Path
-from typing import AsyncIterator, Dict, Any, List, Optional, Protocol, Callable
+from typing import Any, Protocol
 
-from .types import AgentBeatState, Event, EventType, Message, UsageStats
-from .session import SessionManager, sanitize_outbound
-from .tools.manager import ToolManager
-from .tools.builtin import web_premium
-from .tools.parser import parse_tool_call, detect_truncated_tool_call, strip_tool_json_from_text
-from .tools.validator import ResponseValidator, ValidationResult, check_session_pollution
+from ..common.logger import get_logger
+from ..config import calculate_cost, get_agent_config, get_system_prompt, get_system_prompt_mode
+from ..config.defaults import DEFAULT_AGENT_ZOMBIE_THRESHOLD
 from .model_facts import shipped_facts_for_model
 from .providers.base import BaseProvider
-from ..config import get_system_prompt, get_system_prompt_mode, calculate_cost
-from ..common.logger import get_logger
-from ..config.defaults import DEFAULT_AGENT_ZOMBIE_THRESHOLD
-from ..config import get_agent_config
+from .session import SessionManager, sanitize_outbound
+from .tools.builtin import web_premium
+from .tools.manager import ToolManager
+from .tools.parser import detect_truncated_tool_call, parse_tool_call, strip_tool_json_from_text
+from .tools.validator import ResponseValidator, check_session_pollution
+from .types import AgentBeatState, Event, EventType, Message, UsageStats
 
 logger = get_logger("chat")
 
@@ -97,7 +97,7 @@ class ChatContext(Protocol):
     """
 
     @property
-    def provider(self) -> Optional[BaseProvider]:
+    def provider(self) -> BaseProvider | None:
         """Current AI provider."""
         ...
 
@@ -127,21 +127,21 @@ class ChatContext(Protocol):
         ...
 
     @property
-    def system_prompt_override(self) -> Optional[str]:
+    def system_prompt_override(self) -> str | None:
         """Per-engine system-prompt override (v1.19.x). When non-None, it
         REPLACES the config system prompt for this run (the v1 agent tier
         uses it for bounded-agent framing). None = use config."""
         ...
 
-    def get_consent_events(self) -> List[Event]:
+    def get_consent_events(self) -> list[Event]:
         """Get and clear queued consent events."""
         ...
 
-    def track_tool_usage(self, tool_name: str, usage: Dict[str, Any]) -> None:
+    def track_tool_usage(self, tool_name: str, usage: dict[str, Any]) -> None:
         """Track tool usage for cost calculation."""
         ...
 
-    def commit_agent_changes_if_needed(self, message: str) -> Optional[str]:
+    def commit_agent_changes_if_needed(self, message: str) -> str | None:
         """Commit agent changes if in agent mode. Returns commit hash or None."""
         ...
 
@@ -149,7 +149,7 @@ class ChatContext(Protocol):
         """Get bootstrap prompt for current provider/model (v1.14.0)."""
         ...
 
-    def get_working_dir(self) -> Optional[str]:
+    def get_working_dir(self) -> str | None:
         """Get current working directory (v1.15.2)."""
         ...
 
@@ -374,7 +374,7 @@ async def chat_simple(
         return
 
 
-def _build_prompt_based_messages(ctx: ChatContext) -> List[Message]:
+def _build_prompt_based_messages(ctx: ChatContext) -> list[Message]:
     """Build message list with tool descriptions injected into system prompt.
 
     Assembles: bootstrap prompt + system prompt + tool prompt into a single
@@ -454,7 +454,7 @@ def _build_prompt_based_messages(ctx: ChatContext) -> List[Message]:
 async def _execute_single_tool(
     ctx: ChatContext,
     tool_name: str,
-    tool_args: Dict[str, Any],
+    tool_args: dict[str, Any],
     validator: 'ResponseValidator',
     iteration: int
 ) -> tuple:

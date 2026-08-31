@@ -12,8 +12,9 @@ import base64
 import io
 import logging
 from collections import namedtuple
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, IO, Iterable, NamedTuple, Union
+from typing import IO, Any, NamedTuple, Union
 
 try:
     from PIL import Image as PILImage

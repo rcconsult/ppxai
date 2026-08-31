@@ -22,7 +22,6 @@ Tests cover:
 
 from __future__ import annotations
 
-import os
 from unittest.mock import MagicMock
 
 import pytest
@@ -34,7 +33,6 @@ from fastapi.testclient import TestClient
 
 from ppxai.engine.types import Event, EventType
 from ppxai.server.state import with_drained_events
-
 
 # ---------------------------------------------------------------------------
 # Helper unit tests

@@ -1,4 +1,5 @@
 import os
+
 import pytest
 from _pytest.terminal import TerminalReporter
 from dotenv import load_dotenv

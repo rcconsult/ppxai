@@ -3,7 +3,6 @@ Utility functions for the ppxai application.
 """
 
 from pathlib import Path
-from typing import Optional
 
 from rich.console import Console
 from rich.prompt import Prompt
@@ -12,7 +11,7 @@ from rich.prompt import Prompt
 console = Console()
 
 
-def read_file_content(filepath: str) -> Optional[str]:
+def read_file_content(filepath: str) -> str | None:
     """Read and return file content, handling errors gracefully."""
     try:
         path = Path(filepath).expanduser().resolve()

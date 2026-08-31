@@ -16,8 +16,6 @@ Three config knobs under `tools.web_search`, all read by the /task tier:
 
 from __future__ import annotations
 
-import os
-
 import pytest
 
 from ppxai.config.tools import ConfigStore
@@ -216,7 +214,7 @@ def test_get_weather_egress_baseline_authorizes_policy(tools_cfg, monkeypatch):
 def test_pinned_backend_does_not_fall_back(tools_cfg, monkeypatch):
     import asyncio
 
-    from ppxai.engine.tools.builtin import web_premium, web
+    from ppxai.engine.tools.builtin import web, web_premium
 
     tools_cfg["web_search"] = {"preferred": "perplexity", "strict": True}
     monkeypatch.setenv("PERPLEXITY_API_KEY", "k")
@@ -275,7 +273,7 @@ def test_get_weather_tries_wttr_first_even_when_pinned(tools_cfg, monkeypatch):
     # (accuracy) — premium is only a fallback if wttr.in fails.
     import asyncio
 
-    from ppxai.engine.tools.builtin import web_premium, web
+    from ppxai.engine.tools.builtin import web, web_premium
 
     tools_cfg["web_search"] = {"preferred": "perplexity"}
     monkeypatch.setenv("PERPLEXITY_API_KEY", "k")
@@ -295,7 +293,7 @@ def test_get_weather_uses_openmeteo_before_premium(tools_cfg, monkeypatch):
     # BEFORE any premium web search — premium must NOT run if open-meteo works.
     import asyncio
 
-    from ppxai.engine.tools.builtin import web_premium, web
+    from ppxai.engine.tools.builtin import web, web_premium
 
     tools_cfg["web_search"] = {"preferred": "auto"}
     monkeypatch.setenv("PERPLEXITY_API_KEY", "k")
@@ -325,7 +323,7 @@ def test_get_weather_auto_falls_back_when_wttr_and_openmeteo_unreachable(
     # premium web-search backend run.
     import asyncio
 
-    from ppxai.engine.tools.builtin import web_premium, web
+    from ppxai.engine.tools.builtin import web, web_premium
 
     tools_cfg["web_search"] = {"preferred": "auto"}
     monkeypatch.setenv("PERPLEXITY_API_KEY", "k")
@@ -352,7 +350,7 @@ def test_get_weather_no_key_returns_openmeteo_error(tools_cfg, monkeypatch):
     # informative open-meteo error is surfaced (not a hard crash).
     import asyncio
 
-    from ppxai.engine.tools.builtin import web_premium, web
+    from ppxai.engine.tools.builtin import web, web_premium
 
     tools_cfg["web_search"] = {"preferred": "auto"}  # no PERPLEXITY/GEMINI key
 
@@ -448,7 +446,7 @@ def test_openmeteo_network_error_is_stringified(monkeypatch):
 def test_get_weather_auto_uses_wttr_when_reachable(tools_cfg, monkeypatch):
     import asyncio
 
-    from ppxai.engine.tools.builtin import web_premium, web
+    from ppxai.engine.tools.builtin import web, web_premium
 
     tools_cfg["web_search"] = {"preferred": "auto"}
     monkeypatch.setenv("PERPLEXITY_API_KEY", "k")
@@ -469,7 +467,7 @@ def test_ordering_falls_back_along_the_resolved_chain(tools_cfg, monkeypatch):
     # perplexity entirely; the resolver chain fixes the asymmetry.)
     import asyncio
 
-    from ppxai.engine.tools.builtin import web_premium, web
+    from ppxai.engine.tools.builtin import web, web_premium
 
     tools_cfg["web_search"] = {"preferred": "perplexity"}
     monkeypatch.setenv("PERPLEXITY_API_KEY", "k")

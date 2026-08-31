@@ -6,10 +6,10 @@ These tests verify the FastAPI HTTP server endpoints work correctly.
 v1.13.10: Updated to work with SessionManager instead of global default_engine.
 """
 
-import pytest
 import asyncio
-from unittest.mock import MagicMock, AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
+import pytest
 
 # Skip tests if server dependencies not installed
 pytest.importorskip("fastapi")
@@ -17,6 +17,7 @@ pytest.importorskip("httpx")
 
 
 from fastapi.testclient import TestClient
+
 import ppxai.server.http as http_module
 from ppxai.server.session_manager import SessionManager
 
@@ -479,9 +480,10 @@ class TestSSETermination:
     @pytest.mark.asyncio
     async def test_sse_generator_sends_done_signal(self):
         """Test that sse_event_generator sends [DONE] termination signal."""
-        from ppxai.server.http import sse_event_generator
-        from ppxai.engine.types import Event, EventType
         from unittest.mock import AsyncMock
+
+        from ppxai.engine.types import Event, EventType
+        from ppxai.server.http import sse_event_generator
 
         # Create mock engine that yields a simple response
         mock_engine = AsyncMock()
@@ -511,9 +513,10 @@ class TestSSETermination:
     @pytest.mark.asyncio
     async def test_sse_coding_task_generator_sends_done_signal(self):
         """Test that sse_coding_task_generator sends [DONE] termination signal."""
-        from ppxai.server.http import sse_coding_task_generator
-        from ppxai.engine.types import Event, EventType
         from unittest.mock import AsyncMock
+
+        from ppxai.engine.types import Event, EventType
+        from ppxai.server.http import sse_coding_task_generator
 
         # Create mock engine
         mock_engine = AsyncMock()
@@ -668,7 +671,6 @@ class TestFileWritePathValidation:
 
     def test_file_write_outside_working_dir_denied(self, mock_client, tmp_path):
         """Test POST /files/write denies paths outside working dir."""
-        import tempfile
         client, mock_engine = mock_client
 
         # Working dir is tmp_path

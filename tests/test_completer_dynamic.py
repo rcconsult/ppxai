@@ -18,7 +18,6 @@ from prompt_toolkit.document import Document
 
 # Triggers all side-effect registrations in commands/*.py
 import ppxai.commands.handler  # noqa: F401
-from ppxai.commands.factory import CommandFactory
 from ppxai.rich.main import PPXAICompleter
 
 

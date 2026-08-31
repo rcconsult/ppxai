@@ -17,14 +17,13 @@ stops both static and backend.
 
 from __future__ import annotations
 
-import asyncio
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from ppxai.commands.results import PreviewResult, ResultStatus
-from ppxai.engine.preview_backend import PreviewBackend, PreviewBackendError
+import ppxai.rendering.rich_renderer as rr  # noqa: E402
+import ppxai.rendering.textual_renderer as tr  # noqa: E402
 
 # Import ppxai.tui.app FIRST so its `from ppxai.rendering.textual_renderer
 # import TextualRenderer` line fully populates textual_renderer's module
@@ -34,8 +33,8 @@ from ppxai.engine.preview_backend import PreviewBackend, PreviewBackendError
 # loading), and the cycle fails with ImportError. The normal app boot
 # path doesn't hit this because ppxaide.py imports ppxai.tui first.
 import ppxai.tui.app  # noqa: E402,F401
-import ppxai.rendering.rich_renderer as rr  # noqa: E402
-import ppxai.rendering.textual_renderer as tr  # noqa: E402
+from ppxai.commands.results import PreviewResult, ResultStatus
+from ppxai.engine.preview_backend import PreviewBackend, PreviewBackendError
 
 
 def _backend_stub(pid: int = 12345, port: int = 8000, mode: str = "served") -> PreviewBackend:

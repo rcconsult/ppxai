@@ -12,13 +12,15 @@ Architecture:
 Version: see ``ppxai.__version__`` (single source of truth in ``ppxai/version.py``).
 """
 
+from collections.abc import AsyncIterator, Callable
 from datetime import datetime
-from typing import AsyncIterator, Callable, Optional, Any, Dict
-from ppxai.engine.types import Event, EventType
-from ppxai.rich.themes import get_theme, DEFAULT_THEME
-from ppxai.rich.ui_components import render_message
+from typing import Any
+
 from ppxai.commands.factory import CommandFactory
+from ppxai.engine.types import Event, EventType
 from ppxai.rendering.rich_renderer import RichRenderer
+from ppxai.rich.themes import DEFAULT_THEME, get_theme
+from ppxai.rich.ui_components import render_message
 
 
 class EventHandler:
@@ -44,15 +46,15 @@ class EventHandler:
 
     def __init__(
         self,
-        on_stream_start: Optional[Callable[[], None]] = None,
-        on_stream_chunk: Optional[Callable[[str], None]] = None,
-        on_reasoning_chunk: Optional[Callable[[str], None]] = None,
-        on_stream_end: Optional[Callable[[str], None]] = None,
-        on_tool_call: Optional[Callable[[Dict[str, Any]], None]] = None,
-        on_tool_result: Optional[Callable[[Any], None]] = None,
-        on_tool_error: Optional[Callable[[str], None]] = None,
-        on_error: Optional[Callable[[str], None]] = None,
-        on_consent_request: Optional[Callable[[Dict[str, Any]], bool]] = None,
+        on_stream_start: Callable[[], None] | None = None,
+        on_stream_chunk: Callable[[str], None] | None = None,
+        on_reasoning_chunk: Callable[[str], None] | None = None,
+        on_stream_end: Callable[[str], None] | None = None,
+        on_tool_call: Callable[[dict[str, Any]], None] | None = None,
+        on_tool_result: Callable[[Any], None] | None = None,
+        on_tool_error: Callable[[str], None] | None = None,
+        on_error: Callable[[str], None] | None = None,
+        on_consent_request: Callable[[dict[str, Any]], bool] | None = None,
     ):
         """
         Initialize event handler with callbacks.
@@ -314,7 +316,7 @@ class TUIEventHandler(EventHandler):
 
     def _tui_agent_complete(self, event: Event) -> None:
         summary = event.data.get("summary", "") if isinstance(event.data, dict) else ""
-        self.console.print(f"\n[green]✅ Task completed![/green]")
+        self.console.print("\n[green]✅ Task completed![/green]")
         if summary:
             self.console.print(f"[dim]Summary: {summary}[/dim]\n")
 
@@ -474,7 +476,7 @@ class TUIEventHandler(EventHandler):
             self.console.print(panel)
         self.console.print()  # Blank line after response
 
-    def _on_tool_call(self, tool_data: Dict[str, Any]):
+    def _on_tool_call(self, tool_data: dict[str, Any]):
         """Handle tool call for TUI."""
         tool_name = tool_data['tool']
         tool_args = tool_data['arguments']

@@ -10,7 +10,6 @@ The ZIP contains binaries, web UI, config templates, and an install script
 that deploys everything to ~/.ppxai/ on the target machine.
 """
 
-import os
 import sys
 import zipfile
 from pathlib import Path

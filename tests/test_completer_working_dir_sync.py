@@ -14,7 +14,6 @@ Both paths that move the working directory converge here:
 They differ only in what triggers the call, so one set of assertions covers both.
 """
 
-from pathlib import Path
 
 import pytest
 

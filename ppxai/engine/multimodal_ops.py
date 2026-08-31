@@ -28,12 +28,12 @@ client readers at the same time.
 
 import base64
 import os
-from typing import Any, Dict, List
+from typing import Any
 
 from ..common.logger import get_logger
 from ..config import get_vision_model_config
 from .artifact_projector import ContextAttachmentProjector
-from .types import ImageAttachmentRef, OfficeAttachmentRef, PdfAttachmentRef, TextAttachmentRef
+from .types import ImageAttachmentRef, OfficeAttachmentRef, PdfAttachmentRef
 from .uploaded_file import (
     UPLOADED_FILE_RE,
     parse_uploaded_file_markers,
@@ -81,7 +81,7 @@ def refresh_context_attachments(engine) -> None:
     SessionFileStore); clients use it to request thumbnails from a
     future server endpoint.
     """
-    attachments: List[Dict[str, Any]] = []
+    attachments: list[dict[str, Any]] = []
     seen_keys: set = set()
     for turn_index, msg in enumerate(engine.session.messages):
         # Role filter — see docstring. Tool/assistant multimodal content
@@ -162,7 +162,7 @@ def refresh_context_attachments(engine) -> None:
 
 def _project_with_media_type_enrichment(
     ref: Any, content: Any, file_store: Any,
-) -> Dict[str, Any] | None:
+) -> dict[str, Any] | None:
     """Project an artifact ref via ContextAttachmentProjector, then
     enrich `media_type` from the file store / data URI when the ref
     didn't carry one.
@@ -212,7 +212,7 @@ def _project_with_media_type_enrichment(
     return entry
 
 
-def _synthesize_refs_from_content(content: Any) -> List[Any]:
+def _synthesize_refs_from_content(content: Any) -> list[Any]:
     """Build artifact refs from raw content blocks for messages whose
     `Message.attachments` field is empty.
 
@@ -228,7 +228,7 @@ def _synthesize_refs_from_content(content: Any) -> List[Any]:
     """
     if not isinstance(content, list):
         return []
-    refs: List[Any] = []
+    refs: list[Any] = []
     # Local import — avoid circular dep at module load (artifact_projections
     # imports types which imports artifact_registry which... etc.)
 
@@ -281,7 +281,7 @@ def _synthesize_refs_from_content(content: Any) -> List[Any]:
     return refs
 
 
-def _ref_from_legacy_text_marker(marker: Dict[str, str]) -> Any:
+def _ref_from_legacy_text_marker(marker: dict[str, str]) -> Any:
     """Synthesize a kind-specific MarshallableArtifact from a parsed
     `<uploaded_file>` XML marker (pre-v1.17.6 session shape).
 
@@ -312,7 +312,7 @@ def _ref_from_legacy_text_marker(marker: Dict[str, str]) -> Any:
     )
 
 
-def get_context_attachments(engine) -> List[Dict[str, Any]]:
+def get_context_attachments(engine) -> list[dict[str, Any]]:
     """Return the current multimodal attachments in conversation context.
 
     Reads from AppState — the canonical source maintained by
@@ -398,7 +398,7 @@ def remove_context_attachment(engine, target: str) -> int:
                 if fid:
                     matched_file_ids.add(fid)
 
-    def _block_matches(msg: Any, idx: int, block: Dict[str, Any]) -> bool:
+    def _block_matches(msg: Any, idx: int, block: dict[str, Any]) -> bool:
         """True if this structured block should be removed.
 
         ADR 0006 Step 7c (v1.18.6): for image blocks (which no longer
@@ -457,7 +457,7 @@ def remove_context_attachment(engine, target: str) -> int:
         if not isinstance(content, list):
             continue
 
-        kept: List[Dict[str, Any]] = []
+        kept: list[dict[str, Any]] = []
         had_attachment = False
         for idx, block in enumerate(content):
             if not isinstance(block, dict):

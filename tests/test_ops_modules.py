@@ -6,7 +6,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from ppxai.constants import ConsentMode, ConsentResponse, ShellRiskLevel
-from ppxai.engine.types import Message
 from ppxai.engine.bootstrap_ops import (
     get_active_hints,
     get_bootstrap_prompt,
@@ -37,8 +36,7 @@ from ppxai.engine.session_ops import (
     get_usage,
     restore_session,
 )
-from ppxai.engine.types import EventType
-
+from ppxai.engine.types import EventType, Message
 
 # ---------------------------------------------------------------------------
 # Helpers

@@ -30,7 +30,6 @@ from ppxai.engine.providers.wire.generate_content import GenerateContentHandler
 from ppxai.engine.providers.wire.responses import ResponsesHandler
 from ppxai.engine.types import Message
 
-
 #: A block that is legal-looking but carries a non-spec top-level key. The
 #: validator checks each block's TOP-LEVEL keys against the wire spec — a key
 #: nested inside `image_url` is NOT what it looks at, which is how an early

@@ -13,11 +13,11 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from ppxai.server.state import Session, get_session
 from ppxai.server.routes.config import router as config_router
 from ppxai.server.routes.providers import router as providers_router
 from ppxai.server.routes.sessions import router as sessions_router
 from ppxai.server.routes.state import router as state_router  # v1.18.0
+from ppxai.server.state import Session, get_session
 
 
 def create_test_app():

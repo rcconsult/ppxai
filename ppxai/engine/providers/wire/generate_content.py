@@ -25,11 +25,10 @@ conversion cannot be shared with the OpenAI-shaped wires even in principle.
 import base64
 import json
 import logging
-from typing import Any, Dict, List
+from typing import Any
 
 from ...types import Message
 from ...uploaded_file import assert_wire_blocks_clean, flatten_uploaded_file_blocks
-
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +46,7 @@ class GenerateContentHandler:
     name = "generate_content"
 
     @staticmethod
-    def convert_messages(messages: List[Message]) -> tuple:
+    def convert_messages(messages: list[Message]) -> tuple:
         """Convert Message objects to Gemini format.
 
         Gemini uses a different format than OpenAI:
@@ -73,7 +72,7 @@ class GenerateContentHandler:
         """
         contents = []
         system_parts = []
-        call_id_to_name: Dict[str, str] = {}
+        call_id_to_name: dict[str, str] = {}
 
         if not messages:
             return contents, None
@@ -97,7 +96,7 @@ class GenerateContentHandler:
                 # content to its text representation.
                 system_parts.append(m.text_content())
             elif m.role == "assistant" and m.tool_calls:
-                parts: List[Dict[str, Any]] = []
+                parts: list[dict[str, Any]] = []
                 text = m.text_content()
                 if text and text.strip():
                     parts.append({"text": text})
@@ -110,7 +109,7 @@ class GenerateContentHandler:
                     call_id = tc.get("id")
                     if call_id:
                         call_id_to_name[call_id] = name
-                    fc_part: Dict[str, Any] = {
+                    fc_part: dict[str, Any] = {
                         "function_call": {"name": name, "args": args}
                     }
                     # Item 45: Gemini 3.x REQUIRES the signature it issued with
@@ -157,7 +156,7 @@ class GenerateContentHandler:
         return contents, system_instruction
 
     @staticmethod
-    def _parse_tool_call_arguments(raw: Any) -> Dict[str, Any]:
+    def _parse_tool_call_arguments(raw: Any) -> dict[str, Any]:
         """Normalize a recorded tool-call `arguments` value to a dict.
 
         The engine stores arguments as a JSON string (OpenAI wire shape);
@@ -176,7 +175,7 @@ class GenerateContentHandler:
         return {}
 
     @staticmethod
-    def _content_to_gemini_parts(content: Any) -> List[Dict[str, Any]]:
+    def _content_to_gemini_parts(content: Any) -> list[dict[str, Any]]:
         """Convert Message.content to Gemini `parts` list.
 
         String content → single text part. List content (OpenAI multimodal
@@ -200,7 +199,7 @@ class GenerateContentHandler:
         # pre-R5.
         content = flatten_uploaded_file_blocks(content)
 
-        parts: List[Dict[str, Any]] = []
+        parts: list[dict[str, Any]] = []
         for block in content:
             if not isinstance(block, dict):
                 continue

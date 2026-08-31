@@ -18,17 +18,16 @@ from ..config import find_config_file, reload_config, set_tui_config
 from .factory import CommandFactory, CommandSpec
 from .protocol import CommandContext
 from .results import (
-    ResultStatus,
     CommandResult,
     ConfirmationResult,
-    KeyValueResult,
-    ErrorResult,
     DirectoryListingResult,
     DirectoryTreeResult,
+    ErrorResult,
+    FileViewResult,
+    KeyValueResult,
+    ResultStatus,
     SideEffectKind,
     TreeResult,
-    TextResult,
-    FileViewResult,
 )
 
 # Directories to skip in file listings and tree views
@@ -67,7 +66,7 @@ def _show_active_hints(handler: Any, console) -> None:
             display_hint = hint[:80] + "..." if len(hint) > 80 else hint
             console.print(f"  [green]•[/green] [{source}] {display_hint}")
     else:
-        console.print(f"\n[cyan]Provider Hints:[/cyan] [dim]none active[/dim]")
+        console.print("\n[cyan]Provider Hints:[/cyan] [dim]none active[/dim]")
         available = hints_info["all_provider_keys"]
         if available:
             console.print(f"  [dim]Available: {', '.join(available)}[/dim]")
@@ -82,7 +81,7 @@ def _show_active_hints(handler: Any, console) -> None:
             display_hint = hint[:80] + "..." if len(hint) > 80 else hint
             console.print(f"  [green]•[/green] [{pattern}] {display_hint}")
     else:
-        console.print(f"\n[cyan]Model Hints:[/cyan] [dim]none active[/dim]")
+        console.print("\n[cyan]Model Hints:[/cyan] [dim]none active[/dim]")
         available = hints_info["all_model_patterns"]
         if available:
             console.print(f"  [dim]Available patterns: {', '.join(available)}[/dim]")
@@ -140,13 +139,13 @@ def _show_bootstrap_hierarchy(handler: Any, console) -> None:
     if status.get("has_hints"):
         provider_hints = status.get("provider_hints", [])
         model_hints = status.get("model_hints", [])
-        console.print(f"\n[cyan]Hints Defined:[/cyan]")
+        console.print("\n[cyan]Hints Defined:[/cyan]")
         if provider_hints:
             console.print(f"  Provider: {', '.join(provider_hints)}")
         if model_hints:
             console.print(f"  Model: {', '.join(model_hints)}")
     else:
-        console.print(f"\n[cyan]Hints:[/cyan] [dim]none defined[/dim]")
+        console.print("\n[cyan]Hints:[/cyan] [dim]none defined[/dim]")
 
     # Tips
     console.print("\n[dim]Tips:[/dim]")
@@ -413,7 +412,7 @@ def handle_debug_log(context: CommandContext, args: str) -> CommandResult:
                 # Use FileViewResult for proper log display (Phase 2.3)
                 return FileViewResult(
                     status=ResultStatus.INFO,
-                    message=f"Debug log (last 50 lines)",
+                    message="Debug log (last 50 lines)",
                     filepath=str(log_file),
                     content=content,
                     language="log",

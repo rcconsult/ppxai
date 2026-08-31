@@ -5,6 +5,7 @@ Tests the new ToolUsage dataclass and how tool usage is aggregated in UsageStats
 """
 
 import pytest
+
 from ppxai.engine.types import ToolUsage, UsageStats
 
 

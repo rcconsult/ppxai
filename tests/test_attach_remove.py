@@ -38,7 +38,6 @@ from ppxai.commands.results import ResultStatus
 from ppxai.engine.client import EngineClient
 from ppxai.engine.types import Message
 
-
 # Real 1x1 red PNG — survives magic-byte validation in build_multimodal_content.
 _RED_PIXEL_PNG = base64.b64decode(
     b"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4z8DwHwAFAQH/c4"

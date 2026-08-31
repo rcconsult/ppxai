@@ -5,7 +5,6 @@ Provides Theme dataclass and built-in themes for customizing the terminal UI app
 """
 
 from dataclasses import dataclass
-from typing import Dict
 
 
 @dataclass
@@ -53,7 +52,7 @@ class Theme:
 
 
 # Built-in themes
-THEMES: Dict[str, Theme] = {
+THEMES: dict[str, Theme] = {
     "standard": Theme(
         name="Standard",
         # Message styles - current ppxai colors

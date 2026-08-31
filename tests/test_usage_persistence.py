@@ -4,13 +4,11 @@ Tests for persistent usage storage (v1.12.3).
 Tests the UsageStorage class that persists usage data across sessions.
 """
 
-import json
-import pytest
 from datetime import datetime, timedelta
-from pathlib import Path
-from unittest.mock import patch
 
-from ppxai.usage import UsageStorage, get_usage_report, save_session_usage
+import pytest
+
+from ppxai.usage import UsageStorage
 
 
 @pytest.fixture

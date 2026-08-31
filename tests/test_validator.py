@@ -10,10 +10,10 @@ These tests verify that the validator correctly detects:
 """
 
 import pytest
+
 from ppxai.engine.tools.validator import (
     ResponseValidator,
     ValidationResult,
-    ValidationWarning,
     validate_response,
 )
 

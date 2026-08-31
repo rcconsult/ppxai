@@ -11,12 +11,12 @@ v1.15.0: Migrated to type-based renderer dispatch
 from pathlib import Path
 
 from ..config import get_provider_config, get_tui_config, set_tui_config
-from ..rich.themes import get_theme, THEMES
+from ..rich.themes import THEMES, get_theme
 from ..version import __version__
+from .context import ServerCommandContext
 from .factory import CommandFactory, CommandSpec
 from .protocol import CommandContext
 from .results import (
-    ResultStatus,
     CommandResult,
     ConfirmationResult,
     ErrorResult,
@@ -24,11 +24,10 @@ from .results import (
     ListResult,
     MarkdownResult,
     NotificationResult,
+    ResultStatus,
     SideEffectKind,
     TextResult,
 )
-from .context import ServerCommandContext
-
 
 # =============================================================================
 # Type-Based Result Handlers (v1.15.0)
@@ -317,8 +316,10 @@ def handle_status(context: CommandContext, args: str) -> CommandResult:
     # Terminal capabilities (optional - may not be available in all environments)
     try:
         from ..tui.terminal import (
-            get_capabilities, get_image_protocol_name,
-            get_user_terminal_override, get_user_protocol_override
+            get_capabilities,
+            get_image_protocol_name,
+            get_user_protocol_override,
+            get_user_terminal_override,
         )
         caps = get_capabilities()
 
@@ -680,7 +681,7 @@ def handle_keys(context: CommandContext, args: str) -> CommandResult:
     if not is_http:
         # In-process TUI path: use the existing rich binding table.
         try:
-            from ..tui.keys import get_keys_table, get_conflicts_table
+            from ..tui.keys import get_conflicts_table, get_keys_table
             if args and args.strip().lower() == "conflicts":
                 return TextResult(
                     status=ResultStatus.INFO,

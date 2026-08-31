@@ -94,7 +94,7 @@ async def check_session_restoration(app: "PPXAIDEApp") -> None:
                 response = await app.push_screen_wait(
                     ConsentDialog(
                         title="⚠ Session Recovery",
-                        message=f"ppxaide was interrupted during last session",
+                        message="ppxaide was interrupted during last session",
                         question=f"Recover session '{session_name}'?\n{message_count} messages, Provider: {provider_info}, Tools: {tools_info}",
                         options=["Yes", "No"],
                     )

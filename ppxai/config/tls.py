@@ -50,7 +50,7 @@ import ssl
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Dict, Optional, Union
+from typing import Any, Union
 
 from .store import get_config
 
@@ -84,12 +84,12 @@ class TLSSetting:
         return self.verify is False
 
     @property
-    def cert_file(self) -> Optional[str]:
+    def cert_file(self) -> str | None:
         """The custom CA bundle in use, if any."""
         return self.verify if isinstance(self.verify, str) else None
 
 
-def _ssl_config_block() -> Dict[str, Any]:
+def _ssl_config_block() -> dict[str, Any]:
     """`network.ssl` from ppxai-config.json (absent/unreadable → {})."""
     try:
         cfg = get_config() or {}
@@ -225,7 +225,7 @@ def _system_roots_context() -> ssl.SSLContext:
     bounded by `_build_context`'s cache — this runs once per resolved
     policy, not per request.
     """
-    saved: Dict[str, str] = {}
+    saved: dict[str, str] = {}
     for var in ("SSL_CERT_FILE", "SSL_CERT_DIR"):
         val = os.environ.pop(var, None)
         if val is not None:

@@ -2,12 +2,10 @@
 Results storage and historical comparison for LLM benchmarks.
 """
 
-import json
 import hashlib
-from datetime import datetime
+import json
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from dataclasses import dataclass, field, asdict
-from typing import Optional
 
 
 @dataclass
@@ -122,7 +120,7 @@ class ResultsStore:
         results.sort(key=lambda r: r.timestamp)
         return results
 
-    def get_latest(self, pair_key: str) -> Optional[BenchmarkResult]:
+    def get_latest(self, pair_key: str) -> BenchmarkResult | None:
         """Get latest result for a provider/model pair."""
         history = self.get_history(pair_key)
         return history[-1] if history else None
@@ -131,7 +129,7 @@ class ResultsStore:
         """List all provider/model pairs with results."""
         return list(self.index["pairs"].keys())
 
-    def get_ranking(self, agents_md_mode: Optional[str] = None) -> list[tuple[str, float, int]]:
+    def get_ranking(self, agents_md_mode: str | None = None) -> list[tuple[str, float, int]]:
         """
         Get ranking of all provider/model pairs by best score.
         Args:

@@ -24,8 +24,7 @@ Scope:
 from __future__ import annotations
 
 import json
-from typing import Any, AsyncIterator, List
-from unittest.mock import MagicMock, patch
+from collections.abc import AsyncIterator
 
 import pytest
 
@@ -36,24 +35,22 @@ from ppxai.engine.model_facts import ModelFacts
 from ppxai.engine.types import (
     Event,
     EventType,
-    Message,
     ProviderCapabilities,
 )
 from ppxai.server.streaming import sse_event_generator
-
 
 # ---------------------------------------------------------------------------
 # SSE parsing
 # ---------------------------------------------------------------------------
 
 
-def _parse_sse(frames: List[str]) -> List[dict]:
+def _parse_sse(frames: list[str]) -> list[dict]:
     """Parse a sequence of SSE `data: ...\\n\\n` frames into event dicts.
 
     Keepalive comments (`: keepalive`) are skipped. Returns the list of
     parsed event dicts in arrival order.
     """
-    events: List[dict] = []
+    events: list[dict] = []
     for frame in frames:
         for line in frame.splitlines():
             if not line.startswith("data: "):
@@ -67,9 +64,9 @@ def _parse_sse(frames: List[str]) -> List[dict]:
     return events
 
 
-async def _drain_sse(gen: AsyncIterator[str]) -> List[dict]:
+async def _drain_sse(gen: AsyncIterator[str]) -> list[dict]:
     """Drain an sse_event_generator and return the parsed event list."""
-    frames: List[str] = []
+    frames: list[str] = []
     async for frame in gen:
         frames.append(frame)
     return _parse_sse(frames)

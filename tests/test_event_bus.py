@@ -3,8 +3,10 @@
 
 import asyncio
 import sys
-from ppxai.tui.event_bus import EventBus, Events
+
 import pytest
+
+from ppxai.tui.event_bus import EventBus, Events
 
 
 def test_basic_event_flow():
@@ -124,7 +126,7 @@ async def test_stream_event_simulation_async():
 
     async def on_stream_start(sender, **kwargs):
         stream_data["started"] = True
-        print(f"[Handler] Stream started")
+        print("[Handler] Stream started")
 
     async def on_stream_chunk(sender, data, **kwargs):
         stream_data["chunks"].append(data)
@@ -132,7 +134,7 @@ async def test_stream_event_simulation_async():
 
     async def on_stream_end(sender, data, **kwargs):
         stream_data["ended"] = True
-        print(f"[Handler] Stream ended")
+        print("[Handler] Stream ended")
 
     # Subscribe
     bus.on(Events.ENGINE_STREAM_START, on_stream_start)

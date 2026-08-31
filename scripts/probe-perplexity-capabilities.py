@@ -63,13 +63,13 @@ import json
 import os
 import sys
 from pathlib import Path
+from ppxai.engine.providers.perplexity import (  # noqa: E402
+    PERPLEXITY_TOOL_REJECTING_MODELS,
+)
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
-from ppxai.engine.providers.perplexity import (  # noqa: E402
-    PERPLEXITY_TOOL_REJECTING_MODELS,
-)
 
 BASE_URL = "https://api.perplexity.ai"
 

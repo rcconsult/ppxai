@@ -15,10 +15,6 @@ Tests pin the contract.
 
 from __future__ import annotations
 
-from pathlib import Path
-
-import pytest
-
 
 def _get_rewriter():
     # Helper lives in ppxai/common/ — leaf module, no rendering chain.

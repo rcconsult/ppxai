@@ -23,8 +23,7 @@ remove` parity bug (tracker handled the marker, remover didn't).
 from __future__ import annotations
 
 import re
-from typing import Any, Dict, List, Optional
-
+from typing import Any
 
 # R5 (v1.17.6): first-class content-part type for uploaded files.
 #
@@ -66,7 +65,7 @@ def format_uploaded_file_reference(
     media_type: str,
     file_id: str,
     body: str,
-    extra_attrs: Optional[Dict[str, str]] = None,
+    extra_attrs: dict[str, str] | None = None,
 ) -> str:
     """Build a canonical `<uploaded_file>` marker string.
 
@@ -98,7 +97,7 @@ def format_uploaded_file_reference(
     return f'<uploaded_file {" ".join(attrs)}>\n{body}\n</uploaded_file>'
 
 
-def parse_uploaded_file_markers(text: str) -> List[Dict[str, str]]:
+def parse_uploaded_file_markers(text: str) -> list[dict[str, str]]:
     """Extract every `<uploaded_file>` marker from `text`.
 
     Returns a list (preserving order) of dicts with at least the
@@ -109,7 +108,7 @@ def parse_uploaded_file_markers(text: str) -> List[Dict[str, str]]:
     the caller can decide how to handle malformed markers (log a
     warning, skip, etc.) without the parser raising.
     """
-    results: List[Dict[str, str]] = []
+    results: list[dict[str, str]] = []
     for match in UPLOADED_FILE_RE.finditer(text):
         attr_blob = match.group(1)
         attrs = dict(_ATTR_RE.findall(attr_blob))
@@ -124,8 +123,8 @@ def parse_uploaded_file_markers(text: str) -> List[Dict[str, str]]:
 def strip_uploaded_file_marker(
     text: str,
     *,
-    name: Optional[str] = None,
-    file_id: Optional[str] = None,
+    name: str | None = None,
+    file_id: str | None = None,
 ) -> tuple[str, int]:
     """Remove matching `<uploaded_file>` markers from `text`.
 
@@ -180,8 +179,8 @@ def make_uploaded_file_block(
     media_type: str,
     file_id: str,
     summary: str,
-    extra: Optional[Dict[str, str]] = None,
-) -> Dict[str, Any]:
+    extra: dict[str, str] | None = None,
+) -> dict[str, Any]:
     """Build a canonical `uploaded_file` content block (R5).
 
     Dedicated content-part type that replaces the legacy
@@ -200,7 +199,7 @@ def make_uploaded_file_block(
     via `format_uploaded_file_reference` before the API call, so model
     behavior and token counts stay identical to pre-R5.
     """
-    block: Dict[str, Any] = {
+    block: dict[str, Any] = {
         "type": UPLOADED_FILE_BLOCK_TYPE,
         "name": name,
         "media_type": media_type,
@@ -213,7 +212,7 @@ def make_uploaded_file_block(
     return block
 
 
-def uploaded_file_block_to_text(block: Dict[str, Any]) -> str:
+def uploaded_file_block_to_text(block: dict[str, Any]) -> str:
     """Render a structured uploaded_file block as its legacy text marker.
 
     Used by the provider-adapter flatten (so LLM-facing strings stay
@@ -260,7 +259,7 @@ def uploaded_file_block_to_text(block: Dict[str, Any]) -> str:
 # Per OpenAI Chat Completions spec (https://platform.openai.com/docs/api-reference/chat/create).
 # Keys allowed at the top level of each content block, by block `type`.
 # Anything outside these is non-spec and the validator flags it.
-_WIRE_ALLOWED_BLOCK_KEYS: Dict[str, frozenset] = {
+_WIRE_ALLOWED_BLOCK_KEYS: dict[str, frozenset] = {
     "text": frozenset({"type", "text"}),
     # image_url's inner dict accepts {url, detail} per spec; the validator
     # checks the OUTER block keys only — inner dict shape is provider-
@@ -376,7 +375,7 @@ def flatten_uploaded_file_blocks(content: Any) -> Any:
     ):
         return content
 
-    result: List[Any] = []
+    result: list[Any] = []
     for block in content:
         if (
             isinstance(block, dict)

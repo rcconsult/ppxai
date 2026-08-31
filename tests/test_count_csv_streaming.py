@@ -14,8 +14,6 @@ instead of sneaking back into production.
 
 import tracemalloc
 
-import pytest
-
 from ppxai.engine.file_preprocessing import count_csv_rows_cols
 
 

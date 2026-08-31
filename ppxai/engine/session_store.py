@@ -43,7 +43,6 @@ import mimetypes
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional
 
 from ..common.logger import get_logger
 
@@ -110,7 +109,7 @@ class FileMetadata:
     kind: str
     path: Path
 
-    def to_dict(self) -> Dict[str, object]:
+    def to_dict(self) -> dict[str, object]:
         """JSON-serializable projection for AppState / SSE state_sync.
 
         Excludes `path` because it is a per-process absolute path that
@@ -148,7 +147,7 @@ class SessionFileStore:
         # Store is now populated with the same file_ids as before.
     """
 
-    def __init__(self, base_dir: Optional[Path] = None) -> None:
+    def __init__(self, base_dir: Path | None = None) -> None:
         """Initialize the store.
 
         Args:
@@ -158,10 +157,10 @@ class SessionFileStore:
         """
         self._base_dir = Path(base_dir) if base_dir else _DEFAULT_STAGING_DIR
         self._base_dir.mkdir(parents=True, exist_ok=True)
-        self._metadata: Dict[str, FileMetadata] = {}
+        self._metadata: dict[str, FileMetadata] = {}
         # When non-None, new uploads land under this directory instead of
         # the staging base. Set by move_to_session / restore_from_session.
-        self._session_dir: Optional[Path] = None
+        self._session_dir: Path | None = None
 
     # ------------------------------------------------------------------
     # Core storage operations
@@ -171,7 +170,7 @@ class SessionFileStore:
         self,
         name: str,
         data: bytes,
-        media_type: Optional[str] = None,
+        media_type: str | None = None,
     ) -> FileMetadata:
         """Persist bytes to the store and return metadata.
 
@@ -228,7 +227,7 @@ class SessionFileStore:
         )
         return metadata
 
-    def get(self, file_id: str) -> Optional[Path]:
+    def get(self, file_id: str) -> Path | None:
         """Return the on-disk path for a file_id, or None if unknown.
 
         Used by tools (e.g. `ReadPdfTool`, `GetPdfPageImageTool`) that
@@ -238,7 +237,7 @@ class SessionFileStore:
         meta = self._metadata.get(file_id)
         return meta.path if meta else None
 
-    def get_metadata(self, file_id: str) -> Optional[FileMetadata]:
+    def get_metadata(self, file_id: str) -> FileMetadata | None:
         """Return full metadata for a file_id, or None if unknown.
 
         Preferred over `get()` when callers need size/name/kind info
@@ -247,7 +246,7 @@ class SessionFileStore:
         """
         return self._metadata.get(file_id)
 
-    def list_all(self) -> List[FileMetadata]:
+    def list_all(self) -> list[FileMetadata]:
         """Return all currently-tracked metadata entries.
 
         Used by `EngineClient._refresh_context_attachments()` after
@@ -313,7 +312,7 @@ class SessionFileStore:
     # Session binding — move staged files into / out of a session dir
     # ------------------------------------------------------------------
 
-    def move_to_session(self, session_dir: Path) -> Dict[str, str]:
+    def move_to_session(self, session_dir: Path) -> dict[str, str]:
         """Relocate all staged files into a session's `uploads/` directory.
 
         Called by `SessionManager.save()` when persisting a session that
@@ -338,7 +337,7 @@ class SessionFileStore:
         uploads_root = session_dir / "uploads"
         uploads_root.mkdir(parents=True, exist_ok=True)
 
-        rel_map: Dict[str, str] = {}
+        rel_map: dict[str, str] = {}
         for file_id, meta in list(self._metadata.items()):
             src = meta.path
             dst_dir = uploads_root / file_id

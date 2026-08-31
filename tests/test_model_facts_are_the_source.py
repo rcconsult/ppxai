@@ -80,7 +80,7 @@ def _parse_literal_rows(src: str):
     field is *stated* — a row that omits one still has a value at runtime, so
     the object cannot answer it.
     """
-    start = src.index("SHIPPED_MODEL_FACTS: Dict[str, ModelFacts] = {")
+    start = src.index("SHIPPED_MODEL_FACTS: dict[str, ModelFacts] = {")
     end = src.index("\n}", start)
     return re.findall(r'"([^"]+)": ModelFacts\((.*?)\n    \),', src[start:end], re.S)
 

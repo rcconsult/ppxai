@@ -11,8 +11,8 @@ v1.15.0: Added to fix asyncio.run() errors in Textual TUI
 """
 
 import asyncio
-import inspect
-from typing import Coroutine, TypeVar, Any
+from collections.abc import Coroutine
+from typing import Any, TypeVar
 
 T = TypeVar('T')
 

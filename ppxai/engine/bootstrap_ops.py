@@ -5,7 +5,7 @@ Extracted from engine/client.py (v1.17.1) to reduce EngineClient size.
 All functions take an engine reference as first parameter.
 """
 
-from typing import Any, Dict
+from typing import Any
 
 
 def load_bootstrap_context(engine) -> bool:
@@ -30,7 +30,7 @@ def load_bootstrap_context(engine) -> bool:
         return False
 
 
-def get_bootstrap_status(engine) -> Dict[str, Any]:
+def get_bootstrap_status(engine) -> dict[str, Any]:
     """Get status of loaded bootstrap context.
 
     Returns:
@@ -82,7 +82,7 @@ def get_bootstrap_prompt(engine) -> str:
     return engine._bootstrap_context.get_prompt_for(engine.provider_name, engine.model)
 
 
-def get_active_hints(engine) -> Dict[str, Any]:
+def get_active_hints(engine) -> dict[str, Any]:
     """Get detailed breakdown of active hints for current provider/model.
 
     Returns:

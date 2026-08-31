@@ -9,10 +9,9 @@ Detects terminal features like:
 """
 
 import os
-import sys
 from dataclasses import dataclass
 from enum import Enum, auto
-from typing import Optional
+import sys  # noqa: F401 — patched by tests
 
 
 class ImageProtocol(Enum):
@@ -35,7 +34,7 @@ class TerminalCapabilities:
     bracketed_paste: bool              # Bracketed paste mode
 
 
-def get_user_terminal_override() -> Optional[str]:
+def get_user_terminal_override() -> str | None:
     """Get user-configured terminal override from environment.
 
     Returns:
@@ -47,7 +46,7 @@ def get_user_terminal_override() -> Optional[str]:
     return None
 
 
-def get_user_protocol_override() -> Optional[ImageProtocol]:
+def get_user_protocol_override() -> ImageProtocol | None:
     """Get user-configured image protocol override from environment.
 
     Returns:
@@ -262,7 +261,7 @@ def get_image_protocol_name() -> str:
 
 
 # Cached capabilities (detected once at import)
-_capabilities: Optional[TerminalCapabilities] = None
+_capabilities: TerminalCapabilities | None = None
 
 
 def get_capabilities() -> TerminalCapabilities:
@@ -303,7 +302,7 @@ def format_capabilities() -> str:
     ])
 
     if protocol_override is not None:
-        lines.append(f"  (override via PPXAI_IMAGE_PROTOCOL)")
+        lines.append("  (override via PPXAI_IMAGE_PROTOCOL)")
 
     lines.extend([
         f"OSC 8 Hyperlinks: {'yes' if caps.osc_hyperlinks else 'no'}",

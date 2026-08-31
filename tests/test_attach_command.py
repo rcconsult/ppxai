@@ -17,8 +17,6 @@ from typing import Any
 import pytest
 
 from ppxai.commands.attach import (
-    MAX_FILE_BYTES,
-    ContextAttachment,
     PendingFile,
     _classify,
     _load_file,
@@ -27,10 +25,9 @@ from ppxai.commands.attach import (
     collect_context_attachments,
     handle_attach,
 )
-from ppxai.engine.types import Message
 from ppxai.commands.factory import CommandFactory
 from ppxai.commands.results import ResultStatus
-
+from ppxai.engine.types import Message
 
 # Minimal 1x1 red PNG as raw bytes (valid header; decoders accept it).
 _RED_PIXEL_PNG = base64.b64decode(

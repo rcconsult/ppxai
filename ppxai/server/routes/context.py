@@ -5,10 +5,9 @@ Context, working directory, and bootstrap context endpoints.
 import os
 
 from fastapi import APIRouter, Depends, HTTPException
-from typing import Optional
 
 from ...common.logger import get_logger
-from ..models import WorkingDirRequest, AutoInjectRequest
+from ..models import AutoInjectRequest, WorkingDirRequest
 from ..state import Session, get_session, with_drained_events
 
 logger = get_logger("server")

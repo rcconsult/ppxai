@@ -26,7 +26,6 @@ import os
 import shutil
 import sys
 from pathlib import Path
-from typing import List, Optional
 
 # Executable names to probe on PATH, in preference order. Linux ships
 # `libreoffice` (and usually a `soffice` alias); a user symlink may use
@@ -37,9 +36,9 @@ _PATH_NAMES = ("libreoffice", "soffice")
 _ENV_OVERRIDE = "PPXAI_LIBREOFFICE"
 
 
-def _well_known_paths() -> List[Path]:
+def _well_known_paths() -> list[Path]:
     """Absolute locations LibreOffice installs to but doesn't put on PATH."""
-    paths: List[Path] = []
+    paths: list[Path] = []
     if sys.platform == "darwin":
         paths += [
             Path("/Applications/LibreOffice.app/Contents/MacOS/soffice"),
@@ -60,7 +59,7 @@ def _well_known_paths() -> List[Path]:
     return paths
 
 
-def find_libreoffice() -> Optional[str]:
+def find_libreoffice() -> str | None:
     """Return the absolute path to a runnable LibreOffice executable, or None.
 
     Order: ``PPXAI_LIBREOFFICE`` env override → ``libreoffice``/``soffice`` on

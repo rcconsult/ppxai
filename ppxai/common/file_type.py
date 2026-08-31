@@ -17,11 +17,11 @@ Usage:
         # Use TableViewer
 """
 
-import filetype
 import mimetypes
 from enum import Enum, auto
 from pathlib import Path
-from typing import Optional
+
+import filetype
 
 # Initialize mimetypes
 mimetypes.init()
@@ -247,7 +247,7 @@ FILETYPE_TO_LANGUAGE = {
 }
 
 
-def detect_file_type(path: Path, content: Optional[str] = None) -> FileType:
+def detect_file_type(path: Path, content: str | None = None) -> FileType:
     """Detect file type using filetype library with extension fallback.
 
     Args:
@@ -324,7 +324,7 @@ def get_view_mode(file_type: FileType) -> str:
     return FILETYPE_TO_VIEW_MODE.get(file_type, "code")
 
 
-def get_language_for_extension(ext: str) -> Optional[str]:
+def get_language_for_extension(ext: str) -> str | None:
     """Get syntax highlighting language for file extension.
 
     Args:

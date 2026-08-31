@@ -19,8 +19,7 @@ import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
-from typing import Any, Optional
-
+from typing import Any
 
 # --------------------------------------------------------------------------
 # Provider/model matrix. Models chosen per the v1.19.x config; override with
@@ -98,15 +97,15 @@ class Result:
     status: str = ""
     used_granted_tool: bool = False
     tool_calls: list = field(default_factory=list)
-    correctness: Optional[bool] = None
-    error: Optional[str] = None
+    correctness: bool | None = None
+    error: str | None = None
     latency_s: float = 0.0
 
 
 # --------------------------------------------------------------------------
 # HTTP helpers (stdlib)
 # --------------------------------------------------------------------------
-def _req(method: str, url: str, *, token: str = "", body: Optional[dict] = None) -> Any:
+def _req(method: str, url: str, *, token: str = "", body: dict | None = None) -> Any:
     data = json.dumps(body).encode() if body is not None else None
     r = urllib.request.Request(url, data=data, method=method)
     r.add_header("Content-Type", "application/json")

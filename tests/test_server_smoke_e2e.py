@@ -37,9 +37,9 @@ import socket
 import subprocess
 import sys
 import time
+from collections.abc import Iterator
 from contextlib import closing
 from pathlib import Path
-from typing import Iterator, Tuple
 
 import pytest
 
@@ -47,7 +47,6 @@ pytest.importorskip("httpx")
 import httpx
 
 from tests.conftest import pin_server_working_dir
-
 
 # ---------------------------------------------------------------------------
 # Endpoint catalog. Each tuple is (method, path, body|None).
@@ -214,7 +213,7 @@ def _wait_for_health(port: int, timeout: float = _STARTUP_BUDGET_S) -> None:
     )
 
 
-def _can_spawn_server(repo_root: Path) -> Tuple[bool, str]:
+def _can_spawn_server(repo_root: Path) -> tuple[bool, str]:
     """Probe whether `python -m ppxai.server.http` can BOOT here.
 
     Actually starts the server briefly and checks for an HTTP /health
@@ -279,7 +278,7 @@ def _can_spawn_server(repo_root: Path) -> Tuple[bool, str]:
 
 
 @pytest.fixture(scope="module")
-def server(tmp_path_factory) -> Iterator[Tuple[str, subprocess.Popen]]:
+def server(tmp_path_factory) -> Iterator[tuple[str, subprocess.Popen]]:
     """Spawn a real ppxai-server subprocess on a free port.
 
     Yields (base_url, process). Tears down by sending SIGTERM and

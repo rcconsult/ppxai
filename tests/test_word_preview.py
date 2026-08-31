@@ -109,6 +109,7 @@ class TestConvertDocxToPdf:
         freshness check entirely.
         """
         import os
+
         from ppxai.common.docx_to_pdf import convert_docx_to_pdf
 
         source = tmp_path / "memo.docx"
@@ -136,6 +137,7 @@ class TestConvertDocxToPdf:
     def test_cache_kept_when_source_is_older(self, tmp_path):
         """Inverse: when cache is up-to-date, no re-render happens."""
         import os
+
         from ppxai.common.docx_to_pdf import convert_docx_to_pdf
 
         source = tmp_path / "memo.docx"

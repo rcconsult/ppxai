@@ -56,20 +56,13 @@ from __future__ import annotations
 
 import base64
 import mimetypes
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any
 
 from .image_validation import sniff_media_type, validate_image
 from .model_facts import supports_vision as model_supports_vision
-from .types import (
-    ArtifactRef,
-    ImageAttachmentRef,
-    OfficeAttachmentRef,
-    PdfAttachmentRef,
-    TextAttachmentRef,
-)
-from .uploaded_file import make_uploaded_file_block
 from .session_store import (
     KIND_IMAGE,
     KIND_OFFICE,
@@ -79,6 +72,14 @@ from .session_store import (
     SessionFileStore,
     classify_kind,
 )
+from .types import (
+    ArtifactRef,
+    ImageAttachmentRef,
+    OfficeAttachmentRef,
+    PdfAttachmentRef,
+    TextAttachmentRef,
+)
+from .uploaded_file import make_uploaded_file_block
 
 # VL captioner signature — Phase 2.7 will wire EngineClient.caption_image
 # here. Takes (name, media_type, data) and returns a short text caption.
@@ -118,12 +119,12 @@ class PreprocessResult:
         error: Human-readable rejection reason when ok=False.
     """
     ok: bool
-    parts: List[Dict[str, Any]] = field(default_factory=list)
+    parts: list[dict[str, Any]] = field(default_factory=list)
     file_id: str = ""
     name: str = ""
     media_type: str = ""
     kind: str = ""
-    warnings: List[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
     error: str = ""
     # ADR 0006 Step 1 (v1.18.6) — kind-specific ArtifactRef the producer
     # branch populated for this file. Caller threads this through
@@ -134,13 +135,13 @@ class PreprocessResult:
     # build_multimodal_content re-bases when assembling multi-file message.
     # None for failed preprocesses (ok=False) and for placeholder-text
     # fallback paths where no actual artifact survives.
-    attachment_ref: Optional[ArtifactRef] = None
+    attachment_ref: ArtifactRef | None = None
 
 
 # Defer pypdf import to the caller of _count_pdf_pages — pypdf is an
 # optional dependency shipped under the `[data]` extras group (Phase 2.9).
 # Preprocessing still works without it; PDF page count becomes unknown.
-def _count_pdf_pages(data: bytes) -> Optional[int]:
+def _count_pdf_pages(data: bytes) -> int | None:
     """Return PDF page count, or None if pypdf is unavailable / data is malformed."""
     try:
         import pypdf  # noqa: PLC0415 — optional dep, local import
@@ -185,7 +186,7 @@ def _decode_text(data: bytes) -> str:
         return data.decode("utf-8", errors="replace")
 
 
-def _classify_file(name: str, data: bytes, declared_media_type: Optional[str]) -> tuple[str, str]:
+def _classify_file(name: str, data: bytes, declared_media_type: str | None) -> tuple[str, str]:
     """Determine canonical (media_type, kind) for the input.
 
     Priority:
@@ -224,9 +225,9 @@ def _preprocess_image(
     media_type: str,
     *,
     model: str,
-    provider: Optional[str],
-    file_store: Optional[SessionFileStore],
-    vl_captioner: Optional[VLCaptioner],
+    provider: str | None,
+    file_store: SessionFileStore | None,
+    vl_captioner: VLCaptioner | None,
     shell_image_route: bool = False,
 ) -> PreprocessResult:
     """Validate + route an image attachment.
@@ -270,7 +271,7 @@ def _preprocess_image(
     # Persist to the store (if wired) so the caller gets a stable file_id.
     file_id = ""
     on_disk_path = ""  # absolute path for the shell-CLI route (v1.19.0)
-    warnings: List[str] = []
+    warnings: list[str] = []
     if file_store is not None:
         try:
             meta = file_store.save(name, data, media_type=canonical_mt)
@@ -298,7 +299,7 @@ def _preprocess_image(
         # below, in Message.attachments. The wire validator
         # (uploaded_file.assert_wire_blocks_clean) enforces this
         # cleanliness defensively in __debug__ builds.
-        block: Dict[str, Any] = {
+        block: dict[str, Any] = {
             "type": "image_url",
             "image_url": {
                 "url": f"data:{canonical_mt};base64,{b64}",
@@ -474,7 +475,7 @@ def _preprocess_csv(
     data: bytes,
     media_type: str,
     *,
-    file_store: Optional[SessionFileStore],
+    file_store: SessionFileStore | None,
 ) -> PreprocessResult:
     """Persist a large CSV and emit a text reference with metadata.
 
@@ -482,7 +483,7 @@ def _preprocess_csv(
     indicating the file is available via the read_csv and
     list_csv_columns tools. This mirrors the PDF lazy-loading pattern.
     """
-    warnings: List[str] = []
+    warnings: list[str] = []
 
     file_id = ""
     if file_store is not None:
@@ -553,7 +554,7 @@ def _preprocess_text(
     data: bytes,
     media_type: str,
     *,
-    file_store: Optional[SessionFileStore] = None,
+    file_store: SessionFileStore | None = None,
 ) -> PreprocessResult:
     """Inline a text/code file into the prompt as a `<file>` block.
 
@@ -608,7 +609,7 @@ def _preprocess_pdf(
     data: bytes,
     media_type: str,
     *,
-    file_store: Optional[SessionFileStore],
+    file_store: SessionFileStore | None,
 ) -> PreprocessResult:
     """Persist a PDF and emit a text reference with page metadata.
 
@@ -621,7 +622,7 @@ def _preprocess_pdf(
     the file and emit a reference so the preprocessing pipeline stays
     functional on minimal installs.
     """
-    warnings: List[str] = []
+    warnings: list[str] = []
 
     file_id = ""
     if file_store is not None:
@@ -697,7 +698,7 @@ def _preprocess_office(
     data: bytes,
     media_type: str,
     *,
-    file_store: Optional[SessionFileStore],
+    file_store: SessionFileStore | None,
 ) -> PreprocessResult:
     """Persist an Office document and emit a text reference.
 
@@ -802,10 +803,10 @@ def preprocess_file(
     data: bytes,
     *,
     model: str = "",
-    provider: Optional[str] = None,
-    media_type: Optional[str] = None,
-    file_store: Optional[SessionFileStore] = None,
-    vl_captioner: Optional[VLCaptioner] = None,
+    provider: str | None = None,
+    media_type: str | None = None,
+    file_store: SessionFileStore | None = None,
+    vl_captioner: VLCaptioner | None = None,
     shell_image_route: bool = False,
 ) -> PreprocessResult:
     """Preprocess a file into OpenAI-format content parts.

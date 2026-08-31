@@ -34,7 +34,6 @@ from ppxai.engine.providers.openai_compat import OpenAICompatibleProvider
 from ppxai.engine.providers.perplexity import PerplexityProvider
 from ppxai.engine.types import ProviderCapabilities
 
-
 REGISTERED = ["perplexity", "openai", "gemini"]
 TYPE_BASED = ["openrouter", "nvidia", "local-vllm", "a-name-nobody-registered"]
 

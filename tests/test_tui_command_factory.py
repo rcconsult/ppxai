@@ -7,23 +7,22 @@ Tests command execution, error handling, and result rendering.
 Phase 6.2: Command Handler Validation
 """
 
-import pytest
 from pathlib import Path
-from unittest.mock import Mock, AsyncMock, patch
-from textual.app import App
+from unittest.mock import AsyncMock, Mock, patch
+
+import pytest
 
 from ppxai.commands.factory import CommandFactory
 from ppxai.commands.protocol import CommandContext
 from ppxai.commands.results import (
-    ResultStatus,
-    TextResult,
+    ConfirmationResult,
     ErrorResult,
     FileViewResult,
-    TableResult,
     KeyValueResult,
-    ConfirmationResult,
+    ResultStatus,
+    TableResult,
+    TextResult,
 )
-
 
 # =============================================================================
 # Test Fixtures

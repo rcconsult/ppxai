@@ -28,12 +28,12 @@ import re
 import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Optional
 from urllib.parse import urlparse
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import Response
-from kubernetes import client as k8s, config as k8s_config
+from kubernetes import client as k8s
+from kubernetes import config as k8s_config
 from pydantic import BaseModel
 
 # ---------------------------------------------------------------------------
@@ -168,7 +168,7 @@ def _meta_path(username: str) -> Path:
     return REGISTRY_DIR / username / "meta.json"
 
 
-def _load_meta(username: str) -> Optional[SessionMeta]:
+def _load_meta(username: str) -> SessionMeta | None:
     path = _meta_path(username)
     if not path.exists():
         return None
@@ -241,7 +241,7 @@ def _make_cookie_value(slug: str) -> str:
     return f"{slug}.{iat}.{_sign_slug(slug, iat)}"
 
 
-def _verify_cookie(raw: str) -> Optional[str]:
+def _verify_cookie(raw: str) -> str | None:
     """Return the authenticated slug if the cookie is valid + unexpired, else None."""
     if not raw:
         return None
@@ -261,7 +261,7 @@ def _verify_cookie(raw: str) -> Optional[str]:
     return slug
 
 
-def _extract_url_slug(headers) -> Optional[str]:
+def _extract_url_slug(headers) -> str | None:
     """Pull the requested slug from the original request URL ingress forwards.
 
     ingress-nginx auth_request fires on the ORIGINAL $request_uri (pre
@@ -711,7 +711,7 @@ app = FastAPI(title=f"{APP_PREFIX} Session Manager")
 
 class CreateSessionRequest(BaseModel):
     username: str
-    password: Optional[str] = None
+    password: str | None = None
 
 
 def _set_session_cookie(response: Response, slug: str) -> None:

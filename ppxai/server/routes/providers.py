@@ -4,10 +4,10 @@ Provider and model management endpoints.
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from ..models import SetProviderRequest, SetModelRequest, ToolsRequest, ToolsConfigRequest
-from ..state import Session, get_session, with_drained_events
 from ...common.logger import get_logger
 from ...constants import Default
+from ..models import SetModelRequest, SetProviderRequest, ToolsConfigRequest, ToolsRequest
+from ..state import Session, get_session, with_drained_events
 
 logger = get_logger("server")
 

@@ -6,7 +6,7 @@ in an expandable tree format.
 """
 
 import json
-from typing import Any, Optional
+from typing import Any
 
 from textual.app import ComposeResult
 from textual.widgets import Static, Tree
@@ -37,7 +37,7 @@ class TreeViewer(Static):
         self._data = data
         self._title = title
         self._format = format
-        self._tree: Optional[Tree] = None
+        self._tree: Tree | None = None
 
     def compose(self) -> ComposeResult:
         """Compose the tree widget."""

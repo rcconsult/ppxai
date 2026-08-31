@@ -3,42 +3,40 @@ Main entry point for the ppxai application.
 """
 
 import argparse
+import asyncio
 import os
 import sys
-import asyncio
 import time
-from pathlib import Path
-
-from ..version import __version__, format_version_banner
 
 from prompt_toolkit import PromptSession
-from prompt_toolkit.history import InMemoryHistory
-from prompt_toolkit.completion import Completer, Completion
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
+from prompt_toolkit.completion import Completer, Completion
+from prompt_toolkit.history import InMemoryHistory
 
-from ..commands.attach import build_multimodal_content, collect_context_attachments
-from ..commands.factory import CommandFactory
+from ..commands.attach import build_multimodal_content
 from ..commands.handler import CommandHandler
+from ..common.autosave_guard import AutosaveFailureGuard
+from ..common.logger import get_logger
 from ..config import (
     PROVIDERS,
-    get_default_provider,
     get_api_key,
     get_auto_restore_mode,
     get_auto_save_interval,
     get_base_url,
+    get_default_provider,
     get_provider_config,
     get_tui_config,
     get_tui_theme,
     initialize,
 )
 from ..engine.completion import complete as engine_complete
+from ..engine.session import SessionManager
+from ..version import __version__, format_version_banner
+from .event_handler import TUIEventHandler
+from .themes import get_theme
 from .ui import console, display_welcome, select_model, select_provider
 from .ui_components import format_usage_string, render_status_panel
-from ..engine.session import SessionManager
-from .themes import get_theme
-from ..common.logger import get_logger
-from ..common.autosave_guard import AutosaveFailureGuard
-from .event_handler import TUIEventHandler
+from pathlib import Path  # noqa: F401 — patched by tests
 
 logger = get_logger("tui")
 

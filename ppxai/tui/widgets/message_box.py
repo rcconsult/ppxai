@@ -3,17 +3,18 @@ MessageBox widget - Individual chat message display.
 """
 
 from datetime import datetime
-from typing import Any, List
+from typing import Any
 
 from textual.app import ComposeResult
-from textual.containers import Vertical, Horizontal, VerticalScroll
+from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.css.query import NoMatches
 from textual.reactive import reactive
-from textual.widgets import Static, Markdown, Button
+from textual.widgets import Button, Markdown, Static
 
-from ..clipboard import copy_to_clipboard
 from ppxai.engine.artifact_projector import TextMarkerProjector
 from ppxai.engine.types import _synthesize_block_ref
+
+from ..clipboard import copy_to_clipboard
 
 
 def normalize_content_to_text(content: Any) -> str:
@@ -41,7 +42,7 @@ def normalize_content_to_text(content: Any) -> str:
     # Local imports — keeps tui/widgets independent from engine
     # registration ordering at module load time.
 
-    parts: List[str] = []
+    parts: list[str] = []
     for idx, block in enumerate(content):
         if not isinstance(block, dict):
             continue

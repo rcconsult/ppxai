@@ -1,57 +1,57 @@
 """Unit tests for ppxai.config module."""
 import json
-import pathlib
 import os
-import pytest
+import pathlib
 import tempfile
 from pathlib import Path
 from unittest.mock import patch
+
+import pytest
+
 from ppxai.config import (
-    SESSIONS_DIR,
-    EXPORTS_DIR,
-    USAGE_FILE,
-    MODEL_PRICING,
-    MODELS,
     CODING_MODEL,
-    PROVIDERS,
     DEFAULT_CAPABILITIES,
-    get_provider_config,
+    DEFAULT_CONTEXT_LIMIT,
+    DEFAULT_CONTEXT_WARN_PERCENT,
+    # Context configuration (v1.13.9)
+    DEFAULT_MAX_INJECTION_SIZE,
+    EXPORTS_DIR,
+    MODEL_PRICING,
+    PROVIDERS,
+    SESSIONS_DIR,
+    USAGE_FILE,
+    find_config_file,
     get_active_models,
     get_active_pricing,
     get_api_key,
+    get_available_providers,
     get_base_url,
     get_coding_model,
+    get_config_source,
+    get_context_config,
+    get_context_warn_percent,
+    get_default_context_limit,
     get_default_model,
     get_default_provider,
-    get_config_source,
-    get_available_providers,
+    get_max_injection_size,
+    get_model_context_limit,
     get_provider_capabilities,
+    get_provider_config,
+    get_shell_config,
+    get_tool_config,
+    get_tool_pricing,
+    load_config,
     provider_needs_tool,
     reload_config,
     validate_config,
-    load_config,
-    get_tool_config,
-    get_tool_pricing,
-    get_shell_config,
-    find_config_file,
-    initialize,
-    # Context configuration (v1.13.9)
-    DEFAULT_MAX_INJECTION_SIZE,
-    DEFAULT_CONTEXT_LIMIT,
-    DEFAULT_CONTEXT_WARN_PERCENT,
-    get_context_config,
-    get_max_injection_size,
-    get_default_context_limit,
-    get_context_warn_percent,
-    get_model_context_limit,
 )
-from ppxai.config.store import ConfigStore
 from ppxai.config.loader import (
-    _load_json_config,
-    _validate_provider_config,
     _build_legacy_custom_provider,
     _convert_models_format,
+    _load_json_config,
+    _validate_provider_config,
 )
+from ppxai.config.store import ConfigStore
 
 
 @pytest.fixture(autouse=True)
@@ -690,8 +690,9 @@ class TestPathsConfig:
 
     def test_get_paths_config_expands_home(self):
         """Test that {home} templates are expanded."""
-        from ppxai.config import get_paths_config
         from pathlib import Path
+
+        from ppxai.config import get_paths_config
         paths = get_paths_config()
         home = str(Path.home())
         # At least one path should contain the actual home directory
@@ -712,8 +713,9 @@ class TestPathsConfig:
 
     def test_get_data_dir_returns_path(self):
         """Test get_data_dir returns a Path object."""
-        from ppxai.config import get_data_dir
         from pathlib import Path
+
+        from ppxai.config import get_data_dir
         data_dir = get_data_dir()
         assert isinstance(data_dir, Path)
 
@@ -728,8 +730,9 @@ class TestBOMHandling:
 
     def test_load_dotenv_with_bom(self):
         """Test that .env files with UTF-8 BOM are loaded correctly."""
-        from ppxai.config.loader import load_dotenv_with_bom_handling
         import tempfile
+
+        from ppxai.config.loader import load_dotenv_with_bom_handling
 
         # Create a temp .env file with UTF-8 BOM
         with tempfile.NamedTemporaryFile(mode='wb', suffix='.env', delete=False) as f:
@@ -754,8 +757,9 @@ class TestBOMHandling:
 
     def test_load_dotenv_without_bom(self):
         """Test that .env files without BOM still work."""
-        from ppxai.config.loader import load_dotenv_with_bom_handling
         import tempfile
+
+        from ppxai.config.loader import load_dotenv_with_bom_handling
 
         # Create a temp .env file without BOM
         with tempfile.NamedTemporaryFile(mode='w', suffix='.env', delete=False, encoding='utf-8') as f:
@@ -783,8 +787,9 @@ class TestBOMHandling:
 
     def test_load_dotenv_multiple_keys_with_bom(self):
         """Test that all keys are loaded correctly when file has BOM."""
-        from ppxai.config.loader import load_dotenv_with_bom_handling
         import tempfile
+
+        from ppxai.config.loader import load_dotenv_with_bom_handling
 
         # Create a temp .env file with BOM and multiple keys
         with tempfile.NamedTemporaryFile(mode='wb', suffix='.env', delete=False) as f:
@@ -813,7 +818,7 @@ class TestSystemPromptConfig:
 
     def test_get_system_prompt_default(self):
         """Test default system prompt for known providers."""
-        from ppxai.config import get_system_prompt, DEFAULT_SYSTEM_PROMPTS
+        from ppxai.config import get_system_prompt
 
         # Without config file, should return defaults
         with patch.dict(os.environ, {"PPXAI_CONFIG_FILE": "/nonexistent/path.json"}):

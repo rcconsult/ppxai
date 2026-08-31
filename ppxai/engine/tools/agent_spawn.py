@@ -31,11 +31,11 @@ from __future__ import annotations
 
 import asyncio
 import time
-from typing import Awaitable, Callable, List, Optional
+from collections.abc import Awaitable, Callable
 
+from ...common.logger import get_logger
 from .base import BaseTool
 from .network_policy import Allow, NetworkPolicy, grant_has_shell
-from ...common.logger import get_logger
 
 logger = get_logger("tui")
 
@@ -63,7 +63,7 @@ _WILDCARD_SUBSET_PROBES = ("z9x8c7v6b5a4-subset-probe", "q1w2e3r4t5y6-subset-pro
 _PROVIDER_TOOL_PREFIXES = ("default_api.", "default_api:")
 
 
-def _strip_provider_tool_prefix(names: List[str]) -> List[str]:
+def _strip_provider_tool_prefix(names: list[str]) -> list[str]:
     """Strip a known provider namespace prefix from each tool name."""
     out = []
     for name in names:
@@ -132,13 +132,13 @@ class SpawnSubagentTool(BaseTool):
         *,
         registry,
         parent_run_id: str,
-        parent_tools: List[str],
+        parent_tools: list[str],
         parent_allow_outbound: list,
         parent_provider: str,
         parent_model: str,
-        parent_owner: Optional[str] = None,
-        parent_workdir: Optional[str] = None,
-        request_consent: Optional[Callable[[str], Awaitable[bool]]] = None,
+        parent_owner: str | None = None,
+        parent_workdir: str | None = None,
+        request_consent: Callable[[str], Awaitable[bool]] | None = None,
         consent_policy: str = "deny",
         runner_builder: Callable = None,
     ) -> None:
@@ -191,7 +191,7 @@ class SpawnSubagentTool(BaseTool):
 
     # --- subset enforcement (AC-1 / AC-2 transitive) --------------------
 
-    def _check_grant_subset(self, child_tools: List[str]) -> Optional[str]:
+    def _check_grant_subset(self, child_tools: list[str]) -> str | None:
         """Return an error string if child_tools isn't ⊆ parent grant."""
         # A child must never carry shell either (same AC-2 rule as /task).
         if grant_has_shell(child_tools):
@@ -204,7 +204,7 @@ class SpawnSubagentTool(BaseTool):
             )
         return None
 
-    def _check_egress_subset(self, child_allow: list) -> Optional[str]:
+    def _check_egress_subset(self, child_allow: list) -> str | None:
         """Return an error string if any child egress rule isn't permitted by
         the parent allowlist — checking BOTH host and path scope, so a child
         can't widen egress on either axis.
@@ -276,8 +276,8 @@ class SpawnSubagentTool(BaseTool):
     async def execute(
         self,
         task: str,
-        tools: Optional[List[str]] = None,
-        allow_outbound: Optional[list] = None,
+        tools: list[str] | None = None,
+        allow_outbound: list | None = None,
         **kwargs,
     ) -> str:
         child_tools = _strip_provider_tool_prefix(list(tools or []))

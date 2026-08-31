@@ -15,32 +15,32 @@ prompt_toolkit via PyInstaller spec, so no lazy loading is needed.
 
 # Core imports - these are safe for both server and TUI
 from .config import (
-    SESSIONS_DIR,
+    CODING_MODEL,
     EXPORTS_DIR,
-    USAGE_FILE,
     MODEL_PRICING,
     MODELS,
-    CODING_MODEL,
     PROVIDERS,
-    get_default_provider,
-    get_provider_config,
+    SESSIONS_DIR,
+    USAGE_FILE,
     get_active_models,
     get_active_pricing,
     get_api_key,
+    get_available_providers,
     get_base_url,
     get_coding_model,
-    get_default_model,
     get_config_source,
-    get_available_providers,
+    get_default_model,
+    get_default_provider,
     get_provider_capabilities,
+    get_provider_config,
     reload_config,
     validate_config,
 )
-from .prompts import CODING_PROMPTS, SPEC_GUIDELINES, SPEC_TEMPLATES
-from .version import __version__
 
 # Export EngineClient as the primary client interface
 from .engine import EngineClient
+from .prompts import CODING_PROMPTS, SPEC_GUIDELINES, SPEC_TEMPLATES
+from .version import __version__
 
 # TUI-specific imports are lazy-loaded via __getattr__ below
 # This allows the server to import ppxai.* without requiring prompt_toolkit

@@ -52,8 +52,9 @@ import ipaddress
 import os
 import socket
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Union
 from urllib.parse import urlparse
 
 from ...common.logger import get_logger
@@ -68,7 +69,7 @@ logger = get_logger("tui")
 # infra change) is re-evaluated promptly — the cache is an optimization, not a
 # security boundary (the DNS-rebinding TOCTOU is already out of scope, tier-d).
 _RESOLVE_TTL_S = 30.0
-_resolve_cache: Dict[str, Tuple[float, bool]] = {}
+_resolve_cache: dict[str, tuple[float, bool]] = {}
 
 
 def _is_blocked_ip(ip_str: str) -> bool:
@@ -175,20 +176,20 @@ def grant_has_shell(grant) -> bool:
 # egress set to its host(s).
 from .search_backends import (  # noqa: E402  (leaf module, no cycle)
     ALL_HOSTS as _WEB_SEARCH_ALL_HOSTS,
-    BACKEND_ENV as _WEB_SEARCH_BACKEND_ENV,
-    BACKEND_HOSTS as _WEB_SEARCH_BACKEND_HOSTS,
+)
+from .search_backends import (
     resolve_web_search_backend,
 )
 
 # get_weather's key-free direct backends. wttr.in is tried first; Open-Meteo
 # (v1.19.1) is the reliable fallback tier tried BEFORE any premium web search.
 # Both are always in the egress superset since neither needs a key.
-_WEATHER_OPENMETEO_HOSTS: List[str] = [
+_WEATHER_OPENMETEO_HOSTS: list[str] = [
     "https://api.open-meteo.com/",
     "https://geocoding-api.open-meteo.com/",
 ]
 
-_NETWORK_TOOLS: Dict[str, Tuple[str, Any]] = {
+_NETWORK_TOOLS: dict[str, tuple[str, Any]] = {
     "fetch_url": ("kwarg", "url"),
     "web_search": ("fixed", _WEB_SEARCH_ALL_HOSTS),
     # v1.19.1 (ADR 0009 §2 / Item 52): https-only — the handler's plain-http
@@ -197,7 +198,7 @@ _NETWORK_TOOLS: Dict[str, Tuple[str, Any]] = {
 }
 
 
-def pinned_web_search_backend(provider_name: Optional[str] = None) -> Optional[str]:
+def pinned_web_search_backend(provider_name: str | None = None) -> str | None:
     """The single backend web_search is HARD-pinned to, or None.
 
     ADR 0009 step ④ / Q5: delegates to the shared resolver. A pin now exists
@@ -233,7 +234,7 @@ class ToolDecision:
     allowed: bool
     target_host: str
     target_path: str
-    rule_id: Optional[str]  # allowlist_rule_id for audit (None on deny)
+    rule_id: str | None  # allowlist_rule_id for audit (None on deny)
     reason: str
     # All hosts the tool could reach that PASSED the allowlist (the full
     # superset, not just targets[0]). For a multi-backend tool (web_search →
@@ -241,7 +242,7 @@ class ToolDecision:
     # event must record every approved candidate — logging only the first
     # masks which backend was actually hit (secondary review 2026-06-16,
     # Item 37h). Empty on deny. Defaulted so existing call sites stay valid.
-    approved_targets: Tuple[str, ...] = ()
+    approved_targets: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -249,7 +250,7 @@ class _Rule:
     """One normalized allowlist entry: a host matcher + optional path prefixes."""
 
     host: str                 # exact host or "*.suffix" single-label glob
-    paths: Tuple[str, ...]    # path prefixes; empty = any path
+    paths: tuple[str, ...]    # path prefixes; empty = any path
     rule_id: str              # stable id for audit (the index)
 
     def matches_host(self, host: str) -> bool:
@@ -286,9 +287,9 @@ def is_network_tool(name: str) -> bool:
 def tool_targets(
     name: str,
     kwargs: dict,
-    provider_name: Optional[str] = None,
-    egress_allows: Optional[Callable[[str], bool]] = None,
-) -> List[str]:
+    provider_name: str | None = None,
+    egress_allows: Callable[[str], bool] | None = None,
+) -> list[str]:
     """Every URL a network-capable tool call could reach (its egress set).
 
     Returns a list of candidate URLs. Empty list = the tool is
@@ -359,14 +360,14 @@ class NetworkPolicy:
 
     def __init__(
         self,
-        allow_outbound: Optional[List] = None,
-        provider_name: Optional[str] = None,
+        allow_outbound: list | None = None,
+        provider_name: str | None = None,
     ) -> None:
         # Step ④: the run's provider context — threaded into tool_targets()
         # by authorize() so per-provider backend tuples resolve consistently
         # at the egress chokepoint. None = global scope (the pre-④ behavior).
         self.provider_name = provider_name
-        self._rules: List[_Rule] = []
+        self._rules: list[_Rule] = []
         for i, entry in enumerate(allow_outbound or []):
             if isinstance(entry, str):
                 host, paths = entry, ()
@@ -397,7 +398,7 @@ class NetworkPolicy:
         h = (host or "").lower()
         return bool(h) and any(rule.matches_host(h) for rule in self._rules)
 
-    def check(self, url: Optional[str]) -> Decision:
+    def check(self, url: str | None) -> Decision:
         """Allow only if the URL matches a rule. Fail-closed otherwise."""
         if not url:
             return Deny("no resolvable target host")
@@ -461,7 +462,7 @@ class NetworkPolicy:
         )
         if not targets:
             return ToolDecision(False, "", "", None, "no resolvable target host")
-        first_allow_rule: Optional[str] = None
+        first_allow_rule: str | None = None
         for url in targets:
             decision = self.check(url)
             if isinstance(decision, Deny):
@@ -499,7 +500,7 @@ class NetworkPolicy:
         )
 
 
-def apply_egress_ceiling(network: List) -> Tuple[List, List]:
+def apply_egress_ceiling(network: list) -> tuple[list, list]:
     """Intersect a run's assembled allowlist with `execution.egress_ceiling`
     (ADR 0009 sign-off Q3 — step ③).
 
@@ -527,8 +528,8 @@ def apply_egress_ceiling(network: List) -> Tuple[List, List]:
         return list(network or []), []
     policy = NetworkPolicy(ceiling)
     literal = {e for e in ceiling if isinstance(e, str)}
-    kept: List = []
-    stripped: List = []
+    kept: list = []
+    stripped: list = []
     for entry in network or []:
         if isinstance(entry, str):
             ok = entry in literal or (

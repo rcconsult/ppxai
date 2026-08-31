@@ -22,13 +22,11 @@ users won't need.
 
 from __future__ import annotations
 
-from typing import Any, List, Optional, Tuple
+from typing import Any
 
+from ...file_ref import FILE_REF_PROPERTIES, resolve_file_reference
 from ...types import ToolEngineProtocol, ToolManagerProtocol
 from ..base import BaseTool
-from ...file_ref import resolve_file_reference
-from ...file_ref import FILE_REF_PROPERTIES
-
 
 # Default row limits to prevent token-budget blowout on large sheets.
 _DEFAULT_MAX_ROWS = 100
@@ -38,9 +36,9 @@ _MAX_TEXT_CHARS = 100_000
 
 def _resolve_file(
     engine: Any,
-    file_id: Optional[str] = None,
-    path: Optional[str] = None,
-) -> Tuple[Optional[Any], Optional[str]]:
+    file_id: str | None = None,
+    path: str | None = None,
+) -> tuple[Any | None, str | None]:
     """Resolve a file reference via the unified engine resolver.
 
     Accepts EITHER `file_id` (SessionFileStore chat attachment) or
@@ -78,8 +76,8 @@ class ListExcelSheetsTool(BaseTool):
 
     async def execute(
         self,
-        file_id: Optional[str] = None,
-        path: Optional[str] = None,
+        file_id: str | None = None,
+        path: str | None = None,
         **kwargs,
     ) -> str:
         meta, err = _resolve_file(self.engine, file_id=file_id, path=path)
@@ -98,7 +96,7 @@ class ListExcelSheetsTool(BaseTool):
         except Exception as exc:
             return f"Error opening {meta.name!r}: {exc}"
 
-        lines: List[str] = [f"# {meta.name} — {len(wb.sheetnames)} sheet(s)\n"]
+        lines: list[str] = [f"# {meta.name} — {len(wb.sheetnames)} sheet(s)\n"]
 
         for i, sheet_name in enumerate(wb.sheetnames, 1):
             ws = wb[sheet_name]
@@ -106,7 +104,7 @@ class ListExcelSheetsTool(BaseTool):
             max_col = ws.max_column or 0
 
             # Preview: first row as column headers
-            headers: List[str] = []
+            headers: list[str] = []
             if max_row >= 1:
                 for cell in ws[1]:
                     val = cell.value
@@ -180,8 +178,8 @@ class ReadExcelSheetTool(BaseTool):
     async def execute(
         self,
         sheet: str = "",
-        file_id: Optional[str] = None,
-        path: Optional[str] = None,
+        file_id: str | None = None,
+        path: str | None = None,
         rows: int = _DEFAULT_MAX_ROWS,
         as_markdown: bool = True,
         **kwargs,
@@ -227,7 +225,7 @@ class ReadExcelSheetTool(BaseTool):
             return f"{meta.name} / {sheet}: empty sheet (0 rows)."
 
         # Read rows up to the limit
-        all_rows: List[List[str]] = []
+        all_rows: list[list[str]] = []
         total_chars = 0
         truncated = False
 
@@ -269,7 +267,7 @@ class ReadExcelSheetTool(BaseTool):
         return result
 
 
-def _to_markdown_table(rows: List[List[str]]) -> str:
+def _to_markdown_table(rows: list[list[str]]) -> str:
     """Convert a list of rows (first is header) to a markdown table."""
     if not rows:
         return ""
@@ -293,7 +291,7 @@ def _to_markdown_table(rows: List[List[str]]) -> str:
     return "\n".join(lines)
 
 
-def _to_csv(rows: List[List[str]]) -> str:
+def _to_csv(rows: list[list[str]]) -> str:
     """Convert rows to CSV text with proper quoting."""
     lines = []
     for row in rows:

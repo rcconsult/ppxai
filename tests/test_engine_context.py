@@ -6,11 +6,13 @@ These tests verify:
 - clear_injected_contexts() method
 - Context recovery workflow
 """
-import pytest
 import os
-from unittest.mock import patch, AsyncMock
+from unittest.mock import patch
+
+import pytest
+
 from ppxai.engine.client import EngineClient
-from ppxai.engine.types import Event, EventType, Message
+from ppxai.engine.types import Message
 
 
 async def async_event_generator(events):

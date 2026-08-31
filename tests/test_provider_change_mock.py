@@ -4,7 +4,9 @@ Test that completer updates model list when provider changes (with mock).
 """
 
 from pathlib import Path
+
 from ppxai.tui.completer import TextualCompleter
+
 
 # Create a mock engine client
 class MockEngineClient:

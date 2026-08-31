@@ -22,16 +22,13 @@ byte-identical to what pre-R5 producers emitted.
 
 from unittest.mock import MagicMock, patch
 
-import pytest
-
+from ppxai.engine.providers.wire.generate_content import GenerateContentHandler
+from ppxai.engine.providers.wire.responses import ResponsesHandler
 from ppxai.engine.types import Message
 from ppxai.engine.uploaded_file import (
-    flatten_uploaded_file_blocks,
     format_uploaded_file_reference,
     make_uploaded_file_block,
 )
-from ppxai.engine.providers.wire.responses import ResponsesHandler
-from ppxai.engine.providers.wire.generate_content import GenerateContentHandler
 
 
 def _pdf_block():
@@ -183,7 +180,6 @@ class TestOpenAINativeResponsesFlatten:
 
     def test_tool_message_flattened(self):
         """Tool messages carry content too — must flatten there."""
-        from ppxai.engine.providers.openai_native import OpenAINativeProvider
 
         messages = [
             Message(role="tool", content=[_pdf_block()], tool_call_id="call_1"),

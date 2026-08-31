@@ -20,7 +20,7 @@ import pytest
 pytest.importorskip("fastapi")
 pytest.importorskip("httpx")
 
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 from fastapi.testclient import TestClient
 
@@ -283,11 +283,11 @@ class TestEnrichedOneshotFacade:
 
     @pytest.fixture
     def reg(self, tmp_path, monkeypatch):
+        import ppxai.server.state as state
         from ppxai.engine.agent_runs import (
             AgentRunRegistry,
             FilesystemAgentRunStore,
         )
-        import ppxai.server.state as state
 
         reg = AgentRunRegistry(FilesystemAgentRunStore(tmp_path / "runs"))
         monkeypatch.setattr(state, "_agent_run_registry", reg)
@@ -303,7 +303,6 @@ class TestEnrichedOneshotFacade:
 
     @staticmethod
     def _stub_runner(monkeypatch, fn):
-        from ppxai.server.routes import agent_v1
         from ppxai.engine import task_runner
 
         monkeypatch.setattr(task_runner, "build_task_runner", lambda *a, **k: fn)
@@ -441,7 +440,6 @@ class TestEnrichedOneshotAccounting:
     def test_full_grounding_shape_from_run_events(
         self, http_client, reg, search_loop, monkeypatch
     ):
-        from ppxai.server.routes import agent_v1
         from ppxai.engine import task_runner
 
         runner = self._emitting_runner(
@@ -466,7 +464,6 @@ class TestEnrichedOneshotAccounting:
     def test_costless_search_infers_duckduckgo(
         self, http_client, reg, search_loop, monkeypatch
     ):
-        from ppxai.server.routes import agent_v1
         from ppxai.engine import task_runner
 
         async def runner(m):
@@ -497,7 +494,6 @@ class TestEnrichedOneshotAccounting:
         # get_last_tool_usage global failed exactly this shape.
         import asyncio
 
-        from ppxai.server.routes import agent_v1
         from ppxai.engine import task_runner
         from ppxai.server.routes import oneshot as oneshot_mod
 

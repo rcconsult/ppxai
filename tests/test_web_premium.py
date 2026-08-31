@@ -5,8 +5,10 @@ Tests Perplexity Sonar API, Gemini Google Search Grounding, and fallback logic.
 """
 
 import os
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import patch, AsyncMock, MagicMock
+
 from ppxai.engine.tools.builtin import web_premium
 from ppxai.engine.types import ToolUsage
 

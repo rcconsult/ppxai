@@ -158,6 +158,7 @@ def test_spawn_launches_interactive_shell_with_history(tmp_path):
     command, then send an up-arrow (history recall) and confirm the previous
     command comes back — which only works when bash is interactive."""
     import shutil as _sh
+
     from ppxai.server.routes.terminal import PtyProcess
 
     bash = _sh.which("bash")

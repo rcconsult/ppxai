@@ -4,6 +4,7 @@ Quick test of TextualCompleter logic.
 """
 
 from pathlib import Path
+
 from ppxai.tui.completer import TextualCompleter
 
 # Create completer

@@ -6,17 +6,15 @@ Renders TableData as Rich Tables and TreeNode as Rich Trees.
 v1.13.8: Initial implementation
 """
 
-from typing import Optional, Callable
-from rich.console import Console
-from rich.table import Table
-from rich.tree import Tree
-from rich.panel import Panel
-from rich.text import Text
-from rich.syntax import Syntax
 from rich import box
+from rich.console import Console
+from rich.panel import Panel
+from rich.syntax import Syntax
+from rich.table import Table
+from rich.text import Text
+from rich.tree import Tree
 
 from .parsers import TableData, TreeNode
-
 
 # Type colors for tree values
 TYPE_STYLES = {
@@ -35,7 +33,7 @@ def render_table_tui(
     console: Console,
     page: int = 0,
     page_size: int = 50,
-    title: Optional[str] = None,
+    title: str | None = None,
     show_row_numbers: bool = True,
     show_controls: bool = False,
 ) -> dict:
@@ -132,7 +130,7 @@ def render_tree_tui(
     node: TreeNode,
     console: Console,
     expand_depth: int = 2,
-    title: Optional[str] = None,
+    title: str | None = None,
     max_value_length: int = 100,
     show_controls: bool = False,
 ) -> None:

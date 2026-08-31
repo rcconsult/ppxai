@@ -7,13 +7,13 @@ Provides a double-click desktop app experience.
 """
 
 import argparse
-import os
 import socket
 import subprocess
 import sys
 import time
 import webbrowser
 from pathlib import Path
+
 
 # Version — loaded directly from ppxai/version.py by file path to avoid
 # triggering ppxai/__init__.py, which imports config + engine modules
@@ -190,8 +190,8 @@ def install_web_ui():
 
 def wait_for_server(port: int, timeout: float = 30.0) -> bool:
     """Wait for server to become available."""
-    import urllib.request
     import urllib.error
+    import urllib.request
 
     url = f'http://127.0.0.1:{port}/health'
     start = time.time()

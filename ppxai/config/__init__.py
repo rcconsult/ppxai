@@ -20,63 +20,34 @@ v1.17.0: Split into domain submodules (providers, tools, features, paths, prompt
 
 from typing import Any, Dict
 
-from .store import ConfigStore, get_config, register_reload_callback, reload_config
-from .loader import (
-    # Path constants
-    PPXAI_HOME,
-    SESSIONS_DIR,
-    EXPORTS_DIR,
-    USAGE_FILE,
-    USER_CONFIG_FILE,
-    # Default capabilities
-    DEFAULT_CAPABILITIES,
-    # Initialization
-    initialize as _loader_initialize,
-    # Loading functions
-    find_config_file,
-    load_config,
-    _load_json_config,
-    _convert_models_format,
+from ..common.logger import Logger
+
+# Context, injection, bootstrap (no provider/prompt dependencies)
+from .context import (
+    DEFAULT_BOOTSTRAP_FILES,
+    DEFAULT_CONTEXT_LIMIT,
+    DEFAULT_CONTEXT_WARN_PERCENT,
+    DEFAULT_MAX_INJECTION_SIZE,
+    get_bootstrap_config,
+    get_bootstrap_files,
+    get_context_config,
+    get_context_warn_percent,
+    get_default_context_limit,
+    get_max_injection_size,
+    is_bootstrap_enabled,
 )
 from .defaults import (
+    DEFAULT_AGENT_AUTO_RETRY_EMPTY,
+    DEFAULT_AGENT_CONTEXT_CHAR_LIMIT,
+    # Agent defaults
+    DEFAULT_AGENT_MAX_ITERATIONS,
+    DEFAULT_AGENT_MAX_SAME_TOOL_CALLS,
+    DEFAULT_AGENT_MAX_TOOL_ITERATIONS,
+    DEFAULT_AGENT_MIN_TASK_WORDS,
+    DEFAULT_ALLOWED_COMMANDS,
     # Shell tool defaults
     DEFAULT_DANGEROUS_COMMANDS,
     DEFAULT_NEVER_ALLOW,
-    DEFAULT_ALLOWED_COMMANDS,
-    # Agent defaults
-    DEFAULT_AGENT_MAX_ITERATIONS,
-    DEFAULT_AGENT_MAX_TOOL_ITERATIONS,
-    DEFAULT_AGENT_MAX_SAME_TOOL_CALLS,
-    DEFAULT_AGENT_CONTEXT_CHAR_LIMIT,
-    DEFAULT_AGENT_MIN_TASK_WORDS,
-    DEFAULT_AGENT_AUTO_RETRY_EMPTY,
-)
-
-# Provider, model, pricing, capabilities
-from .providers import (
-    _get_config,
-    _get_providers,
-    _get_models,
-    get_default_provider,
-    get_config_source,
-    get_available_providers,
-    get_provider_config,
-    get_active_models,
-    get_active_pricing,
-    get_model_pricing,
-    calculate_cost,
-    get_api_key,
-    get_base_url,
-    get_provider_capabilities,
-    provider_needs_tool,
-    get_coding_model,
-    get_default_model,
-    validate_config,
-    get_model_context_limit,
-    get_model_max_tokens,
-    get_generation_params,
-    get_extra_body,
-    get_reasoning_trigger,
 )
 
 # Execution surfaces (ADR 0010 third axis; ADR 0011 one-off tier)
@@ -90,53 +61,46 @@ from .execution import (
     get_execution_task_config,
 )
 
-# Tool, shell, agent, container
-from .tools import (
-    get_tool_config,
-    get_tool_description_overrides,
-    get_tool_pricing,
-    get_shell_config,
-    get_agent_config,
-    get_container_config,
-    get_vision_model_config,
-)
-
 # TUI and session
 from .features import (
-    get_tui_config,
-    get_tui_theme,
-    set_tui_config,
-    get_session_config,
+    DEFAULT_FILE_TREE_IGNORE_DIRS,
     get_auto_restore_mode,
     get_auto_save_interval,
     get_debug_log_enabled,
     get_file_tree_config,
     get_file_tree_ignore_dirs,
-    DEFAULT_FILE_TREE_IGNORE_DIRS,
+    get_session_config,
+    get_tui_config,
+    get_tui_theme,
+    set_tui_config,
+)
+from .loader import (
+    # Default capabilities
+    DEFAULT_CAPABILITIES,
+    EXPORTS_DIR,
+    # Path constants
+    PPXAI_HOME,
+    SESSIONS_DIR,
+    USAGE_FILE,
+    USER_CONFIG_FILE,
+    _convert_models_format,
+    _load_json_config,
+    # Loading functions
+    find_config_file,
+    load_config,
+)
+from .loader import (
+    # Initialization
+    initialize as _loader_initialize,
 )
 
 # Paths, data directory, server
 from .paths import (
-    get_paths_config,
     get_bin_search_paths,
     get_data_dir,
-    get_server_config,
     get_idle_timeout,
-)
-
-# Context, injection, bootstrap (no provider/prompt dependencies)
-from .context import (
-    DEFAULT_MAX_INJECTION_SIZE,
-    DEFAULT_CONTEXT_LIMIT,
-    DEFAULT_CONTEXT_WARN_PERCENT,
-    get_context_config,
-    get_max_injection_size,
-    get_default_context_limit,
-    get_context_warn_percent,
-    DEFAULT_BOOTSTRAP_FILES,
-    get_bootstrap_config,
-    get_bootstrap_files,
-    is_bootstrap_enabled,
+    get_paths_config,
+    get_server_config,
 )
 
 # System prompts (depends on providers)
@@ -145,8 +109,45 @@ from .prompts import (
     get_system_prompt,
     get_system_prompt_mode,
 )
-from ..common.logger import Logger
 
+# Provider, model, pricing, capabilities
+from .providers import (
+    _get_config,
+    _get_models,
+    _get_providers,
+    calculate_cost,
+    get_active_models,
+    get_active_pricing,
+    get_api_key,
+    get_available_providers,
+    get_base_url,
+    get_coding_model,
+    get_config_source,
+    get_default_model,
+    get_default_provider,
+    get_extra_body,
+    get_generation_params,
+    get_model_context_limit,
+    get_model_max_tokens,
+    get_model_pricing,
+    get_provider_capabilities,
+    get_provider_config,
+    get_reasoning_trigger,
+    provider_needs_tool,
+    validate_config,
+)
+from .store import ConfigStore, get_config, register_reload_callback, reload_config
+
+# Tool, shell, agent, container
+from .tools import (
+    get_agent_config,
+    get_container_config,
+    get_shell_config,
+    get_tool_config,
+    get_tool_description_overrides,
+    get_tool_pricing,
+    get_vision_model_config,
+)
 
 # Legacy compatibility exports
 # Note: MODEL_PRICING is deprecated - use get_model_pricing() instead
@@ -165,8 +166,8 @@ CODING_MODEL = "perplexity/sonar"
 # initialize() is called. They are mutated in-place on reload, so all
 # existing references see the updated data (no stale snapshots).
 
-PROVIDERS: Dict[str, Any] = {}
-MODELS: Dict[str, Any] = {}
+PROVIDERS: dict[str, Any] = {}
+MODELS: dict[str, Any] = {}
 _initialized = False
 
 

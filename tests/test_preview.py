@@ -9,10 +9,10 @@ Tests cover:
 
 import asyncio
 import json
-import pytest
-from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 from urllib.request import urlopen
+
+import pytest
 
 
 class TestInjectReloadScript:
@@ -487,6 +487,7 @@ class TestPreviewBackendDrainTask:
         users get nicer output via `jq -r '.line // .type'`.
         """
         import json as _json
+
         from ppxai.engine.preview_backend import drain_backend_output as _drain_backend_output
         proc = MagicMock()
         proc.pid = 88888
@@ -601,8 +602,8 @@ class TestPreviewLogAlias:
     found"); the alias absorbs both spellings."""
 
     def test_preview_log_resolves_to_logs_subcommand(self):
-        from ppxai.commands.factory import CommandFactory
         from ppxai.commands.display import handle_preview_log
+        from ppxai.commands.factory import CommandFactory
         # Aliased spec exists and resolves to the canonical name.
         spec = CommandFactory.get("preview-log")
         assert spec is not None
@@ -610,8 +611,8 @@ class TestPreviewLogAlias:
         assert spec.handler is handle_preview_log
 
     def test_preview_logs_plural_also_routes(self):
-        from ppxai.commands.factory import CommandFactory
         from ppxai.commands.display import handle_preview_log
+        from ppxai.commands.factory import CommandFactory
         spec = CommandFactory.get("preview-logs")
         assert spec is not None
         # CommandFactory.get follows the alias to its canonical spec.
@@ -622,9 +623,10 @@ class TestPreviewLogAlias:
         """handle_preview_log("50") should invoke handle_preview with
         args="logs 50" — same destination as the user typing
         `/preview logs 50` directly."""
+        from unittest.mock import MagicMock, patch
+
         from ppxai.commands.display import handle_preview_log
         from ppxai.commands.protocol import CommandContext
-        from unittest.mock import MagicMock, patch
 
         ec = MagicMock()
         ec.get_working_dir = MagicMock(return_value=str(tmp_path))
@@ -638,9 +640,10 @@ class TestPreviewLogAlias:
         inner.assert_called_once_with(ctx, "logs 50")
 
     def test_handler_with_no_args_passes_logs(self, tmp_path):
+        from unittest.mock import MagicMock, patch
+
         from ppxai.commands.display import handle_preview_log
         from ppxai.commands.protocol import CommandContext
-        from unittest.mock import MagicMock, patch
 
         ec = MagicMock()
         ec.get_working_dir = MagicMock(return_value=str(tmp_path))

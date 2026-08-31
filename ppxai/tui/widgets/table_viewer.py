@@ -8,7 +8,7 @@ Supports CSV, TSV, PSV with automatic delimiter detection.
 import csv
 import io
 from pathlib import Path
-from typing import Any, List, Literal, Optional, Tuple
+from typing import Literal
 
 from textual.app import ComposeResult
 from textual.css.query import NoMatches
@@ -17,10 +17,9 @@ from textual.reactive import reactive
 from textual.widget import Widget
 from textual.widgets import ContentSwitcher, DataTable, Static
 
-from .code_editor import CodeEditor
-
 from ppxai.tui.keys import get_widget_bindings
 
+from .code_editor import CodeEditor
 
 # Type alias for view modes
 ViewMode = Literal["table", "source"]
@@ -71,7 +70,7 @@ def detect_delimiter(content: str) -> str:
     return best[0] if best[1] > 0 else ","
 
 
-def detect_has_header(rows: List[List[str]]) -> bool:
+def detect_has_header(rows: list[list[str]]) -> bool:
     """Heuristic to detect if first row is a header.
 
     Args:
@@ -102,7 +101,7 @@ def detect_has_header(rows: List[List[str]]) -> bool:
     return False
 
 
-def parse_tabular(content: str, delimiter: str = None) -> Tuple[List[str], List[List[str]], str]:
+def parse_tabular(content: str, delimiter: str = None) -> tuple[list[str], list[list[str]], str]:
     """Parse tabular data content.
 
     Args:
@@ -176,8 +175,8 @@ class TableViewer(Widget):
             id: Widget ID
         """
         super().__init__(id=id)
-        self._headers: List[str] = []
-        self._rows: List[List[str]] = []
+        self._headers: list[str] = []
+        self._rows: list[list[str]] = []
         self._source: str = ""
         self._filename: str = "data.csv"
         self._delimiter: str = ","
@@ -377,8 +376,8 @@ class TableViewer(Widget):
 
     def set_data(
         self,
-        headers: List[str],
-        rows: List[List[str]],
+        headers: list[str],
+        rows: list[list[str]],
         filename: str = "data.csv",
         delimiter: str = ",",
     ) -> None:
@@ -413,12 +412,12 @@ class TableViewer(Widget):
         self._populate_table()
 
     @property
-    def headers(self) -> List[str]:
+    def headers(self) -> list[str]:
         """Get column headers."""
         return self._headers
 
     @property
-    def rows(self) -> List[List[str]]:
+    def rows(self) -> list[list[str]]:
         """Get data rows."""
         return self._rows
 
@@ -443,7 +442,7 @@ class TableViewer(Widget):
         return self._filename
 
     @staticmethod
-    def get_delimiter_for_extension(ext: str) -> Optional[str]:
+    def get_delimiter_for_extension(ext: str) -> str | None:
         """Get expected delimiter for file extension.
 
         Args:

@@ -21,14 +21,14 @@ import importlib.resources
 import logging
 import os
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 from .base import AlwaysWrapper, ProbeWrapper, Wrapper
 
 logger = logging.getLogger(__name__)
 
 
-_TYPE_REGISTRY: Dict[str, type[Wrapper]] = {
+_TYPE_REGISTRY: dict[str, type[Wrapper]] = {
     "probe": ProbeWrapper,
     "always": AlwaysWrapper,
 }
@@ -38,7 +38,7 @@ class WrapperConfigError(ValueError):
     """Raised on a malformed wrapper config entry."""
 
 
-def make_wrapper(entry: Dict[str, Any]) -> Wrapper:
+def make_wrapper(entry: dict[str, Any]) -> Wrapper:
     """Instantiate a Wrapper from a JSON config dict.
 
     Required keys (all wrappers): `name`, `type`, `binary`.

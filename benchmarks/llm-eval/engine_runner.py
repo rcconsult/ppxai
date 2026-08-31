@@ -13,13 +13,13 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 # Add parent directory to path for ppxai imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 # Initialize ppxai config system (loads .env, config, directories)
 from ppxai.config import initialize
+
 initialize()
 
 # Clean up invalid SSL_CERT_FILE from .env (e.g., Windows paths on WSL)
@@ -27,13 +27,11 @@ env_cert = os.environ.get("SSL_CERT_FILE", "")
 if env_cert and not os.path.exists(env_cert):
     os.environ.pop("SSL_CERT_FILE", None)
 
+from results import BenchmarkResult
+from test_cases import ALL_TESTS
+
 from ppxai.engine.client import EngineClient
 from ppxai.engine.types import EventType, Message
-from ppxai.engine.bootstrap import BootstrapContext
-from ppxai.engine.context import ScopedBootstrapSource
-
-from test_cases import ALL_TESTS, TestCase, get_categories, TOOLS
-from results import BenchmarkResult
 
 
 class EngineClientWrapper:
@@ -53,7 +51,7 @@ class EngineClientWrapper:
         model: str,
         verbose: bool = False,
         debug: bool = False,
-        debug_dir: Optional[Path] = None,
+        debug_dir: Path | None = None,
         tool_calling_method: str = "auto",
         skip_agents_md: bool = False,
     ):
@@ -64,7 +62,7 @@ class EngineClientWrapper:
         self.debug_dir = debug_dir
         self.tool_calling_method = tool_calling_method
         self.skip_agents_md = skip_agents_md
-        self._client: Optional[EngineClient] = None
+        self._client: EngineClient | None = None
         self._initialized = False
         self._request_count = 0
         self._response_samples = []  # For model fingerprinting
@@ -169,7 +167,7 @@ class EngineClientWrapper:
     async def chat(
         self,
         messages: list[dict],
-        tools: Optional[list[dict]] = None,
+        tools: list[dict] | None = None,
         **kwargs,
     ) -> dict:
         """
@@ -472,7 +470,7 @@ class EngineClientWrapper:
     def _extract_tool_calls_from_content(
         self,
         content: str,
-        tools: Optional[list[dict]] = None
+        tools: list[dict] | None = None
     ) -> list[dict]:
         """
         Extract tool calls from response content.
@@ -839,11 +837,11 @@ class EngineBenchmarkRunner:
             return False
         return any(marker in blob for marker in cls.INFRA_ERROR_MARKERS)
 
-    def run(self, categories: Optional[list[str]] = None) -> BenchmarkResult:
+    def run(self, categories: list[str] | None = None) -> BenchmarkResult:
         """Run benchmark synchronously."""
         return asyncio.run(self.run_async(categories))
 
-    async def run_async(self, categories: Optional[list[str]] = None) -> BenchmarkResult:
+    async def run_async(self, categories: list[str] | None = None) -> BenchmarkResult:
         """Run benchmark tests."""
         start_time = time.time()
 

@@ -16,8 +16,6 @@ renders them yet. The regression surface is purely the types.
 
 import time
 
-import pytest
-
 from ppxai.engine.types import AgentBeatState, EventType
 
 

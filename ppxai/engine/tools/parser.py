@@ -10,17 +10,18 @@ for tool lookup rather than depending on ToolManager directly.
 
 import json
 import re
-from typing import Any, Callable, Dict, List, Optional, Protocol
+from collections.abc import Callable
+from typing import Any, Protocol
 
 
 class ToolLike(Protocol):
     """Protocol for tool lookup results - used for type checking only."""
     @property
-    def parameters(self) -> Dict[str, Any]: ...
+    def parameters(self) -> dict[str, Any]: ...
 
 
 # Type alias for tool lookup function
-ToolLookupFunc = Callable[[str], Optional[ToolLike]]
+ToolLookupFunc = Callable[[str], ToolLike | None]
 
 
 # Tool inference rules for models that output raw JSON without 'tool' key.
@@ -31,7 +32,7 @@ ToolLookupFunc = Callable[[str], Optional[ToolLike]]
 #   "allowed": all keys that can be present (superset check),
 #   "aliases": {canonical_param: [alias1, alias2, ...]} for normalization
 # }
-TOOL_INFERENCE_RULES: List[Dict[str, Any]] = [
+TOOL_INFERENCE_RULES: list[dict[str, Any]] = [
     {
         "tool": "web_search",
         "required": ["query"],
@@ -81,7 +82,7 @@ TOOL_INFERENCE_RULES: List[Dict[str, Any]] = [
 ]
 
 
-def _try_parse_json(json_str: str) -> Optional[Dict[str, Any]]:
+def _try_parse_json(json_str: str) -> dict[str, Any] | None:
     """Try to parse JSON, including handling single quotes.
 
     Args:
@@ -103,9 +104,9 @@ def _try_parse_json(json_str: str) -> Optional[Dict[str, Any]]:
 
 
 def _normalize_tool_call(
-    data: Dict[str, Any],
+    data: dict[str, Any],
     get_tool: ToolLookupFunc
-) -> Optional[Dict[str, Any]]:
+) -> dict[str, Any] | None:
     """Normalize a parsed tool call dict to standard format.
 
     Args:
@@ -149,7 +150,7 @@ def _normalize_tool_call(
     return None
 
 
-def _find_json_objects(text: str) -> List[Dict[str, Any]]:
+def _find_json_objects(text: str) -> list[dict[str, Any]]:
     """Find all JSON objects in text using brace-counting.
 
     Handles nested braces, escaped characters, and string literals correctly.
@@ -164,7 +165,7 @@ def _find_json_objects(text: str) -> List[Dict[str, Any]]:
     Returns:
         List of parsed dict objects found in the text
     """
-    objects: List[Dict[str, Any]] = []
+    objects: list[dict[str, Any]] = []
     i = 0
     while i < len(text):
         if text[i] == '{':
@@ -206,7 +207,7 @@ def _find_json_objects(text: str) -> List[Dict[str, Any]]:
     return objects
 
 
-def _infer_tool_from_arguments(data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+def _infer_tool_from_arguments(data: dict[str, Any]) -> dict[str, Any] | None:
     """Infer which tool based on argument patterns when 'tool' key is missing.
 
     This handles models (like vLLM-served models) that output raw JSON arguments
@@ -225,7 +226,7 @@ def _infer_tool_from_arguments(data: Dict[str, Any]) -> Optional[Dict[str, Any]]
 
     keys = set(data.keys())
 
-    def match_rule(rule: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def match_rule(rule: dict[str, Any]) -> dict[str, Any] | None:
         """Check if data matches a tool rule and return normalized arguments."""
         tool_name = rule["tool"]
         required = rule["required"]
@@ -269,7 +270,7 @@ def _infer_tool_from_arguments(data: Dict[str, Any]) -> Optional[Dict[str, Any]]
 def parse_tool_call(
     text: str,
     get_tool: ToolLookupFunc
-) -> Optional[Dict[str, Any]]:
+) -> dict[str, Any] | None:
     """Parse a tool call from model response text.
 
     Tries multiple parsing strategies:
@@ -341,7 +342,7 @@ def strip_tool_json_from_text(text: str) -> str:
         return text
 
     # Find all JSON object spans using brace-counting
-    spans_to_remove: List[tuple] = []
+    spans_to_remove: list[tuple] = []
     i = 0
     while i < len(text):
         if text[i] == '{':
@@ -410,7 +411,7 @@ def strip_tool_json_from_text(text: str) -> str:
     return result.strip()
 
 
-def detect_truncated_tool_call(text: str) -> Optional[Dict[str, Any]]:
+def detect_truncated_tool_call(text: str) -> dict[str, Any] | None:
     """Detect if a response contains a truncated/incomplete tool call attempt.
 
     v1.15.2: GPT-OSS and other models sometimes output "I'll use X tool" followed

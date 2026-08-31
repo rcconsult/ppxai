@@ -28,13 +28,11 @@ from __future__ import annotations
 
 import base64
 import io
-from typing import Any, List, Optional, Tuple
+from typing import Any
 
+from ...file_ref import FILE_REF_PROPERTIES, resolve_file_reference
 from ...types import ToolEngineProtocol, ToolManagerProtocol
 from ..base import BaseTool
-from ...file_ref import resolve_file_reference
-from ...file_ref import FILE_REF_PROPERTIES
-
 
 # Maximum characters to return from read_pdf per call. PDFs with thousands
 # of pages would otherwise blow past provider context windows and/or
@@ -49,7 +47,7 @@ _DEFAULT_DPI = 150
 _MAX_DPI = 300  # Cap to prevent runaway memory use on huge pages
 
 
-def _parse_pages_spec(spec: str, total_pages: int) -> List[int]:
+def _parse_pages_spec(spec: str, total_pages: int) -> list[int]:
     """Parse a pages selector into a sorted list of 0-based page indices.
 
     Accepts:
@@ -98,9 +96,9 @@ def _parse_pages_spec(spec: str, total_pages: int) -> List[int]:
 
 def _resolve_file(
     engine: Any,
-    file_id: Optional[str] = None,
-    path: Optional[str] = None,
-) -> Tuple[Optional[Any], Optional[str]]:
+    file_id: str | None = None,
+    path: str | None = None,
+) -> tuple[Any | None, str | None]:
     """Resolve a file reference via the unified engine resolver.
 
     Accepts EITHER `file_id` (SessionFileStore chat attachment) or
@@ -157,8 +155,8 @@ class ReadPdfTool(BaseTool):
 
     async def execute(
         self,
-        file_id: Optional[str] = None,
-        path: Optional[str] = None,
+        file_id: str | None = None,
+        path: str | None = None,
         pages: str = "all",
         **kwargs,
     ) -> str:
@@ -197,7 +195,7 @@ class ReadPdfTool(BaseTool):
         except ValueError as exc:
             return f"Error parsing pages={pages!r}: {exc}"
 
-        chunks: List[str] = [f"# {meta.name} ({total_pages} pages total)"]
+        chunks: list[str] = [f"# {meta.name} ({total_pages} pages total)"]
         total_chars = len(chunks[0])
         truncated = False
 
@@ -285,8 +283,8 @@ class GetPdfPageImageTool(BaseTool):
     async def execute(
         self,
         page: int,
-        file_id: Optional[str] = None,
-        path: Optional[str] = None,
+        file_id: str | None = None,
+        path: str | None = None,
         dpi: int = _DEFAULT_DPI,
         **kwargs,
     ) -> str:

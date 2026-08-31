@@ -45,8 +45,9 @@ Thread-safety design:
 import json
 import logging
 import threading
+from collections.abc import Callable, Mapping
 from importlib.resources import files
-from typing import Any, Callable, Dict, List, Mapping, Optional
+from typing import Any
 
 _logger = logging.getLogger(__name__)
 
@@ -55,7 +56,7 @@ _logger = logging.getLogger(__name__)
 Listener = Callable[[Any], None]
 
 
-def _load_schema() -> Dict[str, Any]:
+def _load_schema() -> dict[str, Any]:
     """Load the canonical AppState schema from the package resources.
 
     The JSON file ships inside the `ppxai.engine` package so it is
@@ -86,7 +87,7 @@ def _load_schema() -> Dict[str, Any]:
 
 # Loaded once at module import. Immutable from Python's perspective;
 # tests and the server route hand this directly to consumers.
-SCHEMA: Dict[str, Any] = _load_schema()
+SCHEMA: dict[str, Any] = _load_schema()
 
 
 def _default_for(field_spec: Mapping[str, Any]) -> Any:
@@ -105,7 +106,7 @@ def _default_for(field_spec: Mapping[str, Any]) -> Any:
     return default
 
 
-def _build_fields(schema: Dict[str, Any]) -> Dict[str, Any]:
+def _build_fields(schema: dict[str, Any]) -> dict[str, Any]:
     """Derive the flat {python_name: default_value} FIELDS dict from
     the schema. Preserves insertion order (Python 3.7+ dict ordering)
     so the documented grouping in the schema JSON carries through."""
@@ -159,23 +160,23 @@ class AppState:
     """
 
     # Raw schema (for the server endpoint, tests, and diagnostic tools).
-    SCHEMA: Dict[str, Any] = SCHEMA
+    SCHEMA: dict[str, Any] = SCHEMA
 
     # Flat {python_name: default_value} map — derived from SCHEMA.
     # Callers that iterate FIELDS (tests, EngineClient, etc.) keep
     # working unchanged. Mutation-safe containers are copied on init.
-    FIELDS: Dict[str, Any] = _build_fields(SCHEMA)
+    FIELDS: dict[str, Any] = _build_fields(SCHEMA)
 
-    def __init__(self, initial: Optional[Dict[str, Any]] = None) -> None:
+    def __init__(self, initial: dict[str, Any] | None = None) -> None:
         self._lock = threading.Lock()
         # Start from a per-instance copy of the schema defaults so
         # mutable defaults (lists, dicts) are not shared between
         # AppState instances.
-        self._data: Dict[str, Any] = {
+        self._data: dict[str, Any] = {
             name: _default_for(spec)
             for name, spec in self.SCHEMA["fields"].items()
         }
-        self._listeners: Dict[str, List[Listener]] = {}
+        self._listeners: dict[str, list[Listener]] = {}
 
         if initial:
             for key, value in initial.items():
@@ -223,7 +224,7 @@ class AppState:
         Usage: state.update(provider="openai", model="gpt-4.1-mini")
         """
         with self._lock:
-            pending: List[tuple] = []
+            pending: list[tuple] = []
             for key, value in kwargs.items():
                 if key not in self._data:
                     continue
@@ -264,7 +265,7 @@ class AppState:
                 fns.remove(fn)
         return self
 
-    def snapshot(self) -> Dict[str, Any]:
+    def snapshot(self) -> dict[str, Any]:
         """Return a plain dict copy of current state (for debugging/serialization)."""
         with self._lock:
             return dict(self._data)

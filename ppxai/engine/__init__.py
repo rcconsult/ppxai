@@ -5,15 +5,6 @@ This module provides the engine layer that powers all frontends (TUI, VSCode, We
 It has no UI dependencies and communicates via events and data structures.
 """
 
-from .types import (
-    EventType,
-    Event,
-    Message,
-    UsageStats,
-    ChatResponse,
-    ProviderCapabilities,
-    ToolDefinition,
-)
 # ADR 0006 Step 7a: import for side effect — registers per-kind
 # projection handlers with the ArtifactProjector subclasses
 # (ContextAttachmentProjector, TextMarkerProjector, MessageBoxProjector)
@@ -21,6 +12,15 @@ from .types import (
 # `<Projector>.project(ref)` without knowing about specific kinds.
 from . import artifact_projections  # noqa: F401
 from .client import EngineClient
+from .types import (
+    ChatResponse,
+    Event,
+    EventType,
+    Message,
+    ProviderCapabilities,
+    ToolDefinition,
+    UsageStats,
+)
 
 __all__ = [
     "EventType",

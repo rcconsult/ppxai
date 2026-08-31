@@ -1,6 +1,5 @@
 """Tests for configurable tool result display limits (v1.15.3)."""
 
-import pytest
 from ppxai.engine.tools.manager import ToolManager
 
 

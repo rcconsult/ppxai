@@ -12,28 +12,27 @@ v1.15.0: Type-based renderer dispatch refactoring
 """
 
 import pytest
+
 from ppxai.commands.results import (
-    ResultStatus,
-    CommandResult,
-    NotificationResult,
-    ErrorResult,
-    ConfirmationResult,
     AIResponseResult,
-    TableResult,
-    TreeResult,
-    ListResult,
-    KeyValueResult,
+    CompositeResult,
+    ConfirmationResult,
+    ConsentResult,
+    DiffResult,
+    ErrorResult,
     FileViewResult,
     ImageResult,
+    KeyValueResult,
+    ListResult,
+    NotificationResult,
     ProgressResult,
-    DiffResult,
-    ConsentResult,
     PromptResult,
-    CompositeResult,
-    ToolExecutionResult,
+    ResultStatus,
+    TableResult,
     TextResult,
+    ToolExecutionResult,
+    TreeResult,
 )
-
 
 # ============================================================================
 # Display Result Tests

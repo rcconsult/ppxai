@@ -19,8 +19,6 @@ from __future__ import annotations
 import base64
 import struct
 
-import pytest
-
 from ppxai.engine.image_validation import (
     ACCEPTED_IMAGE_FORMATS,
     DEFAULT_IMAGE_SIZE_LIMIT,
@@ -31,7 +29,6 @@ from ppxai.engine.image_validation import (
     sniff_media_type,
     validate_image,
 )
-
 
 # -----------------------------------------------------------------------------
 # Synthesized test bytes — deterministic headers, no external dependencies

@@ -28,9 +28,7 @@ Usage:
 import json
 import re
 import time
-import sys
-from pathlib import Path
-from typing import Optional
+
 from openai import OpenAI
 
 # Tool description variants - allows testing different wordings
@@ -490,7 +488,7 @@ def benchmark_model(
         print(f"Average Latency:         {avg_latency:.0f}ms")
 
         if results["per_tool_accuracy"]:
-            print(f"\nPer-Tool Accuracy:")
+            print("\nPer-Tool Accuracy:")
             for tool_name, stats in sorted(results["per_tool_accuracy"].items()):
                 print(f"  {tool_name:<20} {stats['correct']}/{stats['total']} ({stats['accuracy']}%)")
 

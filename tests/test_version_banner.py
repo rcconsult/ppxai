@@ -13,8 +13,6 @@ from __future__ import annotations
 import re
 from unittest.mock import patch
 
-import pytest
-
 from ppxai.version import (
     __version__,
     format_version_banner,
@@ -121,8 +119,9 @@ class TestGitCommitFallback:
         assert info["commit"] == "n/a"
 
     def test_returns_na_on_subprocess_timeout(self):
-        from ppxai import version as ver_mod
         import subprocess as sp
+
+        from ppxai import version as ver_mod
         with patch("ppxai.version.subprocess.run",
                    side_effect=sp.TimeoutExpired(cmd="git", timeout=2)):
             info = ver_mod.get_runtime_version_info()
@@ -143,10 +142,11 @@ class TestBuildInfoInjection:
     def test_build_info_takes_precedence_when_present(self):
         """When `_build_info.py` exists, its values win over runtime
         probes — even when git rev-parse would succeed."""
-        from ppxai import version as ver_mod
         # Stand up a fake _build_info module and inject it.
         import sys
         import types
+
+        from ppxai import version as ver_mod
 
         fake = types.ModuleType("ppxai._build_info")
         fake.BUILD_COMMIT = "deadbee"
@@ -161,8 +161,9 @@ class TestBuildInfoInjection:
 
     def test_falls_back_to_runtime_probes_when_absent(self):
         """No _build_info.py → existing git rev-parse + mtime probes."""
-        from ppxai import version as ver_mod
         import sys
+
+        from ppxai import version as ver_mod
         # Defensively remove the module if a previous test left one.
         sys.modules.pop("ppxai._build_info", None)
         # The runtime path returns either real values or "n/a"
@@ -176,9 +177,10 @@ class TestBuildInfoInjection:
     def test_partial_build_info_falls_through(self):
         """If `_build_info.py` is malformed (missing BUILD_MTIME) the
         runtime path takes over — we don't ship a half-populated banner."""
-        from ppxai import version as ver_mod
         import sys
         import types
+
+        from ppxai import version as ver_mod
 
         fake = types.ModuleType("ppxai._build_info")
         fake.BUILD_COMMIT = "deadbee"

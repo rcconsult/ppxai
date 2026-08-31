@@ -3,9 +3,11 @@
 These tests verify the fix for the 400 error bug where assistant messages
 weren't being added to session history before STREAM_END event was yielded.
 """
-import pytest
 import os
-from unittest.mock import Mock, AsyncMock, patch
+from unittest.mock import patch
+
+import pytest
+
 from ppxai.engine.client import EngineClient
 from ppxai.engine.types import Event, EventType, Message
 

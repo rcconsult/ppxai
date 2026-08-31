@@ -34,7 +34,8 @@ Usage:
 
 import asyncio
 import logging
-from typing import Any, Callable, Dict, Optional
+from collections.abc import Callable
+from typing import Any
 
 from blinker import Signal
 
@@ -55,7 +56,7 @@ class EventBus:
         Args:
             log_events: Enable debug logging for all events (useful for debugging)
         """
-        self._signals: Dict[str, Signal] = {}
+        self._signals: dict[str, Signal] = {}
         self._log_events = log_events
 
     def signal(self, name: str) -> Signal:
@@ -170,7 +171,7 @@ class EventBus:
             except Exception as e:
                 logger.error(f"[EventBus] Error in handler for '{event}': {e}", exc_info=True)
 
-    async def _handle_async(self, event: str, handler: Callable, kwargs: Dict[str, Any]):
+    async def _handle_async(self, event: str, handler: Callable, kwargs: dict[str, Any]):
         """Handle async event handler with error catching."""
         try:
             # Positional sender — same reason as the sync path above.
@@ -194,7 +195,7 @@ class EventBus:
                 exc_info=True,
             )
 
-    def _preview_data(self, kwargs: Dict[str, Any]) -> str:
+    def _preview_data(self, kwargs: dict[str, Any]) -> str:
         """Create abbreviated preview of event data for logging."""
         if not kwargs:
             return "{}"
@@ -215,7 +216,7 @@ class EventBus:
 
         return ", ".join(preview_parts)
 
-    def clear(self, event: Optional[str] = None):
+    def clear(self, event: str | None = None):
         """
         Clear handlers.
 

@@ -51,7 +51,7 @@ import os
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from ..config import execution as _execution_config
 from ..config import get_default_model
@@ -89,7 +89,7 @@ class TaskAuthorizationError(Exception):
         super().__init__(detail)
 
 
-def _task_cfg() -> Dict[str, Any]:
+def _task_cfg() -> dict[str, Any]:
     """Single indirection for `execution.task.*` reads in this module.
 
     `get_execution_task_config` is imported per-module across the codebase
@@ -137,17 +137,17 @@ class TaskRequest:
 
     task: str
     kind: str = "task"
-    tools: List[str] = field(default_factory=list)
-    spec: Optional[str] = None
-    skills: List[str] = field(default_factory=list)
-    profile: Optional[str] = None
-    enrichment: Optional[bool] = None
-    provider: Optional[str] = None
-    model: Optional[str] = None
-    system: Optional[str] = None
-    budget: Optional[Dict[str, Any]] = None
-    network: Optional[List[Any]] = None
-    workdir: Optional[str] = None
+    tools: list[str] = field(default_factory=list)
+    spec: str | None = None
+    skills: list[str] = field(default_factory=list)
+    profile: str | None = None
+    enrichment: bool | None = None
+    provider: str | None = None
+    model: str | None = None
+    system: str | None = None
+    budget: dict[str, Any] | None = None
+    network: list[Any] | None = None
+    workdir: str | None = None
 
 
 @dataclass
@@ -161,19 +161,19 @@ class AuthorizedTask:
     """
 
     task: str
-    tools: List[str]
+    tools: list[str]
     provider: str
     model: str
-    system: Optional[str]
-    budget: Dict[str, Any]
-    network: List[Any]
-    read_roots: List[str]
-    workdir: Optional[str]
+    system: str | None
+    budget: dict[str, Any]
+    network: list[Any]
+    read_roots: list[str]
+    workdir: str | None
     workdir_ignored: bool
     enrichment: bool
-    enrichment_layer: Optional[str]
-    tools_layer: Optional[str]
-    stripped: List[Any]
+    enrichment_layer: str | None
+    tools_layer: str | None
+    stripped: list[Any]
 
 
 # --- tier policy -----------------------------------------------------------
@@ -206,13 +206,13 @@ class TierPolicy:
     # tier. `/v1/oneshot` is byte-identical since v1.18.4 and its route
     # docstring promises the tool-free tier is always available — gating it
     # would break that surface on every box with the task tier off.
-    gated_by: Optional[str]
+    gated_by: str | None
     # "request": the grant is merged from request/spec/skills/profile.
     # "config":  the grant is decided by config alone and the request CANNOT
     #            widen it (ADR 0011 "no tools by design" for the one-off tier).
     grant_source: str
     # config key -> tools it grants, consulted only when grant_source=="config".
-    config_grant: Dict[str, List[str]]
+    config_grant: dict[str, list[str]]
     allows_empty_grant: bool
     # May a CLIENT's ambient UI selection supply provider/model? False for the
     # one-off tier: provider is per-run INJECTED INTENT (ADR 0003 §9), chosen
@@ -220,7 +220,7 @@ class TierPolicy:
     honors_client_fallback: bool
     # Hardwired iteration budget for a config-granted tier, or None to take
     # the budget from the request/spec.
-    iterations: Optional[int]
+    iterations: int | None
     # Does admission pre-validate the provider name/key?
     #
     # True for the task tier, which builds its provider LATER (inside the run)
@@ -233,7 +233,7 @@ class TierPolicy:
     validates_provider: bool = True
 
 
-TIERS: Dict[str, TierPolicy] = {
+TIERS: dict[str, TierPolicy] = {
     "task": TierPolicy(
         kind="task",
         gated_by="execution.task.enabled",
@@ -389,7 +389,7 @@ def resolve_named_skill(name: str) -> LoadedSkill:
         raise TaskAuthorizationError(400, str(exc))
 
 
-def load_skills(names: List[str]) -> List[LoadedSkill]:
+def load_skills(names: list[str]) -> list[LoadedSkill]:
     """Resolve every `--skill <name>`, refusing a scripts-requiring skill unless
     `allow_skill_scripts` is on.
 
@@ -402,7 +402,7 @@ def load_skills(names: List[str]) -> List[LoadedSkill]:
     if not names:
         return []
     allow_scripts = bool(_task_cfg()["sandbox"].get("allow_skill_scripts", False))
-    loaded: List[LoadedSkill] = []
+    loaded: list[LoadedSkill] = []
     for name in names:
         skill = resolve_named_skill(name)
         if skill.has_scripts and not allow_scripts:
@@ -488,8 +488,8 @@ _LAYER_RANK = {"request": 0, "spec": 1, "skill": 2, "profile": 3, "default_grant
 def merge_task_fields(
     req: TaskRequest,
     *,
-    fallback_provider: Optional[str] = None,
-    fallback_model: Optional[str] = None,
+    fallback_provider: str | None = None,
+    fallback_model: str | None = None,
 ) -> dict:
     """Effective run fields, precedence: request > spec > skills > profile >
     client fallback > default_subagent (ADR 0009 Q1; step ③ inserts the
@@ -649,7 +649,7 @@ def merge_task_fields(
     # T4: each skill dir is mounted into the run read-scope. De-dup while
     # preserving --skill order so the run can read references/ (and only these
     # new roots), not siblings outside the skills.
-    read_roots: List[str] = []
+    read_roots: list[str] = []
     for s in skills:
         if s.read_root not in read_roots:
             read_roots.append(s.read_root)
@@ -724,7 +724,7 @@ def apply_ceiling_or_error(network: list) -> tuple:
         raise TaskAuthorizationError(400, str(exc))
 
 
-def web_search_egress_hosts(provider_name: Optional[str] = None) -> list:
+def web_search_egress_hosts(provider_name: str | None = None) -> list:
     """The bare HOSTNAMES of web_search's EFFECTIVE egress set, for the run's
     allowlist. Resolver entries are URLs (the shape `tool_targets` compares
     against), but `NetworkPolicy` allowlist rules take bare hosts — passing
@@ -743,7 +743,7 @@ def web_search_egress_hosts(provider_name: Optional[str] = None) -> list:
 
 
 def enrichment_survives_ceiling(
-    kept: list, provider_name: Optional[str] = None
+    kept: list, provider_name: str | None = None
 ) -> bool:
     """Q3 check: does the EFFECTIVE web_search egress set survive the cap
     in full?
@@ -801,7 +801,7 @@ def validate_provider_or_error(provider_name: str) -> None:
         )
 
 
-def enriched_oneshot_egress_or_error(provider_name: Optional[str] = None) -> list:
+def enriched_oneshot_egress_or_error(provider_name: str | None = None) -> list:
     """The one-off tier's enrichment allowlist: effective backend egress set
     (resolver: superset, or the strict-pinned backend) + operator
     `tools.web_search.egress` baseline, capped by `execution.egress_ceiling`
@@ -844,8 +844,8 @@ def _config_grant_fields(req: TaskRequest, policy: TierPolicy) -> dict:
     is per-run injected intent (ADR 0003 §9), chosen for its task rather than
     inherited from whatever the interactive UI happens to be on.
     """
-    tools: List[str] = []
-    granted_by: Optional[str] = None
+    tools: list[str] = []
+    granted_by: str | None = None
     for key, granted in policy.config_grant.items():
         if _config_flag(key):
             tools = list(granted)
@@ -904,12 +904,12 @@ def _via_route(name: str, fallback):
     return getattr(routes, name, None) or fallback if routes else fallback
 
 
-def _default_model(provider_name: str) -> Optional[str]:
+def _default_model(provider_name: str) -> str | None:
     """`get_default_model`, route-binding aware. See `_via_route`."""
     return _via_route("get_default_model", get_default_model)(provider_name)
 
 
-def _default_subagent() -> Dict[str, Any]:
+def _default_subagent() -> dict[str, Any]:
     """`get_execution_default_subagent`, route-binding aware. See `_via_route`."""
     return _via_route(
         "get_execution_default_subagent",
@@ -939,7 +939,7 @@ def _config_flag(dotted_key: str) -> bool:
 # --- the boundary ----------------------------------------------------------
 
 def _reject_tool_incapable_model(
-    provider: Optional[str], model: Optional[str], tools: List[str]
+    provider: str | None, model: str | None, tools: list[str]
 ) -> None:
     """Refuse a tool-carrying run on a model that cannot call tools.
 
@@ -1075,8 +1075,8 @@ def _tool_capable_models_hint(provider: str) -> str:
 def authorize(
     req: TaskRequest,
     *,
-    fallback_provider: Optional[str] = None,
-    fallback_model: Optional[str] = None,
+    fallback_provider: str | None = None,
+    fallback_model: str | None = None,
 ) -> AuthorizedTask:
     """Full preflight for a run of ANY tier. Raises `TaskAuthorizationError`.
 
@@ -1225,7 +1225,7 @@ def authorize(
     # The per-run jail always wins over a caller-supplied workdir: under the
     # seal the run's writable root IS its jail workdir. Warn-don't-fail — the
     # flag rides out on the result so each client can surface it.
-    workdir: Optional[str] = None
+    workdir: str | None = None
     workdir_ignored = False
     if req.workdir:
         sealed = _task_cfg()["sandbox"].get("enforcement") == "in_process"
@@ -1296,8 +1296,8 @@ def authorize(
 def authorize_task(
     req: TaskRequest,
     *,
-    fallback_provider: Optional[str] = None,
-    fallback_model: Optional[str] = None,
+    fallback_provider: str | None = None,
+    fallback_model: str | None = None,
 ) -> AuthorizedTask:
     """`authorize` pinned to the tool-capable tier.
 
@@ -1318,10 +1318,10 @@ def authorize_task(
 def authorize_oneshot(
     task: str,
     *,
-    provider: Optional[str] = None,
-    model: Optional[str] = None,
-    system: Optional[str] = None,
-    network: Optional[List[Any]] = None,
+    provider: str | None = None,
+    model: str | None = None,
+    system: str | None = None,
+    network: list[Any] | None = None,
 ) -> AuthorizedTask:
     """`authorize` pinned to the tool-free one-off tier (`kind="oneshot"`).
 

@@ -10,7 +10,8 @@ import asyncio
 import json
 import sys
 import traceback
-from typing import Any, Callable, Dict, Optional
+from collections.abc import Callable
+from typing import Any
 
 from ..engine import EngineClient, EventType
 from ..prompts import CODING_PROMPTS
@@ -26,7 +27,7 @@ class JsonRpcServer:
     def __init__(self):
         """Initialize the server with EngineClient."""
         self.engine = EngineClient()
-        self.methods: Dict[str, Callable] = {}
+        self.methods: dict[str, Callable] = {}
 
         # Initialize with default provider
         self._init_engine()
@@ -79,7 +80,7 @@ class JsonRpcServer:
 
     # === Chat Methods ===
 
-    def chat(self, message: str, context: Optional[Dict] = None, stream: bool = False) -> str:
+    def chat(self, message: str, context: dict | None = None, stream: bool = False) -> str:
         """Send a chat message.
 
         Args:
@@ -100,7 +101,7 @@ class JsonRpcServer:
         # Use sync method for simplicity
         return self.engine.chat_sync(full_message, stream=stream)
 
-    async def chat_async(self, message: str, context: Optional[Dict] = None, stream: bool = False) -> str:
+    async def chat_async(self, message: str, context: dict | None = None, stream: bool = False) -> str:
         """Async chat with streaming support."""
         full_message = message
         if context and context.get("code"):
@@ -123,8 +124,8 @@ class JsonRpcServer:
         self,
         task_type: str,
         content: str,
-        language: Optional[str] = None,
-        filename: Optional[str] = None,
+        language: str | None = None,
+        filename: str | None = None,
         stream: bool = False
     ) -> str:
         """Execute a coding task.
@@ -272,7 +273,7 @@ class JsonRpcServer:
         """Save current session."""
         return self.engine.session.save()
 
-    def export_answer(self, filename: Optional[str] = None) -> str:
+    def export_answer(self, filename: str | None = None) -> str:
         """Export last answer to markdown."""
         filepath = self.engine.export_answer(filename)
         return str(filepath)
@@ -298,7 +299,7 @@ class JsonRpcServer:
 
     # === Request Handling ===
 
-    def handle_request(self, request: Dict) -> Dict:
+    def handle_request(self, request: dict) -> dict:
         """Handle a JSON-RPC request."""
         request_id = request.get("id")
         method_name = request.get("method")
@@ -345,7 +346,7 @@ class JsonRpcServer:
                 }
             }
 
-    async def _handle_streaming_request(self, request_id: int, method_name: str, params: Dict) -> Dict:
+    async def _handle_streaming_request(self, request_id: int, method_name: str, params: dict) -> dict:
         """Handle a streaming request."""
         try:
             if method_name == "chat":

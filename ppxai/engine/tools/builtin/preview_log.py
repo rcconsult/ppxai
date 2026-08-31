@@ -31,7 +31,7 @@ import logging
 import os
 import re
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from ...types import ToolManagerProtocol
 
@@ -42,7 +42,7 @@ PREVIEW_LOGS_DIR = Path.home() / ".ppxai" / "logs"
 PREVIEW_LOG_PATTERN = "preview-backend-*.log"
 
 
-def _find_log_file(pid: Optional[int] = None) -> Optional[Path]:
+def _find_log_file(pid: int | None = None) -> Path | None:
     """Find the relevant preview-backend log file.
 
     Args:
@@ -65,7 +65,7 @@ def _find_log_file(pid: Optional[int] = None) -> Optional[Path]:
     return candidates[0] if candidates else None
 
 
-def _parse_pid_from_log_filename(path: Path) -> Optional[int]:
+def _parse_pid_from_log_filename(path: Path) -> int | None:
     """Extract the pid from `preview-backend-<pid>.log`."""
     match = re.match(r"^preview-backend-(\d+)\.log$", path.name)
     return int(match.group(1)) if match else None
@@ -104,9 +104,9 @@ def _is_pid_alive(pid: int) -> bool:  # noqa: F811 (intentional override)
 
 def read_preview_log(
     lines: int = 100,
-    since: Optional[str] = None,
-    filter: Optional[str] = None,
-    pid: Optional[int] = None,
+    since: str | None = None,
+    filter: str | None = None,
+    pid: int | None = None,
 ) -> str:
     """Read recent stdout/stderr from the active /preview --serve backend.
 
@@ -167,7 +167,7 @@ def read_preview_log(
         except re.error:
             pattern = None  # use plain substring match below
 
-    parsed_lines: List[Dict[str, Any]] = []
+    parsed_lines: list[dict[str, Any]] = []
     try:
         # Use readline() in a while loop instead of `for line in f` — Python
         # disables tell() inside the file-iteration protocol because the

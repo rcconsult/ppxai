@@ -2,12 +2,13 @@
 Usage statistics endpoints.
 """
 
-from fastapi import APIRouter, Depends, HTTPException
-from typing import Optional
 
+from fastapi import APIRouter, Depends, HTTPException
+
+from ...usage import get_usage_report as get_report
+from ...usage import get_usage_storage
 from ..models import UsageDisplayModeRequest
 from ..state import Session, get_session
-from ...usage import get_usage_report as get_report, get_usage_storage
 
 router = APIRouter()
 

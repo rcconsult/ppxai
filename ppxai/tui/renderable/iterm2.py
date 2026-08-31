@@ -20,7 +20,7 @@ import base64
 import io
 import logging
 from pathlib import Path
-from typing import Tuple, Union
+from typing import Union
 
 from rich.console import Console, ConsoleOptions, RenderResult
 from rich.control import Control
@@ -37,7 +37,7 @@ except ImportError:
 _NULL_CONTROL = [(ControlType.CURSOR_FORWARD, 0)]
 
 
-def _get_cell_size() -> Tuple[int, int]:
+def _get_cell_size() -> tuple[int, int]:
     """Get terminal cell size in pixels.
 
     Returns:
@@ -133,7 +133,7 @@ class ITerm2Image:
 
     def _calculate_cell_size(
         self, max_width: int, max_height: int
-    ) -> Tuple[int, int]:
+    ) -> tuple[int, int]:
         """Calculate the cell size for rendering.
 
         Args:

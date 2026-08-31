@@ -5,16 +5,16 @@ This is a LEAF MODULE - no ppxai imports allowed.
 Provides centralized default constants that can be overridden by user config.
 """
 
-from typing import Any, Dict, List
-from ppxai.constants import Default
+from typing import Any
 
+from ppxai.constants import Default
 
 # =============================================================================
 # Shell Tool Defaults
 # =============================================================================
 
 # Commands that require user confirmation (regex patterns)
-DEFAULT_DANGEROUS_COMMANDS: List[str] = [
+DEFAULT_DANGEROUS_COMMANDS: list[str] = [
     r"^rm\s+",
     r"^mv\s+",
     r"^dd\s+",
@@ -30,7 +30,7 @@ DEFAULT_DANGEROUS_COMMANDS: List[str] = [
 ]
 
 # Commands that are NEVER allowed (blocked immediately)
-DEFAULT_NEVER_ALLOW: List[str] = [
+DEFAULT_NEVER_ALLOW: list[str] = [
     r"rm\s+-rf\s+/",
     r"dd\s+.*of=/dev/",
     r":\(\)\{\s*:\|:&\s*\};:",  # Fork bomb
@@ -39,7 +39,7 @@ DEFAULT_NEVER_ALLOW: List[str] = [
 ]
 
 # Commands that are always safe (auto-approved)
-DEFAULT_ALLOWED_COMMANDS: List[str] = [
+DEFAULT_ALLOWED_COMMANDS: list[str] = [
     r"^ls\s+",
     r"^cat\s+(?!.*[><])",  # cat without redirection
     r"^grep\s+",
@@ -98,7 +98,7 @@ DEFAULT_ALLOWED_COMMANDS: List[str] = [
 #   probe_timeout_seconds  probe-only — default 5.0.
 #   prefix            required for type=always — string to prepend.
 
-DEFAULT_SHELL_WRAPPERS: List[Dict[str, Any]] = [
+DEFAULT_SHELL_WRAPPERS: list[dict[str, Any]] = [
     {
         "name": "rtk",
         "type": "probe",

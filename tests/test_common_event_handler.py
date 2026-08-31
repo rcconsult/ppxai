@@ -4,10 +4,12 @@ Tests for ppxai/rich/event_handler.py
 Tests the EventHandler class and TUIEventHandler.
 """
 
+from unittest.mock import Mock
+
 import pytest
-from unittest.mock import Mock, AsyncMock
-from ppxai.rich.event_handler import EventHandler, TUIEventHandler
+
 from ppxai.engine.types import Event, EventType
+from ppxai.rich.event_handler import EventHandler, TUIEventHandler
 
 
 @pytest.mark.asyncio

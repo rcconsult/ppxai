@@ -19,7 +19,6 @@ import threading
 import webbrowser
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
-from typing import Optional
 
 from .common.preview import inject_reload_script
 
@@ -119,8 +118,8 @@ class PreviewServer:
             target = Path(working_dir) / filepath
         self.target = target.resolve()
         self.serve_dir = str(self.target.parent)
-        self._httpd: Optional[HTTPServer] = None
-        self._thread: Optional[threading.Thread] = None
+        self._httpd: HTTPServer | None = None
+        self._thread: threading.Thread | None = None
         self.port: int = 0
 
     def start(self, open_browser: bool = True) -> str:

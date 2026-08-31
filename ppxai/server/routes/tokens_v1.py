@@ -24,13 +24,11 @@ The material is returned exactly once on mint and never persisted raw
 
 from __future__ import annotations
 
-from typing import List, Optional
-
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from ...common.logger import get_logger
-from ..secrets import CAP_LIST, CAP_MINT, CAP_REVOKE, CapabilityError
+from ..secrets import CapabilityError
 from ..state import get_secret_provider
 
 logger = get_logger(__name__)
@@ -38,7 +36,7 @@ logger = get_logger(__name__)
 router = APIRouter()
 
 
-def _caller_owner(request: Request) -> Optional[str]:
+def _caller_owner(request: Request) -> str | None:
     """Owner of the authenticated caller, or None when the caller is an
     unscoped operator.
 
@@ -70,11 +68,11 @@ def _is_unscoped(request: Request) -> bool:
 
 class MintTokenRequest(BaseModel):
     owner: str = Field(..., description="Principal the token authenticates.")
-    roles: List[str] = Field(
+    roles: list[str] = Field(
         default_factory=list,
         description="Role labels for routing/authz (C5.2 token-role).",
     )
-    ttl_s: Optional[float] = Field(
+    ttl_s: float | None = Field(
         default=None,
         description="Lifetime in seconds; omit for a non-expiring token.",
     )
@@ -83,8 +81,8 @@ class MintTokenRequest(BaseModel):
 class TokenMeta(BaseModel):
     token_id: str
     owner: str
-    roles: List[str]
-    expires_at: Optional[float]
+    roles: list[str]
+    expires_at: float | None
     revoked: bool
     source: str = Field(description="Backend kind that holds the token.")
 
@@ -105,8 +103,8 @@ def _meta(record) -> TokenMeta:
     )
 
 
-@router.get("/v1/tokens", response_model=List[TokenMeta])
-async def list_tokens(request: Request) -> List[TokenMeta]:
+@router.get("/v1/tokens", response_model=list[TokenMeta])
+async def list_tokens(request: Request) -> list[TokenMeta]:
     chain = get_secret_provider()
     try:
         records = chain.list()

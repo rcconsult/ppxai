@@ -69,8 +69,8 @@ class TestAgentLoggerAttribute:
         because mocks substituted the missing attribute. If this raises
         AttributeError, the agent loop is broken in production again.
         """
-        from ppxai.engine.client import EngineClient
         from ppxai.common.logger import get_logger
+        from ppxai.engine.client import EngineClient
         from ppxai.rich.event_handler import TUIEventHandler
         from ppxai.rich.ui import console
 

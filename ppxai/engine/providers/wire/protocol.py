@@ -19,7 +19,8 @@ responses, `(contents, system_instruction)` for generate_content), and
 pretending they share one type is what produced that Liskov violation.
 """
 
-from typing import Any, AsyncIterator, Dict, List, Optional, Protocol, runtime_checkable
+from collections.abc import AsyncIterator
+from typing import Any, Protocol, runtime_checkable
 
 from ...types import Event, Message
 
@@ -39,17 +40,17 @@ class ProtocolHandler(Protocol):
     #: Matches `ModelFacts.wire_protocol`; the key routing selects on.
     name: str
 
-    def convert_messages(self, messages: List[Message]) -> Any:
+    def convert_messages(self, messages: list[Message]) -> Any:
         """Engine messages -> this wire's request shape."""
         ...
 
     def chat(
         self,
         ctx: Any,
-        messages: List[Message],
+        messages: list[Message],
         model: str,
         stream: bool = True,
-        tools: Optional[List[Dict[str, Any]]] = None,
+        tools: list[dict[str, Any]] | None = None,
     ) -> AsyncIterator[Event]:
         """Streaming or non-streaming turn, emitted as engine events."""
         ...
@@ -57,9 +58,9 @@ class ProtocolHandler(Protocol):
     def oneshot(
         self,
         ctx: Any,
-        messages: List[Message],
+        messages: list[Message],
         model: str,
-        max_tokens: Optional[int] = None,
-    ) -> Dict[str, Any]:
+        max_tokens: int | None = None,
+    ) -> dict[str, Any]:
         """Stateless single turn -> {content, finish_reason, model, usage}."""
         ...

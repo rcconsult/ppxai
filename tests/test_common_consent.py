@@ -5,7 +5,8 @@ Tests the ConsentManager and SyncConsentManager classes.
 """
 
 import pytest
-from ppxai.common.consent import ConsentManager, SyncConsentManager, ConsentRequest
+
+from ppxai.common.consent import ConsentManager, ConsentRequest, SyncConsentManager
 from ppxai.constants import ConsentDecision
 
 

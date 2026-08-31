@@ -42,7 +42,6 @@ from ppxai.engine.session import SESSION_SCHEMA_VERSION, SessionManager
 from ppxai.engine.session_store import SessionFileStore
 from ppxai.engine.types import Message
 
-
 _FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "sessions"
 
 

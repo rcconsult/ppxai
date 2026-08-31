@@ -33,7 +33,6 @@ from pathlib import Path
 
 from .libreoffice import find_libreoffice
 
-
 # LibreOffice headless cold-start is slow (~2-5s) and a large document
 # can take longer than the default 30s; 120s is the empirical ceiling
 # for the largest documents seen in practice. Callers that need a

@@ -7,7 +7,7 @@ with V toggle between modes. Supports JSON, YAML, and TOML formats.
 
 import json
 from pathlib import Path
-from typing import Any, Literal, Optional
+from typing import Any, Literal
 
 from textual.app import ComposeResult
 from textual.containers import Vertical
@@ -18,9 +18,8 @@ from textual.widget import Widget
 from textual.widgets import ContentSwitcher, Static
 
 from ppxai.tui.keys import get_widget_bindings
+from ppxai.tui.widgets.code_editor import CodeEditor
 from ppxai.tui.widgets.tree_viewer import TreeViewer
-from ppxai.tui.widgets.code_editor import CodeEditor, get_syntax_theme_for_app_theme
-
 
 # Type for display modes
 ViewMode = Literal["tree", "source"]
@@ -75,8 +74,8 @@ class DataViewer(Widget):
         self._source = source
         self._format = format
         self._filename = filename or "data"
-        self._tree_viewer: Optional[TreeViewer] = None
-        self._code_editor: Optional[CodeEditor] = None
+        self._tree_viewer: TreeViewer | None = None
+        self._code_editor: CodeEditor | None = None
 
         # Detect format from filename if not specified
         if filename and format == "json":

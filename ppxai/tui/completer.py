@@ -20,7 +20,6 @@ v1.17.x autocomplete refactor was to kill this duplication.
 """
 
 from pathlib import Path
-from typing import List, Optional, Tuple
 
 from ..engine.completion import complete as engine_complete
 
@@ -45,12 +44,12 @@ class TextualCompleter:
     # live state rather than a stale snapshot.
     # ------------------------------------------------------------------
 
-    def _get_current_provider(self) -> Optional[str]:
+    def _get_current_provider(self) -> str | None:
         if self.engine_client is None:
             return None
         return getattr(self.engine_client, "provider_name", None) or None
 
-    def _get_tool_names(self) -> List[Tuple[str, str]]:
+    def _get_tool_names(self) -> list[tuple[str, str]]:
         if self.engine_client is None:
             return []
         tool_manager = getattr(self.engine_client, "tool_manager", None)
@@ -68,7 +67,7 @@ class TextualCompleter:
     # Public API
     # ------------------------------------------------------------------
 
-    def get_completions(self, text: str) -> List[Tuple[str, str]]:
+    def get_completions(self, text: str) -> list[tuple[str, str]]:
         """Return completion candidates for *text*.
 
         Each item is `(replacement_text, description)` where
@@ -86,7 +85,7 @@ class TextualCompleter:
             client="textual",
         )
 
-        completions: List[Tuple[str, str]] = []
+        completions: list[tuple[str, str]] = []
         for item in items:
             replace_start = item.get("replace_start", 0)
             # Cut off the chars the engine says to replace, then append

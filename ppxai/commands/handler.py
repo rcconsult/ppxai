@@ -101,7 +101,7 @@ async def tui_consent_handler(file_path: str) -> tuple[bool, str]:
     Returns:
         tuple: (approved: bool, response: str) - response is normalized to ConsentResponse enum
     """
-    console.print(f"\n[bold yellow]⚠️  File Edit Request[/bold yellow]")
+    console.print("\n[bold yellow]⚠️  File Edit Request[/bold yellow]")
     console.print(f"[cyan]AI wants to edit:[/cyan] {file_path}")
     console.print("[dim]Options: y (yes), n (no), always (all files), never (block all)[/dim]")
 
@@ -200,7 +200,7 @@ async def tui_shell_consent_handler(command: str, working_dir: str, risk_level: 
         return (False, ConsentResponse.NO)
 
 
-def send_coding_task(handler: 'CommandHandler', task_type: str, user_message: str, model: str, provider: str = None) -> Optional[str]:
+def send_coding_task(handler: 'CommandHandler', task_type: str, user_message: str, model: str, provider: str = None) -> str | None:
     """Send a coding task with appropriate system prompt and optional auto-routing."""
     if task_type not in CODING_PROMPTS:
         console.print(f"[red]Unknown task type: {task_type}[/red]")
@@ -571,7 +571,7 @@ class CommandHandler:
 
         return augmented_message, [{'name': f['name'], 'path': f['path']} for f in resolved_files]
 
-    def handle_command(self, user_input: str) -> Optional[bool]:
+    def handle_command(self, user_input: str) -> bool | None:
         """
         Handle a slash command.
 

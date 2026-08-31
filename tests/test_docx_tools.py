@@ -20,7 +20,6 @@ import pytest
 from ppxai.engine.session_store import SessionFileStore
 from ppxai.engine.tools.builtin.docx_tools import ReadDocxTool
 
-
 _DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 
 

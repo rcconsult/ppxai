@@ -10,19 +10,18 @@ Displays files with:
 
 import sys
 from pathlib import Path
-from typing import Optional
 
 from textual.app import ComposeResult
-from textual.containers import VerticalScroll, Center
+from textual.containers import Center, VerticalScroll
 from textual.screen import Screen
-from textual.widgets import Footer, Static, Markdown
-
-from ..widgets.tree_viewer import TreeViewer
-from ..widgets.code_editor import CodeEditor
-from ..images import display_image
-from ..terminal import get_image_protocol_name
+from textual.widgets import Footer, Markdown, Static
 
 from ppxai.tui.keys import get_widget_bindings
+
+from ..images import display_image
+from ..terminal import get_image_protocol_name
+from ..widgets.code_editor import CodeEditor
+from ..widgets.tree_viewer import TreeViewer
 
 
 class ImageViewer(Static):
@@ -62,7 +61,7 @@ class ViewerScreen(Screen):
         path: Path,
         content: str,
         mode: str = "code",
-        line: Optional[int] = None,
+        line: int | None = None,
     ):
         """Initialize viewer screen.
 

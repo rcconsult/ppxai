@@ -25,7 +25,7 @@ Grammar (U2, ADR 0011) is shared with the web client via
 from __future__ import annotations
 
 import asyncio
-from typing import Any, Optional
+from typing import Any
 
 from ..engine.task_authorizer import (
     TIERS,
@@ -35,8 +35,8 @@ from ..engine.task_authorizer import (
 )
 from ..engine.task_backend import get_task_backend
 from ..engine.task_grammar import (
-    Action,
     RUN_ONLY_EXCLUDED_VERBS,
+    Action,
     classify,
     parse_task_args,
 )
@@ -81,7 +81,7 @@ def _no_loop_error(family: str, verb: str) -> ErrorResult:
             "docs/plan-task-command-sequencing.md §T8b."
         ),
         suggestions=[
-            f"Run it from `ppxaide` (the Textual TUI)",
+            "Run it from `ppxaide` (the Textual TUI)",
             f"`{family} ls` and `{family} get <id>` work here — they only read "
             f"the registry",
         ],
@@ -387,7 +387,7 @@ def _dispatch(family: str, kind: str, context: Any, args: str) -> CommandResult:
     )
 
 
-def _ctx_provider(context: Any) -> Optional[str]:
+def _ctx_provider(context: Any) -> str | None:
     """Provider from the client's current selection, tolerating any context.
 
     The three CommandContext patterns expose this differently, and a run
@@ -405,7 +405,7 @@ def _ctx_provider(context: Any) -> Optional[str]:
     return None
 
 
-def _ctx_model(context: Any) -> Optional[str]:
+def _ctx_model(context: Any) -> str | None:
     for attr in ("current_model", "get_model"):
         value = getattr(context, attr, None)
         try:

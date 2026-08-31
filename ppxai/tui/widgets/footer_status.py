@@ -3,6 +3,7 @@ FooterStatus widget - Shows streaming status and indicators at the bottom.
 """
 
 import time
+
 from textual.app import ComposeResult
 from textual.containers import Horizontal
 from textual.css.query import NoMatches

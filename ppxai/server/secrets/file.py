@@ -29,6 +29,7 @@ human-chosen password — there is no dictionary to attack.
 
 from __future__ import annotations
 
+import builtins
 import hashlib
 import hmac
 import json
@@ -38,12 +39,11 @@ import sys
 import tempfile
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from ...common.logger import get_logger
 from .base import (
     ALL_CAPABILITIES,
-    CapabilityError,
     SecretProvider,
     SecretRef,
     TokenRecord,
@@ -109,7 +109,7 @@ class FileSecretProvider:
         return ALL_CAPABILITIES
 
     # -- persistence --------------------------------------------------
-    def _load(self) -> Dict[str, Any]:
+    def _load(self) -> dict[str, Any]:
         if not self.path.exists():
             return {"version": _SCHEMA_VERSION, "tokens": []}
         try:
@@ -123,7 +123,7 @@ class FileSecretProvider:
             raise ValueError(f"token store {self.path} has unexpected shape")
         return data
 
-    def _save(self, data: Dict[str, Any]) -> None:
+    def _save(self, data: dict[str, Any]) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         # Write to a UNIQUE temp file (mkstemp) then replace, so a crash can't
         # truncate the store AND two concurrent writers never race on the same
@@ -148,7 +148,7 @@ class FileSecretProvider:
             raise
 
     @staticmethod
-    def _record_from_row(row: Dict[str, Any]) -> TokenRecord:
+    def _record_from_row(row: dict[str, Any]) -> TokenRecord:
         return TokenRecord(
             token_id=row["token_id"],
             owner=row["owner"],
@@ -159,7 +159,7 @@ class FileSecretProvider:
         )
 
     # -- resolve ------------------------------------------------------
-    def resolve(self, presented: str) -> Optional[TokenRecord]:
+    def resolve(self, presented: str) -> TokenRecord | None:
         try:
             data = self._load()
         except Exception:
@@ -175,7 +175,7 @@ class FileSecretProvider:
         return None
 
     # -- list ---------------------------------------------------------
-    def list(self) -> List[TokenRecord]:
+    def list(self) -> builtins.list[TokenRecord]:
         data = self._load()
         return [self._record_from_row(row) for row in data["tokens"]]
 
@@ -183,9 +183,9 @@ class FileSecretProvider:
     def mint(
         self,
         owner: str,
-        roles: Tuple[str, ...] = (),
-        ttl_s: Optional[float] = None,
-    ) -> Tuple[str, TokenRecord]:
+        roles: tuple[str, ...] = (),
+        ttl_s: float | None = None,
+    ) -> tuple[str, TokenRecord]:
         if not owner:
             raise ValueError("owner is required to mint a token")
         data = self._load()

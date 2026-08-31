@@ -13,10 +13,8 @@ looked identical to a model failure in the result JSON. See
 from unittest.mock import MagicMock
 
 import openai as openai_module
-import pytest
 
 from ppxai.engine.providers.openai_compat import OpenAICompatibleProvider
-from ppxai.engine.types import EventType
 
 
 def _make_provider(provider_id: str = "nvidia") -> OpenAICompatibleProvider:

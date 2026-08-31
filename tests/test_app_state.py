@@ -2,8 +2,6 @@
 
 import threading
 
-import pytest
-
 from ppxai.engine.app_state import AppState
 
 
@@ -399,8 +397,8 @@ class TestSchemaDTO:
         canonical = self.canonical_path.read_bytes()
         bundled = self.vscode_bundled_path.read_bytes()
         assert canonical == bundled, (
-            f"VSCode bundled schema is out of sync with canonical source. "
-            f"Run 'npm run sync-schema' from vscode-extension/ to fix."
+            "VSCode bundled schema is out of sync with canonical source. "
+            "Run 'npm run sync-schema' from vscode-extension/ to fix."
         )
 
     def test_schema_round_trips_through_json(self):
@@ -426,8 +424,8 @@ class TestSchemaDTO:
         regex. Adding a new hardcoded TUI field that isn't declared in
         the schema will fail this test, pointing at the drift.
         """
-        import re
         import pathlib
+        import re
 
         repo_root = pathlib.Path(__file__).parent.parent
         tui_sources = [

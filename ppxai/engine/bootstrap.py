@@ -34,7 +34,6 @@ Scope Precedence (v1.14.2):
 3. {cwd}/AGENTS.md (subdirectory overrides)
 """
 
-import os
 import re
 import subprocess
 
@@ -42,10 +41,10 @@ try:
     import yaml
 except ImportError:
     yaml = None  # type: ignore[assignment]  # Optional: data extras
+from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, Optional, Dict, List, Tuple, Set
-from dataclasses import dataclass, field
+from typing import Any
 
 from ..config import get_bootstrap_config
 
@@ -67,10 +66,10 @@ DEFAULT_BOOTSTRAP_FILES = ["AGENTS.md", "CLAUDE.md", "INSTRUCTIONS.md"]
 HINT_TEMPLATES_FILE = Path.home() / ".ppxai" / "hint-templates.yaml"
 
 # Cache for loaded templates
-_hint_templates_cache: Optional[Dict[str, List[str]]] = None
+_hint_templates_cache: dict[str, list[str]] | None = None
 
 
-def load_hint_templates() -> Dict[str, List[str]]:
+def load_hint_templates() -> dict[str, list[str]]:
     """Load hint templates from ~/.ppxai/hint-templates.yaml (v1.14.2).
 
     Templates allow defining reusable hint collections:
@@ -119,12 +118,12 @@ def load_hint_templates() -> Dict[str, List[str]]:
     return _hint_templates_cache
 
 
-def _parse_templates_simple(file_path: Path) -> Dict[str, List[str]]:
+def _parse_templates_simple(file_path: Path) -> dict[str, list[str]]:
     """Parse hint templates without YAML library.
 
     Simple regex-based parsing for the specific format we need.
     """
-    result: Dict[str, List[str]] = {}
+    result: dict[str, list[str]] = {}
     content = file_path.read_text(encoding="utf-8")
 
     # Find templates: section
@@ -134,7 +133,7 @@ def _parse_templates_simple(file_path: Path) -> Dict[str, List[str]]:
 
     section = templates_match.group(1)
     current_name = None
-    current_hints: List[str] = []
+    current_hints: list[str] = []
 
     for line in section.split('\n'):
         stripped = line.strip()
@@ -180,9 +179,9 @@ class BootstrapContext:
     """
     source_file: str = ""
     base_instructions: str = ""
-    provider_hints: Dict[str, List[str]] = field(default_factory=dict)
-    model_hints: Dict[str, List[str]] = field(default_factory=dict)
-    tool_calling_overrides: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+    provider_hints: dict[str, list[str]] = field(default_factory=dict)
+    model_hints: dict[str, list[str]] = field(default_factory=dict)
+    tool_calling_overrides: dict[str, dict[str, Any]] = field(default_factory=dict)
     raw_content: str = ""
 
     # Include directive settings (v1.14.2)
@@ -212,7 +211,7 @@ class BootstrapContext:
         cls,
         content: str,
         base_dir: Path,
-        visited: Set[Path],
+        visited: set[Path],
         depth: int
     ) -> str:
         """Process include directives in content (v1.14.2).
@@ -317,7 +316,7 @@ class BootstrapContext:
         if tool_calling_section:
             self.tool_calling_overrides = self._parse_tool_calling_section(tool_calling_section)
 
-    def _extract_section(self, yaml_content: str, section_name: str) -> Optional[str]:
+    def _extract_section(self, yaml_content: str, section_name: str) -> str | None:
         """Extract a section from YAML content.
 
         Args:
@@ -334,7 +333,7 @@ class BootstrapContext:
             return match.group(1)
         return None
 
-    def _parse_hints_section(self, section: str) -> Dict[str, List[str]]:
+    def _parse_hints_section(self, section: str) -> dict[str, list[str]]:
         """Parse a hints section into dict of key -> list of hints.
 
         Expects format:
@@ -345,9 +344,9 @@ class BootstrapContext:
 
         Template references are expanded using ~/.ppxai/hint-templates.yaml
         """
-        result: Dict[str, List[str]] = {}
+        result: dict[str, list[str]] = {}
         current_key = None
-        current_hints: List[str] = []
+        current_hints: list[str] = []
 
         # Load templates for expansion (v1.14.2)
         templates = load_hint_templates()
@@ -424,7 +423,7 @@ class BootstrapContext:
 
         return "\n".join(parts)
 
-    def _get_provider_hints(self, provider: str) -> List[str]:
+    def _get_provider_hints(self, provider: str) -> list[str]:
         """Get hints for provider, with 'local' inheritance.
 
         Args:
@@ -433,7 +432,7 @@ class BootstrapContext:
         Returns:
             List of applicable hints (local hints + provider-specific hints)
         """
-        hints: List[str] = []
+        hints: list[str] = []
 
         # Add 'local' hints first for local providers
         if provider in LOCAL_PROVIDERS and "local" in self.provider_hints:
@@ -445,7 +444,7 @@ class BootstrapContext:
 
         return hints
 
-    def _get_model_hints(self, model: str) -> List[str]:
+    def _get_model_hints(self, model: str) -> list[str]:
         """Get hints matching model via regex patterns.
 
         Args:
@@ -454,7 +453,7 @@ class BootstrapContext:
         Returns:
             List of all matching hints (patterns can overlap)
         """
-        hints: List[str] = []
+        hints: list[str] = []
 
         for pattern, pattern_hints in self.model_hints.items():
             # Convert glob-style pattern to regex
@@ -468,7 +467,7 @@ class BootstrapContext:
 
         return hints
 
-    def _parse_tool_calling_section(self, section: str) -> Dict[str, Dict[str, Any]]:
+    def _parse_tool_calling_section(self, section: str) -> dict[str, dict[str, Any]]:
         """Parse tool_calling section into dict of pattern -> overrides.
 
         Expects format:
@@ -476,9 +475,9 @@ class BootstrapContext:
             mode: "prompt_based"
             fallback_on_empty: true
         """
-        result: Dict[str, Dict[str, Any]] = {}
-        current_key: Optional[str] = None
-        current_overrides: Dict[str, Any] = {}
+        result: dict[str, dict[str, Any]] = {}
+        current_key: str | None = None
+        current_overrides: dict[str, Any] = {}
 
         for line in section.split('\n'):
             stripped = line.strip()
@@ -524,7 +523,7 @@ class BootstrapContext:
             pass
         return value
 
-    def get_tool_calling_overrides(self, model: str) -> Dict[str, Any]:
+    def get_tool_calling_overrides(self, model: str) -> dict[str, Any]:
         """Get merged tool_calling overrides for a model.
 
         Matches model against glob patterns in tool_calling_overrides.
@@ -539,7 +538,7 @@ class BootstrapContext:
         if not self.tool_calling_overrides:
             return {}
 
-        merged: Dict[str, Any] = {}
+        merged: dict[str, Any] = {}
         for pattern, overrides in self.tool_calling_overrides.items():
             regex = pattern.replace("*", ".*")
             try:
@@ -550,7 +549,7 @@ class BootstrapContext:
 
         return merged
 
-    def get_active_hints_for(self, provider: str, model: str) -> Dict[str, Any]:
+    def get_active_hints_for(self, provider: str, model: str) -> dict[str, Any]:
         """Get detailed breakdown of active hints for provider/model.
 
         Args:
@@ -564,7 +563,7 @@ class BootstrapContext:
             - inherited_local: bool - whether 'local' hints were inherited
             - matched_patterns: List of matched model patterns
         """
-        result: Dict[str, Any] = {
+        result: dict[str, Any] = {
             "provider_hints": [],
             "model_hints": [],
             "inherited_local": False,
@@ -608,8 +607,8 @@ class BootstrapContext:
 
 def find_bootstrap_file(
     directory: Path,
-    aliases: Optional[List[str]] = None
-) -> Optional[Path]:
+    aliases: list[str] | None = None
+) -> Path | None:
     """Find first matching bootstrap file in directory.
 
     Args:
@@ -633,7 +632,7 @@ def find_bootstrap_file(
     return None
 
 
-def get_bootstrap_files_config() -> List[str]:
+def get_bootstrap_files_config() -> list[str]:
     """Get bootstrap file aliases from config.
 
     Returns:
@@ -653,7 +652,7 @@ def is_bootstrap_enabled() -> bool:
     return config.get("enabled", True)
 
 
-def find_git_root(start_path: Optional[Path] = None) -> Optional[Path]:
+def find_git_root(start_path: Path | None = None) -> Path | None:
     """Find the git repository root starting from a given path.
 
     Walks up the directory tree looking for a .git directory.
@@ -711,8 +710,8 @@ def get_global_config_dir() -> Path:
 
 def find_bootstrap_files_by_scope(
     working_dir: Path,
-    aliases: Optional[List[str]] = None
-) -> List[Tuple[Path, ContextScope]]:
+    aliases: list[str] | None = None
+) -> list[tuple[Path, ContextScope]]:
     """Find bootstrap files across all scopes (v1.14.2).
 
     Searches in precedence order:
@@ -734,7 +733,7 @@ def find_bootstrap_files_by_scope(
     if not aliases:
         return []  # Bootstrap disabled
 
-    results: List[Tuple[Path, ContextScope]] = []
+    results: list[tuple[Path, ContextScope]] = []
     seen_paths: set[Path] = set()  # Avoid duplicates
 
     working_dir = Path(working_dir).resolve()

@@ -9,11 +9,9 @@ documented but not invocable. ``/reload`` is that caller.
 from pathlib import Path
 from unittest.mock import patch
 
-import pytest
-
+import ppxai.commands.utility  # noqa: F401  -- triggers registration
 from ppxai.commands.factory import CommandFactory
 from ppxai.commands.results import ResultStatus
-import ppxai.commands.utility  # noqa: F401  -- triggers registration
 
 
 class _Ctx:

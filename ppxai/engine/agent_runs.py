@@ -37,9 +37,10 @@ import os
 import secrets
 import tempfile
 import time
+from collections.abc import Awaitable, Callable
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Awaitable, Callable, Optional, Protocol
+from typing import Any, Protocol
 
 # DEPENDENCY FOOTPRINT IS DELIBERATE: this module imports only the logger.
 # That is what lets RunMeta be read off disk — and the runs/<run_id>/
@@ -82,10 +83,10 @@ class RunMeta:
     # default via from_dict). Listing surfaces filter on it; sub-agent
     # children stay distinguished by parent_run_id, not kind.
     kind: str = "task"
-    parent_run_id: Optional[str] = None  # set for sub-agents (Inc 7)
-    owner: Optional[str] = None  # Inc 8b: principal that created the run; per-run authz scopes reads to it. None = unowned (created while auth disabled, or a sub-agent) — readable by any authenticated caller.
-    provider: Optional[str] = None
-    model: Optional[str] = None
+    parent_run_id: str | None = None  # set for sub-agents (Inc 7)
+    owner: str | None = None  # Inc 8b: principal that created the run; per-run authz scopes reads to it. None = unowned (created while auth disabled, or a sub-agent) — readable by any authenticated caller.
+    provider: str | None = None
+    model: str | None = None
     tools: list[str] = field(default_factory=list)  # the grant (enforced in Inc 4)
     network: list = field(default_factory=list)  # egress allow_outbound (enforced in Inc 5); provenance/audit on disk
     budget: dict = field(default_factory=dict)  # Inc 6: {tokens?, time_s?, iterations?} caps; absent key = no cap on that axis
@@ -95,7 +96,7 @@ class RunMeta:
     # resume credential POST .../respond must present (owner-scoped reads
     # only, so exposing it on the meta is deliberate: the owner IS the
     # principal allowed to answer).
-    waiting: Optional[dict] = None
+    waiting: dict | None = None
     # T6: two-phase termination. hold_result=True (set by the /task route for
     # TOP-LEVEL tool-capable runs) makes a successful run land in
     # `completed_pending_ack` instead of `completed` — the run has exited
@@ -103,25 +104,25 @@ class RunMeta:
     # POST .../ack collects it (→ finalized). Sub-agent children and the
     # tool-free /run tier never hold (the parent / the caller collects inline).
     hold_result: bool = False
-    acked_at: Optional[float] = None  # T6: when /ack or the retention reaper finalized the run
+    acked_at: float | None = None  # T6: when /ack or the retention reaper finalized the run
     # T7: the remaining runner inputs, persisted so POST /runs/{id}/resume can
     # REBUILD the scoped runner faithfully. task/tools/network/budget/provider/
     # model were already on the meta; `system` is the caller's agent framing
     # (rendered AGENT.md) and `read_roots` the mounted --skill dirs (T4).
     # Recorded by the /task route only (the tool-free tier isn't resumable).
-    system: Optional[str] = None
+    system: str | None = None
     read_roots: list = field(default_factory=list)
     # v1.19.x workdir-alignment: the run's working directory as EFFECTIVE
     # per-run intent (client-sent session wd or --work-dir), applied only
     # while the filesystem seal is OFF. None = server default
     # (server.working_dir config, else home). Sealed runs never record one —
     # the per-run jail always wins. Persisted so resume rebuilds faithfully.
-    workdir: Optional[str] = None
+    workdir: str | None = None
     created_at: float = 0.0
-    started_at: Optional[float] = None  # set when execution begins (Inc 2 background)
-    finished_at: Optional[float] = None
-    result: Optional[str] = None  # synchronous result body (Inc 1); refs in Inc 5
-    error: Optional[str] = None
+    started_at: float | None = None  # set when execution begins (Inc 2 background)
+    finished_at: float | None = None
+    result: str | None = None  # synchronous result body (Inc 1); refs in Inc 5
+    error: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -172,7 +173,7 @@ class RunEvent:
         known = {f for f in cls.__dataclass_fields__}  # type: ignore[attr-defined]
         return cls(**{k: v for k, v in d.items() if k in known})
 
-    def passes(self, min_level: str = "debug", categories: Optional[set[str]] = None) -> bool:
+    def passes(self, min_level: str = "debug", categories: set[str] | None = None) -> bool:
         """True if this event survives the given filters (used on read)."""
         if _LEVEL_RANK.get(self.level, 1) < _LEVEL_RANK.get(min_level, 0):
             return False
@@ -198,7 +199,7 @@ class AgentRunStore(Protocol):
         """Write (create or overwrite) the run's meta record."""
         ...
 
-    def load_meta(self, run_id: str, agent_n: int = 0) -> Optional[RunMeta]:
+    def load_meta(self, run_id: str, agent_n: int = 0) -> RunMeta | None:
         """Load a run slot's meta, or None if unknown. `agent_n=0` is the
         top-level run; sub-agent slots (Inc 7) use higher indices."""
         ...
@@ -226,7 +227,7 @@ class AgentRunStore(Protocol):
         replace, atomic like persist_meta."""
         ...
 
-    def load_state(self, run_id: str, agent_n: int = 0) -> Optional[dict]:
+    def load_state(self, run_id: str, agent_n: int = 0) -> dict | None:
         """Load the run slot's `state.json`, or None if absent/corrupt (T5)."""
         ...
 
@@ -280,7 +281,7 @@ class FilesystemAgentRunStore:
         slot = self._slot_dir(meta.run_id, meta.agent_n)
         self._atomic_write_json(slot, "meta.json", meta.to_dict())
 
-    def load_meta(self, run_id: str, agent_n: int = 0) -> Optional[RunMeta]:
+    def load_meta(self, run_id: str, agent_n: int = 0) -> RunMeta | None:
         path = self._slot_dir(run_id, agent_n) / "meta.json"
         if not path.exists():
             return None
@@ -333,7 +334,7 @@ class FilesystemAgentRunStore:
         slot = self._slot_dir(run_id, agent_n)
         self._atomic_write_json(slot, "state.json", state)
 
-    def load_state(self, run_id: str, agent_n: int = 0) -> Optional[dict]:
+    def load_state(self, run_id: str, agent_n: int = 0) -> dict | None:
         path = self._slot_dir(run_id, agent_n) / "state.json"
         if not path.exists():
             return None
@@ -424,7 +425,7 @@ class RunControl:
 ORPHANABLE_STATUSES = frozenset({"pending", "running", "waiting", "cancelling"})
 
 
-def resume_refusal(meta: RunMeta, *, in_flight: bool) -> Optional[str]:
+def resume_refusal(meta: RunMeta, *, in_flight: bool) -> str | None:
     """Why this run may NOT be resumed — or None if a resume is allowed.
 
     Pure meta-based rules (the route layers authz + the tier gate on top):
@@ -584,17 +585,17 @@ class AgentRunRegistry:
         task: str,
         *,
         kind: str = "task",
-        tools: Optional[list[str]] = None,
-        provider: Optional[str] = None,
-        model: Optional[str] = None,
-        parent_run_id: Optional[str] = None,
-        network: Optional[list] = None,
-        budget: Optional[dict] = None,
-        owner: Optional[str] = None,
+        tools: list[str] | None = None,
+        provider: str | None = None,
+        model: str | None = None,
+        parent_run_id: str | None = None,
+        network: list | None = None,
+        budget: dict | None = None,
+        owner: str | None = None,
         hold_result: bool = False,
-        system: Optional[str] = None,
-        read_roots: Optional[list] = None,
-        workdir: Optional[str] = None,
+        system: str | None = None,
+        read_roots: list | None = None,
+        workdir: str | None = None,
     ) -> RunMeta:
         """Mint a run, persist it in `pending` state, return its meta.
 
@@ -632,8 +633,8 @@ class AgentRunRegistry:
         meta: RunMeta,
         *,
         status: str,
-        result: Optional[str] = None,
-        error: Optional[str] = None,
+        result: str | None = None,
+        error: str | None = None,
         resumable: bool = False,
     ) -> RunMeta:
         """Mark a run terminal (completed/failed/cancelled/interrupted) and persist."""
@@ -648,12 +649,12 @@ class AgentRunRegistry:
         self._notify_change()  # Inc 9: run left the active set
         return meta
 
-    def get_control(self, run_id: str) -> "Optional[RunControl]":
+    def get_control(self, run_id: str) -> "RunControl | None":
         """The in-flight run's cooperative control, or None if not running.
         The runner uses this to poll budget/cancel at each iteration boundary."""
         return self._controls.get(run_id)
 
-    def get_run_task(self, run_id: str) -> "Optional[asyncio.Task]":
+    def get_run_task(self, run_id: str) -> "asyncio.Task | None":
         """The in-flight run's background asyncio.Task, or None if not running.
         Lets a waiter (e.g. spawn_subagent's parent) await the child's
         completion directly instead of polling get_run() off disk."""
@@ -730,7 +731,7 @@ class AgentRunRegistry:
         kind: str,
         prompt: str,
         ttl_s: float,
-        data: Optional[dict] = None,
+        data: dict | None = None,
     ) -> dict:
         """Park an in-flight run in `waiting{kind}` until POST .../respond
         answers it (or the TTL expires) — ADR 0003 §8 / build plan T5.
@@ -837,8 +838,8 @@ class AgentRunRegistry:
         run_id: str,
         *,
         token: str,
-        approved: Optional[bool] = None,
-        text: Optional[str] = None,
+        approved: bool | None = None,
+        text: str | None = None,
     ) -> tuple[bool, str]:
         """Deliver a human response to a parked run (T5). Returns
         (ok, reason): ok=True resolved the park; otherwise `reason` says why
@@ -993,7 +994,7 @@ class AgentRunRegistry:
         self.run_in_background(meta, runner)
 
     def maybe_reap_hold(
-        self, meta: RunMeta, retention_s: Optional[float]
+        self, meta: RunMeta, retention_s: float | None
     ) -> RunMeta:
         """Lazy retention-TTL backstop (T6): finalize a held run whose
         retention window has elapsed. Called from the read paths (GET
@@ -1134,7 +1135,7 @@ class AgentRunRegistry:
         *,
         level: str = "info",
         category: str = "lifecycle",
-        data: Optional[dict] = None,
+        data: dict | None = None,
         agent_n: int = 0,
     ) -> RunEvent:
         """Assign a per-run seq, persist to events.jsonl, fan out to live
@@ -1171,7 +1172,7 @@ class AgentRunRegistry:
         *,
         since: int = 0,
         min_level: str = "debug",
-        categories: Optional[set[str]] = None,
+        categories: set[str] | None = None,
         agent_n: int = 0,
     ) -> list[RunEvent]:
         """Replay persisted events after `since`, applying level/category
@@ -1203,7 +1204,7 @@ class AgentRunRegistry:
             if not subs:
                 self._subscribers.pop(run_id, None)
 
-    def get_run(self, run_id: str) -> Optional[RunMeta]:
+    def get_run(self, run_id: str) -> RunMeta | None:
         return self._store.load_meta(run_id)
 
     def list_runs(self) -> list[RunMeta]:

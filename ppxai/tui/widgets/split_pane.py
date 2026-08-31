@@ -5,7 +5,6 @@ Provides horizontal and vertical split pane layouts
 for displaying multiple widgets side-by-side.
 """
 
-from typing import Optional
 
 from textual.app import ComposeResult
 from textual.containers import Container, Horizontal, Vertical

@@ -34,7 +34,6 @@ from ppxai.engine.uploaded_file import (
     assert_wire_blocks_clean,
 )
 
-
 # =============================================================================
 # Direction 1 — clean blocks pass silently
 # =============================================================================
@@ -222,6 +221,7 @@ class TestDebugGated:
         """
         import ast
         import inspect
+
         from ppxai.engine.uploaded_file import assert_wire_blocks_clean
 
         source = inspect.getsource(assert_wire_blocks_clean)

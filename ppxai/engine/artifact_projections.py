@@ -29,7 +29,7 @@ framework, not bundled into the type.
 
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any
 
 from .artifact_projector import (
     ContextAttachmentProjector,
@@ -43,14 +43,13 @@ from .types import (
     TextAttachmentRef,
 )
 
-
 # =============================================================================
 # image — ImageAttachmentRef
 # =============================================================================
 
 
 @ContextAttachmentProjector.register("image")
-def _image_to_context_dto(ref: ImageAttachmentRef) -> Dict[str, Any]:
+def _image_to_context_dto(ref: ImageAttachmentRef) -> dict[str, Any]:
     """Image → context_attachments DTO entry.
 
     `name` is the canonical filename (file_store-normalized); empty
@@ -90,7 +89,7 @@ def _image_to_message_box_label(ref: ImageAttachmentRef) -> str:
 
 
 @ContextAttachmentProjector.register("pdf")
-def _pdf_to_context_dto(ref: PdfAttachmentRef) -> Dict[str, Any]:
+def _pdf_to_context_dto(ref: PdfAttachmentRef) -> dict[str, Any]:
     """PDF → context_attachments DTO entry. UI uses `kind="pdf"` so
     the chip can render with a PDF-specific icon."""
     return {
@@ -129,7 +128,7 @@ def _pdf_to_message_box_label(ref: PdfAttachmentRef) -> str:
 
 
 @ContextAttachmentProjector.register("office")
-def _office_to_context_dto(ref: OfficeAttachmentRef) -> Dict[str, Any]:
+def _office_to_context_dto(ref: OfficeAttachmentRef) -> dict[str, Any]:
     """Office doc → context_attachments DTO entry. UI uses `kind="file"`
     today since pre-Step-7 multimodal_ops mapped non-PDF uploaded_file
     blocks to `kind="file"`. A future v1.19.x UI can add explicit
@@ -166,7 +165,7 @@ def _office_to_message_box_label(ref: OfficeAttachmentRef) -> str:
 
 
 @ContextAttachmentProjector.register("text")
-def _text_to_context_dto(ref: TextAttachmentRef) -> Dict[str, Any]:
+def _text_to_context_dto(ref: TextAttachmentRef) -> dict[str, Any]:
     """Text artifact → context_attachments DTO entry. `kind="file"`
     matches multimodal_ops's pre-Step-7 mapping for the legacy
     `<uploaded_file>`-marker text branch."""

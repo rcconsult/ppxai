@@ -9,8 +9,6 @@ native-search substitution). The seam is a per-engine
 
 from __future__ import annotations
 
-import pytest
-
 from ppxai.server.routes.agent_v1 import (
     DEFAULT_AGENT_SYSTEM_PROMPT,
     compose_agent_system_prompt,
@@ -163,5 +161,6 @@ class TestTaskThreadsSystem:
 
     def test_build_task_runner_accepts_system(self):
         import inspect
+
         from ppxai.server.routes.agent_v1 import build_task_runner
         assert "system" in inspect.signature(build_task_runner).parameters

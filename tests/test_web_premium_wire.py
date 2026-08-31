@@ -19,8 +19,6 @@ request runs no search and returns no citations — and the results arrive as a
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
-
 from ppxai.engine.model_facts import shipped_facts_for_model
 from ppxai.engine.providers.perplexity import PerplexityProvider
 from ppxai.engine.tools.builtin import web_premium

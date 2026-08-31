@@ -8,20 +8,19 @@ v1.15.0: Migrated to type-based renderer dispatch
 """
 
 from datetime import datetime
-from typing import Optional
 
 import pyperclip
 
 from .factory import CommandFactory, CommandSpec
 from .protocol import CommandContext
 from .results import (
-    ResultStatus,
     CommandResult,
     ConfirmationResult,
-    TableResult,
     ErrorResult,
     NotificationResult,
+    ResultStatus,
     SideEffectKind,
+    TableResult,
 )
 
 
@@ -53,7 +52,7 @@ def handle_save(context: CommandContext, args: str) -> CommandResult:
         # access it defensively via getattr so headless contexts (tests,
         # server route) don't break.
         pending_files = getattr(context, "pending_files", None) or []
-        pending_warning: Optional[str] = None
+        pending_warning: str | None = None
         if pending_files:
             names = ", ".join(getattr(pf, "name", "?") for pf in pending_files[:3])
             if len(pending_files) > 3:

@@ -33,7 +33,6 @@ pytest.importorskip("httpx")
 
 from fastapi.testclient import TestClient
 
-
 # ---------------------------------------------------------------------------
 # Unit tests for the config-layer accessor
 # ---------------------------------------------------------------------------
@@ -47,7 +46,7 @@ class TestGetFileTreeIgnoreDirs:
         # entries the legacy module-level constant had — proves the
         # promotion to config is behavior-preserving for the default
         # case (which is every existing user).
-        from ppxai.config import get_file_tree_ignore_dirs, DEFAULT_FILE_TREE_IGNORE_DIRS
+        from ppxai.config import DEFAULT_FILE_TREE_IGNORE_DIRS
 
         expected = {
             '.git', 'node_modules', '__pycache__',
@@ -122,8 +121,8 @@ class TestGetFileTreeIgnoreDirs:
         # And the full chain: ConfigStore.reload() picks it up, and
         # get_file_tree_ignore_dirs() returns the override (not the
         # default that has venv in it).
-        from ppxai.config.store import ConfigStore
         from ppxai.config import get_file_tree_ignore_dirs
+        from ppxai.config.store import ConfigStore
         store = ConfigStore.get_instance()
         original = dict(store.config)
         try:
@@ -159,7 +158,7 @@ class TestGetFileTreeIgnoreDirs:
         original = dict(store.config)
         try:
             store.config["file_tree"] = {"ignore_dirs": "venv"}  # str, not list
-            from ppxai.config import get_file_tree_ignore_dirs, DEFAULT_FILE_TREE_IGNORE_DIRS
+            from ppxai.config import DEFAULT_FILE_TREE_IGNORE_DIRS, get_file_tree_ignore_dirs
             assert get_file_tree_ignore_dirs() == set(DEFAULT_FILE_TREE_IGNORE_DIRS)
         finally:
             store.config.clear()
