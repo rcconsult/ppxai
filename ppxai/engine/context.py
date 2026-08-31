@@ -19,10 +19,13 @@ from pathlib import Path
 from typing import List, Tuple, Optional, Set, Dict
 
 from .bootstrap import BootstrapContext, find_bootstrap_files_by_scope
+from ..common.logger import get_logger
 from ..config import get_bootstrap_files, get_max_injection_size, is_bootstrap_enabled
 
 import httpx
 import pyperclip
+
+logger = get_logger("tui")
 
 try:
     import trafilatura

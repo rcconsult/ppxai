@@ -1087,8 +1087,16 @@ class PPXAIDEApp(App):
                 # automatically after session load and tools commands.
 
                 if cmd in ("tools", "agent"):
-                    # Update agent mode badge (Phase 1.3)
-                    if cmd == "agent" and self._engine_client:
+                    # Update agent mode badge (Phase 1.3).
+                    #
+                    # `status_bar` was used here but never bound in this
+                    # method (ruff F821) — the block is a copy of the one in
+                    # `on_mount`, which has the local alias this one lost, so
+                    # every badge update here raised NameError. Resolved from
+                    # `self._status_bar`, the file's own convention; it is
+                    # Optional, hence the guard.
+                    status_bar = self._status_bar
+                    if cmd == "agent" and self._engine_client and status_bar:
                         agent_mode = self._engine_client.state.get("agent_mode")
                         if agent_mode:
                             status_bar.add_badge("agent", "Agent", "ACTIVE", variant="success")

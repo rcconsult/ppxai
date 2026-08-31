@@ -27,6 +27,11 @@ from textual.widgets import DataTable, Markdown, TabbedContent, TabPane, Static,
 from textual.containers import Container
 from textual import on
 
+# `TextualRenderer` was named in this module's annotations but never
+# imported (ruff F821). It is a real class, not a typo — the annotations
+# were correct and simply had nothing in scope to refer to. No cycle:
+# textual_renderer.py does not import this module.
+from ...rendering.textual_renderer import TextualRenderer
 from ...commands.results import (
     CommandResult,
     AIResponseResult,

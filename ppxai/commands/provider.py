@@ -313,7 +313,16 @@ def handle_model_info(context: CommandContext, provider: str, model_id: str) -> 
     def _row(field: str) -> str:
         return "{:<20s} ({})".format(str(getattr(effective, field)), _source(field))
 
-    # Count active hints
+    # Count active hints.
+    #
+    # `bootstrap_ctx` was referenced here but NEVER ASSIGNED (ruff F821), so
+    # this block raised NameError on every call rather than doing nothing —
+    # the Hints row could not have appeared for anyone. Resolved from the
+    # engine, the same path `bootstrap_ops.py` uses; `getattr` because the
+    # attribute is Optional on the client and the protocol does not oblige a
+    # test double to carry it.
+    bootstrap_ctx = getattr(context.engine_client, "_bootstrap_context", None)
+
     hint_count = ""
     if bootstrap_ctx is not None:
         try:
