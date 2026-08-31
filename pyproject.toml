@@ -169,6 +169,13 @@ dev = [
 [tool.ruff]
 line-length = 100
 target-version = "py310"
+# Model OUTPUT captured by the tool-calling eval, not source. `test_cases.py`
+# prompts a model to write to a fictional `/src/` path and the file-write tool
+# saves whatever comes back — including `def function_{i}():` with the literal
+# placeholder, and a `calc.py` truncated mid-method. Committed as source by a
+# bulk "adding files to clean state"; every `invalid-syntax` ruff reports comes
+# from here. Excluded rather than repaired: there is nothing to repair.
+extend-exclude = ["benchmarks/llm-eval/src"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP"]
