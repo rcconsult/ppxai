@@ -266,7 +266,44 @@ override provably changes the outgoing request. **Runnable after:** OpenAI
 routes from data; only deliberately-fixed drift rows differ (named in the
 commit message).
 
-## W3 — Perplexity speaks Responses (I4b · **DEADLINE 09-20** · ~2d + live trial)
+## W3 ✅ DONE (2026-08-31) — Perplexity speaks Responses (I4b · DEADLINE 09-20)
+
+Shipped in two commits. **Part 1** `a0d924ea` — provider + fleet rows + the
+live canary. **Part 2** — the scope the auditor's plan-vs-commit check found
+missing from part 1, all of it deadline-carrying or gate-carrying:
+
+- **`web_premium.py` migrated** onto the same wire resolution as the
+  provider. It had built its OWN `AsyncOpenAI` hardcoded to
+  `/chat/completions`, so the 09-27 retirement would have broken web_search
+  **independently of the provider** — one fix leaving a second path dead,
+  which is the root-cause rule's whole point. It now reads
+  `ModelFacts.wire_protocol` from the provider's table: configure
+  `perplexity/sonar` and the tool follows onto the surviving wire with no
+  code change. The citation migration is **behavioural** (W0 (c)): on the
+  Responses wire search is an explicit tool and results arrive as a
+  `search_results` item while `annotations` stay empty.
+- **`tools.web_search.order`** — the chain is config DATA consumed by the
+  one resolver, folded into `preferred` rather than placed beside it. The
+  non-strict egress set is now **derived from the resolved order** instead
+  of the static `ALL_HOSTS`, closing the way a new key could re-create
+  Item 59's chain-vs-allowlist divergence.
+- **Gateway-smoke hard gate: 7/7**, and `POST /v1/oneshot` proven
+  **byte-identical** by before/after capture (`--record` on a stashed
+  baseline, all 9 normalized exchanges `IDENTICAL`) — evidenced, not
+  asserted, because pass/fail alone cannot evidence byte-identity.
+- **Configured set + I3**: `anthropic/claude-sonnet-5` added to the example
+  config with a pricing row; egress allowlist **verified** host-level, not
+  assumed.
+
+**Not done, deliberately, and needing the owner's call:** the `sonar` →
+`perplexity/sonar` **user-facing ID rename** (W0 (a)) and the `base_url`
+`/v1` suffix in the shipped install scripts + VSCode bootstrap config. Those
+change what every fresh install gets and what existing users' configs must
+say; they are a product decision with a `/doctor` deprecation story, not a
+mechanical checklist tick. The code supports both IDs today, so nothing is
+blocked — but the rename must land before 09-27.
+
+## W3 (original scope) — Perplexity speaks Responses (I4b · **DEADLINE 09-20** · ~2d + live trial)
 
 - Responses handler registered on `PerplexityProvider`; routing table
   from W0 data. Agent-fleet rows (`anthropic/*` +

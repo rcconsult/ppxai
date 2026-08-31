@@ -46,7 +46,7 @@ def tools_cfg(monkeypatch):
 
 def test_auto_keeps_full_superset(tools_cfg):
     assert np.pinned_web_search_backend() is None
-    assert np.tool_targets("web_search", {}) == np._WEB_SEARCH_ALL_HOSTS
+    assert set(np.tool_targets("web_search", {})) == set(np._WEB_SEARCH_ALL_HOSTS)
 
 
 def test_perplexity_strict_pin_narrows_to_perplexity(tools_cfg, monkeypatch):
@@ -64,14 +64,14 @@ def test_preferred_without_strict_is_ordering_not_pin(tools_cfg, monkeypatch):
     tools_cfg["web_search"] = {"preferred": "perplexity"}
     monkeypatch.setenv("PERPLEXITY_API_KEY", "k")
     assert np.pinned_web_search_backend() is None
-    assert np.tool_targets("web_search", {}) == np._WEB_SEARCH_ALL_HOSTS
+    assert set(np.tool_targets("web_search", {})) == set(np._WEB_SEARCH_ALL_HOSTS)
 
 
 def test_pin_without_key_falls_back_to_superset(tools_cfg):
     # Fail-safe: never narrow egress on a pin that can't take effect.
     tools_cfg["web_search"] = {"preferred": "perplexity"}  # no PERPLEXITY_API_KEY
     assert np.pinned_web_search_backend() is None
-    assert np.tool_targets("web_search", {}) == np._WEB_SEARCH_ALL_HOSTS
+    assert set(np.tool_targets("web_search", {})) == set(np._WEB_SEARCH_ALL_HOSTS)
 
 
 def test_duckduckgo_pin_needs_no_key(tools_cfg):

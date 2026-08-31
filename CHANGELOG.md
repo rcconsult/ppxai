@@ -57,6 +57,40 @@ because that fallback is what produced the confabulated results.
 uses Perplexity's Jobs API, not chat completions, so it was never usable
 on the endpoint ppxai calls.
 
+### Added — `tools.web_search.order`: the premium search chain is configurable
+
+`tools.web_search.preferred` chose only the FIRST backend; the rest of the
+chain was hardcoded (`perplexity → gemini → duckduckgo`). You can now set the
+whole sequence:
+
+```json
+"tools": { "web_search": { "order": ["gemini", "duckduckgo", "perplexity"] } }
+```
+
+Backends you omit are appended in the default order, so a short list means
+"try these first", not "only these" — narrowing to one backend is still
+`strict`'s job. Unknown ids are reported by `/doctor` and skipped rather than
+taking search offline. `preferred` folds into the order as the first choice
+rather than being a second mechanism beside it.
+
+The egress allowlist is **derived from the same resolved list**, so a
+configured order cannot enumerate a host the chain will never try, nor omit
+one it will (debt Item 59's seam).
+
+### Fixed — `web_search` would have broken on 2026-09-27 independently of the provider
+
+`web_search_perplexity` built its **own** `AsyncOpenAI` client hardcoded to
+`https://api.perplexity.ai` and `/chat/completions`. Migrating the provider
+to the Responses wire would have left this second path dead when the Sonar
+chat-completions endpoint retires. It now reads `ModelFacts.wire_protocol`
+from the same table the provider uses, so configuring `perplexity/sonar`
+moves the tool onto the surviving wire with **no code change**.
+
+The citation change is behavioural, not a parse-site move (measured): on the
+Responses wire search is an explicit **tool** — a plain request runs no
+search and returns no citations — and results arrive as a `search_results`
+output item while the text block's `annotations` stay empty.
+
 ### Added (ADR 0012 W3) — Perplexity's Agent fleet, over the Responses wire
 
 **One Perplexity key now reaches Anthropic, OpenAI, Google and xAI models.**

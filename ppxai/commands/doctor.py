@@ -586,7 +586,9 @@ def _format_web_search_backend_section() -> List[str]:
     from ..engine.tools.search_backends import resolve_web_search_backend
 
     lines: List[str] = []
-    lines.append("web_search backend (tools.web_search preferred/strict — Q5 tuple):")
+    lines.append(
+        "web_search backend (tools.web_search order/preferred/strict — Q5 tuple):"
+    )
 
     res = resolve_web_search_backend(None)
     lines.append(

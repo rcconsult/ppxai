@@ -583,6 +583,27 @@ As of v1.19.1 it can be overridden per-scope via `resolve_web_search_backend()`:
   `preferred` in the same scope is a dead key (flagged by `/doctor`).
 - A preferred backend whose API key is missing is treated as no preference
   at all (fail-safe) — it never narrows egress or blocks the fallback chain.
+- `tools.web_search.order` (or the same key in a provider's `web_search`
+  block) sets the **whole chain**, not just its first entry:
+
+  ```json
+  "tools": {
+    "web_search": {
+      "order": ["gemini", "duckduckgo", "perplexity"]
+    }
+  }
+  ```
+
+  Backends you leave out are appended in the default order, so a short list
+  means *"try these first"*, not *"only these"* — narrowing to one backend
+  is `strict`'s job and stays the only way to say it. Unknown ids are
+  reported by `/doctor` and skipped rather than taking search offline, and
+  `preferred` folds into the order as the first choice rather than being a
+  second mechanism beside it.
+
+  The egress allowlist is **derived from this same resolved list**, so the
+  chain and the hosts a run is authorized to reach cannot drift apart
+  (debt Item 59's seam).
 
 See [task-agent-guide.md](task-agent-guide.md) for how this interacts with
 `/task` tier egress.

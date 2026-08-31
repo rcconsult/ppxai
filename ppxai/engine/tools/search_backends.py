@@ -55,7 +55,12 @@ BACKEND_ENV: Dict[str, Optional[str]] = {
     "duckduckgo": None,  # key-free
 }
 
-# Auto-detect order (Perplexity > Gemini > DuckDuckGo) — the historical chain.
+# Auto-detect order (Perplexity > Gemini > DuckDuckGo) — the historical chain,
+# and the DEFAULT for `tools.web_search.order` (see `_read_order`). It is the
+# fallback when no order is configured, not a hardcoded chain: an operator who
+# writes `"order": ["gemini", "duckduckgo", "perplexity"]` gets exactly that
+# sequence, in the one resolver both the call-time chain and the egress
+# enumeration consume.
 AUTO_ORDER: Tuple[str, ...] = ("perplexity", "gemini", "duckduckgo")
 
 ALL_HOSTS: List[str] = [
@@ -90,8 +95,58 @@ class BackendResolution:
     warnings: Tuple[str, ...] = ()   # fail-safe / dead-key / unknown-name notes
 
 
-def _read_scope(provider_name: Optional[str]) -> Tuple[str, str, bool, List[str]]:
-    """Select the (scope, preferred, strict) tuple per Q5. Never raises."""
+def _read_order(block: Dict[str, object], warnings: List[str]) -> Tuple[str, ...]:
+    """The configured backend chain, or `AUTO_ORDER` when unset.
+
+    `tools.web_search.order` is DATA for the one resolver — deliberately not
+    a second mechanism beside `preferred`. `preferred` still names the first
+    choice; `order` names the rest of the chain and the sequence the fallback
+    walks. They fold together in `resolve_web_search_backend`, so the
+    call-time chain and the egress enumeration read the same tuple and cannot
+    drift (debt Item 59's seam).
+
+    Unknown ids are dropped with a warning rather than raising: a typo in a
+    config file must not take web_search offline. Known backends the operator
+    omitted are appended in `AUTO_ORDER` sequence, so an order of
+    `["gemini"]` still falls back rather than becoming an implicit strict pin
+    — `strict: true` is how one says "only this one", and it stays the only
+    way to say it.
+    """
+    raw = block.get("order")
+    if raw is None:
+        return AUTO_ORDER
+    if not isinstance(raw, (list, tuple)):
+        warnings.append(
+            "tools.web_search.order must be a list of backend ids "
+            f"(got {type(raw).__name__}) — using the default order"
+        )
+        return AUTO_ORDER
+
+    seen: List[str] = []
+    for entry in raw:
+        name = str(entry)
+        if name not in BACKEND_HOSTS:
+            warnings.append(
+                f"unknown web_search backend {name!r} in tools.web_search.order "
+                f"(known: {', '.join(sorted(BACKEND_HOSTS))}) — ignored"
+            )
+            continue
+        if name not in seen:
+            seen.append(name)
+    if not seen:
+        warnings.append(
+            "tools.web_search.order named no known backend — using the default order"
+        )
+        return AUTO_ORDER
+    # Append anything the operator left out, so the chain stays a full
+    # fallback ladder. Narrowing is `strict`'s job, not `order`'s.
+    return tuple(seen) + tuple(b for b in AUTO_ORDER if b not in seen)
+
+
+def _read_scope(
+    provider_name: Optional[str],
+) -> Tuple[str, str, bool, Tuple[str, ...], List[str]]:
+    """Select the (scope, preferred, strict, order) tuple per Q5. Never raises."""
     warnings: List[str] = []
     # Provider block first — it owns the tuple ONLY if it states `preferred`.
     if provider_name:
@@ -108,6 +163,7 @@ def _read_scope(provider_name: Optional[str]) -> Tuple[str, str, bool, List[str]
                 f"provider:{provider_name}",
                 str(block["preferred"]),
                 bool(block.get("strict", False)),
+                _read_order(block, warnings),
                 warnings,
             )
         if "strict" in block:
@@ -124,8 +180,13 @@ def _read_scope(provider_name: Optional[str]) -> Tuple[str, str, bool, List[str]
         g = {}
     preferred = str(g.get("preferred", "auto") or "auto")
     strict = bool(g.get("strict", False))
-    scope = "global" if (g.get("preferred") or "strict" in g) else "default"
-    return scope, preferred, strict, warnings
+    order = _read_order(g, warnings)
+    scope = (
+        "global"
+        if (g.get("preferred") or "strict" in g or "order" in g)
+        else "default"
+    )
+    return scope, preferred, strict, order, warnings
 
 
 def _backend_hosts_all_allowed(
@@ -169,7 +230,7 @@ def resolve_web_search_backend(
     duckduckgo.com`` → no live data). Without it (chat, unconfined runs) the
     resolution is unchanged — the honest global superset.
     """
-    scope, preferred, strict, warnings = _read_scope(provider_name)
+    scope, preferred, strict, order, warnings = _read_scope(provider_name)
 
     if preferred != "auto" and preferred not in BACKEND_HOSTS:
         warnings.append(
@@ -186,14 +247,15 @@ def resolve_web_search_backend(
         )
         preferred, strict = "auto", False
 
-    usable = [b for b in AUTO_ORDER if backend_usable(b)]
+    # The configured order IS the chain — `AUTO_ORDER` is only its default.
+    usable = [b for b in order if backend_usable(b)]
     if preferred == "auto":
         candidates = tuple(usable)
     elif strict:
         candidates = (preferred,)
     else:
         # Ordering semantics (Q5-b): first choice, then the rest of the
-        # usable chain in auto order.
+        # usable chain in the CONFIGURED order.
         candidates = (preferred,) + tuple(b for b in usable if b != preferred)
 
     # Egress: narrowing ONLY under an effective strict pin — otherwise the
@@ -203,7 +265,14 @@ def resolve_web_search_backend(
     if strict:
         egress = tuple(BACKEND_HOSTS[preferred])
     else:
-        egress = tuple(ALL_HOSTS)
+        # DERIVED from the resolved chain, not a static list. `order` makes
+        # the chain configurable, so a hardcoded host set could enumerate a
+        # backend the chain will never try (or, worse, omit one it will) —
+        # the enumeration-vs-chain divergence this resolver exists to
+        # prevent (debt Item 59). Keyed on the ORDER, not on `usable`: a
+        # missing API key must never become a policy denial, which is why
+        # this stays the honest superset of everything the chain may reach.
+        egress = tuple(h for b in order for h in BACKEND_HOSTS[b])
 
     # Item 59: intersect with the run's narrowed egress allowlist, when given.
     # A sandboxed /task run can allowlist a strict subset of the global search

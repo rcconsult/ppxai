@@ -17,6 +17,9 @@ from openai import AsyncOpenAI
 
 from ppxai.config import get_tool_config, get_tool_pricing
 from ppxai.config.tls import tls_verify
+from ppxai.constants import APIEndpoint
+from ...model_facts import shipped_facts_for_model
+from ...providers.perplexity import PerplexityProvider
 from ...types import ToolUsage
 # ADR 0009 step ④: the ONE shared backend resolver (leaf module, top-level
 # import — retires the function-local `network_policy` import this module
@@ -140,6 +143,49 @@ def calculate_tool_cost(provider: str, tokens_in: int = 0, tokens_out: int = 0, 
     return 0.0
 
 
+#: Perplexity's two wires. The chat host is the shared constant; the
+#: Responses wire lives one path segment deeper (measured — the bare host
+#: 404s on `/responses`).
+PERPLEXITY_CHAT_BASE_URL = APIEndpoint.PERPLEXITY_API
+PERPLEXITY_RESPONSES_BASE_URL = APIEndpoint.PERPLEXITY_API.rstrip("/") + "/v1"
+
+
+def _responses_answer_and_citations(response, num_results: int):
+    """Pull answer text and citation URLs out of a Responses reply.
+
+    MEASURED 2026-08-30 (plan W0 (c)): citations arrive as a
+    `search_results` OUTPUT ITEM carrying `{id, snippet, date, url}` rows.
+    The text block's `annotations` array stays **empty** on this wire, so
+    reading annotations — the obvious guess — silently yields no citations.
+    """
+    payload = {}
+    try:
+        payload = response.model_dump()
+    except Exception:  # noqa: BLE001 - SDK shape varies; fall back below
+        payload = {}
+
+    citations = []
+    for item in payload.get("output", []) or []:
+        if isinstance(item, dict) and item.get("type") == "search_results":
+            for row in item.get("results") or []:
+                url = (row or {}).get("url")
+                if url and url not in citations:
+                    citations.append(url)
+
+    content = getattr(response, "output_text", None) or ""
+    if not content:
+        parts = []
+        for item in payload.get("output", []) or []:
+            if not isinstance(item, dict) or item.get("type") != "message":
+                continue
+            for part in item.get("content") or []:
+                if isinstance(part, dict) and part.get("type") == "output_text":
+                    parts.append(part.get("text") or "")
+        content = "".join(parts)
+
+    return content, citations[:num_results]
+
+
 async def web_search_perplexity(query: str, num_results: int = 5) -> Tuple[str, List[str], ToolUsage]:
     """Search web using Perplexity Sonar API.
 
@@ -163,6 +209,18 @@ async def web_search_perplexity(query: str, num_results: int = 5) -> Tuple[str, 
     tool_config = get_tool_config("web_search")
     perplexity_model = tool_config.get("perplexity_model", "sonar")
 
+    # ADR 0012 W3: which wire this model speaks is a per-model FACT, resolved
+    # from the same table `PerplexityProvider` uses. This tool used to build
+    # its own client hardcoded to `/chat/completions`, which meant the
+    # 2026-09-27 Sonar retirement would break web_search independently of the
+    # provider — a second path to patch instead of one path to fix. Reading
+    # the fact here is the root-cause fix: configure `perplexity/sonar` and
+    # this tool follows the provider onto the surviving wire with no code
+    # change.
+    wire = shipped_facts_for_model(
+        perplexity_model, PerplexityProvider.shipped_model_facts
+    ).wire_protocol
+
     # TLS via the shared resolver. This site previously honoured SSL_VERIFY
     # but ignored SSL_CERT_FILE, so a custom-CA install silently verified
     # against the system store here while every other client used the bundle.
@@ -172,23 +230,42 @@ async def web_search_perplexity(query: str, num_results: int = 5) -> Tuple[str, 
     # pool on every web_search call in a long-lived server. Same pattern
     # as web_search_gemini below.
     async with httpx.AsyncClient(verify=tls_verify()) as http_client:
-        client = AsyncOpenAI(
-            api_key=api_key,
-            base_url="https://api.perplexity.ai",
-            http_client=http_client
-        )
-
-        response = await client.chat.completions.create(
-            model=perplexity_model,
-            messages=[{"role": "user", "content": query}]
-        )
-
-    content = response.choices[0].message.content
-    citations = getattr(response, 'citations', [])[:num_results]
-
-    # Calculate cost
-    tokens_in = response.usage.prompt_tokens
-    tokens_out = response.usage.completion_tokens
+        if wire == "responses":
+            client = AsyncOpenAI(
+                api_key=api_key,
+                base_url=PERPLEXITY_RESPONSES_BASE_URL,
+                http_client=http_client,
+            )
+            # MEASURED 2026-08-30 (plan W0 (c)): on this wire search is an
+            # explicit TOOL, not implicit as it is on Sonar chat-completions.
+            # A plain request runs no search at all and returns no citations,
+            # so the tool must be requested by name — the migration is
+            # behavioural, not a change of parse site.
+            response = await client.responses.create(
+                model=perplexity_model,
+                input=query,
+                tools=[{"type": "web_search"}],
+            )
+            content, citations = _responses_answer_and_citations(
+                response, num_results
+            )
+            usage_obj = getattr(response, "usage", None)
+            tokens_in = getattr(usage_obj, "input_tokens", 0) or 0
+            tokens_out = getattr(usage_obj, "output_tokens", 0) or 0
+        else:
+            client = AsyncOpenAI(
+                api_key=api_key,
+                base_url=PERPLEXITY_CHAT_BASE_URL,
+                http_client=http_client,
+            )
+            response = await client.chat.completions.create(
+                model=perplexity_model,
+                messages=[{"role": "user", "content": query}]
+            )
+            content = response.choices[0].message.content
+            citations = list(getattr(response, "citations", None) or [])[:num_results]
+            tokens_in = response.usage.prompt_tokens
+            tokens_out = response.usage.completion_tokens
 
     usage = ToolUsage(
         call_count=1,

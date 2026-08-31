@@ -60,7 +60,7 @@ class TestScopedTupleMatrix:
         assert res.scope == "default"
         assert res.preferred == "auto" and res.strict is False
         assert res.candidates == ("perplexity", "gemini", "duckduckgo")
-        assert list(res.egress_hosts) == ALL_HOSTS
+        assert set(res.egress_hosts) == set(ALL_HOSTS)
 
     def test_global_ordering_no_strict(self, cfg, monkeypatch):
         _keys(monkeypatch, "PERPLEXITY_API_KEY", "GEMINI_API_KEY")
@@ -70,7 +70,7 @@ class TestScopedTupleMatrix:
         assert res.preferred == "gemini" and res.strict is False
         # Ordering: first choice, then the rest of the usable chain.
         assert res.candidates == ("gemini", "perplexity", "duckduckgo")
-        assert list(res.egress_hosts) == ALL_HOSTS  # no narrowing w/o strict
+        assert set(res.egress_hosts) == set(ALL_HOSTS)  # no narrowing w/o strict
 
     def test_global_strict_pins_and_narrows(self, cfg, monkeypatch):
         _keys(monkeypatch, "GEMINI_API_KEY")
@@ -94,7 +94,7 @@ class TestScopedTupleMatrix:
         assert res.scope == "provider:prov"
         assert res.preferred == "perplexity" and res.strict is False
         assert res.candidates[0] == "perplexity"
-        assert list(res.egress_hosts) == ALL_HOSTS
+        assert set(res.egress_hosts) == set(ALL_HOSTS)
 
     def test_provider_strict_with_provider_preferred(self, cfg, monkeypatch):
         _keys(monkeypatch, "PERPLEXITY_API_KEY")
@@ -120,7 +120,7 @@ class TestScopedTupleMatrix:
         cfg["global"] = {"preferred": "perplexity", "strict": True}
         res = resolve_web_search_backend(None)
         assert res.preferred == "auto" and res.strict is False
-        assert list(res.egress_hosts) == ALL_HOSTS
+        assert set(res.egress_hosts) == set(ALL_HOSTS)
         assert any("fail-safe" in w for w in res.warnings)
 
     def test_unknown_backend_name_warns_and_autos(self, cfg):

@@ -16,7 +16,7 @@
     "working_dir": null,
     "__comment_working_dir": "Default working directory for sessions. null = user home directory. Set to e.g. '/workspace' for container deployments.",
     "secrets": {
-      "__comment": "Pluggable bearer-token sources for /v1/tokens + auth (v1.19.0, ADR 0003 §C2). OMIT this whole block for the legacy behavior: a single shared token via the PPXAI_API_TOKEN env var (unauthenticated when unset). Providers are tried in order; the first to resolve a presented token wins. /v1/tokens mint/list/revoke route to the first provider that supports them — read-only providers (env, k8s) return HTTP 405.",
+      "__comment": "Pluggable bearer-token sources for /v1/tokens + auth (v1.19.0, ADR 0003 \u00a7C2). OMIT this whole block for the legacy behavior: a single shared token via the PPXAI_API_TOKEN env var (unauthenticated when unset). Providers are tried in order; the first to resolve a presented token wins. /v1/tokens mint/list/revoke route to the first provider that supports them \u2014 read-only providers (env, k8s) return HTTP 405.",
       "providers": [
         {
           "type": "file",
@@ -175,6 +175,27 @@
             "restricted_params": [],
             "tier": "C"
           }
+        },
+        "anthropic/claude-sonnet-5": {
+          "name": "Claude Sonnet 5 (via Perplexity Agent API)",
+          "description": "Anthropic's Sonnet 5 reached with a Perplexity key over the Responses wire",
+          "context_limit": 200000,
+          "__comment_wire": "ADR 0012 W3: the Agent fleet speaks the OpenAI Responses API, not chat completions. Same Perplexity key, same bill. max_tokens is REQUIRED here - the API answers 400 'max_output_tokens is required when using Anthropic models' without it (measured 2026-08-31).",
+          "facts": {
+            "tool_mode": "auto",
+            "fallback_on_empty": false,
+            "fallback_on_failure": false,
+            "strip_json_from_text": false,
+            "parallel_tool_calls": false,
+            "wire_protocol": "responses",
+            "max_tokens": 4096,
+            "max_tool_iterations": 0,
+            "supports_reasoning": false,
+            "supports_vision": false,
+            "restricted_params": [],
+            "tier": ""
+          },
+          "__comment_unmeasured": "supports_vision / tier / max_tool_iterations are the UNMEASURED floor (Q0a) - this fleet was probed for wire, tools and the max_output_tokens requirement only. They stay at the floor until measured rather than being guessed from the vendor's own model card."
         }
       },
       "pricing": {
@@ -189,6 +210,11 @@
         "sonar-reasoning-pro": {
           "input": 2,
           "output": 8
+        },
+        "anthropic/claude-sonnet-5": {
+          "input": 3,
+          "output": 15,
+          "__comment": "ADR 0012 W3. NOT measured against a Perplexity invoice - carried over from the Anthropic/OpenRouter list price for the same model, because OMITTING the entry is worse: an unpriced model accrues $0 silently in usage accounting. Replace with the Agent API's published rate when confirmed; the number is visible and wrong-able here rather than absent and invisible."
         }
       },
       "facts": {
@@ -216,7 +242,7 @@
         "temperature": 0.2,
         "top_p": 0.9
       },
-      "__comment_deprecations": "Gemini deprecation timeline (verified 2026-04-12 against https://ai.google.dev/gemini-api/docs/deprecations; gemini-3.1-flash-lite GA migration verified 2026-05-14). The Gemini 2.0 and 2.5 families were REMOVED from this example file in v1.17.4 because all variants are scheduled for shutdown between 2026-06-01 and 2026-07-22. `/doctor` still knows about them via `ppxai/engine/model_deprecations.py` — users with old local configs get a warning with upgrade targets. Recommended replacements: gemini-3-flash-preview (best benchmark score, 100%) for general coding, gemini-3.1-pro-preview for complex reasoning, gemini-3.1-flash-lite (GA 2026-05) for high-volume cost-sensitive workloads. gemini-3-pro-preview was SHUT DOWN 2026-03-09. gemini-3.1-flash-lite-preview retires 2026-05-25 — use the GA name gemini-3.1-flash-lite.",
+      "__comment_deprecations": "Gemini deprecation timeline (verified 2026-04-12 against https://ai.google.dev/gemini-api/docs/deprecations; gemini-3.1-flash-lite GA migration verified 2026-05-14). The Gemini 2.0 and 2.5 families were REMOVED from this example file in v1.17.4 because all variants are scheduled for shutdown between 2026-06-01 and 2026-07-22. `/doctor` still knows about them via `ppxai/engine/model_deprecations.py` \u2014 users with old local configs get a warning with upgrade targets. Recommended replacements: gemini-3-flash-preview (best benchmark score, 100%) for general coding, gemini-3.1-pro-preview for complex reasoning, gemini-3.1-flash-lite (GA 2026-05) for high-volume cost-sensitive workloads. gemini-3-pro-preview was SHUT DOWN 2026-03-09. gemini-3.1-flash-lite-preview retires 2026-05-25 \u2014 use the GA name gemini-3.1-flash-lite.",
       "models": {
         "gemini-3.1-pro-preview": {
           "name": "Gemini 3.1 Pro Preview",
@@ -281,7 +307,7 @@
           "name": "Gemma 4 26B (MoE)",
           "description": "Mixture-of-Experts 26B (3.8B active) with text + vision, 256K context. Faster inference than 31B dense for similar quality.",
           "context_limit": 262144,
-          "__comment_best_for": "Workloads benefiting from MoE efficiency — lower latency per token with 3.8B active parameters.",
+          "__comment_best_for": "Workloads benefiting from MoE efficiency \u2014 lower latency per token with 3.8B active parameters.",
           "facts": {
             "tool_mode": "native",
             "fallback_on_empty": true,
@@ -299,10 +325,10 @@
         },
         "gemini-3.5-flash": {
           "name": "Gemini 3.5 Flash",
-          "description": "Google's newest GA flash model (2026) — most intelligent flash tier for agentic and coding tasks. Supersedes gemini-3-flash-preview. 1M context, text + image + video input.",
+          "description": "Google's newest GA flash model (2026) \u2014 most intelligent flash tier for agentic and coding tasks. Supersedes gemini-3-flash-preview. 1M context, text + image + video input.",
           "context_limit": 1048576,
           "__comment_best_for": "Recommended default. Everyday coding, editing, agentic tool loops.",
-          "__comment_benchmark_status": "NOT YET BENCHMARKED — profile cloned from gemini-3-flash (Tier S). Run benchmarks/llm-eval before tuning.",
+          "__comment_benchmark_status": "NOT YET BENCHMARKED \u2014 profile cloned from gemini-3-flash (Tier S). Run benchmarks/llm-eval before tuning.",
           "facts": {
             "tool_mode": "native",
             "fallback_on_empty": true,
@@ -341,7 +367,7 @@
         "gemini-3.5-flash": {
           "input": 0.5,
           "output": 3,
-          "__comment": "approximate — verify against current Gemini pricing"
+          "__comment": "approximate \u2014 verify against current Gemini pricing"
         }
       },
       "facts": {
@@ -375,10 +401,10 @@
       "models": {
         "gpt-5.5": {
           "name": "GPT-5.5",
-          "description": "Newest OpenAI flagship (released 2026-04-23). 1M context, $5/$30 per MTok — 2× the price of GPT-5.4. First fully retrained base since GPT-4.5.",
+          "description": "Newest OpenAI flagship (released 2026-04-23). 1M context, $5/$30 per MTok \u2014 2\u00d7 the price of GPT-5.4. First fully retrained base since GPT-4.5.",
           "context_limit": 1048576,
-          "__comment_best_for": "Hardest reasoning, novel algorithm design, long-context refactors. Expensive — prefer gpt-5.4-mini for everyday work.",
-          "__comment_benchmark_status": "NOT YET BENCHMARKED — hints cloned from gpt-5.4 as starting point. Run benchmarks/llm-eval before tuning.",
+          "__comment_best_for": "Hardest reasoning, novel algorithm design, long-context refactors. Expensive \u2014 prefer gpt-5.4-mini for everyday work.",
+          "__comment_benchmark_status": "NOT YET BENCHMARKED \u2014 hints cloned from gpt-5.4 as starting point. Run benchmarks/llm-eval before tuning.",
           "facts": {
             "tool_mode": "native",
             "fallback_on_empty": false,
@@ -399,10 +425,10 @@
         },
         "gpt-5.5-pro": {
           "name": "GPT-5.5 Pro",
-          "description": "Premium tier of GPT-5.5 (released 2026-04-23). $30/$180 per MTok — highest available capability.",
+          "description": "Premium tier of GPT-5.5 (released 2026-04-23). $30/$180 per MTok \u2014 highest available capability.",
           "context_limit": 1048576,
-          "__comment_best_for": "Critical code review, ADR drafting, multi-day investigation work. ~6× the cost of gpt-5.4-pro.",
-          "__comment_benchmark_status": "NOT YET BENCHMARKED — likely cost-prohibitive for the 36-test suite (~$15-20 per run).",
+          "__comment_best_for": "Critical code review, ADR drafting, multi-day investigation work. ~6\u00d7 the cost of gpt-5.4-pro.",
+          "__comment_benchmark_status": "NOT YET BENCHMARKED \u2014 likely cost-prohibitive for the 36-test suite (~$15-20 per run).",
           "facts": {
             "tool_mode": "native",
             "fallback_on_empty": false,
@@ -426,7 +452,7 @@
           "description": "Current flagship (released 2026-03-05). 1M context, 75% computer use benchmark, best overall intelligence.",
           "context_limit": 1048576,
           "__comment_best_for": "Complex refactoring, architecture decisions, multi-file changes, agentic workflows with browser/computer use.",
-          "__comment_benchmark_status": "NOT YET BENCHMARKED by ppxai — using stub hints from gpt-5.2*. Refine after running benchmarks/llm-eval.",
+          "__comment_benchmark_status": "NOT YET BENCHMARKED by ppxai \u2014 using stub hints from gpt-5.2*. Refine after running benchmarks/llm-eval.",
           "facts": {
             "tool_mode": "native",
             "fallback_on_empty": false,
@@ -450,7 +476,7 @@
           "description": "Premium tier of GPT-5.4 (released 2026-03-05). Highest capability for difficult tasks.",
           "context_limit": 1048576,
           "__comment_best_for": "Hardest problems, novel algorithm design, critical code review. Expensive but top-of-line.",
-          "__comment_benchmark_status": "NOT YET BENCHMARKED — using stub hints. Refine after benchmark run.",
+          "__comment_benchmark_status": "NOT YET BENCHMARKED \u2014 using stub hints. Refine after benchmark run.",
           "generation_params": {
             "temperature": 0.1,
             "max_tokens": 16384
@@ -478,7 +504,7 @@
           "description": "Newest small model (released 2026-03-17). 400K context, $0.75/$4.50 per MTok. OpenAI's 'most capable small model yet'.",
           "context_limit": 400000,
           "__comment_best_for": "Everyday coding, edits, explanations at lower cost than full GPT-5.4. Good price/performance sweet spot.",
-          "__comment_benchmark_status": "NOT YET BENCHMARKED — using stub hints. Refine after benchmark run.",
+          "__comment_benchmark_status": "NOT YET BENCHMARKED \u2014 using stub hints. Refine after benchmark run.",
           "facts": {
             "tool_mode": "native",
             "fallback_on_empty": true,
@@ -499,7 +525,7 @@
           "description": "Cheapest GPT-5.4 variant (released 2026-03-17). API-only. $0.20/$1.25 per MTok.",
           "context_limit": 400000,
           "__comment_best_for": "Simple edits, file operations, high-volume quick Q&A. Lowest-cost GPT-5.4 option.",
-          "__comment_benchmark_status": "NOT YET BENCHMARKED — using stub hints. Refine after benchmark run.",
+          "__comment_benchmark_status": "NOT YET BENCHMARKED \u2014 using stub hints. Refine after benchmark run.",
           "generation_params": {
             "max_tokens": 8192
           },
@@ -523,7 +549,7 @@
         },
         "gpt-5.3-codex": {
           "name": "GPT-5.3 Codex",
-          "description": "Code-specialized model — \"most capable agentic coding model to date\" per OpenAI. 400K context, 128K max output. Note: gpt-5.4 mainline has absorbed these capabilities, but the Codex variant remains for users who want the dedicated coding-tuned model.",
+          "description": "Code-specialized model \u2014 \"most capable agentic coding model to date\" per OpenAI. 400K context, 128K max output. Note: gpt-5.4 mainline has absorbed these capabilities, but the Codex variant remains for users who want the dedicated coding-tuned model.",
           "context_limit": 400000,
           "__comment_best_for": "Long-horizon agentic coding sessions, multi-file refactors with extensive tool chains.",
           "generation_params": {
@@ -552,12 +578,12 @@
         "gpt-5.5": {
           "input": 5,
           "output": 30,
-          "__comment": "Released 2026-04-23. 2× the price of gpt-5.4."
+          "__comment": "Released 2026-04-23. 2\u00d7 the price of gpt-5.4."
         },
         "gpt-5.5-pro": {
           "input": 30,
           "output": 180,
-          "__comment": "Released 2026-04-23. 2× the price of gpt-5.4-pro. Verify against https://platform.openai.com/docs/pricing"
+          "__comment": "Released 2026-04-23. 2\u00d7 the price of gpt-5.4-pro. Verify against https://platform.openai.com/docs/pricing"
         },
         "gpt-5.4": {
           "input": 2.5,
@@ -566,7 +592,7 @@
         "gpt-5.4-pro": {
           "input": 15,
           "output": 75,
-          "__comment": "Premium tier — verify against https://platform.openai.com/docs/pricing"
+          "__comment": "Premium tier \u2014 verify against https://platform.openai.com/docs/pricing"
         },
         "gpt-5.3-codex": {
           "input": 1.75,
@@ -769,19 +795,19 @@
       }
     },
     "nvidia": {
-      "__comment": "NVIDIA NIM (build.nvidia.com) — OpenAI-compatible API. Free tier with API key (nvapi-...). 141 models available.",
-      "__comment_benchmark": "Tier A sweep (2026-05-01 + 2026-05-02 rerun): qwen3.5-122b-a10b 77.4%, qwen3-next-80b-thinking 76.6%, qwen3-next-80b-instruct 68.3%. qwen3-coder-480b excluded as of 2026-05-02 — both free-tier runs scored 19.0% with the rate-limit-contamination signature. Re-add manually if you have paid-tier access (the engine ModelProfile entry is retained for that case).",
+      "__comment": "NVIDIA NIM (build.nvidia.com) \u2014 OpenAI-compatible API. Free tier with API key (nvapi-...). 141 models available.",
+      "__comment_benchmark": "Tier A sweep (2026-05-01 + 2026-05-02 rerun): qwen3.5-122b-a10b 77.4%, qwen3-next-80b-thinking 76.6%, qwen3-next-80b-instruct 68.3%. qwen3-coder-480b excluded as of 2026-05-02 \u2014 both free-tier runs scored 19.0% with the rate-limit-contamination signature. Re-add manually if you have paid-tier access (the engine ModelProfile entry is retained for that case).",
       "__comment_known_issues": "1) Free-tier hangs on long agentic_tool_loops (mistral-large-3, llama-3.3-nemotron). 2) llama-4-maverick is regionally restricted (EU users get 'NIM unavailable in your location'). 3) qwen2.5-coder-32b needs tool_calling.mode='prompt_based' (NIM rejects native tools).",
       "name": "NVIDIA NIM (build.nvidia.com)",
       "base_url": "https://integrate.api.nvidia.com/v1",
       "api_key_env": "NVIDIA_API_KEY",
       "default_model": "qwen/qwen3.5-122b-a10b",
       "coding_model": "qwen/qwen3.5-122b-a10b",
-      "system_prompt": "You are an expert AI coding assistant served via NVIDIA NIM. Be concise and precise. Call tools directly using native function calling — never output tool-call JSON in response text. After tool failures, acknowledge the actual error message before retrying.",
+      "system_prompt": "You are an expert AI coding assistant served via NVIDIA NIM. Be concise and precise. Call tools directly using native function calling \u2014 never output tool-call JSON in response text. After tool failures, acknowledge the actual error message before retrying.",
       "generation_params": {
         "temperature": 0.2,
         "top_p": 0.9,
-        "__comment": "Provider-level defaults. NVIDIA portal recommends different params per model — see model-level overrides below."
+        "__comment": "Provider-level defaults. NVIDIA portal recommends different params per model \u2014 see model-level overrides below."
       },
       "models": {
         "qwen/qwen3.5-122b-a10b": {
@@ -794,7 +820,7 @@
             "temperature": 0.2,
             "top_p": 0.9
           },
-          "__comment_extra_body": "v1.18.3 plumbed extra_body through openai_compat. To enable Qwen3.5's reasoning mode, uncomment the block below. Roughly doubles latency — leave off unless you need extended chain-of-thought. NVIDIA's chat_template_kwargs.enable_thinking is the toggle.",
+          "__comment_extra_body": "v1.18.3 plumbed extra_body through openai_compat. To enable Qwen3.5's reasoning mode, uncomment the block below. Roughly doubles latency \u2014 leave off unless you need extended chain-of-thought. NVIDIA's chat_template_kwargs.enable_thinking is the toggle.",
           "__example_extra_body": {
             "chat_template_kwargs": {
               "enable_thinking": true
@@ -1394,7 +1420,7 @@
       "__comment_checkpoint_backend": "Checkpoint backend: 'auto' (detect git), 'git' (git-only), 'file' (file snapshots), 'none' (disabled)",
       "checkpoint_message": "ppxai checkpoint: {task}",
       "__comment_checkpoint_message": "Git commit message template ({task} is replaced with task description)",
-      "__comment_moved_v1_19_1": "BREAKING (v1.19.1, ADR 0010): task_tier_enabled and sandbox.* are NO LONGER read here. They describe WHERE work runs, not what the agent tool is, and moved to execution.task.* (see the top-level 'execution' block below). There is no dual-read — a stale copy under tools.agent is silently ignored. Run /doctor for the old->new mapping."
+      "__comment_moved_v1_19_1": "BREAKING (v1.19.1, ADR 0010): task_tier_enabled and sandbox.* are NO LONGER read here. They describe WHERE work runs, not what the agent tool is, and moved to execution.task.* (see the top-level 'execution' block below). There is no dual-read \u2014 a stale copy under tools.agent is silently ignored. Run /doctor for the old->new mapping."
     },
     "container": {
       "__comment": "Container tool configuration (v1.15.0+)",
@@ -1408,7 +1434,7 @@
       "__comment_timeout": "Container command timeout in seconds"
     },
     "vision_model": {
-      "__comment": "Vision-language sidecar for text-only models (v1.17.4 Phase 2.7). When the user attaches an image while chatting with a text-only model (e.g. o1-mini, gpt-oss, sonar-reasoning), ppxai can optionally fetch a caption from a separate VL endpoint and inject it as a text placeholder. Unset / disabled = fallback to a '[Image: name — vision not supported]' placeholder.",
+      "__comment": "Vision-language sidecar for text-only models (v1.17.4 Phase 2.7). When the user attaches an image while chatting with a text-only model (e.g. o1-mini, gpt-oss, sonar-reasoning), ppxai can optionally fetch a caption from a separate VL endpoint and inject it as a text placeholder. Unset / disabled = fallback to a '[Image: name \u2014 vision not supported]' placeholder.",
       "enabled": false,
       "__comment_enabled": "Set to true to enable the VL sidecar fallback path.",
       "endpoint": "",
@@ -1420,9 +1446,9 @@
       "auto_caption": true,
       "__comment_auto_caption": "When true, /attach + file_preprocessing call the VL sidecar automatically for images attached to text-only models. When false, the sidecar is wired but only used when explicitly invoked.",
       "timeout": 30,
-      "__comment_timeout": "Request timeout in seconds — VL models can be slow on first load.",
+      "__comment_timeout": "Request timeout in seconds \u2014 VL models can be slow on first load.",
       "max_tokens": 200,
-      "__comment_max_tokens": "Max caption length in tokens. Captions are short — 200 is plenty.",
+      "__comment_max_tokens": "Max caption length in tokens. Captions are short \u2014 200 is plenty.",
       "prompt": "Describe this image in one or two sentences. Focus on what would help a text-only language model reason about it.",
       "__comment_prompt": "System prompt handed to the VL model alongside the image."
     },
@@ -1430,6 +1456,12 @@
       "__comment": "Premium web search configuration (v1.13.4+)",
       "preferred": "auto",
       "__comment_preferred": "Search provider: 'auto' (detect), 'perplexity', 'gemini', 'duckduckgo'",
+      "order": [
+        "perplexity",
+        "gemini",
+        "duckduckgo"
+      ],
+      "__comment_order": "Fallback chain, tried in this sequence. `preferred` still names the first choice and folds into this order. Omitted backends are appended in the default order, so a short list is 'try these first', not 'only these' - use `strict: true` to pin a single backend. The egress allowlist is derived from this same list.",
       "perplexity_model": "sonar",
       "__comment_perplexity_model": "Model for Perplexity searches (sonar = cheapest)",
       "gemini_model": "gemini-2.5-flash",
@@ -1466,7 +1498,7 @@
     }
   },
   "execution": {
-    "__comment": "ADR 0010 third config axis (v1.19.1): WHERE work runs. providers.* say WHO answers, tools.* say WHAT each tool is (tier-independently), and execution.* says how each execution surface runs — tiers, their enablement, grants, sandbox, egress ceiling and consent all read top-to-bottom in this one block.",
+    "__comment": "ADR 0010 third config axis (v1.19.1): WHERE work runs. providers.* say WHO answers, tools.* say WHAT each tool is (tier-independently), and execution.* says how each execution surface runs \u2014 tiers, their enablement, grants, sandbox, egress ceiling and consent all read top-to-bottom in this one block.",
     "run": {
       "__comment": "The one-off tier: the /run command family and the /v1/oneshot facade. Both keys default OFF, so shipped /v1/oneshot behavior is byte-identical until an operator opts in.",
       "web_search": false,
@@ -1477,9 +1509,9 @@
     "collect": "yes",
     "__comment_collect": "How /run + /task results reach the active session: 'auto' (always auto-merge on completion) | 'yes' (held until the Collect button/verb finalizes+merges; default) | 'no' (collect disabled: button greyed, verb warns, result stays on the run record).",
     "task": {
-      "__comment": "The tool-capable POST /v1/agent/task tier. BREAKING (v1.19.1, ADR 0010): these keys moved wholesale from tools.agent.* with NO dual-read — enabled was task_tier_enabled, and consent/budgets were flat tools.agent keys. Run /doctor for the full old->new mapping.",
+      "__comment": "The tool-capable POST /v1/agent/task tier. BREAKING (v1.19.1, ADR 0010): these keys moved wholesale from tools.agent.* with NO dual-read \u2014 enabled was task_tier_enabled, and consent/budgets were flat tools.agent keys. Run /doctor for the full old->new mapping.",
       "enabled": false,
-      "__comment_enabled": "v1.19.0 (was tools.agent.task_tier_enabled): opt-in for the tool-capable tier. Default false. This tier is sandboxed IN-PROCESS ONLY (no OS isolation) and is safe ONLY for trusted operators — enable deliberately. The tool-free POST /v1/agent/run tier is always available regardless.",
+      "__comment_enabled": "v1.19.0 (was tools.agent.task_tier_enabled): opt-in for the tool-capable tier. Default false. This tier is sandboxed IN-PROCESS ONLY (no OS isolation) and is safe ONLY for trusted operators \u2014 enable deliberately. The tool-free POST /v1/agent/run tier is always available regardless.",
       "__comment_sandbox": "v1.19.x build plan T2 (was tools.agent.sandbox): filesystem SEAL for the tool-capable tier. Off by default. Set enforcement='in_process' to confine a run's reads to read_paths.allow (+ skills_dir/specs_dir + its per-run workdir) and writes to the per-run workdir only. deny globs override allow (deny wins). A bare name in deny (e.g. '.env', 'secrets') blocks that file/dir anywhere in the tree; a '/'-containing pattern (e.g. '/abs/path', '**/x') matches the full path. Best-effort under trusted-operator (a path-prefix jail, not an OS boundary); enforcement='container' (tier-d, not yet built) realizes the SAME fields as read-only mounts + ConfigMaps. To activate, set enforcement and read_paths.allow below.",
       "sandbox": {
         "enforcement": "off",
@@ -1500,31 +1532,31 @@
           "follow_symlinks": false
         },
         "skills_dir": null,
-        "__comment_skills_dir": "v1.19.0 (/task T4): a directory of agent SKILL directories. When set, `POST /v1/agent/task {\"skills\":[\"<name>\"]}` (and the web `/task run --skill <name>`) resolves <name> under this dir (NAME only — no path/traversal). Each skill is `<name>/SKILL.md` (a spec, T3 loader) + optional `references/` (mounted into the run read-scope when enforcement=in_process) + optional `scripts/` (INERT). Multiple skills compose: grants union, read-roots union, still clamped by the ceiling (no-shell, execution.task.enabled). A scripts/-bearing skill is refused unless allow_skill_scripts is true. null = skills disabled.",
+        "__comment_skills_dir": "v1.19.0 (/task T4): a directory of agent SKILL directories. When set, `POST /v1/agent/task {\"skills\":[\"<name>\"]}` (and the web `/task run --skill <name>`) resolves <name> under this dir (NAME only \u2014 no path/traversal). Each skill is `<name>/SKILL.md` (a spec, T3 loader) + optional `references/` (mounted into the run read-scope when enforcement=in_process) + optional `scripts/` (INERT). Multiple skills compose: grants union, read-roots union, still clamped by the ceiling (no-shell, execution.task.enabled). A scripts/-bearing skill is refused unless allow_skill_scripts is true. null = skills disabled.",
         "specs_dir": null,
-        "__comment_specs_dir": "v1.19.0 (/task T3): a directory of agent spec files. When set, `POST /v1/agent/task {\"spec\":\"<name>\"}` (and the web `/task run --spec <name>`) resolves <name> under this dir (NAME only — no path/traversal; .md front-matter, .json, .yaml). Spec fields fill any omitted request field; explicit request fields win; the merged grant is clamped by the same ceiling as a direct request (no-shell, execution.task.enabled). null = spec files disabled.",
+        "__comment_specs_dir": "v1.19.0 (/task T3): a directory of agent spec files. When set, `POST /v1/agent/task {\"spec\":\"<name>\"}` (and the web `/task run --spec <name>`) resolves <name> under this dir (NAME only \u2014 no path/traversal; .md front-matter, .json, .yaml). Spec fields fill any omitted request field; explicit request fields win; the merged grant is clamped by the same ceiling as a direct request (no-shell, execution.task.enabled). null = spec files disabled.",
         "allow_skill_scripts": false,
         "__comment_allow_skill_scripts": "v1.19.0 (/task T4): scripts/ in a skill can never execute in the in-process tier (no shell grant). Default false REFUSES a scripts/-bearing skill up front (400) rather than loading it with silently-inert scripts. Set true to acknowledge scripts stay inert and load the skill anyway; running skill scripts needs the container tier (T9)."
       },
       "consent": {
         "spawn_consent": "deny",
-        "__comment_spawn_consent": "v1.19.0 Inc 7 (was tools.agent.spawn_consent): server-context spawn_subagent policy. 'deny' (default, safe) PARKS a spawn needing consent in waiting{consent} until POST .../respond answers it — an unanswered park denies on TTL expiry (fail-closed). 'auto' lets API-driven spawns proceed with the capability SUBSET rules (child grant ⊆ parent, egress ⊆ parent, no-shell, depth=1) as the boundary.",
+        "__comment_spawn_consent": "v1.19.0 Inc 7 (was tools.agent.spawn_consent): server-context spawn_subagent policy. 'deny' (default, safe) PARKS a spawn needing consent in waiting{consent} until POST .../respond answers it \u2014 an unanswered park denies on TTL expiry (fail-closed). 'auto' lets API-driven spawns proceed with the capability SUBSET rules (child grant \u2286 parent, egress \u2286 parent, no-shell, depth=1) as the boundary.",
         "consent_ttl_s": 300.0,
         "__comment_consent_ttl_s": "v1.19.x T5 (was tools.agent.consent_ttl_s): how long a waiting{consent} park stays answerable before resolving to a denial (seconds)."
       },
       "budgets": {
         "result_retention_s": 3600.0,
-        "__comment_result_retention_s": "v1.19.x T6 (was tools.agent.result_retention_s): how long a completed_pending_ack run holds its uncollected result before the lazy reaper finalizes it (seconds; reaped on next read — no timer task). 0 disables the backstop. Finalizing never deletes data — it only marks the run GC-eligible."
+        "__comment_result_retention_s": "v1.19.x T6 (was tools.agent.result_retention_s): how long a completed_pending_ack run holds its uncollected result before the lazy reaper finalizes it (seconds; reaped on next read \u2014 no timer task). 0 disables the backstop. Finalizing never deletes data \u2014 it only marks the run GC-eligible."
       },
-      "__comment_default_grant": "Item 58 (v1.19.x): the USER's standing default grant for a bare /task \"<desc>\" — AgentSpec-shaped {tools?, network?, budget?}. A NEW precedence layer BELOW an explicit request/spec/skill/profile and ABOVE the built-in empty default, so a user can set up their own working environment (e.g. web_search always available) instead of every bare task 422-ing for a missing grant. NOT a new power: the resolved grant still passes the UNCHANGED clamps — shell is rejected, egress is intersected with execution.egress_ceiling, tool kill-switches (tools.<tool>.enabled=false) and provider validation all apply, and a spawned child grant stays ⊆ parent. So a user default can never escalate capability past the operator's envelope. An explicit --tools/--profile still wins (replace/narrow). Absent/empty = no default (bare task keeps 422-ing). Coder baseline example: {\"tools\": [\"web_search\"]}.",
+      "__comment_default_grant": "Item 58 (v1.19.x): the USER's standing default grant for a bare /task \"<desc>\" \u2014 AgentSpec-shaped {tools?, network?, budget?}. A NEW precedence layer BELOW an explicit request/spec/skill/profile and ABOVE the built-in empty default, so a user can set up their own working environment (e.g. web_search always available) instead of every bare task 422-ing for a missing grant. NOT a new power: the resolved grant still passes the UNCHANGED clamps \u2014 shell is rejected, egress is intersected with execution.egress_ceiling, tool kill-switches (tools.<tool>.enabled=false) and provider validation all apply, and a spawned child grant stays \u2286 parent. So a user default can never escalate capability past the operator's envelope. An explicit --tools/--profile still wins (replace/narrow). Absent/empty = no default (bare task keeps 422-ing). Coder baseline example: {\"tools\": [\"web_search\"]}.",
       "default_grant": {},
-      "__comment_allow_user_default": "Item 58 (v1.19.x): operator switch, default true. When false, user-set default_grant is IGNORED entirely (a bare /task with no request grant keeps 422-ing) — a fail-closed posture for a locked-down deployment. The egress-ceiling clamp and kill-switches apply regardless; this key governs only whether the default_grant layer is CONSULTED."
+      "__comment_allow_user_default": "Item 58 (v1.19.x): operator switch, default true. When false, user-set default_grant is IGNORED entirely (a bare /task with no request grant keeps 422-ing) \u2014 a fail-closed posture for a locked-down deployment. The egress-ceiling clamp and kill-switches apply regardless; this key governs only whether the default_grant layer is CONSULTED."
     },
-    "__comment_default_subagent": "v1.19.0 (was tools.agent.default_subagent): provider/model for spawned sub-agent runs when the spawn request doesn't specify. Resolution: request value -> this -> 400. Deliberately NOT the interactive session's chat provider — a sub-agent's model is per-task intent, not inherited from the UI. Lives at the execution root because it composes grants ACROSS tiers.",
+    "__comment_default_subagent": "v1.19.0 (was tools.agent.default_subagent): provider/model for spawned sub-agent runs when the spawn request doesn't specify. Resolution: request value -> this -> 400. Deliberately NOT the interactive session's chat provider \u2014 a sub-agent's model is per-task intent, not inherited from the UI. Lives at the execution root because it composes grants ACROSS tiers.",
     "default_subagent": {},
-    "__comment_profiles": "ADR 0009 §1: named, reusable task grants. Each profile is AgentSpec-shaped ({tools?, network?, budget?, provider?, model?, system?, enrichment?}); a run selects one by name (--profile <name>). Precedence: request > spec > profile > default_subagent > built-in default, with list fields REPLACING (not unioning) so a more specific layer can narrow.",
+    "__comment_profiles": "ADR 0009 \u00a71: named, reusable task grants. Each profile is AgentSpec-shaped ({tools?, network?, budget?, provider?, model?, system?, enrichment?}); a run selects one by name (--profile <name>). Precedence: request > spec > profile > default_subagent > built-in default, with list fields REPLACING (not unioning) so a more specific layer can narrow.",
     "profiles": {},
-    "__comment_egress_ceiling": "ADR 0009 Q3: deployment-wide egress cap. Config-only and INTERSECTIVE — a run's effective allowlist is the intersection of whatever it resolved with this list. A run can never state or raise it. Unset/absent = no cap. A malformed (non-list) value is a hard error, never a silent 'no cap'."
+    "__comment_egress_ceiling": "ADR 0009 Q3: deployment-wide egress cap. Config-only and INTERSECTIVE \u2014 a run's effective allowlist is the intersection of whatever it resolved with this list. A run can never state or raise it. Unset/absent = no cap. A malformed (non-list) value is a hard error, never a silent 'no cap'."
   },
   "tui": {
     "__comment": "Textual TUI (ppxaide) settings (v1.15.0+)",
@@ -1536,7 +1568,7 @@
   },
   "file_tree": {
     "__comment": "Web file tree + /files/list + /files/search settings (v1.18.7+)",
-    "__comment_ignore_dirs": "Directory names hidden from the file tree. REPLACE semantics (not merge) — your list is used verbatim. Empty list = show everything. Default: ['.git', 'node_modules', '__pycache__', '.venv', 'venv', '.tox', 'dist', 'build', '.eggs', '.mypy_cache']. Remove an entry from the default list to unhide that dir (e.g. drop 'venv' if you want it visible).",
+    "__comment_ignore_dirs": "Directory names hidden from the file tree. REPLACE semantics (not merge) \u2014 your list is used verbatim. Empty list = show everything. Default: ['.git', 'node_modules', '__pycache__', '.venv', 'venv', '.tox', 'dist', 'build', '.eggs', '.mypy_cache']. Remove an entry from the default list to unhide that dir (e.g. drop 'venv' if you want it visible).",
     "ignore_dirs": [
       ".git",
       "node_modules",
