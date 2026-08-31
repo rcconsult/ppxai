@@ -98,6 +98,28 @@ class TestItRefusesToGuessWhenItCannotSee:
         probe = {"nvidia": {"reachable": False, "endpoint_models": {}}}
         assert detect_uncatalogued_models(_cfg(["a", "b"]), probe) == []
 
+    def test_unreachable_beats_a_stale_non_empty_catalog(self):
+        """The case that makes the reachability guard mean anything.
+
+        The test above passes for the WRONG REASON: an unreachable probe also
+        carries an empty `endpoint_models`, so the empty-catalog guard catches
+        it first and the `reachable` check never has to work. Deleting that
+        check left all 17 tests green — a guard with no fence under it.
+
+        This is the input that separates them: unreachable, but carrying a
+        non-empty catalog (a stale result, or a probe shape that populated
+        models before failing). Only the `reachable` check can reject it, so
+        this test fails the moment that check is weakened.
+
+        Behaviourally it matters because "we could not reach the provider" and
+        "the provider does not list your model" are different claims, and
+        rendering the first as the second tells an operator their models are
+        gone during an outage.
+        """
+        probe = {"nvidia": {"reachable": False,
+                            "endpoint_models": {"stale-model": 4096}}}
+        assert detect_uncatalogued_models(_cfg(["a", "b"]), probe) == []
+
     def test_an_empty_catalog_reports_nothing(self):
         """A parse that yielded nothing is not proof every model vanished.
 

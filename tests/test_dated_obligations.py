@@ -69,11 +69,26 @@ def test_a_dated_obligation_has_not_come_due(due, what, todo):
     )
 
 
-def test_every_obligation_is_in_the_future_when_written():
-    """A due date already past at authoring time would fire immediately and
-    get muted — the opposite of the point."""
+#: The day this file was written. An obligation dated before it was already
+#: overdue when authored, which means it fires on the first run and gets
+#: muted — the opposite of the point.
+AUTHORED = date(2026, 8, 31)
+
+
+def test_every_obligation_was_in_the_future_when_written():
+    """Asserts what the name says.
+
+    The first version of this checked only `isinstance(due, date)` — a shape
+    check wearing a semantics name, which would have passed for a date years
+    in the past. Caught in review.
+    """
     for due, what, _ in OBLIGATIONS:
-        assert isinstance(due, date), what
+        assert isinstance(due, date), f"{what}: due date must be a date"
+        assert due > AUTHORED, (
+            f"{what}: due {due.isoformat()} is not after the authoring date "
+            f"{AUTHORED.isoformat()} — an obligation that is overdue on "
+            f"arrival fires immediately and teaches the reader to ignore it"
+        )
 
 
 def test_the_list_is_not_silently_empty():

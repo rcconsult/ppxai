@@ -510,7 +510,7 @@ def detect_uncatalogued_models(
                 continue
             if model_id in catalog:
                 continue
-            if False:
+            if classify_model(model_id):
                 continue  # the table already says something more precise
             findings.append({
                 "provider": provider_name,
