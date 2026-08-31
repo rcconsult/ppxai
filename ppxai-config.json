@@ -113,6 +113,17 @@
             "frequency_penalty": 0.2
           },
           "facts": {
+            "fallback_on_empty": false,
+            "fallback_on_failure": false,
+            "max_tokens": 4096,
+            "max_tool_iterations": 20,
+            "parallel_tool_calls": false,
+            "restricted_params": [],
+            "strip_json_from_text": false,
+            "supports_reasoning": false,
+            "supports_vision": false,
+            "tier": "B",
+            "tool_mode": "auto",
             "wire_protocol": "responses"
           },
           "__comment_deadline": "\u23f0 The chat-completions endpoint every OTHER sonar id uses retires 2026-09-27. This entry is on the surviving wire.",
@@ -280,6 +291,20 @@
           "__comment_best_for": "Critical code review, ADR drafting, multi-day investigation work. ~6\u00d7 the cost of gpt-5.4-pro.",
           "__comment_benchmark_status": "NOT YET BENCHMARKED \u2014 likely cost-prohibitive for the 36-test suite (~$15-20 per run).",
           "facts": {
+            "fallback_on_empty": false,
+            "fallback_on_failure": false,
+            "max_tokens": 128000,
+            "max_tool_iterations": 0,
+            "parallel_tool_calls": true,
+            "restricted_params": [
+              "temperature",
+              "top_p"
+            ],
+            "strip_json_from_text": true,
+            "supports_reasoning": false,
+            "supports_vision": true,
+            "tier": "A",
+            "tool_mode": "native",
             "wire_protocol": "responses"
           },
           "__comment_wire": "2026-08-31: 404 on /v1/chat/completions, 200 on /v1/responses (both called). The engine's globs do not route this id to Responses, so the config must."
@@ -302,6 +327,20 @@
             "max_tokens": 16384
           },
           "facts": {
+            "fallback_on_empty": false,
+            "fallback_on_failure": false,
+            "max_tokens": 128000,
+            "max_tool_iterations": 0,
+            "parallel_tool_calls": true,
+            "restricted_params": [
+              "temperature",
+              "top_p"
+            ],
+            "strip_json_from_text": true,
+            "supports_reasoning": false,
+            "supports_vision": true,
+            "tier": "A",
+            "tool_mode": "native",
             "wire_protocol": "responses"
           },
           "__comment_wire": "2026-08-31: 404 on /v1/chat/completions, 200 on /v1/responses (both called). The engine's globs do not route this id to Responses, so the config must."
@@ -332,6 +371,20 @@
             "max_tokens": 16384
           },
           "facts": {
+            "fallback_on_empty": true,
+            "fallback_on_failure": false,
+            "max_tokens": 128000,
+            "max_tool_iterations": 20,
+            "parallel_tool_calls": false,
+            "restricted_params": [
+              "temperature",
+              "top_p"
+            ],
+            "strip_json_from_text": true,
+            "supports_reasoning": false,
+            "supports_vision": true,
+            "tier": "A",
+            "tool_mode": "native",
             "wire_protocol": "responses"
           },
           "__comment_wire": "2026-08-31: 404 on /v1/chat/completions, 200 on /v1/responses (both called). The engine's globs do not route this id to Responses, so the config must."
