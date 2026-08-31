@@ -870,3 +870,198 @@ archived snapshots:
   [docs/archive/DEBT-INVENTORY-v1.18.2.md](archive/DEBT-INVENTORY-v1.18.2.md).
 
 ---
+
+---
+
+## ADR 0012 wave (closed 2026-08-31, `bugfix/v1.19.1`)
+
+Items 61 and 62, in full. Both were filed **while designing** ADR 0012 and
+closed by implementing it — 61 in W2 (`1bf93de7`), 62 across W2 and W4
+(`1bf93de7`, `476fce89`). Kept whole here because the measurements in them
+(the drift table, the validator's single call site, the Liskov violation)
+are the evidence the ADR's decisions rest on, and a one-line summary in the
+rolling inventory cannot carry that.
+
+### Item 61 — `api_path` is declared, config-overridable, displayed — and never routed on [providers / config]
+
+**Filed 2026-08-30** while designing
+[ADR 0012](decisions/0012-wire-protocol-as-per-model-capability.md).
+Independent of that ADR: this is a live defect today.
+
+`ToolCallingProfile.api_path` (`model_profiles.py:43`) is set on built-in
+profiles, merged through the full precedence ladder (`chat.py:206`), exposed
+to operator override (`config/providers.py:385`) and displayed by `/provider`
+(`commands/provider.py:349`). **Nothing reads it to route a request.** Actual
+routing is `_is_responses_api_model()`, a hardcoded prefix tuple
+(`openai_native.py:45`).
+
+Measured (project venv, 2026-08-30) — the two sources disagree on three
+models, **in both directions**:
+
+| model | `profile.api_path` | actual router |
+|---|---|---|
+| `gpt-5.3-codex` | `responses` | `chat` |
+| `gpt-5.2-pro` | `chat` | `responses` |
+| `gpt-5-pro` | `chat` | `responses` |
+
+`gpt-5.3-codex` is declared Responses-only and sent to Chat Completions:
+`"gpt-5.3-codex"` does not *start with* any tuple entry (`"codex"` is a
+prefix, not a substring). A sweep of all 65 built-in globs finds two drifting
+globs; `gpt-5.2-pro` drifts as a model but owns no glob.
+
+**Two harms.** (1) The profile table is decorative for routing, which is how
+it drifted unnoticed. (2) **An operator's `api_path` override is silently
+inert** — it validates, merges and displays as though applied. Same shape as
+Item 43 and the same failure ADR 0010's config-shape file scan exists to
+catch: every upper layer resolves a confident answer, the wire never sees it.
+
+**Fix:** ADR 0012 steps 1–2 (make `api_path` load-bearing; the prefix tuple
+becomes table seed data). Those two steps stand alone and are worth doing even
+if the rest of that ADR is not taken. Minimum fence: a test asserting
+declared-vs-routed agreement for **every** built-in profile, plus one proving
+an operator override changes the outgoing request.
+
+**Not yet established:** whether either drift is user-visible today (does
+`gpt-5.2-pro` actually work over `/chat/completions`, or is the router right
+and the profile wrong?). Each row is a decision to make deliberately, not a
+value to copy from one side to the other.
+
+**W1 progress (2026-08-30) — STILL OPEN.** ADR 0012's W1 replaced
+`api_path` with `ModelFacts.wire_protocol`, so the field is now resolved
+through one path and displayed by `/provider` from that same resolution
+(the display previously re-implemented the merge, which is how it came to
+show a value nothing routed on). **Routing still does not read it** —
+`openai_native` keeps its three `_is_responses_api_model()` branches. The
+item closes in **W2**, which moves those branches onto the resolved fact.
+One design correction landed on the way: an unlisted model on a provider
+that cannot speak `chat_completions` needed a provider-owned floor
+(`BaseProvider.unmeasured_facts`), or W2 would route unlisted Gemini models
+to a handler that does not exist.
+
+**CLOSED in W2 (2026-08-30).** Routing now reads
+`get_facts_for_model(model).wire_protocol` through a single reader
+(`OpenAINativeProvider._wire_for`), consumed by all four dispatch sites
+(`chat`, `chat_sync_simple`, `oneshot`, and the 404 auto-fallback).
+`_is_responses_api_model()` survives only as seed data and for the
+fallback's log line; nothing routes on the prefix tuple.
+
+Both fences are in `tests/test_wire_responses_extraction.py`:
+declared-vs-routed agreement across every built-in profile, and an operator
+override proven to change the **outgoing request** in both directions
+(forced onto Responses, and a Responses model forced onto Chat Completions)
+— asserted at the client spy, not at the resolver, because resolving
+correctly is exactly what the old field also did.
+
+**The "not yet established" question above is now answered, per row:**
+
+| model | resolution | evidence |
+|---|---|---|
+| `gpt-5.2-pro` | `responses` — the ROUTER was right | commit `5e1ace2f` *"Route gpt-5.2-pro to Responses API + add 404 auto-fallback"* added it after OpenAI returned **"not a chat model"**. The declared `chat` was never exercised, because nothing routed on `api_path`. |
+| `gpt-5-pro` | `responses` — same | same commit, same measured 404 |
+| `gpt-5.3-codex` | `responses` — the PROFILE was right | codex models 404 on Chat Completions; registered by `c4b6f431` without the routing tuple being updated |
+
+**A fourth drift, unfiled until now:** `gpt-5.5-pro` was sent to Responses by
+**neither** mechanism — no prefix entry, and its profile declares `chat`. It
+was registered by the same `c4b6f431` as `gpt-5.3-codex`. Its row was filed
+by **analogy** with its siblings and then **probed live 2026-08-31**:
+`/v1/chat/completions` answers `404 "This is not a chat model and thus not
+supported in the v1/chat/completions endpoint"` — the same error, verbatim,
+that its siblings gave. The analogy is now a measurement, and every row in
+the resolved table rests on an observed response.
+
+---
+
+### Item 62 — ADR 0006's wire validator covers only ONE of three protocols; `_convert_messages` is one protocol's emitter in the shared base [providers / multimodal]
+
+**Filed 2026-08-30** while designing
+[ADR 0012](decisions/0012-wire-protocol-as-per-model-capability.md).
+Independent of that ADR; two coupled defects, both live.
+
+**(a) The ADR 0006 validator has exactly one call site.**
+`assert_wire_blocks_clean` is called only at `base.py:384`, inside
+`BaseProvider._convert_messages` — the **chat-completions** emitter.
+(Verified: one call site in `ppxai/`; the only other grep hit is a comment
+in `file_preprocessing.py:299`.) `flatten_uploaded_file_blocks` *is* called
+by all three wire paths, but the validator is not — so
+`_convert_messages_for_responses` (`openai_native.py:863`) and
+`GeminiProvider._convert_messages` (`gemini.py:655`) reach the wire
+**unchecked**. ADR 0006's "spec-clean by construction" guarantee is in
+practice **chat-completions-only**, which is not what that ADR claims.
+
+**(b) The base emitter asserts one protocol's shape.**
+`BaseProvider._convert_messages` (`base.py:346`) returns
+`{role, content, tool_calls, tool_call_id}` — the chat-completions wire
+shape, not a neutral utility. `GeminiProvider` **overrides it with an
+incompatible return type** (`tuple` vs `List[Dict[str, Any]]`) because it
+must. A Liskov violation in shipped code, caused by the base class
+asserting a shape only one of its subclasses' protocols uses.
+
+**Not yet established:** whether (a) has produced a user-visible escape.
+The validator is `__debug__`-gated and was WARN-MODE by design during ADR
+0006's rollout, so the honest claim is "two paths are unguarded", not "bad
+blocks are reaching the wire". Worth a targeted check on the Responses
+path, which carries images.
+
+**Fix:** ADR 0012 step 4 moves `convert_messages` into the protocol handlers
+and the validator travels with it, covering all protocols. If ADR 0012 is
+not taken, (a) is independently fixable by calling the validator in the
+other two converters — cheap, and worth doing regardless.
+
+**W1 progress (2026-08-30) — STILL OPEN, untouched.** W1 unified the
+per-model *fact* system; it did not move any message conversion, so both
+(a) and (b) are exactly as filed. The item closes in **W4**, after W2
+establishes the `wire/` handler package the converters move into. W1 does
+supply the prerequisite: `wire_protocol` is now resolved per model, so a
+handler can be selected at all.
+
+**W2 progress (2026-08-30) — (a) HALF FIXED, (b) STILL OPEN.** The `wire/`
+package now exists and the Responses converter lives in it, so
+`assert_wire_blocks_clean` gained its **second** call site:
+`ResponsesHandler.convert_messages` calls it right after
+`flatten_uploaded_file_blocks`, at both flatten points (tool results and
+user/assistant turns), matching `base.py`'s position exactly. Coverage is
+**2 of 3 wires**; `generate_content` remains unchecked until W4 moves
+Gemini's converter.
+
+Fenced by `TestValidatorCoversThisWire` in
+`tests/test_wire_responses_extraction.py` — parametrised over all three
+roles, and verified to actually trip (a polluted `image_url` block raises).
+Worth recording how that check nearly passed vacuously: the first fixture
+put the offending key *nested inside* `image_url`, where the validator does
+not look (it checks each block's **top-level** keys against
+`_WIRE_ALLOWED_BLOCK_KEYS`), so it reported "not caught" against correctly
+wired code. The wiring was right and the probe was wrong.
+
+(b) is untouched: `BaseProvider._convert_messages` is still the
+chat-completions emitter in the shared base, and `GeminiProvider` still
+overrides it with an incompatible return type. Both resolve in W4.
+
+**CLOSED in W4 (2026-08-31).** Both halves.
+
+**(a)** `assert_wire_blocks_clean` now has **three** call sites, one inside
+each handler's converter — `chat_completions`, `responses`,
+`generate_content`. Coverage is 3 of 3 wires. The fence
+(`tests/test_wire_handlers_complete.py`) parametrises over the handler
+**registry** rather than a hand-written list, so a fourth wire that forgets
+the validator fails on the day it is written; it also greps each handler's
+source, because Item 62 (a) was exactly a validator that existed and was not
+called. Mutation-tested: removing the call fails 2 tests.
+
+**(b)** `GeminiProvider._convert_messages` is **deleted**, not narrowed —
+along with `_content_to_gemini_parts`, `_decode_thought_signature` and
+`_parse_tool_call_arguments`, which moved with it. Each wire owns its
+converter and declares its own return type (`List[Dict]`,
+`(instructions, input_items)`, `(contents, system_instruction)`), which is
+why `ProtocolHandler.convert_messages` is typed `-> Any`: the Liskov
+violation came from one wire's shape being imposed on all of them by the
+base's annotation. `BaseProvider._convert_messages` survives as a
+**delegation** to the chat-completions handler — most providers speak that
+wire and call it directly — but the body is no longer one protocol's emitter
+installed as everyone's default.
+
+Verified byte-identical across all four role paths (system, user, assistant
+with tool_calls, tool result) before the override was removed, and the
+name-pairing hazard that makes this wire unshareable is pinned by its own
+tests.
+
+---

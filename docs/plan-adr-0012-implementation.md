@@ -336,10 +336,36 @@ end-state graph: 4 providers, 3 handlers, zero bespoke wire paths.
 suite; client-parity harness untouched. **Simplification report:** final
 LoC delta + deleted-override list.
 
-## W5 — closeout (~0.5d)
+## W5 ✅ DONE (2026-08-31) — closeout
 
-ADR 0012 → Implemented; Items 61 + 62 archived; CHANGELOG +
-release-notes-v1.19.1-DRAFT; Fleet Atlas dated successor.
+- ADR 0012 → **Implemented** (all four migration steps); decisions README row
+  updated; the "open records" line no longer lists 0012.
+- **Items 61 + 62 archived** to the closed one-liner list, with their full
+  text moved to `docs/archive/DEBT-INVENTORY-CLOSED.md` — the measurements in
+  them (the drift table, the validator's single call site, the Liskov
+  violation) are the evidence the ADR's decisions rest on, so a one-line
+  summary could not carry them. Open set 22 → 20.
+- **release-notes-v1.19.1-DRAFT**: ADR 0012 had **no** user-facing section at
+  all — a config clean break with no migration text. Added the breaking
+  `capabilities`/`tool_calling` → `facts` move, the two-wire Perplexity
+  fleet, and `tools.web_search.order`; every claim re-verified against the
+  code before writing (field lists, `ToolMode` values, `native_tool_calling`
+  absent).
+- **Fleet Atlas dated successor**: `2026-08-31-fleet-atlas.html`. The 08-30
+  edition had been **edited in place across W2/W3/W4**, which made a dated
+  research artifact stop being what its name claims. Restored to its
+  as-written state from `be63fe6a` and given a superseded banner pointing at
+  the successor; the current state lives in the new file.
+- **Two lessons proposed** (owner approves promotion, per
+  `docs/lessons/README.md`): `resolver-vs-direct-path-checks.md` and
+  `tests-whose-premise-expires.md`. Both meet the cross-host +
+  grep-verifiable bar. A third candidate (graph-refresh-as-verification) was
+  **not** promoted — it is a working habit, not an observable repo fact.
+
+**Still open, needing the owner:** the `sonar` → `perplexity/sonar` rename +
+`/v1` base_url in the install scripts and VSCode bootstrap (before
+**2026-09-27**), and the two approved structural refactors (`FactsResolver`;
+`BUILTIN_PROFILES` as native `ModelFacts`).
 
 ---
 

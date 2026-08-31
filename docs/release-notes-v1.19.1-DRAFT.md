@@ -106,6 +106,77 @@ carries no ppxai config keys, so it is unaffected.)
 Also removed as dead config in this pass: the root-level **`visualization.*`**
 block (documented as configuring `/show`, but nothing ever read it).
 
+## ⚠ Breaking changes (ADR 0012 — per-model facts, hard move, NO dual-read)
+
+**`capabilities.*` and `tool_calling.*` merge into one `facts` block.** As
+with ADR 0010, this is a clean break: a config left at the old keys is
+**silently ignored** and those settings revert to defaults. Run **`/doctor`**,
+which scans the config *file* (not the loaded values — a moved key is
+invisible to every accessor) and prints the old→new mapping, flags fields in
+the wrong block, and offers a complete record to paste.
+
+Two record types replace what used to be one overlapping set:
+
+| Record | Answers | Lives on |
+|---|---|---|
+| `ProviderCapabilities` | what the **endpoint** does — `web_search`, `web_fetch`, `weather`, `citations`, `streaming` | the provider block |
+| `ModelFacts` | what a **model** does — `wire_protocol`, `tool_mode`, limits, fallbacks, vision, tier | each model block |
+
+**No field appears on both**, so there is nothing to arbitrate. A
+`tool_mode` written in a provider block does not reach any model — `/doctor`
+reports it as misplaced rather than letting it silently half-work.
+
+**`native_tool_calling` is deleted, not aliased.** Use `tool_mode`, which
+says what the boolean could not: `native`, `prompt_based`, or `auto` (native
+with a prompt-based fallback). If you copied the example config, the
+migration is `native_tool_calling: true` → `tool_mode: "native"`, `false` →
+`tool_mode: "prompt_based"`.
+
+## New: one model, two wires — Perplexity's Agent fleet
+
+A Perplexity key now reaches **Anthropic, OpenAI, Google and xAI models**.
+Perplexity serves Sonar over Chat Completions and its Agent fleet over the
+OpenAI *Responses* API; ppxai picks the wire per model from
+`facts.wire_protocol`, so both live on the one `perplexity` provider — same
+key, same bill, same price table.
+
+```json
+"anthropic/claude-sonnet-5": {
+  "facts": { "wire_protocol": "responses", "tool_mode": "auto", "max_tokens": 4096 }
+}
+```
+
+`max_tokens` is **required** for `anthropic/*` here — the API rejects a
+request without it.
+
+**This matters before 2026-09-27.** Perplexity retires the Sonar
+chat-completions endpoint on that date. The Responses wire is the survivor,
+and both the provider and the `web_search` tool now follow
+`facts.wire_protocol` onto it — the tool used to run its own separate client
+that would have broken independently.
+
+> **One migration step is not yet shipped.** Perplexity's namespaced model
+> IDs (`perplexity/sonar` rather than `sonar`) and the `/v1` base-url suffix
+> are supported by the code but are **not** yet the default in the shipped
+> install scripts or the VSCode bootstrap config. If you drive Perplexity
+> after the retirement date, set them yourself.
+
+## New: `tools.web_search.order` — the whole search chain, not just its head
+
+`preferred` chose only the first backend; the rest of the fallback chain was
+fixed. Now:
+
+```json
+"tools": { "web_search": { "order": ["gemini", "duckduckgo", "perplexity"] } }
+```
+
+Backends you leave out are appended in the default order, so a short list
+means *"try these first"*, not *"only these"* — pinning to one backend is
+still `strict`'s job. Unknown ids are reported by `/doctor` and skipped
+rather than taking search offline. The egress allowlist is derived from the
+same resolved list, so the chain and the hosts a run may reach cannot drift
+apart.
+
 ## New: `execution.collect` — run results into your session (U4)
 
 One global key for the `/run` + `/task` families (default **`yes`** — the

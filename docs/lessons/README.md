@@ -131,6 +131,13 @@ discoverable later.
   clients serve the web UI from `~/.ppxai/web`, not the repo source tree;
   editing `web/` in-repo has no effect on a running server without
   `PPXAI_WEB_DIR` pointed at the checkout
+- [resolver-vs-direct-path-checks.md](resolver-vs-direct-path-checks.md) —
+  calling a parser with a path you chose proves the file parses, not that it
+  is the file the app loads. `find_bootstrap_file()` picks `AGENTS.md` here,
+  not `CLAUDE.md`. When the question is "which one?", call the picker.
+- [tests-whose-premise-expires.md](tests-whose-premise-expires.md) — a test
+  asserting something is *absent* silently stops testing when the roadmap
+  makes it present. Assert absence with a name nothing will ever claim.
 - [clean-break-config-moves-need-a-file-scan.md](clean-break-config-moves-need-a-file-scan.md) —
   a config key moved with NO dual-read is invisible to every accessor, so a
   stale key silently reverts to its default; only a check that reads the

@@ -273,8 +273,8 @@
     <h1>ppxai Fleet Atlas</h1>
     <p class="sub">Every model ppxai can reach today, the wire protocol each one actually travels on, and the fleets
     arriving next — traced from code, config, and live probes, then checked against the provider docs on the web.
-    Companion to ADR 0012 — <em>wire protocol as a per-model capability</em> (Proposed).</p>
-    <div class="stamp">Compiled 2026-08-30 · branch <span class="mono">bugfix/v1.19.1</span> @ <span class="mono">9e6df49f</span> · verification dates on every claim</div>
+    Companion to ADR 0012 — <em>wire protocol as a per-model capability</em>, now <b>fully implemented</b>: all three live wires are handlers, routing reads the per-model fact, and Perplexity speaks two protocols on one key.</p>
+    <div class="stamp">Compiled 2026-08-31 · branch <span class="mono">bugfix/v1.19.1</span> @ <span class="mono">476fce89</span> · supersedes the 2026-08-30 edition, which was written while ADR 0012 was still a proposal · verification dates on every claim</div>
   </div>
 </div>
 
@@ -283,18 +283,8 @@
   <div class="stat"><div class="n">4</div><div class="l">provider classes behind them</div></div>
   <div class="stat"><div class="n">3<span style="font-size:20px;color:var(--muted)">+1</span></div><div class="l">wire protocols live today + Messages designed (ADR 0012)</div></div>
   <div class="stat"><div class="n">35</div><div class="l">models configured · 65 built-in behaviour profiles</div></div>
-  <div class="stat"><div class="n">38+</div><div class="l">models on Perplexity's Agent API, unreachable until I4b</div></div>
+  <div class="stat"><div class="n">38+</div><div class="l">models on Perplexity's Agent API — <b>reachable since W3</b> (2026-08-31)</div></div>
   <div class="stat alert"><div class="n">28<span style="font-size:18px">d</span></div><div class="l">until the Sonar chat-completions endpoint retires (2026-09-27)</div></div>
-</div>
-
-<div style="max-width:1100px;margin:0 auto 22px;padding:14px 18px;border-left:4px solid #0072B8;background:#E9F4FB;border-radius:0 6px 6px 0">
-  <b>Superseded — this is the 2026-08-30 snapshot, kept as written.</b>
-  It records the fleet <em>while ADR 0012 was still a proposal</em>: the
-  <code>api_path</code> drift is listed as an open defect, the Agent fleet as
-  unreachable, and the ADR 0006 validator as covering one wire of three. All
-  three were true when measured and are no longer true. See
-  <a href="2026-08-31-fleet-atlas.html">the 2026-08-31 edition</a> for the
-  current state.
 </div>
 
 <main>
@@ -459,7 +449,7 @@
 </section>
 
 <section id="protocols">
-  <div class="sec-head"><h2>The four wire protocols</h2><span class="k">3 live · 1 designed</span></div>
+  <div class="sec-head"><h2>The four wire protocols</h2><span class="k">3 live, all three now handlers (ADR 0012 W4) · 1 designed</span></div>
   <div class="cards">
     <div class="card chat">
       <h3>chat_completions</h3>
@@ -467,8 +457,9 @@
       <p>The workhorse: 8 of 10 config entries end here. Tool calls go out as a <code>tools</code> array and come back as
       <code>tool_calls</code>; results return as <code>tool</code>-role messages.</p>
       <ul>
-        <li>Message conversion: <code>BaseProvider._convert_messages</code></li>
-        <li>The only wire guarded by ADR 0006's validator (Item 62)</li>
+        <li>Message conversion: <code>wire.ChatCompletionsHandler</code> (ADR 0012 W4;
+        <code>BaseProvider._convert_messages</code> now delegates to it)</li>
+        <li>ADR 0006's validator guards <b>all three</b> wires since W4 — it guarded only this one until then (Item 62, closed)</li>
         <li>Perplexity's copy of it retires 2026-09-27</li>
       </ul>
     </div>
@@ -489,7 +480,7 @@
       <p>Gemini's native wire: <code>parts</code> arrays, <code>user/model</code> roles, system prompts hoisted to
       <code>system_instruction</code>. No tool-call ids — pairing is by function <em>name</em>.</p>
       <ul>
-        <li>Overrides <code>_convert_messages</code> with an incompatible return type (Item 62)</li>
+        <li>Its incompatible <code>_convert_messages</code> override is <b>deleted</b> (ADR 0012 W4) — conversion lives in <code>wire.GenerateContentHandler</code> and returns its own honest shape (Item 62, closed)</li>
         <li>Gemini 3.x makes <code>thought_signature</code> mandatory (Item 54)</li>
         <li>Falls back to chat_completions if google-genai is absent</li>
       </ul>
@@ -641,25 +632,39 @@
 </section>
 
 <section id="drift">
-  <div class="sec-head"><h2>Declared vs routed: the api_path drift</h2><span class="k">debt Item 61 · measured 2026-08-30</span></div>
-  <p class="lede">The profile table carries an <code>api_path</code> per model — merged through the config precedence
-  ladder, operator-overridable, displayed by <code>/provider</code> — and <b>nothing routes on it</b>. The actual router
-  is a hardcoded prefix tuple. The two disagree on three models, in both directions, and an operator's override is
+  <div class="sec-head"><h2>Declared vs routed: the api_path drift</h2><span class="k">debt Item 61 · measured 2026-08-30 · <b>RESOLVED in W2</b></span></div>
+  <p class="lede">The profile table carried an <code>api_path</code> per model — merged through the config precedence
+  ladder, operator-overridable, displayed by <code>/provider</code> — and <b>nothing routed on it</b>. The actual router
+  was a hardcoded prefix tuple. The two disagreed on three models, in both directions, and an operator's override was
   silently inert.</p>
+  <p class="lede" style="margin-top:10px"><b>Resolved 2026-08-30 (ADR 0012 W2).</b> Routing now reads
+  <code>get_facts_for_model(model).wire_protocol</code> through one reader, consumed by all four dispatch sites.
+  The prefix tuple survives only as seed data. Each row below was resolved as a <em>decision</em>, not by copying one
+  side onto the other — the "resolved to" column names the winner and why.</p>
   <div class="tablewrap" style="max-width:720px">
   <table>
-    <thead><tr><th>Model</th><th>Profile declares</th><th>Actually routed</th><th></th></tr></thead>
+    <thead><tr><th>Model</th><th>Profile declared</th><th>Was routed</th><th>Resolved to</th><th>On what evidence</th></tr></thead>
     <tbody>
-      <tr><td class="mono">gpt-5.3-codex</td><td><span class="pill resp">responses</span></td><td><span class="pill chat">chat_completions</span></td><td><span class="pill bad">drift</span></td></tr>
-      <tr><td class="mono">gpt-5.2-pro</td><td><span class="pill chat">chat</span></td><td><span class="pill resp">responses</span></td><td><span class="pill bad">drift</span></td></tr>
-      <tr><td class="mono">gpt-5-pro</td><td><span class="pill chat">chat</span></td><td><span class="pill resp">responses</span></td><td><span class="pill bad">drift</span></td></tr>
-      <tr><td class="mono">gpt-5.1-codex / -mini</td><td><span class="pill resp">responses</span></td><td><span class="pill resp">responses</span></td><td><span class="pill ok">agrees — by coincidence</span></td></tr>
+      <tr><td class="mono">gpt-5.3-codex</td><td><span class="pill resp">responses</span></td><td><span class="pill chat">chat_completions</span></td><td><span class="pill resp">responses</span></td><td class="tiny"><b>profile won</b> — codex 404s on Chat Completions; registered by <span class="mono">c4b6f431</span> without the tuple being updated</td></tr>
+      <tr><td class="mono">gpt-5.2-pro</td><td><span class="pill chat">chat</span></td><td><span class="pill resp">responses</span></td><td><span class="pill resp">responses</span></td><td class="tiny"><b>router won</b> — <span class="mono">5e1ace2f</span> added it after a measured <em>"not a chat model"</em> 404</td></tr>
+      <tr><td class="mono">gpt-5-pro</td><td><span class="pill chat">chat</span></td><td><span class="pill resp">responses</span></td><td><span class="pill resp">responses</span></td><td class="tiny"><b>router won</b> — same commit, same measured 404</td></tr>
+      <tr><td class="mono">gpt-5.5-pro</td><td><span class="pill chat">chat</span></td><td><span class="pill chat">chat_completions</span></td><td><span class="pill resp">responses</span></td><td class="tiny"><b>fourth drift, found in W2</b> — reached by <em>neither</em> mechanism. Filed by analogy, then <b>probed 2026-08-31</b>: 404 <em>"This is not a chat model"</em>, same error as its siblings</td></tr>
+      <tr><td class="mono">gpt-5.1-codex / -mini</td><td><span class="pill resp">responses</span></td><td><span class="pill resp">responses</span></td><td><span class="pill resp">responses</span></td><td class="tiny">agreed — by coincidence, not construction</td></tr>
     </tbody>
   </table>
   </div>
-  <p class="lede dim" style="margin-top:12px"><code>"gpt-5.3-codex"</code> misses the tuple because <code>"codex"</code>
-  is a <em>prefix</em> match, not a substring. ADR 0012 steps 1–2 make <code>api_path</code> load-bearing and fence it
-  with a declared-vs-routed test over every built-in profile.</p>
+  <p class="lede dim" style="margin-top:12px"><code>"gpt-5.3-codex"</code> missed the tuple because <code>"codex"</code>
+  is a <em>prefix</em> match, not a substring. Two fences now hold the line
+  (<span class="mono">tests/test_wire_responses_extraction.py</span>): declared-vs-routed agreement across every
+  built-in profile, and an operator override proven to change the <b>outgoing request</b> in both directions —
+  asserted at the client spy, not at the resolver, because resolving correctly is exactly what the inert field
+  also did.</p>
+  <p class="lede dim" style="margin-top:10px"><b>Every row now rests on an observed response.</b>
+  <code>gpt-5.5-pro</code> was the one exception — filed by analogy, because nothing had ever routed it to Chat
+  Completions and so no 404 had ever been seen for it. Probed <b>2026-08-31</b>: it answers
+  <code>404 "This is not a chat model and thus not supported in the v1/chat/completions endpoint"</code>, the same
+  error verbatim that put its siblings on the list. The assumption was marked as an assumption while it was one,
+  and the measurement confirmed it.</p>
 </section>
 
 <section id="future">
@@ -668,12 +673,23 @@
   <div class="prov">
     <div class="prov-head">
       <h3>Perplexity Agent API</h3>
-      <span class="cls">the same <span class="mono">perplexity</span> entry, second wire (ADR 0012 §5 · I4b)</span>
+      <span class="cls">the same <span class="mono">perplexity</span> entry, second wire (ADR 0012 §5 · W3)</span>
       <span class="pill resp">responses</span>
-      <span class="pill bad">mandatory by 2026-09-27</span>
+      <span class="pill ok">SHIPPED 2026-08-31</span>
+      <span class="pill bad">chat wire retires 2026-09-27</span>
     </div>
     <div class="prov-body">
-      <p class="prov-note" style="margin:0 0 12px">Roster fetched from <span class="mono">docs.perplexity.ai</span> 2026-08-13,
+      <p class="prov-note" style="margin:0 0 12px"><b>Live since ADR 0012 W3 (2026-08-31).</b> Routed as table data —
+      <span class="mono">anthropic/* · openai/* · google/* · xai/* · perplexity/*</span> resolve
+      <span class="mono">wire_protocol="responses"</span> on the one <span class="mono">perplexity</span> provider; no code
+      branch names a vendor. Canary verified end to end: <span class="mono">anthropic/claude-sonnet-5</span> emitted a native
+      <span class="mono">function_call</span> for <span class="mono">read_file(path="/etc/hostname")</span> with a real
+      <span class="mono">toolu_bdrk_…</span> id.<br><br>
+      <b>One model, two wires, two capabilities — measured.</b> <span class="mono">perplexity/sonar</span> on the Responses
+      wire accepted a tools array and called the tool; bare <span class="mono">sonar</span> answers
+      <span class="mono">400 "Tool calling is not supported for this model"</span> on Chat Completions. That is the sharpest
+      evidence anywhere in this atlas for why capability cannot be a property of a provider.<br><br>
+      Roster fetched from <span class="mono">docs.perplexity.ai</span> 2026-08-13,
       additions confirmed on the web 2026-08-30. All of it is <b>one Perplexity key, one bill, one accounting bucket</b> —
       which is why it stays one provider entry (§5), unlike Anthropic-direct (§7). Wire measured live:
       <code>anthropic/claude-sonnet-5</code> answered and emitted a real <code>function_call</code> through the stock OpenAI SDK.</p>
