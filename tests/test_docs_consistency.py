@@ -613,15 +613,29 @@ class TestEveryLessonIsDiscoverable:
             "Add a one-line entry under ## Index."
         )
 
-    def test_the_readme_does_not_list_lessons_that_are_gone(self):
-        """The other direction: a renamed or deleted lesson leaves a dead
-        entry, and a reader following it finds nothing."""
+    def test_the_readme_does_not_name_lessons_that_are_gone(self):
+        """A renamed lesson leaves a dead entry, and the reader finds nothing.
+
+        Scoped deliberately to what `TestDocLinksResolve` does NOT cover.
+        That test already fails on a dangling *markdown link* anywhere in the
+        repo — measured: deselect this class and it still catches
+        `[ghost](ghost.md)` in this README on its own. So checking linked
+        targets here would be pure duplication.
+
+        What neither covers is a **bare filename mention**: this index's
+        entries are prose as much as links, and `- old-name.md — ...` after a
+        rename is a dead reference with no link syntax for the repo-wide test
+        to find. Measured before writing this: a bare `ghost-lesson.md` line
+        passed all 30 tests.
+        """
         root = Path(__file__).resolve().parents[1] / "docs" / "lessons"
         index = (root / "README.md").read_text(encoding="utf-8")
-        linked = set(re.findall(r"\(([a-z0-9-]+\.md)\)", index))
         present = {p.name for p in self._lessons()} | {"README.md"}
-        dangling = sorted(linked - present)
+        # Every `*.md` token the index names, however it names it.
+        named = set(re.findall(r"[a-z0-9][a-z0-9-]*\.md", index))
+        dangling = sorted(named - present)
         assert not dangling, (
-            f"docs/lessons/README.md links to files that do not exist: "
-            f"{dangling}"
+            "docs/lessons/README.md names lesson files that do not exist: "
+            f"{dangling}\n\nA renamed or deleted lesson leaves the old name "
+            "behind; a reader following it finds nothing."
         )
